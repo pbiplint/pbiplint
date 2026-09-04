@@ -220,8 +220,12 @@ The parity suite is the acceptance test for every rule.
   `te bpa run <model> -r <BPARules.json> --no-defaults`, captured once
   and committed as JSON. The test asserts that pbiplint's finding set
   per rule equals the expected set, not just the count.
-- Tabular Editor is not required in CI. Expectations are refreshed by
-  hand with a documented script when the fixtures or the ruleset change.
+- Tabular Editor is never required by users, by the CLI, or by CI. It is
+  a development-time oracle only: expectations are refreshed by hand
+  with a documented script when the fixtures or the ruleset change,
+  using the TE3 command line or the free Tabular Editor 2 command line
+  on Windows. Contributors without either can submit hand-verified
+  expectations.
 - A rule is done when it has a fixture that exercises it and matches
   Tabular Editor. Rules with no fixture coverage are listed in the test
   output as untested, and new fixtures are added to close the gaps.

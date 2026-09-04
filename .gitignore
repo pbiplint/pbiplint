@@ -6,3 +6,5 @@ packages/cli/sample/
 *.tsbuildinfo
 .claude/worktrees/
 .superpowers/
+.env
+.env.*

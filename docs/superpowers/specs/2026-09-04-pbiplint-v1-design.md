@@ -1,6 +1,6 @@
 # pbiplint v1 design
 
-Date: 2026-09-04. Status: draft for review.
+Date: 2026-09-04. Status: approved by Michael on 2026-09-04. Implementation plan: docs/superpowers/plans/2026-09-04-pbiplint-v1-core-and-cli.md.
 
 ## 1. What this is
 

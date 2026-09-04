@@ -1,0 +1,6 @@
+dist
+node_modules
+examples
+tests/fixtures
+*.tmdl
+*.md

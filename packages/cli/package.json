@@ -1,0 +1,24 @@
+{
+  "name": "pbiplint",
+  "version": "0.0.0",
+  "description": "Lint Power BI semantic models (TMDL) for best-practice violations. Nothing is uploaded.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "pbiplint": "./dist/pbiplint.mjs"
+  },
+  "files": [
+    "dist",
+    "sample"
+  ],
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pbiplint/pbiplint"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

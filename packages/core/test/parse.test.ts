@@ -132,6 +132,12 @@ describe("parseTmdl", () => {
     expect(pf.roots[2]).toMatchObject({ kind: "ref", type: "cultureinfo", name: "en-US" });
   });
 
+  it("ignores a leading UTF-8 BOM", () => {
+    const pf = parseTmdl("f.tmdl", "﻿table T\n\tcolumn C\n\t\tdataType: string\n");
+    expect(pf.issues).toEqual([]);
+    expect(pf.roots[0]).toMatchObject({ kind: "object", type: "table", name: "T" });
+  });
+
   it("parses a flag with children (query partition source)", () => {
     const text =
       "table Legacy\n\tpartition Legacy = query\n\t\tdataView: full\n\t\tsource\n\t\t\tquery = SELECT * FROM dbo.Legacy\n\t\t\tdataSource: 'Legacy SQL'\n";

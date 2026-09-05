@@ -84,6 +84,14 @@ describe("pbiplint CLI", () => {
     expect(b.code).toBe(2);
     expect(b.err).toMatch(/rules\["X"\]/);
   });
+  it("rejects a config file that is not a JSON object", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "pbiplint-cfg-array-"));
+    const cfg = join(dir, "array.json");
+    writeFileSync(cfg, "[]");
+    const r = await run([sample, "--config", cfg]);
+    expect(r.code).toBe(2);
+    expect(r.err).toMatch(/must be a JSON object/);
+  });
   it("lists rules", async () => {
     const r = await run(["rules"]);
     expect(r.code).toBe(0);

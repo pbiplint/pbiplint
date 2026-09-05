@@ -11,11 +11,17 @@ export interface FoundConfig {
 }
 
 function readConfig(path: string): PbiplintConfig {
+  let parsed: unknown;
   try {
-    return JSON.parse(readFileSync(path, "utf8")) as PbiplintConfig;
+    parsed = JSON.parse(readFileSync(path, "utf8"));
   } catch (e) {
     throw new UsageError(`Could not read ${path}: ${e instanceof Error ? e.message : String(e)}`);
   }
+  // main spreads this into a fresh object before resolveConfig, which would hide core's
+  // own guard, so a null, an array, or a scalar has to be rejected right here.
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed))
+    throw new UsageError(`${path}: pbiplint.config.json must be a JSON object`);
+  return parsed as PbiplintConfig;
 }
 
 /** `explicit` wins; otherwise walk up from `startDir` to the filesystem root looking for pbiplint.config.json. */

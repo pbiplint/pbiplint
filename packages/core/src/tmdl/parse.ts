@@ -43,7 +43,9 @@ function splitHeader(
  * so a construct this code has never seen never aborts a run.
  */
 export function parseTmdl(file: string, text: string): ParsedFile {
-  const lines = text.replace(/\r\n?/g, "\n").split("\n");
+  // Power BI Desktop writes TMDL as UTF-8 with a BOM; it is not part of the first line.
+  const body = text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+  const lines = body.replace(/\r\n?/g, "\n").split("\n");
   const roots: TmdlNode[] = [];
   const issues: ParseIssue[] = [];
   const stack: TmdlNode[] = [];

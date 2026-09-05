@@ -9,10 +9,12 @@
   },
   "files": [
     "dist",
-    "sample"
+    "sample",
+    "NOTICE"
   ],
   "scripts": {
-    "build": "node build.mjs"
+    "build": "node build.mjs",
+    "test:bundle": "node dist/pbiplint.mjs --sample --format json > /dev/null; test $? -eq 1"
   },
   "repository": {
     "type": "git",

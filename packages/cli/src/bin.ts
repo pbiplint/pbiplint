@@ -1,3 +1,9 @@
-import { VERSION } from "@pbiplint/core";
+import { main } from "./main.js";
 
-console.log(`pbiplint ${VERSION}`);
+main(process.argv.slice(2), {
+  stdout: (s) => process.stdout.write(s),
+  stderr: (s) => process.stderr.write(s),
+  cwd: () => process.cwd(),
+}).then((code) => {
+  process.exitCode = code;
+});

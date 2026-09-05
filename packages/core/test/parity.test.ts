@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync } from "node:fs";
-import { afterAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { lint } from "../src/engine/lint.js";
 import { defaultRules } from "../src/rules/index.js";
 import { readModelFiles } from "./helpers.js";
@@ -53,9 +53,22 @@ describe.each(expectations)("parity with Tabular Editor: $name", (exp) => {
   });
 });
 
-// Lists ported rules that no fixture exercises.
-afterAll(() => {
-  const untested = [...expectedCounts].filter(([, n]) => n === 0).map(([id]) => id);
-  if (untested.length)
-    console.log(`[parity] ported rules with no fixture findings: ${untested.join(", ")}`);
+// Vitest runs a file's blocks in order, so the describe.each counts above are complete here.
+describe("parity coverage", () => {
+  it("has fixture findings for every ported rule except the unit-tested five", () => {
+    const untested = [...expectedCounts]
+      .filter(([, n]) => n === 0)
+      .map(([id]) => id)
+      .sort();
+    // These five cannot fire on a fixture Tabular Editor also reports on (they need a model state
+    // TMDL cannot express, or characters the fixtures deliberately keep out), so each has a unit
+    // test instead: see rules-naming.test.ts and rules-measures.test.ts.
+    expect(untested).toEqual([
+      "AVOID_INVALID_DESCRIPTION_CHARACTERS",
+      "AVOID_INVALID_NAME_CHARACTERS",
+      "EXPRESSION_RELIANT_OBJECTS_MUST_HAVE_AN_EXPRESSION",
+      "REMOVE_DATA_SOURCES_NOT_REFERENCED_BY_ANY_PARTITIONS",
+      "SPECIAL_CHARS_IN_OBJECT_NAMES",
+    ]);
+  });
 });

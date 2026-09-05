@@ -138,6 +138,72 @@ describe("formatSarif", () => {
   });
 });
 
+describe("a model with no model.tmdl", () => {
+  // buildModel synthesizes a Model whose location has an empty file, so Model findings carry no
+  // location at all rather than a bogus ":0" that SARIF consumers reject.
+  const single = lint([
+    { path: "tables/T.tmdl", text: "table T\n\tcolumn C\n\t\tdataType: string\n" },
+  ]);
+  const RULE = "MODEL_SHOULD_HAVE_A_DATE_TABLE";
+
+  it("leaves the location off the Model finding", () => {
+    const f = single.findings.find((x) => x.ruleId === RULE);
+    expect(f).toBeDefined();
+    expect(f).not.toHaveProperty("location");
+  });
+  it("omits file and line from the JSON finding", () => {
+    const json = JSON.parse(formatJson(single));
+    const group = json.groups.find((g: { rule: { id: string } }) => g.rule.id === RULE);
+    expect(group.findings[0]).toEqual({ objectType: "Model", objectName: "Model" });
+    expect(group.findings[0]).not.toHaveProperty("file");
+    expect(group.findings[0]).not.toHaveProperty("line");
+  });
+  it("omits locations from the SARIF result", () => {
+    const res = JSON.parse(formatSarif(single)).runs[0].results.find(
+      (r: { ruleId: string }) => r.ruleId === RULE,
+    );
+    expect(res).toBeDefined();
+    expect(res).not.toHaveProperty("locations");
+  });
+  it("prints no :0 on the text line for the Model object", () => {
+    const line = formatText(single)
+      .split("\n")
+      .find((l) => l.trim() === "Model" || l.trim().startsWith("Model "));
+    expect(line).toBeDefined();
+    expect(line).not.toContain(":0");
+  });
+});
+
+describe("formatSarif with a pathPrefix", () => {
+  it("joins the prefix in front of every artifact URI", () => {
+    const sarif = JSON.parse(
+      formatSarif(result, { pathPrefix: "tests/fixtures/x.SemanticModel" }),
+    ) as {
+      runs: [
+        {
+          results: { locations?: [{ physicalLocation: { artifactLocation: { uri: string } } }] }[];
+        },
+      ];
+    };
+    const uris = sarif.runs[0].results.flatMap(
+      (r) => r.locations?.map((l) => l.physicalLocation.artifactLocation.uri) ?? [],
+    );
+    expect(uris.length).toBeGreaterThan(0);
+    for (const uri of uris)
+      expect(uri.startsWith("tests/fixtures/x.SemanticModel/definition/")).toBe(true);
+  });
+  it("leaves URIs model-relative when the prefix is empty or absent", () => {
+    expect(formatSarif(result, { pathPrefix: "" })).toBe(formatSarif(result));
+    expect(formatSarif(result)).toContain('"uri": "definition/tables/Sales.tmdl"');
+  });
+  it("is ignored by the text, JSON, and markdown formats", () => {
+    const prefix = { pathPrefix: "tests/fixtures/x.SemanticModel" };
+    expect(formatText(result, prefix)).toBe(formatText(result));
+    expect(formatJson(result, prefix)).toBe(formatJson(result));
+    expect(formatMarkdown(result, prefix)).toBe(formatMarkdown(result));
+  });
+});
+
 describe("formatResult", () => {
   it("dispatches by name", () => {
     expect(FORMATS).toEqual(["text", "json", "markdown", "sarif"]);

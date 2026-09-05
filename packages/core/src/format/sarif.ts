@@ -11,6 +11,10 @@ const LEVEL: Record<Severity, "error" | "warning" | "note"> = {
 
 export function formatSarif(result: LintResult, options: FormatOptions = {}): string {
   const byId = new Map((options.rules ?? defaultRules).map((r) => [r.id, r]));
+  // Code scanning resolves artifact URIs against the repository root, so the caller can prefix the
+  // model root's path. Finding locations themselves stay relative to the model root.
+  const prefix = options.pathPrefix ?? "";
+  const uri = (file: string): string => (prefix ? `${prefix}/${file}` : file);
   const rules = result.groups.map((g) => {
     const full = byId.get(g.rule.id);
     return {
@@ -34,7 +38,7 @@ export function formatSarif(result: LintResult, options: FormatOptions = {}): st
             locations: [
               {
                 physicalLocation: {
-                  artifactLocation: { uri: f.location.file },
+                  artifactLocation: { uri: uri(f.location.file) },
                   region: { startLine: f.location.line },
                 },
               },

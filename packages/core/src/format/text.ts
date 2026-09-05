@@ -5,6 +5,12 @@ import { SEVERITY_LABEL, type Finding } from "../rules/types.js";
 export interface FormatOptions {
   toolVersion?: string;
   rules?: import("../rules/types.js").Rule[];
+  /**
+   * Posix path (forward slashes, no leading "./", no trailing slash) joined in front of each
+   * SARIF artifact URI so code scanning can resolve it from the repository root. The text, JSON,
+   * and markdown formats ignore it: their paths stay relative to the model root.
+   */
+  pathPrefix?: string;
 }
 
 const SEVERITY_TAG = { 3: "ERROR", 2: "WARN ", 1: "INFO " } as const;
@@ -48,11 +54,12 @@ export function formatText(result: LintResult, _options: FormatOptions = {}): st
         `${SEVERITY_TAG[g.rule.severity]}  ${g.rule.name}  ${g.rule.id}  (${g.findings.length})`,
       );
       out.push(`       ${g.rule.url}`);
+      // The location column is always emitted, empty or not, so a finding without a location never
+      // shifts its detail into the location column. Widths align within the group only.
       const width = Math.max(...g.findings.map((f) => f.objectName.length));
+      const locWidth = Math.max(...g.findings.map((f) => locationOf(f).length));
       for (const f of g.findings) {
-        const cols = [f.objectName.padEnd(width), locationOf(f), f.detail ?? ""].filter(
-          (c, i) => i === 0 || c !== "",
-        );
+        const cols = [f.objectName.padEnd(width), locationOf(f).padEnd(locWidth), f.detail ?? ""];
         out.push(`       ${cols.join("  ")}`.trimEnd());
       }
       out.push("");

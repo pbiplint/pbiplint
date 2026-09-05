@@ -57,10 +57,12 @@ export const columnObjectType = (c: Column): ObjectType =>
 
 /** Finding factories. Object names follow Tabular Editor's display names (see the plan's naming table). */
 export const finding = {
+  // A model synthesized because the folder has no model.tmdl has no real location, so Model
+  // findings carry none rather than pointing at line 0 of an empty file name.
   model: (m: Model): RuleFinding => ({
     objectType: "Model",
     objectName: "Model",
-    location: m.location,
+    ...(m.location.file === "" ? {} : { location: m.location }),
     object: m,
   }),
   table: (t: Table): RuleFinding => ({

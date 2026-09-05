@@ -222,15 +222,14 @@ export const AVOID_THE_USERELATIONSHIP_FUNCTION_AND_RLS_AGAINST_THE_SAME_TABLE =
 
 // Scope: Table, Measure, DataColumn, CalculatedColumn, CalculatedTable, CalculatedTableColumn, CalculationGroup.
 // Visibility is the object's own IsHidden (a visible column in a hidden table is still reported).
-export const OBJECTS_WITH_NO_DESCRIPTION = bpaRule("OBJECTS_WITH_NO_DESCRIPTION", (m) => [
-  ...m.tables.filter((t) => isBlank(t.description) && !t.isHidden).map(finding.table),
-  ...allMeasures(m)
-    .filter((x) => isBlank(x.description) && !x.isHidden)
-    .map(finding.measure),
-  ...allColumns(m)
-    .filter((c) => isBlank(c.description) && !c.isHidden)
-    .map(finding.column),
-]);
+// Findings follow model order: each table, then its columns, then its measures.
+export const OBJECTS_WITH_NO_DESCRIPTION = bpaRule("OBJECTS_WITH_NO_DESCRIPTION", (m) =>
+  m.tables.flatMap((t) => [
+    ...(isBlank(t.description) && !t.isHidden ? [finding.table(t)] : []),
+    ...t.columns.filter((c) => isBlank(c.description) && !c.isHidden).map(finding.column),
+    ...t.measures.filter((x) => isBlank(x.description) && !x.isHidden).map(finding.measure),
+  ]),
+);
 
 export const tableRules = [
   MODEL_SHOULD_HAVE_A_DATE_TABLE,

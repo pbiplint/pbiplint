@@ -54,6 +54,22 @@ describe("pbiplint CLI", () => {
     expect(r.out).toBe("");
     expect(JSON.parse(readFileSync(file, "utf8")).version).toBe("2.1.0");
   });
+  it("prefixes SARIF artifact URIs with the model root's path from the cwd", async () => {
+    const r = await run([
+      join(repo, "tests/fixtures/kitchen-sink.SemanticModel"),
+      "--format",
+      "sarif",
+    ]);
+    const results = JSON.parse(r.out).runs[0].results as {
+      locations?: [{ physicalLocation: { artifactLocation: { uri: string } } }];
+    }[];
+    const uris = results.flatMap(
+      (x) => x.locations?.map((l) => l.physicalLocation.artifactLocation.uri) ?? [],
+    );
+    expect(uris.length).toBeGreaterThan(0);
+    for (const uri of uris)
+      expect(uri.startsWith("tests/fixtures/kitchen-sink.SemanticModel/definition/")).toBe(true);
+  });
   it("discovers pbiplint.config.json above the model and honors --config", async () => {
     const dir = mkdtempSync(join(tmpdir(), "pbiplint-cfg-"));
     const cfg = join(dir, "pbiplint.config.json");

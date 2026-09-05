@@ -1,5 +1,5 @@
 import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, relative, resolve } from "node:path";
 import {
   ConfigError,
   defaultRules,
@@ -56,7 +56,10 @@ export async function main(argv: string[], io: Io): Promise<number> {
       ...(opts.failOn ? { failOn: opts.failOn } : {}),
     });
     const result = lint(model.files, { config });
-    const report = formatResult(opts.format, result, { toolVersion: VERSION });
+    // SARIF artifact URIs are resolved from where the tool ran, so they carry the model root's
+    // path relative to the cwd in front of each model-relative finding path.
+    const pathPrefix = relative(io.cwd(), model.root).split("\\").join("/");
+    const report = formatResult(opts.format, result, { toolVersion: VERSION, pathPrefix });
     if (opts.output) {
       const out = resolve(io.cwd(), opts.output);
       mkdirSync(dirname(out), { recursive: true });

@@ -18,7 +18,7 @@ Names that start or end with a space, for the model, tables, measures, hierarchi
 
 ## Why it matters
 
-Objects should not start or end with a space
+A leading or trailing space is invisible on screen but is part of the name, so "Sales " and "Sales" are two different objects to the engine. That is enough to break a DAX reference, a report visual binding, or a deployment that expects the trimmed name, and the error you get back will name an object that looks perfectly correct. Stray spaces almost always arrive by accident, pasted in or inherited from a source column name, so trimming them is safe and rarely breaks anything downstream. This rule is an error rather than a warning because the failure stays silent until something else breaks.
 
 ## How to fix it
 

@@ -19,7 +19,7 @@ Text columns named with country, continent, or city, and decimal or double colum
 
 ## Why it matters
 
-Add Data Category property for appropriate columns.
+Add the Data Category property for geographic columns. Without it, the mapping visuals have to guess what a text column means, and they guess wrong often enough to matter: a City column with ambiguous names can plot in the wrong country, and Latitude and Longitude are treated as ordinary numbers, so they get summed by default and place a single point in the middle of the ocean. Setting the category tells the visuals how to bind the column and how to geocode it, and it travels with the model, so every report inherits it. It is a one-time property change with no cost to refresh or query performance.
 
 ## How to fix it
 

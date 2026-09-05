@@ -20,7 +20,7 @@ Query (provider) partitions that reference a structured data source.
 
 ## Why it matters
 
-Power BI does not support provider (a.k.a. 'legacy') partitions which reference structured data sources. Partitions which reference structured data sources must use the M-language. Otherwise, 'provider' partitions must reference a 'provider' data source. This can be resolved by converting the structured data source into a provider data source (see 2nd reference link below).
+Power BI does not support provider (a.k.a. 'legacy') partitions which reference structured data sources. Partitions which reference structured data sources must use the M-language. Otherwise, 'provider' partitions must reference a 'provider' data source. This can be resolved by converting the structured data source into a provider data source (see the elegantbi.com post "Convert Data Sources" in the links below).
 
 ## How to fix it
 

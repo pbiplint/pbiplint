@@ -18,7 +18,7 @@ Many-to-many relationships with bi-directional cross filtering.
 
 ## Why it matters
 
-Microsoft's Best Practice Analyzer includes this rule under Performance.
+A many-to-many relationship has no unique key on either side, so the engine resolves it through an implicit set of distinct values rather than a direct lookup. Making that relationship bi-directional as well lets filters travel back through the same expansion, and that is where filter ambiguity begins: as soon as two paths reach the same table, the result depends on which path the engine chooses, and totals stop agreeing with the sum of their parts. The extra direction also costs at query time, because every filter has to be expanded across the distinct values on both sides instead of one. Single direction keeps one predictable filter path and is the accepted default; add the reverse direction only where a specific report needs it and you have confirmed the model has no second path.
 
 ## How to fix it
 

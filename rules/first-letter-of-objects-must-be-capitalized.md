@@ -18,7 +18,7 @@ Tables, measures, hierarchies, calculated columns, calculated tables, and calcul
 
 ## Why it matters
 
-Microsoft's Best Practice Analyzer includes this rule under Formatting.
+Object names are the model's user interface: they appear in the field list, on axis labels, in tooltips, and in every export, and nothing capitalizes them for you. A field list that mixes "Sales Amount" with "total cost" reads as unfinished, and it tells a report author that the two fields came from different places and may not be equally trustworthy. Capitalizing the first letter costs nothing, survives every refresh, and is the convention nearly every published model follows. A name starting with a digit or a symbol is not flagged, because those characters have no upper case form.
 
 ## How to fix it
 

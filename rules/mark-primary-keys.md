@@ -18,7 +18,7 @@ Columns on the one side of a relationship, outside date tables, that are not mar
 
 ## Why it matters
 
-Set the 'Key' property to 'True' for primary key columns within the column properties.
+Set the Key property to true for primary key columns in the column properties. The flag declares that the column is unique, which lets the engine and client tools treat it as the identifier of the row rather than one more attribute to aggregate. It also documents intent: the next person reading the model can see at a glance which column defines the grain of the dimension, without tracing every relationship to work it out. Tables marked as date tables are skipped, because marking a table as a date table already declares its key column.
 
 ## How to fix it
 

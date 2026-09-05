@@ -18,7 +18,7 @@ Roles with no members.
 
 ## Why it matters
 
-May remove roles with no members.
+A role with no members grants nothing, so it is dead weight that still has to be read and understood every time someone audits the model's security. It is also ambiguous in the worst way: the next person cannot tell whether membership was never assigned, was removed deliberately, or was dropped by a failed deployment, and that is exactly the question a security review needs answered. Either assign the members or delete the role, so the roles in the model match the access that is actually in force. In a Power BI project the membership is held in the service rather than in the files, so read the Quirks note below before acting on this rule.
 
 ## How to fix it
 

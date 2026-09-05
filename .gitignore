@@ -4,6 +4,7 @@ coverage/
 .DS_Store
 packages/cli/sample/
 packages/cli/NOTICE
+packages/cli/LICENSE
 *.tsbuildinfo
 .claude/worktrees/
 .superpowers/

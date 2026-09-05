@@ -10,7 +10,8 @@
   "files": [
     "dist",
     "sample",
-    "NOTICE"
+    "NOTICE",
+    "LICENSE"
   ],
   "scripts": {
     "build": "node build.mjs",

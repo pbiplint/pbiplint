@@ -1,4 +1,14 @@
 export const VERSION = "0.0.0";
+export { buildIndexes, type Indexes } from "./index/build.js";
+export {
+  extractRefs,
+  type DaxRef,
+  type RefOwner,
+  type RefOwnerKind,
+  type ReferenceIndex,
+} from "./index/references.js";
+export type { RelationshipIndex } from "./index/relationships.js";
+export type { UsageIndex } from "./index/usage.js";
 export { buildModel, splitQualifiedName } from "./model/build.js";
 export {
   columnRef,

@@ -34,30 +34,31 @@ export const topGroups = (result: LintResult, n = 5): RankedGroup[] => result.gr
 export function formatText(result: LintResult, _options: FormatOptions = {}): string {
   const out: string[] = [`pbiplint: ${summaryLine(result)}`, skippedLine(result), ""];
   if (result.groups.length === 0) {
-    out.push("No findings.");
-    return out.join("\n") + "\n";
-  }
-  out.push("Fix these first:");
-  topGroups(result).forEach((g, i) =>
-    out.push(
-      `  ${i + 1}. ${g.rule.name}  (${g.findings.length} ${SEVERITY_LABEL[g.rule.severity]}${g.findings.length === 1 ? "" : "s"})`,
-    ),
-  );
-  out.push("");
-  for (const g of result.groups) {
-    out.push(
-      `${SEVERITY_TAG[g.rule.severity]}  ${g.rule.name}  ${g.rule.id}  (${g.findings.length})`,
+    out.push("No findings.", "");
+  } else {
+    out.push("Fix these first:");
+    topGroups(result).forEach((g, i) =>
+      out.push(
+        `  ${i + 1}. ${g.rule.name}  (${g.findings.length} ${SEVERITY_LABEL[g.rule.severity]}${g.findings.length === 1 ? "" : "s"})`,
+      ),
     );
-    out.push(`       ${g.rule.url}`);
-    const width = Math.max(...g.findings.map((f) => f.objectName.length));
-    for (const f of g.findings) {
-      const cols = [f.objectName.padEnd(width), locationOf(f), f.detail ?? ""].filter(
-        (c, i) => i === 0 || c !== "",
-      );
-      out.push(`       ${cols.join("  ")}`.trimEnd());
-    }
     out.push("");
+    for (const g of result.groups) {
+      out.push(
+        `${SEVERITY_TAG[g.rule.severity]}  ${g.rule.name}  ${g.rule.id}  (${g.findings.length})`,
+      );
+      out.push(`       ${g.rule.url}`);
+      const width = Math.max(...g.findings.map((f) => f.objectName.length));
+      for (const f of g.findings) {
+        const cols = [f.objectName.padEnd(width), locationOf(f), f.detail ?? ""].filter(
+          (c, i) => i === 0 || c !== "",
+        );
+        out.push(`       ${cols.join("  ")}`.trimEnd());
+      }
+      out.push("");
+    }
   }
+  // Rule crashes are always reported, including on a run where nothing else fired.
   if (result.summary.ruleErrors.length) {
     out.push("Rule errors (please report these):");
     for (const e of result.summary.ruleErrors) out.push(`  ${e.id}: ${e.message}`);

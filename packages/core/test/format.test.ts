@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { lint } from "../src/engine/lint.js";
+import type { Rule } from "../src/rules/types.js";
 import {
   formatJson,
   formatMarkdown,
@@ -34,6 +35,28 @@ describe("formatText", () => {
     expect(text).toContain("https://pbiplint.com/rules/dax-columns-fully-qualified");
     expect(text).toMatch(/\[Total\]\s+definition\/tables\/Sales\.tmdl:5/);
     expect(text).toMatch(/'Sales'\[Amount\]\s+definition\/tables\/Sales\.tmdl:2/);
+  });
+});
+
+describe("formatText with a crashing rule", () => {
+  it("still reports rule errors when nothing else fired", () => {
+    const throwingRule: Rule = {
+      id: "THROWING_RULE",
+      name: "Rule that throws",
+      category: "Maintenance",
+      severity: 2,
+      scope: ["Table"],
+      description: "Only exists to blow up.",
+      references: [],
+      status: "ported",
+      check() {
+        throw new Error("kaboom");
+      },
+    };
+    const text = formatText(lint(files.slice(1), { rules: [throwingRule] }));
+    expect(text).toContain("No findings.");
+    expect(text).toContain("Rule errors");
+    expect(text).toContain("kaboom");
   });
 });
 

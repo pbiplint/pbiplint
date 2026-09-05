@@ -5,6 +5,8 @@ coverage/
 packages/cli/sample/
 packages/cli/NOTICE
 packages/cli/LICENSE
+packages/core/NOTICE
+packages/core/LICENSE
 *.tsbuildinfo
 .claude/worktrees/
 .superpowers/

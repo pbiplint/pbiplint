@@ -11,10 +11,13 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "NOTICE",
+    "LICENSE"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json && node scripts/copy-notices.mjs",
+    "prepack": "npm run build"
   },
   "repository": {
     "type": "git",

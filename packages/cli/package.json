@@ -15,6 +15,7 @@
   ],
   "scripts": {
     "build": "node build.mjs",
+    "prepack": "npm run build",
     "test:bundle": "node dist/pbiplint.mjs --sample --format json > /dev/null; test $? -eq 1"
   },
   "repository": {

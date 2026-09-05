@@ -32,6 +32,8 @@ export const isNumericType = (c: Column): boolean =>
   ["int64", "decimal", "double"].includes(dataType(c));
 export const hiddenOrTableHidden = (c: Column): boolean => c.isHidden || c.table.isHidden;
 export const isBlank = (s: string | undefined): boolean => s === undefined || s.trim() === "";
+/** Escape a model object name for interpolation into a RegExp source. */
+export const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 /** Tabular Editor labels a table by its first partition's mode; DirectQuery tables are what several rules test for. */
 export const isDirectQueryTable = (t: Table): boolean =>
   t.kind === "table" && t.partitions[0]?.mode === "directquery";

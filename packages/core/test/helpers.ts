@@ -1,12 +1,20 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
+import { buildIndexes } from "../src/index/build.js";
 import { buildModel } from "../src/model/build.js";
 import type { Model } from "../src/model/types.js";
+import type { Rule } from "../src/rules/types.js";
 import { parseTmdl } from "../src/tmdl/parse.js";
 import type { ParsedFile } from "../src/tmdl/types.js";
 
 export function modelFrom(tmdl: string): Model {
   return buildModel([parseTmdl("inline.tmdl", tmdl)]);
+}
+
+/** Run one rule on inline TMDL and return the object names it flags, in emission order. */
+export function objectNames(rule: Rule, tmdl: string): string[] {
+  const model = modelFrom(tmdl);
+  return rule.check(model, { indexes: buildIndexes(model) }).map((f) => f.objectName);
 }
 
 /** Read every .tmdl under `<root>/definition` (or under `<root>` when it is itself a definition folder). */

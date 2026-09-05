@@ -56,6 +56,9 @@ export {
   tableObjectType,
 } from "./rules/helpers.js";
 export { defaultRules } from "./rules/index.js";
+export { BPA_RULES, type BpaRuleMeta } from "./rules/microsoft-bpa/bpa-rules.data.js";
+export { bpaRule, liveModelRule, mapScope } from "./rules/microsoft-bpa/define.js";
+export { microsoftBpaRules } from "./rules/microsoft-bpa/index.js";
 export { PARSE_ISSUE } from "./rules/parse-issue.js";
 export * from "./rules/types.js";
 export { parseTmdl } from "./tmdl/parse.js";

@@ -38,6 +38,10 @@ export const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]
 export const isDirectQueryTable = (t: Table): boolean =>
   t.kind === "table" && t.partitions[0]?.mode === "directquery";
 
+/** Tables that satisfy the Table or CalculatedTable scope. Calculation group tables are only in the CalculationGroup scope. */
+export const tablesInScope = (m: Model): Table[] =>
+  m.tables.filter((t) => t.kind !== "calculationGroup");
+
 export const tableObjectType = (t: Table): ObjectType =>
   t.kind === "calculated"
     ? "CalculatedTable"

@@ -23,7 +23,9 @@ Instead of using the '1-(x/y)' or '1+(x/y)' syntax to achieve a percentage calcu
 Let's clarify with an example:
 
 Avoid this: 1 - SUM ( 'Sales'[CostAmount] ) / SUM( 'Sales'[SalesAmount] )
+
 Better: DIVIDE ( SUM ( 'Sales'[SalesAmount] ) - SUM ( 'Sales'[CostAmount] ), SUM ( 'Sales'[SalesAmount] ) )
+
 Best: VAR x = SUM ( 'Sales'[SalesAmount] ) RETURN DIVIDE ( x - SUM ( 'Sales'[CostAmount] ), x )
 
 ## How to fix it

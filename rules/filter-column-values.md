@@ -23,6 +23,7 @@ CALCULATE or CALCULATETABLE with `FILTER('Table', 'Table'[Column] ...)` as a fil
 Instead of using this pattern FILTER('Table','Table'[Column]="Value") for the filter parameters of a CALCULATE or CALCULATETABLE function, use one of the options below. As far as whether to use the KEEPFILTERS function, see the second reference link below.
 
 Option 1: KEEPFILTERS('Table'[Column]="Value")
+
 Option 2: 'Table'[Column]="Value"
 
 ## How to fix it

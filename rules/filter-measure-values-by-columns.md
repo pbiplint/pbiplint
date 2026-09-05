@@ -22,6 +22,7 @@ CALCULATE or CALCULATETABLE with `FILTER('Table', [Measure] ...)` as a filter ar
 Instead of using this pattern FILTER('Table',[Measure]>Value) for the filter parameters of a CALCULATE or CALCULATETABLE function, use one of the options below (if possible). Filtering on a specific column will produce a smaller table for the engine to process, thereby enabling faster performance. Using the VALUES function or the ALL function depends on the desired measure result.
 
 Option 1: FILTER(VALUES('Table'[Column]),[Measure] > Value)
+
 Option 2: FILTER(ALL('Table'[Column]),[Measure] > Value)
 
 ## How to fix it

@@ -366,12 +366,16 @@ const QUIRKS = {
   ],
 };
 
+// Microsoft writes list-like descriptions ("Option 1: ... \n Option 2: ...") with single newlines,
+// which Markdown collapses into one paragraph. Every surviving line becomes its own paragraph, so a
+// run of blank lines collapses to the single blank line that separates two paragraphs.
 const why = (rule) => {
   const text = rule.description
     .split("\n")
     .filter((line) => !/^\s*Reference:/i.test(line))
-    .join("\n")
-    .trim();
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .join("\n\n");
   return text.length
     ? text
     : `Microsoft's Best Practice Analyzer includes this rule under ${rule.category}.`;

@@ -1,0 +1,70 @@
+table Promotion
+	lineageTag: 5d7c9e48-4c96-5567-8d00-a1987c38cad8
+
+	column 'Promotion ID'
+		dataType: int64
+		isKey
+		lineageTag: da81a7bb-30e7-5013-8ddb-27030239dcdc
+		summarizeBy: none
+		sourceColumn: Promotion ID
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Promotion Name'
+		dataType: string
+		lineageTag: 2e80c670-0382-5460-850d-ab7866bb24a0
+		summarizeBy: none
+		sourceColumn: Promotion Name
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Promotion Type'
+		dataType: string
+		lineageTag: 48a89c2a-aa66-54a2-aa3e-65117f63ccaf
+		summarizeBy: none
+		sourceColumn: Promotion Type
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Discount Pct'
+		dataType: double
+		lineageTag: aac25df9-017e-5fa9-a04a-7188e3c2b942
+		summarizeBy: none
+		sourceColumn: Discount Pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Start Date'
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: cb587125-464c-5dc9-aa64-5960bd844d5f
+		summarizeBy: none
+		sourceColumn: Start Date
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column 'End Date'
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: 6fa83b4a-1007-5f43-8bc4-f3bbf0a80b38
+		summarizeBy: none
+		sourceColumn: End Date
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	partition Promotion = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents("C:\Demo\Data\Promotion.csv"), [Delimiter=",", Columns=6, Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+				    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers", {{"Promotion ID", Int64.Type}, {"Promotion Name", Text.Type}, {"Promotion Type", Text.Type}, {"Discount Pct", Double.Type}, {"Start Date", type date}, {"End Date", type date}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table
+

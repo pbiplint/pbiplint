@@ -1,0 +1,44 @@
+table 'Monthly Budget'
+
+	column Department
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Department
+
+	column Jan
+		dataType: decimal
+		summarizeBy: sum
+		sourceColumn: Jan
+
+	column Feb
+		dataType: decimal
+		summarizeBy: sum
+		sourceColumn: Feb
+
+	column Mar
+		dataType: decimal
+		summarizeBy: sum
+		sourceColumn: Mar
+
+	column Apr
+		dataType: decimal
+		summarizeBy: sum
+		sourceColumn: Apr
+
+	column May
+		dataType: decimal
+		summarizeBy: sum
+		sourceColumn: May
+
+	column Jun
+		dataType: decimal
+		summarizeBy: sum
+		sourceColumn: Jun
+
+	partition 'Monthly Budget' = m
+		mode: import
+		source =
+				let
+				    Source = Table.FromRows({})
+				in
+				    Source

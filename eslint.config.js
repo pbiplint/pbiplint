@@ -10,4 +10,11 @@ export default tseslint.config(
       "@typescript-eslint/no-non-null-assertion": "off",
     },
   },
+  {
+    // Plain Node scripts under scripts/ run on Node, not in a browser.
+    files: ["**/*.mjs"],
+    languageOptions: {
+      globals: { console: "readonly", process: "readonly" },
+    },
+  },
 );

@@ -23,6 +23,16 @@ export {
   type RuleSummary,
 } from "./engine/rank.js";
 export { runRules, type RuleError, type RunResult, type SkippedRule } from "./engine/run.js";
+export {
+  FORMATS,
+  formatResult,
+  formatJson,
+  formatMarkdown,
+  formatSarif,
+  formatText,
+  type FormatName,
+  type FormatOptions,
+} from "./format/index.js";
 export { buildIndexes, type Indexes } from "./index/build.js";
 export {
   extractRefs,

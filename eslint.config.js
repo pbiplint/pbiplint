@@ -8,6 +8,12 @@ export default tseslint.config(
   {
     rules: {
       "@typescript-eslint/no-non-null-assertion": "off",
+      // A leading underscore marks a parameter that is intentionally unused, such as an
+      // options argument a formatter accepts to keep one signature across all formatters.
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" },
+      ],
     },
   },
   {

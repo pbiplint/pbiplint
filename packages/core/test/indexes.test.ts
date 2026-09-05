@@ -74,6 +74,12 @@ describe("extractRefs", () => {
       { name: "M", qualified: false },
     ]);
   });
+  it("accepts Unicode letters in unquoted table names", () => {
+    expect(extractRefs("SUM(Año[Fecha]) + Größe[X]")).toEqual([
+      { table: "Año", name: "Fecha", qualified: true },
+      { table: "Größe", name: "X", qualified: true },
+    ]);
+  });
 });
 
 describe("relationship index", () => {

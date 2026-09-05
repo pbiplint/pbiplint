@@ -40,8 +40,10 @@ interface RawRef {
   qualified: boolean;
 }
 
-// Qualified: 'Table Name'[Column] or TableName[Column]. Bare: [Name].
-const QUALIFIED = /(?:'((?:[^']|'')+)'\s*|([A-Za-z_]\w*))\[([^\]]+)\]/g;
+// Qualified: 'Table Name'[Column] or TableName[Column]. Bare: [Name]. An unquoted table name may
+// contain Unicode letters and digits (Año, Größe), so the identifier branch matches \p{L} and
+// \p{N} rather than ASCII word characters.
+const QUALIFIED = /(?:'((?:[^']|'')+)'\s*|([\p{L}_][\p{L}\p{N}_]*))\[([^\]]+)\]/gu;
 const BARE = /\[([^\]]+)\]/g;
 
 /**

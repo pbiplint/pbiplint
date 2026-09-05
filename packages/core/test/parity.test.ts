@@ -45,12 +45,11 @@ describe.each(expectations)("parity with Tabular Editor: $name", (exp) => {
     expectedCounts.set(id, (expectedCounts.get(id) ?? 0) + expected.length);
     expect(actual).toEqual(expected);
   });
-  // Reports rules Tabular Editor fired that are not ported yet. Task 13 turns this into an assertion.
-  afterAll(() => {
+  it("has every rule Tabular Editor fired ported", () => {
     const missing = Object.keys(exp.findings).filter(
       (id) => !ported.some((r) => r.id === id) && !exp.skipRules?.[id],
     );
-    if (missing.length) console.log(`[parity] ${exp.name}: not yet ported: ${missing.join(", ")}`);
+    expect(missing).toEqual([]);
   });
 });
 

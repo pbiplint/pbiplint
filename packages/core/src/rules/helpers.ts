@@ -184,3 +184,38 @@ export function namedObjects(m: Model, types: ObjectType[]): NamedObject[] {
   for (const d of m.dataSources) push(finding.dataSource(d), d.name, d.description);
   return out;
 }
+
+export type ExpressionKind = "measure" | "calculatedColumn" | "calculationItem";
+
+export interface ExpressionObject {
+  kind: ExpressionKind;
+  finding: RuleFinding;
+  expression: string;
+}
+
+/** Measures, calculated columns, and calculation items (the objects DAX rules are scoped to), in model order. */
+export function expressionObjects(m: Model, kinds: ExpressionKind[]): ExpressionObject[] {
+  const want = new Set(kinds);
+  const out: ExpressionObject[] = [];
+  for (const t of m.tables) {
+    if (want.has("measure"))
+      for (const x of t.measures)
+        out.push({ kind: "measure", finding: finding.measure(x), expression: x.expression });
+    if (want.has("calculatedColumn"))
+      for (const c of t.columns)
+        if (c.kind === "calculated")
+          out.push({
+            kind: "calculatedColumn",
+            finding: finding.column(c),
+            expression: c.expression ?? "",
+          });
+    if (want.has("calculationItem"))
+      for (const i of t.calculationGroup?.items ?? [])
+        out.push({
+          kind: "calculationItem",
+          finding: finding.calculationItem(i),
+          expression: i.expression,
+        });
+  }
+  return out;
+}

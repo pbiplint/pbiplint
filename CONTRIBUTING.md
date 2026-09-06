@@ -49,5 +49,6 @@ New fixtures must be sanitized: `node scripts/sanitize-fixture.mjs <dir>` rewrit
 ## License
 
 pbiplint is licensed under the GNU Affero General Public License, version 3 or later (see
-[LICENSE](LICENSE)). By submitting a contribution you agree that it is licensed under the same
-terms.
+[LICENSE](LICENSE)). Contributions are accepted under the contributor license agreement in
+CLA.md. A bot asks you to sign it on your first pull request by posting one sentence as a
+comment, and you only sign once.

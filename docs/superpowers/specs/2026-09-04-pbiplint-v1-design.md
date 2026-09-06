@@ -4,7 +4,7 @@ Date: 2026-09-04. Status: approved by Michael on 2026-09-04. Implementation plan
 
 ## 1. What this is
 
-pbiplint is a free, open-source (MIT) best-practice linter for Power BI
+pbiplint is a free, open-source (AGPL-3.0-or-later) best-practice linter for Power BI
 projects. A person pastes TMDL, or drops a `.SemanticModel` folder, and
 gets a ranked list of best-practice findings with guidance on how to fix
 each one. The analysis runs entirely in the browser or on the user's own
@@ -14,6 +14,15 @@ It is a public good and the top of the funnel for The Data Practitioner
 channel. Every rule has a page, and every rule page links to
 documentation and, over time, to a channel video. There is no paid tier
 in v1 and no plan to charge for rules, ever.
+
+The code is licensed under the GNU Affero General Public License,
+version 3 or later (changed from MIT on 2026-09-06, before any release).
+Anyone may use, modify, and share it. Anyone who distributes a modified
+version, or runs one as a service, must publish their source under the
+same license, so a closed clone or a paid embedding needs the copyright
+holder's permission. McKinley Consulting holds the copyright and can
+grant other terms case by case. The name pbiplint and its logo are
+trademarks and are not covered by the code license.
 
 v1 covers the semantic model layer only. Report (PBIR) rules and Power
 Query rules follow in later versions (section 12).
@@ -322,5 +331,5 @@ Ordered, each its own spec:
   pages, about page; works offline; deployed at pbiplint.com.
 - CLI: published to npm; text, JSON, SARIF, markdown outputs; config
   and exit codes; runs the sample.
-- Repo: MIT license, README with the no-upload claim and how to verify
+- Repo: AGPL-3.0-or-later license, README with the no-upload claim and how to verify
   it, contributor guide for adding a rule and a rule page, CI green.

@@ -280,7 +280,7 @@ packages/cli/sample/
   "name": "@pbiplint/core",
   "version": "0.0.0",
   "description": "Best-practice linter core for Power BI semantic models (TMDL). Runs in the browser and in Node.",
-  "license": "MIT",
+  "license": "AGPL-3.0-or-later",
   "type": "module",
   "exports": {
     ".": {
@@ -322,7 +322,7 @@ export const VERSION = "0.0.0";
   "name": "pbiplint",
   "version": "0.0.0",
   "description": "Lint Power BI semantic models (TMDL) for best-practice violations. Nothing is uploaded.",
-  "license": "MIT",
+  "license": "AGPL-3.0-or-later",
   "type": "module",
   "bin": { "pbiplint": "./dist/pbiplint.mjs" },
   "files": ["dist", "sample"],
@@ -6550,6 +6550,6 @@ Checked against spec section 14:
 - Parser: zero parse issues across the fixture corpus (parity suite asserts it); spec sample fully captured (parse and build tests); unit tests green.
 - Rules: all 71 rules in `BPARules.json` registered (pack test), 66 ported, 5 declared `needsLiveModel`; 60 rules verified against Tabular Editor on at least one fixture, 6 verified by unit tests with the reason recorded on their pages; a page per rule.
 - CLI: `npx`-style single-file bundle with text, JSON, SARIF, and Markdown output, config discovery, ignores, exit codes, `--sample`, and `rules`. Publishing to npm is in the next plan together with the site, because the first publish claims the name and should ship with pbiplint.com live.
-- Repo: MIT with the Microsoft ruleset NOTICE, README with usage and the no-upload claim, CONTRIBUTING with the add-a-rule and refresh-expectations procedures, CI green.
+- Repo: AGPL-3.0-or-later with the Microsoft ruleset NOTICE, README with usage and the no-upload claim, CONTRIBUTING with the add-a-rule and refresh-expectations procedures, CI green.
 
 Not in this plan (next plan): the web app (spec section 9), GitHub Pages deploy and DNS, npm publish of `pbiplint` and `@pbiplint/core`, and the rule pages rendered at pbiplint.com/rules.

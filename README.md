@@ -68,5 +68,14 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-MIT. See [LICENSE](LICENSE). The vendored Microsoft ruleset has its own notice in
-[NOTICE](NOTICE).
+Copyright (C) 2026 McKinley Consulting.
+
+pbiplint is free software under the GNU Affero General Public License,
+version 3 or later. See [LICENSE](LICENSE). You can use it, modify it,
+and share it. If you distribute a modified version, or run one as a
+service, you must publish your source under the same license. Other
+terms for closed products can be discussed with the copyright holder.
+The vendored Microsoft ruleset has its own notice in [NOTICE](NOTICE).
+
+The name pbiplint and its logo are trademarks of McKinley Consulting.
+The code license does not cover them.

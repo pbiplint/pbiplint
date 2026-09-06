@@ -1,0 +1,37 @@
+/// Internal commentary on individual sales — discretionary discounts, returns context, special handling. Hidden in its entirety from sales-rep roles via table-level OLS.
+table 'Sensitive Notes'
+	lineageTag: 5f70ac1f-5a1d-5770-8a0f-da21f25a1673
+
+	/// Foreign key to Sales[Sale ID]. One-to-one in practice (each sale has at most one note), modeled many-to-one with Sales as the "one" side.
+	column 'Sale ID'
+		dataType: int64
+		isHidden
+		isAvailableInMdx: false
+		isKey
+		lineageTag: d4ceb0a1-03d7-567d-a382-678b6fb92af6
+		summarizeBy: none
+		sourceColumn: Sale ID
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Free-text internal note about the sale.
+	column Note
+		dataType: string
+		lineageTag: 9db40a1b-fd1d-5eaf-a55b-bcb9f1515fc3
+		summarizeBy: none
+		sourceColumn: Note
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'Sensitive Notes' = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents("C:\Demo\Data\sensitive_notes.csv"), [Delimiter=",", Columns=2, Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+				    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers", {{"Sale ID", Int64.Type}, {"Note", Text.Type}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table
+

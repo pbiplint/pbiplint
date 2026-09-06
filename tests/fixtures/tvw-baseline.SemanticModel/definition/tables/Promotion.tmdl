@@ -1,0 +1,72 @@
+table Promotion
+	lineageTag: b34a5d45-5aa3-4593-a3e3-1bd4f3f67d0b
+
+	column 'Promotion ID'
+		dataType: int64
+		isHidden
+		lineageTag: 87cd03fb-6a1f-4082-bd84-cb4457b551dc
+		summarizeBy: none
+		sourceColumn: Promotion ID
+
+	column 'Promotion Name'
+		dataType: string
+		lineageTag: 992d7511-0355-4329-a671-3378ffa15c37
+		summarizeBy: none
+		sourceColumn: Promotion Name
+
+	column 'Promotion Type'
+		dataType: string
+		lineageTag: 22990e2f-43f4-4ecd-a031-96bdb2694bfc
+		summarizeBy: none
+		sourceColumn: Promotion Type
+
+	column 'Discount Pct'
+		dataType: double
+		formatString: 0.0%
+		lineageTag: 429fd7ad-ab58-4d0b-8564-7b5b5e718bf0
+		summarizeBy: sum
+		sourceColumn: Discount Pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Start Date'
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		lineageTag: 595d1596-d2d3-4050-b7e8-61d32f44d235
+		summarizeBy: none
+		sourceColumn: Start Date
+
+		variation Variation
+			isDefault
+			relationship: f242ceed-3be3-4473-9ef3-246412877058
+			defaultHierarchy: LocalDateTable_152618ca-7d7d-4b4c-8a4c-54982fa64176.'Date Hierarchy'
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column 'End Date'
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		lineageTag: 45fb976b-103e-4109-94e1-54518d157071
+		summarizeBy: none
+		sourceColumn: End Date
+
+		variation Variation
+			isDefault
+			relationship: eca678a0-c972-4dc7-ba6a-7402f6d0b26f
+			defaultHierarchy: LocalDateTable_bc59707b-5588-45b1-b7db-d153b59cc0f5.'Date Hierarchy'
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	partition Promotion = m
+		mode: import
+		source =
+				let
+				    // Read the Promotion dimension CSV from the local Data folder
+				    Source = Csv.Document(File.Contents("C:\Demo\Data\Promotion.csv"), [Delimiter = ",", Columns = 6, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+				    #"Typed Columns" = Table.TransformColumnTypes(#"Promoted Headers", {
+				        {"Promotion ID", Int64.Type}, {"Promotion Name", type text}, {"Promotion Type", type text},
+				        {"Discount Pct", type number}, {"Start Date", type date}, {"End Date", type date}})
+				in
+				    #"Typed Columns"
+

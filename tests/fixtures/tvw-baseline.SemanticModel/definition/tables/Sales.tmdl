@@ -1,0 +1,196 @@
+table Sales
+	lineageTag: eec9a223-1905-40b8-8fbc-baada9a0a769
+
+	/// Net sales revenue after discounts. Primary measure of the report.
+	measure Revenue = SUM(Sales[Net Amount])
+		formatString: $#,##0
+		lineageTag: c1c52f36-46b8-4d95-944b-14c50e42cb3a
+
+	/// Gross sales before discounts (list value of what was sold).
+	measure 'Gross Sales' = SUM(Sales[Total Amount])
+		formatString: $#,##0
+		lineageTag: b68cf83c-ee9f-42ee-992d-39c9441a3cf4
+
+	/// Total discount dollars given away across all orders.
+	measure Discounts = SUM(Sales[Discount Amount])
+		formatString: $#,##0
+		lineageTag: 2ea06810-5939-4499-91e4-3080f3c16387
+
+	/// Cost of goods sold = unit cost x quantity, summed per line.
+	measure COGS = SUMX(Sales, Sales[Unit Cost] * Sales[Quantity])
+		formatString: $#,##0
+		lineageTag: bb7c2512-b735-4f56-b723-bd80ddd187fc
+
+	/// Gross profit = Revenue - COGS.
+	measure 'Gross Profit' = [Revenue] - [COGS]
+		formatString: $#,##0
+		lineageTag: daaf3dbc-4a4b-4a4d-8baf-11fa01c79cbf
+
+	/// Gross margin as a percent of revenue.
+	measure 'Gross Margin %' = DIVIDE([Gross Profit], [Revenue])
+		formatString: 0.0%
+		lineageTag: 7361edb0-81fe-4e36-9b3c-2f9a6b5c65fb
+
+	/// Total units sold (sum of quantity).
+	measure 'Units Sold' = SUM(Sales[Quantity])
+		formatString: #,##0
+		lineageTag: 1617e17a-b180-4c8a-9139-8062431815d6
+
+	/// Number of distinct sales orders.
+	measure Orders = DISTINCTCOUNT(Sales[Sale ID])
+		formatString: #,##0
+		lineageTag: b5bd61c5-6878-43e8-8a8f-d14b45b1fdd2
+
+	/// Average revenue per order.
+	measure 'Avg Order Value' = DIVIDE([Revenue], [Orders])
+		formatString: $#,##0
+		lineageTag: da67cb0b-b7d0-41d6-b5fe-34ad9d3e32b6
+
+	/// Revenue for the same period in the prior year.
+	measure 'Revenue PY' = CALCULATE([Revenue], SAMEPERIODLASTYEAR('Date'[Date]))
+		formatString: $#,##0
+		lineageTag: 46d8d1b9-9254-435b-b780-4c06a0d61995
+
+	/// Year-over-year revenue change in dollars.
+	measure 'Revenue YoY' = [Revenue] - [Revenue PY]
+		formatString: $#,##0
+		lineageTag: 84281bd8-928c-4a17-8efc-5dbd55cdf955
+
+	/// Year-over-year revenue change as a percent.
+	measure 'Revenue YoY %' = DIVIDE([Revenue] - [Revenue PY], [Revenue PY])
+		formatString: 0.0%
+		lineageTag: 08529063-8378-4faa-8231-7a5a2d2a278b
+
+	/// Discounts as a percent of gross sales (commercial-health metric).
+	measure 'Discount Rate %' = DIVIDE([Discounts], [Gross Sales])
+		formatString: 0.0%
+		lineageTag: b51d7d6e-ff93-4e10-8fcc-8837283ed9aa
+
+	/// Average revenue generated per active store.
+	measure 'Revenue per Store' = DIVIDE([Revenue], [Store Count])
+		formatString: $#,##0
+		lineageTag: 5f5f3617-dcd1-486e-8051-b9327bf41cb4
+
+	/// Leading region by revenue and its share of total (for KPI card).
+	measure 'Top Region Label' =
+			VAR _region =
+			    MAXX( TOPN( 1, ALLSELECTED( Store[Region] ), [Revenue], DESC ), Store[Region] )
+			VAR _share =
+			    DIVIDE( CALCULATE( [Revenue], Store[Region] = _region ), [Revenue] )
+			RETURN
+			    _region & " — " & FORMAT( _share, "0%" ) & " of total"
+		lineageTag: ae99b53d-b354-4697-b0ce-711bace4dec2
+
+	/// Best-selling product by revenue (for KPI card).
+	measure 'Top Product Label' = MAXX( TOPN( 1, ALLSELECTED( Product[Product Name] ), [Revenue], DESC ), Product[Product Name] )
+		lineageTag: d86178f4-3e5f-4e81-b577-71644388de22
+
+	column 'Sale ID'
+		dataType: int64
+		isHidden
+		lineageTag: 58cdd2b7-4cb5-4d89-9359-93c80b8a11b2
+		summarizeBy: none
+		sourceColumn: Sale ID
+
+	column 'Sale Date'
+		dataType: dateTime
+		isHidden
+		formatString: Long Date
+		lineageTag: 352f7d20-202e-4ac8-97e4-49a8dd1537ed
+		summarizeBy: none
+		sourceColumn: Sale Date
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column 'Product ID'
+		dataType: int64
+		isHidden
+		lineageTag: ca2fe519-7ec9-4892-bc38-493c5176951f
+		summarizeBy: none
+		sourceColumn: Product ID
+
+	column 'Customer ID'
+		dataType: int64
+		isHidden
+		lineageTag: 5c7bf104-5f1c-4dd7-9abc-1d5c7e8c7e6a
+		summarizeBy: none
+		sourceColumn: Customer ID
+
+	column 'Store ID'
+		dataType: int64
+		isHidden
+		lineageTag: a7e10bc6-c97a-448e-b856-1e59ef3ec35f
+		summarizeBy: none
+		sourceColumn: Store ID
+
+	column 'Employee ID'
+		dataType: int64
+		isHidden
+		lineageTag: 24ee1a06-6ec8-485d-a06a-b34c9501a019
+		summarizeBy: none
+		sourceColumn: Employee ID
+
+	column 'Promotion ID'
+		dataType: int64
+		isHidden
+		lineageTag: bb05b314-2e65-4313-b084-ce585c65b1ae
+		summarizeBy: none
+		sourceColumn: Promotion ID
+
+	column Quantity
+		dataType: int64
+		isHidden
+		lineageTag: dd5cec03-219b-4565-b702-eb67bf77d31e
+		summarizeBy: none
+		sourceColumn: Quantity
+
+	column 'Unit Price'
+		dataType: double
+		isHidden
+		lineageTag: 0be691f6-6de6-449f-a38f-ac93a96fbc27
+		summarizeBy: none
+		sourceColumn: Unit Price
+
+	column 'Unit Cost'
+		dataType: double
+		isHidden
+		lineageTag: 366307b0-83eb-42a1-b3ad-6dbf5031699b
+		summarizeBy: none
+		sourceColumn: Unit Cost
+
+	column 'Discount Amount'
+		dataType: double
+		isHidden
+		lineageTag: fe3fe25d-2878-48f2-b71c-d34e5c390398
+		summarizeBy: none
+		sourceColumn: Discount Amount
+
+	column 'Total Amount'
+		dataType: double
+		isHidden
+		lineageTag: 34c4320f-9f6c-4afe-ba2e-e14f0c337325
+		summarizeBy: none
+		sourceColumn: Total Amount
+
+	column 'Net Amount'
+		dataType: double
+		isHidden
+		lineageTag: b0401191-b079-4de3-9f30-88ecaa718708
+		summarizeBy: none
+		sourceColumn: Net Amount
+
+	partition Sales = m
+		mode: import
+		source =
+				let
+				    // Read the Sales fact CSV from the local Data folder
+				    Source = Csv.Document(File.Contents("C:\Demo\Data\Sales.csv"), [Delimiter = ",", Columns = 13, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+				    #"Typed Columns" = Table.TransformColumnTypes(#"Promoted Headers", {
+				        {"Sale ID", Int64.Type}, {"Sale Date", type date}, {"Product ID", Int64.Type}, {"Customer ID", Int64.Type},
+				        {"Store ID", Int64.Type}, {"Employee ID", Int64.Type}, {"Promotion ID", Int64.Type}, {"Quantity", Int64.Type},
+				        {"Unit Price", type number}, {"Unit Cost", type number}, {"Discount Amount", type number},
+				        {"Total Amount", type number}, {"Net Amount", type number}})
+				in
+				    #"Typed Columns"
+

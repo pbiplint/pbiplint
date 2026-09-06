@@ -1,0 +1,243 @@
+{
+  "fixture": "tests/fixtures/rule-zoo.SemanticModel",
+  "oracle": "Tabular Editor CLI 0.5.2.11639 with BPARules.json sha256 ddb9cff4c2a0611a6467e2559d38319d9867381998066473ffa1e11c2d360392",
+  "captured": "2026-09-04",
+  "skipRules": {},
+  "findings": {
+    "AVOID_DUPLICATE_MEASURES": [
+      "[Hidden Unused]",
+      "[Only Calc Item Uses Me]",
+      "[Total Amount Copy]",
+      "[Total Amount]"
+    ],
+    "AVOID_EXCESSIVE_BI-DIRECTIONAL_OR_MANY-TO-MANY_RELATIONSHIPS": [
+      "Model"
+    ],
+    "AVOID_THE_USERELATIONSHIP_FUNCTION_AND_RLS_AGAINST_THE_SAME_TABLE": [
+      "'Date'"
+    ],
+    "AVOID_USING_'1-(X/Y)'_SYNTAX": [
+      "[Margin Pct]"
+    ],
+    "AVOID_USING_MANY-TO-MANY_RELATIONSHIPS_ON_TABLES_USED_FOR_DYNAMIC_ROW_LEVEL_SECURITY": [
+      "'Region Security'"
+    ],
+    "AVOID_USING_THE_IFERROR_FUNCTION": [
+      "[Safe Ratio]"
+    ],
+    "CALCULATION_GROUPS_WITH_NO_CALCULATION_ITEMS": [
+      "'Empty Calc Group'"
+    ],
+    "CHECK_IF_BI-DIRECTIONAL_AND_MANY-TO-MANY_RELATIONSHIPS_ARE_VALID": [
+      "'Customer'[Region] ∞↔∞ 'Region Security'[Region]"
+    ],
+    "CHECK_IF_DYNAMIC_ROW_LEVEL_SECURITY_(RLS)_IS_NECESSARY": [
+      "Region Security"
+    ],
+    "DATA_COLUMNS_MUST_HAVE_A_SOURCE_COLUMN": [
+      "'Sales'[No Source]"
+    ],
+    "DAX_COLUMNS_FULLY_QUALIFIED": [
+      "Date",
+      "[Bare Other Col]",
+      "[Bare Own Col]"
+    ],
+    "DAX_MEASURES_UNQUALIFIED": [
+      "Qualified Measure",
+      "[Qualified Ref]"
+    ],
+    "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+      "' Spaced '",
+      "'Monthly Budget'"
+    ],
+    "EVALUATEANDLOG_SHOULD_NOT_BE_USED_IN_PRODUCTION_MODELS": [
+      "[Logged Amount]"
+    ],
+    "FILTER_COLUMN_VALUES": [
+      "[Filter Column]",
+      "[Filter Measure]"
+    ],
+    "FILTER_MEASURE_VALUES_BY_COLUMNS": [
+      "[Filter Measure]"
+    ],
+    "FIRST_LETTER_OF_OBJECTS_MUST_BE_CAPITALIZED": [
+      "[lowercase]",
+      "by Category"
+    ],
+    "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [
+      "'Sales'[IsReturned]",
+      "'Sales'[Priority Flag]"
+    ],
+    "HIDE_FOREIGN_KEYS": [
+      "'Customer'[Customer ID]",
+      "'Customer'[Region]",
+      "'Product'[Product ID]",
+      "'Region Security'[Region]",
+      "'Sales'[Month Start]",
+      "'Sales'[Order Date]",
+      "'Sales'[Ship Date]"
+    ],
+    "INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED": [
+      "'Sales'[Month Start] ∞←1 'Date'[Date]"
+    ],
+    "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+      "'Sales'[Amount]",
+      "'Sales'[Cost]",
+      "'Sales'[Customer ID]",
+      "'Sales'[Only Calc Item Column]",
+      "'Sales'[Only Hidden Measure Column]",
+      "'Sales'[Only RLS Column]",
+      "'Sales'[Product ID]",
+      "'Time Intelligence'[Ordinal]"
+    ],
+    "LIMIT_ROW_LEVEL_SECURITY_(RLS)_LOGIC": [
+      "'Date'"
+    ],
+    "MANY-TO-MANY_RELATIONSHIPS_SHOULD_BE_SINGLE-DIRECTION": [
+      "'Customer'[Region] ∞↔∞ 'Region Security'[Region]"
+    ],
+    "MEASURES_SHOULD_NOT_BE_DIRECT_REFERENCES_OF_OTHER_MEASURES": [
+      "[Amount Alias]"
+    ],
+    "MEASURES_USING_TIME_INTELLIGENCE_AND_MODEL_IS_USING_DIRECT_QUERY": [
+      "YTD",
+      "[YTD Amount]"
+    ],
+    "MINIMIZE_POWER_QUERY_TRANSFORMATIONS": [
+      "SalesData"
+    ],
+    "MODEL_USING_DIRECT_QUERY_AND_NO_AGGREGATIONS": [
+      "Model"
+    ],
+    "MONTHCOLUMN_FORMATSTRING": [
+      "'Sales'[Month Start]"
+    ],
+    "NUMERIC_COLUMN_SUMMARIZE_BY": [
+      "'Monthly Budget'[Apr]",
+      "'Monthly Budget'[Feb]",
+      "'Monthly Budget'[Jan]",
+      "'Monthly Budget'[Jun]",
+      "'Monthly Budget'[Mar]",
+      "'Monthly Budget'[May]"
+    ],
+    "OBJECTS_SHOULD_NOT_START_OR_END_WITH_A_SPACE": [
+      " Spaced ",
+      "' Spaced '",
+      "' Spaced '[ Padded Col ]"
+    ],
+    "OBJECTS_WITH_NO_DESCRIPTION": [
+      "' Spaced '",
+      "' Spaced '[ Padded Col ]",
+      "'Customer'",
+      "'Customer'[Customer ID]",
+      "'Customer'[Customer Name]",
+      "'Customer'[Region]",
+      "'Date'",
+      "'Date'[Date]",
+      "'Date'[Month Name]",
+      "'Date'[Year]",
+      "'Empty Calc Group'",
+      "'Empty Calc Group'[Name]",
+      "'Monthly Budget'",
+      "'Monthly Budget'[Apr]",
+      "'Monthly Budget'[Department]",
+      "'Monthly Budget'[Feb]",
+      "'Monthly Budget'[Jan]",
+      "'Monthly Budget'[Jun]",
+      "'Monthly Budget'[Mar]",
+      "'Monthly Budget'[May]",
+      "'Product'",
+      "'Product'[Category]",
+      "'Product'[Product ID]",
+      "'Product'[Product Name]",
+      "'Region Security'",
+      "'Region Security'[Region]",
+      "'Region Security'[UserEmail]",
+      "'Sales'",
+      "'Sales'[Category]",
+      "'Sales'[IsReturned]",
+      "'Sales'[Month Start]",
+      "'Sales'[No Source]",
+      "'Sales'[Order Date]",
+      "'Sales'[Priority Flag]",
+      "'Sales'[Product Category]",
+      "'Sales'[Sale ID]",
+      "'Sales'[Ship Date]",
+      "'Time Intelligence'",
+      "'Time Intelligence'[Name]",
+      "[Amount Alias]",
+      "[Bare Other Col]",
+      "[Bare Own Col]",
+      "[Filter Column]",
+      "[Filter Measure]",
+      "[Intersect Demo]",
+      "[Logged Amount]",
+      "[Margin Pct]",
+      "[Qualified Ref]",
+      "[Safe Ratio]",
+      "[Ship Amount]",
+      "[Total Amount Copy]",
+      "[Total Amount]",
+      "[Total Cost]",
+      "[YTD Amount]",
+      "[lowercase]"
+    ],
+    "PARTITION_NAME_SHOULD_MATCH_TABLE_NAME_FOR_SINGLE_PARTITION_TABLES": [
+      "'Sales'"
+    ],
+    "PERSPECTIVES_WITH_NO_OBJECTS": [
+      "Empty View"
+    ],
+    "REDUCE_USAGE_OF_CALCULATED_COLUMNS_THAT_USE_THE_RELATED_FUNCTION": [
+      "'Sales'[Product Category]"
+    ],
+    "RELATIONSHIP_COLUMNS_SAME_DATA_TYPE": [
+      "'Sales'[Customer ID] ∞←1 'Customer'[Customer ID]"
+    ],
+    "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+      "'Customer'[Region]",
+      "'Date'[Date]",
+      "'Region Security'[Region]",
+      "'Sales'[Customer ID]",
+      "'Sales'[Month Start]",
+      "'Sales'[Order Date]",
+      "'Sales'[Ship Date]"
+    ],
+    "REMOVE_REDUNDANT_COLUMNS_IN_RELATED_TABLES": [
+      "'Sales'[Category]"
+    ],
+    "REMOVE_ROLES_WITH_NO_MEMBERS": [
+      "Region Users"
+    ],
+    "SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS": [
+      "'Date'[Month Number]"
+    ],
+    "SNOWFLAKE_SCHEMA_ARCHITECTURE": [
+      "'Customer'"
+    ],
+    "TRIM_OBJECT_NAMES": [
+      " Category",
+      " Padded Param ",
+      " Spaced ",
+      "' Spaced '",
+      "' Spaced '[ Padded Col ]"
+    ],
+    "UNNECESSARY_COLUMNS": [
+      "'Time Intelligence'[Ordinal]"
+    ],
+    "UNNECESSARY_MEASURES": [
+      "[Hidden Unused]",
+      "[Hidden Uses Column]"
+    ],
+    "UNPIVOT_PIVOTED_(MONTH)_DATA": [
+      "'Monthly Budget'"
+    ],
+    "USE_THE_DIVIDE_FUNCTION_FOR_DIVISION": [
+      "Half",
+      "[Safe Ratio]"
+    ],
+    "USE_THE_TREATAS_FUNCTION_INSTEAD_OF_INTERSECT": [
+      "[Intersect Demo]"
+    ]
+  }
+}

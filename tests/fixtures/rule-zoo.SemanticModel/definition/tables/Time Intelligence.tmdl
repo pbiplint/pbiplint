@@ -1,0 +1,34 @@
+table 'Time Intelligence'
+
+	calculationGroup
+		precedence: 1
+
+		calculationItem YTD = CALCULATE(SELECTEDMEASURE(), DATESYTD('Date'[Date]))
+
+		calculationItem Half = SELECTEDMEASURE() / 2
+
+		calculationItem 'Bare Col' = IF(HASONEVALUE([Name]), SELECTEDMEASURE())
+
+		calculationItem 'Bare Ordinal' = IF(MAX([Ordinal]) > 1, SELECTEDMEASURE())
+
+		calculationItem 'Other Table Bare' = IF(HASONEVALUE([Year]), SELECTEDMEASURE())
+
+		calculationItem 'Uses Hidden Measure' = [Only Calc Item Uses Me] + SELECTEDMEASURE()
+
+		calculationItem 'Uses Hidden Column' = IF(MAX('Sales'[Only Calc Item Column]) > 1, SELECTEDMEASURE())
+
+		calculationItem 'Qualified Measure' = 'Sales'[Total Amount] + SELECTEDMEASURE()
+
+	column Name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Name
+
+	column Ordinal
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: Ordinal
+
+	partition 'Time Intelligence' = calculationGroup
+		mode: import

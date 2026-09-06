@@ -1,0 +1,15 @@
+relationship 079dedb3-8fe4-57ac-86c2-c1cab8f8de83
+	fromColumn: Sales.'Sale Date'
+	toColumn: Date.Date
+
+relationship 46a4ceb3-3f2b-500e-8983-a5ab36c02a2f
+	fromColumn: Sales.'Customer ID'
+	toColumn: Customer.'Customer ID'
+
+relationship 502d5206-f1e8-5d34-8611-cbff8f140005
+	fromColumn: Sales.'Product ID'
+	toColumn: Product.'Product ID'
+
+relationship 788857b5-3e94-5d20-a54d-73c11b509a40
+	fromColumn: 'Sensitive Notes'.'Sale ID'
+	toColumn: Sales.'Sale ID'

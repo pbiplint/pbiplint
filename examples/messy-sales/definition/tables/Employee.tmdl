@@ -1,0 +1,83 @@
+table Employee
+	lineageTag: 6c6ba8b8-eac3-579e-9f88-96a7b4219875
+
+	column 'Employee ID'
+		dataType: int64
+		isKey
+		lineageTag: c33865e5-d843-531c-b902-fbfa905607cc
+		summarizeBy: none
+		sourceColumn: Employee ID
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Employee Name'
+		dataType: string
+		lineageTag: 7950d647-8d6b-5f2a-b4c1-d1269cde214d
+		summarizeBy: none
+		sourceColumn: Employee Name
+
+		annotation SummarizationSetBy = Automatic
+
+	column Title
+		dataType: string
+		lineageTag: 3d37ca5a-fe25-5a18-be6f-a836d48869f4
+		summarizeBy: none
+		sourceColumn: Title
+
+		annotation SummarizationSetBy = Automatic
+
+	column Department
+		dataType: string
+		lineageTag: 8510c798-0da3-5dc4-9eb0-b45adb9314cb
+		summarizeBy: none
+		sourceColumn: Department
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Hire Date'
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: fae6dc05-0ed0-578e-ad4e-6ab935e74a27
+		summarizeBy: none
+		sourceColumn: Hire Date
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column 'Manager ID'
+		dataType: int64
+		lineageTag: 3a704eb2-4e30-57aa-bdf9-62728fbbf112
+		summarizeBy: none
+		sourceColumn: Manager ID
+
+		annotation SummarizationSetBy = Automatic
+
+	column Region
+		dataType: string
+		lineageTag: 7b99ec00-fd9b-560a-9dab-6f2ff34639a1
+		summarizeBy: none
+		sourceColumn: Region
+
+		annotation SummarizationSetBy = Automatic
+
+	column Email
+		dataType: string
+		lineageTag: e38684c7-30e0-598e-ae3d-1f3d00d4fbe7
+		summarizeBy: none
+		sourceColumn: Email
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Employee = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents("C:\Demo\Data\Employee.csv"), [Delimiter=",", Columns=8, Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+				    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers", {{"Employee ID", Int64.Type}, {"Employee Name", Text.Type}, {"Title", Text.Type}, {"Department", Text.Type}, {"Hire Date", type date}, {"Manager ID", Int64.Type}, {"Region", Text.Type}, {"Email", Text.Type}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table
+

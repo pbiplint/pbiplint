@@ -1,0 +1,107 @@
+table Customer
+	lineageTag: e9d2e6ee-e373-5a84-94c4-bb4aa85275b8
+
+	column 'Customer ID'
+		dataType: int64
+		isKey
+		lineageTag: 5ce62e29-bd98-5b2c-9529-a47378a6596d
+		summarizeBy: none
+		sourceColumn: Customer ID
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Customer Name'
+		dataType: string
+		lineageTag: dfe76534-4f10-56c5-b590-6f84ca127ce1
+		summarizeBy: none
+		sourceColumn: Customer Name
+
+		annotation SummarizationSetBy = Automatic
+
+	column Segment
+		dataType: string
+		lineageTag: 17767c18-689a-5190-b942-004eb49aef36
+		summarizeBy: none
+		sourceColumn: Segment
+
+		annotation SummarizationSetBy = Automatic
+
+	column Region
+		dataType: string
+		lineageTag: 7c28bda2-4a6f-5d61-88f7-ac1551a41482
+		summarizeBy: none
+		sourceColumn: Region
+
+		annotation SummarizationSetBy = Automatic
+
+	column City
+		dataType: string
+		lineageTag: f026dd47-62b6-5557-bb57-2c3234f10c5e
+		summarizeBy: none
+		sourceColumn: City
+
+		annotation SummarizationSetBy = Automatic
+
+	column State
+		dataType: string
+		lineageTag: bd455366-9d71-5c4f-a310-3b489a5e912a
+		summarizeBy: none
+		sourceColumn: State
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Postal Code'
+		dataType: string
+		lineageTag: db27ea4d-571c-584c-adec-400bbc15a855
+		summarizeBy: none
+		sourceColumn: Postal Code
+
+		annotation SummarizationSetBy = Automatic
+
+	column Country
+		dataType: string
+		lineageTag: 6dc206e0-b8e2-58c5-b6ee-ffaab758639b
+		summarizeBy: none
+		sourceColumn: Country
+
+		annotation SummarizationSetBy = Automatic
+
+	column Email
+		dataType: string
+		lineageTag: 84288c04-01aa-5bf0-8298-a94dc4ba81d7
+		summarizeBy: none
+		sourceColumn: Email
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Join Date'
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: 6387e0dd-a104-5d04-83be-dd4c7a71799f
+		summarizeBy: none
+		sourceColumn: Join Date
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column 'Loyalty Tier'
+		dataType: string
+		lineageTag: f50d42ec-a890-5dd9-8e75-8d7df228c848
+		summarizeBy: none
+		sourceColumn: Loyalty Tier
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Customer = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents("C:\Demo\Data\Customer.csv"), [Delimiter=",", Columns=11, Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+				    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers", {{"Customer ID", Int64.Type}, {"Customer Name", Text.Type}, {"Segment", Text.Type}, {"Region", Text.Type}, {"City", Text.Type}, {"State", Text.Type}, {"Postal Code", Text.Type}, {"Country", Text.Type}, {"Email", Text.Type}, {"Join Date", type date}, {"Loyalty Tier", Text.Type}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table
+

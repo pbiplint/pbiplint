@@ -1,0 +1,26 @@
+{
+  "fixture": "tests/fixtures/data-sources.SemanticModel",
+  "oracle": "Tabular Editor CLI 0.5.2.11639 with BPARules.json sha256 ddb9cff4c2a0611a6467e2559d38319d9867381998066473ffa1e11c2d360392",
+  "captured": "2026-09-04",
+  "skipRules": {
+    "REMOVE_DATA_SOURCES_NOT_REFERENCED_BY_ANY_PARTITIONS": "Tabular Editor CLI 0.5.2 flagged 'Unused SQL' when this model was loaded from .bim but not when loaded from these TMDL files; the port follows the rule text and is unit-tested instead."
+  },
+  "findings": {
+    "AVOID_STRUCTURED_DATA_SOURCES_WITH_PROVIDER_PARTITIONS": [
+      "Structured"
+    ],
+    "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+      "'Legacy'",
+      "'Structured'"
+    ],
+    "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+      "Model"
+    ],
+    "OBJECTS_WITH_NO_DESCRIPTION": [
+      "'Legacy'",
+      "'Legacy'[Id]",
+      "'Structured'",
+      "'Structured'[Id]"
+    ]
+  }
+}

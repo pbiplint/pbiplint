@@ -9,15 +9,62 @@ line. Nothing is uploaded, ever.
 
 ## Status
 
-Pre-release. The design is being written; nothing is published yet.
-The first release covers the semantic model layer (TMDL), ported from
-the Microsoft best-practice rules and verified against Tabular Editor.
-Report rules (PBIR) and Power Query rules follow.
+Pre-release. Nothing is published to npm yet, so the commands below start
+working at the first release. That release covers the semantic model layer
+(TMDL), ported from the Microsoft best-practice rules and verified against
+Tabular Editor. Report rules (PBIR) and Power Query rules follow.
+
+## Use it
+
+```bash
+npx pbiplint path/to/Model.SemanticModel        # or a PBIP folder, or one .tmdl file
+npx pbiplint --sample                            # try it on the bundled sample project
+npx pbiplint path/to/model --format sarif --output pbiplint.sarif
+npx pbiplint rules                               # every rule with status and severity
+```
+
+Exit code 1 means findings at or above `--fail-on` (default `error`), so it works as a CI gate.
+
+## Configure it
+
+`pbiplint.config.json` next to your project (or anywhere above it):
+
+```json
+{
+  "rules": {
+    "REMOVE_ROLES_WITH_NO_MEMBERS": "off",
+    "DAX_COLUMNS_FULLY_QUALIFIED": "warning"
+  },
+  "failOn": "warning"
+}
+```
+
+The search walks up from the model to the filesystem root and uses the first file it finds, so a
+`pbiplint.config.json` in a parent folder or in your home directory applies to every model below it.
+Pass `--config <file>` to pick one explicitly.
+
+To ignore a rule on one object, add an annotation in TMDL. Power BI Desktop keeps it:
+
+```
+	column 'Product ID'
+		dataType: int64
+		annotation pbiplint.ignore = HIDE_FOREIGN_KEYS, MARK_PRIMARY_KEYS
+```
+
+`annotation pbiplint.ignore = *` ignores every rule on that object.
+
+## What it checks
+
+Every rule from Microsoft's Best Practice Analyzer ruleset, ported literally so the numbers match Tabular Editor. Five rules need VertiPaq statistics and are listed but not run. Each rule has a page under `rules/` with what it checks, why, how to fix it, and known quirks.
 
 ## Links
 
 - Website: https://pbiplint.com (coming)
 - From the makers of [The Data Practitioner](https://www.youtube.com/@TheDataPractitioner)
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
@@ -28,6 +75,7 @@ version 3 or later. See [LICENSE](LICENSE). You can use it, modify it,
 and share it. If you distribute a modified version, or run one as a
 service, you must publish your source under the same license. Other
 terms for closed products can be discussed with the copyright holder.
+The vendored Microsoft ruleset has its own notice in [NOTICE](NOTICE).
 
 The name pbiplint and its logo are trademarks of McKinley Consulting.
 The code license does not cover them.

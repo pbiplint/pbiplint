@@ -1,3 +1,7 @@
+pbiplint itself is licensed under the GNU Affero General Public License,
+version 3 or later; see LICENSE. The MIT license text below applies only
+to the third-party material described here, not to pbiplint.
+
 pbiplint bundles rule definitions derived from BPARules.json in the
 microsoft/Analysis-Services repository (https://github.com/microsoft/Analysis-Services),
 which is licensed under the MIT License:

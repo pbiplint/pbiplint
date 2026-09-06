@@ -45,3 +45,9 @@ New fixtures must be sanitized: `node scripts/sanitize-fixture.mjs <dir>` rewrit
 - Commit messages in the imperative.
 - No em dashes anywhere in the repo, including docs and commit messages.
 - Product naming avoids Microsoft trademarks; "for Power BI projects" in descriptive text is fine.
+
+## License
+
+pbiplint is licensed under the GNU Affero General Public License, version 3 or later (see
+[LICENSE](LICENSE)). By submitting a contribution you agree that it is licensed under the same
+terms.

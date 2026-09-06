@@ -2,7 +2,7 @@
   "name": "pbiplint",
   "version": "0.0.0",
   "description": "Lint Power BI semantic models (TMDL) for best-practice violations. Nothing is uploaded.",
-  "license": "MIT",
+  "license": "AGPL-3.0-or-later",
   "type": "module",
   "bin": {
     "pbiplint": "./dist/pbiplint.mjs"

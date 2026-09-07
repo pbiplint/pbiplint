@@ -19,6 +19,21 @@ describe("measure format rules", () => {
     );
     expect(objectNames(rules.INTEGER_FORMATTING, m)).toEqual(["[A]", "[E]"]);
   });
+  it("INTEGER_FORMATTING says why each measure fired: the format string it saw, or that there is none", () => {
+    const model = modelFrom(
+      measures(
+        '\tmeasure A = 1\n\tmeasure B = 1\n\t\tformatString: #,0.00\n\tmeasure C = 1\n\t\tformatStringDefinition = "0"',
+      ),
+    );
+    const details = rules.INTEGER_FORMATTING.check(model, { indexes: buildIndexes(model) }).map(
+      (f) => [f.objectName, f.detail],
+    );
+    expect(details).toEqual([
+      ["[A]", "no format string"],
+      ["[B]", 'format string "#,0.00"'],
+      ["[C]", "dynamic format string only"],
+    ]);
+  });
   it("PERCENTAGE_FORMATTING", () => {
     const m = measures(
       "\tmeasure A = 1\n\t\tformatString: 0.0%\n\tmeasure B = 1\n\t\tformatString: #,0.0%;-#,0.0%;#,0.0%\n\tmeasure C = 1\n\t\tformatString: #,0",

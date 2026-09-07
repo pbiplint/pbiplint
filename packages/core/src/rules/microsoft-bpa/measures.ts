@@ -5,6 +5,7 @@ import {
   isBlank,
   type ExpressionKind,
 } from "../helpers.js";
+import type { Measure } from "../../model/types.js";
 import type { Rule } from "../types.js";
 import { bpaRule } from "./define.js";
 
@@ -34,13 +35,21 @@ export const PROVIDE_FORMAT_STRING_FOR_MEASURES = bpaRule(
       .map(finding.measure),
 );
 
+// The source rule reads only the static format string, so an unformatted currency or percentage
+// measure fires under a name that calls it a whole number. The detail says what the rule saw.
+const formatStringDetail = (x: Measure): string => {
+  const fs = x.formatString ?? "";
+  if (fs.trim() !== "") return `format string "${fs}"`;
+  return isBlank(x.formatStringDefinition) ? "no format string" : "dynamic format string only";
+};
+
 export const INTEGER_FORMATTING = bpaRule("INTEGER_FORMATTING", (m) =>
   allMeasures(m)
     .filter((x) => {
       const fs = x.formatString ?? "";
       return !fs.includes("$") && !fs.includes("%") && !(fs === "#,0" || fs === "#,0.0");
     })
-    .map(finding.measure),
+    .map((x) => ({ ...finding.measure(x), detail: formatStringDetail(x) })),
 );
 
 export const PERCENTAGE_FORMATTING = bpaRule("PERCENTAGE_FORMATTING", (m) =>

@@ -30,6 +30,7 @@ export {
   formatMarkdown,
   formatSarif,
   formatText,
+  summaryLine,
   type FormatName,
   type FormatOptions,
 } from "./format/index.js";

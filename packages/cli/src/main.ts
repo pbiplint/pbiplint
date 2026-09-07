@@ -7,6 +7,7 @@ import {
   lint,
   resolveConfig,
   SEVERITY_LABEL,
+  summaryLine,
 } from "@pbiplint/core";
 import { HELP, parseArgs, UsageError } from "./args.js";
 import { findConfig } from "./config.js";
@@ -64,6 +65,8 @@ export async function main(argv: string[], io: Io): Promise<number> {
       const out = resolve(io.cwd(), opts.output);
       mkdirSync(dirname(out), { recursive: true });
       writeFileSync(out, report);
+      // The report left stdout, so say what it holds and where it went.
+      io.stderr(`pbiplint: ${summaryLine(result)}, wrote ${opts.output}\n`);
     } else {
       io.stdout(report);
     }

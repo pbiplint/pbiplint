@@ -49,10 +49,18 @@ describe("pbiplint CLI", () => {
       else expect(() => JSON.parse(r.out)).not.toThrow();
     }
     const dir = mkdtempSync(join(tmpdir(), "pbiplint-out-"));
-    const file = join(dir, "report.sarif");
-    const r = await run([sample, "--format", "sarif", "--output", file]);
+    const r = await run([sample, "--format", "sarif", "--output", "report.sarif"], dir);
     expect(r.out).toBe("");
-    expect(JSON.parse(readFileSync(file, "utf8")).version).toBe("2.1.0");
+    expect(JSON.parse(readFileSync(join(dir, "report.sarif"), "utf8")).version).toBe("2.1.0");
+  });
+  it("summarizes on stderr when the report goes to --output, naming the file as typed", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "pbiplint-out-"));
+    const r = await run([sample, "--format", "sarif", "--output", "out/report.sarif"], dir);
+    expect(r.code).toBe(1);
+    expect(r.out).toBe("");
+    expect(r.err).toBe(
+      "pbiplint: 161 findings (16 errors, 39 warnings, 106 info) in 11 files, wrote out/report.sarif\n",
+    );
   });
   it("prefixes SARIF artifact URIs with the model root's path from the cwd", async () => {
     const r = await run([

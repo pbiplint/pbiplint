@@ -90,7 +90,7 @@ Lint a Power BI semantic model (TMDL) for best-practice violations. Nothing is u
 --format <name>     text (default), json, sarif, markdown
 --fail-on <level>   error (default), warning, info, none: lowest severity that exits 1
 --config <file>     pbiplint.config.json to use (default: nearest one above the model)
---output <file>     write the report to a file instead of stdout
+--output <file>     write the report to a file instead of stdout (a one-line summary goes to stderr)
 --help, --version
 
 Exit codes: 0 no findings at or above --fail-on, 1 findings, 2 usage or input error.

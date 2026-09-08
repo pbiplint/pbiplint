@@ -18,20 +18,23 @@ const SEVERITY_TAG = { 3: "ERROR", 2: "WARN ", 1: "INFO " } as const;
 export const locationOf = (f: Finding): string =>
   f.location ? `${f.location.file}:${f.location.line}` : "";
 
+/** "1 rule", "2 rules". Nouns that do not take an s ("info") are written out by the caller. */
+const plural = (n: number, noun: string): string => `${n} ${noun}${n === 1 ? "" : "s"}`;
+
 /** Summary sentence shared by the text and markdown formats. */
 export function summaryLine(result: LintResult): string {
   const s = result.summary;
-  return `${s.findings} findings (${s.errors} errors, ${s.warnings} warnings, ${s.infos} info) in ${s.files} files`;
+  return `${plural(s.findings, "finding")} (${plural(s.errors, "error")}, ${plural(s.warnings, "warning")}, ${s.infos} info) in ${plural(s.files, "file")}`;
 }
 
 export function skippedLine(result: LintResult): string {
   const s = result.summary;
   const live = s.rulesSkipped.filter((r) => r.reason === "needsLiveModel").length;
   const disabled = s.rulesSkipped.filter((r) => r.reason === "disabled").length;
-  const parts = [`${s.rulesRun} rules run`];
-  if (live) parts.push(`${live} rules skipped (need a live model)`);
-  if (disabled) parts.push(`${disabled} rules disabled by config`);
-  if (s.ignored) parts.push(`${s.ignored} findings ignored by annotation`);
+  const parts = [`${plural(s.rulesRun, "rule")} run`];
+  if (live) parts.push(`${plural(live, "rule")} skipped (need a live model)`);
+  if (disabled) parts.push(`${plural(disabled, "rule")} disabled by config`);
+  if (s.ignored) parts.push(`${plural(s.ignored, "finding")} ignored by annotation`);
   return parts.join(", ");
 }
 
@@ -45,7 +48,7 @@ export function formatText(result: LintResult, _options: FormatOptions = {}): st
     out.push("Fix these first:");
     topGroups(result).forEach((g, i) =>
       out.push(
-        `  ${i + 1}. ${g.rule.name}  (${g.findings.length} ${SEVERITY_LABEL[g.rule.severity]}${g.findings.length === 1 ? "" : "s"})`,
+        `  ${i + 1}. ${g.rule.name}  (${plural(g.findings.length, SEVERITY_LABEL[g.rule.severity])})`,
       ),
     );
     out.push("");

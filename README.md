@@ -41,7 +41,8 @@ Exit code 1 means findings at or above `--fail-on` (default `error`), so it work
 
 The search walks up from the model to the filesystem root and uses the first file it finds, so a
 `pbiplint.config.json` in a parent folder or in your home directory applies to every model below it.
-Pass `--config <file>` to pick one explicitly.
+Pass `--config <file>` to pick one explicitly. Rule ids match regardless of case, and an id that
+names no rule prints a warning, so a typo never switches a rule off silently.
 
 To ignore a rule on one object, add an annotation in TMDL. Power BI Desktop keeps it:
 
@@ -51,7 +52,7 @@ To ignore a rule on one object, add an annotation in TMDL. Power BI Desktop keep
 		annotation pbiplint.ignore = HIDE_FOREIGN_KEYS, MARK_PRIMARY_KEYS
 ```
 
-`annotation pbiplint.ignore = *` ignores every rule on that object.
+`annotation pbiplint.ignore = *` ignores every rule on that object. Ids match regardless of case here too.
 
 ## What it checks
 

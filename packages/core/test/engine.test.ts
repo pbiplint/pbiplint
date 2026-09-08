@@ -92,6 +92,12 @@ describe("isIgnored", () => {
     expect(isIgnored(m.tables[1]!, "ANYTHING")).toBe(true);
     expect(isIgnored(undefined, "ANYTHING")).toBe(false);
   });
+  it("matches ids regardless of case", () => {
+    const lower = modelFrom(
+      "table A\n\tcolumn X\n\t\tdataType: string\n\n\t\tannotation pbiplint.ignore = every_column\n",
+    );
+    expect(isIgnored(lower.tables[0]!.columns[0]!, "EVERY_COLUMN")).toBe(true);
+  });
 });
 
 describe("runRules", () => {
@@ -191,6 +197,23 @@ describe("lint", () => {
     expect(lint(files, { rules: [everyColumn] }).failed).toBe(false);
     expect(lint(files, { rules: [everyColumn], config: { failOn: "warning" } }).failed).toBe(true);
     expect(lint(files, { rules: [everyColumn], config: { failOn: "none" } }).failed).toBe(false);
+  });
+  it("matches config rule ids regardless of case and reports the ones that match nothing", () => {
+    const files = [{ path: "a.tmdl", text: "table A\n\tcolumn X\n\t\tdataType: string\n" }];
+    const result = lint(files, {
+      rules: [everyTable, everyColumn],
+      config: {
+        rules: {
+          every_table: "off",
+          Every_Column: "error",
+          NOT_A_RULE: "off",
+          also_missing: "warning",
+        },
+      },
+    });
+    expect(result.summary.rulesSkipped).toEqual([{ id: "EVERY_TABLE", reason: "disabled" }]);
+    expect(result.groups.map((g) => [g.rule.id, g.rule.severity])).toEqual([["EVERY_COLUMN", 3]]);
+    expect(result.summary.unknownRules).toEqual(["NOT_A_RULE", "also_missing"]);
   });
   it("uses the default rule set when none is given", () => {
     const result = lint([{ path: "a.tmdl", text: "table A\n" }]);

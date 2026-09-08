@@ -108,6 +108,25 @@ describe("pbiplint CLI", () => {
     expect(b.code).toBe(2);
     expect(b.err).toMatch(/rules\["X"\]/);
   });
+  it("warns on stderr about config rule ids that match no rule, and keeps going", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "pbiplint-cfg-unknown-"));
+    const cfg = join(dir, "pbiplint.config.json");
+    writeFileSync(
+      cfg,
+      JSON.stringify({
+        rules: { HIDE_FOREIGN_KEY: "off", provide_format_string_for_measures: "off" },
+      }),
+    );
+    const r = await run([sample, "--config", cfg, "--format", "json"]);
+    expect(r.err).toBe(
+      'pbiplint: pbiplint.config.json: no rule named "HIDE_FOREIGN_KEY" (run pbiplint rules for the list)\n',
+    );
+    expect(JSON.parse(r.out).summary.rulesSkipped).toContainEqual({
+      id: "PROVIDE_FORMAT_STRING_FOR_MEASURES",
+      reason: "disabled",
+    });
+    expect(r.code).toBe(1);
+  });
   it("rejects a config file that is not a JSON object", async () => {
     const dir = mkdtempSync(join(tmpdir(), "pbiplint-cfg-array-"));
     const cfg = join(dir, "array.json");

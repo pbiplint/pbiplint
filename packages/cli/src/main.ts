@@ -1,5 +1,5 @@
 import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname, relative, resolve } from "node:path";
+import { basename, dirname, relative, resolve } from "node:path";
 import {
   ConfigError,
   defaultRules,
@@ -10,7 +10,7 @@ import {
   summaryLine,
 } from "@pbiplint/core";
 import { HELP, parseArgs, UsageError } from "./args.js";
-import { findConfig } from "./config.js";
+import { CONFIG_FILE, findConfig } from "./config.js";
 import { sampleDir } from "./sample.js";
 import { resolveModel } from "./walk.js";
 
@@ -71,6 +71,12 @@ export async function main(argv: string[], io: Io): Promise<number> {
       io.stdout(report);
     }
     for (const e of result.summary.ruleErrors) io.stderr(`rule ${e.id} failed: ${e.message}\n`);
+    // A misspelled id would otherwise switch nothing off and say nothing, so name each one.
+    const configName = basename(found.path ?? CONFIG_FILE);
+    for (const id of result.summary.unknownRules)
+      io.stderr(
+        `pbiplint: ${configName}: no rule named "${id}" (run pbiplint rules for the list)\n`,
+      );
     return result.failed ? 1 : 0;
   } catch (e) {
     if (e instanceof UsageError || e instanceof ConfigError) {

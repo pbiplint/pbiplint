@@ -1,4 +1,4 @@
-import type { Severity } from "../rules/types.js";
+import type { Rule, Severity } from "../rules/types.js";
 
 export type SeverityName = "info" | "warning" | "error";
 
@@ -17,6 +17,34 @@ export interface ResolvedConfig {
 }
 
 export class ConfigError extends Error {}
+
+export interface BoundConfig {
+  /** The same settings keyed by the rules' own ids. */
+  config: ResolvedConfig;
+  /** Ids from the config that match no rule, as written. */
+  unknownRules: string[];
+}
+
+/**
+ * Map the config's rule ids onto `rules` without regard to case, so `hide_foreign_keys` reaches
+ * HIDE_FOREIGN_KEYS, and list the ids that reach nothing so a typo never disables a rule silently.
+ */
+export function bindConfig(config: ResolvedConfig, rules: Rule[]): BoundConfig {
+  const idByUpper = new Map(rules.map((r) => [r.id.toUpperCase(), r.id]));
+  const bound: ResolvedConfig = { disabled: new Set(), severity: new Map(), failOn: config.failOn };
+  const unknownRules: string[] = [];
+  for (const id of config.disabled) {
+    const real = idByUpper.get(id.toUpperCase());
+    if (real === undefined) unknownRules.push(id);
+    else bound.disabled.add(real);
+  }
+  for (const [id, severity] of config.severity) {
+    const real = idByUpper.get(id.toUpperCase());
+    if (real === undefined) unknownRules.push(id);
+    else bound.severity.set(real, severity);
+  }
+  return { config: bound, unknownRules };
+}
 
 export const SEVERITY_BY_NAME: Record<SeverityName, Severity> = { info: 1, warning: 2, error: 3 };
 

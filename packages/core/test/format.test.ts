@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { lint } from "../src/engine/lint.js";
+import { finding } from "../src/rules/helpers.js";
 import type { Rule } from "../src/rules/types.js";
 import {
   formatJson,
@@ -35,6 +36,51 @@ describe("formatText", () => {
     expect(text).toContain("https://pbiplint.com/rules/dax-columns-fully-qualified");
     expect(text).toMatch(/\[Total\]\s+definition\/tables\/Sales\.tmdl:5/);
     expect(text).toMatch(/'Sales'\[Amount\]\s+definition\/tables\/Sales\.tmdl:2/);
+  });
+});
+
+describe("summary wording", () => {
+  const base = { scope: [], description: "", references: [], status: "ported" as const };
+  const oneColumn: Rule = {
+    ...base,
+    id: "ONE_COLUMN",
+    name: "One column",
+    category: "Formatting",
+    severity: 2,
+    check: (m) => m.tables.flatMap((t) => t.columns.map((c) => finding.column(c))),
+  };
+  const everyTable: Rule = {
+    ...base,
+    id: "EVERY_TABLE",
+    name: "Every table",
+    category: "Maintenance",
+    severity: 1,
+    check: (m) => m.tables.map((t) => finding.table(t)),
+  };
+  it("uses singular nouns for counts of one", () => {
+    const text = formatText(
+      lint([{ path: "a.tmdl", text: "table A\n\tcolumn X\n\t\tdataType: string\n" }], {
+        rules: [oneColumn],
+      }),
+    );
+    expect(text.split("\n")[0]).toBe("pbiplint: 1 finding (0 errors, 1 warning, 0 info) in 1 file");
+    expect(text.split("\n")[1]).toBe("1 rule run");
+  });
+  it("uses singular nouns for one disabled rule and one ignored finding", () => {
+    const text = formatText(
+      lint(
+        [
+          {
+            path: "a.tmdl",
+            text: "table A\n\tcolumn X\n\t\tdataType: string\n\n\t\tannotation pbiplint.ignore = ONE_COLUMN\n\n\tcolumn Y\n\t\tdataType: string\n",
+          },
+        ],
+        { rules: [oneColumn, everyTable], config: { rules: { EVERY_TABLE: "off" } } },
+      ),
+    );
+    expect(text.split("\n")[1]).toBe(
+      "1 rule run, 1 rule disabled by config, 1 finding ignored by annotation",
+    );
   });
 });
 

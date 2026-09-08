@@ -5,6 +5,7 @@ import { defaultRules } from "../rules/index.js";
 import type { Finding, Rule } from "../rules/types.js";
 import { parseTmdl } from "../tmdl/parse.js";
 import {
+  bindConfig,
   isResolvedConfig,
   resolveConfig,
   type PbiplintConfig,
@@ -34,6 +35,8 @@ export interface LintSummary {
   rulesSkipped: SkippedRule[];
   ruleErrors: RuleError[];
   ignored: number;
+  /** Rule ids named in the config that match no rule, as written there. */
+  unknownRules: string[];
 }
 
 export interface LintResult {
@@ -47,8 +50,11 @@ export interface LintResult {
 
 /** The one call the web app and the CLI both make. Pure: no I/O, no network. */
 export function lint(files: LintFile[], options: LintOptions = {}): LintResult {
-  const config = isResolvedConfig(options.config) ? options.config : resolveConfig(options.config);
   const rules = options.rules ?? defaultRules;
+  const { config, unknownRules } = bindConfig(
+    isResolvedConfig(options.config) ? options.config : resolveConfig(options.config),
+    rules,
+  );
   const parsed = files.map((f) => parseTmdl(f.path, f.text));
   const model = buildModel(parsed);
   const indexes = buildIndexes(model);
@@ -66,6 +72,7 @@ export function lint(files: LintFile[], options: LintOptions = {}): LintResult {
     rulesSkipped: run.rulesSkipped,
     ruleErrors: run.ruleErrors,
     ignored: run.ignored,
+    unknownRules,
   };
   const failed = config.failOn !== null && groups.some((g) => g.rule.severity >= config.failOn!);
   return { model, findings: run.findings, groups, summary, failed };

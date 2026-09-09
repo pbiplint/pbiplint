@@ -18,11 +18,11 @@ Relationships whose two columns have different data types.
 
 ## Why it matters
 
-Columns used in a relationship should be of the same data type. Ideally, they will be of integer data type (see the related rule '[Formatting] Relationship columns should be of integer data type'). Having columns within a relationship which are of different data types may lead to various issues.
+The engine relates columns by value, and when the types differ it converts one side for every query. A text key on one side and a whole number on the other works until a value like 007 meets 7, at which point rows quietly fall into the blank member. Matching types remove both the conversion cost and the surprise.
 
 ## How to fix it
 
-Convert both columns to the same type, ideally whole number.
+Change both columns to the same type in Power Query, and prefer whole numbers for keys. In the TMDL file the property is `dataType` on each column.
 
 ## Links
 

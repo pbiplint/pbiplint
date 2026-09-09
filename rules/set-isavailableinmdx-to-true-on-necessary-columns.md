@@ -14,17 +14,15 @@ sources:
 
 ## What it checks
 
-Columns with IsAvailableInMdx false that are used for sorting, in a hierarchy, in a variation, or that sort by another column.
+Columns with IsAvailableInMdx set to false that are used to sort another column, appear in a hierarchy or a variation, or sort by another column.
 
 ## Why it matters
 
-In order to avoid errors, ensure that attribute hierarchies are enabled if a column is used for sorting another column, used in a hierarchy, used in variations, or is sorted by another column.
+A column that sorts another column, or sits in a hierarchy, is used through its attribute hierarchy, and that is exactly what setting IsAvailableInMdx to false removes. The result is a processing error, or a hierarchy that fails in Excel and other MDX clients, usually after someone set the property to false in bulk to save memory.
 
 ## How to fix it
 
-Set `isAvailableInMdx` back to true.
-
-Tabular Editor fix expression: `IsAvailableInMDX = true`
+Remove the `isAvailableInMdx: false` line from the column in the TMDL file, so the property returns to its default of true.
 
 ## Links
 

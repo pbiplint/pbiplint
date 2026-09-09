@@ -14,15 +14,15 @@ sources:
 
 ## What it checks
 
-Text columns longer than 100 characters in more than 500,000 rows. Needs VertiPaq statistics.
+Text columns where more than 500,000 rows hold values longer than 100 characters. Row data is not in the model files, so pbiplint lists this rule but cannot run it.
 
 ## Why it matters
 
-It is best to avoid lengthy text columns. This is especially true if the column has many unique values. These types of columns can cause longer processing times, bloated model sizes, as well as slower user queries. Long length is defined as more than 100 characters.
+The engine stores each distinct text value once in a dictionary and encodes the rows against it. Long unique strings, such as comments, descriptions, or URLs with query strings, defeat that: the dictionary grows as large as the data, memory and refresh time follow, and every visual that touches the column pays to decode it. Such a column is usually never shown in a visual anyway.
 
 ## How to fix it
 
-Shorten or split long text columns upstream, or remove them from the model.
+Leave the column out of the model unless a report shows it. If it is needed, shorten it in Power Query, keep only the rows that matter, or move it to a detail table reached by drillthrough. Check column sizes with DAX Studio's VertiPaq Analyzer.
 
 pbiplint cannot evaluate this rule from files; it appears in `pbiplint rules` as needing a live model.
 

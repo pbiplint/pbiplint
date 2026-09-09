@@ -14,15 +14,15 @@ sources:
 
 ## What it checks
 
-Tables whose row-level security filters use RIGHT, LEFT, UPPER, LOWER, or FIND.
+Tables whose row-level security filter, in any role, calls RIGHT, LEFT, UPPER, LOWER, or FIND.
 
 ## Why it matters
 
-Try to simplify the DAX used for row level security. Usage of the functions within this rule can likely be offloaded to the upstream systems (data warehouse).
+A security filter runs on every query from every user in the role, and string functions in it are evaluated row by row on the secured table. A filter that compares a precomputed key column with equals is applied as a lookup instead. The string logic usually exists to derive a key from an email address or a code, which the source can produce once at load.
 
 ## How to fix it
 
-Precompute the security key upstream so the filter is a simple equality.
+Add the derived key as a column in Power Query or in the source, and write the filter as a plain comparison such as `[Email] = USERPRINCIPALNAME()` or `[Region Key] = LOOKUPVALUE(...)`.
 
 ## Quirks
 

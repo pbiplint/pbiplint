@@ -14,23 +14,26 @@ sources:
 
 ## What it checks
 
-Expressions of the form `1 - x / y`, `1 + x / y`, or a number plus or minus `DIVIDE(...)`.
+Expressions with a number, then plus or minus, then either `SUM('Table'[Column])` followed by a division operator, or a call to DIVIDE. The common shape is `1 - SUM(Sales[Cost]) / SUM(Sales[Amount])`.
 
 ## Why it matters
 
-Instead of using the '1-(x/y)' or '1+(x/y)' syntax to achieve a percentage calculation, use the basic DAX functions (as shown below). Using the improved syntax will generally improve the performance. The '1+/-...' syntax always returns a value whereas the solution without the '1+/-...' does not (as the value may be 'blank'). Therefore the '1+/-...' syntax may return more rows/columns which may result in a slower query speed.
-
-Let's clarify with an example:
-
-Avoid this: 1 - SUM ( 'Sales'[CostAmount] ) / SUM( 'Sales'[SalesAmount] )
-
-Better: DIVIDE ( SUM ( 'Sales'[SalesAmount] ) - SUM ( 'Sales'[CostAmount] ), SUM ( 'Sales'[SalesAmount] ) )
-
-Best: VAR x = SUM ( 'Sales'[SalesAmount] ) RETURN DIVIDE ( x - SUM ( 'Sales'[CostAmount] ), x )
+Written that way the measure always returns a value. When there are no rows, the division is blank, one minus blank is one, and every empty cell in the matrix shows 100 percent. The visual fills with rows that should not be there, and the query does extra work to produce them. Written as a single DIVIDE over the difference, the measure is blank when the data is blank and the engine skips those rows.
 
 ## How to fix it
 
-Rewrite as `DIVIDE(y - x, y)` so the measure returns blank rather than a constant when there is no data.
+Rewrite `1 - x / y` as `DIVIDE(y - x, y)`, and hold the shared denominator in a variable when it is used twice:
+
+```
+Margin % =
+VAR Sales = SUM ( Sales[Amount] )
+RETURN DIVIDE ( Sales - SUM ( Sales[Cost] ), Sales )
+```
+
+## Quirks
+
+- The pattern needs SUM as the numerator, or DIVIDE right after the number. `1 - [Cost] / [Sales]` and `1 - AVERAGE(...) / ...` are not matched.
+- Table and column names must contain only letters, digits, spaces, and underscores for the SUM form to match.
 
 ## Links
 

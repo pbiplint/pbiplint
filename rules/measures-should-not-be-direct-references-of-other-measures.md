@@ -14,15 +14,19 @@ sources:
 
 ## What it checks
 
-Measures whose entire expression is a reference to another measure.
+Measures whose whole expression is a reference to another measure, such as `[Total Sales]`.
 
 ## Why it matters
 
-This rule identifies measures which are simply a reference to another measure. As an example, consider a model with two measures: [MeasureA] and [MeasureB]. This rule would be triggered for MeasureB if MeasureB's DAX was MeasureB:=[MeasureA]. Such duplicative measures should be removed.
+An alias measure is a second name for the same number. Reports pick one or the other, the two drift apart the first time someone edits the alias instead of the original, and anyone reading the model has to follow the reference to learn what it means.
 
 ## How to fix it
 
-Delete the alias measure or give it its own logic.
+Point the reports at the original and delete the alias. If the alias exists only for a friendlier name, rename the original instead; Power BI Desktop updates the visuals that use it.
+
+## Quirks
+
+- Only the exact form matches: `[Measure]` and nothing else. A table prefix, a comment, or a surrounding function passes.
 
 ## Links
 

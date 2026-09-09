@@ -22,14 +22,12 @@ An unformatted whole number is rendered with whatever default the client picks, 
 
 ## How to fix it
 
-Set a format string that matches what the measure represents: `#,0` for counts and other whole numbers, a currency format such as `$#,0.00` for money, or `#,0.0%;-#,0.0%;#,0.0%` for percentages (the exact string PERCENTAGE_FORMATTING expects). The Tabular Editor fix expression below sets `#,0`, which is right only for whole numbers.
-
-Tabular Editor fix expression: `FormatString = "#,0"`
+Set a format string that matches what the measure represents: `#,0` for counts and other whole numbers, a currency format such as `$#,0.00` for money, or `#,0.0%;-#,0.0%;#,0.0%` for percentages, which is the exact string `PERCENTAGE_FORMATTING` expects. In Power BI Desktop the Format box under Measure tools takes any of these. In the TMDL file the property is `formatString: #,0` under the measure.
 
 ## Quirks
 
-- A measure with no format string at all is flagged by this rule as well as by PROVIDE_FORMAT_STRING_FOR_MEASURES. Setting the format string once clears both findings.
-- A measure with a dynamic format string (a formatStringDefinition) but no static format string is flagged, because the source rule reads only the static FormatString property.
+- A measure with no format string at all is flagged by this rule as well as by `PROVIDE_FORMAT_STRING_FOR_MEASURES`. Setting the format string once clears both findings.
+- A measure with a dynamic format string but no static format string is flagged, because the source rule reads only the static format string.
 - Currency formats that do not use the `$` character, for example `€#,0.00`, are flagged as though they were unformatted numbers, because the source rule looks for `$` only.
 
 ## Links

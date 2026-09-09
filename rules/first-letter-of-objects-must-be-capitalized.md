@@ -14,7 +14,7 @@ sources:
 
 ## What it checks
 
-Tables, measures, hierarchies, calculated columns, calculated tables, and calculation groups whose first character is not upper case.
+Tables, measures, hierarchies, calculated columns, calculated tables, and calculation groups whose first character has an upper case form and is not upper case.
 
 ## Why it matters
 
@@ -22,7 +22,7 @@ Object names are the model's user interface: they appear in the field list, on a
 
 ## How to fix it
 
-Capitalize the first letter.
+Rename the object in Power BI Desktop, which updates the visuals and the DAX that reference it, or edit the name in the TMDL file.
 
 ## Quirks
 

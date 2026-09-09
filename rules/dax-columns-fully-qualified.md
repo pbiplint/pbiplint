@@ -15,20 +15,21 @@ sources:
 
 ## What it checks
 
-Measures, table permissions, and calculation items that reference a column without its table name.
+Measures and row-level security filters that refer to a column by its bare name, `[Column]`, instead of `'Table'[Column]`.
 
 ## Why it matters
 
-Using fully qualified column references makes it easier to distinguish between column and measure references, and also helps avoid certain errors. When referencing a column in DAX, first specify the table name, then specify the column name in square brackets.
+In DAX a bare `[Name]` is the convention for a measure. A column written the same way reads as a measure to everyone who maintains the model, and the two behave differently in a row context, so the expression is misread before it is ever debugged. The bare form also breaks when the column moves to another table, or when a measure with the same name is added and the engine binds to that instead.
 
 ## How to fix it
 
-Write `'Table'[Column]` instead of `[Column]`.
+Write `'Table'[Column]` for every column reference. The formula bar in Power BI Desktop completes the qualified form when you start typing the table name.
 
 ## Quirks
 
-- Calculation items never fire this rule: Tabular Editor does not resolve bare column references inside calculation items, and pbiplint matches that.
-- KPI expressions are not checked in v1.
+- Calculation items are in the rule's scope but never fire, because Tabular Editor does not resolve bare column references inside calculation items and pbiplint matches that.
+- A bare name that matches any measure in the model is treated as a measure reference, so a column that shares its name with a measure is never flagged.
+- References are found by pattern matching, so a `[Column]` inside a string or a comment counts.
 
 ## Links
 

@@ -14,15 +14,19 @@ sources:
 
 ## What it checks
 
-Text columns with Month in the name (but not Months) that have no sort-by column.
+Text columns with month in the name, but not months, that have no sort-by column.
 
 ## Why it matters
 
-This rule highlights month columns which are strings and are not sorted. If left unsorted, they will sort alphabetically (i.e. April, August...). Make sure to sort such columns so that they sort properly (January, February, March...).
+A text month sorts alphabetically: April, August, December. Every axis and slicer that uses the column shows that order until someone notices, and the fix has to be repeated in each visual unless it is made once on the column.
 
 ## How to fix it
 
-Add a month number column and set it as the sort-by column.
+Add a month number column, then in Power BI Desktop select the month name column and set Sort by column under Column tools to the number. In the TMDL file the property is `sortByColumn: 'Month Number'` under the column.
+
+## Quirks
+
+- The name test is a substring, so Month Name fires and so does a text column called Monthly Target. Months is excluded, so Months Elapsed passes.
 
 ## Links
 

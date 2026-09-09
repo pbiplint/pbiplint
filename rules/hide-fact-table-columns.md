@@ -14,17 +14,20 @@ sources:
 
 ## What it checks
 
-Visible numeric columns that a measure aggregates with SUM, COUNT, AVERAGE, MIN, MAX, DISTINCTCOUNT, or similar.
+Visible numeric columns that a measure aggregates directly with a fully qualified reference, such as `SUM('Sales'[Amount])`. COUNT, SUM, AVERAGE, MIN, MAX, DISTINCTCOUNT, VALUES, DISTINCT, and their A-suffixed variants count as aggregations.
 
 ## Why it matters
 
-It is a best practice to hide fact table columns that are used for aggregation in measures.
+Once a measure exists for a column, the column itself is the wrong thing to drag onto a visual: it produces an implicit sum that may not match the measure, ignores whatever logic the measure adds, and sits in the field list right next to the measure under a similar name. Hiding the column leaves one correct choice.
 
 ## How to fix it
 
-Hide the column and expose the measure instead.
+Hide the column in the model view, or add `isHidden` under the column in the TMDL file.
 
-Tabular Editor fix expression: `IsHidden = true`
+## Quirks
+
+- Only fully qualified references count. `SUM([Amount])` inside a measure on the same table does not fire.
+- A visible column in a hidden table is still reported.
 
 ## Links
 

@@ -16,15 +16,15 @@ sources:
 
 ## What it checks
 
-Query (provider) partitions that reference a structured data source.
+Partitions whose source is a legacy query, a provider partition, that points at a structured data source.
 
 ## Why it matters
 
-Power BI does not support provider (a.k.a. 'legacy') partitions which reference structured data sources. Partitions which reference structured data sources must use the M-language. Otherwise, 'provider' partitions must reference a 'provider' data source. This can be resolved by converting the structured data source into a provider data source (see the elegantbi.com post "Convert Data Sources" in the links below).
+Power BI supports two combinations: a Power Query partition against any data source, or a legacy provider partition against a legacy provider data source. A provider partition against a structured data source is a mix the service refuses, so the model fails to deploy or refresh. Power BI Desktop never produces the combination; it appears in models migrated from Analysis Services or assembled by hand.
 
 ## How to fix it
 
-Convert the partition to M, or convert the data source to a provider data source.
+Rewrite the partition as Power Query, which is what Desktop would write: in the TMDL file, change `partition Sales = query` to `partition Sales = m` and replace the query text with an M expression such as `let Source = Sql.Database("server", "db") in Source{[Schema="dbo",Item="Sales"]}[Data]`. The other option is to change the data source itself to a provider data source so both halves are legacy; the elegantbi post in the links shows that conversion with Tabular Editor.
 
 ## Links
 

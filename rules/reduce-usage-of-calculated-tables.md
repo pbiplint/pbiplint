@@ -14,15 +14,19 @@ sources:
 
 ## What it checks
 
-Every calculated table.
+Every calculated table. Calculation groups are not included.
 
 ## Why it matters
 
-Migrate calculated table logic to your data warehouse. Reliance on calculated tables will lead to technical debt and potential misalignments if you have multiple models on your platform.
+A calculated table is rebuilt from DAX after every refresh, holds a copy of data that exists somewhere else, and is invisible to the source's lineage and to every other model. When two models need the same table, each rebuilds it its own way and they drift. A date table is the usual exception, and even there a shared table in the source or in a dataflow serves every model the same way.
 
 ## How to fix it
 
-Build the table in the source or in Power Query so it is loaded as data.
+Build the table in the source or in Power Query so it loads as data. Where a calculated table stays, keep it small and give it a description that says why.
+
+## Quirks
+
+- With Auto date/time on, each hidden LocalDateTable is a calculated table and fires here as well as `REMOVE_AUTO-DATE_TABLE`. Turning the option off clears both.
 
 ## Links
 

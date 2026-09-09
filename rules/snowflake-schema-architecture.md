@@ -15,15 +15,19 @@ sources:
 
 ## What it checks
 
-Tables that are on the many side of one relationship and the one side of another.
+Tables that are on the from side of one relationship and the to side of another, which is what a dimension related to a sub-dimension looks like.
 
 ## Why it matters
 
-Generally speaking, a star-schema is the optimal architecture for tabular models. That being the case, there are valid cases to use a snowflake approach. Please check your model and consider moving to a star-schema architecture.
+In a star schema every dimension relates directly to the fact table, so a filter on Category reaches Sales in one hop. When Category hangs off Product, which hangs off Sales, the filter travels two hops, the model view is harder to read, and any bi-directional relationship along the chain doubles the chance of ambiguity. The engine handles a snowflake, but it handles a star faster, and a report author understands a star at a glance.
 
 ## How to fix it
 
-Flatten the snowflaked dimension into a single dimension table where practical.
+Flatten the sub-dimension into its parent with a merge in Power Query, so Product carries Category Name and the Category table goes away. Keep a snowflake only where the sub-dimension is shared by several dimensions or is very large.
+
+## Quirks
+
+- The test is the from side and the to side of a relationship, not the many side and the one side, so a table with a one-to-one relationship can count.
 
 ## Links
 

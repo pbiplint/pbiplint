@@ -18,11 +18,11 @@ Lines the TMDL parser did not understand: space indentation, an unterminated ```
 
 ## Why it matters
 
-A line in a TMDL file was not understood. The rest of the file was still analyzed, but findings in and around this line may be missing or wrong.
+The parser skipped the line, so whatever it declared, a column, a property, a measure, is missing from the model the rules see. Findings on that object and on anything that references it may be missing or wrong, and a result that looks clean may not be.
 
 ## How to fix it
 
-Fix the line (TMDL uses tabs; close every ``` fence). The rest of the file is still analyzed.
+Open the file at the reported line. TMDL is indented with tabs, and expression blocks open and close with ``` on their own lines. Power BI Desktop writes valid TMDL, so a parse issue usually means a hand edit or a merge conflict marker.
 
 ## Links
 

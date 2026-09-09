@@ -14,15 +14,15 @@ sources:
 
 ## What it checks
 
-Measures, calculated columns, and calculation items with an empty expression.
+Measures, calculated columns, and calculation items whose expression is empty.
 
 ## Why it matters
 
-Calculated columns, calculation items and measures must have an expression. Without an expression, these objects will not show any values.
+Without an expression the object cannot be evaluated: a measure returns nothing, a calculated column is empty, and a calculation item does nothing. Depending on the engine version the deployment fails outright, and the error points at the object without saying why.
 
 ## How to fix it
 
-Add the DAX expression or delete the object.
+Add the DAX, or delete the object.
 
 ## Quirks
 

@@ -14,15 +14,19 @@ sources:
 
 ## What it checks
 
-Visible integer columns named Is... and visible non-text columns named ... Flag.
+Visible columns whose name starts with Is and whose type is whole number, and visible columns whose name ends with Flag and whose type is not text.
 
 ## Why it matters
 
-Flags must be properly formatted as Yes/No as this is easier to read than using 0/1 integer values.
+A 0 or 1 in a slicer, a legend, or a table column tells the reader nothing without a lookup, and a whole-number flag is summed by default, so a card labeled Is Active shows a count of true rows that looks like something else. Yes and No read correctly everywhere and cannot be aggregated by accident.
 
 ## How to fix it
 
-Convert the flag to Yes/No text in Power Query.
+In Power Query, add a conditional column or use Replace Values so the column holds Yes and No, and set its type to Text. Keep the numeric version hidden if a measure needs it for counting.
+
+## Quirks
+
+- The name tests are case-sensitive prefix and suffix checks, so a whole-number column called Island or Issue Count fires, and the Flag suffix needs a space before it.
 
 ## Links
 

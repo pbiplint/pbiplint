@@ -19,11 +19,15 @@ Measures and calculation items that call INTERSECT.
 
 ## Why it matters
 
-The TREATAS function is more efficient and provides better performance than the INTERSECT function when used in virutal relationships.
+INTERSECT is used to push a filter from one table to another when no relationship exists: take the values on one side and intersect them with the other. TREATAS does the same job by treating the first table's values as a filter on the second table's columns, and the engine applies it as a filter, which is much cheaper than materializing both sets and intersecting them.
 
 ## How to fix it
 
-Use TREATAS to propagate the filter.
+Replace `CALCULATE([Measure], INTERSECT(VALUES(Table2[Key]), VALUES(Table1[Key])))` with `CALCULATE([Measure], TREATAS(VALUES(Table1[Key]), Table2[Key]))`. The SQLBI article in the links covers the pattern.
+
+## Quirks
+
+- INTERSECT used for anything other than a virtual relationship, such as set logic inside a measure, is flagged too.
 
 ## Links
 

@@ -14,15 +14,15 @@ sources:
 
 ## What it checks
 
-Tables with no relationships.
+Tables with no relationship to any other table. Calculation groups are not checked.
 
 ## Why it matters
 
-This rule highlights tables which are not connected to any other table in the model with a relationship.
+A table that relates to nothing filters nothing and is filtered by nothing, so a visual that mixes its columns with another table's shows the same value repeated on every row. Sometimes that is the point: a parameter table, a measure table, or a security lookup that is read from DAX. More often it is a table that was loaded and never wired up, or a relationship that was deleted by accident.
 
 ## How to fix it
 
-Relate the table, or confirm it is an intentional disconnected table (parameters, security).
+Add the relationship in the model view, or confirm the table is disconnected on purpose and leave it. Hiding the table does not clear the finding, and a measure table with a single hidden column is reported like any other.
 
 ## Links
 

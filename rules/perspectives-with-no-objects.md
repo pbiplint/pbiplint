@@ -14,17 +14,15 @@ sources:
 
 ## What it checks
 
-Perspectives containing no tables.
+Perspectives that contain no tables. Adding any column, measure, or hierarchy to a perspective adds its table, so a perspective with no tables is empty.
 
 ## Why it matters
 
-Perspectives that contain no objects (tables) are most likely not necessary. In this rule, it is only necessary to check tables as adding a column/measure/hierarchy to a perspective also adds the table to the perspective. Additionally, tables in general covers calculated tables and calculation groups as well.
+An empty perspective still shows up in clients that offer perspectives, such as Excel, as a named view of the model that contains nothing. It is either an abandoned start or the remains of objects that were removed, and it leaves the next person asking what it was for.
 
 ## How to fix it
 
-Add objects to the perspective or delete it.
-
-Tabular Editor fix expression: `Delete()`
+Add the objects the perspective should show, or delete its file from the `perspectives` folder. Power BI Desktop does not manage perspectives, so they appear only in models built or edited with other tools.
 
 ## Links
 

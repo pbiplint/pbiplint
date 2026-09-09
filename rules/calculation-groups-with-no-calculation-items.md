@@ -14,15 +14,15 @@ sources:
 
 ## What it checks
 
-Calculation groups with no calculation items.
+Calculation groups that contain no calculation items.
 
 ## Why it matters
 
-Calculation groups have no function unless they have calculation items.
+A calculation group with no items still appears in the field list as a table with one column, and dropping that column on a visual does nothing. It is usually a group that was started and abandoned, and it puzzles whoever finds it later.
 
 ## How to fix it
 
-Add calculation items or delete the group.
+Add the calculation items, or delete the table. In the TMDL file a calculation group is a table with a `calculationGroup` block, and each item is a `calculationItem` inside it.
 
 ## Links
 

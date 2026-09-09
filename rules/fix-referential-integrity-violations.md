@@ -15,15 +15,15 @@ sources:
 
 ## What it checks
 
-Relationships with foreign key values missing from the dimension. Needs VertiPaq statistics.
+Relationships where the many side holds key values that do not exist on the one side. Row data is not in the model files, so pbiplint lists this rule but cannot run it.
 
 ## Why it matters
 
-This rule highlights relationships which have referential integrity violations. This indicates that there are values in the table on the 'from' side of the relationship which do not exist in the table on the 'to' side of the relationship. Referential integrity violations will also produce the 'blank' member value in slicers. It is recommended to fix these issues by ensuring that the 'to' table's primary key column has all the values in the 'from' table's foreign key column.
+Every orphan key is grouped under a single blank row of the dimension, so slicers grow a blank entry, totals include amounts that no category explains, and a filter on any dimension attribute silently drops those rows. The blank row is also added to the dimension in memory on every refresh.
 
 ## How to fix it
 
-Add the missing dimension rows or fix the fact data.
+Find the orphans with a query in Power BI Desktop's DAX query view, such as `EVALUATE EXCEPT(VALUES(Sales[Product Key]), VALUES(Product[Product Key]))`, or read the violation count per relationship in DAX Studio's VertiPaq Analyzer. Then fix the source: add the missing dimension rows, or add an Unknown row and map the orphans to it.
 
 pbiplint cannot evaluate this rule from files; it appears in `pbiplint rules` as needing a live model.
 

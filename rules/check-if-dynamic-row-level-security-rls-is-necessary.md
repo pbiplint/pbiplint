@@ -15,19 +15,19 @@ sources:
 
 ## What it checks
 
-Row-level security filters that call USERNAME() or USERPRINCIPALNAME().
+Row-level security filters that call USERNAME or USERPRINCIPALNAME. Reported per table permission, at info severity.
 
 ## Why it matters
 
-Usage of dynamic row level security (RLS) can add memory and performance overhead. Please research the pros/cons of using it.
+A dynamic filter is evaluated for each user separately, so the engine cannot share a cached result between two people with the same access, and every query carries the lookup that maps the user to their rows. That is the right trade when the audience is large or changes often. When a handful of fixed groups each see a fixed slice, static roles with a plain filter are faster and simpler to audit.
 
 ## How to fix it
 
-Use static roles when the audience is small and fixed.
+Keep the dynamic filter when the user-to-data mapping lives in a table and changes without a redeploy. Otherwise create one role per audience with a static filter such as `[Region] = "East"` and assign members in the service.
 
 ## Quirks
 
-- A space before the parenthesis, as DAX formatters produce (`USERPRINCIPALNAME ()`), is not matched.
+- A space before the parenthesis, as some DAX formatters write, is not matched: `USERPRINCIPALNAME ()` passes.
 
 ## Links
 

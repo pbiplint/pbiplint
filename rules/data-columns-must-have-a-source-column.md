@@ -14,15 +14,15 @@ sources:
 
 ## What it checks
 
-Data columns with no sourceColumn.
+Data columns with no source column. Calculated columns are not checked.
 
 ## Why it matters
 
-Data columns must have a source column. A data column without a source column will cause an error when processing the model.
+A data column is filled from a column in the partition query, and the source column name is how the engine finds it. Without it, processing fails for the whole table, with an error that names the column but not the cause.
 
 ## How to fix it
 
-Set the source column, or delete the column.
+Set `sourceColumn` on the column in the TMDL file to the name the query produces, or delete the column. Power BI Desktop always writes the property, so this appears only in hand-built or migrated files.
 
 ## Links
 

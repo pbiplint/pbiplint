@@ -15,15 +15,20 @@ sources:
 
 ## What it checks
 
-Expressions that divide with the / operator right after a ] or ).
+Expressions that use the division operator right after a closing bracket or parenthesis, such as `[Sales] / [Cost]` or `SUM(...) / SUM(...)`. A slash that starts a comment is ignored.
 
 ## Why it matters
 
-Use the DIVIDE  function instead of using "/". The DIVIDE function resolves divide-by-zero cases. As such, it is recommended to use to avoid errors.
+Dividing by a zero or blank denominator with `/` produces an error, and an error in one cell takes down the whole visual with a generic message. DIVIDE returns blank in that case, or an alternate result you choose, so the visual shows a gap where the data has one instead of failing.
 
 ## How to fix it
 
-Use `DIVIDE(numerator, denominator)` so divide-by-zero returns blank.
+Write `DIVIDE([Sales], [Cost])`, with a third argument when you want something other than blank for a zero denominator.
+
+## Quirks
+
+- A slash after a number or a variable name is not matched: `1 / [Sales]` and `total / count` pass.
+- Division by a constant, `[Sales] / 100`, is flagged even though it cannot fail.
 
 ## Links
 

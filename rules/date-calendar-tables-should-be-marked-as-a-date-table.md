@@ -15,15 +15,19 @@ sources:
 
 ## What it checks
 
-Tables with Date or Calendar in the name that are not marked as a date table.
+Tables with date or calendar in the name that are not marked as a date table, meaning the data category is not Time or no DateTime column is marked as the key.
 
 ## Why it matters
 
-This rule looks for tables that contain the words 'date' or 'calendar' as they should likely be marked as a date table.
+Marking the date table tells the engine which column is the calendar key, and every time intelligence function relies on it: DATESYTD, SAMEPERIODLASTYEAR, and the rest return wrong or blank results over an unmarked table without raising any error. Marking it also lets you turn off Auto date/time, which otherwise adds a hidden date table for every date column in the model.
 
 ## How to fix it
 
-Mark the table as a date table (Table tools, Mark as date table) using a DateTime key column.
+In Power BI Desktop, select the table, open Table tools, choose Mark as date table, and pick the date column. In the TMDL file the result is `dataCategory: Time` on the table and `isKey` on the date column.
+
+## Quirks
+
+- The name test is a substring, so a table called Updates or Candidates fires too.
 
 ## Links
 

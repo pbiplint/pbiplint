@@ -15,15 +15,20 @@ sources:
 
 ## What it checks
 
-Tables that carry a row-level security filter and take part in a many-to-many relationship.
+Regular tables that carry a row-level security filter in any role and take part in a many-to-many relationship.
 
 ## Why it matters
 
-Using many-to-many relationships on tables which use dynamic row level security can cause serious query performance degradation. This pattern's performance problems compound when snowflaking multiple many-to-many relationships against a table which contains row level security. Instead, use one of the patterns shown in the article below where a single dimension table relates many-to-one to a security table.
+A security filter is pushed through every relationship leading away from the secured table, on every query, for every user in the role. Through a many-to-many relationship that push is an expansion over the distinct values on both sides rather than a lookup, and it runs before the query proper. The slowdown grows with every such hop, and the model owner never sees it, because Desktop tests without roles.
 
 ## How to fix it
 
-Relate the security table many-to-one to a single dimension instead.
+Put the security filter on a small security table that relates many-to-one to a single dimension, and let the dimension filter the facts through ordinary one-to-many relationships. The elegantbi post in the links walks through the patterns.
+
+## Quirks
+
+- Any row-level security filter counts, not only dynamic filters that call USERNAME or USERPRINCIPALNAME.
+- Calculated tables are out of scope.
 
 ## Links
 

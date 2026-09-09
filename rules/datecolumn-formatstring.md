@@ -14,21 +14,20 @@ sources:
 
 ## What it checks
 
-DateTime columns with Date in the name whose format string is not mm/dd/yyyy.
+DateTime columns with date in the name whose format string is not exactly `mm/dd/yyyy`.
 
 ## Why it matters
 
-Columns of type "DateTime" that have "Month" in their names should be formatted as "mm/dd/yyyy".
+A date column with no format string is shown however the viewer's locale and the visual decide, so the same column can read 3/4/2026 in one visual and 4 March 2026 in another. A format string on the column fixes the presentation once for every report. The source ruleset picked the US short date as its convention.
 
 ## How to fix it
 
-Set the format string to mm/dd/yyyy. The rule is US-centric; if your standard differs, disable it in pbiplint.config.json.
-
-Tabular Editor fix expression: `FormatString = "mm/dd/yyyy"`
+In Power BI Desktop, select the column and set the Format under Column tools. In the TMDL file, add `formatString: mm/dd/yyyy` under the column. The expected format is US-centric; if your convention differs, set the format you want and turn this rule off in `pbiplint.config.json`, because only the exact string passes.
 
 ## Quirks
 
-- The Microsoft description says Month; the rule matches Date in the column name. Any name containing the letters date, such as Update, is matched.
+- The name test is a substring, so any column containing the letters date, such as Update Time, is matched.
+- Any other format fires, including `dd/mm/yyyy` and `yyyy-mm-dd`.
 
 ## Links
 

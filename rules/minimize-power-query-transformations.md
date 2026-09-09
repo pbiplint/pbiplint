@@ -15,15 +15,19 @@ sources:
 
 ## What it checks
 
-M partitions that call heavy transformations: Table.Combine, Table.Join, Table.NestedJoin, Table.AddColumn, Table.Group, Table.Sort, Table.Pivot, Table.Unpivot, Table.UnpivotOtherColumns, Table.Distinct, or native queries.
+Power Query partitions whose M text contains Table.Combine, Table.Join, Table.NestedJoin, Table.AddColumn, Table.Group, Table.Sort, Table.Pivot, Table.Unpivot, Table.UnpivotOtherColumns, Table.Distinct, a native SQL query, or an OLE DB or ODBC query.
 
 ## Why it matters
 
-Minimize Power Query transformations in order to improve model processing performance. It is a best practice to offload these transformations to the data warehouse if possible. Also, please check whether query folding is occurring within your model. Please reference the article below for more information on query folding.
+These are the steps most likely to stop query folding. When folding stops, Power Query pulls the raw rows and does the work itself on the refresh machine, on every refresh, instead of asking the source for the finished result. On a large table that is the difference between a five-minute refresh and an hour, and the same logic in a view or the warehouse runs once, with indexes.
 
 ## How to fix it
 
-Push the transformation into the source system or a view, and check that query folding still occurs.
+Move the join, grouping, or pivot into the source as a view or a table and point the query at that. Where a step has to stay in Power Query, check that the steps before it still fold by right-clicking the step and looking for View Native Query. A native query folds nothing after it, so put it first or replace it with a view.
+
+## Quirks
+
+- The check is a case-sensitive substring match on the M text, so a function name inside a comment counts too.
 
 ## Links
 

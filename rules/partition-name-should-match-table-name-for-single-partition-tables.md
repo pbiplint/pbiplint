@@ -14,17 +14,15 @@ sources:
 
 ## What it checks
 
-Tables with a single partition whose name differs from the table name.
+Regular tables with exactly one partition whose name differs from the table name. Calculated tables and calculation groups are not checked.
 
 ## Why it matters
 
-Tables with just one partition should match their table and partition names.Tables with more than one partition should have each partition name starting with the table name.
+A single-partition table has no reason for its partition to carry a different name, and when it does it is usually the table's old name from before a rename. Refresh logs, error messages, and the TMDL file all name the partition, so a mismatch sends the reader looking for a table that no longer exists.
 
 ## How to fix it
 
-Rename the partition to the table name.
-
-Tabular Editor fix expression: `Partitions[0].Name = it.Name`
+Rename the partition in the TMDL file: the line `partition 'Old Name' = m` becomes `partition 'Table Name' = m`. Power BI Desktop names the partition after the table when it creates it, so on a Desktop project this usually points at a hand edit or a migrated model.
 
 ## Links
 

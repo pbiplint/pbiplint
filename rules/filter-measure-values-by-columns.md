@@ -15,19 +15,20 @@ sources:
 
 ## What it checks
 
-CALCULATE or CALCULATETABLE with `FILTER('Table', [Measure] ...)` as a filter argument.
+CALCULATE or CALCULATETABLE whose first filter argument is `FILTER('Table', [Measure] ...)`.
 
 ## Why it matters
 
-Instead of using this pattern FILTER('Table',[Measure]>Value) for the filter parameters of a CALCULATE or CALCULATETABLE function, use one of the options below (if possible). Filtering on a specific column will produce a smaller table for the engine to process, thereby enabling faster performance. Using the VALUES function or the ALL function depends on the desired measure result.
-
-Option 1: FILTER(VALUES('Table'[Column]),[Measure] > Value)
-
-Option 2: FILTER(ALL('Table'[Column]),[Measure] > Value)
+FILTER over a whole table evaluates the measure once per row of the table. Over a fact table that is millions of measure evaluations to keep a few rows. Filtering the distinct values of one column instead evaluates the measure once per value, usually thousands of times fewer, and produces the same rows.
 
 ## How to fix it
 
-Filter a column instead: `FILTER(VALUES('Table'[Column]), [Measure] > value)` or `FILTER(ALL('Table'[Column]), ...)`.
+Replace `FILTER('Table', [Measure] > 0)` with `FILTER(VALUES('Table'[Column]), [Measure] > 0)` to respect the current filter on the column, or `FILTER(ALL('Table'[Column]), [Measure] > 0)` to ignore it. Pick the column with the fewest distinct values that still gives the right answer.
+
+## Quirks
+
+- Only the first filter argument is checked, and only when the expression before it contains no comma.
+- Table names must contain only letters, digits, spaces, and underscores.
 
 ## Links
 

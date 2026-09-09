@@ -15,15 +15,15 @@ sources:
 
 ## What it checks
 
-Every bi-directional or many-to-many relationship.
+Every relationship that is bi-directional, many-to-many, or both. This is a review list at info severity, not a defect.
 
 ## Why it matters
 
-Bi-directional and many-to-many relationships may cause performance degradation or even have unintended consequences. Make sure to check these specific relationships to ensure they are working as designed and are actually necessary.
+Both kinds have real uses, and both are easy to create by accident: Desktop offers bi-directional filtering as a dropdown, and it falls back to many-to-many when it finds duplicates on both sides of a key. An accidental one costs query time on every visual that touches the tables and can open a second filter path, which is where totals stop adding up without any error.
 
 ## How to fix it
 
-Confirm each one is intentional; otherwise make it single direction or many-to-one.
+Confirm each one is deliberate. If a bi-directional relationship exists only so one slicer narrows another, replace it with a measure-based visual filter or CROSSFILTER in the measures that need it. If a many-to-many relationship was created because a key column has duplicates, fix the duplicates in the source and go back to many-to-one.
 
 ## Links
 

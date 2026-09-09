@@ -14,19 +14,19 @@ sources:
 
 ## What it checks
 
-Measures and calculation items that use time intelligence functions in a model with a DirectQuery table.
+Measures and calculation items that call a time intelligence function, in a model where at least one table is in DirectQuery mode.
 
 ## Why it matters
 
-At present, time intelligence functions are known to not perform as well when using Direct Query. If you are having performance issues, you may want to try alternative solutions such as adding columns in the fact table that show previous year or previous month data.
+Time intelligence functions build sets of dates and evaluate the measure over each set. In Import mode that is in-memory work. In DirectQuery each set becomes a query, or a long list of dates inside one, sent to the source on every visual refresh, and sources are rarely fast at it. The functions work, but a page of year-to-date and prior-year cards can take many seconds to render.
 
 ## How to fix it
 
-Add prior-period columns to the fact table, or move the table to Import.
+If the fact table can be imported, import it and keep DirectQuery for the tables that need it. If it cannot, add prior-period columns to the fact table in the source, such as the same day's amount one year earlier on each row, so the measure becomes a plain SUM.
 
 ## Quirks
 
-- Function names are matched case-sensitively (upper case only), as in the Microsoft rule.
+- Function names are matched case-sensitively, in upper case only, as in the source rule.
 
 ## Links
 

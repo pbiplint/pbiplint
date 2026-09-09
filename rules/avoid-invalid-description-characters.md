@@ -14,17 +14,19 @@ sources:
 
 ## What it checks
 
-Descriptions containing control characters.
+Descriptions containing a control character other than whitespace. Tabs and line breaks are allowed.
 
 ## Why it matters
 
-This rule identifies if a description for a given object in your model (i.e. table/column/measure) which contains an invalid character. Invalid characters will cause an error when deploying the model (and failure to deploy). This rule has a fix expression which converts the invalid character into a space, resolving the issue.
+A control character in a description is invisible in Power BI Desktop and fails the deployment: the service rejects the metadata and the publish stops with an error that names no object. Finding the character by eye is close to impossible.
 
 ## How to fix it
 
-Replace the control character with a space.
+Retype the description in Desktop, or remove the character from the `///` comment lines above the object in the TMDL file. A text editor that shows invisible characters makes it easy to spot.
 
-Tabular Editor fix expression: `Description = string.Concat( it.Description.ToCharArray().Select( c => (char.IsControl(c) && !char.IsWhiteSpace(c)) ? ' ': c ))`
+## Quirks
+
+- In practice this rule cannot fire on a project loaded from TMDL files, because the format does not carry these characters. It is kept so that models built by other means are covered.
 
 ## Links
 

@@ -15,15 +15,15 @@ sources:
 
 ## What it checks
 
-Models with a DirectQuery table, no aggregation tables (no column has alternateOf), and the PowerBI_V3 data source version.
+Models that have at least one DirectQuery table, no aggregation table (no column has an alternateOf mapping), and the PowerBI_V3 data source version, which is every project Desktop writes today.
 
 ## Why it matters
 
-If using Direct Query in Power BI Premium, you may want to consider using aggregations in order to boost performance.
+In DirectQuery every visual sends a query to the source. Aggregation tables let the engine answer the common high-level questions, totals by month or by region, from a small imported table and send only the detail queries through. Without them, the summary page of a dashboard pays the full round trip to the source on every interaction. This is an info-level prompt to consider the feature, not a defect.
 
 ## How to fix it
 
-Consider adding aggregation tables for the DirectQuery fact table.
+Create a summary table at the grain the reports use most, import it, and set it up under Manage aggregations in Power BI Desktop. The guide in the links covers the setup and the rules the engine uses to match queries to the aggregation.
 
 ## Links
 

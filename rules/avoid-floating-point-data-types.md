@@ -14,17 +14,15 @@ sources:
 
 ## What it checks
 
-Columns whose data type is Double (floating point).
+Columns of any kind whose data type is Double, which Power BI Desktop calls Decimal Number.
 
 ## Why it matters
 
-The "Double" floating point data type should be avoided, as it can result in unpredictable roundoff errors and decreased performance in certain scenarios. Use "Int64" or "Decimal" where appropriate (but note that "Decimal" is limited to 4 digits after the decimal sign).
+Double is binary floating point, so values like 0.1 have no exact representation and sums drift in the last digits. Two totals that should match can differ by a fraction of a cent, and a money column stored as Double compresses worse than the same values as Fixed Decimal Number, so it costs memory as well. Fixed Decimal Number stores four decimal places exactly, and Whole Number compresses best of all.
 
 ## How to fix it
 
-Change the column's data type to Decimal (fixed decimal) or Int64 in Power Query or the model. Decimal keeps four decimal places.
-
-Tabular Editor fix expression: `DataType = DataType.Decimal`
+In Power Query, change the column type to Fixed Decimal Number or Whole Number so the conversion happens before load. Changing it in the model view works too. In the TMDL file the property is `dataType: decimal` or `dataType: int64`. Keep Double only for values that need more than four decimal places, such as scientific measurements.
 
 ## Links
 

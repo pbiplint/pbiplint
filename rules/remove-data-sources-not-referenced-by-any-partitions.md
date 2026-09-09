@@ -14,17 +14,15 @@ sources:
 
 ## What it checks
 
-Data sources that no partition uses or mentions.
+Data sources that no partition names and that appear nowhere in any partition's query text.
 
 ## Why it matters
 
-Data sources which are not referenced by any partitions may be removed.
+An unused data source is a connection string, and usually a credential, that the model still asks to have configured on every deployment, so the service keeps prompting for credentials to a source nothing reads. It is a leftover from a migration or a source that was replaced.
 
 ## How to fix it
 
-Delete the data source.
-
-Tabular Editor fix expression: `Delete()`
+Delete the data source's file from the `dataSources` folder of the project.
 
 ## Quirks
 

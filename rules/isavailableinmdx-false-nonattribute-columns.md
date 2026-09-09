@@ -15,17 +15,19 @@ sources:
 
 ## What it checks
 
-Hidden columns, or columns in hidden tables, that are not used for sorting, in hierarchies, or in variations, and still have IsAvailableInMdx set to true.
+Hidden columns, or columns in hidden tables, that still have IsAvailableInMdx set to true and are not used to sort another column, in a hierarchy, or in a variation, and do not themselves sort by another column.
 
 ## Why it matters
 
-To speed up processing time and conserve memory after processing, attribute hierarchies should not be built for columns that are never used for slicing by MDX clients. In other words, all hidden columns that are not used as a Sort By Column or referenced in user hierarchies should have their IsAvailableInMdx property set to false.
+When IsAvailableInMdx is true the engine builds an attribute hierarchy for the column at every refresh: a sorted structure that lets Excel and other MDX clients browse the column's values. A hidden column is never browsed, so the structure is built, stored, and rebuilt for nothing. On wide tables with many hidden keys and helper columns that is measurable refresh time and memory.
 
 ## How to fix it
 
-Set `isAvailableInMdx: false` on the column so no attribute hierarchy is built for it.
+Add `isAvailableInMdx: false` under the column in the TMDL file. Power BI Desktop has no setting for this property but keeps the value once it is in the file. With many columns to change, Tabular Editor can set the property on every selected column in one edit; the TMDL edit needs no other tool.
 
-Tabular Editor fix expression: `IsAvailableInMDX = false`
+## Quirks
+
+- Power BI Desktop never writes this property, so a Desktop-authored model gets one finding per hidden column until they are set.
 
 ## Links
 

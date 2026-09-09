@@ -19,11 +19,11 @@ Measures and calculated columns that call IFERROR.
 
 ## Why it matters
 
-Avoid using the IFERROR function as it may cause performance degradation. If you are concerned about a divide-by-zero error, use the DIVIDE function as it naturally resolves such errors as blank (or you can customize what should be shown in case of such an error).
+IFERROR makes the engine evaluate the expression row by row so it can catch a failure, which switches off the bulk evaluation that makes DAX fast. Most uses guard a division, and DIVIDE handles that case without the penalty. The rest usually hide a data problem, such as text in a numeric column, that is better fixed in Power Query where the failure cannot happen.
 
 ## How to fix it
 
-Handle the specific error case, for example with DIVIDE, instead of IFERROR.
+Replace `IFERROR([A] / [B], 0)` with `DIVIDE([A], [B], 0)`. For type conversions, clean the column in Power Query so the conversion cannot fail. If a guard is unavoidable, test the condition with IF instead of catching the error.
 
 ## Links
 

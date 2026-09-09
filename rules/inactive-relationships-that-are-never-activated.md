@@ -20,16 +20,16 @@ Inactive relationships that no measure or calculation item activates with USEREL
 
 ## Why it matters
 
-Inactive relationships are activated using the USERELATIONSHIP function. If an inactive relationship is not referenced in any measure via this function, the relationship will not be used. It should be determined whether the relationship is not necessary or to activate the relationship via this method.
+An inactive relationship does nothing on its own. It exists so a measure can switch it on with USERELATIONSHIP, typically for a second date on a fact table. If no measure does, the relationship is either a leftover from a design that changed or a plan that was never finished, and a report author who sees the dotted line in the model view will assume the filter works.
 
 ## How to fix it
 
-Delete the relationship, or use it with USERELATIONSHIP in a measure.
+Write the measure that uses it, `CALCULATE([Total Sales], USERELATIONSHIP(Sales[Ship Date], 'Date'[Date]))`, or delete the relationship in the model view.
 
 ## Quirks
 
 - Only `USERELATIONSHIP(from column, to column)` counts as activation; the reversed argument order does not.
-- pbiplint escapes table and column names before building the pattern, which the Microsoft rule does not, so names with parentheses cannot break the check.
+- pbiplint escapes table and column names before building the pattern, which the source rule does not, so names with parentheses cannot break the check.
 
 ## Links
 

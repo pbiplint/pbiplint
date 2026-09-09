@@ -15,15 +15,19 @@ sources:
 
 ## What it checks
 
-Tables that have row-level security and are the target of USERELATIONSHIP in a measure.
+Tables that have a row-level security filter in any role and are named as the second argument of USERELATIONSHIP in a measure.
 
 ## Why it matters
 
-The USERELATIONSHIP function may not be used against a table which also leverages row-level security (RLS). This will generate an error when using the particular measure in a visual. This rule will highlight the table which is used in a measure's USERELATIONSHIP function as well as RLS.
+When a role filters a table, the engine has to apply that filter through the active relationship, and USERELATIONSHIP asks it to swap in an inactive one. The two instructions conflict, so the measure fails for every user in the role while it works for the model owner, who tests without roles. That is a bug you find after publishing.
 
 ## How to fix it
 
-Remove the row-level security from that table, or avoid USERELATIONSHIP against it.
+Keep row-level security and USERELATIONSHIP on different tables. Either move the filter to another table in the same role, or replace USERELATIONSHIP with a second copy of the dimension that has an active relationship of its own, which is the usual answer for an order date and a ship date.
+
+## Quirks
+
+- Only the second argument of USERELATIONSHIP is compared, and only measures are scanned. A calculation item that calls USERELATIONSHIP is not checked, and a measure that names the secured table as the first argument passes.
 
 ## Links
 

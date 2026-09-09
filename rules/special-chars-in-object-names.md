@@ -22,7 +22,11 @@ Tabs and line breaks inside a name are invisible in most of the interface, so th
 
 ## How to fix it
 
-Remove the character from the name.
+Rename the object without the character in Power BI Desktop, or edit the name in the TMDL file.
+
+## Quirks
+
+- In practice this rule cannot fire on a project loaded from TMDL files, because the format does not carry these characters. It is kept so that models built by other means are covered.
 
 ## Links
 

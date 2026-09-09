@@ -15,15 +15,15 @@ sources:
 
 ## What it checks
 
-Models with more than five calculated columns.
+Models with more than five calculated columns across all tables. Columns of calculated tables do not count, and the finding is on the model.
 
 ## Why it matters
 
-Calculated columns do not compress as well as data columns so they take up more memory. They also slow down processing times for both the table as well as process recalc. Offload calculated column logic to your data warehouse and turn these calculated columns into data columns.
+A calculated column is computed after load, one row at a time, and stored without the compression the engine gets for a column it loaded from the source, so each one costs refresh time and memory out of proportion to its size. Five is a budget rather than a limit: past it, the model is usually doing in DAX what Power Query or the source would do once and better.
 
 ## How to fix it
 
-Move calculated column logic into Power Query or the source.
+Move the logic into Power Query as a custom column, or into the source as a view. Keep DAX calculated columns for the few cases that need the model, such as a value that depends on a measure.
 
 ## Links
 

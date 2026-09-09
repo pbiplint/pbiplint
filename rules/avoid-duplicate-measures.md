@@ -14,15 +14,19 @@ sources:
 
 ## What it checks
 
-Two or more measures with the same DAX after removing whitespace.
+Two or more measures whose DAX is identical once spaces, tabs, and line breaks are removed. Every copy is reported.
 
 ## Why it matters
 
-Two measures with different names and defined by the same DAX expression should be avoided to reduce redundancy.
+Two names for one calculation split the reader's trust: nobody can tell which is the real one, reports end up using both, and the next change gets made to one copy only. When both appear in the same visual the engine also evaluates them separately, so the duplicate costs query time as well as confusion.
 
 ## How to fix it
 
-Keep one measure and reference it from the other, or delete the duplicate.
+Keep one measure and delete the other. If existing reports depend on both names, keep the second one for now as a plain reference to the first, `Sales Amount = [Total Sales]`, and retire it once the reports are moved.
+
+## Quirks
+
+- The comparison is exact apart from whitespace. Two measures that differ only in a comment or in letter case are not duplicates to this rule.
 
 ## Links
 

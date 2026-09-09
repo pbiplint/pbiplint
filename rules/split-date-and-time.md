@@ -15,15 +15,15 @@ sources:
 
 ## What it checks
 
-DateTime columns with values not at midnight. Needs VertiPaq statistics.
+DateTime columns holding values that are not at midnight. Row data is not in the model files, so pbiplint lists this rule but cannot run it.
 
 ## Why it matters
 
-This rule finds datetime columns that have values not at midnight. To maximize performance, the time element should be split from date element (or the time component should be rounded to midnight as this will reduce column cardinality).
+A timestamp column has nearly as many distinct values as rows, so it does not compress and it cannot relate to a date table. Split into a date and a time, each column has a few thousand distinct values, compresses well, relates to a date table and a time table, and supports the questions people actually ask, which are by day and by hour rather than by second.
 
 ## How to fix it
 
-Split the column into a date column and a time column, or round it to midnight.
+In Power Query, add a Date column and a Time column from the timestamp and remove the original, or round the timestamp to midnight if the time is never used. Check cardinality with DAX Studio's VertiPaq Analyzer or with DISTINCTCOUNT in DAX query view.
 
 pbiplint cannot evaluate this rule from files; it appears in `pbiplint rules` as needing a live model.
 

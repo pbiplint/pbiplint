@@ -14,21 +14,20 @@ sources:
 
 ## What it checks
 
-Hidden columns that nothing references: no DAX, relationship, hierarchy, sort-by, row-level security, or object-level security.
+Hidden columns, or columns in hidden tables, that nothing references: no DAX expression, relationship, hierarchy, sort-by column, row-level security filter, or object-level security rule.
 
 ## Why it matters
 
-Hidden columns that are not referenced by any DAX expressions, relationships, hierarchy levels or Sort By-properties should be removed.
+A hidden column that nothing uses is loaded, compressed, and refreshed for no reader. Key columns and helper columns pile up this way as a model evolves, and each one costs memory and refresh time in proportion to its cardinality. Removing them is the cheapest model diet there is.
 
 ## How to fix it
 
-Remove the column from the query.
-
-Tabular Editor fix expression: `Delete()`
+Remove the column in Power Query with Choose Columns or Remove Columns, so it is never loaded.
 
 ## Quirks
 
 - DAX references are approximated by pattern matching: references inside strings or comments count, and a bare [Column] reference resolves measure-first, then the expression's own table, then the first table with that column.
+- Report usage is not visible to this rule. A hidden column used only by a visual, a slicer, or a report-level filter is still flagged.
 
 ## Links
 

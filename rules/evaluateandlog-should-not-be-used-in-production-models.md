@@ -19,11 +19,11 @@ Measures that call EVALUATEANDLOG.
 
 ## Why it matters
 
-The EVALUATEANDLOG function is meant to be used only in development/test environments and should not be used in production models.
+EVALUATEANDLOG is a debugging aid: in Power BI Desktop it emits a trace event with its argument on every evaluation so you can watch intermediate values. The service ignores it. Leaving it in a published model ships debug scaffolding that every reader has to look past, and anyone who opens the file in Desktop gets trace output they did not ask for.
 
 ## How to fix it
 
-Remove EVALUATEANDLOG before deploying.
+Remove the EVALUATEANDLOG wrapper and keep the expression inside it.
 
 ## Links
 

@@ -19,11 +19,11 @@ Calculated columns whose DAX calls RELATED.
 
 ## Why it matters
 
-Calculated columns do not compress as well as data columns and may cause longer processing times. As such, calculated columns should be avoided if possible. One scenario where they may be easier to avoid is if they use the RELATED function.
+RELATED in a calculated column copies a value from the one side of a relationship onto every row of the many side. That is a lookup the source can do with a join, or Power Query with a merge, at load time and often folded to the source. Done in DAX it is computed row by row after load and stored without full compression, and the copied column then duplicates a dimension attribute, which `REMOVE_REDUNDANT_COLUMNS_IN_RELATED_TABLES` also flags.
 
 ## How to fix it
 
-Move the lookup into Power Query (a merge) or into the source, so the column arrives as a data column.
+Add the column in Power Query with Merge Queries, or join it in the source view. If the value is only needed inside a measure, use RELATED in the measure instead of storing a column.
 
 ## Quirks
 

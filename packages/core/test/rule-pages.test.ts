@@ -6,6 +6,13 @@ import { SEVERITY_LABEL } from "../src/rules/types.js";
 
 const rulesDir = new URL("../../../rules/", import.meta.url).pathname;
 
+const normalize = (s: string): string =>
+  s.toLowerCase().replace(/["'`]/g, "").replace(/\s+/g, " ").trim();
+
+/** The section between one `## ` heading and the next. */
+const section = (text: string, heading: string): string =>
+  text.split(`## ${heading}`)[1]?.split(/\n## /)[0] ?? "";
+
 describe.each(defaultRules.map((r) => [r.id, r] as const))("rule page for %s", (_id, rule) => {
   const path = `${rulesDir}${slug(rule.id)}.md`;
   it("exists with matching frontmatter and the required sections", () => {
@@ -24,6 +31,18 @@ describe.each(defaultRules.map((r) => [r.id, r] as const))("rule page for %s", (
     ])
       expect(text, heading).toContain(heading);
     expect(text).not.toContain("TODO");
-    expect(text).not.toContain("\u2014");
+    expect(text).not.toContain("—");
+  });
+
+  it("is written in pbiplint's own words, with no Tabular Editor fix expressions", () => {
+    const text = readFileSync(path, "utf8");
+    // Fixes are described for Power BI Desktop, Power Query, the source, or the TMDL file,
+    // never as a C# expression for another tool.
+    expect(text).not.toMatch(/fix expression/i);
+    // The ruleset's description is data the engine carries, not prose for the page. The
+    // page's Why section must not reuse its opening sentence.
+    const firstSentence = normalize(rule.description.split(/\.\s|\n/)[0] ?? "");
+    if (firstSentence.length >= 30)
+      expect(normalize(section(text, "Why it matters"))).not.toContain(firstSentence);
   });
 });

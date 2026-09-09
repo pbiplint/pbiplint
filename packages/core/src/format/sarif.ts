@@ -9,6 +9,9 @@ const LEVEL: Record<Severity, "error" | "warning" | "note"> = {
   1: "note",
 };
 
+/** Rule summaries are Markdown with inline code; SARIF's plain-text slot gets them without the backticks. */
+const plain = (markdown: string): string => markdown.replace(/`/g, "");
+
 export function formatSarif(result: LintResult, options: FormatOptions = {}): string {
   const byId = new Map((options.rules ?? defaultRules).map((r) => [r.id, r]));
   // Code scanning resolves artifact URIs against the repository root, so the caller can prefix the
@@ -21,7 +24,9 @@ export function formatSarif(result: LintResult, options: FormatOptions = {}): st
       id: g.rule.id,
       name: g.rule.name,
       shortDescription: { text: g.rule.name },
-      fullDescription: { text: full?.description ?? g.rule.name },
+      fullDescription: full
+        ? { text: plain(full.description), markdown: full.description }
+        : { text: g.rule.name },
       helpUri: g.rule.url,
       defaultConfiguration: { level: LEVEL[g.rule.severity] },
       properties: { category: g.rule.category },

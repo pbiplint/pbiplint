@@ -160,7 +160,10 @@ describe("formatSarif", () => {
       defaultConfiguration: { level: "error" },
       properties: { category: "DAX Expressions" },
     });
-    expect(run.tool.driver.rules[ruleIndex].fullDescription.text).toContain("fully qualified");
+    const full = run.tool.driver.rules[ruleIndex].fullDescription;
+    expect(full.text).toContain("refer to a column by its bare name, [Column]");
+    expect(full.text).not.toContain("`");
+    expect(full.markdown).toContain("`[Column]`");
     const res = run.results.find(
       (r: { ruleId: string }) => r.ruleId === "DAX_COLUMNS_FULLY_QUALIFIED",
     );

@@ -78,6 +78,7 @@ export interface Rule {
   category: Category;
   severity: Severity;
   scope: ObjectType[];
+  /** What the rule checks, one paragraph from the rule page in pbiplint's own words. */
   description: string;
   fixExpression?: string;
   references: string[];

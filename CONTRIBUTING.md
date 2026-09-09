@@ -49,6 +49,7 @@ Every rule has a page in `rules/`, written in pbiplint's own words. The rule-pag
 - Every "How to fix it" gives a route that needs no third-party tool: Power BI Desktop, Power Query, the source system, or a direct edit to the TMDL file, which Desktop preserves. Tabular Editor may be mentioned as an optional bulk shortcut or a linked walkthrough, and only after that route.
 - No Tabular Editor fix expressions or other C# on the pages.
 - Document every quirk kept from the source rule under `## Quirks`, and refer to other rules by their id.
+- The first paragraph of "What it checks" is also the rule's description in tool output such as SARIF. After editing one, run `node scripts/sync-rule-summaries.mjs` to regenerate `packages/core/src/rules/rule-summaries.data.ts`; the rule-pages test fails until they match.
 
 ## Style
 

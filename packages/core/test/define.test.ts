@@ -40,7 +40,9 @@ describe("bpaRule", () => {
       fixExpression: "IsHidden = true",
     });
     expect(r.scope).toEqual(["Column", "CalculatedColumn", "CalculatedTableColumn"]);
-    expect(r.description).toBe("Foreign keys should always be hidden.");
+    // The description comes from the rule page, not from the ruleset.
+    expect(r.description).toMatch(/^Visible columns whose name matches the from column/);
+    expect(r.description).not.toContain("Foreign keys should always be hidden");
   });
   it("extracts reference URLs from the description", () => {
     const r = bpaRule("ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS", () => []);

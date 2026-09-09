@@ -1,3 +1,4 @@
+import { RULE_SUMMARIES } from "./rule-summaries.data.js";
 import type { Rule } from "./types.js";
 
 /** Built-in rule that surfaces parser issues in the same list as everything else (spec section 5). */
@@ -7,8 +8,7 @@ export const PARSE_ISSUE: Rule = {
   category: "Error Prevention",
   severity: 3,
   scope: ["File"],
-  description:
-    "A line in a TMDL file was not understood. The rest of the file was still analyzed, but findings in and around this line may be missing or wrong.",
+  description: RULE_SUMMARIES["PARSE_ISSUE"] ?? "TMDL could not be fully parsed",
   references: ["https://learn.microsoft.com/analysis-services/tmdl/tmdl-overview"],
   status: "builtin",
   check: (model) =>

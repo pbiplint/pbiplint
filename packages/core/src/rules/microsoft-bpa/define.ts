@@ -1,5 +1,6 @@
 import type { Model } from "../../model/types.js";
 import type { Category, ObjectType, Rule, RuleContext, RuleFinding, Severity } from "../types.js";
+import { RULE_SUMMARIES } from "../rule-summaries.data.js";
 import { BPA_RULES, type BpaRuleMeta } from "./bpa-rules.data.js";
 
 const byId = new Map(BPA_RULES.map((r) => [r.id, r]));
@@ -53,7 +54,11 @@ const extractUrls = (text: string): string[] => [
   ...new Set((text.match(/https?:\/\/[^\s)"]+/g) ?? []).map((u) => u.replace(/[.,]$/, ""))),
 ];
 
-/** A literal port of one Microsoft BPA rule: metadata from the ruleset, behavior from `check`. */
+/**
+ * A literal port of one Microsoft BPA rule: metadata from the ruleset, behavior from `check`.
+ * The description is pbiplint's own summary from the rule page, never the ruleset's text; the
+ * ruleset description is read only for the reference URLs it carries.
+ */
 export function bpaRule(
   id: string,
   check: (model: Model, ctx: RuleContext) => RuleFinding[],
@@ -65,7 +70,7 @@ export function bpaRule(
     category: meta.category as Category,
     severity: meta.severity as Severity,
     scope: mapScope(meta.scope),
-    description: meta.description,
+    description: RULE_SUMMARIES[id] ?? stripCategory(meta.name),
     fixExpression: meta.fixExpression,
     references: extractUrls(meta.description),
     status: "ported",

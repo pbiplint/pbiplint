@@ -58,7 +58,7 @@ describe.each(defaultRules.map((r) => [r.id, r] as const))("rule page for %s", (
   });
 
   it("is the source of the rule's description in tool output", () => {
-    // rule-summaries.data.ts is generated from the page; rerun scripts/sync-rule-summaries.mjs after editing.
+    // rule-summaries.data.ts is generated from the page; rerun scripts/sync-rule-pages.mjs after editing.
     const text = readFileSync(path, "utf8");
     expect(rule.description).toBe(firstParagraph(section(text, "What it checks")));
   });

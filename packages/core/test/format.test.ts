@@ -164,6 +164,13 @@ describe("formatSarif", () => {
     expect(full.text).toContain("refer to a column by its bare name, [Column]");
     expect(full.text).not.toContain("`");
     expect(full.markdown).toContain("`[Column]`");
+    // Without a help map the help block still carries the description and the page link, since
+    // GitHub shows help.markdown and ignores helpUri.
+    const help = run.tool.driver.rules[ruleIndex].help;
+    expect(help.markdown).toContain(
+      "Read more: https://pbiplint.com/rules/dax-columns-fully-qualified",
+    );
+    expect(help.text).not.toContain("`");
     const res = run.results.find(
       (r: { ruleId: string }) => r.ruleId === "DAX_COLUMNS_FULLY_QUALIFIED",
     );
@@ -220,6 +227,19 @@ describe("a model with no model.tmdl", () => {
       .find((l) => l.trim() === "Model" || l.trim().startsWith("Model "));
     expect(line).toBeDefined();
     expect(line).not.toContain(":0");
+  });
+});
+
+describe("formatSarif with a help map", () => {
+  it("uses the caller's help for a rule and falls back for the rest", () => {
+    const help = {
+      DAX_COLUMNS_FULLY_QUALIFIED: { text: "Why: plain.", markdown: "### Why\n\nplain." },
+    };
+    const rules = JSON.parse(formatSarif(result, { help })).runs[0].tool.driver.rules;
+    const given = rules.find((r: { id: string }) => r.id === "DAX_COLUMNS_FULLY_QUALIFIED");
+    expect(given.help).toEqual(help.DAX_COLUMNS_FULLY_QUALIFIED);
+    const other = rules.find((r: { id: string }) => r.id !== "DAX_COLUMNS_FULLY_QUALIFIED");
+    expect(other.help.markdown).toContain("Read more: https://pbiplint.com/rules/");
   });
 });
 

@@ -33,6 +33,7 @@ export {
   summaryLine,
   type FormatName,
   type FormatOptions,
+  type RuleHelp,
 } from "./format/index.js";
 export { buildIndexes, type Indexes } from "./index/build.js";
 export {

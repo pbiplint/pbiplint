@@ -51,7 +51,13 @@ describe("pbiplint CLI", () => {
     const dir = mkdtempSync(join(tmpdir(), "pbiplint-out-"));
     const r = await run([sample, "--format", "sarif", "--output", "report.sarif"], dir);
     expect(r.out).toBe("");
-    expect(JSON.parse(readFileSync(join(dir, "report.sarif"), "utf8")).version).toBe("2.1.0");
+    const sarif = JSON.parse(readFileSync(join(dir, "report.sarif"), "utf8"));
+    expect(sarif.version).toBe("2.1.0");
+    // The CLI hands the rule pages to the formatter, so every rule's help block is the page.
+    for (const rule of sarif.runs[0].tool.driver.rules) {
+      expect(rule.help.markdown, rule.id).toContain("### How to fix it");
+      expect(rule.help.markdown, rule.id).toContain(`Read more: ${rule.helpUri}`);
+    }
   });
   it("summarizes on stderr when the report goes to --output, naming the file as typed", async () => {
     const dir = mkdtempSync(join(tmpdir(), "pbiplint-out-"));

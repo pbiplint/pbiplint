@@ -1,7 +1,7 @@
 import type { LintResult } from "../engine/lint.js";
 import { defaultRules } from "../rules/index.js";
 import type { Severity } from "../rules/types.js";
-import type { FormatOptions } from "./text.js";
+import type { FormatOptions, RuleHelp } from "./text.js";
 
 const LEVEL: Record<Severity, "error" | "warning" | "note"> = {
   3: "error",
@@ -18,6 +18,13 @@ export function formatSarif(result: LintResult, options: FormatOptions = {}): st
   // model root's path. Finding locations themselves stay relative to the model root.
   const prefix = options.pathPrefix ?? "";
   const uri = (file: string): string => (prefix ? `${prefix}/${file}` : file);
+  // GitHub renders help.markdown beside the alert and ignores helpUri, so the page link rides
+  // inside the help block as well.
+  const helpFor = (id: string, description: string, url: string): RuleHelp =>
+    options.help?.[id] ?? {
+      text: `${plain(description)}\n\nRead more: ${url}`,
+      markdown: `${description}\n\nRead more: ${url}`,
+    };
   const rules = result.groups.map((g) => {
     const full = byId.get(g.rule.id);
     return {
@@ -27,6 +34,7 @@ export function formatSarif(result: LintResult, options: FormatOptions = {}): st
       fullDescription: full
         ? { text: plain(full.description), markdown: full.description }
         : { text: g.rule.name },
+      help: helpFor(g.rule.id, full?.description ?? g.rule.name, g.rule.url),
       helpUri: g.rule.url,
       defaultConfiguration: { level: LEVEL[g.rule.severity] },
       properties: { category: g.rule.category },

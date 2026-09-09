@@ -12,6 +12,7 @@ import {
 import { HELP, parseArgs, UsageError } from "./args.js";
 import { CONFIG_FILE, findConfig } from "./config.js";
 import { sampleDir } from "./sample.js";
+import { RULE_HELP } from "./rule-help.data.js";
 import { resolveModel } from "./walk.js";
 
 declare const __PBIPLINT_VERSION__: string | undefined;
@@ -60,7 +61,11 @@ export async function main(argv: string[], io: Io): Promise<number> {
     // SARIF artifact URIs are resolved from where the tool ran, so they carry the model root's
     // path relative to the cwd in front of each model-relative finding path.
     const pathPrefix = relative(io.cwd(), model.root).split("\\").join("/");
-    const report = formatResult(opts.format, result, { toolVersion: VERSION, pathPrefix });
+    const report = formatResult(opts.format, result, {
+      toolVersion: VERSION,
+      pathPrefix,
+      help: RULE_HELP,
+    });
     if (opts.output) {
       const out = resolve(io.cwd(), opts.output);
       mkdirSync(dirname(out), { recursive: true });

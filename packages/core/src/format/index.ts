@@ -2,7 +2,7 @@ import type { LintResult } from "../engine/lint.js";
 import { formatJson } from "./json.js";
 import { formatMarkdown } from "./markdown.js";
 import { formatSarif } from "./sarif.js";
-import { formatText, summaryLine, type FormatOptions } from "./text.js";
+import { formatText, summaryLine, type FormatOptions, type RuleHelp } from "./text.js";
 
 export const FORMATS = ["text", "json", "markdown", "sarif"] as const;
 export type FormatName = (typeof FORMATS)[number];
@@ -27,4 +27,4 @@ export function formatResult(
 }
 
 export { formatJson, formatMarkdown, formatSarif, formatText, summaryLine };
-export type { FormatOptions };
+export type { FormatOptions, RuleHelp };

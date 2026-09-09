@@ -2,8 +2,20 @@ import type { LintResult } from "../engine/lint.js";
 import type { RankedGroup } from "../engine/rank.js";
 import { SEVERITY_LABEL, type Finding } from "../rules/types.js";
 
+/** Guidance for one rule in the two forms SARIF carries: plain text and Markdown. */
+export interface RuleHelp {
+  text: string;
+  markdown: string;
+}
+
 export interface FormatOptions {
   toolVersion?: string;
+  /**
+   * Help per rule id for the SARIF help block, which code scanning shows beside each alert.
+   * The CLI passes the rule pages' Why, How to fix, and Quirks sections. Without it the block
+   * falls back to the rule's description and page URL.
+   */
+  help?: Readonly<Record<string, RuleHelp>>;
   rules?: import("../rules/types.js").Rule[];
   /**
    * Posix path (forward slashes, no leading "./", no trailing slash) joined in front of each

@@ -1,0 +1,66 @@
+/// Product dimension; one row per product. Cost Price and Margin % are sensitive — hidden from non-finance roles via column-level OLS.
+table Product
+	lineageTag: 5d098541-4be0-5ab6-a367-6cf18e7a746c
+
+	/// Surrogate key.
+	column 'Product ID'
+		dataType: int64
+		isHidden
+		isAvailableInMdx: false
+		isKey
+		lineageTag: 3eae9f70-08f8-58f7-979c-5eb15031f0b7
+		summarizeBy: none
+		sourceColumn: Product ID
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Product display name.
+	column 'Product Name'
+		dataType: string
+		lineageTag: 6b949083-7c91-5c07-9756-da8f50e6e4bf
+		summarizeBy: none
+		sourceColumn: Product Name
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Top-level grouping — Hardware or Service.
+	column Category
+		dataType: string
+		lineageTag: 594a7f3a-7b01-599f-a9fa-5cd3b6e3f74c
+		summarizeBy: none
+		sourceColumn: Category
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Per-unit cost. Sensitive — hidden from non-finance roles via column-level OLS on the Sales Rep role.
+	column 'Cost Price'
+		dataType: decimal
+		formatString: "$"#,0.00
+		lineageTag: b2a133b6-4eb9-5469-8235-45be96b83db3
+		summarizeBy: none
+		sourceColumn: Cost Price
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Per-unit margin as a percentage of price. Sensitive — hidden from non-finance roles via column-level OLS on the Sales Rep role.
+	column 'Margin %'
+		dataType: decimal
+		formatString: #,0.0%;-#,0.0%;#,0.0%
+		lineageTag: 2a4caada-fc1b-5861-9462-ebfb8a82ef40
+		summarizeBy: none
+		sourceColumn: Margin %
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Product = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents("C:\Demo\Data\product.csv"), [Delimiter=",", Columns=5, Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+				    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers", {{"Product ID", Int64.Type}, {"Product Name", Text.Type}, {"Category", Text.Type}, {"Cost Price", Currency.Type}, {"Margin %", Currency.Type}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table
+

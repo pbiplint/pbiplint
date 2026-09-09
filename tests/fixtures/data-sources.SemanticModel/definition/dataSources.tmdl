@@ -1,0 +1,21 @@
+dataSource 'Legacy SQL' = provider
+	connectionString: Provider=SQLNCLI11;Data Source=localhost;Initial Catalog=Sales
+	impersonationMode: impersonateServiceAccount
+
+dataSource SQL/localhost;Sales
+	connectionDetails =
+			{
+			  "authentication": null,
+			  "query": null
+			}
+		protocol: tds
+		address
+			server: localhost
+			database: Sales
+	credential =
+			{
+			  "kind": "SQL",
+			  "path": "localhost;Sales"
+			}
+		authenticationKind: ServiceAccount
+

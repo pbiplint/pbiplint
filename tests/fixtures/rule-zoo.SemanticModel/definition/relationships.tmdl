@@ -1,0 +1,28 @@
+relationship Sales_Product
+	fromColumn: Sales.'Product ID'
+	toColumn: Product.'Product ID'
+
+relationship Sales_Customer
+	fromColumn: Sales.'Customer ID'
+	toColumn: Customer.'Customer ID'
+
+relationship Sales_OrderDate
+	fromColumn: Sales.'Order Date'
+	toColumn: Date.Date
+
+relationship Sales_ShipDate
+	isActive: false
+	fromColumn: Sales.'Ship Date'
+	toColumn: Date.Date
+
+relationship Sales_MonthStart
+	isActive: false
+	fromColumn: Sales.'Month Start'
+	toColumn: Date.Date
+
+relationship Customer_RegionSecurity
+	fromCardinality: many
+	toCardinality: many
+	crossFilteringBehavior: bothDirections
+	fromColumn: Customer.Region
+	toColumn: 'Region Security'.Region

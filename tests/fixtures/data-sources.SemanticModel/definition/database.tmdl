@@ -1,0 +1,4 @@
+database DsModel
+	compatibilityLevel: 1600
+	compatibilityMode: analysisServices
+

@@ -1,0 +1,101 @@
+table Customer
+	lineageTag: 4c4026ea-dbf8-463d-9295-87359757a0d6
+
+	/// Number of distinct customers.
+	measure 'Customer Count' = DISTINCTCOUNT(Customer[Customer ID])
+		formatString: #,##0
+		lineageTag: 665ed3c1-7cc3-49f0-bef1-f3ee1cfe7d45
+
+	column 'Customer ID'
+		dataType: int64
+		isHidden
+		lineageTag: 3e8b35a7-7963-432b-966d-638147506f92
+		summarizeBy: none
+		sourceColumn: Customer ID
+
+	column 'Customer Name'
+		dataType: string
+		lineageTag: 5e503464-e8d0-472c-9a30-343f5d6ae3df
+		summarizeBy: none
+		sourceColumn: Customer Name
+
+	column Segment
+		dataType: string
+		lineageTag: bd92eb1f-f1c2-42fa-842f-3ddd799b6d24
+		summarizeBy: none
+		sourceColumn: Segment
+
+	column Region
+		dataType: string
+		lineageTag: c349a191-9fef-4cb6-9e5f-0c137f4f4d58
+		summarizeBy: none
+		sourceColumn: Region
+
+	column City
+		dataType: string
+		lineageTag: 05767b58-a495-4fb0-a238-3233f423f2a9
+		dataCategory: City
+		summarizeBy: none
+		sourceColumn: City
+
+	column State
+		dataType: string
+		lineageTag: 92b59630-e0c7-4a15-951a-a282fd1a5973
+		dataCategory: StateOrProvince
+		summarizeBy: none
+		sourceColumn: State
+
+	column 'Postal Code'
+		dataType: string
+		lineageTag: b7240c2f-f1fe-42e1-9c31-63671a5f2905
+		dataCategory: PostalCode
+		summarizeBy: none
+		sourceColumn: Postal Code
+
+	column Country
+		dataType: string
+		lineageTag: ce45a6ba-9e22-4caf-9a77-67b6d77bcba1
+		dataCategory: Country
+		summarizeBy: none
+		sourceColumn: Country
+
+	column Email
+		dataType: string
+		lineageTag: 74fb8cd5-657d-4e04-8247-507a71a0cc23
+		summarizeBy: none
+		sourceColumn: Email
+
+	column 'Join Date'
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		lineageTag: 80f52695-5bea-4340-834a-5bf29ec319b8
+		summarizeBy: none
+		sourceColumn: Join Date
+
+		variation Variation
+			isDefault
+			relationship: f08d5ee4-c9c4-45f3-a3ef-e5b54c3b7d8f
+			defaultHierarchy: LocalDateTable_1b2c1fde-0cf3-455e-bfee-a8e4970804e0.'Date Hierarchy'
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column 'Loyalty Tier'
+		dataType: string
+		lineageTag: f8e5852b-81a2-4663-b178-23fe0df3ac8c
+		summarizeBy: none
+		sourceColumn: Loyalty Tier
+
+	partition Customer = m
+		mode: import
+		source =
+				let
+				    // Read the Customer dimension CSV from the local Data folder
+				    Source = Csv.Document(File.Contents("C:\Demo\Data\Customer.csv"), [Delimiter = ",", Columns = 11, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+				    #"Typed Columns" = Table.TransformColumnTypes(#"Promoted Headers", {
+				        {"Customer ID", Int64.Type}, {"Customer Name", type text}, {"Segment", type text}, {"Region", type text},
+				        {"City", type text}, {"State", type text}, {"Postal Code", type text}, {"Country", type text},
+				        {"Email", type text}, {"Join Date", type date}, {"Loyalty Tier", type text}})
+				in
+				    #"Typed Columns"
+

@@ -1,0 +1,19 @@
+table 'Region Security'
+
+	column Region
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Region
+
+	column UserEmail
+		dataType: string
+		summarizeBy: none
+		sourceColumn: UserEmail
+
+	partition 'Region Security' = m
+		mode: import
+		source =
+				let
+				    Source = Table.FromRows({})
+				in
+				    Source

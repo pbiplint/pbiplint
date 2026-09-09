@@ -1,0 +1,46 @@
+/// Customer dimension; one row per customer. Region drives row-level security — viewers in the East Region role see only East customers.
+table Customer
+	lineageTag: ce13eb34-049f-58b5-b50b-a769e1b30699
+
+	/// Surrogate key. Hidden because consumers should filter by Customer Name or Region, not by the internal ID.
+	column 'Customer ID'
+		dataType: int64
+		isHidden
+		isAvailableInMdx: false
+		isKey
+		lineageTag: cf880c6d-e952-5985-811a-38fb00c1af1d
+		summarizeBy: none
+		sourceColumn: Customer ID
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Customer's display name.
+	column 'Customer Name'
+		dataType: string
+		lineageTag: 6ebb5fc3-b2cb-578d-8bc3-b8738793f3e1
+		summarizeBy: none
+		sourceColumn: Customer Name
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Geographic region — East / West / North / South. Drives both static RLS (East Region role) and dynamic RLS (Regional Manager role via the disconnected User Region table).
+	column Region
+		dataType: string
+		lineageTag: f36769e3-bc00-5213-99d8-d84e7444c07c
+		summarizeBy: none
+		sourceColumn: Region
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Customer = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents("C:\Demo\Data\customer.csv"), [Delimiter=",", Columns=3, Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+				    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers", {{"Customer ID", Int64.Type}, {"Customer Name", Text.Type}, {"Region", Text.Type}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table
+

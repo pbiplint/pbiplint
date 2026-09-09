@@ -1,0 +1,87 @@
+table Date
+	lineageTag: 7b2d2da4-787a-4947-b461-da8fa87e75e9
+	dataCategory: Time
+
+	column Date
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		lineageTag: 79144632-2217-4a71-a986-7a363a226294
+		summarizeBy: none
+		sourceColumn: Date
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column Year
+		dataType: int64
+		lineageTag: 2ef33b02-42b0-43f1-a2f9-bdf81e395266
+		summarizeBy: none
+		sourceColumn: Year
+
+	column Quarter
+		dataType: string
+		lineageTag: 017be42c-cc4c-4e89-976d-9367a220646e
+		summarizeBy: none
+		sourceColumn: Quarter
+		sortByColumn: 'Quarter Number'
+
+	column 'Quarter Number'
+		dataType: int64
+		isHidden
+		lineageTag: 4f8a9a87-ddac-4c98-b67f-d9f9ac8ed810
+		summarizeBy: none
+		sourceColumn: Quarter Number
+
+	column Month
+		dataType: string
+		lineageTag: e170571a-30a7-4f2f-b1d4-0e91479f55a3
+		summarizeBy: none
+		sourceColumn: Month
+		sortByColumn: 'Month Number'
+
+	column 'Month Number'
+		dataType: int64
+		isHidden
+		lineageTag: 4acb80be-cf37-4604-865d-ae1aeaef99b8
+		summarizeBy: none
+		sourceColumn: Month Number
+
+	column 'Day of Week'
+		dataType: string
+		lineageTag: 9a0343aa-311b-4727-b7e9-248d7bd91ac8
+		summarizeBy: none
+		sourceColumn: Day of Week
+		sortByColumn: 'Day Number'
+
+	column 'Day Number'
+		dataType: int64
+		isHidden
+		lineageTag: 618ee82c-7e46-48e8-9abd-d5f3953b22cb
+		summarizeBy: none
+		sourceColumn: Day Number
+
+	column 'Week of Year'
+		dataType: int64
+		lineageTag: b89cee0a-487c-406e-afb6-40f3ad8566e0
+		summarizeBy: none
+		sourceColumn: Week of Year
+
+	column 'Is Weekend'
+		dataType: boolean
+		lineageTag: 657aff01-d230-4d11-90fb-c01519823862
+		summarizeBy: none
+		sourceColumn: Is Weekend
+
+	partition Date = m
+		mode: import
+		source =
+				let
+				    // Read the Date dimension CSV from the local Data folder
+				    Source = Csv.Document(File.Contents("C:\Demo\Data\Date.csv"), [Delimiter = ",", Columns = 10, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+				    #"Typed Columns" = Table.TransformColumnTypes(#"Promoted Headers", {
+				        {"Date", type date}, {"Year", Int64.Type}, {"Quarter", type text}, {"Quarter Number", Int64.Type},
+				        {"Month", type text}, {"Month Number", Int64.Type}, {"Day of Week", type text}, {"Day Number", Int64.Type},
+				        {"Week of Year", Int64.Type}, {"Is Weekend", type logical}})
+				in
+				    #"Typed Columns"
+

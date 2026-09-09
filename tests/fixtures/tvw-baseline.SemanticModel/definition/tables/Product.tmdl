@@ -1,0 +1,91 @@
+table Product
+	lineageTag: 3a982247-989a-49d0-a238-f0e9cfa06d5f
+
+	/// Number of distinct products.
+	measure 'Product Count' = DISTINCTCOUNT(Product[Product ID])
+		formatString: #,##0
+		lineageTag: 3d613fcc-a1ea-47cd-8ac1-8fd668c5e9a6
+
+	column 'Product ID'
+		dataType: int64
+		isHidden
+		lineageTag: 4c803bba-b971-4ad9-b33b-fe85bdb9b83d
+		summarizeBy: none
+		sourceColumn: Product ID
+
+	column 'Product Name'
+		dataType: string
+		lineageTag: fb9007d9-1063-45f4-a007-88132898157b
+		summarizeBy: none
+		sourceColumn: Product Name
+
+	column Category
+		dataType: string
+		lineageTag: 10f5c51b-8b97-495e-830b-0dd1a5b1f217
+		summarizeBy: none
+		sourceColumn: Category
+
+	column Subcategory
+		dataType: string
+		lineageTag: 8418e5a6-19c7-461a-b4f6-ba4bca7d0a62
+		summarizeBy: none
+		sourceColumn: Subcategory
+
+	column Brand
+		dataType: string
+		lineageTag: 45e8e98d-72a1-4772-a0ac-2d1ff834e73d
+		summarizeBy: none
+		sourceColumn: Brand
+
+	column Color
+		dataType: string
+		lineageTag: f8f7eb3b-6c0a-42f8-a82a-cdbbfaa39c07
+		summarizeBy: none
+		sourceColumn: Color
+
+	column Size
+		dataType: string
+		lineageTag: bfe7a0ca-f814-443a-aaa6-315a6384aedc
+		summarizeBy: none
+		sourceColumn: Size
+
+	column 'Standard Cost'
+		dataType: double
+		formatString: $#,##0.00
+		lineageTag: 501b4470-948e-47f4-9304-4051a5d35bf2
+		summarizeBy: none
+		sourceColumn: Standard Cost
+
+	column 'List Price'
+		dataType: double
+		formatString: $#,##0.00
+		lineageTag: aa5d0f49-b831-4484-a1e1-aef85f79ca99
+		summarizeBy: none
+		sourceColumn: List Price
+
+	column 'Supplier Name'
+		dataType: string
+		lineageTag: b1fbfd28-242d-4e1e-b9e2-15c4bcc8b2f4
+		summarizeBy: none
+		sourceColumn: Supplier Name
+
+	column Discontinued
+		dataType: boolean
+		lineageTag: 5331bdaa-f823-4fce-8ef4-bae0cb87d4f2
+		summarizeBy: none
+		sourceColumn: Discontinued
+
+	partition Product = m
+		mode: import
+		source =
+				let
+				    // Read the Product dimension CSV from the local Data folder
+				    Source = Csv.Document(File.Contents("C:\Demo\Data\Product.csv"), [Delimiter = ",", Columns = 11, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+				    #"Typed Columns" = Table.TransformColumnTypes(#"Promoted Headers", {
+				        {"Product ID", Int64.Type}, {"Product Name", type text}, {"Category", type text}, {"Subcategory", type text},
+				        {"Brand", type text}, {"Color", type text}, {"Size", type text}, {"Standard Cost", type number},
+				        {"List Price", type number}, {"Supplier Name", type text}, {"Discontinued", type logical}})
+				in
+				    #"Typed Columns"
+

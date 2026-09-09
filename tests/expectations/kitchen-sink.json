@@ -1,0 +1,27 @@
+{
+  "fixture": "tests/fixtures/kitchen-sink.SemanticModel",
+  "oracle": "Tabular Editor CLI 0.5.2.11639 with BPARules.json sha256 ddb9cff4c2a0611a6467e2559d38319d9867381998066473ffa1e11c2d360392",
+  "captured": "2026-09-04",
+  "skipRules": {},
+  "findings": {
+    "DATECOLUMN_FORMATSTRING": [
+      "'Date'[Date]",
+      "'Sales'[Sale Date]"
+    ],
+    "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+      "'User Region'"
+    ],
+    "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+      "'Date'[Date]",
+      "'Sales'[Sale Date]"
+    ],
+    "REMOVE_ROLES_WITH_NO_MEMBERS": [
+      "East Region",
+      "Regional Manager",
+      "Sales Rep"
+    ],
+    "SNOWFLAKE_SCHEMA_ARCHITECTURE": [
+      "'Sales'"
+    ]
+  }
+}

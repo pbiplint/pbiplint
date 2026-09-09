@@ -1,0 +1,49 @@
+relationship rel_Sales_Date
+	fromColumn: Sales.'Sale Date'
+	toColumn: Date.Date
+
+relationship rel_Sales_Product
+	fromColumn: Sales.'Product ID'
+	toColumn: Product.'Product ID'
+
+relationship rel_Sales_Customer
+	fromColumn: Sales.'Customer ID'
+	toColumn: Customer.'Customer ID'
+
+relationship rel_Sales_Store
+	fromColumn: Sales.'Store ID'
+	toColumn: Store.'Store ID'
+
+relationship rel_Sales_Employee
+	fromColumn: Sales.'Employee ID'
+	toColumn: Employee.'Employee ID'
+
+relationship rel_Sales_Promotion
+	fromColumn: Sales.'Promotion ID'
+	toColumn: Promotion.'Promotion ID'
+
+relationship f08d5ee4-c9c4-45f3-a3ef-e5b54c3b7d8f
+	joinOnDateBehavior: datePartOnly
+	fromColumn: Customer.'Join Date'
+	toColumn: LocalDateTable_1b2c1fde-0cf3-455e-bfee-a8e4970804e0.Date
+
+relationship fec0f1bb-2929-410d-9485-8332687e4569
+	joinOnDateBehavior: datePartOnly
+	fromColumn: Store.'Open Date'
+	toColumn: LocalDateTable_ef30d063-6216-4d63-895c-419361657bc0.Date
+
+relationship 31804c3c-642e-451a-bf08-67309450978e
+	joinOnDateBehavior: datePartOnly
+	fromColumn: Employee.'Hire Date'
+	toColumn: LocalDateTable_e7a9b7e2-77e8-4edf-afdf-0d3d18a2752d.Date
+
+relationship f242ceed-3be3-4473-9ef3-246412877058
+	joinOnDateBehavior: datePartOnly
+	fromColumn: Promotion.'Start Date'
+	toColumn: LocalDateTable_152618ca-7d7d-4b4c-8a4c-54982fa64176.Date
+
+relationship eca678a0-c972-4dc7-ba6a-7402f6d0b26f
+	joinOnDateBehavior: datePartOnly
+	fromColumn: Promotion.'End Date'
+	toColumn: LocalDateTable_bc59707b-5588-45b1-b7db-d153b59cc0f5.Date
+

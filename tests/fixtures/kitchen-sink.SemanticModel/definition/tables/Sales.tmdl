@@ -1,0 +1,192 @@
+/// Sales fact; one row per sale line item. Most measures aggregate columns from this table — including the time-intelligence measures, which are conceptually Sales metrics viewed through time. Joined to Date, Customer, and Product (many-to-one each) and to Sensitive Notes (one-to-many — every sale may have an internal note).
+table Sales
+	lineageTag: 3396b883-dd7e-5333-ae65-a6596af6b394
+
+	/// Fact-row surrogate key. Also the join key to Sensitive Notes.
+	column 'Sale ID'
+		dataType: int64
+		isHidden
+		isAvailableInMdx: false
+		isKey
+		lineageTag: 52e95bc5-d1b8-5334-a1e7-6577e7e94faa
+		summarizeBy: none
+		sourceColumn: Sale ID
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Foreign key to Date[Date]. Hidden — time analysis goes through the date dimension, not directly against the fact column.
+	column 'Sale Date'
+		dataType: dateTime
+		isHidden
+		isAvailableInMdx: false
+		formatString: Long Date
+		lineageTag: 7e51c001-d616-5802-9bc2-d208e1b1bcdb
+		summarizeBy: none
+		sourceColumn: Sale Date
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	/// Foreign key to Customer[Customer ID].
+	column 'Customer ID'
+		dataType: int64
+		isHidden
+		isAvailableInMdx: false
+		lineageTag: 5218e590-ceaa-5d31-a04b-156015498d34
+		summarizeBy: none
+		sourceColumn: Customer ID
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Foreign key to Product[Product ID].
+	column 'Product ID'
+		dataType: int64
+		isHidden
+		isAvailableInMdx: false
+		lineageTag: 639322b2-a79d-5ffc-bb11-d7ce499a7d96
+		summarizeBy: none
+		sourceColumn: Product ID
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Units sold on this line. Hidden — aggregation source for measures.
+	column Quantity
+		dataType: int64
+		isHidden
+		isAvailableInMdx: false
+		lineageTag: 7abcd819-ad61-53e3-a21e-8a4503d6900d
+		summarizeBy: none
+		sourceColumn: Quantity
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Price per unit at sale time. Hidden — aggregation source for measures.
+	column 'Unit Price'
+		dataType: decimal
+		isHidden
+		isAvailableInMdx: false
+		formatString: "$"#,0.00
+		lineageTag: 863b7ef8-d87a-539f-b1b3-421449465b7f
+		summarizeBy: none
+		sourceColumn: Unit Price
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Quantity × Unit Price for this line. Hidden — primary aggregation source for [Total Sales].
+	column 'Total Amount'
+		dataType: decimal
+		isHidden
+		isAvailableInMdx: false
+		formatString: "$"#,0.00
+		lineageTag: 9cad4ce0-94fd-5ece-ac0b-54771667d71f
+		summarizeBy: none
+		sourceColumn: Total Amount
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Quantity × cost-price-at-sale-time for this line. Hidden — aggregation source for [Total Cost]. Distinct from Product[Cost Price], which is the current cost; this column captures the cost as of the sale.
+	column Cost
+		dataType: decimal
+		isHidden
+		isAvailableInMdx: false
+		formatString: "$"#,0.00
+		lineageTag: fd8c3ebb-c0c5-5d19-9072-3cbaa6283a58
+		summarizeBy: none
+		sourceColumn: Cost
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Total sales revenue in filter context. Aggregates Sales[Total Amount].
+	measure 'Total Sales' = SUM ( 'Sales'[Total Amount] )
+		formatString: "$"#,0.00
+		lineageTag: 1f6ee63a-6f25-58ff-8e80-f0d1cec36aec
+		displayFolder: KPIs
+
+	/// Total cost of goods sold in filter context. Aggregates Sales[Cost] (the point-in-time cost captured at sale).
+	measure 'Total Cost' = SUM ( 'Sales'[Cost] )
+		formatString: "$"#,0.00
+		lineageTag: 65e03618-4970-52d8-a22a-3c72fe529cb1
+		displayFolder: KPIs
+
+	/// Sales minus cost — the gross profit measure. Cross-measure reference; depends on [Total Sales] and [Total Cost].
+	measure 'Total Margin' = [Total Sales] - [Total Cost]
+		formatString: "$"#,0.00
+		lineageTag: afee3152-a5ec-55ab-8242-ceb79a5a35a2
+		displayFolder: KPIs
+
+	/// Margin as a percentage of sales. Returns BLANK when [Total Sales] is zero (DIVIDE's third arg makes the divide-by-zero handling explicit — BLANK is the right semantic here so empty-sales rows don't render as 0% in visuals).
+	measure 'Margin %' = DIVIDE ( [Total Margin], [Total Sales], BLANK () )
+		formatString: #,0.0%;-#,0.0%;#,0.0%
+		lineageTag: d266ebed-4011-5fc3-a6d5-9fe59bde720e
+		displayFolder: KPIs
+
+	/// Number of distinct sale orders in filter context.
+	measure 'Order Count' = DISTINCTCOUNT ( 'Sales'[Sale ID] )
+		formatString: #,0
+		lineageTag: cab04915-bfa6-516d-b89d-ac5d72d850b2
+		displayFolder: KPIs
+
+	/// Average revenue per distinct sale order. Cross-measure reference; depends on [Total Sales] and [Order Count]. Returns BLANK when there are no orders.
+	measure 'Average Order Value' = DIVIDE ( [Total Sales], [Order Count], BLANK () )
+		formatString: "$"#,0.00
+		lineageTag: 496ae847-bcc7-5509-a930-d9a5deea7e45
+		displayFolder: KPIs
+
+	/// Total units sold in filter context. Aggregates Sales[Quantity].
+	measure 'Total Quantity' = SUM ( 'Sales'[Quantity] )
+		formatString: #,0
+		lineageTag: 02b4231f-0c85-5732-b943-3dba0c54c8f6
+		displayFolder: KPIs
+
+	/// Average per-unit price across sale lines in filter context. Aggregates Sales[Unit Price] — note this is a simple line-level average, not a quantity-weighted average.
+	measure 'Average Unit Price' = AVERAGE ( 'Sales'[Unit Price] )
+		formatString: "$"#,0.00
+		lineageTag: 23ffc6e1-f42b-5702-b5b1-c35123639a40
+		displayFolder: KPIs
+
+	/// Year-to-date total sales relative to the date in filter context. Resets at the calendar-year boundary (January 1). Suppressed at multi-year totals (HASONEVALUE guard) — at a grand total across multiple years, TOTALYTD would return just the most recent year's YTD, which is misleading next to a multi-year [Total Sales] figure.
+	measure 'Sales YTD' =
+
+			IF (
+			    HASONEVALUE ( 'Date'[Year] ),
+			    TOTALYTD ( [Total Sales], 'Date'[Date] )
+			)
+		formatString: "$"#,0.00
+		lineageTag: 25d03166-d977-57ba-9913-b2657bc50ab7
+		displayFolder: Time Intelligence
+
+	/// Total sales for the same period one calendar year earlier. Suppressed at multi-year totals (HASONEVALUE guard) — SAMEPERIODLASTYEAR at a multi-year total returns just the earliest year, which is meaningless as a comparison. Used as the prior-period baseline for [Sales YoY %].
+	measure 'Sales LY' =
+
+			IF (
+			    HASONEVALUE ( 'Date'[Year] ),
+			    CALCULATE ( [Total Sales], SAMEPERIODLASTYEAR ( 'Date'[Date] ) )
+			)
+		formatString: "$"#,0.00
+		lineageTag: d944cc52-f65d-5eb7-a5cb-495ac7d15eb6
+		displayFolder: Time Intelligence
+
+	/// Year-over-year growth as a percentage. Cascades the multi-year guard from [Sales LY] — when [Sales LY] is BLANK at multi-year totals, DIVIDE propagates BLANK through. Also returns BLANK when prior-year sales are zero or missing within a single-year filter.
+	measure 'Sales YoY %' =
+
+			VAR _current = [Total Sales]
+			VAR _prior = [Sales LY]
+			RETURN
+			    DIVIDE ( _current - _prior, _prior, BLANK () )
+		formatString: #,0.0%;-#,0.0%;#,0.0%
+		lineageTag: 0ca3489c-71f5-5aa7-a8ee-bc809d8bb2d8
+		displayFolder: Time Intelligence
+
+	partition Sales = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents("C:\Demo\Data\sales.csv"), [Delimiter=",", Columns=8, Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+				    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers", {{"Sale ID", Int64.Type}, {"Sale Date", type date}, {"Customer ID", Int64.Type}, {"Product ID", Int64.Type}, {"Quantity", Int64.Type}, {"Unit Price", Currency.Type}, {"Total Amount", Currency.Type}, {"Cost", Currency.Type}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table
+

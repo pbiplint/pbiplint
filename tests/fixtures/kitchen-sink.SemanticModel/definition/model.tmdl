@@ -1,0 +1,36 @@
+/// Phase 1 reference model — exercises every supported TMDLMaker capability
+/// in one shape: star schema with marked daily-grain date table, measures
+/// (basics + time intelligence + cross-measure references) all hosted on
+/// the Sales fact, descriptions on every named object, format strings,
+/// display folders (KPIs + Time Intelligence), sort-by columns, a
+/// multi-level date hierarchy, a perspective, static + dynamic row-level
+/// security, and table- + column-level object-level security.
+model Model
+	culture: en-US
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	sourceQueryCulture: en-US
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+annotation __PBI_TimeIntelligenceEnabled = 1
+
+annotation PBI_ProTooling = ["DevMode"]
+
+annotation PBI_QueryOrder = ["Date","Customer","Product","Sales","Sensitive Notes","User Region"]
+
+ref table Date
+ref table Customer
+ref table Product
+ref table Sales
+ref table 'Sensitive Notes'
+ref table 'User Region'
+
+ref perspective 'Sales Rep View'
+
+ref role 'East Region'
+ref role 'Regional Manager'
+ref role 'Sales Rep'
+
+ref cultureInfo en-US
+

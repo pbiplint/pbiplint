@@ -1,0 +1,233 @@
+{
+  "fixture": "tests/fixtures/tvw-baseline.SemanticModel",
+  "oracle": "Tabular Editor CLI 0.5.2.11639 with BPARules.json sha256 ddb9cff4c2a0611a6467e2559d38319d9867381998066473ffa1e11c2d360392",
+  "captured": "2026-09-04",
+  "skipRules": {},
+  "findings": {
+    "ADD_DATA_CATEGORY_FOR_COLUMNS": [
+      "'Store'[Latitude]",
+      "'Store'[Longitude]"
+    ],
+    "AVOID_FLOATING_POINT_DATA_TYPES": [
+      "'Product'[List Price]",
+      "'Product'[Standard Cost]",
+      "'Promotion'[Discount Pct]",
+      "'Sales'[Discount Amount]",
+      "'Sales'[Net Amount]",
+      "'Sales'[Total Amount]",
+      "'Sales'[Unit Cost]",
+      "'Sales'[Unit Price]",
+      "'Store'[Latitude]",
+      "'Store'[Longitude]"
+    ],
+    "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+      "'Date'",
+      "'DateTableTemplate_f2afc5fc-2d0d-478c-92e8-dc0f26f32175'",
+      "'LocalDateTable_152618ca-7d7d-4b4c-8a4c-54982fa64176'",
+      "'LocalDateTable_1b2c1fde-0cf3-455e-bfee-a8e4970804e0'",
+      "'LocalDateTable_bc59707b-5588-45b1-b7db-d153b59cc0f5'",
+      "'LocalDateTable_e7a9b7e2-77e8-4edf-afdf-0d3d18a2752d'",
+      "'LocalDateTable_ef30d063-6216-4d63-895c-419361657bc0'"
+    ],
+    "DATECOLUMN_FORMATSTRING": [
+      "'Customer'[Join Date]",
+      "'Date'[Date]",
+      "'DateTableTemplate_f2afc5fc-2d0d-478c-92e8-dc0f26f32175'[Date]",
+      "'Employee'[Hire Date]",
+      "'LocalDateTable_152618ca-7d7d-4b4c-8a4c-54982fa64176'[Date]",
+      "'LocalDateTable_1b2c1fde-0cf3-455e-bfee-a8e4970804e0'[Date]",
+      "'LocalDateTable_bc59707b-5588-45b1-b7db-d153b59cc0f5'[Date]",
+      "'LocalDateTable_e7a9b7e2-77e8-4edf-afdf-0d3d18a2752d'[Date]",
+      "'LocalDateTable_ef30d063-6216-4d63-895c-419361657bc0'[Date]",
+      "'Promotion'[End Date]",
+      "'Promotion'[Start Date]",
+      "'Sales'[Sale Date]",
+      "'Store'[Open Date]"
+    ],
+    "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+      "'DateTableTemplate_f2afc5fc-2d0d-478c-92e8-dc0f26f32175'"
+    ],
+    "HIDE_FOREIGN_KEYS": [
+      "'Customer'[Join Date]",
+      "'Employee'[Hire Date]",
+      "'Promotion'[End Date]",
+      "'Promotion'[Start Date]",
+      "'Store'[Open Date]"
+    ],
+    "INTEGER_FORMATTING": [
+      "[Customer Count]",
+      "[Employee Count]",
+      "[Orders]",
+      "[Product Count]",
+      "[Store Count]",
+      "[Top Product Label]",
+      "[Top Region Label]",
+      "[Units Sold]"
+    ],
+    "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+      "'Customer'[Customer ID]",
+      "'DateTableTemplate_f2afc5fc-2d0d-478c-92e8-dc0f26f32175'[Date]",
+      "'Employee'[Employee ID]",
+      "'Employee'[Manager ID]",
+      "'LocalDateTable_152618ca-7d7d-4b4c-8a4c-54982fa64176'[Date]",
+      "'LocalDateTable_1b2c1fde-0cf3-455e-bfee-a8e4970804e0'[Date]",
+      "'LocalDateTable_bc59707b-5588-45b1-b7db-d153b59cc0f5'[Date]",
+      "'LocalDateTable_e7a9b7e2-77e8-4edf-afdf-0d3d18a2752d'[Date]",
+      "'LocalDateTable_ef30d063-6216-4d63-895c-419361657bc0'[Date]",
+      "'Product'[Product ID]",
+      "'Promotion'[Promotion ID]",
+      "'Sales'[Customer ID]",
+      "'Sales'[Discount Amount]",
+      "'Sales'[Employee ID]",
+      "'Sales'[Net Amount]",
+      "'Sales'[Product ID]",
+      "'Sales'[Promotion ID]",
+      "'Sales'[Quantity]",
+      "'Sales'[Sale Date]",
+      "'Sales'[Sale ID]",
+      "'Sales'[Store ID]",
+      "'Sales'[Total Amount]",
+      "'Sales'[Unit Cost]",
+      "'Sales'[Unit Price]",
+      "'Store'[Latitude]",
+      "'Store'[Longitude]",
+      "'Store'[Store ID]"
+    ],
+    "MARK_PRIMARY_KEYS": [
+      "'Customer'[Customer ID]",
+      "'Employee'[Employee ID]",
+      "'LocalDateTable_152618ca-7d7d-4b4c-8a4c-54982fa64176'[Date]",
+      "'LocalDateTable_1b2c1fde-0cf3-455e-bfee-a8e4970804e0'[Date]",
+      "'LocalDateTable_bc59707b-5588-45b1-b7db-d153b59cc0f5'[Date]",
+      "'LocalDateTable_e7a9b7e2-77e8-4edf-afdf-0d3d18a2752d'[Date]",
+      "'LocalDateTable_ef30d063-6216-4d63-895c-419361657bc0'[Date]",
+      "'Product'[Product ID]",
+      "'Promotion'[Promotion ID]",
+      "'Store'[Store ID]"
+    ],
+    "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+      "Model"
+    ],
+    "NUMERIC_COLUMN_SUMMARIZE_BY": [
+      "'Promotion'[Discount Pct]",
+      "'Store'[Square Feet]"
+    ],
+    "OBJECTS_WITH_NO_DESCRIPTION": [
+      "'Customer'",
+      "'Customer'[City]",
+      "'Customer'[Country]",
+      "'Customer'[Customer Name]",
+      "'Customer'[Email]",
+      "'Customer'[Join Date]",
+      "'Customer'[Loyalty Tier]",
+      "'Customer'[Postal Code]",
+      "'Customer'[Region]",
+      "'Customer'[Segment]",
+      "'Customer'[State]",
+      "'Date'",
+      "'Date'[Date]",
+      "'Date'[Day of Week]",
+      "'Date'[Is Weekend]",
+      "'Date'[Month]",
+      "'Date'[Quarter]",
+      "'Date'[Week of Year]",
+      "'Date'[Year]",
+      "'Employee'",
+      "'Employee'[Department]",
+      "'Employee'[Email]",
+      "'Employee'[Employee Name]",
+      "'Employee'[Hire Date]",
+      "'Employee'[Region]",
+      "'Employee'[Title]",
+      "'Product'",
+      "'Product'[Brand]",
+      "'Product'[Category]",
+      "'Product'[Color]",
+      "'Product'[Discontinued]",
+      "'Product'[List Price]",
+      "'Product'[Product Name]",
+      "'Product'[Size]",
+      "'Product'[Standard Cost]",
+      "'Product'[Subcategory]",
+      "'Product'[Supplier Name]",
+      "'Promotion'",
+      "'Promotion'[Discount Pct]",
+      "'Promotion'[End Date]",
+      "'Promotion'[Promotion Name]",
+      "'Promotion'[Promotion Type]",
+      "'Promotion'[Start Date]",
+      "'Sales'",
+      "'Store'",
+      "'Store'[City]",
+      "'Store'[Country]",
+      "'Store'[Open Date]",
+      "'Store'[Region]",
+      "'Store'[Square Feet]",
+      "'Store'[State]",
+      "'Store'[Store Name]",
+      "'Store'[Store Type]"
+    ],
+    "PERCENTAGE_FORMATTING": [
+      "[Discount Rate %]",
+      "[Gross Margin %]",
+      "[Revenue YoY %]"
+    ],
+    "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+      "[Top Product Label]",
+      "[Top Region Label]"
+    ],
+    "REDUCE_NUMBER_OF_CALCULATED_COLUMNS": [
+      "Model"
+    ],
+    "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+      "'DateTableTemplate_f2afc5fc-2d0d-478c-92e8-dc0f26f32175'",
+      "'LocalDateTable_152618ca-7d7d-4b4c-8a4c-54982fa64176'",
+      "'LocalDateTable_1b2c1fde-0cf3-455e-bfee-a8e4970804e0'",
+      "'LocalDateTable_bc59707b-5588-45b1-b7db-d153b59cc0f5'",
+      "'LocalDateTable_e7a9b7e2-77e8-4edf-afdf-0d3d18a2752d'",
+      "'LocalDateTable_ef30d063-6216-4d63-895c-419361657bc0'"
+    ],
+    "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+      "'Customer'[Join Date]",
+      "'Date'[Date]",
+      "'Employee'[Hire Date]",
+      "'LocalDateTable_152618ca-7d7d-4b4c-8a4c-54982fa64176'[Date]",
+      "'LocalDateTable_1b2c1fde-0cf3-455e-bfee-a8e4970804e0'[Date]",
+      "'LocalDateTable_bc59707b-5588-45b1-b7db-d153b59cc0f5'[Date]",
+      "'LocalDateTable_e7a9b7e2-77e8-4edf-afdf-0d3d18a2752d'[Date]",
+      "'LocalDateTable_ef30d063-6216-4d63-895c-419361657bc0'[Date]",
+      "'Promotion'[End Date]",
+      "'Promotion'[Start Date]",
+      "'Sales'[Sale Date]",
+      "'Store'[Open Date]"
+    ],
+    "REMOVE_AUTO-DATE_TABLE": [
+      "'DateTableTemplate_f2afc5fc-2d0d-478c-92e8-dc0f26f32175'",
+      "'LocalDateTable_152618ca-7d7d-4b4c-8a4c-54982fa64176'",
+      "'LocalDateTable_1b2c1fde-0cf3-455e-bfee-a8e4970804e0'",
+      "'LocalDateTable_bc59707b-5588-45b1-b7db-d153b59cc0f5'",
+      "'LocalDateTable_e7a9b7e2-77e8-4edf-afdf-0d3d18a2752d'",
+      "'LocalDateTable_ef30d063-6216-4d63-895c-419361657bc0'"
+    ],
+    "SNOWFLAKE_SCHEMA_ARCHITECTURE": [
+      "'Customer'",
+      "'Employee'",
+      "'Promotion'",
+      "'Store'"
+    ],
+    "UNNECESSARY_COLUMNS": [
+      "'Employee'[Manager ID]",
+      "'Sales'[Unit Price]",
+      "'Store'[Latitude]",
+      "'Store'[Longitude]"
+    ],
+    "USE_THE_DIVIDE_FUNCTION_FOR_DIVISION": [
+      "'DateTableTemplate_f2afc5fc-2d0d-478c-92e8-dc0f26f32175'[QuarterNo]",
+      "'LocalDateTable_152618ca-7d7d-4b4c-8a4c-54982fa64176'[QuarterNo]",
+      "'LocalDateTable_1b2c1fde-0cf3-455e-bfee-a8e4970804e0'[QuarterNo]",
+      "'LocalDateTable_bc59707b-5588-45b1-b7db-d153b59cc0f5'[QuarterNo]",
+      "'LocalDateTable_e7a9b7e2-77e8-4edf-afdf-0d3d18a2752d'[QuarterNo]",
+      "'LocalDateTable_ef30d063-6216-4d63-895c-419361657bc0'[QuarterNo]"
+    ]
+  }
+}

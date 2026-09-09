@@ -1,0 +1,8 @@
+role 'Region Users'
+	modelPermission: read
+
+	tablePermission 'Region Security' = 'Region Security'[UserEmail] = USERNAME()
+
+	tablePermission Date = LEFT('Date'[Year], 2) = "20" && [Year] > 2000
+
+	tablePermission Sales = 'Sales'[Only RLS Column] = 1

@@ -1,0 +1,12 @@
+table 'Empty Calc Group'
+
+	calculationGroup
+		precedence: 2
+
+	column Name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Name
+
+	partition 'Empty Calc Group' = calculationGroup
+		mode: import

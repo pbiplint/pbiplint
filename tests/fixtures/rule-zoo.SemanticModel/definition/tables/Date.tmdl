@@ -1,0 +1,35 @@
+table Date
+	dataCategory: Time
+
+	column Date
+		dataType: dateTime
+		isKey
+		formatString: mm/dd/yyyy
+		summarizeBy: none
+		sourceColumn: Date
+
+	column Year
+		dataType: int64
+		summarizeBy: none
+		sourceColumn: Year
+
+	column 'Month Name'
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Month Name
+		sortByColumn: 'Month Number'
+
+	column 'Month Number'
+		dataType: int64
+		isHidden
+		isAvailableInMdx: false
+		summarizeBy: none
+		sourceColumn: Month Number
+
+	partition Date = m
+		mode: import
+		source =
+				let
+				    Source = Table.FromRows({})
+				in
+				    Source

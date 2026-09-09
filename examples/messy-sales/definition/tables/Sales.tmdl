@@ -1,0 +1,165 @@
+table Sales
+	lineageTag: e5dd0f16-ac53-567e-9fd5-189bf2d92f14
+
+	column 'Sale ID'
+		dataType: int64
+		isKey
+		lineageTag: 70a98324-671c-5529-9217-756c2fda75a9
+		summarizeBy: none
+		sourceColumn: Sale ID
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Sale Date'
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: 7f4ed934-60cc-55da-9d09-443a16c75b08
+		summarizeBy: none
+		sourceColumn: Sale Date
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column 'Product ID'
+		dataType: int64
+		lineageTag: 71545778-b268-596b-81b8-f792096cb975
+		summarizeBy: none
+		sourceColumn: Product ID
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Customer ID'
+		dataType: int64
+		lineageTag: 83c1d15d-889f-56b0-b27d-162c78253a9d
+		summarizeBy: none
+		sourceColumn: Customer ID
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Store ID'
+		dataType: int64
+		lineageTag: e16109a4-d939-505b-b0cd-20b4c3d592e3
+		summarizeBy: none
+		sourceColumn: Store ID
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Employee ID'
+		dataType: int64
+		lineageTag: 99144444-aea2-57c0-bfc8-df3f8f843022
+		summarizeBy: none
+		sourceColumn: Employee ID
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Promotion ID'
+		dataType: int64
+		lineageTag: 02d8dfb6-3a51-5af7-89b5-99d8d7671b99
+		summarizeBy: none
+		sourceColumn: Promotion ID
+
+		annotation SummarizationSetBy = Automatic
+
+	column Quantity
+		dataType: int64
+		lineageTag: 25de422f-c861-5a18-ac3b-fd90c45080b3
+		summarizeBy: none
+		sourceColumn: Quantity
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Unit Price'
+		dataType: decimal
+		lineageTag: 99d165f1-4665-5927-8368-bfa80820fad8
+		summarizeBy: none
+		sourceColumn: Unit Price
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Unit Cost'
+		dataType: decimal
+		lineageTag: 443d6657-f319-531e-b413-e16dca902a9d
+		summarizeBy: none
+		sourceColumn: Unit Cost
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Discount Amount'
+		dataType: decimal
+		lineageTag: 8e0a517a-cdb7-56fc-9705-7ff8b42933b8
+		summarizeBy: none
+		sourceColumn: Discount Amount
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Total Amount'
+		dataType: decimal
+		lineageTag: 64b9f067-3b01-5675-ae63-ed3e5c665328
+		summarizeBy: none
+		sourceColumn: Total Amount
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Net Amount'
+		dataType: decimal
+		lineageTag: 8a8bd9c9-529d-5cc2-ac18-8fb3886016d9
+		summarizeBy: none
+		sourceColumn: Net Amount
+
+		annotation SummarizationSetBy = Automatic
+
+	measure 'Total Sales' = SUM ( 'Sales'[Total Amount] )
+		lineageTag: ca8c39c8-04a5-56b1-898d-0a73736c3cca
+
+	measure 'Total Quantity' = SUM ( [Quantity] )
+		lineageTag: 3ac4e158-858b-5e1b-8289-78d12ceb80e2
+
+	measure 'Average Unit Price' = AVERAGE ( 'Sales'[Unit Price] )
+		lineageTag: 2b5680cc-3046-5e41-bc7f-f5ff360370b2
+
+	measure 'Total Cost' = SUM ( 'Sales'[Unit Cost] )
+		lineageTag: aef7aa67-b06e-5e59-ac93-136e4a872346
+
+	measure 'Total Discount' = SUM ( 'Sales'[Discount Amount] )
+		lineageTag: 6f6edc54-d408-5aea-a787-b48f4126590a
+
+	measure 'Net Sales' = [Total Sales] - [Total Discount]
+		lineageTag: e4e79507-12c0-5c58-8e25-12963846b787
+
+	measure 'Total Margin' = [Total Sales] - [Total Cost]
+		lineageTag: b9913bc2-aa66-55c0-8965-911b688f87dd
+
+	measure 'Margin %' = [Total Margin] / [Total Sales]
+		lineageTag: f9ffc38c-cd44-5852-b85a-0f7cbc8753f4
+
+	measure 'Order Count' = DISTINCTCOUNT ( 'Sales'[Sale ID] )
+		lineageTag: e8120ffb-3d8e-5701-a3b7-6c5e283a59a3
+
+	measure 'Average Order Value' = [Total Sales] / [Order Count]
+		lineageTag: df423b46-4a20-5b0c-8e7d-a87a163b2f7a
+
+	measure 'Distinct Customers' = DISTINCTCOUNT ( [Customer ID] )
+		lineageTag: ad0bf4d6-42d5-53d9-a887-1483c9167c06
+
+	measure 'Sales YTD' = TOTALYTD ( [Total Sales], 'Date'[Date] )
+		lineageTag: e501d2df-a69b-570d-a31d-d1bbfc8694a8
+
+	measure 'Sales LY' = CALCULATE ( [Total Sales], SAMEPERIODLASTYEAR ( 'Date'[Date] ) )
+		lineageTag: 5d4245d8-0c72-584f-bcd5-efbd492fc3a7
+
+	measure 'Sales YoY %' = ( [Total Sales] - [Sales LY] ) / [Sales LY]
+		lineageTag: 0f9d5832-20e8-584c-a5b3-fd670931d428
+
+	partition Sales = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents("C:\Demo\Data\Sales.csv"), [Delimiter=",", Columns=13, Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+				    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers", {{"Sale ID", Int64.Type}, {"Sale Date", type date}, {"Product ID", Int64.Type}, {"Customer ID", Int64.Type}, {"Store ID", Int64.Type}, {"Employee ID", Int64.Type}, {"Promotion ID", Int64.Type}, {"Quantity", Int64.Type}, {"Unit Price", Currency.Type}, {"Unit Cost", Currency.Type}, {"Discount Amount", Currency.Type}, {"Total Amount", Currency.Type}, {"Net Amount", Currency.Type}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table
+

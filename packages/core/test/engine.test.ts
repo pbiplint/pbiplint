@@ -79,6 +79,12 @@ describe("resolveConfig", () => {
     expect(() => resolveConfig({ rulez: {} })).toThrow(/unknown key "rulez"/);
     expect(() => resolveConfig([])).toThrow(ConfigError);
   });
+  it("accepts a $schema key so editors can validate the file", () => {
+    expect(() =>
+      resolveConfig({ $schema: "https://pbiplint.com/schema/pbiplint.config.schema.json" }),
+    ).not.toThrow();
+    expect(() => resolveConfig({ $schema: 1, rulez: {} })).toThrow(/unknown key "rulez"/);
+  });
 });
 
 describe("isIgnored", () => {

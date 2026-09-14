@@ -15,7 +15,8 @@
     "typecheck": "tsc -b packages/core && tsc -p packages/cli/tsconfig.json && tsc -p tsconfig.test.json",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
-    "check:browser": "node packages/core/scripts/check-browser-bundle.mjs"
+    "check:browser": "node packages/core/scripts/check-browser-bundle.mjs",
+    "version:sync": "node scripts/sync-version.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

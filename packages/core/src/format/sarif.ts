@@ -1,6 +1,7 @@
 import type { LintResult } from "../engine/lint.js";
 import { defaultRules } from "../rules/index.js";
 import type { Severity } from "../rules/types.js";
+import { VERSION } from "../version.js";
 import type { FormatOptions, RuleHelp } from "./text.js";
 
 const LEVEL: Record<Severity, "error" | "warning" | "note"> = {
@@ -17,7 +18,10 @@ export function formatSarif(result: LintResult, options: FormatOptions = {}): st
   // Code scanning resolves artifact URIs against the repository root, so the caller can prefix the
   // model root's path. Finding locations themselves stay relative to the model root.
   const prefix = options.pathPrefix ?? "";
-  const uri = (file: string): string => (prefix ? `${prefix}/${file}` : file);
+  // SARIF artifact URIs are URIs, so each path segment is percent-encoded: a model folder with a
+  // space in its name would otherwise produce a location code scanning cannot resolve.
+  const encodePath = (p: string): string => p.split("/").map(encodeURIComponent).join("/");
+  const uri = (file: string): string => encodePath(prefix ? `${prefix}/${file}` : file);
   // GitHub renders help.markdown beside the alert and ignores helpUri, so the page link rides
   // inside the help block as well.
   const helpFor = (id: string, description: string, url: string): RuleHelp =>
@@ -68,7 +72,7 @@ export function formatSarif(result: LintResult, options: FormatOptions = {}): st
         tool: {
           driver: {
             name: "pbiplint",
-            version: options.toolVersion ?? "0.0.0",
+            version: options.toolVersion ?? VERSION,
             informationUri: "https://pbiplint.com",
             rules,
           },

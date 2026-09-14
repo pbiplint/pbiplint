@@ -1,0 +1,40 @@
+/// Field-list filter showing only what a sales rep needs — fact (with all measures), customer, product (without internal cost/margin), and the date hierarchy. Distinct from OLS — perspective hides things from the field list; OLS hides them at the engine level.
+perspective 'Sales Rep View'
+
+	perspectiveTable Sales
+
+		perspectiveMeasure 'Total Sales'
+
+		perspectiveMeasure 'Order Count'
+
+		perspectiveMeasure 'Average Order Value'
+
+		perspectiveMeasure 'Sales YTD'
+
+		perspectiveMeasure 'Sales LY'
+
+		perspectiveMeasure 'Sales YoY %'
+
+	perspectiveTable Customer
+
+		perspectiveColumn 'Customer Name'
+
+		perspectiveColumn Region
+
+	perspectiveTable Product
+
+		perspectiveColumn 'Product Name'
+
+		perspectiveColumn Category
+
+	perspectiveTable Date
+
+		perspectiveColumn Date
+
+		perspectiveColumn Year
+
+		perspectiveColumn Quarter
+
+		perspectiveColumn Month
+
+		perspectiveHierarchy Calendar

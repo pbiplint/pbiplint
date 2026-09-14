@@ -1,0 +1,158 @@
+table Sales
+
+	column 'Sale ID'
+		dataType: int64
+		isKey
+		summarizeBy: none
+		sourceColumn: Sale ID
+
+	column 'Product ID'
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: Product ID
+
+	column 'Customer ID'
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: Customer ID
+
+	column 'Order Date'
+		dataType: dateTime
+		formatString: mm/dd/yyyy
+		summarizeBy: none
+		sourceColumn: Order Date
+
+	column 'Ship Date'
+		dataType: dateTime
+		formatString: mm/dd/yyyy
+		summarizeBy: none
+		sourceColumn: Ship Date
+
+	column 'Month Start'
+		dataType: dateTime
+		summarizeBy: none
+		sourceColumn: Month Start
+
+	column Category
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Category
+
+	column Amount
+		dataType: decimal
+		isHidden
+		summarizeBy: none
+		sourceColumn: Amount
+
+	column Cost
+		dataType: decimal
+		isHidden
+		summarizeBy: none
+		sourceColumn: Cost
+
+	column IsReturned
+		dataType: int64
+		summarizeBy: none
+		sourceColumn: IsReturned
+
+	column 'Priority Flag'
+		dataType: int64
+		summarizeBy: none
+		sourceColumn: Priority Flag
+
+	column 'No Source'
+		dataType: string
+		summarizeBy: none
+
+	column 'Product Category' = RELATED('Product'[Category])
+		dataType: string
+		summarizeBy: none
+
+	column 'Only Calc Item Column'
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: Only Calc Item Column
+
+	column 'Only RLS Column'
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: Only RLS Column
+
+	column 'Only Hidden Measure Column'
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: Only Hidden Measure Column
+
+	measure 'Only Calc Item Uses Me' = 1
+		isHidden
+		formatString: #,0
+
+	measure 'Hidden Uses Column' = SUM('Sales'[Only Hidden Measure Column])
+		isHidden
+		formatString: #,0
+
+	measure 'Bare Own Col' = SUM([Amount])
+		formatString: #,0
+
+	measure 'Bare Other Col' = COUNTROWS(FILTER('Date', [Year] > 2000))
+		formatString: #,0
+
+	measure 'Safe Ratio' = IFERROR([Total Cost] / [Total Amount], 0)
+		formatString: #,0.0%;-#,0.0%;#,0.0%
+
+	measure 'Total Amount' = SUM('Sales'[Amount])
+		formatString: #,0
+
+	measure 'Total Amount Copy' = SUM('Sales'[Amount])
+		formatString: #,0
+
+	measure 'Amount Alias' = [Total Amount]
+		formatString: #,0
+
+	measure 'Intersect Demo' = COUNTROWS(INTERSECT(VALUES('Product'[Category]), VALUES('Sales'[Category])))
+		formatString: #,0
+
+	measure 'Filter Column' = CALCULATE([Total Amount], FILTER('Sales', 'Sales'[Category] = "Bikes"))
+		formatString: #,0
+
+	measure 'Filter Measure' = CALCULATE([Total Amount], FILTER('Product', [Total Amount] > 100))
+		formatString: #,0
+
+	measure 'Total Cost' = SUM('Sales'[Cost])
+		formatString: #,0
+
+	measure 'Margin Pct' = 1 - DIVIDE([Total Cost], [Total Amount])
+		formatString: #,0.0%;-#,0.0%;#,0.0%
+
+	measure 'Logged Amount' = EVALUATEANDLOG([Total Amount])
+		formatString: #,0
+
+	measure 'Qualified Ref' = 'Sales'[Total Amount] * 2
+		formatString: #,0
+
+	measure 'Hidden Unused' = 1
+		isHidden
+		formatString: #,0
+
+	measure lowercase = 2
+		formatString: #,0
+
+	measure 'Ship Amount' = CALCULATE([Total Amount], USERELATIONSHIP('Sales'[Ship Date], 'Date'[Date]))
+		formatString: #,0
+
+	measure 'YTD Amount' = TOTALYTD([Total Amount], 'Date'[Date])
+		formatString: #,0
+
+	partition SalesData = m
+		mode: import
+		source =
+				let
+				    Source = Table.FromRows({}),
+				    Added = Table.AddColumn(Source, "X", each 1)
+				in
+				    Added

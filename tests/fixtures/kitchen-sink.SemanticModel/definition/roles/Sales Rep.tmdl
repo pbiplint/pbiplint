@@ -1,0 +1,15 @@
+/// Sales reps see customers / products / sales but not internal cost or margin (column-level OLS) and not internal commentary (table-level OLS). Combination role demonstrates that a single role can carry multiple OLS forms across different tablePermissions[] entries.
+role 'Sales Rep'
+	modelPermission: read
+
+	tablePermission 'Sensitive Notes'
+		metadataPermission: none
+
+	tablePermission Product
+
+		columnPermission 'Cost Price' = none
+
+		columnPermission 'Margin %' = none
+
+	annotation PBI_Id = 1722340a0ba255788c720f3467a9223d
+

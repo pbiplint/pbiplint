@@ -189,7 +189,9 @@ Desktop preserves unknown annotations, so ignores survive a round trip.
 Project-level configuration lives in `pbiplint.config.json` next to the
 project: rules on or off, severity overrides, and the fail threshold for
 the CLI. The web app accepts the same file when it is present in the
-dropped folder.
+dropped folder. Rule ids in the annotation and in the config are matched
+without regard to case, and a config id that names no rule is reported
+rather than dropped silently.
 
 ## 6. Ranking
 

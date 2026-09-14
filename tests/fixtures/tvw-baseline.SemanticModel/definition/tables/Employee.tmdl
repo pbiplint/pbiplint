@@ -1,0 +1,81 @@
+table Employee
+	lineageTag: 0e58509a-3b12-4638-a2e5-38ce148a8113
+
+	/// Number of distinct employees.
+	measure 'Employee Count' = DISTINCTCOUNT(Employee[Employee ID])
+		formatString: #,##0
+		lineageTag: 44041a50-d274-4617-a357-ee5513ce92df
+
+	column 'Employee ID'
+		dataType: int64
+		isHidden
+		lineageTag: 263b1d8a-94c4-4fc8-ada7-4190d11dfdf5
+		summarizeBy: none
+		sourceColumn: Employee ID
+
+	column 'Employee Name'
+		dataType: string
+		lineageTag: 4802dd4a-9464-475e-af40-c17d7619937c
+		summarizeBy: none
+		sourceColumn: Employee Name
+
+	column Title
+		dataType: string
+		lineageTag: db7f497a-7f36-42f2-8443-264e47237d46
+		summarizeBy: none
+		sourceColumn: Title
+
+	column Department
+		dataType: string
+		lineageTag: 4a737427-80b7-4e0f-83b0-c2aadb30a8f1
+		summarizeBy: none
+		sourceColumn: Department
+
+	column 'Hire Date'
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		lineageTag: ede28605-27a2-4d5d-90e3-8599ba6b1109
+		summarizeBy: none
+		sourceColumn: Hire Date
+
+		variation Variation
+			isDefault
+			relationship: 31804c3c-642e-451a-bf08-67309450978e
+			defaultHierarchy: LocalDateTable_e7a9b7e2-77e8-4edf-afdf-0d3d18a2752d.'Date Hierarchy'
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column 'Manager ID'
+		dataType: int64
+		isHidden
+		lineageTag: 05a659d1-1163-4f58-aa77-58a16c7d6bee
+		summarizeBy: count
+		sourceColumn: Manager ID
+
+		annotation SummarizationSetBy = Automatic
+
+	column Region
+		dataType: string
+		lineageTag: 5449bf4a-dbd4-402b-84c2-ff3dac4af19f
+		summarizeBy: none
+		sourceColumn: Region
+
+	column Email
+		dataType: string
+		lineageTag: 636c8bab-e534-418e-b61e-1d64098c1743
+		summarizeBy: none
+		sourceColumn: Email
+
+	partition Employee = m
+		mode: import
+		source =
+				let
+				    // Read the Employee dimension CSV from the local Data folder
+				    Source = Csv.Document(File.Contents("C:\Demo\Data\Employee.csv"), [Delimiter = ",", Columns = 8, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+				    #"Typed Columns" = Table.TransformColumnTypes(#"Promoted Headers", {
+				        {"Employee ID", Int64.Type}, {"Employee Name", type text}, {"Title", type text}, {"Department", type text},
+				        {"Hire Date", type date}, {"Manager ID", Int64.Type}, {"Region", type text}, {"Email", type text}})
+				in
+				    #"Typed Columns"
+

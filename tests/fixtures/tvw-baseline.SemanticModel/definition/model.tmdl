@@ -1,0 +1,31 @@
+model Model
+	culture: en-US
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	discourageImplicitMeasures
+	sourceQueryCulture: en-US
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+annotation PBI_ProTooling = ["MCP-PBIModeling","DevMode"]
+
+annotation PBI_QueryOrder = ["Sales","Date","Product","Customer","Store","Employee","Promotion"]
+
+annotation __PBI_TimeIntelligenceEnabled = 1
+
+annotation __TEdtr = 1
+
+ref table Sales
+ref table Date
+ref table Product
+ref table Customer
+ref table Store
+ref table Employee
+ref table Promotion
+ref table DateTableTemplate_f2afc5fc-2d0d-478c-92e8-dc0f26f32175
+ref table LocalDateTable_1b2c1fde-0cf3-455e-bfee-a8e4970804e0
+ref table LocalDateTable_ef30d063-6216-4d63-895c-419361657bc0
+ref table LocalDateTable_e7a9b7e2-77e8-4edf-afdf-0d3d18a2752d
+ref table LocalDateTable_152618ca-7d7d-4b4c-8a4c-54982fa64176
+ref table LocalDateTable_bc59707b-5588-45b1-b7db-d153b59cc0f5
+

@@ -1,0 +1,8 @@
+dist
+node_modules
+examples
+tests/fixtures
+# Generated verbatim by scripts/te-expectations.mjs; regenerating must not need a format pass.
+tests/expectations
+*.tmdl
+*.md

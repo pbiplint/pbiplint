@@ -1,0 +1,26 @@
+table Customer
+
+	column 'Customer ID'
+		dataType: int64
+		isKey
+		summarizeBy: none
+		sourceColumn: Customer ID
+
+	column 'Customer Name'
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Customer Name
+
+	column Region
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Region
+
+	partition Customer = m
+		mode: directQuery
+		source =
+				let
+				    Source = Sql.Database("localhost", "Sales"),
+				    Customer = Source{[Schema="dbo",Item="Customer"]}[Data]
+				in
+				    Customer

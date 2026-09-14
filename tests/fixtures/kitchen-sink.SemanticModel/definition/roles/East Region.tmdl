@@ -1,0 +1,8 @@
+/// Static RLS — viewer sees only customers in the East region. The filter is a literal DAX expression, no user-identity dependency. Dim-side filter automatically restricts every related fact row through the active relationship.
+role 'East Region'
+	modelPermission: read
+
+	tablePermission Customer = 'Customer'[Region] = "East"
+
+	annotation PBI_Id = 1f1b5dac15755b2bbfafe4650e8673eb
+

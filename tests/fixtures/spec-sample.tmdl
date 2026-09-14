@@ -1,0 +1,114 @@
+database Sales
+	compatibilityLevel: 1567
+
+model Model
+	culture: en-US
+
+annotation PBI_QueryOrder = ["Sales"]
+
+/// Table Description
+table Sales
+	lineageTag: e9374b9a-faee-4f9e-b2e7-d9aafb9d6a91
+
+	partition 'Sales-Partition' = m
+		mode: import
+		source = ```
+			let
+				Source = Sql.Database(Server, Database)
+			in
+				Source
+
+			```
+
+	/// This is the Measure Description
+	/// One more line
+	measure 'Sales Amount' = SUMX('Sales', [Quantity] * [Net Price])
+		formatString: $ #,##0
+		displayFolder: " My ""Amazing"" Measures"
+
+	measure 'Sales (ly)' =
+			var ly = CALCULATE([Sales Amount], SAMEPERIODLASTYEAR('Calendar'[Date]))
+			return ly
+		formatString: $ #,##0
+
+	measure Measure1 = ```
+				var myVar = Today()
+				return myVar
+			```
+
+	column Quantity
+		datatype: int64
+		isHidden
+		isAvailableInMdx: false
+		sourceColumn: Quantity
+		summarizeBy: None
+
+	column 'Net Price'
+		dataType: int64
+		sourceColumn: "Net Price"
+		summarizeBy: none
+
+	column Category
+		dataType: string
+		sortByColumn: 'Category Order'
+
+	column 'Category Order'
+		dataType: int64
+		isHidden
+
+	column 'Margin %' = DIVIDE([Sales Amount], 1)
+		dataType: double
+
+	hierarchy 'Product Hierarchy'
+
+		level Category
+			column: Category
+
+	calculationGroup
+		precedence: 1
+
+		calculationItem YTD = CALCULATE(SELECTEDMEASURE(), DATESYTD('Calendar'[Date]))
+
+		calculationItem 'Prior Year' =
+				CALCULATE(
+					SELECTEDMEASURE(),
+					SAMEPERIODLASTYEAR('Calendar'[Date])
+				)
+			formatStringDefinition = "0.0%"
+
+table Sales
+
+	measure 'Partial Measure' = 1
+
+table 'O''Brien'
+	isHidden
+
+relationship cdb6e6a9-c9d1-42b9-b9e0-484a1bc7e123
+	fromColumn: Sales.'Product Key'
+	toColumn: Product.'Product Key'
+
+role Role_Store1
+	modelPermission: read
+
+	tablePermission Store = 'Store'[Store Code] IN {1,10,20,30}
+
+perspective Product
+
+	perspectiveTable Product
+
+		perspectiveMeasure '# Products'
+
+expression Server = "localhost" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+
+expression Database = "Contoso" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+
+cultureInfo en-US
+	linguisticMetadata =
+			{
+			  "Version": "1.0.0",
+			  "Language": "en-US"
+			}
+		contentType: json
+
+function 'Sales.Rate' =
+		(x: INT64) => x * 2

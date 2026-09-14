@@ -1,0 +1,90 @@
+import type { LintResult } from "../engine/lint.js";
+import type { RankedGroup } from "../engine/rank.js";
+import { SEVERITY_LABEL, type Finding } from "../rules/types.js";
+
+/** Guidance for one rule in the two forms SARIF carries: plain text and Markdown. */
+export interface RuleHelp {
+  text: string;
+  markdown: string;
+}
+
+export interface FormatOptions {
+  toolVersion?: string;
+  /**
+   * Help per rule id for the SARIF help block, which code scanning shows beside each alert.
+   * The CLI passes the rule pages' Why, How to fix, and Quirks sections. Without it the block
+   * falls back to the rule's description and page URL.
+   */
+  help?: Readonly<Record<string, RuleHelp>>;
+  rules?: import("../rules/types.js").Rule[];
+  /**
+   * Posix path (forward slashes, no leading "./", no trailing slash) joined in front of each
+   * SARIF artifact URI so code scanning can resolve it from the repository root. The text, JSON,
+   * and markdown formats ignore it: their paths stay relative to the model root.
+   */
+  pathPrefix?: string;
+}
+
+const SEVERITY_TAG = { 3: "ERROR", 2: "WARN ", 1: "INFO " } as const;
+
+export const locationOf = (f: Finding): string =>
+  f.location ? `${f.location.file}:${f.location.line}` : "";
+
+/** "1 rule", "2 rules". Nouns that do not take an s ("info") are written out by the caller. */
+const plural = (n: number, noun: string): string => `${n} ${noun}${n === 1 ? "" : "s"}`;
+
+/** Summary sentence shared by the text and markdown formats. */
+export function summaryLine(result: LintResult): string {
+  const s = result.summary;
+  return `${plural(s.findings, "finding")} (${plural(s.errors, "error")}, ${plural(s.warnings, "warning")}, ${s.infos} info) in ${plural(s.files, "file")}`;
+}
+
+export function skippedLine(result: LintResult): string {
+  const s = result.summary;
+  const live = s.rulesSkipped.filter((r) => r.reason === "needsLiveModel").length;
+  const disabled = s.rulesSkipped.filter((r) => r.reason === "disabled").length;
+  const parts = [`${plural(s.rulesRun, "rule")} run`];
+  if (live) parts.push(`${plural(live, "rule")} skipped (need a live model)`);
+  if (disabled) parts.push(`${plural(disabled, "rule")} disabled by config`);
+  if (s.ignored) parts.push(`${plural(s.ignored, "finding")} ignored by annotation`);
+  return parts.join(", ");
+}
+
+export const topGroups = (result: LintResult, n = 5): RankedGroup[] => result.groups.slice(0, n);
+
+export function formatText(result: LintResult, _options: FormatOptions = {}): string {
+  const out: string[] = [`pbiplint: ${summaryLine(result)}`, skippedLine(result), ""];
+  if (result.groups.length === 0) {
+    out.push("No findings.", "");
+  } else {
+    out.push("Fix these first:");
+    topGroups(result).forEach((g, i) =>
+      out.push(
+        `  ${i + 1}. ${g.rule.name}  (${plural(g.findings.length, SEVERITY_LABEL[g.rule.severity])})`,
+      ),
+    );
+    out.push("");
+    for (const g of result.groups) {
+      out.push(
+        `${SEVERITY_TAG[g.rule.severity]}  ${g.rule.name}  ${g.rule.id}  (${g.findings.length})`,
+      );
+      out.push(`       ${g.rule.url}`);
+      // The location column is always emitted, empty or not, so a finding without a location never
+      // shifts its detail into the location column. Widths align within the group only.
+      const width = Math.max(...g.findings.map((f) => f.objectName.length));
+      const locWidth = Math.max(...g.findings.map((f) => locationOf(f).length));
+      for (const f of g.findings) {
+        const cols = [f.objectName.padEnd(width), locationOf(f).padEnd(locWidth), f.detail ?? ""];
+        out.push(`       ${cols.join("  ")}`.trimEnd());
+      }
+      out.push("");
+    }
+  }
+  // Rule crashes are always reported, including on a run where nothing else fired.
+  if (result.summary.ruleErrors.length) {
+    out.push("Rule errors (please report these):");
+    for (const e of result.summary.ruleErrors) out.push(`  ${e.id}: ${e.message}`);
+    out.push("");
+  }
+  return out.join("\n");
+}

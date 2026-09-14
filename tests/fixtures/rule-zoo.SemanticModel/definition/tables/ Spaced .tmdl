@@ -1,0 +1,14 @@
+table ' Spaced '
+
+	column ' Padded Col '
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Padded Col
+
+	partition ' Spaced ' = m
+		mode: import
+		source =
+				let
+				    Source = Table.FromRows({})
+				in
+				    Source

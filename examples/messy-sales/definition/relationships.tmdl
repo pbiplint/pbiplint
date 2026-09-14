@@ -1,0 +1,23 @@
+relationship 8f6329ea-7a97-59d8-906c-ee02e1d79158
+	fromColumn: Sales.'Product ID'
+	toColumn: Product.'Product ID'
+
+relationship 8733974e-19f7-50c5-a5cd-64b565554e0e
+	fromColumn: Sales.'Customer ID'
+	toColumn: Customer.'Customer ID'
+
+relationship 28714507-189f-5b8b-8e59-0b55a5d65096
+	fromColumn: Sales.'Sale Date'
+	toColumn: Date.Date
+
+relationship 2cf9b5a2-6bd2-5d41-aee4-d153a32261c5
+	fromColumn: Sales.'Store ID'
+	toColumn: Store.'Store ID'
+
+relationship 5b883d70-11cb-59ee-bf31-c706854ce0a7
+	fromColumn: Sales.'Employee ID'
+	toColumn: Employee.'Employee ID'
+
+relationship 4862abb4-bb60-51c5-8127-c4d618a3c29a
+	fromColumn: Sales.'Promotion ID'
+	toColumn: Promotion.'Promotion ID'

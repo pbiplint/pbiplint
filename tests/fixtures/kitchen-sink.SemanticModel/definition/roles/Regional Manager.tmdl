@@ -1,0 +1,13 @@
+/// Dynamic RLS — viewer sees only customers in the regions their email is mapped to via the disconnected User Region table. Different users get different filter sets without separate role definitions.
+role 'Regional Manager'
+	modelPermission: read
+
+	tablePermission Customer =
+			'Customer'[Region] IN
+			    CALCULATETABLE (
+			        VALUES ( 'User Region'[Region] ),
+			        'User Region'[User Email] = USERPRINCIPALNAME ()
+			    )
+
+	annotation PBI_Id = 91d25a77a3e65caca65731d62eba0308
+

@@ -1,0 +1,6 @@
+role Admins
+	modelPermission: administrator
+
+	member 'admin@example.com'
+		identityProvider: AzureAD
+		memberType: user

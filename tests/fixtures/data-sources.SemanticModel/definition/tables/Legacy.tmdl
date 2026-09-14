@@ -1,0 +1,13 @@
+table Legacy
+
+	column Id
+		dataType: int64
+		summarizeBy: none
+		sourceColumn: Id
+
+	partition Legacy = query
+		dataView: full
+		source
+			query = SELECT * FROM dbo.Legacy
+			dataSource: 'Legacy SQL'
+

@@ -96,7 +96,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   OBJECTS_WITH_NO_DESCRIPTION:
     "Visible tables, columns, measures, and calculation groups with no description. Visibility is the object's own flag.",
   PARSE_ISSUE:
-    "Lines the TMDL parser did not understand: space indentation, an unterminated ``` fence, or a line at an impossible indentation.",
+    "Lines the TMDL parser could not use: space indentation, an unterminated ``` fence, a line at an impossible indentation, a line in no form the parser recognizes, and a `///` description with a blank line between it and its declaration.",
   PARTITION_NAME_SHOULD_MATCH_TABLE_NAME_FOR_SINGLE_PARTITION_TABLES:
     "Regular tables with exactly one partition whose name differs from the table name. Calculated tables and calculation groups are not checked.",
   PERCENTAGE_FORMATTING:

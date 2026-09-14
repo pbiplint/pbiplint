@@ -50,18 +50,36 @@ export function parseTmdl(file: string, text: string): ParsedFile {
   const issues: ParseIssue[] = [];
   const stack: TmdlNode[] = [];
   let pendingDescription: string[] = [];
+  // The first `///` line of the pending run, for the issue reported when it leads nowhere.
+  let descriptionLine = 0;
+  let descriptionText = "";
   let i = 0;
 
   while (i < lines.length) {
     const raw = lines[i]!;
     const lineNo = i + 1;
     if (raw.trim() === "") {
+      // Tabular Editor's TMDL reader rejects a blank line after a `///` description, so a
+      // description separated from its declaration never reaches it. Report and drop it.
+      if (pendingDescription.length) {
+        issues.push({
+          file,
+          line: descriptionLine,
+          text: descriptionText,
+          reason: "description is not followed by a declaration",
+        });
+        pendingDescription = [];
+      }
       i++;
       continue;
     }
     const indent = tabIndent(raw);
     const content = raw.slice(indent);
     if (content.startsWith("///")) {
+      if (!pendingDescription.length) {
+        descriptionLine = lineNo;
+        descriptionText = raw;
+      }
       pendingDescription.push(content.replace(/^\/\/\/ ?/, ""));
       i++;
       continue;

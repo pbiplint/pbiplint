@@ -30,6 +30,10 @@ const join = (dir: string, name: string): string => (dir === "" ? name : `${dir}
  * Mirrors the CLI's resolveModel on a tree of paths: a folder with a definition folder is the
  * model; else a folder holding exactly one .SemanticModel folder points at it; else every .tmdl
  * file under the folder is linted with paths relative to it.
+ *
+ * A sibling .SemanticModel folder with no .tmdl files is invisible here, because only .tmdl files
+ * and the config are ever read, so it never triggers the two-model refusal the CLI gives; the one
+ * lintable model is linted.
  */
 export function selectModel(entries: InputEntry[]): SelectedModel {
   const tmdl = entries.filter((e) => e.path.endsWith(".tmdl"));

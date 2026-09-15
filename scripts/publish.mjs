@@ -5,6 +5,8 @@
 // makes the workflow safe to rerun and lets a tag follow a first publish done by hand.
 // In GitHub Actions the publish authenticates through npm trusted publishing (OIDC), so no token
 // is read here; provenance is attached by npm.
+// The publish runs with --ignore-scripts, so the tarball is exactly the tree check:pack
+// inspected: no prepack rebuild happens between the check and the upload.
 import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
@@ -16,5 +18,5 @@ for (const dir of ["packages/core", "packages/cli"]) {
     continue;
   }
   console.log(`publishing ${name}@${version}`);
-  execFileSync("npm", ["publish", "-w", name], { stdio: "inherit" });
+  execFileSync("npm", ["publish", "--ignore-scripts", "-w", name], { stdio: "inherit" });
 }

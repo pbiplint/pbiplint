@@ -1,15 +1,22 @@
 // @vitest-environment happy-dom
 import { lint } from "@pbiplint/core";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { applyFilters, renderResults } from "../src/results/render.js";
 import { SAMPLE_FILES } from "../src/sample.js";
 
 const result = lint(SAMPLE_FILES);
 let container: HTMLElement;
 
+const original = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+
 beforeEach(() => {
   document.body.innerHTML = '<section id="results"></section>';
   container = document.getElementById("results")!;
+});
+
+afterEach(() => {
+  if (original) Object.defineProperty(navigator, "clipboard", original);
+  else Reflect.deleteProperty(navigator, "clipboard");
 });
 
 describe("renderResults", () => {
@@ -38,6 +45,8 @@ describe("renderResults", () => {
     expect(g0.dataset.severity).toBe(String(r0.rule.severity));
     expect(g0.dataset.category).toBe(r0.rule.category);
     expect(g0.querySelector("a.rule-link")!.getAttribute("href")).toBe(`/rules/${r0.rule.slug}/`);
+    // The summary is the disclosure control, so it holds nothing else focusable (WCAG 4.1.2).
+    expect(g0.querySelector("summary a")).toBeNull();
     expect(g0.querySelectorAll("tbody tr").length).toBe(r0.findings.length);
     expect(g0.querySelector("tbody td")!.textContent).toBe(r0.findings[0]!.objectName);
   });
@@ -62,6 +71,19 @@ describe("renderResults", () => {
       "Download JSON",
       "Copy Markdown",
     ]);
+  });
+  it("says so on the button when the copy is refused", async () => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: () => Promise.reject(new Error("NotAllowedError")) },
+    });
+    renderResults(container, result, { source: "x" });
+    const buttons = [...container.querySelectorAll<HTMLButtonElement>(".export button")];
+    const copyButton = buttons.at(-1)!;
+    copyButton.click();
+    // A macrotask flushes every pending microtask, well before the 1500 ms label reset.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(copyButton.textContent).toBe("Copy failed");
   });
   it("says so when there is nothing to report", () => {
     // No model small enough to write here is actually clean (a bare model trips the date table

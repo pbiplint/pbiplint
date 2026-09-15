@@ -108,10 +108,20 @@ function renderExportBar(result: LintResult): HTMLElement {
     button("Download Markdown", () => download(exportMarkdown(result))),
     button("Download JSON", () => download(exportJson(result))),
     button("Copy Markdown", (b) => {
-      void copy(exportMarkdown(result)).then(() => {
-        b.textContent = "Copied";
+      const restore = (): void => {
         setTimeout(() => (b.textContent = "Copy Markdown"), 1500);
-      });
+      };
+      void copy(exportMarkdown(result))
+        .then(() => {
+          b.textContent = "Copied";
+          restore();
+        })
+        // A browser with no clipboard API, an insecure context, an unfocused document, or a
+        // refused permission all land here. Say so on the button instead of failing silently.
+        .catch(() => {
+          b.textContent = "Copy failed";
+          restore();
+        });
     }),
   );
 }
@@ -172,15 +182,22 @@ function renderGroup(g: RankedGroup): HTMLElement {
       "data-severity": String(g.rule.severity),
       "data-category": g.rule.category,
     },
+    // The summary is the disclosure control itself, so it holds no focusable child: the rule link
+    // sits in the panel below, where activating it can only mean "open the page".
     h(
       "summary",
       {},
       h("span", { class: `badge ${label}` }, label),
       h("span", { class: "name" }, g.rule.name),
       h("span", { class: "count" }, String(g.findings.length)),
+    ),
+    h(
+      "p",
+      { class: "meta" },
+      h("code", {}, g.rule.id),
+      ` · ${g.rule.category} · `,
       h("a", { class: "rule-link", href: pagePath(g.rule.slug) }, "How to fix it"),
     ),
-    h("p", { class: "meta" }, h("code", {}, g.rule.id), ` · ${g.rule.category}`),
     h(
       "table",
       {},

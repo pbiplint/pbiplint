@@ -31,4 +31,14 @@ export function download(file: ExportFile): void {
   URL.revokeObjectURL(url);
 }
 
-export const copy = (file: ExportFile): Promise<void> => navigator.clipboard.writeText(file.text);
+/**
+ * Copies the text with the async clipboard API. An insecure context or an older browser has no
+ * `navigator.clipboard` at all, so the miss comes back as a rejected promise rather than a throw:
+ * callers then have one failure path to handle instead of two.
+ */
+export function copy(file: ExportFile): Promise<void> {
+  const clipboard: Clipboard | undefined = navigator.clipboard;
+  return clipboard
+    ? clipboard.writeText(file.text)
+    : Promise.reject(new Error("Clipboard access is not available"));
+}

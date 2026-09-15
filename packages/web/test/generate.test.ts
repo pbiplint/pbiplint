@@ -79,7 +79,7 @@ describe("generateSite", () => {
     expect(summaries.filter((s) => s.includes("`"))).toEqual([]);
     const parseIssue = readFileSync(join(out, "rules/parse-issue/index.html"), "utf8");
     const description = /<meta name="description" content="([^"]*)"/.exec(parseIssue)?.[1] ?? "";
-    expect(description).toContain("an unterminated fence");
+    expect(description).toContain("an unterminated code fence");
     expect(description).not.toContain("`");
     const about = readFileSync(join(out, "about/index.html"), "utf8");
     expect(about).toContain('<h2 id="verify">');

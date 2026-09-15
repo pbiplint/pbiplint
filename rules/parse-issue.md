@@ -14,7 +14,7 @@ sources:
 
 ## What it checks
 
-Lines the TMDL parser could not use: space indentation, an unterminated ``` fence, a line at an impossible indentation, a line in no form the parser recognizes, and a `///` description with a blank line between it and its declaration.
+Lines the TMDL parser could not use: space indentation, an unterminated code fence, a line at an impossible indentation, a line in no form the parser recognizes, and a `///` description with a blank line between it and its declaration.
 
 ## Why it matters
 

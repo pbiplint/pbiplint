@@ -136,7 +136,7 @@ main {
   font-size: 14px;
 }
 .site-footer p {
-  color: var(--fg-3);
+  color: var(--fg-2);
   margin: 4px 0;
 }
 
@@ -214,7 +214,7 @@ button,
 .button {
   font: inherit;
   font-weight: 600;
-  color: #fff;
+  color: var(--canvas);
   background: var(--brand-blue);
   border: 0;
   border-radius: 8px;
@@ -226,7 +226,7 @@ button,
 button:hover,
 .button:hover {
   background: var(--brand-blue-soft);
-  color: #fff;
+  color: var(--canvas);
 }
 button.secondary,
 .button.secondary {
@@ -246,7 +246,7 @@ button.secondary:hover,
   margin-top: 20px;
 }
 .hint {
-  color: var(--fg-3);
+  color: var(--fg-2);
   font-size: 14px;
   margin: 0;
 }
@@ -290,7 +290,7 @@ button.secondary:hover,
   align-items: center;
 }
 .filters legend {
-  color: var(--fg-3);
+  color: var(--fg-2);
   font-size: 13px;
   padding: 0 6px;
 }
@@ -347,7 +347,7 @@ button.secondary:hover,
 .group .meta {
   margin: 0;
   padding: 0 16px 8px 42px;
-  color: var(--fg-3);
+  color: var(--fg-2);
   font-size: 13px;
 }
 .badge {
@@ -375,7 +375,7 @@ button.secondary:hover,
 }
 .badge.muted {
   background: var(--surface-2);
-  color: var(--fg-3);
+  color: var(--fg-2);
 }
 table {
   width: 100%;
@@ -390,7 +390,7 @@ td {
   vertical-align: top;
 }
 th {
-  color: var(--fg-3);
+  color: var(--fg-2);
   font-weight: 600;
   font-size: 12px;
   text-transform: uppercase;
@@ -403,7 +403,7 @@ th {
 
 /* Rules and prose pages */
 .eyebrow {
-  color: var(--fg-3);
+  color: var(--fg-2);
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.08em;

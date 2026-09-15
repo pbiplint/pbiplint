@@ -10,7 +10,7 @@ npm run check:browser
 npm run build       # core, CLI, and the site (the site build fails on any network reference)
 ```
 
-Node 20 or later. No runtime dependencies are allowed in `packages/core` or `packages/cli`.
+Node 20.19 or later (or 22.12 or later), which Vite needs for the site build. No runtime dependencies are allowed in `packages/core` or `packages/cli`.
 
 ## Layout
 

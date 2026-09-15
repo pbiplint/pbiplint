@@ -20,9 +20,11 @@ const folderInput = byId<HTMLInputElement>("folder-input");
 const plural = (n: number, noun: string): string => `${n} ${noun}${n === 1 ? "" : "s"}`;
 
 function say(text: string, kind: "info" | "error" = "info"): void {
+  // Unhidden before the text is written: a screen reader can miss text set on a hidden live region.
+  if (text !== "") status.hidden = false;
   status.textContent = text;
   status.dataset.kind = kind;
-  status.hidden = text === "";
+  if (text === "") status.hidden = true;
 }
 
 /**

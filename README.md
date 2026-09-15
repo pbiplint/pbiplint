@@ -23,7 +23,10 @@ npx pbiplint path/to/model --format sarif --output pbiplint.sarif
 npx pbiplint rules                               # every rule with status and severity
 ```
 
-Exit code 1 means findings at or above `--fail-on` (default `error`), so it works as a CI gate.
+Or use it in the browser at https://pbiplint.com: paste TMDL or drop a `.SemanticModel` folder.
+The page never uploads anything; the About page explains how to check that.
+
+Exit codes: 0 no findings at or above --fail-on (default error), 1 findings, 2 usage or input error. That makes it a CI gate.
 
 ## Configure it
 
@@ -31,6 +34,7 @@ Exit code 1 means findings at or above `--fail-on` (default `error`), so it work
 
 ```json
 {
+  "$schema": "https://pbiplint.com/schema/pbiplint.config.schema.json",
   "rules": {
     "REMOVE_ROLES_WITH_NO_MEMBERS": "off",
     "DAX_COLUMNS_FULLY_QUALIFIED": "warning"
@@ -38,6 +42,8 @@ Exit code 1 means findings at or above `--fail-on` (default `error`), so it work
   "failOn": "warning"
 }
 ```
+
+The $schema line is optional; with it, editors validate the file as you type.
 
 The search walks up from the model to the filesystem root and uses the first file it finds, so a
 `pbiplint.config.json` in a parent folder or in your home directory applies to every model below it.
@@ -56,11 +62,12 @@ To ignore a rule on one object, add an annotation in TMDL. Power BI Desktop keep
 
 ## What it checks
 
-Every rule from Microsoft's Best Practice Analyzer ruleset, ported literally so the numbers match Tabular Editor. Five rules need VertiPaq statistics and are listed but not run. Each rule has a page under `rules/` with what it checks, why, how to fix it, and known quirks.
+Every rule from Microsoft's Best Practice Analyzer ruleset, ported literally so the numbers match Tabular Editor. Five rules need VertiPaq statistics and are listed but not run. Each rule has a page at https://pbiplint.com/rules (source under `rules/`) with what it checks, why, how to fix it, and known quirks.
 
 ## Links
 
-- Website: https://pbiplint.com (coming)
+- Website: https://pbiplint.com
+- Rule pages: https://pbiplint.com/rules
 - From the makers of [The Data Practitioner](https://www.youtube.com/@TheDataPractitioner)
 
 ## Contributing

@@ -1,6 +1,6 @@
 # pbiplint v1 design
 
-Date: 2026-09-04. Status: approved by Michael on 2026-09-04. Implementation plan: docs/superpowers/plans/2026-09-04-pbiplint-v1-core-and-cli.md.
+Date: 2026-09-04. Status: approved by Michael on 2026-09-04. Implementation plan: docs/superpowers/plans/2026-09-04-pbiplint-v1-core-and-cli.md. Web app, deploy, and publish plan: docs/superpowers/plans/2026-09-14-pbiplint-v1-web-deploy-and-publish.md.
 
 ## 1. What this is
 
@@ -152,14 +152,16 @@ interface Rule {
   category: Category;    // Performance | Error Prevention | DAX Expressions | Maintenance | Formatting | Naming Conventions
   severity: 1 | 2 | 3;   // info | warning | error, as in the source ruleset
   scope: ObjectType[];
-  needsLiveModel?: true; // declared, never run: needs VertiPaq statistics
-  check(model: Model, ctx: RuleContext): Finding[];
+  description: string;   // the first paragraph of the rule page's "What it checks"
+  references: string[];  // documentation URLs
+  status: "ported" | "needsLiveModel" | "builtin";   // needsLiveModel: declared, never run
+  check(model: Model, ctx: RuleContext): RuleFinding[];
 }
 
 interface Finding {
   ruleId: string;
   objectType: ObjectType;
-  objectRef: string;     // 'Table'[Column], [Measure], 'Table', Model
+  objectName: string;    // Tabular Editor's display name: 'Table'[Column], [Measure], 'Table', Model
   location?: { file: string; line: number };
   detail?: string;       // rule-specific specifics, optional
 }
@@ -168,8 +170,9 @@ interface Finding {
 Rule packs: v1 ships one pack, `microsoft-bpa`, containing every rule in
 `BPARules.json` that can be evaluated from files. Rules that need
 VertiPaq statistics (column cardinality, table sizes, referential
-integrity violations) are declared with `needsLiveModel` so they appear
-on the site as "not checkable from files" rather than silently missing.
+integrity violations) are declared with status `"needsLiveModel"` so
+they appear on the site as "not checkable from files" rather than
+silently missing.
 
 Literal ports, quirks included. Ported rules reproduce the source
 ruleset's behavior exactly, including its quirks (for example the

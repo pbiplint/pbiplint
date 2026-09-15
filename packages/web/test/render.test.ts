@@ -1,0 +1,87 @@
+// @vitest-environment happy-dom
+import { lint } from "@pbiplint/core";
+import { beforeEach, describe, expect, it } from "vitest";
+import { applyFilters, renderResults } from "../src/results/render.js";
+import { SAMPLE_FILES } from "../src/sample.js";
+
+const result = lint(SAMPLE_FILES);
+let container: HTMLElement;
+
+beforeEach(() => {
+  document.body.innerHTML = '<section id="results"></section>';
+  container = document.getElementById("results")!;
+});
+
+describe("renderResults", () => {
+  it("opens with the privacy line, the summary, and the five groups to fix first", () => {
+    renderResults(container, result, { source: "the sample project (11 files)" });
+    expect(container.querySelector(".privacy")!.textContent).toContain("Nothing was uploaded");
+    expect(container.querySelector("h2")!.textContent).toBe(
+      "Results for the sample project (11 files)",
+    );
+    expect(container.querySelector(".summary")!.textContent).toContain(
+      "161 findings (16 errors, 39 warnings, 106 info) in 11 files",
+    );
+    const first = [...container.querySelectorAll(".fix-first li")];
+    expect(first.length).toBe(5);
+    expect(first[0]!.querySelector("a")!.getAttribute("href")).toBe(
+      `#rule-${result.groups[0]!.rule.slug}`,
+    );
+  });
+  it("renders one group per rule with the objects, a page link, and severity and category data", () => {
+    renderResults(container, result, { source: "x" });
+    const groups = [...container.querySelectorAll<HTMLElement>(".group")];
+    expect(groups.length).toBe(result.groups.length);
+    const g0 = groups[0]!;
+    const r0 = result.groups[0]!;
+    expect(g0.id).toBe(`rule-${r0.rule.slug}`);
+    expect(g0.dataset.severity).toBe(String(r0.rule.severity));
+    expect(g0.dataset.category).toBe(r0.rule.category);
+    expect(g0.querySelector("a.rule-link")!.getAttribute("href")).toBe(`/rules/${r0.rule.slug}/`);
+    expect(g0.querySelectorAll("tbody tr").length).toBe(r0.findings.length);
+    expect(g0.querySelector("tbody td")!.textContent).toBe(r0.findings[0]!.objectName);
+  });
+  it("hides groups whose severity or category is unchecked", () => {
+    renderResults(container, result, { source: "x" });
+    const errors = container.querySelector<HTMLInputElement>(
+      'input[data-filter="severity"][value="3"]',
+    )!;
+    errors.checked = false;
+    errors.dispatchEvent(new Event("change", { bubbles: true }));
+    const hidden = [...container.querySelectorAll<HTMLElement>(".group")].filter((g) => g.hidden);
+    expect(hidden.length).toBe(result.groups.filter((g) => g.rule.severity === 3).length);
+    expect(hidden.every((g) => g.dataset.severity === "3")).toBe(true);
+    errors.checked = true;
+    applyFilters(container);
+    expect(container.querySelectorAll<HTMLElement>(".group[hidden]").length).toBe(0);
+  });
+  it("offers Markdown and JSON export", () => {
+    renderResults(container, result, { source: "x" });
+    expect([...container.querySelectorAll(".export button")].map((b) => b.textContent)).toEqual([
+      "Download Markdown",
+      "Download JSON",
+      "Copy Markdown",
+    ]);
+  });
+  it("says so when there is nothing to report", () => {
+    // No model small enough to write here is actually clean (a bare model trips the date table
+    // rule, a model with a date table trips four more), so the empty result comes from an empty
+    // rule set, the way the core format tests shape one.
+    renderResults(container, lint([{ path: "m.tmdl", text: "model Model\n" }], { rules: [] }), {
+      source: "pasted TMDL",
+    });
+    expect(container.textContent).toContain("No findings.");
+    expect(container.querySelector(".filters")).toBeNull();
+  });
+  it("never parses model text as HTML", () => {
+    const hostile = lint([
+      {
+        path: "t.tmdl",
+        text: "table '<img src=x onerror=alert(1)>'\n\tcolumn A\n\t\tdataType: string\n",
+      },
+    ]);
+    renderResults(container, hostile, { source: "x" });
+    expect(container.querySelector("img")).toBeNull();
+    expect(container.textContent).toContain("<img src=x onerror=alert(1)>");
+  });
+});

@@ -1,0 +1,100 @@
+// @vitest-environment happy-dom
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { beforeAll, describe, expect, it } from "vitest";
+
+// happy-dom resolves a relative URL against the page's http base, so the file path is built
+// from import.meta.url instead of new URL(..., import.meta.url).
+const html = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../index.html"), "utf8");
+const body = html
+  .slice(html.indexOf("<body>") + 6, html.indexOf("</body>"))
+  .replace(/<script[\s\S]*?<\/script>/, "");
+const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
+
+/** The accessor an element inherits for a DOM property, so a spy can record and then delegate. */
+const inherited = (el: object, prop: string): PropertyDescriptor => {
+  for (let o: object | null = Object.getPrototypeOf(el); o; o = Object.getPrototypeOf(o)) {
+    const d = Object.getOwnPropertyDescriptor(o, prop);
+    if (d) return d;
+  }
+  throw new Error(`no inherited ${prop}`);
+};
+
+/** Records the order of writes to the named DOM properties of one element while fn runs. */
+function writeOrder(el: HTMLElement, props: string[], fn: () => void): string[] {
+  const order: string[] = [];
+  const accessors = props.map((prop) => inherited(el, prop));
+  props.forEach((prop, i) => {
+    const { get, set } = accessors[i]!;
+    Object.defineProperty(el, prop, {
+      configurable: true,
+      get: () => get!.call(el),
+      set: (value: unknown) => {
+        order.push(`${prop}=${String(value)}`);
+        set!.call(el, value);
+      },
+    });
+  });
+  try {
+    fn();
+  } finally {
+    for (const prop of props) Reflect.deleteProperty(el, prop);
+  }
+  return order;
+}
+
+describe("home page", () => {
+  beforeAll(async () => {
+    document.body.innerHTML = body;
+    await import("../src/main.js");
+  });
+  it("lints the sample project from its button", async () => {
+    document.getElementById("try-sample")!.click();
+    await tick();
+    const results = document.getElementById("results")!;
+    expect(results.hidden).toBe(false);
+    expect(results.querySelector(".summary")!.textContent).toContain("161 findings");
+    expect(document.getElementById("status")!.hidden).toBe(true);
+  });
+  it("lints pasted TMDL and complains about an empty paste", async () => {
+    const paste = document.getElementById("paste") as HTMLTextAreaElement;
+    paste.value = "";
+    document.getElementById("lint-paste")!.click();
+    const status = document.getElementById("status")!;
+    expect(status.hidden).toBe(false);
+    expect(status.textContent).toBe("Paste some TMDL first.");
+    paste.value = "table Sales\n\tcolumn Amount\n\t\tdataType: double\n\t\tsourceColumn: Amount\n";
+    document.getElementById("lint-paste")!.click();
+    await tick();
+    expect(status.hidden).toBe(true);
+    expect(document.querySelector("#results h2")!.textContent).toBe("Results for pasted TMDL");
+    expect(document.querySelector("#results .summary")!.textContent).toContain("in 1 file");
+  });
+  it("unhides the status line before it writes the message", () => {
+    const status = document.getElementById("status")!;
+    status.hidden = true;
+    (document.getElementById("paste") as HTMLTextAreaElement).value = "";
+    const order = writeOrder(status, ["hidden", "textContent"], () => {
+      document.getElementById("lint-paste")!.click();
+    });
+    // hidden = false first: a screen reader can miss text set on a hidden role="status".
+    expect(order).toEqual(["hidden=false", "textContent=Paste some TMDL first."]);
+    expect(status.hidden).toBe(false);
+    expect(status.textContent).toBe("Paste some TMDL first.");
+  });
+  it("clears the last results when the next input fails", async () => {
+    document.getElementById("try-sample")!.click();
+    await tick();
+    const results = document.getElementById("results")!;
+    expect(results.hidden).toBe(false);
+    expect(results.querySelector(".fix-first")).not.toBeNull();
+    (document.getElementById("paste") as HTMLTextAreaElement).value = "";
+    document.getElementById("lint-paste")!.click();
+    const status = document.getElementById("status")!;
+    expect(status.hidden).toBe(false);
+    expect(status.textContent).toBe("Paste some TMDL first.");
+    expect(results.hidden).toBe(true);
+    expect(results.children.length).toBe(0);
+  });
+});

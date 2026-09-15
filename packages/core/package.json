@@ -1,27 +1,49 @@
 {
   "name": "@pbiplint/core",
   "version": "0.0.0",
-  "description": "Best-practice linter core for Power BI semantic models (TMDL). Runs in the browser and in Node.",
+  "description": "Best-practice linter core for Power BI semantic models (TMDL). Runs in the browser and in Node, makes no network calls.",
+  "keywords": [
+    "power-bi",
+    "tmdl",
+    "semantic-model",
+    "pbip",
+    "linter",
+    "best-practices",
+    "tabular"
+  ],
   "license": "AGPL-3.0-or-later",
+  "author": "McKinley Consulting",
+  "homepage": "https://pbiplint.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pbiplint/pbiplint.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/pbiplint/pbiplint/issues"
+  },
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     }
   },
   "files": [
     "dist",
+    "src",
+    "README.md",
     "NOTICE",
     "LICENSE"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/copy-notices.mjs",
     "prepack": "npm run build"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/pbiplint/pbiplint"
   },
   "engines": {
     "node": ">=20"

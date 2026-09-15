@@ -7,14 +7,16 @@ npm install
 npm test            # unit tests and the Tabular Editor parity suite
 npm run typecheck && npm run lint
 npm run check:browser
+npm run build       # core, CLI, and the site (the site build fails on any network reference)
 ```
 
-Node 20 or later. No runtime dependencies are allowed in `packages/core` or `packages/cli`.
+Node 20.19 or later (or 22.12 or later), which Vite needs for the site build. No runtime dependencies are allowed in `packages/core` or `packages/cli`.
 
 ## Layout
 
 - `packages/core`: parser, object model, indexes, rules, ranking, formatters. Browser-pure: no `node:` imports, no network.
 - `packages/cli`: the `pbiplint` command. Folder walk, config discovery, output, exit codes.
+- `packages/web`: the site, a static Vite build. `src/build` generates the rule pages, the rules index, the about page, and the sitemap from `rules/*.md` and `content/about.md` into gitignored folders, and fails the build if any page references the network. `npm run dev -w @pbiplint/web` serves it.
 - `rules/`: one Markdown page per rule, written by hand. Content, not code; see Rule pages below.
 - `tests/fixtures`, `tests/expectations`, `examples/messy-sales`: parity fixtures and the Tabular Editor results they must match.
 
@@ -42,7 +44,7 @@ New fixtures must be sanitized: `node scripts/sanitize-fixture.mjs <dir>` rewrit
 
 ## Rule pages
 
-Every rule has a page in `rules/`, written in pbiplint's own words. The rule-pages test checks them.
+Every rule has a page in `rules/`, written in pbiplint's own words. The rule-pages test checks them. The site renders each page at `pbiplint.com/rules/<slug>`; the build regenerates it from the Markdown, so a merged page edit is live after the next deploy.
 
 - `node scripts/generate-rule-pages.mjs` scaffolds a page for any rule that has none, with TODO placeholders that the test rejects until they are replaced. It never touches an existing page and never copies prose from the ruleset.
 - Do not paste the ruleset's description text into a page. The ruleset URL under `sources` is the attribution; the prose is ours.
@@ -50,6 +52,10 @@ Every rule has a page in `rules/`, written in pbiplint's own words. The rule-pag
 - No Tabular Editor fix expressions or other C# on the pages.
 - Document every quirk kept from the source rule under `## Quirks`, and refer to other rules by their id.
 - The pages also feed tool output. The first paragraph of "What it checks" is the rule's description, and the Why, How to fix, and Quirks sections are the help block in SARIF. After editing a page, run `node scripts/sync-rule-pages.mjs` to regenerate `packages/core/src/rules/rule-summaries.data.ts` and `packages/cli/src/rule-help.data.ts`; the rule-pages tests fail until they match.
+
+## Releasing
+
+See docs/RELEASING.md.
 
 ## Style
 

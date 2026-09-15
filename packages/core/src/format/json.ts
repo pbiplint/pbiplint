@@ -1,10 +1,11 @@
 import type { LintResult } from "../engine/lint.js";
+import { VERSION } from "../version.js";
 import type { FormatOptions } from "./text.js";
 
 export function formatJson(result: LintResult, options: FormatOptions = {}): string {
   const doc = {
     version: 1,
-    tool: { name: "pbiplint", version: options.toolVersion ?? "0.0.0" },
+    tool: { name: "pbiplint", version: options.toolVersion ?? VERSION },
     summary: result.summary,
     groups: result.groups.map((g) => ({
       rule: g.rule,

@@ -1,0 +1,13 @@
+{
+  "name": "@pbiplint/web",
+  "private": true,
+  "version": "0.0.0",
+  "description": "pbiplint.com: the in-browser linter, rule pages, and about page.",
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  }
+}

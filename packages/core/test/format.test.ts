@@ -273,6 +273,29 @@ describe("formatSarif with a pathPrefix", () => {
   });
 });
 
+describe("SARIF URIs", () => {
+  it("percent-encodes SARIF artifact URIs so a path with spaces is a valid URI", () => {
+    const spaced = lint([
+      {
+        path: "definition/tables/ Spaced .tmdl",
+        text: "table ' Spaced '\n\tcolumn 'A B'\n\t\tdataType: string\n\t\tsourceColumn: A B\n",
+      },
+    ]);
+    const sarif = JSON.parse(formatSarif(spaced, { pathPrefix: "my models/demo.SemanticModel" }));
+    const uris: string[] = sarif.runs[0].results
+      .map(
+        (r: { locations?: { physicalLocation: { artifactLocation: { uri: string } } }[] }) =>
+          r.locations?.[0]?.physicalLocation.artifactLocation.uri,
+      )
+      .filter((u: string | undefined): u is string => u !== undefined);
+    expect(uris.length).toBeGreaterThan(0);
+    for (const u of uris) {
+      expect(u).not.toContain(" ");
+      expect(u).toBe("my%20models/demo.SemanticModel/definition/tables/%20Spaced%20.tmdl");
+    }
+  });
+});
+
 describe("formatResult", () => {
   it("dispatches by name", () => {
     expect(FORMATS).toEqual(["text", "json", "markdown", "sarif"]);

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>pbiplint: best-practice linter for Power BI projects</title>
+    <meta
+      name="description"
+      content="Paste TMDL or drop a .SemanticModel folder and get ranked best-practice findings with fix guidance. Runs in your browser. Nothing is uploaded."
+    />
+    <link rel="canonical" href="https://pbiplint.com/" />
+    <meta property="og:title" content="pbiplint" />
+    <meta
+      property="og:description"
+      content="Best-practice linter for Power BI projects. Runs in your browser. Nothing is uploaded."
+    />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <a class="brand" href="/"
+          ><img src="/favicon.svg" alt="" width="28" height="28" /> pbiplint</a
+        >
+        <nav>
+          <a href="/" aria-current="page">Lint</a><a href="/rules/">Rules</a
+          ><a href="/about/">About</a><a href="https://github.com/pbiplint/pbiplint">GitHub</a>
+        </nav>
+      </div>
+    </header>
+    <main class="container">
+      <section class="hero">
+        <h1>Lint your Power BI semantic model in the browser</h1>
+        <p class="lede">
+          Paste TMDL or drop a <code>.SemanticModel</code> folder. pbiplint runs the Microsoft
+          best-practice rules on it, ranks what it finds, and tells you how to fix each one. Nothing
+          is uploaded: the analysis runs in this tab.
+        </p>
+      </section>
+      <div class="inputs">
+        <section class="panel">
+          <h2><label for="paste">Paste TMDL</label></h2>
+          <textarea
+            id="paste"
+            spellcheck="false"
+            placeholder="table Sales&#10;&#9;column 'Sale ID'&#10;&#9;&#9;dataType: int64&#10;&#9;&#9;sourceColumn: SaleID"
+          ></textarea>
+          <div><button id="lint-paste" type="button">Lint pasted TMDL</button></div>
+        </section>
+        <section class="panel">
+          <h2>Drop a folder</h2>
+          <div id="drop" class="drop">
+            <p>
+              Drop a <code>.SemanticModel</code> folder, the PBIP folder that holds one, or a single
+              <code>.tmdl</code> file here.
+            </p>
+            <button id="choose-folder" type="button" class="secondary">Choose a folder</button>
+            <input id="folder-input" type="file" webkitdirectory multiple hidden />
+          </div>
+          <p class="hint">
+            Only .tmdl files and pbiplint.config.json are read. Nothing else in the folder is
+            opened.
+          </p>
+        </section>
+      </div>
+      <div class="actions">
+        <button id="try-sample" type="button" class="secondary">Try the sample project</button>
+        <p class="hint">
+          A small sales model with planted violations, the same one
+          <code>npx pbiplint --sample</code> lints.
+        </p>
+      </div>
+      <p id="status" class="status" role="status" aria-live="polite" hidden></p>
+      <section id="results" aria-live="polite" hidden></section>
+    </main>
+    <footer class="site-footer">
+      <div class="container">
+        <p>Nothing you lint leaves your browser. <a href="/about/#verify">How to check that</a>.</p>
+        <p>
+          Free software under the AGPL-3.0-or-later license, from the makers of
+          <a href="https://www.youtube.com/@TheDataPractitioner">The Data Practitioner</a>. pbiplint
+          and its logo are trademarks of McKinley Consulting.
+        </p>
+      </div>
+    </footer>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

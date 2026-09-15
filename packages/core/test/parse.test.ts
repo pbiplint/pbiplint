@@ -49,6 +49,23 @@ describe("parseTmdl", () => {
     expect(measure.description).toBe("This is the Measure Description\nOne more line");
   });
 
+  it("drops a /// description that a blank line separates from its object, which Tabular Editor's reader rejects (checked 2026-09)", () => {
+    const pf = parseTmdl(
+      "t.tmdl",
+      "table T\n\t/// Described\n\n\tcolumn A\n\t\tdataType: string\n",
+    );
+    const column = pf.roots[0]!.children.find((n) => n.kind === "object" && n.type === "column");
+    expect(column?.description).toBeUndefined();
+    expect(pf.issues).toEqual([
+      {
+        file: "t.tmdl",
+        line: 2,
+        text: "\t/// Described",
+        reason: "description is not followed by a declaration",
+      },
+    ]);
+  });
+
   it("lowercases keys and reads flags, properties, and quoted values", () => {
     const pf = parseTmdl("f.tmdl", specSample);
     const sales = pf.roots[3]!;

@@ -1,2 +1,4 @@
 examples/** -text
 tests/fixtures/** -text
+# The page generator requires LF frontmatter.
+*.md text eol=lf

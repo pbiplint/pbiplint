@@ -1,4 +1,4 @@
-export const VERSION = "0.0.0";
+export { VERSION } from "./version.js";
 export {
   ConfigError,
   resolveConfig,
@@ -30,7 +30,9 @@ export {
   formatMarkdown,
   formatSarif,
   formatText,
+  skippedLine,
   summaryLine,
+  topGroups,
   type FormatName,
   type FormatOptions,
   type RuleHelp,

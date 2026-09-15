@@ -73,6 +73,15 @@ const firstParagraph = (s: string): string =>
     ?.replace(/\s+/g, " ")
     .trim() ?? "";
 const render = (markdown: string): string => marked.parse(markdown, { async: false }) as string;
+/** A Markdown paragraph as prose: code marks dropped, whitespace collapsed. For a meta description. */
+const plainText = (markdown: string): string =>
+  markdown.replace(/`+/g, "").replace(/\s+/g, " ").trim();
+/**
+ * A Markdown paragraph as inline HTML, so `FILTER('Table')` in a summary reads as code. A backtick
+ * run marked leaves literal, such as the unterminated fence the parse-issue page names, is dropped.
+ */
+const renderInline = (markdown: string): string =>
+  plainText(marked.parseInline(markdown, { async: false }) as string);
 
 function header(path: string): string {
   const current = (href: string): boolean =>
@@ -167,7 +176,7 @@ export function rulePage(markdown: string, slug: string): { html: string; meta: 
   return {
     html: page({
       title: `${title} · pbiplint`,
-      description: meta.summary,
+      description: plainText(meta.summary),
       path: `/rules/${slug}/`,
       main,
     }),
@@ -185,7 +194,7 @@ export function rulesIndex(metas: RuleMeta[]): string {
     const items = rows
       .map(
         (m) =>
-          `  <li><a href="/rules/${escapeHtml(m.slug)}/">${escapeHtml(m.title)}</a> <span class="badge ${escapeHtml(m.severity)}">${escapeHtml(m.severity)}</span>${m.status === "needsLiveModel" ? ' <span class="badge muted">needs a live model</span>' : ""}<br /><span class="summary">${escapeHtml(m.summary)}</span></li>`,
+          `  <li><a href="/rules/${escapeHtml(m.slug)}/">${escapeHtml(m.title)}</a> <span class="badge ${escapeHtml(m.severity)}">${escapeHtml(m.severity)}</span>${m.status === "needsLiveModel" ? ' <span class="badge muted">needs a live model</span>' : ""}<br /><span class="summary">${renderInline(m.summary)}</span></li>`,
       )
       .join("\n");
     return `<h2>${escapeHtml(category)}</h2>\n<ul class="rule-list">\n${items}\n</ul>`;

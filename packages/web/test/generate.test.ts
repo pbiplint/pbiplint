@@ -71,6 +71,16 @@ describe("generateSite", () => {
     expect(index).toContain("72 rules: 66 ported");
     expect((index.match(/needs a live model/g) ?? []).length).toBe(5);
     for (const m of metas) expect(index).toContain(`href="/rules/${m.slug}/"`);
+    const summaries = [...index.matchAll(/<span class="summary">([\s\S]*?)<\/span>/g)].map(
+      (m) => m[1]!,
+    );
+    expect(summaries.length).toBe(72);
+    expect(summaries.some((s) => s.includes("<code>///</code>"))).toBe(true);
+    expect(summaries.filter((s) => s.includes("`"))).toEqual([]);
+    const parseIssue = readFileSync(join(out, "rules/parse-issue/index.html"), "utf8");
+    const description = /<meta name="description" content="([^"]*)"/.exec(parseIssue)?.[1] ?? "";
+    expect(description).toContain("an unterminated fence");
+    expect(description).not.toContain("`");
     const about = readFileSync(join(out, "about/index.html"), "utf8");
     expect(about).toContain('<h2 id="verify">');
     expect(about).toContain("<title>About pbiplint");

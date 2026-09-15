@@ -50,11 +50,17 @@ async function walkHandle(
   }
 }
 
+/**
+ * This route sees paths rather than entries: a directory input enumerates hidden and nested
+ * folders too, so the skip is applied to the segments of the reported path.
+ */
+const skipped = (path: string): boolean => path.split("/").some((seg) => SKIP_DIRS.has(seg));
+
 /** Firefox and Safari: the files of an <input type="file" webkitdirectory>, with the paths the browser reports. */
 export async function readDirectoryInput(input: HTMLInputElement): Promise<InputEntry[]> {
   const out: InputEntry[] = [];
   for (const file of [...(input.files ?? [])])
-    if (wanted(file.name))
+    if (wanted(file.name) && !skipped(file.webkitRelativePath))
       out.push({ path: file.webkitRelativePath || file.name, text: await file.text() });
   return out;
 }

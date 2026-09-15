@@ -51,4 +51,23 @@ describe("readDirectoryInput", () => {
       { path: "Demo.SemanticModel/definition/tables/T.tmdl", text: "table T\n" },
     ]);
   });
+  it("skips junk folders anywhere in the reported path", async () => {
+    const tmdl = (path: string, text: string) =>
+      Object.assign(new File([text], path.slice(path.lastIndexOf("/") + 1)), {
+        webkitRelativePath: path,
+      });
+    const input = {
+      files: [
+        tmdl("Demo.SemanticModel/definition/model.tmdl", "model Model\n"),
+        tmdl(
+          "Demo.SemanticModel/node_modules/pkg/fixtures/X.SemanticModel/definition/model.tmdl",
+          "never",
+        ),
+        tmdl("Demo.SemanticModel/.git/x.tmdl", "never"),
+      ],
+    } as unknown as HTMLInputElement;
+    expect(await readDirectoryInput(input)).toEqual([
+      { path: "Demo.SemanticModel/definition/model.tmdl", text: "model Model\n" },
+    ]);
+  });
 });

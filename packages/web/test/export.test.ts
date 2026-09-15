@@ -21,6 +21,7 @@ describe("export", () => {
   afterEach(() => {
     restoreClipboard();
     vi.restoreAllMocks();
+    vi.useRealTimers();
   });
   it("produces the same Markdown and JSON reports as the CLI", () => {
     const md = exportMarkdown(result);
@@ -32,7 +33,8 @@ describe("export", () => {
     expect(doc.summary.findings).toBe(161);
     expect(doc.tool.version).toBe(VERSION);
   });
-  it("downloads through a blob URL and cleans up after itself", () => {
+  it("downloads through a blob URL and revokes it only once the download can have started", () => {
+    vi.useFakeTimers();
     const create = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test");
     const revoke = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
     const click = vi
@@ -42,8 +44,11 @@ describe("export", () => {
     expect(create).toHaveBeenCalledTimes(1);
     expect(create.mock.calls[0]![0]).toBeInstanceOf(Blob);
     expect(click).toHaveBeenCalledTimes(1);
-    expect(revoke).toHaveBeenCalledWith("blob:test");
     expect(document.body.querySelector("a")).toBeNull();
+    // Still live right after the click: Safari cancels a download whose URL is revoked too early.
+    expect(revoke).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1000);
+    expect(revoke).toHaveBeenCalledWith("blob:test");
   });
   it("copies through the clipboard API when there is one", async () => {
     const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined);

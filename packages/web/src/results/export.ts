@@ -28,7 +28,9 @@ export function download(file: ExportFile): void {
   document.body.append(a);
   a.click();
   a.remove();
-  URL.revokeObjectURL(url);
+  // Revoked late, not right after the click: Safari has cancelled downloads whose blob URL was
+  // released before the navigation it started had a chance to begin.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 /**

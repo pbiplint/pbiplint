@@ -4,15 +4,18 @@ Two packages ship together at the same version: `@pbiplint/core` and `pbiplint` 
 line, which bundles the core). The site at pbiplint.com deploys itself on every push to main and
 is not versioned.
 
-## One-time setup (done once, kept here for the record)
+## One-time setup
 
-- npm organization `pbiplint`, with Michael's npm account as owner and two-factor authentication on.
-- The first version of each package was published by hand (see "First release" below), because
-  npm only lets a trusted publisher be configured on a package that already exists.
-- Trusted publishing configured on npmjs.com for each package: package settings, "Trusted
-  publisher", GitHub Actions, organization `pbiplint`, repository `pbiplint`, workflow file
-  `release.yml`, environment left blank. From then on the workflow publishes without a token and
-  npm attaches provenance.
+Do these once, at the first release, not before.
+
+1. Create the npm organization `pbiplint`, with Michael's npm account as owner and two-factor
+   authentication on.
+2. Publish the first version of each package by hand (see "First release" below). This comes first
+   because npm only lets a trusted publisher be configured on a package that already exists.
+3. Configure trusted publishing on npmjs.com for each package: package settings, "Trusted
+   publisher", GitHub Actions, organization `pbiplint`, repository `pbiplint`, workflow file
+   `release.yml`, environment left blank. From then on the workflow publishes without a token and
+   npm attaches provenance.
 
 ## Every release
 
@@ -42,7 +45,8 @@ skips a version that is already on the registry.
 
 ## First release (v0.1.0, by hand)
 
-Done once by Michael from a clean checkout of the release commit, logged in to npm:
+Do this once, at the first release, not before. Michael runs it from a clean checkout of the
+release commit, logged in to npm:
 
 ```bash
 npm ci && npm run build && npm run check:pack
@@ -50,10 +54,10 @@ npm publish -w @pbiplint/core
 npm publish -w pbiplint
 ```
 
-Then the trusted publisher was configured for each package and the tag was pushed, which created
-the GitHub release and skipped the two publishes.
+Then configure the trusted publisher for each package and push the tag, which creates the GitHub
+release and skips the two publishes, because both versions are already on the registry.
 
 ## Later
 
-`pbip-lint` (with the hyphen) is published as a thin package that depends on `pbiplint`, so a
+`pbip-lint` (with the hyphen) will be published as a thin package that depends on `pbiplint`, so a
 guessed name still installs the right thing. Not before v0.1.0 has been out for a while.

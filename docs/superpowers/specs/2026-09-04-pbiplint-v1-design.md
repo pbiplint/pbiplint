@@ -154,16 +154,25 @@ interface Rule {
   scope: ObjectType[];
   description: string;   // the first paragraph of the rule page's "What it checks"
   references: string[];  // documentation URLs
+  fixExpression?: string;   // the source ruleset's Tabular Editor fix, kept as data, never shown on a page
   status: "ported" | "needsLiveModel" | "builtin";   // needsLiveModel: declared, never run
   check(model: Model, ctx: RuleContext): RuleFinding[];
 }
 
-interface Finding {
-  ruleId: string;
+interface RuleFinding {  // what a rule returns
   objectType: ObjectType;
   objectName: string;    // Tabular Editor's display name: 'Table'[Column], [Measure], 'Table', Model
   location?: { file: string; line: number };
   detail?: string;       // rule-specific specifics, optional
+  object?: Named;        // the model object, used for ignore annotations and stripped before output
+}
+
+interface Finding {      // what the engine returns: a rule's finding, tagged with the rule id
+  ruleId: string;
+  objectType: ObjectType;
+  objectName: string;
+  location?: { file: string; line: number };
+  detail?: string;
 }
 ```
 

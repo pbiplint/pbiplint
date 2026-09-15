@@ -25,9 +25,22 @@ function say(text: string, kind: "info" | "error" = "info"): void {
   status.hidden = text === "";
 }
 
+/**
+ * An input that went nowhere: say why, drop the results of the last one so nothing stale is read
+ * as the answer, and scroll the message into view, since a previous run may have pushed it above
+ * the fold.
+ */
+function problem(message: string): void {
+  say(message, "error");
+  results.hidden = true;
+  results.replaceChildren();
+  if (typeof status.scrollIntoView === "function")
+    status.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 function fail(e: unknown): void {
-  if (e instanceof InputError || e instanceof ConfigError) say(e.message, "error");
-  else say(`Something went wrong: ${e instanceof Error ? e.message : String(e)}`, "error");
+  if (e instanceof InputError || e instanceof ConfigError) problem(e.message);
+  else problem(`Something went wrong: ${e instanceof Error ? e.message : String(e)}`);
 }
 
 /** Every input ends up here: read the config if there is one, lint, render. Nothing touches the network. */
@@ -71,7 +84,7 @@ function runEntries(entries: InputEntry[]): void {
 byId("lint-paste").addEventListener("click", () => {
   const text = paste.value;
   if (text.trim() === "") {
-    say("Paste some TMDL first.", "error");
+    problem("Paste some TMDL first.");
     return;
   }
   run([{ path: "pasted.tmdl", text }], "pasted TMDL");

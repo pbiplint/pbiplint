@@ -39,4 +39,18 @@ describe("home page", () => {
     expect(document.querySelector("#results h2")!.textContent).toBe("Results for pasted TMDL");
     expect(document.querySelector("#results .summary")!.textContent).toContain("in 1 file");
   });
+  it("clears the last results when the next input fails", async () => {
+    document.getElementById("try-sample")!.click();
+    await tick();
+    const results = document.getElementById("results")!;
+    expect(results.hidden).toBe(false);
+    expect(results.querySelector(".fix-first")).not.toBeNull();
+    (document.getElementById("paste") as HTMLTextAreaElement).value = "";
+    document.getElementById("lint-paste")!.click();
+    const status = document.getElementById("status")!;
+    expect(status.hidden).toBe(false);
+    expect(status.textContent).toBe("Paste some TMDL first.");
+    expect(results.hidden).toBe(true);
+    expect(results.children.length).toBe(0);
+  });
 });

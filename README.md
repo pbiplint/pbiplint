@@ -2,10 +2,11 @@
 
 Best-practice linter for Power BI projects. Browser and CLI. Nothing leaves your machine.
 
-Paste TMDL or Power Query, or drop a whole PBIP project, and get ranked
-best-practice findings with guidance on how to fix each one. The analysis
-runs entirely in your browser or on your own machine from the command
-line. Nothing is uploaded, ever.
+Paste TMDL or drop a `.SemanticModel` folder (whole PBIP projects and
+Power Query rules come later), and get ranked best-practice findings with
+guidance on how to fix each one. The analysis runs entirely in your
+browser or on your own machine from the command line. Nothing is
+uploaded, ever.
 
 ## Status
 

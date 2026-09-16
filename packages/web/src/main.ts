@@ -30,14 +30,15 @@ function say(text: string, kind: "info" | "error" = "info"): void {
 /**
  * An input that went nowhere: say why, drop the results of the last one so nothing stale is read
  * as the answer, and scroll the message into view, since a previous run may have pushed it above
- * the fold.
+ * the fold. "nearest" scrolls only as far as it must, so an empty paste keeps the textarea on
+ * screen instead of pinning the message to the top.
  */
 function problem(message: string): void {
   say(message, "error");
   results.hidden = true;
   results.replaceChildren();
   if (typeof status.scrollIntoView === "function")
-    status.scrollIntoView({ behavior: "smooth", block: "start" });
+    status.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 function fail(e: unknown): void {

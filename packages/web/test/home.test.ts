@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 // happy-dom resolves a relative URL against the page's http base, so the file path is built
 // from import.meta.url instead of new URL(..., import.meta.url).
@@ -89,6 +89,18 @@ describe("home page", () => {
     expect(order).toEqual(["hidden=false", "textContent=Paste some TMDL first."]);
     expect(status.hidden).toBe(false);
     expect(status.textContent).toBe("Paste some TMDL first.");
+  });
+  it("scrolls a problem message only as far as needed, so the textarea stays in view", () => {
+    const status = document.getElementById("status")!;
+    const scroll = vi.fn();
+    status.scrollIntoView = scroll;
+    try {
+      (document.getElementById("paste") as HTMLTextAreaElement).value = "";
+      document.getElementById("lint-paste")!.click();
+    } finally {
+      Reflect.deleteProperty(status, "scrollIntoView");
+    }
+    expect(scroll).toHaveBeenCalledWith({ behavior: "smooth", block: "nearest" });
   });
   it("clears the last results when the next input fails", async () => {
     document.getElementById("try-sample")!.click();

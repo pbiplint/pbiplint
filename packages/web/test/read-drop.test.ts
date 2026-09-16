@@ -104,6 +104,28 @@ describe("readDataTransfer", () => {
       modelFolders: [],
     });
   });
+  it("reads a top-level file from the item itself, so an entry whose file() fails still reads", async () => {
+    // WebKit hands out a FileSystemFileEntry for a file that exists only in memory, and that
+    // entry's file() rejects with NotFoundError; the File on the item is the one to read.
+    const broken = {
+      isFile: true,
+      isDirectory: false,
+      name: "T.tmdl",
+      fullPath: "/T.tmdl",
+      file: (_ok: unknown, fail: (e: Error) => void) => fail(new Error("NotFoundError")),
+    } as unknown as FileSystemEntry;
+    const dt = {
+      items: [
+        { webkitGetAsEntry: () => broken, getAsFile: () => new File(["table T\n"], "T.tmdl") },
+        { webkitGetAsEntry: () => broken, getAsFile: () => new File(["{}"], "other.json") },
+      ],
+      files: [],
+    } as unknown as DataTransfer;
+    expect(await readDataTransfer(dt)).toEqual({
+      entries: [{ path: "T.tmdl", text: "table T\n" }],
+      modelFolders: [],
+    });
+  });
   it("falls back to flat files when it does not", async () => {
     const dt = {
       items: [],

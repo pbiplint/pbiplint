@@ -377,6 +377,9 @@ button.secondary:hover,
   background: var(--surface-2);
   color: var(--fg-2);
 }
+.table-wrap {
+  overflow-x: auto;
+}
 table {
   width: 100%;
   border-collapse: collapse;

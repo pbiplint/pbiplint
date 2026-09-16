@@ -200,22 +200,27 @@ function renderGroup(g: RankedGroup): HTMLElement {
       ` · ${g.rule.category} · `,
       h("a", { class: "rule-link", href: pagePath(g.rule.slug) }, "How to fix it"),
     ),
+    // The wrapper scrolls sideways on a narrow screen, so a long object name never widens the page.
     h(
-      "table",
-      {},
+      "div",
+      { class: "table-wrap" },
       h(
-        "thead",
+        "table",
         {},
         h(
-          "tr",
+          "thead",
           {},
-          h("th", {}, "Object"),
-          h("th", {}, "Type"),
-          h("th", {}, "Location"),
-          h("th", {}, "Detail"),
+          h(
+            "tr",
+            {},
+            h("th", {}, "Object"),
+            h("th", {}, "Type"),
+            h("th", {}, "Location"),
+            h("th", {}, "Detail"),
+          ),
         ),
+        h("tbody", {}, ...rows),
       ),
-      h("tbody", {}, ...rows),
     ),
   );
 }

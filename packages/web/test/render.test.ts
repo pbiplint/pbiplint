@@ -64,6 +64,11 @@ describe("renderResults", () => {
     applyFilters(container);
     expect(container.querySelectorAll<HTMLElement>(".group[hidden]").length).toBe(0);
   });
+  it("wraps each findings table so a long object name scrolls instead of overflowing the page", () => {
+    renderResults(container, result, { source: "x" });
+    const groups = [...container.querySelectorAll<HTMLElement>(".group")];
+    expect(groups.every((g) => g.querySelector(".table-wrap > table") !== null)).toBe(true);
+  });
   it("labels the severity filters in title case, like the category filters", () => {
     renderResults(container, result, { source: "x" });
     const labels = [...container.querySelectorAll("label.filter")].map((l) => l.textContent);

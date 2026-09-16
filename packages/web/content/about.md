@@ -26,6 +26,10 @@ The analysis runs in your browser. There is no server behind this site, no accou
 
 The command-line tool is the same code with a folder walk in front of it. It reads the files you point it at and writes to your terminal or to a file you name.
 
+## Known limits in the browser
+
+The "Choose a folder" button uses the browser's folder picker. In Chrome and Edge that picker does not list files whose names begin or end with a space, so a table file named that way is skipped without a message and its findings are missing. Dragging the folder onto the page, or running the command line, reads every file. The rule that flags such names, `OBJECTS_SHOULD_NOT_START_OR_END_WITH_A_SPACE`, says the same on its page.
+
 ## What it does not do
 
 pbiplint does not document models, apply fixes, or analyze query performance. For documentation there is PBIP Documenter; for query plans there is DAX Studio. The rules pbiplint ports are the Best Practice Analyzer rules, so a model that is clean here is clean there too.

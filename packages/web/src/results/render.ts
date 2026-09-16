@@ -136,11 +136,13 @@ function renderFilters(result: LintResult): HTMLElement {
     );
   const severities = SEVERITIES.filter((s) => result.groups.some((g) => g.rule.severity === s));
   const categories = CATEGORY_ORDER.filter((c) => result.groups.some((g) => g.rule.category === c));
+  // "Error", not "error": the category labels beside them are title case.
+  const titleCase = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
   return h(
     "fieldset",
     { class: "filters" },
     h("legend", {}, "Show"),
-    ...severities.map((s) => box("severity", String(s), SEVERITY_LABEL[s])),
+    ...severities.map((s) => box("severity", String(s), titleCase(SEVERITY_LABEL[s]))),
     h("span", { class: "gap" }),
     ...categories.map((c) => box("category", c, c)),
   );

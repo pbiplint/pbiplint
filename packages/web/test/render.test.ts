@@ -64,6 +64,17 @@ describe("renderResults", () => {
     applyFilters(container);
     expect(container.querySelectorAll<HTMLElement>(".group[hidden]").length).toBe(0);
   });
+  it("labels the severity filters in title case, like the category filters", () => {
+    renderResults(container, result, { source: "x" });
+    const labels = [...container.querySelectorAll("label.filter")].map((l) => l.textContent);
+    expect(labels.slice(0, 3)).toEqual(["Error", "Warning", "Info"]);
+    expect(labels[3]).toBe("Performance");
+    expect(
+      [...container.querySelectorAll<HTMLInputElement>('input[data-filter="severity"]')].map(
+        (i) => i.value,
+      ),
+    ).toEqual(["3", "2", "1"]);
+  });
   it("offers Markdown and JSON export", () => {
     renderResults(container, result, { source: "x" });
     expect([...container.querySelectorAll(".export button")].map((b) => b.textContent)).toEqual([

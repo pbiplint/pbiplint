@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { InputError, selectModel, type InputEntry } from "../src/input/model-files.js";
+import {
+  InputError,
+  relativeToRoot,
+  selectModel,
+  type InputEntry,
+} from "../src/input/model-files.js";
 
 const e = (path: string, text = `// ${path}\n`): InputEntry => ({ path, text });
 
@@ -76,5 +81,18 @@ describe("selectModel", () => {
   it("explains an empty drop", () => {
     expect(() => selectModel([e("Proj/Demo.Report/definition/report.json")])).toThrow(InputError);
     expect(() => selectModel([])).toThrow(/No \.tmdl files/);
+  });
+});
+
+describe("relativeToRoot", () => {
+  it("writes a path at or above the model root the way a shell would", () => {
+    expect(relativeToRoot("Proj/Demo.SemanticModel", "Proj/pbiplint.config.json")).toBe(
+      "../pbiplint.config.json",
+    );
+    expect(relativeToRoot("Demo.SemanticModel", "Demo.SemanticModel/pbiplint.config.json")).toBe(
+      "pbiplint.config.json",
+    );
+    expect(relativeToRoot("", "pbiplint.config.json")).toBe("pbiplint.config.json");
+    expect(relativeToRoot("a/b/c", "pbiplint.config.json")).toBe("../../../pbiplint.config.json");
   });
 });

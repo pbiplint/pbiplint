@@ -125,6 +125,26 @@ describe("renderResults", () => {
     expect(container.textContent).toContain("No findings.");
     expect(container.querySelector(".filters")).toBeNull();
   });
+  it("lists the files it read, collapsed, under the results", () => {
+    const files = [
+      "definition/model.tmdl",
+      "definition/tables/T.tmdl",
+      "../pbiplint.config.json (config)",
+    ];
+    renderResults(container, result, { source: "x", files });
+    const details = container.querySelector<HTMLDetailsElement>("details.files")!;
+    expect(details.open).toBe(false);
+    expect(details.querySelector("summary")!.textContent).toBe("Files read (3)");
+    expect([...details.querySelectorAll("li")].map((li) => li.textContent)).toEqual(files);
+    expect(container.lastElementChild).toBe(details);
+  });
+  it("lists the files it read even when there are no findings, and nothing for a paste", () => {
+    const clean = lint([{ path: "m.tmdl", text: "model Model\n" }], { rules: [] });
+    renderResults(container, clean, { source: "x", files: ["m.tmdl"] });
+    expect(container.querySelector("details.files li")!.textContent).toBe("m.tmdl");
+    renderResults(container, result, { source: "pasted TMDL" });
+    expect(container.querySelector("details.files")).toBeNull();
+  });
   it("never parses model text as HTML", () => {
     const hostile = lint([
       {

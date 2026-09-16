@@ -380,6 +380,18 @@ button.secondary:hover,
 .table-wrap {
   overflow-x: auto;
 }
+.files {
+  margin-top: 24px;
+  color: var(--fg-2);
+  font-size: 14px;
+}
+.files summary {
+  cursor: pointer;
+}
+.files ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
 table {
   width: 100%;
   border-collapse: collapse;

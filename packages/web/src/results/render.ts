@@ -13,6 +13,11 @@ import { copy, download, exportJson, exportMarkdown } from "./export.js";
 export interface RenderOptions {
   /** What was linted, for the heading: "the sample project (11 files)", "pasted TMDL". */
   source: string;
+  /**
+   * The files that were read, as paths relative to the model root, listed under the results so a
+   * file the browser skipped is visible by its absence. Omitted for a paste, where nothing was read.
+   */
+  files?: string[];
 }
 
 type Child = Node | string | null | undefined;
@@ -66,7 +71,7 @@ export function renderResults(
     ),
   );
   if (result.groups.length === 0) {
-    container.append(h("p", { class: "clean" }, "No findings."));
+    container.append(h("p", { class: "clean" }, "No findings."), ...renderFilesRead(options.files));
     return;
   }
   container.append(
@@ -99,10 +104,24 @@ export function renderResults(
           result.summary.ruleErrors.map((e) => `${e.id}: ${e.message}`).join("; "),
       ),
     );
+  container.append(...renderFilesRead(options.files));
   // One handler for the whole container, so re-rendering never stacks listeners.
   container.onchange = (event) => {
     if ((event.target as HTMLElement).matches("input[data-filter]")) applyFilters(container);
   };
+}
+
+/** The files that were read, collapsed: the count is enough until a file seems to be missing. */
+function renderFilesRead(files: string[] | undefined): HTMLElement[] {
+  if (!files) return [];
+  return [
+    h(
+      "details",
+      { class: "files" },
+      h("summary", {}, `Files read (${files.length})`),
+      h("ul", {}, ...files.map((path) => h("li", { class: "mono" }, path))),
+    ),
+  ];
 }
 
 function renderExportBar(result: LintResult): HTMLElement {

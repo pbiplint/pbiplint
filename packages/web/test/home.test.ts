@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it, vi } from "vitest";
+import { SAMPLE_FILES } from "../src/sample.js";
 
 // happy-dom resolves a relative URL against the page's http base, so the file path is built
 // from import.meta.url instead of new URL(..., import.meta.url).
@@ -152,6 +153,37 @@ describe("home page", () => {
     expect(document.querySelector("#results h2")!.textContent).toBe(
       "Results for Demo.SemanticModel (1 file)",
     );
+  });
+  it("lists the files it read for the sample and a folder, and none for a paste", async () => {
+    const listed = (): string[] =>
+      [...document.querySelectorAll("#results details.files li")].map((li) => li.textContent!);
+    document.getElementById("try-sample")!.click();
+    await tick();
+    expect(listed()).toEqual(SAMPLE_FILES.map((f) => f.path));
+    const input = document.getElementById("folder-input") as HTMLInputElement;
+    const at = (path: string, text: string): File =>
+      Object.assign(new File([text], path.slice(path.lastIndexOf("/") + 1)), {
+        webkitRelativePath: path,
+      });
+    Object.defineProperty(input, "files", {
+      configurable: true,
+      value: [
+        at("Proj/Demo.SemanticModel/definition/tables/T.tmdl", "table T\n"),
+        at("Proj/pbiplint.config.json", "{}"),
+      ],
+    });
+    try {
+      input.dispatchEvent(new Event("change"));
+    } finally {
+      Reflect.deleteProperty(input, "files");
+    }
+    await tick();
+    await tick();
+    expect(listed()).toEqual(["definition/tables/T.tmdl", "../pbiplint.config.json (config)"]);
+    (document.getElementById("paste") as HTMLTextAreaElement).value = "table T\n";
+    document.getElementById("lint-paste")!.click();
+    await tick();
+    expect(document.querySelector("#results details.files")).toBeNull();
   });
   it("clears the last results when the next input fails", async () => {
     document.getElementById("try-sample")!.click();

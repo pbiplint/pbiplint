@@ -1,5 +1,5 @@
 import { ConfigError, lint, resolveConfig, type LintFile } from "@pbiplint/core";
-import { InputError, selectModel, type InputEntry } from "./input/model-files.js";
+import { InputError, relativeToRoot, selectModel, type InputEntry } from "./input/model-files.js";
 import { directoryPicker, readDirectoryInput, readPickedDirectory } from "./input/pick-folder.js";
 import { readDataTransfer } from "./input/read-drop.js";
 import { renderResults } from "./results/render.js";
@@ -46,13 +46,22 @@ function fail(e: unknown): void {
   else problem(`Something went wrong: ${e instanceof Error ? e.message : String(e)}`);
 }
 
+interface Run {
+  files: LintFile[];
+  /** What was linted, for the results heading. */
+  source: string;
+  config?: { path: string; text: string };
+  /** What to list as read under the results: the model files and the config. None for a paste. */
+  read?: string[];
+}
+
 /** Every input ends up here: read the config if there is one, lint, render. Nothing touches the network. */
-function run(files: LintFile[], source: string, configText?: string): void {
+function run({ files, source, config, read }: Run): void {
   try {
     let raw: unknown;
-    if (configText !== undefined) {
+    if (config) {
       try {
-        raw = JSON.parse(configText);
+        raw = JSON.parse(config.text);
       } catch (e) {
         throw new ConfigError(
           `pbiplint.config.json is not valid JSON: ${e instanceof Error ? e.message : String(e)}`,
@@ -62,7 +71,7 @@ function run(files: LintFile[], source: string, configText?: string): void {
     const result = lint(files, { config: resolveConfig(raw) });
     // Shown before it is filled: a screen reader can miss mutations made inside a hidden live region.
     results.hidden = false;
-    renderResults(results, result, { source });
+    renderResults(results, result, { source, files: read });
     say("");
     if (typeof results.scrollIntoView === "function")
       results.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -74,11 +83,14 @@ function run(files: LintFile[], source: string, configText?: string): void {
 function runEntries(entries: InputEntry[]): void {
   try {
     const model = selectModel(entries);
-    run(
-      model.files,
-      `${model.root || "the dropped file"} (${plural(model.files.length, "file")})`,
-      model.config?.text,
-    );
+    const read = model.files.map((f) => f.path);
+    if (model.config) read.push(`${relativeToRoot(model.root, model.config.path)} (config)`);
+    run({
+      files: model.files,
+      source: `${model.root || "the dropped file"} (${plural(model.files.length, "file")})`,
+      config: model.config,
+      read,
+    });
   } catch (e) {
     fail(e);
   }
@@ -90,11 +102,15 @@ byId("lint-paste").addEventListener("click", () => {
     problem("Paste some TMDL first.");
     return;
   }
-  run([{ path: "pasted.tmdl", text }], "pasted TMDL");
+  run({ files: [{ path: "pasted.tmdl", text }], source: "pasted TMDL" });
 });
 
 byId("try-sample").addEventListener("click", () =>
-  run(SAMPLE_FILES, `${SAMPLE_NAME} (${plural(SAMPLE_FILES.length, "file")})`),
+  run({
+    files: SAMPLE_FILES,
+    source: `${SAMPLE_NAME} (${plural(SAMPLE_FILES.length, "file")})`,
+    read: SAMPLE_FILES.map((f) => f.path),
+  }),
 );
 
 // Every folder route says "Reading files..." once there is a folder to read: the drop as it lands,

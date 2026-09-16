@@ -25,6 +25,17 @@ const within = (path: string, dir: string): boolean => dir === "" || path.starts
 const relativeTo = (path: string, dir: string): string =>
   dir === "" ? path : path.slice(dir.length + 1);
 const join = (dir: string, name: string): string => (dir === "" ? name : `${dir}/${name}`);
+const depth = (dir: string): number => (dir === "" ? 0 : dir.split("/").length);
+
+/**
+ * A drop-relative path at or above the model root, written relative to the root the way a shell
+ * would: "../pbiplint.config.json" for a config one folder up. For listing beside the model files.
+ */
+export function relativeToRoot(root: string, path: string): string {
+  const dir = parent(path);
+  if (within(path, root)) return relativeTo(path, root);
+  return "../".repeat(depth(root) - depth(dir)) + relativeTo(path, dir);
+}
 
 /**
  * Mirrors the CLI's resolveModel on a tree of paths: a folder with a definition folder is the

@@ -22,7 +22,11 @@ export default defineConfig({
     command: `npm run build -w @pbiplint/web && npm run preview -w @pbiplint/web -- --port ${port} --strictPort`,
     cwd: repo,
     url: `http://localhost:${port}/`,
-    reuseExistingServer: !process.env.CI,
+    // The command builds first, so a server left over from an earlier session would serve a stale
+    // build; never reuse one. The build's output is piped through so a failed build is readable
+    // instead of a silent timeout.
+    reuseExistingServer: false,
+    stdout: "pipe",
     timeout: 180_000,
   },
   projects: [

@@ -1,11 +1,20 @@
 import { AxeBuilder } from "@axe-core/playwright";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures.js";
 
 // The generated pages and the properties every page shares: the policy, the build marker, the
-// deep-link anchors, and an accessibility scan of the home page before and after a run.
+// deep-link anchors, and an accessibility scan of each page template. Every test also ends by
+// proving no console error was written and no request left the origin (see fixtures.ts).
+
+const PAGES = ["/", "/rules/", "/rules/hide-foreign-keys/", "/about/", "/404.html"];
+
+/** Violations as one line each, so a failure reads as a list of rule ids rather than a node dump. */
+async function violations(page: import("@playwright/test").Page): Promise<string[]> {
+  const scan = await new AxeBuilder({ page }).analyze();
+  return scan.violations.map((v) => `${v.id} (${v.impact}): ${v.nodes.length} node(s)`);
+}
 
 test("every page carries the policy and the build marker", async ({ page }) => {
-  for (const path of ["/", "/rules/", "/rules/hide-foreign-keys/", "/about/"]) {
+  for (const path of PAGES) {
     await page.goto(path);
     await expect(page.locator('meta[http-equiv="Content-Security-Policy"]')).toHaveAttribute(
       "content",
@@ -21,28 +30,33 @@ test("every page carries the policy and the build marker", async ({ page }) => {
 test("a section of a rule page, the rules index, and the About page can be deep-linked", async ({
   page,
 }) => {
-  await page.goto("/rules/hide-foreign-keys/#how-to-fix-it");
-  await expect(page.locator("h2#how-to-fix-it")).toHaveText("How to fix it");
-  await expect(page.locator("h2#how-to-fix-it")).toBeInViewport();
-  await page.goto("/rules/#formatting");
-  await expect(page.locator("h2#formatting")).toBeInViewport();
-  await page.goto("/about/#verify");
-  await expect(page.locator("h2#verify")).toBeInViewport();
+  // Each heading must be in view and the page must have scrolled to get there, since a heading
+  // near the top would be in view even if the fragment were ignored.
+  for (const [path, id, text] of [
+    ["/rules/hide-foreign-keys/#how-to-fix-it", "how-to-fix-it", "How to fix it"],
+    ["/rules/#formatting", "formatting", "Formatting"],
+    ["/about/#verify", "verify", "How to check that nothing is uploaded"],
+  ]) {
+    await page.goto(path!);
+    const heading = page.locator(`h2#${id}`);
+    await expect(heading).toHaveText(text!);
+    await expect(heading).toBeInViewport();
+    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  }
 });
 
-test("the home page has no accessibility violations before or after a run", async ({ page }) => {
-  await page.goto("/");
-  const before = await new AxeBuilder({ page }).analyze();
-  expect(before.violations).toEqual([]);
+test("no page template has an accessibility violation", async ({ page }) => {
+  for (const path of PAGES) {
+    await page.goto(path);
+    expect(await violations(page), path).toEqual([]);
+  }
+});
+
+test("the home page has no accessibility violation after a run with a group open", async ({
+  page,
+}) => {
   await page.getByRole("button", { name: "Try the sample project" }).click();
   await expect(page.locator("#results")).toBeVisible();
   await page.locator("#results .group").first().locator("summary").click();
-  const after = await new AxeBuilder({ page }).analyze();
-  expect(after.violations).toEqual([]);
-});
-
-test("a rule page has no accessibility violations", async ({ page }) => {
-  await page.goto("/rules/hide-foreign-keys/");
-  const scan = await new AxeBuilder({ page }).analyze();
-  expect(scan.violations).toEqual([]);
+  expect(await violations(page)).toEqual([]);
 });

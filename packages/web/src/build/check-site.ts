@@ -22,6 +22,8 @@ const NETWORK_APIS = [
 const RESOURCE_TAG = /<(script|link|img|iframe|video|audio|source|embed|object)\b[^>]*>/gi;
 const OFF_ORIGIN = /^(https?:)?\/\//i;
 const CSS_URL = /url\((["']?)((?:https?:)?\/\/[^)"']*)\1\)/gi;
+/** An opening tag that carries an id, with the id captured. */
+const ID_ATTR = /<[a-z][^>]*\sid="([^"]*)"[^>]*>/gi;
 
 export function checkSite(dir: string): SiteReport {
   const report: SiteReport = { files: 0, bytes: 0, problems: [] };
@@ -58,6 +60,14 @@ function checkHtml(rel: string, html: string, report: SiteReport): void {
     if (/\brel="canonical"/.test(tag)) continue;
     const target = /\s(?:src|href)=["']([^"']*)["']/i.exec(tag)?.[1] ?? "";
     if (OFF_ORIGIN.test(target)) report.problems.push(`${rel}: external resource ${tag}`);
+  }
+  // Heading ids are made from heading text, so a repeated or empty one would break a deep link.
+  const ids = new Set<string>();
+  for (const m of html.matchAll(ID_ATTR)) {
+    const id = m[1]!;
+    if (id === "") report.problems.push(`${rel}: empty id on ${m[0]}`);
+    else if (ids.has(id)) report.problems.push(`${rel}: duplicate id "${id}"`);
+    ids.add(id);
   }
 }
 

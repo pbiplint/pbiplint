@@ -81,6 +81,7 @@ describe("generateSite", () => {
     expect(existsSync(join(out, "rules/hide-foreign-keys/index.html"))).toBe(true);
     const index = readFileSync(join(out, "rules/index.html"), "utf8");
     expect(index).toContain("72 rules: 66 ported");
+    expect(index).toContain('<h2 id="error-prevention">Error Prevention</h2>');
     expect((index.match(/needs a live model/g) ?? []).length).toBe(5);
     for (const m of metas) expect(index).toContain(`href="/rules/${m.slug}/"`);
     const summaries = [...index.matchAll(/<span class="summary">([\s\S]*?)<\/span>/g)].map(

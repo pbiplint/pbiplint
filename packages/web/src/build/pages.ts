@@ -217,7 +217,7 @@ export function rulesIndex(metas: RuleMeta[]): string {
           `  <li><a href="/rules/${escapeHtml(m.slug)}/">${escapeHtml(m.title)}</a> <span class="badge ${escapeHtml(m.severity)}">${escapeHtml(m.severity)}</span>${m.status === "needsLiveModel" ? ' <span class="badge muted">needs a live model</span>' : ""}<br /><span class="summary">${renderInline(m.summary)}</span></li>`,
       )
       .join("\n");
-    return `<h2>${escapeHtml(category)}</h2>\n<ul class="rule-list">\n${items}\n</ul>`;
+    return `<h2 id="${headingId(category)}">${escapeHtml(category)}</h2>\n<ul class="rule-list">\n${items}\n</ul>`;
   }).join("\n");
   const main = `<article class="prose">
 <h1>Rules</h1>

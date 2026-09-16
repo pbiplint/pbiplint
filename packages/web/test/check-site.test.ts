@@ -36,6 +36,16 @@ describe("checkSite", () => {
     });
     expect(checkSite(dir).problems).toEqual([]);
   });
+  it("names a page whose element ids repeat or are empty, so every anchor stays linkable", () => {
+    const dir = site({
+      "index.html": `<html><head>${META}</head><body><h2 id="verify">A</h2><p id="status"></p></body></html>`,
+      "d/index.html": `<html><head>${META}</head><body><h2 id="quirks">A</h2><h2 id="quirks">B</h2><h3 id="">C</h3></body></html>`,
+    });
+    expect(checkSite(dir).problems).toEqual([
+      'd/index.html: duplicate id "quirks"',
+      'd/index.html: empty id on <h3 id="">',
+    ]);
+  });
   it("names every page that lacks the CSP or reaches off the origin, and every script or style that could", () => {
     const dir = site({
       "index.html": `<html><head></head><body></body></html>`,

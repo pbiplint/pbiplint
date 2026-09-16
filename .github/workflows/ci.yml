@@ -37,6 +37,7 @@ jobs:
   # stays quick and a browser download never slows the unit tests.
   e2e:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7

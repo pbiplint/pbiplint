@@ -40,11 +40,17 @@ jobs:
       - id: deployment
         uses: actions/deploy-pages@v5
   # Every page is stamped with the short commit sha at build time (packages/web/src/build/build-info.ts),
-  # so the live site can prove it is serving the build this run published. Pages sets a ten-minute
-  # cache header, so the check retries for up to three minutes before calling the deploy a failure.
+  # so the live site can prove it is serving the build this run published. Pages purges its edge on
+  # deploy and a new build has shown within a minute, so three minutes of retries is generous; the
+  # request asks for a fresh copy in case something in between honours the ten-minute cache header.
+  # A red verify beside a green deploy is deliberate: the site is up, but not with this run's build.
+  # The timeouts matter: a hung request here would hold the pages concurrency group and block every
+  # later deploy.
   verify:
     needs: deploy
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions: {}
     steps:
       - name: Confirm pbiplint.com serves this build
         env:
@@ -53,8 +59,8 @@ jobs:
           marker="name=\"pbiplint-build\" content=\"${SHA:0:7}\""
           for attempt in $(seq 1 18); do
             ok=true
-            for path in / /rules/hide-foreign-keys/ /about/; do
-              curl -fsS "https://pbiplint.com${path}" | grep -q "$marker" || ok=false
+            for path in / /rules/ /about/; do
+              curl -fsS --max-time 15 -H 'Cache-Control: no-cache' "https://pbiplint.com${path}" | grep -qF "$marker" || ok=false
             done
             if [ "$ok" = true ]; then
               echo "pbiplint.com serves ${SHA:0:7}"

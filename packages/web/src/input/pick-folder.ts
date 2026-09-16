@@ -21,8 +21,15 @@ export function directoryPicker(): DirectoryPicker | null {
   return typeof w.showDirectoryPicker === "function" ? w.showDirectoryPicker.bind(window) : null;
 }
 
-/** Walks a picked folder. Null when the person closes the dialog without choosing. */
-export async function readPickedDirectory(pick: DirectoryPicker): Promise<InputEntry[] | null> {
+/**
+ * Walks a picked folder. Null when the person closes the dialog without choosing. `onPicked` runs
+ * once a folder is chosen and before any file is read, so the caller can say the read has begun
+ * without saying it while the dialog is still open.
+ */
+export async function readPickedDirectory(
+  pick: DirectoryPicker,
+  onPicked?: () => void,
+): Promise<InputEntry[] | null> {
   let dir: DirectoryHandleLike;
   try {
     dir = await pick({ mode: "read" });
@@ -30,6 +37,7 @@ export async function readPickedDirectory(pick: DirectoryPicker): Promise<InputE
     if (e instanceof DOMException && e.name === "AbortError") return null;
     throw e;
   }
+  onPicked?.();
   const out: InputEntry[] = [];
   await walkHandle(dir, dir.name, out);
   return out;

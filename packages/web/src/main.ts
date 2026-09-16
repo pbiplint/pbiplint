@@ -97,6 +97,10 @@ byId("try-sample").addEventListener("click", () =>
   run(SAMPLE_FILES, `${SAMPLE_NAME} (${plural(SAMPLE_FILES.length, "file")})`),
 );
 
+// Every folder route says "Reading files..." once there is a folder to read: the drop as it lands,
+// the picker once the dialog closes on a choice, the directory input as it reports its files.
+const reading = (): void => say("Reading files...");
+
 // A drop anywhere else would make the browser open the file; keep it on the page.
 document.addEventListener("dragover", (event) => event.preventDefault());
 document.addEventListener("drop", (event) => event.preventDefault());
@@ -122,17 +126,19 @@ dropZone.addEventListener("drop", (event) => {
   event.preventDefault();
   unlight();
   if (!event.dataTransfer) return;
-  say("Reading files...");
+  reading();
   // readDataTransfer takes the entries before its first await, while the DataTransfer is still readable.
   readDataTransfer(event.dataTransfer).then(runEntries, fail);
 });
 
 const picker = directoryPicker();
 byId("choose-folder").addEventListener("click", () => {
-  if (picker) readPickedDirectory(picker).then((entries) => entries && runEntries(entries), fail);
+  if (picker)
+    readPickedDirectory(picker, reading).then((entries) => entries && runEntries(entries), fail);
   else folderInput.click();
 });
 folderInput.addEventListener("change", () => {
+  reading();
   readDirectoryInput(folderInput).then(runEntries, fail);
   folderInput.value = "";
 });

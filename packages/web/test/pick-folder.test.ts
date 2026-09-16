@@ -30,6 +30,30 @@ describe("readPickedDirectory", () => {
       { path: "Demo.SemanticModel/definition/model.tmdl", text: "model Model\n" },
     ]);
   });
+  it("tells the caller once the folder is chosen, before any file is read", async () => {
+    const seen: string[] = [];
+    const picked = dirHandle("Demo.SemanticModel", [
+      {
+        kind: "file",
+        name: "model.tmdl",
+        getFile: async () => {
+          seen.push("read");
+          return new File(["model Model\n"], "model.tmdl");
+        },
+      },
+    ]);
+    await readPickedDirectory(
+      async () => picked as never,
+      () => seen.push("picked"),
+    );
+    expect(seen).toEqual(["picked", "read"]);
+    const abort = async () => {
+      throw new DOMException("cancelled", "AbortError");
+    };
+    const calls: string[] = [];
+    await readPickedDirectory(abort as never, () => calls.push("picked"));
+    expect(calls).toEqual([]);
+  });
   it("returns null when the person cancels the dialog", async () => {
     const abort = async () => {
       throw new DOMException("cancelled", "AbortError");

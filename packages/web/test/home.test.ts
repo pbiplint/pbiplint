@@ -132,6 +132,27 @@ describe("home page", () => {
     fire(zone, "dragleave");
     expect(zone.classList.contains("over")).toBe(false);
   });
+  it("says it is reading files as soon as a folder input reports its files", async () => {
+    const input = document.getElementById("folder-input") as HTMLInputElement;
+    const file = Object.assign(new File(["table T\n"], "T.tmdl"), {
+      webkitRelativePath: "Demo.SemanticModel/definition/tables/T.tmdl",
+    });
+    Object.defineProperty(input, "files", { configurable: true, value: [file] });
+    try {
+      input.dispatchEvent(new Event("change"));
+    } finally {
+      Reflect.deleteProperty(input, "files");
+    }
+    const status = document.getElementById("status")!;
+    expect(status.hidden).toBe(false);
+    expect(status.textContent).toBe("Reading files...");
+    await tick();
+    await tick();
+    expect(status.hidden).toBe(true);
+    expect(document.querySelector("#results h2")!.textContent).toBe(
+      "Results for Demo.SemanticModel (1 file)",
+    );
+  });
   it("clears the last results when the next input fails", async () => {
     document.getElementById("try-sample")!.click();
     await tick();

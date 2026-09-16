@@ -1,4 +1,4 @@
-import { marked } from "marked";
+import { Marked, type Tokens } from "marked";
 
 export const SITE = "https://pbiplint.com";
 
@@ -72,16 +72,36 @@ const firstParagraph = (s: string): string =>
     .split(/\n\s*\n/)[0]
     ?.replace(/\s+/g, " ")
     .trim() ?? "";
-const render = (markdown: string): string => marked.parse(markdown, { async: false }) as string;
 /** A Markdown paragraph as prose: code marks dropped, whitespace collapsed. For a meta description. */
 const plainText = (markdown: string): string =>
   markdown.replace(/`+/g, "").replace(/\s+/g, " ").trim();
+
+/**
+ * The id a heading gets, so a section can be linked to: the text in lower case with code marks
+ * and punctuation dropped and each run of spaces a hyphen. "How to fix it" is "how-to-fix-it".
+ */
+export const headingId = (text: string): string =>
+  plainText(text)
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N} -]/gu, "")
+    .trim()
+    .replace(/\s+/g, "-");
+
+// marked adds no heading ids of its own since v8, so the renderer adds them here.
+const md = new Marked({
+  renderer: {
+    heading({ tokens, depth, text }: Tokens.Heading): string {
+      return `<h${depth} id="${headingId(text)}">${this.parser.parseInline(tokens)}</h${depth}>\n`;
+    },
+  },
+});
+const render = (markdown: string): string => md.parse(markdown, { async: false }) as string;
 /**
  * A Markdown paragraph as inline HTML, so `FILTER('Table')` in a summary reads as code. A backtick
  * run marked leaves literal, such as the unterminated fence the parse-issue page names, is dropped.
  */
 const renderInline = (markdown: string): string =>
-  plainText(marked.parseInline(markdown, { async: false }) as string);
+  plainText(md.parseInline(markdown, { async: false }) as string);
 
 function header(path: string): string {
   const current = (href: string): boolean =>

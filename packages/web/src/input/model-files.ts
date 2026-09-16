@@ -6,12 +6,24 @@ export interface InputEntry {
   text: string;
 }
 
+/** What a reader saw: the files it read, and every .SemanticModel folder it passed, read or not. */
+export interface InputTree {
+  entries: InputEntry[];
+  /**
+   * Drop-relative paths of the .SemanticModel folders seen, whether or not they held a .tmdl file.
+   * A folder is known by its name alone; nothing inside it is opened unless it is a wanted file.
+   */
+  modelFolders: string[];
+}
+
 export interface SelectedModel {
   /** Path of the model root inside the drop; "" when a lone file was dropped. */
   root: string;
   files: LintFile[];
   /** The nearest pbiplint.config.json at or above the model root, if the drop had one. */
   config?: { path: string; text: string };
+  /** Sentences for under the results, such as a model folder in the drop that could not be linted. */
+  notes: string[];
 }
 
 /** A problem with what was dropped, in words meant for the status line. */
@@ -19,6 +31,10 @@ export class InputError extends Error {}
 
 export const CONFIG_FILE = "pbiplint.config.json";
 const MODEL_SUFFIX = ".SemanticModel";
+export const isModelFolder = (name: string): boolean => name.endsWith(MODEL_SUFFIX);
+
+const TMDL_ONLY =
+  "Only a model stored as TMDL can be linted; a model in the older model.bim format needs to be saved as TMDL from Power BI Desktop first.";
 
 const parent = (p: string): string => (p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "");
 const within = (path: string, dir: string): boolean => dir === "" || path.startsWith(dir + "/");
@@ -42,15 +58,19 @@ export function relativeToRoot(root: string, path: string): string {
  * model; else a folder holding exactly one .SemanticModel folder points at it; else every .tmdl
  * file under the folder is linted with paths relative to it.
  *
- * A sibling .SemanticModel folder with no .tmdl files is invisible here, because only .tmdl files
- * and the config are ever read, so it never triggers the two-model refusal the CLI gives; the one
- * lintable model is linted.
+ * A .SemanticModel folder with no .tmdl files (an older model.bim model) holds nothing to lint, so
+ * it never triggers the two-model refusal the CLI gives: the one lintable model is linted and the
+ * other is named in a note. When it is the only model folder, the error names it instead.
  */
-export function selectModel(entries: InputEntry[]): SelectedModel {
+export function selectModel(entries: InputEntry[], modelFolders: string[] = []): SelectedModel {
   const tmdl = entries.filter((e) => e.path.endsWith(".tmdl"));
+  const unlintable = modelFolders.filter((folder) => !tmdl.some((e) => within(e.path, folder)));
+  const holdsNoTmdl = `${unlintable.join(", ")} hold${unlintable.length === 1 ? "s" : ""} no .tmdl files`;
   if (tmdl.length === 0)
     throw new InputError(
-      "No .tmdl files found. Drop a .SemanticModel folder, the PBIP folder that holds one, or a .tmdl file.",
+      unlintable.length
+        ? `${holdsNoTmdl}. ${TMDL_ONLY}`
+        : "No .tmdl files found. Drop a .SemanticModel folder, the PBIP folder that holds one, or a .tmdl file.",
     );
   // The dropped folder is the first path segment of everything; a lone file has no folder.
   const firsts = new Set(entries.map((e) => e.path.split("/")[0]!));
@@ -62,7 +82,10 @@ export function selectModel(entries: InputEntry[]): SelectedModel {
     .filter((e) => within(e.path, root))
     .map((e) => ({ path: relativeTo(e.path, root), text: e.text }))
     .sort((a, b) => a.path.localeCompare(b.path));
-  return { root, files, config: findConfig(entries, root) };
+  const notes = unlintable.length
+    ? [`${holdsNoTmdl} and ${unlintable.length === 1 ? "was" : "were"} not linted. ${TMDL_ONLY}`]
+    : [];
+  return { root, files, config: findConfig(entries, root), notes };
 }
 
 const hasDefinition = (tmdl: InputEntry[], dir: string): boolean =>
@@ -75,7 +98,7 @@ function resolveRoot(tmdl: InputEntry[], dir: string): string {
       tmdl
         .filter((e) => within(e.path, dir))
         .map((e) => relativeTo(e.path, dir).split("/")[0]!)
-        .filter((name) => name.endsWith(MODEL_SUFFIX)),
+        .filter(isModelFolder),
     ),
   ].sort();
   if (models.length === 1) return resolveRoot(tmdl, join(dir, models[0]!));

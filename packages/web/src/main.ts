@@ -1,5 +1,5 @@
 import { ConfigError, lint, resolveConfig, type LintFile } from "@pbiplint/core";
-import { InputError, relativeToRoot, selectModel, type InputEntry } from "./input/model-files.js";
+import { InputError, relativeToRoot, selectModel, type InputTree } from "./input/model-files.js";
 import { directoryPicker, readDirectoryInput, readPickedDirectory } from "./input/pick-folder.js";
 import { readDataTransfer } from "./input/read-drop.js";
 import { renderResults } from "./results/render.js";
@@ -53,10 +53,12 @@ interface Run {
   config?: { path: string; text: string };
   /** What to list as read under the results: the model files and the config. None for a paste. */
   read?: string[];
+  /** Sentences about the input for under the summary. */
+  notes?: string[];
 }
 
 /** Every input ends up here: read the config if there is one, lint, render. Nothing touches the network. */
-function run({ files, source, config, read }: Run): void {
+function run({ files, source, config, read, notes }: Run): void {
   try {
     let raw: unknown;
     if (config) {
@@ -71,7 +73,7 @@ function run({ files, source, config, read }: Run): void {
     const result = lint(files, { config: resolveConfig(raw) });
     // Shown before it is filled: a screen reader can miss mutations made inside a hidden live region.
     results.hidden = false;
-    renderResults(results, result, { source, files: read });
+    renderResults(results, result, { source, files: read, notes });
     say("");
     if (typeof results.scrollIntoView === "function")
       results.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -80,9 +82,9 @@ function run({ files, source, config, read }: Run): void {
   }
 }
 
-function runEntries(entries: InputEntry[]): void {
+function runEntries(tree: InputTree): void {
   try {
-    const model = selectModel(entries);
+    const model = selectModel(tree.entries, tree.modelFolders);
     const read = model.files.map((f) => f.path);
     if (model.config) read.push(`${relativeToRoot(model.root, model.config.path)} (config)`);
     run({
@@ -90,6 +92,7 @@ function runEntries(entries: InputEntry[]): void {
       source: `${model.root || "the dropped file"} (${plural(model.files.length, "file")})`,
       config: model.config,
       read,
+      notes: model.notes,
     });
   } catch (e) {
     fail(e);

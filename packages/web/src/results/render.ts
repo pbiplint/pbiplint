@@ -18,6 +18,8 @@ export interface RenderOptions {
    * file the browser skipped is visible by its absence. Omitted for a paste, where nothing was read.
    */
   files?: string[];
+  /** Sentences about the input worth a notice under the summary, such as a model folder that was not linted. */
+  notes?: string[];
 }
 
 type Child = Node | string | null | undefined;
@@ -66,6 +68,7 @@ export function renderResults(
       { class: "summary", "aria-live": "polite" },
       `${summaryLine(result)}. ${skippedLine(result)}.`,
     ),
+    ...(options.notes ?? []).map((note) => h("p", { class: "notice" }, note)),
     ...result.summary.unknownRules.map((id) =>
       h("p", { class: "notice" }, `pbiplint.config.json names no rule called "${id}".`),
     ),

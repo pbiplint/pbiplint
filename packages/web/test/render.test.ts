@@ -145,6 +145,12 @@ describe("renderResults", () => {
     renderResults(container, result, { source: "pasted TMDL" });
     expect(container.querySelector("details.files")).toBeNull();
   });
+  it("shows each note from the input as a notice under the summary", () => {
+    renderResults(container, result, { source: "x", notes: ["Old.SemanticModel was skipped."] });
+    const notice = container.querySelector(".notice")!;
+    expect(notice.textContent).toBe("Old.SemanticModel was skipped.");
+    expect(notice.previousElementSibling).toBe(container.querySelector(".summary"));
+  });
   it("never parses model text as HTML", () => {
     const hostile = lint([
       {

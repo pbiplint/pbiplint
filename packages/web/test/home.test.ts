@@ -185,6 +185,40 @@ describe("home page", () => {
     await tick();
     expect(document.querySelector("#results details.files")).toBeNull();
   });
+  it("says when a dropped PBIP folder holds a model with no .tmdl files", async () => {
+    const input = document.getElementById("folder-input") as HTMLInputElement;
+    const at = (path: string, text: string): File =>
+      Object.assign(new File([text], path.slice(path.lastIndexOf("/") + 1)), {
+        webkitRelativePath: path,
+      });
+    const feed = (files: File[]): void => {
+      Object.defineProperty(input, "files", { configurable: true, value: files });
+      try {
+        input.dispatchEvent(new Event("change"));
+      } finally {
+        Reflect.deleteProperty(input, "files");
+      }
+    };
+    feed([
+      at("Proj/New.SemanticModel/definition/tables/T.tmdl", "table T\n"),
+      at("Proj/Old.SemanticModel/model.bim", "{}"),
+    ]);
+    await tick();
+    await tick();
+    expect(document.querySelector("#results h2")!.textContent).toBe(
+      "Results for Proj/New.SemanticModel (1 file)",
+    );
+    expect(document.querySelector("#results .notice")!.textContent).toMatch(
+      /^Proj\/Old\.SemanticModel holds no \.tmdl files/,
+    );
+    feed([at("Proj/Old.SemanticModel/model.bim", "{}")]);
+    await tick();
+    await tick();
+    const status = document.getElementById("status")!;
+    expect(status.hidden).toBe(false);
+    expect(status.textContent).toMatch(/^Proj\/Old\.SemanticModel holds no \.tmdl files\./);
+    expect(document.getElementById("results")!.hidden).toBe(true);
+  });
   it("clears the last results when the next input fails", async () => {
     document.getElementById("try-sample")!.click();
     await tick();

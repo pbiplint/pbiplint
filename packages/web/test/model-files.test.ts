@@ -82,6 +82,33 @@ describe("selectModel", () => {
     expect(() => selectModel([e("Proj/Demo.Report/definition/report.json")])).toThrow(InputError);
     expect(() => selectModel([])).toThrow(/No \.tmdl files/);
   });
+  it("notes a sibling .SemanticModel folder that holds no .tmdl file, and lints the other", () => {
+    const m = selectModel(
+      [e("Proj/New.SemanticModel/definition/model.tmdl")],
+      ["Proj/New.SemanticModel", "Proj/Old.SemanticModel"],
+    );
+    expect(m.root).toBe("Proj/New.SemanticModel");
+    expect(m.notes).toEqual([
+      expect.stringMatching(/^Proj\/Old\.SemanticModel holds no \.tmdl files/),
+    ]);
+    expect(m.notes[0]).toMatch(/TMDL/);
+    expect(
+      selectModel([e("Proj/New.SemanticModel/definition/model.tmdl")], ["Proj/New.SemanticModel"])
+        .notes,
+    ).toEqual([]);
+    const two = selectModel(
+      [e("Proj/New.SemanticModel/definition/model.tmdl")],
+      ["Proj/New.SemanticModel", "Proj/A.SemanticModel", "Proj/B.SemanticModel"],
+    );
+    expect(two.notes[0]).toMatch(
+      /^Proj\/A\.SemanticModel, Proj\/B\.SemanticModel hold no \.tmdl files and were not linted\./,
+    );
+  });
+  it("names the model folder when it is the only one and holds no .tmdl file", () => {
+    expect(() => selectModel([], ["Proj/Old.SemanticModel"])).toThrow(
+      /^Proj\/Old\.SemanticModel holds no \.tmdl files\./,
+    );
+  });
 });
 
 describe("relativeToRoot", () => {

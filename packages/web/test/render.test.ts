@@ -39,10 +39,15 @@ describe("renderResults", () => {
     renderResults(container, result, { source: "x" });
     const items = [...container.querySelectorAll(".fix-first li")];
     items.forEach((li, i) => {
-      const slug = result.groups[i]!.rule.slug;
+      const { slug, name } = result.groups[i]!.rule;
       expect(li.querySelector("a")!.getAttribute("href")).toBe(`#rule-${slug}`);
-      expect(li.querySelector("a.rule-link")!.getAttribute("href")).toBe(`/rules/${slug}/`);
+      const link = li.querySelector("a.rule-link")!;
+      expect(link.getAttribute("href")).toBe(`/rules/${slug}/`);
+      // Up to ten links read "How to fix it"; the accessible name says which rule each one opens.
+      expect(link.getAttribute("aria-label")).toBe(`How to fix it: ${name}`);
     });
+    const group = container.querySelector(".group a.rule-link")!;
+    expect(group.getAttribute("aria-label")).toBe(`How to fix it: ${result.groups[0]!.rule.name}`);
   });
   it("renders one group per rule with the objects, a page link, and severity and category data", () => {
     renderResults(container, result, { source: "x" });

@@ -86,7 +86,15 @@ export function renderResults(
           {},
           h("a", { href: `#rule-${g.rule.slug}` }, g.rule.name),
           ` (${count(g.findings.length, g.rule.severity)}) · `,
-          h("a", { class: "rule-link", href: pagePath(g.rule.slug) }, "How to fix it"),
+          h(
+            "a",
+            {
+              class: "rule-link",
+              href: pagePath(g.rule.slug),
+              "aria-label": `How to fix it: ${g.rule.name}`,
+            },
+            "How to fix it",
+          ),
         ),
       ),
     ),
@@ -225,7 +233,15 @@ function renderGroup(g: RankedGroup): HTMLElement {
       { class: "meta" },
       h("code", {}, g.rule.id),
       ` · ${g.rule.category} · `,
-      h("a", { class: "rule-link", href: pagePath(g.rule.slug) }, "How to fix it"),
+      h(
+        "a",
+        {
+          class: "rule-link",
+          href: pagePath(g.rule.slug),
+          "aria-label": `How to fix it: ${g.rule.name}`,
+        },
+        "How to fix it",
+      ),
     ),
     // The wrapper scrolls sideways on a narrow screen, so a long object name never widens the page.
     // Nothing inside it takes focus, so it is a named tab stop of its own for keyboard scrolling.

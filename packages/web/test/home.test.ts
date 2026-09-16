@@ -102,6 +102,36 @@ describe("home page", () => {
     }
     expect(scroll).toHaveBeenCalledWith({ behavior: "smooth", block: "nearest" });
   });
+  it("keeps the drop zone lit while the pointer crosses its children", () => {
+    const zone = document.getElementById("drop")!;
+    const child = zone.querySelector("p")!;
+    const fire = (el: Element, type: string): boolean =>
+      el.dispatchEvent(new Event(type, { bubbles: true, cancelable: true }));
+    fire(zone, "dragenter");
+    expect(zone.classList.contains("over")).toBe(true);
+    // Entering a child fires dragenter on the child and dragleave on the zone, in that order.
+    fire(child, "dragenter");
+    fire(zone, "dragleave");
+    expect(zone.classList.contains("over")).toBe(true);
+    // Leaving the child back onto the zone, then leaving the zone.
+    fire(zone, "dragenter");
+    fire(child, "dragleave");
+    expect(zone.classList.contains("over")).toBe(true);
+    fire(zone, "dragleave");
+    expect(zone.classList.contains("over")).toBe(false);
+  });
+  it("unlights the drop zone on a drop and starts the next drag from zero", () => {
+    const zone = document.getElementById("drop")!;
+    const fire = (el: Element, type: string): boolean =>
+      el.dispatchEvent(new Event(type, { bubbles: true, cancelable: true }));
+    fire(zone, "dragenter");
+    fire(zone.querySelector("p")!, "dragenter");
+    fire(zone, "drop");
+    expect(zone.classList.contains("over")).toBe(false);
+    fire(zone, "dragenter");
+    fire(zone, "dragleave");
+    expect(zone.classList.contains("over")).toBe(false);
+  });
   it("clears the last results when the next input fails", async () => {
     document.getElementById("try-sample")!.click();
     await tick();

@@ -100,15 +100,27 @@ byId("try-sample").addEventListener("click", () =>
 // A drop anywhere else would make the browser open the file; keep it on the page.
 document.addEventListener("dragover", (event) => event.preventDefault());
 document.addEventListener("drop", (event) => event.preventDefault());
-for (const type of ["dragenter", "dragover"] as const)
-  dropZone.addEventListener(type, (event) => {
-    event.preventDefault();
-    dropZone.classList.add("over");
-  });
-dropZone.addEventListener("dragleave", () => dropZone.classList.remove("over"));
+// Every child the pointer crosses fires its own dragenter and a dragleave on the element left, so
+// the zone counts entries against leaves and unlights only when the pointer has left them all.
+// (relatedTarget would tell the two apart, but Chrome and Safari leave it null on drag events.)
+let dragDepth = 0;
+const unlight = (): void => {
+  dragDepth = 0;
+  dropZone.classList.remove("over");
+};
+dropZone.addEventListener("dragenter", (event) => {
+  event.preventDefault();
+  dragDepth += 1;
+  dropZone.classList.add("over");
+});
+dropZone.addEventListener("dragover", (event) => event.preventDefault());
+dropZone.addEventListener("dragleave", () => {
+  dragDepth = Math.max(0, dragDepth - 1);
+  if (dragDepth === 0) dropZone.classList.remove("over");
+});
 dropZone.addEventListener("drop", (event) => {
   event.preventDefault();
-  dropZone.classList.remove("over");
+  unlight();
   if (!event.dataTransfer) return;
   say("Reading files...");
   // readDataTransfer takes the entries before its first await, while the DataTransfer is still readable.

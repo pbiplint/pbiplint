@@ -78,10 +78,9 @@ describe("renderResults", () => {
     const groups = [...container.querySelectorAll<HTMLElement>(".group")];
     expect(groups.every((g) => g.querySelector(".table-wrap > table") !== null)).toBe(true);
   });
-  it("makes the summary paragraph the live region, so a run is announced as one sentence", () => {
+  it("puts no live region inside the results: the page announces a run through a persistent one", () => {
     renderResults(container, result, { source: "x" });
-    expect(container.querySelector(".summary")!.getAttribute("aria-live")).toBe("polite");
-    expect(container.querySelectorAll("[aria-live]").length).toBe(1);
+    expect(container.querySelectorAll("[aria-live], [role=status]").length).toBe(0);
   });
   it("labels the severity filters in title case, like the category filters", () => {
     renderResults(container, result, { source: "x" });

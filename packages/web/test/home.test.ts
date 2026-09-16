@@ -58,12 +58,21 @@ describe("home page", () => {
     expect(results.querySelector(".summary")!.textContent).toContain("161 findings");
     expect(document.getElementById("status")!.hidden).toBe(true);
   });
-  it("keeps the live region on the summary, not on the whole results section", async () => {
+  it("announces a run as one sentence through a live region that exists before the run", async () => {
+    // A live region inserted with its text already set is the case screen readers may not
+    // announce, so the announcer is part of the page and only its text changes.
+    expect(body).toMatch(/<p id="announce"[^>]*aria-live="polite"[^>]*><\/p>/);
+    const announcer = document.getElementById("announce")!;
     document.getElementById("try-sample")!.click();
     await tick();
-    const results = document.getElementById("results")!;
-    expect(results.hasAttribute("aria-live")).toBe(false);
-    expect(results.querySelector(".summary")!.getAttribute("aria-live")).toBe("polite");
+    expect(announcer.textContent).toBe(
+      "Results for the sample project (11 files): 161 findings (16 errors, 39 warnings, 106 info) in 11 files.",
+    );
+    expect(document.getElementById("results")!.hasAttribute("aria-live")).toBe(false);
+    expect(document.querySelectorAll("#results [aria-live]").length).toBe(0);
+    (document.getElementById("paste") as HTMLTextAreaElement).value = "";
+    document.getElementById("lint-paste")!.click();
+    expect(announcer.textContent).toBe("");
   });
   it("lints pasted TMDL and complains about an empty paste", async () => {
     const paste = document.getElementById("paste") as HTMLTextAreaElement;

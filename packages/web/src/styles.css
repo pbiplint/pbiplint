@@ -91,6 +91,18 @@ h3 {
 [hidden] {
   display: none !important;
 }
+/* Present for assistive technology, not on screen: the live region a run is announced through. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 
 /* Header and footer */
 .site-header {

@@ -61,13 +61,9 @@ export function renderResults(
       h("a", { href: "/about/#verify" }, "How to check that"),
     ),
     h("h2", {}, `Results for ${options.source}`),
-    // The summary is the live region, not the section around it, so a run reaches a screen reader
-    // as one sentence rather than every finding row.
-    h(
-      "p",
-      { class: "summary", "aria-live": "polite" },
-      `${summaryLine(result)}. ${skippedLine(result)}.`,
-    ),
+    // No live region in here: everything is rebuilt on each run, and a region inserted with its
+    // text already set may not be announced. The page announces the summary through #announce.
+    h("p", { class: "summary" }, `${summaryLine(result)}. ${skippedLine(result)}.`),
     ...(options.notes ?? []).map((note) => h("p", { class: "notice" }, note)),
     ...result.summary.unknownRules.map((id) =>
       h("p", { class: "notice" }, `pbiplint.config.json names no rule called "${id}".`),

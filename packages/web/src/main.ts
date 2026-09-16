@@ -1,4 +1,4 @@
-import { ConfigError, lint, resolveConfig, type LintFile } from "@pbiplint/core";
+import { ConfigError, lint, resolveConfig, summaryLine, type LintFile } from "@pbiplint/core";
 import { InputError, relativeToRoot, selectModel, type InputTree } from "./input/model-files.js";
 import { directoryPicker, readDirectoryInput, readPickedDirectory } from "./input/pick-folder.js";
 import { readDataTransfer } from "./input/read-drop.js";
@@ -13,6 +13,7 @@ const byId = <T extends HTMLElement>(id: string): T => {
 
 const paste = byId<HTMLTextAreaElement>("paste");
 const status = byId<HTMLParagraphElement>("status");
+const announcer = byId<HTMLParagraphElement>("announce");
 const results = byId<HTMLElement>("results");
 const dropZone = byId<HTMLElement>("drop");
 const folderInput = byId<HTMLInputElement>("folder-input");
@@ -35,6 +36,7 @@ function say(text: string, kind: "info" | "error" = "info"): void {
  */
 function problem(message: string): void {
   say(message, "error");
+  announcer.textContent = "";
   results.hidden = true;
   results.replaceChildren();
   if (typeof status.scrollIntoView === "function")
@@ -71,10 +73,12 @@ function run({ files, source, config, read, notes }: Run): void {
       }
     }
     const result = lint(files, { config: resolveConfig(raw) });
-    // Shown before it is filled: a screen reader can miss mutations made inside a hidden live region.
     results.hidden = false;
     renderResults(results, result, { source, files: read, notes });
     say("");
+    // The results are rebuilt on every run, so the live region is this one paragraph that never
+    // leaves the page: a screen reader hears the summary sentence, not every finding row.
+    announcer.textContent = `Results for ${source}: ${summaryLine(result)}.`;
     if (typeof results.scrollIntoView === "function")
       results.scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (e) {

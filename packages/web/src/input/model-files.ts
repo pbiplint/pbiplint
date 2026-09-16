@@ -39,8 +39,13 @@ export const CONFIG_FILE = "pbiplint.config.json";
 const MODEL_SUFFIX = ".SemanticModel";
 export const isModelFolder = (name: string): boolean => name.endsWith(MODEL_SUFFIX);
 
+// The cause is offered, not asserted: the folder may as well be empty or half copied.
 const TMDL_ONLY =
-  "Only a model stored as TMDL can be linted; a model in the older model.bim format needs to be saved as TMDL from Power BI Desktop first.";
+  "Only a model stored as TMDL can be linted; if it is in the older model.bim format, save it in the TMDL format from Power BI Desktop first.";
+
+/** "A", "A and B", "A, B, and C". */
+const listOf = (items: string[]): string =>
+  items.length <= 2 ? items.join(" and ") : `${items.slice(0, -1).join(", ")}, and ${items.at(-1)}`;
 
 const parent = (p: string): string => (p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "");
 const within = (path: string, dir: string): boolean => dir === "" || path.startsWith(dir + "/");
@@ -72,11 +77,13 @@ export function relativeToRoot(root: string, path: string): string {
 export function selectModel(entries: InputEntry[], modelFolders: string[] = []): SelectedModel {
   const tmdl = entries.filter((e) => e.path.endsWith(".tmdl"));
   const unlintable = modelFolders.filter((folder) => !tmdl.some((e) => within(e.path, folder)));
-  const holdsNoTmdl = `${unlintable.join(", ")} hold${unlintable.length === 1 ? "s" : ""} no .tmdl files`;
+  // "X holds no .tmdl files", built only when there is such a folder to name.
+  const holdsNoTmdl = (): string =>
+    `${listOf(unlintable)} hold${unlintable.length === 1 ? "s" : ""} no .tmdl files`;
   if (tmdl.length === 0)
     throw new InputError(
       unlintable.length
-        ? `${holdsNoTmdl}. ${TMDL_ONLY}`
+        ? `${holdsNoTmdl()}. ${TMDL_ONLY}`
         : "No .tmdl files found. Drop a .SemanticModel folder, the PBIP folder that holds one, or a .tmdl file.",
     );
   // The dropped folder is the first path segment of everything; a lone file has no folder.
@@ -90,7 +97,7 @@ export function selectModel(entries: InputEntry[], modelFolders: string[] = []):
     .map((e) => ({ path: relativeTo(e.path, root), text: e.text }))
     .sort((a, b) => a.path.localeCompare(b.path));
   const notes = unlintable.length
-    ? [`${holdsNoTmdl} and ${unlintable.length === 1 ? "was" : "were"} not linted. ${TMDL_ONLY}`]
+    ? [`${holdsNoTmdl()} and ${unlintable.length === 1 ? "was" : "were"} not linted. ${TMDL_ONLY}`]
     : [];
   const config = findConfig(entries, root);
   const linted = new Set(files.map((f) => join(root, f.path)));

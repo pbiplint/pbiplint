@@ -133,12 +133,28 @@ describe("selectModel", () => {
       ["Proj/New.SemanticModel", "Proj/A.SemanticModel", "Proj/B.SemanticModel"],
     );
     expect(two.notes[0]).toMatch(
-      /^Proj\/A\.SemanticModel, Proj\/B\.SemanticModel hold no \.tmdl files and were not linted\./,
+      /^Proj\/A\.SemanticModel and Proj\/B\.SemanticModel hold no \.tmdl files and were not linted\./,
+    );
+    const three = selectModel(
+      [e("Proj/New.SemanticModel/definition/model.tmdl")],
+      [
+        "Proj/New.SemanticModel",
+        "Proj/A.SemanticModel",
+        "Proj/B.SemanticModel",
+        "Proj/C.SemanticModel",
+      ],
+    );
+    expect(three.notes[0]).toMatch(
+      /^Proj\/A\.SemanticModel, Proj\/B\.SemanticModel, and Proj\/C\.SemanticModel hold no/,
+    );
+    // The folder may be empty or half copied, so the model.bim cause is offered, not asserted.
+    expect(m.notes[0]).toBe(
+      "Proj/Old.SemanticModel holds no .tmdl files and was not linted. Only a model stored as TMDL can be linted; if it is in the older model.bim format, save it in the TMDL format from Power BI Desktop first.",
     );
   });
   it("names the model folder when it is the only one and holds no .tmdl file", () => {
     expect(() => selectModel([], ["Proj/Old.SemanticModel"])).toThrow(
-      /^Proj\/Old\.SemanticModel holds no \.tmdl files\./,
+      "Proj/Old.SemanticModel holds no .tmdl files. Only a model stored as TMDL can be linted; if it is in the older model.bim format, save it in the TMDL format from Power BI Desktop first.",
     );
   });
 });

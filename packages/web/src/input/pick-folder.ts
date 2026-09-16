@@ -68,7 +68,11 @@ async function walkHandle(
  */
 const skipped = (path: string): boolean => path.split("/").some((seg) => SKIP_DIRS.has(seg));
 
-/** The .SemanticModel folders a reported path passes through, outermost first. */
+/**
+ * The .SemanticModel folders a reported path passes through, outermost first. A model folder with
+ * no files at all is invisible on this route, unlike the drop and picker routes, which walk
+ * directories; a real model.bim model always has its one file, so this never shows in practice.
+ */
 const modelFoldersIn = (path: string): string[] => {
   const dirs = path.split("/").slice(0, -1);
   return dirs.flatMap((name, i) => (isModelFolder(name) ? [dirs.slice(0, i + 1).join("/")] : []));

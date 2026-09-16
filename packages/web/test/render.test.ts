@@ -135,7 +135,7 @@ describe("renderResults", () => {
     expect(container.textContent).toContain("No findings.");
     expect(container.querySelector(".filters")).toBeNull();
   });
-  it("lists the files it read, collapsed, between the export buttons and the filters", () => {
+  it("lists the files it read, collapsed, right under the summary that counts them", () => {
     const files = [
       "definition/model.tmdl",
       "definition/tables/T.tmdl",
@@ -146,8 +146,16 @@ describe("renderResults", () => {
     expect(details.open).toBe(false);
     expect(details.querySelector("summary")!.textContent).toBe("Files read (3)");
     expect([...details.querySelectorAll("li")].map((li) => li.textContent)).toEqual(files);
-    expect(details.previousElementSibling).toBe(container.querySelector(".export"));
-    expect(details.nextElementSibling).toBe(container.querySelector(".filters"));
+    expect(details.previousElementSibling).toBe(container.querySelector(".summary"));
+    expect(details.nextElementSibling).toBe(container.querySelector("h3"));
+    // A notice about the input stays with the summary; the list follows both.
+    renderResults(container, result, {
+      source: "x",
+      files,
+      notes: ["Old.SemanticModel was skipped."],
+    });
+    const after = container.querySelector<HTMLDetailsElement>("details.files")!;
+    expect(after.previousElementSibling).toBe(container.querySelector(".notice"));
   });
   it("lists the files it read even when there are no findings, and nothing for a paste", () => {
     const clean = lint([{ path: "m.tmdl", text: "model Model\n" }], { rules: [] });

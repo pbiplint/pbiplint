@@ -68,9 +68,11 @@ export function renderResults(
     ...result.summary.unknownRules.map((id) =>
       h("p", { class: "notice" }, `pbiplint.config.json names no rule called "${id}".`),
     ),
+    // Right under the sentence that counts the files, so "in 11 files" expands into which ones.
+    ...renderFilesRead(options.files),
   );
   if (result.groups.length === 0) {
-    container.append(h("p", { class: "clean" }, "No findings."), ...renderFilesRead(options.files));
+    container.append(h("p", { class: "clean" }, "No findings."));
     return;
   }
   container.append(
@@ -99,7 +101,6 @@ export function renderResults(
       ),
     ),
     renderExportBar(result),
-    ...renderFilesRead(options.files),
     renderFilters(result),
     h("div", { class: "groups" }, ...result.groups.map(renderGroup)),
   );

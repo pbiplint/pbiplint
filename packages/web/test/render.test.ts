@@ -35,6 +35,15 @@ describe("renderResults", () => {
       `#rule-${result.groups[0]!.rule.slug}`,
     );
   });
+  it("links each fix-first item to its rule page as well as to its group", () => {
+    renderResults(container, result, { source: "x" });
+    const items = [...container.querySelectorAll(".fix-first li")];
+    items.forEach((li, i) => {
+      const slug = result.groups[i]!.rule.slug;
+      expect(li.querySelector("a")!.getAttribute("href")).toBe(`#rule-${slug}`);
+      expect(li.querySelector("a.rule-link")!.getAttribute("href")).toBe(`/rules/${slug}/`);
+    });
+  });
   it("renders one group per rule with the objects, a page link, and severity and category data", () => {
     renderResults(container, result, { source: "x" });
     const groups = [...container.querySelectorAll<HTMLElement>(".group")];

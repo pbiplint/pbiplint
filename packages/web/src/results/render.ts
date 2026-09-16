@@ -74,12 +74,15 @@ export function renderResults(
     h(
       "ol",
       { class: "fix-first" },
+      // The name jumps to the group; the second link opens the rule page, which is otherwise only
+      // reachable from inside the group once it is expanded.
       ...topGroups(result).map((g) =>
         h(
           "li",
           {},
           h("a", { href: `#rule-${g.rule.slug}` }, g.rule.name),
-          ` (${count(g.findings.length, g.rule.severity)})`,
+          ` (${count(g.findings.length, g.rule.severity)}) · `,
+          h("a", { class: "rule-link", href: pagePath(g.rule.slug) }, "How to fix it"),
         ),
       ),
     ),

@@ -27,6 +27,7 @@ Rename the object without the space in Power BI Desktop, which updates the visua
 ## Quirks
 
 - Narrower scope than `TRIM_OBJECT_NAMES`: levels, roles, expressions, calculation items, calculated tables, and calculated table columns are not checked here.
+- In the browser, the "Choose a folder" button in Chrome and Edge does not list a file whose name begins or ends with a space, so a table file named that way is never read on that route and its findings are missing. Drag the folder onto the page, or use the command line, to read it.
 
 ## Links
 

@@ -39,3 +39,28 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v5
+  # Every page is stamped with the short commit sha at build time (packages/web/src/build/build-info.ts),
+  # so the live site can prove it is serving the build this run published. Pages sets a ten-minute
+  # cache header, so the check retries for up to three minutes before calling the deploy a failure.
+  verify:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Confirm pbiplint.com serves this build
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          marker="name=\"pbiplint-build\" content=\"${SHA:0:7}\""
+          for attempt in $(seq 1 18); do
+            ok=true
+            for path in / /rules/hide-foreign-keys/ /about/; do
+              curl -fsS "https://pbiplint.com${path}" | grep -q "$marker" || ok=false
+            done
+            if [ "$ok" = true ]; then
+              echo "pbiplint.com serves ${SHA:0:7}"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "pbiplint.com is not serving ${SHA:0:7} after three minutes"
+          exit 1

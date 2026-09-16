@@ -54,6 +54,26 @@ Every rule has a page in `rules/`, written in pbiplint's own words. The rule-pag
 - Document every quirk kept from the source rule under `## Quirks`, and refer to other rules by their id.
 - The pages also feed tool output. The first paragraph of "What it checks" is the rule's description, and the Why, How to fix, and Quirks sections are the help block in SARIF. After editing a page, run `node scripts/sync-rule-pages.mjs` to regenerate `packages/core/src/rules/rule-summaries.data.ts` and `packages/cli/src/rule-help.data.ts`; the rule-pages tests fail until they match.
 
+## Testing a pull request
+
+Every pull request runs three checks on GitHub, and it cannot merge with any of them red:
+
+- The unit matrix on Node 20 and 22: lint, typecheck, the unit tests and the Tabular Editor parity suite, the browser-purity check on the core bundle, the full build with the site check that fails on any network reference, and the npm pack check.
+- The browser suite (`packages/web/e2e`) in Chromium, Firefox, and WebKit against the production build: the inputs, the results, drag and drop, downloads, keyboard focus, deep links, the policy and build marker on every page, and an axe-core accessibility scan of every page template. Every test also proves that nothing wrote a console error and no request left the origin.
+- The contributor license agreement.
+
+Merging to `main` deploys the site within about a minute, and a verify job then fails the run unless pbiplint.com is serving that exact commit (every page carries `<meta name="pbiplint-build">` with the short sha). If verify goes red, revert the merge; the previous build is live again a minute later.
+
+Three things stay manual, because no automation can reach them. Check them on the deployed site or with `npm run dev -w @pbiplint/web`, and only when the pull request touches that area:
+
+| The change touches | Check by hand |
+|---|---|
+| The folder or drop input (`packages/web/src/main.ts`, `packages/web/src/input`) | "Choose a folder" in Chrome, and a real folder dragged from the desktop into Chrome |
+| The live region or the results announcement | Run the sample with a screen reader on and confirm it reads one sentence |
+| Visual design, layout, or copy | Look at it, on a phone-width window too |
+
+The tests pin the sample project's counts, so a change to a rule or to the sample fails them until the expectations are updated. That is the point.
+
 ## Releasing
 
 See docs/RELEASING.md.

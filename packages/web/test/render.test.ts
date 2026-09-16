@@ -77,6 +77,12 @@ describe("renderResults", () => {
     renderResults(container, result, { source: "x" });
     const groups = [...container.querySelectorAll<HTMLElement>(".group")];
     expect(groups.every((g) => g.querySelector(".table-wrap > table") !== null)).toBe(true);
+    // A scroll container with nothing focusable inside needs a tab stop and a name, or a keyboard
+    // user on a narrow screen cannot scroll it (WCAG 2.1.1).
+    const wrap = groups[0]!.querySelector(".table-wrap")!;
+    expect(wrap.getAttribute("tabindex")).toBe("0");
+    expect(wrap.getAttribute("role")).toBe("region");
+    expect(wrap.getAttribute("aria-label")).toBe(`${result.groups[0]!.rule.name} findings`);
   });
   it("puts no live region inside the results: the page announces a run through a persistent one", () => {
     renderResults(container, result, { source: "x" });

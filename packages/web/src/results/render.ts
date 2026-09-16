@@ -228,9 +228,15 @@ function renderGroup(g: RankedGroup): HTMLElement {
       h("a", { class: "rule-link", href: pagePath(g.rule.slug) }, "How to fix it"),
     ),
     // The wrapper scrolls sideways on a narrow screen, so a long object name never widens the page.
+    // Nothing inside it takes focus, so it is a named tab stop of its own for keyboard scrolling.
     h(
       "div",
-      { class: "table-wrap" },
+      {
+        class: "table-wrap",
+        tabindex: "0",
+        role: "region",
+        "aria-label": `${g.rule.name} findings`,
+      },
       h(
         "table",
         {},

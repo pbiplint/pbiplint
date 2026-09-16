@@ -135,7 +135,7 @@ describe("renderResults", () => {
     expect(container.textContent).toContain("No findings.");
     expect(container.querySelector(".filters")).toBeNull();
   });
-  it("lists the files it read, collapsed, under the results", () => {
+  it("lists the files it read, collapsed, between the export buttons and the filters", () => {
     const files = [
       "definition/model.tmdl",
       "definition/tables/T.tmdl",
@@ -146,7 +146,8 @@ describe("renderResults", () => {
     expect(details.open).toBe(false);
     expect(details.querySelector("summary")!.textContent).toBe("Files read (3)");
     expect([...details.querySelectorAll("li")].map((li) => li.textContent)).toEqual(files);
-    expect(container.lastElementChild).toBe(details);
+    expect(details.previousElementSibling).toBe(container.querySelector(".export"));
+    expect(details.nextElementSibling).toBe(container.querySelector(".filters"));
   });
   it("lists the files it read even when there are no findings, and nothing for a paste", () => {
     const clean = lint([{ path: "m.tmdl", text: "model Model\n" }], { rules: [] });

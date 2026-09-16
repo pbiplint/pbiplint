@@ -393,7 +393,7 @@ button.secondary:hover,
   overflow-x: auto;
 }
 .files {
-  margin-top: 24px;
+  margin: 16px 0;
   color: var(--fg-2);
   font-size: 14px;
 }

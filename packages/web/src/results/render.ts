@@ -99,6 +99,7 @@ export function renderResults(
       ),
     ),
     renderExportBar(result),
+    ...renderFilesRead(options.files),
     renderFilters(result),
     h("div", { class: "groups" }, ...result.groups.map(renderGroup)),
   );
@@ -111,7 +112,6 @@ export function renderResults(
           result.summary.ruleErrors.map((e) => `${e.id}: ${e.message}`).join("; "),
       ),
     );
-  container.append(...renderFilesRead(options.files));
   // One handler for the whole container, so re-rendering never stacks listeners.
   container.onchange = (event) => {
     if ((event.target as HTMLElement).matches("input[data-filter]")) applyFilters(container);

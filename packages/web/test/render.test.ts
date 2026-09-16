@@ -69,6 +69,11 @@ describe("renderResults", () => {
     const groups = [...container.querySelectorAll<HTMLElement>(".group")];
     expect(groups.every((g) => g.querySelector(".table-wrap > table") !== null)).toBe(true);
   });
+  it("makes the summary paragraph the live region, so a run is announced as one sentence", () => {
+    renderResults(container, result, { source: "x" });
+    expect(container.querySelector(".summary")!.getAttribute("aria-live")).toBe("polite");
+    expect(container.querySelectorAll("[aria-live]").length).toBe(1);
+  });
   it("labels the severity filters in title case, like the category filters", () => {
     renderResults(container, result, { source: "x" });
     const labels = [...container.querySelectorAll("label.filter")].map((l) => l.textContent);

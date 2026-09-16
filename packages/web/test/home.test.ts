@@ -57,6 +57,13 @@ describe("home page", () => {
     expect(results.querySelector(".summary")!.textContent).toContain("161 findings");
     expect(document.getElementById("status")!.hidden).toBe(true);
   });
+  it("keeps the live region on the summary, not on the whole results section", async () => {
+    document.getElementById("try-sample")!.click();
+    await tick();
+    const results = document.getElementById("results")!;
+    expect(results.hasAttribute("aria-live")).toBe(false);
+    expect(results.querySelector(".summary")!.getAttribute("aria-live")).toBe("polite");
+  });
   it("lints pasted TMDL and complains about an empty paste", async () => {
     const paste = document.getElementById("paste") as HTMLTextAreaElement;
     paste.value = "";

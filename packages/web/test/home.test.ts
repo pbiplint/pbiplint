@@ -130,6 +130,37 @@ describe("home page", () => {
     fire(zone, "dragleave");
     expect(zone.classList.contains("over")).toBe(false);
   });
+  it("unlights the drop zone by itself when dragover stops, even with a dragleave missed", () => {
+    const zone = document.getElementById("drop")!;
+    const fire = (el: Element, type: string): boolean =>
+      el.dispatchEvent(new Event(type, { bubbles: true, cancelable: true }));
+    vi.useFakeTimers();
+    try {
+      // Two entries, no leaves: a drag cancelled with Escape over a child looks like this.
+      fire(zone, "dragenter");
+      fire(zone.querySelector("p")!, "dragenter");
+      fire(zone, "dragover");
+      vi.advanceTimersByTime(900);
+      expect(zone.classList.contains("over")).toBe(true);
+      fire(zone, "dragover");
+      vi.advanceTimersByTime(900);
+      expect(zone.classList.contains("over")).toBe(true);
+      vi.advanceTimersByTime(200);
+      expect(zone.classList.contains("over")).toBe(false);
+      // The count was reset with the highlight, so the next drag behaves normally.
+      fire(zone, "dragenter");
+      fire(zone, "dragleave");
+      expect(zone.classList.contains("over")).toBe(false);
+      // A stray dragleave while the pointer is still inside is healed by the next dragover.
+      fire(zone, "dragenter");
+      fire(zone, "dragleave");
+      fire(zone, "dragleave");
+      fire(zone, "dragover");
+      expect(zone.classList.contains("over")).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
   it("unlights the drop zone on a drop and starts the next drag from zero", () => {
     const zone = document.getElementById("drop")!;
     const fire = (el: Element, type: string): boolean =>

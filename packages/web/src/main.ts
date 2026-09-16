@@ -130,9 +130,14 @@ document.addEventListener("drop", (event) => event.preventDefault());
 // Every child the pointer crosses fires its own dragenter and a dragleave on the element left, so
 // the zone counts entries against leaves and unlights only when the pointer has left them all.
 // (relatedTarget would tell the two apart, but Chrome and Safari leave it null on drag events.)
+// The count can still go wrong: a drag cancelled with Escape over a child, or dragged out of the
+// window, may miss a dragleave. So dragover, which a browser fires at least every 550 ms while a
+// drag is over the zone, relights it and arms a watchdog that unlights it once dragover stops.
 let dragDepth = 0;
+let dragWatchdog: ReturnType<typeof setTimeout> | undefined;
 const unlight = (): void => {
   dragDepth = 0;
+  clearTimeout(dragWatchdog);
   dropZone.classList.remove("over");
 };
 dropZone.addEventListener("dragenter", (event) => {
@@ -140,10 +145,15 @@ dropZone.addEventListener("dragenter", (event) => {
   dragDepth += 1;
   dropZone.classList.add("over");
 });
-dropZone.addEventListener("dragover", (event) => event.preventDefault());
+dropZone.addEventListener("dragover", (event) => {
+  event.preventDefault();
+  dropZone.classList.add("over");
+  clearTimeout(dragWatchdog);
+  dragWatchdog = setTimeout(unlight, 1000);
+});
 dropZone.addEventListener("dragleave", () => {
   dragDepth = Math.max(0, dragDepth - 1);
-  if (dragDepth === 0) dropZone.classList.remove("over");
+  if (dragDepth === 0) unlight();
 });
 dropZone.addEventListener("drop", (event) => {
   event.preventDefault();

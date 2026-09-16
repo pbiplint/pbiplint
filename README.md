@@ -10,10 +10,10 @@ uploaded, ever.
 
 ## Status
 
-Pre-release. Nothing is published to npm yet, so the commands below start
-working at the first release. That release covers the semantic model layer
-(TMDL), ported from the Microsoft best-practice rules and verified against
-Tabular Editor. Report rules (PBIR) and Power Query rules follow.
+Version 0.1.0, released on September 16, 2026. It covers the semantic model
+layer (TMDL): every rule from the Microsoft best-practice ruleset, ported and
+verified against Tabular Editor, in the browser at https://pbiplint.com and on
+the command line. Report rules (PBIR) and Power Query rules follow.
 
 ## Use it
 

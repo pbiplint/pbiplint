@@ -13,6 +13,13 @@ import { copy, download, exportJson, exportMarkdown } from "./export.js";
 export interface RenderOptions {
   /** What was linted, for the heading: "the sample project (11 files)", "pasted TMDL". */
   source: string;
+  /**
+   * The files that were read, as paths relative to the model root, listed under the results so a
+   * file the browser skipped is visible by its absence. Omitted for a paste, where nothing was read.
+   */
+  files?: string[];
+  /** Sentences about the input worth a notice under the summary, such as a model folder that was not linted. */
+  notes?: string[];
 }
 
 type Child = Node | string | null | undefined;
@@ -54,10 +61,15 @@ export function renderResults(
       h("a", { href: "/about/#verify" }, "How to check that"),
     ),
     h("h2", {}, `Results for ${options.source}`),
+    // No live region in here: everything is rebuilt on each run, and a region inserted with its
+    // text already set may not be announced. The page announces the summary through #announce.
     h("p", { class: "summary" }, `${summaryLine(result)}. ${skippedLine(result)}.`),
+    ...(options.notes ?? []).map((note) => h("p", { class: "notice" }, note)),
     ...result.summary.unknownRules.map((id) =>
       h("p", { class: "notice" }, `pbiplint.config.json names no rule called "${id}".`),
     ),
+    // Right under the sentence that counts the files, so "in 11 files" expands into which ones.
+    ...renderFilesRead(options.files),
   );
   if (result.groups.length === 0) {
     container.append(h("p", { class: "clean" }, "No findings."));
@@ -68,12 +80,23 @@ export function renderResults(
     h(
       "ol",
       { class: "fix-first" },
+      // The name jumps to the group; the second link opens the rule page, which is otherwise only
+      // reachable from inside the group once it is expanded.
       ...topGroups(result).map((g) =>
         h(
           "li",
           {},
           h("a", { href: `#rule-${g.rule.slug}` }, g.rule.name),
-          ` (${count(g.findings.length, g.rule.severity)})`,
+          ` (${count(g.findings.length, g.rule.severity)}) · `,
+          h(
+            "a",
+            {
+              class: "rule-link",
+              href: pagePath(g.rule.slug),
+              "aria-label": `How to fix it: ${g.rule.name}`,
+            },
+            "How to fix it",
+          ),
         ),
       ),
     ),
@@ -94,6 +117,19 @@ export function renderResults(
   container.onchange = (event) => {
     if ((event.target as HTMLElement).matches("input[data-filter]")) applyFilters(container);
   };
+}
+
+/** The files that were read, collapsed: the count is enough until a file seems to be missing. */
+function renderFilesRead(files: string[] | undefined): HTMLElement[] {
+  if (!files) return [];
+  return [
+    h(
+      "details",
+      { class: "files" },
+      h("summary", {}, `Files read (${files.length})`),
+      h("ul", {}, ...files.map((path) => h("li", { class: "mono" }, path))),
+    ),
+  ];
 }
 
 function renderExportBar(result: LintResult): HTMLElement {
@@ -136,11 +172,13 @@ function renderFilters(result: LintResult): HTMLElement {
     );
   const severities = SEVERITIES.filter((s) => result.groups.some((g) => g.rule.severity === s));
   const categories = CATEGORY_ORDER.filter((c) => result.groups.some((g) => g.rule.category === c));
+  // "Error", not "error": the category labels beside them are title case.
+  const titleCase = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
   return h(
     "fieldset",
     { class: "filters" },
     h("legend", {}, "Show"),
-    ...severities.map((s) => box("severity", String(s), SEVERITY_LABEL[s])),
+    ...severities.map((s) => box("severity", String(s), titleCase(SEVERITY_LABEL[s]))),
     h("span", { class: "gap" }),
     ...categories.map((c) => box("category", c, c)),
   );
@@ -196,24 +234,43 @@ function renderGroup(g: RankedGroup): HTMLElement {
       { class: "meta" },
       h("code", {}, g.rule.id),
       ` · ${g.rule.category} · `,
-      h("a", { class: "rule-link", href: pagePath(g.rule.slug) }, "How to fix it"),
-    ),
-    h(
-      "table",
-      {},
       h(
-        "thead",
+        "a",
+        {
+          class: "rule-link",
+          href: pagePath(g.rule.slug),
+          "aria-label": `How to fix it: ${g.rule.name}`,
+        },
+        "How to fix it",
+      ),
+    ),
+    // The wrapper scrolls sideways on a narrow screen, so a long object name never widens the page.
+    // Nothing inside it takes focus, so it is a named tab stop of its own for keyboard scrolling.
+    h(
+      "div",
+      {
+        class: "table-wrap",
+        tabindex: "0",
+        role: "region",
+        "aria-label": `${g.rule.name} findings`,
+      },
+      h(
+        "table",
         {},
         h(
-          "tr",
+          "thead",
           {},
-          h("th", {}, "Object"),
-          h("th", {}, "Type"),
-          h("th", {}, "Location"),
-          h("th", {}, "Detail"),
+          h(
+            "tr",
+            {},
+            h("th", {}, "Object"),
+            h("th", {}, "Type"),
+            h("th", {}, "Location"),
+            h("th", {}, "Detail"),
+          ),
         ),
+        h("tbody", {}, ...rows),
       ),
-      h("tbody", {}, ...rows),
     ),
   );
 }

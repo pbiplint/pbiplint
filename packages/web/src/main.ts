@@ -1,5 +1,5 @@
-import { ConfigError, lint, resolveConfig, type LintFile } from "@pbiplint/core";
-import { InputError, selectModel, type InputEntry } from "./input/model-files.js";
+import { ConfigError, lint, resolveConfig, summaryLine, type LintFile } from "@pbiplint/core";
+import { InputError, selectModel, type InputTree } from "./input/model-files.js";
 import { directoryPicker, readDirectoryInput, readPickedDirectory } from "./input/pick-folder.js";
 import { readDataTransfer } from "./input/read-drop.js";
 import { renderResults } from "./results/render.js";
@@ -13,6 +13,7 @@ const byId = <T extends HTMLElement>(id: string): T => {
 
 const paste = byId<HTMLTextAreaElement>("paste");
 const status = byId<HTMLParagraphElement>("status");
+const announcer = byId<HTMLParagraphElement>("announce");
 const results = byId<HTMLElement>("results");
 const dropZone = byId<HTMLElement>("drop");
 const folderInput = byId<HTMLInputElement>("folder-input");
@@ -30,14 +31,16 @@ function say(text: string, kind: "info" | "error" = "info"): void {
 /**
  * An input that went nowhere: say why, drop the results of the last one so nothing stale is read
  * as the answer, and scroll the message into view, since a previous run may have pushed it above
- * the fold.
+ * the fold. "nearest" scrolls only as far as it must, so an empty paste keeps the textarea on
+ * screen instead of pinning the message to the top.
  */
 function problem(message: string): void {
   say(message, "error");
+  announcer.textContent = "";
   results.hidden = true;
   results.replaceChildren();
   if (typeof status.scrollIntoView === "function")
-    status.scrollIntoView({ behavior: "smooth", block: "start" });
+    status.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 function fail(e: unknown): void {
@@ -45,13 +48,24 @@ function fail(e: unknown): void {
   else problem(`Something went wrong: ${e instanceof Error ? e.message : String(e)}`);
 }
 
+interface Run {
+  files: LintFile[];
+  /** What was linted, for the results heading. */
+  source: string;
+  config?: { path: string; text: string };
+  /** What to list as read under the results: the model files and the config. None for a paste. */
+  read?: string[];
+  /** Sentences about the input for under the summary. */
+  notes?: string[];
+}
+
 /** Every input ends up here: read the config if there is one, lint, render. Nothing touches the network. */
-function run(files: LintFile[], source: string, configText?: string): void {
+function run({ files, source, config, read, notes }: Run): void {
   try {
     let raw: unknown;
-    if (configText !== undefined) {
+    if (config) {
       try {
-        raw = JSON.parse(configText);
+        raw = JSON.parse(config.text);
       } catch (e) {
         throw new ConfigError(
           `pbiplint.config.json is not valid JSON: ${e instanceof Error ? e.message : String(e)}`,
@@ -59,10 +73,12 @@ function run(files: LintFile[], source: string, configText?: string): void {
       }
     }
     const result = lint(files, { config: resolveConfig(raw) });
-    // Shown before it is filled: a screen reader can miss mutations made inside a hidden live region.
     results.hidden = false;
-    renderResults(results, result, { source });
+    renderResults(results, result, { source, files: read, notes });
     say("");
+    // The results are rebuilt on every run, so the live region is this one paragraph that never
+    // leaves the page: a screen reader hears the summary sentence, not every finding row.
+    announcer.textContent = `Results for ${source}: ${summaryLine(result)}.`;
     if (typeof results.scrollIntoView === "function")
       results.scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (e) {
@@ -70,14 +86,16 @@ function run(files: LintFile[], source: string, configText?: string): void {
   }
 }
 
-function runEntries(entries: InputEntry[]): void {
+function runEntries(tree: InputTree): void {
   try {
-    const model = selectModel(entries);
-    run(
-      model.files,
-      `${model.root || "the dropped file"} (${plural(model.files.length, "file")})`,
-      model.config?.text,
-    );
+    const model = selectModel(tree.entries, tree.modelFolders);
+    run({
+      files: model.files,
+      source: `${model.root || "the dropped file"} (${plural(model.files.length, "file")})`,
+      config: model.config,
+      read: model.read,
+      notes: model.notes,
+    });
   } catch (e) {
     fail(e);
   }
@@ -89,37 +107,69 @@ byId("lint-paste").addEventListener("click", () => {
     problem("Paste some TMDL first.");
     return;
   }
-  run([{ path: "pasted.tmdl", text }], "pasted TMDL");
+  run({ files: [{ path: "pasted.tmdl", text }], source: "pasted TMDL" });
 });
 
 byId("try-sample").addEventListener("click", () =>
-  run(SAMPLE_FILES, `${SAMPLE_NAME} (${plural(SAMPLE_FILES.length, "file")})`),
+  run({
+    files: SAMPLE_FILES,
+    source: `${SAMPLE_NAME} (${plural(SAMPLE_FILES.length, "file")})`,
+    read: SAMPLE_FILES.map((f) => f.path),
+  }),
 );
+
+// Every folder route says "Reading files..." once there is a folder to read: the drop as it lands,
+// the picker once the dialog closes on a choice, the directory input as it reports its files.
+const reading = (): void => say("Reading files...");
 
 // A drop anywhere else would make the browser open the file; keep it on the page.
 document.addEventListener("dragover", (event) => event.preventDefault());
 document.addEventListener("drop", (event) => event.preventDefault());
-for (const type of ["dragenter", "dragover"] as const)
-  dropZone.addEventListener(type, (event) => {
-    event.preventDefault();
-    dropZone.classList.add("over");
-  });
-dropZone.addEventListener("dragleave", () => dropZone.classList.remove("over"));
+// Every child the pointer crosses fires its own dragenter and a dragleave on the element left, so
+// the zone counts entries against leaves and unlights only when the pointer has left them all.
+// (relatedTarget would tell the two apart, but Chrome and Safari leave it null on drag events.)
+// The count can still go wrong: a drag cancelled with Escape over a child, or dragged out of the
+// window, may miss a dragleave. So dragover, which a browser fires at least every 550 ms while a
+// drag is over the zone, relights it and arms a watchdog that unlights it once dragover stops.
+let dragDepth = 0;
+let dragWatchdog: ReturnType<typeof setTimeout> | undefined;
+const unlight = (): void => {
+  dragDepth = 0;
+  clearTimeout(dragWatchdog);
+  dropZone.classList.remove("over");
+};
+dropZone.addEventListener("dragenter", (event) => {
+  event.preventDefault();
+  dragDepth += 1;
+  dropZone.classList.add("over");
+});
+dropZone.addEventListener("dragover", (event) => {
+  event.preventDefault();
+  dropZone.classList.add("over");
+  clearTimeout(dragWatchdog);
+  dragWatchdog = setTimeout(unlight, 1000);
+});
+dropZone.addEventListener("dragleave", () => {
+  dragDepth = Math.max(0, dragDepth - 1);
+  if (dragDepth === 0) unlight();
+});
 dropZone.addEventListener("drop", (event) => {
   event.preventDefault();
-  dropZone.classList.remove("over");
+  unlight();
   if (!event.dataTransfer) return;
-  say("Reading files...");
+  reading();
   // readDataTransfer takes the entries before its first await, while the DataTransfer is still readable.
   readDataTransfer(event.dataTransfer).then(runEntries, fail);
 });
 
 const picker = directoryPicker();
 byId("choose-folder").addEventListener("click", () => {
-  if (picker) readPickedDirectory(picker).then((entries) => entries && runEntries(entries), fail);
+  if (picker)
+    readPickedDirectory(picker, reading).then((entries) => entries && runEntries(entries), fail);
   else folderInput.click();
 });
 folderInput.addEventListener("change", () => {
+  reading();
   readDirectoryInput(folderInput).then(runEntries, fail);
   folderInput.value = "";
 });

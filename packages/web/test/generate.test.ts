@@ -35,7 +35,7 @@ describe("rulePage", () => {
     });
     expect(meta.summary.startsWith("Visible columns whose name matches")).toBe(true);
     expect(html).toContain("<h1>Hide foreign keys</h1>");
-    expect(html).toContain("<h2>What it checks</h2>");
+    expect(html).toContain('<h2 id="what-it-checks">What it checks</h2>');
     expect(html).toContain(
       '<link rel="canonical" href="https://pbiplint.com/rules/hide-foreign-keys/" />',
     );
@@ -44,6 +44,18 @@ describe("rulePage", () => {
     );
     expect(html).toContain('<link rel="stylesheet" href="/src/styles.css" />');
     expect(html).not.toContain("<script");
+  });
+  it("gives every section heading an id, so a section can be linked to", () => {
+    const { html } = rulePage(read("hide-foreign-keys"), "hide-foreign-keys");
+    const ids = [...html.matchAll(/<h2 id="([^"]*)">/g)].map((m) => m[1]);
+    expect(ids).toEqual(["what-it-checks", "why-it-matters", "how-to-fix-it", "quirks", "links"]);
+    expect(html).not.toMatch(/<h[2-6]>/);
+    // A heading with inline code or punctuation still gets a plain slug.
+    const odd = rulePage(
+      read("hide-foreign-keys").replace("## Quirks", "## Quirks: `FILTER('T')` & more"),
+      "x",
+    );
+    expect(odd.html).toContain('<h2 id="quirks-filtert-more">');
   });
   it("marks a live-model rule and shows a video link only when the page has one", () => {
     const live = rulePage(
@@ -69,6 +81,7 @@ describe("generateSite", () => {
     expect(existsSync(join(out, "rules/hide-foreign-keys/index.html"))).toBe(true);
     const index = readFileSync(join(out, "rules/index.html"), "utf8");
     expect(index).toContain("72 rules: 66 ported");
+    expect(index).toContain('<h2 id="error-prevention">Error Prevention</h2>');
     expect((index.match(/needs a live model/g) ?? []).length).toBe(5);
     for (const m of metas) expect(index).toContain(`href="/rules/${m.slug}/"`);
     const summaries = [...index.matchAll(/<span class="summary">([\s\S]*?)<\/span>/g)].map(
@@ -83,6 +96,7 @@ describe("generateSite", () => {
     expect(description).not.toContain("`");
     const about = readFileSync(join(out, "about/index.html"), "utf8");
     expect(about).toContain('<h2 id="verify">');
+    expect(about).toContain('<h2 id="known-limits-in-the-browser">');
     expect(about).toContain("<title>About pbiplint");
     const sitemap = readFileSync(join(out, "public/sitemap.xml"), "utf8");
     expect(sitemap).toContain("<loc>https://pbiplint.com/rules/hide-foreign-keys/</loc>");

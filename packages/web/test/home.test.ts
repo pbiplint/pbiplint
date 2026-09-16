@@ -2,7 +2,8 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
+import { SAMPLE_FILES } from "../src/sample.js";
 
 // happy-dom resolves a relative URL against the page's http base, so the file path is built
 // from import.meta.url instead of new URL(..., import.meta.url).
@@ -57,6 +58,22 @@ describe("home page", () => {
     expect(results.querySelector(".summary")!.textContent).toContain("161 findings");
     expect(document.getElementById("status")!.hidden).toBe(true);
   });
+  it("announces a run as one sentence through a live region that exists before the run", async () => {
+    // A live region inserted with its text already set is the case screen readers may not
+    // announce, so the announcer is part of the page and only its text changes.
+    expect(body).toMatch(/<p id="announce"[^>]*aria-live="polite"[^>]*><\/p>/);
+    const announcer = document.getElementById("announce")!;
+    document.getElementById("try-sample")!.click();
+    await tick();
+    expect(announcer.textContent).toBe(
+      "Results for the sample project (11 files): 161 findings (16 errors, 39 warnings, 106 info) in 11 files.",
+    );
+    expect(document.getElementById("results")!.hasAttribute("aria-live")).toBe(false);
+    expect(document.querySelectorAll("#results [aria-live]").length).toBe(0);
+    (document.getElementById("paste") as HTMLTextAreaElement).value = "";
+    document.getElementById("lint-paste")!.click();
+    expect(announcer.textContent).toBe("");
+  });
   it("lints pasted TMDL and complains about an empty paste", async () => {
     const paste = document.getElementById("paste") as HTMLTextAreaElement;
     paste.value = "";
@@ -82,6 +99,165 @@ describe("home page", () => {
     expect(order).toEqual(["hidden=false", "textContent=Paste some TMDL first."]);
     expect(status.hidden).toBe(false);
     expect(status.textContent).toBe("Paste some TMDL first.");
+  });
+  it("scrolls a problem message only as far as needed, so the textarea stays in view", () => {
+    const status = document.getElementById("status")!;
+    const scroll = vi.fn();
+    status.scrollIntoView = scroll;
+    try {
+      (document.getElementById("paste") as HTMLTextAreaElement).value = "";
+      document.getElementById("lint-paste")!.click();
+    } finally {
+      Reflect.deleteProperty(status, "scrollIntoView");
+    }
+    expect(scroll).toHaveBeenCalledWith({ behavior: "smooth", block: "nearest" });
+  });
+  it("keeps the drop zone lit while the pointer crosses its children", () => {
+    const zone = document.getElementById("drop")!;
+    const child = zone.querySelector("p")!;
+    const fire = (el: Element, type: string): boolean =>
+      el.dispatchEvent(new Event(type, { bubbles: true, cancelable: true }));
+    fire(zone, "dragenter");
+    expect(zone.classList.contains("over")).toBe(true);
+    // Entering a child fires dragenter on the child and dragleave on the zone, in that order.
+    fire(child, "dragenter");
+    fire(zone, "dragleave");
+    expect(zone.classList.contains("over")).toBe(true);
+    // Leaving the child back onto the zone, then leaving the zone.
+    fire(zone, "dragenter");
+    fire(child, "dragleave");
+    expect(zone.classList.contains("over")).toBe(true);
+    fire(zone, "dragleave");
+    expect(zone.classList.contains("over")).toBe(false);
+  });
+  it("unlights the drop zone by itself when dragover stops, even with a dragleave missed", () => {
+    const zone = document.getElementById("drop")!;
+    const fire = (el: Element, type: string): boolean =>
+      el.dispatchEvent(new Event(type, { bubbles: true, cancelable: true }));
+    vi.useFakeTimers();
+    try {
+      // Two entries, no leaves: a drag cancelled with Escape over a child looks like this.
+      fire(zone, "dragenter");
+      fire(zone.querySelector("p")!, "dragenter");
+      fire(zone, "dragover");
+      vi.advanceTimersByTime(900);
+      expect(zone.classList.contains("over")).toBe(true);
+      fire(zone, "dragover");
+      vi.advanceTimersByTime(900);
+      expect(zone.classList.contains("over")).toBe(true);
+      vi.advanceTimersByTime(200);
+      expect(zone.classList.contains("over")).toBe(false);
+      // The count was reset with the highlight, so the next drag behaves normally.
+      fire(zone, "dragenter");
+      fire(zone, "dragleave");
+      expect(zone.classList.contains("over")).toBe(false);
+      // A stray dragleave while the pointer is still inside is healed by the next dragover.
+      fire(zone, "dragenter");
+      fire(zone, "dragleave");
+      fire(zone, "dragleave");
+      fire(zone, "dragover");
+      expect(zone.classList.contains("over")).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it("unlights the drop zone on a drop and starts the next drag from zero", () => {
+    const zone = document.getElementById("drop")!;
+    const fire = (el: Element, type: string): boolean =>
+      el.dispatchEvent(new Event(type, { bubbles: true, cancelable: true }));
+    fire(zone, "dragenter");
+    fire(zone.querySelector("p")!, "dragenter");
+    fire(zone, "drop");
+    expect(zone.classList.contains("over")).toBe(false);
+    fire(zone, "dragenter");
+    fire(zone, "dragleave");
+    expect(zone.classList.contains("over")).toBe(false);
+  });
+  it("says it is reading files as soon as a folder input reports its files", async () => {
+    const input = document.getElementById("folder-input") as HTMLInputElement;
+    const file = Object.assign(new File(["table T\n"], "T.tmdl"), {
+      webkitRelativePath: "Demo.SemanticModel/definition/tables/T.tmdl",
+    });
+    Object.defineProperty(input, "files", { configurable: true, value: [file] });
+    try {
+      input.dispatchEvent(new Event("change"));
+    } finally {
+      Reflect.deleteProperty(input, "files");
+    }
+    const status = document.getElementById("status")!;
+    expect(status.hidden).toBe(false);
+    expect(status.textContent).toBe("Reading files...");
+    await tick();
+    await tick();
+    expect(status.hidden).toBe(true);
+    expect(document.querySelector("#results h2")!.textContent).toBe(
+      "Results for Demo.SemanticModel (1 file)",
+    );
+  });
+  it("lists the files it read for the sample and a folder, and none for a paste", async () => {
+    const listed = (): string[] =>
+      [...document.querySelectorAll("#results details.files li")].map((li) => li.textContent!);
+    document.getElementById("try-sample")!.click();
+    await tick();
+    expect(listed()).toEqual(SAMPLE_FILES.map((f) => f.path));
+    const input = document.getElementById("folder-input") as HTMLInputElement;
+    const at = (path: string, text: string): File =>
+      Object.assign(new File([text], path.slice(path.lastIndexOf("/") + 1)), {
+        webkitRelativePath: path,
+      });
+    Object.defineProperty(input, "files", {
+      configurable: true,
+      value: [
+        at("Proj/Demo.SemanticModel/definition/tables/T.tmdl", "table T\n"),
+        at("Proj/pbiplint.config.json", "{}"),
+      ],
+    });
+    try {
+      input.dispatchEvent(new Event("change"));
+    } finally {
+      Reflect.deleteProperty(input, "files");
+    }
+    await tick();
+    await tick();
+    expect(listed()).toEqual(["../pbiplint.config.json (config)", "definition/tables/T.tmdl"]);
+    (document.getElementById("paste") as HTMLTextAreaElement).value = "table T\n";
+    document.getElementById("lint-paste")!.click();
+    await tick();
+    expect(document.querySelector("#results details.files")).toBeNull();
+  });
+  it("says when a dropped PBIP folder holds a model with no .tmdl files", async () => {
+    const input = document.getElementById("folder-input") as HTMLInputElement;
+    const at = (path: string, text: string): File =>
+      Object.assign(new File([text], path.slice(path.lastIndexOf("/") + 1)), {
+        webkitRelativePath: path,
+      });
+    const feed = (files: File[]): void => {
+      Object.defineProperty(input, "files", { configurable: true, value: files });
+      try {
+        input.dispatchEvent(new Event("change"));
+      } finally {
+        Reflect.deleteProperty(input, "files");
+      }
+    };
+    feed([
+      at("Proj/New.SemanticModel/definition/tables/T.tmdl", "table T\n"),
+      at("Proj/Old.SemanticModel/model.bim", "{}"),
+    ]);
+    await tick();
+    await tick();
+    expect(document.querySelector("#results h2")!.textContent).toBe(
+      "Results for Proj/New.SemanticModel (1 file)",
+    );
+    expect(document.querySelector("#results .notice")!.textContent).toMatch(
+      /^Proj\/Old\.SemanticModel holds no \.tmdl files/,
+    );
+    feed([at("Proj/Old.SemanticModel/model.bim", "{}")]);
+    await tick();
+    await tick();
+    const status = document.getElementById("status")!;
+    expect(status.hidden).toBe(false);
+    expect(status.textContent).toMatch(/^Proj\/Old\.SemanticModel holds no \.tmdl files\./);
+    expect(document.getElementById("results")!.hidden).toBe(true);
   });
   it("clears the last results when the next input fails", async () => {
     document.getElementById("try-sample")!.click();

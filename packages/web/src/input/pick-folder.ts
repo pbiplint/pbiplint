@@ -1,4 +1,4 @@
-import type { InputEntry } from "./model-files.js";
+import { isModelFolder, type InputTree } from "./model-files.js";
 import { SKIP_DIRS, wanted } from "./read-drop.js";
 
 // lib.dom does not type the File System Access API's picker or directory iteration, so the shape
@@ -21,8 +21,15 @@ export function directoryPicker(): DirectoryPicker | null {
   return typeof w.showDirectoryPicker === "function" ? w.showDirectoryPicker.bind(window) : null;
 }
 
-/** Walks a picked folder. Null when the person closes the dialog without choosing. */
-export async function readPickedDirectory(pick: DirectoryPicker): Promise<InputEntry[] | null> {
+/**
+ * Walks a picked folder. Null when the person closes the dialog without choosing. `onPicked` runs
+ * once a folder is chosen and before any file is read, so the caller can say the read has begun
+ * without saying it while the dialog is still open.
+ */
+export async function readPickedDirectory(
+  pick: DirectoryPicker,
+  onPicked?: () => void,
+): Promise<InputTree | null> {
   let dir: DirectoryHandleLike;
   try {
     dir = await pick({ mode: "read" });
@@ -30,22 +37,27 @@ export async function readPickedDirectory(pick: DirectoryPicker): Promise<InputE
     if (e instanceof DOMException && e.name === "AbortError") return null;
     throw e;
   }
-  const out: InputEntry[] = [];
-  await walkHandle(dir, dir.name, out);
-  return out;
+  onPicked?.();
+  const tree: InputTree = { entries: [], modelFolders: [] };
+  await walkHandle(dir, dir.name, tree);
+  return tree;
 }
 
 async function walkHandle(
   dir: DirectoryHandleLike,
   prefix: string,
-  out: InputEntry[],
+  tree: InputTree,
 ): Promise<void> {
+  if (isModelFolder(dir.name)) tree.modelFolders.push(prefix);
   for await (const handle of dir.values()) {
     if (handle.kind === "file") {
       if (wanted(handle.name))
-        out.push({ path: `${prefix}/${handle.name}`, text: await (await handle.getFile()).text() });
+        tree.entries.push({
+          path: `${prefix}/${handle.name}`,
+          text: await (await handle.getFile()).text(),
+        });
     } else if (!SKIP_DIRS.has(handle.name)) {
-      await walkHandle(handle, `${prefix}/${handle.name}`, out);
+      await walkHandle(handle, `${prefix}/${handle.name}`, tree);
     }
   }
 }
@@ -56,11 +68,27 @@ async function walkHandle(
  */
 const skipped = (path: string): boolean => path.split("/").some((seg) => SKIP_DIRS.has(seg));
 
+/**
+ * The .SemanticModel folders a reported path passes through, outermost first. A model folder with
+ * no files at all is invisible on this route, unlike the drop and picker routes, which walk
+ * directories; a real model.bim model always has its one file, so this never shows in practice.
+ */
+const modelFoldersIn = (path: string): string[] => {
+  const dirs = path.split("/").slice(0, -1);
+  return dirs.flatMap((name, i) => (isModelFolder(name) ? [dirs.slice(0, i + 1).join("/")] : []));
+};
+
 /** Firefox and Safari: the files of an <input type="file" webkitdirectory>, with the paths the browser reports. */
-export async function readDirectoryInput(input: HTMLInputElement): Promise<InputEntry[]> {
-  const out: InputEntry[] = [];
-  for (const file of [...(input.files ?? [])])
-    if (wanted(file.name) && !skipped(file.webkitRelativePath))
-      out.push({ path: file.webkitRelativePath || file.name, text: await file.text() });
-  return out;
+export async function readDirectoryInput(input: HTMLInputElement): Promise<InputTree> {
+  const tree: InputTree = { entries: [], modelFolders: [] };
+  for (const file of [...(input.files ?? [])]) {
+    const path = file.webkitRelativePath || file.name;
+    if (skipped(path)) continue;
+    // The browser reports every file's path without opening it, so a model folder shows in the
+    // segments even when nothing in it is read.
+    for (const folder of modelFoldersIn(path))
+      if (!tree.modelFolders.includes(folder)) tree.modelFolders.push(folder);
+    if (wanted(file.name)) tree.entries.push({ path, text: await file.text() });
+  }
+  return tree;
 }

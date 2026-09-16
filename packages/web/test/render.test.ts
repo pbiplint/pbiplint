@@ -35,6 +35,20 @@ describe("renderResults", () => {
       `#rule-${result.groups[0]!.rule.slug}`,
     );
   });
+  it("links each fix-first item to its rule page as well as to its group", () => {
+    renderResults(container, result, { source: "x" });
+    const items = [...container.querySelectorAll(".fix-first li")];
+    items.forEach((li, i) => {
+      const { slug, name } = result.groups[i]!.rule;
+      expect(li.querySelector("a")!.getAttribute("href")).toBe(`#rule-${slug}`);
+      const link = li.querySelector("a.rule-link")!;
+      expect(link.getAttribute("href")).toBe(`/rules/${slug}/`);
+      // Up to ten links read "How to fix it"; the accessible name says which rule each one opens.
+      expect(link.getAttribute("aria-label")).toBe(`How to fix it: ${name}`);
+    });
+    const group = container.querySelector(".group a.rule-link")!;
+    expect(group.getAttribute("aria-label")).toBe(`How to fix it: ${result.groups[0]!.rule.name}`);
+  });
   it("renders one group per rule with the objects, a page link, and severity and category data", () => {
     renderResults(container, result, { source: "x" });
     const groups = [...container.querySelectorAll<HTMLElement>(".group")];
@@ -63,6 +77,32 @@ describe("renderResults", () => {
     errors.checked = true;
     applyFilters(container);
     expect(container.querySelectorAll<HTMLElement>(".group[hidden]").length).toBe(0);
+  });
+  it("wraps each findings table so a long object name scrolls instead of overflowing the page", () => {
+    renderResults(container, result, { source: "x" });
+    const groups = [...container.querySelectorAll<HTMLElement>(".group")];
+    expect(groups.every((g) => g.querySelector(".table-wrap > table") !== null)).toBe(true);
+    // A scroll container with nothing focusable inside needs a tab stop and a name, or a keyboard
+    // user on a narrow screen cannot scroll it (WCAG 2.1.1).
+    const wrap = groups[0]!.querySelector(".table-wrap")!;
+    expect(wrap.getAttribute("tabindex")).toBe("0");
+    expect(wrap.getAttribute("role")).toBe("region");
+    expect(wrap.getAttribute("aria-label")).toBe(`${result.groups[0]!.rule.name} findings`);
+  });
+  it("puts no live region inside the results: the page announces a run through a persistent one", () => {
+    renderResults(container, result, { source: "x" });
+    expect(container.querySelectorAll("[aria-live], [role=status]").length).toBe(0);
+  });
+  it("labels the severity filters in title case, like the category filters", () => {
+    renderResults(container, result, { source: "x" });
+    const labels = [...container.querySelectorAll("label.filter")].map((l) => l.textContent);
+    expect(labels.slice(0, 3)).toEqual(["Error", "Warning", "Info"]);
+    expect(labels[3]).toBe("Performance");
+    expect(
+      [...container.querySelectorAll<HTMLInputElement>('input[data-filter="severity"]')].map(
+        (i) => i.value,
+      ),
+    ).toEqual(["3", "2", "1"]);
   });
   it("offers Markdown and JSON export", () => {
     renderResults(container, result, { source: "x" });
@@ -94,6 +134,41 @@ describe("renderResults", () => {
     });
     expect(container.textContent).toContain("No findings.");
     expect(container.querySelector(".filters")).toBeNull();
+  });
+  it("lists the files it read, collapsed, right under the summary that counts them", () => {
+    const files = [
+      "definition/model.tmdl",
+      "definition/tables/T.tmdl",
+      "../pbiplint.config.json (config)",
+    ];
+    renderResults(container, result, { source: "x", files });
+    const details = container.querySelector<HTMLDetailsElement>("details.files")!;
+    expect(details.open).toBe(false);
+    expect(details.querySelector("summary")!.textContent).toBe("Files read (3)");
+    expect([...details.querySelectorAll("li")].map((li) => li.textContent)).toEqual(files);
+    expect(details.previousElementSibling).toBe(container.querySelector(".summary"));
+    expect(details.nextElementSibling).toBe(container.querySelector("h3"));
+    // A notice about the input stays with the summary; the list follows both.
+    renderResults(container, result, {
+      source: "x",
+      files,
+      notes: ["Old.SemanticModel was skipped."],
+    });
+    const after = container.querySelector<HTMLDetailsElement>("details.files")!;
+    expect(after.previousElementSibling).toBe(container.querySelector(".notice"));
+  });
+  it("lists the files it read even when there are no findings, and nothing for a paste", () => {
+    const clean = lint([{ path: "m.tmdl", text: "model Model\n" }], { rules: [] });
+    renderResults(container, clean, { source: "x", files: ["m.tmdl"] });
+    expect(container.querySelector("details.files li")!.textContent).toBe("m.tmdl");
+    renderResults(container, result, { source: "pasted TMDL" });
+    expect(container.querySelector("details.files")).toBeNull();
+  });
+  it("shows each note from the input as a notice under the summary", () => {
+    renderResults(container, result, { source: "x", notes: ["Old.SemanticModel was skipped."] });
+    const notice = container.querySelector(".notice")!;
+    expect(notice.textContent).toBe("Old.SemanticModel was skipped.");
+    expect(notice.previousElementSibling).toBe(container.querySelector(".summary"));
   });
   it("never parses model text as HTML", () => {
     const hostile = lint([

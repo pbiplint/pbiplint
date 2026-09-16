@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { InputTree } from "../src/input/model-files.js";
 import { readDataTransfer, walkEntry, wanted } from "../src/input/read-drop.js";
 
 /** A fake FileSystemEntry tree: a directory reader hands out its children in batches of two, then an empty batch. */
@@ -59,8 +60,10 @@ describe("walkEntry", () => {
       ]),
       file("pbiplint.config.json", "/Demo.SemanticModel/pbiplint.config.json", "{}"),
     ]);
-    const out: { path: string; text: string }[] = [];
-    await walkEntry(tree, out);
+    const seen: InputTree = { entries: [], modelFolders: [] };
+    await walkEntry(tree, seen);
+    const out = seen.entries;
+    expect(seen.modelFolders).toEqual(["Demo.SemanticModel"]);
     expect(out.map((e) => e.path).sort()).toEqual([
       "Demo.SemanticModel/definition/model.tmdl",
       "Demo.SemanticModel/definition/tables/A.tmdl",
@@ -70,19 +73,45 @@ describe("walkEntry", () => {
     ]);
     expect(out.find((e) => e.path.endsWith("A.tmdl"))?.text).toBe("table A\n");
   });
+  it("records every .SemanticModel folder it passes, opening nothing inside one with no .tmdl", async () => {
+    let opened = 0;
+    const bim = file("model.bim", "/Proj/Old.SemanticModel/model.bim", "{}");
+    (bim as unknown as { file: () => void }).file = () => {
+      opened += 1;
+    };
+    const tree = dir("Proj", "/Proj", [
+      dir("Old.SemanticModel", "/Proj/Old.SemanticModel", [bim]),
+      dir("New.SemanticModel", "/Proj/New.SemanticModel", [
+        dir("definition", "/Proj/New.SemanticModel/definition", [
+          file("model.tmdl", "/Proj/New.SemanticModel/definition/model.tmdl", "model Model\n"),
+        ]),
+      ]),
+      dir(".git", "/Proj/.git", [dir("X.SemanticModel", "/Proj/.git/X.SemanticModel", [])]),
+    ]);
+    const seen: InputTree = { entries: [], modelFolders: [] };
+    await walkEntry(tree, seen);
+    expect(seen.modelFolders).toEqual(["Proj/Old.SemanticModel", "Proj/New.SemanticModel"]);
+    expect(opened).toBe(0);
+  });
 });
 
 describe("readDataTransfer", () => {
   it("uses the entries API when the browser has it", async () => {
     const entry = file("T.tmdl", "/T.tmdl", "table T\n");
     const dt = { items: [{ webkitGetAsEntry: () => entry }], files: [] } as unknown as DataTransfer;
-    expect(await readDataTransfer(dt)).toEqual([{ path: "T.tmdl", text: "table T\n" }]);
+    expect(await readDataTransfer(dt)).toEqual({
+      entries: [{ path: "T.tmdl", text: "table T\n" }],
+      modelFolders: [],
+    });
   });
   it("falls back to flat files when it does not", async () => {
     const dt = {
       items: [],
       files: [new File(["table T\n"], "T.tmdl"), new File(["{}"], "report.json")],
     } as unknown as DataTransfer;
-    expect(await readDataTransfer(dt)).toEqual([{ path: "T.tmdl", text: "table T\n" }]);
+    expect(await readDataTransfer(dt)).toEqual({
+      entries: [{ path: "T.tmdl", text: "table T\n" }],
+      modelFolders: [],
+    });
   });
 });

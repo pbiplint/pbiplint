@@ -32,3 +32,23 @@ jobs:
       - run: npm run build
       - run: npm run check:pack
       - run: npm run test:bundle -w pbiplint
+  # The site in real browsers: the production build served by vite preview, driven by Playwright in
+  # Chromium, Firefox, and WebKit, with an accessibility scan. Its own job, so the matrix above
+  # stays quick and a browser download never slows the unit tests.
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report
+          path: packages/web/playwright-report
+          retention-days: 7

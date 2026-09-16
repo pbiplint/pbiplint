@@ -8,6 +8,7 @@ npm test            # unit tests and the Tabular Editor parity suite
 npm run typecheck && npm run lint
 npm run check:browser
 npm run build       # core, CLI, and the site (the site build fails on any network reference)
+npm run test:e2e    # the site in Chromium, Firefox, and WebKit; run `npx playwright install` once first
 ```
 
 Node 20.19 or later (or 22.12 or later), which Vite needs for the site build. No runtime dependencies are allowed in `packages/core` or `packages/cli`.

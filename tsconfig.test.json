@@ -6,5 +6,5 @@
     "declaration": false,
     "paths": { "@pbiplint/core": ["./packages/core/src/index.ts"] }
   },
-  "include": ["packages/*/test", "*.ts"]
+  "include": ["packages/*/test", "packages/web/e2e", "packages/web/playwright.config.ts", "*.ts"]
 }

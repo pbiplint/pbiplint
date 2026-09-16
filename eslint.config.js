@@ -10,6 +10,8 @@ export default tseslint.config(
       "tests/fixtures/**",
       "packages/web/rules/**",
       "packages/web/about/**",
+      "**/test-results/**",
+      "**/playwright-report/**",
     ],
   },
   js.configs.recommended,

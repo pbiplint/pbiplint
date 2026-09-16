@@ -48,7 +48,10 @@ function write(path: string, text: string): void {
 
 /** Every index.html under the package plus 404.html, keyed by site path, for Rollup. */
 export function pageEntries(root: string): Record<string, string> {
-  const skip = /^(node_modules|dist|public|src|test|content)([\\/]|$)/;
+  // Playwright's folders hold index.html files too (its report bundles fetch and XMLHttpRequest,
+  // which the site check would then reject), so they are skipped by name along with the rest.
+  const skip =
+    /^(node_modules|dist|public|src|test|content|e2e|test-results|playwright-report)([\\/]|$)/;
   const files = readdirSync(root, { recursive: true })
     .map(String)
     .filter((p) => !skip.test(p) && (p.endsWith("index.html") || p === "404.html"));

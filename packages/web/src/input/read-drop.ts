@@ -12,9 +12,20 @@ export const SKIP_DIRS: ReadonlySet<string> = new Set([".git", ".pbi", "node_mod
  */
 export async function readDataTransfer(dt: DataTransfer): Promise<InputTree> {
   const tree: InputTree = { entries: [], modelFolders: [] };
-  const entries = [...dt.items].map((item) => item.webkitGetAsEntry?.() ?? null);
-  if (entries.some((e) => e !== null)) {
-    for (const entry of entries) if (entry) await walkEntry(entry, tree);
+  const items = [...dt.items].map((item) => ({
+    entry: item.webkitGetAsEntry?.() ?? null,
+    file: item.getAsFile?.() ?? null,
+  }));
+  if (items.some((i) => i.entry !== null)) {
+    for (const { entry, file } of items) {
+      if (!entry) continue;
+      // A dropped file is already a File on its item; the entries API is needed only to walk a
+      // folder. (WebKit hands out an entry even for a file that exists only in memory, and that
+      // entry's file() fails, so the File itself is the safer read.)
+      if (entry.isFile && file) {
+        if (wanted(file.name)) tree.entries.push({ path: file.name, text: await file.text() });
+      } else await walkEntry(entry, tree);
+    }
     return tree;
   }
   // No entries API: a flat list of files is all there is.

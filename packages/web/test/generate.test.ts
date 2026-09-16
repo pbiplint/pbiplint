@@ -1,4 +1,11 @@
-import { existsSync, mkdtempSync, readFileSync, readdirSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -103,6 +110,18 @@ describe("generateSite", () => {
     expect(Object.keys(pageEntries(out)).sort()).toEqual(
       ["about", "rules", ...metas.map((m) => `rules/${m.slug}`)].sort(),
     );
+  });
+});
+
+describe("pageEntries", () => {
+  it("never takes a Playwright report or result as a site page", () => {
+    const out = mkdtempSync(join(tmpdir(), "pbiplint-entries-"));
+    for (const dir of ["playwright-report", "test-results/x", "e2e", "rules/a", "test-suite"]) {
+      mkdirSync(join(out, dir), { recursive: true });
+      writeFileSync(join(out, dir, "index.html"), "<html></html>");
+    }
+    writeFileSync(join(out, "index.html"), "<html></html>");
+    expect(Object.keys(pageEntries(out)).sort()).toEqual(["home", "rules/a", "test-suite"]);
   });
 });
 

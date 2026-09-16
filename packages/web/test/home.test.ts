@@ -219,7 +219,7 @@ describe("home page", () => {
     }
     await tick();
     await tick();
-    expect(listed()).toEqual(["definition/tables/T.tmdl", "../pbiplint.config.json (config)"]);
+    expect(listed()).toEqual(["../pbiplint.config.json (config)", "definition/tables/T.tmdl"]);
     (document.getElementById("paste") as HTMLTextAreaElement).value = "table T\n";
     document.getElementById("lint-paste")!.click();
     await tick();

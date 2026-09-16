@@ -1,5 +1,5 @@
 import { ConfigError, lint, resolveConfig, summaryLine, type LintFile } from "@pbiplint/core";
-import { InputError, relativeToRoot, selectModel, type InputTree } from "./input/model-files.js";
+import { InputError, selectModel, type InputTree } from "./input/model-files.js";
 import { directoryPicker, readDirectoryInput, readPickedDirectory } from "./input/pick-folder.js";
 import { readDataTransfer } from "./input/read-drop.js";
 import { renderResults } from "./results/render.js";
@@ -89,13 +89,11 @@ function run({ files, source, config, read, notes }: Run): void {
 function runEntries(tree: InputTree): void {
   try {
     const model = selectModel(tree.entries, tree.modelFolders);
-    const read = model.files.map((f) => f.path);
-    if (model.config) read.push(`${relativeToRoot(model.root, model.config.path)} (config)`);
     run({
       files: model.files,
       source: `${model.root || "the dropped file"} (${plural(model.files.length, "file")})`,
       config: model.config,
-      read,
+      read: model.read,
       notes: model.notes,
     });
   } catch (e) {

@@ -24,6 +24,12 @@ export interface SelectedModel {
   config?: { path: string; text: string };
   /** Sentences for under the results, such as a model folder in the drop that could not be linted. */
   notes: string[];
+  /**
+   * Every file that was read, as a path relative to the model root, for listing under the results:
+   * the linted files as they are, the config marked "(config)", and a .tmdl file read but outside
+   * the model or its definition folder marked "(not linted)". A skipped file shows by its absence.
+   */
+  read: string[];
 }
 
 /** A problem with what was dropped, in words meant for the status line. */
@@ -41,16 +47,17 @@ const within = (path: string, dir: string): boolean => dir === "" || path.starts
 const relativeTo = (path: string, dir: string): string =>
   dir === "" ? path : path.slice(dir.length + 1);
 const join = (dir: string, name: string): string => (dir === "" ? name : `${dir}/${name}`);
-const depth = (dir: string): number => (dir === "" ? 0 : dir.split("/").length);
-
 /**
- * A drop-relative path at or above the model root, written relative to the root the way a shell
- * would: "../pbiplint.config.json" for a config one folder up. For listing beside the model files.
+ * A drop-relative path written relative to the model root the way a shell would:
+ * "../pbiplint.config.json" for a config one folder up, "../Other/x.tmdl" for a file beside the
+ * root. For listing every file read beside the model files.
  */
 export function relativeToRoot(root: string, path: string): string {
-  const dir = parent(path);
-  if (within(path, root)) return relativeTo(path, root);
-  return "../".repeat(depth(root) - depth(dir)) + relativeTo(path, dir);
+  const from = root === "" ? [] : root.split("/");
+  const to = path.split("/");
+  let shared = 0;
+  while (shared < from.length && shared < to.length - 1 && from[shared] === to[shared]) shared++;
+  return "../".repeat(from.length - shared) + to.slice(shared).join("/");
 }
 
 /**
@@ -85,7 +92,17 @@ export function selectModel(entries: InputEntry[], modelFolders: string[] = []):
   const notes = unlintable.length
     ? [`${holdsNoTmdl} and ${unlintable.length === 1 ? "was" : "were"} not linted. ${TMDL_ONLY}`]
     : [];
-  return { root, files, config: findConfig(entries, root), notes };
+  const config = findConfig(entries, root);
+  const linted = new Set(files.map((f) => join(root, f.path)));
+  const read = entries
+    .map((e) => {
+      const rel = relativeToRoot(root, e.path);
+      if (e.path === config?.path) return `${rel} (config)`;
+      if (e.path.endsWith(CONFIG_FILE)) return `${rel} (config, not used)`;
+      return linted.has(e.path) ? rel : `${rel} (not linted)`;
+    })
+    .sort((a, b) => a.localeCompare(b));
+  return { root, files, config, notes, read };
 }
 
 const hasDefinition = (tmdl: InputEntry[], dir: string): boolean =>

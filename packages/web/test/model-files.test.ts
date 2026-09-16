@@ -68,6 +68,38 @@ describe("selectModel", () => {
       text: inner.text,
     });
   });
+  it("lists every file it read, relative to the model root, marking the config and what was not linted", () => {
+    const m = selectModel([
+      e("Proj/Demo.SemanticModel/definition/tables/T.tmdl"),
+      e("Proj/Demo.SemanticModel/definition/model.tmdl"),
+      e("Proj/Demo.SemanticModel/notes.tmdl"),
+      e("Proj/Other/x.tmdl"),
+      e("Proj/pbiplint.config.json", "{}"),
+    ]);
+    expect(m.root).toBe("Proj/Demo.SemanticModel");
+    expect(m.files.map((f) => f.path)).toEqual([
+      "definition/model.tmdl",
+      "definition/tables/T.tmdl",
+    ]);
+    expect(m.read).toEqual([
+      "../Other/x.tmdl (not linted)",
+      "../pbiplint.config.json (config)",
+      "definition/model.tmdl",
+      "definition/tables/T.tmdl",
+      "notes.tmdl (not linted)",
+    ]);
+    expect(selectModel([e("T.tmdl")]).read).toEqual(["T.tmdl"]);
+    const two = selectModel([
+      e("Proj/Demo.SemanticModel/definition/model.tmdl"),
+      e("Proj/Demo.SemanticModel/pbiplint.config.json", "{}"),
+      e("Proj/pbiplint.config.json", "{}"),
+    ]);
+    expect(two.read).toEqual([
+      "../pbiplint.config.json (config, not used)",
+      "definition/model.tmdl",
+      "pbiplint.config.json (config)",
+    ]);
+  });
   it("sorts files by path so results are stable", () => {
     const m = selectModel([
       e("M.SemanticModel/definition/tables/Z.tmdl"),
@@ -121,5 +153,8 @@ describe("relativeToRoot", () => {
     );
     expect(relativeToRoot("", "pbiplint.config.json")).toBe("pbiplint.config.json");
     expect(relativeToRoot("a/b/c", "pbiplint.config.json")).toBe("../../../pbiplint.config.json");
+    // A path beside the root, not above it, climbs to the shared folder and descends from there.
+    expect(relativeToRoot("Proj/Demo.SemanticModel", "Proj/Other/x.tmdl")).toBe("../Other/x.tmdl");
+    expect(relativeToRoot("a/b", "c/d.tmdl")).toBe("../../c/d.tmdl");
   });
 });

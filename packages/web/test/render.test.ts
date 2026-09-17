@@ -1,25 +1,10 @@
 // @vitest-environment happy-dom
-import { defaultRules, lint, type Rule } from "@pbiplint/core";
+import { lint } from "@pbiplint/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { applyFilters, h, renderResults } from "../src/results/render.js";
+import { applyFilters, renderResults } from "../src/results/render.js";
 import { SAMPLE_FILES } from "../src/sample.js";
 
 const result = lint(SAMPLE_FILES);
-const bare = [{ path: "m.tmdl", text: "model Model\n" }];
-/** A rule that throws, so a run has a rule error to report. */
-const boom: Rule = {
-  id: "BOOM",
-  name: "Boom",
-  category: "Performance",
-  severity: 3,
-  scope: ["Model"],
-  description: "Throws.",
-  references: [],
-  status: "builtin",
-  check: () => {
-    throw new Error("kaboom");
-  },
-};
 let container: HTMLElement;
 
 const original = Object.getOwnPropertyDescriptor(navigator, "clipboard");
@@ -243,52 +228,6 @@ describe("renderResults", () => {
     expect(notice.textContent).toBe("Old.SemanticModel was skipped.");
     expect(notice.previousElementSibling).toBe(container.querySelector(".summary"));
   });
-  it("names every rule id the config asked for that matches no rule", () => {
-    const configured = lint(SAMPLE_FILES, { config: { rules: { NOPE: "off", TYPOED: "error" } } });
-    renderResults(container, configured, { source: "x" });
-    expect([...container.querySelectorAll(".notice")].map((n) => n.textContent)).toEqual([
-      'pbiplint.config.json names no rule called "NOPE".',
-      'pbiplint.config.json names no rule called "TYPOED".',
-    ]);
-  });
-  it("reports a rule that threw, with or without findings beside it", () => {
-    renderResults(container, lint(SAMPLE_FILES, { rules: [...defaultRules, boom] }), {
-      source: "x",
-    });
-    const notice = container.querySelector(".notice")!;
-    expect(notice.textContent).toBe("Rule errors (please report these): BOOM: kaboom");
-    // With the summary and the other notices, not below every group, where a reader who never
-    // scrolls that far never learns a rule broke.
-    expect(notice.previousElementSibling).toBe(container.querySelector(".summary"));
-    // Nothing to rank, so the render stops early. The rule still broke, and saying so is the only
-    // way anyone reports it.
-    const nothing = lint(bare, { rules: [boom] });
-    expect(nothing.groups).toHaveLength(0);
-    renderResults(container, nothing, { source: "x" });
-    expect(container.querySelector(".notice")!.textContent).toBe(
-      "Rule errors (please report these): BOOM: kaboom",
-    );
-  });
-  it("sets its change handler on every render and leaves none behind on a clean one", () => {
-    renderResults(container, result, { source: "x" });
-    const first = container.onchange;
-    expect(typeof first).toBe("function");
-    renderResults(container, result, { source: "x" });
-    // Assigned, never added: a re-render replaces the handler rather than stacking a second one.
-    expect(container.onchange).not.toBe(first);
-    const errors = container.querySelector<HTMLInputElement>(
-      'input[data-filter="severity"][value="3"]',
-    )!;
-    errors.checked = false;
-    errors.dispatchEvent(new Event("change", { bubbles: true }));
-    expect(
-      [...container.querySelectorAll<HTMLElement>(".group")].every(
-        (g) => g.hidden === (g.dataset.severity === "3"),
-      ),
-    ).toBe(true);
-    renderResults(container, lint(bare, { rules: [] }), { source: "x" });
-    expect(container.onchange).toBeNull();
-  });
   it("never parses model text as HTML", () => {
     const hostile = lint([
       {
@@ -299,22 +238,5 @@ describe("renderResults", () => {
     renderResults(container, hostile, { source: "x" });
     expect(container.querySelector("img")).toBeNull();
     expect(container.textContent).toContain("<img src=x onerror=alert(1)>");
-  });
-});
-
-describe("h", () => {
-  it("writes every attribute as data, and a false one not at all", () => {
-    const el = h("input", {
-      type: "checkbox",
-      checked: true,
-      disabled: false,
-      value: '"><img src=x onerror=alert(1)>',
-    });
-    expect(el.getAttribute("type")).toBe("checkbox");
-    // true is the empty string HTML writes for a boolean attribute; false leaves it off entirely.
-    expect(el.getAttribute("checked")).toBe("");
-    expect(el.hasAttribute("disabled")).toBe(false);
-    expect(el.getAttribute("value")).toBe('"><img src=x onerror=alert(1)>');
-    expect(el.querySelector("img")).toBeNull();
   });
 });

@@ -12,18 +12,25 @@ import { readDataTransfer } from "./input/read-drop.js";
 import { renderResults } from "./results/render.js";
 import { SAMPLE_FILES, SAMPLE_NAME } from "./sample.js";
 
-const byId = <T extends HTMLElement>(id: string): T => {
+/**
+ * The page's own element, checked rather than cast: a #paste that stopped being a textarea would
+ * otherwise read `.value` as undefined and lint an empty paste, with nothing to say where the
+ * mistake was. Both throws happen as this module loads, so the page fails at the markup.
+ */
+const byId = <T extends HTMLElement>(id: string, type: new () => T): T => {
   const el = document.getElementById(id);
   if (!el) throw new Error(`The home page has no #${id}`);
-  return el as T;
+  if (!(el instanceof type))
+    throw new Error(`The home page's #${id} is a ${el.tagName.toLowerCase()}, not ${type.name}`);
+  return el;
 };
 
-const paste = byId<HTMLTextAreaElement>("paste");
-const status = byId<HTMLParagraphElement>("status");
-const announcer = byId<HTMLParagraphElement>("announce");
-const results = byId<HTMLElement>("results");
-const dropZone = byId<HTMLElement>("drop");
-const folderInput = byId<HTMLInputElement>("folder-input");
+const paste = byId("paste", HTMLTextAreaElement);
+const status = byId("status", HTMLParagraphElement);
+const announcer = byId("announce", HTMLParagraphElement);
+const results = byId("results", HTMLElement);
+const dropZone = byId("drop", HTMLElement);
+const folderInput = byId("folder-input", HTMLInputElement);
 
 function say(text: string, kind: "info" | "error" = "info"): void {
   // Unhidden before the text is written: a screen reader can miss text set on a hidden live region.
@@ -88,6 +95,10 @@ function run({ files, source, config, read, notes }: Run): void {
       }
     }
     const result = lint(files, { config: resolveConfig(raw) });
+    // Unhidden before it is filled, as the status line is: a hidden block is out of the
+    // accessibility tree, so anything rendered into one arrives where nothing can reach it. The
+    // live region that first made the order matter has since moved out to #announce; the order
+    // stays, and home.test.ts holds it.
     results.hidden = false;
     renderResults(results, result, { source, files: read, notes });
     say("");
@@ -116,7 +127,7 @@ function runEntries(tree: InputTree): void {
   }
 }
 
-byId("lint-paste").addEventListener("click", () => {
+byId("lint-paste", HTMLButtonElement).addEventListener("click", () => {
   const text = paste.value;
   // Claimed even for an empty paste: a folder still reading must not land on top of the message.
   startRun();
@@ -127,7 +138,7 @@ byId("lint-paste").addEventListener("click", () => {
   run({ files: [{ path: "pasted.tmdl", text }], source: "pasted TMDL" });
 });
 
-byId("try-sample").addEventListener("click", () => {
+byId("try-sample", HTMLButtonElement).addEventListener("click", () => {
   startRun();
   run({
     files: SAMPLE_FILES,
@@ -189,7 +200,7 @@ dropZone.addEventListener("drop", (event) => {
 });
 
 const picker = directoryPicker();
-byId("choose-folder").addEventListener("click", () => {
+byId("choose-folder", HTMLButtonElement).addEventListener("click", () => {
   if (!picker) {
     folderInput.click();
     return;

@@ -22,6 +22,7 @@ jobs:
       # that follow. Nothing in this job pushes.
       - uses: actions/checkout@v7
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
       - uses: actions/setup-node@v7
         with:
@@ -43,8 +44,12 @@ jobs:
       contents: write # softprops/action-gh-release creates the release
       id-token: write # npm trusted publishing
     steps:
+      # Pinned to the SHA that triggered the run, because a tag is mutable: resolving the tag ref a
+      # second time here could publish a commit the verify job never saw. persist-credentials:
+      # false, so no git credential is left in .git/config; nothing in this job pushes either.
       - uses: actions/checkout@v7
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
       - uses: actions/setup-node@v7
         with:

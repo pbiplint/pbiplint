@@ -100,6 +100,46 @@ describe("checkSite", () => {
       'a/index.html: inline event handler <button onclick="go()">',
     ]);
   });
+  // An unquoted value ends at the first space, so its candidates carry no descriptors, only commas.
+  it("names an unquoted srcset whose off-origin candidate is not the first", () => {
+    const dir = site({
+      "index.html": `<html><head>${META}</head><body><img src=/a.png srcset=/a.png,https://evil.example/x.png></body></html>`,
+    });
+    expect(checkSite(dir).problems).toEqual([
+      "index.html: external resource <img src=/a.png srcset=/a.png,https://evil.example/x.png>",
+    ]);
+  });
+  it("reads past a > inside a quoted value, so the attributes after it are still checked", () => {
+    const dir = site({
+      "index.html": `<html><head>${META}</head><body><img alt="a>b" src="https://evil.example/x.png"></body></html>`,
+    });
+    expect(checkSite(dir).problems).toEqual([
+      'index.html: external resource <img alt="a>b" src="https://evil.example/x.png">',
+    ]);
+  });
+  it("names a handler that follows an unquoted value containing a quote", () => {
+    const dir = site({
+      "index.html": `<html><head>${META}</head><body><div x=a="b onclick=" y>hi</div></body></html>`,
+    });
+    expect(checkSite(dir).problems).toEqual([
+      'index.html: inline event handler <div x=a="b onclick=" y>',
+    ]);
+  });
+  it("names a tag that never closes, which would otherwise vanish from every check", () => {
+    const dir = site({
+      "index.html": `<html><head>${META}</head><body><img src="/a.png"`,
+    });
+    expect(checkSite(dir).problems).toEqual(['index.html: unterminated tag <img src="/a.png"']);
+  });
+  it("shortens a runaway unterminated tag, so the message stays readable", () => {
+    const dir = site({
+      "index.html": `<html><head>${META}</head><body><img alt="${"x".repeat(200)}"`,
+    });
+    const [problem] = checkSite(dir).problems;
+    expect(problem?.startsWith('index.html: unterminated tag <img alt="xxx')).toBe(true);
+    expect(problem?.endsWith("...")).toBe(true);
+    expect(problem?.length).toBeLessThan(120);
+  });
   it("reads every unquoted attribute on a tag, not only the first", () => {
     const dir = site({
       "index.html": `<html><head>${META}</head><body><img src=/a.png srcset=https://evil.example/x.png></body></html>`,

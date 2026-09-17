@@ -20,10 +20,33 @@ const NETWORK_APIS = [
 ];
 /** Elements that load something, with the attribute that names it. Anchors navigate; they are not resources. */
 const RESOURCE_TAG = /<(script|link|img|iframe|video|audio|source|embed|object)\b[^>]*>/gi;
+/** Any opening tag, for the checks that are not about a resource. */
+const ANY_TAG = /<[a-z][^>]*>/gi;
 const OFF_ORIGIN = /^(https?:)?\/\//i;
 const CSS_URL = /url\((["']?)((?:https?:)?\/\/[^)"']*)\1\)/gi;
+/** `@import "https://..."`, which CSS_URL misses because it names no url(). */
+const CSS_IMPORT = /@import\s+(["'])(?:https?:)?\/\/[^"']*\1/gi;
+/** A <style> block's contents, so an inline stylesheet gets the same checks as a file. */
+const STYLE_BLOCK = /<style\b[^>]*>([\s\S]*?)<\/style>/gi;
+/**
+ * An inline event handler. The CSP's script-src blocks these at run time, so this is hardening.
+ * The generator writes no attribute beginning with "on", which is why the match can be this broad.
+ */
+const INLINE_HANDLER = /\son[a-z]{2,}\s*=/i;
+/** src, href, or srcset written unquoted, which the quoted matcher below would skip. */
+const UNQUOTED_ATTR = /\s(?:src|href|srcset)=(?!["'])([^\s>]+)/i;
 /** An opening tag that carries an id, with the id captured. */
 const ID_ATTR = /<[a-z][^>]*\sid="([^"]*)"[^>]*>/gi;
+
+/** Every candidate URL in a srcset: comma separated, each a URL and an optional descriptor. */
+const srcsetUrls = (tag: string): string[] => {
+  const value = /\ssrcset=["']([^"']*)["']/i.exec(tag)?.[1];
+  if (!value) return [];
+  return value
+    .split(",")
+    .map((candidate) => candidate.trim().split(/\s+/)[0] ?? "")
+    .filter(Boolean);
+};
 
 export function checkSite(dir: string): SiteReport {
   const report: SiteReport = { files: 0, bytes: 0, problems: [] };
@@ -58,9 +81,19 @@ function checkHtml(rel: string, html: string, report: SiteReport): void {
     report.problems.push(`${rel}: no Content-Security-Policy meta with connect-src 'none'`);
   for (const tag of html.match(RESOURCE_TAG) ?? []) {
     if (/\brel="canonical"/.test(tag)) continue;
-    const target = /\s(?:src|href)=["']([^"']*)["']/i.exec(tag)?.[1] ?? "";
-    if (OFF_ORIGIN.test(target)) report.problems.push(`${rel}: external resource ${tag}`);
+    const targets = [
+      /\s(?:src|href)=["']([^"']*)["']/i.exec(tag)?.[1] ?? "",
+      UNQUOTED_ATTR.exec(tag)?.[1] ?? "",
+      ...srcsetUrls(tag),
+    ];
+    // One problem per tag, however many of its attributes reach off the origin.
+    if (targets.some((target) => OFF_ORIGIN.test(target)))
+      report.problems.push(`${rel}: external resource ${tag}`);
   }
+  for (const tag of html.match(ANY_TAG) ?? [])
+    if (INLINE_HANDLER.test(tag)) report.problems.push(`${rel}: inline event handler ${tag}`);
+  // An inline stylesheet can reach off the origin exactly as a file can.
+  for (const m of html.matchAll(STYLE_BLOCK)) checkStyle(rel, m[1]!, report);
   // Heading ids are made from heading text, so a repeated or empty one would break a deep link.
   const ids = new Set<string>();
   for (const m of html.matchAll(ID_ATTR)) {
@@ -78,6 +111,7 @@ function checkScript(rel: string, code: string, report: SiteReport): void {
 
 function checkStyle(rel: string, css: string, report: SiteReport): void {
   for (const m of css.matchAll(CSS_URL)) report.problems.push(`${rel}: external ${m[0]}`);
+  for (const m of css.matchAll(CSS_IMPORT)) report.problems.push(`${rel}: external ${m[0]}`);
 }
 
 function walk(dir: string): string[] {

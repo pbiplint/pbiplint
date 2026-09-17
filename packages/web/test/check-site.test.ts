@@ -75,4 +75,20 @@ describe("checkSite", () => {
       "index.html: no Content-Security-Policy meta with connect-src 'none'",
     ]);
   });
+  it("names an inline handler, a bare @import, a srcset, an unquoted attribute, and an inline style", () => {
+    const dir = site({
+      "index.html": `<html><head>${META}</head><body><button onclick="go()">x</button></body></html>`,
+      "a/index.html": `<html><head>${META}</head><body><img srcset="https://img.example/x.png 2x, /favicon.svg 1x"></body></html>`,
+      "b/index.html": `<html><head>${META}</head><body><script src=https://cdn.example/x.js></script></body></html>`,
+      "c/index.html": `<html><head>${META}<style>@import "https://fonts.example/x.css";</style></head></html>`,
+      "assets/a.css": '@import "https://fonts.example/y.css";',
+    });
+    expect(checkSite(dir).problems).toEqual([
+      'a/index.html: external resource <img srcset="https://img.example/x.png 2x, /favicon.svg 1x">',
+      'assets/a.css: external @import "https://fonts.example/y.css"',
+      "b/index.html: external resource <script src=https://cdn.example/x.js>",
+      'c/index.html: external @import "https://fonts.example/x.css"',
+      'index.html: inline event handler <button onclick="go()">',
+    ]);
+  });
 });

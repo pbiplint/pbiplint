@@ -239,7 +239,7 @@ Expected: all four pass.
 ```bash
 git push -u origin parser-followups
 gh pr create --title "fix: report a trailing /// description and name the fence as the rule page does" --body "$(cat <<'MSG'
-Two boxes from #7, both in the TMDL parser.
+Two boxes from #7, both in the TMDL parser. The branch also carries this plan and a follow-up commit correcting three things execution proved wrong in it.
 
 - A `///` description on the last line of a file was only reported as an orphan when the file ended with a newline. The pending description is now flushed after the loop as well, so both forms report.
 - The finding said "unterminated ``` fence" while `rules/parse-issue.md` says "code fence". They now agree.
@@ -957,6 +957,13 @@ Five boxes from #7, all in what the browser runs.
 - The picker route tests the picked root folder against the skip list, as the drop route already did.
 - Both folder walkers stop at a depth cap, so a symlink cycle cannot walk forever. No browser hands one out today.
 
+Beyond the five boxes, and separable: one commit adds a visually hidden `role="status"` region so a screen reader hears the copy result, which until now was conveyed by the button label alone. VoiceOver on macOS misses that label change entirely on a mouse click, because Safari does not focus buttons on click. It is the last commit on the branch and reverts cleanly on its own.
+
+Two things worth a reviewer's attention:
+
+- **This deviates from the issue's suggested mechanism.** The box says to wrap `copy()`'s body in `Promise.resolve().then(...)`. That does stop the synchronous throw, but it also moves `clipboard.writeText` off the user gesture to the microtask checkpoint after the click handler returns, and WebKit ties clipboard access to the gesture still on the stack. A `try`/`catch` form meets the requirement and keeps the call in the click's own turn, so that is what shipped.
+- **That fix has no regression guard.** Reverting it to the microtask form would pass lint, typecheck, every unit test and all three browser engines. The guard is about three lines: call `copy(file)` without awaiting, then assert `writeText` has already been called. Worth a follow-up.
+
 Refs #7
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
@@ -1366,7 +1373,13 @@ Four boxes from #7, all build-time. Nothing here ships in the browser bundle.
 - `generateSite` clears the generated `rules/` tree first, so a renamed rule leaves no orphan page in a local build.
 - The site check also catches inline event handlers, an `@import` of a bare URL, `srcset`, unquoted attribute values, and an inline `<style>` block that reaches off the origin. The CSP blocks all of these at run time, so this is hardening.
 
-Not changed here: four other `localeCompare` calls take no locale, and `packages/core/src/engine/rank.ts:65` is the one worth a look, since it orders what a user reads. That is not a box on #7, so it is left for a new one rather than widening this PR.
+The whole-branch review then found a build-breaking bug the per-task review had cleared, and three commits fix it and its neighbours:
+
+- **The inline-handler check read attribute values, not just names.** `ANY_TAG` hands it the whole span from `<` to the first `>`, and the generator pipes rule prose into `<meta name="description" content="...">`, where `escapeHtml` does not escape `=`. A rule description saying `Set only = TRUE` failed the entire build, reported as an inline event handler that does not exist. Confirmed by injecting exactly that into a real rule and watching the build fail. "only" already appears six times in today's descriptions and "once" twice; they simply are not followed by `=` yet.
+- An unquoted off-origin `srcset` escaped both checks, because `srcsetUrls` requires quotes and `UNQUOTED_ATTR` used `.exec`.
+- Regeneration is now atomic: pages are built in memory and the index computed before anything is deleted, so a rule the index rejects leaves the previous build in place instead of a tree of pages with no index.
+
+Not changed here, and each worth its own box rather than widening this PR: flagging **any** inline style as a CSP violation (`csp.ts` sets `style-src 'self'` with no `unsafe-inline`, so an inline `<style>` or a `style="..."` attribute is as dead as an inline handler, yet the check only scans `<style>` bodies for off-origin URLs and never looks at `style=`); giving `parseFrontmatter`'s error a filename; and the four remaining locale-free `localeCompare` calls, of which `sample.ts:16` and `model-files.ts:98,111` are the sharper case, since they are runtime sorts ordering the files fed to the parser in the visitor's browser.
 
 Refs #7
 
@@ -2113,7 +2126,7 @@ Expected: all pass, and `npm test` now reports the two scripts test files alongs
 ```bash
 git push -u origin release-followups
 gh pr create --title "ci: make the release checks honest about what they proved" --body "$(cat <<'MSG'
-The last seven boxes from #7. Closes the issue.
+Six of the seven Release and packaging boxes from #7.
 
 - `scripts/publish.mjs` treats a miss as unpublished only when the registry answered 404. A registry that cannot be reached now stops the run instead of falling through to a publish it would reject.
 - `scripts/check-pack.mjs` matches forbidden paths at any depth, not only at the package root, which matters because the core ships all of `src`.
@@ -2123,11 +2136,18 @@ The last seven boxes from #7. Closes the issue.
 - `.gitattributes` lists `*.md text eol=lf` first, so the two fixture `-text` rules win for a Markdown file inside them.
 - The release workflow is split: a `verify` job with `contents: read` and no OIDC token, and a `publish` job that needs it and holds `id-token: write`. Neither checkout persists credentials.
 
-Also done, with no commit: a repository ruleset now protects `refs/tags/v*` against deletion and non-fast-forward updates, so a release tag cannot be moved to different content and re-run.
+The whole-branch review then found that the split gave up a property, and four commits close that and its neighbours:
 
-The workflow split cannot be fully proven until the next tag. Watch the first `v0.2.0` run.
+- **Splitting the job introduced a second checkout of a mutable tag.** `actions/checkout` resolves `refs/tags/vX` at fetch time rather than pinning the triggering commit, so a tag deleted and re-pushed between the jobs would get one commit verified and a different one published. Both checkouts now pin `ref: ${{ github.sha }}`.
+- **The 404 branch every release after the first depends on had no test.** npm says `404 No match found for version 0.2.0` for a new version of an existing package, and `404 Not Found` only for an unknown package. The code handled both through the `E404` code; the test pinned only the second wording.
+- `package-lock.json` still carried the old `>=20` floor for both packages, and `version.test.ts` now asserts the lockfile as well as the manifests, since asserting only the manifests is what let it drift.
+- Both scripts' main guards now `realpathSync` `argv[1]`, so reaching a script through a symlink no longer makes it exit 0 having done nothing.
 
-Closes #7
+**Still open, and deliberately not in this PR:** the seventh box, a repository ruleset protecting `refs/tags/v*` against deletion and non-fast-forward updates. It is a GitHub setting rather than code and needs an account with admin on the repository. It matters more now than it did: the two-job split is exactly what makes a mutable tag dangerous, and pinning the SHA closes the hole inside a single run but not across a re-run.
+
+**The workflow split cannot be proven until a tag is pushed.** Worth knowing while watching the first `v0.2.0` run: the v0.1.0 run finished in 42 seconds printing only "already published, skipping", because both packages were published by hand, so the OIDC publish has never actually executed in CI.
+
+Refs #7
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
@@ -2158,7 +2178,7 @@ gh issue view 7 --json body --jq .body | grep -c '^- \[x\]'   # confirm the new 
 gh auth switch --user michaelmckinleyconsulting
 ```
 
-Running count as the stages land: stage 1 takes it to 2 of 18, stage 2 to 7, stage 3 to 11, stage 4 to 18. The stage 4 PR body carries `Closes #7`, so merging it closes the issue; tick the boxes first so the closed issue reads as complete.
+Running count as the stages land: stage 1 takes it to 2 of 18, stage 2 to 7, stage 3 to 11, stage 4 to 17. No PR carries `Closes #7`, because the eighteenth box is the tag ruleset, which is a GitHub setting awaiting authorization rather than anything a merge can deliver. Close the issue by hand once that box is ticked too.
 
 ## What this plan does not do
 

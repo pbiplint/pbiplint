@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { checkSite } from "../src/build/check-site.js";
+import { checkSite, scanTags } from "../src/build/check-site.js";
 import { CSP } from "../src/build/csp.js";
 
 const META = `<meta http-equiv="Content-Security-Policy" content="${CSP}">`;
@@ -107,5 +107,50 @@ describe("checkSite", () => {
     expect(checkSite(dir).problems).toEqual([
       "index.html: external resource <img src=/a.png srcset=https://evil.example/x.png>",
     ]);
+  });
+});
+
+describe("scanTags", () => {
+  it("reads a double-quoted, single-quoted, bare, and valueless attribute", () => {
+    const [tag] = scanTags(`<img src="/a.png" alt='x' width=32 hidden>`);
+    expect(tag?.name).toBe("img");
+    expect([...(tag?.attrs ?? [])]).toEqual([
+      ["src", "/a.png"],
+      ["alt", "x"],
+      ["width", "32"],
+      ["hidden", ""],
+    ]);
+  });
+  it("does not end a tag at a > inside a quoted value", () => {
+    const [tag] = scanTags(`<img alt="a>b" src="https://evil.example/x.png">`);
+    expect(tag?.attrs.get("src")).toBe("https://evil.example/x.png");
+    expect(tag?.raw).toBe(`<img alt="a>b" src="https://evil.example/x.png">`);
+  });
+  it("reads an unquoted value containing a quote as one value, so the next name is still a name", () => {
+    const [tag] = scanTags(`<div x=a="b onclick=" y>`);
+    expect([...(tag?.attrs.keys() ?? [])]).toEqual(["x", "onclick", "y"]);
+  });
+  it("keeps an = inside a quoted value out of the attribute names", () => {
+    const [tag] = scanTags(`<meta name="description" content="Set only = TRUE to keep it." />`);
+    expect([...(tag?.attrs.keys() ?? [])]).toEqual(["name", "content"]);
+  });
+  it("lowercases the element name and every attribute name", () => {
+    const [tag] = scanTags(`<IMG SrcSet="/a.png">`);
+    expect(tag?.name).toBe("img");
+    expect(tag?.attrs.get("srcset")).toBe("/a.png");
+  });
+  it("marks a tag that never closes as unterminated", () => {
+    const [tag] = scanTags(`<img src="/a.png"`);
+    expect(tag?.unterminated).toBe(true);
+  });
+  it("marks a closed tag terminated", () => {
+    const [tag] = scanTags(`<img src="/a.png">`);
+    expect(tag?.unterminated).toBe(false);
+  });
+  it("reads no tag from a < that starts none", () => {
+    expect(scanTags("a < b, and 3<4")).toEqual([]);
+  });
+  it("resumes after a tag, so a < inside a value starts nothing", () => {
+    expect(scanTags(`<img alt="a<b"><p id="x">`).map((t) => t.name)).toEqual(["img", "p"]);
   });
 });

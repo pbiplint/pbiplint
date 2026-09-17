@@ -8,6 +8,18 @@ export interface SiteReport {
   problems: string[];
 }
 
+/** An opening tag, read the way a browser reads one. */
+export interface Tag {
+  /** The element name, lowercased. */
+  name: string;
+  /** The tag exactly as written, for the problem message. */
+  raw: string;
+  /** Attribute names lowercased, values as written; a valueless attribute maps to "". */
+  attrs: Map<string, string>;
+  /** True when the tag ran to the end of the file without ever closing. */
+  unterminated: boolean;
+}
+
 /** Substrings that prove a script reaches for the network (or a service worker, which could). */
 const NETWORK_APIS = [
   "fetch(",
@@ -60,6 +72,55 @@ const srcsetUrls = (tag: string): string[] => {
     .map((candidate) => candidate.trim().split(/\s+/)[0] ?? "")
     .filter(Boolean);
 };
+
+/** The element name at a `<`, which is what separates a tag from an angle bracket in prose. */
+const TAG_NAME = /[a-z][^\s/>]*/iy;
+/** One attribute: a name, then optionally a double-quoted, single-quoted, or bare value. */
+const ATTR = /([^\s/>=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]*)))?/g;
+
+/** A tag's attributes. A repeated name keeps its first value, as a browser does. */
+const tagAttributes = (body: string): Map<string, string> => {
+  const attrs = new Map<string, string>();
+  for (const m of body.matchAll(ATTR)) {
+    const name = m[1]!.toLowerCase();
+    if (!attrs.has(name)) attrs.set(name, m[2] ?? m[3] ?? m[4] ?? "");
+  }
+  return attrs;
+};
+
+/**
+ * Every opening tag in a document, with its attributes parsed once. One scan that reads a value the
+ * way a browser does beats a pattern per check, each carrying its own guess about quoting: whether
+ * a value is quoted, and what it contains, stops mattering to everything downstream. Quoted runs
+ * are skipped while looking for the tag's end, so a `>` inside a value does not truncate it.
+ */
+export function scanTags(html: string): Tag[] {
+  const tags: Tag[] = [];
+  for (let i = html.indexOf("<"); i !== -1; i = html.indexOf("<", i + 1)) {
+    TAG_NAME.lastIndex = i + 1;
+    if (!TAG_NAME.exec(html)) continue;
+    const start = TAG_NAME.lastIndex;
+    let end = start;
+    let quote = "";
+    while (end < html.length) {
+      const char = html[end]!;
+      if (quote) {
+        if (char === quote) quote = "";
+      } else if (char === '"' || char === "'") quote = char;
+      else if (char === ">") break;
+      end++;
+    }
+    const unterminated = end === html.length;
+    tags.push({
+      name: html.slice(i + 1, start).toLowerCase(),
+      raw: html.slice(i, unterminated ? end : end + 1),
+      attrs: tagAttributes(html.slice(start, end)),
+      unterminated,
+    });
+    i = end;
+  }
+  return tags;
+}
 
 export function checkSite(dir: string): SiteReport {
   const report: SiteReport = { files: 0, bytes: 0, problems: [] };

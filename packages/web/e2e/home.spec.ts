@@ -127,6 +127,29 @@ test("downloads the Markdown report", async ({ page }) => {
   expect(text).toContain("161 findings");
 });
 
+test("copies the Markdown report from the button beside the downloads", async ({
+  page,
+  context,
+  browserName,
+}) => {
+  // Chrome grants clipboard-write to the focused tab by itself, but a Playwright context starts at
+  // "prompt" and denies the write with nobody there to answer, so granting it is what restores the
+  // visitor's Chrome. Firefox and WebKit have no such permission to grant and reject the name.
+  if (browserName === "chromium") await context.grantPermissions(["clipboard-write"]);
+  await page.getByRole("button", { name: "Try the sample project" }).click();
+  // Found by position rather than by name, because the name is the thing that changes: a name
+  // locator stops matching the moment the copy lands.
+  const copy = page.locator(".export button").last();
+  await expect(copy).toHaveText("Copy Markdown");
+  await copy.click();
+  // The label, not the clipboard contents: reading the clipboard needs a permission that is not
+  // grantable in all three engines, while the label is observable everywhere and is exactly what a
+  // visitor sees. This is the only real-browser cover the copy path has. It does not prove the
+  // write rides the click's own gesture, which is what Safari requires: none of the three engines
+  // enforces that gate here, so only the unit tests and the shape of copy() speak to it.
+  await expect(copy).toHaveText("Copied");
+});
+
 test("a keyboard user can reach a findings table that scrolls sideways", async ({ page }) => {
   await page.setViewportSize({ width: 400, height: 800 });
   await page.getByRole("button", { name: "Try the sample project" }).click();

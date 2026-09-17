@@ -60,7 +60,10 @@ describe("home page", () => {
   });
   it("announces a run as one sentence through a live region that exists before the run", async () => {
     // A live region inserted with its text already set is the case screen readers may not
-    // announce, so the announcer is part of the page and only its text changes.
+    // announce, so the announcer is part of the page and only its text changes. The two checks
+    // below say the results block declares no aria-live of its own, which is less than it sounds:
+    // the copy status inside it is a role="status" region, and that selector does not match one.
+    // Holding the results block to a single empty region is render.test.ts's job.
     expect(body).toMatch(/<p id="announce"[^>]*aria-live="polite"[^>]*><\/p>/);
     const announcer = document.getElementById("announce")!;
     document.getElementById("try-sample")!.click();
@@ -272,5 +275,32 @@ describe("home page", () => {
     expect(status.textContent).toBe("Paste some TMDL first.");
     expect(results.hidden).toBe(true);
     expect(results.children.length).toBe(0);
+  });
+  it("lets the newest input win when two reads finish out of order", async () => {
+    const input = document.getElementById("folder-input") as HTMLInputElement;
+    let release: (() => void) | undefined;
+    // A folder file whose read never settles until the test says so.
+    const slow = Object.assign(new File(["table Slow\n"], "Slow.tmdl"), {
+      webkitRelativePath: "Slow.SemanticModel/definition/tables/Slow.tmdl",
+      text: () => new Promise<string>((resolve) => (release = () => resolve("table Slow\n"))),
+    });
+    Object.defineProperty(input, "files", { configurable: true, value: [slow] });
+    try {
+      input.dispatchEvent(new Event("change"));
+    } finally {
+      Reflect.deleteProperty(input, "files");
+    }
+    await tick();
+    // The folder read is still waiting on its file, so a paste finishes first and owns the page.
+    (document.getElementById("paste") as HTMLTextAreaElement).value = "table Pasted\n";
+    document.getElementById("lint-paste")!.click();
+    await tick();
+    expect(document.querySelector("#results h2")!.textContent).toBe("Results for pasted TMDL");
+    release!();
+    await tick();
+    await tick();
+    // The superseded read comes back last and is dropped rather than replacing the paste.
+    expect(document.querySelector("#results h2")!.textContent).toBe("Results for pasted TMDL");
+    expect(document.getElementById("status")!.hidden).toBe(true);
   });
 });

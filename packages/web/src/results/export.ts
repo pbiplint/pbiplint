@@ -34,13 +34,19 @@ export function download(file: ExportFile): void {
 }
 
 /**
- * Copies the text with the async clipboard API. An insecure context or an older browser has no
- * `navigator.clipboard` at all, so the miss comes back as a rejected promise rather than a throw:
- * callers then have one failure path to handle instead of two.
+ * Copies the text with the async clipboard API. The write goes out in the caller's own turn rather
+ * than from a later microtask, because a clipboard write is gesture gated and WebKit wants the
+ * gesture still on the stack. Whatever the environment does about that, the caller sees one
+ * failure path: a throw from reading the property and a throw from the call itself both come back
+ * as a rejection, alongside the rejection a refused permission gives. An insecure context or an
+ * older browser has no `navigator.clipboard` at all, which is the case the explicit throw covers.
  */
 export function copy(file: ExportFile): Promise<void> {
-  const clipboard: Clipboard | undefined = navigator.clipboard;
-  return clipboard
-    ? clipboard.writeText(file.text)
-    : Promise.reject(new Error("Clipboard access is not available"));
+  try {
+    const clipboard: Clipboard | undefined = navigator.clipboard;
+    if (!clipboard) throw new Error("Clipboard access is not available");
+    return Promise.resolve(clipboard.writeText(file.text));
+  } catch (e) {
+    return Promise.reject(e instanceof Error ? e : new Error(String(e)));
+  }
 }

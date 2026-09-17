@@ -61,8 +61,8 @@ export function renderResults(
       h("a", { href: "/about/#verify" }, "How to check that"),
     ),
     h("h2", {}, `Results for ${options.source}`),
-    // No live region in here: everything is rebuilt on each run, and a region inserted with its
-    // text already set may not be announced. The page announces the summary through #announce.
+    // The summary is not a live region: everything is rebuilt on each run, and a region inserted
+    // with its text already set may not be announced. The page announces it through #announce.
     h("p", { class: "summary" }, `${summaryLine(result)}. ${skippedLine(result)}.`),
     ...(options.notes ?? []).map((note) => h("p", { class: "notice" }, note)),
     ...result.summary.unknownRules.map((id) =>
@@ -138,27 +138,32 @@ function renderExportBar(result: LintResult): HTMLElement {
     b.addEventListener("click", () => onClick(b));
     return b;
   };
+  // One handle for the copy button's reset: a second click before the first reset lands would
+  // otherwise schedule a second one that flips the label back early.
+  let restoreTimer: ReturnType<typeof setTimeout> | undefined;
+  // The button label flips for everyone who can see it; this says the same thing out loud. It is
+  // empty until a copy happens, so it never competes with the #announce region on the page.
+  const announce = h("span", { class: "visually-hidden", role: "status" });
   return h(
     "div",
     { class: "export" },
     button("Download Markdown", () => download(exportMarkdown(result))),
     button("Download JSON", () => download(exportJson(result))),
     button("Copy Markdown", (b) => {
-      const restore = (): void => {
-        setTimeout(() => (b.textContent = "Copy Markdown"), 1500);
+      const flash = (label: string, spoken: string): void => {
+        b.textContent = label;
+        announce.textContent = spoken;
+        clearTimeout(restoreTimer);
+        restoreTimer = setTimeout(() => (b.textContent = "Copy Markdown"), 1500);
       };
       void copy(exportMarkdown(result))
-        .then(() => {
-          b.textContent = "Copied";
-          restore();
-        })
+        .then(() => flash("Copied", "Report copied to the clipboard"))
         // A browser with no clipboard API, an insecure context, an unfocused document, or a
-        // refused permission all land here. Say so on the button instead of failing silently.
-        .catch(() => {
-          b.textContent = "Copy failed";
-          restore();
-        });
+        // refused permission all land here. Say so on the button and in the status region beside
+        // it instead of failing silently.
+        .catch(() => flash("Copy failed", "Copying to the clipboard failed"));
     }),
+    announce,
   );
 }
 

@@ -136,6 +136,12 @@ describe("rulesIndex", () => {
     expect(seen.length).toBeGreaterThan(0);
     expect([...new Set(seen)]).toEqual(["en"]);
   });
+  it("refuses a rule whose category has no section, rather than dropping it from the index", () => {
+    const invented = { ...metas[0]!, slug: "invented", category: "Invented" };
+    expect(() => rulesIndex([invented])).toThrow('invented: unknown category "Invented"');
+    // Every real rule still passes.
+    expect(() => rulesIndex(metas)).not.toThrow();
+  });
 });
 
 describe("pageEntries", () => {

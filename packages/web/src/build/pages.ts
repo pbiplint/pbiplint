@@ -205,6 +205,12 @@ export function rulePage(markdown: string, slug: string): { html: string; meta: 
 }
 
 export function rulesIndex(metas: RuleMeta[]): string {
+  // CATEGORY_ORDER drives the sections, so a rule with any other category would be in the count
+  // at the top of the page and in no list below it. Fail the build rather than ship a rule page
+  // nothing links to.
+  for (const m of metas)
+    if (!CATEGORY_ORDER.includes(m.category))
+      throw new Error(`${m.slug}: unknown category "${m.category}"`);
   const count = (status: string): number => metas.filter((m) => m.status === status).length;
   const sections = CATEGORY_ORDER.map((category) => {
     const rows = metas

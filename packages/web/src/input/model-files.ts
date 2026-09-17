@@ -95,7 +95,7 @@ export function selectModel(entries: InputEntry[], modelFolders: string[] = []):
     .filter((e) => within(e.path, join(root, "definition")) || !hasDefinition(tmdl, root))
     .filter((e) => within(e.path, root))
     .map((e) => ({ path: relativeTo(e.path, root), text: e.text }))
-    .sort((a, b) => a.path.localeCompare(b.path));
+    .sort((a, b) => a.path.localeCompare(b.path, "en"));
   const notes = unlintable.length
     ? [`${holdsNoTmdl()} and ${unlintable.length === 1 ? "was" : "were"} not linted. ${TMDL_ONLY}`]
     : [];
@@ -108,7 +108,7 @@ export function selectModel(entries: InputEntry[], modelFolders: string[] = []):
       if (e.path.endsWith(CONFIG_FILE)) return `${rel} (config, not used)`;
       return linted.has(e.path) ? rel : `${rel} (not linted)`;
     })
-    .sort((a, b) => a.localeCompare(b));
+    .sort((a, b) => a.localeCompare(b, "en"));
   return { root, files, config, notes, read };
 }
 

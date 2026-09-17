@@ -25,6 +25,18 @@ export default tseslint.config(
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" },
       ],
+      // localeCompare with no locale sorts by whatever locale the machine running the code
+      // happens to have, so generated pages, a report's findings, and the order files reach the
+      // parser all depend on where the code ran. Tests are held to it too: a fixture that sorts
+      // one way locally and another way in CI is the same hazard wearing a different hat.
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: 'CallExpression[callee.property.name="localeCompare"][arguments.length<2]',
+          message:
+            'Pass an explicit locale, as in localeCompare(other, "en"), so the order does not depend on the machine.',
+        },
+      ],
     },
   },
   {

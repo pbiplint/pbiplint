@@ -13,7 +13,7 @@ const toPosix = (p: string): string => p.split("\\").join("/");
 
 function readTmdlFiles(root: string, dir: string, out: LintFile[]): void {
   for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) =>
-    a.name.localeCompare(b.name),
+    a.name.localeCompare(b.name, "en"),
   )) {
     const p = join(dir, entry.name);
     if (entry.isDirectory()) readTmdlFiles(root, p, out);

@@ -25,7 +25,7 @@ export function readModelFiles(root: string): { path: string; text: string }[] {
   const out: { path: string; text: string }[] = [];
   const walk = (dir: string) => {
     for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) =>
-      a.name.localeCompare(b.name),
+      a.name.localeCompare(b.name, "en"),
     )) {
       const p = join(dir, entry.name);
       if (entry.isDirectory()) walk(p);

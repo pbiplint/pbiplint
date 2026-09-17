@@ -25,7 +25,12 @@ export interface RenderOptions {
 
 type Child = Node | string | null | undefined;
 
-/** Builds an element. Strings become text nodes, so nothing from a model file is ever parsed as HTML. */
+/**
+ * Builds an element. Every child string becomes a text node and every attribute is written with
+ * setAttribute, so nothing from a model file is ever parsed as HTML. Attribute values are taken as
+ * given, though: a href or a handler name would be set exactly as passed, which is why every
+ * attribute here is built from pbiplint's own strings and never from model text.
+ */
 export function h<K extends keyof HTMLElementTagNameMap>(
   tag: K,
   attrs: Record<string, string | boolean> = {},
@@ -71,9 +76,24 @@ export function renderResults(
     ...result.summary.unknownRules.map((id) =>
       h("p", { class: "notice" }, `pbiplint.config.json names no rule called "${id}".`),
     ),
+    // Beside the other notices rather than below the groups: a rule that threw is worth reporting
+    // whether or not the rules that ran found anything, and a clean run stops before the groups.
+    ...(result.summary.ruleErrors.length
+      ? [
+          h(
+            "p",
+            { class: "notice" },
+            "Rule errors (please report these): " +
+              result.summary.ruleErrors.map((e) => `${e.id}: ${e.message}`).join("; "),
+          ),
+        ]
+      : []),
     // Right under the sentence that counts the files, so "in 11 files" expands into which ones.
     ...renderFilesRead(options.files),
   );
+  // Cleared on every render and set again below only when there are filters to change, so a run
+  // with no findings cannot leave the previous run's handler on the container.
+  container.onchange = null;
   if (result.groups.length === 0) {
     container.append(h("p", { class: "clean" }, "No findings."));
     return;
@@ -107,16 +127,8 @@ export function renderResults(
     renderFilters(result),
     h("div", { class: "groups" }, ...result.groups.map(renderGroup)),
   );
-  if (result.summary.ruleErrors.length)
-    container.append(
-      h(
-        "p",
-        { class: "notice" },
-        "Rule errors (please report these): " +
-          result.summary.ruleErrors.map((e) => `${e.id}: ${e.message}`).join("; "),
-      ),
-    );
-  // One handler for the whole container, so re-rendering never stacks listeners.
+  // One handler for the whole container, assigned rather than added, so re-rendering replaces it
+  // instead of stacking a second one.
   container.onchange = (event) => {
     if ((event.target as HTMLElement).matches("input[data-filter]")) applyFilters(container);
   };

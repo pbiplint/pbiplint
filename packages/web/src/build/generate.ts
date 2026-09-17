@@ -1,4 +1,4 @@
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Plugin } from "vite";
@@ -20,6 +20,10 @@ export function generateSite({
   contentDir = CONTENT_DIR,
   outDir = WEB_ROOT,
 }: GenerateOptions = {}): RuleMeta[] {
+  // Every page under rules/ is generated and gitignored, so it is cleared first: a renamed or
+  // deleted rule would otherwise leave a page behind that nothing links to and the sitemap no
+  // longer names, until the next clean checkout.
+  rmSync(join(outDir, "rules"), { recursive: true, force: true });
   const metas: RuleMeta[] = [];
   for (const file of readdirSync(rulesDir)
     .filter((f) => f.endsWith(".md"))

@@ -111,6 +111,15 @@ describe("generateSite", () => {
       ["about", "rules", ...metas.map((m) => `rules/${m.slug}`)].sort(),
     );
   });
+  it("clears the generated rules tree, so a renamed rule leaves no orphan page", () => {
+    const out = mkdtempSync(join(tmpdir(), "pbiplint-stale-"));
+    mkdirSync(join(out, "rules", "renamed-away"), { recursive: true });
+    writeFileSync(join(out, "rules", "renamed-away", "index.html"), "<html>stale</html>");
+    generateSite({ outDir: out });
+    expect(existsSync(join(out, "rules", "renamed-away", "index.html"))).toBe(false);
+    expect(existsSync(join(out, "rules", "hide-foreign-keys", "index.html"))).toBe(true);
+    expect(existsSync(join(out, "rules", "index.html"))).toBe(true);
+  });
 });
 
 describe("rulesIndex", () => {

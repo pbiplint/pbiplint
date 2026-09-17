@@ -4,19 +4,53 @@ on:
   push:
     tags: ["v*"]
 
-permissions:
-  contents: write
-  id-token: write
+# Nothing here: each job asks for exactly what it needs, so the job that runs the test suite never
+# holds the OIDC token the publish authenticates with.
+permissions: {}
 
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  publish:
+  verify:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
+      # persist-credentials: false, so no git credential is left in .git/config for the steps
+      # that follow. Nothing in this job pushes.
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node scripts/check-release-tag.mjs "$GITHUB_REF_NAME"
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run check:browser
+      - run: npm run build
+      - run: npm run check:pack
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # softprops/action-gh-release creates the release
+      id-token: write # npm trusted publishing
+    steps:
+      # Pinned to the SHA that triggered the run, because a tag is mutable: resolving the tag ref a
+      # second time here could publish a commit the verify job never saw. persist-credentials:
+      # false, so no git credential is left in .git/config; nothing in this job pushes either.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -25,12 +59,9 @@ jobs:
       # npm@11 resolves to the newest 11.x, which satisfies that, and pins the major.
       - run: npm install -g npm@11
       - run: npm ci --ignore-scripts
-      - run: node scripts/check-release-tag.mjs "$GITHUB_REF_NAME"
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm run check:browser
       - run: npm run build
+      # Run again on this job's own tree rather than trusting the verify job's: this is the
+      # tarball that ships.
       - run: npm run check:pack
       - run: node scripts/publish.mjs
       - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3

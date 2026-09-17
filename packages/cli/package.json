@@ -43,6 +43,6 @@
     "test:bundle": "node dist/pbiplint.mjs --sample --format json > /dev/null; test $? -eq 1"
   },
   "engines": {
-    "node": ">=20"
+    "node": "^20.19.0 || >=22.12.0"
   }
 }

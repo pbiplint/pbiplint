@@ -131,7 +131,8 @@ export function parseTmdl(file: string, text: string): ParsedFile {
         j++;
       }
       if (j >= lines.length)
-        issues.push({ file, line: lineNo, text: raw, reason: "unterminated ``` fence" });
+        // "code fence", the words rules/parse-issue.md uses, so the finding and the page agree.
+        issues.push({ file, line: lineNo, text: raw, reason: "unterminated code fence" });
       const boundary = j < lines.length ? leadingWs(lines[j]!) : 0;
       i = j;
       return out.map((l) => l.slice(Math.min(boundary, leadingWs(l)))).join("\n");

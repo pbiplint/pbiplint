@@ -183,7 +183,7 @@ describe("parseTmdl", () => {
     const pf = parseTmdl("bad.tmdl", "table T\n    column C\n\tmeasure M = ```\n\t\tx\n");
     expect(pf.issues.map((i) => [i.line, i.reason])).toEqual([
       [2, "space indentation (TMDL requires tabs)"],
-      [3, "unterminated ``` fence"],
+      [3, "unterminated code fence"],
     ]);
   });
 

@@ -32,6 +32,9 @@ jobs:
       - run: npm run build
       - run: npm run check:pack
       - run: npm run test:bundle -w pbiplint
+      # The alias reaches into pbiplint's dist by path, which resolves only while pbiplint
+      # declares no exports map. A unit test pins that, and this proves the shim actually runs.
+      - run: npm run test:bundle -w pbip-lint
   # The site in real browsers: the production build served by vite preview, driven by Playwright in
   # Chromium, Firefox, and WebKit, with an accessibility scan. Its own job, so the matrix above
   # stays quick and a browser download never slows the unit tests.

@@ -4,6 +4,7 @@ import { formatMarkdown } from "./markdown.js";
 import { formatSarif } from "./sarif.js";
 import {
   formatText,
+  plural,
   skippedLine,
   summaryLine,
   topGroups,
@@ -33,5 +34,14 @@ export function formatResult(
   }
 }
 
-export { formatJson, formatMarkdown, formatSarif, formatText, skippedLine, summaryLine, topGroups };
+export {
+  formatJson,
+  formatMarkdown,
+  formatSarif,
+  formatText,
+  plural,
+  skippedLine,
+  summaryLine,
+  topGroups,
+};
 export type { FormatOptions, RuleHelp };

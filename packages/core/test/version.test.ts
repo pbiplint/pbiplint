@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
-import { skippedLine, topGroups, VERSION } from "../src/index.js";
+import { plural, skippedLine, topGroups, VERSION } from "../src/index.js";
 import { lint } from "../src/engine/lint.js";
 
 const manifest = (path: string): { version: string } =>
@@ -32,6 +32,12 @@ it("declares the same Node floor as the workspace root, which require() of an ES
   expect(lock.packages["packages/cli"].engines.node).toBe(NODE_FLOOR);
   // The root workspace carries its own copy too, and drifts the same way the other two did.
   expect(lock.packages[""].engines.node).toBe(NODE_FLOOR);
+});
+
+it('exports the plural helper, so the site says "1 file" the way the text format does', () => {
+  expect(plural(1, "file")).toBe("1 file");
+  expect(plural(2, "file")).toBe("2 files");
+  expect(plural(0, "file")).toBe("0 files");
 });
 
 it("exports the summary helpers the site shares with the text format", () => {

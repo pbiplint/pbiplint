@@ -31,7 +31,7 @@ export const locationOf = (f: Finding): string =>
   f.location ? `${f.location.file}:${f.location.line}` : "";
 
 /** "1 rule", "2 rules". Nouns that do not take an s ("info") are written out by the caller. */
-const plural = (n: number, noun: string): string => `${n} ${noun}${n === 1 ? "" : "s"}`;
+export const plural = (n: number, noun: string): string => `${n} ${noun}${n === 1 ? "" : "s"}`;
 
 /** Summary sentence shared by the text and markdown formats. */
 export function summaryLine(result: LintResult): string {

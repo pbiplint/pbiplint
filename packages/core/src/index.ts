@@ -30,6 +30,7 @@ export {
   formatMarkdown,
   formatSarif,
   formatText,
+  plural,
   skippedLine,
   summaryLine,
   topGroups,

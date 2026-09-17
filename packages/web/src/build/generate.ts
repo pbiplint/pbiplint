@@ -45,7 +45,7 @@ export function generateSite({
   write(join(outDir, "rules", "index.html"), index);
   write(
     join(outDir, "about", "index.html"),
-    contentPage(readFileSync(join(contentDir, "about.md"), "utf8"), "/about/"),
+    contentPage(readFileSync(join(contentDir, "about.md"), "utf8"), "/about/", "content/about.md"),
   );
   write(
     join(outDir, "public", "sitemap.xml"),

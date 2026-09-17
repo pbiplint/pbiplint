@@ -103,6 +103,35 @@ describe("home page", () => {
     expect(status.hidden).toBe(false);
     expect(status.textContent).toBe("Paste some TMDL first.");
   });
+  it("unhides the results before it renders into them", () => {
+    const results = document.getElementById("results")!;
+    results.hidden = true;
+    const order: string[] = [];
+    const hidden = inherited(results, "hidden");
+    const replaceChildren = results.replaceChildren.bind(results);
+    Object.defineProperty(results, "hidden", {
+      configurable: true,
+      get: () => hidden.get!.call(results) as boolean,
+      set: (value: boolean) => {
+        order.push(`hidden=${String(value)}`);
+        hidden.set!.call(results, value);
+      },
+    });
+    results.replaceChildren = ((...nodes: (Node | string)[]) => {
+      order.push("render");
+      replaceChildren(...nodes);
+    }) as typeof results.replaceChildren;
+    try {
+      document.getElementById("try-sample")!.click();
+    } finally {
+      Reflect.deleteProperty(results, "hidden");
+      Reflect.deleteProperty(results, "replaceChildren");
+    }
+    // The same rule the status line follows: a hidden block is out of the accessibility tree, so
+    // content rendered into one arrives where nothing can reach it.
+    expect(order).toEqual(["hidden=false", "render"]);
+    expect(results.querySelector(".summary")!.textContent).toContain("161 findings");
+  });
   it("scrolls a problem message only as far as needed, so the textarea stays in view", () => {
     const status = document.getElementById("status")!;
     const scroll = vi.fn();

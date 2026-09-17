@@ -91,4 +91,21 @@ describe("checkSite", () => {
       'index.html: inline event handler <button onclick="go()">',
     ]);
   });
+  it("reads attribute names, so an = inside rule prose is not mistaken for a handler", () => {
+    const dir = site({
+      "index.html": `<html><head>${META}<meta name="description" content="Set only = TRUE to keep it." /></head><body></body></html>`,
+      "a/index.html": `<html><head>${META}</head><body><button onclick="go()">x</button></body></html>`,
+    });
+    expect(checkSite(dir).problems).toEqual([
+      'a/index.html: inline event handler <button onclick="go()">',
+    ]);
+  });
+  it("reads every unquoted attribute on a tag, not only the first", () => {
+    const dir = site({
+      "index.html": `<html><head>${META}</head><body><img src=/a.png srcset=https://evil.example/x.png></body></html>`,
+    });
+    expect(checkSite(dir).problems).toEqual([
+      "index.html: external resource <img src=/a.png srcset=https://evil.example/x.png>",
+    ]);
+  });
 });

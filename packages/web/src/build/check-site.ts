@@ -18,6 +18,11 @@ const NETWORK_APIS = [
   "navigator.serviceWorker",
   'import("http',
 ];
+// Every pattern below that carries the `g` flag is read only through `match`, `matchAll`, or
+// `replace`, none of which leave a `lastIndex` behind for the next tag to trip over. The rest are
+// read through `.exec` or `.test`, which do. Adding `g` to one of those for symmetry would make it
+// stateful and silently skip every second match, so the two groups have to stay apart.
+
 /** Elements that load something, with the attribute that names it. Anchors navigate; they are not resources. */
 const RESOURCE_TAG = /<(script|link|img|iframe|video|audio|source|embed|object)\b[^>]*>/gi;
 /** Any opening tag, for the checks that are not about a resource. */
@@ -30,13 +35,21 @@ const CSS_IMPORT = /@import\s+(["'])(?:https?:)?\/\/[^"']*\1/gi;
 const STYLE_BLOCK = /<style\b[^>]*>([\s\S]*?)<\/style>/gi;
 /**
  * An inline event handler. The CSP's script-src blocks these at run time, so this is hardening.
- * The generator writes no attribute beginning with "on", which is why the match can be this broad.
+ * It is tested against a tag whose quoted values have been blanked, so it can match this broadly:
+ * what is left of the tag is attribute names, and the generator writes none beginning with "on".
  */
 const INLINE_HANDLER = /\son[a-z]{2,}\s*=/i;
 /** src, href, or srcset written unquoted, which the quoted matcher below would skip. */
-const UNQUOTED_ATTR = /\s(?:src|href|srcset)=(?!["'])([^\s>]+)/i;
+const UNQUOTED_ATTR = /\s(?:src|href|srcset)=(?!["'])([^\s>]+)/gi;
 /** An opening tag that carries an id, with the id captured. */
 const ID_ATTR = /<[a-z][^>]*\sid="([^"]*)"[^>]*>/gi;
+
+/**
+ * A tag with its quoted attribute values blanked, so the handler check reads names rather than
+ * prose. A rule summary reaches the page as a meta description, and one reading "Set only = TRUE"
+ * looks exactly like an event handler to a pattern that cannot tell a name from a value.
+ */
+const attributeNames = (tag: string): string => tag.replace(/=\s*(["'])[\s\S]*?\1/g, "=");
 
 /** Every candidate URL in a srcset: comma separated, each a URL and an optional descriptor. */
 const srcsetUrls = (tag: string): string[] => {
@@ -83,7 +96,7 @@ function checkHtml(rel: string, html: string, report: SiteReport): void {
     if (/\brel="canonical"/.test(tag)) continue;
     const targets = [
       /\s(?:src|href)=["']([^"']*)["']/i.exec(tag)?.[1] ?? "",
-      UNQUOTED_ATTR.exec(tag)?.[1] ?? "",
+      ...[...tag.matchAll(UNQUOTED_ATTR)].map((m) => m[1]!),
       ...srcsetUrls(tag),
     ];
     // One problem per tag, however many of its attributes reach off the origin.
@@ -91,7 +104,8 @@ function checkHtml(rel: string, html: string, report: SiteReport): void {
       report.problems.push(`${rel}: external resource ${tag}`);
   }
   for (const tag of html.match(ANY_TAG) ?? [])
-    if (INLINE_HANDLER.test(tag)) report.problems.push(`${rel}: inline event handler ${tag}`);
+    if (INLINE_HANDLER.test(attributeNames(tag)))
+      report.problems.push(`${rel}: inline event handler ${tag}`);
   // An inline stylesheet can reach off the origin exactly as a file can.
   for (const m of html.matchAll(STYLE_BLOCK)) checkStyle(rel, m[1]!, report);
   // Heading ids are made from heading text, so a repeated or empty one would break a deep link.

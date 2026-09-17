@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { lint } from "@pbiplint/core";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { applyFilters, renderResults } from "../src/results/render.js";
 import { SAMPLE_FILES } from "../src/sample.js";
 
@@ -124,6 +124,31 @@ describe("renderResults", () => {
     // A macrotask flushes every pending microtask, well before the 1500 ms label reset.
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(copyButton.textContent).toBe("Copy failed");
+  });
+  it("keeps one reset timer, so a second copy cannot flip the label back early", async () => {
+    const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    vi.useFakeTimers();
+    try {
+      renderResults(container, result, { source: "x" });
+      const button = [...container.querySelectorAll("button")].find(
+        (b) => b.textContent === "Copy Markdown",
+      )!;
+      button.click();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(button.textContent).toBe("Copied");
+      await vi.advanceTimersByTimeAsync(1000);
+      button.click();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(button.textContent).toBe("Copied");
+      // The first click's reset was due here; the second click cleared it.
+      await vi.advanceTimersByTimeAsync(600);
+      expect(button.textContent).toBe("Copied");
+      await vi.advanceTimersByTimeAsync(900);
+      expect(button.textContent).toBe("Copy Markdown");
+    } finally {
+      vi.useRealTimers();
+    }
   });
   it("says so when there is nothing to report", () => {
     // No model small enough to write here is actually clean (a bare model trips the date table

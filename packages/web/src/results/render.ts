@@ -138,26 +138,25 @@ function renderExportBar(result: LintResult): HTMLElement {
     b.addEventListener("click", () => onClick(b));
     return b;
   };
+  // One handle for the copy button's reset: a second click before the first reset lands would
+  // otherwise schedule a second one that flips the label back early.
+  let restoreTimer: ReturnType<typeof setTimeout> | undefined;
   return h(
     "div",
     { class: "export" },
     button("Download Markdown", () => download(exportMarkdown(result))),
     button("Download JSON", () => download(exportJson(result))),
     button("Copy Markdown", (b) => {
-      const restore = (): void => {
-        setTimeout(() => (b.textContent = "Copy Markdown"), 1500);
+      const flash = (label: string): void => {
+        b.textContent = label;
+        clearTimeout(restoreTimer);
+        restoreTimer = setTimeout(() => (b.textContent = "Copy Markdown"), 1500);
       };
       void copy(exportMarkdown(result))
-        .then(() => {
-          b.textContent = "Copied";
-          restore();
-        })
+        .then(() => flash("Copied"))
         // A browser with no clipboard API, an insecure context, an unfocused document, or a
         // refused permission all land here. Say so on the button instead of failing silently.
-        .catch(() => {
-          b.textContent = "Copy failed";
-          restore();
-        });
+        .catch(() => flash("Copy failed"));
     }),
   );
 }

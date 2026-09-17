@@ -15,12 +15,21 @@ it("is released in lockstep with the CLI", () => {
 });
 
 it("declares the same Node floor as the workspace root, which require() of an ESM package needs", () => {
+  // >=20 is not enough: require() of an ESM package resolves only on 20.19 or later.
+  const NODE_FLOOR = "^20.19.0 || >=22.12.0";
   const floor = (path: string): string =>
     JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8")).engines.node;
-  // >=20 is not enough: require() of an ESM package resolves only on 20.19 or later.
-  expect(floor("../package.json")).toBe("^20.19.0 || >=22.12.0");
-  expect(floor("../../cli/package.json")).toBe("^20.19.0 || >=22.12.0");
-  expect(floor("../../../package.json")).toBe("^20.19.0 || >=22.12.0");
+  expect(floor("../package.json")).toBe(NODE_FLOOR);
+  expect(floor("../../cli/package.json")).toBe(NODE_FLOOR);
+  expect(floor("../../../package.json")).toBe(NODE_FLOOR);
+  // The lockfile keeps its own copy of engines for each workspace, and npm ci never compares the
+  // copy to the manifest, so the two drift in silence until a release runs npm install and
+  // rewrites them as noise inside the release commit.
+  const lock = JSON.parse(
+    readFileSync(new URL("../../../package-lock.json", import.meta.url), "utf8"),
+  );
+  expect(lock.packages["packages/core"].engines.node).toBe(NODE_FLOOR);
+  expect(lock.packages["packages/cli"].engines.node).toBe(NODE_FLOOR);
 });
 
 it("exports the summary helpers the site shares with the text format", () => {

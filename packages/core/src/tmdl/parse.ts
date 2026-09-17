@@ -49,19 +49,21 @@ export function parseTmdl(file: string, text: string): ParsedFile {
   const roots: TmdlNode[] = [];
   const issues: ParseIssue[] = [];
   const stack: TmdlNode[] = [];
-  let pendingDescription: string[] = [];
-  // The first `///` line of the pending run, for the issue reported when it leads nowhere.
-  let descriptionLine = 0;
-  let descriptionText = "";
+  /**
+   * The `///` lines seen since the last declaration, and the line and raw text of the first of
+   * them, for the issue reported when the run leads nowhere. One object rather than three
+   * bindings: there is no line number to hold when no description is pending.
+   */
+  let pendingDescription: { line: number; text: string; lines: string[] } | null = null;
   /** A pending description that nothing will claim: report it and drop it. */
-  const orphanDescription = (): void => {
+  const orphanDescription = (pending: { line: number; text: string }): void => {
     issues.push({
       file,
-      line: descriptionLine,
-      text: descriptionText,
+      line: pending.line,
+      text: pending.text,
       reason: "description is not followed by a declaration",
     });
-    pendingDescription = [];
+    pendingDescription = null;
   };
   let i = 0;
 
@@ -71,18 +73,16 @@ export function parseTmdl(file: string, text: string): ParsedFile {
     if (raw.trim() === "") {
       // Tabular Editor's TMDL reader rejects a blank line after a `///` description, so a
       // description separated from its declaration never reaches it. Report and drop it.
-      if (pendingDescription.length) orphanDescription();
+      if (pendingDescription) orphanDescription(pendingDescription);
       i++;
       continue;
     }
     const indent = tabIndent(raw);
     const content = raw.slice(indent);
     if (content.startsWith("///")) {
-      if (!pendingDescription.length) {
-        descriptionLine = lineNo;
-        descriptionText = raw;
-      }
-      pendingDescription.push(content.replace(/^\/\/\/ ?/, ""));
+      const line = content.replace(/^\/\/\/ ?/, "");
+      if (pendingDescription) pendingDescription.lines.push(line);
+      else pendingDescription = { line: lineNo, text: raw, lines: [line] };
       i++;
       continue;
     }
@@ -172,9 +172,9 @@ export function parseTmdl(file: string, text: string): ParsedFile {
       }
     }
 
-    if (pendingDescription.length) {
-      node.description = pendingDescription.join("\n");
-      pendingDescription = [];
+    if (pendingDescription) {
+      node.description = pendingDescription.lines.join("\n");
+      pendingDescription = null;
     }
     stack.length = indent;
     const parent = indent > 0 ? stack[indent - 1] : undefined;
@@ -195,6 +195,6 @@ export function parseTmdl(file: string, text: string): ParsedFile {
   }
   // A description on the last line has no blank line after it to reach the check above. Desktop
   // always writes a trailing newline, which does, but a hand-edited file need not.
-  if (pendingDescription.length) orphanDescription();
+  if (pendingDescription) orphanDescription(pendingDescription);
   return { file, roots, issues, lineCount: lines.length };
 }

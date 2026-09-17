@@ -66,6 +66,23 @@ describe("parseTmdl", () => {
     ]);
   });
 
+  it("reports a run of /// lines at the line the run started on", () => {
+    // The whole run is one description, so the issue points at where it begins rather than at the
+    // last line before the gap.
+    const pf = parseTmdl(
+      "t.tmdl",
+      "table T\n\t/// One\n\t/// Two\n\n\tcolumn A\n\t\tdataType: string\n",
+    );
+    expect(pf.issues).toEqual([
+      {
+        file: "t.tmdl",
+        line: 2,
+        text: "\t/// One",
+        reason: "description is not followed by a declaration",
+      },
+    ]);
+  });
+
   it("reports a /// description at the end of a file, with or without a trailing newline", () => {
     const orphan = {
       file: "t.tmdl",

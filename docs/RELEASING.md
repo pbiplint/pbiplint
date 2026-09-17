@@ -36,7 +36,10 @@ Do these once, at the first release, not before.
    ```
 
 4. The Release workflow verifies the tag against the version, runs every check, builds, dry-runs
-   the tarballs, publishes both packages, and creates the GitHub release with generated notes.
+   the tarballs, publishes both packages, and creates the GitHub release with generated notes. It
+   does that in two jobs, so anything that fails once the checks are green failed in the second
+   one: `verify` checks the tag and runs lint, types, tests, the browser check and the pack check,
+   then `publish` builds again, uploads both packages to npm and creates the release.
    Watch it with `gh run watch --repo pbiplint/pbiplint`.
 5. Check: `npx pbiplint@0.2.0 --sample` in an empty folder exits 1 with 161 findings.
 

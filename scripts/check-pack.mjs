@@ -6,6 +6,7 @@
 // differ. Scripts are skipped so the check looks at what the last build produced, exactly as the
 // release workflow publishes it.
 import { execFileSync } from "node:child_process";
+import { realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 export const REQUIRED = {
@@ -47,14 +48,17 @@ export const FORBIDDEN = [
 export function packProblems(packs) {
   const problems = [];
   for (const pack of packs) {
-    const required = REQUIRED[pack.name];
     // A renamed package would otherwise be checked against an empty list and pass in silence.
-    if (!required) {
+    // Object.hasOwn rather than a truthiness test on the lookup, because a package named after
+    // something on Object.prototype, constructor or toString, would find an inherited function
+    // there and read as known.
+    if (!Object.hasOwn(REQUIRED, pack.name)) {
       problems.push(
         `${pack.name}: not a package this check knows; add it to REQUIRED or stop packing it`,
       );
       continue;
     }
+    const required = REQUIRED[pack.name];
     const files = new Set(pack.files.map((f) => f.path));
     for (const f of required) if (!files.has(f)) problems.push(`${pack.name}: missing ${f}`);
     for (const f of files)
@@ -83,4 +87,9 @@ function main() {
   console.log("pack contents look right");
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
+// Only when run as a script, so packProblems can be imported by a test. argv[1] is realpathed
+// first because Node realpaths the ESM main and not argv[1], so invoking this through a symlink
+// would leave the two spellings unequal, skip main() and exit 0, and a pack check that inspected
+// nothing would look like one that passed.
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href)
+  main();

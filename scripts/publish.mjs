@@ -8,7 +8,7 @@
 // The publish runs with --ignore-scripts, so the tarball is exactly the tree check:pack
 // inspected: no prepack rebuild happens between the check and the upload.
 import { execFileSync, spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 export const PACKAGE_DIRS = ["packages/core", "packages/cli"];
@@ -49,5 +49,9 @@ function main() {
   }
 }
 
-// Only when run as a script, so viewState can be imported by a test.
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
+// Only when run as a script, so viewState can be imported by a test. argv[1] is realpathed first
+// because Node realpaths the ESM main and not argv[1], so invoking this through a symlink would
+// leave the two spellings unequal, skip main() and exit 0, and the workflow would go on to create
+// a GitHub release for a version that was never published.
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href)
+  main();

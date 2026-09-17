@@ -1,4 +1,6 @@
+# The page generator requires LF frontmatter. Listed first so the two fixture rules below win for
+# a Markdown file inside them: a fixture is compared byte for byte and must never be normalised.
+*.md text eol=lf
+
 examples/** -text
 tests/fixtures/** -text
-# The page generator requires LF frontmatter.
-*.md text eol=lf

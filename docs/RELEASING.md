@@ -1,8 +1,9 @@
 # Releasing pbiplint
 
-Two packages ship together at the same version: `@pbiplint/core` and `pbiplint` (the command
-line, which bundles the core). The site at pbiplint.com deploys itself on every push to main and
-is not versioned.
+Two packages ship together at the same version from the tag workflow: `@pbiplint/core` and
+`pbiplint` (the command line, which bundles the core). A third, `pbip-lint`, is an alias for the
+command line and is published by hand for now; see the last section. The site at pbiplint.com
+deploys itself on every push to main and is not versioned.
 
 ## One-time setup
 
@@ -57,7 +58,27 @@ npm publish -w pbiplint
 Then configure the trusted publisher for each package and push the tag, which creates the GitHub
 release and skips the two publishes, because both versions are already on the registry.
 
-## Later
+## The pbip-lint alias
 
-`pbip-lint` (with the hyphen) will be published as a thin package that depends on `pbiplint`, so a
-guessed name still installs the right thing. Not before v0.1.0 has been out for a while.
+`pbip-lint` (with the hyphen) is a thin package that depends on `pbiplint` and hands the command
+straight to it, so a guessed name still installs the right thing. It lives in `packages/alias`.
+
+It is not in the release workflow yet: `scripts/publish.mjs`, `scripts/check-pack.mjs`, and the
+version bump above all still name two packages. Until issue #14 closes, the alias is published by
+hand, and it has to be republished after any release that changes the version, or `npx pbip-lint`
+keeps serving the old one. From a clean checkout of the release commit, logged in to npm:
+
+```bash
+npm ci && npm run build -w pbip-lint
+npm pack --dry-run -w pbip-lint
+npm publish -w pbip-lint
+```
+
+**Read the file list the dry run prints, and do not publish unless `LICENSE` is one of four.** That
+file is copied from the repo root at build time and is gitignored, npm does not warn when a `files`
+entry is missing, and a published version can never be replaced. This is also why the publish here
+does not pass `--ignore-scripts`, unlike `scripts/publish.mjs`: the `prepack` script is what puts
+the license in the tarball.
+
+Then configure the trusted publisher for the package the same way as the other two, so it is ready
+when the workflow starts publishing it.

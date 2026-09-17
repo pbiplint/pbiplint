@@ -8,9 +8,17 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { CATEGORY_ORDER as CORE_CATEGORY_ORDER } from "@pbiplint/core";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { generateSite, pageEntries, RULES_DIR } from "../src/build/generate.js";
-import { NAV, parseFrontmatter, rulePage, rulesIndex, type RuleMeta } from "../src/build/pages.js";
+import {
+  CATEGORY_ORDER,
+  NAV,
+  parseFrontmatter,
+  rulePage,
+  rulesIndex,
+  type RuleMeta,
+} from "../src/build/pages.js";
 
 const read = (slug: string): string => readFileSync(join(RULES_DIR, `${slug}.md`), "utf8");
 const home = readFileSync(new URL("../index.html", import.meta.url), "utf8");
@@ -181,9 +189,19 @@ describe("rulesIndex", () => {
   });
   it("refuses a rule whose category has no section, rather than dropping it from the index", () => {
     const invented = { ...metas[0]!, slug: "invented", category: "Invented" };
-    expect(() => rulesIndex([invented])).toThrow('invented: unknown category "Invented"');
+    expect(() => rulesIndex([invented])).toThrow(
+      'invented: unknown category "Invented" (add it to CATEGORY_ORDER in packages/web/src/build/pages.ts)',
+    );
     // Every real rule still passes.
     expect(() => rulesIndex(metas)).not.toThrow();
+  });
+});
+
+describe("CATEGORY_ORDER", () => {
+  it("still matches core's list, which the index now hard-fails on any drift from", () => {
+    // Only the test imports core: pages.ts is a build-time module, and core resolves to its dist,
+    // so importing it there would make generating the site wait on core being built.
+    expect(CATEGORY_ORDER).toEqual([...CORE_CATEGORY_ORDER]);
   });
 });
 

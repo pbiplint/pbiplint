@@ -9,7 +9,11 @@ export const NAV = [
   { href: "https://github.com/pbiplint/pbiplint", label: "GitHub" },
 ] as const;
 
-const CATEGORY_ORDER = [
+/**
+ * The sections of the rules index, in order. Core has the same list, but importing it would make
+ * this build depend on core's dist, so the copy is deliberate and a test holds the two together.
+ */
+export const CATEGORY_ORDER = [
   "Performance",
   "Error Prevention",
   "DAX Expressions",
@@ -210,7 +214,9 @@ export function rulesIndex(metas: RuleMeta[]): string {
   // nothing links to.
   for (const m of metas)
     if (!CATEGORY_ORDER.includes(m.category))
-      throw new Error(`${m.slug}: unknown category "${m.category}"`);
+      throw new Error(
+        `${m.slug}: unknown category "${m.category}" (add it to CATEGORY_ORDER in packages/web/src/build/pages.ts)`,
+      );
   const count = (status: string): number => metas.filter((m) => m.status === status).length;
   const sections = CATEGORY_ORDER.map((category) => {
     const rows = metas

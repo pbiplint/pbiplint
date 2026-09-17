@@ -4,7 +4,7 @@ export type SeverityName = "info" | "warning" | "error";
 
 /** Shape of pbiplint.config.json. */
 export interface PbiplintConfig {
-  /** Optional JSON Schema URL, so an editor can validate and complete the file. Ignored here. */
+  /** Optional JSON Schema URL, so an editor can validate and complete the file. Read by nothing else. */
   $schema?: string;
   /** Per rule: "off" disables it; a severity name overrides its severity. */
   rules?: Record<string, "off" | SeverityName>;
@@ -62,6 +62,10 @@ export function resolveConfig(raw: unknown = {}): ResolvedConfig {
   for (const k of Object.keys(raw))
     if (k !== "rules" && k !== "failOn" && k !== "$schema")
       throw new ConfigError(`pbiplint.config.json: unknown key "${k}"`);
+  // Nothing here reads $schema, but a number or an object in it means the file was written by
+  // hand and misunderstood, and every other key says so rather than passing it over in silence.
+  if (raw.$schema !== undefined && typeof raw.$schema !== "string")
+    throw new ConfigError('pbiplint.config.json: "$schema" must be a string');
   const out: ResolvedConfig = { disabled: new Set(), severity: new Map(), failOn: 3 };
   if (raw.rules !== undefined) {
     if (!isRecord(raw.rules))

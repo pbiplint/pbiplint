@@ -79,10 +79,15 @@ describe("resolveConfig", () => {
     expect(() => resolveConfig({ rulez: {} })).toThrow(/unknown key "rulez"/);
     expect(() => resolveConfig([])).toThrow(ConfigError);
   });
-  it("accepts a $schema key so editors can validate the file", () => {
+  it("accepts a string $schema so editors can validate the file", () => {
     expect(() =>
       resolveConfig({ $schema: "https://pbiplint.com/schema/pbiplint.config.schema.json" }),
     ).not.toThrow();
+  });
+  it("rejects a $schema that is not a string", () => {
+    expect(() => resolveConfig({ $schema: 1 })).toThrow(ConfigError);
+    expect(() => resolveConfig({ $schema: 1 })).toThrow(/"\$schema" must be a string/);
+    // The unknown-key check still runs first, so a typo is named before a bad $schema.
     expect(() => resolveConfig({ $schema: 1, rulez: {} })).toThrow(/unknown key "rulez"/);
   });
 });

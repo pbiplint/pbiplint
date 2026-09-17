@@ -1,5 +1,5 @@
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Plugin } from "vite";
 import { contentPage, rulePage, rulesIndex, sitemap, type RuleMeta } from "./pages.js";
@@ -20,20 +20,29 @@ export function generateSite({
   contentDir = CONTENT_DIR,
   outDir = WEB_ROOT,
 }: GenerateOptions = {}): RuleMeta[] {
-  // Every page under rules/ is generated and gitignored, so it is cleared first: a renamed or
-  // deleted rule would otherwise leave a page behind that nothing links to and the sitemap no
-  // longer names, until the next clean checkout.
-  rmSync(join(outDir, "rules"), { recursive: true, force: true });
+  // The delete below is derived from outDir while the sources are read from rulesDir, so a caller
+  // that pointed outDir at the repo root would erase the very Markdown this is generating from.
+  if (resolve(outDir, "rules") === resolve(rulesDir))
+    throw new Error(`outDir would delete the rule sources in ${resolve(rulesDir)}`);
   const metas: RuleMeta[] = [];
+  const pages: { slug: string; html: string }[] = [];
   for (const file of readdirSync(rulesDir)
     .filter((f) => f.endsWith(".md"))
     .sort()) {
     const slug = file.replace(/\.md$/, "");
     const { html, meta } = rulePage(readFileSync(join(rulesDir, file), "utf8"), slug);
-    write(join(outDir, "rules", slug, "index.html"), html);
+    pages.push({ slug, html });
     metas.push(meta);
   }
-  write(join(outDir, "rules", "index.html"), rulesIndex(metas));
+  // Computed before anything is deleted, so a rule the index rejects leaves the previous build in
+  // place rather than a tree of pages with no index to reach them.
+  const index = rulesIndex(metas);
+  // Every page under rules/ is generated and gitignored, so it is cleared first: a renamed or
+  // deleted rule would otherwise leave a page behind that nothing links to and the sitemap no
+  // longer names, until the next clean checkout.
+  rmSync(join(outDir, "rules"), { recursive: true, force: true });
+  for (const p of pages) write(join(outDir, "rules", p.slug, "index.html"), p.html);
+  write(join(outDir, "rules", "index.html"), index);
   write(
     join(outDir, "about", "index.html"),
     contentPage(readFileSync(join(contentDir, "about.md"), "utf8"), "/about/"),

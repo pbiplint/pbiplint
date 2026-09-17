@@ -8,9 +8,9 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { generateSite, pageEntries, RULES_DIR } from "../src/build/generate.js";
-import { NAV, parseFrontmatter, rulePage, rulesIndex } from "../src/build/pages.js";
+import { NAV, parseFrontmatter, rulePage, rulesIndex, type RuleMeta } from "../src/build/pages.js";
 
 const read = (slug: string): string => readFileSync(join(RULES_DIR, `${slug}.md`), "utf8");
 const home = readFileSync(new URL("../index.html", import.meta.url), "utf8");
@@ -120,10 +120,44 @@ describe("generateSite", () => {
     expect(existsSync(join(out, "rules", "hide-foreign-keys", "index.html"))).toBe(true);
     expect(existsSync(join(out, "rules", "index.html"))).toBe(true);
   });
+  it("leaves the previous build alone when the index refuses a rule", () => {
+    const out = mkdtempSync(join(tmpdir(), "pbiplint-atomic-"));
+    mkdirSync(join(out, "rules", "kept"), { recursive: true });
+    writeFileSync(join(out, "rules", "kept", "index.html"), "<html>previous</html>");
+    const rules = mkdtempSync(join(tmpdir(), "pbiplint-badrules-"));
+    writeFileSync(
+      join(rules, "invented.md"),
+      read("hide-foreign-keys").replace("category: Formatting", "category: Invented"),
+    );
+    expect(() => generateSite({ outDir: out, rulesDir: rules })).toThrow(
+      'unknown category "Invented"',
+    );
+    expect(readFileSync(join(out, "rules", "kept", "index.html"), "utf8")).toBe(
+      "<html>previous</html>",
+    );
+  });
+  it("refuses an outDir whose rules folder is the rule sources it reads", () => {
+    // A temporary tree stands in for the repo root here, so a regression in the guard costs a
+    // temp folder rather than the checked-in rules/ the real default would point at.
+    const out = mkdtempSync(join(tmpdir(), "pbiplint-selfdelete-"));
+    const rules = join(out, "rules");
+    mkdirSync(rules, { recursive: true });
+    writeFileSync(join(rules, "hide-foreign-keys.md"), read("hide-foreign-keys"));
+    expect(() => generateSite({ outDir: out, rulesDir: rules })).toThrow(
+      "would delete the rule sources",
+    );
+    expect(existsSync(join(rules, "hide-foreign-keys.md"))).toBe(true);
+  });
 });
 
 describe("rulesIndex", () => {
-  const metas = generateSite({ outDir: mkdtempSync(join(tmpdir(), "pbiplint-index-")) });
+  // Generated inside beforeAll rather than at collection time: a rule the index refuses would
+  // otherwise fail the whole file with a collection error instead of the one test that covers it,
+  // and the work would run even when the file is filtered to an unrelated test.
+  let metas: RuleMeta[];
+  beforeAll(() => {
+    metas = generateSite({ outDir: mkdtempSync(join(tmpdir(), "pbiplint-index-")) });
+  });
   it("sorts with an explicit locale, so the order does not depend on the build machine", () => {
     // Intl.LocalesArgument, not string | string[], because ES2020 widened the parameter and the
     // mock has to match the signature it stands in for.

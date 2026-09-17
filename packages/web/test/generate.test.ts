@@ -8,9 +8,17 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { CATEGORY_ORDER as CORE_CATEGORY_ORDER } from "@pbiplint/core";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { generateSite, pageEntries, RULES_DIR } from "../src/build/generate.js";
-import { NAV, parseFrontmatter, rulePage } from "../src/build/pages.js";
+import {
+  CATEGORY_ORDER,
+  NAV,
+  parseFrontmatter,
+  rulePage,
+  rulesIndex,
+  type RuleMeta,
+} from "../src/build/pages.js";
 
 const read = (slug: string): string => readFileSync(join(RULES_DIR, `${slug}.md`), "utf8");
 const home = readFileSync(new URL("../index.html", import.meta.url), "utf8");
@@ -110,6 +118,90 @@ describe("generateSite", () => {
     expect(Object.keys(pageEntries(out)).sort()).toEqual(
       ["about", "rules", ...metas.map((m) => `rules/${m.slug}`)].sort(),
     );
+  });
+  it("clears the generated rules tree, so a renamed rule leaves no orphan page", () => {
+    const out = mkdtempSync(join(tmpdir(), "pbiplint-stale-"));
+    mkdirSync(join(out, "rules", "renamed-away"), { recursive: true });
+    writeFileSync(join(out, "rules", "renamed-away", "index.html"), "<html>stale</html>");
+    generateSite({ outDir: out });
+    expect(existsSync(join(out, "rules", "renamed-away", "index.html"))).toBe(false);
+    expect(existsSync(join(out, "rules", "hide-foreign-keys", "index.html"))).toBe(true);
+    expect(existsSync(join(out, "rules", "index.html"))).toBe(true);
+  });
+  it("leaves the previous build alone when the index refuses a rule", () => {
+    const out = mkdtempSync(join(tmpdir(), "pbiplint-atomic-"));
+    mkdirSync(join(out, "rules", "kept"), { recursive: true });
+    writeFileSync(join(out, "rules", "kept", "index.html"), "<html>previous</html>");
+    const rules = mkdtempSync(join(tmpdir(), "pbiplint-badrules-"));
+    writeFileSync(
+      join(rules, "invented.md"),
+      read("hide-foreign-keys").replace("category: Formatting", "category: Invented"),
+    );
+    expect(() => generateSite({ outDir: out, rulesDir: rules })).toThrow(
+      'unknown category "Invented"',
+    );
+    expect(readFileSync(join(out, "rules", "kept", "index.html"), "utf8")).toBe(
+      "<html>previous</html>",
+    );
+  });
+  it("refuses an outDir whose rules folder is the rule sources it reads", () => {
+    // A temporary tree stands in for the repo root here, so a regression in the guard costs a
+    // temp folder rather than the checked-in rules/ the real default would point at.
+    const out = mkdtempSync(join(tmpdir(), "pbiplint-selfdelete-"));
+    const rules = join(out, "rules");
+    mkdirSync(rules, { recursive: true });
+    writeFileSync(join(rules, "hide-foreign-keys.md"), read("hide-foreign-keys"));
+    expect(() => generateSite({ outDir: out, rulesDir: rules })).toThrow(
+      "would delete the rule sources",
+    );
+    expect(existsSync(join(rules, "hide-foreign-keys.md"))).toBe(true);
+  });
+});
+
+describe("rulesIndex", () => {
+  // Generated inside beforeAll rather than at collection time: a rule the index refuses would
+  // otherwise fail the whole file with a collection error instead of the one test that covers it,
+  // and the work would run even when the file is filtered to an unrelated test.
+  let metas: RuleMeta[];
+  beforeAll(() => {
+    metas = generateSite({ outDir: mkdtempSync(join(tmpdir(), "pbiplint-index-")) });
+  });
+  it("sorts with an explicit locale, so the order does not depend on the build machine", () => {
+    // Intl.LocalesArgument, not string | string[], because ES2020 widened the parameter and the
+    // mock has to match the signature it stands in for.
+    const seen: Intl.LocalesArgument[] = [];
+    const real = String.prototype.localeCompare;
+    const spy = vi.spyOn(String.prototype, "localeCompare").mockImplementation(function (
+      this: string,
+      that: string,
+      locales?: Intl.LocalesArgument,
+    ) {
+      seen.push(locales);
+      return real.call(this, that, locales);
+    });
+    try {
+      rulesIndex(metas);
+    } finally {
+      spy.mockRestore();
+    }
+    expect(seen.length).toBeGreaterThan(0);
+    expect([...new Set(seen)]).toEqual(["en"]);
+  });
+  it("refuses a rule whose category has no section, rather than dropping it from the index", () => {
+    const invented = { ...metas[0]!, slug: "invented", category: "Invented" };
+    expect(() => rulesIndex([invented])).toThrow(
+      'invented: unknown category "Invented" (add it to CATEGORY_ORDER in packages/web/src/build/pages.ts)',
+    );
+    // Every real rule still passes.
+    expect(() => rulesIndex(metas)).not.toThrow();
+  });
+});
+
+describe("CATEGORY_ORDER", () => {
+  it("still matches core's list, which the index now hard-fails on any drift from", () => {
+    // Only the test imports core: pages.ts is a build-time module, and core resolves to its dist,
+    // so importing it there would make generating the site wait on core being built.
+    expect(CATEGORY_ORDER).toEqual([...CORE_CATEGORY_ORDER]);
   });
 });
 

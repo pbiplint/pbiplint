@@ -18,8 +18,10 @@ jobs:
     permissions:
       contents: read
     steps:
-      # persist-credentials: false, so no git credential is left in .git/config for the steps
-      # that follow. Nothing in this job pushes.
+      # Pinned to the SHA that triggered the run, because a tag is mutable and checkout resolves a
+      # tag ref at fetch time: without the pin this job could verify a different commit from the
+      # one the publish job ships. That job pins for the same reason. persist-credentials: false,
+      # so no git credential is left in .git/config for the steps that follow. Nothing here pushes.
       - uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}

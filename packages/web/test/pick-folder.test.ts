@@ -69,6 +69,13 @@ describe("readPickedDirectory", () => {
     await readPickedDirectory(abort as never, () => calls.push("picked"));
     expect(calls).toEqual([]);
   });
+  it("reads nothing when the picked folder is itself one of the skipped folders", async () => {
+    const picked = dirHandle("node_modules", [
+      dirHandle("pkg", [fileHandle("model.tmdl", "model Model\n")]),
+    ]);
+    const out = await readPickedDirectory(async () => picked as never);
+    expect(out).toEqual({ entries: [], modelFolders: [] });
+  });
   it("returns null when the person cancels the dialog", async () => {
     const abort = async () => {
       throw new DOMException("cancelled", "AbortError");

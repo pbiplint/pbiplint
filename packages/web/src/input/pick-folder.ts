@@ -48,6 +48,9 @@ async function walkHandle(
   prefix: string,
   tree: InputTree,
 ): Promise<void> {
+  // Tested here rather than at the recursive call below, so the picked root is tested too: the
+  // drop route's walkEntry checks the entry it is handed the same way.
+  if (SKIP_DIRS.has(dir.name)) return;
   if (isModelFolder(dir.name)) tree.modelFolders.push(prefix);
   for await (const handle of dir.values()) {
     if (handle.kind === "file") {
@@ -56,7 +59,7 @@ async function walkHandle(
           path: `${prefix}/${handle.name}`,
           text: await (await handle.getFile()).text(),
         });
-    } else if (!SKIP_DIRS.has(handle.name)) {
+    } else {
       await walkHandle(handle, `${prefix}/${handle.name}`, tree);
     }
   }

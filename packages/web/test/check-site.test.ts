@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { checkSite } from "../src/build/check-site.js";
+import { checkSite, scanTags } from "../src/build/check-site.js";
 import { CSP } from "../src/build/csp.js";
 
 const META = `<meta http-equiv="Content-Security-Policy" content="${CSP}">`;
@@ -88,6 +88,7 @@ describe("checkSite", () => {
       'assets/a.css: external @import "https://fonts.example/y.css"',
       "b/index.html: external resource <script src=https://cdn.example/x.js>",
       'c/index.html: external @import "https://fonts.example/x.css"',
+      "c/index.html: inline style <style>",
       'index.html: inline event handler <button onclick="go()">',
     ]);
   });
@@ -100,6 +101,78 @@ describe("checkSite", () => {
       'a/index.html: inline event handler <button onclick="go()">',
     ]);
   });
+  it("names an inline style attribute, which style-src 'self' makes as dead as a handler", () => {
+    const dir = site({
+      "index.html": `<html><head>${META}</head><body><div style="color:red">x</div></body></html>`,
+    });
+    expect(checkSite(dir).problems).toEqual(['index.html: inline style <div style="color:red">']);
+  });
+  it("names a style element, and still reads its body for an off-origin url", () => {
+    const dir = site({
+      "index.html": `<html><head>${META}<style>@import "https://fonts.example/x.css";</style></head></html>`,
+    });
+    expect(checkSite(dir).problems).toEqual([
+      'index.html: external @import "https://fonts.example/x.css"',
+      "index.html: inline style <style>",
+    ]);
+  });
+  it("names an off-origin imagesrcset on a preload link", () => {
+    const dir = site({
+      "index.html": `<html><head>${META}<link rel="preload" as="image" imagesrcset="/a.png 1x, https://evil.example/x.png 2x"></head></html>`,
+    });
+    expect(checkSite(dir).problems).toEqual([
+      'index.html: external resource <link rel="preload" as="image" imagesrcset="/a.png 1x, https://evil.example/x.png 2x">',
+    ]);
+  });
+  it("reads the data of an object and the poster of a video", () => {
+    const dir = site({
+      "index.html": `<html><head>${META}</head><body><object data="https://evil.example/x.swf"></object><video poster="https://evil.example/p.png"></video></body></html>`,
+    });
+    expect(checkSite(dir).problems).toEqual([
+      'index.html: external resource <object data="https://evil.example/x.swf">',
+      'index.html: external resource <video poster="https://evil.example/p.png">',
+    ]);
+  });
+  // An unquoted value ends at the first space, so its candidates carry no descriptors, only commas.
+  it("names an unquoted srcset whose off-origin candidate is not the first", () => {
+    const dir = site({
+      "index.html": `<html><head>${META}</head><body><img src=/a.png srcset=/a.png,https://evil.example/x.png></body></html>`,
+    });
+    expect(checkSite(dir).problems).toEqual([
+      "index.html: external resource <img src=/a.png srcset=/a.png,https://evil.example/x.png>",
+    ]);
+  });
+  it("reads past a > inside a quoted value, so the attributes after it are still checked", () => {
+    const dir = site({
+      "index.html": `<html><head>${META}</head><body><img alt="a>b" src="https://evil.example/x.png"></body></html>`,
+    });
+    expect(checkSite(dir).problems).toEqual([
+      'index.html: external resource <img alt="a>b" src="https://evil.example/x.png">',
+    ]);
+  });
+  it("names a handler that follows an unquoted value containing a quote", () => {
+    const dir = site({
+      "index.html": `<html><head>${META}</head><body><div x=a="b onclick=" y>hi</div></body></html>`,
+    });
+    expect(checkSite(dir).problems).toEqual([
+      'index.html: inline event handler <div x=a="b onclick=" y>',
+    ]);
+  });
+  it("names a tag that never closes, which would otherwise vanish from every check", () => {
+    const dir = site({
+      "index.html": `<html><head>${META}</head><body><img src="/a.png"`,
+    });
+    expect(checkSite(dir).problems).toEqual(['index.html: unterminated tag <img src="/a.png"']);
+  });
+  it("shortens a runaway unterminated tag, so the message stays readable", () => {
+    const dir = site({
+      "index.html": `<html><head>${META}</head><body><img alt="${"x".repeat(200)}"`,
+    });
+    const [problem] = checkSite(dir).problems;
+    expect(problem?.startsWith('index.html: unterminated tag <img alt="xxx')).toBe(true);
+    expect(problem?.endsWith("...")).toBe(true);
+    expect(problem?.length).toBeLessThan(120);
+  });
   it("reads every unquoted attribute on a tag, not only the first", () => {
     const dir = site({
       "index.html": `<html><head>${META}</head><body><img src=/a.png srcset=https://evil.example/x.png></body></html>`,
@@ -107,5 +180,50 @@ describe("checkSite", () => {
     expect(checkSite(dir).problems).toEqual([
       "index.html: external resource <img src=/a.png srcset=https://evil.example/x.png>",
     ]);
+  });
+});
+
+describe("scanTags", () => {
+  it("reads a double-quoted, single-quoted, bare, and valueless attribute", () => {
+    const [tag] = scanTags(`<img src="/a.png" alt='x' width=32 hidden>`);
+    expect(tag?.name).toBe("img");
+    expect([...(tag?.attrs ?? [])]).toEqual([
+      ["src", "/a.png"],
+      ["alt", "x"],
+      ["width", "32"],
+      ["hidden", ""],
+    ]);
+  });
+  it("does not end a tag at a > inside a quoted value", () => {
+    const [tag] = scanTags(`<img alt="a>b" src="https://evil.example/x.png">`);
+    expect(tag?.attrs.get("src")).toBe("https://evil.example/x.png");
+    expect(tag?.raw).toBe(`<img alt="a>b" src="https://evil.example/x.png">`);
+  });
+  it("reads an unquoted value containing a quote as one value, so the next name is still a name", () => {
+    const [tag] = scanTags(`<div x=a="b onclick=" y>`);
+    expect([...(tag?.attrs.keys() ?? [])]).toEqual(["x", "onclick", "y"]);
+  });
+  it("keeps an = inside a quoted value out of the attribute names", () => {
+    const [tag] = scanTags(`<meta name="description" content="Set only = TRUE to keep it." />`);
+    expect([...(tag?.attrs.keys() ?? [])]).toEqual(["name", "content"]);
+  });
+  it("lowercases the element name and every attribute name", () => {
+    const [tag] = scanTags(`<IMG SrcSet="/a.png">`);
+    expect(tag?.name).toBe("img");
+    expect(tag?.attrs.get("srcset")).toBe("/a.png");
+  });
+  it("marks a tag that never closes as unterminated", () => {
+    const [tag] = scanTags(`<img src="/a.png"`);
+    expect(tag?.unterminated).toBe(true);
+  });
+  it("marks a closed tag terminated", () => {
+    const [tag] = scanTags(`<img src="/a.png">`);
+    expect(tag?.unterminated).toBe(false);
+  });
+  it("reads no tag from a < that starts none", () => {
+    expect(scanTags("a < b, and 3<4")).toEqual([]);
+  });
+  it("resumes after a tag, so a < inside a value starts nothing", () => {
+    expect(scanTags(`<img alt="a<b"><p id="x">`).map((t) => t.name)).toEqual(["img", "p"]);
   });
 });

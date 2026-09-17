@@ -34,13 +34,15 @@ export function download(file: ExportFile): void {
 }
 
 /**
- * Copies the text with the async clipboard API. An insecure context or an older browser has no
- * `navigator.clipboard` at all, so the miss comes back as a rejected promise rather than a throw:
- * callers then have one failure path to handle instead of two.
+ * Copies the text with the async clipboard API. Every way this can go wrong comes back as a
+ * rejected promise, so callers have one failure path rather than two: an insecure context or an
+ * older browser has no `navigator.clipboard` at all, a permissions policy can make reading the
+ * property or calling `writeText` throw outright, and a refused permission rejects.
  */
 export function copy(file: ExportFile): Promise<void> {
-  const clipboard: Clipboard | undefined = navigator.clipboard;
-  return clipboard
-    ? clipboard.writeText(file.text)
-    : Promise.reject(new Error("Clipboard access is not available"));
+  return Promise.resolve().then(() => {
+    const clipboard: Clipboard | undefined = navigator.clipboard;
+    if (!clipboard) throw new Error("Clipboard access is not available");
+    return clipboard.writeText(file.text);
+  });
 }

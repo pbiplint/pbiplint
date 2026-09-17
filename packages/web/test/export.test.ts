@@ -63,4 +63,23 @@ describe("export", () => {
     expect(promise).toBeInstanceOf(Promise);
     await expect(promise).rejects.toThrow("Clipboard access is not available");
   });
+  it("rejects rather than throws when writeText itself throws", async () => {
+    setClipboard({
+      writeText: () => {
+        throw new Error("Write permission denied by policy");
+      },
+    });
+    const promise = copy(file);
+    expect(promise).toBeInstanceOf(Promise);
+    await expect(promise).rejects.toThrow("Write permission denied by policy");
+  });
+  it("rejects rather than throws when reading navigator.clipboard throws", async () => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      get() {
+        throw new Error("Blocked by permissions policy");
+      },
+    });
+    await expect(copy(file)).rejects.toThrow("Blocked by permissions policy");
+  });
 });

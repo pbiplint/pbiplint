@@ -13,6 +13,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { generateSite, pageEntries, RULES_DIR } from "../src/build/generate.js";
 import {
   CATEGORY_ORDER,
+  contentPage,
   NAV,
   parseFrontmatter,
   rulePage,
@@ -25,7 +26,10 @@ const home = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 
 describe("parseFrontmatter", () => {
   it("reads scalars, bracket lists, dash lists, and empty keys", () => {
-    const { data, body } = parseFrontmatter(read("hide-foreign-keys"));
+    const { data, body } = parseFrontmatter(
+      read("hide-foreign-keys"),
+      "rules/hide-foreign-keys.md",
+    );
     expect(data.id).toBe("HIDE_FOREIGN_KEYS");
     expect(data.name).toBe("Hide foreign keys");
     expect(data.scope).toEqual(["Column", "CalculatedColumn", "CalculatedTableColumn"]);
@@ -34,6 +38,38 @@ describe("parseFrontmatter", () => {
     ]);
     expect(data.video).toEqual([]);
     expect(body.trim().startsWith("# Hide foreign keys")).toBe(true);
+  });
+});
+
+describe("parseFrontmatter errors", () => {
+  const source = "rules/made-up.md";
+  it("names the page when there is no frontmatter at all", () => {
+    expect(() => parseFrontmatter("# No frontmatter\n", source)).toThrow(
+      "rules/made-up.md: no frontmatter (the page must open with a --- block)",
+    );
+  });
+  it("refuses a frontmatter line it cannot read rather than dropping it", () => {
+    // A key silently skipped is a rule page that renders with a field missing and no sign of why.
+    expect(() => parseFrontmatter("---\nid: X\nstray line\n---\nbody\n", source)).toThrow(
+      'rules/made-up.md: cannot read frontmatter line "stray line" (expected `key: value` or an indented `- item`)',
+    );
+  });
+  it("allows a blank line between frontmatter keys", () => {
+    const { data } = parseFrontmatter("---\nid: X\n\nname: Y\n---\nbody\n", source);
+    expect(data).toEqual({ id: "X", name: "Y" });
+  });
+  it("unescapes a quoted value rather than passing the backslashes through", () => {
+    const { data } = parseFrontmatter(
+      '---\nname: "A \\"quoted\\" name, C:\\\\path"\n---\nbody\n',
+      source,
+    );
+    expect(data.name).toBe('A "quoted" name, C:\\path');
+  });
+  it("names the file the reader would have to edit, from either caller", () => {
+    expect(() => rulePage("# No frontmatter\n", "made-up")).toThrow("rules/made-up.md:");
+    expect(() => contentPage("# No frontmatter\n", "/about/", "content/about.md")).toThrow(
+      "content/about.md:",
+    );
   });
 });
 

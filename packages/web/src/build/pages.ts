@@ -32,26 +32,46 @@ export const escapeHtml = (s: string): string =>
 
 export type Frontmatter = Record<string, string | string[]>;
 
-/** The frontmatter the rule pages use: `key: value`, `key: [a, b]`, and `key:` followed by `  - item` lines. */
-export function parseFrontmatter(text: string): { data: Frontmatter; body: string } {
+/** A double-quoted scalar, with the escapes a quoted value is allowed to carry resolved. */
+const unquote = (value: string): string => {
+  const quoted = /^"(.*)"$/.exec(value);
+  return quoted ? quoted[1]!.replace(/\\(["\\])/g, "$1") : value;
+};
+
+/**
+ * The frontmatter the rule pages use: `key: value`, `key: [a, b]`, and `key:` followed by
+ * `  - item` lines. Blank lines are allowed between keys; anything else it cannot read is an
+ * error rather than a skip, because a key dropped in silence renders a page with a field missing
+ * and nothing to say why. `source` is the file a reader would open to fix that, such as
+ * `rules/<slug>.md`, and it names the page in every error thrown here.
+ */
+export function parseFrontmatter(
+  text: string,
+  source: string,
+): { data: Frontmatter; body: string } {
   const m = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/.exec(text);
-  if (!m) throw new Error("The page has no frontmatter");
+  if (!m) throw new Error(`${source}: no frontmatter (the page must open with a --- block)`);
   const data: Frontmatter = {};
-  let list: string[] | null = null;
+  let items: string[] | null = null;
   for (const line of m[1]!.split("\n")) {
     const item = /^\s+- (.*)$/.exec(line);
-    if (item && list) {
-      list.push(item[1]!.trim());
+    if (item && items) {
+      items.push(item[1]!.trim());
       continue;
     }
+    if (line.trim() === "") continue;
     const kv = /^([A-Za-z_]+):\s*(.*)$/.exec(line);
-    if (!kv) continue;
+    if (!kv)
+      throw new Error(
+        `${source}: cannot read frontmatter line ${JSON.stringify(line)} ` +
+          "(expected `key: value` or an indented `- item`)",
+      );
     const key = kv[1]!;
     const value = kv[2]!.trim();
-    list = null;
+    items = null;
     if (value === "") {
-      list = [];
-      data[key] = list;
+      items = [];
+      data[key] = items;
     } else if (value.startsWith("[") && value.endsWith("]")) {
       data[key] = value
         .slice(1, -1)
@@ -59,7 +79,7 @@ export function parseFrontmatter(text: string): { data: Frontmatter; body: strin
         .map((s) => s.trim())
         .filter(Boolean);
     } else {
-      data[key] = value.replace(/^"(.*)"$/, "$1");
+      data[key] = unquote(value);
     }
   }
   return { data, body: m[2]! };
@@ -177,7 +197,7 @@ export interface RuleMeta {
 }
 
 export function rulePage(markdown: string, slug: string): { html: string; meta: RuleMeta } {
-  const { data, body } = parseFrontmatter(markdown);
+  const { data, body } = parseFrontmatter(markdown, `rules/${slug}.md`);
   const title = /^# (.+)$/m.exec(body)?.[1] ?? str(data.name);
   const meta: RuleMeta = {
     slug,
@@ -247,8 +267,8 @@ ${sections}
 }
 
 /** A Markdown page with `title` and `description` frontmatter, such as content/about.md. */
-export function contentPage(markdown: string, path: string): string {
-  const { data, body } = parseFrontmatter(markdown);
+export function contentPage(markdown: string, path: string, source: string): string {
+  const { data, body } = parseFrontmatter(markdown, source);
   return page({
     title: `${str(data.title)} · pbiplint`,
     description: str(data.description),

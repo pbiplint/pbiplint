@@ -122,6 +122,24 @@ describe("readPickedDirectory", () => {
     };
     expect(await readPickedDirectory(abort as never)).toBeNull();
   });
+  it("passes on a failure that is not a cancel, with nothing said about a read starting", async () => {
+    // A cancel is the one refusal that means "nothing happened". Everything else is worth showing,
+    // and onPicked must stay unrun either way: the page starts its run from that call.
+    const calls: string[] = [];
+    const denied = async () => {
+      throw new DOMException("permission denied", "NotAllowedError");
+    };
+    await expect(readPickedDirectory(denied as never, () => calls.push("picked"))).rejects.toThrow(
+      "permission denied",
+    );
+    const broken = async () => {
+      throw new TypeError("showDirectoryPicker is not a function");
+    };
+    await expect(readPickedDirectory(broken as never, () => calls.push("picked"))).rejects.toThrow(
+      TypeError,
+    );
+    expect(calls).toEqual([]);
+  });
 });
 
 describe("readDirectoryInput", () => {

@@ -9,6 +9,7 @@ packages/cli/NOTICE
 packages/cli/LICENSE
 packages/core/NOTICE
 packages/core/LICENSE
+packages/alias/LICENSE
 *.tsbuildinfo
 .claude/worktrees/
 .superpowers/

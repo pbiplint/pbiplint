@@ -30,6 +30,8 @@ it("declares the same Node floor as the workspace root, which require() of an ES
   );
   expect(lock.packages["packages/core"].engines.node).toBe(NODE_FLOOR);
   expect(lock.packages["packages/cli"].engines.node).toBe(NODE_FLOOR);
+  // The root workspace carries its own copy too, and drifts the same way the other two did.
+  expect(lock.packages[""].engines.node).toBe(NODE_FLOOR);
 });
 
 it("exports the summary helpers the site shares with the text format", () => {

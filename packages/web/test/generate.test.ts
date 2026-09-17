@@ -1,4 +1,5 @@
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -8,9 +9,10 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { ConfigEnv, UserConfig } from "vite";
 import { CATEGORY_ORDER as CORE_CATEGORY_ORDER } from "@pbiplint/core";
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { generateSite, pageEntries, RULES_DIR } from "../src/build/generate.js";
+import { generatePlugin, generateSite, pageEntries, RULES_DIR } from "../src/build/generate.js";
 import {
   CATEGORY_ORDER,
   contentPage,
@@ -250,6 +252,40 @@ describe("pageEntries", () => {
     }
     writeFileSync(join(out, "index.html"), "<html></html>");
     expect(Object.keys(pageEntries(out)).sort()).toEqual(["home", "rules/a", "test-suite"]);
+  });
+  it("skips the package's own folders by name, and only where they sit", () => {
+    const out = mkdtempSync(join(tmpdir(), "pbiplint-entries-"));
+    for (const dir of ["node_modules/p", "dist", "public", "src", "test", "content", "rules/src"]) {
+      mkdirSync(join(out, dir), { recursive: true });
+      writeFileSync(join(out, dir, "index.html"), "<html></html>");
+    }
+    writeFileSync(join(out, "404.html"), "<html></html>");
+    expect(Object.keys(pageEntries(out)).sort()).toEqual(["404", "rules/src"]);
+  });
+  it("does not read what it skips, so a folder it cannot open is no reason to fail", () => {
+    const out = mkdtempSync(join(tmpdir(), "pbiplint-entries-"));
+    mkdirSync(join(out, "node_modules/p"), { recursive: true });
+    writeFileSync(join(out, "node_modules/p/index.html"), "<html></html>");
+    mkdirSync(join(out, "rules/a"), { recursive: true });
+    writeFileSync(join(out, "rules/a/index.html"), "<html></html>");
+    // Unreadable, so a walk that descends into it first and filters afterwards fails loudly here.
+    chmodSync(join(out, "node_modules"), 0o000);
+    try {
+      expect(Object.keys(pageEntries(out))).toEqual(["rules/a"]);
+    } finally {
+      chmodSync(join(out, "node_modules"), 0o755);
+    }
+  });
+});
+
+describe("generatePlugin", () => {
+  it("generates for a build and for the dev server, but not for a preview", () => {
+    const apply = generatePlugin().apply as (c: UserConfig, env: ConfigEnv) => boolean;
+    expect(apply({}, { command: "build", mode: "production" })).toBe(true);
+    expect(apply({}, { command: "serve", mode: "development" })).toBe(true);
+    // vite preview resolves the config as a serve, and the pages it would generate land in the
+    // source tree while the server is only there to hand back what the build already wrote.
+    expect(apply({}, { command: "serve", mode: "production", isPreview: true })).toBe(false);
   });
 });
 

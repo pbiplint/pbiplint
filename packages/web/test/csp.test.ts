@@ -15,9 +15,14 @@ describe("content security policy", () => {
     const plugin = cspPlugin();
     expect(plugin.apply).toBe("build");
     const hook = plugin.transformIndexHtml as unknown as (html: string) => {
+      html: string;
       tags: { tag: string; attrs: Record<string, string>; injectTo: string }[];
     };
-    const out = hook("<html><head></head></html>");
+    const page = "<html><head></head><body><p>a page</p></body></html>";
+    const out = hook(page);
+    // The hook hands the page back as it found it: dropping it would replace every built page
+    // with the meta tag alone.
+    expect(out.html).toBe(page);
     expect(out.tags).toEqual([
       {
         tag: "meta",

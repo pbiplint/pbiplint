@@ -1,8 +1,8 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
-import { describe, expect, it } from "vitest";
-import { checkSite, scanTags } from "../src/build/check-site.js";
+import { basename, dirname, join } from "node:path";
+import { describe, expect, it, vi } from "vitest";
+import { checkSite, scanTags, siteCheckPlugin } from "../src/build/check-site.js";
 import { CSP } from "../src/build/csp.js";
 
 const META = `<meta http-equiv="Content-Security-Policy" content="${CSP}">`;
@@ -225,5 +225,58 @@ describe("scanTags", () => {
   });
   it("resumes after a tag, so a < inside a value starts nothing", () => {
     expect(scanTags(`<img alt="a<b"><p id="x">`).map((t) => t.name)).toEqual(["img", "p"]);
+  });
+});
+
+describe("siteCheckPlugin", () => {
+  /** Runs the plugin over a built site the way Vite does: resolve the config, then close the bundle. */
+  function run(dir: string): { logs: string[]; error?: Error } {
+    const plugin = siteCheckPlugin();
+    expect(plugin.apply).toBe("build");
+    const configResolved = plugin.configResolved as unknown as (c: {
+      root: string;
+      build: { outDir: string };
+    }) => void;
+    const closeBundle = plugin.closeBundle as unknown as () => void;
+    // outDir is Vite's own, relative to the project root, so the plugin has to join the two to
+    // find the folder the build actually wrote.
+    configResolved({ root: dirname(dir), build: { outDir: basename(dir) } });
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      closeBundle();
+      return { logs: log.mock.calls.map((c) => String(c[0])) };
+    } catch (e) {
+      return { logs: log.mock.calls.map((c) => String(c[0])), error: e as Error };
+    } finally {
+      log.mockRestore();
+    }
+  }
+
+  it("checks the folder the build wrote to, and reports what it read", () => {
+    const dir = site({
+      "index.html": `<html><head>${META}</head><body><img src="/favicon.svg"></body></html>`,
+      "assets/a.js": 'document.createElement("a");',
+    });
+    const { logs, error } = run(dir);
+    expect(error).toBeUndefined();
+    expect(logs[0]).toMatch(/^site: 2 files, \d+ KB$/);
+    expect(logs[1]).toBe(
+      "site check passed: CSP on every page, no external resources, no network APIs",
+    );
+  });
+
+  it("fails the build, naming every problem it found", () => {
+    const dir = site({
+      "index.html": "<html><head></head><body></body></html>",
+      "assets/a.js": 'fetch("/x");',
+    });
+    const { logs, error } = run(dir);
+    expect(error?.message).toContain("site check failed:");
+    expect(error?.message).toContain(
+      "index.html: no Content-Security-Policy meta with connect-src 'none'",
+    );
+    expect(error?.message).toContain("assets/a.js: references fetch(");
+    // The size line is written before the check can fail, so a failing build still says what it read.
+    expect(logs).toHaveLength(1);
   });
 });

@@ -59,22 +59,39 @@ function write(path: string, text: string): void {
   writeFileSync(path, text);
 }
 
+// Playwright's folders hold index.html files too (its report bundles fetch and XMLHttpRequest,
+// which the site check would then reject), so they are skipped by name along with the rest. Only
+// where they sit: these are the package's own folders, and a rule is free to be called "src".
+const NOT_PAGES = new Set([
+  "node_modules",
+  "dist",
+  "public",
+  "src",
+  "test",
+  "content",
+  "e2e",
+  "test-results",
+  "playwright-report",
+]);
+
 /** Every index.html under the package plus 404.html, keyed by site path, for Rollup. */
 export function pageEntries(root: string): Record<string, string> {
-  // Playwright's folders hold index.html files too (its report bundles fetch and XMLHttpRequest,
-  // which the site check would then reject), so they are skipped by name along with the rest.
-  const skip =
-    /^(node_modules|dist|public|src|test|content|e2e|test-results|playwright-report)([\\/]|$)/;
-  const files = readdirSync(root, { recursive: true })
-    .map(String)
-    .filter((p) => !skip.test(p) && (p.endsWith("index.html") || p === "404.html"));
+  const files: string[] = [];
+  // Pruned on the way down rather than filtered afterwards, so a skipped folder is never opened:
+  // node_modules alone can hold more files than the rest of the package put together.
+  const walk = (dir: string, prefix: string): void => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const rel = prefix + entry.name;
+      if (entry.isDirectory()) {
+        if (prefix === "" && NOT_PAGES.has(entry.name)) continue;
+        walk(join(dir, entry.name), `${rel}/`);
+      } else if (entry.name === "index.html" || rel === "404.html") files.push(rel);
+    }
+  };
+  walk(root, "");
   return Object.fromEntries(
     files.map((p) => [
-      p
-        .split("\\")
-        .join("/")
-        .replace(/\/?index\.html$/, "")
-        .replace(/\.html$/, "") || "home",
+      p.replace(/\/?index\.html$/, "").replace(/\.html$/, "") || "home",
       join(root, p),
     ]),
   );
@@ -84,6 +101,10 @@ export function pageEntries(root: string): Record<string, string> {
 export function generatePlugin(): Plugin {
   return {
     name: "pbiplint-generate",
+    // vite preview resolves the config the same way the dev server does, and this plugin writes
+    // into the source tree: previewing a build would regenerate every page underneath the finished
+    // one it was asked to serve.
+    apply: (_config, env) => !env.isPreview,
     config() {
       const n = generateSite().length;
       console.log(`generated ${n} rule pages, the rules index, the about page, and the sitemap`);

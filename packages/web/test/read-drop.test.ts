@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { InputTree } from "../src/input/model-files.js";
-import { readDataTransfer, walkEntry, wanted } from "../src/input/read-drop.js";
+import { MAX_DEPTH, readDataTransfer, walkEntry, wanted } from "../src/input/read-drop.js";
 
 /** A fake FileSystemEntry tree: a directory reader hands out its children in batches of two, then an empty batch. */
 function dir(
@@ -32,6 +32,27 @@ function file(name: string, fullPath: string, text: string): FileSystemFileEntry
     fullPath,
     file: (ok: (f: File) => void) => ok(new File([text], name)),
   } as unknown as FileSystemFileEntry;
+}
+
+/**
+ * Counts the directory readers a walk opens, and throws once it has opened more than `limit` of
+ * them. The throw is what makes a missing depth cap a fast red: a cycle walked with no cap
+ * exhausts the worker's memory and dies with SIGABRT long before an assertion at the end of a
+ * test could run, which reads as an unexplained crash rather than a failure.
+ */
+function readerCount(limit: number) {
+  const state = { readers: 0 };
+  const wrap = (entry: FileSystemDirectoryEntry): FileSystemDirectoryEntry =>
+    ({
+      ...entry,
+      createReader: () => {
+        state.readers += 1;
+        if (state.readers > limit)
+          throw new Error(`the walk opened more than ${limit} directory readers`);
+        return entry.createReader();
+      },
+    }) as unknown as FileSystemDirectoryEntry;
+  return { state, wrap };
 }
 
 describe("wanted", () => {
@@ -93,8 +114,21 @@ describe("walkEntry", () => {
     expect(seen.modelFolders).toEqual(["Proj/Old.SemanticModel", "Proj/New.SemanticModel"]);
     expect(opened).toBe(0);
   });
-  it("stops instead of looping when a folder contains itself", async () => {
-    // A symlink cycle would look like this. No browser hands one out today.
+  it("opens one reader per folder, which is what the depth cap counts", async () => {
+    // Anchors the number the cap test asserts: four nested folders, four readers. Without this,
+    // a count of MAX_DEPTH there could agree with the cap by coincidence rather than because the
+    // walk descends one reader at a time.
+    const { state, wrap } = readerCount(MAX_DEPTH);
+    const nest = (level: number): FileSystemEntry =>
+      wrap(dir(`L${level}`, `/${"L/".repeat(level)}L${level}`, level < 3 ? [nest(level + 1)] : []));
+    await walkEntry(nest(0), { entries: [], modelFolders: [] });
+    expect(state.readers).toBe(4);
+  });
+  it("stops at the depth cap instead of looping when a folder contains itself", async () => {
+    // A symlink cycle would look like this. No browser hands one out today. The reader count is
+    // what proves the walk stopped because of the cap: an empty tree on its own is also what a
+    // walk that gave up for some other reason leaves behind.
+    const { state, wrap } = readerCount(MAX_DEPTH + 1);
     const loop = {
       isFile: false,
       isDirectory: true,
@@ -104,15 +138,19 @@ describe("walkEntry", () => {
         let done = false;
         return {
           readEntries: (ok: (entries: FileSystemEntry[]) => void) => {
-            ok(done ? [] : [loop]);
+            ok(done ? [] : [wrapped]);
             done = true;
           },
         };
       },
     } as unknown as FileSystemDirectoryEntry;
+    const wrapped = wrap(loop);
     const tree: InputTree = { entries: [], modelFolders: [] };
-    await walkEntry(loop, tree);
+    await walkEntry(wrapped, tree);
     expect(tree).toEqual({ entries: [], modelFolders: [] });
+    // One reader per level, and the level that hits the cap opens none: the walk went exactly as
+    // deep as the cap allows and no deeper.
+    expect(state.readers).toBe(MAX_DEPTH);
   });
 });
 

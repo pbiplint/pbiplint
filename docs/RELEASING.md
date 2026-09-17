@@ -14,8 +14,20 @@ Do these once, at the first release, not before.
    because npm only lets a trusted publisher be configured on a package that already exists.
 3. Configure trusted publishing on npmjs.com for each package: package settings, "Trusted
    publisher", GitHub Actions, organization `pbiplint`, repository `pbiplint`, workflow file
-   `release.yml`, environment left blank. From then on the workflow publishes without a token and
-   npm attaches provenance.
+   `release.yml`, environment left blank.
+4. Under "Allowed actions" on that same panel, tick **Allow `npm publish`**, for each package.
+   This one is easy to miss and nothing local can catch it. A new trusted publisher is created
+   with `npm stage publish` permission only, which uploads a package and waits for a human to
+   promote it. This workflow runs a direct `npm publish`, so without the tick the registry
+   refuses it with `403 ... OIDC permission denied for this action`, after the OIDC token has
+   been minted and the provenance statement already signed. That happened on the v0.1.1 release,
+   2026-09-17. The trust link itself was correct; only the permission was missing.
+
+   Leaving it unticked is a defensible choice, since a compromised workflow could then stage a
+   package but never ship one. Taking it means changing `scripts/publish.mjs` to `npm stage
+   publish` and promoting each release by hand on npmjs.com.
+
+   From then on the workflow publishes without a token and npm attaches provenance.
 
 ## Every release
 
@@ -57,8 +69,11 @@ npm publish -w @pbiplint/core
 npm publish -w pbiplint
 ```
 
-Then configure the trusted publisher for each package and push the tag, which creates the GitHub
-release and skips the two publishes, because both versions are already on the registry.
+Then configure the trusted publisher for each package, including the "Allow `npm publish`" tick
+in step 4 above, and push the tag, which creates the GitHub release and skips the two publishes,
+because both versions are already on the registry. Note what that means: a tag pushed after a
+manual publish exercises none of the publishing path, so it proves the workflow runs and nothing
+more. The first release that actually publishes is the first real test of it.
 
 ## The hyphenated name, settled
 

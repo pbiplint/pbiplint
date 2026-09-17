@@ -13,6 +13,6 @@ const raw = import.meta.glob("../../../examples/messy-sales/definition/**/*.tmdl
 /** examples/messy-sales, the files `pbiplint --sample` lints, with paths relative to the model root. */
 export const SAMPLE_FILES: LintFile[] = Object.entries(raw)
   .map(([key, text]) => ({ path: key.slice(key.indexOf("definition/")), text }))
-  .sort((a, b) => a.path.localeCompare(b.path));
+  .sort((a, b) => a.path.localeCompare(b.path, "en"));
 
 export const SAMPLE_NAME = "the sample project";

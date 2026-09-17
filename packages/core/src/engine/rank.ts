@@ -62,6 +62,6 @@ export function rank(findings: Finding[], rules: Rule[], config: ResolvedConfig)
       b.rule.severity - a.rule.severity ||
       CATEGORY_ORDER.indexOf(a.rule.category) - CATEGORY_ORDER.indexOf(b.rule.category) ||
       b.findings.length - a.findings.length ||
-      a.rule.id.localeCompare(b.rule.id),
+      a.rule.id.localeCompare(b.rule.id, "en"),
   );
 }

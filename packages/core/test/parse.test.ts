@@ -66,6 +66,18 @@ describe("parseTmdl", () => {
     ]);
   });
 
+  it("reports a /// description at the end of a file, with or without a trailing newline", () => {
+    const orphan = {
+      file: "t.tmdl",
+      line: 2,
+      text: "\t/// Described",
+      reason: "description is not followed by a declaration",
+    };
+    expect(parseTmdl("t.tmdl", "table T\n\t/// Described\n").issues).toEqual([orphan]);
+    // The same file without the final newline: nothing follows the description there either.
+    expect(parseTmdl("t.tmdl", "table T\n\t/// Described").issues).toEqual([orphan]);
+  });
+
   it("lowercases keys and reads flags, properties, and quoted values", () => {
     const pf = parseTmdl("f.tmdl", specSample);
     const sales = pf.roots[3]!;

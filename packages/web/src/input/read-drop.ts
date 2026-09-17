@@ -7,6 +7,18 @@ export const wanted = (name: string): boolean => name.endsWith(".tmdl") || name 
 export const SKIP_DIRS: ReadonlySet<string> = new Set([".git", ".pbi", "node_modules"]);
 
 /**
+ * How deep a folder walk goes. A drop or a picked folder is a tree today, since no browser follows
+ * a symlink into one, but a cycle would otherwise walk on forever. Both walkers await before they
+ * recurse, so every level resumes from the microtask queue and the synchronous stack unwinds
+ * between levels; what grows without bound is the retained chain of suspended frames and promises,
+ * so it is memory that gives out rather than the stack. The cap bounds depth, not total work: a
+ * cycle with more than one directory per level still branches. That is the trade worth making
+ * while no browser hands out a cycle at all. A real PBIP folder is under ten deep, so a genuine
+ * model never reaches this.
+ */
+export const MAX_DEPTH = 64;
+
+/**
  * Reads the model files out of a drop. The entries are taken from the DataTransfer before the
  * first await, because a DataTransfer is only readable while the drop event is being handled.
  */
@@ -34,7 +46,7 @@ export async function readDataTransfer(dt: DataTransfer): Promise<InputTree> {
   return tree;
 }
 
-export async function walkEntry(entry: FileSystemEntry, tree: InputTree): Promise<void> {
+export async function walkEntry(entry: FileSystemEntry, tree: InputTree, depth = 0): Promise<void> {
   const path = entry.fullPath.replace(/^\//, "");
   if (entry.isFile) {
     if (!wanted(entry.name)) return;
@@ -44,7 +56,7 @@ export async function walkEntry(entry: FileSystemEntry, tree: InputTree): Promis
     tree.entries.push({ path, text: await file.text() });
     return;
   }
-  if (!entry.isDirectory || SKIP_DIRS.has(entry.name)) return;
+  if (!entry.isDirectory || SKIP_DIRS.has(entry.name) || depth >= MAX_DEPTH) return;
   // The folder's name says a model is there; whether it holds TMDL is known from the walk below.
   if (isModelFolder(entry.name)) tree.modelFolders.push(path);
   const reader = (entry as FileSystemDirectoryEntry).createReader();
@@ -54,6 +66,6 @@ export async function walkEntry(entry: FileSystemEntry, tree: InputTree): Promis
       reader.readEntries(resolve, reject),
     );
     if (batch.length === 0) break;
-    for (const child of batch) await walkEntry(child, tree);
+    for (const child of batch) await walkEntry(child, tree, depth + 1);
   }
 }

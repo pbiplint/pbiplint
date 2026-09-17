@@ -1,5 +1,5 @@
 import { isModelFolder, type InputTree } from "./model-files.js";
-import { SKIP_DIRS, wanted } from "./read-drop.js";
+import { MAX_DEPTH, SKIP_DIRS, wanted } from "./read-drop.js";
 
 // lib.dom does not type the File System Access API's picker or directory iteration, so the shape
 // used here is declared locally. It matches Chrome and Edge.
@@ -47,10 +47,13 @@ async function walkHandle(
   dir: DirectoryHandleLike,
   prefix: string,
   tree: InputTree,
+  depth = 0,
 ): Promise<void> {
   // Tested here rather than at the recursive call below, so the picked root is tested too: the
-  // drop route's walkEntry checks the entry it is handed the same way.
-  if (SKIP_DIRS.has(dir.name)) return;
+  // drop route's walkEntry checks the entry it is handed the same way. The depth clause sits here
+  // for that same reason, so a cycle stops at the cap on the picked root's own path as well as on
+  // its children. MAX_DEPTH, in read-drop.ts, says what the cap is for.
+  if (SKIP_DIRS.has(dir.name) || depth >= MAX_DEPTH) return;
   if (isModelFolder(dir.name)) tree.modelFolders.push(prefix);
   for await (const handle of dir.values()) {
     if (handle.kind === "file") {
@@ -60,7 +63,7 @@ async function walkHandle(
           text: await (await handle.getFile()).text(),
         });
     } else {
-      await walkHandle(handle, `${prefix}/${handle.name}`, tree);
+      await walkHandle(handle, `${prefix}/${handle.name}`, tree, depth + 1);
     }
   }
 }

@@ -76,6 +76,17 @@ describe("readPickedDirectory", () => {
     const out = await readPickedDirectory(async () => picked as never);
     expect(out).toEqual({ entries: [], modelFolders: [] });
   });
+  it("stops instead of looping when a picked folder contains itself", async () => {
+    const loop: Handle = {
+      kind: "directory",
+      name: "Loop",
+      async *values() {
+        yield loop;
+      },
+    };
+    const out = await readPickedDirectory(async () => loop as never);
+    expect(out).toEqual({ entries: [], modelFolders: [] });
+  });
   it("returns null when the person cancels the dialog", async () => {
     const abort = async () => {
       throw new DOMException("cancelled", "AbortError");

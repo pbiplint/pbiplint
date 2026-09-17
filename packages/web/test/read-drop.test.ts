@@ -93,6 +93,27 @@ describe("walkEntry", () => {
     expect(seen.modelFolders).toEqual(["Proj/Old.SemanticModel", "Proj/New.SemanticModel"]);
     expect(opened).toBe(0);
   });
+  it("stops instead of looping when a folder contains itself", async () => {
+    // A symlink cycle would look like this. No browser hands one out today.
+    const loop = {
+      isFile: false,
+      isDirectory: true,
+      name: "Loop",
+      fullPath: "/Loop",
+      createReader: () => {
+        let done = false;
+        return {
+          readEntries: (ok: (entries: FileSystemEntry[]) => void) => {
+            ok(done ? [] : [loop]);
+            done = true;
+          },
+        };
+      },
+    } as unknown as FileSystemDirectoryEntry;
+    const tree: InputTree = { entries: [], modelFolders: [] };
+    await walkEntry(loop, tree);
+    expect(tree).toEqual({ entries: [], modelFolders: [] });
+  });
 });
 
 describe("readDataTransfer", () => {

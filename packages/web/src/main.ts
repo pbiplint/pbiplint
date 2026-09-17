@@ -1,4 +1,11 @@
-import { ConfigError, lint, resolveConfig, summaryLine, type LintFile } from "@pbiplint/core";
+import {
+  ConfigError,
+  lint,
+  plural,
+  resolveConfig,
+  summaryLine,
+  type LintFile,
+} from "@pbiplint/core";
 import { InputError, selectModel, type InputTree } from "./input/model-files.js";
 import { directoryPicker, readDirectoryInput, readPickedDirectory } from "./input/pick-folder.js";
 import { readDataTransfer } from "./input/read-drop.js";
@@ -17,8 +24,6 @@ const announcer = byId<HTMLParagraphElement>("announce");
 const results = byId<HTMLElement>("results");
 const dropZone = byId<HTMLElement>("drop");
 const folderInput = byId<HTMLInputElement>("folder-input");
-
-const plural = (n: number, noun: string): string => `${n} ${noun}${n === 1 ? "" : "s"}`;
 
 function say(text: string, kind: "info" | "error" = "info"): void {
   // Unhidden before the text is written: a screen reader can miss text set on a hidden live region.

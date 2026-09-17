@@ -35,6 +35,20 @@ describe("renderResults", () => {
       `#rule-${result.groups[0]!.rule.slug}`,
     );
   });
+  it("counts the severity nouns as the text format does, with info taking no s", () => {
+    // Guards the shared pluralisation: "error" and "warning" take an s, "info" is the same word
+    // for one finding and many. The sample's top five carry the singular and plural cases; the
+    // info case is rendered from the one info group the sample has, since the top five has none.
+    renderResults(container, result, { source: "x" });
+    const top = [...container.querySelectorAll(".fix-first li")].map((li) => li.textContent);
+    expect(top[0]).toContain("(2 errors)");
+    expect(top[3]).toContain("(1 warning)");
+    const info = result.groups.find((g) => g.rule.severity === 1)!;
+    renderResults(container, { ...result, groups: [info] }, { source: "x" });
+    expect(container.querySelector(".fix-first li")!.textContent).toContain(
+      `(${info.findings.length} info)`,
+    );
+  });
   it("links each fix-first item to its rule page as well as to its group", () => {
     renderResults(container, result, { source: "x" });
     const items = [...container.querySelectorAll(".fix-first li")];

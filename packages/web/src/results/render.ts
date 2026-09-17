@@ -1,5 +1,6 @@
 import {
   CATEGORY_ORDER,
+  plural,
   SEVERITY_LABEL,
   skippedLine,
   summaryLine,
@@ -45,7 +46,9 @@ const pagePath = (slug: string): string => `/rules/${slug}/`;
 /** "1 error", "3 warnings", "106 info": the severity nouns as the text format writes them. */
 const count = (n: number, severity: Severity): string => {
   const noun = SEVERITY_LABEL[severity];
-  return `${n} ${noun}${n === 1 || noun === "info" ? "" : "s"}`;
+  // "info" reads the same for one finding and for many, which is the case core's plural leaves
+  // to its caller.
+  return noun === "info" ? `${n} ${noun}` : plural(n, noun);
 };
 
 export function renderResults(

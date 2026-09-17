@@ -89,9 +89,15 @@ describe("renderResults", () => {
     expect(wrap.getAttribute("role")).toBe("region");
     expect(wrap.getAttribute("aria-label")).toBe(`${result.groups[0]!.rule.name} findings`);
   });
-  it("puts no live region inside the results: the page announces a run through a persistent one", () => {
+  it("inserts every live region empty: the page announces a run through a persistent one", () => {
     renderResults(container, result, { source: "x" });
-    expect(container.querySelectorAll("[aria-live], [role=status]").length).toBe(0);
+    const regions = [...container.querySelectorAll("[aria-live], [role=status]")];
+    // The copy status is the only one, and it holds nothing yet. A region inserted with its text
+    // already set may not be announced, and this block is rebuilt on every run, so nothing in here
+    // narrates the run itself: #announce on the page does that.
+    expect(regions.length).toBe(1);
+    expect(regions[0]).toBe(container.querySelector(".export [role='status']"));
+    expect(regions[0]!.textContent).toBe("");
   });
   it("labels the severity filters in title case, like the category filters", () => {
     renderResults(container, result, { source: "x" });
@@ -149,6 +155,19 @@ describe("renderResults", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+  it("announces the copy result through its own status region", async () => {
+    const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    renderResults(container, result, { source: "x" });
+    const region = container.querySelector(".export [role='status']")!;
+    expect(region.textContent).toBe("");
+    expect(region.classList.contains("visually-hidden")).toBe(true);
+    [...container.querySelectorAll("button")]
+      .find((b) => b.textContent === "Copy Markdown")!
+      .click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(region.textContent).toBe("Report copied to the clipboard");
   });
   it("says so when there is nothing to report", () => {
     // No model small enough to write here is actually clean (a bare model trips the date table

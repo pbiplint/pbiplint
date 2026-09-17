@@ -209,7 +209,9 @@ export function rulesIndex(metas: RuleMeta[]): string {
   const sections = CATEGORY_ORDER.map((category) => {
     const rows = metas
       .filter((m) => m.category === category)
-      .sort((a, b) => a.title.localeCompare(b.title));
+      // An explicit locale: with none, the order comes from the build machine's default and the
+      // same rule set can generate a different index on a different machine.
+      .sort((a, b) => a.title.localeCompare(b.title, "en"));
     if (rows.length === 0) return "";
     const items = rows
       .map(

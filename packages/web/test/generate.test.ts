@@ -8,9 +8,9 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { generateSite, pageEntries, RULES_DIR } from "../src/build/generate.js";
-import { NAV, parseFrontmatter, rulePage } from "../src/build/pages.js";
+import { NAV, parseFrontmatter, rulePage, rulesIndex } from "../src/build/pages.js";
 
 const read = (slug: string): string => readFileSync(join(RULES_DIR, `${slug}.md`), "utf8");
 const home = readFileSync(new URL("../index.html", import.meta.url), "utf8");
@@ -110,6 +110,31 @@ describe("generateSite", () => {
     expect(Object.keys(pageEntries(out)).sort()).toEqual(
       ["about", "rules", ...metas.map((m) => `rules/${m.slug}`)].sort(),
     );
+  });
+});
+
+describe("rulesIndex", () => {
+  const metas = generateSite({ outDir: mkdtempSync(join(tmpdir(), "pbiplint-index-")) });
+  it("sorts with an explicit locale, so the order does not depend on the build machine", () => {
+    // Intl.LocalesArgument, not string | string[], because ES2020 widened the parameter and the
+    // mock has to match the signature it stands in for.
+    const seen: Intl.LocalesArgument[] = [];
+    const real = String.prototype.localeCompare;
+    const spy = vi.spyOn(String.prototype, "localeCompare").mockImplementation(function (
+      this: string,
+      that: string,
+      locales?: Intl.LocalesArgument,
+    ) {
+      seen.push(locales);
+      return real.call(this, that, locales);
+    });
+    try {
+      rulesIndex(metas);
+    } finally {
+      spy.mockRestore();
+    }
+    expect(seen.length).toBeGreaterThan(0);
+    expect([...new Set(seen)]).toEqual(["en"]);
   });
 });
 

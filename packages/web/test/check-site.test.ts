@@ -88,6 +88,7 @@ describe("checkSite", () => {
       'assets/a.css: external @import "https://fonts.example/y.css"',
       "b/index.html: external resource <script src=https://cdn.example/x.js>",
       'c/index.html: external @import "https://fonts.example/x.css"',
+      "c/index.html: inline style <style>",
       'index.html: inline event handler <button onclick="go()">',
     ]);
   });
@@ -98,6 +99,38 @@ describe("checkSite", () => {
     });
     expect(checkSite(dir).problems).toEqual([
       'a/index.html: inline event handler <button onclick="go()">',
+    ]);
+  });
+  it("names an inline style attribute, which style-src 'self' makes as dead as a handler", () => {
+    const dir = site({
+      "index.html": `<html><head>${META}</head><body><div style="color:red">x</div></body></html>`,
+    });
+    expect(checkSite(dir).problems).toEqual(['index.html: inline style <div style="color:red">']);
+  });
+  it("names a style element, and still reads its body for an off-origin url", () => {
+    const dir = site({
+      "index.html": `<html><head>${META}<style>@import "https://fonts.example/x.css";</style></head></html>`,
+    });
+    expect(checkSite(dir).problems).toEqual([
+      'index.html: external @import "https://fonts.example/x.css"',
+      "index.html: inline style <style>",
+    ]);
+  });
+  it("names an off-origin imagesrcset on a preload link", () => {
+    const dir = site({
+      "index.html": `<html><head>${META}<link rel="preload" as="image" imagesrcset="/a.png 1x, https://evil.example/x.png 2x"></head></html>`,
+    });
+    expect(checkSite(dir).problems).toEqual([
+      'index.html: external resource <link rel="preload" as="image" imagesrcset="/a.png 1x, https://evil.example/x.png 2x">',
+    ]);
+  });
+  it("reads the data of an object and the poster of a video", () => {
+    const dir = site({
+      "index.html": `<html><head>${META}</head><body><object data="https://evil.example/x.swf"></object><video poster="https://evil.example/p.png"></video></body></html>`,
+    });
+    expect(checkSite(dir).problems).toEqual([
+      'index.html: external resource <object data="https://evil.example/x.swf">',
+      'index.html: external resource <video poster="https://evil.example/p.png">',
     ]);
   });
   // An unquoted value ends at the first space, so its candidates carry no descriptors, only commas.

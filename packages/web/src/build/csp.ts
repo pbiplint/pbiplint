@@ -8,6 +8,7 @@ import type { Plugin } from "vite";
 export const CSP = [
   "default-src 'none'",
   "script-src 'self'",
+  // No unsafe-inline here is what lets the site check treat any inline style as a violation.
   "style-src 'self'",
   "img-src 'self' data:",
   "font-src 'self'",

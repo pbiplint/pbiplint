@@ -42,10 +42,13 @@ const RESOURCE_ELEMENTS = new Set([
   "embed",
   "object",
 ]);
-/** The attributes of those elements that name what gets loaded. */
-const URL_ATTRS = ["src", "href", "srcset"];
+/**
+ * The attributes of those elements that name what gets loaded. `imagesrcset` belongs to a preload
+ * link, `data` to an object, and `poster` to a video.
+ */
+const URL_ATTRS = ["src", "href", "srcset", "imagesrcset", "data", "poster"];
 /** The ones holding a candidate list rather than a single URL. */
-const SRCSET_ATTRS = new Set(["srcset"]);
+const SRCSET_ATTRS = new Set(["srcset", "imagesrcset"]);
 /** An attribute that is an inline event handler. The CSP's script-src blocks these; this is hardening. */
 const INLINE_HANDLER = /^on[a-z]{2,}$/;
 const OFF_ORIGIN = /^(https?:)?\/\//i;
@@ -154,6 +157,9 @@ function checkHtml(rel: string, html: string, report: SiteReport): void {
     if (tag.unterminated) report.problems.push(`${rel}: unterminated tag ${brief(tag.raw)}`);
     if ([...tag.attrs.keys()].some((name) => INLINE_HANDLER.test(name)))
       report.problems.push(`${rel}: inline event handler ${tag.raw}`);
+    // style-src carries no unsafe-inline, so an inline style is as dead on the site as a handler.
+    if (tag.name === "style" || tag.attrs.has("style"))
+      report.problems.push(`${rel}: inline style ${tag.raw}`);
     if (RESOURCE_ELEMENTS.has(tag.name) && tag.attrs.get("rel") !== "canonical") {
       const targets = URL_ATTRS.flatMap((name) => {
         const value = tag.attrs.get(name);

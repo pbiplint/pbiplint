@@ -1,7 +1,9 @@
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { expect, it } from "vitest";
 import { plural, skippedLine, topGroups, VERSION } from "../src/index.js";
 import { lint } from "../src/engine/lint.js";
+import { examplesDir, readModelFiles } from "./helpers.js";
 
 const manifest = (path: string): { version: string } =>
   JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));
@@ -41,8 +43,24 @@ it('exports the plural helper, so the site says "1 file" the way the text format
 });
 
 it("exports the summary helpers the site shares with the text format", () => {
-  const result = lint([{ path: "definition/model.tmdl", text: "model Model\n" }]);
+  // The sample ranks fourteen groups, so the cap is what makes this a list of five rather than
+  // all of them. A model with fewer groups than the cap cannot tell the two apart, which is what
+  // the earlier fixture here did.
+  const result = lint(readModelFiles(join(examplesDir, "messy-sales")));
   expect(skippedLine(result)).toMatch(/rules run/);
-  expect(topGroups(result)).toEqual(result.groups.slice(0, 5));
+  expect(result.groups.length).toBeGreaterThan(5);
+  // The five the site puts under "Fix these first" and the text format prints at the top, in rank
+  // order: severity, then category, then count.
+  expect(topGroups(result).map((g) => g.rule.id)).toEqual([
+    "DAX_COLUMNS_FULLY_QUALIFIED",
+    "PROVIDE_FORMAT_STRING_FOR_MEASURES",
+    "AVOID_FLOATING_POINT_DATA_TYPES",
+    "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE",
+    "MODEL_SHOULD_HAVE_A_DATE_TABLE",
+  ]);
+  expect(topGroups(result, 2).map((g) => g.rule.id)).toEqual([
+    "DAX_COLUMNS_FULLY_QUALIFIED",
+    "PROVIDE_FORMAT_STRING_FOR_MEASURES",
+  ]);
   expect(topGroups(result, 0)).toEqual([]);
 });

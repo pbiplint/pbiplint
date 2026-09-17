@@ -1837,6 +1837,8 @@ MSG
 Run: `git check-attr text eol -- tests/fixtures/demo.md examples/demo.md rules/parse-issue.md`
 Expected, measured on 2026-09-17 before the change: all three report `text: set` and `eol: lf`. The first two are the bug; `rules/parse-issue.md` is correct and must stay that way.
 
+Note which of the two attributes is doing the work. `text` is the one the reorder flips. `eol` is not: `-text` switches normalisation off without unsetting `eol`, so all three paths still report `eol: lf` after the change as well. Reading the attributes back therefore cannot show that this worked, which is why Step 3 hashes content instead.
+
 - [ ] **Step 2: Reorder the file**
 
 Replace the whole of `.gitattributes` with:
@@ -1850,10 +1852,26 @@ examples/** -text
 tests/fixtures/** -text
 ```
 
-- [ ] **Step 3: Verify**
+- [ ] **Step 3: Verify by hashing CRLF content**
 
-Run: `git check-attr text eol -- tests/fixtures/demo.md examples/demo.md rules/parse-issue.md`
-Expected: `tests/fixtures/demo.md: text: unset` and `eol: unspecified`, the same for `examples/demo.md`, and `rules/parse-issue.md: text: set` with `eol: lf`.
+What actually changes is whether Git normalises content on the way into the object store, so ask it that directly. `git hash-object --path` applies a path's attributes to content on stdin, and no file has to exist at the path for it to work:
+
+```bash
+for p in tests/fixtures/demo.md examples/demo.md rules/demo.md; do
+  printf '%-24s' "$p"
+  printf 'a\r\nb\r\n' | git hash-object --stdin --path "$p"
+done
+```
+
+Expected, measured on 2026-09-17 after the change:
+
+```
+tests/fixtures/demo.md  c30dea8a3641ea99b125d04d599d843712292759
+examples/demo.md        c30dea8a3641ea99b125d04d599d843712292759
+rules/demo.md           422c2b7ab3b3c668038da977e4e93a5fc623169c
+```
+
+`c30dea8a` is the blob for those two lines with their CRLF endings intact, so the fixture paths are no longer normalised, which is the fix. `422c2b7a` is the same two lines with LF endings, so `rules/` is still normalised, which is what the page generator needs. The check is the comparison: the two fixture paths must hash differently from the `rules/` path. Measured before the change, all three returned `422c2b7a`, because `*.md text eol=lf` was the last matching line and won everywhere.
 
 - [ ] **Step 4: Confirm nothing in the working tree changed**
 
@@ -1958,22 +1976,71 @@ jobs:
           generate_release_notes: true
 ```
 
-- [ ] **Step 2: Check it parses and that the steps survived the split**
+- [ ] **Step 2: Count the invariants, with the comments stripped first**
 
-Run:
+Every `run` line from the old single job has to survive in one of the two new jobs, and nothing can be duplicated on the way. Strip comments before counting, because several comments in this file contain the very strings being counted and will inflate the numbers:
 
 ```bash
-python3 -c "import sys,yaml; d=yaml.safe_load(open('.github/workflows/release.yml')); print(list(d['jobs'])); [print(j, [s.get('run') or s.get('uses') for s in d['jobs'][j]['steps']]) for j in d['jobs']]"
+f=.github/workflows/release.yml
+body=$(sed 's/#.*//' "$f")
+printf '%s\n' "$body" | grep -cE '^  [a-z][a-z-]*:$'
+for s in 'id-token: write' 'persist-credentials: false' 'npm run build' 'npm run check:pack' \
+  'npm run lint' 'npm run typecheck' 'npm test' 'npm run check:browser' \
+  'check-release-tag.mjs' 'scripts/publish.mjs' 'action-gh-release' 'npm install -g npm@11'; do
+  printf '%-30s %s\n' "$s" "$(printf '%s\n' "$body" | grep -cF "$s")"
+done
 ```
 
-Expected: jobs `['verify', 'publish']`, and every `run` line from the old single job appears in one of them, with `node scripts/publish.mjs` and the release action only in `publish`.
+Expected, measured on 2026-09-17 against the file above:
 
-- [ ] **Step 3: Lint the workflow if actionlint is available**
+```
+3
+id-token: write                1
+persist-credentials: false     2
+npm run build                  2
+npm run check:pack             2
+npm run lint                   1
+npm run typecheck              1
+npm test                       1
+npm run check:browser          1
+check-release-tag.mjs          1
+scripts/publish.mjs            1
+action-gh-release              1
+npm install -g npm@11          1
+```
+
+Three job keys is the right answer, not evidence that a third job crept in. The regex matches any key indented by two spaces, and `push:` under `on:` has exactly that shape, so the three matches are `push`, `verify` and `publish`. Check the job names rather than trusting the number.
+
+Do not drop the `sed`. Without it two of these counts are wrong: the comment above the `verify` checkout takes `persist-credentials: false` to 3, and the comment on `contents: write` takes `action-gh-release` to 2.
+
+- [ ] **Step 3: Parse it with Prettier's YAML parser**
+
+Counting lines proves nothing about whether the document is well formed. PyYAML is not installed on this machine and there is no standalone `yaml` package in `node_modules`, but Prettier ships a real YAML parser, so the file can be machine-validated after all:
+
+```bash
+node --input-type=module -e "
+import prettier from 'prettier';
+import { readFile } from 'node:fs/promises';
+const text = await readFile('.github/workflows/release.yml', 'utf8');
+await prettier.__debug.parse(text, { parser: 'yaml' });
+console.log('release.yml: parses as YAML');
+"
+```
+
+Expected: `release.yml: parses as YAML`. This is a genuine parse, not a smoke test. `__debug.parse` throws a `SyntaxError` naming the line and column of the first fault when the document is malformed. It is async, so keep the `await`: without it the rejection is thrown after the script has already printed its success line.
+
+Its limit is worth stating plainly. It validates YAML syntax and structure, never the file against the GitHub Actions schema. A key that means nothing to Actions, or a real key nested under the wrong job, still parses cleanly.
+
+- [ ] **Step 4: Read the permissions by eye**
+
+Neither the counts nor the parse can say where a key sits, and placement is the whole point of this task. Open the file and confirm by hand that the top-level `permissions:` is `{}`, that `verify` carries `contents: read` and nothing more, and that `contents: write` and `id-token: write` are both nested under `publish`. One occurrence of `id-token: write` is only correct if that occurrence is in the publish job.
+
+- [ ] **Step 5: Lint the workflow if actionlint is available**
 
 Run: `command -v actionlint >/dev/null && actionlint .github/workflows/release.yml || echo "actionlint not installed, skipped"`
 Expected: no output from actionlint, or the skip message.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add .github/workflows/release.yml
@@ -2097,4 +2164,4 @@ Running count as the stages land: stage 1 takes it to 2 of 18, stage 2 to 7, sta
 
 - `packages/core/src/engine/rank.ts:65` sorts rule ids with `localeCompare` and no locale, which can order findings differently on different machines. That is the same class of bug as the one Task 11 fixes, but it is not a box on issue #7. Propose it as a new checkbox rather than folding it in.
 - Task 9 is beyond issue #7 and is marked optional. Drop it if the stage 2 review would rather keep the branch to the issue.
-- The release workflow split (Task 20) is not provable until a tag is pushed. Nothing else in stage 4 depends on it.
+- The release workflow split (Task 20) is not provable until a tag is pushed, and it is not independent of the rest of stage 4, as the whole-branch review pointed out. The split introduces a second `actions/checkout` of a mutable tag ref, which is precisely the thing the Task 21 tag ruleset exists to prevent. Task 20 therefore makes Task 21 more load-bearing, not less. Treat the two as coupled: pinning each checkout to `ref: ${{ github.sha }}` closes the immediate hole, and the ruleset is what keeps the tag from moving under a rerun.

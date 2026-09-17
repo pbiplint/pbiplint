@@ -8,6 +8,8 @@ export default defineConfig({
     },
   },
   test: {
-    include: ["packages/*/test/**/*.test.ts"],
+    // The release scripts are plain .mjs, and so are their tests: no TypeScript build step sits
+    // between scripts/publish.mjs and the workflow step that runs it.
+    include: ["packages/*/test/**/*.test.ts", "scripts/test/**/*.test.mjs"],
   },
 });

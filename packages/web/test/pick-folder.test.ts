@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readDirectoryInput, readPickedDirectory } from "../src/input/pick-folder.js";
+import { MAX_DEPTH } from "../src/input/read-drop.js";
 
 type Handle =
   | { kind: "file"; name: string; getFile(): Promise<File> }
@@ -17,6 +18,27 @@ const dirHandle = (name: string, children: Handle[]): Handle => ({
     yield* children;
   },
 });
+
+/**
+ * Counts the folders a walk opens for iteration, and throws once it has opened more than `limit`.
+ * The throw is what makes a missing depth cap a fast red: a cycle walked with no cap exhausts the
+ * worker's memory and dies with SIGABRT before any assertion at the end of a test could run.
+ */
+function openCount(limit: number) {
+  const state = { opened: 0 };
+  const wrap = (handle: Handle): Handle =>
+    handle.kind === "file"
+      ? handle
+      : {
+          ...handle,
+          values: () => {
+            state.opened += 1;
+            if (state.opened > limit) throw new Error(`the walk opened more than ${limit} folders`);
+            return handle.values();
+          },
+        };
+  return { state, wrap };
+}
 
 describe("readPickedDirectory", () => {
   it("walks the picked directory, prefixing its name, and reads only model files", async () => {
@@ -76,16 +98,23 @@ describe("readPickedDirectory", () => {
     const out = await readPickedDirectory(async () => picked as never);
     expect(out).toEqual({ entries: [], modelFolders: [] });
   });
-  it("stops instead of looping when a picked folder contains itself", async () => {
+  it("stops at the depth cap instead of looping when a picked folder contains itself", async () => {
+    // The open count is what proves the walk stopped because of the cap: an empty tree on its own
+    // is also what a walk that gave up for some other reason leaves behind. One open per level,
+    // and the level that hits the cap opens nothing, so the walk goes exactly as deep as the cap
+    // allows. MAX_DEPTH is shared with the drop route, which is walked the same way.
+    const { state, wrap } = openCount(MAX_DEPTH + 1);
     const loop: Handle = {
       kind: "directory",
       name: "Loop",
       async *values() {
-        yield loop;
+        yield wrapped;
       },
     };
-    const out = await readPickedDirectory(async () => loop as never);
+    const wrapped = wrap(loop);
+    const out = await readPickedDirectory(async () => wrapped as never);
     expect(out).toEqual({ entries: [], modelFolders: [] });
+    expect(state.opened).toBe(MAX_DEPTH);
   });
   it("returns null when the person cancels the dialog", async () => {
     const abort = async () => {

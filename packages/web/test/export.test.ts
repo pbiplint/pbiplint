@@ -56,6 +56,16 @@ describe("export", () => {
     await expect(copy(file)).resolves.toBeUndefined();
     expect(writeText).toHaveBeenCalledWith("# x");
   });
+  it("writes in the caller's own turn rather than from a later microtask", async () => {
+    // A clipboard write is gesture gated, and WebKit wants the gesture still on the stack, so the
+    // write has to go out before the click handler yields. Nothing is awaited before the
+    // assertion: any await here would drain the microtask queue and hide a deferred write.
+    const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined);
+    setClipboard({ writeText });
+    const promise = copy(file);
+    expect(writeText).toHaveBeenCalledWith("# x");
+    await expect(promise).resolves.toBeUndefined();
+  });
   it("rejects rather than throws when there is no clipboard", async () => {
     setClipboard(undefined);
     // The call itself must not throw: the caller has one failure path, the rejection.

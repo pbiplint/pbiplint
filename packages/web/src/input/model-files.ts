@@ -17,7 +17,10 @@ export interface InputTree {
 }
 
 export interface SelectedModel {
-  /** Path of the model root inside the drop; "" when a lone file was dropped. */
+  /**
+   * Path of the model root inside the drop; "" when the drop has no folder above the files, which
+   * is a lone file, or several dropped side by side.
+   */
   root: string;
   files: LintFile[];
   /** The nearest pbiplint.config.json at or above the model root, if the drop had one. */
@@ -33,7 +36,11 @@ export interface SelectedModel {
 }
 
 /** A problem with what was dropped, in words meant for the status line. */
-export class InputError extends Error {}
+export class InputError extends Error {
+  // Error's own name otherwise, which says nothing in a console or a stack trace. The page matches
+  // on the class, not on this.
+  override name = "InputError";
+}
 
 export const CONFIG_FILE = "pbiplint.config.json";
 const MODEL_SUFFIX = ".SemanticModel";
@@ -91,9 +98,12 @@ export function selectModel(entries: InputEntry[], modelFolders: string[] = []):
   const base =
     firsts.size === 1 && entries.every((e) => e.path.includes("/")) ? [...firsts][0]! : "";
   const root = resolveRoot(tmdl, base);
+  // Both are the same for every file, and hasDefinition walks the whole list, so asking once per
+  // file made the filter quadratic in the number of .tmdl files.
+  const definitionDir = join(root, "definition");
+  const fromDefinition = hasDefinition(tmdl, root);
   const files = tmdl
-    .filter((e) => within(e.path, join(root, "definition")) || !hasDefinition(tmdl, root))
-    .filter((e) => within(e.path, root))
+    .filter((e) => within(e.path, root) && (!fromDefinition || within(e.path, definitionDir)))
     .map((e) => ({ path: relativeTo(e.path, root), text: e.text }))
     .sort((a, b) => a.path.localeCompare(b.path, "en"));
   const notes = unlintable.length

@@ -110,6 +110,31 @@ describe("selectModel", () => {
       "definition/tables/Z.tmdl",
     ]);
   });
+  it("leaves a .tmdl beside the definition folder unlinted, and says so in what it read", () => {
+    // A model with a definition folder is linted from that folder alone, so a stray file next to
+    // it (a copy, an export, a note someone saved) is read for the listing and nothing more.
+    const m = selectModel([
+      e("Demo.SemanticModel/definition/model.tmdl"),
+      e("Demo.SemanticModel/scratch.tmdl"),
+    ]);
+    expect(m.root).toBe("Demo.SemanticModel");
+    expect(m.files.map((f) => f.path)).toEqual(["definition/model.tmdl"]);
+    expect(m.read).toEqual(["definition/model.tmdl", "scratch.tmdl (not linted)"]);
+  });
+  it("says what kind of error it is, so a stack trace names it", () => {
+    // Nothing on the page reads the name (it matches on the class), but an error that reaches a
+    // console or a report reads as "Error: ..." without it, which says nothing about where it came
+    // from.
+    let thrown: unknown;
+    try {
+      selectModel([]);
+    } catch (e) {
+      thrown = e;
+    }
+    expect(thrown).toBeInstanceOf(InputError);
+    expect((thrown as Error).name).toBe("InputError");
+    expect(String(thrown)).toMatch(/^InputError: No \.tmdl files/);
+  });
   it("explains an empty drop", () => {
     expect(() => selectModel([e("Proj/Demo.Report/definition/report.json")])).toThrow(InputError);
     expect(() => selectModel([])).toThrow(/No \.tmdl files/);

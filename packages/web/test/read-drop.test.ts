@@ -114,6 +114,24 @@ describe("walkEntry", () => {
     expect(seen.modelFolders).toEqual(["Proj/Old.SemanticModel", "Proj/New.SemanticModel"]);
     expect(opened).toBe(0);
   });
+  it("never opens node_modules, which holds no model and can be enormous", async () => {
+    let opened = 0;
+    const inside = file("x.tmdl", "/Proj/node_modules/pkg/x.tmdl", "table X\n");
+    // Counts the read and still hands the file over, so a walk that does descend fails on the
+    // entries it collected rather than hanging on a callback that never comes.
+    (inside as unknown as { file: (ok: (f: File) => void) => void }).file = (ok) => {
+      opened += 1;
+      ok(new File(["table X\n"], "x.tmdl"));
+    };
+    const tree = dir("Proj", "/Proj", [
+      dir("node_modules", "/Proj/node_modules", [dir("pkg", "/Proj/node_modules/pkg", [inside])]),
+      file("m.tmdl", "/Proj/m.tmdl", "model Model\n"),
+    ]);
+    const seen: InputTree = { entries: [], modelFolders: [] };
+    await walkEntry(tree, seen);
+    expect(seen.entries.map((e) => e.path)).toEqual(["Proj/m.tmdl"]);
+    expect(opened).toBe(0);
+  });
   it("opens one reader per folder, which is what the depth cap counts", async () => {
     // Anchors the number the cap test asserts: four nested folders, four readers. Without this,
     // a count of MAX_DEPTH there could agree with the cap by coincidence rather than because the
@@ -179,6 +197,21 @@ describe("readDataTransfer", () => {
         { webkitGetAsEntry: () => broken, getAsFile: () => new File(["{}"], "other.json") },
       ],
       files: [],
+    } as unknown as DataTransfer;
+    expect(await readDataTransfer(dt)).toEqual({
+      entries: [{ path: "T.tmdl", text: "table T\n" }],
+      modelFolders: [],
+    });
+  });
+  it("falls back to flat files when an item has no entry to hand out", async () => {
+    // Two ways a browser gets here: no webkitGetAsEntry on the item at all, and one that returns
+    // null. Neither yields an entry, so the flat file list is the whole drop.
+    const dt = {
+      items: [
+        { getAsFile: () => new File(["table T\n"], "T.tmdl") },
+        { webkitGetAsEntry: () => null, getAsFile: () => new File(["{}"], "report.json") },
+      ],
+      files: [new File(["table T\n"], "T.tmdl"), new File(["{}"], "report.json")],
     } as unknown as DataTransfer;
     expect(await readDataTransfer(dt)).toEqual({
       entries: [{ path: "T.tmdl", text: "table T\n" }],

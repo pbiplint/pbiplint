@@ -273,4 +273,31 @@ describe("home page", () => {
     expect(results.hidden).toBe(true);
     expect(results.children.length).toBe(0);
   });
+  it("lets the newest input win when two reads finish out of order", async () => {
+    const input = document.getElementById("folder-input") as HTMLInputElement;
+    let release: (() => void) | undefined;
+    // A folder file whose read never settles until the test says so.
+    const slow = Object.assign(new File(["table Slow\n"], "Slow.tmdl"), {
+      webkitRelativePath: "Slow.SemanticModel/definition/tables/Slow.tmdl",
+      text: () => new Promise<string>((resolve) => (release = () => resolve("table Slow\n"))),
+    });
+    Object.defineProperty(input, "files", { configurable: true, value: [slow] });
+    try {
+      input.dispatchEvent(new Event("change"));
+    } finally {
+      Reflect.deleteProperty(input, "files");
+    }
+    await tick();
+    // The folder read is still waiting on its file, so a paste finishes first and owns the page.
+    (document.getElementById("paste") as HTMLTextAreaElement).value = "table Pasted\n";
+    document.getElementById("lint-paste")!.click();
+    await tick();
+    expect(document.querySelector("#results h2")!.textContent).toBe("Results for pasted TMDL");
+    release!();
+    await tick();
+    await tick();
+    // The superseded read comes back last and is dropped rather than replacing the paste.
+    expect(document.querySelector("#results h2")!.textContent).toBe("Results for pasted TMDL");
+    expect(document.getElementById("status")!.hidden).toBe(true);
+  });
 });

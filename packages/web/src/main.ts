@@ -48,6 +48,16 @@ function fail(e: unknown): void {
   else problem(`Something went wrong: ${e instanceof Error ? e.message : String(e)}`);
 }
 
+/**
+ * Two reads can be in flight at once, a drop landing while a folder walk is still going, and they
+ * can come back in either order. Every input takes the next token as it starts; a read holding
+ * anything but the newest token has been superseded, so its results and its failures are both
+ * dropped rather than overwriting what the newer input is already showing.
+ */
+let latestRun = 0;
+const startRun = (): number => (latestRun += 1);
+const superseded = (token: number): boolean => token !== latestRun;
+
 interface Run {
   files: LintFile[];
   /** What was linted, for the results heading. */
@@ -103,6 +113,8 @@ function runEntries(tree: InputTree): void {
 
 byId("lint-paste").addEventListener("click", () => {
   const text = paste.value;
+  // Claimed even for an empty paste: a folder still reading must not land on top of the message.
+  startRun();
   if (text.trim() === "") {
     problem("Paste some TMDL first.");
     return;
@@ -110,13 +122,14 @@ byId("lint-paste").addEventListener("click", () => {
   run({ files: [{ path: "pasted.tmdl", text }], source: "pasted TMDL" });
 });
 
-byId("try-sample").addEventListener("click", () =>
+byId("try-sample").addEventListener("click", () => {
+  startRun();
   run({
     files: SAMPLE_FILES,
     source: `${SAMPLE_NAME} (${plural(SAMPLE_FILES.length, "file")})`,
     read: SAMPLE_FILES.map((f) => f.path),
-  }),
-);
+  });
+});
 
 // Every folder route says "Reading files..." once there is a folder to read: the drop as it lands,
 // the picker once the dialog closes on a choice, the directory input as it reports its files.
@@ -157,19 +170,51 @@ dropZone.addEventListener("drop", (event) => {
   event.preventDefault();
   unlight();
   if (!event.dataTransfer) return;
+  const token = startRun();
   reading();
   // readDataTransfer takes the entries before its first await, while the DataTransfer is still readable.
-  readDataTransfer(event.dataTransfer).then(runEntries, fail);
+  readDataTransfer(event.dataTransfer).then(
+    (tree) => {
+      if (!superseded(token)) runEntries(tree);
+    },
+    (e) => {
+      if (!superseded(token)) fail(e);
+    },
+  );
 });
 
 const picker = directoryPicker();
 byId("choose-folder").addEventListener("click", () => {
-  if (picker)
-    readPickedDirectory(picker, reading).then((entries) => entries && runEntries(entries), fail);
-  else folderInput.click();
+  if (!picker) {
+    folderInput.click();
+    return;
+  }
+  // The token is claimed when a folder is chosen rather than when the dialog opens: the dialog can
+  // sit open for as long as the person likes, and it must not cancel an input made in the meantime.
+  // A failure before that has no token, and a picker that will not open is worth saying out loud.
+  let token = 0;
+  readPickedDirectory(picker, () => {
+    token = startRun();
+    reading();
+  }).then(
+    (entries) => {
+      if (entries && !superseded(token)) runEntries(entries);
+    },
+    (e) => {
+      if (token === 0 || !superseded(token)) fail(e);
+    },
+  );
 });
 folderInput.addEventListener("change", () => {
+  const token = startRun();
   reading();
-  readDirectoryInput(folderInput).then(runEntries, fail);
+  readDirectoryInput(folderInput).then(
+    (tree) => {
+      if (!superseded(token)) runEntries(tree);
+    },
+    (e) => {
+      if (!superseded(token)) fail(e);
+    },
+  );
   folderInput.value = "";
 });

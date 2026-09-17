@@ -60,7 +60,10 @@ describe("home page", () => {
   });
   it("announces a run as one sentence through a live region that exists before the run", async () => {
     // A live region inserted with its text already set is the case screen readers may not
-    // announce, so the announcer is part of the page and only its text changes.
+    // announce, so the announcer is part of the page and only its text changes. The two checks
+    // below say the results block declares no aria-live of its own, which is less than it sounds:
+    // the copy status inside it is a role="status" region, and that selector does not match one.
+    // Holding the results block to a single empty region is render.test.ts's job.
     expect(body).toMatch(/<p id="announce"[^>]*aria-live="polite"[^>]*><\/p>/);
     const announcer = document.getElementById("announce")!;
     document.getElementById("try-sample")!.click();

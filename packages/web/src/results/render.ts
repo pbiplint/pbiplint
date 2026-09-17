@@ -159,7 +159,8 @@ function renderExportBar(result: LintResult): HTMLElement {
       void copy(exportMarkdown(result))
         .then(() => flash("Copied", "Report copied to the clipboard"))
         // A browser with no clipboard API, an insecure context, an unfocused document, or a
-        // refused permission all land here. Say so on the button instead of failing silently.
+        // refused permission all land here. Say so on the button and in the status region beside
+        // it instead of failing silently.
         .catch(() => flash("Copy failed", "Copying to the clipboard failed"));
     }),
     announce,

@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>pbiplint v2 mockups: results page and CLI output</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 24px;
+        background: #f4f5f8;
+        color: #1c2333;
+        font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 0 0 4px;
+      }
+      .intro {
+        color: #5a6478;
+        margin: 0 0 20px;
+        max-width: 80ch;
+      }
+      h2.section {
+        font-size: 16px;
+        margin: 32px 0 8px;
+      }
+      .mock {
+        border: 1px solid #d5d9e2;
+        border-radius: 10px;
+        background: #fff;
+        overflow: hidden;
+        max-width: 1080px;
+      }
+      .mock-header {
+        background: #e9ecf3;
+        color: #3a4459;
+        font-size: 12px;
+        padding: 6px 12px;
+        border-bottom: 1px solid #d5d9e2;
+      }
+      .pb {
+        background: #0a0e1a;
+        color: #e6edf6;
+        font-size: 13px;
+        line-height: 1.45;
+        padding: 18px 20px;
+      }
+      .pb a {
+        color: #4f9de8;
+        text-decoration: none;
+      }
+      .pb a.fact {
+        color: #e6edf6;
+        text-decoration: underline;
+        text-decoration-color: #3fc7c3;
+        text-underline-offset: 3px;
+      }
+      .pb a.fact.flag {
+        color: #f0b429;
+        text-decoration-color: #f0b429;
+      }
+      .pb .privacy {
+        color: #a9b4c7;
+        font-size: 12px;
+        margin: 0 0 10px;
+      }
+      .pb h2 {
+        font-size: 19px;
+        margin: 0 0 6px;
+        color: #fff;
+      }
+      .pb h3 {
+        font-size: 14px;
+        margin: 18px 0 6px;
+        color: #fff;
+      }
+      .pb .summary {
+        margin: 0 0 8px;
+      }
+      .pb .files {
+        color: #a9b4c7;
+        font-size: 12px;
+        margin: 6px 0 0;
+      }
+      .pb ol {
+        margin: 4px 0 0 18px;
+        padding: 0;
+      }
+      .pb li {
+        margin: 2px 0;
+      }
+      .pb .rule-link {
+        color: #a9b4c7;
+        font-size: 12px;
+      }
+      .pb .export {
+        margin: 12px 0 8px;
+        display: flex;
+        gap: 8px;
+      }
+      .pb .btn {
+        border: 1px solid #2d7dd2;
+        border-radius: 6px;
+        padding: 4px 10px;
+        font-size: 12px;
+      }
+      .pb .filters {
+        border: 1px solid #232a3d;
+        border-radius: 8px;
+        padding: 6px 10px;
+        margin: 8px 0 12px;
+        font-size: 12px;
+        color: #a9b4c7;
+      }
+      .pb .filters b {
+        color: #e6edf6;
+        font-weight: 600;
+        margin-right: 6px;
+      }
+      .pb .group {
+        border: 1px solid #232a3d;
+        border-radius: 8px;
+        padding: 8px 12px;
+        margin: 6px 0;
+        background: #0f1424;
+      }
+      .pb .group .row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .pb .badge {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        border-radius: 999px;
+        padding: 2px 7px;
+      }
+      .pb .badge.error {
+        background: #3a1416;
+        color: #ff8a8e;
+      }
+      .pb .badge.warning {
+        background: #3a2e0d;
+        color: #f0b429;
+      }
+      .pb .badge.info {
+        background: #0f2740;
+        color: #4f9de8;
+      }
+      .pb .layer {
+        font-size: 10px;
+        border: 1px solid #2a3350;
+        color: #a9b4c7;
+        border-radius: 4px;
+        padding: 1px 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .pb .layer.report {
+        border-color: #00a9a5;
+        color: #3fc7c3;
+      }
+      .pb .name {
+        flex: 1;
+      }
+      .pb .count {
+        color: #a9b4c7;
+      }
+      .pb .meta {
+        color: #a9b4c7;
+        font-size: 11px;
+        margin: 4px 0 0;
+      }
+      .pb code {
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+        font-size: 11px;
+        color: #e6edf6;
+      }
+      .pb .facts {
+        border: 1px solid #1e3a3a;
+        background: #0c1a1c;
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin: 10px 0 4px;
+      }
+      .pb .facts h3 {
+        margin: 0 0 6px;
+        font-size: 12px;
+        color: #3fc7c3;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .pb .facts dl {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 4px 16px;
+        margin: 0;
+        font-size: 13px;
+      }
+      .pb .facts dt {
+        color: #a9b4c7;
+      }
+      .pb .facts dd {
+        margin: 0;
+      }
+      .pb .hint {
+        color: #a9b4c7;
+      }
+      .dim {
+        opacity: 0.55;
+      }
+      .legend {
+        font-size: 12px;
+        color: #5a6478;
+        margin: 8px 2px 0;
+      }
+      .legend .u1 {
+        text-decoration: underline;
+        text-decoration-color: #00a9a5;
+        text-underline-offset: 3px;
+        margin-right: 16px;
+      }
+      .legend .u2 {
+        text-decoration: underline;
+        text-decoration-color: #d99a00;
+        text-underline-offset: 3px;
+        color: #8a6100;
+      }
+      pre.term {
+        background: #0a0e1a;
+        color: #e6edf6;
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+        font-size: 12px;
+        line-height: 1.4;
+        padding: 14px 16px;
+        margin: 0;
+        overflow-x: auto;
+        white-space: pre;
+      }
+      pre.term .e {
+        color: #ff8a8e;
+      }
+      pre.term .w {
+        color: #f0b429;
+      }
+      pre.term .i {
+        color: #4f9de8;
+      }
+      pre.term .t {
+        color: #3fc7c3;
+      }
+      pre.term .m {
+        color: #8b95a8;
+      }
+      pre.term .h {
+        color: #fff;
+        font-weight: 600;
+      }
+      .note {
+        color: #5a6478;
+        font-size: 12px;
+        margin: 8px 2px 0;
+        max-width: 80ch;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>pbiplint v2 mockups</h1>
+    <p class="intro">
+      Approved 2026-09-18 with the v2 report-layer spec. Two surfaces: the web results page for a
+      whole-PBIP drop (facts panel under the summary, option A, with linked facts) and the CLI text
+      format (groups ranked together with layer tags, option A). Counts are illustrative; the sample
+      project's real numbers replace them once the report exists.
+    </p>
+
+    <h2 class="section">1. Web results page for a whole-PBIP drop</h2>
+    <div class="mock">
+      <div class="mock-header">pbiplint.com, results region</div>
+      <div class="pb">
+        <p class="privacy">
+          Nothing was uploaded. The analysis ran in this browser tab. <a>How to check that</a>
+        </p>
+        <h2>Results for Messy Sales Demo (model, 11 files · report, 27 files)</h2>
+        <p class="summary">
+          174 findings (18 errors, 46 warnings, 110 info) in 38 files. 92 rules run, 5 rules skipped
+          (need a live model).
+        </p>
+        <p class="files">&#9656; Files read (38)</p>
+
+        <div class="facts">
+          <h3>Report at a glance</h3>
+          <dl>
+            <dt>Opens on</dt>
+            <dd>
+              Overview <span class="hint">· the page open when it was saved; </span
+              ><a class="fact flag" href="#rule-landing-page-not-set">no landing page set</a>
+            </dd>
+            <dt>Filters pane</dt>
+            <dd>
+              <a class="fact" href="#">open</a>
+              <span class="hint">· set a policy in pbiplint.config.json to have this checked</span>
+            </dd>
+            <dt>Pages</dt>
+            <dd>4 · 1 hidden · <a class="fact" href="#">1 tooltip</a></dd>
+            <dt>Visuals</dt>
+            <dd>
+              27 · <a class="fact flag" href="#rule-hidden-visuals-still-query">2 hidden</a> · 1
+              custom visual type registered, <a class="fact flag" href="#">0 used</a>
+            </dd>
+            <dt>Report measures</dt>
+            <dd>
+              <a class="fact flag" href="#">2</a>
+              <span class="hint">· defined in the report, not the model</span>
+            </dd>
+            <dt>Slicers</dt>
+            <dd>3 · <a class="fact" href="#">1 with a saved selection</a></dd>
+            <dt>Mobile layouts</dt>
+            <dd>none</dd>
+            <dt>Model</dt>
+            <dd>
+              8 tables · 96 columns · 14 measures ·
+              <a class="fact flag" href="#"
+                >31 columns and 3 measures not reached from this report</a
+              >
+            </dd>
+          </dl>
+        </div>
+
+        <h3>Fix these first</h3>
+        <ol>
+          <li>
+            <a>Field the model does not have</a> (3 errors)
+            <span class="layer report">report</span> · <span class="rule-link">How to fix it</span>
+          </li>
+          <li>
+            <a>Column references should be fully qualified</a> (2 errors)
+            <span class="layer">model</span> · <span class="rule-link">How to fix it</span>
+          </li>
+          <li>
+            <a>Provide format string for measures</a> (14 errors) <span class="layer">model</span> ·
+            <span class="rule-link">How to fix it</span>
+          </li>
+          <li>
+            <a>Hidden visuals still run their queries</a> (2 warnings)
+            <span class="layer report">report</span> · <span class="rule-link">How to fix it</span>
+          </li>
+          <li>
+            <a>Alt text missing</a> (9 warnings) <span class="layer report">report</span> ·
+            <span class="rule-link">How to fix it</span>
+          </li>
+        </ol>
+
+        <div class="export">
+          <span class="btn">Download JSON</span><span class="btn">Copy Markdown</span>
+        </div>
+        <div class="filters">
+          <b>Show</b> &#9745; Error &nbsp;&#9745; Warning &nbsp;&#9745; Info &nbsp;|&nbsp; &#9745;
+          Model &nbsp;&#9745; Report &nbsp;|&nbsp; &#9745; Performance &nbsp;&#9745; Error
+          Prevention &nbsp;&#9745; Accessibility <span class="dim">…</span>
+        </div>
+
+        <div class="group" id="rule-broken-field-reference">
+          <div class="row">
+            <span class="badge error">error</span><span class="layer report">report</span
+            ><span class="name">Field the model does not have</span><span class="count">3</span>
+          </div>
+          <p class="meta">
+            <code>BROKEN_FIELD_REFERENCE</code> · Error Prevention · <a>How to fix it</a>
+          </p>
+          <p class="meta" style="margin-top: 6px">
+            <code>"Sales by region" on "Overview"</code> &nbsp; Visual &nbsp;
+            <code>definition/pages/4c1a…/visuals/9f2e…/visual.json:31</code> &nbsp; 'Sales'[Region]
+            is not a column on Sales
+          </p>
+          <p class="meta">
+            <code>"Top products" on "Overview"</code> &nbsp; Visual &nbsp;
+            <code>definition/pages/4c1a…/visuals/b07d…/visual.json:44</code> &nbsp; [Net Margin] is
+            not a measure in the model
+          </p>
+          <p class="meta">
+            <code>Page filter on "Detail"</code> &nbsp; Page &nbsp;
+            <code>definition/pages/9e3f…/page.json:18</code> &nbsp; 'Customer'[Segment] is not a
+            column on Customer
+          </p>
+        </div>
+        <div class="group">
+          <div class="row">
+            <span class="badge error">error</span><span class="layer">model</span
+            ><span class="name">Column references should be fully qualified</span
+            ><span class="count">2</span>
+          </div>
+        </div>
+        <div class="group">
+          <div class="row">
+            <span class="badge error">error</span><span class="layer">model</span
+            ><span class="name">Provide format string for measures</span
+            ><span class="count">14</span>
+          </div>
+        </div>
+        <div class="group" id="rule-hidden-visuals-still-query">
+          <div class="row">
+            <span class="badge warning">warning</span><span class="layer report">report</span
+            ><span class="name">Hidden visuals still run their queries</span
+            ><span class="count">2</span>
+          </div>
+        </div>
+        <div class="group dim">
+          <div class="row">
+            <span class="badge warning">warning</span><span class="layer report">report</span
+            ><span class="name">Alt text missing</span><span class="count">9</span>
+          </div>
+        </div>
+        <div class="group dim">
+          <div class="row">
+            <span class="badge info">info</span><span class="layer report">report</span
+            ><span class="name">Not reached from the report</span><span class="count">34</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="legend">
+      <span class="u1"
+        >teal underline: links to the rule page (no finding this run, or a policy rule with no
+        policy set)</span
+      >
+      <span class="u2">amber: jumps to the finding group on this page</span>
+    </p>
+    <p class="note">
+      Rejected alternatives: a collapsed "Report at a glance (8)" line with the two flags inline
+      (hides the facts people most need to notice), and a side column on wide screens (the site has
+      no two-column layout and the panel stacks to this on narrow screens anyway).
+    </p>
+
+    <h2 class="section">2. CLI text format for a whole project</h2>
+    <div class="mock">
+      <div class="mock-header">pbiplint examples/messy-sales</div>
+      <pre
+        class="term"
+      ><span class="h">pbiplint: 174 findings (18 errors, 46 warnings, 110 info) in 38 files</span>
+Model: 11 files. Report: 27 files. 92 rules run, 5 rules skipped (need a live model)
+
+<span class="t">Report at a glance</span>
+  Opens on         Overview (the page open when it was saved; no landing page set)  <span class="m">LANDING_PAGE_NOT_SET</span>
+  Filters pane     open  <span class="m">FILTERS_PANE_STATE</span>
+  Pages            4 (1 hidden, 1 tooltip)
+  Visuals          27 (2 hidden; 1 custom visual type registered, 0 used)
+  Report measures  2 (defined in the report, not the model)  <span class="m">REPORT_LEVEL_MEASURES</span>
+  Slicers          3 (1 with a saved selection)
+  Mobile layouts   none
+  Model            8 tables, 96 columns, 14 measures; 31 columns and 3 measures not reached  <span class="m">NOT_REACHED_FROM_REPORT</span>
+
+Fix these first:
+  1. Field the model does not have  (3 errors)  <span class="t">[report]</span>
+  2. Column references should be fully qualified  (2 errors)  <span class="m">[model]</span>
+  3. Provide format string for measures  (14 errors)  <span class="m">[model]</span>
+  4. Hidden visuals still run their queries  (2 warnings)  <span class="t">[report]</span>
+  5. Alt text missing  (9 warnings)  <span class="t">[report]</span>
+
+<span class="e">ERROR</span>  <span class="t">[report]</span> Field the model does not have  BROKEN_FIELD_REFERENCE  (3)
+       <span class="m">https://pbiplint.com/rules/broken-field-reference</span>
+       "Sales by region" on "Overview"  definition/pages/4c1a…/visuals/9f2e…/visual.json:31  'Sales'[Region] is not a column on Sales
+       "Top products" on "Overview"     definition/pages/4c1a…/visuals/b07d…/visual.json:44  [Net Margin] is not a measure in the model
+       Page filter on "Detail"          definition/pages/9e3f…/page.json:18                 'Customer'[Segment] is not a column on Customer
+
+<span class="e">ERROR</span>  <span class="m">[model]</span> Column references should be fully qualified  DAX_COLUMNS_FULLY_QUALIFIED  (2)
+       <span class="m">https://pbiplint.com/rules/dax-columns-fully-qualified</span>
+       [Total Quantity]      definition/tables/Sales.tmdl:115
+       [Distinct Customers]  definition/tables/Sales.tmdl:142
+
+<span class="w">WARN </span>  <span class="t">[report]</span> Hidden visuals still run their queries  HIDDEN_VISUALS_STILL_QUERY  (2)
+       <span class="m">https://pbiplint.com/rules/hidden-visuals-still-query</span>
+       "Sales trend (old)" on "Overview"  definition/pages/4c1a…/visuals/77aa…/visual.json:1  3 fields bound
+       "Debug table" on "Detail"          definition/pages/9e3f…/visuals/c2e1…/visual.json:1  6 fields bound
+<span class="m">…</span></pre>
+    </div>
+    <p class="note">
+      Rejected alternative: two sections, Model then Report, each ranked on its own. Ranking across
+      both layers keeps "fix these first" honest; the tag says which file family to open. JSON adds
+      <code>layers</code>, <code>facts</code>, and <code>diagnostics</code>; SARIF is unchanged in
+      shape.
+    </p>
+  </body>
+</html>

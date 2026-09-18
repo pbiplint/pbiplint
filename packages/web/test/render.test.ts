@@ -107,6 +107,23 @@ describe("renderResults", () => {
     applyFilters(container);
     expect(container.querySelectorAll<HTMLElement>(".group[hidden]").length).toBe(0);
   });
+  it("marks its header cells as column headers and says what the count counts", () => {
+    renderResults(container, result, { source: "x" });
+    const g0 = container.querySelector<HTMLElement>(".group")!;
+    const r0 = result.groups[0]!;
+    expect([...g0.querySelectorAll("th")].map((th) => th.getAttribute("scope"))).toEqual([
+      "col",
+      "col",
+      "col",
+      "col",
+    ]);
+    // "2" beside a rule name is a number with no noun. The digits are for the eye and the phrase
+    // for a screen reader, each hidden from the other so the count is never read out twice.
+    const count = g0.querySelector(".count")!;
+    expect(r0.rule.id).toBe("DAX_COLUMNS_FULLY_QUALIFIED");
+    expect(count.querySelector("[aria-hidden='true']")!.textContent).toBe("2");
+    expect(count.querySelector(".visually-hidden")!.textContent).toBe("2 errors");
+  });
   it("wraps each findings table so a long object name scrolls instead of overflowing the page", () => {
     renderResults(container, result, { source: "x" });
     const groups = [...container.querySelectorAll<HTMLElement>(".group")];

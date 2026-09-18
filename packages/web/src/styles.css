@@ -324,6 +324,9 @@ button.secondary:hover,
   gap: 10px;
   margin: 16px 0;
 }
+.groups {
+  margin-top: 16px;
+}
 .group {
   background: var(--surface-1);
   border: 1px solid var(--line-1);
@@ -386,9 +389,29 @@ button.secondary:hover,
   background: rgba(45, 125, 210, 0.2);
   color: #8ec3ff;
 }
+/* Not a severity, an annotation beside one: outlined rather than filled, so the filled badge on a
+   row is always the severity. The border eats a pixel of the padding to keep both the same height. */
 .badge.muted {
-  background: var(--surface-2);
-  color: var(--fg-2);
+  background: none;
+  color: var(--fg-3);
+  border: 1px solid var(--line-2);
+  padding: 1px 7px;
+}
+/* The same phrase on every row, so it reads as the secondary link it is beside the rule's own
+   name, and never breaks across the separator before it. It keeps the link colour and the
+   underline: the size is what subordinates it, not a colour a reader has to notice. */
+.rule-link {
+  font-size: 13px;
+  white-space: nowrap;
+}
+/* The whole answer, when the answer is nothing. A bare sentence under the summary reads as a line
+   someone forgot to finish. */
+.clean {
+  margin: 16px 0;
+  padding: 16px;
+  background: var(--surface-1);
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius);
 }
 .table-wrap {
   overflow-x: auto;

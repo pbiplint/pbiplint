@@ -247,7 +247,14 @@ function renderGroup(g: RankedGroup): HTMLElement {
       {},
       h("span", { class: `badge ${label}` }, label),
       h("span", { class: "name" }, g.rule.name),
-      h("span", { class: "count" }, String(g.findings.length)),
+      // The digits are for the eye, the phrase for a screen reader: "2" beside a rule name is a
+      // number with no noun, and both in the open would read the count out twice.
+      h(
+        "span",
+        { class: "count" },
+        h("span", { "aria-hidden": "true" }, String(g.findings.length)),
+        h("span", { class: "visually-hidden" }, count(g.findings.length, g.rule.severity)),
+      ),
     ),
     h(
       "p",
@@ -283,10 +290,12 @@ function renderGroup(g: RankedGroup): HTMLElement {
           h(
             "tr",
             {},
-            h("th", {}, "Object"),
-            h("th", {}, "Type"),
-            h("th", {}, "Location"),
-            h("th", {}, "Detail"),
+            // scope="col", so a screen reader naming a cell's column reads the right heading
+            // rather than guessing from the table's shape.
+            h("th", { scope: "col" }, "Object"),
+            h("th", { scope: "col" }, "Type"),
+            h("th", { scope: "col" }, "Location"),
+            h("th", { scope: "col" }, "Detail"),
           ),
         ),
         h("tbody", {}, ...rows),

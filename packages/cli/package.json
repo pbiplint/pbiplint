@@ -25,7 +25,7 @@
   },
   "type": "module",
   "bin": {
-    "pbiplint": "./dist/pbiplint.mjs"
+    "pbiplint": "dist/pbiplint.mjs"
   },
   "files": [
     "dist",

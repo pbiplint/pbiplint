@@ -390,10 +390,12 @@ button.secondary:hover,
   color: #8ec3ff;
 }
 /* Not a severity, an annotation beside one: outlined rather than filled, so the filled badge on a
-   row is always the severity. The border eats a pixel of the padding to keep both the same height. */
+   row is always the severity. The border eats a pixel of the padding to keep both the same height.
+   The text stays --fg-2: --fg-3 is 4.35:1 on the canvas, which the axe scan in the e2e suite fails
+   at this size, and correctly. */
 .badge.muted {
   background: none;
-  color: var(--fg-3);
+  color: var(--fg-2);
   border: 1px solid var(--line-2);
   padding: 1px 7px;
 }

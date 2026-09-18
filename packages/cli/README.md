@@ -1,8 +1,9 @@
 # pbiplint
 
 Best-practice linter for Power BI semantic models. Point it at a `.SemanticModel` folder, a PBIP
-folder, or one `.tmdl` file and get ranked findings with a link to a fix page for each rule.
-Nothing is uploaded: it reads the files you name and writes to your terminal. Node 20 or later.
+folder, a `definition` folder, or one `.tmdl` file and get ranked findings with a link to a fix
+page for each rule. Nothing is uploaded: it reads the files you name and writes to your terminal.
+Node 20 or later.
 
 ```bash
 npx pbiplint path/to/Model.SemanticModel
@@ -10,12 +11,15 @@ npx pbiplint --sample                                       # a bundled model wi
 npx pbiplint path/to/model --format sarif --output pbiplint.sarif
 npx pbiplint path/to/model --format markdown
 npx pbiplint rules                                          # every rule with status and severity
+npx pbiplint --help                                         # every option, in one screen
+npx pbiplint --version
 ```
 
 Formats: `text` (default), `json`, `sarif` (for GitHub code scanning and editors), `markdown`.
 
-Exit codes: `0` no findings at or above `--fail-on` (default `error`), `1` findings, `2` usage or
-input error. `--fail-on warning` tightens the gate; `--fail-on none` always exits 0.
+Exit codes: `0` no findings at or above `--fail-on`, `1` findings, `2` usage or input error.
+`--fail-on error` is the default; `--fail-on warning` and `--fail-on info` tighten the gate;
+`--fail-on none` always exits 0.
 
 ## Configuration
 

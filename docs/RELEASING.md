@@ -53,7 +53,21 @@ Do these once, at the first release, not before.
    one: `verify` checks the tag and runs lint, types, tests, the browser check and the pack check,
    then `publish` builds again, uploads both packages to npm and creates the release.
    Watch it with `gh run watch --repo pbiplint/pbiplint`.
-5. Check: `npx pbiplint@0.2.0 --sample` in an empty folder exits 1 with 161 findings.
+5. Check the published build against the one you tagged, rather than against a number written
+   here that drifts with every rule added:
+
+   ```bash
+   cd "$(mktemp -d)"
+   npx pbiplint@0.2.0 --sample > published.txt
+   echo "exit $?"          # 1
+   head -1 published.txt
+
+   # from the release checkout, where step 1 already built it
+   node packages/cli/dist/pbiplint.mjs --sample | head -1
+   ```
+
+   The exit code is 1 and the two summary lines are identical. `npm test` pins those same totals,
+   in `packages/web/test/sample.test.ts`.
 
 A rerun of the workflow, or a tag pushed after a manual publish, is safe: `scripts/publish.mjs`
 skips a version that is already on the registry.

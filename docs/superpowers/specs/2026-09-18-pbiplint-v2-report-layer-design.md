@@ -131,9 +131,15 @@ entry is typed `Advanced` with nothing applied).
   and sanitise): 1 page, 19 visuals, current schemas (report 3.2.0,
   page 2.1.0, visual 2.8.0, pagesMetadata 1.0.0), Filters pane saved
   `expanded: true`, one registered PNG and the stock Fluent theme.
-- Michael's `ShelfMart Foot Traffic and Weather.Report`: 1 page, 9
-  visuals each with `mobile.json`, a registered PNG and a firm-named
-  theme JSON under `StaticResources/RegisteredResources` (remove).
+- Michael's `ShelfMart Foot Traffic and Weather` project (OneDrive,
+  read-only; copy): a whole PBIP with a `.pbip` file, a TMDL model (20
+  `.tmdl` files, no local paths in partition sources) and a report with
+  1 page, 9 visuals each with `mobile.json`, theme CY24SU10, and a
+  registered PNG and theme JSON under `StaticResources`. ShelfMart is a
+  fictional company with generated data; Michael has cleared every part
+  of it for use as a fixture, so it needs no sanitising beyond the
+  standard script. `StaticResources` may be left out of the copy only
+  because nothing reads them.
 - `examples/messy-sales` has no report. The OneDrive `Sales Demo.Report`
   beside the demo model is one empty page.
 
@@ -533,8 +539,9 @@ follows the four-section template.
 **Fixtures** in `tests/fixtures/`, sanitised: `base-rules-fails` and
 `base-rules-passes` from fab-inspector (whole PBIPs, section 3.3);
 Michael's PBIP and GitHub Demo (current PBIR, registered PNG and theme
-removed) with its model; ShelfMart (report only, resources removed);
-the sample project with its new report.
+removed) with its model; ShelfMart, whole PBIP (report and model), the
+one fixture with mobile layouts and the second Desktop-written one for
+the cross-layer rules; the sample project with its new report.
 
 **Oracle expectations.** `scripts/fab-expectations.mjs` mirrors
 `te-expectations.mjs`: runs the fab-inspector CLI or converts a saved

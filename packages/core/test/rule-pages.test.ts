@@ -28,7 +28,6 @@ const LEGACY_PAGES = new Set<string>([
   "avoid-invalid-name-characters",
   "avoid-structured-data-sources-with-provider-partitions",
   "avoid-the-userelationship-function-and-rls-against-the-same-table",
-  "avoid-using-1-x-y-syntax",
   "avoid-using-many-to-many-relationships-on-tables-used-for-dynamic-row-level-security",
   "avoid-using-the-iferror-function",
   "calculation-groups-with-no-calculation-items",

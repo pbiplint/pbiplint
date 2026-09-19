@@ -178,6 +178,8 @@ describe("rulePage", () => {
     // The build cannot import core (see CATEGORY_ORDER), so the text is copied and held equal here.
     expect(ignoreHelp("X", ["Column"])).toBe(coreIgnoreHelp("X", ["Column"]));
     expect(ignoreHelp("X", ["File"])).toBe(coreIgnoreHelp("X", ["File"]));
+    expect(ignoreHelp("X", [])).toBe(coreIgnoreHelp("X", []));
+    expect(ignoreHelp("X", ["File", "Table"])).toBe(coreIgnoreHelp("X", ["File", "Table"]));
     // A page without the section gets nothing appended.
     const live = read("avoid-bi-directional-relationships-against-high-cardinality-columns");
     expect(rulePage(live, "x").html).not.toContain("pbiplint.ignore");
@@ -199,7 +201,20 @@ describe("rulePage", () => {
       ),
       "x",
     );
-    expect(other.html).toContain('<a href="https://learn.microsoft.com/x">learn.microsoft.com</a>');
+    expect(other.html).not.toContain('class="sources"');
+    // A page not yet on the template lists its further reading in sources too; only the source
+    // the rule was ported from is credited.
+    const both = rulePage(
+      read("hide-foreign-keys").replace(
+        /sources:\n( {2}- .*\n)+/,
+        "sources:\n  - https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json\n  - https://www.sqlbi.com/articles/x\n",
+      ),
+      "x",
+    );
+    expect(both.html).toContain(
+      `<p class="sources">Ported from <a href="https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json">Microsoft's Best Practice Analyzer ruleset</a>.</p>`,
+    );
+    expect(both.html).not.toContain("sqlbi");
   });
 });
 
@@ -213,6 +228,9 @@ describe("withIgnoreHelp", () => {
       `## When to ignore it\n\nRarely.\n\n${help}\n`,
     );
     expect(withIgnoreHelp("## Quirks\n\n- Q\n", "X", ["Column"])).toBe("## Quirks\n\n- Q\n");
+    // The heading is matched at a line start, so prose that names the section is left alone.
+    const prose = "## Quirks\n\nSee the ## When to ignore it section.\n";
+    expect(withIgnoreHelp(prose, "X", ["Column"])).toBe(prose);
   });
 });
 
@@ -230,8 +248,14 @@ describe("ruleLinks and attribution", () => {
     ).toBe(
       `<p class="sources">Ported from <a href="https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json">Microsoft's Best Practice Analyzer ruleset</a>.</p>\n`,
     );
-    expect(attribution(["https://example.org/a?b=1"])).toBe(
-      `<p class="sources">Ported from <a href="https://example.org/a?b=1">example.org</a>.</p>\n`,
+    expect(attribution(["https://example.org/a?b=1"])).toBe("");
+    expect(
+      attribution([
+        "https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json",
+        "https://www.sqlbi.com/articles/x",
+      ]),
+    ).toBe(
+      `<p class="sources">Ported from <a href="https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json">Microsoft's Best Practice Analyzer ruleset</a>.</p>\n`,
     );
   });
 });

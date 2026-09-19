@@ -311,12 +311,13 @@ more to read.
 
 **Attribution** is rendered from `sources` as a paragraph at the foot
 of the article, before the call-to-action: for the ruleset URL, "Ported
-from Microsoft's Best Practice Analyzer ruleset" with the link; for any
-other URL, the link under its hostname. The renderer keeps a small map
-from known URLs to names, which is the extension point the v2 spec
-needs for PBI Inspector. A page with empty `sources` renders no
-attribution paragraph. The test checks `sources` per status as section
-4 says.
+from Microsoft's Best Practice Analyzer ruleset" with the link; a URL
+the map does not name is left out of the line, so a page not yet
+migrated does not credit its further-reading link as a source. The
+renderer keeps a small map from known URLs to names, which is the
+extension point the v2 spec needs for PBI Inspector. A page with empty
+`sources` renders no attribution paragraph. The test checks `sources`
+per status as section 4 says.
 
 ## 8. Site renderer changes, in one place
 

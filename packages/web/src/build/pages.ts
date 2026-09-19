@@ -64,11 +64,14 @@ export function ignoreHelp(ruleId: string, scope: readonly string[] = []): strin
 
 /** The body with the ignore mechanics as the last paragraph of "When to ignore it", when the page has that section. */
 export function withIgnoreHelp(body: string, ruleId: string, scope: readonly string[]): string {
-  const heading = "## When to ignore it";
-  const start = body.indexOf(heading);
-  if (start === -1) return body;
-  const next = body.indexOf("\n## ", start + heading.length);
-  const end = next === -1 ? body.length : next;
+  // Both searches are line-anchored, so "## When to ignore it" in the middle of a prose line is
+  // never taken for the heading and a mid-line "## " never for the section that ends it.
+  const heading = /^## When to ignore it[ \t]*$/m.exec(body);
+  if (!heading) return body;
+  const after = heading.index + heading[0].length;
+  const next = /^## /m.exec(body.slice(after));
+  // A match is the next heading itself, and the section ends at the newline in front of it.
+  const end = next ? after + next.index - 1 : body.length;
   return `${body.slice(0, end).trimEnd()}\n\n${ignoreHelp(ruleId, scope)}\n${body.slice(end)}`;
 }
 
@@ -85,13 +88,16 @@ export function ruleLinks(pages: { slug: string; markdown: string }[]): RuleLink
   );
 }
 
-/** The attribution line under a rule page. Nothing for a rule that was ported from nowhere. */
+/**
+ * The attribution line under a rule page, naming only the sources SOURCE_NAMES knows. A page not
+ * yet on the template still carries a further-reading URL in `sources`, and that URL is under its
+ * Links too, so crediting it as a port source would be false. Nothing when no source is named.
+ */
 export function attribution(sources: string[]): string {
-  if (sources.length === 0) return "";
-  const links = sources.map(
-    (url) =>
-      `<a href="${escapeHtml(url)}">${escapeHtml(SOURCE_NAMES[url] ?? new URL(url).hostname)}</a>`,
-  );
+  const links = sources
+    .filter((url) => SOURCE_NAMES[url] !== undefined)
+    .map((url) => `<a href="${escapeHtml(url)}">${escapeHtml(SOURCE_NAMES[url]!)}</a>`);
+  if (links.length === 0) return "";
   return `<p class="sources">Ported from ${links.join(" and ")}.</p>\n`;
 }
 

@@ -66,7 +66,7 @@ A calculation group with no items still appears in the field list as a table wit
 
 ## How to fix it
 
-In Power BI Desktop, open Model view, find the group under Calculation groups in the Model explorer pane, choose New calculation item, and write its DAX in the formula bar. In the TMDL file the group is a `calculationGroup` block under the table, and each item is a `calculationItem` inside it with its DAX after the `=`. If the group is not wanted, delete the table: in Desktop, right-click it in the Data pane and choose Delete from model; in the project, remove its file from the `tables` folder.
+In Power BI Desktop, open Model view, find the group under Calculation groups in the Model explorer pane, choose New calculation item, and write its DAX in the formula bar. In the TMDL file the group is a `calculationGroup` block under the table, and each item is a `calculationItem` inside it with its DAX after the `=`. If the group is not wanted, delete the table: in Desktop, right-click it in the Data pane and choose Delete from model; in the project, remove its file from the `tables` folder and its `ref table` line from `model.tmdl`.
 
 ## When to ignore it
 

@@ -61,7 +61,7 @@ A name that already says the whole thing needs nothing added: `'Date'[Year]` gai
 - Visibility is the object's own isHidden flag: a visible column inside a hidden table is still reported.
 - A calculation group table is reported once, as a calculation group.
 - A description of only spaces or tabs counts as none, so padding a description to quiet the rule does not work.
-- Hierarchies, hierarchy levels, partitions, roles, perspectives, data sources, and named expressions are outside the scope, so an undescribed hierarchy is never reported here.
+- Hierarchies, hierarchy levels, calculation items, partitions, roles, perspectives, data sources, and named expressions are outside the scope, so an undescribed hierarchy is never reported here.
 
 ## Related rules
 

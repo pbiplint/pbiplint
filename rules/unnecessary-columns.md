@@ -70,7 +70,7 @@ Report usage is the case to check first. A hidden column that a visual, a slicer
 - DAX references are approximated by pattern matching: references inside strings or comments count, and a bare `[Column]` reference resolves measure-first, then the expression's own table, then the first table with that column.
 - Report usage is not visible to this rule. A hidden column used only by a visual, a slicer, or a report-level filter is still flagged.
 - Variations are not tested, here or in the source rule, so a hidden column that a variation names as its default column is reported. `SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS` does read variations.
-- Row-level security is matched as text, ignoring letter case, the way the source rule matches it. A bare `[Column]` counts only inside a filter on the column's own table, while `Table[Column]` and `'Table'[Column]` count inside any role's filter on any table.
+- Row-level security is matched as text, ignoring letter case, the way the source rule matches it. A bare `[Column]` in any role's filter already counts as a DAX reference (see above), so the text test only adds the qualified forms `Table[Column]` and `'Table'[Column]`.
 
 ## Related rules
 

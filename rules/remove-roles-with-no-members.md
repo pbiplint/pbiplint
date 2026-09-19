@@ -58,7 +58,7 @@ role 'West Region'
 
 ## Why it matters
 
-A role with no members filters nobody. Where membership belongs in the model, an empty role leaves the next reviewer guessing whether it was never assigned, was removed on purpose, or was dropped by a failed deployment, which is exactly the question a security review has to answer. In the meantime the role still has to be read and understood by everyone who reviews the model, and it appears in every list of roles as though somebody were behind it.
+Where a model carries its own membership, a role with no members filters nobody. Where membership belongs in the model, an empty role leaves the next reviewer guessing whether it was never assigned, was removed on purpose, or was dropped by a failed deployment, which is exactly the question a security review has to answer. In the meantime the role still has to be read and understood by everyone who reviews the model, and it appears in every list of roles as though somebody were behind it.
 
 ## How to fix it
 

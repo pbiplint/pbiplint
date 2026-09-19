@@ -10,7 +10,7 @@ uploaded, ever.
 
 ## Status
 
-Version 0.1.0, released on September 16, 2026. It covers the semantic model
+Version 0.1.2, released on September 18, 2026. It covers the semantic model
 layer (TMDL): every rule from the Microsoft best-practice ruleset, ported and
 verified against Tabular Editor, in the browser at https://pbiplint.com and on
 the command line. Report rules (PBIR) and Power Query rules follow.

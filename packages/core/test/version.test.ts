@@ -16,6 +16,15 @@ it("is released in lockstep with the CLI", () => {
   expect(manifest("../../cli/package.json").version).toBe(manifest("../package.json").version);
 });
 
+it("is the version the README's Status section names (update it in the release commit)", () => {
+  // The README front page says which version is out. Nothing regenerates that line, and two
+  // patch releases went by with it still naming 0.1.0, so the release checks pin it here.
+  const readme = readFileSync(new URL("../../../README.md", import.meta.url), "utf8");
+  const status = readme.split("\n").find((line) => line.startsWith("Version "));
+  const version = manifest("../package.json").version.replaceAll(".", "\\.");
+  expect(status).toMatch(new RegExp(`^Version ${version}\\b`));
+});
+
 it("declares the same Node floor as the workspace root, which require() of an ESM package needs", () => {
   // >=20 is not enough: require() of an ESM package resolves only on 20.19 or later.
   const NODE_FLOOR = "^20.19.0 || >=22.12.0";

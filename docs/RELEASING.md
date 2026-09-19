@@ -37,8 +37,17 @@ Do these once, at the first release, not before.
    npm version 0.2.0 -w @pbiplint/core -w pbiplint --no-git-tag-version
    npm install
    npm run version:sync
+   ```
+
+   Set the same version, and the date, in the Status section of `README.md`, which nothing
+   regenerates. Then run every check:
+
+   ```bash
    npm test && npm run build && npm run check:pack
    ```
+
+   The version test fails until the README names the version in `package.json`, so a release
+   commit that skips the README cannot pass CI.
 
 2. Commit as `chore: release v0.2.0`, open a pull request, let CI pass, merge.
 3. Tag the merge commit and push the tag:

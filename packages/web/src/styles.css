@@ -65,6 +65,27 @@ pre code {
   background: none;
   padding: 0;
 }
+/* A rule page's example: the snippet that fires and the same snippet fixed, captioned by the
+   renderer so every page reads the same. */
+.example {
+  margin: 16px 0;
+}
+.example figcaption {
+  color: var(--fg-2);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 6px;
+}
+.example pre {
+  margin: 0;
+}
+/* Where a rule was ported from, under the page. */
+.sources {
+  color: var(--fg-2);
+  font-size: 14px;
+  margin-top: 32px;
+}
 h1,
 h2,
 h3 {

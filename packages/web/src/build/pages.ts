@@ -26,9 +26,74 @@ const STATUS_LABEL: Record<string, string> = {
   needsLiveModel: "needs a live model",
   builtin: "built in",
 };
+/** Known source URLs and how the attribution line names them. Any other URL is named by its host. */
+const SOURCE_NAMES: Record<string, string> = {
+  "https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json":
+    "Microsoft's Best Practice Analyzer ruleset",
+};
+/** The caption a fenced example carries, by the word after `tmdl` in its info string. */
+const EXAMPLE_CAPTION: Record<string, string> = {
+  fires: "Fires the rule",
+  fixed: "After the fix",
+};
 
 export const escapeHtml = (s: string): string =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+const str = (v: string | string[] | undefined): string =>
+  Array.isArray(v) ? (v[0] ?? "") : (v ?? "");
+const list = (v: string | string[] | undefined): string[] => (Array.isArray(v) ? v : v ? [v] : []);
+
+/** escapeHtml plus the apostrophe, for text inside <code>, matching what marked writes there. */
+const escapeCode = (s: string): string => escapeHtml(s).replace(/'/g, "&#39;");
+
+/**
+ * How to silence a rule, appended to a page's "When to ignore it" section. Core exports the same
+ * text as ignoreHelp; this copy is deliberate for the reason CATEGORY_ORDER gives, and a test
+ * holds the two equal.
+ */
+export function ignoreHelp(ruleId: string, scope: readonly string[] = []): string {
+  const project = `To turn the rule off for a whole project, set \`"${ruleId}": "off"\` under \`rules\` in \`pbiplint.config.json\`.`;
+  if (scope.length > 0 && scope.every((s) => s === "File"))
+    return `This rule reports on files, so there is no object to annotate. ${project}`;
+  return (
+    `To ignore this rule on one object, add \`annotation pbiplint.ignore = ${ruleId}\` under ` +
+    `the object in its TMDL file. Power BI Desktop keeps the annotation. ${project}`
+  );
+}
+
+/** The body with the ignore mechanics as the last paragraph of "When to ignore it", when the page has that section. */
+export function withIgnoreHelp(body: string, ruleId: string, scope: readonly string[]): string {
+  const heading = "## When to ignore it";
+  const start = body.indexOf(heading);
+  if (start === -1) return body;
+  const next = body.indexOf("\n## ", start + heading.length);
+  const end = next === -1 ? body.length : next;
+  return `${body.slice(0, end).trimEnd()}\n\n${ignoreHelp(ruleId, scope)}\n${body.slice(end)}`;
+}
+
+/** Rule id to page slug; a code span that names a rule in this map links to its page. */
+export type RuleLinks = ReadonlyMap<string, string>;
+
+/** The link table for a set of pages, read from their frontmatter before any page is rendered. */
+export function ruleLinks(pages: { slug: string; markdown: string }[]): RuleLinks {
+  return new Map(
+    pages.map(({ slug, markdown }) => [
+      str(parseFrontmatter(markdown, `rules/${slug}.md`).data.id),
+      slug,
+    ]),
+  );
+}
+
+/** The attribution line under a rule page. Nothing for a rule that was ported from nowhere. */
+export function attribution(sources: string[]): string {
+  if (sources.length === 0) return "";
+  const links = sources.map(
+    (url) =>
+      `<a href="${escapeHtml(url)}">${escapeHtml(SOURCE_NAMES[url] ?? new URL(url).hostname)}</a>`,
+  );
+  return `<p class="sources">Ported from ${links.join(" and ")}.</p>\n`;
+}
 
 export type Frontmatter = Record<string, string | string[]>;
 
@@ -85,9 +150,6 @@ export function parseFrontmatter(
   return { data, body: m[2]! };
 }
 
-const str = (v: string | string[] | undefined): string =>
-  Array.isArray(v) ? (v[0] ?? "") : (v ?? "");
-const list = (v: string | string[] | undefined): string[] => (Array.isArray(v) ? v : v ? [v] : []);
 const section = (body: string, heading: string): string =>
   body.split(`## ${heading}`)[1]?.split(/\n## /)[0] ?? "";
 const firstParagraph = (s: string): string =>
@@ -111,15 +173,36 @@ export const headingId = (text: string): string =>
     .trim()
     .replace(/\s+/g, "-");
 
-// marked adds no heading ids of its own since v8, so the renderer adds them here.
-const md = new Marked({
-  renderer: {
-    heading({ tokens, depth, text }: Tokens.Heading): string {
-      return `<h${depth} id="${headingId(text)}">${this.parser.parseInline(tokens)}</h${depth}>\n`;
+/**
+ * The site's Markdown renderer. marked adds no heading ids of its own since v8, so headings get
+ * them here. On a rule page, a fence whose info string is `tmdl fires` or `tmdl fixed` renders as
+ * a captioned figure, and a code span naming another rule links to its page; returning false
+ * from an override hands the token back to marked's default renderer.
+ */
+function siteMarkdown(links: RuleLinks = new Map(), self = ""): Marked {
+  return new Marked({
+    renderer: {
+      heading({ tokens, depth, text }: Tokens.Heading): string {
+        return `<h${depth} id="${headingId(text)}">${this.parser.parseInline(tokens)}</h${depth}>\n`;
+      },
+      code({ text, lang, escaped }: Tokens.Code): string | false {
+        const example = /^tmdl (fires|fixed)$/.exec(lang ?? "");
+        if (!example) return false;
+        const kind = example[1]!;
+        const code = (escaped ? text : escapeCode(text)).replace(/\n$/, "");
+        return `<figure class="example ${kind}">\n<figcaption>${EXAMPLE_CAPTION[kind]!}</figcaption>\n<pre><code class="language-tmdl">${code}\n</code></pre>\n</figure>\n`;
+      },
+      codespan({ text }: Tokens.Codespan): string | false {
+        const slug = links.get(text);
+        if (slug === undefined || text === self) return false;
+        return `<a href="/rules/${escapeHtml(slug)}/"><code>${escapeCode(text)}</code></a>`;
+      },
     },
-  },
-});
-const render = (markdown: string): string => md.parse(markdown, { async: false }) as string;
+  });
+}
+const md = siteMarkdown();
+const render = (markdown: string, links?: RuleLinks, self?: string): string =>
+  (links ? siteMarkdown(links, self) : md).parse(markdown, { async: false }) as string;
 /**
  * A Markdown paragraph as inline HTML, so `FILTER('Table')` in a summary reads as code. A backtick
  * run marked leaves literal, such as the unterminated fence the parse-issue page names, is dropped.
@@ -196,7 +279,11 @@ export interface RuleMeta {
   summary: string;
 }
 
-export function rulePage(markdown: string, slug: string): { html: string; meta: RuleMeta } {
+export function rulePage(
+  markdown: string,
+  slug: string,
+  links: RuleLinks = new Map(),
+): { html: string; meta: RuleMeta } {
   const { data, body } = parseFrontmatter(markdown, `rules/${slug}.md`);
   const title = /^# (.+)$/m.exec(body)?.[1] ?? str(data.name);
   const meta: RuleMeta = {
@@ -214,8 +301,8 @@ export function rulePage(markdown: string, slug: string): { html: string; meta: 
   <h1>${escapeHtml(title)}</h1>
   <p class="meta"><span class="badge ${escapeHtml(meta.severity)}">${escapeHtml(meta.severity)}</span> <code>${escapeHtml(meta.id)}</code> · ${escapeHtml(STATUS_LABEL[meta.status] ?? meta.status)} · scope: ${escapeHtml(list(data.scope).join(", "))}</p>
   ${video ? `<p class="video"><a href="${escapeHtml(video)}">Watch the video for this rule</a></p>` : ""}
-  ${render(body.replace(/^# .+\n/m, ""))}
-  <p class="cta"><a class="button" href="/">Check a model for this</a> <a href="https://github.com/pbiplint/pbiplint/edit/main/rules/${escapeHtml(slug)}.md">Improve this page</a></p>
+  ${render(withIgnoreHelp(body.replace(/^# .+\n/m, ""), meta.id, list(data.scope)), links, meta.id)}
+  ${attribution(list(data.sources))}<p class="cta"><a class="button" href="/">Check a model for this</a> <a href="https://github.com/pbiplint/pbiplint/edit/main/rules/${escapeHtml(slug)}.md">Improve this page</a></p>
 </article>`;
   return {
     html: page({

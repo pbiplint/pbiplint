@@ -10,17 +10,24 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ConfigEnv, UserConfig } from "vite";
-import { CATEGORY_ORDER as CORE_CATEGORY_ORDER } from "@pbiplint/core";
+import {
+  CATEGORY_ORDER as CORE_CATEGORY_ORDER,
+  ignoreHelp as coreIgnoreHelp,
+} from "@pbiplint/core";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { generatePlugin, generateSite, pageEntries, RULES_DIR } from "../src/build/generate.js";
 import {
+  attribution,
   CATEGORY_ORDER,
   contentPage,
+  ignoreHelp,
   NAV,
   parseFrontmatter,
+  ruleLinks,
   rulePage,
   rulesIndex,
   type RuleMeta,
+  withIgnoreHelp,
 } from "../src/build/pages.js";
 
 const read = (slug: string): string => readFileSync(join(RULES_DIR, `${slug}.md`), "utf8");
@@ -122,6 +129,110 @@ describe("rulePage", () => {
       "hide-foreign-keys",
     );
     expect(withVideo.html).toContain('href="https://youtu.be/abc"');
+  });
+  it("renders an example fence as a captioned figure and leaves other fences alone", () => {
+    const page = read("hide-foreign-keys").replace(
+      "## Why it matters",
+      "## Example\n\n```tmdl fires\ntable T\n\tcolumn 'A'\n```\n\n```tmdl fixed\ntable T\n```\n\n```\nDAX here\n```\n\n## Why it matters",
+    );
+    const { html } = rulePage(page, "hide-foreign-keys");
+    expect(html).toContain(
+      '<figure class="example fires">\n<figcaption>Fires the rule</figcaption>\n<pre><code class="language-tmdl">table T\n\tcolumn &#39;A&#39;\n</code></pre>\n</figure>',
+    );
+    expect(html).toContain(
+      '<figure class="example fixed">\n<figcaption>After the fix</figcaption>',
+    );
+    expect(html).toContain("<pre><code>DAX here\n</code></pre>");
+    expect(html).toContain('<h2 id="example">Example</h2>');
+  });
+  it("links a code span that names another rule, and only another rule", () => {
+    const page = read("hide-foreign-keys").replace(
+      "## Quirks",
+      "See `MARK_PRIMARY_KEYS`, `HIDE_FOREIGN_KEYS`, and `MADE_UP`.\n\n## Quirks",
+    );
+    const links = new Map([
+      ["MARK_PRIMARY_KEYS", "mark-primary-keys"],
+      ["HIDE_FOREIGN_KEYS", "hide-foreign-keys"],
+    ]);
+    const { html } = rulePage(page, "hide-foreign-keys", links);
+    expect(html).toContain(
+      '<a href="/rules/mark-primary-keys/"><code>MARK_PRIMARY_KEYS</code></a>',
+    );
+    expect(html).toContain("<code>HIDE_FOREIGN_KEYS</code>");
+    expect(html).not.toContain('<a href="/rules/hide-foreign-keys/">');
+    expect(html).toContain("<code>MADE_UP</code>");
+    expect(html).not.toContain("made-up");
+    // With no link table, nothing is linked.
+    expect(rulePage(page, "hide-foreign-keys").html).not.toContain("/rules/mark-primary-keys/");
+  });
+  it("appends the ignore mechanics to When to ignore it, in core's words", () => {
+    const page = read("hide-foreign-keys").replace(
+      "## Quirks",
+      "## When to ignore it\n\nRarely.\n\n## Quirks",
+    );
+    const { html } = rulePage(page, "hide-foreign-keys");
+    expect(html).toContain(
+      "<p>Rarely.</p>\n<p>To ignore this rule on one object, add <code>annotation pbiplint.ignore = HIDE_FOREIGN_KEYS</code>",
+    );
+    expect(html).toContain("<code>&quot;HIDE_FOREIGN_KEYS&quot;: &quot;off&quot;</code>");
+    // The build cannot import core (see CATEGORY_ORDER), so the text is copied and held equal here.
+    expect(ignoreHelp("X", ["Column"])).toBe(coreIgnoreHelp("X", ["Column"]));
+    expect(ignoreHelp("X", ["File"])).toBe(coreIgnoreHelp("X", ["File"]));
+    // A page without the section gets nothing appended.
+    const live = read("avoid-bi-directional-relationships-against-high-cardinality-columns");
+    expect(rulePage(live, "x").html).not.toContain("pbiplint.ignore");
+  });
+  it("prints where the rule was ported from, and nothing for a rule with no source", () => {
+    const { html } = rulePage(read("hide-foreign-keys"), "hide-foreign-keys");
+    expect(html).toContain(
+      `<p class="sources">Ported from <a href="https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json">Microsoft's Best Practice Analyzer ruleset</a>.</p>`,
+    );
+    const none = rulePage(
+      read("hide-foreign-keys").replace(/sources:\n( {2}- .*\n)+/, "sources:\n"),
+      "x",
+    );
+    expect(none.html).not.toContain('class="sources"');
+    const other = rulePage(
+      read("hide-foreign-keys").replace(
+        /sources:\n( {2}- .*\n)+/,
+        "sources:\n  - https://learn.microsoft.com/x\n",
+      ),
+      "x",
+    );
+    expect(other.html).toContain('<a href="https://learn.microsoft.com/x">learn.microsoft.com</a>');
+  });
+});
+
+describe("withIgnoreHelp", () => {
+  it("appends to the section whether or not another section follows it", () => {
+    const help = ignoreHelp("X", ["Column"]);
+    expect(
+      withIgnoreHelp("## When to ignore it\n\nRarely.\n\n## Quirks\n\n- Q\n", "X", ["Column"]),
+    ).toBe(`## When to ignore it\n\nRarely.\n\n${help}\n\n## Quirks\n\n- Q\n`);
+    expect(withIgnoreHelp("## When to ignore it\n\nRarely.\n", "X", ["Column"])).toBe(
+      `## When to ignore it\n\nRarely.\n\n${help}\n`,
+    );
+    expect(withIgnoreHelp("## Quirks\n\n- Q\n", "X", ["Column"])).toBe("## Quirks\n\n- Q\n");
+  });
+});
+
+describe("ruleLinks and attribution", () => {
+  it("maps every page's id to its slug", () => {
+    const links = ruleLinks([{ slug: "hide-foreign-keys", markdown: read("hide-foreign-keys") }]);
+    expect([...links]).toEqual([["HIDE_FOREIGN_KEYS", "hide-foreign-keys"]]);
+  });
+  it("names a known source and falls back to the hostname", () => {
+    expect(attribution([])).toBe("");
+    expect(
+      attribution([
+        "https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json",
+      ]),
+    ).toBe(
+      `<p class="sources">Ported from <a href="https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json">Microsoft's Best Practice Analyzer ruleset</a>.</p>\n`,
+    );
+    expect(attribution(["https://example.org/a?b=1"])).toBe(
+      `<p class="sources">Ported from <a href="https://example.org/a?b=1">example.org</a>.</p>\n`,
+    );
   });
 });
 

@@ -8,14 +8,13 @@ status: needsLiveModel
 video:
 sources:
   - https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json
-  - https://www.elegantbi.com/post/vertipaqintabulareditor
 ---
 
 # Avoid bi-directional relationships against high-cardinality columns
 
 ## What it checks
 
-Columns in a bi-directional relationship that have more than 100,000 distinct values. Cardinality is not stored in the model files, so pbiplint lists this rule but cannot run it.
+Columns in a bi-directional relationship that have more than 100,000 distinct values. Cardinality is a statistic of the loaded data, not of the model files, so pbiplint lists this rule but does not run it: it needs column statistics that only a live model carries.
 
 ## Why it matters
 
@@ -23,11 +22,13 @@ A bi-directional relationship makes the engine propagate filters both ways on ev
 
 ## How to fix it
 
-Find the cardinality with DAX Studio's VertiPaq Analyzer, or with a query such as `EVALUATE ROW("n", DISTINCTCOUNT('Sales'[Order ID]))` in Power BI Desktop's DAX query view. Then set the relationship back to single direction and, where one report needs the reverse filter, get it from a measure with CROSSFILTER or TREATAS. If you already use Tabular Editor, the script in the links loads the same statistics into its Best Practice Analyzer, which can then run this rule directly.
+Find the cardinality first. In Power BI Desktop's DAX query view, run a query such as `EVALUATE ROW("n", DISTINCTCOUNT('Sales'[Order ID]))` for each column in a bi-directional relationship. Then set the relationship back to single direction in the model view, or remove `crossFilteringBehavior: bothDirections` from it in the TMDL file, and where one report needs the reverse filter, get it from a measure with CROSSFILTER or TREATAS. DAX Studio's VertiPaq Analyzer shows every column's cardinality at once, and if you already use Tabular Editor, the walkthrough under Links loads the same statistics into its Best Practice Analyzer, which can then run this rule directly.
 
-pbiplint cannot evaluate this rule from files; it appears in `pbiplint rules` as needing a live model.
+## Related rules
+
+- `AVOID_EXCESSIVE_BI-DIRECTIONAL_OR_MANY-TO-MANY_RELATIONSHIPS` counts bi-directional and many-to-many relationships without needing statistics, and fires when they are more than 30 percent of the model's relationships.
+- `CHECK_IF_BI-DIRECTIONAL_AND_MANY-TO-MANY_RELATIONSHIPS_ARE_VALID` lists every bi-directional and many-to-many relationship for review, whatever the column's distinct count.
 
 ## Links
 
-- https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json
-- https://www.elegantbi.com/post/vertipaqintabulareditor
+- [Loading VertiPaq statistics into Tabular Editor's Best Practice Analyzer](https://www.elegantbi.com/post/vertipaqintabulareditor)

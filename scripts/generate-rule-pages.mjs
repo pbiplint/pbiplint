@@ -15,7 +15,9 @@ let written = 0;
 for (const rule of defaultRules) {
   const path = `rules/${slug(rule.id)}.md`;
   if (existsSync(path)) continue;
-  const sources = rule.status === "builtin" ? rule.references : [RULESET_URL, ...rule.references];
+  const sources = rule.status === "builtin" ? [] : [RULESET_URL];
+  // A live-model rule never runs, so it has no example to show and no finding to ignore.
+  const runs = rule.status !== "needsLiveModel";
   const lines = [
     "---",
     `id: ${rule.id}`,
@@ -34,6 +36,26 @@ for (const rule of defaultRules) {
     "## What it checks",
     "",
     "TODO: the exact condition the rule tests, in one or two sentences.",
+    ...(runs
+      ? []
+      : [
+          "",
+          "TODO: after the condition, say that pbiplint lists this rule but does not run it, because it needs column statistics that only a live model carries and a TMDL file does not.",
+        ]),
+    ...(runs
+      ? [
+          "",
+          "## Example",
+          "",
+          "```tmdl fires",
+          "TODO: the smallest TMDL that fires the rule",
+          "```",
+          "",
+          "```tmdl fixed",
+          "TODO: the same TMDL with the fix applied",
+          "```",
+        ]
+      : []),
     "",
     "## Why it matters",
     "",
@@ -41,17 +63,18 @@ for (const rule of defaultRules) {
     "",
     "## How to fix it",
     "",
-    "TODO: a route that needs no third-party tool: Power BI Desktop, Power Query, the source, or the TMDL file.",
-    ...(rule.status === "needsLiveModel"
+    "TODO: a route that needs no third-party tool: Power BI Desktop, Power Query, the source, or the TMDL file. Name the Desktop route and the TMDL property where both exist.",
+    ...(runs
       ? [
           "",
-          "pbiplint cannot evaluate this rule from files; it appears in `pbiplint rules` as needing a live model.",
+          "## When to ignore it",
+          "",
+          "TODO: the situations in which the finding is noise, or one sentence saying there are none. The annotation and config lines are generated; do not write them here.",
         ]
       : []),
-    "",
-    "## Links",
-    "",
-    ...sources.map((u) => `- ${u}`),
+    ...(rule.references.length > 0
+      ? ["", "## Links", "", ...rule.references.map((u) => `- [TODO: what this is](${u})`)]
+      : []),
     "",
   ];
   writeFileSync(path, lines.join("\n"));

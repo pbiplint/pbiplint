@@ -10,17 +10,24 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ConfigEnv, UserConfig } from "vite";
-import { CATEGORY_ORDER as CORE_CATEGORY_ORDER } from "@pbiplint/core";
+import {
+  CATEGORY_ORDER as CORE_CATEGORY_ORDER,
+  ignoreHelp as coreIgnoreHelp,
+} from "@pbiplint/core";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { generatePlugin, generateSite, pageEntries, RULES_DIR } from "../src/build/generate.js";
 import {
+  attribution,
   CATEGORY_ORDER,
   contentPage,
+  ignoreHelp,
   NAV,
   parseFrontmatter,
+  ruleLinks,
   rulePage,
   rulesIndex,
   type RuleMeta,
+  withIgnoreHelp,
 } from "../src/build/pages.js";
 
 const read = (slug: string): string => readFileSync(join(RULES_DIR, `${slug}.md`), "utf8");
@@ -101,7 +108,15 @@ describe("rulePage", () => {
   it("gives every section heading an id, so a section can be linked to", () => {
     const { html } = rulePage(read("hide-foreign-keys"), "hide-foreign-keys");
     const ids = [...html.matchAll(/<h2 id="([^"]*)">/g)].map((m) => m[1]);
-    expect(ids).toEqual(["what-it-checks", "why-it-matters", "how-to-fix-it", "quirks", "links"]);
+    expect(ids).toEqual([
+      "what-it-checks",
+      "example",
+      "why-it-matters",
+      "how-to-fix-it",
+      "when-to-ignore-it",
+      "quirks",
+      "related-rules",
+    ]);
     expect(html).not.toMatch(/<h[2-6]>/);
     // A heading with inline code or punctuation still gets a plain slug.
     const odd = rulePage(
@@ -123,6 +138,131 @@ describe("rulePage", () => {
     );
     expect(withVideo.html).toContain('href="https://youtu.be/abc"');
   });
+  it("renders an example fence as a captioned figure and leaves other fences alone", () => {
+    const page = read("hide-foreign-keys").replace(
+      "## Why it matters",
+      "## Example\n\n```tmdl fires\ntable T\n\tcolumn 'A'\n```\n\n```tmdl fixed\ntable T\n```\n\n```\nDAX here\n```\n\n## Why it matters",
+    );
+    const { html } = rulePage(page, "hide-foreign-keys");
+    expect(html).toContain(
+      '<figure class="example fires">\n<figcaption>Fires the rule</figcaption>\n<pre><code class="language-tmdl">table T\n\tcolumn &#39;A&#39;\n</code></pre>\n</figure>',
+    );
+    expect(html).toContain(
+      '<figure class="example fixed">\n<figcaption>After the fix</figcaption>',
+    );
+    expect(html).toContain("<pre><code>DAX here\n</code></pre>");
+    expect(html).toContain('<h2 id="example">Example</h2>');
+  });
+  it("links a code span that names another rule, and only another rule", () => {
+    const page = read("hide-foreign-keys").replace(
+      "## Quirks",
+      "See `MARK_PRIMARY_KEYS`, `HIDE_FOREIGN_KEYS`, and `MADE_UP`.\n\n## Quirks",
+    );
+    const links = new Map([
+      ["MARK_PRIMARY_KEYS", "mark-primary-keys"],
+      ["HIDE_FOREIGN_KEYS", "hide-foreign-keys"],
+    ]);
+    const { html } = rulePage(page, "hide-foreign-keys", links);
+    expect(html).toContain(
+      '<a href="/rules/mark-primary-keys/"><code>MARK_PRIMARY_KEYS</code></a>',
+    );
+    expect(html).toContain("<code>HIDE_FOREIGN_KEYS</code>");
+    expect(html).not.toContain('<a href="/rules/hide-foreign-keys/">');
+    expect(html).toContain("<code>MADE_UP</code>");
+    expect(html).not.toContain("made-up");
+    // With no link table, nothing is linked.
+    expect(rulePage(page, "hide-foreign-keys").html).not.toContain("/rules/mark-primary-keys/");
+  });
+  it("appends the ignore mechanics to When to ignore it, in core's words", () => {
+    const { html } = rulePage(read("hide-foreign-keys"), "hide-foreign-keys");
+    // The mechanics are the last paragraph of the section, after the page's own judgment.
+    expect(html).toContain(
+      "needs to see.</p>\n<p>To ignore this rule on one object, add <code>annotation pbiplint.ignore = HIDE_FOREIGN_KEYS</code>",
+    );
+    expect(html).toContain("<code>&quot;HIDE_FOREIGN_KEYS&quot;: &quot;off&quot;</code>");
+    // The build cannot import core (see CATEGORY_ORDER), so the text is copied and held equal here.
+    expect(ignoreHelp("X", ["Column"])).toBe(coreIgnoreHelp("X", ["Column"]));
+    expect(ignoreHelp("X", ["File"])).toBe(coreIgnoreHelp("X", ["File"]));
+    expect(ignoreHelp("X", [])).toBe(coreIgnoreHelp("X", []));
+    expect(ignoreHelp("X", ["File", "Table"])).toBe(coreIgnoreHelp("X", ["File", "Table"]));
+    // A page without the section gets nothing appended.
+    const live = read("avoid-bi-directional-relationships-against-high-cardinality-columns");
+    expect(rulePage(live, "x").html).not.toContain("pbiplint.ignore");
+  });
+  it("prints where the rule was ported from, and nothing for a rule with no source", () => {
+    const { html } = rulePage(read("hide-foreign-keys"), "hide-foreign-keys");
+    expect(html).toContain(
+      `<p class="sources">Ported from <a href="https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json">Microsoft's Best Practice Analyzer ruleset</a>.</p>`,
+    );
+    const none = rulePage(
+      read("hide-foreign-keys").replace(/sources:\n( {2}- .*\n)+/, "sources:\n"),
+      "x",
+    );
+    expect(none.html).not.toContain('class="sources"');
+    const other = rulePage(
+      read("hide-foreign-keys").replace(
+        /sources:\n( {2}- .*\n)+/,
+        "sources:\n  - https://learn.microsoft.com/x\n",
+      ),
+      "x",
+    );
+    expect(other.html).not.toContain('class="sources"');
+    // A page not yet on the template lists its further reading in sources too; only the source
+    // the rule was ported from is credited.
+    const both = rulePage(
+      read("hide-foreign-keys").replace(
+        /sources:\n( {2}- .*\n)+/,
+        "sources:\n  - https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json\n  - https://www.sqlbi.com/articles/x\n",
+      ),
+      "x",
+    );
+    expect(both.html).toContain(
+      `<p class="sources">Ported from <a href="https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json">Microsoft's Best Practice Analyzer ruleset</a>.</p>`,
+    );
+    expect(both.html).not.toContain("sqlbi");
+  });
+});
+
+describe("withIgnoreHelp", () => {
+  it("appends to the section whether or not another section follows it", () => {
+    const help = ignoreHelp("X", ["Column"]);
+    expect(
+      withIgnoreHelp("## When to ignore it\n\nRarely.\n\n## Quirks\n\n- Q\n", "X", ["Column"]),
+    ).toBe(`## When to ignore it\n\nRarely.\n\n${help}\n\n## Quirks\n\n- Q\n`);
+    expect(withIgnoreHelp("## When to ignore it\n\nRarely.\n", "X", ["Column"])).toBe(
+      `## When to ignore it\n\nRarely.\n\n${help}\n`,
+    );
+    expect(withIgnoreHelp("## Quirks\n\n- Q\n", "X", ["Column"])).toBe("## Quirks\n\n- Q\n");
+    // The heading is matched at a line start, so prose that names the section is left alone.
+    const prose = "## Quirks\n\nSee the ## When to ignore it section.\n";
+    expect(withIgnoreHelp(prose, "X", ["Column"])).toBe(prose);
+  });
+});
+
+describe("ruleLinks and attribution", () => {
+  it("maps every page's id to its slug", () => {
+    const links = ruleLinks([{ slug: "hide-foreign-keys", markdown: read("hide-foreign-keys") }]);
+    expect([...links]).toEqual([["HIDE_FOREIGN_KEYS", "hide-foreign-keys"]]);
+  });
+  it("names a known source and leaves an unnamed one out", () => {
+    expect(attribution([])).toBe("");
+    expect(
+      attribution([
+        "https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json",
+      ]),
+    ).toBe(
+      `<p class="sources">Ported from <a href="https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json">Microsoft's Best Practice Analyzer ruleset</a>.</p>\n`,
+    );
+    expect(attribution(["https://example.org/a?b=1"])).toBe("");
+    expect(
+      attribution([
+        "https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json",
+        "https://www.sqlbi.com/articles/x",
+      ]),
+    ).toBe(
+      `<p class="sources">Ported from <a href="https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json">Microsoft's Best Practice Analyzer ruleset</a>.</p>\n`,
+    );
+  });
 });
 
 describe("generateSite", () => {
@@ -132,6 +272,9 @@ describe("generateSite", () => {
     expect(metas.length).toBe(72);
     expect(readdirSync(join(out, "rules")).filter((d) => d !== "index.html").length).toBe(72);
     expect(existsSync(join(out, "rules/hide-foreign-keys/index.html"))).toBe(true);
+    expect(readFileSync(join(out, "rules/hide-foreign-keys/index.html"), "utf8")).toContain(
+      '<a href="/rules/mark-primary-keys/"><code>MARK_PRIMARY_KEYS</code></a>',
+    );
     const index = readFileSync(join(out, "rules/index.html"), "utf8");
     expect(index).toContain("72 rules: 66 ported");
     expect(index).toContain('<h2 id="error-prevention">Error Prevention</h2>');

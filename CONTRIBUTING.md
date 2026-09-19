@@ -45,14 +45,20 @@ New fixtures must be sanitized: `node scripts/sanitize-fixture.mjs <dir>` rewrit
 
 ## Rule pages
 
-Every rule has a page in `rules/`, written in pbiplint's own words. The rule-pages test checks them. The site renders each page at `pbiplint.com/rules/<slug>`; the build regenerates it from the Markdown, so a merged page edit is live after the next deploy.
+Every rule has a page in `rules/`, written in pbiplint's own words. The rule-pages test checks them. The site renders each page at `pbiplint.com/rules/<slug>`; the build regenerates it from the Markdown, so a merged page edit is live after the next deploy. The template is specified in `docs/superpowers/specs/2026-09-19-rule-pages-template-design.md`.
 
-- `node scripts/generate-rule-pages.mjs` scaffolds a page for any rule that has none, with TODO placeholders that the test rejects until they are replaced. It never touches an existing page and never copies prose from the ruleset.
-- Do not paste the ruleset's description text into a page. The ruleset URL under `sources` is the attribution; the prose is ours.
-- Every "How to fix it" gives a route that needs no third-party tool: Power BI Desktop, Power Query, the source system, or a direct edit to the TMDL file, which Desktop preserves. Tabular Editor may be mentioned as an optional bulk shortcut or a linked walkthrough, and only after that route.
-- No Tabular Editor fix expressions or other C# on the pages.
-- Document every quirk kept from the source rule under `## Quirks`, and refer to other rules by their id.
-- The pages also feed tool output. The first paragraph of "What it checks" is the rule's description, and the Why, How to fix, and Quirks sections are the help block in SARIF. After editing a page, run `node scripts/sync-rule-pages.mjs` to regenerate `packages/core/src/rules/rule-summaries.data.ts` and `packages/cli/src/rule-help.data.ts`; the rule-pages tests fail until they match.
+Sections, in this order: What it checks, Example, Why it matters, How to fix it, When to ignore it, Quirks, Related rules, Links. The first five are required. A rule that needs a live model has no Example and no When to ignore it, because it never runs. Quirks, Related rules, and Links appear only when there is something to say.
+
+- `node scripts/generate-rule-pages.mjs` scaffolds a page for any rule that has none, with TODO placeholders that the test rejects until they are replaced. It never touches an existing page and never copies prose from the ruleset. Build core first.
+- Do not paste the ruleset's description text into a page. `sources` in the frontmatter is the attribution: the ruleset URL and nothing else, empty for a built-in rule. The site prints it as a line under the page. Further reading goes under Links as `[text](url)`, never a bare URL and never a URL that is already in `sources`.
+- The first paragraph of What it checks is the rule's description in tool output. Keep it to the condition, in one or two sentences. A second paragraph may show the finding as the tool prints it.
+- Example holds two fenced blocks, one with the info string `tmdl fires` and one with `tmdl fixed`, and no captions: the site and the SARIF help add them. The test lints both through the engine. The first must produce a finding for the rule and no parse issue (the parse-issue page is the exception, since its first snippet is the parse issue); the second must produce neither. Neither may carry a `pbiplint.ignore` annotation. Snippets are minimal and need not be clean on other rules.
+- Every How to fix it gives a route that needs no third-party tool: Power BI Desktop, Power Query, the source system, or a direct edit to the TMDL file, which Desktop preserves. Name the Desktop route and the TMDL property where both exist. Tabular Editor may be mentioned as an optional bulk shortcut or a linked walkthrough, and only after that route. No Tabular Editor fix expressions or other C# on the pages.
+- When to ignore it is the judgment only: the cases where the finding is noise, or a sentence saying there are none. The annotation and config lines are generated from the rule id (`ignoreHelp` in core) onto the page and into the help block, and the test rejects a page that writes them by hand.
+- Document every quirk kept from the source rule under Quirks.
+- Related rules is a bulleted list. Each bullet opens with a rule id in backticks and says how the rules relate. The test checks the ids. On the site, a rule id in backticks anywhere on a page links to that rule's page.
+- The pages also feed tool output. After editing a page, run `npm run build -w @pbiplint/core && node scripts/sync-rule-pages.mjs` to regenerate `packages/core/src/rules/rule-summaries.data.ts` and `packages/cli/src/rule-help.data.ts`; the rule-pages tests fail until they match.
+- `LEGACY_PAGES` in `packages/core/test/rule-pages.test.ts` lists the pages not yet on this template. Migrate a page by bringing it up to the template and removing its slug.
 
 ## Testing a pull request
 

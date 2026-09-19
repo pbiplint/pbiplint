@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { defaultRules, ruleUrl, slug } from "@pbiplint/core";
+import { defaultRules, ignoreHelp, ruleUrl, slug } from "@pbiplint/core";
 import { describe, expect, it } from "vitest";
 import { RULE_HELP } from "../src/rule-help.data.js";
 
@@ -17,12 +17,22 @@ describe.each(defaultRules.map((r) => [r.id, r] as const))("SARIF help for %s", 
   const page = readFileSync(`${rulesDir}${slug(rule.id)}.md`, "utf8");
   const help = RULE_HELP[rule.id];
 
-  it("carries the page's Why, How to fix, and Quirks sections and links to the page", () => {
+  it("carries the page's Why, How to fix, When to ignore, and Quirks sections and links to the page", () => {
     expect(help).toBeDefined();
     const markdown = normalize(help!.markdown);
-    for (const heading of ["Why it matters", "How to fix it", "Quirks"]) {
+    for (const heading of ["Why it matters", "How to fix it", "When to ignore it", "Quirks"]) {
       const body = normalize(section(page, heading));
       if (body) expect(markdown, heading).toContain(body);
+    }
+    if (section(page, "When to ignore it"))
+      expect(markdown).toContain(normalize(ignoreHelp(rule.id, rule.scope)));
+    if (section(page, "Example")) {
+      // The template allows a sentence or two around the fences, so pin the captions and their
+      // reduced info strings within the Example section rather than right after its heading.
+      const example = markdown.split("### Example")[1]?.split("### Why it matters")[0] ?? "";
+      expect(example).not.toBe("");
+      expect(example).toContain("**Fires the rule** ```tmdl");
+      expect(example).toContain("**After the fix** ```tmdl");
     }
     expect(markdown).toContain(`Read more: ${ruleUrl(rule.id)}`);
   });
@@ -34,6 +44,7 @@ describe.each(defaultRules.map((r) => [r.id, r] as const))("SARIF help for %s", 
     expect(help!.text).not.toMatch(/`[^`\n]+`/);
     expect(help!.text).not.toMatch(/^```/m);
     expect(help!.text).not.toContain("### ");
+    expect(help!.text).not.toContain("**");
     expect(help!.text).not.toMatch(/\]\(/);
     expect(help!.text).toContain("Read more: ");
   });

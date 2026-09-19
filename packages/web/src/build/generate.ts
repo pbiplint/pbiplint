@@ -2,7 +2,7 @@ import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "nod
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Plugin } from "vite";
-import { contentPage, rulePage, rulesIndex, sitemap, type RuleMeta } from "./pages.js";
+import { contentPage, ruleLinks, rulePage, rulesIndex, sitemap, type RuleMeta } from "./pages.js";
 
 export const WEB_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 export const RULES_DIR = join(WEB_ROOT, "../../rules");
@@ -26,11 +26,18 @@ export function generateSite({
     throw new Error(`outDir would delete the rule sources in ${resolve(rulesDir)}`);
   const metas: RuleMeta[] = [];
   const pages: { slug: string; html: string }[] = [];
-  for (const file of readdirSync(rulesDir)
+  const sources = readdirSync(rulesDir)
     .filter((f) => f.endsWith(".md"))
-    .sort()) {
-    const slug = file.replace(/\.md$/, "");
-    const { html, meta } = rulePage(readFileSync(join(rulesDir, file), "utf8"), slug);
+    .sort()
+    .map((file) => ({
+      slug: file.replace(/\.md$/, ""),
+      markdown: readFileSync(join(rulesDir, file), "utf8"),
+    }));
+  // Every page's id is known before any page renders, so a code span naming a rule links only to
+  // a page this build is about to write.
+  const links = ruleLinks(sources);
+  for (const { slug, markdown } of sources) {
+    const { html, meta } = rulePage(markdown, slug, links);
     pages.push({ slug, html });
     metas.push(meta);
   }

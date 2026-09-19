@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { helpText } from "../sync-rule-pages.mjs";
+import { exampleMarkdown, helpMarkdown, helpText } from "../sync-rule-pages.mjs";
 
 describe("helpText", () => {
   it("unwraps a code span rather than deleting the backticks around it", () => {
@@ -28,6 +28,76 @@ describe("helpText", () => {
     expect(helpText("### How to fix it")).toBe("How to fix it");
     expect(helpText("See [the page](https://pbiplint.com/rules/x).")).toBe(
       "See the page (https://pbiplint.com/rules/x).",
+    );
+  });
+
+  it("drops the bold markers on a caption so it reads as a plain line", () => {
+    expect(helpText("**Fires the rule**\n\n```tmdl\ntable A\n```")).toBe(
+      "Fires the rule\n\ntable A",
+    );
+  });
+});
+
+describe("exampleMarkdown", () => {
+  it("captions the two fences and reduces their info strings to tmdl", () => {
+    expect(exampleMarkdown("```tmdl fires\ntable A\n```\n\n```tmdl fixed\ntable B\n```")).toBe(
+      "**Fires the rule**\n\n```tmdl\ntable A\n```\n\n**After the fix**\n\n```tmdl\ntable B\n```",
+    );
+  });
+});
+
+describe("helpMarkdown", () => {
+  const mechanics =
+    'To ignore this rule on one object, add `annotation pbiplint.ignore = X` under the object in its TMDL file. Power BI Desktop keeps the annotation. To turn the rule off for a whole project, set `"X": "off"` under `rules` in `pbiplint.config.json`.';
+  it("mirrors the page minus What it checks, captions the example, and appends the mechanics", () => {
+    const s = {
+      Example: "```tmdl fires\ntable A\n```\n\n```tmdl fixed\ntable B\n```",
+      "Why it matters": "Why.",
+      "How to fix it": "How.",
+      "When to ignore it": "Never.",
+      Quirks: "- One.",
+    };
+    expect(helpMarkdown(s, "https://pbiplint.com/rules/x", "X", ["Column"])).toBe(
+      [
+        "### Example",
+        "",
+        "**Fires the rule**",
+        "",
+        "```tmdl",
+        "table A",
+        "```",
+        "",
+        "**After the fix**",
+        "",
+        "```tmdl",
+        "table B",
+        "```",
+        "",
+        "### Why it matters",
+        "",
+        "Why.",
+        "",
+        "### How to fix it",
+        "",
+        "How.",
+        "",
+        "### When to ignore it",
+        "",
+        "Never.",
+        "",
+        mechanics,
+        "",
+        "### Quirks",
+        "",
+        "- One.",
+        "",
+        "Read more: https://pbiplint.com/rules/x",
+      ].join("\n"),
+    );
+  });
+  it("leaves out the sections a page does not have", () => {
+    expect(helpMarkdown({ "Why it matters": "Why.", "How to fix it": "How." }, "u", "X", [])).toBe(
+      "### Why it matters\n\nWhy.\n\n### How to fix it\n\nHow.\n\nRead more: u",
     );
   });
 });

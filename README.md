@@ -29,6 +29,23 @@ The page never uploads anything; the About page explains how to check that.
 
 Exit codes: 0 no findings at or above --fail-on (default error), 1 findings, 2 usage or input error. That makes it a CI gate.
 
+### In GitHub Actions
+
+One step lints the model on every pull request: the check fails on findings, each finding is
+annotated on its line in the Files changed tab, the full report is in the job summary, and the
+findings reach code scanning. See https://github.com/pbiplint/action for the inputs and outputs.
+
+```yaml
+permissions:
+  contents: read
+  security-events: write # for code scanning; drop it and set upload-sarif: false otherwise
+steps:
+  - uses: actions/checkout@v7
+  - uses: pbiplint/action@v1
+    with:
+      path: Sales.SemanticModel
+```
+
 ## Configure it
 
 `pbiplint.config.json` next to your project (or anywhere above it):

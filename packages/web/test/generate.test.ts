@@ -108,7 +108,15 @@ describe("rulePage", () => {
   it("gives every section heading an id, so a section can be linked to", () => {
     const { html } = rulePage(read("hide-foreign-keys"), "hide-foreign-keys");
     const ids = [...html.matchAll(/<h2 id="([^"]*)">/g)].map((m) => m[1]);
-    expect(ids).toEqual(["what-it-checks", "why-it-matters", "how-to-fix-it", "quirks", "links"]);
+    expect(ids).toEqual([
+      "what-it-checks",
+      "example",
+      "why-it-matters",
+      "how-to-fix-it",
+      "when-to-ignore-it",
+      "quirks",
+      "related-rules",
+    ]);
     expect(html).not.toMatch(/<h[2-6]>/);
     // A heading with inline code or punctuation still gets a plain slug.
     const odd = rulePage(
@@ -166,13 +174,10 @@ describe("rulePage", () => {
     expect(rulePage(page, "hide-foreign-keys").html).not.toContain("/rules/mark-primary-keys/");
   });
   it("appends the ignore mechanics to When to ignore it, in core's words", () => {
-    const page = read("hide-foreign-keys").replace(
-      "## Quirks",
-      "## When to ignore it\n\nRarely.\n\n## Quirks",
-    );
-    const { html } = rulePage(page, "hide-foreign-keys");
+    const { html } = rulePage(read("hide-foreign-keys"), "hide-foreign-keys");
+    // The mechanics are the last paragraph of the section, after the page's own judgment.
     expect(html).toContain(
-      "<p>Rarely.</p>\n<p>To ignore this rule on one object, add <code>annotation pbiplint.ignore = HIDE_FOREIGN_KEYS</code>",
+      "needs to see.</p>\n<p>To ignore this rule on one object, add <code>annotation pbiplint.ignore = HIDE_FOREIGN_KEYS</code>",
     );
     expect(html).toContain("<code>&quot;HIDE_FOREIGN_KEYS&quot;: &quot;off&quot;</code>");
     // The build cannot import core (see CATEGORY_ORDER), so the text is copied and held equal here.
@@ -267,6 +272,9 @@ describe("generateSite", () => {
     expect(metas.length).toBe(72);
     expect(readdirSync(join(out, "rules")).filter((d) => d !== "index.html").length).toBe(72);
     expect(existsSync(join(out, "rules/hide-foreign-keys/index.html"))).toBe(true);
+    expect(readFileSync(join(out, "rules/hide-foreign-keys/index.html"), "utf8")).toContain(
+      '<a href="/rules/mark-primary-keys/"><code>MARK_PRIMARY_KEYS</code></a>',
+    );
     const index = readFileSync(join(out, "rules/index.html"), "utf8");
     expect(index).toContain("72 rules: 66 ported");
     expect(index).toContain('<h2 id="error-prevention">Error Prevention</h2>');

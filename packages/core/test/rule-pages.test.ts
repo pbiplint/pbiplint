@@ -48,7 +48,6 @@ const LEGACY_PAGES = new Set<string>([
   "fix-referential-integrity-violations",
   "format-flag-columns-as-yes-no-value-strings",
   "hide-fact-table-columns",
-  "hide-foreign-keys",
   "inactive-relationships-that-are-never-activated",
   "integer-formatting",
   "isavailableinmdx-false-nonattribute-columns",
@@ -162,10 +161,16 @@ describe("LEGACY_PAGES", () => {
     for (const s of LEGACY_PAGES) {
       const path = `${rulesDir}${s}.md`;
       expect(existsSync(path), path).toBe(true);
-      expect(
-        readFileSync(path, "utf8"),
-        `${s} is migrated: remove it from LEGACY_PAGES`,
-      ).not.toContain("## When to ignore it");
+      const text = readFileSync(path, "utf8");
+      expect(text, `${s} is migrated: remove it from LEGACY_PAGES`).not.toContain(
+        "## When to ignore it",
+      );
+      // A page not yet migrated repeats its sources as bare URLs under Links; a migrated page
+      // never has a bare URL there, whatever its status. So this catches a migrated live-model
+      // page left in the set, which the check above cannot.
+      expect(section(text, "Links"), `${s} is migrated: remove it from LEGACY_PAGES`).toMatch(
+        /^- https?:\/\//m,
+      );
     }
   });
 });

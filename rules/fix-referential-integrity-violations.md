@@ -8,14 +8,13 @@ status: needsLiveModel
 video:
 sources:
   - https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json
-  - https://blog.enterprisedna.co/vertipaq-analyzer-tutorial-relationships-referential-integrity/
 ---
 
 # Fix referential integrity violations
 
 ## What it checks
 
-Relationships where the many side holds key values that do not exist on the one side. Row data is not in the model files, so pbiplint lists this rule but cannot run it.
+Relationships where the many side holds key values that do not exist on the one side. The count of offending rows is a statistic of the loaded data, not of the model files, so pbiplint lists this rule but does not run it: it needs statistics that only a live model carries.
 
 ## Why it matters
 
@@ -23,11 +22,17 @@ Every orphan key is grouped under a single blank row of the dimension, so slicer
 
 ## How to fix it
 
-Find the orphans with a query in Power BI Desktop's DAX query view, such as `EVALUATE EXCEPT(VALUES(Sales[Product Key]), VALUES(Product[Product Key]))`, or read the violation count per relationship in DAX Studio's VertiPaq Analyzer. Then fix the source: add the missing dimension rows, or add an Unknown row and map the orphans to it.
+Find the orphans first. In Power BI Desktop's DAX query view, run a query such as `EVALUATE EXCEPT(VALUES('Sales'[Product Key]), VALUES('Product'[Product Key]))` for each relationship you suspect, which lists the keys the dimension is missing. Then fix the data where it is loaded: add the missing rows to the dimension query, or add an Unknown row to the dimension and map the orphan keys to it in Power Query or in the warehouse view behind it. Where the orphans are legitimate and the dimension cannot grow, filter the fact rows out in Power Query instead, so the blank member never appears. DAX Studio's VertiPaq Analyzer reads the violation count for every relationship at once if you would rather start from a list than a query per relationship.
 
-pbiplint cannot evaluate this rule from files; it appears in `pbiplint rules` as needing a live model.
+## Quirks
+
+- The source rule reads a `Vertipaq_RIViolationInvalidRows` annotation that a Tabular Editor script writes onto the model after loading VertiPaq statistics. A project's files never carry that annotation, which is why pbiplint lists the rule rather than running it.
+
+## Related rules
+
+- `RELATIONSHIP_COLUMNS_SAME_DATA_TYPE` reads the same relationships out of the files and reports the ones whose two columns have different data types, which pbiplint can check without any data.
+- `MARK_PRIMARY_KEYS` reports the column on the one side of a relationship when it is not marked as the table's key, which is the column this rule's condition is about.
 
 ## Links
 
-- https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json
-- https://blog.enterprisedna.co/vertipaq-analyzer-tutorial-relationships-referential-integrity/
+- [Reading referential integrity violations in VertiPaq Analyzer](https://blog.enterprisedna.co/vertipaq-analyzer-tutorial-relationships-referential-integrity/)

@@ -7,7 +7,7 @@ export {
   type ResolvedConfig,
   type SeverityName,
 } from "./engine/config.js";
-export { IGNORE_ANNOTATION, isIgnored } from "./engine/ignore.js";
+export { IGNORE_ANNOTATION, ignoreHelp, isIgnored } from "./engine/ignore.js";
 export {
   lint,
   type LintFile,

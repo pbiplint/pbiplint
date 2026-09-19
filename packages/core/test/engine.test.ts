@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildIndexes } from "../src/index/build.js";
 import { ConfigError, resolveConfig } from "../src/engine/config.js";
-import { isIgnored } from "../src/engine/ignore.js";
+import { ignoreHelp, isIgnored } from "../src/engine/ignore.js";
 import { lint } from "../src/engine/lint.js";
 import { rank } from "../src/engine/rank.js";
 import { runRules } from "../src/engine/run.js";
@@ -108,6 +108,20 @@ describe("isIgnored", () => {
       "table A\n\tcolumn X\n\t\tdataType: string\n\n\t\tannotation pbiplint.ignore = every_column\n",
     );
     expect(isIgnored(lower.tables[0]!.columns[0]!, "EVERY_COLUMN")).toBe(true);
+  });
+});
+
+describe("ignoreHelp", () => {
+  it("names the annotation and the config line for the rule", () => {
+    expect(ignoreHelp("HIDE_FOREIGN_KEYS", ["Column"])).toBe(
+      'To ignore this rule on one object, add `annotation pbiplint.ignore = HIDE_FOREIGN_KEYS` under the object in its TMDL file. Power BI Desktop keeps the annotation. To turn the rule off for a whole project, set `"HIDE_FOREIGN_KEYS": "off"` under `rules` in `pbiplint.config.json`.',
+    );
+    expect(ignoreHelp("X")).toBe(ignoreHelp("X", ["Model"]));
+  });
+  it("offers only the project switch for a rule that reports on files", () => {
+    expect(ignoreHelp("PARSE_ISSUE", ["File"])).toBe(
+      'This rule reports on files, so there is no object to annotate. To turn the rule off for a whole project, set `"PARSE_ISSUE": "off"` under `rules` in `pbiplint.config.json`.',
+    );
   });
 });
 

@@ -140,6 +140,10 @@ A role nobody is assigned to still counts. The rule pairs any role's filter with
 
 ## Related rules
 
-- `INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED` reads the same USERELATIONSHIP calls from the other end and reports an inactive relationship that no measure or calculation item activates. Dropping the call without dropping the relationship clears this rule and starts that one; removing the relationship clears both.
+- `INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED` reads the same USERELATIONSHIP calls from the other end and reports an inactive relationship that no measure or calculation item activates. Dropping the call without dropping the relationship clears this rule and starts that one; removing the relationship as well clears both.
 - `AVOID_USING_MANY-TO-MANY_RELATIONSHIPS_ON_TABLES_USED_FOR_DYNAMIC_ROW_LEVEL_SECURITY` reports a table that carries a row-level security filter and sits in a many-to-many relationship, the same shape of finding built from a role filter and a relationship the engine has to resolve around it.
 - `LIMIT_ROW_LEVEL_SECURITY_(RLS)_LOGIC` reads the filters on the same tables and reports the table whose filter calls RIGHT, LEFT, UPPER, LOWER, or FIND.
+
+## Links
+
+- [Chris Webb on USERELATIONSHIP and tabular row security](https://blog.crossjoin.co.uk/2013/05/10/userelationship-and-tabular-row-security/)

@@ -60,9 +60,10 @@ describe("parity coverage", () => {
       .filter(([, n]) => n === 0)
       .map(([id]) => id)
       .sort();
-    // These five cannot fire on a fixture Tabular Editor also reports on (they need a model state
-    // TMDL cannot express, or characters the fixtures deliberately keep out), so each has a unit
-    // test instead: see rules-naming.test.ts and rules-measures.test.ts.
+    // These five cannot fire on a fixture Tabular Editor also reports on, because the fixtures
+    // deliberately keep out the control characters, the empty declaration, and the unreferenced
+    // data source those rules need. Each has a unit test instead: see rules-naming.test.ts and
+    // rules-measures.test.ts.
     expect(untested).toEqual([
       "AVOID_INVALID_DESCRIPTION_CHARACTERS",
       "AVOID_INVALID_NAME_CHARACTERS",

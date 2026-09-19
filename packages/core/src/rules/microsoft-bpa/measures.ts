@@ -117,8 +117,8 @@ export const REDUCE_USAGE_OF_CALCULATED_COLUMNS_THAT_USE_THE_RELATED_FUNCTION = 
   [/RELATED\s*\(/i],
 );
 
-// The TMDL reader never yields an empty expression (the next indented line becomes the expression),
-// so this rule can only fire on models built some other way. It is kept for completeness.
+// A declaration whose `=` is followed by nothing, and whose next non-blank line is indented no
+// deeper than the declaration itself, yields an empty expression, so this rule fires on such a file.
 export const EXPRESSION_RELIANT_OBJECTS_MUST_HAVE_AN_EXPRESSION = bpaRule(
   "EXPRESSION_RELIANT_OBJECTS_MUST_HAVE_AN_EXPRESSION",
   (m) =>

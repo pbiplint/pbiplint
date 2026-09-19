@@ -58,7 +58,7 @@ There is no case for it. A control character in a description tells a reader not
 
 ## Quirks
 
-- A `///` line carries whatever that line holds. pbiplint takes each `///` line above a declaration as one line of the object's description, so a control character on one of those lines reaches the model and the rule reports it. Only the line feed and the carriage return cannot arrive that way, because the file is split into lines before any declaration is read, and the rule does not test for either of them.
+- A `///` line carries whatever that line holds. pbiplint takes each `///` line above a declaration as one line of the object's description, so a control character on one of those lines reaches the model and the rule reports it. Only the line feed and the carriage return cannot arrive inside one of those lines; a description built from several `///` lines carries a line feed between them, which the rule does not test for either.
 - The test follows .NET's definition of a control character that is not whitespace, so a tab, a vertical tab, a form feed, or a next line character in a description is not reported. No rule reads a description for those: `SPECIAL_CHARS_IN_OBJECT_NAMES` reads names only.
 - The `///` lines have to sit directly above the declaration they describe. A run of them followed by a blank line describes nothing, and pbiplint reports that as a `PARSE_ISSUE` instead of carrying the text into the model, so a character in a stranded comment never reaches this rule.
 - The scope covers hierarchy levels and roles, and leaves out the model itself, named expressions, and data sources, so a control character in one of those descriptions is not reported.

@@ -64,7 +64,6 @@ const LEGACY_PAGES = new Set<string>([
   "numeric-column-summarize-by",
   "objects-should-not-start-or-end-with-a-space",
   "objects-with-no-description",
-  "parse-issue",
   "partition-name-should-match-table-name-for-single-partition-tables",
   "percentage-formatting",
   "perspectives-with-no-objects",

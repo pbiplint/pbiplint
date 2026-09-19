@@ -52,7 +52,7 @@ In Power BI Desktop, double-click the field in the Data pane and retype the name
 
 ## When to ignore it
 
-No name should start or end with a space. A leading space is sometimes used to push a measure to the top of the field list; a display folder puts it where you want it without hiding a character in the name, and it survives the next rename.
+No name should start or end with a space. A leading space is sometimes used to push a measure to the top of the field list; a display folder gathers the measure with the ones it belongs beside, and it does that without hiding a character in the name.
 
 ## Quirks
 
@@ -63,4 +63,4 @@ No name should start or end with a space. A leading space is sometimes used to p
 
 - `OBJECTS_SHOULD_NOT_START_OR_END_WITH_A_SPACE` makes the same test at error severity over a narrower set of object types, and one rename clears both.
 - `SPECIAL_CHARS_IN_OBJECT_NAMES` reads the same names for the other invisible whitespace, a tab or a line break.
-- `AVOID_INVALID_NAME_CHARACTERS` reads them for the control characters that are not whitespace, so between the three every name is checked for something the field list will not show you.
+- `AVOID_INVALID_NAME_CHARACTERS` reads them for the control characters that are neither whitespace nor a tab or line break.

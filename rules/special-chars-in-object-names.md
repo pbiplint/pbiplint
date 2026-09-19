@@ -61,6 +61,6 @@ There is no case for it. A tab or a line break in a name buys nothing an ordinar
 
 ## Related rules
 
-- `AVOID_INVALID_NAME_CHARACTERS` reads the same names for the control characters that are not whitespace, and leaves the tab, the line feed, and the carriage return to this rule.
+- `AVOID_INVALID_NAME_CHARACTERS` reads names for the control characters that are not whitespace, and leaves the tab, the line feed, and the carriage return to this rule.
 - `AVOID_INVALID_DESCRIPTION_CHARACTERS` makes that test on descriptions instead of names; no rule reads a description for a tab.
 - `TRIM_OBJECT_NAMES` fires on a wider set of objects for the other invisible whitespace, a leading or trailing space.

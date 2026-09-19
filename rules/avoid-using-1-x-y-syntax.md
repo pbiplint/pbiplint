@@ -16,7 +16,7 @@ sources:
 
 Expressions with a number, then plus or minus, then either `SUM('Table'[Column])` followed by a division operator, or a call to DIVIDE. The common shape is `1 - SUM(Sales[Cost]) / SUM(Sales[Amount])`.
 
-Each finding names the measure, calculated column, or calculation item, as `[Margin %]`.
+Each finding names the object: a measure as `[Margin %]`, a calculated column as `'Sales'[Margin %]`, a calculation item by its name.
 
 ## Example
 
@@ -54,8 +54,8 @@ Rewrite `1 - x / y` as `DIVIDE(y - x, y)`, and hold the shared denominator in a 
 
 ```
 Margin % =
-VAR Sales = SUM ( Sales[Amount] )
-RETURN DIVIDE ( Sales - SUM ( Sales[Cost] ), Sales )
+VAR TotalAmount = SUM ( Sales[Amount] )
+RETURN DIVIDE ( TotalAmount - SUM ( Sales[Cost] ), TotalAmount )
 ```
 
 In Power BI Desktop, select the measure and edit it in the formula bar. In the TMDL file, edit the expression after `measure 'Margin %' =`.

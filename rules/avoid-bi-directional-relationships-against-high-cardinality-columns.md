@@ -26,8 +26,8 @@ Find the cardinality first. In Power BI Desktop's DAX query view, run a query su
 
 ## Related rules
 
-- `AVOID_EXCESSIVE_BI-DIRECTIONAL_OR_MANY-TO-MANY_RELATIONSHIPS` counts the same relationships without needing statistics, and fires when they are more than 30 percent of the model's relationships.
-- `CHECK_IF_BI-DIRECTIONAL_AND_MANY-TO-MANY_RELATIONSHIPS_ARE_VALID` lists every bi-directional and many-to-many relationship for review, whatever its cardinality.
+- `AVOID_EXCESSIVE_BI-DIRECTIONAL_OR_MANY-TO-MANY_RELATIONSHIPS` counts bi-directional and many-to-many relationships without needing statistics, and fires when they are more than 30 percent of the model's relationships.
+- `CHECK_IF_BI-DIRECTIONAL_AND_MANY-TO-MANY_RELATIONSHIPS_ARE_VALID` lists every bi-directional and many-to-many relationship for review, whatever the column's distinct count.
 
 ## Links
 

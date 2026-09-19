@@ -27,8 +27,12 @@ describe.each(defaultRules.map((r) => [r.id, r] as const))("SARIF help for %s", 
     if (section(page, "When to ignore it"))
       expect(markdown).toContain(normalize(ignoreHelp(rule.id, rule.scope)));
     if (section(page, "Example")) {
-      expect(markdown).toContain("### Example **Fires the rule** ```tmdl");
-      expect(markdown).toContain("**After the fix** ```tmdl");
+      // The template allows a sentence or two around the fences, so pin the captions and their
+      // reduced info strings within the Example section rather than right after its heading.
+      const example = markdown.split("### Example")[1]?.split("### Why it matters")[0] ?? "";
+      expect(example).not.toBe("");
+      expect(example).toContain("**Fires the rule** ```tmdl");
+      expect(example).toContain("**After the fix** ```tmdl");
     }
     expect(markdown).toContain(`Read more: ${ruleUrl(rule.id)}`);
   });

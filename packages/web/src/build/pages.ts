@@ -26,7 +26,7 @@ const STATUS_LABEL: Record<string, string> = {
   needsLiveModel: "needs a live model",
   builtin: "built in",
 };
-/** Known source URLs and how the attribution line names them. Any other URL is named by its host. */
+/** Known source URLs and how the attribution line names them. A URL this map does not name is left out of the attribution line. */
 const SOURCE_NAMES: Record<string, string> = {
   "https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json":
     "Microsoft's Best Practice Analyzer ruleset",

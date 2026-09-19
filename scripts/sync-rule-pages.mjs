@@ -41,8 +41,8 @@ export const firstParagraph = (s) =>
 /** The Example section for the help block: each fence captioned, its info string reduced to `tmdl`. */
 export const exampleMarkdown = (example) =>
   example
-    .replace(/^```tmdl fires[ \t]*$/m, "**Fires the rule**\n\n```tmdl")
-    .replace(/^```tmdl fixed[ \t]*$/m, "**After the fix**\n\n```tmdl");
+    .replace(/^```tmdl fires[ \t]*$/gm, "**Fires the rule**\n\n```tmdl")
+    .replace(/^```tmdl fixed[ \t]*$/gm, "**After the fix**\n\n```tmdl");
 
 /**
  * Markdown help for SARIF consumers: the page minus its What section, in the page's order, with
@@ -127,7 +127,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = ${JSON.stringify
 // rerun the script.
 import type { RuleHelp } from "@pbiplint/core";
 
-/** SARIF help per rule id: the page minus What it checks, plus a link to the page. */
+/** SARIF help per rule id: the page's Example, Why, How to fix, When to ignore, and Quirks sections, plus a link to the page. */
 export const RULE_HELP: Readonly<Record<string, RuleHelp>> = ${JSON.stringify(help, null, 2)};
 `,
   );

@@ -244,7 +244,7 @@ describe("ruleLinks and attribution", () => {
     const links = ruleLinks([{ slug: "hide-foreign-keys", markdown: read("hide-foreign-keys") }]);
     expect([...links]).toEqual([["HIDE_FOREIGN_KEYS", "hide-foreign-keys"]]);
   });
-  it("names a known source and falls back to the hostname", () => {
+  it("names a known source and leaves an unnamed one out", () => {
     expect(attribution([])).toBe("");
     expect(
       attribution([

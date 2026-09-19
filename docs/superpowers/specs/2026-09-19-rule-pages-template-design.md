@@ -89,9 +89,12 @@ parses the frontmatter, renders the whole body through `marked` 18.0.13
 with a heading renderer that adds ids (`headingId`), and wraps it in
 the page shell with a meta line (severity badge, id, status, scope),
 the optional video link, and a call-to-action. `sources` is not
-rendered. The build code imports only `marked`; the web app's runtime
-code imports `@pbiplint/core`, so the package is available to the build
-too. `packages/web/test/generate.test.ts` pins the h2 id list of
+rendered. The build code imports only `marked`, deliberately: it runs
+when Vite loads its config, outside the alias that points the app and
+the tests at core's source, so importing core there would make
+generating the site wait on core's dist being built. `CATEGORY_ORDER`
+is copied into `pages.ts` for that reason, and a test in
+`generate.test.ts` (which does import core) holds the copy equal. `packages/web/test/generate.test.ts` pins the h2 id list of
 hide-foreign-keys as `what-it-checks, why-it-matters, how-to-fix-it,
 quirks, links`, pins the page count at 72, and tests the live-model
 badge and the video link on
@@ -261,21 +264,27 @@ along the lines of "add an annotation" or a config snippet does not
 belong on the page. The test rejects a section that contains
 `pbiplint.ignore` or `"off"`.
 
-The mechanics are generated from the rule id by one helper in core,
-exported for the renderer and the sync script to share. Proposed name
-`ignoreHelp(ruleId)`, returning Markdown to this effect:
+The mechanics are generated from the rule id by `ignoreHelp(ruleId,
+scope)` in core, a pure string function, so core stays browser-pure.
+It returns Markdown to this effect:
 
 > To ignore this rule on one object, add `annotation pbiplint.ignore =
 > RULE_ID` under the object in its TMDL file. Power BI Desktop keeps the
 > annotation. To turn the rule off for a whole project, set `"RULE_ID":
 > "off"` under `rules` in `pbiplint.config.json`.
 
-The helper is a pure string function, so core stays browser-pure. The
-renderer appends its output as the last paragraph of the section before
-rendering the body, by splitting the Markdown at the heading. The sync
-script appends the same text in the help block. A unit test in core
-pins the helper's text, and the renderer and sync tests check that the
-section ends with it.
+A rule whose scope is only `File` (parse-issue today) has no object to
+annotate, so for it the first two sentences are replaced by one that
+says so, and the project-wide sentence stands alone.
+
+The sync script imports the helper from `@pbiplint/core`. The site
+build cannot (section 3), so `pages.ts` carries a copy, and
+`generate.test.ts` holds the copy equal to core's, the same way it
+holds `CATEGORY_ORDER`. The renderer appends the text as the last
+paragraph of the section before rendering the body, by splitting the
+Markdown at the heading. The sync script appends the same text in the
+help block. A unit test in core pins the helper's text, and the
+renderer and sync tests check that the section ends with it.
 
 ## 7. Related rules, Links, and attribution
 
@@ -287,12 +296,13 @@ token shaped like a rule id names a rule in `defaultRules`, and that
 the page's own id is not listed.
 
 **Rule ids become links** everywhere on every page: a `marked` codespan
-renderer override checks the span's text against the set of rule ids
-(imported from `@pbiplint/core`, which the build can now use) and, when
-it matches and is not the page's own id, wraps the `<code>` in an
-`<a href="/rules/<slug>/">`. The nine pages that already name other
-rules in Quirks and How to fix get links for free. `slug` is exported
-from core and is what the site already uses for paths.
+renderer override checks the span's text against a map of rule id to
+slug and, when it matches and is not the page's own id, wraps the
+`<code>` in an `<a href="/rules/<slug>/">`. The map comes from the
+pages themselves: `generateSite` reads every page's frontmatter before
+rendering any, so the site links only to pages it is about to write,
+and the build still imports nothing from core. The nine pages that
+already name other rules in Quirks and How to fix get links for free.
 
 **Links** is further reading only. Every bullet is `- [text](url)` with
 descriptive text; a bare URL fails the test, and so does a URL that
@@ -469,8 +479,9 @@ Per section:
 - All 72 pages meet the template; `LEGACY_PAGES` is gone.
 - Every example fires and every fix clears, proven by the test on every
   run.
-- `ignoreHelp` is the only copy of the ignore mechanics outside the
-  README.
+- The ignore mechanics exist in three places only: `ignoreHelp` in
+  core, its twin in the site build that a test holds equal, and the
+  README. No page carries them by hand.
 - The site renders figures, linked rule ids, the generated mechanics,
   and attribution; the site check, the build tests, and the browser
   suite are green.

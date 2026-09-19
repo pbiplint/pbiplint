@@ -20,7 +20,6 @@ const RULESET_URL =
  */
 const LEGACY_PAGES = new Set<string>([
   "add-data-category-for-columns",
-  "avoid-bi-directional-relationships-against-high-cardinality-columns",
   "avoid-duplicate-measures",
   "avoid-excessive-bi-directional-or-many-to-many-relationships",
   "avoid-floating-point-data-types",

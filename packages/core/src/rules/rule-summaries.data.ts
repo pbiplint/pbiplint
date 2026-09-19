@@ -6,7 +6,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   ADD_DATA_CATEGORY_FOR_COLUMNS:
     "Columns with no data category whose name contains country, continent, or city and whose type is text, or whose name is exactly latitude or longitude and whose type is decimal or double.",
   "AVOID_BI-DIRECTIONAL_RELATIONSHIPS_AGAINST_HIGH-CARDINALITY_COLUMNS":
-    "Columns in a bi-directional relationship that have more than 100,000 distinct values. Cardinality is not stored in the model files, so pbiplint lists this rule but cannot run it.",
+    "Columns in a bi-directional relationship that have more than 100,000 distinct values. Cardinality is a statistic of the loaded data, not of the model files, so pbiplint lists this rule but does not run it: it needs column statistics that only a live model carries.",
   AVOID_DUPLICATE_MEASURES:
     "Two or more measures whose DAX is identical once spaces, tabs, and line breaks are removed. Every copy is reported.",
   "AVOID_EXCESSIVE_BI-DIRECTIONAL_OR_MANY-TO-MANY_RELATIONSHIPS":

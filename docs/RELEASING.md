@@ -69,6 +69,11 @@ Do these once, at the first release, not before.
    The exit code is 1 and the two summary lines are identical. `npm test` pins those same totals,
    in `packages/web/test/sample.test.ts`.
 
+6. Bump the GitHub Action's pin. In https://github.com/pbiplint/action, change the
+   `pbiplint-version` default in `action.yml` and the version in the README's inputs table to the
+   new version, then release the action following its own `RELEASING.md`. Until then, workflows
+   using `pbiplint/action@v1` keep running the previous CLI.
+
 A rerun of the workflow, or a tag pushed after a manual publish, is safe: `scripts/publish.mjs`
 skips a version that is already on the registry.
 

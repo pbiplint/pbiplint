@@ -22,10 +22,12 @@ export interface RunResult {
   ignored: number;
 }
 
-/** The rule's declared defaults; Task 2 lays the config's values over them. */
-export function optionsFor(rule: Rule, _config: ResolvedConfig): RuleOptions {
+/** The rule's declared defaults with the config file's values laid over them. */
+export function optionsFor(rule: Rule, config: ResolvedConfig): RuleOptions {
   const out: Record<string, number | string> = {};
   for (const o of rule.options ?? []) if (o.default !== undefined) out[o.name] = o.default;
+  for (const [name, value] of Object.entries(config.options.get(rule.id) ?? {}))
+    out[name] = value as number | string;
   return out;
 }
 

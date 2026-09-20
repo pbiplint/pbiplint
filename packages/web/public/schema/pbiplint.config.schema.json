@@ -9,8 +9,18 @@
     "$schema": { "type": "string" },
     "rules": {
       "type": "object",
-      "description": "Rule id to \"off\", or to a severity that replaces the rule's own. Ids match regardless of case.",
-      "additionalProperties": { "enum": ["off", "info", "warning", "error"] }
+      "description": "Rule id to \"off\", to a severity that replaces the rule's own, or to an object with a severity and the rule's options. Ids match regardless of case.",
+      "additionalProperties": {
+        "oneOf": [
+          { "enum": ["off", "info", "warning", "error"] },
+          {
+            "type": "object",
+            "description": "A severity override and the options the rule declares (see its page).",
+            "properties": { "severity": { "enum": ["info", "warning", "error"] } },
+            "additionalProperties": true
+          }
+        ]
+      }
     },
     "failOn": {
       "enum": ["error", "warning", "info", "none"],

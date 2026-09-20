@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { buildIndexes } from "../src/index/build.js";
-import { ConfigError, resolveConfig } from "../src/engine/config.js";
+import { bindConfig, ConfigError, resolveConfig } from "../src/engine/config.js";
 import { ignoreHelp, isIgnored } from "../src/engine/ignore.js";
 import { lint } from "../src/engine/lint.js";
 import { rank } from "../src/engine/rank.js";
-import { runRules } from "../src/engine/run.js";
+import { optionsFor, runRules } from "../src/engine/run.js";
 import { finding, namedObjects } from "../src/rules/helpers.js";
 import { PARSE_ISSUE } from "../src/rules/parse-issue.js";
 import type { Rule } from "../src/rules/types.js";
@@ -96,6 +96,65 @@ describe("resolveConfig", () => {
     expect(() => resolveConfig({ $schema: 1 })).toThrow(/"\$schema" must be a string/);
     // The unknown-key check still runs first, so a typo is named before a bad $schema.
     expect(() => resolveConfig({ $schema: 1, rulez: {} })).toThrow(/unknown key "rulez"/);
+  });
+  it("accepts an object per rule with a severity and options, and keeps a v1 file valid", () => {
+    const c = resolveConfig({
+      rules: { A: { severity: "error", max: 15 }, B: { expect: "closed" }, C: "off", D: "warning" },
+    });
+    expect(c.severity.get("A")).toBe(3);
+    expect(c.options.get("A")).toEqual({ max: 15 });
+    expect(c.options.get("B")).toEqual({ expect: "closed" });
+    expect(c.severity.has("B")).toBe(false);
+    expect(c.disabled.has("C")).toBe(true);
+    expect(c.options.has("D")).toBe(false);
+    expect(() => resolveConfig({ rules: { A: { severity: "loud" } } })).toThrow(
+      /rules\["A"\]\.severity/,
+    );
+    expect(() => resolveConfig({ rules: { A: [] } })).toThrow(ConfigError);
+  });
+});
+
+describe("bindConfig with options", () => {
+  const withMax: Rule = {
+    ...base,
+    id: "WITH_MAX",
+    name: "With max",
+    category: "Performance",
+    severity: 2,
+    options: [{ name: "max", type: "number", default: 20 }],
+    check: () => [],
+  };
+  const policy: Rule = {
+    ...base,
+    id: "POLICY",
+    name: "Policy",
+    category: "Report Design",
+    severity: 2,
+    options: [{ name: "expect", type: "string", values: ["open", "closed"] }],
+    check: () => [],
+  };
+  it("lays the config's values over the declared defaults, by id without regard to case", () => {
+    const { config } = bindConfig(resolveConfig({ rules: { with_max: { max: 5 } } }), [
+      withMax,
+      policy,
+    ]);
+    expect(optionsFor(withMax, config)).toEqual({ max: 5 });
+    expect(optionsFor(policy, config)).toEqual({});
+    expect(optionsFor(withMax, resolveConfig())).toEqual({ max: 20 });
+  });
+  it("rejects an option the rule does not declare, a wrong type, and a value outside the list", () => {
+    expect(() =>
+      bindConfig(resolveConfig({ rules: { WITH_MAX: { maxx: 5 } } }), [withMax]),
+    ).toThrow('pbiplint.config.json: rules["WITH_MAX"] has no option "maxx" (options: max)');
+    expect(() =>
+      bindConfig(resolveConfig({ rules: { WITH_MAX: { max: "5" } } }), [withMax]),
+    ).toThrow('pbiplint.config.json: rules["WITH_MAX"].max must be a number');
+    expect(() =>
+      bindConfig(resolveConfig({ rules: { POLICY: { expect: "shut" } } }), [policy]),
+    ).toThrow('pbiplint.config.json: rules["POLICY"].expect must be one of open, closed');
+    expect(() =>
+      bindConfig(resolveConfig({ rules: { EVERY_TABLE: { max: 1 } } }), [everyTable]),
+    ).toThrow('pbiplint.config.json: rules["EVERY_TABLE"] takes no options');
   });
 });
 

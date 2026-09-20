@@ -119,8 +119,8 @@ const legacyModel = (folder: string, name: string): Diagnostic => ({
   path: name,
   message: `${name} is stored as model.bim, which pbiplint cannot read; save it in the TMDL format from Power BI Desktop`,
 });
-const LEGACY_REPORT_REASON = "saved in the legacy report.json format";
-const LEGACY_MODEL_REASON = "saved in the legacy model.bim format";
+const LEGACY_REPORT_REASON = "the report is saved in the legacy report.json format";
+const LEGACY_MODEL_REASON = "the model is saved in the legacy model.bim format";
 
 /** Find the project at or under `input` and read its parts (spec section 4). */
 export function resolveProject(input: string): ResolvedProject {

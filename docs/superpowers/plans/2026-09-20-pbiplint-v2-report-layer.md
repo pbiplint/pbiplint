@@ -6999,7 +6999,7 @@ cd ~/Projects/pbiplint && git switch main && git pull --ff-only && git switch -c
 
 Shared facts:
 
-- The mockup (spec section 9, `2026-09-18-pbiplint-v2-mockups.html`, section 1) is the layout: heading with both layers and file counts; summary sentence; notices; "Report at a glance" as an always-open panel (`<section class="facts">` with `<h3>` and a `<dl>`), a fact with a `ruleId` linking to `#rule-<slug>` when the run has that group (class `fact flag`) else to `/rules/<slug>/` (class `fact`), plain counts not linked; "Fix these first" with a layer tag per item; export bar; the Show filter with a Model / Report pair between severity and category; every group summary row carries `<span class="layer <layer>">`; groups carry `data-layer`.
+- The mockup (spec section 9, `2026-09-18-pbiplint-v2-mockups.html`, section 1) is the layout: heading with file counts naming present layers only; summary sentence; notices; "Report at a glance" as an always-open panel, rendered only when the report layer is present (`<section class="facts">` with `<h3>` and a `<dl>`, both left out when `result.facts` is empty, decision 14), a fact with a `ruleId` linking to `#rule-<slug>` when the run has that group (class `fact flag`) else to `/rules/<slug>/` (class `fact`), plain counts not linked; "Fix these first" with a layer tag per item; export bar; the Show filter with a Model / Report pair between severity and category; every group summary row carries `<span class="layer <layer>">`; groups carry `data-layer`.
 - `wanted(path)` takes the drop-relative path: `.tmdl`, `pbiplint.config.json`, `definition.pbir`, `.platform`, `.pbip`, and `.json` whose path has a `.Report` segment followed later by a `definition` segment. `report.json` directly under a `.Report` folder and `model.bim` directly under a `.SemanticModel` folder are recorded as markers by name and never opened.
 - `InputTree` becomes `{ entries, modelFolders, reportFolders, markers: { path: string; kind: "legacy-report" | "legacy-model" }[], diagnostics: Diagnostic[] }`; the three readers fill it; a read failure is an `unread-file` diagnostic; the cap is a `depth-cap` diagnostic naming the folder, on all three routes (decision 8).
 - `selectProject(tree): SelectedProject { root, files, absent, config?, notes, read, diagnostics }` in `packages/web/src/input/project-files.ts` (the renamed `model-files.ts`), mirroring `resolveProject` on paths, including the two-reports refusal, the pairing through `definition.pbir` with `pairingDecision`, and the legacy markers as diagnostics.
@@ -7301,7 +7301,7 @@ Update the existing render, home, and export tests for the new heading (`Results
 In `render.ts`: `heading(result, source)`, `renderFacts(result)`, the layer boxes, tags, `data-layer`, and the diagnostics notices, following the mockup's structure; every href is built from pbiplint's own strings (`slug` from the finding's rule id via `result.groups` and `ruleUrl`/`pagePath`). In `styles.css`, after `.files`:
 
 ```css
-/* Report at a glance: what the report will do, always shown, under the summary. */
+/* Report at a glance: what the report will do, under the summary when the input has a report. */
 .facts {
   border: 1px solid rgba(0, 169, 165, 0.35);
   background: rgba(0, 169, 165, 0.06);
@@ -7491,9 +7491,10 @@ Replace the opening paragraph and Status section of `README.md`:
 Best-practice linter for Power BI projects. Browser and CLI. Nothing leaves your machine.
 
 Paste TMDL, or drop a PBIP folder, a `.SemanticModel` folder, or a `.Report` folder, and get
-ranked best-practice findings with guidance on how to fix each one, plus a "Report at a glance"
-block that says what the report will do when someone opens it. The analysis runs entirely in your
-browser or on your own machine from the command line. Nothing is uploaded, ever.
+ranked best-practice findings with guidance on how to fix each one, and, when the input has a
+report, a "Report at a glance" block that says what the report will do when someone opens it. The
+analysis runs entirely in your browser or on your own machine from the command line. Nothing is
+uploaded, ever.
 
 ## Status
 

@@ -172,7 +172,7 @@ describe("pbiplint CLI", () => {
     expect(doc.layers.model).toEqual({ present: true, files: 1 });
     expect(doc.layers.report).toEqual({
       present: false,
-      reason: "saved in the legacy report.json format",
+      reason: "the report is saved in the legacy report.json format",
     });
     expect(r.err).toBe(
       "pbiplint: notice: Demo.Report is stored as a single report.json, which pbiplint cannot read; save it in the PBIR format from Power BI Desktop\n",

@@ -6821,7 +6821,7 @@ In `packages/web/src/main.ts`, the sample click passes the config: `run({ files:
 - [ ] **Step 4: Run the suite and commit**
 
 Run: `npm run lint && npm run typecheck && npm test && npm run build && npm run check:pack && npm run test:bundle -w pbiplint`
-Expected: PASS; 161 findings everywhere still, `--sample` prints `Model: 11 files. Report: absent (no report in the input).`
+Expected: PASS; 161 findings everywhere still, `--sample` prints `Model: 11 files.`
 
 ```bash
 git add -A examples packages scripts tests/expectations/messy-sales.json CONTRIBUTING.md

@@ -29,7 +29,7 @@ export interface LintOptions {
   rules?: Rule[];
   /** What the input reader found that a reader of the results must know; carried onto the result. */
   diagnostics?: Diagnostic[];
-  /** Why the reader left a layer out, per layer, for the layers line. */
+  /** Why the reader left a layer out, per layer, for the skipped line. */
   absent?: Partial<Record<LayerName, string>>;
 }
 

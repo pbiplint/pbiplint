@@ -188,9 +188,11 @@ const RULE_LAYERS: readonly RuleLayer[] = ["model", "report", "project"];
  * reads a report, sets this to both families and moves the value pinned in generate.test.ts and
  * the site's pinned counts with it.
  *
- * While this list names one family, no report page is published, so a layer column has nothing to
- * distinguish and the attribution the ported report set adds has no page to sit on. That is why
- * neither appears until the list grows, and why neither needs a flag of its own.
+ * While this list names one family, no report page is published, so the attribution the ported
+ * report set adds has no page to sit on: that one holds by construction and needs no flag. A layer
+ * column does not. A badge on every row would read `model` on all of them, a column that
+ * distinguishes nothing, so the pull request that adds the column renders it only when this list
+ * names more than one family.
  */
 export const SITE_LAYERS: readonly SiteLayer[] = ["model"];
 

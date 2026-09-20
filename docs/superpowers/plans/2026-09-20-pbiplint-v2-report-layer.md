@@ -110,7 +110,7 @@ Recorded so a reviewer can see them as decisions rather than drift. None reopens
 12. **Report-level measures resolve field references.** A visual bound to a measure from `reportExtensions.json` is not a broken reference; `BROKEN_FIELD_REFERENCE` fires only on names neither the model nor the report defines.
 13. **A `pbir` figure's caption names the file the document stands for**: "Fires the rule in visual.json", "After the fix in visual.json". Approved by Michael on 2026-09-20 and written into spec section 7. A `tree.json` document names its files itself, so its caption is the bare "Fires the rule" or "After the fix". The SARIF help block's bold captions say the same.
 14. **A run given one part prints no section for the part it was not given.** `buildFacts` returns no facts without a report, so no surface shows "Report at a glance" on a model-only run; the layers line names present layers only, and the skipped line's `noModel` and `noReport` clauses print the absent layer's reason from `LintResult.layers`, which is where an overridden reason such as "this report reads a published model" now reaches the reader. `lint`'s default reason for an absent model layer becomes `no model in the input`, because the layers line no longer names it and its only human surface is the skipped line, where it has to read as a skip reason beside `no report in the input`. The JSON document keeps `layers` in full, absent layers and their reasons included, so structured output stays complete. Task 38 (the browser results page, pull request 7) inherits the rule: no facts panel and no heading when the report layer is absent, and the results heading's file counts name present layers only. Spec sections 6 and 9 amended 2026-09-20; tracked in #60.
-15. **The site publishes only the layers `SITE_LAYERS` names.** `packages/web/src/build/pages.ts` holds the list, initially `["model"]`, and `generateSite` filters its sources through it once: a page whose `layer` is not published is not rendered, not in the rules index, not in the sitemap, and not in the rule-id link map, so its id stays plain code on the pages that mention it, and a page with no `layer` key counts as `model` while a key that is present and empty is an error. `layer: project` is valid frontmatter and is never a member of `SITE_LAYERS`, which names file families: a `project` page publishes as soon as either family does, because a project rule fires on any input the site can lint. That is why `PARSE_ISSUE`, layer `project` in core, keeps its page through pull requests 2 to 6 once Task 18 writes the key onto it. The gate is there because the site deploys from main on every push while the ported report rules land on main several pull requests before the browser can lint a report, so without it pbiplint.com would carry pages for rules no published tool runs. Pull request 7 (Task 38 or 41) sets `SITE_LAYERS` to both families and moves everything `generate.test.ts` pins with it: the value of `SITE_LAYERS`, which that test asserts by value and not only through the counts, as well as the page count, the index sentence, and the sitemap. A layer column and the attribution the ported report set adds appear only once more than one layer is published: while the list names one layer, no report page is published, so a column has nothing to distinguish and the attribution has no page to sit on, which is why neither needs a flag of its own to hold it back. The CLI's help data, `scripts/sync-rule-pages.mjs`, and the rule pages themselves are not gated; only what the site publishes. Tracked in #61.
+15. **The site publishes only the layers `SITE_LAYERS` names.** `packages/web/src/build/pages.ts` holds the list, initially `["model"]`, and `generateSite` filters its sources through it once: a page whose `layer` is not published is not rendered, not in the rules index, not in the sitemap, and not in the rule-id link map, so its id stays plain code on the pages that mention it, and a page with no `layer` key counts as `model` while a key that is present and empty is an error. `layer: project` is valid frontmatter and is never a member of `SITE_LAYERS`, which names file families: a `project` page publishes as soon as either family does. `PARSE_ISSUE` is the reason. It declares `needs: []`, so it fires on a model-only run, and holding its page back until both families publish would take a page off the live site for four pull requests. The other two `project` rules, `BROKEN_FIELD_REFERENCE` and `NOT_REACHED_FROM_REPORT`, need both layers, so from pull request 3 their pages publish for rules the site's browser always skips. That is a known exception, accepted rather than missed: gating on `needs` would take a frontmatter key nobody plans to add, so the lever, if the exception is ever unwanted, is scheduling those two pages into pull request 7 instead of Task 24, not a change to the gate. The gate is there because the site deploys from main on every push while the ported report rules land on main several pull requests before the browser can lint a report, so without it pbiplint.com would carry pages for rules no published tool runs. Pull request 7 (Task 38 or 41) sets `SITE_LAYERS` to both families and moves everything `generate.test.ts` pins with it: the value of `SITE_LAYERS`, which that test asserts by value and not only through the counts, as well as the page count, the index sentence, and the sitemap. The attribution the ported report set adds holds by construction and needs no flag of its own: `attribution` renders for a page, and no report page is published, so there is nothing to credit. The layer column does not hold by construction. It renders a badge on every row, so with one family published it would read `model` on all 72 of them, a column that distinguishes nothing. Pull request 2, which adds the column (Task 18), is the session that has to render it only when more than one layer is published. The CLI's help data, `scripts/sync-rule-pages.mjs`, and the rule pages themselves are not gated; only what the site publishes. Tracked in #61.
 
 ## File map for the whole of v2
 
@@ -4942,7 +4942,7 @@ export const REDUCE_PAGES = inspectorRule(
 export const countRules = [REDUCE_VISUALS_ON_PAGE, REDUCE_OBJECTS_WITHIN_VISUALS, REDUCE_TOPN_FILTERS, REDUCE_ADVANCED_FILTERS, REDUCE_PAGES];
 ```
 
-In `pbi-inspector/index.ts`: `export const pbiInspectorRules: Rule[] = [...countRules].sort(...)`. In `packages/core/test/pack.test.ts` set the count to `77` and in `packages/web/test/generate.test.ts` the page count and index sentence likewise (the pages come in Task 18; until then the rule-pages test will report five missing pages, which is expected and is why Tasks 15 to 19 are one pull request; run the parity and unit files, not the rule-pages file, until Task 18).
+In `pbi-inspector/index.ts`: `export const pbiInspectorRules: Rule[] = [...countRules].sort(...)`. In `packages/core/test/pack.test.ts` set the count to `77`. `packages/web/test/generate.test.ts` does not move: the site's page count and index sentence hold at 72 through pull requests 2 to 6, because the site publishes the model layer only (decision 15). (the pages come in Task 18; until then the rule-pages test will report five missing pages, which is expected and is why Tasks 15 to 19 are one pull request; run the parity and unit files, not the rule-pages file, until Task 18).
 
 - [ ] **Step 4: Run the tests and record the two deviations**
 
@@ -4962,7 +4962,7 @@ git commit -m "feat(rules): port the five fab-inspector count rules with parity,
 
 **Files:**
 - Create: `packages/core/src/rules/pbi-inspector/report.ts`, `packages/core/src/rules/pbi-inspector/pages.ts`
-- Modify: `packages/core/src/rules/pbi-inspector/index.ts`, `packages/core/test/report-parity.test.ts` (`NOT_YET_PORTED` shrinks by three), `packages/core/test/pack.test.ts`, `packages/web/test/generate.test.ts` (80)
+- Modify: `packages/core/src/rules/pbi-inspector/index.ts`, `packages/core/test/report-parity.test.ts` (`NOT_YET_PORTED` shrinks by three), `packages/core/test/pack.test.ts` (80); not `packages/web/test/generate.test.ts`, whose pins hold at 72 (decision 15)
 - Test: `packages/core/test/rules-report-pages.test.ts`
 
 - [ ] **Step 1: Write the failing tests**
@@ -5083,7 +5083,7 @@ git commit -m "feat(rules): port unused custom visuals, visible tooltip pages, a
 
 **Files:**
 - Create: `packages/core/src/rules/pbi-inspector/visuals.ts`
-- Modify: `packages/core/src/rules/pbi-inspector/index.ts`, `packages/core/test/report-parity.test.ts` (delete `NOT_YET_PORTED` and its use), `packages/core/test/pack.test.ts` (83), `packages/web/test/generate.test.ts` (83), the expectation files (`deviations`/`ours` for `ENSURE_THEME_COLOURS`)
+- Modify: `packages/core/src/rules/pbi-inspector/index.ts`, `packages/core/test/report-parity.test.ts` (delete `NOT_YET_PORTED` and its use), `packages/core/test/pack.test.ts` (83); not `packages/web/test/generate.test.ts`, whose pins hold at 72 (decision 15); the expectation files (`deviations`/`ours` for `ENSURE_THEME_COLOURS`)
 - Test: `packages/core/test/rules-report-visuals.test.ts`
 
 - [ ] **Step 1: Write the failing tests**
@@ -5278,7 +5278,9 @@ In `packages/web/test/generate.test.ts`: extend the tie test with `["Visual"]`, 
   });
 ```
 
-and in the `generateSite`/`rulesIndex` tests change the count assertions to 83 and the sentence to `"83 rules: 66 model rules ported from Microsoft's Best Practice Analyzer ruleset so the results match Tabular Editor, 5 listed but not run because they need statistics only a live model has, 11 report rules ported from PBI Inspector's base rules, and 1 built into pbiplint."` and assert the index contains `<span class="layer report">report</span>` and `<span class="layer model">model</span>`.
+and leave the `generateSite`/`rulesIndex` count assertions at 72 with the index sentence as it stands: the site publishes the model layer only until pull request 7, so the 11 new pages are on disk and not on the site (decision 15). The sentence they become once `SITE_LAYERS` names both families, which is pull request 7's edit and not this one, is `"83 rules: 66 model rules ported from Microsoft's Best Practice Analyzer ruleset so the results match Tabular Editor, 5 listed but not run because they need statistics only a live model has, 11 report rules ported from PBI Inspector's base rules, and 1 built into pbiplint."`
+
+The layer badge is the one part of this task the gate does not hold by construction: rendered on every row, it would read `model` on all 72 published rows, a column that distinguishes nothing. Render it only when more than one layer is published, in `rulesIndex` beside the constant that decides it, and assert it where both families are published rather than against the real rule set, which publishes one. The assertions `<span class="layer report">report</span>` and `<span class="layer model">model</span>` belong to that case, and to pull request 7's index once the flip lands.
 
 In `scripts/test/sync-rule-pages.test.mjs`, inside `describe("exampleMarkdown")`:
 
@@ -5637,7 +5639,7 @@ Pull request 2 of 8 for the report layer, tracked in #9.
 - The parity test compares pbiplint's object ids with the oracle's per rule and fixture; the three documented deviations are recorded as `deviations` and `ours` and must differ from the oracle on the fixture that shows them; a test ties each sentence to the page's Quirks.
 - Rule pages: `layer` in frontmatter, `pbir fires` and `pbir fixed` example fences, captioned with the file they stand for, proven through the engine by the rule-pages test (with a `tree.json` form for the count rules and an optional config fence), JSON ignore mechanics for page and visual rules, PBI Inspector attribution, a layer badge on the index. Eleven new pages.
 
-Counts: 83 rules and pages (pinned in pack.test and generate.test).
+Counts: 83 rules and 83 pages on disk, of which the site publishes 72: `pack.test.ts` pins 83, `generate.test.ts` holds at 72 until pull request 7 (decision 15).
 
 Manual check for Michael: open two of the new pages (reduce-visuals-on-page, ensure-alttext) on the deployed site and look at the JSON figures and the layer badge on the index.
 
@@ -6086,7 +6088,7 @@ git commit -m "feat(rules): landing page, opening page validity, and the Filters
 
 **Files:**
 - Create: `packages/core/src/rules/pbiplint/visuals.ts`
-- Modify: `packages/core/src/rules/pbiplint/index.ts`, `packages/core/test/pack.test.ts` (89), `packages/web/test/generate.test.ts` (89 and the sentence's "and 7 built into pbiplint")
+- Modify: `packages/core/src/rules/pbiplint/index.ts`, `packages/core/test/pack.test.ts` (89); not `packages/web/test/generate.test.ts`, whose pins hold at 72 (decision 15), so the sentence's "and 7 built into pbiplint" arrives with pull request 7
 - Modify: `packages/core/test/report-parity.test.ts` (the native check), `tests/expectations/base-rules-passes.report.json`, `shelfmart.report.json`, `pbip-and-github-demo.report.json`, `base-rules-fails.report.json` (`native` maps)
 - Test: `packages/core/test/rules-native-visuals.test.ts`
 
@@ -6179,6 +6181,8 @@ git commit -m "feat(rules): hidden visuals that still query, and the native quie
 ### Task 24: The six tier-1 pages
 
 Scaffold, then draft with Task 19's brief and these notes, review, delete the pending set, regenerate, test, commit. Add the six slugs to a `PENDING_PAGES` set again for the scaffold step (`broken-field-reference`, `not-reached-from-report`, `landing-page-not-set`, `opening-page-invalid`, `filters-pane-state`, `hidden-visuals-still-query`) and delete the set once the pages are written, exactly as Tasks 18 and 19 did.
+
+Two of these pages publish to the site before the rule behind them can run: `broken-field-reference` and `not-reached-from-report` are layer `project` and need both layers, and a `project` page publishes as soon as either family does, so from this pull request the site carries them while its browser always skips the rules (decision 15). That is accepted. If it is ever not, move those two pages to pull request 7 rather than change the gate.
 
 | Page | Example shape | Notes |
 |---|---|---|
@@ -7238,8 +7242,8 @@ git commit -m "feat(web): selectProject mirrors the CLI on a tree of paths, with
 ### Task 38: The results page: heading, facts panel, layer tags, filters, notices; home and About copy
 
 **Files:**
-- Modify: `packages/web/src/results/render.ts`, `packages/web/src/main.ts`, `packages/web/src/styles.css`, `packages/web/index.html`, `packages/web/content/about.md`
-- Test: `packages/web/test/render.test.ts`, `packages/web/test/home.test.ts`, `packages/web/test/styles.test.ts`
+- Modify: `packages/web/src/results/render.ts`, `packages/web/src/main.ts`, `packages/web/src/styles.css`, `packages/web/index.html`, `packages/web/content/about.md`, `packages/web/src/build/pages.ts` (`SITE_LAYERS` gains `report`, and the layer column's condition turns true with it: until this flip the browser would link to report rule pages the site does not publish, and no static check catches a 404 behind a link built at runtime)
+- Test: `packages/web/test/render.test.ts`, `packages/web/test/home.test.ts`, `packages/web/test/styles.test.ts`, `packages/web/test/generate.test.ts` (the pinned `SITE_LAYERS` value, the page count, the index sentence, and the sitemap all move to the full count here; its layer tests go red until they do, which is the forcing function in this direction)
 
 **Interfaces:**
 - `RenderOptions.source` becomes the project label without counts; `renderResults` builds the heading from `result.layers`: `Results for <source> (model, 11 files · report, 46 files)`, or `(report, 46 files)` / `(model, 11 files)` for one layer; `SAMPLE_NAME` stays "the sample project".

@@ -19,19 +19,7 @@ const RULESET_URL =
  * its slugs, and the last batch deletes this set and everything that reads it.
  */
 const LEGACY_PAGES = new Set<string>([
-  "avoid-excessive-bi-directional-or-many-to-many-relationships",
-  "avoid-floating-point-data-types",
-  "avoid-using-many-to-many-relationships-on-tables-used-for-dynamic-row-level-security",
-  "check-if-bi-directional-and-many-to-many-relationships-are-valid",
-  "check-if-dynamic-row-level-security-rls-is-necessary",
-  "date-calendar-tables-should-be-marked-as-a-date-table",
-  "isavailableinmdx-false-nonattribute-columns",
-  "large-tables-should-be-partitioned",
-  "limit-row-level-security-rls-logic",
-  "many-to-many-relationships-should-be-single-direction",
   "measures-using-time-intelligence-and-model-is-using-direct-query",
-  "minimize-power-query-transformations",
-  "model-should-have-a-date-table",
   "model-using-direct-query-and-no-aggregations",
   "reduce-number-of-calculated-columns",
   "reduce-usage-of-calculated-columns-that-use-the-related-function",

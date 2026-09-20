@@ -68,7 +68,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS:
     "Hidden columns, or columns in hidden tables, that still have IsAvailableInMdx set to true and are not used to sort another column, in a hierarchy, or in a variation, and do not themselves sort by another column.",
   LARGE_TABLES_SHOULD_BE_PARTITIONED:
-    "Tables with more than 25 million rows and a single partition. Row counts are not in the model files, so pbiplint lists this rule but cannot run it.",
+    "Tables with more than 25 million rows and a single partition. The row count is a statistic of the loaded data, not of the model files, so pbiplint lists this rule but does not run it: it needs statistics that only a live model carries.",
   "LIMIT_ROW_LEVEL_SECURITY_(RLS)_LOGIC":
     "Tables whose row-level security filter, in any role, calls RIGHT, LEFT, UPPER, LOWER, or FIND.",
   "MANY-TO-MANY_RELATIONSHIPS_SHOULD_BE_SINGLE-DIRECTION":

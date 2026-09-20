@@ -50,19 +50,34 @@ export function skippedLine(result: LintResult): string {
   const parts = [`${plural(s.rulesRun, "rule")} run`];
   if (by("needsLiveModel"))
     parts.push(`${plural(by("needsLiveModel"), "rule")} skipped (need a live model)`);
-  if (by("noModel")) parts.push(`${plural(by("noModel"), "rule")} skipped (no model in the input)`);
+  // An absent layer's reason is the one the run recorded, so an overridden reason ("this report
+  // reads a published model") reaches the reader here, where the layers line no longer names it.
+  const why = (layer: LayerStatus, fallback: string): string =>
+    layer.present ? fallback : layer.reason;
+  if (by("noModel"))
+    parts.push(
+      `${plural(by("noModel"), "rule")} skipped (${why(result.layers.model, "no model in the input")})`,
+    );
   if (by("noReport"))
-    parts.push(`${plural(by("noReport"), "rule")} skipped (no report in the input)`);
+    parts.push(
+      `${plural(by("noReport"), "rule")} skipped (${why(result.layers.report, "no report in the input")})`,
+    );
   if (by("disabled")) parts.push(`${plural(by("disabled"), "rule")} disabled by config`);
   if (s.ignored) parts.push(`${plural(s.ignored, "finding")} ignored by annotation`);
   return parts.join(", ");
 }
 
-/** "Model: 11 files. Report: 27 files." naming the reason for an absent layer. */
+/**
+ * "Model: 11 files. Report: 27 files.", naming present layers only, so a run given one part says
+ * nothing about the part it was not given; the reason for an absent layer rides on the skipped
+ * line instead. Empty when neither layer is present.
+ */
 export function layersLine(result: LintResult): string {
   const part = (name: string, s: LayerStatus): string =>
-    s.present ? `${name}: ${plural(s.files, "file")}.` : `${name}: absent (${s.reason}).`;
-  return `${part("Model", result.layers.model)} ${part("Report", result.layers.report)}`;
+    s.present ? `${name}: ${plural(s.files, "file")}.` : "";
+  return [part("Model", result.layers.model), part("Report", result.layers.report)]
+    .filter(Boolean)
+    .join(" ");
 }
 
 export const layerTag = (layer: Layer): string => `[${layer}]`;
@@ -94,7 +109,7 @@ export const topGroups = (result: LintResult, n = 5): RankedGroup[] => result.gr
 export function formatText(result: LintResult, _options: FormatOptions = {}): string {
   const out: string[] = [
     `pbiplint: ${summaryLine(result)}`,
-    `${layersLine(result)} ${skippedLine(result)}`,
+    [layersLine(result), skippedLine(result)].filter(Boolean).join(" "),
     ...noticeLines(result),
     "",
     ...factsLines(result),

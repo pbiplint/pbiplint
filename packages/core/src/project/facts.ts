@@ -165,15 +165,17 @@ function reportFacts(report: Report, known: ReadonlySet<string>): Fact[] {
 }
 
 /**
- * The "Report at a glance" block: structured, always produced, in the order the spec's table
- * lists. A fact links to a rule only when that rule is in the run's rule set.
+ * The "Report at a glance" block: structured, in the order the spec's table lists, and built only
+ * when the report layer is present, so a run without a report produces none and no surface shows
+ * the block. A fact links to a rule only when that rule is in the run's rule set.
  */
 export function buildFacts(
   project: Project,
   indexes: Indexes,
   knownRules: ReadonlySet<string>,
 ): Fact[] {
-  const facts: Fact[] = project.report ? reportFacts(project.report, knownRules) : [];
+  if (!project.report) return [];
+  const facts: Fact[] = reportFacts(project.report, knownRules);
   const model = project.model;
   if (model) {
     const columns = model.tables.reduce((s, t) => s + t.columns.length, 0);

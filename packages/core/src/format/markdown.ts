@@ -16,7 +16,7 @@ export function formatMarkdown(result: LintResult, _options: FormatOptions = {})
   const out: string[] = [
     "# pbiplint report",
     "",
-    `${summaryLine(result)}. ${layersLine(result)} ${skippedLine(result)}.`,
+    `${summaryLine(result)}. ${[layersLine(result), skippedLine(result)].filter(Boolean).join(" ")}.`,
     "",
   ];
   for (const d of result.diagnostics) out.push(`> Notice: ${cell(d.message)}`, "");

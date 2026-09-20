@@ -36,6 +36,13 @@ const kb = (n) => (n / 1024).toFixed(1);
 console.log(
   `core browser bundle: ${kb(code.length)} KB minified, ${kb(gzipSync(code).length)} KB gzipped`,
 );
+
+// The site loads the core on every visit; 200 KB minified is the budget the v2 spec sets.
+const LIMIT_KB = 200;
+if (code.length > LIMIT_KB * 1024) {
+  console.error(`core bundle is ${kb(code.length)} KB minified, over the ${LIMIT_KB} KB budget`);
+  process.exit(1);
+}
 if (hits.length) {
   console.error(`core bundle references forbidden APIs: ${hits.join(", ")}`);
   process.exit(1);

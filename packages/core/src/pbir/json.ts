@@ -19,11 +19,18 @@ const CONFLICT_MARKER = /^(?:<{7}|={7}|>{7})(?:\s|$)/;
 /** How a document is cut into lines. Every line number in this file counts the same breaks. */
 const LINE_BREAK = /\r\n?|\n/;
 
-/** An offset an engine names in a parse error message, as in `at position 19`. */
-const AT_POSITION = /position (\d+)/;
+/**
+ * An offset an engine names in a parse error message. Anchored to the engine's own phrasing, as in
+ * V8's `in JSON at position 14` and `after JSON at position 9`, because the message also quotes a
+ * slice of the document, and a document is free to say `position 400` itself.
+ */
+const AT_POSITION = /\bJSON at position (\d+)/;
 
-/** A line an engine names instead of an offset, as in `(line 3 column 1)`. */
-const AT_LINE = /line (\d+)/;
+/**
+ * A line an engine names instead of an offset, anchored the same way: V8's `(line 3 column 1)` and
+ * Firefox's `at line 3 column 9 of the JSON data`.
+ */
+const AT_LINE = /\bline (\d+) column \d+/;
 
 /**
  * The run of text an engine quotes when it names neither, as in
@@ -36,15 +43,17 @@ const QUOTED_RUN = /^Unexpected token '(.)', (?:\.\.\.)?"([\s\S]*)"(?:\.\.\.)? i
  * The 1-based line a JSON.parse error points at. Engines say it three ways: an offset into the
  * document, a line of its own, or a quoted run of the text around the failure. That run is centred
  * on the character the parser stopped at, so of the places that character appears in it, the one
- * nearest the middle is the failure. Line 1 is the honest answer when a message says none of the
- * three.
+ * nearest the middle is the failure. An offset or a line the document cannot hold did not come
+ * from the engine, so it falls through to the next way; line 1 is the honest answer when a message
+ * says none of the three.
  */
 function lineOfParseError(body: string, message: string): number {
+  const lineCount = body.split(LINE_BREAK).length;
   const lineOf = (offset: number): number => body.slice(0, offset).split(LINE_BREAK).length;
   const at = AT_POSITION.exec(message);
-  if (at) return lineOf(Number(at[1]));
+  if (at && Number(at[1]) <= body.length) return lineOf(Number(at[1]));
   const named = AT_LINE.exec(message);
-  if (named) return Number(named[1]);
+  if (named && Number(named[1]) >= 1 && Number(named[1]) <= lineCount) return Number(named[1]);
   const quoted = QUOTED_RUN.exec(message);
   if (!quoted) return 1;
   const char = quoted[1]!;

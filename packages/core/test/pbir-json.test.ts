@@ -55,6 +55,17 @@ describe("readJson", () => {
     expect(r.issues[0]!.reason).toMatch(/^not valid JSON/);
     expect(r.issues[0]!.line).toBe(3);
   });
+  it("does not read the document's own text as the engine's line or offset", () => {
+    // V8 quotes a slice of the broken document in its message, so a document that says "line 5"
+    // or "position 400" of its own is quoted back and must not be mistaken for the engine saying
+    // where it stopped.
+    const named = readJson("x.json", '{\n  "a": 1,\n  "b": line 5\n}');
+    expect(named.issues[0]!.line).toBe(3);
+    expect(named.issues[0]!.text).toBe('  "b": line 5');
+    const offset = readJson("x.json", '{\n  "a": 1,\n  "b": position 400\n}');
+    expect(offset.issues[0]!.line).toBe(3);
+    expect(offset.issues[0]!.text).toBe('  "b": position 400');
+  });
 });
 
 describe("newerThan", () => {

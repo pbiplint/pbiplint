@@ -56,15 +56,15 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   FIX_REFERENTIAL_INTEGRITY_VIOLATIONS:
     "Relationships where the many side holds key values that do not exist on the one side. The count of offending rows is a statistic of the loaded data, not of the model files, so pbiplint lists this rule but does not run it: it needs statistics that only a live model carries.",
   "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS":
-    "Visible columns whose name starts with Is and whose type is whole number, and visible columns whose name ends with Flag and whose type is not text.",
+    "Visible columns whose name starts with Is and whose type is whole number, and visible columns whose name ends with the word Flag after a space and whose type is not text.",
   HIDE_FACT_TABLE_COLUMNS:
-    "Visible numeric columns that a measure aggregates directly with a fully qualified reference, such as `SUM('Sales'[Amount])`. COUNT, SUM, AVERAGE, MIN, MAX, DISTINCTCOUNT, VALUES, DISTINCT, and their A-suffixed variants count as aggregations.",
+    "Visible numeric columns that a measure aggregates directly with a fully qualified reference, such as `SUM('Sales'[Amount])`. COUNT, COUNTBLANK, SUM, AVERAGE, MIN, MAX, DISTINCTCOUNT, VALUES, DISTINCT, and the A-suffixed COUNTA, AVERAGEA, MAXA, and MINA count as aggregations.",
   HIDE_FOREIGN_KEYS:
     "Visible columns whose name matches the from column of a relationship whose from side is many. Only the from cardinality is tested, so a many-to-many relationship counts here too, not just many-to-one.",
   INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED:
     "Inactive relationships that no measure or calculation item activates with USERELATIONSHIP.",
   INTEGER_FORMATTING:
-    'Measures whose static format string is not a recognized whole-number, currency, or percentage format. The only format strings the rule accepts are `#,0`, `#,0.0`, and any string containing `$` or `%`. A measure with no format string at all fires too, and that is the common case: the rule reads only the format string, so it cannot tell an unformatted currency or ratio from an unformatted count. Each finding says what the rule saw: `no format string`, `format string "0.00"`, or `dynamic format string only`.',
+    "Measures whose static format string is not a recognized whole-number, currency, or percentage format. The only format strings the rule accepts are `#,0`, `#,0.0`, and any string containing `$` or `%`. A measure with no format string at all fires too, and that is the common case: the rule reads only the format string, so it cannot tell an unformatted currency or ratio from an unformatted count.",
   ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS:
     "Hidden columns, or columns in hidden tables, that still have IsAvailableInMdx set to true and are not used to sort another column, in a hierarchy, or in a variation, and do not themselves sort by another column.",
   LARGE_TABLES_SHOULD_BE_PARTITIONED:

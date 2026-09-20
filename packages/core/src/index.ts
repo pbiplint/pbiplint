@@ -89,6 +89,14 @@ export {
 export { collectFieldRefs, escapePointer } from "./pbir/refs.js";
 export type * from "./pbir/types.js";
 export { buildFacts } from "./project/facts.js";
+export {
+  datasetReference,
+  isModelFile,
+  isReportFile,
+  pairingDecision,
+  routeFiles,
+  type PairingDecision,
+} from "./project/route.js";
 export type {
   Diagnostic,
   DiagnosticKind,

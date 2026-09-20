@@ -90,9 +90,12 @@ export function readJson(file: string, text: string): JsonRead {
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     const line = lineOfParseError(body, message);
+    // The message quotes a slice of the document, raw line breaks included. The line lookup reads
+    // it as the engine wrote it; the reason takes it on one line, so a finding stays one row.
+    const flat = message.replace(/\s+/g, " ");
     return {
       json: undefined,
-      issues: [{ file, line, text: lines[line - 1] ?? "", reason: `not valid JSON (${message})` }],
+      issues: [{ file, line, text: lines[line - 1] ?? "", reason: `not valid JSON (${flat})` }],
     };
   }
 }

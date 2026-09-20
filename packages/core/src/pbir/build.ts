@@ -82,7 +82,8 @@ function filtersOf(filterConfig: unknown, file: string, pointer: string): Report
   });
 }
 
-function datasetReferenceOf(json: unknown): DatasetReference {
+/** The `datasetReference` of a read definition.pbir: which model the report reads, and how. */
+export function datasetReferenceOf(json: unknown): DatasetReference {
   const ref = isRecord(json) && isRecord(json.datasetReference) ? json.datasetReference : undefined;
   if (!ref) return { kind: "none" };
   if (isRecord(ref.byPath) && typeof ref.byPath.path === "string")

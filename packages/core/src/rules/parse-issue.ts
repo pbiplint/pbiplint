@@ -5,13 +5,13 @@ import type { Rule, RuleFinding } from "./types.js";
 /** Built-in rule that surfaces parser issues in the same list as everything else (spec section 5). */
 export const PARSE_ISSUE: Rule = {
   id: "PARSE_ISSUE",
-  name: "TMDL could not be fully parsed",
+  name: "File could not be fully parsed",
   category: "Error Prevention",
   severity: 3,
   scope: ["File"],
   layer: "project",
   needs: [],
-  description: RULE_SUMMARIES["PARSE_ISSUE"] ?? "TMDL could not be fully parsed",
+  description: RULE_SUMMARIES["PARSE_ISSUE"] ?? "File could not be fully parsed",
   references: ["https://learn.microsoft.com/analysis-services/tmdl/tmdl-overview"],
   status: "builtin",
   check: ({ model, report }) => {

@@ -387,3 +387,79 @@ describe("namedObjects", () => {
     ).toEqual([]);
   });
 });
+
+describe("lint over a project", () => {
+  const j = (v: unknown) => JSON.stringify(v);
+  const modelFiles = [
+    {
+      path: "definition/tables/Sales.tmdl",
+      text: "table Sales\n\tcolumn Amount\n\t\tdataType: decimal\n",
+    },
+  ];
+  const reportFiles = [
+    { path: "definition/report.json", text: j({}) },
+    { path: "definition/pages/pages.json", text: j({ pageOrder: ["p"], activePageName: "p" }) },
+    { path: "definition/pages/p/page.json", text: j({ name: "p", displayName: "P" }) },
+  ];
+  it("reports which layers ran and why one is absent, and counts routed files", () => {
+    const both = lint([...modelFiles, ...reportFiles, { path: "README.md", text: "" }]);
+    expect(both.layers).toEqual({
+      model: { present: true, files: 1 },
+      report: { present: true, files: 3 },
+    });
+    expect(both.summary.files).toBe(4);
+    expect(both.project.model).toBeDefined();
+    expect(both.project.report).toBeDefined();
+    expect(both.facts.map((f) => f.label)).toContain("Opens on");
+    const modelOnly = lint(modelFiles);
+    expect(modelOnly.layers.report).toEqual({ present: false, reason: "no report in the input" });
+    expect(modelOnly.facts.map((f) => f.label)).toEqual(["Model"]);
+    const reportOnly = lint(reportFiles, {
+      absent: { model: "this report reads a published model" },
+    });
+    expect(reportOnly.layers.model).toEqual({
+      present: false,
+      reason: "this report reads a published model",
+    });
+    expect(reportOnly.model.tables).toEqual([]);
+    expect(reportOnly.project.model).toBeUndefined();
+  });
+  it("carries the reader's diagnostics and adds the builder's", () => {
+    const r = lint(
+      [
+        ...reportFiles,
+        {
+          path: "definition/pages/q/page.json",
+          text: j({ $schema: "https://x/page/9.0.0/schema.json", name: "q", displayName: "Q" }),
+        },
+      ],
+      { diagnostics: [{ kind: "depth-cap", message: "stopped" }] },
+    );
+    expect(r.diagnostics.map((d) => d.kind)).toEqual(["depth-cap", "schema-newer-than-known"]);
+  });
+  it("skips model rules on a report-only run and says so", () => {
+    const r = lint(reportFiles);
+    expect(r.summary.rulesSkipped.filter((s) => s.reason === "noModel").length).toBeGreaterThan(60);
+    expect(r.findings.filter((f) => f.ruleId === "PARSE_ISSUE")).toEqual([]);
+  });
+  it("reports a JSON parse issue through PARSE_ISSUE with the file and line", () => {
+    const r = lint([
+      { path: "definition/pages/p/page.json", text: '{\n  "name": "p",\n<<<<<<< HEAD\n}\n' },
+    ]);
+    expect(
+      r.findings
+        .filter((f) => f.ruleId === "PARSE_ISSUE")
+        .map((f) => [f.layer, f.objectName, f.location?.line, f.detail]),
+    ).toEqual([
+      ["report", "definition/pages/p/page.json", 3, "merge conflict marker: <<<<<<< HEAD"],
+    ]);
+  });
+  it("keeps an invalid-JSON detail on one line, whatever the engine's message spans", () => {
+    const r = lint([{ path: "definition/pages/p/page.json", text: '{\n  "a": 1,\n  "b": }\n' }]);
+    const issues = r.findings.filter((f) => f.ruleId === "PARSE_ISSUE");
+    expect(issues).toHaveLength(1);
+    expect(issues[0]!.location?.line).toBe(3);
+    expect(issues[0]!.detail).toMatch(/^not valid JSON \(/);
+    expect(issues[0]!.detail).not.toContain("\n");
+  });
+});

@@ -114,6 +114,7 @@ const { report } = buildReport([
           name: "Sales",
           measures: [
             { name: "Net Margin", expression: "[Total Sales] - SUM('Sales'[Amount]) + [Missing]" },
+            { name: "Doubled", expression: "'Sales'[Net Margin] * 2" },
           ],
         },
       ],
@@ -156,6 +157,13 @@ describe("buildReportReferenceIndex", () => {
       ["visualFilter", 'no column named "Nope" on "Sales"'],
       ["reportMeasure", 'no measure or column named "Missing"'],
     ]);
+  });
+  it("resolves a qualified reference to a report measure written inside another one", () => {
+    expect(
+      index.refs
+        .filter((r) => r.owner.kind === "reportMeasure" && r.ref.name === "Net Margin")
+        .map((r) => [r.ref.kind, r.resolution.kind]),
+    ).toEqual([["measure", "reportMeasure"]]);
   });
   it("marks everything unresolved with one reason when there is no model, except report measures", () => {
     const without = buildReportReferenceIndex(report, undefined);

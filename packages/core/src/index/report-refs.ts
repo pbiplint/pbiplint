@@ -146,7 +146,13 @@ export function buildReportReferenceIndex(
     for (const raw of extractRefs(m.expression)) {
       if (raw.qualified) {
         const t = tables.get(lower(raw.table!));
-        const kind = t && measureOf(t, raw.name) ? "measure" : "column";
+        // A qualified name is a measure when the model table carries it or the report's own
+        // measures declare it on that table; only then is it a column.
+        const kind =
+          (t && measureOf(t, raw.name)) ||
+          reportMeasures.has(`${lower(raw.table!)}\u0000${lower(raw.name)}`)
+            ? "measure"
+            : "column";
         add(owner, m.file, [{ kind, table: raw.table!, name: raw.name, pointer: "" }]);
         continue;
       }

@@ -60,7 +60,7 @@ In Power BI Desktop, select the measure in the Data pane and edit it in the form
 
 ## When to ignore it
 
-A calculated column is materialized once per refresh and never again at query time, so the cost of the guard is paid by the refresh, not by every visual. IFERROR in a calculated column over a small table is a fair trade while the underlying data problem is being sorted out upstream. A measure is the opposite case: it runs on every query, so the guard is worth removing even when the model is small today.
+A calculated column on an imported table is materialized once per refresh and never again at query time, so the cost of the guard is paid by the refresh, not by every visual. IFERROR in a calculated column over a small table is a fair trade while the underlying data problem is being sorted out upstream. A measure is the opposite case: it runs on every query, so the guard is worth removing even when the model is small today.
 
 ## Quirks
 
@@ -70,7 +70,7 @@ A calculated column is materialized once per refresh and never again at query ti
 
 ## Related rules
 
-- `USE_THE_DIVIDE_FUNCTION_FOR_DIVISION` fires on the `/` inside the usual `IFERROR(x / y, 0)`, and the DIVIDE rewrite clears both.
+- `USE_THE_DIVIDE_FUNCTION_FOR_DIVISION` fires on the `/` inside the usual `IFERROR([A] / [B], 0)`, and the DIVIDE rewrite clears both.
 
 ## Links
 

@@ -86,7 +86,7 @@ Iterate the column the answer actually varies by, not the table:
 Best Seller Sales = CALCULATE ( [Total Sales], FILTER ( VALUES ( 'Product'[Product ID] ), [Total Sales] > 1000 ) )
 ```
 
-VALUES respects the filter already on the column; swap in ALL to ignore it. Pick the column with the fewest distinct values that still gives the right answer. In Power BI Desktop, select the measure in the Data pane and edit it in the formula bar; a calculated column and a calculation item are edited the same way. In the TMDL file, edit the expression after `measure 'Best Seller Sales' =`.
+VALUES respects the filter already on the column; swap in ALL to ignore it. Pick the column with the fewest distinct values that still gives the right answer, and note that passing a column also narrows what the filter carries into CALCULATE, one column's values rather than whole rows of the table, so the rewrite pays even where the column you iterate is the table's key. In Power BI Desktop, select the measure in the Data pane and edit it in the formula bar; a calculated column and a calculation item are edited the same way. In the TMDL file, edit the expression after `measure 'Best Seller Sales' =`, after `column Name =` for a calculated column, or after `calculationItem Name =` in the calculation group.
 
 ## When to ignore it
 
@@ -99,6 +99,7 @@ Where the measure's value depends on more than one column of the table, no singl
 - Table names must contain only letters, digits, spaces, and underscores.
 - CALCULATETABLE is matched by a second pattern of its own, with the same shape.
 - Function names are matched in any letter case and with any spacing before the parenthesis.
+- The expression is read as raw text, so a CALCULATE and FILTER shape written inside a string literal or a comment counts.
 
 ## Related rules
 

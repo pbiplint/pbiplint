@@ -86,7 +86,7 @@ Drop the FILTER and pass the predicate itself. Wrap it in KEEPFILTERS to keep wh
 Bike Sales = CALCULATE ( [Total Sales], KEEPFILTERS ( 'Product'[Category] = "Bikes" ) )
 ```
 
-Leave KEEPFILTERS off to replace that filter instead, which is what a bare predicate inside CALCULATE means. The SQLBI article under Links covers which one you want. In Power BI Desktop, select the measure in the Data pane and edit it in the formula bar; a calculated column and a calculation item are edited the same way. In the TMDL file, edit the expression after `measure 'Bike Sales' =`.
+Leave KEEPFILTERS off to replace that filter instead, which is what a bare predicate inside CALCULATE means. The SQLBI article under Links covers which one you want. In Power BI Desktop, select the measure in the Data pane and edit it in the formula bar; a calculated column and a calculation item are edited the same way. In the TMDL file, edit the expression after `measure 'Bike Sales' =`, after `column Name =` for a calculated column, or after `calculationItem Name =` in the calculation group.
 
 ## When to ignore it
 
@@ -99,6 +99,7 @@ A predicate that reads two columns of the same table row by row has no column eq
 - Table and column names must contain only letters, digits, spaces, and underscores. A column called `Category-Name` puts the expression out of the pattern's reach.
 - CALCULATETABLE is matched by a second pattern of its own, with the same shape.
 - Function names are matched in any letter case and with any spacing before the parenthesis.
+- The expression is read as raw text, so a CALCULATE and FILTER shape written inside a string literal or a comment counts.
 
 ## Related rules
 

@@ -77,6 +77,11 @@ table Budget
 		summarizeBy: none
 		sourceColumn: MonthNumber
 
+	column 'Month Start'
+		dataType: dateTime
+		formatString: MMMM yyyy
+		sourceColumn: MonthStart
+
 	column Amount
 		dataType: decimal
 		summarizeBy: sum

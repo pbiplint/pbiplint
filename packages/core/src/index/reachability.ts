@@ -1,6 +1,6 @@
 import { columnRef, measureRef, tableRef } from "../model/names.js";
 import type { Column, Measure, Model, Table } from "../model/types.js";
-import type { ReferenceIndex } from "./references.js";
+import type { ReferenceIndex, RefOwner, RefOwnerKind } from "./references.js";
 import type { ReportReferenceIndex } from "./report-refs.js";
 
 type Node = Table | Column | Measure;
@@ -102,11 +102,18 @@ export function buildReachabilityIndex(
     if (n.sortByColumn !== undefined) reach(columnOf(n.table.name, n.sortByColumn), n);
   }
 
+  // A reference owner is not always something a reason can name: a table permission's object is a
+  // TablePermission and a calculation item's is a CalculationItem, neither of which carries a table
+  // object, and a calculated table's is the table rather than a column or a measure. Only these two
+  // owner kinds hold one, so the reason names those and passes over the rest.
+  const NAMEABLE: ReadonlySet<RefOwnerKind> = new Set(["measure", "calculatedColumn"]);
+  const daxReferrers = (owners: readonly RefOwner[]): Node[] =>
+    owners.filter((o) => NAMEABLE.has(o.kind)).map((o) => o.object as Column | Measure);
   // The v1 reference index records DAX references only, so a column a sibling sorts by has no DAX
   // referrer at all. The walk follows that sort-by edge, so the reason has to read through it too.
   const referrersOf = (n: Column | Measure): Node[] => {
-    if (isMeasure(n)) return references.measureReferencedBy(n).map((o) => o.object as Node);
-    const dax = references.columnReferencedBy(n).map((o) => o.object as Node);
+    if (isMeasure(n)) return daxReferrers(references.measureReferencedBy(n));
+    const dax = daxReferrers(references.columnReferencedBy(n));
     const sortedBy = n.table.columns.filter(
       (c) => c.sortByColumn !== undefined && c.sortByColumn.toLowerCase() === n.name.toLowerCase(),
     );

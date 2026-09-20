@@ -63,6 +63,9 @@ relationship Sales-Product
 
 role Readers
 	tablePermission Region = Region[Name] = "West"
+
+role Filtered
+	tablePermission Sales = [Sales YoY %] > 0
 `;
 const model = modelFrom(tmdl);
 const col = (table: string, name: string): Column =>
@@ -115,6 +118,14 @@ describe("buildReachabilityIndex", () => {
     );
     expect(reach.reasonFor(col("Sales", "Month Number"))).toBe(
       "referenced only by 'Sales'[Month Name], which nothing reaches either",
+    );
+  });
+  it("names no referrer that is not a column or a measure, such as an RLS filter", () => {
+    const { report } = buildReport(visualBinding(column("Sales", "Amount")));
+    const reach = buildIndexes({ model, report }).reachability!;
+    expect(reach.reached(meas("Sales YoY %"))).toBe(false);
+    expect(reach.reasonFor(meas("Sales YoY %"))).toBe(
+      "nothing in the report reaches it, and no measure or column references it",
     );
   });
   it("is absent in a report-only or model-only project", () => {

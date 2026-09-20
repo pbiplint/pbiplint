@@ -100,8 +100,8 @@ describe("resolveProject", () => {
         "definition/tables/T.tmdl",
       ]);
       expect(p.report!.files.map((f) => f.path).sort()).toEqual([
+        "../Demo.pbip",
         ".platform",
-        "Demo.pbip",
         "definition.pbir",
         "definition/pages/p/page.json",
         "definition/pages/p/visuals/v/visual.json",
@@ -118,7 +118,7 @@ describe("resolveProject", () => {
     const lone = resolveProject(join(root, "Demo.Report"));
     expect(lone.model).toBeUndefined();
     expect(lone.report!.files.map((f) => f.path)).toContain("definition/pages/p/page.json");
-    expect(lone.report!.files.map((f) => f.path)).not.toContain("Demo.pbip");
+    expect(lone.report!.files.map((f) => f.path)).not.toContain("../Demo.pbip");
     expect(lone.absent).toEqual({});
     const def = resolveProject(join(root, "Demo.Report", "definition"));
     expect(def.report!.root).toBe(join(root, "Demo.Report"));

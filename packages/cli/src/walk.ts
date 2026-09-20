@@ -163,7 +163,13 @@ export function resolveProject(input: string): ResolvedProject {
     const pbip = readdirSync(path)
       .filter((n) => n.endsWith(".pbip"))
       .sort(byName)[0];
-    if (pbip) report.files.push({ path: pbip, text: readFileSync(join(path, pbip), "utf8") });
+    // The .pbip sits at the project root, one level above the report root every other path is
+    // relative to, so it carries that relative path and a finding on it points at the real file.
+    if (pbip)
+      report.files.push({
+        path: toPosix(relative(report.root, join(path, pbip))),
+        text: readFileSync(join(path, pbip), "utf8"),
+      });
     const pbir = report.files.find((f) => f.path === "definition.pbir");
     const decision = pairingDecision(
       pbir ? datasetReference(pbir.text) : { kind: "none" },

@@ -429,8 +429,20 @@ source's values. Policy rules use the same mechanism (`expect`); a
 policy rule emits nothing until its option is set and its page says
 so; the fact is shown regardless. A v1 config file stays valid.
 
-**Ranking** is unchanged; facts are not ranked. **Rule pages** keep
-the four sections and the existing tests; frontmatter gains `layer`.
+**Ranking** is unchanged; facts are not ranked. **Rule pages** follow
+the complete template of `2026-09-19-rule-pages-template-design.md`:
+eight sections, every example proven through the engine by the
+rule-pages test, the ignore mechanics generated onto the page, and
+attribution printed from `sources`. Frontmatter gains `layer`. A
+report rule's Example uses two fences with the info strings `pbir
+fires` and `pbir fixed`, each holding one report JSON document and,
+after the info string, the file it stands for (`pbir fires
+visual.json`), so the test can place it in a minimal report tree; the
+rule-pages test gains a hook that runs the report linter over a `pbir`
+fence the way it runs the model linter over a `tmdl` fence, and the
+same assertions apply (the fires fence produces a finding for the
+page's rule and no diagnostic, the fixed fence neither). The site
+renderer captions a `pbir` fence exactly as it captions a `tmdl` one.
 Fix routes are Desktop's report view or a JSON edit Desktop preserves,
 never a third-party tool.
 
@@ -530,9 +542,14 @@ layer in each rule's `properties`. Diagnostics that mean an incomplete
 read go to `run.invocations[].toolExecutionNotifications`; facts are
 not emitted.
 
-**Rules index and pages.** A layer column; a source line naming PBI
-Inspector and Nat Van Gulck for the ported set; each report rule page
-follows the four-section template.
+**Rules index and pages.** A layer column. Attribution comes from
+`sources` through the site renderer's map of known source URLs to
+names (`SOURCE_NAMES` in `packages/web/src/build/pages.ts`, which
+prints only sources it can name): the ported set adds one entry naming
+PBI Inspector and Nat Van Gulck, and each ported report page carries
+that URL alone in `sources`, with any further reading under Links.
+Each report rule page follows the complete template (section 7),
+including the `pbir` example fences.
 
 ## 10. Parity and testing
 
@@ -555,7 +572,8 @@ to one sentence. For a deviating rule the parity test asserts
 pbiplint's own committed expectation (`ours` in the same file) instead
 of the oracle's. Adding a deviation requires the sentence, a fixture
 that shows the difference, and the same sentence in the rule page's
-Quirks section; a test checks that the three agree. Three are known
+Quirks section (a required part of the template whenever a quirk
+exists); a test checks that the three agree. Three are known
 now (section 8.1).
 
 **Native rules** have no oracle. Each is pinned two ways: a

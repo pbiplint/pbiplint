@@ -55,7 +55,7 @@ When IsAvailableInMdx is true the engine builds an attribute hierarchy for the c
 
 ## How to fix it
 
-Add `isAvailableInMdx: false` under the column in its table's TMDL file. Power BI Desktop has no setting for the property and never writes it, but it keeps the value once it is in the file, and it keeps it the same way on an import table and a DirectQuery one. The other way to clear a finding is to decide the column should not be hidden after all: clear Is hidden in the Properties pane, or remove `isHidden` from under the column, and the rule stops reading it, because only hidden columns are in scope. Where a table has dozens of hidden keys, Tabular Editor's property grid sets the property on every selected column in one edit, which is quicker than the same change repeated down a file.
+Add `isAvailableInMdx: false` under the column in its table's TMDL file. Power BI Desktop has no setting for the property and never writes it, but it keeps the value once it is in the file, and it keeps it the same way on an import table and a DirectQuery one. The other way to clear a finding is to decide the column should not be hidden after all: clear Is hidden in the Properties pane, or remove `isHidden` from under the column, and the rule stops reading it, as long as its table is visible too. Where a table has dozens of hidden keys, Tabular Editor's property grid sets the property on every selected column in one edit, which is quicker than the same change repeated down a file.
 
 ## When to ignore it
 

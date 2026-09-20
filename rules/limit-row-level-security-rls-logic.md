@@ -75,6 +75,6 @@ Where the function is applied to the user's name rather than to a column, the fi
 ## Related rules
 
 - `CHECK_IF_DYNAMIC_ROW_LEVEL_SECURITY_(RLS)_IS_NECESSARY` reads the same filters and reports the table permission when one calls USERNAME or USERPRINCIPALNAME. The example above fires both, on the same filter.
-- `AVOID_USING_MANY-TO-MANY_RELATIONSHIPS_ON_TABLES_USED_FOR_DYNAMIC_ROW_LEVEL_SECURITY` reports the same table when it also takes part in a many-to-many relationship.
+- `AVOID_USING_MANY-TO-MANY_RELATIONSHIPS_ON_TABLES_USED_FOR_DYNAMIC_ROW_LEVEL_SECURITY` reports the same plain table when it also takes part in a many-to-many relationship. It reads plain tables only, so a calculated table reported here is never reported there.
 - `AVOID_THE_USERELATIONSHIP_FUNCTION_AND_RLS_AGAINST_THE_SAME_TABLE` reports the same table when a measure activates a relationship into it, which the engine refuses once a role is applied.
 - `REMOVE_ROLES_WITH_NO_MEMBERS` reads the roles these filters live in and reports the ones the project files carry no members for.

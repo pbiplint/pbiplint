@@ -79,14 +79,17 @@ export function bindConfig(config: ResolvedConfig, rules: Rule[]): BoundConfig {
         throw new ConfigError(
           `pbiplint.config.json: rules["${real}"].${name} must be a ${decl.type}`,
         );
-      if (decl.values && !decl.values.includes(value as string))
+      // A values list is a string option's alphabet; on a number option it could never match, so
+      // it is not a gate a number has to pass.
+      if (decl.type === "string" && decl.values && !decl.values.includes(value as string))
         throw new ConfigError(
           `pbiplint.config.json: rules["${real}"].${name} must be one of ${decl.values.join(", ")}`,
         );
     }
     bound.options.set(real, options);
   }
-  return { config: bound, unknownRules };
+  // One id that carries a severity and options reaches the list twice; it is named once.
+  return { config: bound, unknownRules: [...new Set(unknownRules)] };
 }
 
 export const SEVERITY_BY_NAME: Record<SeverityName, Severity> = { info: 1, warning: 2, error: 3 };

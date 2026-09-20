@@ -156,6 +156,25 @@ describe("bindConfig with options", () => {
       bindConfig(resolveConfig({ rules: { EVERY_TABLE: { max: 1 } } }), [everyTable]),
     ).toThrow('pbiplint.config.json: rules["EVERY_TABLE"] takes no options');
   });
+  it("names an unknown rule id once however many settings it carries", () => {
+    expect(
+      bindConfig(resolveConfig({ rules: { NOPE: { severity: "error", max: 1 } } }), [everyTable])
+        .unknownRules,
+    ).toEqual(["NOPE"]);
+  });
+  it("checks a values list on string options only", () => {
+    const counted: Rule = {
+      ...base,
+      id: "COUNTED",
+      name: "Counted",
+      category: "Performance",
+      severity: 2,
+      options: [{ name: "n", type: "number", values: ["x"] }],
+      check: () => [],
+    };
+    const { config } = bindConfig(resolveConfig({ rules: { COUNTED: { n: 5 } } }), [counted]);
+    expect(optionsFor(counted, config)).toEqual({ n: 5 });
+  });
 });
 
 describe("isIgnored", () => {

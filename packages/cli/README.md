@@ -52,12 +52,10 @@ Every rule from the Microsoft Best Practice Analyzer ruleset, ported literally s
 Tabular Editor. Five rules need statistics only a live model has; they are listed but not run. Each
 rule has a page at https://pbiplint.com/rules with what it checks, why, how to fix it, and quirks.
 
-The report layer (PBIR): 11 rules ported from PBI Inspector's base rules and pbiplint's own rules
-for broken field references, model objects the report never reaches, the opening page, the Filters
-pane, hidden visuals that still query, default page names, empty visuals, visuals past the page
-edge, report-level measures, broken button and bookmark targets, tab order, and saved slicer
-selections. A `.Report` folder alone is valid input; with the model beside it, the two are checked
-against each other.
+The report layer (PBIR) is read beside the model: a `.Report` folder alone is valid input, and with
+the model beside it the two are paired through `definition.pbir` and checked together. This version
+reports what it reads (the layers line, the "Report at a glance" block, and parse issues in report
+files); the report rules arrive in 0.2.0.
 
 The same linter runs in the browser at https://pbiplint.com. Source, issues, and contributing:
 https://github.com/pbiplint/pbiplint.

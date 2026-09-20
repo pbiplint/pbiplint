@@ -92,6 +92,23 @@ function pbipIn(input: string, folder: string, preferred: string | undefined): s
   return found[0];
 }
 
+/**
+ * Why the model layer is absent for a report read on its own: the report's own definition.pbir
+ * still says whether it reads a published model, which the layers line reports as the reason.
+ */
+function loneReportAbsent(
+  report: ResolvedPart,
+  folder: string,
+): Partial<Record<LayerName, string>> {
+  const pbir = report.files.find((f) => f.path === "definition.pbir");
+  const decision = pairingDecision(
+    pbir ? datasetReference(pbir.text) : { kind: "none" },
+    undefined,
+    basename(folder),
+  );
+  return !decision.useModel && decision.reason ? { model: decision.reason } : {};
+}
+
 const legacyReport = (folder: string, name: string): Diagnostic => ({
   kind: "legacy-report-format",
   path: name,
@@ -140,7 +157,7 @@ function resolveFolder(input: string, path: string, preferred?: string): Resolve
     const model = modelPart(path);
     if (model) return { ...out, model };
     const report = reportPart(path);
-    if (report) return { ...out, report };
+    if (report) return { ...out, report, absent: loneReportAbsent(report, path) };
   }
   // A definition folder given directly: a model's is read as v1 did, a report's from its parent.
   if (name === "definition") {
@@ -148,7 +165,13 @@ function resolveFolder(input: string, path: string, preferred?: string): Resolve
     readTree(path, path, (n) => n.endsWith(".tmdl"), tmdl);
     if (tmdl.length) return { ...out, model: { root: path, files: tmdl } };
     const report = reportPart(dirname(path));
-    if (report) return { root: dirname(path), report, absent: {}, diagnostics: [] };
+    if (report)
+      return {
+        root: dirname(path),
+        report,
+        absent: loneReportAbsent(report, dirname(path)),
+        diagnostics: [],
+      };
   }
   // A part folder in the legacy format.
   if (name.endsWith(".Report") && isFile(join(path, "report.json"))) {
@@ -201,7 +224,9 @@ function resolveFolder(input: string, path: string, preferred?: string): Resolve
       model ? models[0] : undefined,
       reports[0]!,
     );
-    if (!decision.useModel && model) {
+    // The reason is recorded whether or not a model sat beside the report: a thin report says it
+    // reads a published model on the layers line either way.
+    if (!decision.useModel) {
       model = undefined;
       if (decision.reason) out.absent.model = decision.reason;
     }

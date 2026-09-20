@@ -166,6 +166,18 @@ describe("resolveProject", () => {
     );
     expect(elsewhere.diagnostics.map((d) => d.kind)).toEqual(["model-reference-mismatch"]);
   });
+  it("says a report reads a published model even with no model beside it", () => {
+    const thin = pbip({ report: true, pbir: { byConnection: { connectionString: "x" } } });
+    const whole = resolveProject(thin);
+    expect(whole.model).toBeUndefined();
+    expect(whole.absent).toEqual({ model: "this report reads a published model" });
+    expect(whole.diagnostics).toEqual([]);
+    const lone = resolveProject(join(thin, "Demo.Report"));
+    expect(lone.absent).toEqual({ model: "this report reads a published model" });
+    expect(lone.diagnostics).toEqual([]);
+    const def = resolveProject(join(thin, "Demo.Report", "definition"));
+    expect(def.absent).toEqual({ model: "this report reads a published model" });
+  });
   it("turns the two legacy formats into diagnostics with the layer absent", () => {
     const legacy = resolveProject(pbip({ model: true, legacyReport: true }));
     expect(legacy.model).toBeDefined();

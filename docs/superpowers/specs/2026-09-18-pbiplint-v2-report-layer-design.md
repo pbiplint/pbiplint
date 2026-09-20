@@ -442,7 +442,10 @@ rule-pages test gains a hook that runs the report linter over a `pbir`
 fence the way it runs the model linter over a `tmdl` fence, and the
 same assertions apply (the fires fence produces a finding for the
 page's rule and no diagnostic, the fixed fence neither). The site
-renderer captions a `pbir` fence exactly as it captions a `tmdl` one.
+renderer captions a `pbir` fence as it captions a `tmdl` one, naming
+the file the document stands for ("Fires the rule in visual.json"); a
+`tree.json` document names its files itself, so its caption carries
+none (amended 2026-09-20 with the plan).
 Fix routes are Desktop's report view or a JSON edit Desktop preserves,
 never a third-party tool.
 
@@ -618,7 +621,12 @@ edge; two report-level measures; a button pointing at a deleted page;
 a bookmark capturing a deleted visual; a page whose tab order runs
 backwards; a slicer with a saved selection; one registered custom
 visual no visual uses; a tooltip page left visible; a page taller than
-720; one page with more than 20 visuals. Everything else is clean.
+720; one page with more than 20 visuals. Amended 2026-09-20 with the
+plan: the seven ported rules that list leaves out are planted too (a
+visual with seven fields, a page with five TopN and five applied
+Advanced filters, eleven pages, a visual with Show items with no data,
+a hex colour, a visual without alt text), so the sample fires every
+report rule. Everything else is clean.
 
 **Sanitising.** No registered resources, the stock Fluent theme, no
 `.pbi`, no `cache.abf`. `scripts/sanitize-fixture.mjs` gains a report

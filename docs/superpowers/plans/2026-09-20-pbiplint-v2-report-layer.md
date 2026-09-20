@@ -104,10 +104,11 @@ Recorded so a reviewer can see them as decisions rather than drift. None reopens
 6. **`LintResult.model` stays** (`project.model`, or the empty model `buildModel([])` when the layer is absent) so the API is additive; `project`, `layers`, `facts`, `diagnostics` are added.
 7. **The skipped line uses parentheses**, `14 rules skipped (no report in the input)`, matching v1's `(need a live model)`.
 8. **The directory-input route applies the depth cap by path depth**, so all three browser routes report `depth-cap` the same way and the browser test can drive it with a real deep folder.
-9. **The sample ships a `pbiplint.config.json`** setting `FILTERS_PANE_STATE` to `expect: "closed"`, because a policy rule fires only under a policy and the definition of done wants every native rule to fire on the sample. `OPENING_PAGE_INVALID`, native and not on the spec's planted list, is planted as a hidden active page. The spec's list is otherwise exact; the four ported rules it does not plant stay quiet on the sample.
+9. **The sample ships a `pbiplint.config.json`** setting `FILTERS_PANE_STATE` to `expect: "closed"`, because a policy rule fires only under a policy and the definition of done wants every native rule to fire on the sample. `OPENING_PAGE_INVALID`, native and not on the spec's planted list, is planted as a hidden active page. The seven ported rules the spec's list left out (objects within visuals, TopN filters, Advanced filters, page count, Show items with no data, theme colours, alt text) are planted too, approved by Michael on 2026-09-20 and written into spec section 11, so the sample fires all 25 report rules.
 10. **A visual's `mobile.json` marks the visual**; a page "has a mobile layout" when any of its visuals does. That is the fact the spec asks for.
 11. **`AVOID_SHOW_ITEMS_WITH_NO_DATA` reads `showAll` on any role**, as the spec's table says, while the source reads the Category role only. Parity on both oracle fixtures decides whether that is a difference: if it is, Task 16 stops and reports it to Michael as a fourth deviation candidate rather than deciding.
 12. **Report-level measures resolve field references.** A visual bound to a measure from `reportExtensions.json` is not a broken reference; `BROKEN_FIELD_REFERENCE` fires only on names neither the model nor the report defines.
+13. **A `pbir` figure's caption names the file the document stands for**: "Fires the rule in visual.json", "After the fix in visual.json". Approved by Michael on 2026-09-20 and written into spec section 7. A `tree.json` document names its files itself, so its caption is the bare "Fires the rule" or "After the fix". The SARIF help block's bold captions say the same.
 
 ## File map for the whole of v2
 
@@ -5233,7 +5234,7 @@ git commit -m "feat(rules): port show items with no data, theme colours, and alt
   - a scope holding `Page` or `Visual` (and only report types): "To ignore this rule on one page or visual, add `{ "name": "pbiplint.ignore", "value": "RULE_ID" }` to the `annotations` array of its page.json or visual.json. Power BI Desktop keeps the annotation. To turn the rule off for a whole project, set `"RULE_ID": "off"` under `rules` in `pbiplint.config.json`."
   - a scope of only `Report`, `Bookmark`, or `ReportMeasure`: "This rule reports on the report itself, so there is no object to annotate. To turn the rule off for a whole project, …"
 - Frontmatter gains `layer: model | report | project`; the test requires it to equal `rule.layer`. `sources` is `[RULESET_URL]` for a ported model rule, `[INSPECTOR_URL]` for a ported report rule, `[]` for builtin.
-- `SOURCE_NAMES[INSPECTOR_URL] = "PBI Inspector's base rules by Nat Van Gulck"`; the site renders `pbir` fences as captioned figures with `language-json`; the rules index shows a layer badge per rule and counts per source; `RuleMeta.layer`.
+- `SOURCE_NAMES[INSPECTOR_URL] = "PBI Inspector's base rules by Nat Van Gulck"`; the site renders `pbir` fences as captioned figures with `language-json`, the caption naming the file the document stands for ("Fires the rule in visual.json", "After the fix in visual.json"; a `tree.json` fence keeps the bare caption because its keys name the files), and the SARIF help block's bold captions say the same (decision 13); the rules index shows a layer badge per rule and counts per source; `RuleMeta.layer`.
 - `PENDING_PAGES`, a set of slugs whose page is a scaffold, skips every check but existence; Task 19 deletes it.
 
 - [ ] **Step 1: Write the failing tests**
@@ -5258,14 +5259,16 @@ In `packages/core/test/engine.test.ts`, inside `describe("ignoreHelp")`:
 In `packages/web/test/generate.test.ts`: extend the tie test with `["Visual"]`, `["Report"]`, `["Page", "Visual", "Report"]`, and `["ReportMeasure"]`; add inside `describe("rulePage")`:
 
 ```ts
-  it("renders a pbir fence as a captioned JSON figure, whatever file it names", () => {
+  it("renders a pbir fence as a captioned JSON figure that names its file, bare for a tree", () => {
     const page = read("hide-foreign-keys").replace(
       "## Why it matters",
       '## Example\n\n```pbir fires visual.json\n{ "name": "v" }\n```\n\n```pbir fixed tree.json\n{ "definition/pages/p/page.json": {} }\n```\n\n## Why it matters',
     );
     const { html } = rulePage(page, "hide-foreign-keys");
-    expect(html).toContain('<figure class="example fires">\n<figcaption>Fires the rule</figcaption>\n<pre><code class="language-json">{ &quot;name&quot;: &quot;v&quot; }\n</code></pre>\n</figure>');
+    expect(html).toContain('<figure class="example fires">\n<figcaption>Fires the rule in visual.json</figcaption>\n<pre><code class="language-json">{ &quot;name&quot;: &quot;v&quot; }\n</code></pre>\n</figure>');
     expect(html).toContain('<figure class="example fixed">\n<figcaption>After the fix</figcaption>\n<pre><code class="language-json">');
+    const escaped = rulePage(page.replace("pbir fires visual.json", "pbir fires a<b.json"), "hide-foreign-keys").html;
+    expect(escaped).toContain("<figcaption>Fires the rule in a&lt;b.json</figcaption>");
   });
   it("credits PBI Inspector for a page whose source is its ruleset", () => {
     const page = read("hide-foreign-keys").replace(/sources:\n( {2}- .*\n)+/, "sources:\n  - https://github.com/NatVanG/fab-inspector/blob/main/Rules/Base-rules.json\n");
@@ -5278,9 +5281,9 @@ and in the `generateSite`/`rulesIndex` tests change the count assertions to 83 a
 In `scripts/test/sync-rule-pages.test.mjs`, inside `describe("exampleMarkdown")`:
 
 ```js
-  it("captions pbir fences the same way and reduces their info strings to json", () => {
+  it("captions pbir fences with their file, bare for a tree, and reduces their info strings to json", () => {
     expect(exampleMarkdown("```pbir fires visual.json\n{}\n```\n\n```pbir fixed tree.json\n{}\n```")).toBe(
-      "**Fires the rule**\n\n```json\n{}\n```\n\n**After the fix**\n\n```json\n{}\n```",
+      "**Fires the rule in visual.json**\n\n```json\n{}\n```\n\n**After the fix**\n\n```json\n{}\n```",
     );
   });
 ```
@@ -5481,7 +5484,7 @@ export function ignoreHelp(ruleId: string, scope: readonly string[] = []): strin
 In `packages/web/src/build/pages.ts`:
 
 - `SOURCE_NAMES` gains `"https://github.com/NatVanG/fab-inspector/blob/main/Rules/Base-rules.json": "PBI Inspector's base rules by Nat Van Gulck"`.
-- The `code` override: `const example = /^(tmdl|pbir) (fires|fixed)(?: \S+)?$/.exec(lang ?? ""); if (!example) return false; const language = example[1] === "pbir" ? "json" : "tmdl"; const kind = example[2]!;` and the `<code class="language-${language}">`.
+- The `code` override: `const example = /^(tmdl|pbir) (fires|fixed)(?: (\S+))?$/.exec(lang ?? ""); if (!example) return false; const language = example[1] === "pbir" ? "json" : "tmdl"; const kind = example[2]!; const file = example[3]; const caption = file !== undefined && file !== "tree.json" ? `${EXAMPLE_CAPTION[kind]} in ${escapeHtml(file)}` : EXAMPLE_CAPTION[kind]!;`, then `<figcaption>${caption}</figcaption>` and `<code class="language-${language}">`.
 - `RuleMeta` gains `layer: string` (from `str(data.layer)`), and the meta line on a page gains `` · ${escapeHtml(meta.layer)} layer `` after the status.
 - `rulesIndex`: each `<li>` gets `` <span class="layer ${escapeHtml(m.layer)}">${escapeHtml(m.layer)}</span> `` right after the severity badge; the count paragraph becomes:
 
@@ -5514,8 +5517,8 @@ In `packages/web/src/styles.css`, after `.badge.muted`:
 In `scripts/sync-rule-pages.mjs`, `exampleMarkdown` gains the two `pbir` replacements:
 
 ```js
-    .replace(/^```pbir fires \S+[ \t]*$/gm, "**Fires the rule**\n\n```json")
-    .replace(/^```pbir fixed \S+[ \t]*$/gm, "**After the fix**\n\n```json");
+    .replace(/^```pbir fires (\S+)[ \t]*$/gm, (_line, file) => `**Fires the rule${file === "tree.json" ? "" : ` in ${file}`}**\n\n\`\`\`json`)
+    .replace(/^```pbir fixed (\S+)[ \t]*$/gm, (_line, file) => `**After the fix${file === "tree.json" ? "" : ` in ${file}`}**\n\n\`\`\`json`);
 ```
 
 In `scripts/generate-rule-pages.mjs`: write `layer: ${rule.layer}` after `status`; `sources` is `[]` for builtin, `[INSPECTOR_URL]` when `rule.layer === "report"`, else `[RULESET_URL]` (add the constant); the example fences are `tmdl` for a model rule and, for a report or project rule, `` ```pbir fires visual.json `` and `` ```pbir fixed visual.json `` around `{ "TODO": "the smallest report JSON that fires the rule" }` and `{ "TODO": "the same JSON with the fix applied" }`. Then add `layer: model` to the 72 existing pages after their `status:` line:
@@ -5630,7 +5633,7 @@ Pull request 2 of 8 for the report layer, tracked in #9.
 - Four whole-PBIP fixtures under `tests/fixtures/`, sanitised by the extended script (no registered resources, caches, or local paths): the two fab-inspector fixtures, the PBIP and GitHub Demo, and ShelfMart.
 - `scripts/fab-expectations.mjs` converts the oracle's JSON into `tests/expectations/<fixture>.report.json`; the four files are captured with every rule enabled. `docs/RELEASING.md` has the macOS invocation.
 - The parity test compares pbiplint's object ids with the oracle's per rule and fixture; the three documented deviations are recorded as `deviations` and `ours` and must differ from the oracle on the fixture that shows them; a test ties each sentence to the page's Quirks.
-- Rule pages: `layer` in frontmatter, `pbir fires` and `pbir fixed` example fences proven through the engine by the rule-pages test (with a `tree.json` form for the count rules and an optional config fence), JSON ignore mechanics for page and visual rules, PBI Inspector attribution, a layer badge on the index. Eleven new pages.
+- Rule pages: `layer` in frontmatter, `pbir fires` and `pbir fixed` example fences, captioned with the file they stand for, proven through the engine by the rule-pages test (with a `tree.json` form for the count rules and an optional config fence), JSON ignore mechanics for page and visual rules, PBI Inspector attribution, a layer badge on the index. Eleven new pages.
 
 Counts: 83 rules and pages (pinned in pack.test and generate.test).
 
@@ -6669,7 +6672,7 @@ Shared facts for this pull request:
 - The report ships no `StaticResources`, no `.pbi`, no registered resources; `report.json` names the stock base theme `Fluent2-CY26SU04` under `themeCollection.baseTheme` with `type: "SharedResources"`, as the demo fixture does. Schema versions: report 3.2.0, page 2.1.0, visual 2.8.0, pagesMetadata 1.0.0 (a landing page is deliberately absent, and 1.0.0 has no such property).
 - Every visual is written by copying the shape of a visual of the same type from `tests/fixtures/pbip-and-github-demo` and changing names, positions, and fields; nothing is written from memory. Ids are 20 lowercase hex characters, generated once (`node -e 'console.log(require("crypto").randomBytes(10).toString("hex"))'`) and then fixed in the files; the expectation file names them, so they never change afterwards.
 - Validation after every batch of files: `npx --yes @microsoft/powerbi-report-authoring-cli@0.1.4 validate "examples/messy-sales/Messy Sales Demo.Report"` (Node 20 or later; the package is a development-time tool and is not added to the repository). If the `powerbi-authoring` plugin from `microsoft/skills-for-fabric` is installed in the executing session, its authoring mode may write the files; the validate step is required either way.
-- The planted violations, one per rule where the model allows (spec section 11), plus a hidden active page for `OPENING_PAGE_INVALID` (decision 9). Everything else is clean: every visual has alt text, no hex colour, no `showAll`, no visual with more than six fields, no TopN or Advanced filter overflow, every page named, every visual inside its page, every action and bookmark target real, tab order following layout except on the one page that plants it.
+- The planted violations: every report rule, that is the spec's section 11 list plus, approved on 2026-09-20, the seven ported rules it left out and a hidden active page for `OPENING_PAGE_INVALID` (decision 9). Everything else is clean: every visual but the one planting alt text has alt text, one visual carries a hex colour, one has more than six fields, one has `showAll`, one page carries the TopN and Advanced filter overflow, every other page is named, every other visual is inside its page, every action and bookmark target but the two planted is real, and tab order follows layout except on the one page that plants it.
 
 ### Task 32: `examples/messy-sales` becomes a PBIP folder
 
@@ -6837,12 +6840,16 @@ The report, page by page. Visual ids are chosen once; the table names the visual
 | Page (display name) | Settings | Visuals | Plants |
 |---|---|---|---|
 | Overview | 1280 by 720, visible, the active page is not this one | "Sales by region": clusteredBarChart bound to `'Sales'[Region]` (Category) and `[Total Sales]` (Y); "Total Sales", "Order Count", "Average Order Value": cardVisual each bound to that measure; "Sales by category": donutChart bound to `'Product'[Category]` and `[Total Sales]`; "Category" slicer bound to `'Product'[Category]` with a saved selection (`filterConfig` entry of type Categorical carrying a `filter` with a `Where` selecting "Bikes"); "Go to detail": actionButton with `visualLink` type PageNavigation whose `navigationSection` is `deadpage00000000000000` (no such page); "Sales trend (old)": lineChart, `isHidden: true`, bound to `'Date'[Month]` and `[Total Sales]`; "Debug table": tableEx, `isHidden: true`, bound to six Sales columns; "Placeholder": cardVisual with no query; "Notes": textbox at x 1200 width 200 (past the right edge) | BROKEN_FIELD_REFERENCE (Sales has no Region), SLICER_SELECTION_SAVED, BROKEN_ACTION_TARGET, HIDDEN_VISUALS_STILL_QUERY (two), VISUAL_WITHOUT_FIELDS, VISUAL_OUTSIDE_PAGE |
-| Page 2 | visible | "Total Quantity" card bound to `[Total Quantity]` | DEFAULT_PAGE_NAME |
-| Duplicate of Overview | visible | "Total Discount" card bound to `[Total Discount]` | DEFAULT_PAGE_NAME |
+| Page 2 | visible | "Total Quantity" card bound to `[Total Quantity]`, its value colour a hex literal (a `solid.color` whose Literal is `'#1F77B4'` under the card's formatting objects, the property shape copied from a fixture visual that sets a colour) | DEFAULT_PAGE_NAME, ENSURE_THEME_COLOURS |
+| Duplicate of Overview | visible | "Sales by brand": clusteredBarChart bound to `'Product'[Brand]` (Category) and `[Total Sales]` (Y), with `showAll: true` on the Category role | DEFAULT_PAGE_NAME, AVOID_SHOW_ITEMS_WITH_NO_DATA |
 | Product tooltip | `pageBinding.type: "Tooltip"`, visibility AlwaysVisible (absent), 320 by 240 | "Product name" card bound to `'Product'[Product Name]` | HIDE_TOOLTIP_DRILLTROUGH_PAGES |
-| Detail | height 1080, width 1280, visible | three cards in one row, "Net Sales", "Total Cost", "Total Margin", with `tabOrder` descending left to right (3000, 2000, 1000) | ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY, TAB_ORDER_FOLLOWS_LAYOUT |
-| Scratch | visibility HiddenInViewMode; `activePageName` names this page | "Scratch note" textbox | OPENING_PAGE_INVALID (with no landing page, so LANDING_PAGE_NOT_SET fires too) |
-| Crowded | visible | 21 cardVisuals bound to `[Total Sales]`, laid out in a grid of 7 by 3, tab order following the grid | REDUCE_VISUALS_ON_PAGE |
+| Detail | height 1080, width 1280, visible | three cards in one row, "Net Sales", "Total Cost", "Total Margin", with `tabOrder` descending left to right (3000, 2000, 1000); below them "Sales detail": tableEx, `tabOrder` 4000, bound to seven Sales columns (Sale ID, Sale Date, Product ID, Customer ID, Quantity, Unit Price, Total Amount) | ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY, TAB_ORDER_FOLLOWS_LAYOUT, REDUCE_OBJECTS_WITHIN_VISUALS |
+| Scratch | visibility HiddenInViewMode; `activePageName` names this page | "Scratch note" textbox with no alt text | OPENING_PAGE_INVALID (with no landing page, so LANDING_PAGE_NOT_SET fires too), ENSURE_ALTTEXT |
+| Crowded | visible | 21 cardVisuals bound to `[Total Sales]`, laid out in a grid of 7 by 3, tab order following the grid; five of them carry a TopN filter (a `filterConfig` entry of type TopN on `'Product'[Product Name]`, top 5 by `[Total Sales]`), five others an applied Advanced filter (type Advanced on `'Sales'[Quantity]` with a `filter` whose `Where` requires a value above 0) | REDUCE_VISUALS_ON_PAGE, REDUCE_TOPN_FILTERS, REDUCE_ADVANCED_FILTERS |
+| Customers | visible | "Distinct Customers" card bound to `[Distinct Customers]` | with the three pages below, eleven pages: REDUCE_PAGES |
+| Stores | visible | "Average Unit Price" card bound to `[Average Unit Price]` | counted in REDUCE_PAGES |
+| Employees | visible | "Total Cost" card bound to `[Total Cost]` | counted in REDUCE_PAGES |
+| Promotions | visible | "Total Discount" card bound to `[Total Discount]` | counted in REDUCE_PAGES |
 
 Report-level files:
 
@@ -6862,7 +6869,7 @@ Report-level files:
 }
 ```
 
-Every visual carries `visualContainerObjects.general[0].properties.altText` with a literal describing it, and a `title` where the table names one. The Crowded page's 21 cards are stamped from one template by a throwaway script in the scratchpad (not committed): read one card file, write 21 copies with fresh ids, positions on the grid, and `tabOrder` 1000 to 21000.
+Every visual but the Scratch note carries `visualContainerObjects.general[0].properties.altText` with a literal describing it, and a `title` where the table names one. The Crowded page's 21 cards are stamped from one template by a throwaway script in the scratchpad (not committed): read one card file, write 21 copies with fresh ids, positions on the grid, and `tabOrder` 1000 to 21000, then add the TopN filter to the first five and the applied Advanced filter to the next five (the filter shapes copied from a fixture visual that carries one of each: `grep -l '"TopN"' tests/fixtures/*/*.Report/definition/pages/*/visuals/*/visual.json` finds them).
 
 - [ ] **Step 1: Write the files, validating after each page**
 
@@ -6881,7 +6888,7 @@ node scripts/sanitize-fixture.mjs examples/messy-sales
 node packages/cli/dist/pbiplint.mjs examples/messy-sales --fail-on none
 ```
 
-(build the CLI first with `npm run build -w pbiplint`). Expected: the facts block reads, in substance, `Opens on Scratch (hidden) (the page open when it was saved; no landing page set)`, `Filters pane open`, `Pages 7 (1 hidden, 1 tooltip)`, `Visuals 38 (2 hidden; 1 custom visual type registered, 0 used)`, `Report measures 2`, `Slicers 1 (1 with a saved selection)`, `Mobile layouts none`, `Schema versions report 3.2.0, page 2.1.0, visual 2.8.0`, `Model 7 tables, 74 columns, 14 measures; N columns and 2 measures not reached`; and every rule in the Plants column appears in the groups, each with the count the table implies. Any rule not in the Plants column must be absent, apart from `NOT_REACHED_FROM_REPORT` and the model rules. Fix the JSON until that is so.
+(build the CLI first with `npm run build -w pbiplint`). Expected: the facts block reads, in substance, `Opens on Scratch (hidden) (the page open when it was saved; no landing page set)`, `Filters pane open`, `Pages 11 (1 hidden, 1 tooltip)`, `Visuals 43 (2 hidden; 1 custom visual type registered, 0 used)`, `Report measures 2`, `Slicers 1 (1 with a saved selection)`, `Mobile layouts none`, `Schema versions report 3.2.0, page 2.1.0, visual 2.8.0`, `Model 7 tables, 74 columns, 14 measures; N columns and 2 measures not reached`; and every one of the 25 report rules appears in the groups, each with the count the table implies; nothing else appears apart from `NOT_REACHED_FROM_REPORT` and the model rules. Fix the JSON until that is so.
 
 - [ ] **Step 3: Commit**
 
@@ -6907,14 +6914,21 @@ git commit -m "feat(sample): Messy Sales Demo.Report, one planted violation per 
 {
   "fixture": "examples/messy-sales",
   "report": "Messy Sales Demo.Report",
-  "oracle": "hand-written; the sample plants one violation per report rule (spec section 11)",
+  "oracle": "hand-written; the sample plants every report rule (spec section 11, amended 2026-09-20)",
   "captured": "2026-09-2x",
   "deviations": {},
   "ours": {
     "REMOVE_UNUSED_CUSTOM_VISUALS": ["ChicletSlicer1448559807354"],
     "REDUCE_VISUALS_ON_PAGE": ["<crowded page id>"],
+    "REDUCE_OBJECTS_WITHIN_VISUALS": ["<sales detail id>"],
+    "REDUCE_TOPN_FILTERS": ["<crowded page id>"],
+    "REDUCE_ADVANCED_FILTERS": ["<crowded page id>"],
+    "REDUCE_PAGES": ["report"],
+    "AVOID_SHOW_ITEMS_WITH_NO_DATA": ["<sales by brand id>"],
     "HIDE_TOOLTIP_DRILLTROUGH_PAGES": ["<tooltip page id>"],
-    "ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY": ["<detail page id>"]
+    "ENSURE_THEME_COLOURS": ["<total quantity card id>"],
+    "ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY": ["<detail page id>"],
+    "ENSURE_ALTTEXT": ["<scratch note id>"]
   },
   "native": {
     "BROKEN_FIELD_REFERENCE": ["<sales by region visual id>"],
@@ -6935,7 +6949,7 @@ git commit -m "feat(sample): Messy Sales Demo.Report, one planted violation per 
 }
 ```
 
-with every placeholder replaced by the real id from the files, and the `NOT_REACHED_FROM_REPORT` list written out in full from the run (it is long; that is the pin). In `report-parity.test.ts`: when `exp.results` is undefined, skip the oracle `it.each` and the two oracle-shaped tests, and add for such a file `it.each(Object.keys(exp.ours))("%s fires as planted", (id) => expect([...(ours[id] ?? [])].sort()).toEqual([...exp.ours[id]!].sort()))`; and a test that every native rule fires on the sample: `for (const r of native) expect(exp.native[r.id], r.id).toBeDefined()` when `exp.name === "messy-sales"`.
+with every placeholder replaced by the real id from the files, and the `NOT_REACHED_FROM_REPORT` list written out in full from the run (it is long; that is the pin). In `report-parity.test.ts`: when `exp.results` is undefined, skip the oracle `it.each` and the two oracle-shaped tests, and add for such a file `it.each(Object.keys(exp.ours))("%s fires as planted", (id) => expect([...(ours[id] ?? [])].sort()).toEqual([...exp.ours[id]!].sort()))`; and a test that every native rule and every ported report rule fires on the sample: `for (const r of native) expect(exp.native[r.id], r.id).toBeDefined(); for (const r of ported) expect(exp.ours[r.id], r.id).toBeDefined();` when `exp.name === "messy-sales"`.
 
 Run the sample through the CLI in JSON and copy the totals into the pins:
 
@@ -6963,7 +6977,7 @@ As Task 20 Steps 1 to 3, branch `v2-sample-report`, title "v2 sample: Messy Sale
 Pull request 6 of 8 for the report layer, tracked in #9.
 
 - `examples/messy-sales` is now a PBIP folder: the model moved (unchanged) into `Messy Sales Demo.SemanticModel`, a hand-authored `Messy Sales Demo.Report` beside it, a `.pbip`, and a `pbiplint.config.json` that sets the Filters pane policy so that rule can fire.
-- The report plants one violation per report rule where the model allows (spec section 11), plus a hidden active page; every visual carries alt text and nothing else fires. Validated with `powerbi-report-author validate` after every page.
+- The report plants one violation per report rule, all 25: the spec's list, the seven ported rules it left out (approved 2026-09-20, spec section 11 amended), and a hidden active page. Every other visual carries alt text and nothing else fires. Validated with `powerbi-report-author validate` after every page.
 - `--sample`, the site bundle, and `check:pack` carry the whole project. `tests/expectations/messy-sales.report.json` pins every planted finding by id.
 - Totals move from 161 findings in 11 files to <new totals>; every pin is updated.
 
@@ -7626,7 +7640,7 @@ Report the URL and stop. Michael merges, tags, watches the release, and does the
 | `base-rules-passes` and ShelfMart are quiet under the native rules except as listed by name | Tasks 23, 26, 29 (the `native` maps) | `report-parity.test.ts`, "native rules on $name" |
 | A whole-PBIP drop, a report-only drop, and a model-only drop render correctly in three browsers; the CLI accepts every input shape in section 4 | Tasks 36 to 39 (browser), Task 10 (CLI) | `home.spec.ts` (the three drops plus the existing model-only tests), `walk.test.ts` |
 | The depth cap and both legacy formats surface as diagnostics | Tasks 8, 10, 36, 37 | `route.test.ts`, `walk.test.ts`, `cli.test.ts`, `read-drop.test.ts`, `pick-folder.test.ts`, `project-files.test.ts`, `home.spec.ts` |
-| The sample fires every native rule and every planted ported rule | Tasks 33, 34 | `report-parity.test.ts` on `messy-sales.report.json` |
+| The sample fires every native rule and every planted ported rule (every report rule, after the amendment to section 11) | Tasks 33, 34 | `report-parity.test.ts` on `messy-sales.report.json` |
 | The browser purity check and the performance budget pass | Task 11 (200 KB), Task 39 (two seconds) | `npm run check:browser`, `home.spec.ts` |
 | 0.2.0 is on npm and the site is live with the new pages, index column, and attribution | Task 43 and Michael's tag | The Release workflow; the deploy verify job; a look at pbiplint.com/rules/ |
 

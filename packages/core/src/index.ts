@@ -39,6 +39,7 @@ export {
   type RuleHelp,
 } from "./format/index.js";
 export { buildIndexes, type Indexes } from "./index/build.js";
+export { buildReachabilityIndex, type ReachabilityIndex } from "./index/reachability.js";
 export {
   extractRefs,
   type DaxRef,
@@ -47,6 +48,14 @@ export {
   type ReferenceIndex,
 } from "./index/references.js";
 export type { RelationshipIndex } from "./index/relationships.js";
+export {
+  buildReportReferenceIndex,
+  type ReportRef,
+  type ReportRefOwner,
+  type ReportRefOwnerKind,
+  type ReportReferenceIndex,
+  type Resolution,
+} from "./index/report-refs.js";
 export type { UsageIndex } from "./index/usage.js";
 export { buildModel, splitQualifiedName } from "./model/build.js";
 export {

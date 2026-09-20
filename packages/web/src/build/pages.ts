@@ -158,6 +158,52 @@ export function parseFrontmatter(
   return { data, body: m[2]! };
 }
 
+/**
+ * The layers a rule page can declare. The site keeps its own copy of the names core uses, for the
+ * reason CATEGORY_ORDER gives: this build imports nothing from core.
+ */
+export type RuleLayer = "model" | "report";
+
+/** Every layer name a page may declare, and the list the error names when a page declares another. */
+const RULE_LAYERS: readonly RuleLayer[] = ["model", "report"];
+
+/**
+ * The layers pbiplint.com publishes. A rule page whose `layer` is not in this list is not
+ * rendered, not in the rules index, not in the sitemap, and not in the rule-id link map, so its
+ * id stays plain code on the pages that mention it. A page with no `layer` counts as `model`.
+ *
+ * The gate is here because the site deploys from main on every push while the ported report rules
+ * land on main several pull requests before the browser can lint a report: without it, pbiplint.com
+ * would carry pages for rules no published tool runs, for weeks. Pull request 7, where the browser
+ * reads a report, sets this to both layers and moves the site's pinned counts with it.
+ *
+ * While this list names one layer, no report page is published, so a layer column has nothing to
+ * distinguish and the attribution the ported report set adds has no page to sit on. That is why
+ * neither appears until the list grows, and why neither needs a flag of its own.
+ */
+export const SITE_LAYERS: readonly RuleLayer[] = ["model"];
+
+/**
+ * The layer a page declares, `model` when its frontmatter has no `layer` key, because the pages
+ * predate the key. A value that is not a layer name is an error rather than a fall back to
+ * `model`, for the reason parseFrontmatter gives: a typo that quietly unpublished a page would be
+ * invisible on the site, and one that quietly published a report page would defeat the gate.
+ * `source` names the page the same way parseFrontmatter does.
+ */
+export function pageLayer(data: Frontmatter, source: string): RuleLayer {
+  const value = str(data.layer);
+  if (value === "") return "model";
+  const layer = RULE_LAYERS.find((l) => l === value);
+  if (!layer)
+    throw new Error(
+      `${source}: unknown layer ${JSON.stringify(value)} (expected ${RULE_LAYERS.join(" or ")})`,
+    );
+  return layer;
+}
+
+/** Whether the site publishes a layer, and so whether a page on that layer is generated at all. */
+export const publishesLayer = (layer: RuleLayer): boolean => SITE_LAYERS.includes(layer);
+
 const section = (body: string, heading: string): string =>
   body.split(`## ${heading}`)[1]?.split(/\n## /)[0] ?? "";
 const firstParagraph = (s: string): string =>

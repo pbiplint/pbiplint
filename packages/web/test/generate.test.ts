@@ -22,11 +22,14 @@ import {
   contentPage,
   ignoreHelp,
   NAV,
+  pageLayer,
   parseFrontmatter,
+  publishesLayer,
   ruleLinks,
   rulePage,
   rulesIndex,
   type RuleMeta,
+  SITE_LAYERS,
   withIgnoreHelp,
 } from "../src/build/pages.js";
 
@@ -265,6 +268,31 @@ describe("ruleLinks and attribution", () => {
   });
 });
 
+describe("pageLayer and SITE_LAYERS", () => {
+  const source = "rules/made-up.md";
+  it("reads the layer a page declares, and counts a page with no layer as model", () => {
+    // Every page today predates the key, so the whole rule set reads as the model layer.
+    expect(pageLayer(parseFrontmatter(read("hide-foreign-keys"), source).data, source)).toBe(
+      "model",
+    );
+    expect(pageLayer({}, source)).toBe("model");
+    expect(pageLayer({ layer: "model" }, source)).toBe("model");
+    expect(pageLayer({ layer: "report" }, source)).toBe("report");
+  });
+  it("names the page when the layer is not a layer at all, rather than taking it for model", () => {
+    // A typo that quietly unpublished a page would be invisible on the site, and one that quietly
+    // published a report page would defeat the gate.
+    expect(() => pageLayer({ layer: "reprot" }, source)).toThrow(
+      'rules/made-up.md: unknown layer "reprot" (expected model or report)',
+    );
+  });
+  it("publishes the model layer only, until the browser can lint a report", () => {
+    expect([...SITE_LAYERS]).toEqual(["model"]);
+    expect(publishesLayer("model")).toBe(true);
+    expect(publishesLayer("report")).toBe(false);
+  });
+});
+
 describe("generateSite", () => {
   it("writes every rule page, the index, the about page, and the sitemap", () => {
     const out = mkdtempSync(join(tmpdir(), "pbiplint-site-"));
@@ -336,6 +364,51 @@ describe("generateSite", () => {
       "would delete the rule sources",
     );
     expect(existsSync(join(rules, "hide-foreign-keys.md"))).toBe(true);
+  });
+  it("leaves a page on an unpublished layer out of the pages, the index, the sitemap, and the links", () => {
+    // Two real pages, so a failure here is the gate rather than something rulePage or rulesIndex
+    // would have refused anyway. hide-foreign-keys already names MARK_PRIMARY_KEYS in a code span,
+    // which is the link the gate has to take away.
+    const out = mkdtempSync(join(tmpdir(), "pbiplint-layer-"));
+    const rules = mkdtempSync(join(tmpdir(), "pbiplint-layerrules-"));
+    writeFileSync(join(rules, "hide-foreign-keys.md"), read("hide-foreign-keys"));
+    writeFileSync(
+      join(rules, "mark-primary-keys.md"),
+      read("mark-primary-keys").replace("status: ported\n", "status: ported\nlayer: report\n"),
+    );
+    const metas = generateSite({ outDir: out, rulesDir: rules });
+    // Not rendered, and not among the metas the caller gets back.
+    expect(metas.map((m) => m.slug)).toEqual(["hide-foreign-keys"]);
+    expect(existsSync(join(out, "rules/hide-foreign-keys/index.html"))).toBe(true);
+    expect(existsSync(join(out, "rules/mark-primary-keys/index.html"))).toBe(false);
+    // Not in the index: neither in the count at the top nor in a list below it.
+    const index = readFileSync(join(out, "rules/index.html"), "utf8");
+    expect(index).toContain("1 rules: 1 ported");
+    expect(index).toContain('href="/rules/hide-foreign-keys/"');
+    expect(index).not.toContain("mark-primary-keys");
+    expect(index).not.toContain("Mark primary keys");
+    // Not in the sitemap.
+    const map = readFileSync(join(out, "public/sitemap.xml"), "utf8");
+    expect(map).toContain("<loc>https://pbiplint.com/rules/hide-foreign-keys/</loc>");
+    expect(map).not.toContain("mark-primary-keys");
+    // Not in the link map: its id stays plain code on the published page that names it, the way
+    // an id no page carries does.
+    const page = readFileSync(join(out, "rules/hide-foreign-keys/index.html"), "utf8");
+    expect(page).toContain("<code>MARK_PRIMARY_KEYS</code>");
+    expect(page).not.toContain('<a href="/rules/mark-primary-keys/">');
+  });
+  it("names the page when a rule page's layer is not a layer at all", () => {
+    const out = mkdtempSync(join(tmpdir(), "pbiplint-badlayer-"));
+    const rules = mkdtempSync(join(tmpdir(), "pbiplint-badlayerrules-"));
+    writeFileSync(
+      join(rules, "hide-foreign-keys.md"),
+      read("hide-foreign-keys").replace("status: ported\n", "status: ported\nlayer: reprot\n"),
+    );
+    expect(() => generateSite({ outDir: out, rulesDir: rules })).toThrow(
+      'rules/hide-foreign-keys.md: unknown layer "reprot" (expected model or report)',
+    );
+    // The gate runs before anything is written, so a typo costs a build rather than the pages.
+    expect(existsSync(join(out, "rules"))).toBe(false);
   });
 });
 

@@ -36,7 +36,16 @@ export function summarizeRule(
   config: ResolvedConfig,
   findings: Finding[] = [],
 ): RuleSummary {
-  const layer = rule.layer === "project" && findings[0] ? findings[0].layer : rule.layer;
+  // A `project` rule reports on both layers, so its group takes the layer its findings share.
+  // When they do not share one the group is the project's own, and with no findings at all the
+  // rule's own layer stands.
+  const first = findings[0];
+  const layer: Layer =
+    rule.layer === "project" && first
+      ? findings.every((f) => f.layer === first.layer)
+        ? first.layer
+        : "project"
+      : rule.layer;
   return {
     id: rule.id,
     name: rule.name,

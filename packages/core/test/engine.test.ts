@@ -454,6 +454,15 @@ describe("lint over a project", () => {
       ["report", "definition/pages/p/page.json", 3, "merge conflict marker: <<<<<<< HEAD"],
     ]);
   });
+  it("tags a parse-issue group that spans both layers as a project group", () => {
+    const r = lint([
+      { path: "definition/tables/Sales.tmdl", text: "table Sales\n  column Amount\n" },
+      { path: "definition/pages/p/page.json", text: '{\n  "name": "p",\n<<<<<<< HEAD\n}\n' },
+    ]);
+    const group = r.groups.find((g) => g.rule.id === "PARSE_ISSUE")!;
+    expect(group.rule.layer).toBe("project");
+    expect(group.findings.map((f) => f.layer)).toEqual(["model", "report"]);
+  });
   it("keeps an invalid-JSON detail on one line, whatever the engine's message spans", () => {
     const r = lint([{ path: "definition/pages/p/page.json", text: '{\n  "a": 1,\n  "b": }\n' }]);
     const issues = r.findings.filter((f) => f.ruleId === "PARSE_ISSUE");

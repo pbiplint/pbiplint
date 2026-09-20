@@ -111,7 +111,7 @@ export function formatText(result: LintResult, _options: FormatOptions = {}): st
     out.push("");
     for (const g of result.groups) {
       out.push(
-        `${SEVERITY_TAG[g.rule.severity]}  ${layerTag(g.rule.layer).padEnd(8)}  ${g.rule.name}  ${g.rule.id}  (${g.findings.length})`,
+        `${SEVERITY_TAG[g.rule.severity]}  ${layerTag(g.rule.layer).padEnd(9)}  ${g.rule.name}  ${g.rule.id}  (${g.findings.length})`,
       );
       out.push(`       ${g.rule.url}`);
       // The location column is always emitted, empty or not, so a finding without a location never

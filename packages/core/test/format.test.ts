@@ -364,9 +364,16 @@ describe("a whole-project report", () => {
     expect(text).toMatch(/\n {2}1\. File could not be fully parsed {2}\(1 error\) {3}\[report\]\n/);
     expect(text).toMatch(/\n {2}\d\. .+ {3}\[model\]\n/);
     expect(text).toMatch(
-      /\nERROR {2}\[report\] {2}File could not be fully parsed {2}PARSE_ISSUE {2}\(1\)\n/,
+      /\nERROR {2}\[report\] {3}File could not be fully parsed {2}PARSE_ISSUE {2}\(1\)\n/,
     );
-    expect(text).toMatch(/\nERROR {2}\[model\] {3}Column references should be fully qualified/);
+    expect(text).toMatch(/\nERROR {2}\[model\] {4}Column references should be fully qualified/);
+  });
+  it("tags a parse-issue group spanning both layers as project in the text header", () => {
+    const spanning = lint([
+      { path: "definition/tables/Sales.tmdl", text: "table Sales\n  column Amount\n" },
+      { path: "definition/pages/p/page.json", text: '{\n  "name": "p",\n<<<<<<< HEAD\n}\n' },
+    ]);
+    expect(formatText(spanning)).toContain("ERROR  [project]  File could not be fully parsed");
   });
   it("says which layer is absent and why", () => {
     const text = formatText(lint(files));

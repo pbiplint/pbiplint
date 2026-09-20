@@ -2,7 +2,17 @@ import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "nod
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Plugin } from "vite";
-import { contentPage, ruleLinks, rulePage, rulesIndex, sitemap, type RuleMeta } from "./pages.js";
+import {
+  contentPage,
+  pageLayer,
+  parseFrontmatter,
+  publishesLayer,
+  ruleLinks,
+  rulePage,
+  rulesIndex,
+  sitemap,
+  type RuleMeta,
+} from "./pages.js";
 
 export const WEB_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 export const RULES_DIR = join(WEB_ROOT, "../../rules");
@@ -32,7 +42,14 @@ export function generateSite({
     .map((file) => ({
       slug: file.replace(/\.md$/, ""),
       markdown: readFileSync(join(rulesDir, file), "utf8"),
-    }));
+    }))
+    // The one gate on what the site publishes, and the only one: the link map, the pages, the
+    // index, and the sitemap below all read this list, so a page on a layer SITE_LAYERS leaves
+    // out is missing from every one of them and nothing downstream has to ask about a layer again.
+    .filter(({ slug, markdown }) => {
+      const source = `rules/${slug}.md`;
+      return publishesLayer(pageLayer(parseFrontmatter(markdown, source).data, source));
+    });
   // Every page's id is known before any page renders, so a code span naming a rule links only to
   // a page this build is about to write.
   const links = ruleLinks(sources);

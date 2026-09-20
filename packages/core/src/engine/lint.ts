@@ -81,7 +81,7 @@ export function lint(files: LintFile[], options: LintOptions = {}): LintResult {
   const layers: Layers = {
     model: model
       ? { present: true, files: routed.model.length }
-      : { present: false, reason: options.absent?.model ?? "no .tmdl files in the input" },
+      : { present: false, reason: options.absent?.model ?? "no model in the input" },
     report: built
       ? { present: true, files: routed.report.length }
       : { present: false, reason: options.absent?.report ?? "no report in the input" },

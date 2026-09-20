@@ -394,7 +394,7 @@ describe("a whole-project report", () => {
     expect(line).toMatch(/^\d+ rules? run, /);
     expect(line).not.toMatch(/ {2}/);
     // The reason still reaches the reader; with no layers named, it is all line 2 carries.
-    expect(line).toContain("(no .tmdl files in the input)");
+    expect(line).toContain("(no model in the input)");
     expect(formatMarkdown(nothing).split("\n")[2]).toBe(
       `0 findings (0 errors, 0 warnings, 0 info) in 0 files. ${line}.`,
     );

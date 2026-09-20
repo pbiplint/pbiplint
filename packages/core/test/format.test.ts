@@ -452,5 +452,25 @@ describe("a whole-project report", () => {
       },
     ]);
     expect(JSON.parse(formatSarif(lint(files))).runs[0].invocations).toBeUndefined();
+    // The project's .pbip sits one level above the report root, so its path reaches lint as
+    // ../Demo.pbip. The artifact URI names the file where it really is, and a prefix that itself
+    // begins with .. keeps its leading segment.
+    const pbip = lint([{ path: "../Demo.pbip", text: "{" }]);
+    const pbipUri = (reportPathPrefix: string): string => {
+      const doc = JSON.parse(formatSarif(pbip, { reportPathPrefix })) as {
+        runs: [
+          {
+            results: {
+              ruleId: string;
+              locations?: [{ physicalLocation: { artifactLocation: { uri: string } } }];
+            }[];
+          },
+        ];
+      };
+      const hit = doc.runs[0].results.find((r) => r.ruleId === "PARSE_ISSUE");
+      return hit!.locations![0].physicalLocation.artifactLocation.uri;
+    };
+    expect(pbipUri("proj/Demo.Report")).toBe("proj/Demo.pbip");
+    expect(pbipUri("../proj/Demo.Report")).toBe("../proj/Demo.pbip");
   });
 });

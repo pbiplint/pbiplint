@@ -24,9 +24,22 @@ export function formatSarif(result: LintResult, options: FormatOptions = {}): st
   // SARIF artifact URIs are URIs, so each path segment is percent-encoded: a model folder with a
   // space in its name would otherwise produce a location code scanning cannot resolve.
   const encodePath = (p: string): string => p.split("/").map(encodeURIComponent).join("/");
+  // A project's .pbip sits one level above the report root, so its path arrives as ../Demo.pbip.
+  // Dot segments are collapsed the POSIX way before encoding, or the URI would name a file that
+  // does not exist. A leading .. is kept: a prefix is relative to the working directory and may
+  // begin with one itself. This is path normalisation, not analysis.
+  const collapse = (p: string): string => {
+    const out: string[] = [];
+    for (const segment of p.split("/")) {
+      if (segment === ".") continue;
+      if (segment === ".." && out.length > 0 && out[out.length - 1] !== "..") out.pop();
+      else out.push(segment);
+    }
+    return out.join("/");
+  };
   const uri = (file: string, layer: "model" | "report"): string => {
     const prefix = prefixFor(layer);
-    return encodePath(prefix ? `${prefix}/${file}` : file);
+    return encodePath(collapse(prefix ? `${prefix}/${file}` : file));
   };
   // GitHub renders help.markdown beside the alert and ignores helpUri, so the page link rides
   // inside the help block as well.

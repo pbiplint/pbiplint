@@ -80,6 +80,22 @@ describe("collectFieldRefs", () => {
       ["", "Year", "/filters/1/filter/Where/0/Condition"],
     ]);
   });
+  it("lets a nested From shadow an outer alias even when its Entity is not a string", () => {
+    const refs = collectFieldRefs({
+      From: [{ Name: "d", Entity: "Outer", Type: 0 }],
+      subquery: {
+        From: [{ Name: "d", Expression: {} }],
+        Where: [
+          {
+            Condition: {
+              Column: { Expression: { SourceRef: { Source: "d" } }, Property: "Year" },
+            },
+          },
+        ],
+      },
+    });
+    expect(refs.map((r) => [r.table, r.name])).toEqual([["", "Year"]]);
+  });
   it("escapes a key with a slash in the pointer and ignores nodes that only look like references", () => {
     const refs = collectFieldRefs({ "a/b": [column("T", "C")], Column: "not a ref" }, "");
     expect(refs).toEqual([{ kind: "column", table: "T", name: "C", pointer: "/a~1b/0" }]);

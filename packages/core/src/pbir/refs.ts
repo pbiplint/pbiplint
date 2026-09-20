@@ -37,9 +37,11 @@ export function collectFieldRefs(
     if (!isRecord(n)) return;
     if (Array.isArray(n.From)) {
       const next = new Map(scope);
+      // A nested From shadows the outer alias of the same name whatever it declares: a subquery
+      // entry names no Entity, and the alias it introduces is not the outer table.
       for (const f of n.From)
-        if (isRecord(f) && typeof f.Name === "string" && typeof f.Entity === "string")
-          next.set(f.Name, f.Entity);
+        if (isRecord(f) && typeof f.Name === "string")
+          next.set(f.Name, typeof f.Entity === "string" ? f.Entity : "");
       scope = next;
     }
     if (isRecord(n.Column) && typeof n.Column.Property === "string") {

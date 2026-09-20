@@ -134,6 +134,22 @@ describe("resolveProject", () => {
         .files,
     ).toEqual([{ path: "T.tmdl", text: "table T\n" }]);
   });
+  it("reads the .pbip the user named, refuses two in a folder, and ignores a directory named .pbip", () => {
+    const root = pbip({ model: true, report: true });
+    writeFileSync(join(root, "Another.pbip"), j({ version: "1.0", artifacts: [] }));
+    expect(() => resolveProject(root)).toThrow(
+      /contains 2 \.pbip files; point at one of them: Another\.pbip, Demo\.pbip/,
+    );
+    const named = resolveProject(join(root, "Demo.pbip"));
+    expect(named.root).toBe(root);
+    expect(named.report!.files.map((f) => f.path)).toContain("../Demo.pbip");
+    expect(named.report!.files.map((f) => f.path)).not.toContain("../Another.pbip");
+    const other = resolveProject(join(root, "Another.pbip"));
+    expect(other.report!.files.map((f) => f.path)).toContain("../Another.pbip");
+    const solo = pbip({ model: true, report: true });
+    mkdirSync(join(solo, "x.pbip"));
+    expect(resolveProject(solo).report!.files.map((f) => f.path)).toContain("../Demo.pbip");
+  });
   it("leaves the model out when the report reads a published model or another model, and says why", () => {
     const published = resolveProject(
       pbip({ model: true, report: true, pbir: { byConnection: { connectionString: "x" } } }),

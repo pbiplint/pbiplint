@@ -74,6 +74,24 @@ function reportPart(folder: string): ResolvedPart | undefined {
   return files.some((f) => f.path.startsWith("definition/")) ? { root: folder, files } : undefined;
 }
 
+/**
+ * The project's .pbip: the one the user pointed at, else the only regular file with that suffix
+ * in the folder. A folder holding several is refused rather than guessed at, and a directory
+ * whose name ends in .pbip is not one of them.
+ */
+function pbipIn(input: string, folder: string, preferred: string | undefined): string | undefined {
+  if (preferred !== undefined) return preferred;
+  const found = readdirSync(folder, { withFileTypes: true })
+    .filter((e) => e.isFile() && e.name.endsWith(".pbip"))
+    .map((e) => e.name)
+    .sort(byName);
+  if (found.length > 1)
+    throw new UsageError(
+      `${input} contains ${found.length} .pbip files; point at one of them: ${found.join(", ")}`,
+    );
+  return found[0];
+}
+
 const legacyReport = (folder: string, name: string): Diagnostic => ({
   kind: "legacy-report-format",
   path: name,
@@ -102,9 +120,18 @@ export function resolveProject(input: string): ResolvedProject {
         absent: {},
         diagnostics: [],
       };
-    if (path.endsWith(".pbip")) return resolveProject(dirname(path));
+    // The project is the .pbip's own folder, and the file named is the one read there.
+    if (path.endsWith(".pbip")) return resolveFolder(dirname(path), dirname(path), basename(path));
     throw new UsageError(`${input} is not a .tmdl file, a .pbip file, or a folder`);
   }
+  return resolveFolder(input, path);
+}
+
+/**
+ * A folder, either given directly or named by a .pbip. `preferred` is that .pbip's file name, so
+ * a project holding more than one is read as the user asked instead of refused.
+ */
+function resolveFolder(input: string, path: string, preferred?: string): ResolvedProject {
   const out: ResolvedProject = { root: path, absent: {}, diagnostics: [] };
   const name = basename(path);
 
@@ -160,9 +187,7 @@ export function resolveProject(input: string): ResolvedProject {
     out.absent.report = LEGACY_REPORT_REASON;
   }
   if (report) {
-    const pbip = readdirSync(path)
-      .filter((n) => n.endsWith(".pbip"))
-      .sort(byName)[0];
+    const pbip = pbipIn(input, path, preferred);
     // The .pbip sits at the project root, one level above the report root every other path is
     // relative to, so it carries that relative path and a finding on it points at the real file.
     if (pbip)

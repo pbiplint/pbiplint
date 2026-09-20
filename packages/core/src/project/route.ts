@@ -44,9 +44,11 @@ export function pairingDecision(
   siblingModelFolder: string | undefined,
   reportFolder: string,
 ): PairingDecision {
-  if (siblingModelFolder === undefined) return { useModel: false };
+  // What the report itself says comes first: a report bound to a published model reads one whether
+  // or not a model sits beside it, and the layers line has a reason to give either way.
   if (ref.kind === "byConnection")
     return { useModel: false, reason: "this report reads a published model" };
+  if (siblingModelFolder === undefined) return { useModel: false };
   if (ref.kind === "none") return { useModel: true };
   const named = ref.path.replace(/\\/g, "/").replace(/\/+$/, "").split("/").pop() ?? "";
   if (named === siblingModelFolder) return { useModel: true };

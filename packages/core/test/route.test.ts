@@ -48,6 +48,10 @@ describe("pairingDecision", () => {
     expect(
       pairingDecision({ kind: "byPath", path: "../Demo.SemanticModel" }, undefined, "Demo.Report"),
     ).toEqual({ useModel: false });
+    expect(pairingDecision({ kind: "byConnection" }, undefined, "Demo.Report")).toEqual({
+      useModel: false,
+      reason: "this report reads a published model",
+    });
     expect(
       pairingDecision(
         { kind: "byPath", path: "../Other.SemanticModel" },

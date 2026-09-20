@@ -16,7 +16,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   AVOID_INVALID_DESCRIPTION_CHARACTERS:
     "Descriptions containing a control character other than whitespace. Tabs and line breaks are allowed.",
   AVOID_INVALID_NAME_CHARACTERS:
-    "Object names containing a control character other than whitespace. Tabs and line breaks are allowed here and are covered by `SPECIAL_CHARS_IN_OBJECT_NAMES`.",
+    "Object names containing a control character that is not whitespace. The whitespace control characters are left out of the test; `SPECIAL_CHARS_IN_OBJECT_NAMES` reads names for a tab, a line feed, and a carriage return.",
   AVOID_STRUCTURED_DATA_SOURCES_WITH_PROVIDER_PARTITIONS:
     "Partitions whose source is a legacy query, a provider partition, that points at a structured data source.",
   AVOID_THE_USERELATIONSHIP_FUNCTION_AND_RLS_AGAINST_THE_SAME_TABLE:

@@ -99,7 +99,7 @@ table CG
     );
     expect(objectNames(rules.AVOID_USING_1_X_Y_SYNTAX, m)).toEqual(["[A]", "[B]", "[C]"]);
   });
-  it("EXPRESSION_RELIANT_OBJECTS_MUST_HAVE_AN_EXPRESSION cannot be produced from TMDL, so it is checked on a mutated model", () => {
+  it("EXPRESSION_RELIANT_OBJECTS_MUST_HAVE_AN_EXPRESSION also fires on a mutated model, not only on an empty declaration", () => {
     const model = modelFrom(measures("\tmeasure A = 1\n\tcolumn CC = 2\n\t\tdataType: int64"));
     model.tables[0]!.measures[0]!.expression = "   ";
     model.tables[0]!.columns[1]!.expression = "";

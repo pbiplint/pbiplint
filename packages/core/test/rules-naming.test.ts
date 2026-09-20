@@ -92,7 +92,7 @@ describe("name rules by scope", () => {
       "'cg'",
     ]);
   });
-  it("control character rules use hand-built models because TMDL cannot carry them", () => {
+  it("control character rules divide names, descriptions, and whitespace between them", () => {
     const model = modelFrom("table T\n\tcolumn A\n\t\tdataType: string\n\tmeasure M = 1\n");
     model.tables[0]!.columns[0]!.name = "Bad\u0001Name";
     model.tables[0]!.measures[0]!.description = "line1\u0001line2";

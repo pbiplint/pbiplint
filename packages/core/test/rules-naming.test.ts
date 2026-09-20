@@ -97,16 +97,16 @@ describe("name rules by scope", () => {
     model.tables[0]!.columns[0]!.name = "Bad\u0001Name";
     model.tables[0]!.measures[0]!.description = "line1\u0001line2";
     model.tables[0]!.name = "Tab\tName";
-    const ctx = { indexes: buildIndexes(model) };
-    expect(rules.AVOID_INVALID_NAME_CHARACTERS.check(model, ctx).map((f) => f.objectName)).toEqual([
-      "'Tab\tName'[Bad\u0001Name]",
-    ]);
+    const ctx = { indexes: buildIndexes({ model }), options: {} };
     expect(
-      rules.AVOID_INVALID_DESCRIPTION_CHARACTERS.check(model, ctx).map((f) => f.objectName),
+      rules.AVOID_INVALID_NAME_CHARACTERS.check({ model }, ctx).map((f) => f.objectName),
+    ).toEqual(["'Tab\tName'[Bad\u0001Name]"]);
+    expect(
+      rules.AVOID_INVALID_DESCRIPTION_CHARACTERS.check({ model }, ctx).map((f) => f.objectName),
     ).toEqual(["[M]"]);
-    expect(rules.SPECIAL_CHARS_IN_OBJECT_NAMES.check(model, ctx).map((f) => f.objectName)).toEqual([
-      "'Tab\tName'",
-    ]);
+    expect(
+      rules.SPECIAL_CHARS_IN_OBJECT_NAMES.check({ model }, ctx).map((f) => f.objectName),
+    ).toEqual(["'Tab\tName'"]);
   });
 });
 

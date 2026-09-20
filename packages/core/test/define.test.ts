@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { buildIndexes } from "../src/index/build.js";
 import { BPA_RULES } from "../src/rules/microsoft-bpa/bpa-rules.data.js";
 import { bpaRule, liveModelRule, mapScope } from "../src/rules/microsoft-bpa/define.js";
+import { modelFrom } from "./helpers.js";
 
 describe("vendored ruleset", () => {
   it("has all 71 Microsoft rules with unique ids", () => {
@@ -49,6 +51,16 @@ describe("bpaRule", () => {
     expect(r.references).toEqual([
       "https://blog.crossjoin.co.uk/2018/07/02/isavailableinmdx-ssas-tabular/",
     ]);
+  });
+  it("runs the model body against the project's model and declares the model layer", () => {
+    const r = bpaRule("HIDE_FOREIGN_KEYS", (m) => [{ objectType: "Model", objectName: m.name }]);
+    expect(r.layer).toBe("model");
+    expect(r.needs).toEqual(["model"]);
+    const model = modelFrom("model Demo\n");
+    expect(r.check({ model }, { indexes: buildIndexes({ model }), options: {} })).toEqual([
+      { objectType: "Model", objectName: "Demo" },
+    ]);
+    expect(r.check({}, { indexes: buildIndexes({}), options: {} })).toEqual([]);
   });
   it("rejects unknown ids", () => {
     expect(() => bpaRule("NOPE", () => [])).toThrow(/NOPE/);

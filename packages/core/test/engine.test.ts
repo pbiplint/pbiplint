@@ -10,14 +10,21 @@ import { PARSE_ISSUE } from "../src/rules/parse-issue.js";
 import type { Rule } from "../src/rules/types.js";
 import { modelFrom } from "./helpers.js";
 
-const base = { scope: [], description: "", references: [], status: "ported" as const };
+const base = {
+  scope: [],
+  description: "",
+  references: [],
+  status: "ported" as const,
+  layer: "model" as const,
+  needs: ["model"] as const,
+};
 const everyTable: Rule = {
   ...base,
   id: "EVERY_TABLE",
   name: "Every table",
   category: "Maintenance",
   severity: 1,
-  check: (m) => m.tables.map((t) => finding.table(t)),
+  check: ({ model }) => model!.tables.map((t) => finding.table(t)),
 };
 const everyColumn: Rule = {
   ...base,
@@ -25,7 +32,7 @@ const everyColumn: Rule = {
   name: "Every column",
   category: "Formatting",
   severity: 2,
-  check: (m) => m.tables.flatMap((t) => t.columns.map((c) => finding.column(c))),
+  check: ({ model }) => model!.tables.flatMap((t) => t.columns.map((c) => finding.column(c))),
 };
 const modelRule: Rule = {
   ...base,
@@ -33,7 +40,7 @@ const modelRule: Rule = {
   name: "Model",
   category: "Performance",
   severity: 2,
-  check: (m) => [finding.model(m)],
+  check: ({ model }) => [finding.model(model!)],
 };
 const live: Rule = {
   ...base,
@@ -127,10 +134,10 @@ describe("ignoreHelp", () => {
 
 describe("runRules", () => {
   const m = modelFrom(tmdl);
-  const idx = buildIndexes(m);
+  const idx = buildIndexes({ model: m });
   it("applies ignores, skips disabled and live-model rules, and survives a throwing rule", () => {
     const r = runRules(
-      m,
+      { model: m },
       idx,
       [everyTable, everyColumn, modelRule, live, boom],
       resolveConfig({ rules: { EVERY_TABLE: "off" } }),
@@ -150,13 +157,36 @@ describe("runRules", () => {
     expect(r.ruleErrors).toEqual([{ id: "BOOM", message: "kaboom" }]);
   });
   it("stamps ruleId and drops the object reference", () => {
-    const r = runRules(m, idx, [everyColumn], resolveConfig());
+    const r = runRules({ model: m }, idx, [everyColumn], resolveConfig());
     expect(r.findings[0]).toEqual({
       ruleId: "EVERY_COLUMN",
+      layer: "model",
       objectType: "Column",
       objectName: "'A'[Y]",
       location: { file: "inline.tmdl", line: 12 },
     });
+  });
+  it("skips a rule whose layer is not in the project and tags every finding with its object's layer", () => {
+    const reportOnly: Rule = {
+      ...base,
+      id: "REPORT_ONLY",
+      name: "Report only",
+      category: "Report Design",
+      severity: 2,
+      layer: "report",
+      needs: ["report"],
+      check: () => [],
+    };
+    const m = modelFrom("table A\n\tcolumn X\n\t\tdataType: string\n");
+    const r = runRules(
+      { model: m },
+      buildIndexes({ model: m }),
+      [reportOnly, everyColumn],
+      resolveConfig(),
+    );
+    expect(r.rulesSkipped).toEqual([{ id: "REPORT_ONLY", reason: "noReport" }]);
+    expect(r.rulesRun).toEqual(["EVERY_COLUMN"]);
+    expect(r.findings.map((f) => f.layer)).toEqual(["model"]);
   });
 });
 
@@ -167,7 +197,7 @@ describe("rank", () => {
     );
     const rules = [everyTable, everyColumn, modelRule];
     const cfg = resolveConfig();
-    const r = runRules(m, buildIndexes(m), rules, cfg);
+    const r = runRules({ model: m }, buildIndexes({ model: m }), rules, cfg);
     const groups = rank(r.findings, rules, cfg);
     expect(groups.map((g) => [g.rule.id, g.findings.length])).toEqual([
       ["MODEL_RULE", 1], // warning, Performance
@@ -185,7 +215,11 @@ describe("rank", () => {
     const m = modelFrom("table A\n");
     const rules = [everyTable, modelRule];
     const cfg = resolveConfig({ rules: { EVERY_TABLE: "error" } });
-    const groups = rank(runRules(m, buildIndexes(m), rules, cfg).findings, rules, cfg);
+    const groups = rank(
+      runRules({ model: m }, buildIndexes({ model: m }), rules, cfg).findings,
+      rules,
+      cfg,
+    );
     expect(groups.map((g) => [g.rule.id, g.rule.severity])).toEqual([
       ["EVERY_TABLE", 3],
       ["MODEL_RULE", 2],

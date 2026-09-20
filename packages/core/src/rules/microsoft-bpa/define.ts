@@ -70,11 +70,14 @@ export function bpaRule(
     category: meta.category as Category,
     severity: meta.severity as Severity,
     scope: mapScope(meta.scope),
+    layer: "model",
+    needs: ["model"],
     description: RULE_SUMMARIES[id] ?? stripCategory(meta.name),
     fixExpression: meta.fixExpression,
     references: extractUrls(meta.description),
     status: "ported",
-    check,
+    // The 72 model bodies keep their (model, ctx) shape; the project is unwrapped here once.
+    check: (project, ctx) => (project.model ? check(project.model, ctx) : []),
   };
 }
 

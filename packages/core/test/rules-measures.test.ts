@@ -25,9 +25,10 @@ describe("measure format rules", () => {
         '\tmeasure A = 1\n\tmeasure B = 1\n\t\tformatString: #,0.00\n\tmeasure C = 1\n\t\tformatStringDefinition = "0"',
       ),
     );
-    const details = rules.INTEGER_FORMATTING.check(model, { indexes: buildIndexes(model) }).map(
-      (f) => [f.objectName, f.detail],
-    );
+    const details = rules.INTEGER_FORMATTING.check(
+      { model },
+      { indexes: buildIndexes({ model }), options: {} },
+    ).map((f) => [f.objectName, f.detail]);
     expect(details).toEqual([
       ["[A]", "no format string"],
       ["[B]", 'format string "#,0.00"'],
@@ -103,9 +104,10 @@ table CG
     const model = modelFrom(measures("\tmeasure A = 1\n\tcolumn CC = 2\n\t\tdataType: int64"));
     model.tables[0]!.measures[0]!.expression = "   ";
     model.tables[0]!.columns[1]!.expression = "";
-    const names = rules.EXPRESSION_RELIANT_OBJECTS_MUST_HAVE_AN_EXPRESSION.check(model, {
-      indexes: buildIndexes(model),
-    }).map((f) => f.objectName);
+    const names = rules.EXPRESSION_RELIANT_OBJECTS_MUST_HAVE_AN_EXPRESSION.check(
+      { model },
+      { indexes: buildIndexes({ model }), options: {} },
+    ).map((f) => f.objectName);
     expect(names).toEqual(["[A]", "'T'[CC]"]);
   });
 });

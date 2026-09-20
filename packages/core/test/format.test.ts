@@ -40,14 +40,21 @@ describe("formatText", () => {
 });
 
 describe("summary wording", () => {
-  const base = { scope: [], description: "", references: [], status: "ported" as const };
+  const base = {
+    scope: [],
+    description: "",
+    references: [],
+    status: "ported" as const,
+    layer: "model" as const,
+    needs: ["model"] as const,
+  };
   const oneColumn: Rule = {
     ...base,
     id: "ONE_COLUMN",
     name: "One column",
     category: "Formatting",
     severity: 2,
-    check: (m) => m.tables.flatMap((t) => t.columns.map((c) => finding.column(c))),
+    check: ({ model }) => model!.tables.flatMap((t) => t.columns.map((c) => finding.column(c))),
   };
   const everyTable: Rule = {
     ...base,
@@ -55,7 +62,7 @@ describe("summary wording", () => {
     name: "Every table",
     category: "Maintenance",
     severity: 1,
-    check: (m) => m.tables.map((t) => finding.table(t)),
+    check: ({ model }) => model!.tables.map((t) => finding.table(t)),
   };
   it("uses singular nouns for counts of one", () => {
     const text = formatText(
@@ -92,6 +99,8 @@ describe("formatText with a crashing rule", () => {
       category: "Maintenance",
       severity: 2,
       scope: ["Table"],
+      layer: "model",
+      needs: ["model"],
       description: "Only exists to blow up.",
       references: [],
       status: "ported",

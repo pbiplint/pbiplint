@@ -59,6 +59,15 @@ export {
   tableRef,
 } from "./model/names.js";
 export type * from "./model/types.js";
+export type * from "./pbir/types.js";
+export type {
+  Diagnostic,
+  DiagnosticKind,
+  Fact,
+  Layers,
+  LayerStatus,
+  Project,
+} from "./project/types.js";
 export {
   allCalculationItems,
   allColumns,

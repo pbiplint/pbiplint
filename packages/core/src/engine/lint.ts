@@ -1,6 +1,7 @@
 import { buildIndexes } from "../index/build.js";
 import { buildModel } from "../model/build.js";
 import type { Model } from "../model/types.js";
+import type { Project } from "../project/types.js";
 import { defaultRules } from "../rules/index.js";
 import type { Finding, Rule } from "../rules/types.js";
 import { parseTmdl } from "../tmdl/parse.js";
@@ -57,8 +58,9 @@ export function lint(files: LintFile[], options: LintOptions = {}): LintResult {
   );
   const parsed = files.map((f) => parseTmdl(f.path, f.text));
   const model = buildModel(parsed);
-  const indexes = buildIndexes(model);
-  const run = runRules(model, indexes, rules, config);
+  const project: Project = { model };
+  const indexes = buildIndexes(project);
+  const run = runRules(project, indexes, rules, config);
   const groups = rank(run.findings, rules, config);
   const count = (severity: number) =>
     groups.filter((g) => g.rule.severity === severity).reduce((n, g) => n + g.findings.length, 0);

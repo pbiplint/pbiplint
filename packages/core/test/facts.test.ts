@@ -221,6 +221,17 @@ describe("buildFacts", () => {
       value: "none",
     });
   });
+  it("links a fact to the first of its candidate rules the run knows", () => {
+    const { report } = buildReport(files);
+    const project = { model, report };
+    const facts = buildFacts(
+      project,
+      buildIndexes(project),
+      new Set(["LANDING_PAGE_NOT_SET", "REMOVE_UNUSED_CUSTOM_VISUALS"]),
+    );
+    expect(facts.find((f) => f.label === "Opens on")!.ruleId).toBe("LANDING_PAGE_NOT_SET");
+    expect(facts.find((f) => f.label === "Visuals")!.ruleId).toBe("REMOVE_UNUSED_CUSTOM_VISUALS");
+  });
   it("gives a model-only run the model fact alone, without the reach detail", () => {
     expect(buildFacts({ model }, buildIndexes({ model }), ALL)).toEqual([
       { layer: "model", label: "Model", value: "1 table, 2 columns, 2 measures" },

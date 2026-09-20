@@ -9,8 +9,13 @@ const n = plural;
 
 function reportFacts(report: Report, known: ReadonlySet<string>): Fact[] {
   const facts: Fact[] = [];
-  const withRule = (fact: Fact, ruleId: string | undefined): Fact =>
-    ruleId !== undefined && known.has(ruleId) ? { ...fact, ruleId } : fact;
+  // The candidates are ordered from the most specific rule to the broadest, and the fact links to
+  // the first the run actually carries, so leaving the specific rule out of a run does not cost
+  // the fact its link to the rule that did run.
+  const withRule = (fact: Fact, ...candidates: (string | undefined)[]): Fact => {
+    const ruleId = candidates.find((id) => id !== undefined && known.has(id));
+    return ruleId === undefined ? fact : { ...fact, ruleId };
+  };
   const pages = report.pages;
   const byId = new Map(pages.map((p) => [p.id, p]));
   const header = report.pagesHeader;
@@ -38,11 +43,8 @@ function reportFacts(report: Report, known: ReadonlySet<string>): Fact[] {
             ? "landing page"
             : "the page open when it was saved; no landing page set",
       },
-      invalid
-        ? "OPENING_PAGE_INVALID"
-        : header.landingPageName === undefined
-          ? "LANDING_PAGE_NOT_SET"
-          : undefined,
+      invalid ? "OPENING_PAGE_INVALID" : undefined,
+      header.landingPageName === undefined ? "LANDING_PAGE_NOT_SET" : undefined,
     ),
   );
 
@@ -106,11 +108,8 @@ function reportFacts(report: Report, known: ReadonlySet<string>): Fact[] {
         value: String(visuals.length),
         ...(visualParts.length ? { detail: visualParts.join("; ") } : {}),
       },
-      hiddenWithFields > 0
-        ? "HIDDEN_VISUALS_STILL_QUERY"
-        : registered.length > used
-          ? "REMOVE_UNUSED_CUSTOM_VISUALS"
-          : undefined,
+      hiddenWithFields > 0 ? "HIDDEN_VISUALS_STILL_QUERY" : undefined,
+      registered.length > used ? "REMOVE_UNUSED_CUSTOM_VISUALS" : undefined,
     ),
   );
 

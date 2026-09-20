@@ -83,4 +83,4 @@ A model with no dates in it is the clean exception: a reference list, a product 
 
 - `DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE` names the table to mark when a calendar is already in the model under a name containing date or calendar. Marking it clears both rules at once.
 - `REMOVE_AUTO-DATE_TABLE` reports the calculated tables the Auto date/time option generates, whose names start with DateTableTemplate_ or LocalDateTable_, which is what a model without its own calendar falls back to.
-- `REDUCE_USAGE_OF_CALCULATED_TABLES` lists every calculated table, so a calendar built with CALENDAR satisfies this rule and creates a finding there.
+- `REDUCE_USAGE_OF_CALCULATED_TABLES` lists every calculated table, so a calendar built with CALENDAR satisfies this rule once it is marked and creates a finding there.

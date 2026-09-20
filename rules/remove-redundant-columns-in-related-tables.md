@@ -14,7 +14,7 @@ sources:
 
 ## What it checks
 
-Columns that take part in no relationship and whose name also exists on a table at the other end of a relationship their own table is the from side of. In practice, a fact table column that duplicates a dimension attribute.
+Columns that take part in no relationship and share a name with a column on a table at the to side of a relationship from their own table.
 
 Each finding names the column, as `'Sales'[Product Name]`, and it is always the copy on the from side that is named, never the dimension's original.
 

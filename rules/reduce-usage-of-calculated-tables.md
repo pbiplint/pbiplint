@@ -67,4 +67,4 @@ Several of these tables are features rather than choices. A field parameter and 
 
 - `REMOVE_AUTO-DATE_TABLE` reports the subset of these tables that Auto date/time generated, whose names start with DateTableTemplate_ or LocalDateTable_. Every table it reports is reported here too.
 - `DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE` reads calculated tables as well as loaded ones, so a calendar built with CALENDAR is reported by both until it is marked, and marking it clears only that one.
-- `MODEL_SHOULD_HAVE_A_DATE_TABLE` is satisfied by a calculated calendar, so the cheapest way to clear that finding creates one here.
+- `MODEL_SHOULD_HAVE_A_DATE_TABLE` is satisfied by a calculated calendar once it is marked, so the cheapest way to clear that finding creates one here.

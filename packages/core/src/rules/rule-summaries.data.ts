@@ -120,7 +120,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   REMOVE_DATA_SOURCES_NOT_REFERENCED_BY_ANY_PARTITIONS:
     "Data sources that no partition names and that appear nowhere in any partition's query or M text.",
   REMOVE_REDUNDANT_COLUMNS_IN_RELATED_TABLES:
-    "Columns that take part in no relationship and whose name also exists on a table at the other end of a relationship their own table is the from side of. In practice, a fact table column that duplicates a dimension attribute.",
+    "Columns that take part in no relationship and share a name with a column on a table at the to side of a relationship from their own table.",
   REMOVE_ROLES_WITH_NO_MEMBERS: "Roles with no members.",
   SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS:
     "Columns with IsAvailableInMdx set to false that are used to sort another column, appear in a hierarchy or a variation, or sort by another column.",

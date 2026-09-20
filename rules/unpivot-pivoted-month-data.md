@@ -85,11 +85,11 @@ table Budget
 
 ## Why it matters
 
-A column per month is a spreadsheet layout. In a model it means a measure per month, no way to filter by date, no relationship to the date table, and a schema change every year. Unpivoted into one Month column and one Value column, the same data relates to the date table and every measure and time intelligence function works over it.
+A column per month is a spreadsheet layout. In a model it means a measure per month, no way to filter by date, no relationship to the date table, and a schema change every year. Unpivoted into one Month column and one Value column, with the month's start date beside them, the same data relates to the date table through that date and every measure and time intelligence function works over it.
 
 ## How to fix it
 
-Reshape the table where it is loaded. In Power BI Desktop choose Transform data, select the query, select the month columns, and use Unpivot Columns on the Transform tab, or select the columns that are not months and use Unpivot Other Columns so next year's column is picked up without an edit; then rename the Attribute and Value columns to something a report author will recognize, such as Month Name and Amount. Where the source is a warehouse, the same reshape belongs in a view there, and the refresh gets the finished shape for nothing. Back in the model, give the month column a Month Number column to sort by, which is Sort by column on the Column tools tab and `sortByColumn` in the TMDL file, and relate the month to the date table so time intelligence works over it. The rule reads the model's columns, so the finding clears as soon as the reshaped query is applied.
+Reshape the table where it is loaded. In Power BI Desktop choose Transform data, select the query, select the month columns, and use Unpivot Columns on the Transform tab, or select the columns that are not months and use Unpivot Other Columns so next year's column is picked up without an edit; then rename the Attribute and Value columns to something a report author will recognize, such as Month Name and Amount. Where the source is a warehouse, the same reshape belongs in a view there, and the refresh gets the finished shape for nothing. Back in the model, give the month column a Month Number column to sort by, which is Sort by column on the Column tools tab and `sortByColumn` in the TMDL file. A month name is text and cannot carry a relationship to a day-grain date table, so load the month's start date alongside it, as a Month Start column of the first of each month, and relate that column to the date table; time intelligence then works over the reshaped table. The rule reads the model's columns, so the finding clears as soon as the reshaped query is applied.
 
 ## When to ignore it
 

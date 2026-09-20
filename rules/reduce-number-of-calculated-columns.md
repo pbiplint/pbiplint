@@ -122,7 +122,7 @@ Move the work upstream. In Power BI Desktop choose Transform data, select the qu
 
 ## When to ignore it
 
-Five is somebody's round number, not a law, and a model can be perfectly healthy at eight. The judgment is what the columns cost, which the rule cannot see: six columns on a two-thousand-row dimension are free, and one on a hundred-million-row fact table is the thing to look at first. A column that genuinely needs the model is the other legitimate case: a value derived from a measure, a ranking within the table, or a flag that depends on a relationship cannot be computed in Power Query at all, because the model does not exist yet when the query runs. Count how many of the columns are on large tables before deciding, and ignore the finding once the answer is none.
+Five is somebody's round number, not a law, and a model can be perfectly healthy at eight. The judgment is what the columns cost, which the rule cannot see: six columns on a two-thousand-row dimension are free, and one on a hundred-million-row fact table is the thing to look at first. A column that genuinely needs the model is the other legitimate case: a value derived from a measure, or a flag that depends on a relationship, cannot be computed in Power Query at all, because the model does not exist yet when the query runs. Count how many of the columns are on large tables before deciding, and ignore the finding once the answer is none.
 
 ## Quirks
 

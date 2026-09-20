@@ -122,6 +122,8 @@ export type DatasetReference =
 /** The report layer of one run: everything the PBIR reader found, in the order the files declare it. */
 export interface Report {
   file?: string;
+  /** The text of that report.json, so a report-level finding can point at a line within it. */
+  text?: string;
   displayName?: string;
   schemaVersion?: string;
   themeName?: string;

@@ -59,6 +59,25 @@ export {
   tableRef,
 } from "./model/names.js";
 export type * from "./model/types.js";
+export { buildReport, KNOWN_SCHEMAS, literal } from "./pbir/build.js";
+export {
+  lineOfPointer,
+  newerThan,
+  readJson,
+  schemaFamilyOf,
+  schemaVersionOf,
+} from "./pbir/json.js";
+export {
+  bookmarkLabel,
+  pageFilterLabel,
+  pageLabel,
+  REPORT_FILTER_LABEL,
+  REPORT_LABEL,
+  reportMeasureLabel,
+  shortId,
+  visualLabel,
+} from "./pbir/names.js";
+export { collectFieldRefs, escapePointer } from "./pbir/refs.js";
 export type * from "./pbir/types.js";
 export type {
   Diagnostic,
@@ -84,6 +103,7 @@ export { BPA_RULES, type BpaRuleMeta } from "./rules/microsoft-bpa/bpa-rules.dat
 export { bpaRule, liveModelRule, mapScope } from "./rules/microsoft-bpa/define.js";
 export { microsoftBpaRules } from "./rules/microsoft-bpa/index.js";
 export { PARSE_ISSUE } from "./rules/parse-issue.js";
+export { allVisuals, isHiddenPage, reportFinding, visiblePages } from "./rules/report-helpers.js";
 export * from "./rules/types.js";
 export { parseTmdl } from "./tmdl/parse.js";
 export { unquoteName, unquoteValue } from "./tmdl/quote.js";

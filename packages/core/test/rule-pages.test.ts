@@ -12,38 +12,6 @@ const ruleIds = new Set(defaultRules.map((r) => r.id));
 const RULESET_URL =
   "https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json";
 
-/**
- * Pages not yet brought up to the complete template
- * (docs/superpowers/specs/2026-09-19-rule-pages-template-design.md, section 10). A page here meets
- * only the checks every page meets; a page not here meets the whole template. Each batch removes
- * its slugs, and the last batch deletes this set and everything that reads it.
- */
-const LEGACY_PAGES = new Set<string>([
-  "avoid-excessive-bi-directional-or-many-to-many-relationships",
-  "avoid-floating-point-data-types",
-  "avoid-using-many-to-many-relationships-on-tables-used-for-dynamic-row-level-security",
-  "check-if-bi-directional-and-many-to-many-relationships-are-valid",
-  "check-if-dynamic-row-level-security-rls-is-necessary",
-  "date-calendar-tables-should-be-marked-as-a-date-table",
-  "isavailableinmdx-false-nonattribute-columns",
-  "large-tables-should-be-partitioned",
-  "limit-row-level-security-rls-logic",
-  "many-to-many-relationships-should-be-single-direction",
-  "measures-using-time-intelligence-and-model-is-using-direct-query",
-  "minimize-power-query-transformations",
-  "model-should-have-a-date-table",
-  "model-using-direct-query-and-no-aggregations",
-  "reduce-number-of-calculated-columns",
-  "reduce-usage-of-calculated-columns-that-use-the-related-function",
-  "reduce-usage-of-calculated-tables",
-  "reduce-usage-of-long-length-columns-with-high-cardinality",
-  "remove-auto-date-table",
-  "remove-redundant-columns-in-related-tables",
-  "snowflake-schema-architecture",
-  "split-date-and-time",
-  "unpivot-pivoted-month-data",
-]);
-
 /** The sections a complete page may have, in the only order they may appear. */
 const SECTION_ORDER = [
   "What it checks",
@@ -108,28 +76,8 @@ const run = (tmdl: string): Finding[] => lint([{ path: "example.tmdl", text: tmd
 const hits = (findings: Finding[], id: string): Finding[] =>
   findings.filter((f) => f.ruleId === id);
 
-describe("LEGACY_PAGES", () => {
-  it("names only pages that exist and have not been migrated", () => {
-    for (const s of LEGACY_PAGES) {
-      const path = `${rulesDir}${s}.md`;
-      expect(existsSync(path), path).toBe(true);
-      const text = readFileSync(path, "utf8");
-      expect(text, `${s} is migrated: remove it from LEGACY_PAGES`).not.toContain(
-        "## When to ignore it",
-      );
-      // A page not yet migrated repeats its sources as bare URLs under Links; a migrated page
-      // never has a bare URL there, whatever its status. So this catches a migrated live-model
-      // page left in the set, which the check above cannot.
-      expect(section(text, "Links"), `${s} is migrated: remove it from LEGACY_PAGES`).toMatch(
-        /^- https?:\/\//m,
-      );
-    }
-  });
-});
-
 describe.each(defaultRules.map((r) => [r.id, r] as const))("rule page for %s", (_id, rule) => {
   const path = `${rulesDir}${slug(rule.id)}.md`;
-  const migrated = !LEGACY_PAGES.has(slug(rule.id));
 
   it("exists with matching frontmatter and the required sections", () => {
     expect(existsSync(path), path).toBe(true);
@@ -140,14 +88,8 @@ describe.each(defaultRules.map((r) => [r.id, r] as const))("rule page for %s", (
     expect(frontmatter).toContain(`status: ${rule.status}`);
     expect(frontmatter).toContain(`category: ${rule.category}`);
     expect(frontmatter).toContain(`scope: [${rule.scope.join(", ")}]`);
-    // Links is required on a page that has not been migrated; on the template it is further
-    // reading only, present when there is some.
-    for (const heading of [
-      "## What it checks",
-      "## Why it matters",
-      "## How to fix it",
-      ...(migrated ? [] : ["## Links"]),
-    ])
+    // Every page has these; the template block below checks the rest.
+    for (const heading of ["## What it checks", "## Why it matters", "## How to fix it"])
       expect(text, heading).toContain(heading);
     expect(text).not.toContain("TODO");
     expect(text).not.toContain("\u2014");
@@ -172,7 +114,7 @@ describe.each(defaultRules.map((r) => [r.id, r] as const))("rule page for %s", (
     expect(rule.description).toBe(firstParagraph(section(text, "What it checks")));
   });
 
-  describe.runIf(migrated)("meets the complete template", () => {
+  describe("meets the complete template", () => {
     it("has its sections in order, with the ones its status requires and none it forbids", () => {
       const found = headings(readFileSync(path, "utf8"));
       expect(found).toEqual([...new Set(found)]);

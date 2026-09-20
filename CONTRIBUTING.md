@@ -58,7 +58,6 @@ Sections, in this order: What it checks, Example, Why it matters, How to fix it,
 - Document every quirk kept from the source rule under Quirks.
 - Related rules is a bulleted list. Each bullet opens with a rule id in backticks and says how the rules relate. The test checks the ids. On the site, a rule id in backticks anywhere on a page links to that rule's page.
 - The pages also feed tool output. After editing a page, run `npm run build -w @pbiplint/core && node scripts/sync-rule-pages.mjs` to regenerate `packages/core/src/rules/rule-summaries.data.ts` and `packages/cli/src/rule-help.data.ts`; the rule-pages tests fail until they match.
-- `LEGACY_PAGES` in `packages/core/test/rule-pages.test.ts` lists the pages not yet on this template. Migrate a page by bringing it up to the template and removing its slug.
 
 ## Testing a pull request
 

@@ -30,8 +30,10 @@ describe("the CLI README", () => {
       .split(/,\s*(?:or\s+)?/)
       .map((s) => s.replace(/^(?:a|one)\s+/, "").trim());
     expect(paths).toEqual([
-      ".SemanticModel folder",
       "PBIP folder",
+      ".pbip file",
+      ".SemanticModel folder",
+      ".Report folder",
       "definition folder",
       ".tmdl file",
     ]);

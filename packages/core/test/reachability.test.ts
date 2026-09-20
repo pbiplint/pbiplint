@@ -1,0 +1,138 @@
+import { describe, expect, it } from "vitest";
+import { buildIndexes } from "../src/index/build.js";
+import { buildReport } from "../src/pbir/build.js";
+import type { Column, Measure } from "../src/model/types.js";
+import { modelFrom } from "./helpers.js";
+
+const j = (v: unknown) => JSON.stringify(v);
+const column = (entity: string, property: string) => ({
+  Column: { Expression: { SourceRef: { Entity: entity } }, Property: property },
+});
+const measure = (entity: string, property: string) => ({
+  Measure: { Expression: { SourceRef: { Entity: entity } }, Property: property },
+});
+const visualBinding = (...fields: unknown[]) => [
+  { path: "definition/pages/p1/page.json", text: j({ name: "p1", displayName: "P" }) },
+  {
+    path: "definition/pages/p1/visuals/v1/visual.json",
+    text: j({
+      name: "v1",
+      position: {},
+      visual: {
+        visualType: "tableEx",
+        query: { queryState: { Values: { projections: fields.map((field) => ({ field })) } } },
+      },
+    }),
+  },
+];
+const tmdl = `table Sales
+	column Amount
+		dataType: decimal
+	column 'Product ID'
+		dataType: int64
+	column 'Month Name'
+		dataType: string
+		sortByColumn: 'Month Number'
+	column 'Month Number'
+		dataType: int64
+	column Lonely
+		dataType: string
+	measure 'Total Sales' = SUM('Sales'[Amount])
+	measure 'Sales LY' = CALCULATE([Total Sales], SAMEPERIODLASTYEAR('Date'[Date]))
+	measure 'Sales YoY %' = ([Total Sales] - [Sales LY]) / [Sales LY]
+	measure 'Loop A' = [Loop B] + 1
+	measure 'Loop B' = [Loop A] + 1
+
+table Product
+	column 'Product ID'
+		dataType: int64
+	column Category
+		dataType: string
+
+table Date
+	column Date
+		dataType: dateTime
+
+table Region
+	column Name
+		dataType: string
+
+relationship Sales-Product
+	fromColumn: Sales.'Product ID'
+	toColumn: Product.'Product ID'
+
+role Readers
+	tablePermission Region = Region[Name] = "West"
+
+role Filtered
+	tablePermission Sales = [Sales YoY %] > 0
+`;
+const model = modelFrom(tmdl);
+const col = (table: string, name: string): Column =>
+  model.tables.find((t) => t.name === table)!.columns.find((c) => c.name === name)!;
+const meas = (name: string): Measure => model.tables[0]!.measures.find((m) => m.name === name)!;
+
+describe("buildReachabilityIndex", () => {
+  it("walks from the report's fields through DAX, sort-by, relationships, and RLS to a fixed point", () => {
+    const { report } = buildReport(
+      visualBinding(column("Sales", "Month Name"), measure("Sales", "Total Sales")),
+    );
+    const reach = buildIndexes({ model, report }).reachability!;
+    expect(reach.reached(col("Sales", "Month Name"))).toBe(true);
+    expect(reach.reached(col("Sales", "Month Number"))).toBe(true);
+    expect(reach.pathTo(col("Sales", "Month Number"))).toEqual([
+      "'Sales'[Month Name]",
+      "'Sales'[Month Number]",
+    ]);
+    expect(reach.reached(col("Sales", "Amount"))).toBe(true);
+    expect(reach.pathTo(col("Sales", "Amount"))).toEqual(["[Total Sales]", "'Sales'[Amount]"]);
+    expect(reach.reached(col("Sales", "Product ID"))).toBe(true);
+    expect(reach.reached(col("Product", "Product ID"))).toBe(true);
+    expect(reach.reached(col("Region", "Name"))).toBe(true);
+    expect(reach.reached(model.tables.find((t) => t.name === "Region")!)).toBe(true);
+    expect(reach.reached(col("Sales", "Lonely"))).toBe(false);
+    expect(reach.reached(meas("Sales LY"))).toBe(false);
+    expect(reach.reached(col("Date", "Date"))).toBe(false);
+  });
+  it("lists the unreached set with a reason that reads the dead chain top-down, and survives a cycle", () => {
+    const { report } = buildReport(visualBinding(measure("Sales", "Total Sales")));
+    const reach = buildIndexes({ model, report }).reachability!;
+    const u = reach.unreached();
+    expect(u.measures.map((m) => m.name)).toEqual(["Sales LY", "Sales YoY %", "Loop A", "Loop B"]);
+    expect(u.columns.map((c) => `${c.table.name}.${c.name}`)).toEqual([
+      "Sales.Month Name",
+      "Sales.Month Number",
+      "Sales.Lonely",
+      "Product.Category",
+      "Date.Date",
+    ]);
+    expect(u.tables.map((t) => t.name)).toEqual(["Date"]);
+    expect(reach.reasonFor(meas("Sales YoY %"))).toBe(
+      "nothing in the report reaches it, and no measure or column references it",
+    );
+    expect(reach.reasonFor(meas("Sales LY"))).toBe(
+      "referenced only by [Sales YoY %], which nothing reaches either",
+    );
+    expect(reach.reasonFor(meas("Loop A"))).toBe(
+      "referenced only by [Loop B], which nothing reaches either",
+    );
+    expect(reach.reasonFor(col("Sales", "Month Number"))).toBe(
+      "referenced only by 'Sales'[Month Name], which nothing reaches either",
+    );
+  });
+  it("names no referrer that is not a column or a measure, such as an RLS filter", () => {
+    const { report } = buildReport(visualBinding(column("Sales", "Amount")));
+    const reach = buildIndexes({ model, report }).reachability!;
+    expect(reach.reached(meas("Sales YoY %"))).toBe(false);
+    expect(reach.reasonFor(meas("Sales YoY %"))).toBe(
+      "nothing in the report reaches it, and no measure or column references it",
+    );
+  });
+  it("is absent in a report-only or model-only project", () => {
+    const { report } = buildReport(visualBinding(column("Sales", "Amount")));
+    expect(buildIndexes({ report }).reachability).toBeUndefined();
+    expect(buildIndexes({ report }).reportRefs).toBeDefined();
+    expect(buildIndexes({ model }).reachability).toBeUndefined();
+    expect(buildIndexes({ model }).reportRefs).toBeUndefined();
+  });
+});

@@ -60,7 +60,7 @@ role R
 	modelPermission: read
 	tablePermission Date = [Month Name] = "Jan" && 'Sales'[Amount] > 0
 `);
-const idx = buildIndexes(zoo);
+const idx = buildIndexes({ model: zoo });
 const table = (n: string) => zoo.tables.find((t) => t.name === n)!;
 const column = (t: string, c: string) => table(t).columns.find((x) => x.name === c)!;
 const measure = (n: string) => zoo.tables.flatMap((t) => t.measures).find((m) => m.name === n)!;
@@ -162,7 +162,7 @@ describe("reference index", () => {
     const m = modelFrom(
       "table T\n\tcolumn Amount\n\t\tdataType: int64\n\tmeasure A = SUM('t'[amount])\n\tmeasure B = [a] + 1\n",
     );
-    const i = buildIndexes(m);
+    const i = buildIndexes({ model: m });
     expect(i.references.refsOf(m.tables[0]!.measures[0]!)).toEqual([
       { kind: "column", table: "T", name: "Amount", qualified: true },
     ]);

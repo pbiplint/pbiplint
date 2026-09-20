@@ -13,6 +13,8 @@ const boom: Rule = {
   category: "Performance",
   severity: 3,
   scope: ["Model"],
+  layer: "model",
+  needs: ["model"],
   description: "Throws.",
   references: [],
   status: "builtin",

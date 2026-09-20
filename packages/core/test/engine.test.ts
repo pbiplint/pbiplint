@@ -1,23 +1,30 @@
 import { describe, expect, it } from "vitest";
 import { buildIndexes } from "../src/index/build.js";
-import { ConfigError, resolveConfig } from "../src/engine/config.js";
+import { bindConfig, ConfigError, resolveConfig } from "../src/engine/config.js";
 import { ignoreHelp, isIgnored } from "../src/engine/ignore.js";
 import { lint } from "../src/engine/lint.js";
 import { rank } from "../src/engine/rank.js";
-import { runRules } from "../src/engine/run.js";
+import { optionsFor, runRules } from "../src/engine/run.js";
 import { finding, namedObjects } from "../src/rules/helpers.js";
 import { PARSE_ISSUE } from "../src/rules/parse-issue.js";
 import type { Rule } from "../src/rules/types.js";
 import { modelFrom } from "./helpers.js";
 
-const base = { scope: [], description: "", references: [], status: "ported" as const };
+const base = {
+  scope: [],
+  description: "",
+  references: [],
+  status: "ported" as const,
+  layer: "model" as const,
+  needs: ["model"] as const,
+};
 const everyTable: Rule = {
   ...base,
   id: "EVERY_TABLE",
   name: "Every table",
   category: "Maintenance",
   severity: 1,
-  check: (m) => m.tables.map((t) => finding.table(t)),
+  check: ({ model }) => model!.tables.map((t) => finding.table(t)),
 };
 const everyColumn: Rule = {
   ...base,
@@ -25,7 +32,7 @@ const everyColumn: Rule = {
   name: "Every column",
   category: "Formatting",
   severity: 2,
-  check: (m) => m.tables.flatMap((t) => t.columns.map((c) => finding.column(c))),
+  check: ({ model }) => model!.tables.flatMap((t) => t.columns.map((c) => finding.column(c))),
 };
 const modelRule: Rule = {
   ...base,
@@ -33,7 +40,7 @@ const modelRule: Rule = {
   name: "Model",
   category: "Performance",
   severity: 2,
-  check: (m) => [finding.model(m)],
+  check: ({ model }) => [finding.model(model!)],
 };
 const live: Rule = {
   ...base,
@@ -90,6 +97,84 @@ describe("resolveConfig", () => {
     // The unknown-key check still runs first, so a typo is named before a bad $schema.
     expect(() => resolveConfig({ $schema: 1, rulez: {} })).toThrow(/unknown key "rulez"/);
   });
+  it("accepts an object per rule with a severity and options, and keeps a v1 file valid", () => {
+    const c = resolveConfig({
+      rules: { A: { severity: "error", max: 15 }, B: { expect: "closed" }, C: "off", D: "warning" },
+    });
+    expect(c.severity.get("A")).toBe(3);
+    expect(c.options.get("A")).toEqual({ max: 15 });
+    expect(c.options.get("B")).toEqual({ expect: "closed" });
+    expect(c.severity.has("B")).toBe(false);
+    expect(c.disabled.has("C")).toBe(true);
+    expect(c.options.has("D")).toBe(false);
+    expect(() => resolveConfig({ rules: { A: { severity: "loud" } } })).toThrow(
+      /rules\["A"\]\.severity/,
+    );
+    expect(() => resolveConfig({ rules: { A: [] } })).toThrow(ConfigError);
+  });
+});
+
+describe("bindConfig with options", () => {
+  const withMax: Rule = {
+    ...base,
+    id: "WITH_MAX",
+    name: "With max",
+    category: "Performance",
+    severity: 2,
+    options: [{ name: "max", type: "number", default: 20 }],
+    check: () => [],
+  };
+  const policy: Rule = {
+    ...base,
+    id: "POLICY",
+    name: "Policy",
+    category: "Report Design",
+    severity: 2,
+    options: [{ name: "expect", type: "string", values: ["open", "closed"] }],
+    check: () => [],
+  };
+  it("lays the config's values over the declared defaults, by id without regard to case", () => {
+    const { config } = bindConfig(resolveConfig({ rules: { with_max: { max: 5 } } }), [
+      withMax,
+      policy,
+    ]);
+    expect(optionsFor(withMax, config)).toEqual({ max: 5 });
+    expect(optionsFor(policy, config)).toEqual({});
+    expect(optionsFor(withMax, resolveConfig())).toEqual({ max: 20 });
+  });
+  it("rejects an option the rule does not declare, a wrong type, and a value outside the list", () => {
+    expect(() =>
+      bindConfig(resolveConfig({ rules: { WITH_MAX: { maxx: 5 } } }), [withMax]),
+    ).toThrow('pbiplint.config.json: rules["WITH_MAX"] has no option "maxx" (options: max)');
+    expect(() =>
+      bindConfig(resolveConfig({ rules: { WITH_MAX: { max: "5" } } }), [withMax]),
+    ).toThrow('pbiplint.config.json: rules["WITH_MAX"].max must be a number');
+    expect(() =>
+      bindConfig(resolveConfig({ rules: { POLICY: { expect: "shut" } } }), [policy]),
+    ).toThrow('pbiplint.config.json: rules["POLICY"].expect must be one of open, closed');
+    expect(() =>
+      bindConfig(resolveConfig({ rules: { EVERY_TABLE: { max: 1 } } }), [everyTable]),
+    ).toThrow('pbiplint.config.json: rules["EVERY_TABLE"] takes no options');
+  });
+  it("names an unknown rule id once however many settings it carries", () => {
+    expect(
+      bindConfig(resolveConfig({ rules: { NOPE: { severity: "error", max: 1 } } }), [everyTable])
+        .unknownRules,
+    ).toEqual(["NOPE"]);
+  });
+  it("checks a values list on string options only", () => {
+    const counted: Rule = {
+      ...base,
+      id: "COUNTED",
+      name: "Counted",
+      category: "Performance",
+      severity: 2,
+      options: [{ name: "n", type: "number", values: ["x"] }],
+      check: () => [],
+    };
+    const { config } = bindConfig(resolveConfig({ rules: { COUNTED: { n: 5 } } }), [counted]);
+    expect(optionsFor(counted, config)).toEqual({ n: 5 });
+  });
 });
 
 describe("isIgnored", () => {
@@ -127,10 +212,10 @@ describe("ignoreHelp", () => {
 
 describe("runRules", () => {
   const m = modelFrom(tmdl);
-  const idx = buildIndexes(m);
+  const idx = buildIndexes({ model: m });
   it("applies ignores, skips disabled and live-model rules, and survives a throwing rule", () => {
     const r = runRules(
-      m,
+      { model: m },
       idx,
       [everyTable, everyColumn, modelRule, live, boom],
       resolveConfig({ rules: { EVERY_TABLE: "off" } }),
@@ -150,13 +235,36 @@ describe("runRules", () => {
     expect(r.ruleErrors).toEqual([{ id: "BOOM", message: "kaboom" }]);
   });
   it("stamps ruleId and drops the object reference", () => {
-    const r = runRules(m, idx, [everyColumn], resolveConfig());
+    const r = runRules({ model: m }, idx, [everyColumn], resolveConfig());
     expect(r.findings[0]).toEqual({
       ruleId: "EVERY_COLUMN",
+      layer: "model",
       objectType: "Column",
       objectName: "'A'[Y]",
       location: { file: "inline.tmdl", line: 12 },
     });
+  });
+  it("skips a rule whose layer is not in the project and tags every finding with its object's layer", () => {
+    const reportOnly: Rule = {
+      ...base,
+      id: "REPORT_ONLY",
+      name: "Report only",
+      category: "Report Design",
+      severity: 2,
+      layer: "report",
+      needs: ["report"],
+      check: () => [],
+    };
+    const m = modelFrom("table A\n\tcolumn X\n\t\tdataType: string\n");
+    const r = runRules(
+      { model: m },
+      buildIndexes({ model: m }),
+      [reportOnly, everyColumn],
+      resolveConfig(),
+    );
+    expect(r.rulesSkipped).toEqual([{ id: "REPORT_ONLY", reason: "noReport" }]);
+    expect(r.rulesRun).toEqual(["EVERY_COLUMN"]);
+    expect(r.findings.map((f) => f.layer)).toEqual(["model"]);
   });
 });
 
@@ -167,7 +275,7 @@ describe("rank", () => {
     );
     const rules = [everyTable, everyColumn, modelRule];
     const cfg = resolveConfig();
-    const r = runRules(m, buildIndexes(m), rules, cfg);
+    const r = runRules({ model: m }, buildIndexes({ model: m }), rules, cfg);
     const groups = rank(r.findings, rules, cfg);
     expect(groups.map((g) => [g.rule.id, g.findings.length])).toEqual([
       ["MODEL_RULE", 1], // warning, Performance
@@ -185,7 +293,11 @@ describe("rank", () => {
     const m = modelFrom("table A\n");
     const rules = [everyTable, modelRule];
     const cfg = resolveConfig({ rules: { EVERY_TABLE: "error" } });
-    const groups = rank(runRules(m, buildIndexes(m), rules, cfg).findings, rules, cfg);
+    const groups = rank(
+      runRules({ model: m }, buildIndexes({ model: m }), rules, cfg).findings,
+      rules,
+      cfg,
+    );
     expect(groups.map((g) => [g.rule.id, g.rule.severity])).toEqual([
       ["EVERY_TABLE", 3],
       ["MODEL_RULE", 2],
@@ -292,5 +404,90 @@ describe("namedObjects", () => {
         "Relationship",
       ]),
     ).toEqual([]);
+  });
+});
+
+describe("lint over a project", () => {
+  const j = (v: unknown) => JSON.stringify(v);
+  const modelFiles = [
+    {
+      path: "definition/tables/Sales.tmdl",
+      text: "table Sales\n\tcolumn Amount\n\t\tdataType: decimal\n",
+    },
+  ];
+  const reportFiles = [
+    { path: "definition/report.json", text: j({}) },
+    { path: "definition/pages/pages.json", text: j({ pageOrder: ["p"], activePageName: "p" }) },
+    { path: "definition/pages/p/page.json", text: j({ name: "p", displayName: "P" }) },
+  ];
+  it("reports which layers ran and why one is absent, and counts routed files", () => {
+    const both = lint([...modelFiles, ...reportFiles, { path: "README.md", text: "" }]);
+    expect(both.layers).toEqual({
+      model: { present: true, files: 1 },
+      report: { present: true, files: 3 },
+    });
+    expect(both.summary.files).toBe(4);
+    expect(both.project.model).toBeDefined();
+    expect(both.project.report).toBeDefined();
+    expect(both.facts.map((f) => f.label)).toContain("Opens on");
+    const modelOnly = lint(modelFiles);
+    expect(modelOnly.layers.report).toEqual({ present: false, reason: "no report in the input" });
+    expect(modelOnly.facts.map((f) => f.label)).toEqual(["Model"]);
+    const reportOnly = lint(reportFiles, {
+      absent: { model: "this report reads a published model" },
+    });
+    expect(reportOnly.layers.model).toEqual({
+      present: false,
+      reason: "this report reads a published model",
+    });
+    expect(reportOnly.model.tables).toEqual([]);
+    expect(reportOnly.project.model).toBeUndefined();
+  });
+  it("carries the reader's diagnostics and adds the builder's", () => {
+    const r = lint(
+      [
+        ...reportFiles,
+        {
+          path: "definition/pages/q/page.json",
+          text: j({ $schema: "https://x/page/9.0.0/schema.json", name: "q", displayName: "Q" }),
+        },
+      ],
+      { diagnostics: [{ kind: "depth-cap", message: "stopped" }] },
+    );
+    expect(r.diagnostics.map((d) => d.kind)).toEqual(["depth-cap", "schema-newer-than-known"]);
+  });
+  it("skips model rules on a report-only run and says so", () => {
+    const r = lint(reportFiles);
+    expect(r.summary.rulesSkipped.filter((s) => s.reason === "noModel").length).toBeGreaterThan(60);
+    expect(r.findings.filter((f) => f.ruleId === "PARSE_ISSUE")).toEqual([]);
+  });
+  it("reports a JSON parse issue through PARSE_ISSUE with the file and line", () => {
+    const r = lint([
+      { path: "definition/pages/p/page.json", text: '{\n  "name": "p",\n<<<<<<< HEAD\n}\n' },
+    ]);
+    expect(
+      r.findings
+        .filter((f) => f.ruleId === "PARSE_ISSUE")
+        .map((f) => [f.layer, f.objectName, f.location?.line, f.detail]),
+    ).toEqual([
+      ["report", "definition/pages/p/page.json", 3, "merge conflict marker: <<<<<<< HEAD"],
+    ]);
+  });
+  it("tags a parse-issue group that spans both layers as a project group", () => {
+    const r = lint([
+      { path: "definition/tables/Sales.tmdl", text: "table Sales\n  column Amount\n" },
+      { path: "definition/pages/p/page.json", text: '{\n  "name": "p",\n<<<<<<< HEAD\n}\n' },
+    ]);
+    const group = r.groups.find((g) => g.rule.id === "PARSE_ISSUE")!;
+    expect(group.rule.layer).toBe("project");
+    expect(group.findings.map((f) => f.layer)).toEqual(["model", "report"]);
+  });
+  it("keeps an invalid-JSON detail on one line, whatever the engine's message spans", () => {
+    const r = lint([{ path: "definition/pages/p/page.json", text: '{\n  "a": 1,\n  "b": }\n' }]);
+    const issues = r.findings.filter((f) => f.ruleId === "PARSE_ISSUE");
+    expect(issues).toHaveLength(1);
+    expect(issues[0]!.location?.line).toBe(3);
+    expect(issues[0]!.detail).toMatch(/^not valid JSON \(/);
+    expect(issues[0]!.detail).not.toContain("\n");
   });
 });

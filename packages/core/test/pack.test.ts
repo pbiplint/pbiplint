@@ -3,6 +3,7 @@ import { slug } from "../src/model/names.js";
 import { BPA_RULES } from "../src/rules/microsoft-bpa/bpa-rules.data.js";
 import { microsoftBpaRules } from "../src/rules/microsoft-bpa/index.js";
 import { defaultRules } from "../src/rules/index.js";
+import { CATEGORY_ORDER, REPORT_OBJECT_TYPES, layerOf } from "../src/rules/types.js";
 
 describe("microsoft-bpa pack", () => {
   it("contains every rule in BPARules.json exactly once, in ruleset order", () => {
@@ -28,14 +29,32 @@ describe("microsoft-bpa pack", () => {
     for (const r of microsoftBpaRules) {
       expect(r.scope.length, r.id).toBeGreaterThan(0);
       expect(r.name.startsWith("["), r.id).toBe(false);
-      expect([
-        "Performance",
-        "Error Prevention",
-        "DAX Expressions",
-        "Maintenance",
-        "Formatting",
-        "Naming Conventions",
-      ]).toContain(r.category);
+      expect(CATEGORY_ORDER).toContain(r.category);
+      expect(r.layer, r.id).toBe("model");
+      expect(r.needs, r.id).toEqual(["model"]);
     }
+  });
+  it("orders the eight categories as the spec ranks them", () => {
+    expect(CATEGORY_ORDER).toEqual([
+      "Performance",
+      "Error Prevention",
+      "Accessibility",
+      "DAX Expressions",
+      "Maintenance",
+      "Report Design",
+      "Formatting",
+      "Naming Conventions",
+    ]);
+  });
+  it("knows which object types belong to the report layer", () => {
+    expect([...REPORT_OBJECT_TYPES].sort()).toEqual([
+      "Bookmark",
+      "Page",
+      "Report",
+      "ReportMeasure",
+      "Visual",
+    ]);
+    expect(layerOf("Visual")).toBe("report");
+    expect(layerOf("Column")).toBe("model");
   });
 });

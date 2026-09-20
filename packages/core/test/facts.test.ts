@@ -1,0 +1,240 @@
+import { describe, expect, it } from "vitest";
+import { buildIndexes } from "../src/index/build.js";
+import { buildReport } from "../src/pbir/build.js";
+import { buildFacts } from "../src/project/facts.js";
+import { modelFrom } from "./helpers.js";
+
+const j = (v: unknown) => JSON.stringify(v);
+const column = (entity: string, property: string) => ({
+  Column: { Expression: { SourceRef: { Entity: entity } }, Property: property },
+});
+const lit = (value: string) => ({ expr: { Literal: { Value: value } } });
+const page = (name: string, displayName: string, extra: Record<string, unknown> = {}) => ({
+  path: `definition/pages/${name}/page.json`,
+  text: j({
+    $schema: "https://x/page/2.1.0/schema.json",
+    name,
+    displayName,
+    width: 1280,
+    height: 720,
+    ...extra,
+  }),
+});
+const visual = (
+  pageId: string,
+  name: string,
+  type: string,
+  extra: Record<string, unknown> = {},
+  fields: unknown[] = [],
+) => ({
+  path: `definition/pages/${pageId}/visuals/${name}/visual.json`,
+  text: j({
+    $schema: "https://x/visualContainer/2.8.0/schema.json",
+    name,
+    position: {},
+    ...extra,
+    visual: {
+      visualType: type,
+      query: { queryState: { Values: { projections: fields.map((field) => ({ field })) } } },
+    },
+  }),
+});
+const ALL = new Set([
+  "LANDING_PAGE_NOT_SET",
+  "OPENING_PAGE_INVALID",
+  "FILTERS_PANE_STATE",
+  "HIDE_TOOLTIP_DRILLTROUGH_PAGES",
+  "HIDDEN_VISUALS_STILL_QUERY",
+  "REMOVE_UNUSED_CUSTOM_VISUALS",
+  "REPORT_LEVEL_MEASURES",
+  "SLICER_SELECTION_SAVED",
+  "NOT_REACHED_FROM_REPORT",
+]);
+const model = modelFrom(
+  "table Sales\n\tcolumn Amount\n\t\tdataType: decimal\n\tcolumn Region\n\t\tdataType: string\n\tmeasure Total = SUM('Sales'[Amount])\n\tmeasure Other = 1\n",
+);
+
+const files = [
+  {
+    path: "definition/report.json",
+    text: j({
+      $schema: "https://x/report/3.2.0/schema.json",
+      objects: { outspacePane: [{ properties: { expanded: lit("true") } }] },
+      publicCustomVisuals: ["ChicletSlicer1448559807354", "Used123"],
+    }),
+  },
+  {
+    path: "definition/pages/pages.json",
+    text: j({ pageOrder: ["p1", "p2", "p3"], activePageName: "p1" }),
+  },
+  page("p1", "Overview"),
+  page("p2", "Tips", { pageBinding: { type: "Tooltip" } }),
+  page("p3", "Scratch", { visibility: "HiddenInViewMode" }),
+  visual(
+    "p1",
+    "v1",
+    "slicer",
+    {
+      filterConfig: {
+        filters: [
+          {
+            name: "f",
+            field: column("Sales", "Region"),
+            type: "Categorical",
+            filter: { Where: [] },
+          },
+        ],
+      },
+    },
+    [column("Sales", "Region")],
+  ),
+  visual("p1", "v2", "slicer", {}, [column("Sales", "Region")]),
+  visual("p1", "v3", "cardVisual", { isHidden: true }, [
+    { Measure: { Expression: { SourceRef: { Entity: "Sales" } }, Property: "Total" } },
+  ]),
+  visual("p1", "v4", "Used123"),
+  { path: "definition/pages/p1/visuals/v4/mobile.json", text: j({ position: {} }) },
+  {
+    path: "definition/reportExtensions.json",
+    text: j({
+      entities: [
+        {
+          name: "Sales",
+          measures: [
+            { name: "M1", expression: "1" },
+            { name: "M2", expression: "2" },
+          ],
+        },
+      ],
+    }),
+  },
+];
+
+describe("buildFacts", () => {
+  it("states what the report will do, with a rule id where a known rule checks the fact", () => {
+    const { report } = buildReport(files);
+    const project = { model, report };
+    expect(buildFacts(project, buildIndexes(project), ALL)).toEqual([
+      {
+        layer: "report",
+        label: "Opens on",
+        value: "Overview",
+        detail: "the page open when it was saved; no landing page set",
+        ruleId: "LANDING_PAGE_NOT_SET",
+      },
+      { layer: "report", label: "Filters pane", value: "open", ruleId: "FILTERS_PANE_STATE" },
+      {
+        layer: "report",
+        label: "Pages",
+        value: "3",
+        detail: "1 hidden, 1 tooltip",
+        ruleId: "HIDE_TOOLTIP_DRILLTROUGH_PAGES",
+      },
+      {
+        layer: "report",
+        label: "Visuals",
+        value: "4",
+        detail: "1 hidden; 2 custom visual types registered, 1 used",
+        ruleId: "HIDDEN_VISUALS_STILL_QUERY",
+      },
+      {
+        layer: "report",
+        label: "Report measures",
+        value: "2",
+        detail: "defined in the report, not the model",
+        ruleId: "REPORT_LEVEL_MEASURES",
+      },
+      {
+        layer: "report",
+        label: "Slicers",
+        value: "2",
+        detail: "1 with a saved selection",
+        ruleId: "SLICER_SELECTION_SAVED",
+      },
+      { layer: "report", label: "Mobile layouts", value: "1 of 3 pages" },
+      {
+        layer: "report",
+        label: "Schema versions",
+        value: "report 3.2.0, page 2.1.0, visual 2.8.0",
+      },
+      {
+        layer: "model",
+        label: "Model",
+        value: "1 table, 2 columns, 2 measures",
+        detail: "0 columns and 1 measure not reached from this report",
+        ruleId: "NOT_REACHED_FROM_REPORT",
+      },
+    ]);
+  });
+  it("names a landing page, a hidden or missing opening page, a closed or hidden pane, and drops rule ids the run lacks", () => {
+    const { report } = buildReport([
+      {
+        path: "definition/report.json",
+        text: j({ objects: { outspacePane: [{ properties: { visible: lit("false") } }] } }),
+      },
+      {
+        path: "definition/pages/pages.json",
+        text: j({ pageOrder: ["p3"], activePageName: "p3", landingPageName: "gone" }),
+      },
+      page("p3", "Scratch", { visibility: "HiddenInViewMode" }),
+    ]);
+    const facts = buildFacts({ report }, buildIndexes({ report }), new Set());
+    expect(facts[0]).toEqual({
+      layer: "report",
+      label: "Opens on",
+      value: '"gone" (no such page)',
+      detail: "landing page",
+    });
+    expect(facts[1]).toEqual({
+      layer: "report",
+      label: "Filters pane",
+      value: "hidden from readers",
+    });
+    expect(facts.find((f) => f.label === "Model")).toBeUndefined();
+    const closed = buildReport([
+      { path: "definition/report.json", text: j({}) },
+      { path: "definition/pages/pages.json", text: j({ pageOrder: ["p3"], activePageName: "p3" }) },
+      page("p3", "Scratch", { visibility: "HiddenInViewMode" }),
+    ]).report;
+    const f2 = buildFacts({ report: closed }, buildIndexes({ report: closed }), ALL);
+    expect(f2[0]).toEqual({
+      layer: "report",
+      label: "Opens on",
+      value: "Scratch (hidden)",
+      detail: "the page open when it was saved; no landing page set",
+      ruleId: "OPENING_PAGE_INVALID",
+    });
+    expect(f2[1]).toEqual({
+      layer: "report",
+      label: "Filters pane",
+      value: "closed",
+      ruleId: "FILTERS_PANE_STATE",
+    });
+    expect(f2.find((f) => f.label === "Slicers")).toEqual({
+      layer: "report",
+      label: "Slicers",
+      value: "none",
+    });
+    expect(f2.find((f) => f.label === "Mobile layouts")).toEqual({
+      layer: "report",
+      label: "Mobile layouts",
+      value: "none",
+    });
+  });
+  it("links a fact to the first of its candidate rules the run knows", () => {
+    const { report } = buildReport(files);
+    const project = { model, report };
+    const facts = buildFacts(
+      project,
+      buildIndexes(project),
+      new Set(["LANDING_PAGE_NOT_SET", "REMOVE_UNUSED_CUSTOM_VISUALS"]),
+    );
+    expect(facts.find((f) => f.label === "Opens on")!.ruleId).toBe("LANDING_PAGE_NOT_SET");
+    expect(facts.find((f) => f.label === "Visuals")!.ruleId).toBe("REMOVE_UNUSED_CUSTOM_VISUALS");
+  });
+  it("gives a model-only run the model fact alone, without the reach detail", () => {
+    expect(buildFacts({ model }, buildIndexes({ model }), ALL)).toEqual([
+      { layer: "model", label: "Model", value: "1 table, 2 columns, 2 measures" },
+    ]);
+  });
+});

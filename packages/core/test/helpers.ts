@@ -14,7 +14,9 @@ export function modelFrom(tmdl: string): Model {
 /** Run one rule on inline TMDL and return the object names it flags, in emission order. */
 export function objectNames(rule: Rule, tmdl: string): string[] {
   const model = modelFrom(tmdl);
-  return rule.check(model, { indexes: buildIndexes(model) }).map((f) => f.objectName);
+  return rule
+    .check({ model }, { indexes: buildIndexes({ model }), options: {} })
+    .map((f) => f.objectName);
 }
 
 /** Read every .tmdl under `<root>/definition` (or under `<root>` when it is itself a definition folder). */

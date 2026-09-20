@@ -83,13 +83,14 @@ export const HELP = `Usage: pbiplint <path> [options]
        pbiplint --sample [options]
        pbiplint rules
 
-Lint a Power BI semantic model (TMDL) for best-practice violations. Nothing is uploaded.
+Lint a Power BI project, its semantic model (TMDL) and its report (PBIR), for best-practice
+violations. Either part alone is fine. Nothing is uploaded.
 
-<path>              a .SemanticModel folder, a PBIP folder, a definition folder, or one .tmdl file
+<path>              a PBIP folder, a .pbip file, a .SemanticModel folder, a .Report folder, a definition folder, or one .tmdl file
 --sample            lint the bundled sample project instead of a path
 --format <name>     text (default), json, sarif, markdown
 --fail-on <level>   error (default), warning, info, none: lowest severity that exits 1
---config <file>     pbiplint.config.json to use (default: nearest one above the model)
+--config <file>     pbiplint.config.json to use (default: nearest one above the project)
 --output <file>     write the report to a file instead of stdout (a one-line summary goes to stderr)
 --help, --version
 

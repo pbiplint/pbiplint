@@ -24,12 +24,16 @@ export {
 } from "./engine/rank.js";
 export { runRules, type RuleError, type RunResult, type SkippedRule } from "./engine/run.js";
 export {
+  factsLines,
   FORMATS,
   formatResult,
   formatJson,
   formatMarkdown,
   formatSarif,
   formatText,
+  layersLine,
+  layerTag,
+  noticeLines,
   plural,
   skippedLine,
   summaryLine,
@@ -39,6 +43,7 @@ export {
   type RuleHelp,
 } from "./format/index.js";
 export { buildIndexes, type Indexes } from "./index/build.js";
+export { buildReachabilityIndex, type ReachabilityIndex } from "./index/reachability.js";
 export {
   extractRefs,
   type DaxRef,
@@ -47,6 +52,14 @@ export {
   type ReferenceIndex,
 } from "./index/references.js";
 export type { RelationshipIndex } from "./index/relationships.js";
+export {
+  buildReportReferenceIndex,
+  type ReportRef,
+  type ReportRefOwner,
+  type ReportRefOwnerKind,
+  type ReportReferenceIndex,
+  type Resolution,
+} from "./index/report-refs.js";
 export type { UsageIndex } from "./index/usage.js";
 export { buildModel, splitQualifiedName } from "./model/build.js";
 export {
@@ -59,6 +72,43 @@ export {
   tableRef,
 } from "./model/names.js";
 export type * from "./model/types.js";
+export { buildReport, KNOWN_SCHEMAS, literal } from "./pbir/build.js";
+export {
+  lineOfPointer,
+  newerThan,
+  readJson,
+  schemaFamilyOf,
+  schemaVersionOf,
+} from "./pbir/json.js";
+export {
+  bookmarkLabel,
+  pageFilterLabel,
+  pageLabel,
+  REPORT_FILTER_LABEL,
+  REPORT_LABEL,
+  reportMeasureLabel,
+  shortId,
+  visualLabel,
+} from "./pbir/names.js";
+export { collectFieldRefs, escapePointer } from "./pbir/refs.js";
+export type * from "./pbir/types.js";
+export { buildFacts } from "./project/facts.js";
+export {
+  datasetReference,
+  isModelFile,
+  isReportFile,
+  pairingDecision,
+  routeFiles,
+  type PairingDecision,
+} from "./project/route.js";
+export type {
+  Diagnostic,
+  DiagnosticKind,
+  Fact,
+  Layers,
+  LayerStatus,
+  Project,
+} from "./project/types.js";
 export {
   allCalculationItems,
   allColumns,
@@ -75,6 +125,7 @@ export { BPA_RULES, type BpaRuleMeta } from "./rules/microsoft-bpa/bpa-rules.dat
 export { bpaRule, liveModelRule, mapScope } from "./rules/microsoft-bpa/define.js";
 export { microsoftBpaRules } from "./rules/microsoft-bpa/index.js";
 export { PARSE_ISSUE } from "./rules/parse-issue.js";
+export { allVisuals, isHiddenPage, reportFinding, visiblePages } from "./rules/report-helpers.js";
 export * from "./rules/types.js";
 export { parseTmdl } from "./tmdl/parse.js";
 export { unquoteName, unquoteValue } from "./tmdl/quote.js";

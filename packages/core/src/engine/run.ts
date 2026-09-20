@@ -1,12 +1,12 @@
 import type { Indexes } from "../index/build.js";
-import type { Model } from "../model/types.js";
-import type { Finding, Rule } from "../rules/types.js";
+import type { Project } from "../project/types.js";
+import { layerOf, type Finding, type Rule, type RuleOptions } from "../rules/types.js";
 import type { ResolvedConfig } from "./config.js";
 import { isIgnored } from "./ignore.js";
 
 export interface SkippedRule {
   id: string;
-  reason: "disabled" | "needsLiveModel";
+  reason: "disabled" | "needsLiveModel" | "noModel" | "noReport";
 }
 
 export interface RuleError {
@@ -22,8 +22,17 @@ export interface RunResult {
   ignored: number;
 }
 
+/** The rule's declared defaults with the config file's values laid over them. */
+export function optionsFor(rule: Rule, config: ResolvedConfig): RuleOptions {
+  const out: Record<string, number | string> = {};
+  for (const o of rule.options ?? []) if (o.default !== undefined) out[o.name] = o.default;
+  for (const [name, value] of Object.entries(config.options.get(rule.id) ?? {}))
+    out[name] = value as number | string;
+  return out;
+}
+
 export function runRules(
-  model: Model,
+  project: Project,
   indexes: Indexes,
   rules: Rule[],
   config: ResolvedConfig,
@@ -44,10 +53,18 @@ export function runRules(
       result.rulesSkipped.push({ id: rule.id, reason: "needsLiveModel" });
       continue;
     }
+    const missing = rule.needs.find((layer) => project[layer] === undefined);
+    if (missing !== undefined) {
+      result.rulesSkipped.push({
+        id: rule.id,
+        reason: missing === "model" ? "noModel" : "noReport",
+      });
+      continue;
+    }
     result.rulesRun.push(rule.id);
     let raw;
     try {
-      raw = rule.check(model, { indexes });
+      raw = rule.check(project, { indexes, options: optionsFor(rule, config) });
     } catch (e) {
       result.ruleErrors.push({ id: rule.id, message: e instanceof Error ? e.message : String(e) });
       continue;
@@ -57,7 +74,13 @@ export function runRules(
         result.ignored++;
         continue;
       }
-      const out: Finding = { ruleId: rule.id, objectType: f.objectType, objectName: f.objectName };
+      const out: Finding = {
+        ruleId: rule.id,
+        layer: f.layer ?? layerOf(f.objectType),
+        objectType: f.objectType,
+        objectName: f.objectName,
+      };
+      if (f.objectId !== undefined) out.objectId = f.objectId;
       if (f.location) out.location = f.location;
       if (f.detail !== undefined) out.detail = f.detail;
       result.findings.push(out);

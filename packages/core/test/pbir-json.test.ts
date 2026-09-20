@@ -1,0 +1,96 @@
+import { describe, expect, it } from "vitest";
+import {
+  lineOfPointer,
+  newerThan,
+  readJson,
+  schemaFamilyOf,
+  schemaVersionOf,
+} from "../src/pbir/json.js";
+
+const doc = [
+  "{",
+  '  "name": "v1",',
+  '  "position": {',
+  '    "x": 1,',
+  '    "height": 20',
+  "  },",
+  '  "items": [',
+  '    "a",',
+  '    { "k": "b" }',
+  "  ]",
+  "}",
+].join("\n");
+
+describe("readJson", () => {
+  it("parses a document, drops a BOM, and reads the schema family and version", () => {
+    const r = readJson(
+      "definition/report.json",
+      '﻿{"$schema":"https://x/report/definition/report/3.2.0/schema.json","a":1}',
+    );
+    expect(r.issues).toEqual([]);
+    expect(r.json).toEqual({
+      $schema: "https://x/report/definition/report/3.2.0/schema.json",
+      a: 1,
+    });
+    expect(r.schema).toBe("https://x/report/definition/report/3.2.0/schema.json");
+    expect(r.schemaVersion).toBe("3.2.0");
+    expect(schemaFamilyOf(r.schema)).toBe("report");
+    expect(schemaVersionOf(undefined)).toBeUndefined();
+  });
+  it("reports every merge conflict marker with its line and reads nothing else from the file", () => {
+    const text = '{\n  "a": 1,\n<<<<<<< HEAD\n  "b": 2,\n=======\n  "b": 3,\n>>>>>>> theirs\n}\n';
+    const r = readJson("definition/pages/p/page.json", text);
+    expect(r.json).toBeUndefined();
+    expect(r.issues.map((i) => [i.line, i.reason])).toEqual([
+      [3, "merge conflict marker"],
+      [5, "merge conflict marker"],
+      [7, "merge conflict marker"],
+    ]);
+    expect(r.issues[0]!.file).toBe("definition/pages/p/page.json");
+  });
+  it("reports invalid JSON with the line the parser stopped on", () => {
+    const r = readJson("x.json", '{\n  "a": 1,\n  "b": }\n');
+    expect(r.json).toBeUndefined();
+    expect(r.issues).toHaveLength(1);
+    expect(r.issues[0]!.reason).toMatch(/^not valid JSON/);
+    expect(r.issues[0]!.line).toBe(3);
+  });
+  it("does not read the document's own text as the engine's line or offset", () => {
+    // V8 quotes a slice of the broken document in its message, so a document that says "line 5"
+    // or "position 400" of its own is quoted back and must not be mistaken for the engine saying
+    // where it stopped.
+    const named = readJson("x.json", '{\n  "a": 1,\n  "b": line 5\n}');
+    expect(named.issues[0]!.line).toBe(3);
+    expect(named.issues[0]!.text).toBe('  "b": line 5');
+    const offset = readJson("x.json", '{\n  "a": 1,\n  "b": position 400\n}');
+    expect(offset.issues[0]!.line).toBe(3);
+    expect(offset.issues[0]!.text).toBe('  "b": position 400');
+  });
+});
+
+describe("newerThan", () => {
+  it("compares numeric segments", () => {
+    expect(newerThan("3.3.0", "3.2.0")).toBe(true);
+    expect(newerThan("2.10.0", "2.9.0")).toBe(true);
+    expect(newerThan("3.2.0", "3.2.0")).toBe(false);
+    expect(newerThan("1.0.0", "3.2.0")).toBe(false);
+  });
+});
+
+describe("lineOfPointer", () => {
+  it("gives the line of an object member's key and of an array element's value", () => {
+    expect(lineOfPointer(doc, "/position/height")).toBe(5);
+    expect(lineOfPointer(doc, "/position")).toBe(3);
+    expect(lineOfPointer(doc, "/items/0")).toBe(8);
+    expect(lineOfPointer(doc, "/items/1/k")).toBe(9);
+  });
+  it("is 1 for the root, a missing pointer, and a key that only appears inside a string", () => {
+    expect(lineOfPointer(doc, "")).toBe(1);
+    expect(lineOfPointer(doc, "/nope")).toBe(1);
+    expect(lineOfPointer('{\n  "a": "\\"height\\": 1",\n  "height": 2\n}', "/height")).toBe(3);
+  });
+  it("unescapes ~1 and ~0 in a pointer segment", () => {
+    expect(lineOfPointer('{\n  "a/b": 1,\n  "c~d": 2\n}', "/a~1b")).toBe(2);
+    expect(lineOfPointer('{\n  "a/b": 1,\n  "c~d": 2\n}', "/c~0d")).toBe(3);
+  });
+});

@@ -16,8 +16,10 @@ export const NAV = [
 export const CATEGORY_ORDER = [
   "Performance",
   "Error Prevention",
+  "Accessibility",
   "DAX Expressions",
   "Maintenance",
+  "Report Design",
   "Formatting",
   "Naming Conventions",
 ];

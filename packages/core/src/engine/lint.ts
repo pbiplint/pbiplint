@@ -1,8 +1,12 @@
 import { buildIndexes } from "../index/build.js";
 import { buildModel } from "../model/build.js";
 import type { Model } from "../model/types.js";
+import { buildReport } from "../pbir/build.js";
+import { buildFacts } from "../project/facts.js";
+import { routeFiles } from "../project/route.js";
+import type { Diagnostic, Fact, Layers, Project } from "../project/types.js";
 import { defaultRules } from "../rules/index.js";
-import type { Finding, Rule } from "../rules/types.js";
+import type { Finding, LayerName, Rule } from "../rules/types.js";
 import { parseTmdl } from "../tmdl/parse.js";
 import {
   bindConfig,
@@ -15,7 +19,7 @@ import { rank, type RankedGroup } from "./rank.js";
 import { runRules, type RuleError, type SkippedRule } from "./run.js";
 
 export interface LintFile {
-  /** Path relative to the model root, forward slashes, e.g. `definition/tables/Sales.tmdl`. */
+  /** Path relative to the part's root, forward slashes: `definition/tables/Sales.tmdl`, `definition/pages/<id>/page.json`. */
   path: string;
   text: string;
 }
@@ -23,9 +27,14 @@ export interface LintFile {
 export interface LintOptions {
   config?: PbiplintConfig | ResolvedConfig;
   rules?: Rule[];
+  /** What the input reader found that a reader of the results must know; carried onto the result. */
+  diagnostics?: Diagnostic[];
+  /** Why the reader left a layer out, per layer, for the layers line. */
+  absent?: Partial<Record<LayerName, string>>;
 }
 
 export interface LintSummary {
+  /** Files that routed to a layer. */
   files: number;
   findings: number;
   errors: number;
@@ -40,7 +49,12 @@ export interface LintSummary {
 }
 
 export interface LintResult {
+  project: Project;
+  /** The model layer, or the empty model when it is absent, so a v1 reader keeps working. */
   model: Model;
+  layers: Layers;
+  facts: Fact[];
+  diagnostics: Diagnostic[];
   findings: Finding[];
   groups: RankedGroup[];
   summary: LintSummary;
@@ -55,15 +69,32 @@ export function lint(files: LintFile[], options: LintOptions = {}): LintResult {
     isResolvedConfig(options.config) ? options.config : resolveConfig(options.config),
     rules,
   );
-  const parsed = files.map((f) => parseTmdl(f.path, f.text));
-  const model = buildModel(parsed);
-  const indexes = buildIndexes(model);
-  const run = runRules(model, indexes, rules, config);
+  const routed = routeFiles(files);
+  const model = routed.model.length
+    ? buildModel(routed.model.map((f) => parseTmdl(f.path, f.text)))
+    : undefined;
+  const built = routed.report.length ? buildReport(routed.report) : undefined;
+  const project: Project = {
+    ...(model ? { model } : {}),
+    ...(built ? { report: built.report } : {}),
+  };
+  const layers: Layers = {
+    model: model
+      ? { present: true, files: routed.model.length }
+      : { present: false, reason: options.absent?.model ?? "no .tmdl files in the input" },
+    report: built
+      ? { present: true, files: routed.report.length }
+      : { present: false, reason: options.absent?.report ?? "no report in the input" },
+  };
+  const diagnostics = [...(options.diagnostics ?? []), ...(built?.diagnostics ?? [])];
+  const indexes = buildIndexes(project);
+  const run = runRules(project, indexes, rules, config);
   const groups = rank(run.findings, rules, config);
+  const facts = buildFacts(project, indexes, new Set(rules.map((r) => r.id)));
   const count = (severity: number) =>
     groups.filter((g) => g.rule.severity === severity).reduce((n, g) => n + g.findings.length, 0);
   const summary: LintSummary = {
-    files: files.length,
+    files: routed.model.length + routed.report.length,
     findings: run.findings.length,
     errors: count(3),
     warnings: count(2),
@@ -75,5 +106,15 @@ export function lint(files: LintFile[], options: LintOptions = {}): LintResult {
     unknownRules,
   };
   const failed = config.failOn !== null && groups.some((g) => g.rule.severity >= config.failOn!);
-  return { model, findings: run.findings, groups, summary, failed };
+  return {
+    project,
+    model: model ?? buildModel([]),
+    layers,
+    facts,
+    diagnostics,
+    findings: run.findings,
+    groups,
+    summary,
+    failed,
+  };
 }

@@ -7202,7 +7202,7 @@ describe("selectProject", () => {
   it("refuses two reports, and turns the legacy markers into diagnostics", () => {
     expect(() => selectProject(tree([...proj, e("Proj/Other.Report/definition/report.json")], { reportFolders: ["Proj/Demo.Report", "Proj/Other.Report"] }))).toThrow(/contains 2 reports; drop one of them: Demo\.Report, Other\.Report/);
     const legacy = selectProject(tree(proj.filter((x) => !x.path.includes(".Report")), { markers: [{ path: "Proj/Demo.Report/report.json", kind: "legacy-report" }] }));
-    expect(legacy.absent).toEqual({ report: "saved in the legacy report.json format" });
+    expect(legacy.absent).toEqual({ report: "the report is saved in the legacy report.json format" });
     expect(legacy.diagnostics.map((d) => d.kind)).toEqual(["legacy-report-format"]);
   });
   it("passes the walk's diagnostics through", () => {

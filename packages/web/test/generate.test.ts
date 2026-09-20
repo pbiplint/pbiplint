@@ -410,16 +410,23 @@ describe("generateSite", () => {
     expect(page).toContain("<code>MARK_PRIMARY_KEYS</code>");
     expect(page).not.toContain('<a href="/rules/mark-primary-keys/">');
   });
-  it("publishes a project page while one family is published, because a project rule fires on any input it lints", () => {
+  it("publishes a project page while one family is published, the way PARSE_ISSUE's page needs", () => {
     // PARSE_ISSUE is layer project in core, so Task 18 writes `layer: project` onto its page. It
-    // fires on a model-only run, so gating it would take a page off the site that belongs there.
+    // declares needs: [], so it fires on a model-only run and gating its page would take one off
+    // the site that belongs there. The two project rules that do need both layers publish a page
+    // early in exchange, which decision 15 records as a known exception.
     const out = mkdtempSync(join(tmpdir(), "pbiplint-project-"));
     const rules = mkdtempSync(join(tmpdir(), "pbiplint-projectrules-"));
     writeFileSync(join(rules, "hide-foreign-keys.md"), read("hide-foreign-keys"));
-    writeFileSync(
-      join(rules, "parse-issue.md"),
-      read("parse-issue").replace("id: PARSE_ISSUE\n", "id: PARSE_ISSUE\nlayer: project\n"),
+    const fixture = read("parse-issue").replace(
+      "id: PARSE_ISSUE\n",
+      "id: PARSE_ISSUE\nlayer: project\n",
     );
+    // A missed anchor would leave the fixture with no layer key, so it would read as the model
+    // layer, publish anyway, and every assertion below would pass while proving nothing. The gate
+    // test next door needs no such guard: there the mutation is what makes the page disappear.
+    expect(fixture).toContain("layer: project");
+    writeFileSync(join(rules, "parse-issue.md"), fixture);
     const metas = generateSite({ outDir: out, rulesDir: rules });
     expect(metas.map((m) => m.slug)).toEqual(["hide-foreign-keys", "parse-issue"]);
     expect(existsSync(join(out, "rules/parse-issue/index.html"))).toBe(true);

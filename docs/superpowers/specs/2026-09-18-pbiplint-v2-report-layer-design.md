@@ -380,6 +380,10 @@ parity; `NOT_REACHED_FROM_REPORT` reads this index.
 | Schema versions | report, page, visual (highest seen) | |
 | Model | tables, columns, measures; with both parts, columns and measures not reached from this report | `NOT_REACHED_FROM_REPORT` |
 
+Amended 2026-09-20: the facts are built only when the report layer is
+present, so a model-only run produces none and no surface shows the
+block or its heading.
+
 **Cost.** Linear in the JSON. The demo report's largest visual is
 61 KB, most under 5 KB; a 300-visual report is a few megabytes and
 lints well under a second in the browser. No new dependency.
@@ -525,16 +529,23 @@ rule id links to that rule's group on the page when the run produced
 one, else to the rule page; plain counts do not link. "Fix these
 first" ranks across both layers with a layer tag per item. The Show
 filter gains Model / Report. Every group carries the layer tag on its
-summary row. Diagnostics render as notices under the summary.
+summary row. Diagnostics render as notices under the summary. Amended
+2026-09-20: the panel and its heading appear only when the report
+layer is present, and the heading's file counts name present layers
+only.
 
 **Text format.** Summary line; a layer line ("Model: 11 files.
 Report: 27 files. 92 rules run, 5 rules skipped (need a live model)");
 the facts block with rule ids in the right margin; "Fix these first"
 with tags; groups ranked together with `[report]` or `[model]` before
-the rule name. Column alignment as today.
+the rule name. Column alignment as today. Amended 2026-09-20: the
+layer line names present layers only, and an absent layer's reason
+rides on the skipped line that explains why its rules did not run.
 
 **Markdown.** Mirrors the text format; the facts as a table with the
-same links the page has.
+same links the page has. Amended 2026-09-20: it mirrors the layer line
+and the absent facts block too, so a model-only run has no "Report at
+a glance" table.
 
 **JSON.** Adds `layers` (which ran; absent ones with the reason),
 `facts`, and `diagnostics`. Findings gain `layer` and `objectId`.

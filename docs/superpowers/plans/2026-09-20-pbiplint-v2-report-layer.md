@@ -109,6 +109,7 @@ Recorded so a reviewer can see them as decisions rather than drift. None reopens
 11. **`AVOID_SHOW_ITEMS_WITH_NO_DATA` reads `showAll` on any role**, as the spec's table says, while the source reads the Category role only. Parity on both oracle fixtures decides whether that is a difference: if it is, Task 16 stops and reports it to Michael as a fourth deviation candidate rather than deciding.
 12. **Report-level measures resolve field references.** A visual bound to a measure from `reportExtensions.json` is not a broken reference; `BROKEN_FIELD_REFERENCE` fires only on names neither the model nor the report defines.
 13. **A `pbir` figure's caption names the file the document stands for**: "Fires the rule in visual.json", "After the fix in visual.json". Approved by Michael on 2026-09-20 and written into spec section 7. A `tree.json` document names its files itself, so its caption is the bare "Fires the rule" or "After the fix". The SARIF help block's bold captions say the same.
+14. **A run given one part prints no section for the part it was not given.** `buildFacts` returns no facts without a report, so no surface shows "Report at a glance" on a model-only run; the layers line names present layers only, and the skipped line's `noModel` and `noReport` clauses print the absent layer's reason from `LintResult.layers`, which is where an overridden reason such as "this report reads a published model" now reaches the reader. `lint`'s default reason for an absent model layer becomes `no model in the input`, because the layers line no longer names it and its only human surface is the skipped line, where it has to read as a skip reason beside `no report in the input`. The JSON document keeps `layers` in full, absent layers and their reasons included, so structured output stays complete. Task 38 (the browser results page, pull request 7) inherits the rule: no facts panel and no heading when the report layer is absent, and the results heading's file counts name present layers only. Spec sections 6 and 9 amended 2026-09-20; tracked in #60.
 
 ## File map for the whole of v2
 
@@ -6820,7 +6821,7 @@ In `packages/web/src/main.ts`, the sample click passes the config: `run({ files:
 - [ ] **Step 4: Run the suite and commit**
 
 Run: `npm run lint && npm run typecheck && npm test && npm run build && npm run check:pack && npm run test:bundle -w pbiplint`
-Expected: PASS; 161 findings everywhere still, `--sample` prints `Model: 11 files. Report: absent (no report in the input).`
+Expected: PASS; 161 findings everywhere still, `--sample` prints `Model: 11 files.`
 
 ```bash
 git add -A examples packages scripts tests/expectations/messy-sales.json CONTRIBUTING.md
@@ -6998,7 +6999,7 @@ cd ~/Projects/pbiplint && git switch main && git pull --ff-only && git switch -c
 
 Shared facts:
 
-- The mockup (spec section 9, `2026-09-18-pbiplint-v2-mockups.html`, section 1) is the layout: heading with both layers and file counts; summary sentence; notices; "Report at a glance" as an always-open panel (`<section class="facts">` with `<h3>` and a `<dl>`), a fact with a `ruleId` linking to `#rule-<slug>` when the run has that group (class `fact flag`) else to `/rules/<slug>/` (class `fact`), plain counts not linked; "Fix these first" with a layer tag per item; export bar; the Show filter with a Model / Report pair between severity and category; every group summary row carries `<span class="layer <layer>">`; groups carry `data-layer`.
+- The mockup (spec section 9, `2026-09-18-pbiplint-v2-mockups.html`, section 1) is the layout: heading with file counts naming present layers only; summary sentence; notices; "Report at a glance" as an always-open panel, rendered only when the report layer is present (`<section class="facts">` with `<h3>` and a `<dl>`, both left out when `result.facts` is empty, decision 14), a fact with a `ruleId` linking to `#rule-<slug>` when the run has that group (class `fact flag`) else to `/rules/<slug>/` (class `fact`), plain counts not linked; "Fix these first" with a layer tag per item; export bar; the Show filter with a Model / Report pair between severity and category; every group summary row carries `<span class="layer <layer>">`; groups carry `data-layer`.
 - `wanted(path)` takes the drop-relative path: `.tmdl`, `pbiplint.config.json`, `definition.pbir`, `.platform`, `.pbip`, and `.json` whose path has a `.Report` segment followed later by a `definition` segment. `report.json` directly under a `.Report` folder and `model.bim` directly under a `.SemanticModel` folder are recorded as markers by name and never opened.
 - `InputTree` becomes `{ entries, modelFolders, reportFolders, markers: { path: string; kind: "legacy-report" | "legacy-model" }[], diagnostics: Diagnostic[] }`; the three readers fill it; a read failure is an `unread-file` diagnostic; the cap is a `depth-cap` diagnostic naming the folder, on all three routes (decision 8).
 - `selectProject(tree): SelectedProject { root, files, absent, config?, notes, read, diagnostics }` in `packages/web/src/input/project-files.ts` (the renamed `model-files.ts`), mirroring `resolveProject` on paths, including the two-reports refusal, the pairing through `definition.pbir` with `pairingDecision`, and the legacy markers as diagnostics.
@@ -7201,7 +7202,7 @@ describe("selectProject", () => {
   it("refuses two reports, and turns the legacy markers into diagnostics", () => {
     expect(() => selectProject(tree([...proj, e("Proj/Other.Report/definition/report.json")], { reportFolders: ["Proj/Demo.Report", "Proj/Other.Report"] }))).toThrow(/contains 2 reports; drop one of them: Demo\.Report, Other\.Report/);
     const legacy = selectProject(tree(proj.filter((x) => !x.path.includes(".Report")), { markers: [{ path: "Proj/Demo.Report/report.json", kind: "legacy-report" }] }));
-    expect(legacy.absent).toEqual({ report: "saved in the legacy report.json format" });
+    expect(legacy.absent).toEqual({ report: "the report is saved in the legacy report.json format" });
     expect(legacy.diagnostics.map((d) => d.kind)).toEqual(["legacy-report-format"]);
   });
   it("passes the walk's diagnostics through", () => {
@@ -7300,7 +7301,7 @@ Update the existing render, home, and export tests for the new heading (`Results
 In `render.ts`: `heading(result, source)`, `renderFacts(result)`, the layer boxes, tags, `data-layer`, and the diagnostics notices, following the mockup's structure; every href is built from pbiplint's own strings (`slug` from the finding's rule id via `result.groups` and `ruleUrl`/`pagePath`). In `styles.css`, after `.files`:
 
 ```css
-/* Report at a glance: what the report will do, always shown, under the summary. */
+/* Report at a glance: what the report will do, under the summary when the input has a report. */
 .facts {
   border: 1px solid rgba(0, 169, 165, 0.35);
   background: rgba(0, 169, 165, 0.06);
@@ -7490,9 +7491,10 @@ Replace the opening paragraph and Status section of `README.md`:
 Best-practice linter for Power BI projects. Browser and CLI. Nothing leaves your machine.
 
 Paste TMDL, or drop a PBIP folder, a `.SemanticModel` folder, or a `.Report` folder, and get
-ranked best-practice findings with guidance on how to fix each one, plus a "Report at a glance"
-block that says what the report will do when someone opens it. The analysis runs entirely in your
-browser or on your own machine from the command line. Nothing is uploaded, ever.
+ranked best-practice findings with guidance on how to fix each one, and, when the input has a
+report, a "Report at a glance" block that says what the report will do when someone opens it. The
+analysis runs entirely in your browser or on your own machine from the command line. Nothing is
+uploaded, ever.
 
 ## Status
 

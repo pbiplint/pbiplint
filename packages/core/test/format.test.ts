@@ -71,9 +71,7 @@ describe("summary wording", () => {
       }),
     );
     expect(text.split("\n")[0]).toBe("pbiplint: 1 finding (0 errors, 1 warning, 0 info) in 1 file");
-    expect(text.split("\n")[1]).toBe(
-      "Model: 1 file. Report: absent (no report in the input). 1 rule run",
-    );
+    expect(text.split("\n")[1]).toBe("Model: 1 file. 1 rule run");
   });
   it("uses singular nouns for one disabled rule and one ignored finding", () => {
     const text = formatText(
@@ -88,7 +86,7 @@ describe("summary wording", () => {
       ),
     );
     expect(text.split("\n")[1]).toBe(
-      "Model: 1 file. Report: absent (no report in the input). 1 rule run, 1 rule disabled by config, 1 finding ignored by annotation",
+      "Model: 1 file. 1 rule run, 1 rule disabled by config, 1 finding ignored by annotation",
     );
   });
 });
@@ -234,8 +232,8 @@ describe("a model with no model.tmdl", () => {
     expect(res).not.toHaveProperty("locations");
   });
   it("prints no :0 on the text line for the Model object", () => {
-    // Finding rows carry a seven space indent. The facts block's own "Model" row is indented two
-    // and now sits above them, so the indent is what picks the finding row out.
+    // Finding rows carry a seven space indent, which is what picks the row out. This run is
+    // model-only, so there is no facts block above them to confuse it with.
     const line = formatText(single)
       .split("\n")
       .find(
@@ -375,18 +373,30 @@ describe("a whole-project report", () => {
     ]);
     expect(formatText(spanning)).toContain("ERROR  [project]  File could not be fully parsed");
   });
-  it("says which layer is absent and why", () => {
+  it("names present layers only and rides an absent layer's reason on the skipped line", () => {
     const text = formatText(lint(files));
-    expect(text.split("\n")[1]).toMatch(
-      /^Model: 2 files\. Report: absent \(no report in the input\)\./,
-    );
+    expect(text.split("\n")[1]).toMatch(/^Model: 2 files\. \d+ rules run/);
+    expect(text.split("\n")[1]).not.toContain("Report:");
+    expect(text).not.toContain("Report at a glance");
     const reportOnly = formatText(
       lint([{ path: "definition/pages/p/page.json", text: j({ name: "p", displayName: "P" }) }], {
         absent: { model: "this report reads a published model" },
       }),
     );
     expect(reportOnly.split("\n")[1]).toMatch(
-      /^Model: absent \(this report reads a published model\)\. Report: 1 file\. \d+ rules? run, \d+ rules skipped \(need a live model\), \d+ rules skipped \(no model in the input\)$/,
+      /^Report: 1 file\. \d+ rules? run, \d+ rules skipped \(need a live model\), \d+ rules skipped \(this report reads a published model\)$/,
+    );
+    expect(reportOnly).toContain("\nReport at a glance\n");
+  });
+  it("leaves no stray space on either line when neither layer is present", () => {
+    const nothing = lint([{ path: "README.md", text: "" }]);
+    const line = formatText(nothing).split("\n")[1];
+    expect(line).toMatch(/^\d+ rules? run, /);
+    expect(line).not.toMatch(/ {2}/);
+    // The reason still reaches the reader; with no layers named, it is all line 2 carries.
+    expect(line).toContain("(no model in the input)");
+    expect(formatMarkdown(nothing).split("\n")[2]).toBe(
+      `0 findings (0 errors, 0 warnings, 0 info) in 0 files. ${line}.`,
     );
   });
   it("mirrors the same in markdown, with the facts as a table", () => {

@@ -232,9 +232,7 @@ describe("buildFacts", () => {
     expect(facts.find((f) => f.label === "Opens on")!.ruleId).toBe("LANDING_PAGE_NOT_SET");
     expect(facts.find((f) => f.label === "Visuals")!.ruleId).toBe("REMOVE_UNUSED_CUSTOM_VISUALS");
   });
-  it("gives a model-only run the model fact alone, without the reach detail", () => {
-    expect(buildFacts({ model }, buildIndexes({ model }), ALL)).toEqual([
-      { layer: "model", label: "Model", value: "1 table, 2 columns, 2 measures" },
-    ]);
+  it("gives a model-only run no facts at all, because the block is about the report", () => {
+    expect(buildFacts({ model }, buildIndexes({ model }), ALL)).toEqual([]);
   });
 });

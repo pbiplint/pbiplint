@@ -432,7 +432,7 @@ describe("lint over a project", () => {
     expect(both.facts.map((f) => f.label)).toContain("Opens on");
     const modelOnly = lint(modelFiles);
     expect(modelOnly.layers.report).toEqual({ present: false, reason: "no report in the input" });
-    expect(modelOnly.facts.map((f) => f.label)).toEqual(["Model"]);
+    expect(modelOnly.facts).toEqual([]);
     const reportOnly = lint(reportFiles, {
       absent: { model: "this report reads a published model" },
     });
@@ -442,6 +442,9 @@ describe("lint over a project", () => {
     });
     expect(reportOnly.model.tables).toEqual([]);
     expect(reportOnly.project.model).toBeUndefined();
+    // The block rides with the report, so a report-only run keeps it; only the Model row is gone.
+    expect(reportOnly.facts.map((f) => f.label)).toContain("Opens on");
+    expect(reportOnly.facts.map((f) => f.label)).not.toContain("Model");
   });
   it("carries the reader's diagnostics and adds the builder's", () => {
     const r = lint(

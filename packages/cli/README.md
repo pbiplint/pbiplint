@@ -2,9 +2,9 @@
 
 Best-practice linter for Power BI projects. Point it at a PBIP folder, a `.pbip` file, a
 `.SemanticModel` folder, a `.Report` folder, a `definition` folder, or one `.tmdl` file and get
-ranked findings with a link to a fix page for each rule, plus a "Report at a glance" block that
-says what the report will do when someone opens it. Nothing is uploaded: it reads the files you
-name and writes to your terminal. Node 20 or later.
+ranked findings with a link to a fix page for each rule, and, when the input has a report, a
+"Report at a glance" block that says what the report will do when someone opens it. Nothing is
+uploaded: it reads the files you name and writes to your terminal. Node 20 or later.
 
 ```bash
 npx pbiplint path/to/Model.SemanticModel
@@ -54,8 +54,8 @@ rule has a page at https://pbiplint.com/rules with what it checks, why, how to f
 
 The report layer (PBIR) is read beside the model: a `.Report` folder alone is valid input, and with
 the model beside it the two are paired through `definition.pbir` and checked together. This version
-reports what it reads (the layers line, the "Report at a glance" block, and parse issues in report
-files); the report rules arrive in 0.2.0.
+reports what it reads (the layers line, parse issues in report files, and, when the input has a
+report, the "Report at a glance" block); the report rules arrive in 0.2.0.
 
 The same linter runs in the browser at https://pbiplint.com. Source, issues, and contributing:
 https://github.com/pbiplint/pbiplint.

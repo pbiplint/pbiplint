@@ -182,7 +182,7 @@ describe("resolveProject", () => {
     const legacy = resolveProject(pbip({ model: true, legacyReport: true }));
     expect(legacy.model).toBeDefined();
     expect(legacy.report).toBeUndefined();
-    expect(legacy.absent.report).toBe("saved in the legacy report.json format");
+    expect(legacy.absent.report).toBe("the report is saved in the legacy report.json format");
     expect(legacy.diagnostics).toEqual([
       {
         kind: "legacy-report-format",
@@ -193,7 +193,7 @@ describe("resolveProject", () => {
     ]);
     const bim = resolveProject(pbip({ legacyModel: true, report: true }));
     expect(bim.model).toBeUndefined();
-    expect(bim.absent.model).toBe("saved in the legacy model.bim format");
+    expect(bim.absent.model).toBe("the model is saved in the legacy model.bim format");
     expect(bim.diagnostics.map((d) => d.kind)).toEqual(["legacy-model-format"]);
     const only = resolveProject(join(pbip({ legacyModel: true }), "Demo.SemanticModel"));
     expect(only.model).toBeUndefined();

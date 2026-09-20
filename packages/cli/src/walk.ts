@@ -94,7 +94,7 @@ function pbipIn(input: string, folder: string, preferred: string | undefined): s
 
 /**
  * Why the model layer is absent for a report read on its own: the report's own definition.pbir
- * still says whether it reads a published model, which the layers line reports as the reason.
+ * still says whether it reads a published model, which the skipped line reports as the reason.
  */
 function loneReportAbsent(
   report: ResolvedPart,
@@ -119,8 +119,8 @@ const legacyModel = (folder: string, name: string): Diagnostic => ({
   path: name,
   message: `${name} is stored as model.bim, which pbiplint cannot read; save it in the TMDL format from Power BI Desktop`,
 });
-const LEGACY_REPORT_REASON = "saved in the legacy report.json format";
-const LEGACY_MODEL_REASON = "saved in the legacy model.bim format";
+const LEGACY_REPORT_REASON = "the report is saved in the legacy report.json format";
+const LEGACY_MODEL_REASON = "the model is saved in the legacy model.bim format";
 
 /** Find the project at or under `input` and read its parts (spec section 4). */
 export function resolveProject(input: string): ResolvedProject {
@@ -225,7 +225,7 @@ function resolveFolder(input: string, path: string, preferred?: string): Resolve
       reports[0]!,
     );
     // The reason is recorded whether or not a model sat beside the report: a thin report says it
-    // reads a published model on the layers line either way.
+    // reads a published model on the skipped line either way.
     if (!decision.useModel) {
       model = undefined;
       if (decision.reason) out.absent.model = decision.reason;

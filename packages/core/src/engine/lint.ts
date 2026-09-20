@@ -29,7 +29,7 @@ export interface LintOptions {
   rules?: Rule[];
   /** What the input reader found that a reader of the results must know; carried onto the result. */
   diagnostics?: Diagnostic[];
-  /** Why the reader left a layer out, per layer, for the layers line. */
+  /** Why the reader left a layer out, per layer, for the skipped line. */
   absent?: Partial<Record<LayerName, string>>;
 }
 
@@ -81,7 +81,7 @@ export function lint(files: LintFile[], options: LintOptions = {}): LintResult {
   const layers: Layers = {
     model: model
       ? { present: true, files: routed.model.length }
-      : { present: false, reason: options.absent?.model ?? "no .tmdl files in the input" },
+      : { present: false, reason: options.absent?.model ?? "no model in the input" },
     report: built
       ? { present: true, files: routed.report.length }
       : { present: false, reason: options.absent?.report ?? "no report in the input" },

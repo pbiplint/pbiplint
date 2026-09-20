@@ -32,7 +32,7 @@ export interface Layers {
   report: LayerStatus;
 }
 
-/** One line of "Report at a glance": what the report will do, always shown, whether or not anything fired. */
+/** One line of "Report at a glance", a block produced only when the report layer is present: what the report will do, shown whether or not anything fired. */
 export interface Fact {
   layer: LayerName;
   label: string;

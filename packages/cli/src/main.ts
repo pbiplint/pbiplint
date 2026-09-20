@@ -13,7 +13,7 @@ import { HELP, parseArgs, UsageError } from "./args.js";
 import { CONFIG_FILE, findConfig } from "./config.js";
 import { sampleDir } from "./sample.js";
 import { RULE_HELP } from "./rule-help.data.js";
-import { resolveModel } from "./walk.js";
+import { resolveProject } from "./walk.js";
 
 declare const __PBIPLINT_VERSION__: string | undefined;
 export const VERSION =
@@ -30,7 +30,7 @@ function listRules(): string {
   return defaultRules
     .map(
       (r) =>
-        `${r.id.padEnd(width)}  ${(r.status === "needsLiveModel" ? "needs live model" : r.status).padEnd(16)}  ${SEVERITY_LABEL[r.severity].padEnd(7)}  ${r.category.padEnd(18)}  ${r.name}`,
+        `${r.id.padEnd(width)}  ${r.layer.padEnd(7)}  ${(r.status === "needsLiveModel" ? "needs live model" : r.status).padEnd(16)}  ${SEVERITY_LABEL[r.severity].padEnd(7)}  ${r.category.padEnd(18)}  ${r.name}`,
     )
     .join("\n");
 }
@@ -51,19 +51,29 @@ export async function main(argv: string[], io: Io): Promise<number> {
       return 0;
     }
     const target = opts.sample ? sampleDir() : resolve(io.cwd(), opts.path!);
-    const model = resolveModel(target);
-    const found = findConfig(model.root, opts.config ? resolve(io.cwd(), opts.config) : undefined);
+    const project = resolveProject(target);
+    const found = findConfig(
+      project.root,
+      opts.config ? resolve(io.cwd(), opts.config) : undefined,
+    );
     const config = resolveConfig({
       ...found.config,
       ...(opts.failOn ? { failOn: opts.failOn } : {}),
     });
-    const result = lint(model.files, { config });
-    // SARIF artifact URIs are resolved from where the tool ran, so they carry the model root's
-    // path relative to the cwd in front of each model-relative finding path.
-    const pathPrefix = relative(io.cwd(), model.root).split("\\").join("/");
+    const files = [...(project.model?.files ?? []), ...(project.report?.files ?? [])];
+    const result = lint(files, {
+      config,
+      diagnostics: project.diagnostics,
+      absent: project.absent,
+    });
+    // SARIF artifact URIs are resolved from where the tool ran, so each part's root, relative to
+    // the cwd, goes in front of that part's finding paths.
+    const prefix = (root: string | undefined): string | undefined =>
+      root === undefined ? undefined : relative(io.cwd(), root).split("\\").join("/");
     const report = formatResult(opts.format, result, {
       toolVersion: VERSION,
-      pathPrefix,
+      pathPrefix: prefix(project.model?.root) ?? prefix(project.report?.root) ?? "",
+      reportPathPrefix: prefix(project.report?.root),
       help: RULE_HELP,
     });
     if (opts.output) {
@@ -82,6 +92,7 @@ export async function main(argv: string[], io: Io): Promise<number> {
       io.stderr(
         `pbiplint: ${configName}: no rule named "${id}" (run pbiplint rules for the list)\n`,
       );
+    for (const d of result.diagnostics) io.stderr(`pbiplint: notice: ${d.message}\n`);
     return result.failed ? 1 : 0;
   } catch (e) {
     if (e instanceof UsageError || e instanceof ConfigError) {

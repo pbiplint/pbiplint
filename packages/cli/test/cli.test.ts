@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -144,8 +144,10 @@ describe("pbiplint CLI", () => {
   it("lists rules", async () => {
     const r = await run(["rules"]);
     expect(r.code).toBe(0);
-    expect(r.out).toMatch(/HIDE_FOREIGN_KEYS\s+ported\s+warning\s+Formatting\s+Hide foreign keys/);
-    expect(r.out).toMatch(/SPLIT_DATE_AND_TIME\s+needs live model/);
+    expect(r.out).toMatch(
+      /HIDE_FOREIGN_KEYS\s+model\s+ported\s+warning\s+Formatting\s+Hide foreign keys/,
+    );
+    expect(r.out).toMatch(/SPLIT_DATE_AND_TIME\s+model\s+needs live model/);
     expect(r.out.trim().split("\n").length).toBeGreaterThanOrEqual(72);
   });
   it("prints help and version, and exits 2 on usage errors", async () => {
@@ -157,5 +159,28 @@ describe("pbiplint CLI", () => {
     const missing = await run([join(repo, "nope")]);
     expect(missing.code).toBe(2);
     expect(missing.err).toContain("does not exist");
+  });
+  it("lints a whole project, prints layers in JSON, and puts notices on stderr", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pbiplint-proj-"));
+    mkdirSync(join(root, "Demo.SemanticModel", "definition"), { recursive: true });
+    writeFileSync(join(root, "Demo.SemanticModel", "definition", "model.tmdl"), "model Model\n");
+    mkdirSync(join(root, "Demo.Report"), { recursive: true });
+    writeFileSync(join(root, "Demo.Report", "report.json"), "{}");
+    const r = await run([root, "--format", "json", "--fail-on", "none"]);
+    expect(r.code).toBe(0);
+    const doc = JSON.parse(r.out);
+    expect(doc.layers.model).toEqual({ present: true, files: 1 });
+    expect(doc.layers.report).toEqual({
+      present: false,
+      reason: "saved in the legacy report.json format",
+    });
+    expect(r.err).toBe(
+      "pbiplint: notice: Demo.Report is stored as a single report.json, which pbiplint cannot read; save it in the PBIR format from Power BI Desktop\n",
+    );
+  });
+  it("lists the layer of every rule", async () => {
+    const r = await run(["rules"]);
+    expect(r.out).toMatch(/^PARSE_ISSUE\s+project\s+builtin/m);
+    expect(r.out).toMatch(/^HIDE_FOREIGN_KEYS\s+model\s+ported/m);
   });
 });

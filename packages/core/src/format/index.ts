@@ -3,7 +3,11 @@ import { formatJson } from "./json.js";
 import { formatMarkdown } from "./markdown.js";
 import { formatSarif } from "./sarif.js";
 import {
+  factsLines,
   formatText,
+  layersLine,
+  layerTag,
+  noticeLines,
   plural,
   skippedLine,
   summaryLine,
@@ -35,10 +39,14 @@ export function formatResult(
 }
 
 export {
+  factsLines,
   formatJson,
   formatMarkdown,
   formatSarif,
   formatText,
+  layersLine,
+  layerTag,
+  noticeLines,
   plural,
   skippedLine,
   summaryLine,

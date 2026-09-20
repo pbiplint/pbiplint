@@ -31,7 +31,7 @@ describe("formatText", () => {
   });
   it("prints each group with severity, name, id, count, URL, and file locations", () => {
     expect(text).toMatch(
-      /ERROR\s+Column references should be fully qualified\s+DAX_COLUMNS_FULLY_QUALIFIED\s+\(1\)/,
+      /ERROR\s+\[model\]\s+Column references should be fully qualified\s+DAX_COLUMNS_FULLY_QUALIFIED\s+\(1\)/,
     );
     expect(text).toContain("https://pbiplint.com/rules/dax-columns-fully-qualified");
     expect(text).toMatch(/\[Total\]\s+definition\/tables\/Sales\.tmdl:5/);
@@ -71,7 +71,9 @@ describe("summary wording", () => {
       }),
     );
     expect(text.split("\n")[0]).toBe("pbiplint: 1 finding (0 errors, 1 warning, 0 info) in 1 file");
-    expect(text.split("\n")[1]).toBe("1 rule run");
+    expect(text.split("\n")[1]).toBe(
+      "Model: 1 file. Report: absent (no report in the input). 1 rule run",
+    );
   });
   it("uses singular nouns for one disabled rule and one ignored finding", () => {
     const text = formatText(
@@ -86,7 +88,7 @@ describe("summary wording", () => {
       ),
     );
     expect(text.split("\n")[1]).toBe(
-      "1 rule run, 1 rule disabled by config, 1 finding ignored by annotation",
+      "Model: 1 file. Report: absent (no report in the input). 1 rule run, 1 rule disabled by config, 1 finding ignored by annotation",
     );
   });
 });
@@ -126,6 +128,7 @@ describe("formatJson", () => {
     );
     expect(group.count).toBe(1);
     expect(group.findings[0]).toEqual({
+      layer: "model",
       objectType: "Column",
       objectName: "'Sales'[Amount]",
       file: "definition/tables/Sales.tmdl",
@@ -219,7 +222,7 @@ describe("a model with no model.tmdl", () => {
   it("omits file and line from the JSON finding", () => {
     const json = JSON.parse(formatJson(single));
     const group = json.groups.find((g: { rule: { id: string } }) => g.rule.id === RULE);
-    expect(group.findings[0]).toEqual({ objectType: "Model", objectName: "Model" });
+    expect(group.findings[0]).toEqual({ layer: "model", objectType: "Model", objectName: "Model" });
     expect(group.findings[0]).not.toHaveProperty("file");
     expect(group.findings[0]).not.toHaveProperty("line");
   });
@@ -231,9 +234,13 @@ describe("a model with no model.tmdl", () => {
     expect(res).not.toHaveProperty("locations");
   });
   it("prints no :0 on the text line for the Model object", () => {
+    // Finding rows carry a seven space indent. The facts block's own "Model" row is indented two
+    // and now sits above them, so the indent is what picks the finding row out.
     const line = formatText(single)
       .split("\n")
-      .find((l) => l.trim() === "Model" || l.trim().startsWith("Model "));
+      .find(
+        (l) => l.startsWith("       ") && (l.trim() === "Model" || l.trim().startsWith("Model ")),
+      );
     expect(line).toBeDefined();
     expect(line).not.toContain(":0");
   });
@@ -310,5 +317,140 @@ describe("formatResult", () => {
     expect(FORMATS).toEqual(["text", "json", "markdown", "sarif"]);
     expect(formatResult("json", result)).toBe(formatJson(result));
     expect(() => formatResult("xml" as never, result)).toThrow(/Unknown format/);
+  });
+});
+
+describe("a whole-project report", () => {
+  const j = (v: unknown) => JSON.stringify(v);
+  const project = lint(
+    [
+      ...files,
+      {
+        path: "definition/report.json",
+        text: j({ $schema: "https://x/report/3.2.0/schema.json" }),
+      },
+      { path: "definition/pages/pages.json", text: j({ pageOrder: ["p"], activePageName: "p" }) },
+      { path: "definition/pages/p/page.json", text: j({ name: "p", displayName: "Overview" }) },
+      {
+        path: "definition/pages/p/visuals/v/visual.json",
+        text: '{\n  "name": "v",\n<<<<<<< HEAD\n}\n',
+      },
+    ],
+    {
+      diagnostics: [
+        {
+          kind: "depth-cap",
+          message: "the walk stopped 64 folders deep inside Deep",
+          path: "Deep",
+        },
+      ],
+    },
+  );
+  it("prints the layers line, notices, the facts block, and a layer tag on every group in text", () => {
+    const text = formatText(project);
+    const lines = text.split("\n");
+    expect(lines[1]).toMatch(
+      /^Model: 2 files\. Report: 4 files\. \d+ rules run, 5 rules skipped \(need a live model\)$/,
+    );
+    expect(lines[2]).toBe("Notice: the walk stopped 64 folders deep inside Deep");
+    expect(text).toContain("\nReport at a glance\n");
+    expect(text).toMatch(
+      /\n {2}Opens on {9}Overview \(the page open when it was saved; no landing page set\)\n/,
+    );
+    expect(text).toMatch(
+      /\n {2}Model {12}1 table, 1 column, 1 measure \(1 column and 1 measure not reached from this report\)\n/,
+    );
+    // PARSE_ISSUE is an Error Prevention error, so it ranks first; the model's DAX error follows.
+    expect(text).toMatch(/\n {2}1\. File could not be fully parsed {2}\(1 error\) {3}\[report\]\n/);
+    expect(text).toMatch(/\n {2}\d\. .+ {3}\[model\]\n/);
+    expect(text).toMatch(
+      /\nERROR {2}\[report\] {2}File could not be fully parsed {2}PARSE_ISSUE {2}\(1\)\n/,
+    );
+    expect(text).toMatch(/\nERROR {2}\[model\] {3}Column references should be fully qualified/);
+  });
+  it("says which layer is absent and why", () => {
+    const text = formatText(lint(files));
+    expect(text.split("\n")[1]).toMatch(
+      /^Model: 2 files\. Report: absent \(no report in the input\)\./,
+    );
+    const reportOnly = formatText(
+      lint([{ path: "definition/pages/p/page.json", text: j({ name: "p", displayName: "P" }) }], {
+        absent: { model: "this report reads a published model" },
+      }),
+    );
+    expect(reportOnly.split("\n")[1]).toMatch(
+      /^Model: absent \(this report reads a published model\)\. Report: 1 file\. \d+ rules? run, \d+ rules skipped \(need a live model\), \d+ rules skipped \(no model in the input\)$/,
+    );
+  });
+  it("mirrors the same in markdown, with the facts as a table", () => {
+    const md = formatMarkdown(project);
+    expect(md).toContain("Model: 2 files. Report: 4 files.");
+    expect(md).toContain("> Notice: the walk stopped 64 folders deep inside Deep");
+    expect(md).toContain(
+      "## Report at a glance\n\n| Fact | Value | Rule |\n|---|---|---|\n| Opens on | Overview (the page open when it was saved; no landing page set) |  |",
+    );
+    expect(md).toMatch(/## ERROR: File could not be fully parsed \(1\) · report/);
+  });
+  it("adds layers, facts, and diagnostics to JSON and a layer to every finding without changing what was there", () => {
+    const doc = JSON.parse(formatJson(project));
+    expect(Object.keys(doc)).toEqual([
+      "version",
+      "tool",
+      "summary",
+      "layers",
+      "facts",
+      "diagnostics",
+      "groups",
+    ]);
+    expect(doc.layers).toEqual({
+      model: { present: true, files: 2 },
+      report: { present: true, files: 4 },
+    });
+    expect(doc.facts[0]).toMatchObject({ layer: "report", label: "Opens on" });
+    expect(doc.diagnostics).toEqual([
+      { kind: "depth-cap", message: "the walk stopped 64 folders deep inside Deep", path: "Deep" },
+    ]);
+    const parse = doc.groups.find((g: { rule: { id: string } }) => g.rule.id === "PARSE_ISSUE");
+    expect(parse.rule.layer).toBe("report");
+    expect(parse.findings[0]).toMatchObject({
+      layer: "report",
+      objectType: "File",
+      file: "definition/pages/p/visuals/v/visual.json",
+      line: 3,
+    });
+  });
+  it("prefixes report paths separately in SARIF, tags rules with their layer, and notes an incomplete read", () => {
+    const sarif = JSON.parse(
+      formatSarif(project, {
+        pathPrefix: "proj/Demo.SemanticModel",
+        reportPathPrefix: "proj/Demo.Report",
+      }),
+    );
+    const run = sarif.runs[0];
+    const uris = run.results.map(
+      (r: { locations?: [{ physicalLocation: { artifactLocation: { uri: string } } }] }) =>
+        r.locations?.[0]?.physicalLocation.artifactLocation.uri ?? "",
+    );
+    expect(uris).toContain("proj/Demo.Report/definition/pages/p/visuals/v/visual.json");
+    expect(uris).toContain("proj/Demo.SemanticModel/definition/tables/Sales.tmdl");
+    expect(
+      run.tool.driver.rules.map((r: { id: string; properties: { layer: string } }) => [
+        r.id,
+        r.properties.layer,
+      ]),
+    ).toContainEqual(["PARSE_ISSUE", "report"]);
+    expect(run.invocations).toEqual([
+      {
+        executionSuccessful: true,
+        toolExecutionNotifications: [
+          {
+            level: "warning",
+            descriptor: { id: "depth-cap" },
+            message: { text: "the walk stopped 64 folders deep inside Deep" },
+          },
+        ],
+      },
+    ]);
+    expect(JSON.parse(formatSarif(lint(files))).runs[0].invocations).toBeUndefined();
   });
 });

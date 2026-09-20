@@ -7,12 +7,17 @@ export function formatJson(result: LintResult, options: FormatOptions = {}): str
     version: 1,
     tool: { name: "pbiplint", version: options.toolVersion ?? VERSION },
     summary: result.summary,
+    layers: result.layers,
+    facts: result.facts,
+    diagnostics: result.diagnostics,
     groups: result.groups.map((g) => ({
       rule: g.rule,
       count: g.findings.length,
       findings: g.findings.map((f) => ({
+        layer: f.layer,
         objectType: f.objectType,
         objectName: f.objectName,
+        ...(f.objectId !== undefined ? { objectId: f.objectId } : {}),
         ...(f.location ? { file: f.location.file, line: f.location.line } : {}),
         ...(f.detail !== undefined ? { detail: f.detail } : {}),
       })),

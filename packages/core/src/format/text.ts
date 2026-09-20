@@ -1,6 +1,8 @@
 import type { LintResult } from "../engine/lint.js";
 import type { RankedGroup } from "../engine/rank.js";
-import { SEVERITY_LABEL, type Finding } from "../rules/types.js";
+import type { SkippedRule } from "../engine/run.js";
+import type { LayerStatus } from "../project/types.js";
+import { SEVERITY_LABEL, type Finding, type Layer } from "../rules/types.js";
 
 /** Guidance for one rule in the two forms SARIF carries: plain text and Markdown. */
 export interface RuleHelp {
@@ -23,6 +25,8 @@ export interface FormatOptions {
    * and markdown formats ignore it: their paths stay relative to the model root.
    */
   pathPrefix?: string;
+  /** The same for report findings; falls back to pathPrefix. */
+  reportPathPrefix?: string;
 }
 
 const SEVERITY_TAG = { 3: "ERROR", 2: "WARN ", 1: "INFO " } as const;
@@ -41,32 +45,73 @@ export function summaryLine(result: LintResult): string {
 
 export function skippedLine(result: LintResult): string {
   const s = result.summary;
-  const live = s.rulesSkipped.filter((r) => r.reason === "needsLiveModel").length;
-  const disabled = s.rulesSkipped.filter((r) => r.reason === "disabled").length;
+  const by = (reason: SkippedRule["reason"]): number =>
+    s.rulesSkipped.filter((r) => r.reason === reason).length;
   const parts = [`${plural(s.rulesRun, "rule")} run`];
-  if (live) parts.push(`${plural(live, "rule")} skipped (need a live model)`);
-  if (disabled) parts.push(`${plural(disabled, "rule")} disabled by config`);
+  if (by("needsLiveModel"))
+    parts.push(`${plural(by("needsLiveModel"), "rule")} skipped (need a live model)`);
+  if (by("noModel")) parts.push(`${plural(by("noModel"), "rule")} skipped (no model in the input)`);
+  if (by("noReport"))
+    parts.push(`${plural(by("noReport"), "rule")} skipped (no report in the input)`);
+  if (by("disabled")) parts.push(`${plural(by("disabled"), "rule")} disabled by config`);
   if (s.ignored) parts.push(`${plural(s.ignored, "finding")} ignored by annotation`);
   return parts.join(", ");
 }
 
+/** "Model: 11 files. Report: 27 files." naming the reason for an absent layer. */
+export function layersLine(result: LintResult): string {
+  const part = (name: string, s: LayerStatus): string =>
+    s.present ? `${name}: ${plural(s.files, "file")}.` : `${name}: absent (${s.reason}).`;
+  return `${part("Model", result.layers.model)} ${part("Report", result.layers.report)}`;
+}
+
+export const layerTag = (layer: Layer): string => `[${layer}]`;
+
+/** The facts as aligned lines under a heading, with rule ids in the right margin; nothing when there are no facts. */
+export function factsLines(result: LintResult): string[] {
+  if (result.facts.length === 0) return [];
+  const rows = result.facts.map((f) => ({
+    label: f.label,
+    value: f.detail ? `${f.value} (${f.detail})` : f.value,
+    rule: f.ruleId ?? "",
+  }));
+  const labelWidth = Math.max(...rows.map((r) => r.label.length));
+  const valueWidth = Math.max(...rows.map((r) => r.value.length));
+  return [
+    "Report at a glance",
+    ...rows.map((r) =>
+      `  ${r.label.padEnd(labelWidth)}  ${r.value.padEnd(valueWidth)}   ${r.rule}`.trimEnd(),
+    ),
+    "",
+  ];
+}
+
+export const noticeLines = (result: LintResult): string[] =>
+  result.diagnostics.map((d) => `Notice: ${d.message}`);
+
 export const topGroups = (result: LintResult, n = 5): RankedGroup[] => result.groups.slice(0, n);
 
 export function formatText(result: LintResult, _options: FormatOptions = {}): string {
-  const out: string[] = [`pbiplint: ${summaryLine(result)}`, skippedLine(result), ""];
+  const out: string[] = [
+    `pbiplint: ${summaryLine(result)}`,
+    `${layersLine(result)} ${skippedLine(result)}`,
+    ...noticeLines(result),
+    "",
+    ...factsLines(result),
+  ];
   if (result.groups.length === 0) {
     out.push("No findings.", "");
   } else {
     out.push("Fix these first:");
     topGroups(result).forEach((g, i) =>
       out.push(
-        `  ${i + 1}. ${g.rule.name}  (${plural(g.findings.length, SEVERITY_LABEL[g.rule.severity])})`,
+        `  ${i + 1}. ${g.rule.name}  (${plural(g.findings.length, SEVERITY_LABEL[g.rule.severity])})   ${layerTag(g.rule.layer)}`,
       ),
     );
     out.push("");
     for (const g of result.groups) {
       out.push(
-        `${SEVERITY_TAG[g.rule.severity]}  ${g.rule.name}  ${g.rule.id}  (${g.findings.length})`,
+        `${SEVERITY_TAG[g.rule.severity]}  ${layerTag(g.rule.layer).padEnd(8)}  ${g.rule.name}  ${g.rule.id}  (${g.findings.length})`,
       );
       out.push(`       ${g.rule.url}`);
       // The location column is always emitted, empty or not, so a finding without a location never

@@ -24,12 +24,16 @@ export {
 } from "./engine/rank.js";
 export { runRules, type RuleError, type RunResult, type SkippedRule } from "./engine/run.js";
 export {
+  factsLines,
   FORMATS,
   formatResult,
   formatJson,
   formatMarkdown,
   formatSarif,
   formatText,
+  layersLine,
+  layerTag,
+  noticeLines,
   plural,
   skippedLine,
   summaryLine,

@@ -63,4 +63,4 @@ A measure that returns text has nothing to format. A label measure that builds a
 
 ## Related rules
 
-- `INTEGER_FORMATTING` reports the same measure whenever it has no static format string, whether or not it is visible, so one format string clears both findings on a visible measure.
+- `INTEGER_FORMATTING` reports the same measure whenever it has no static format string, whether or not it is visible, so one format string it accepts clears both findings on a visible measure.

@@ -60,7 +60,7 @@ No name should start or end with a space, and this rule reports at error severit
 
 ## Quirks
 
-- Narrower scope than `TRIM_OBJECT_NAMES`: levels, roles, named expressions, calculation items, data sources, calculated tables, and calculated table columns are not checked here.
+- Narrower scope than `TRIM_OBJECT_NAMES`: levels, roles, named expressions, calculation items, calculation group tables, data sources, calculated tables, and calculated table columns are not checked here.
 - The test is for the space character at the start or the end of the name. A name padded with a tab is not reported here; `SPECIAL_CHARS_IN_OBJECT_NAMES` covers that one.
 - The model object is in scope, and a finding on the model is always named `Model` whatever the model is called, so a stray space in the model's own name gives a finding with nothing in the line to show it. The model's name is on the `model` line in the TMDL file.
 - In the browser, the "Choose a folder" button in Chrome and Edge does not list a file whose name begins or ends with a space, so a table file named that way is never read on that route and its findings are missing. Drag the folder onto the page, or use the command line, to read it.

@@ -71,5 +71,5 @@ A measure already formatted the way its number deserves is the usual false alarm
 
 ## Related rules
 
-- `PROVIDE_FORMAT_STRING_FOR_MEASURES` reports a visible measure that has neither a static nor a dynamic format string, so a measure with no format string at all is reported by both rules and one format string clears both.
-- `PERCENTAGE_FORMATTING` reads one of the two sets this rule lets through, the format strings containing `%`, so no measure is reported by both. The three-part percentage string recommended above is the one that rule requires.
+- `PROVIDE_FORMAT_STRING_FOR_MEASURES` reports a visible measure that has neither a static nor a dynamic format string, so a measure with no format string at all is reported by both rules, and one format string this rule accepts clears both.
+- `PERCENTAGE_FORMATTING` reads one of the sets this rule lets through, the format strings containing `%`, so no measure is reported by both. The three-part percentage string recommended above is the one that rule requires.

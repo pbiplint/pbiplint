@@ -59,7 +59,7 @@ Add `isAvailableInMdx: false` under the column in its table's TMDL file. Power B
 
 ## When to ignore it
 
-Size is the first judgment. The saving is roughly proportional to the column's distinct count, so a hidden flag with two values is not worth an edit and a hidden key with a million is. Work down the list by cardinality and stop where the numbers get small. A variation is the one case where acting on the finding can break something: pbiplint reads a variation's default column only, so a hidden column a variation reaches through its default hierarchy is reported here, and setting the property to false on it takes away the attribute hierarchy the variation needs. Check the date table's hidden columns against its variations before you touch them. A column you are about to unhide is a fair thing to leave, since unhiding it clears the finding anyway.
+Size is the first judgment. The saving is roughly proportional to the column's distinct count, so a hidden flag with two values is not worth an edit and a hidden key with a million is. Work down the list by cardinality and stop where the numbers get small. A variation is the one case where acting on the finding can break something: pbiplint reads a variation's default column only, so a hidden column a variation reaches through its default hierarchy is reported here, and setting the property to false on it takes away the attribute hierarchy the variation needs. Check the date table's hidden columns against its variations before you touch them. A column you are about to unhide is a fair thing to leave, since unhiding it clears the finding anyway, as long as its table is visible.
 
 ## Quirks
 

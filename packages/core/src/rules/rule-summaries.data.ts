@@ -111,7 +111,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Calculated columns whose DAX calls RELATED.",
   REDUCE_USAGE_OF_CALCULATED_TABLES: "Every calculated table. Calculation groups are not included.",
   "REDUCE_USAGE_OF_LONG-LENGTH_COLUMNS_WITH_HIGH_CARDINALITY":
-    "Text columns where more than 500,000 rows hold values longer than 100 characters. Row data is not in the model files, so pbiplint lists this rule but cannot run it.",
+    "Text columns where more than 500,000 rows hold values longer than 100 characters. That count is a statistic of the loaded data, not of the model files, so pbiplint lists this rule but does not run it: it needs statistics that only a live model carries.",
   RELATIONSHIP_COLUMNS_SAME_DATA_TYPE: "Relationships whose two columns have different data types.",
   RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE:
     "Any column that takes part in a relationship and is not a whole number.",
@@ -120,7 +120,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   REMOVE_DATA_SOURCES_NOT_REFERENCED_BY_ANY_PARTITIONS:
     "Data sources that no partition names and that appear nowhere in any partition's query or M text.",
   REMOVE_REDUNDANT_COLUMNS_IN_RELATED_TABLES:
-    "Columns that take part in no relationship and share a name with a column on a table that this table relates to from the many side. In practice, a fact table column that duplicates a dimension attribute.",
+    "Columns that take part in no relationship and whose name also exists on a table at the other end of a relationship their own table is the from side of. In practice, a fact table column that duplicates a dimension attribute.",
   REMOVE_ROLES_WITH_NO_MEMBERS: "Roles with no members.",
   SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS:
     "Columns with IsAvailableInMdx set to false that are used to sort another column, appear in a hierarchy or a variation, or sort by another column.",
@@ -128,7 +128,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Tables that are on the from side of one relationship and the to side of another, which is what a dimension related to a sub-dimension looks like.",
   SPECIAL_CHARS_IN_OBJECT_NAMES: "Names containing a tab, line feed, or carriage return.",
   SPLIT_DATE_AND_TIME:
-    "DateTime columns holding values that are not at midnight. Row data is not in the model files, so pbiplint lists this rule but cannot run it.",
+    "DateTime columns holding values that are not at midnight. Whether any row carries a time is a statistic of the loaded data, not of the model files, so pbiplint lists this rule but does not run it: it needs statistics that only a live model carries.",
   TRIM_OBJECT_NAMES:
     "Names that start or end with a space, across every named object type in the model.",
   UNNECESSARY_COLUMNS:

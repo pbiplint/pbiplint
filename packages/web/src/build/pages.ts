@@ -158,51 +158,71 @@ export function parseFrontmatter(
   return { data, body: m[2]! };
 }
 
+/** A file family a project can hold, and so a family the site can lint: core calls these `LayerName`. */
+export type SiteLayer = "model" | "report";
+
 /**
- * The layers a rule page can declare. The site keeps its own copy of the names core uses, for the
- * reason CATEGORY_ORDER gives: this build imports nothing from core.
+ * The layer a rule page declares, the site's copy of core's `Layer`: a file family, or `project`
+ * for a rule that reads both and can fire on either. The copy is deliberate for the reason
+ * CATEGORY_ORDER gives, this build imports nothing from core.
  */
-export type RuleLayer = "model" | "report";
+export type RuleLayer = SiteLayer | "project";
 
-/** Every layer name a page may declare, and the list the error names when a page declares another. */
-const RULE_LAYERS: readonly RuleLayer[] = ["model", "report"];
+/** Every layer a page may declare, and the list the error names when a page declares another. */
+const RULE_LAYERS: readonly RuleLayer[] = ["model", "report", "project"];
 
 /**
- * The layers pbiplint.com publishes. A rule page whose `layer` is not in this list is not
+ * The file families pbiplint.com publishes. A rule page whose layer is not published is not
  * rendered, not in the rules index, not in the sitemap, and not in the rule-id link map, so its
- * id stays plain code on the pages that mention it. A page with no `layer` counts as `model`.
+ * id stays plain code on the pages that mention it. A page with no `layer` key counts as `model`.
+ *
+ * `project` is not a member and never becomes one: it is not a file family, and a `project` page
+ * publishes whenever this list names either family, because a project rule fires on any input the
+ * site can lint. `PARSE_ISSUE` is the page that shows it, on the site today and on a model-only
+ * run. Keeping `project` out also leaves "more than one layer published" a question about the two
+ * families, which is what the layer column below turns on.
  *
  * The gate is here because the site deploys from main on every push while the ported report rules
  * land on main several pull requests before the browser can lint a report: without it, pbiplint.com
  * would carry pages for rules no published tool runs, for weeks. Pull request 7, where the browser
- * reads a report, sets this to both layers and moves the site's pinned counts with it.
+ * reads a report, sets this to both families and moves the value pinned in generate.test.ts and
+ * the site's pinned counts with it.
  *
- * While this list names one layer, no report page is published, so a layer column has nothing to
+ * While this list names one family, no report page is published, so a layer column has nothing to
  * distinguish and the attribution the ported report set adds has no page to sit on. That is why
  * neither appears until the list grows, and why neither needs a flag of its own.
  */
-export const SITE_LAYERS: readonly RuleLayer[] = ["model"];
+export const SITE_LAYERS: readonly SiteLayer[] = ["model"];
 
 /**
- * The layer a page declares, `model` when its frontmatter has no `layer` key, because the pages
- * predate the key. A value that is not a layer name is an error rather than a fall back to
- * `model`, for the reason parseFrontmatter gives: a typo that quietly unpublished a page would be
- * invisible on the site, and one that quietly published a report page would defeat the gate.
- * `source` names the page the same way parseFrontmatter does.
+ * The layer a page declares, `model` when its frontmatter has no `layer` key at all, because the
+ * pages predate the key. A key that is present and says nothing readable is an error rather than a
+ * fall back to `model`: `layer:` on its own is the form a scaffolded page carries, the way `video:`
+ * does on every page today, and reading it as the model layer is how a report page would reach the
+ * site by accident. A typo is an error for the same reason parseFrontmatter gives, and `source`
+ * names the page the way it does.
  */
 export function pageLayer(data: Frontmatter, source: string): RuleLayer {
+  // An absent key and a present but empty one are different things in the parsed frontmatter, and
+  // only str() reads them alike, so the key is tested before its value is.
+  if (data.layer === undefined) return "model";
   const value = str(data.layer);
-  if (value === "") return "model";
   const layer = RULE_LAYERS.find((l) => l === value);
   if (!layer)
     throw new Error(
-      `${source}: unknown layer ${JSON.stringify(value)} (expected ${RULE_LAYERS.join(" or ")})`,
+      `${source}: unknown layer ${JSON.stringify(value)} ` +
+        `(expected one of ${RULE_LAYERS.join(", ")}, or no layer key at all)`,
     );
   return layer;
 }
 
-/** Whether the site publishes a layer, and so whether a page on that layer is generated at all. */
-export const publishesLayer = (layer: RuleLayer): boolean => SITE_LAYERS.includes(layer);
+/**
+ * Whether the site publishes a page on a layer, and so whether it is generated at all. A `project`
+ * page publishes as soon as either family does, because a project rule can fire on any input the
+ * site can lint.
+ */
+export const publishesLayer = (layer: RuleLayer): boolean =>
+  layer === "project" ? SITE_LAYERS.length > 0 : SITE_LAYERS.includes(layer);
 
 const section = (body: string, heading: string): string =>
   body.split(`## ${heading}`)[1]?.split(/\n## /)[0] ?? "";

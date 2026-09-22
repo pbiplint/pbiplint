@@ -3,8 +3,12 @@
   "report": "PBIP and GitHub Demo.Report",
   "oracle": "fab-inspector CLI 3.4.0 with Base-rules.json sha256 22868be9acd696c96e62f214dbe0efc72fd1bfffda1736b3b9a4d7fba21f883c, every rule enabled",
   "captured": "2026-09-22",
-  "deviations": {},
-  "ours": {},
+  "deviations": {
+    "REDUCE_ADVANCED_FILTERS": "pbiplint counts only Advanced filters with a condition applied, where PBI Inspector also counts an Advanced filter with nothing set, such as a slicer's or one Power BI Desktop writes for a visual's own fields."
+  },
+  "ours": {
+    "REDUCE_ADVANCED_FILTERS": []
+  },
   "native": {},
   "results": {
     "ENSURE_ALTTEXT": {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { lint } from "../src/engine/lint.js";
 import {
   HIDE_TOOLTIP_DRILLTROUGH_PAGES,
   ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY,
@@ -52,5 +53,19 @@ describe("ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY", () => {
     expect(
       reportObjectIds(ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY, files, undefined, { maxHeight: 1080 }),
     ).toEqual([]);
+  });
+
+  it("points the finding at the height line", () => {
+    // Pretty-printed, as Desktop writes it, so a mistyped pointer cannot fall back to line 1 unseen.
+    const tall = page("tall", { height: 721 });
+    const text = JSON.stringify(JSON.parse(tall.text), null, 2);
+    const { findings } = lint([{ ...tall, text }], {
+      rules: [ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY],
+      config: { failOn: "none" },
+    });
+    expect(findings).toHaveLength(1);
+    const line = findings[0]!.location!.line;
+    expect(line).toBeGreaterThan(1);
+    expect(text.split("\n")[line - 1]).toContain('"height"');
   });
 });

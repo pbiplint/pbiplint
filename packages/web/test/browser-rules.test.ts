@@ -43,9 +43,10 @@ describe("BROWSER_RULES", () => {
     expect(skippedLine(lint(SAMPLE_FILES, { rules: defaultRules }))).toMatch(
       /skipped \(no report in the input\)/,
     );
-    expect(skippedLine(lint(SAMPLE_FILES, { rules: BROWSER_RULES }))).not.toMatch(
-      /no report in the input/,
-    );
+    const line = skippedLine(lint(SAMPLE_FILES, { rules: BROWSER_RULES }));
+    expect(line).not.toMatch(/no report in the input/);
+    // The line is still there, carrying the clause a model-only run always has.
+    expect(line).toMatch(/^\d+ rules run, \d+ rules? skipped \(need a live model\)/);
   });
 });
 
@@ -73,6 +74,16 @@ describe("browserConfig", () => {
   });
   it("still names an id no default rule has", () => {
     expect(unknownIn({ NOPE: "off", needs_the_report: "off" })).toEqual(["NOPE"]);
+  });
+  it("keeps a kept rule's options and drops a left-out rule's", () => {
+    // No rule the browser runs declares an option yet, so this reads the config browserConfig
+    // returns rather than a lint run, which would refuse the option when it binds the config.
+    const config = browserConfig(
+      resolveConfig({
+        rules: { HIDE_FOREIGN_KEYS: { severity: "info", max: 3 }, NEEDS_THE_REPORT: { max: 5 } },
+      }),
+    );
+    expect([...config.options]).toEqual([["HIDE_FOREIGN_KEYS", { max: 3 }]]);
   });
   it("keeps the entries for the rules the browser runs, and failOn", () => {
     const config = browserConfig(

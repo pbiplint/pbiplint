@@ -7619,7 +7619,7 @@ npm install
 npm run version:sync
 ```
 
-Set the Status line in `README.md` to `Version 0.2.0, released on <today, long form>.` Then:
+Set the Status line in `README.md` to `Version 0.2.0, released on <today, long form>.` Delete the "Release hold until the report layer is live" section from `docs/RELEASING.md`: pull request 7 published the report pages, so the hold it describes ends with this release. Then:
 
 ```bash
 npm run lint && npm run typecheck && npm test && npm run check:browser && npm run build && npm run check:pack && npm run test:bundle -w pbiplint && npm run test:e2e
@@ -7645,6 +7645,7 @@ Pull request 8 of 8 for the report layer, tracked in #9.
 
 - README, CONTRIBUTING (adding a report rule; deviating from a ported rule), and the core README describe the report layer, the config options, and the JSON ignore annotation.
 - Version 0.2.0 in both packages, the README status line, and the lockfile.
+- docs/RELEASING.md drops its release hold section, since the site now publishes the report rule pages the CLI links to.
 
 After the merge, Michael tags per docs/RELEASING.md step 3 (`git fetch origin main && git tag v0.2.0 origin/main && git push origin v0.2.0`); the Release workflow publishes both packages through trusted publishing (this is the first real exercise of that path since v0.1.2). Then step 6: bump the pbiplint-version default in pbiplint/action and release it, and move the action's sample checkout pin past the sample pull request so its fixture SARIF is regenerated against the whole project.
 

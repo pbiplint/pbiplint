@@ -29,6 +29,16 @@ Do these once, at the first release, not before.
 
    From then on the workflow publishes without a token and npm attaches provenance.
 
+## Release hold until the report layer is live
+
+From the merge of the v2 plan's pull request 2 until pull request 7 sets `SITE_LAYERS` to both
+families, publish nothing from main. The CLI on main links to the report rule pages, and the site
+does not publish those pages until pull request 7 (decision 15 in
+`docs/superpowers/plans/2026-09-20-pbiplint-v2-report-layer.md`), so a release cut in that window
+would send its users to pages that do not exist yet. If a 0.1.x patch is needed meanwhile, cut it
+from a branch off the `v0.1.2` tag and tag that branch's release commit, not main. The 0.2.0
+release pull request removes this section.
+
 ## Every release
 
 1. On a branch from main, set the version in both packages and regenerate the core's version file:

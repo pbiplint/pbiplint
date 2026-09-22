@@ -41,6 +41,13 @@ for (const rule of defaultRules) {
           '{ "TODO": "the same JSON with the fix applied" }',
           "```",
         ];
+  // The fix route follows the files the rule reads: a model rule's can be in Power Query, the
+  // source, or the TMDL file as well as Desktop; a report or project rule's starts in Power BI
+  // Desktop, and its file route is a JSON edit Desktop keeps.
+  const fixPrompt =
+    rule.layer === "model"
+      ? "TODO: a route that needs no third-party tool: Power BI Desktop, Power Query, the source, or the TMDL file. Name the Desktop route and the TMDL property where both exist."
+      : "TODO: a route that needs no third-party tool: the Power BI Desktop route first, then an edit to the report JSON that Desktop keeps when it next saves the file. Name both where both exist.";
   const lines = [
     "---",
     `id: ${rule.id}`,
@@ -74,7 +81,7 @@ for (const rule of defaultRules) {
     "",
     "## How to fix it",
     "",
-    "TODO: a route that needs no third-party tool: Power BI Desktop, Power Query, the source, or the TMDL file. Name the Desktop route and the TMDL property where both exist.",
+    fixPrompt,
     ...(runs
       ? [
           "",

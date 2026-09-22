@@ -186,12 +186,14 @@ function buildVisual(
     isRecord(visual.query) && isRecord(visual.query.queryState) ? visual.query.queryState : {};
   const fields: VisualField[] = [];
   const showAllRoles: string[] = [];
+  let projectionCount = 0;
   for (const [role, state] of Object.entries(query)) {
     if (!isRecord(state)) continue;
     if (state.showAll === true) showAllRoles.push(role);
     if (!Array.isArray(state.projections)) continue;
     state.projections.forEach((proj, i) => {
       if (!isRecord(proj)) return;
+      projectionCount++;
       const pointer = `/visual/query/queryState/${escapePointer(role)}/projections/${i}/field`;
       for (const ref of collectFieldRefs(proj.field, pointer)) fields.push({ role, ref });
     });
@@ -247,6 +249,7 @@ function buildVisual(
     ...(title !== undefined ? { title } : {}),
     ...(altText !== undefined ? { altText } : {}),
     fields,
+    projectionCount,
     showAllRoles,
     filters: filtersOf(json.filterConfig, file, "/filterConfig"),
     actions,

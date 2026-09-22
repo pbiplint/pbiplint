@@ -118,7 +118,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   REDUCE_NUMBER_OF_CALCULATED_COLUMNS:
     "Models with more than five calculated columns across all tables. Columns of calculated tables do not count, and the finding is on the model.",
   REDUCE_OBJECTS_WITHIN_VISUALS:
-    "Visuals with more fields in their field wells than the threshold, 6 by default, counting every column and measure bound to any of the visual's wells.",
+    "Visuals with more entries in their field wells than the threshold, 6 by default, counting each column, measure, visual calculation, or sparkline in any of the visual's wells as one.",
   REDUCE_PAGES: "Reports with more pages than the threshold, 10 by default, hidden pages included.",
   REDUCE_TOPN_FILTERS:
     "Pages with more visuals carrying a Top N filter than the threshold, 4 by default.",

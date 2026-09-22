@@ -24,7 +24,11 @@ export const REDUCE_VISUALS_ON_PAGE = inspectorRule(
     }),
 );
 
-/** Deviation: the fields bound to the visual's roles, once each, not every `projections` array in the file. */
+/**
+ * Counts the entries in the projections of the visual's roles, one per field in a well, as the
+ * source's `count($..projections[*])` does. Deviation: only the roles' projections, not every
+ * `projections` array anywhere in the file.
+ */
 export const REDUCE_OBJECTS_WITHIN_VISUALS = inspectorRule(
   "REDUCE_OBJECTS_WITHIN_VISUALS",
   {
@@ -34,12 +38,12 @@ export const REDUCE_OBJECTS_WITHIN_VISUALS = inspectorRule(
   },
   (report, ctx) =>
     allVisuals(report).flatMap((v) =>
-      v.fields.length > max(ctx)
+      v.projectionCount > max(ctx)
         ? [
             reportFinding.visual(
               v,
               "/visual/query",
-              `${v.fields.length} fields bound, more than ${max(ctx)}`,
+              `${v.projectionCount} fields bound, more than ${max(ctx)}`,
             ),
           ]
         : [],

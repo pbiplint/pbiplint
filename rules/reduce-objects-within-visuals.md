@@ -15,7 +15,7 @@ sources:
 
 ## What it checks
 
-Visuals with more fields in their field wells than the threshold, 6 by default, counting every column and measure bound to any of the visual's wells.
+Visuals with more entries in their field wells than the threshold, 6 by default, counting each column, measure, visual calculation, or sparkline in any of the visual's wells as one.
 
 Each finding names the visual, as `"Sales by product" on "Overview"` when it has a title and `tableEx (c897ed) on "Overview"` when it has none, and its detail gives the count, as `7 fields bound, more than 6`.
 
@@ -130,7 +130,7 @@ A table or matrix whose job is to show many columns side by side, such as the de
 ## Quirks
 
 - pbiplint counts the fields bound to the visual's roles once, where PBI Inspector counts every projections array in the file and can count a field twice.
-- Only the fields in the wells count. A field in the visual's filters that is not also in a well is not counted.
+- Only the entries in the wells count, one for each well a field sits in, so a field in two wells counts twice. A field in the visual's filters that is not also in a well is not counted.
 
 ## Related rules
 

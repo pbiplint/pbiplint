@@ -222,6 +222,7 @@ describe("buildReport", () => {
       ["Y", "measure", "Sales", "Total Sales"],
     ]);
     expect(v1.fields[0]!.ref.pointer).toBe("/visual/query/queryState/Category/projections/0/field");
+    expect(v1.projectionCount).toBe(2);
     expect(v1.showAllRoles).toEqual(["Category"]);
     expect(v1.title).toBe("Sales by category");
     expect(v1.altText).toBe("Bar chart of sales by category");
@@ -240,6 +241,7 @@ describe("buildReport", () => {
     const [g1, v2] = report.pages[0]!.visuals;
     expect(g1!.isGroup).toBe(true);
     expect(g1!.type).toBe("visualGroup");
+    expect(g1!.projectionCount).toBe(0);
     expect(v2!.groupId).toBe("g1");
     expect(v2!.altText).toBe("(expression)");
     expect(v2!.hasMobileLayout).toBe(false);

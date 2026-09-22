@@ -50,6 +50,13 @@ export interface Visual {
   /** The alt text literal, or "(expression)" when it is bound to a measure or aggregation. */
   altText?: string;
   fields: VisualField[];
+  /**
+   * The entries in the `projections` arrays of the visual's roles, one per field in a well: a
+   * column, a measure, a visual calculation, a sparkline, or an arithmetic expression is one entry
+   * however many field references it holds (a visual calculation holds none), and a field bound in
+   * two roles is two.
+   */
+  projectionCount: number;
   showAllRoles: string[];
   filters: ReportFilter[];
   actions: VisualAction[];

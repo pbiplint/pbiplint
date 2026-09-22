@@ -54,7 +54,7 @@ Each finding names the page, as `Page "Product tooltip"`, and its detail says wh
 
 ## Why it matters
 
-A tooltip page is built to appear small, over a data point, already filtered to whatever the pointer rests on, and a drillthrough page is built to open filtered to the item a reader drilled from. Left visible, each is also a tab a reader can open on its own, with no data point or item behind it. Its visuals then show totals for everything under a heading that promises one product or one customer, and nothing on the page tells the reader so. The extra tabs also crowd the page list with pages that make sense only in context.
+A tooltip page is built to appear small, over a data point, already filtered to whatever the pointer rests on, and a drillthrough page is built to open filtered to the item a reader drilled from. Left visible, each is also a tab a reader can open on its own, with no data point or item behind it. A tooltip page's visuals then show totals for everything, and a drillthrough page's show whatever the page was last filtered to, both under a heading that promises one product or one customer, with nothing on the page to tell the reader so. The extra tabs also crowd the page list with pages that make sense only in context.
 
 ## How to fix it
 

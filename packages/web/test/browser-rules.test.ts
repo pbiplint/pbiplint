@@ -1,6 +1,6 @@
-import { defaultRules, lint, skippedLine, type Rule } from "@pbiplint/core";
+import { defaultRules, lint, resolveConfig, skippedLine, type Rule } from "@pbiplint/core";
 import { describe, expect, it, vi } from "vitest";
-import { BROWSER_RULES } from "../src/browser-rules.js";
+import { BROWSER_RULES, browserConfig } from "../src/browser-rules.js";
 import { SAMPLE_FILES } from "../src/sample.js";
 
 // No registered rule needs the report until the ports land, so the default rules this file sees
@@ -46,5 +46,48 @@ describe("BROWSER_RULES", () => {
     expect(skippedLine(lint(SAMPLE_FILES, { rules: BROWSER_RULES }))).not.toMatch(
       /no report in the input/,
     );
+  });
+});
+
+describe("browserConfig", () => {
+  const unknownIn = (rules: Record<string, unknown>): string[] =>
+    lint(SAMPLE_FILES, { config: browserConfig(resolveConfig({ rules })), rules: BROWSER_RULES })
+      .summary.unknownRules;
+
+  it("drops a left-out default rule's entries in any case, so they raise no notice", () => {
+    // Bound as written, the entry names no rule the browser runs.
+    const asWritten = resolveConfig({ rules: { NEEDS_THE_REPORT: "off" } });
+    expect(
+      lint(SAMPLE_FILES, { config: asWritten, rules: BROWSER_RULES }).summary.unknownRules,
+    ).toEqual(["NEEDS_THE_REPORT"]);
+    expect(unknownIn({ NEEDS_THE_REPORT: "off" })).toEqual([]);
+    expect(unknownIn({ needs_the_report: "info" })).toEqual([]);
+  });
+  it("leaves a left-out rule's options unvalidated", () => {
+    // The fixture declares no options, so bound against the default rules this entry throws.
+    const rules = { Needs_The_Report: { severity: "error", max: 3 } };
+    expect(() =>
+      lint(SAMPLE_FILES, { config: resolveConfig({ rules }), rules: defaultRules }),
+    ).toThrow(/takes no options/);
+    expect(unknownIn(rules)).toEqual([]);
+  });
+  it("still names an id no default rule has", () => {
+    expect(unknownIn({ NOPE: "off", needs_the_report: "off" })).toEqual(["NOPE"]);
+  });
+  it("keeps the entries for the rules the browser runs, and failOn", () => {
+    const config = browserConfig(
+      resolveConfig({
+        rules: {
+          hide_foreign_keys: "off",
+          needs_the_report: "off",
+          PARSE_ISSUE: "warning",
+          NEEDS_THE_REPORT: "error",
+        },
+        failOn: "none",
+      }),
+    );
+    expect([...config.disabled]).toEqual(["hide_foreign_keys"]);
+    expect([...config.severity]).toEqual([["PARSE_ISSUE", 2]]);
+    expect(config.failOn).toBeNull();
   });
 });

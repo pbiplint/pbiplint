@@ -5,7 +5,14 @@ import { expect, test } from "./fixtures.js";
 // deep-link anchors, and an accessibility scan of each page template. Every test also ends by
 // proving no console error was written and no request left the origin (see fixtures.ts).
 
-const PAGES = ["/", "/rules/", "/rules/hide-foreign-keys/", "/about/", "/404.html"];
+const PAGES = [
+  "/",
+  "/rules/",
+  "/rules/hide-foreign-keys/",
+  "/rules/parse-issue/",
+  "/about/",
+  "/404.html",
+];
 
 /** Violations as one line each, so a failure reads as a list of rule ids rather than a node dump. */
 async function violations(page: import("@playwright/test").Page): Promise<string[]> {

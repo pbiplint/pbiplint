@@ -15,8 +15,9 @@ const JUNK_SUFFIXES = [".pbix"];
 
 // A string literal holding an absolute path: a drive (C:\ or C:/), a UNC share (\\host\), or a
 // macOS or Linux home or volume. Outside File.Contents these still name folders, as in
-// Folder.Files("Y:\...") and the [Folder Path] comparison Desktop writes beside it.
-const ABSOLUTE_PATH_LITERAL = /"((?:[A-Za-z]:[\\/]|\\\\|\/(?:Users|Volumes|home)\/)[^"]*)"/g;
+// Folder.Files("Y:\...") and the [Folder Path] comparison Desktop writes beside it. The literal
+// ends on its own line, so an unclosed quote cannot run the match on to the next quote in the file.
+const ABSOLUTE_PATH_LITERAL = /"((?:[A-Za-z]:[\\/]|\\\\|\/(?:Users|Volumes|home)\/)[^"\r\n]*)"/g;
 
 /** C:\Demo\Data\<basename>, keeping a folder's trailing separator so a [Folder Path] test still matches. */
 function placeholder(path) {

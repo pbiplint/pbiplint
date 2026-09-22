@@ -77,6 +77,9 @@ describe("sanitizeProject", () => {
         '\t\t    Rows = Table.SelectRows(Source, each [Folder Path] = "Y:\\Documents\\Acme Ltd\\Raw Data\\Weather Data\\"),',
         '\t\t    Share = Csv.Document(Binary.Buffer(Web.Contents("\\\\host\\share\\people.csv"))),',
         '\t\t    Mac = Excel.Workbook(Binary.Buffer(Web.Contents("/Users/someone/Desktop/book.xlsx"))),',
+        // An unclosed quote before a drive path: the match must stop at the line's end, not run on.
+        '\t\t    // was "C:\\Users\\me\\Old Folder',
+        "\t\t    Half = 1 / 2,",
         '\t\t    Kept = Text.Combine({"d/m/yyyy", "Support\\Helper Queries", "https://example.com/a"})',
         "\t\tin",
         "\t\t    Rows",
@@ -90,6 +93,7 @@ describe("sanitizeProject", () => {
     expect(text).toContain('Web.Contents("C:\\Demo\\Data\\people.csv")');
     expect(text).toContain('Web.Contents("C:\\Demo\\Data\\book.xlsx")');
     expect(text).toContain('{"d/m/yyyy", "Support\\Helper Queries", "https://example.com/a"}');
+    expect(text).toContain("\n\t\t    Half = 1 / 2,\n");
     for (const leak of ["Acme", "host", "someone"]) expect(text).not.toContain(leak);
     expect(sanitizeProject(root)).toEqual({ rewritten: 0, removed: 0, edited: 0 });
     expect(readFileSync(file, "utf8")).toBe(text);

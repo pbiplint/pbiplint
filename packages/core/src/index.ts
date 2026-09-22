@@ -125,6 +125,16 @@ export { BPA_RULES, type BpaRuleMeta } from "./rules/microsoft-bpa/bpa-rules.dat
 export { bpaRule, liveModelRule, mapScope } from "./rules/microsoft-bpa/define.js";
 export { microsoftBpaRules } from "./rules/microsoft-bpa/index.js";
 export { PARSE_ISSUE } from "./rules/parse-issue.js";
+export {
+  INSPECTOR_RULES,
+  type InspectorRuleMeta,
+} from "./rules/pbi-inspector/inspector-rules.data.js";
+export {
+  inspectorMetaOf,
+  inspectorRule,
+  type InspectorRuleSpec,
+} from "./rules/pbi-inspector/define.js";
+export { pbiInspectorRules } from "./rules/pbi-inspector/index.js";
 export { allVisuals, isHiddenPage, reportFinding, visiblePages } from "./rules/report-helpers.js";
 export * from "./rules/types.js";
 export { parseTmdl } from "./tmdl/parse.js";

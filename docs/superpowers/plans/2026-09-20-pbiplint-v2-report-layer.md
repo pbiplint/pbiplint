@@ -3934,7 +3934,7 @@ Shared facts for this pull request:
 - `INSPECTOR_URL = "https://github.com/NatVanG/fab-inspector/blob/main/Rules/Base-rules.json"` is the attribution URL every ported report page carries alone in `sources`; `SOURCE_NAMES` names it "PBI Inspector's base rules by Nat Van Gulck".
 - The three deviation sentences, verbatim in the expectation files' `deviations` map and in each page's Quirks section:
   - `REDUCE_OBJECTS_WITHIN_VISUALS`: "pbiplint counts the fields bound to the visual's roles once, where PBI Inspector counts every projections array in the file and can count a field twice."
-  - `REDUCE_ADVANCED_FILTERS`: "pbiplint counts only Advanced filters with a condition applied, where PBI Inspector also counts a slicer typed Advanced with nothing set."
+  - `REDUCE_ADVANCED_FILTERS`: "pbiplint counts only Advanced filters with a condition applied, where PBI Inspector also counts an Advanced filter with nothing set, such as a slicer's or one Power BI Desktop writes for a visual's own fields."
   - `ENSURE_THEME_COLOURS`: "pbiplint looks for hex literals in colour properties only, where PBI Inspector matches a hex-looking pattern anywhere in the visual's JSON, including titles and text."
 - Escalation rule for a parity difference the three sentences do not cover: do not narrow the rule to match and do not add a fourth deviation; stop the task, write what differs (rule, fixture, the two lists) in the SDD ledger, and report it to Michael. Two known candidates: `AVOID_SHOW_ITEMS_WITH_NO_DATA` reads every role while the source reads Category only; `ENSURE_ALTTEXT` reads the alt text property while the source's `none` test treats a `general` entry with no `altText` as having one and treats a visual group as a visual.
 
@@ -4925,7 +4925,7 @@ export const REDUCE_TOPN_FILTERS = inspectorRule(
   (report, ctx) => pagesWithFilteredVisuals(report, ctx, (type) => type === "TopN", "a TopN filter"),
 );
 
-/** Deviation: only Advanced filters with a condition applied; a slicer typed Advanced with nothing set is not one. */
+/** Deviation: only Advanced filters with a condition applied; one with nothing set, such as a slicer's or one Desktop writes for a visual's own fields, is not counted. */
 export const REDUCE_ADVANCED_FILTERS = inspectorRule(
   "REDUCE_ADVANCED_FILTERS",
   { category: "Performance", scope: ["Page"], options: [{ name: "max", type: "number", default: 4 }] },
@@ -4947,7 +4947,7 @@ In `pbi-inspector/index.ts`: `export const pbiInspectorRules: Rule[] = [...count
 - [ ] **Step 4: Run the tests and record the two deviations**
 
 Run: `npx vitest run packages/core/test/rules-report-counts.test.ts packages/core/test/report-parity.test.ts`
-Expected: the unit tests PASS. Parity for `REDUCE_OBJECTS_WITHIN_VISUALS` and `REDUCE_ADVANCED_FILTERS` FAILS where the oracle counts differently (the demo report's date slicer for the latter, per spec 3.2). For each failing rule and fixture: read the two lists; confirm every difference is exactly the deviation sentence (a visual counted twice through a second `projections` array; a slicer typed Advanced with no `filter`); then add the sentence under `deviations` and pbiplint's sorted ids under `ours` in that fixture's `.report.json`. Where the lists agree on a fixture, add nothing for that fixture. A difference the sentence does not explain is a port bug: fix the port. Re-run: PASS. The parity test still reports the six `NOT_YET_PORTED` rules as tolerated.
+Expected: the unit tests PASS. Parity for `REDUCE_OBJECTS_WITHIN_VISUALS` and `REDUCE_ADVANCED_FILTERS` FAILS where the oracle counts differently (for the latter, the demo report's page, whose Advanced filters with nothing set are a date slicer's and four data visuals' own per-field entries, per spec 3.2). For each failing rule and fixture: read the two lists; confirm every difference is exactly the deviation sentence (a visual counted twice through a second `projections` array; an Advanced filter with no `filter`, a slicer's or a visual's own per-field entry); then add the sentence under `deviations` and pbiplint's sorted ids under `ours` in that fixture's `.report.json`. Where the lists agree on a fixture, add nothing for that fixture. A difference the sentence does not explain is a port bug: fix the port. Re-run: PASS. The parity test still reports the six `NOT_YET_PORTED` rules as tolerated.
 
 - [ ] **Step 5: Commit**
 

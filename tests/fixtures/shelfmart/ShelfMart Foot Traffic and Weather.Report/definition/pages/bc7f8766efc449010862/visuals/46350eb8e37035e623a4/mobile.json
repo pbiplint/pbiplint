@@ -1,0 +1,30 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainerMobileState/1.4.0/schema.json",
+  "objects": {
+    "general": [
+      {
+        "properties": {
+          "paragraphs": [
+            {
+              "textRuns": [
+                {
+                  "value": "Impact of Weather on Foot Traffic and Average Revenue per Visit",
+                  "textStyle": {
+                    "fontSize": "12pt"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "position": {
+    "x": 108,
+    "y": 0,
+    "z": 11,
+    "height": 87,
+    "width": 216
+  }
+}

@@ -1,0 +1,36 @@
+/// Disconnected security table — maps user emails to regions for dynamic RLS. Stays disconnected on purpose; a relationship to Customer would put security data in the field list and risks leaking it.
+table 'User Region'
+	lineageTag: b1dbc831-bc8a-5bf5-b645-7fda4b7d51c9
+
+	/// Authenticated user's UPN. Compared against USERPRINCIPALNAME() in the Regional Manager role's filter expression.
+	column 'User Email'
+		dataType: string
+		lineageTag: 4a984fed-1361-5c0b-900f-a5adde3a8dff
+		summarizeBy: none
+		sourceColumn: User Email
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Region the user is allowed to see. Multiple rows per user expand the user's accessible region set.
+	column Region
+		dataType: string
+		lineageTag: b047ae30-a683-5286-8373-1276668dc1a4
+		summarizeBy: none
+		sourceColumn: Region
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'User Region' = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents("C:\Demo\Data\user_region.csv"),[Delimiter=",", Columns=2, Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+				    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers", {{"User Email", Text.Type}, {"Region", Text.Type}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table
+
+	annotation PBI_NavigationStepName = Navigation
+

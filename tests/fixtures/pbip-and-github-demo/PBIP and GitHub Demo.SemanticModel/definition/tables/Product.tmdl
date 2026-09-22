@@ -1,0 +1,68 @@
+/// Product dimension; one row per product. Cost Price and Margin % are visible — useful for per-product profitability visuals.
+table Product
+	lineageTag: ab5725b6-ac18-5340-aa72-c5324ef32460
+
+	/// Surrogate key.
+	column 'Product ID'
+		dataType: int64
+		isHidden
+		isKey
+		isAvailableInMdx: false
+		lineageTag: c6fb783f-76d6-535a-a748-48f748521f0d
+		summarizeBy: none
+		sourceColumn: Product ID
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Product display name.
+	column 'Product Name'
+		dataType: string
+		lineageTag: f71339a7-4a9d-56b9-a3aa-f389cd811a4c
+		summarizeBy: none
+		sourceColumn: Product Name
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Top-level grouping — Hardware or Service.
+	column Category
+		dataType: string
+		lineageTag: 1a9a4c29-ca0e-522c-a23a-ac1e5236e272
+		summarizeBy: none
+		sourceColumn: Category
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Per-unit cost.
+	column 'Cost Price'
+		dataType: decimal
+		formatString: "$"#,0.00
+		lineageTag: 88db2499-d9da-530a-b72e-cca9ff2b51a2
+		summarizeBy: none
+		sourceColumn: Cost Price
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Per-unit margin as a percentage of price.
+	column 'Margin %'
+		dataType: decimal
+		formatString: #,0.0%;-#,0.0%;#,0.0%
+		lineageTag: 4bd759e9-434b-5e11-ab32-fd0114ebbcdf
+		summarizeBy: none
+		sourceColumn: Margin %
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Product = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents("C:\Demo\Data\product.csv"),[Delimiter=",", Columns=5, Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+				    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers", {{"Product ID", Int64.Type}, {"Product Name", Text.Type}, {"Category", Text.Type}, {"Cost Price", Currency.Type}, {"Margin %", Currency.Type}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table
+
+	annotation PBI_NavigationStepName = Navigation
+

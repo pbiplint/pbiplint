@@ -1,0 +1,31 @@
+/// Demo semantic model for the Data Practitioner video on Power BI
+/// Projects + GitHub. Star schema with marked daily-grain date table,
+/// KPI and time-intelligence measures hosted on the Sales fact,
+/// descriptions on every named object, format strings, display
+/// folders, sort-by columns, a Calendar hierarchy, and static +
+/// dynamic row-level security.
+model Model
+	culture: en-US
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	sourceQueryCulture: en-US
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+annotation __PBI_TimeIntelligenceEnabled = 1
+
+annotation PBI_ProTooling = ["DevMode"]
+
+annotation PBI_QueryOrder = ["Date","Customer","Product","Sales","User Region"]
+
+ref table Date
+ref table Customer
+ref table Product
+ref table Sales
+ref table 'User Region'
+
+ref role 'East Region'
+ref role 'Regional Manager'
+
+ref cultureInfo en-US
+

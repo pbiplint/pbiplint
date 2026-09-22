@@ -1,0 +1,58 @@
+model Model
+	culture: en-US
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	sourceQueryCulture: en-US
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+/// Contains queries and parameters used for the support of the semantic model
+queryGroup Support
+
+	annotation PBI_QueryGroupOrder = 0
+
+/// Contains queries that generate dimension tables within the semantic model
+queryGroup 'Dimension Queries'
+
+	annotation PBI_QueryGroupOrder = 1
+
+/// Contains queries that generate fact tables within the semantic model
+queryGroup 'Fact Queries'
+
+	annotation PBI_QueryGroupOrder = 2
+
+queryGroup 'Support\Transform File from Weather Data'
+
+	annotation PBI_QueryGroupOrder = 0
+
+queryGroup 'Support\Transform File from Weather Data\Helper Queries'
+
+	annotation PBI_QueryGroupOrder = 0
+
+annotation PBI_QueryOrder = ["Start Date","Last Refresh","Date","Store","Foot Traffic","Average Revenue per Visit","Revenue per Store","Average High Temperature Summary","Sample File","Parameter1","Transform Sample File","Transform File","Foot Traffic Forecast 2024","Average Revenue per Visit Forecast 2024","Revenue per Store Forecast 2024","Weather Data"]
+
+annotation __PBI_TimeIntelligenceEnabled = 1
+
+annotation PBIDesktopVersion = 2.142.928.0 (25.04)+de52df9f0bb74ad93a80d89c52d63fe6d07e0e1b
+
+annotation PBI_ProTooling = ["DevMode"]
+
+ref table Store
+ref table Date
+ref table 'Last Refresh'
+ref table 'Foot Traffic'
+ref table 'Average Revenue per Visit'
+ref table 'Weather Data'
+ref table 'Foot Traffic Forecast 2024'
+ref table 'Average Revenue per Visit Forecast 2024'
+ref table 'Revenue per Store Forecast 2024'
+ref table 'Revenue per Store'
+
+ref role Midwest
+ref role West
+ref role Northeast
+ref role Southeast
+ref role Southwest
+
+ref cultureInfo en-US
+

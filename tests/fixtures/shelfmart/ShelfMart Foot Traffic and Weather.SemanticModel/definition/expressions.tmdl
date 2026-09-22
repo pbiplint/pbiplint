@@ -1,0 +1,77 @@
+/// This is the date at which the dimension Date table will start.  This should usually be set to January 1 of the earliest year that is pertinent to your report.
+expression 'Start Date' = #date(2022, 1, 1) meta [IsParameterQuery=true, Type="Date", IsParameterQueryRequired=true]
+	lineageTag: 2664e8d5-e58b-4ae9-ba94-818a5dbc6a8e
+	queryGroup: Support
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Date
+
+expression 'Average High Temperature Summary' =
+		let
+		    Source = Csv.Document(File.Contents("C:\Demo\Data\AverageHighTemperatureSummary.csv"),[Delimiter=",", Columns=3, Encoding=1252, QuoteStyle=QuoteStyle.None]),
+		    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+		    #"Renamed Columns" = Table.RenameColumns(#"Promoted Headers",{{"AverageHighTemperature", "Average High Temperature"}, {"StoreID", "Store ID"}}),
+		    #"Changed Type" = Table.TransformColumnTypes(#"Renamed Columns",{{"Date", type text}, {"Average High Temperature", type number}, {"Store ID", Int64.Type}}),
+		    #"Added Key Column" = Table.AddColumn(#"Changed Type", "Key", each Text.Combine({Text.From([Store ID]), [Date]}, "-"), type text)
+		in
+		    #"Added Key Column"
+	lineageTag: 9ec20971-e077-40ec-b21b-f0308b11b6bd
+	queryGroup: Support
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+
+expression 'Sample File' =
+		let
+		    Source = Folder.Files("C:\Demo\Data\Weather Data"),
+		    #"Filtered Rows" = Table.SelectRows(Source, each ([Folder Path] = "C:\Demo\Data\Weather Data\") and ([Extension] = ".csv")),
+		    Navigation1 = #"Filtered Rows"{0}[Content]
+		in
+		    Navigation1
+	lineageTag: a8d4834d-f431-43a5-a260-7be35327f71a
+	queryGroup: 'Support\Transform File from Weather Data\Helper Queries'
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Binary
+
+expression Parameter1 = #"Sample File" meta [IsParameterQuery=true, BinaryIdentifier=#"Sample File", Type="Binary", IsParameterQueryRequired=true]
+	lineageTag: 748c5b3b-07c3-4ad6-ac13-5ce899bb77a3
+	queryGroup: 'Support\Transform File from Weather Data\Helper Queries'
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Binary
+
+expression 'Transform Sample File' =
+		let
+		    Source = Csv.Document(Parameter1,[Delimiter=",", Columns=11, Encoding=1252, QuoteStyle=QuoteStyle.None]),
+		    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true])
+		in
+		    #"Promoted Headers"
+	lineageTag: ff09549b-b85c-43e5-ab6f-8e97f861b984
+	queryGroup: 'Support\Transform File from Weather Data'
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+
+expression 'Transform File' =
+		let
+		    Source = (Parameter1 as binary) => let
+		    Source = Csv.Document(Parameter1,[Delimiter=",", Columns=11, Encoding=1252, QuoteStyle=QuoteStyle.None]),
+		    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true])
+		in
+		    #"Promoted Headers"
+		in
+		    Source
+	mAttributes: [ FunctionQueryBinding = "{""exemplarFormulaName"":""Transform Sample File""}" ]
+	lineageTag: 2274dcac-8b86-4aff-af82-0ac5e1395277
+	queryGroup: 'Support\Transform File from Weather Data\Helper Queries'
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Function
+

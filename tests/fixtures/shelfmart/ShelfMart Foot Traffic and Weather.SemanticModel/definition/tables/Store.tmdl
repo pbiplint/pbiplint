@@ -1,0 +1,134 @@
+/// The dimension Store table.  It is at the granularity of Store and contains details about ShelfMart's stores.
+table Store
+	lineageTag: b8f72c73-6285-4c13-97ba-0b479b09e2c4
+
+	/// The city in which the store is located
+	column City
+		dataType: string
+		lineageTag: 063c9467-0ba5-46c8-8363-cf1364eee054
+		dataCategory: City
+		isDefaultLabel
+		summarizeBy: none
+		sourceColumn: City
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	/// The state in which the store is located
+	column State
+		dataType: string
+		lineageTag: c2643abd-5b6d-40d1-8f72-47ea4ca72d42
+		dataCategory: StateOrProvince
+		summarizeBy: none
+		sourceColumn: State
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	/// The ID for the store.  The primary key for the table.
+	column 'Store ID'
+		dataType: int64
+		isHidden
+		isKey
+		formatString: 0
+		lineageTag: dbaa690f-5d65-4271-850d-cc3bbbe3e465
+		summarizeBy: none
+		sourceColumn: Store ID
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	/// The latitude of the store location
+	column Latitude
+		dataType: double
+		lineageTag: 32b1f71d-2a84-4f04-83b4-905ca9769217
+		dataCategory: Latitude
+		summarizeBy: none
+		sourceColumn: Latitude
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = User
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	/// The longitude of the store location
+	column Longitude
+		dataType: double
+		lineageTag: 2a3c4652-4e01-4311-87cc-07392d5d8259
+		dataCategory: Longitude
+		summarizeBy: none
+		sourceColumn: Longitude
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = User
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	/// The five-digit ZIP code of the store location
+	column ZIP
+		dataType: string
+		lineageTag: 655d6067-2f44-4dd5-8ded-d8b681aeb73e
+		dataCategory: PostalCode
+		summarizeBy: none
+		sourceColumn: ZIP
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	/// The date the store was opened
+	column 'Open Date'
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: c0f8fed0-a174-403b-8bea-d9e4ecca7813
+		summarizeBy: none
+		sourceColumn: Open Date
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	/// The type of store.  I.e., either "ShelfMart", "ShelfMarket", or "SpeedMart".
+	column 'Store Type'
+		dataType: string
+		lineageTag: 7ad4e321-4e49-489d-92e6-492eaee28381
+		summarizeBy: none
+		sourceColumn: Store Type
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	/// The region of the nation in which the store is located
+	column Region
+		dataType: string
+		lineageTag: 484b8dbd-67a6-4e97-953f-f2c3a458e801
+		summarizeBy: none
+		sourceColumn: Region
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Store = m
+		mode: import
+		queryGroup: 'Dimension Queries'
+		source =
+				let
+				    Source = Excel.Workbook(File.Contents("C:\Demo\Data\DimStore.xlsx"), null, true),
+				    DimStore_Table = Source{[Item="Store",Kind="Table"]}[Data],
+				    #"Assign Initial Datatypes" = Table.TransformColumnTypes(DimStore_Table,{{"Store ID", Int64.Type}, {"Latitude", type number}, {"Longitude", type number}, {"City", type text}, {"State", type text}, {"ZIP", type text}, {"Open Date", type date}, {"Store Type", type text}, {"Region", type text}})
+				in
+				    #"Assign Initial Datatypes"
+
+	changedProperty = IsHidden
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

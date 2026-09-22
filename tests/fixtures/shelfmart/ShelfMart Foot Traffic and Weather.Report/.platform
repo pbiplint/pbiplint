@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Report",
+    "displayName": "ShelfMart Foot Traffic and Weather"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "43e47710-3701-4643-a710-71619bac2a1d"
+  }
+}

@@ -1,0 +1,12 @@
+relationship 797c5f8b-0c04-5c82-8c4b-2ad8828299b6
+	fromColumn: Sales.'Sale Date'
+	toColumn: Date.Date
+
+relationship 2b23363c-91ae-5505-b1b9-b9ce9d122933
+	fromColumn: Sales.'Customer ID'
+	toColumn: Customer.'Customer ID'
+
+relationship 7a0e02ee-9424-5fa6-8c88-39bd35315cc5
+	fromColumn: Sales.'Product ID'
+	toColumn: Product.'Product ID'
+

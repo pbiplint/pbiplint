@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { buildIndexes } from "../src/index/build.js";
 import { buildModel } from "../src/model/build.js";
@@ -41,6 +41,47 @@ export function readModelFiles(root: string): { path: string; text: string }[] {
 
 export function parseModelDir(root: string): ParsedFile[] {
   return readModelFiles(root).map((f) => parseTmdl(f.path, f.text));
+}
+
+/** A PBIP folder's two parts as the CLI would read them, for tests that cannot import the CLI. */
+export function readProjectFiles(root: string): {
+  model: { path: string; text: string }[];
+  report: { path: string; text: string }[];
+  modelFolder?: string;
+  reportFolder?: string;
+} {
+  const dirs = readdirSync(root, { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name);
+  const modelFolder = dirs.find((d) => d.endsWith(".SemanticModel"));
+  const reportFolder = dirs.find((d) => d.endsWith(".Report"));
+  const model = modelFolder ? readModelFiles(join(root, modelFolder)) : [];
+  const report: { path: string; text: string }[] = [];
+  if (reportFolder) {
+    const base = join(root, reportFolder);
+    for (const name of ["definition.pbir", ".platform"])
+      if (existsSync(join(base, name)))
+        report.push({ path: name, text: readFileSync(join(base, name), "utf8") });
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) =>
+        a.name.localeCompare(b.name, "en"),
+      )) {
+        const p = join(dir, entry.name);
+        if (entry.isDirectory()) walk(p);
+        else if (entry.name.endsWith(".json"))
+          report.push({
+            path: relative(base, p).split("\\").join("/"),
+            text: readFileSync(p, "utf8"),
+          });
+      }
+    };
+    walk(join(base, "definition"));
+    // The CLI rides the project's .pbip in the report part by its path relative to the report
+    // root, one level up, so a finding on it points at the real file.
+    const pbip = readdirSync(root).find((n) => n.endsWith(".pbip"));
+    if (pbip) report.push({ path: `../${pbip}`, text: readFileSync(join(root, pbip), "utf8") });
+  }
+  return { model, report, modelFolder, reportFolder };
 }
 
 export const fixturesDir = new URL("../../../tests/fixtures/", import.meta.url).pathname;

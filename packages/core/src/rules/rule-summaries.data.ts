@@ -17,6 +17,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Descriptions containing a control character other than whitespace. Tabs and line breaks are allowed.",
   AVOID_INVALID_NAME_CHARACTERS:
     "Object names containing a control character that is not whitespace. The whitespace control characters are left out of the test; `SPECIAL_CHARS_IN_OBJECT_NAMES` reads names for a tab, a line feed, and a carriage return.",
+  AVOID_SHOW_ITEMS_WITH_NO_DATA:
+    "Visuals with Show items with no data turned on for any of their field wells.",
   AVOID_STRUCTURED_DATA_SOURCES_WITH_PROVIDER_PARTITIONS:
     "Partitions whose source is a legacy query, a provider partition, that points at a structured data source.",
   AVOID_THE_USERELATIONSHIP_FUNCTION_AND_RLS_AGAINST_THE_SAME_TABLE:
@@ -42,8 +44,13 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Measures and row-level security filters that refer to a column by its bare name, `[Column]`, instead of `'Table'[Column]`.",
   DAX_MEASURES_UNQUALIFIED:
     "Measures, calculated columns, calculated tables, and calculation items that refer to a measure with a table prefix, `'Table'[Measure]`.",
+  ENSURE_ALTTEXT: "Visuals other than shapes whose alt text is missing or empty.",
+  ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY:
+    "Visible pages taller than the threshold, 720 pixels by default.",
   ENSURE_TABLES_HAVE_RELATIONSHIPS:
     "Tables with no relationship to any other table. Calculation groups are not checked.",
+  ENSURE_THEME_COLOURS:
+    "Visuals other than text boxes with a colour property set to a hex value instead of a theme colour, including a hex value inside a conditional formatting rule or a gradient.",
   EVALUATEANDLOG_SHOULD_NOT_BE_USED_IN_PRODUCTION_MODELS: "Measures that call EVALUATEANDLOG.",
   EXPRESSION_RELIANT_OBJECTS_MUST_HAVE_AN_EXPRESSION:
     "Measures, calculated columns, and calculation items whose expression is empty.",
@@ -61,6 +68,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Visible numeric columns that a measure aggregates directly with a fully qualified reference, such as `SUM('Sales'[Amount])`. COUNT, COUNTBLANK, SUM, AVERAGE, MIN, MAX, DISTINCTCOUNT, VALUES, DISTINCT, and the A-suffixed COUNTA, AVERAGEA, MAXA, and MINA count as aggregations.",
   HIDE_FOREIGN_KEYS:
     "Visible columns whose name matches the from column of a relationship whose from side is many. Only the from cardinality is tested, so a many-to-many relationship counts here too, not just many-to-one.",
+  HIDE_TOOLTIP_DRILLTROUGH_PAGES: "Tooltip pages and drillthrough pages that are not hidden.",
   INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED:
     "Inactive relationships that no measure or calculation item activates with USERELATIONSHIP.",
   INTEGER_FORMATTING:
@@ -105,13 +113,22 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Perspectives that contain no tables. Adding any column, measure, or hierarchy to a perspective adds its table, so a perspective with no tables is empty.",
   PROVIDE_FORMAT_STRING_FOR_MEASURES:
     "Visible measures with no format string and no dynamic format string.",
+  REDUCE_ADVANCED_FILTERS:
+    "Pages with more visuals carrying an Advanced filter with a condition applied than the threshold, 4 by default.",
   REDUCE_NUMBER_OF_CALCULATED_COLUMNS:
     "Models with more than five calculated columns across all tables. Columns of calculated tables do not count, and the finding is on the model.",
+  REDUCE_OBJECTS_WITHIN_VISUALS:
+    "Visuals with more fields in their field wells than the threshold, 6 by default, counting every column and measure bound to any of the visual's wells.",
+  REDUCE_PAGES: "Reports with more pages than the threshold, 10 by default, hidden pages included.",
+  REDUCE_TOPN_FILTERS:
+    "Pages with more visuals carrying a Top N filter than the threshold, 4 by default.",
   REDUCE_USAGE_OF_CALCULATED_COLUMNS_THAT_USE_THE_RELATED_FUNCTION:
     "Calculated columns whose DAX calls RELATED.",
   REDUCE_USAGE_OF_CALCULATED_TABLES: "Every calculated table. Calculation groups are not included.",
   "REDUCE_USAGE_OF_LONG-LENGTH_COLUMNS_WITH_HIGH_CARDINALITY":
     "Text columns where more than 500,000 rows hold values longer than 100 characters. That count is a statistic of the loaded data, not of the model files, so pbiplint lists this rule but does not run it: it needs statistics that only a live model carries.",
+  REDUCE_VISUALS_ON_PAGE:
+    "Pages with more visible visuals than the threshold, 20 by default, not counting shapes, slicers, buttons, and text boxes.",
   RELATIONSHIP_COLUMNS_SAME_DATA_TYPE: "Relationships whose two columns have different data types.",
   RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE:
     "Any column that takes part in a relationship and is not a whole number.",
@@ -122,6 +139,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   REMOVE_REDUNDANT_COLUMNS_IN_RELATED_TABLES:
     "Columns that take part in no relationship and share a name with a column on a table at the to side of a relationship from their own table.",
   REMOVE_ROLES_WITH_NO_MEMBERS: "Roles with no members.",
+  REMOVE_UNUSED_CUSTOM_VISUALS:
+    "Custom visuals from AppSource that the report registers in report.json and that no visual on any page uses.",
   SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS:
     "Columns with IsAvailableInMdx set to false that are used to sort another column, appear in a hierarchy or a variation, or sort by another column.",
   SNOWFLAKE_SCHEMA_ARCHITECTURE:

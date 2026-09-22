@@ -15,26 +15,87 @@ sources:
 
 ## What it checks
 
-TODO: the exact condition the rule tests, in one or two sentences.
+Visuals other than shapes whose alt text is missing or empty.
+
+Each finding names the visual, as `"Total Sales" on "Overview"` when it has a title and `cardVisual (3d9c80) on "Overview"` when it has none, and its detail reads `no alt text`. When the visual has an empty alt text, the line is that property.
 
 ## Example
 
 ```pbir fires visual.json
-{ "TODO": "the smallest report JSON that fires the rule" }
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.8.0/schema.json",
+  "name": "3d9c80144abca427957c",
+  "position": { "x": 40, "y": 90, "z": 1000, "height": 105, "width": 150, "tabOrder": 1000 },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": { "Measure": { "Expression": { "SourceRef": { "Entity": "Sales" } }, "Property": "Total Sales" } },
+              "queryRef": "Sales.Total Sales"
+            }
+          ]
+        }
+      }
+    }
+  }
+}
 ```
 
 ```pbir fixed visual.json
-{ "TODO": "the same JSON with the fix applied" }
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.8.0/schema.json",
+  "name": "3d9c80144abca427957c",
+  "position": { "x": 40, "y": 90, "z": 1000, "height": 105, "width": 150, "tabOrder": 1000 },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": { "Measure": { "Expression": { "SourceRef": { "Entity": "Sales" } }, "Property": "Total Sales" } },
+              "queryRef": "Sales.Total Sales"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "general": [
+        {
+          "properties": {
+            "altText": { "expr": { "Literal": { "Value": "'Total sales for the period and stores selected on this page'" } } }
+          }
+        }
+      ]
+    }
+  }
+}
 ```
 
 ## Why it matters
 
-TODO: the practical consequence for a report author or a refresh, in pbiplint's own words.
+A screen reader announces a visual by its title and its type, then reads the alt text. With none, a reader who cannot see the page learns that there is a card or a bar chart and nothing about what it shows, so the insight the visual was built for never reaches them. Alt text also travels with the report: when a report is exported to PowerPoint, a visual without it gets the alt text "No alt text provided". The accessibility standards many organizations follow ask for a text alternative for every visual that carries information.
 
 ## How to fix it
 
-TODO: a route that needs no third-party tool: Power BI Desktop, Power Query, the source, or the TMDL file. Name the Desktop route and the TMDL property where both exist.
+In Power BI Desktop, select the visual, open the Format pane, expand General, and fill in Alt text at the bottom of the card; it takes up to 250 characters. Describe what a reader should take away rather than how the visual looks, since the screen reader already announces the title and type. For a figure that changes with the filters, the fx button beside Alt text binds it to a measure that writes the sentence. In visual.json, alt text is `altText` under `visualContainerObjects.general[0].properties` in the `visual` object, as in the example.
 
 ## When to ignore it
 
-TODO: the situations in which the finding is noise, or one sentence saying there are none. The annotation and config lines are generated; do not write them here.
+A purely decorative element, such as a background image, carries nothing for a screen reader to say. Take it out of the tab order in the Selection pane so screen readers skip it, and ignore the finding on it. A visual group is the other case (see Quirks): once the visuals inside it have alt text of their own, the finding on the group can be ignored.
+
+## Quirks
+
+- Shapes are not checked, as the source leaves them out. Images, text boxes, and buttons are checked; Microsoft's accessibility checklist asks for a text box's contents to go in its alt text too, so screen readers can read them.
+- The source ships this rule turned off, and pbiplint ships it on.
+- Alt text bound to a measure counts as present. pbiplint does not evaluate the measure, so one that returns blank still counts.
+- Alt text that is set but empty counts as missing.
+- A visual group is checked as a visual is. pbiplint looks for the alt text where a visual keeps it, and a group keeps its own under `visualGroup`, so every group is reported, with or without alt text of its own.
+
+## Links
+
+- [Design Power BI reports for accessibility](https://learn.microsoft.com/power-bi/create-reports/desktop-accessibility-creating-reports)

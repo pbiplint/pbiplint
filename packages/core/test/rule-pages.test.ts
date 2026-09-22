@@ -15,20 +15,6 @@ const ruleIds = new Set(defaultRules.map((r) => r.id));
 const RULESET_URL =
   "https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json";
 const INSPECTOR_URL = "https://github.com/NatVanG/fab-inspector/blob/main/Rules/Base-rules.json";
-/** Pages that exist as scaffolds only; Task 19 fills them and deletes this set. */
-const PENDING_PAGES = new Set([
-  "remove-unused-custom-visuals",
-  "reduce-visuals-on-page",
-  "reduce-objects-within-visuals",
-  "reduce-topn-filters",
-  "reduce-advanced-filters",
-  "reduce-pages",
-  "avoid-show-items-with-no-data",
-  "hide-tooltip-drilltrough-pages",
-  "ensure-theme-colours",
-  "ensure-pages-do-not-scroll-vertically",
-  "ensure-alttext",
-]);
 
 /** The sections a complete page may have, in the only order they may appear. */
 const SECTION_ORDER = [
@@ -268,13 +254,6 @@ function checkExample(rule: Rule, example: string): void {
 describe.each(defaultRules.map((r) => [r.id, r] as const))("rule page for %s", (_id, rule) => {
   const path = `${rulesDir}${slug(rule.id)}.md`;
 
-  if (PENDING_PAGES.has(slug(rule.id))) {
-    it("exists as a scaffold, to be written in Task 19", () => {
-      expect(existsSync(path), path).toBe(true);
-    });
-    return;
-  }
-
   it("exists with matching frontmatter and the required sections", () => {
     expect(existsSync(path), path).toBe(true);
     const text = readFileSync(path, "utf8");
@@ -387,18 +366,13 @@ describe("documented deviations", () => {
     "%s is named, in the same words, in the page's Quirks section",
     (id, sentence) => {
       const path = `${rulesDir}${slug(id)}.md`;
-      // A scaffold is held to existence only, as in the describe.each above; Task 19 writes the Quirks.
-      if (PENDING_PAGES.has(slug(id))) {
-        expect(existsSync(path), path).toBe(true);
-        return;
-      }
       expect(section(readFileSync(path, "utf8"), "Quirks")).toContain(sentence);
     },
   );
 });
 
 describe("the pbir example hook", () => {
-  // Every report page is a scaffold until Task 19, so these prove the hook on examples of its own.
+  // These prove the hook on examples of their own, so a page edit cannot hide a change to the hook.
   const ruleById = (id: string): Rule => defaultRules.find((r) => r.id === id)!;
   const fence = (info: string, body: unknown): string =>
     `\`\`\`${info}\n${typeof body === "string" ? body : JSON.stringify(body, null, 2)}\n\`\`\``;
@@ -486,7 +460,11 @@ describe("the pbir example hook", () => {
 
   it("places a malformed document for PARSE_ISSUE and runs it beside the TMDL pair", () => {
     const rule = ruleById("PARSE_ISSUE");
-    const tmdl = section(readFileSync(`${rulesDir}parse-issue.md`, "utf8"), "Example");
+    // The page's own JSON pair is left out, so the pair below is the only one.
+    const tmdl = section(readFileSync(`${rulesDir}parse-issue.md`, "utf8"), "Example").replace(
+      /^```pbir [^\n]*\n[\s\S]*?\n```$/gm,
+      "",
+    );
     const malformed = '{ "name": "salesCard", "visual": ';
     const json = [
       fence("pbir fires visual.json", malformed),

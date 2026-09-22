@@ -6,6 +6,7 @@ import {
   summaryLine,
   type LintFile,
 } from "@pbiplint/core";
+import { BROWSER_RULES } from "./browser-rules.js";
 import { InputError, selectModel, type InputTree } from "./input/model-files.js";
 import { directoryPicker, readDirectoryInput, readPickedDirectory } from "./input/pick-folder.js";
 import { readDataTransfer } from "./input/read-drop.js";
@@ -94,7 +95,7 @@ function run({ files, source, config, read, notes }: Run): void {
         );
       }
     }
-    const result = lint(files, { config: resolveConfig(raw) });
+    const result = lint(files, { config: resolveConfig(raw), rules: BROWSER_RULES });
     // Unhidden before it is filled, as the status line is: a hidden block is out of the
     // accessibility tree, so anything rendered into one arrives where nothing can reach it. The
     // live region that first made the order matter has since moved out to #announce; the order

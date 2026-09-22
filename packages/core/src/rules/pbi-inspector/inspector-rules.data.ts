@@ -6,7 +6,7 @@ export interface InspectorRuleMeta {
   id: string;
   name: string;
   description: string;
-  /** "Report" or "Pages" in the source; absent for a report-level rule. */
+  /** The source's part, "Report" or "Pages", or absent; nothing in pbiplint reads it. */
   part?: string;
   /** Shipped off in the source; pbiplint ships every rule on. */
   disabled: boolean;

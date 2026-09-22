@@ -2,5 +2,11 @@
 # a Markdown file inside them: a fixture is compared byte for byte and must never be normalised.
 *.md text eol=lf
 
+# The page's example is a file with a merge conflict in it, markers and all. Git counts a marker
+# only at this length here, so the deliberate seven-character ones are not reported as leftovers.
+rules/parse-issue.md conflict-marker-size=32
+
 examples/** -text
-tests/fixtures/** -text
+# Fixtures are test inputs, not code: GitHub collapses them in a pull request diff and leaves them
+# out of the language stats.
+tests/fixtures/** -text linguist-generated=true

@@ -231,12 +231,11 @@ export const showsLayers = (published: readonly SiteLayer[] = SITE_LAYERS): bool
   new Set(published).size > 1;
 
 /**
- * The layer a page declares, `model` when its frontmatter has no `layer` key at all, because the
- * pages predate the key. A key that is present and says nothing readable is an error rather than a
- * fall back to `model`: `layer:` on its own is the form a scaffolded page carries, the way `video:`
- * does on every page today, and reading it as the model layer is how a report page would reach the
- * site by accident. A typo is an error for the same reason parseFrontmatter gives, and `source`
- * names the page the way it does.
+ * The layer a page's frontmatter declares, which decides whether the site publishes the page
+ * (decision 15). A page with no `layer` key at all counts as `model`. A key that is present but
+ * empty, or names no layer, is an error rather than a fall back to `model`: the site publishes the
+ * model layer, so reading a blank or mistyped key as `model` is how a report page would reach the
+ * site by accident. `source` names the page in the error, as parseFrontmatter's errors do.
  */
 export function pageLayer(data: Frontmatter, source: string): RuleLayer {
   // An absent key and a present but empty one are different things in the parsed frontmatter, and

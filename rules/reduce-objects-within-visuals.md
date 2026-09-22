@@ -130,7 +130,7 @@ A table or matrix whose job is to show many columns side by side, such as the de
 ## Quirks
 
 - pbiplint counts the fields bound to the visual's roles once, where PBI Inspector counts every projections array in the file and can count a field twice.
-- Only the entries in the wells count, one for each well a field sits in, so a field in two wells counts twice. A field in the visual's filters that is not also in a well is not counted.
+- Only the entries in the wells count, one for each well a field sits in, so a field in two wells counts twice, in PBI Inspector too. A field in the visual's filters that is not also in a well is not counted.
 
 ## Related rules
 

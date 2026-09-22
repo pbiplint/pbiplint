@@ -5,6 +5,7 @@ category: Performance
 severity: info
 scope: [TablePermission]
 status: ported
+layer: model
 video:
 sources:
   - https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json

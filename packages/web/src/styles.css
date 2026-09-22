@@ -420,6 +420,21 @@ button.secondary:hover,
   border: 1px solid var(--line-2);
   padding: 1px 7px;
 }
+/* Which layer a rule or a group belongs to: an outlined tag beside the severity badge. */
+.layer {
+  display: inline-block;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  padding: 1px 6px;
+  color: var(--fg-2);
+}
+.layer.report {
+  border-color: var(--brand-teal);
+  color: var(--brand-teal-soft);
+}
 /* The same phrase on every row, so it reads as the secondary link it is beside the rule's own
    name, and never breaks across the separator before it. It keeps the link colour and the
    underline: the size is what subordinates it, not a colour a reader has to notice. */

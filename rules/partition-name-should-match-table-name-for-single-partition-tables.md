@@ -5,6 +5,7 @@ category: Naming Conventions
 severity: info
 scope: [Table]
 status: ported
+layer: model
 video:
 sources:
   - https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json

@@ -5,6 +5,7 @@ category: Maintenance
 severity: info
 scope: [Table, Measure, Column, CalculatedColumn, CalculatedTable, CalculatedTableColumn, CalculationGroupTable]
 status: ported
+layer: model
 video:
 sources:
   - https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json

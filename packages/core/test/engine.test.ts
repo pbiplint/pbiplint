@@ -208,6 +208,22 @@ describe("ignoreHelp", () => {
       'This rule reports on files, so there is no object to annotate. To turn the rule off for a whole project, set `"PARSE_ISSUE": "off"` under `rules` in `pbiplint.config.json`.',
     );
   });
+  it("tells a page or visual rule to annotate the JSON, and a report-level rule that there is nothing to annotate", () => {
+    expect(ignoreHelp("ENSURE_ALTTEXT", ["Visual"])).toBe(
+      'To ignore this rule on one page or visual, add `{ "name": "pbiplint.ignore", "value": "ENSURE_ALTTEXT" }` to the `annotations` array of its page.json or visual.json. Power BI Desktop keeps the annotation. To turn the rule off for a whole project, set `"ENSURE_ALTTEXT": "off"` under `rules` in `pbiplint.config.json`.',
+    );
+    expect(ignoreHelp("X", ["Visual", "Page", "Report", "Bookmark"])).toMatch(
+      /^To ignore this rule on one page or visual/,
+    );
+    expect(ignoreHelp("REDUCE_PAGES", ["Report"])).toBe(
+      'This rule reports on the report itself, so there is no object to annotate. To turn the rule off for a whole project, set `"REDUCE_PAGES": "off"` under `rules` in `pbiplint.config.json`.',
+    );
+    expect(ignoreHelp("X", ["ReportMeasure"])).toMatch(/^This rule reports on the report itself/);
+    // A rule that spans both layers keeps the TMDL form: its objects are model objects.
+    expect(ignoreHelp("NOT_REACHED_FROM_REPORT", ["Column", "Measure"])).toMatch(
+      /^To ignore this rule on one object, add `annotation/,
+    );
+  });
 });
 
 describe("runRules", () => {

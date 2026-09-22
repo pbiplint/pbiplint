@@ -5,6 +5,7 @@ category: DAX Expressions
 severity: error
 scope: [Measure, TablePermission, CalculationItem]
 status: ported
+layer: model
 video:
 sources:
   - https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json

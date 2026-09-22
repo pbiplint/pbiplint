@@ -5,6 +5,7 @@ category: Naming Conventions
 severity: info
 scope: [Model, Table, Measure, Hierarchy, Level, Perspective, Partition, DataSource, Column, CalculatedColumn, CalculatedTable, CalculatedTableColumn, NamedExpression, Role, CalculationGroupTable, CalculationItem]
 status: ported
+layer: model
 video:
 sources:
   - https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json

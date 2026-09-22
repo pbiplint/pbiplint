@@ -5,6 +5,7 @@ category: Error Prevention
 severity: error
 scope: [File]
 status: builtin
+layer: project
 video:
 sources:
 ---

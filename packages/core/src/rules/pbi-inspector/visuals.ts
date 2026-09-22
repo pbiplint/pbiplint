@@ -23,14 +23,15 @@ const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
 
 /**
- * JSON pointers of every `Literal` with a hex value inside one colour: the plain value, a
- * conditional formatting case, or a gradient stop. Each is a colour set by hand.
+ * JSON pointers to the `Value` of every `Literal` holding a hex inside one colour: the plain value,
+ * a conditional formatting case, or a gradient stop. Each is a colour set by hand, and the pointer
+ * ends at the value so a finding's line is the hex's own.
  */
 function hexLiterals(node: unknown, pointer: string): string[] {
   if (Array.isArray(node)) return node.flatMap((item, i) => hexLiterals(item, `${pointer}/${i}`));
   if (!isRecord(node)) return [];
   const value = isRecord(node.Literal) ? literal({ expr: { Literal: node.Literal } }) : undefined;
-  const here = value !== undefined && HEX.test(value) ? [`${pointer}/Literal`] : [];
+  const here = value !== undefined && HEX.test(value) ? [`${pointer}/Literal/Value`] : [];
   return [
     ...here,
     ...Object.entries(node).flatMap(([key, child]) =>

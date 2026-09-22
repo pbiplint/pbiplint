@@ -67,11 +67,20 @@ export function ignoreHelp(ruleId: string, scope: readonly string[] = []): strin
     return `This rule reports on files, so there is no object to annotate. ${project}`;
   const reportScoped =
     scope.length > 0 && scope.every((s) => REPORT_ANNOTATED.has(s) || REPORT_ONLY.has(s));
-  if (reportScoped && scope.some((s) => REPORT_ANNOTATED.has(s)))
+  const page = scope.includes("Page");
+  const visual = scope.includes("Visual");
+  if (reportScoped && (page || visual)) {
+    const [object, file] =
+      page && visual
+        ? ["page or visual", "page.json or visual.json"]
+        : page
+          ? ["page", "page.json"]
+          : ["visual", "visual.json"];
     return (
-      `To ignore this rule on one page or visual, add \`{ "name": "pbiplint.ignore", "value": "${ruleId}" }\` to the ` +
-      `\`annotations\` array of its page.json or visual.json. Power BI Desktop keeps the annotation. ${project}`
+      `To ignore this rule on one ${object}, add \`{ "name": "pbiplint.ignore", "value": "${ruleId}" }\` to the ` +
+      `\`annotations\` array of its ${file}. Power BI Desktop keeps the annotation. ${project}`
     );
+  }
   if (reportScoped)
     return `This rule reports on the report itself, so there is no object to annotate. ${project}`;
   return (

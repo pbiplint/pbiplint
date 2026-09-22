@@ -229,6 +229,8 @@ describe("rulePage", () => {
     expect(ignoreHelp("X", [])).toBe(coreIgnoreHelp("X", []));
     expect(ignoreHelp("X", ["File", "Table"])).toBe(coreIgnoreHelp("X", ["File", "Table"]));
     expect(ignoreHelp("X", ["Visual"])).toBe(coreIgnoreHelp("X", ["Visual"]));
+    expect(ignoreHelp("X", ["Page"])).toBe(coreIgnoreHelp("X", ["Page"]));
+    expect(ignoreHelp("X", ["Page", "Visual"])).toBe(coreIgnoreHelp("X", ["Page", "Visual"]));
     expect(ignoreHelp("X", ["Report"])).toBe(coreIgnoreHelp("X", ["Report"]));
     expect(ignoreHelp("X", ["Page", "Visual", "Report"])).toBe(
       coreIgnoreHelp("X", ["Page", "Visual", "Report"]),

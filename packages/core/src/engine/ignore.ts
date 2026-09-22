@@ -27,9 +27,9 @@ const REPORT_ONLY = new Set(["Report", "Bookmark", "ReportMeasure"]);
  * and for the SARIF help block. Written once so the two surfaces cannot drift. The site build
  * carries a copy (packages/web/src/build/pages.ts) that a test holds equal, because the build
  * imports nothing from core. A rule scoped to files alone has no object to annotate; a rule scoped
- * to report objects alone is ignored in the page or visual JSON when it reaches one, and otherwise
- * has nothing to annotate either. A scope with any model object keeps the TMDL form, because its
- * objects are model objects.
+ * to report objects alone is ignored in the JSON of the pages or visuals it reaches, named as its
+ * scope names them, and otherwise has nothing to annotate either. A scope with any model object
+ * keeps the TMDL form, because its objects are model objects.
  */
 export function ignoreHelp(ruleId: string, scope: readonly string[] = []): string {
   const project = `To turn the rule off for a whole project, set \`"${ruleId}": "off"\` under \`rules\` in \`pbiplint.config.json\`.`;
@@ -37,11 +37,20 @@ export function ignoreHelp(ruleId: string, scope: readonly string[] = []): strin
     return `This rule reports on files, so there is no object to annotate. ${project}`;
   const reportScoped =
     scope.length > 0 && scope.every((s) => REPORT_ANNOTATED.has(s) || REPORT_ONLY.has(s));
-  if (reportScoped && scope.some((s) => REPORT_ANNOTATED.has(s)))
+  const page = scope.includes("Page");
+  const visual = scope.includes("Visual");
+  if (reportScoped && (page || visual)) {
+    const [object, file] =
+      page && visual
+        ? ["page or visual", "page.json or visual.json"]
+        : page
+          ? ["page", "page.json"]
+          : ["visual", "visual.json"];
     return (
-      `To ignore this rule on one page or visual, add \`{ "name": "${IGNORE_ANNOTATION}", "value": "${ruleId}" }\` to the ` +
-      `\`annotations\` array of its page.json or visual.json. Power BI Desktop keeps the annotation. ${project}`
+      `To ignore this rule on one ${object}, add \`{ "name": "${IGNORE_ANNOTATION}", "value": "${ruleId}" }\` to the ` +
+      `\`annotations\` array of its ${file}. Power BI Desktop keeps the annotation. ${project}`
     );
+  }
   if (reportScoped)
     return `This rule reports on the report itself, so there is no object to annotate. ${project}`;
   return (

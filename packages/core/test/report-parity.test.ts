@@ -19,13 +19,6 @@ interface Expectation {
   results: Record<string, Record<string, OracleResult>>;
 }
 
-/** Rules the ruleset has that no task has ported yet; Tasks 16 and 17 empty it and Task 17 deletes it. */
-const NOT_YET_PORTED = new Set([
-  "AVOID_SHOW_ITEMS_WITH_NO_DATA",
-  "ENSURE_THEME_COLOURS",
-  "ENSURE_ALTTEXT",
-]);
-
 const repoRoot = new URL("../../../", import.meta.url).pathname;
 const expectationsDir = repoRoot + "tests/expectations/";
 const expectations: Expectation[] = readdirSync(expectationsDir)
@@ -64,13 +57,11 @@ describe.each(expectations)("parity with fab-inspector: $name", (exp) => {
         : oracleIds(exp.results[id]);
     expect([...(ours[id] ?? [])].sort()).toEqual(expected);
   });
-  it("has every rule the oracle failed ported, or listed as not yet ported", () => {
+  it("has every rule the oracle failed ported", () => {
     const failed = Object.entries(exp.results)
       .filter(([, pages]) => Object.values(pages).some((r) => !r.pass))
       .map(([id]) => id);
-    const missing = failed.filter(
-      (id) => !ported.some((r) => r.id === id) && !NOT_YET_PORTED.has(id),
-    );
+    const missing = failed.filter((id) => !ported.some((r) => r.id === id));
     expect(missing).toEqual([]);
   });
   it("shows the difference each deviation names, and names only ported rules", () => {

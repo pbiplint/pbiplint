@@ -3,8 +3,12 @@
   "report": "Base-rules-fails.Report",
   "oracle": "fab-inspector CLI 3.4.0 with Base-rules.json sha256 22868be9acd696c96e62f214dbe0efc72fd1bfffda1736b3b9a4d7fba21f883c, every rule enabled",
   "captured": "2026-09-22",
-  "deviations": {},
-  "ours": {},
+  "deviations": {
+    "ENSURE_THEME_COLOURS": "pbiplint looks for hex literals in colour properties only, where PBI Inspector matches a hex-looking pattern anywhere in the visual's JSON, including titles and text."
+  },
+  "ours": {
+    "ENSURE_THEME_COLOURS": []
+  },
   "native": {},
   "results": {
     "AVOID_SHOW_ITEMS_WITH_NO_DATA": {

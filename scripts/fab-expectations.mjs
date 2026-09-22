@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 // Convert fab-inspector CLI output into a pbiplint report-parity expectation file.
 //
-//   node scripts/fab-expectations.mjs <fixtureDir> <out.report.json> --from <TestRun.json>
-//   node scripts/fab-expectations.mjs <fixtureDir> <out.report.json> --cli <PBIRInspectorCLI> --rules <Base-rules.json>
+//   node scripts/fab-expectations.mjs <fixtureDir> <out.report.json> --from <TestRun.json> [--oracle <text>]
+//   node scripts/fab-expectations.mjs <fixtureDir> <out.report.json> --cli <PBIRInspectorCLI> --cli-version <x.y.z> --rules <Base-rules.json>
 //
 // With --cli the oracle runs over the fixture's .Report with every rule enabled (the source ships
-// ENSURE_ALTTEXT off; pbiplint ships it on). Keeps deviations, ours, and native from an existing
-// file. fab-inspector is a development-time oracle only; see docs/RELEASING.md for the macOS
+// ENSURE_ALTTEXT off; pbiplint ships it on), and the file's oracle string names the release given
+// with --cli-version, which is required, and the ruleset's sha256. With --from the oracle string is
+// --oracle's, or the existing file's. Keeps deviations, ours, and native from an existing file.
+// fab-inspector is a development-time oracle only; see docs/RELEASING.md for the macOS
 // invocation. Never run in CI.
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -34,13 +36,30 @@ export const enabledRuleset = (text) => {
   return JSON.stringify(json, null, 2);
 };
 
-/** `Results[]` keyed by rule id, then by page id or `report`. */
+/** The key a result is filed under: its page's id, or `report` for the report's own results. */
+function keyOf(r) {
+  const page = /^\/definition\/pages\/([^/]+)\/page\.json$/.exec(r.ItemPath ?? "")?.[1];
+  if (page !== undefined) return page;
+  if (r.ItemPath === "root" || r.ItemPath === "/definition/report.json") return "report";
+  throw new Error(`${r.RuleId}: unrecognised ItemPath ${JSON.stringify(r.ItemPath)}`);
+}
+
+/**
+ * `Results[]` keyed by rule id, then by page id or `report`. An item path it does not know, or a
+ * second result under the same rule and key, is an error rather than a guess or an overwrite.
+ */
 export function convertResults(results, pageIdByDisplayName) {
   const out = {};
+  const from = new Map();
   for (const r of results) {
     if (r.RuleId === "template") continue;
-    const page =
-      /^\/definition\/pages\/([^/]+)\/page\.json$/.exec(r.ItemPath ?? "")?.[1] ?? "report";
+    const page = keyOf(r);
+    const at = `${r.RuleId}\u0000${page}`;
+    if (from.has(at))
+      throw new Error(
+        `${r.RuleId}: two results for "${page}", from ${JSON.stringify(from.get(at))} and ${JSON.stringify(r.ItemPath)}`,
+      );
+    from.set(at, r.ItemPath);
     let actual = r.Actual;
     if (DISPLAY_NAME_RULES.has(r.RuleId) && Array.isArray(actual))
       actual = actual.map((name) => {
@@ -79,9 +98,15 @@ function main() {
     const i = rest.indexOf(name);
     return i >= 0 ? rest[i + 1] : undefined;
   };
-  if (!fixtureDir || !outPath || (!opt("--from") && !(opt("--cli") && opt("--rules")))) {
+  const cliMode = !opt("--from") && opt("--cli") && opt("--rules");
+  if (
+    !fixtureDir ||
+    !outPath ||
+    (!opt("--from") && !cliMode) ||
+    (cliMode && !/^\d+\.\d+\.\d+$/.test(opt("--cli-version") ?? ""))
+  ) {
     console.error(
-      "usage: fab-expectations <fixtureDir> <out.report.json> (--from <TestRun.json> | --cli <PBIRInspectorCLI> --rules <Base-rules.json>)",
+      "usage: fab-expectations <fixtureDir> <out.report.json> (--from <TestRun.json> [--oracle <text>] | --cli <PBIRInspectorCLI> --cli-version <x.y.z> --rules <Base-rules.json>)",
     );
     process.exit(2);
   }
@@ -109,7 +134,7 @@ function main() {
     if (!file)
       throw new Error(`the oracle wrote no TestRun_*.json to ${tmp}\n${run.stdout}\n${run.stderr}`);
     raw = readFileSync(join(tmp, file), "utf8");
-    oracle = `fab-inspector CLI 3.4.0 with Base-rules.json sha256 ${sha}, every rule enabled`;
+    oracle = `fab-inspector CLI ${opt("--cli-version")} with Base-rules.json sha256 ${sha}, every rule enabled`;
   }
   const json = JSON.parse(raw.replace(/^\ufeff/, ""));
   const results = convertResults(json.Results, pageIds(reportDir));

@@ -2,21 +2,22 @@ import type { Column, Hierarchy, Level, Measure, Model, Table } from "../model/t
 import type { Bookmark, FieldRef, Page, Report, ReportMeasure, Visual } from "../pbir/types.js";
 import { extractRefs } from "./references.js";
 
-export type ReportRefOwnerKind =
-  | "visualField"
-  | "visualFilter"
-  | "pageFilter"
-  | "pageBinding"
-  | "reportFilter"
-  | "bookmark"
-  | "reportMeasure";
+/** What holds a report reference, discriminated on `kind` so `object` narrows with it. */
+export type ReportRefOwner =
+  | {
+      kind: "visualField";
+      object: Visual;
+      /** The visual role the field is bound to. */
+      role: string;
+    }
+  | { kind: "visualFilter"; object: Visual }
+  | { kind: "pageFilter"; object: Page }
+  | { kind: "pageBinding"; object: Page }
+  | { kind: "reportFilter"; object: Report }
+  | { kind: "bookmark"; object: Bookmark }
+  | { kind: "reportMeasure"; object: ReportMeasure };
 
-export interface ReportRefOwner {
-  kind: ReportRefOwnerKind;
-  object: Visual | Page | Report | Bookmark | ReportMeasure;
-  /** The visual role for a `visualField` owner. */
-  role?: string;
-}
+export type ReportRefOwnerKind = ReportRefOwner["kind"];
 
 export type Resolution =
   | { kind: "column"; column: Column }

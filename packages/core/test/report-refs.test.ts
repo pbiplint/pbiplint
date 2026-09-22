@@ -126,7 +126,10 @@ describe("buildReportReferenceIndex", () => {
   const index = buildReportReferenceIndex(report, model);
   it("resolves visual fields, filters, bookmarks, and report measures against the model", () => {
     const v1 = report.pages[0]!.visuals[0]!;
-    expect(index.fieldsOf(v1).map((r) => [r.owner.role, r.resolution.kind])).toEqual([
+    const roles = index
+      .fieldsOf(v1)
+      .map((r) => [r.owner.kind === "visualField" ? r.owner.role : "", r.resolution.kind]);
+    expect(roles).toEqual([
       ["Category", "column"],
       ["Category", "hierarchy"],
       ["Y", "measure"],

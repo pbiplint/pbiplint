@@ -21,11 +21,8 @@ interface Expectation {
 
 /** Rules the ruleset has that no task has ported yet; Tasks 16 and 17 empty it and Task 17 deletes it. */
 const NOT_YET_PORTED = new Set([
-  "REMOVE_UNUSED_CUSTOM_VISUALS",
   "AVOID_SHOW_ITEMS_WITH_NO_DATA",
-  "HIDE_TOOLTIP_DRILLTROUGH_PAGES",
   "ENSURE_THEME_COLOURS",
-  "ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY",
   "ENSURE_ALTTEXT",
 ]);
 

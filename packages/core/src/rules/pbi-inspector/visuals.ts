@@ -22,19 +22,34 @@ const HEX = /^#(?:[A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
 
-/** JSON pointers of every `solid.color` literal that is a hex value, which is how PBIR writes a colour set by hand. */
+/**
+ * JSON pointers of every `Literal` with a hex value inside one colour: the plain value, a
+ * conditional formatting case, or a gradient stop. Each is a colour set by hand.
+ */
+function hexLiterals(node: unknown, pointer: string): string[] {
+  if (Array.isArray(node)) return node.flatMap((item, i) => hexLiterals(item, `${pointer}/${i}`));
+  if (!isRecord(node)) return [];
+  const value = isRecord(node.Literal) ? literal({ expr: { Literal: node.Literal } }) : undefined;
+  const here = value !== undefined && HEX.test(value) ? [`${pointer}/Literal`] : [];
+  return [
+    ...here,
+    ...Object.entries(node).flatMap(([key, child]) =>
+      hexLiterals(child, `${pointer}/${escapePointer(key)}`),
+    ),
+  ];
+}
+
+/** JSON pointers of every hex literal under a `solid.color`, which is where PBIR writes a colour property. */
 function hexColourPointers(node: unknown, pointer = ""): string[] {
   if (Array.isArray(node))
     return node.flatMap((item, i) => hexColourPointers(item, `${pointer}/${i}`));
   if (!isRecord(node)) return [];
-  const out: string[] = [];
-  if (isRecord(node.solid)) {
-    const value = literal(node.solid.color);
-    if (value !== undefined && HEX.test(value)) out.push(`${pointer}/solid/color`);
-  }
-  for (const [key, value] of Object.entries(node))
-    out.push(...hexColourPointers(value, `${pointer}/${escapePointer(key)}`));
-  return out;
+  return Object.entries(node).flatMap(([key, value]) => {
+    const at = `${pointer}/${escapePointer(key)}`;
+    return key === "solid" && isRecord(value)
+      ? hexLiterals(value.color, `${at}/color`)
+      : hexColourPointers(value, at);
+  });
 }
 
 /** Deviation: hex literals in colour properties only, where the source matches the pattern anywhere in the visual's text. */

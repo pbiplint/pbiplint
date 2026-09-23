@@ -354,6 +354,7 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
     bookmarksHeader: { items: [] },
     bookmarks: [],
     measures: [],
+    extensions: "absent",
     datasetReference: { kind: "none" },
     files: [],
     issues: [],
@@ -380,6 +381,9 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
 
   for (const f of [...files].sort((a, b) => a.path.localeCompare(b.path, "en"))) {
     report.files.push(f.path);
+    // Unread until it parses to an object below, so a file that fails on the way is not taken
+    // for one that defines no measures.
+    if (f.path === "definition/reportExtensions.json") report.extensions = "unread";
     const read = readJson(f.path, f.text);
     report.issues.push(...read.issues);
     if (read.json === undefined) continue;
@@ -457,6 +461,7 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
     } else if ((m = BOOKMARK_FILE.exec(f.path))) {
       report.bookmarks.push(buildBookmark(m[1]!, f.path, f.text, json));
     } else if (f.path === "definition/reportExtensions.json") {
+      report.extensions = "read";
       report.measures.push(...readExtensions(f.path, f.text, json));
     }
   }

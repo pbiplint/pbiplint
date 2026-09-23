@@ -176,6 +176,13 @@ export interface Report {
   bookmarksHeader: BookmarksHeader;
   bookmarks: Bookmark[];
   measures: ReportMeasure[];
+  /**
+   * What became of definition/reportExtensions.json: `absent` when the input holds none, `read`
+   * when it parsed to an object and its measures are in `measures`, `unread` when it did not (a
+   * merge conflict or invalid JSON, which PARSE_ISSUE reports), so `measures` says nothing of what
+   * the file defines.
+   */
+  extensions: "absent" | "read" | "unread";
   datasetReference: DatasetReference;
   files: string[];
   issues: ParseIssue[];

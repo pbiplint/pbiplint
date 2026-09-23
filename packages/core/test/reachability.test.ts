@@ -257,6 +257,25 @@ relationship r1
     expect(u.columns.map((c) => `${c.table.name}.${c.name}`)).toEqual(["Sales.OrderDate"]);
     expect(u.tables).toEqual([]);
   });
+  it("roots nothing through a reference to the report's extension while reportExtensions.json cannot be read", () => {
+    const inExtension = {
+      Measure: {
+        Expression: { SourceRef: { Schema: "extension", Entity: "Sales" } },
+        Property: "Total Sales",
+      },
+    };
+    const { report } = buildReport([
+      ...visualBinding(inExtension),
+      {
+        path: "definition/reportExtensions.json",
+        text: "<<<<<<< HEAD\n{}\n=======\n{}\n>>>>>>> main",
+      },
+    ]);
+    const indexes = buildIndexes({ model, report });
+    expect(indexes.reportRefs!.refs.map((r) => r.resolution.kind)).toEqual(["unread"]);
+    expect(indexes.reachability!.reached(meas("Total Sales"))).toBe(false);
+    expect(indexes.reachability!.reached(col("Sales", "Amount"))).toBe(false);
+  });
   it("is absent in a report-only or model-only project", () => {
     const { report } = buildReport(visualBinding(column("Sales", "Amount")));
     expect(buildIndexes({ report }).reachability).toBeUndefined();

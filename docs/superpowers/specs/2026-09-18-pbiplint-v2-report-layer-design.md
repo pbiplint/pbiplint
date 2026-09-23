@@ -373,6 +373,12 @@ resolves among the report's own measures only (Power BI Desktop writes
 Microsoft's reportExtension schema says to leave the schema empty for a
 model measure), so a reference left naming the extension after its
 measure moved into the model is unresolved, whatever the model holds.
+While reportExtensions.json cannot be read (merge-conflict markers or
+invalid JSON, which section 5 makes a `PARSE_ISSUE` finding), such a
+reference resolves to `unread`, which no rule reports, because pbiplint
+cannot say what the file defines; with no reportExtensions.json in the
+input, it stays unresolved, with a reason saying the report defines no
+extension measures.
 
 **Reachability index.** Roots: every resolved report reference; both
 columns of every relationship; columns named in RLS and OLS filters;

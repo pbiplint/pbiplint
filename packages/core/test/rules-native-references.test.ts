@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { buildIndexes } from "../src/index/build.js";
 import { buildModel } from "../src/model/build.js";
 import { buildReport } from "../src/pbir/build.js";
+import { PARSE_ISSUE } from "../src/rules/parse-issue.js";
 import {
   BROKEN_FIELD_REFERENCE,
   NOT_REACHED_FROM_REPORT,
@@ -116,7 +117,8 @@ describe("BROKEN_FIELD_REFERENCE", () => {
   });
   it("reports a reference still naming the report's extension after its measure moved into the model", () => {
     // Desktop binds a report measure with `"Schema": "extension"`; the measure has since moved
-    // into the model and out of reportExtensions.json, so the extension no longer defines it.
+    // into the model, and the input holds no reportExtensions.json, so nothing in the report
+    // defines it.
     const text = JSON.stringify(
       JSON.parse(
         bound("p", "v", "cardVisual", [
@@ -142,9 +144,50 @@ describe("BROKEN_FIELD_REFERENCE", () => {
     ).toEqual([
       [
         'cardVisual (v) on "Page p"',
-        `[Net Margin]: no measure named "Net Margin" on "Sales" in the report's extension`,
+        `[Net Margin]: no measure named "Net Margin" on "Sales": the report defines no extension measures`,
         { file: "definition/pages/p/visuals/v/visual.json", line: lineOf(text, '"field"') },
       ],
+    ]);
+  });
+  it("leaves a reference naming the report's extension unreported while reportExtensions.json cannot be read", () => {
+    // Both sides of the merge define Net Margin, and the model has one too. pbiplint reads neither
+    // side, so it says nothing of what the file defines; PARSE_ISSUE names the file instead.
+    const inExtension = {
+      Measure: {
+        Expression: { SourceRef: { Schema: "extension", Entity: "Sales" } },
+        Property: "Net Margin",
+      },
+    };
+    const side = (expression: string) =>
+      j({ entities: [{ name: "Sales", measures: [{ name: "Net Margin", expression }] }] });
+    const files = [
+      page("p"),
+      bound("p", "v1", "cardVisual", [inExtension]),
+      bound("p", "v2", "cardVisual", [inExtension]),
+      bound("p", "v3", "cardVisual", [inExtension]),
+      {
+        path: "definition/reportExtensions.json",
+        text: [
+          "<<<<<<< HEAD",
+          side("[Total Sales] * 0.1"),
+          "=======",
+          side("[Total Sales] * 0.2"),
+          ">>>>>>> main",
+        ].join("\n"),
+      },
+    ];
+    const withMeasure = `${tmdl}\tmeasure 'Net Margin' = [Total Sales] * 0.1\n`;
+    expect(reportFindings(BROKEN_FIELD_REFERENCE, files, withMeasure)).toEqual([]);
+    expect(
+      reportFindings(PARSE_ISSUE, files, withMeasure).map((f) => [
+        f.objectName,
+        f.location?.line,
+        f.detail,
+      ]),
+    ).toEqual([
+      ["definition/reportExtensions.json", 1, "merge conflict marker: <<<<<<< HEAD"],
+      ["definition/reportExtensions.json", 3, "merge conflict marker: ======="],
+      ["definition/reportExtensions.json", 5, "merge conflict marker: >>>>>>> main"],
     ]);
   });
   it("keeps one finding per file when two pages share a display name and a visual id", () => {

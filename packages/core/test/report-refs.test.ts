@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { buildReportReferenceIndex, type Resolution } from "../src/index/report-refs.js";
+import type { Model } from "../src/model/types.js";
 import { buildReport } from "../src/pbir/build.js";
 import { fixturesDir, modelFrom } from "./helpers.js";
 
@@ -372,8 +373,14 @@ describe("a reference that names the report's extension schema", () => {
       Property: property,
     },
   });
-  /** A card bound to the given fields, with reportExtensions.json defining `measures` on Sales. */
-  const indexOf = (fields: unknown[], measures: string[], m = model) => {
+  /** A reportExtensions.json defining `measures` on Sales, each with `expression`. */
+  const extensionsText = (measures: string[], expression = "1") =>
+    j({
+      name: "extension",
+      entities: [{ name: "Sales", measures: measures.map((name) => ({ name, expression })) }],
+    });
+  /** A card bound to the given fields, with reportExtensions.json's text, or no such file. */
+  const indexWith = (fields: unknown[], extensions: string | undefined, m: Model | undefined) => {
     const { report: r } = buildReport([
       { path: "definition/pages/p1/page.json", text: j({ name: "p1", displayName: "P" }) },
       {
@@ -387,18 +394,15 @@ describe("a reference that names the report's extension schema", () => {
           },
         }),
       },
-      {
-        path: "definition/reportExtensions.json",
-        text: j({
-          name: "extension",
-          entities: [
-            { name: "Sales", measures: measures.map((name) => ({ name, expression: "1" })) },
-          ],
-        }),
-      },
+      ...(extensions === undefined
+        ? []
+        : [{ path: "definition/reportExtensions.json", text: extensions }]),
     ]);
     return buildReportReferenceIndex(r, m);
   };
+  /** A card bound to the given fields, with reportExtensions.json defining `measures` on Sales. */
+  const indexOf = (fields: unknown[], measures: string[], m: Model = model) =>
+    indexWith(fields, extensionsText(measures), m);
   /** The model the report reads, after Net Margin moved into it. */
   const moved = modelFrom(`table Sales
 	column Amount
@@ -412,9 +416,9 @@ describe("a reference that names the report's extension schema", () => {
     expect(ref!.resolution.kind).toBe("reportMeasure");
   });
   it("resolves to the report's measure with no model in the run", () => {
-    const [ref] = indexOf(
+    const [ref] = indexWith(
       [inExtension("Measure", "Sales", "Net Margin")],
-      ["Net Margin"],
+      extensionsText(["Net Margin"]),
       undefined,
     ).refs;
     expect(ref!.resolution.kind).toBe("reportMeasure");
@@ -434,6 +438,41 @@ describe("a reference that names the report's extension schema", () => {
     const index = indexOf([inExtension("Column", "Sales", "Amount")], ["Net Margin"], moved);
     expect(index.refs.map((r) => reasonOf(r.resolution))).toEqual([
       `the report's extension defines only measures, so no column named "Amount" on "Sales"`,
+    ]);
+  });
+  it("is unread, and not unresolved, while reportExtensions.json cannot be read", () => {
+    // Both sides of the merge define Net Margin; pbiplint reads neither, so it cannot say either way.
+    const conflicted = [
+      "<<<<<<< HEAD",
+      extensionsText(["Net Margin"], "[Total Sales] * 0.1"),
+      "=======",
+      extensionsText(["Net Margin"], "[Total Sales] * 0.2"),
+      ">>>>>>> main",
+    ].join("\n");
+    const index = indexWith(
+      [
+        inExtension("Measure", "Sales", "Net Margin"),
+        inExtension("Column", "Sales", "Amount"),
+        measure("Sales", "Total Sales"),
+      ],
+      conflicted,
+      moved,
+    );
+    const unread = { kind: "unread", reason: "reportExtensions.json could not be read" };
+    expect(index.refs.map((r) => r.resolution)).toEqual([
+      unread,
+      unread,
+      expect.objectContaining({ kind: "measure" }),
+    ]);
+    expect(index.unresolved()).toEqual([]);
+  });
+  it("says the report defines no extension measures when the input holds no reportExtensions.json", () => {
+    const index = indexWith([inExtension("Measure", "Sales", "Net Margin")], undefined, moved);
+    expect(index.refs.map((r) => r.resolution)).toEqual([
+      {
+        kind: "unresolved",
+        reason: `no measure named "Net Margin" on "Sales": the report defines no extension measures`,
+      },
     ]);
   });
 });

@@ -29,13 +29,17 @@ export type ReportRefOwnerKind = ReportRefOwner["kind"];
 /**
  * What a reference resolves to. `variationOf` is the date column whose variation the reference
  * went through (Desktop's auto date/time), which the visual uses as surely as the level it shows.
+ * `unread` is a reference that names the report's extension while reportExtensions.json could not
+ * be read: what it resolves to is unknown, so it is neither resolved nor unresolved, no rule
+ * reports it, and the file's own PARSE_ISSUE finding says why.
  */
 export type Resolution =
   | { kind: "column"; column: Column; variationOf?: Column }
   | { kind: "measure"; measure: Measure; variationOf?: Column }
   | { kind: "reportMeasure"; measure: ReportMeasure }
   | { kind: "hierarchy"; hierarchy: Hierarchy; level?: Level; variationOf?: Column }
-  | { kind: "unresolved"; reason: string };
+  | { kind: "unresolved"; reason: string }
+  | { kind: "unread"; reason: string };
 
 export interface ReportRef {
   ref: FieldRef;
@@ -48,6 +52,7 @@ export interface ReportReferenceIndex {
   refs: ReportRef[];
   /** Report references that resolve to this model column or measure. */
   referencedBy(target: Column | Measure): ReportRef[];
+  /** The references that resolve to nothing; an `unread` one is not among them. */
   unresolved(): ReportRef[];
   /** The references a visual's roles bind, in role order. */
   fieldsOf(v: Visual): ReportRef[];
@@ -62,8 +67,8 @@ const q = (s: string): string => `"${s}"`;
  * the table the reference names, then among the report's own measures, and a measure that lives
  * on another table is reported as such, since Desktop breaks the visual the same way when a
  * measure moves. A reference that names a schema (Desktop writes `extension` for a report measure)
- * resolves among the report's own measures only. Without a model, every other reference is
- * unresolved with one reason.
+ * resolves among the report's own measures only, and is `unread` while reportExtensions.json
+ * could not be read. Without a model, every other reference is unresolved with one reason.
  */
 export function buildReportReferenceIndex(
   report: Report,
@@ -116,12 +121,19 @@ export function buildReportReferenceIndex(
   /**
    * A reference that names a schema and is not one of the report's own measures. The report's
    * extension defines measures only, so a column or a hierarchy named in it is unresolved too.
+   * While reportExtensions.json could not be read, what it defines is unknown, so the reference is
+   * `unread` rather than unresolved; a missing source is still said, since the visual's own file
+   * shows it.
    */
   const notInExtension = (ref: FieldRef): Resolution => {
     if (ref.noTable) return unresolved(NO_TABLE[ref.noTable]);
+    if (report.extensions === "unread")
+      return { kind: "unread", reason: "reportExtensions.json could not be read" };
     if (ref.kind === "measure")
       return unresolved(
-        `no measure named ${q(ref.name)} on ${q(ref.table)} in the report's extension`,
+        report.extensions === "absent"
+          ? `no measure named ${q(ref.name)} on ${q(ref.table)}: the report defines no extension measures`
+          : `no measure named ${q(ref.name)} on ${q(ref.table)} in the report's extension`,
       );
     const what = ref.kind === "hierarchyLevel" ? "hierarchy" : "column";
     return unresolved(

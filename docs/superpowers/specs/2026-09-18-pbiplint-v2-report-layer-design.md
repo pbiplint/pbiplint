@@ -22,6 +22,10 @@ report will do when someone opens it: which page, whether the Filters
 pane is open, what is saved with it. Those are the things a senior
 reviewer flags every time and resents spending review time on.
 
+Amended 2026-09-23: a hidden visual does not run its query until
+something shows it, so a hidden visual with fields bound is unfinished
+work, not an expense (section 8.2).
+
 Two things make the report layer worth building beyond that list.
 Teams on PBIP commit report changes far more often than model changes,
 so a linter that only reads the model is silent on most pull requests.
@@ -375,7 +379,7 @@ parity; `NOT_REACHED_FROM_REPORT` reads this index.
 | Opens on | landing page display name, or the active page with "the page open when it was saved; no landing page set" | `LANDING_PAGE_NOT_SET` |
 | Filters pane | open / closed / hidden from readers | `FILTERS_PANE_STATE` |
 | Pages | count; hidden; tooltip; drillthrough | `HIDE_TOOLTIP_DRILLTROUGH_PAGES` |
-| Visuals | count; hidden; custom visual types registered and used | `HIDDEN_VISUALS_STILL_QUERY`, `REMOVE_UNUSED_CUSTOM_VISUALS` |
+| Visuals | count; hidden; custom visual types registered and used | `HIDDEN_VISUAL_WITH_FIELDS`, `REMOVE_UNUSED_CUSTOM_VISUALS` |
 | Report measures | count | `REPORT_LEVEL_MEASURES` |
 | Slicers | count; with a saved selection | `SLICER_SELECTION_SAVED` |
 | Mobile layouts | pages with one, of total | |
@@ -483,9 +487,20 @@ compares on ids. All ported rules are `warning`.
 | BROKEN_FIELD_REFERENCE | Visual, Page, Report, Bookmark | project | Error Prevention | error | A visual, filter, or bookmark names a table, column, or measure the model does not have; detail says which and why |
 | NOT_REACHED_FROM_REPORT | Column, Measure | project | Maintenance | info | Not reached by the walk in section 6; detail gives the dead chain |
 | LANDING_PAGE_NOT_SET | Report | report | Report Design | info | No `landingPageName`; the report opens wherever it was saved |
-| OPENING_PAGE_INVALID | Report | report | Error Prevention | error | Landing or active page names a page that does not exist or is hidden |
+| OPENING_PAGE_INVALID | Report | report | Error Prevention | error | The landing page names a page that does not exist; or, with no landing page, the active page names a page that does not exist or is hidden |
 | FILTERS_PANE_STATE | Report | report | Report Design | warning | Policy `expect: open \| closed`; fires when the saved state disagrees |
-| HIDDEN_VISUALS_STILL_QUERY | Visual | report | Performance | warning | `isHidden` with fields bound; the query still runs |
+| HIDDEN_VISUAL_WITH_FIELDS | Visual | report | Maintenance | info | `isHidden` with fields bound; it runs its query only when a bookmark or the Selection pane shows it, so one nothing shows is left behind |
+
+Amended 2026-09-23 with Michael, after checking the two rows against
+Microsoft's own account. `OPENING_PAGE_INVALID` no longer flags a hidden
+landing page: Microsoft Learn documents it as supported ("Hidden pages
+can be set as the landing page. Report consumers always see the hidden
+page when they open the report."); a hidden active page with no landing
+page is still the slip it catches. `HIDDEN_VISUALS_STILL_QUERY` became
+`HIDDEN_VISUAL_WITH_FIELDS`, Maintenance, info, with the same condition:
+Phil Seamark (Microsoft) writes that hidden visuals do not fire a query
+until they are made visible, so the old name and category claimed a cost
+the report does not pay.
 
 Malformed JSON and conflict markers use `PARSE_ISSUE`; legacy formats
 are diagnostics.

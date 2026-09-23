@@ -25,12 +25,14 @@ const fieldLabel = (ref: FieldRef): string => {
  * The first finding for each object and missing field. One field can be named several times on an
  * object: an applied filter names it in `field` and again in its `Where`, a visual's own filter
  * entry or sort entry repeats a role binding, a bookmark's state can repeat it. The index keeps
- * every reference; the rule reports the field once, at its earliest reference.
+ * every reference; the rule reports the field once, at its earliest reference. The key holds the
+ * file, so two objects that share a label and an id in different files, such as visuals with the
+ * same id on two pages with the same name, are not taken for one.
  */
 const firstPerObjectAndField = (findings: RuleFinding[]): RuleFinding[] => {
   const seen = new Set<string>();
   return findings.filter((f) => {
-    const key = [f.objectType, f.objectId, f.objectName, f.detail].join("\u0000");
+    const key = [f.location?.file, f.objectType, f.objectId, f.objectName, f.detail].join("\u0000");
     if (seen.has(key)) return false;
     seen.add(key);
     return true;

@@ -69,11 +69,9 @@ export const FILTERS_PANE_STATE = pbiplintRule({
     const pane = filtersPaneState(report);
     if (!pane || pane.state === expect) return [];
     const { state, recordedAt } = pane;
-    // Without the property pbiplint reads the pane as open, and says the file does not record it.
-    const saved =
-      recordedAt === undefined
-        ? `${state} by default (report.json does not record it)`
-        : `saved ${state}`;
+    // Without the property pbiplint reads the pane as open, and says that is its reading of a
+    // state the file does not record, not a saved state.
+    const saved = recordedAt === undefined ? `not recorded, read as ${state}` : `saved ${state}`;
     return [
       reportFinding.report(report, `${saved}; the policy expects ${expect}`, "report", recordedAt),
     ];

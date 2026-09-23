@@ -76,7 +76,7 @@ function reportFacts(report: Report, known: ReadonlySet<string>): Fact[] {
             label: "Filters pane",
             value: pane.state,
             ...(pane.recordedAt === undefined
-              ? { detail: "the default; report.json does not record it" }
+              ? { detail: "read as open; report.json does not record it" }
               : {}),
           },
           "FILTERS_PANE_STATE",

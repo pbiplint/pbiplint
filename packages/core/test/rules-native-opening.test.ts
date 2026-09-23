@@ -222,7 +222,7 @@ describe("FILTERS_PANE_STATE", () => {
     const details = (pane: Record<string, unknown>, expect: string) =>
       reportFindings(FILTERS_PANE_STATE, report(pane), undefined, { expect }).map((f) => f.detail);
     expect(details({}, "closed")).toEqual([
-      "open by default (report.json does not record it); the policy expects closed",
+      "not recorded, read as open; the policy expects closed",
     ]);
     expect(details({ expanded: lit("true") }, "closed")).toEqual([
       "saved open; the policy expects closed",

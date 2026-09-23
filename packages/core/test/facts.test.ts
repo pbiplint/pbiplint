@@ -232,7 +232,7 @@ describe("buildFacts", () => {
       layer: "report",
       label: "Filters pane",
       value: "open",
-      detail: "the default; report.json does not record it",
+      detail: "read as open; report.json does not record it",
       ruleId: "FILTERS_PANE_STATE",
     });
     // With no report.json read, absent or unreadable, nothing says what state the pane is in.

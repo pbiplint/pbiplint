@@ -11,7 +11,6 @@ import {
   bound,
   column,
   j,
-  lit,
   measure,
   page,
   projectFrom,
@@ -95,8 +94,92 @@ describe("BROKEN_FIELD_REFERENCE", () => {
     });
   });
   it("is quiet when everything resolves, including a report measure", () => {
-    const files = [page("p"), bound("p", "v", "cardVisual", [measure("Sales", "Total Sales")])];
+    const files = [
+      page("p"),
+      bound("p", "v", "cardVisual", [
+        measure("Sales", "Total Sales"),
+        measure("Sales", "Net Margin"),
+      ]),
+      {
+        path: "definition/reportExtensions.json",
+        text: j({
+          entities: [
+            {
+              name: "Sales",
+              measures: [{ name: "Net Margin", expression: "[Total Sales] * 0.1" }],
+            },
+          ],
+        }),
+      },
+    ];
     expect(reportObjectIds(BROKEN_FIELD_REFERENCE, files, tmdl)).toEqual([]);
+  });
+  it("keeps one finding per file when two pages share a display name and a visual id", () => {
+    const files = [
+      page("p1", { displayName: "Same" }),
+      page("p2", { displayName: "Same" }),
+      bound("p1", "v", "tableEx", [measure("Sales", "Profit")]),
+      bound("p2", "v", "tableEx", [measure("Sales", "Profit")]),
+    ];
+    const findings = reportFindings(BROKEN_FIELD_REFERENCE, files, tmdl);
+    expect(findings.map((f) => [f.objectName, f.detail, f.location?.file])).toEqual([
+      [
+        'tableEx (v) on "Same"',
+        '[Profit]: no measure named "Profit" on "Sales"',
+        "definition/pages/p1/visuals/v/visual.json",
+      ],
+      [
+        'tableEx (v) on "Same"',
+        '[Profit]: no measure named "Profit" on "Sales"',
+        "definition/pages/p2/visuals/v/visual.json",
+      ],
+    ]);
+  });
+  it("reports a drillthrough page whose binding names a missing column, on the page", () => {
+    const files = [
+      page("drill", {
+        pageBinding: {
+          name: "Pod",
+          type: "Drillthrough",
+          parameters: [
+            {
+              name: "Param_Filter1",
+              boundFilter: "Filter1",
+              fieldExpr: column("Sales", "Customer"),
+            },
+          ],
+        },
+      }),
+    ];
+    const findings = reportFindings(BROKEN_FIELD_REFERENCE, files, tmdl);
+    expect(findings.map((f) => [f.objectName, f.objectId, f.detail])).toEqual([
+      ['Page "Page drill"', "drill", `'Sales'[Customer]: no column named "Customer" on "Sales"`],
+    ]);
+  });
+  it("labels a user hierarchy's level with its table and hierarchy", () => {
+    const dated = `table Date
+	column Month
+		dataType: string
+	hierarchy Calendar
+		level Month
+			column: Month
+`;
+    const level = {
+      HierarchyLevel: {
+        Expression: {
+          Hierarchy: { Expression: { SourceRef: { Entity: "Date" } }, Hierarchy: "Calendar" },
+        },
+        Level: "Year",
+      },
+    };
+    const findings = reportFindings(
+      BROKEN_FIELD_REFERENCE,
+      [page("p"), bound("p", "v", "tableEx", [level])],
+      dated,
+    );
+    expect(findings.map((f) => f.detail)).toEqual([
+      `'Date'[Calendar].[Year]: no level named "Year" in hierarchy "Calendar" on "Date"`,
+    ]);
   });
   it("points at the reference's own line in a pretty-printed report.json and bookmark", () => {
     const pretty = (v: unknown) => JSON.stringify(v, null, 2);
@@ -154,7 +237,7 @@ describe("BROKEN_FIELD_REFERENCE", () => {
                           Column: { Expression: { SourceRef: { Source: "s" } }, Property: "Nope" },
                         },
                       ],
-                      Values: [[lit("'East'")]],
+                      Values: [[{ Literal: { Value: "'East'" } }]],
                     },
                   },
                 },

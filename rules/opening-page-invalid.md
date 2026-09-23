@@ -97,7 +97,7 @@ When readers are meant to start on a hidden page, make it the landing page: Powe
 
 - A hidden landing page is not reported, because Power BI opens on it for every reader by design. Microsoft's documentation says so: "Hidden pages can be set as the landing page. Report consumers always see the hidden page when they open the report."
 - When a landing page is set, the active page is not checked, since the landing page overrides it.
-- When pages.json names neither a landing page nor an active page, the report opens on the first page in its page order, which exists by definition, so nothing is reported.
+- When pages.json names neither a landing page nor an active page, the report opens on the first page in its page order, which exists by definition, so nothing is reported. Nothing is reported when that first page is hidden either, because Microsoft does not document what Power BI shows readers in that case.
 - A page is matched by its `name`, exactly as pages.json writes it, not by its display name.
 - The rule reads pages.json. Without one in the input, or with one that cannot be read, it reports nothing.
 

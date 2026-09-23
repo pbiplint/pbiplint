@@ -413,7 +413,7 @@ describe("BROKEN_BOOKMARK_REFERENCE", () => {
 });
 
 describe("TAB_ORDER_FOLLOWS_LAYOUT", () => {
-  /** The policy that switches the rule on; every case below but the first runs under it. */
+  /** The policy that switches the rule on; every case below runs under it, the first without it too. */
   const LAYOUT = { expect: "layout" };
   const at = (
     name: string,

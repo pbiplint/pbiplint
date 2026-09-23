@@ -7540,18 +7540,19 @@ against it, plus pbiplint's own rules for what is broken, unfinished, or expensi
 and for what the model holds that the report never reaches. Power Query rules follow.
 ```
 
-In "Use it", the first command line becomes `npx pbiplint path/to/Project        # a PBIP folder, a .pbip file, a .SemanticModel or .Report folder, or one .tmdl file` and the browser sentence names the three folder kinds. In "Configure it", after the config example, add:
+In "Use it", the first command line becomes `npx pbiplint path/to/Project        # a PBIP folder, a .pbip file, a .SemanticModel or .Report folder, or one .tmdl file` and the browser sentence names the three folder kinds. In "Configure it", after the config example, add (three policy rules and the tab-order policy in the example, amended 2026-09-23 with Michael):
 
 ```markdown
 A rule that takes options is set with an object. The thresholds of the ported report rules and
-the two policy rules are examples; each rule's page lists its options:
+the three policy rules are examples; each rule's page lists its options:
 
 ```json
 {
   "rules": {
     "REDUCE_VISUALS_ON_PAGE": { "severity": "error", "max": 15 },
     "FILTERS_PANE_STATE": { "expect": "closed" },
-    "SLICER_SELECTION_SAVED": { "expect": "none" }
+    "SLICER_SELECTION_SAVED": { "expect": "none" },
+    "TAB_ORDER_FOLLOWS_LAYOUT": { "expect": "layout" }
   }
 }
 ```

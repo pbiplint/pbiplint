@@ -638,7 +638,7 @@ skips it.
 | BROKEN_ACTION_TARGET | Visual | Error Prevention | error | A button's `navigationSection`, `bookmark`, or `drillthroughSection` names nothing that exists |
 | ACTION_WITHOUT_DESTINATION | Visual | Report Design | warning | A button's page navigation, drillthrough, or bookmark action is on but names no destination |
 | BROKEN_BOOKMARK_REFERENCE | Bookmark | Error Prevention | warning | A bookmark's active page, or a page or visual it captures, does not exist |
-| TAB_ORDER_FOLLOWS_LAYOUT | Page | Accessibility | warning | Tab order disagrees with reading order (top to bottom, left to right, with a row tolerance of half the median visual height). Desktop always writes `tabOrder`, so "not set" is not detectable; disagreement with the layout is. The page documents the heuristic |
+| TAB_ORDER_FOLLOWS_LAYOUT | Page | Accessibility | warning | Tab order disagrees with reading order (top to bottom, left to right, with a row tolerance of half the median visual height). Desktop always writes `tabOrder`, so "not set" is not detectable; disagreement with the layout is. The page documents the heuristic; policy `expect: layout`, silent without it |
 | SLICER_SELECTION_SAVED | Visual | Report Design | info | A slicer carries a saved selection; policy `expect: none` raises it to warning |
 
 Amended 2026-09-23 with pull request 5, reading the conditions rather

@@ -153,7 +153,8 @@ const files = [
   },
   {
     path: "definition/bookmarks/bookmarks.json",
-    text: j({ items: [{ name: "b1", children: [{ name: "b2" }] }] }),
+    // Desktop and Microsoft's bookmarksMetadata schema list a group's children by bookmark name.
+    text: j({ items: [{ name: "b1", displayName: "Group", children: ["b2"] }] }),
   },
   {
     path: "definition/bookmarks/b1.bookmark.json",
@@ -617,6 +618,18 @@ describe("the schema notice", () => {
   });
   it("reads an older version without a notice", () => {
     expect(buildReport([onVisual("1.2.0"), onBookmark("1.4.0")]).diagnostics).toEqual([]);
+  });
+  it("reads a file whose schema family is the name of an Object member, with no notice", () => {
+    for (const family of ["constructor", "toString", "hasOwnProperty", "__proto__"]) {
+      const { report, diagnostics } = buildReport([
+        {
+          path: "definition/pages/p/visuals/v/visual.json",
+          text: visual("v").replace(schema("visualContainer", "2.8.0"), schema(family, "9.0.0")),
+        },
+      ]);
+      expect(diagnostics).toEqual([]);
+      expect(report.pages[0]!.visuals.map((v) => v.id)).toEqual(["v"]);
+    }
   });
 });
 

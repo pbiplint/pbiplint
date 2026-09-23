@@ -420,7 +420,8 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
     if (
       family &&
       version &&
-      KNOWN_SCHEMAS[family] &&
+      // An own property only: a family named `constructor` or `toString` is not a known one.
+      Object.hasOwn(KNOWN_SCHEMAS, family) &&
       newerMajor(version, KNOWN_SCHEMAS[family]!) &&
       !reportedFamilies.has(family)
     ) {
@@ -475,10 +476,9 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
                 ? [
                     {
                       name: item.name,
+                      // A group lists its bookmarks by name (bookmarksMetadata 1.0.0).
                       children: Array.isArray(item.children)
-                        ? item.children.flatMap((c) =>
-                            isRecord(c) && typeof c.name === "string" ? [c.name] : [],
-                          )
+                        ? item.children.filter((c): c is string => typeof c === "string")
                         : [],
                     },
                   ]

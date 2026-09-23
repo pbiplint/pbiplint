@@ -9,7 +9,21 @@
   "ours": {
     "REDUCE_ADVANCED_FILTERS": []
   },
-  "native": {},
+  "native": {
+    "NOT_REACHED_FROM_REPORT": [
+      "'Customer'[Customer Name]",
+      "'Date'[Month Number]",
+      "'Date'[Month]",
+      "'Product'[Cost Price]",
+      "'Product'[Margin %]",
+      "[Average Order Value]",
+      "[Max Year]",
+      "[Sales YTD]"
+    ],
+    "LANDING_PAGE_NOT_SET": [
+      "report"
+    ]
+  },
   "results": {
     "ENSURE_ALTTEXT": {
       "d3583278a4fc59eaa0d6": {

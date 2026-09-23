@@ -4,6 +4,7 @@ import type { Report } from "../pbir/types.js";
 import {
   allVisuals,
   filtersPaneState,
+  hiddenVisualWithFields,
   isHiddenPage,
   landingPageNotSet,
   openingPage,
@@ -98,7 +99,7 @@ function reportFacts(report: Report, known: ReadonlySet<string>): Fact[] {
   // Visuals.
   const visuals = allVisuals(report).filter((v) => !v.isGroup);
   const hiddenVisuals = visuals.filter((v) => v.isHidden);
-  const hiddenWithFields = hiddenVisuals.filter((v) => v.fields.length > 0).length;
+  const hiddenWithFields = visuals.filter(hiddenVisualWithFields).length;
   const registered = report.publicCustomVisuals;
   const usedTypes = new Set(visuals.map((v) => v.type));
   const used = registered.filter((t) => usedTypes.has(t)).length;
@@ -116,7 +117,7 @@ function reportFacts(report: Report, known: ReadonlySet<string>): Fact[] {
         value: String(visuals.length),
         ...(visualParts.length ? { detail: visualParts.join("; ") } : {}),
       },
-      hiddenWithFields > 0 ? "HIDDEN_VISUALS_STILL_QUERY" : undefined,
+      hiddenWithFields > 0 ? "HIDDEN_VISUAL_WITH_FIELDS" : undefined,
       registered.length > used ? "REMOVE_UNUSED_CUSTOM_VISUALS" : undefined,
     ),
   );

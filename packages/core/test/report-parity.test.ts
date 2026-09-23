@@ -29,6 +29,18 @@ const expectations: Expectation[] = readdirSync(expectationsDir)
   }));
 
 const ported = defaultRules.filter((r) => r.status === "ported" && r.layer === "report");
+const native = defaultRules.filter((r) => r.status === "builtin" && r.id !== "PARSE_ISSUE");
+
+/** One lint per fixture, shared by the parity and native checks: the files, the run, and its ids per rule. */
+const runs = new Map(
+  expectations.map((exp) => {
+    const files = readProjectFiles(repoRoot + exp.fixture);
+    const result = lint([...files.model, ...files.report], { config: { failOn: "none" } });
+    const ours: Record<string, string[]> = {};
+    for (const f of result.findings) (ours[f.ruleId] ??= []).push(f.objectId ?? f.objectName);
+    return [exp.name, { files, result, ours }] as const;
+  }),
+);
 
 /** What the oracle says fails, as object ids: a list rule's names, a count rule's page (or `report`). */
 export function oracleIds(pages: Record<string, OracleResult> | undefined): string[] {
@@ -40,10 +52,7 @@ export function oracleIds(pages: Record<string, OracleResult> | undefined): stri
 }
 
 describe.each(expectations)("parity with fab-inspector: $name", (exp) => {
-  const files = readProjectFiles(repoRoot + exp.fixture);
-  const result = lint([...files.model, ...files.report], { config: { failOn: "none" } });
-  const ours: Record<string, string[]> = {};
-  for (const f of result.findings) (ours[f.ruleId] ??= []).push(f.objectId ?? f.objectName);
+  const { files, result, ours } = runs.get(exp.name)!;
 
   it("reads both parts without parse issues or rule errors", () => {
     expect(files.report.length).toBeGreaterThan(0);
@@ -88,5 +97,27 @@ describe("report parity coverage", () => {
         if (oracleIds(exp.results[id]).length || (exp.ours[id] ?? []).length) fired.add(id);
     const silent = ported.map((r) => r.id).filter((id) => !fired.has(id));
     expect(silent).toEqual([]);
+  });
+});
+
+/**
+ * Native rules have no oracle, so each fixture's `native` map lists by name every native finding
+ * it produces, and any other fails: the quiet check (spec section 10), run on every fixture.
+ */
+describe.each(expectations)("native rules on $name", (exp) => {
+  const { ours } = runs.get(exp.name)!;
+  it.each(native.map((r) => [r.id] as const))("%s", (id) => {
+    expect([...(ours[id] ?? [])].sort()).toEqual([...(exp.native[id] ?? [])].sort());
+  });
+});
+
+describe("native expectations", () => {
+  it("name only native rules in every native map", () => {
+    const ids = new Set(native.map((r) => r.id));
+    for (const exp of expectations)
+      expect(
+        Object.keys(exp.native).filter((id) => !ids.has(id)),
+        exp.name,
+      ).toEqual([]);
   });
 });

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildIndexes } from "../src/index/build.js";
 import { buildReport } from "../src/pbir/build.js";
 import { buildFacts } from "../src/project/facts.js";
+import { defaultRules } from "../src/rules/index.js";
 import { modelFrom } from "./helpers.js";
 
 const j = (v: unknown) => JSON.stringify(v);
@@ -39,17 +40,7 @@ const visual = (
     },
   }),
 });
-const ALL = new Set([
-  "LANDING_PAGE_NOT_SET",
-  "OPENING_PAGE_INVALID",
-  "FILTERS_PANE_STATE",
-  "HIDE_TOOLTIP_DRILLTROUGH_PAGES",
-  "HIDDEN_VISUALS_STILL_QUERY",
-  "REMOVE_UNUSED_CUSTOM_VISUALS",
-  "REPORT_LEVEL_MEASURES",
-  "SLICER_SELECTION_SAVED",
-  "NOT_REACHED_FROM_REPORT",
-]);
+const ALL = new Set(defaultRules.map((r) => r.id));
 const model = modelFrom(
   "table Sales\n\tcolumn Amount\n\t\tdataType: decimal\n\tcolumn Region\n\t\tdataType: string\n\tmeasure Total = SUM('Sales'[Amount])\n\tmeasure Other = 1\n",
 );
@@ -135,21 +126,19 @@ describe("buildFacts", () => {
         label: "Visuals",
         value: "4",
         detail: "1 hidden; 2 custom visual types registered, 1 used",
-        ruleId: "HIDDEN_VISUALS_STILL_QUERY",
+        ruleId: "HIDDEN_VISUAL_WITH_FIELDS",
       },
       {
         layer: "report",
         label: "Report measures",
         value: "2",
         detail: "defined in the report, not the model",
-        ruleId: "REPORT_LEVEL_MEASURES",
       },
       {
         layer: "report",
         label: "Slicers",
         value: "2",
         detail: "1 with a saved selection",
-        ruleId: "SLICER_SELECTION_SAVED",
       },
       { layer: "report", label: "Mobile layouts", value: "1 of 3 pages" },
       {
@@ -313,6 +302,23 @@ describe("buildFacts", () => {
     );
     expect(facts.find((f) => f.label === "Opens on")!.ruleId).toBe("LANDING_PAGE_NOT_SET");
     expect(facts.find((f) => f.label === "Visuals")!.ruleId).toBe("REMOVE_UNUSED_CUSTOM_VISUALS");
+  });
+  it("links the Visuals fact to HIDDEN_VISUAL_WITH_FIELDS by the rule's own count of fields in wells", () => {
+    // A visual calculation references no model field, and is still a field in a well.
+    const calc = { NativeVisualCalculation: { Language: "dax", Expression: "1", Name: "One" } };
+    const { report } = buildReport([
+      page("p1", "Overview"),
+      visual("p1", "v1", "tableEx", { isHidden: true }, [calc]),
+    ]);
+    expect(report.pages[0]!.visuals[0]!.fields).toEqual([]);
+    const facts = buildFacts({ report }, buildIndexes({ report }), ALL);
+    expect(facts.find((f) => f.label === "Visuals")).toEqual({
+      layer: "report",
+      label: "Visuals",
+      value: "1",
+      detail: "1 hidden",
+      ruleId: "HIDDEN_VISUAL_WITH_FIELDS",
+    });
   });
   it("gives a model-only run no facts at all, because the block is about the report", () => {
     expect(buildFacts({ model }, buildIndexes({ model }), ALL)).toEqual([]);

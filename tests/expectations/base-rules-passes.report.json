@@ -5,7 +5,24 @@
   "captured": "2026-09-22",
   "deviations": {},
   "ours": {},
-  "native": {},
+  "native": {
+    "NOT_REACHED_FROM_REPORT": [
+      "'DateTableTemplate_6b07bb7c-f59e-4738-852d-77414fd15999'[Année]",
+      "'DateTableTemplate_6b07bb7c-f59e-4738-852d-77414fd15999'[Date]",
+      "'DateTableTemplate_6b07bb7c-f59e-4738-852d-77414fd15999'[Jour]",
+      "'DateTableTemplate_6b07bb7c-f59e-4738-852d-77414fd15999'[Mois]",
+      "'DateTableTemplate_6b07bb7c-f59e-4738-852d-77414fd15999'[NoMois]",
+      "'DateTableTemplate_6b07bb7c-f59e-4738-852d-77414fd15999'[NoTrimestre]",
+      "'DateTableTemplate_6b07bb7c-f59e-4738-852d-77414fd15999'[Trimestre]"
+    ],
+    "LANDING_PAGE_NOT_SET": [
+      "report"
+    ],
+    "HIDDEN_VISUAL_WITH_FIELDS": [
+      "0f2d9f89bd9c0e146925",
+      "c5be22dcf11a01f64810"
+    ]
+  },
   "results": {
     "ENSURE_ALTTEXT": {
       "ReportSection8952e5fd70dcea579d3b": {

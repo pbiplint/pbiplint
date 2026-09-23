@@ -124,6 +124,13 @@ export const allVisuals = (r: Report): Visual[] => r.pages.flatMap((p) => p.visu
 export const isHiddenPage = (p: Page): boolean => p.visibility === "HiddenInViewMode";
 export const visiblePages = (r: Report): Page[] => r.pages.filter((p) => !isHiddenPage(p));
 
+/**
+ * HIDDEN_VISUAL_WITH_FIELDS's condition, which the Visuals fact shares: a hidden visual with a field
+ * in any of its wells. It counts the wells' entries, so a visual calculation, which references no
+ * model field, still counts, and a group, which has no wells, never does.
+ */
+export const hiddenVisualWithFields = (v: Visual): boolean => v.isHidden && v.projectionCount > 0;
+
 /** The page a report opens on, what decided it, and the name pages.json gives it. */
 export interface OpeningPage {
   by: "landing" | "active" | "first";

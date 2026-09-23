@@ -65,9 +65,11 @@ export const FILTERS_PANE_STATE = pbiplintRule({
   check: ({ report }, ctx) => {
     const expect = ctx.options.expect;
     if (!report || expect === undefined) return [];
-    const { state, recordedAt } = filtersPaneState(report);
-    if (state === expect) return [];
-    // Without the property the state is Desktop's default, which the file does not record.
+    // Silent, too, without a report.json to read the pane from.
+    const pane = filtersPaneState(report);
+    if (!pane || pane.state === expect) return [];
+    const { state, recordedAt } = pane;
+    // Without the property pbiplint reads the pane as open, and says the file does not record it.
     const saved =
       recordedAt === undefined
         ? `${state} by default (report.json does not record it)`

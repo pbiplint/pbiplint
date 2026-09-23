@@ -185,10 +185,15 @@ export type FiltersPaneState = "open" | "closed" | "hidden from readers";
  * The Filters pane as readers first see it, and the report.json property that records it.
  * `visible: false` hides the pane whatever `expanded` says; otherwise `expanded` decides, and
  * without it the pane is read as open. Desktop records "false" when the pane was collapsed and
- * "true" when it was open, though one Desktop-saved report in the fixtures records nothing for an
- * open pane. `recordedAt` is absent when the file records neither, so the state is that reading.
+ * "true" when it was open, though one Desktop-saved 3.1.0 report outside the fixtures records
+ * nothing for an open pane. `recordedAt` is absent when the file records neither, so the state is
+ * that reading. Undefined when report.json was not read (absent, or unreadable), since nothing
+ * then says what state the pane is in; FILTERS_PANE_STATE and the Filters pane fact share this.
  */
-export function filtersPaneState(r: Report): { state: FiltersPaneState; recordedAt?: string } {
+export function filtersPaneState(
+  r: Report,
+): { state: FiltersPaneState; recordedAt?: string } | undefined {
+  if (r.file === undefined) return undefined;
   const property = (key: string) => `/objects/outspacePane/0/properties/${key}`;
   const pane = r.filtersPane;
   if (pane.visible === false)

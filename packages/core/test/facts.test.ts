@@ -235,6 +235,35 @@ describe("buildFacts", () => {
       detail: "the default; report.json does not record it",
       ruleId: "FILTERS_PANE_STATE",
     });
+    // With no report.json read, absent or unreadable, nothing says what state the pane is in.
+    const pagesOnly = [
+      { path: "definition/pages/pages.json", text: j({ pageOrder: ["p1"], activePageName: "p1" }) },
+      page("p1", "Overview"),
+    ];
+    const conflicted = [
+      "{",
+      "<<<<<<< HEAD",
+      '  "objects": {}',
+      "=======",
+      "}",
+      ">>>>>>> theirs",
+    ].join("\n");
+    for (const files of [
+      pagesOnly,
+      [...pagesOnly, { path: "definition/report.json", text: conflicted }],
+    ]) {
+      const unread = buildReport(files).report;
+      expect(
+        buildFacts({ report: unread }, buildIndexes({ report: unread }), ALL).find(
+          (fact) => fact.label === "Filters pane",
+        ),
+      ).toEqual({
+        layer: "report",
+        label: "Filters pane",
+        value: "unknown",
+        detail: "report.json was not read",
+      });
+    }
     // A hidden landing page is a true fact, but not one OPENING_PAGE_INVALID flags.
     const hiddenLanding = buildReport([
       {

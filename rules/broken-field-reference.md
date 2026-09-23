@@ -94,7 +94,7 @@ The chart asks the Sales table for a Profit measure it does not have, so the fin
 
 ## Why it matters
 
-A visual that names a field the model does not have cannot show its data. Power BI Desktop draws an error on the visual, with a warning naming the fields that do not exist, and conditional formatting that names a missing field puts a warning on the visual and in the Format pane. The error sits on that visual alone, so nothing points at the break until someone looks at it. The causes Microsoft's documentation gives for a missing field are on the model side: a field deleted from the model, or renamed, after the report was built. Catching it before the report is published spares readers a visual that shows an error where its numbers should be.
+A visual that names a field the model does not have cannot show its data. Power BI Desktop draws an error on the visual, with a warning naming the fields that do not exist, and conditional formatting that names a missing field puts a warning on the visual and in the Format pane. The error sits on that visual alone, so nothing points at the break until someone looks at it. The cause is often on the model side, a field deleted from the model or renamed after the report was built, as Microsoft's documentation describes, and a visual pasted from a report built on a different model breaks the same way. Catching it before the report is published spares readers a visual that shows an error where its numbers should be.
 
 ## How to fix it
 

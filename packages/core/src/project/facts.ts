@@ -59,20 +59,28 @@ function reportFacts(report: Report, known: ReadonlySet<string>): Fact[] {
     ),
   );
 
-  // Filters pane.
+  // Filters pane. Unknown, like Opens on, when the file that records it was not read; the rule is
+  // silent then, so the fact links no rule.
   const pane = filtersPaneState(report);
   facts.push(
-    withRule(
-      {
-        layer: "report",
-        label: "Filters pane",
-        value: pane.state,
-        ...(pane.recordedAt === undefined
-          ? { detail: "the default; report.json does not record it" }
-          : {}),
-      },
-      "FILTERS_PANE_STATE",
-    ),
+    pane === undefined
+      ? {
+          layer: "report",
+          label: "Filters pane",
+          value: "unknown",
+          detail: "report.json was not read",
+        }
+      : withRule(
+          {
+            layer: "report",
+            label: "Filters pane",
+            value: pane.state,
+            ...(pane.recordedAt === undefined
+              ? { detail: "the default; report.json does not record it" }
+              : {}),
+          },
+          "FILTERS_PANE_STATE",
+        ),
   );
 
   // Pages.

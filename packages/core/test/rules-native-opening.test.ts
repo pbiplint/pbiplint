@@ -173,7 +173,7 @@ describe("FILTERS_PANE_STATE", () => {
         expect: "open",
       }),
     ).toEqual([]);
-    // An absent `expanded` is read as open: Desktop records "false" only when the pane was collapsed.
+    // An absent `expanded` is read as open: Desktop records "false" whenever the pane was collapsed.
     expect(reportObjectIds(FILTERS_PANE_STATE, report({}), undefined, { expect: "open" })).toEqual(
       [],
     );
@@ -185,6 +185,38 @@ describe("FILTERS_PANE_STATE", () => {
         expect: "closed",
       }),
     ).toEqual(["report"]);
+  });
+  it("says nothing under either policy when report.json was not read", () => {
+    const pagesOnly = [
+      { path: "definition/pages/pages.json", text: j({ pageOrder: ["p"], activePageName: "p" }) },
+      page("p"),
+    ];
+    // Unreadable: a report.json saved mid-merge is a parse issue, not a report with the pane open.
+    const side = (value: string) =>
+      `  "objects": { "outspacePane": [{ "properties": { "expanded": ${j(lit(value))} } }] }`;
+    const conflicted = [
+      "{",
+      "<<<<<<< HEAD",
+      side("true"),
+      "=======",
+      side("false"),
+      ">>>>>>> theirs",
+      "}",
+    ].join("\n");
+    for (const policy of ["open", "closed"]) {
+      // Absent: nothing records the pane, and nothing says report.json would leave it open.
+      expect(reportObjectIds(FILTERS_PANE_STATE, pagesOnly, undefined, { expect: policy })).toEqual(
+        [],
+      );
+      expect(
+        reportObjectIds(
+          FILTERS_PANE_STATE,
+          [...pagesOnly, { path: "definition/report.json", text: conflicted }],
+          undefined,
+          { expect: policy },
+        ),
+      ).toEqual([]);
+    }
   });
   it("claims a saved state only when report.json records one", () => {
     const details = (pane: Record<string, unknown>, expect: string) =>

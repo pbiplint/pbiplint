@@ -1,6 +1,6 @@
 import type { LintFile } from "../engine/lint.js";
 import type { Diagnostic } from "../project/types.js";
-import { lineOfPointer, newerThan, readJson, schemaFamilyOf } from "./json.js";
+import { lineOfPointer, newerMajor, newerThan, readJson, schemaFamilyOf } from "./json.js";
 import { collectFieldRefs, escapePointer } from "./refs.js";
 import type {
   Bookmark,
@@ -15,18 +15,22 @@ import type {
 } from "./types.js";
 
 /**
- * The newest schema version of each family this reader was written against. A file on a newer
- * one still parses (unknown properties are ignored); it is a diagnostic so nobody mistakes what
- * pbiplint could not know for clean.
+ * The newest version Microsoft publishes of each schema family this reader reads (in
+ * github.com/microsoft/json-schemas, under fabric/item/report/definition). A file on a newer minor
+ * or patch version is read as that family's known shape without a notice: Power BI Desktop saves
+ * versions Microsoft has not published, such as visualContainer 2.10.0 to 2.12.0. Only a newer
+ * major version, which may change the shape, is a diagnostic, so nobody mistakes what pbiplint
+ * could not know for clean. Unknown properties are ignored either way.
  */
 export const KNOWN_SCHEMAS: Readonly<Record<string, string>> = {
   report: "3.3.0",
-  page: "2.3.1",
-  visualContainer: "2.8.0",
+  page: "2.1.0",
+  visualContainer: "2.9.0",
   pagesMetadata: "1.1.0",
-  bookmark: "1.0.0",
+  bookmarksMetadata: "1.0.0",
+  bookmark: "2.1.0",
   reportExtension: "1.0.0",
-  visualContainerMobileState: "1.4.0",
+  visualContainerMobileState: "2.4.0",
 };
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>
@@ -417,14 +421,14 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
       family &&
       version &&
       KNOWN_SCHEMAS[family] &&
-      newerThan(version, KNOWN_SCHEMAS[family]!) &&
+      newerMajor(version, KNOWN_SCHEMAS[family]!) &&
       !reportedFamilies.has(family)
     ) {
       reportedFamilies.add(family);
       diagnostics.push({
         kind: "schema-newer-than-known",
         path: f.path,
-        message: `${f.path} uses ${family} schema ${version}, newer than the ${KNOWN_SCHEMAS[family]} this version of pbiplint knows; properties it does not know are ignored`,
+        message: `${f.path} uses ${family} schema ${version}, a newer major version than the ${KNOWN_SCHEMAS[family]} this version of pbiplint knows; properties it does not know are ignored`,
       });
     }
     const json = read.json;

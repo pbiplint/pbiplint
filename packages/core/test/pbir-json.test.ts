@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   lineOfPointer,
+  newerMajor,
   newerThan,
   readJson,
   schemaFamilyOf,
@@ -74,6 +75,22 @@ describe("newerThan", () => {
     expect(newerThan("2.10.0", "2.9.0")).toBe(true);
     expect(newerThan("3.2.0", "3.2.0")).toBe(false);
     expect(newerThan("1.0.0", "3.2.0")).toBe(false);
+  });
+});
+
+describe("newerMajor", () => {
+  it("is true only when the first segment is greater, compared as a number", () => {
+    expect(newerMajor("2.9.0", "2.9.0")).toBe(false);
+    expect(newerMajor("2.12.0", "2.9.0")).toBe(false);
+    expect(newerMajor("2.9.1", "2.9.0")).toBe(false);
+    expect(newerMajor("3.0.0", "2.9.0")).toBe(true);
+    expect(newerMajor("10.0.0", "9.1.0")).toBe(true);
+    expect(newerMajor("1.4.0", "2.1.0")).toBe(false);
+  });
+  it("reads only the major segment when the others are missing", () => {
+    expect(newerMajor("3", "2.9.0")).toBe(true);
+    expect(newerMajor("2", "2.9.0")).toBe(false);
+    expect(newerMajor("2.12", "2")).toBe(false);
   });
 });
 

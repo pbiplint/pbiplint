@@ -555,6 +555,71 @@ describe("buildReport", () => {
   });
 });
 
+describe("the schema notice", () => {
+  const onVisual = (version: string, id = "v") => ({
+    path: `definition/pages/p/visuals/${id}/visual.json`,
+    text: visual(id).replace(
+      schema("visualContainer", "2.8.0"),
+      schema("visualContainer", version),
+    ),
+  });
+  const onBookmark = (version: string, id = "b") => ({
+    path: `definition/bookmarks/${id}.bookmark.json`,
+    text: j({
+      $schema: schema("bookmark", version),
+      name: id,
+      displayName: id,
+      explorationState: {},
+    }),
+  });
+
+  it("knows the newest version Microsoft publishes of each family the reader reads", () => {
+    // github.com/microsoft/json-schemas, fabric/item/report/definition/<family>/, 2026-09-23.
+    expect(KNOWN_SCHEMAS).toEqual({
+      report: "3.3.0",
+      page: "2.1.0",
+      visualContainer: "2.9.0",
+      pagesMetadata: "1.1.0",
+      bookmarksMetadata: "1.0.0",
+      bookmark: "2.1.0",
+      reportExtension: "1.0.0",
+      visualContainerMobileState: "2.4.0",
+    });
+  });
+  it("reads a newer minor version within the known major without a notice", () => {
+    // Desktop saves visualContainer 2.10.0 to 2.12.0, which Microsoft has not published.
+    expect(buildReport([onVisual("2.12.0")]).diagnostics).toEqual([]);
+  });
+  it("gives the notice for a newer major version, naming the version and the one it knows", () => {
+    expect(buildReport([onVisual("3.0.0")]).diagnostics).toEqual([
+      {
+        kind: "schema-newer-than-known",
+        path: "definition/pages/p/visuals/v/visual.json",
+        message:
+          "definition/pages/p/visuals/v/visual.json uses visualContainer schema 3.0.0, a newer major version than the 2.9.0 this version of pbiplint knows; properties it does not know are ignored",
+      },
+    ]);
+    expect(buildReport([onBookmark("3.0.0")]).diagnostics.map((d) => d.message)).toEqual([
+      "definition/bookmarks/b.bookmark.json uses bookmark schema 3.0.0, a newer major version than the 2.1.0 this version of pbiplint knows; properties it does not know are ignored",
+    ]);
+  });
+  it("gives the notice once per family however many of its files are on a newer major", () => {
+    const { diagnostics } = buildReport([
+      onVisual("3.0.0", "a"),
+      onVisual("3.1.0", "b"),
+      onBookmark("3.0.0", "x"),
+      onBookmark("4.0.0", "y"),
+    ]);
+    expect(diagnostics.map((d) => d.path)).toEqual([
+      "definition/bookmarks/x.bookmark.json",
+      "definition/pages/p/visuals/a/visual.json",
+    ]);
+  });
+  it("reads an older version without a notice", () => {
+    expect(buildReport([onVisual("1.2.0"), onBookmark("1.4.0")]).diagnostics).toEqual([]);
+  });
+});
+
 describe("buildReport tolerance", () => {
   it("reports a schema newer than it knows once per family and ignores families it does not know", () => {
     const { diagnostics } = buildReport([
@@ -568,7 +633,7 @@ describe("buildReport tolerance", () => {
       path: "definition/pages/a/page.json",
     });
     expect(diagnostics[0]!.message).toContain(
-      `newer than the ${KNOWN_SCHEMAS.page} this version of pbiplint knows`,
+      `a newer major version than the ${KNOWN_SCHEMAS.page} this version of pbiplint knows`,
     );
   });
   it("keeps a file with a conflict marker as an issue and still builds everything else", () => {

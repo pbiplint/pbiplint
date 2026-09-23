@@ -122,6 +122,13 @@ export function newerThan(a: string, b: string): boolean {
 }
 
 /**
+ * True when `a` is a newer major version than `b`, comparing the first segments as numbers:
+ * `3.0.0` against `2.9.0`, but not `2.12.0`, a newer minor version of the same major.
+ */
+export const newerMajor = (a: string, b: string): boolean =>
+  Number(a.split(".")[0]) > Number(b.split(".")[0]);
+
+/**
  * The 1-based line of what a JSON pointer names, for a finding's location: the line of the key
  * for an object member, the line the value starts on for an array element. 1 for the root or for
  * a pointer that names nothing. A token scanner rather than a parse, because JSON.parse keeps no

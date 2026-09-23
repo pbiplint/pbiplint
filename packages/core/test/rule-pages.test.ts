@@ -229,7 +229,7 @@ function checkExample(rule: Rule, example: string): void {
     // A fix is a fix, not a suppression.
     expect(`${fires!.text}${fixed!.text}`).not.toContain("pbiplint.ignore");
     const config = configFence(example);
-    const withModel = rule.layer === "project";
+    const withModel = rule.needs.includes("model");
     check(runPbir(fires!, withModel, config), runPbir(fixed!, withModel, config));
   };
   const infos = infoStrings(example);

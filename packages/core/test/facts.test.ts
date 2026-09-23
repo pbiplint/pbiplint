@@ -156,6 +156,20 @@ describe("buildFacts", () => {
       },
     ]);
   });
+  it("shows the report measures either way, and links the rule only with the model in the run", () => {
+    const { report } = buildReport(files);
+    const measures = (project: { model?: typeof model; report: typeof report }) =>
+      buildFacts(project, buildIndexes(project), ALL).find((f) => f.label === "Report measures");
+    const shown = {
+      layer: "report",
+      label: "Report measures",
+      value: "2",
+      detail: "defined in the report, not the model",
+    };
+    expect(measures({ model, report })).toEqual({ ...shown, ruleId: "REPORT_LEVEL_MEASURES" });
+    // A report that reads a published model: the rule leaves its measures alone.
+    expect(measures({ report })).toEqual(shown);
+  });
   it("names a landing page, a hidden or missing opening page, a closed or hidden pane, and drops rule ids the run lacks", () => {
     const { report } = buildReport([
       {

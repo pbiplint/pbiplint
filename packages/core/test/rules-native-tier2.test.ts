@@ -160,6 +160,10 @@ describe("VISUAL_WITHOUT_FIELDS", () => {
     ]);
     expect(reportObjectIds(VISUAL_WITHOUT_FIELDS, files)).toEqual(["titled"]);
   });
+  it("takes a custom visual for a data visual", () => {
+    const files = [page("p"), visual("p", "custom", "BarChartF5983CEA542C47889C9DE852B430DE5F")];
+    expect(reportObjectIds(VISUAL_WITHOUT_FIELDS, files)).toEqual(["custom"]);
+  });
   it("leaves a container with neither a visual nor a group alone", () => {
     const files = [
       page("p"),
@@ -296,17 +300,23 @@ describe("REPORT_LEVEL_MEASURES", () => {
     ],
   };
 
-  it("fires once per measure in reportExtensions.json", () => {
-    expect(reportObjectIds(REPORT_LEVEL_MEASURES, extensions(j(entities)))).toEqual([
+  /** The model the report reads, in the run beside it. */
+  const model = "table Sales\n\tcolumn Amount\n\t\tdataType: decimal\n";
+
+  it("fires once per measure in reportExtensions.json when the run holds the model", () => {
+    expect(reportObjectIds(REPORT_LEVEL_MEASURES, extensions(j(entities)), model)).toEqual([
       "Sales.Net Margin",
       "Sales.Margin %",
     ]);
+  });
+  it("leaves a report that reads a published model alone", () => {
+    expect(reportObjectIds(REPORT_LEVEL_MEASURES, extensions(j(entities)))).toEqual([]);
   });
   it("names the table the measure is defined on, at the measure's line", () => {
     const text = pretty(entities);
     const line = lineOf(text, '"Margin %"') - 1;
     expect(line).toBeGreaterThan(1);
-    const [, second] = reportFindings(REPORT_LEVEL_MEASURES, extensions(text));
+    const [, second] = reportFindings(REPORT_LEVEL_MEASURES, extensions(text), model);
     expect(second).toEqual({
       objectType: "ReportMeasure",
       objectName: "[Margin %] (report)",
@@ -314,11 +324,13 @@ describe("REPORT_LEVEL_MEASURES", () => {
       location: { file: "definition/reportExtensions.json", line },
       detail: 'defined in the report on table "Sales"',
     });
+    // A report rule that needs the model too: without it, the run skips the rule.
     expect(REPORT_LEVEL_MEASURES).toMatchObject({
       ...tier2,
       name: "Measure defined in the report",
       category: "Maintenance",
       scope: ["ReportMeasure"],
+      needs: ["model", "report"],
     });
   });
 });

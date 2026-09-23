@@ -574,6 +574,8 @@ describe("lint over a project", () => {
   it("reads no ignore annotation on a report measure, though the schema allows one", () => {
     const r = lint(
       [
+        // The model the report reads, without which the rule does not run.
+        ...modelFiles,
         {
           path: "definition/reportExtensions.json",
           text: j({
@@ -598,6 +600,25 @@ describe("lint over a project", () => {
       ["REPORT_LEVEL_MEASURES", "Sales.Net Margin"],
     ]);
     expect(r.summary.ignored).toBe(0);
+  });
+  it("skips REPORT_LEVEL_MEASURES on a report that reads a published model", () => {
+    const extensions = {
+      path: "definition/reportExtensions.json",
+      text: j({
+        entities: [{ name: "Sales", measures: [{ name: "Net Margin", expression: "1" }] }],
+      }),
+    };
+    const reportOnly = lint([...reportFiles, extensions]);
+    expect(reportOnly.findings.filter((f) => f.ruleId === "REPORT_LEVEL_MEASURES")).toEqual([]);
+    expect(reportOnly.summary.rulesSkipped).toContainEqual({
+      id: "REPORT_LEVEL_MEASURES",
+      reason: "noModel",
+    });
+    // With the model in the run, the same measure is reported.
+    const both = lint([...modelFiles, ...reportFiles, extensions]);
+    expect(
+      both.findings.filter((f) => f.ruleId === "REPORT_LEVEL_MEASURES").map((f) => f.objectId),
+    ).toEqual(["Sales.Net Margin"]);
   });
   it("keeps an invalid-JSON detail on one line, whatever the engine's message spans", () => {
     const r = lint([{ path: "definition/pages/p/page.json", text: '{\n  "a": 1,\n  "b": }\n' }]);

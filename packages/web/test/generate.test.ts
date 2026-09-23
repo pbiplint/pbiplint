@@ -359,15 +359,15 @@ describe("generateSite", () => {
   it("writes every rule page, the index, the about page, and the sitemap", () => {
     const out = mkdtempSync(join(tmpdir(), "pbiplint-site-"));
     const metas = generateSite({ outDir: out });
-    expect(metas.length).toBe(72);
-    expect(readdirSync(join(out, "rules")).filter((d) => d !== "index.html").length).toBe(72);
+    expect(metas.length).toBe(74);
+    expect(readdirSync(join(out, "rules")).filter((d) => d !== "index.html").length).toBe(74);
     expect(existsSync(join(out, "rules/hide-foreign-keys/index.html"))).toBe(true);
     expect(readFileSync(join(out, "rules/hide-foreign-keys/index.html"), "utf8")).toContain(
       '<a href="/rules/mark-primary-keys/"><code>MARK_PRIMARY_KEYS</code></a>',
     );
     const index = readFileSync(join(out, "rules/index.html"), "utf8");
     expect(index).toContain(
-      "72 rules: 66 model rules ported from Microsoft's Best Practice Analyzer ruleset so the results match Tabular Editor, 5 listed but not run because they need statistics only a live model has, and 1 built into pbiplint.",
+      "74 rules: 66 model rules ported from Microsoft's Best Practice Analyzer ruleset so the results match Tabular Editor, 5 listed but not run because they need statistics only a live model has, and 3 built into pbiplint.",
     );
     expect(index).toContain('<h2 id="error-prevention">Error Prevention</h2>');
     expect((index.match(/needs a live model/g) ?? []).length).toBe(5);
@@ -375,7 +375,7 @@ describe("generateSite", () => {
     const summaries = [...index.matchAll(/<span class="summary">([\s\S]*?)<\/span>/g)].map(
       (m) => m[1]!,
     );
-    expect(summaries.length).toBe(72);
+    expect(summaries.length).toBe(74);
     expect(summaries.some((s) => s.includes("<code>///</code>"))).toBe(true);
     expect(summaries.filter((s) => s.includes("`"))).toEqual([]);
     const parseIssue = readFileSync(join(out, "rules/parse-issue/index.html"), "utf8");
@@ -561,7 +561,7 @@ describe("rulesIndex", () => {
     );
     // With a report rule published, the count names its source in the clause the gate holds back.
     expect(index).toContain(
-      "73 rules: 66 model rules ported from Microsoft's Best Practice Analyzer ruleset so the results match Tabular Editor, 5 listed but not run because they need statistics only a live model has, 1 report rules ported from PBI Inspector's base rules, and 1 built into pbiplint.",
+      "75 rules: 66 model rules ported from Microsoft's Best Practice Analyzer ruleset so the results match Tabular Editor, 5 listed but not run because they need statistics only a live model has, 1 report rules ported from PBI Inspector's base rules, and 3 built into pbiplint.",
     );
   });
 });

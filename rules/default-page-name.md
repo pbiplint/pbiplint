@@ -14,7 +14,7 @@ sources:
 
 ## What it checks
 
-Pages whose display name in page.json is `Page` and a number, begins with `Duplicate of`, or ends with `(copy)`: the names English Power BI Desktop gives a new page and a duplicated one, and a name marked as a copy.
+Pages whose display name in page.json has the shape `Page <n>`, `Duplicate of <name>`, or `<name> (copy)`: the names English Power BI Desktop gives a new page and a duplicated one, and a name marked as a copy.
 
 Each finding names the page, as `Page "Page 2"`, at the `displayName` line of its page.json, and its detail says which of the three the name matched: `"Page 2" is the name Power BI Desktop gives a new page`, `"Duplicate of Overview" is the name Power BI Desktop gives a duplicated page`, or `"Overview (copy)" is named as a copy`.
 
@@ -63,7 +63,7 @@ A page whose real name has one of these shapes is named on purpose. A report tha
 - It matches the names English Power BI Desktop gives. Desktop running in another language names pages in that language, such as `Seite 1` or `Página 1`, and those are not reported.
 - The whole name has to match, with the capitals as shown: `Page 2` is reported, while `Page 2 sales` and `page 2` are not.
 - A duplicate of a duplicate, `Duplicate of Duplicate of Overview`, is one finding, like any other page.
-- A name ending in `(copy)` is reported whoever typed it, and its detail says only that it is named as a copy.
+- A name that ends with a space and `(copy)` is reported whoever typed it, and its detail says only that it is named as a copy. `Overview(copy)`, with no space, is not.
 - A page whose page.json records no display name is not checked, and neither is a page with no page.json in the input. pbiplint labels such a page by its folder id, which is not a name anyone chose.
 
 ## Related rules

@@ -14,11 +14,11 @@ sources:
 
 ## What it checks
 
-Data visuals with no field in any of their wells. Every visual type counts as a data visual, custom visuals included, except visual groups and the types that take no fields by design, such as shapes, text boxes, images, and buttons.
+Data visuals with no field in any of their wells. Every visual type counts as a data visual, custom visuals included, except visual groups and the types that need no fields by design, such as shapes, text boxes, images, and buttons.
 
 Each finding names the visual, as `cardVisual (3d9c80) on "Overview"`, or as `"Sales by region" on "Overview"` when it has a title, at the `visualType` line of its visual.json, and its detail reads `no fields bound`.
 
-The types that are never reported are shapes (`shape`, and the older `basicShape`), text boxes (`textbox`), images (`image`), buttons (`actionButton`), the page and bookmark navigators (`pageNavigator`, `bookmarkNavigator`), the Q&A visual (`qnaVisual`), the narrative visual (`aiNarratives`), the metrics scorecard visual (`scorecard`), and the animated number visual (`animatedNumber`), none of which has a well to fill. Two more have wells whose fields are optional, so they are not reported either: the paginated report visual (`rdlVisual`), which can use the paginated report's default parameters in place of fields, and the Power Automate visual (`FlowVisual_C29F1DCC_81F5_4973_94AD_0517D44CC06A`), whose fields serve only as optional inputs to its flow.
+The types that are never reported are shapes (`shape`, and the older `basicShape`), text boxes (`textbox`), images (`image`), buttons (`actionButton`), the page and bookmark navigators (`pageNavigator`, `bookmarkNavigator`), the Q&A visual (`qnaVisual`), the narrative visual (`aiNarratives`), the metrics scorecard visual (`scorecard`), and the animated number visual (`animatedNumber`), none of which has a well to fill. Two more have wells whose fields are optional, so they are not reported either: the paginated report visual (`rdlVisual`), which can use the paginated report's default parameters in place of fields when the report has them, and the Power Automate visual (`FlowVisual_C29F1DCC_81F5_4973_94AD_0517D44CC06A`), whose fields serve only as optional inputs to its flow.
 
 ## Example
 
@@ -60,13 +60,13 @@ The card was placed on the page and never given a field, so its file has no `que
 
 ## Why it matters
 
-Microsoft's guidance divides what sits on a report page into visuals, which are visualizations of the model's data, and elements, which provide visual interest but don't use that data: text boxes, buttons, shapes, and images. A visual shows the fields in its wells, so a chart, card, table, or slicer with none has no data to show. Readers get a space on the page that shows nothing, perhaps under a title or a border that suggests it should, and the next author gets a visual whose purpose nobody wrote down. Usually it is a visual that was added and never finished, or one left in place after its fields were removed.
+Microsoft's guidance divides what sits on a report page into visuals, which are visualizations of the model's data, and elements, which provide visual interest but don't use that data: text boxes, buttons, shapes, and images. A visual shows the fields in its wells, so a chart, card, table, or slicer with none has no data to show. Readers get a visual that shows no data, perhaps under a title or a border that suggests it should, and the next author gets a visual whose purpose nobody wrote down. Usually it is a visual that was added and never finished, or one left in place after its fields were removed.
 
 ## How to fix it
 
-Decide what the visual was meant to show. In Power BI Desktop, select it and drag those fields from the Data pane into its wells in the Visualizations pane; the wells depend on the visual's type, such as Axis, Legend, and Values for a bar chart. If the page does not need the visual, delete it.
+Decide what the visual was meant to show. In Power BI Desktop, select it and drag those fields from the Data pane into its wells in the Visualizations pane; the wells depend on the visual's type, such as the X-axis area of a column chart, or the Bubble size and Legend areas of a map. If the page does not need the visual, delete it.
 
-In visual.json, a visual's fields are the `projections` under `query.queryState`, one entry per field, grouped under the name of the well that holds it, as the card's `Data` well does in the example. The well names differ from one visual type to the next, so adding fields in Desktop is the surer route.
+In visual.json, a visual's fields are the `projections` under `query.queryState`, one entry per field, grouped under the name of the data role behind the well, as `Data` for the card in the example. Role names differ from one visual type to the next and are not always the labels the Visualizations pane shows, so adding fields in Desktop is the surer route.
 
 ## When to ignore it
 

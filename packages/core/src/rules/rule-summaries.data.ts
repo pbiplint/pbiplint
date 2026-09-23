@@ -47,7 +47,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   DAX_MEASURES_UNQUALIFIED:
     "Measures, calculated columns, calculated tables, and calculation items that refer to a measure with a table prefix, `'Table'[Measure]`.",
   DEFAULT_PAGE_NAME:
-    "Pages whose display name in page.json is `Page` and a number, begins with `Duplicate of`, or ends with `(copy)`: the names English Power BI Desktop gives a new page and a duplicated one, and a name marked as a copy.",
+    "Pages whose display name in page.json has the shape `Page <n>`, `Duplicate of <name>`, or `<name> (copy)`: the names English Power BI Desktop gives a new page and a duplicated one, and a name marked as a copy.",
   ENSURE_ALTTEXT:
     "Visuals other than shapes whose alt text is missing or empty. A visual group is checked by its own alt text, the one set on the group rather than on the visuals inside it.",
   ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY:
@@ -180,5 +180,5 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   VISUAL_OUTSIDE_PAGE:
     "Visuals whose box runs past the right or bottom edge of their page by a pixel or more: `x` plus `width` beyond the page's width, or `y` plus `height` beyond its height.",
   VISUAL_WITHOUT_FIELDS:
-    "Data visuals with no field in any of their wells. Every visual type counts as a data visual, custom visuals included, except visual groups and the types that take no fields by design, such as shapes, text boxes, images, and buttons.",
+    "Data visuals with no field in any of their wells. Every visual type counts as a data visual, custom visuals included, except visual groups and the types that need no fields by design, such as shapes, text boxes, images, and buttons.",
 };

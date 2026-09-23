@@ -125,8 +125,9 @@ const stockReport = (): LintFile[] => [
   },
 ];
 /**
- * The model the example of any rule whose needs include the model runs against: Sales with Amount
- * and Region, and the measure Total Sales. So REPORT_LEVEL_MEASURES gets it and PARSE_ISSUE does not.
+ * The model the example of any report or project rule whose needs include the model runs against:
+ * Sales with Amount and Region, and the measure Total Sales. So REPORT_LEVEL_MEASURES gets it and
+ * PARSE_ISSUE does not.
  */
 const STOCK_MODEL: LintFile = {
   path: "definition/tables/Sales.tmdl",

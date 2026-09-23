@@ -74,7 +74,7 @@ A report page has the width and height its canvas settings give it, and Microsof
 
 ## How to fix it
 
-In Power BI Desktop, select the visual, open the Format pane, select the General tab, and under Properties change its Position, the horizontal and vertical position in pixels from the top-left corner of the canvas, or its Size, the height and width in pixels, until it ends inside the page. If the page should be larger instead, change its size: with nothing selected on the page, the Format pane shows the page's options, and under Canvas settings you can choose a larger Size, or the Custom type to set the height and width in pixels yourself.
+In Power BI Desktop, select the visual, open the Format pane, select the General tab, and under Properties change its Position, the horizontal and vertical position in pixels from the top-left corner of the canvas, or its Size, the height and width in pixels, until it ends inside the page. If the page should be larger instead, change its size: with nothing selected on the page, the Visualizations pane shows Format page options, and under Canvas settings you can choose a larger Size, or the Custom type to set the height and width in pixels yourself.
 
 In visual.json the box is `position`: bring `x` or `y` back, or shrink `width` or `height`, as the example does with `x`. For a visual inside a group, move or resize the group.
 
@@ -84,7 +84,7 @@ A decorative shape or image sized to run past the edge on purpose, such as a bac
 
 ## Quirks
 
-- A visual inside a group has its position relative to the group, not to the page, so pbiplint checks the visuals that sit directly on the page and the top-level groups. A group past the edge is one finding, on the group. The visuals inside it are not checked, nor is a group inside another group.
+- The position visual.json records for a visual inside a group is relative to the group, not to the page, so it can differ from the Position the Format pane shows, which is measured from the top-left corner of the canvas. pbiplint therefore checks the visuals that sit directly on the page and the top-level groups. A group past the edge is one finding, on the group. The visuals inside it are not checked, nor is a group inside another group.
 - An edge counts once the box passes it by a whole pixel. A box that ends a fraction of a pixel past the edge, as a position stored with decimals can, is not reported, and the detail rounds the overhang to whole pixels.
 - Only the right and bottom edges are checked. A visual that starts left of or above the page, at a negative `x` or `y`, is not reported.
 - A page whose page.json records no width or height is not checked, and neither is a page with no page.json in the input.

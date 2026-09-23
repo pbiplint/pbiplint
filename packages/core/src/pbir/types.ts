@@ -61,10 +61,10 @@ export interface Visual {
    */
   projectionCount: number;
   /**
-   * Every field reference in visual.json outside the wells and the filters: formatting,
-   * conditional formatting, reference labels, a bound title or alt text, sort, expansion states, a
-   * group's own objects, and any property Desktop adds later. Read from the whole file, so a new
-   * property is covered without a code change.
+   * Every field reference in visual.json outside the wells' projections and the filters: a role's
+   * field parameters, formatting, conditional formatting, reference labels, a bound title or alt
+   * text, sort, expansion states, a group's own objects, and any property Desktop adds later. Read
+   * from the whole file, so a new property is covered without a code change.
    */
   propertyRefs: FieldRef[];
   showAllRoles: string[];

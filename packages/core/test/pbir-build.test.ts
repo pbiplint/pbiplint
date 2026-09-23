@@ -388,6 +388,63 @@ describe("buildReport", () => {
     ]);
     expect(report.pages[1]!.visuals[0]!.propertyRefs).toEqual([]);
   });
+  it("reads a field parameter in a role as a property reference, and a projection only as a field", () => {
+    const measure = (property: string) => ({
+      Measure: { Expression: { SourceRef: { Entity: "Sales" } }, Property: property },
+    });
+    const { report: parameterised } = buildReport([
+      { path: "definition/pages/p1/page.json", text: page("p1") },
+      {
+        path: "definition/pages/p1/visuals/v/visual.json",
+        text: j({
+          $schema: schema("visualContainer", "2.8.0"),
+          name: "v",
+          position: { x: 0, y: 0, z: 0, height: 100, width: 100, tabOrder: 0 },
+          visual: {
+            visualType: "clusteredBarChart",
+            query: {
+              queryState: {
+                Category: {
+                  projections: [{ field: column("Product", "Category") }],
+                  fieldParameters: [
+                    { parameterExpr: column("Metric", "Metric"), index: 0, length: 1 },
+                  ],
+                },
+                // An arithmetic projection holds its references below `field`.
+                Y: {
+                  projections: [
+                    {
+                      field: {
+                        Arithmetic: {
+                          Left: measure("Total Sales"),
+                          Right: measure("Total Cost"),
+                          Operator: 1,
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      },
+    ]);
+    const v = parameterised.pages[0]!.visuals[0]!;
+    expect(v.propertyRefs.map((r) => [r.kind, r.table, r.name, r.pointer])).toEqual([
+      [
+        "column",
+        "Metric",
+        "Metric",
+        "/visual/query/queryState/Category/fieldParameters/0/parameterExpr",
+      ],
+    ]);
+    expect(v.fields.map((f) => [f.role, f.ref.name, f.ref.pointer])).toEqual([
+      ["Category", "Category", "/visual/query/queryState/Category/projections/0/field"],
+      ["Y", "Total Sales", "/visual/query/queryState/Y/projections/0/field/Arithmetic/Left"],
+      ["Y", "Total Cost", "/visual/query/queryState/Y/projections/0/field/Arithmetic/Right"],
+    ]);
+  });
   it("reads bookmarks and their header, and report-level measures with their lines", () => {
     expect(report.bookmarksHeader.items).toEqual([{ name: "b1", children: ["b2"] }]);
     const b = report.bookmarks[0]!;

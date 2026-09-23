@@ -6113,6 +6113,7 @@ git commit -m "feat(rules): landing page, opening page validity, and the Filters
 - Create: `packages/core/src/rules/pbiplint/visuals.ts`
 - Modify: `packages/core/src/rules/pbiplint/index.ts`, `packages/core/test/pack.test.ts` (89); not `packages/web/test/generate.test.ts`, whose pins hold at 72 (decision 15), so the sentence's "and 7 built into pbiplint" arrives with pull request 7, the site reaching 3 built in at Task 24 when the two `project` pages publish
 - Modify: `packages/core/test/report-parity.test.ts` (the native check), `tests/expectations/base-rules-passes.report.json`, `shelfmart.report.json`, `pbip-and-github-demo.report.json`, `base-rules-fails.report.json` (`native` maps)
+- Modify: `packages/core/src/project/facts.ts` (the Visuals fact's candidate id becomes `HIDDEN_VISUAL_WITH_FIELDS`), `packages/core/test/facts.test.ts` (its `ALL` set becomes the `defaultRules` ids)
 - Test: `packages/core/test/rules-native-visuals.test.ts`
 
 - [ ] **Step 1: Write the failing tests**
@@ -6203,7 +6204,7 @@ git commit -m "feat(rules): hidden visuals left with fields bound, and the nativ
 
 ### Task 24: The six tier-1 pages
 
-Scaffold, then draft with Task 19's brief and these notes, review, delete the pending set, regenerate, test, commit. Add the six slugs to a `PENDING_PAGES` set again for the scaffold step (`broken-field-reference`, `not-reached-from-report`, `landing-page-not-set`, `opening-page-invalid`, `filters-pane-state`, `hidden-visuals-still-query`) and delete the set once the pages are written, exactly as Tasks 18 and 19 did.
+Scaffold, then draft with Task 19's brief and these notes, review, delete the pending set, regenerate, test, commit. Add the six slugs to a `PENDING_PAGES` set again for the scaffold step (`broken-field-reference`, `not-reached-from-report`, `landing-page-not-set`, `opening-page-invalid`, `filters-pane-state`, `hidden-visual-with-fields`) and delete the set once the pages are written, exactly as Tasks 18 and 19 did.
 
 Two of these pages publish to the site before the rule behind them can run: `broken-field-reference` and `not-reached-from-report` are layer `project` and need both layers, and a `project` page publishes as soon as either family does, so from this pull request the site carries them while its browser always skips the rules (decision 15). That is accepted. If it is ever not, move those two pages to pull request 7 rather than change the gate.
 

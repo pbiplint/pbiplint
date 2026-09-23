@@ -390,6 +390,12 @@ Amended 2026-09-20: the facts are built only when the report layer is
 present, so a model-only run produces none and no surface shows the
 block or its heading.
 
+Amended 2026-09-23: Opens on names the first page in `pageOrder` when
+`pages.json` sets neither a landing page nor an active page, and says
+unknown when `pages.json` was not read (absent, or unreadable) or the
+report has no pages. The fact links `OPENING_PAGE_INVALID` when that
+rule fires, else `LANDING_PAGE_NOT_SET` when it fires.
+
 **Cost.** Linear in the JSON. The demo report's largest visual is
 61 KB, most under 5 KB; a 300-visual report is a few megabytes and
 lints well under a second in the browser. No new dependency.

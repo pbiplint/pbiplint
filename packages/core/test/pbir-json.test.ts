@@ -93,6 +93,11 @@ describe("lineOfPointer", () => {
     expect(lineOfPointer('{\n  "a/b": 1,\n  "c~d": 2\n}', "/a~1b")).toBe(2);
     expect(lineOfPointer('{\n  "a/b": 1,\n  "c~d": 2\n}', "/c~0d")).toBe(3);
   });
+  it("always moves forward, whatever sits between the tokens", () => {
+    // Neither is JSON whitespace, but a regex `\s` matches both, which once stalled the scalar skip.
+    expect(lineOfPointer('{\n  "a":\u00a0 1,\n  "b": 2\n}', "/b")).toBe(3);
+    expect(lineOfPointer('{\n  "a": [\u2028 1, 2],\n  "b": 3\n}', "/b")).toBe(3);
+  });
   it("reads past a BOM, which the finding factories' file text keeps", () => {
     expect(lineOfPointer(`\ufeff${doc}`, "/position/height")).toBe(5);
     expect(

@@ -263,13 +263,45 @@ describe("buildFacts", () => {
       detail: "landing page",
     });
     // With no pages there is nothing to open, so LANDING_PAGE_NOT_SET does not fire and the fact links no rule.
-    const empty = buildReport([{ path: "definition/report.json", text: j({}) }]).report;
+    const empty = buildReport([
+      { path: "definition/report.json", text: j({}) },
+      { path: "definition/pages/pages.json", text: j({ pageOrder: [] }) },
+    ]).report;
     expect(buildFacts({ report: empty }, buildIndexes({ report: empty }), ALL)[0]).toEqual({
       layer: "report",
       label: "Opens on",
       value: "unknown",
       detail: "no landing page set",
     });
+  });
+  it("says unknown when pages.json was not read, whether it is absent or unreadable", () => {
+    const unknown = {
+      layer: "report",
+      label: "Opens on",
+      value: "unknown",
+      detail: "pages.json was not read",
+    };
+    const absent = buildReport([
+      { path: "definition/report.json", text: j({}) },
+      page("a", "Alpha"),
+      page("b", "Beta"),
+    ]).report;
+    expect(buildFacts({ report: absent }, buildIndexes({ report: absent }), ALL)[0]).toEqual(
+      unknown,
+    );
+    const conflicted = buildReport([
+      { path: "definition/report.json", text: j({}) },
+      {
+        path: "definition/pages/pages.json",
+        text: '{\n  "pageOrder": ["b", "a"],\n<<<<<<< HEAD\n  "activePageName": "b"\n=======\n  "activePageName": "a"\n>>>>>>> theirs\n}',
+      },
+      page("a", "Alpha"),
+      page("b", "Beta"),
+    ]).report;
+    expect(conflicted.issues.length).toBeGreaterThan(0);
+    expect(
+      buildFacts({ report: conflicted }, buildIndexes({ report: conflicted }), ALL)[0],
+    ).toEqual(unknown);
   });
   it("links a fact to the first of its candidate rules the run knows", () => {
     const { report } = buildReport(files);

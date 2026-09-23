@@ -135,9 +135,11 @@ export interface OpeningPage {
 /**
  * Where the report opens: the landing page when one is set, else the page open when it was saved,
  * else the first page in pageOrder, which is the pagesMetadata schema's default when pages.json
- * names neither. Undefined when it names neither and there are no pages: nothing opens.
+ * names neither. Undefined when pages.json was not read (absent, or unreadable), since nothing
+ * then says which page opens, and when it names neither and there are no pages: nothing opens.
  */
 export function openingPage(r: Report): OpeningPage | undefined {
+  if (r.pagesHeader.file === undefined) return undefined;
   const { landingPageName, activePageName } = r.pagesHeader;
   const name = landingPageName ?? activePageName;
   if (name !== undefined)
@@ -161,9 +163,14 @@ export const openingPageInvalid = (o: OpeningPage | undefined): boolean =>
   o.by !== "first" &&
   (o.page === undefined || (o.by === "active" && isHiddenPage(o.page)));
 
-/** LANDING_PAGE_NOT_SET's condition, which the Opens on fact shares: no landing page, and a page to open. */
+/**
+ * LANDING_PAGE_NOT_SET's condition, which the Opens on fact shares: a pages.json that was read
+ * and sets no landing page, and a page to open.
+ */
 export const landingPageNotSet = (r: Report): boolean =>
-  r.pagesHeader.landingPageName === undefined && r.pages.length > 0;
+  r.pagesHeader.file !== undefined &&
+  r.pagesHeader.landingPageName === undefined &&
+  r.pages.length > 0;
 
 export type FiltersPaneState = "open" | "closed" | "hidden from readers";
 

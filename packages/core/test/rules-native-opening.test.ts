@@ -64,16 +64,43 @@ describe("LANDING_PAGE_NOT_SET", () => {
       reportObjectIds(LANDING_PAGE_NOT_SET, [{ path: "definition/report.json", text: j({}) }]),
     ).toEqual([]);
   });
-  it("falls back to report.json when pages.json is not in the input, never to a path it was not given", () => {
+  it("says nothing when pages.json was not read, because nothing then says which page opens", () => {
+    // Absent: the pages are there, but no pages.json names an order or an active page.
     expect(
-      reportFindings(LANDING_PAGE_NOT_SET, [
+      reportObjectIds(LANDING_PAGE_NOT_SET, [
         { path: "definition/report.json", text: j({}) },
-        page("p"),
+        page("a"),
+        page("b"),
       ]),
-    ).toEqual([onReport("definition/report.json", 1, 'opens on "Page p", the first page')]);
-    const [bare] = reportFindings(LANDING_PAGE_NOT_SET, [page("p")]);
-    expect(bare).toBeDefined();
-    expect(bare!.location).toBeUndefined();
+    ).toEqual([]);
+    // Unreadable: a pages.json saved mid-merge is a parse issue, not a report with no active page.
+    const conflicted = [
+      "{",
+      '  "pageOrder": ["b", "a"],',
+      "<<<<<<< HEAD",
+      '  "activePageName": "b"',
+      "=======",
+      '  "activePageName": "a"',
+      ">>>>>>> theirs",
+      "}",
+    ].join("\n");
+    expect(
+      reportObjectIds(LANDING_PAGE_NOT_SET, [
+        { path: "definition/report.json", text: j({}) },
+        { path: "definition/pages/pages.json", text: conflicted },
+        page("a"),
+        page("b"),
+      ]),
+    ).toEqual([]);
+  });
+  it("never names a page the report does not have", () => {
+    expect(reportFindings(LANDING_PAGE_NOT_SET, pages({ activePageName: "gone" }))).toEqual([
+      onReport(
+        "definition/pages/pages.json",
+        1,
+        'no landing page set; the active page "gone" does not exist',
+      ),
+    ]);
   });
 });
 

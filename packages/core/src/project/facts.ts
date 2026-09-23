@@ -46,7 +46,12 @@ function reportFacts(report: Report, known: ReadonlySet<string>): Fact[] {
         layer: "report",
         label: "Opens on",
         value,
-        detail: opens === undefined ? "no landing page set" : how[opens.by],
+        detail:
+          report.pagesHeader.file === undefined
+            ? "pages.json was not read"
+            : opens === undefined
+              ? "no landing page set"
+              : how[opens.by],
       },
       openingPageInvalid(opens) ? "OPENING_PAGE_INVALID" : undefined,
       landingPageNotSet(report) ? "LANDING_PAGE_NOT_SET" : undefined,

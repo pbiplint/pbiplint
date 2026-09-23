@@ -139,8 +139,8 @@ export function lineOfPointer(text: string, pointer: string): number {
   const matches = (): boolean => path.length === want.length && path.every((p, i) => p === want[i]);
   let line = 1;
   let expectKey = false;
-  // The text a finding factory holds keeps the BOM readJson drops. It is not part of the document,
-  // and the scalar skip below would never move past it, because a regex `\s` matches it.
+  // The text a finding factory holds keeps the BOM readJson drops. It is not part of the document;
+  // read as a scalar, it would swallow the opening brace with it, and the scan would lose the root.
   for (let i = text.charCodeAt(0) === 0xfeff ? 1 : 0; i < text.length; i++) {
     const ch = text[i]!;
     if (ch === "\n") {
@@ -182,9 +182,10 @@ export function lineOfPointer(text: string, pointer: string): number {
       else expectKey = true;
       continue;
     }
-    // A number, true, false, or null.
+    // A number, true, false, or null. The skip takes at least this character, so a character a
+    // regex `\s` matches but the whitespace test above does not, such as U+00A0, cannot stall it.
     if (parent() === "array" && matches()) return line;
-    let j = i;
+    let j = i + 1;
     while (j < text.length && !/[\s,\]}]/.test(text[j]!)) j++;
     i = j - 1;
   }

@@ -17,13 +17,19 @@ export const LANDING_PAGE_NOT_SET = pbiplintRule({
   check: ({ report }) => {
     const opens = report && landingPageNotSet(report) ? openingPage(report) : undefined;
     if (!report || !opens) return [];
+    const pointer = opens.by === "active" ? "/activePageName" : undefined;
+    // Never name a page the report does not have; OPENING_PAGE_INVALID reports it beside this.
+    if (opens.page === undefined)
+      return [
+        reportFinding.pagesHeader(
+          report,
+          pointer,
+          `no landing page set; the active page "${opens.name}" does not exist`,
+        ),
+      ];
     const which = opens.by === "first" ? "the first page" : "the page open when it was saved";
     return [
-      reportFinding.pagesHeader(
-        report,
-        opens.by === "active" ? "/activePageName" : undefined,
-        `opens on "${opens.page?.displayName ?? opens.name}", ${which}`,
-      ),
+      reportFinding.pagesHeader(report, pointer, `opens on "${opens.page.displayName}", ${which}`),
     ];
   },
 });

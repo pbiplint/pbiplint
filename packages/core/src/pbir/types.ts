@@ -65,6 +65,8 @@ export interface Visual {
   isHidden: boolean;
   isGroup: boolean;
   groupId?: string;
+  /** A group's display name, as its `visualGroup` records it; a visual has none. */
+  displayName?: string;
   title?: string;
   /**
    * The alt text literal, or "(expression)" when it is bound to a measure or aggregation. A

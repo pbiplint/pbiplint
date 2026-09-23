@@ -6,6 +6,7 @@ import {
   pageLabel,
   reportMeasureLabel,
   visualLabel,
+  visualName,
 } from "../src/pbir/names.js";
 import { reportFinding } from "../src/rules/report-helpers.js";
 
@@ -46,6 +47,30 @@ describe("report finding names", () => {
     expect(bookmarkLabel(report.bookmarks[0]!)).toBe('Bookmark "Reset"');
     expect(reportMeasureLabel(report.measures[0]!)).toBe("[Net Margin] (report)");
     expect(pageFilterLabel(page)).toBe('Page filter on "Overview"');
+    // A name is the label without its page.
+    expect(visualName(titled!)).toBe('"Top products"');
+    expect(visualName(untitled!)).toBe("cardVisual (b07d00)");
+  });
+  it("name a group by the display name its visualGroup records, else by its type and id", () => {
+    const group = (name: string, visualGroup: Record<string, unknown>) => ({
+      path: `definition/pages/p1/visuals/${name}/visual.json`,
+      text: j({ name, position: {}, visualGroup: { groupMode: "ScaleMode", ...visualGroup } }),
+    });
+    const { report: grouped } = buildReport([
+      { path: "definition/pages/p1/page.json", text: j({ name: "p1", displayName: "Overview" }) },
+      group("4a1b2c3d0000", { displayName: "Filters" }),
+      group("5e6f00000000", {}),
+      group("6a7b00000000", { displayName: "" }),
+    ]);
+    const [named, unnamed, empty] = grouped.pages[0]!.visuals;
+    expect(named!.displayName).toBe("Filters");
+    expect(visualName(named!)).toBe('Group "Filters"');
+    expect(visualLabel(named!)).toBe('Group "Filters" on "Overview"');
+    expect(unnamed).not.toHaveProperty("displayName");
+    expect(visualLabel(unnamed!)).toBe('visualGroup (5e6f00) on "Overview"');
+    expect(visualLabel(empty!)).toBe('visualGroup (6a7b00) on "Overview"');
+    // Only a group has a display name; a visual's comes from its title.
+    expect(report.pages[0]!.visuals[1]).not.toHaveProperty("displayName");
   });
   it("build findings with the object id, a line from the pointer, and the object for the ignore check", () => {
     const page = report.pages[0]!;

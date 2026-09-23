@@ -17,7 +17,7 @@ sources:
 
 Visuals other than shapes whose alt text is missing or empty. A visual group is checked by its own alt text, the one set on the group rather than on the visuals inside it.
 
-Each finding names the visual, as `"Total Sales" on "Overview"` when it has a title and `cardVisual (3d9c80) on "Overview"` when it has none, and a group as `visualGroup (4e1a7b) on "Overview"`; its detail reads `no alt text`. When the visual or group has an empty alt text, the line is that property.
+Each finding names the visual, as `"Total Sales" on "Overview"` when it has a title and `cardVisual (3d9c80) on "Overview"` when it has none, and a group as `Group "Filters" on "Overview"` by the display name its file records, or `visualGroup (4e1a7b) on "Overview"` when it records none; its detail reads `no alt text`. When the visual or group has an empty alt text, the line is that property.
 
 ## Example
 

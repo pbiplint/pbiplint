@@ -267,6 +267,9 @@ function buildVisual(
     isHidden: json.isHidden === true,
     isGroup: group !== undefined,
     ...(str(json.parentGroupName) !== undefined ? { groupId: str(json.parentGroupName) } : {}),
+    ...(group && str(group.displayName) !== undefined
+      ? { displayName: str(group.displayName) }
+      : {}),
     ...(title !== undefined ? { title } : {}),
     ...(altText !== undefined ? { altText } : {}),
     fields,

@@ -161,6 +161,7 @@ function buildPage(
     height: num(json.height),
     displayOption: str(json.displayOption),
     visibility: str(json.visibility),
+    type: str(json.type),
     bindingType: binding ? str(binding.type) : undefined,
     bindingRefs: binding ? collectFieldRefs(binding.parameters, "/pageBinding/parameters") : [],
     filters: filtersOf(json.filterConfig, file, "/filterConfig"),

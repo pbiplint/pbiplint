@@ -592,6 +592,19 @@ describe("TAB_ORDER_FOLLOWS_LAYOUT", () => {
       reportObjectIds(TAB_ORDER_FOLLOWS_LAYOUT, disagreeing({ visibility: "HiddenInViewMode" })),
     ).toEqual(["p"]);
   });
+  it("leaves out a page marked as a tooltip by page.json's own type, with no pageBinding", () => {
+    // Microsoft's page schema: `type` Tooltip is a "Page to be used as tooltip.", and Desktop
+    // marks most tooltip pages by it alone.
+    const disagreeing = (extra: Record<string, unknown>) => [
+      page("p", extra),
+      at("a", 0, 0, 2000),
+      at("b", 0, 200, 1000),
+    ];
+    expect(detail(disagreeing({ type: "Tooltip" }))).toEqual([]);
+    expect(
+      reportObjectIds(TAB_ORDER_FOLLOWS_LAYOUT, disagreeing({ type: "Drillthrough" })),
+    ).toEqual(["p"]);
+  });
   it("leaves out a hidden visual and the children of a hidden group", () => {
     const files = [
       page("p"),

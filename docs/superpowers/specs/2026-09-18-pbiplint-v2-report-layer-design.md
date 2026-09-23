@@ -343,8 +343,9 @@ path and raw text.
   measures.
 - `PagesHeader`: `pageOrder`, `activePageName`, `landingPageName`.
 - `Page`: id (`name`), display name, width, height, display option,
-  visibility, binding type (tooltip, drillthrough) and parameters,
-  filters, visuals, file, `annotations`.
+  visibility, the page's own `type` (tooltip, drillthrough), binding
+  type (tooltip, drillthrough) and parameters, filters, visuals, file,
+  `annotations`.
 - `Visual`: id, page, position (x, y, z, width, height, tabOrder),
   type, `isHidden`, group membership, filters, fields bound per role,
   title text, alt text, actions (type and target), `annotations`, raw
@@ -669,11 +670,13 @@ group; it leaves out a hidden visual, a negative `tabOrder` (a visual
 hidden from the tab order), and a missing one, and a scope agrees when
 its tab order equals the tolerant reading order or a strict sort by `y`
 then `x`, the order Desktop's "match visual order" button writes (by a
-third party's account). It leaves out a tooltip page, which shows on
-hover rather than being a page a reader tabs through; drillthrough and
-hidden pages are checked. "Desktop always writes `tabOrder`" does not
-hold for every visual (511 of 13,026 lack it); a tab order the author
-never touched is still what cannot be detected.
+third party's account). It leaves out a page set up as a tooltip,
+whether page.json marks it by its `type` or by its `pageBinding`, since
+a tooltip shows on hover rather than being a page a reader tabs
+through; drillthrough and hidden pages are checked. "Desktop always
+writes `tabOrder`" does not hold for every visual (511 of 13,026 lack
+it); a tab order the author never touched is still what cannot be
+detected.
 `SLICER_SELECTION_SAVED` reads the five slicer types in Microsoft's
 catalog and the selection under
 `visual.objects.general[].properties.filter` with a non-empty `Where`

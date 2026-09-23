@@ -125,6 +125,13 @@ export interface Page {
   height?: number;
   displayOption?: string;
   visibility?: string;
+  /**
+   * page.json's own `type`, in Microsoft's page schema the page's "specific usage": `Tooltip`,
+   * "Page to be used as tooltip.", or `Drillthrough`, "Page to be used as drillthrough." It is
+   * apart from `bindingType`, which is read from `pageBinding`; Desktop-saved reports mark most
+   * tooltip pages by this alone, with no `pageBinding`. A stub page has none.
+   */
+  type?: string;
   bindingType?: string;
   bindingRefs: FieldRef[];
   filters: ReportFilter[];

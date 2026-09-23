@@ -88,6 +88,7 @@ const files = [
     path: "definition/pages/p1/page.json",
     text: page("p1", {
       visibility: "HiddenInViewMode",
+      type: "Tooltip",
       pageBinding: { type: "Tooltip", parameters: [{ field: column("Product", "Category") }] },
       filterConfig: {
         filters: [
@@ -192,7 +193,7 @@ describe("buildReport", () => {
     expect(report.issues).toEqual([]);
     expect(diagnostics).toEqual([]);
   });
-  it("orders pages by pageOrder and reads their header, binding, filters, and annotations", () => {
+  it("orders pages by pageOrder and reads their header, type, binding, filters, and annotations", () => {
     expect(report.pagesHeader).toEqual({
       file: "definition/pages/pages.json",
       text: pagesJson,
@@ -204,6 +205,9 @@ describe("buildReport", () => {
     const p1 = report.pages[1]!;
     expect(p1.displayName).toBe("Page p1");
     expect(p1.visibility).toBe("HiddenInViewMode");
+    // page.json's own `type`, apart from its pageBinding's; p2 sets neither.
+    expect(p1.type).toBe("Tooltip");
+    expect(report.pages[0]!.type).toBeUndefined();
     expect(p1.bindingType).toBe("Tooltip");
     expect(p1.bindingRefs.map((r) => r.name)).toEqual(["Category"]);
     expect(p1.filters.map((f) => [f.type, f.applied])).toEqual([["Advanced", true]]);
@@ -576,7 +580,7 @@ describe("buildReport tolerance", () => {
       ["definition/pages/a/page.json", 1],
     ]);
     // The page file could not be read, so the visual's page is a stub named by its folder.
-    expect(report.pages.map((p) => [p.id, p.displayName])).toEqual([["a", "a"]]);
+    expect(report.pages.map((p) => [p.id, p.displayName, p.type])).toEqual([["a", "a", undefined]]);
     expect(report.pages[0]!.visuals.map((v) => v.id)).toEqual(["v"]);
   });
   it("records whether reportExtensions.json was in the input and could be read", () => {

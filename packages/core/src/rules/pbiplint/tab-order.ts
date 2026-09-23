@@ -1,6 +1,6 @@
 import { visualName } from "../../pbir/names.js";
 import type { Visual } from "../../pbir/types.js";
-import { reportFinding } from "../report-helpers.js";
+import { isTooltipPage, reportFinding } from "../report-helpers.js";
 import { pbiplintRule } from "./define.js";
 
 const median = (xs: number[]): number => {
@@ -105,7 +105,7 @@ export const TAB_ORDER_FOLLOWS_LAYOUT = pbiplintRule({
   check: ({ report }) =>
     (report?.pages ?? []).flatMap((p) => {
       // A tooltip page shows on hover, not as a page a reader tabs through.
-      if (p.bindingType === "Tooltip") return [];
+      if (isTooltipPage(p)) return [];
       // Each scope's members by the group they sit in: the page's own under no group.
       const scopes = new Map<string | undefined, Visual[]>();
       for (const v of p.visuals) {

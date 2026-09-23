@@ -128,6 +128,15 @@ export const isHiddenPage = (p: Page): boolean => p.visibility === "HiddenInView
 export const visiblePages = (r: Report): Page[] => r.pages.filter((p) => !isHiddenPage(p));
 
 /**
+ * Whether the page is set up as a tooltip. page.json marks one in either of two places: its own
+ * `type`, which Microsoft's page schema gives as "Page to be used as tooltip." and which alone
+ * marks most tooltip pages in Desktop-saved reports, or its `pageBinding`'s `type`, "Binding to be
+ * used as tooltip page." in the same schema.
+ */
+export const isTooltipPage = (p: Page): boolean =>
+  p.type === "Tooltip" || p.bindingType === "Tooltip";
+
+/**
  * HIDDEN_VISUAL_WITH_FIELDS's condition, which the Visuals fact shares: a hidden visual with a field
  * in any of its wells. It counts the wells' entries, so a visual calculation, which references no
  * model field, still counts, and a group, which has no wells, never does.

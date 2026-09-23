@@ -22,6 +22,16 @@ Each finding names the page, as `Page "Overview"`, at line 1 of its page.json, a
 
 ## Example
 
+The policy is set in `pbiplint.config.json`, and the config below applies to both documents: it asks for tab order to follow the layout.
+
+```json pbiplint.config.json
+{
+  "rules": {
+    "TAB_ORDER_FOLLOWS_LAYOUT": { "expect": "layout" }
+  }
+}
+```
+
 ```pbir fires tree.json
 {
   "definition/pages/p1/visuals/3d9c80144abca427957c/visual.json": {

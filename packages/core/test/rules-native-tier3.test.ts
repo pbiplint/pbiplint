@@ -413,6 +413,8 @@ describe("BROKEN_BOOKMARK_REFERENCE", () => {
 });
 
 describe("TAB_ORDER_FOLLOWS_LAYOUT", () => {
+  /** The policy that switches the rule on; every case below but the first runs under it. */
+  const LAYOUT = { expect: "layout" };
   const at = (
     name: string,
     x: number,
@@ -450,36 +452,53 @@ describe("TAB_ORDER_FOLLOWS_LAYOUT", () => {
     }),
   });
   const detail = (files: { path: string; text: string }[]) =>
-    reportFindings(TAB_ORDER_FOLLOWS_LAYOUT, files).map((f) => [f.objectId, f.detail]);
+    reportFindings(TAB_ORDER_FOLLOWS_LAYOUT, files, undefined, LAYOUT).map((f) => [
+      f.objectId,
+      f.detail,
+    ]);
 
+  it("reports nothing without the layout policy, and fires under it", () => {
+    const files = [page("p"), at("a", 0, 0, 2000), at("b", 0, 200, 1000)];
+    expect(reportObjectIds(TAB_ORDER_FOLLOWS_LAYOUT, files)).toEqual([]);
+    expect(reportObjectIds(TAB_ORDER_FOLLOWS_LAYOUT, files, undefined, LAYOUT)).toEqual(["p"]);
+    expect(TAB_ORDER_FOLLOWS_LAYOUT.options).toEqual([
+      { name: "expect", type: "string", values: ["layout"] },
+    ]);
+  });
   it("fires when the tab order disagrees with top-to-bottom, left-to-right reading order", () => {
     expect(
-      reportObjectIds(TAB_ORDER_FOLLOWS_LAYOUT, [
-        page("p"),
-        at("a", 0, 0, 3000),
-        at("b", 200, 5, 2000),
-        at("c", 0, 200, 1000),
-      ]),
+      reportObjectIds(
+        TAB_ORDER_FOLLOWS_LAYOUT,
+        [page("p"), at("a", 0, 0, 3000), at("b", 200, 5, 2000), at("c", 0, 200, 1000)],
+        undefined,
+        LAYOUT,
+      ),
     ).toEqual(["p"]);
     expect(
-      reportObjectIds(TAB_ORDER_FOLLOWS_LAYOUT, [
-        page("p"),
-        at("a", 0, 0, 1000),
-        at("b", 200, 5, 2000),
-        at("c", 0, 200, 3000),
-      ]),
+      reportObjectIds(
+        TAB_ORDER_FOLLOWS_LAYOUT,
+        [page("p"), at("a", 0, 0, 1000), at("b", 200, 5, 2000), at("c", 0, 200, 3000)],
+        undefined,
+        LAYOUT,
+      ),
     ).toEqual([]);
     // Within half the median height, a row is a row: b sits a little lower than a and still reads after it.
     expect(
-      reportObjectIds(TAB_ORDER_FOLLOWS_LAYOUT, [
-        page("p"),
-        at("a", 0, 0, 1000),
-        at("b", 200, 20, 2000),
-      ]),
+      reportObjectIds(
+        TAB_ORDER_FOLLOWS_LAYOUT,
+        [page("p"), at("a", 0, 0, 1000), at("b", 200, 20, 2000)],
+        undefined,
+        LAYOUT,
+      ),
     ).toEqual([]);
-    expect(reportObjectIds(TAB_ORDER_FOLLOWS_LAYOUT, [page("p"), at("only", 0, 0, 1000)])).toEqual(
-      [],
-    );
+    expect(
+      reportObjectIds(
+        TAB_ORDER_FOLLOWS_LAYOUT,
+        [page("p"), at("only", 0, 0, 1000)],
+        undefined,
+        LAYOUT,
+      ),
+    ).toEqual([]);
   });
   it("says which two visuals disagree first", () => {
     const project = projectFrom([
@@ -490,7 +509,7 @@ describe("TAB_ORDER_FOLLOWS_LAYOUT", () => {
     ]);
     const [f] = TAB_ORDER_FOLLOWS_LAYOUT.check(project, {
       indexes: buildIndexes(project),
-      options: {},
+      options: LAYOUT,
     });
     expect(f!.detail).toBe(
       "tab order starts at cardVisual (c) but the layout reads cardVisual (a) first",
@@ -668,10 +687,17 @@ describe("TAB_ORDER_FOLLOWS_LAYOUT", () => {
       reportObjectIds(
         TAB_ORDER_FOLLOWS_LAYOUT,
         disagreeing({ pageBinding: { type: "Drillthrough" } }),
+        undefined,
+        LAYOUT,
       ),
     ).toEqual(["p"]);
     expect(
-      reportObjectIds(TAB_ORDER_FOLLOWS_LAYOUT, disagreeing({ visibility: "HiddenInViewMode" })),
+      reportObjectIds(
+        TAB_ORDER_FOLLOWS_LAYOUT,
+        disagreeing({ visibility: "HiddenInViewMode" }),
+        undefined,
+        LAYOUT,
+      ),
     ).toEqual(["p"]);
   });
   it("leaves out a page marked as a tooltip by page.json's own type, with no pageBinding", () => {
@@ -684,7 +710,12 @@ describe("TAB_ORDER_FOLLOWS_LAYOUT", () => {
     ];
     expect(detail(disagreeing({ type: "Tooltip" }))).toEqual([]);
     expect(
-      reportObjectIds(TAB_ORDER_FOLLOWS_LAYOUT, disagreeing({ type: "Drillthrough" })),
+      reportObjectIds(
+        TAB_ORDER_FOLLOWS_LAYOUT,
+        disagreeing({ type: "Drillthrough" }),
+        undefined,
+        LAYOUT,
+      ),
     ).toEqual(["p"]);
   });
   it("leaves out a hidden visual and the children of a hidden group", () => {
@@ -721,11 +752,12 @@ describe("TAB_ORDER_FOLLOWS_LAYOUT", () => {
     expect(detail(probe(1001))).toEqual([]);
   });
   it("sits on line 1 of the page's page.json", () => {
-    const [f] = reportFindings(TAB_ORDER_FOLLOWS_LAYOUT, [
-      page("p"),
-      at("a", 0, 0, 2000),
-      at("b", 0, 200, 1000),
-    ]);
+    const [f] = reportFindings(
+      TAB_ORDER_FOLLOWS_LAYOUT,
+      [page("p"), at("a", 0, 0, 2000), at("b", 0, 200, 1000)],
+      undefined,
+      LAYOUT,
+    );
     expect(f).toMatchObject({
       objectType: "Page",
       objectId: "p",

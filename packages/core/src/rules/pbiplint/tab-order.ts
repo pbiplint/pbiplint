@@ -105,9 +105,13 @@ export const TAB_ORDER_FOLLOWS_LAYOUT = pbiplintRule({
   severity: 2,
   scope: ["Page"],
   layer: "report",
-  // One finding per page, on the first scope in tab sequence whose order disagrees.
-  check: ({ report }) =>
-    (report?.pages ?? []).flatMap((p) => {
+  options: [{ name: "expect", type: "string", values: ["layout"] }],
+  // A policy rule: most pages of a report nobody ordered disagree, so it reports only when the
+  // project asks for tab order to follow the layout. Then one finding per page, on the first
+  // scope in tab sequence whose order disagrees.
+  check: ({ report }, ctx) => {
+    if (!report || ctx.options.expect !== "layout") return [];
+    return report.pages.flatMap((p) => {
       // A tooltip page shows on hover, not as a page a reader tabs through.
       if (isTooltipPage(p)) return [];
       // Each scope's members by the group they sit in: the page's own under no group.
@@ -119,7 +123,8 @@ export const TAB_ORDER_FOLLOWS_LAYOUT = pbiplintRule({
       }
       const detail = firstDisagreement(scopes.get(undefined) ?? [], scopes, new Set());
       return detail === undefined ? [] : [reportFinding.page(p, undefined, detail)];
-    }),
+    });
+  },
 });
 
 export const tabOrderRules = [TAB_ORDER_FOLLOWS_LAYOUT];

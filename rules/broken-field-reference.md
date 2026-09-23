@@ -120,7 +120,8 @@ There is no legitimate exception, because a reference the model cannot resolve i
 
 ## Related rules
 
-- `NOT_REACHED_FROM_REPORT` can clear with the same fix: pointing a broken reference at the field it meant reaches that field, which takes it off that rule's list of model fields nothing in the report reaches.
+- `NOT_REACHED_FROM_REPORT` looks the other way, at the model's fields that nothing in the report reaches. A reference this rule reports reaches nothing, so pointing it at the right field can also take that field off the other rule's list.
+- `REPORT_LEVEL_MEASURES` reports a measure defined in the report, which resolves for this rule like a model measure.
 - `BROKEN_BOOKMARK_REFERENCE` fires on the same object, a bookmark, when it captures a page or visual the report does not have.
 
 ## Links

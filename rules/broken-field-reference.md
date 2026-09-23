@@ -100,7 +100,7 @@ A visual that names a field the model does not have cannot show its data. Power 
 
 In Power BI Desktop, select the visual that the finding names; it shows an error that names the fields it cannot find. In the Visualizations pane, remove the broken field from its well and add the field you meant from the Data pane. For a field used in conditional formatting, open the formatting option's fx dialog and pick a valid field, or remove the formatting and apply it again with the right one. For a filter, remove the broken card from the Filters pane and add the field again. For a bookmark, fix the page it shows first, then select the bookmark and choose Update from its More options menu, so it captures the page again.
 
-In the report's JSON, a field reference names its table in `Entity` and its column or measure in `Property`, as in the example: correct the name, or, for a measure that moved, the table, and change the `queryRef` and `nativeQueryRef` beside it to match. When the model is what changed and the report is right, renaming the field back in the model fixes every reference to it at once.
+In the report's JSON, a field reference names its table in `Entity` and its column or measure in `Property`, as in the example: correct the name, or, for a measure that moved, the table, and change the `queryRef` and `nativeQueryRef` beside it to match. A reference to a measure in the report's extension also carries `"Schema": "extension"`, on its `SourceRef` or, in a filter's condition, on the `From` entry its alias names, and when that measure has moved into the model, remove the key, as `REPORT_LEVEL_MEASURES`'s page describes. When the model is what changed and the report is right, renaming the field back in the model fixes every reference to it at once.
 
 ## When to ignore it
 
@@ -110,7 +110,8 @@ There is no legitimate exception, because a reference the model cannot resolve i
 
 - Names are matched without regard to case, so `'sales'[region]` finds the Region column on Sales.
 - A reference names the measure's table as well as the measure, so a measure that lives on another table is reported with the table it is on, as `[Total Sales]: [Total Sales] is on "Sales", not "Product"`, rather than as missing.
-- A measure defined in the report itself, in reportExtensions.json, resolves like a model measure, so a visual bound to one is not reported. A reference inside such a measure's own DAX is not reported by this rule at all.
+- A measure defined in the report itself, in reportExtensions.json, resolves like a model measure, so a visual bound to one is not reported. A reference that names the report's extension, as Power BI Desktop's references to a report measure do with `"Schema": "extension"`, is looked up among the report's own measures only, so one left behind after its measure moved into the model is reported, as `[Net Margin]: no measure named "Net Margin" on "Sales" in the report's extension`. A reference inside such a measure's own DAX is not reported by this rule at all; `REPORT_LEVEL_MEASURES` reports the measure itself, so it can move into the model.
+- While reportExtensions.json cannot be read, such as while it holds merge-conflict markers, a reference that names the report's extension is not reported, since pbiplint cannot tell what the file defines; the file's own `PARSE_ISSUE` finding says why. When the input holds no reportExtensions.json at all, the reference is reported, as `[Net Margin]: no measure named "Net Margin" on "Sales": the report defines no extension measures`.
 - Each object reports a missing field once, however many times it names it. A filter that names the field in its `field` and again in its condition is one finding, and so is a visual that binds a field and also filters or sorts by it. The finding keeps one line, chosen in this order rather than by position in the file: the well that binds the field, else the first filter that names it, else the first formatting property or sort entry that does.
 - A field a visual names anywhere in its file counts, not only the fields in its wells: conditional formatting, a title bound to a measure, a card's reference label, and the sort all name fields, so a missing field in any of them is reported.
 - A filter condition that reaches its table through an alias the filter never declares is reported by the field's name alone, as `[Region]: a filter alias that no From list declares`. A reference whose alias stands for a subquery rather than a table, or whose source names no table at all, is labelled the same way, with `an alias whose From entry names no model table` or `a source that names no model table`.
@@ -120,6 +121,7 @@ There is no legitimate exception, because a reference the model cannot resolve i
 ## Related rules
 
 - `NOT_REACHED_FROM_REPORT` looks the other way, at the model's fields that nothing in the report reaches. A reference this rule reports reaches nothing, so pointing it at the right field can also take that field off the other rule's list.
+- `REPORT_LEVEL_MEASURES` reports a measure defined in the report, which resolves for this rule like a model measure.
 
 ## Links
 

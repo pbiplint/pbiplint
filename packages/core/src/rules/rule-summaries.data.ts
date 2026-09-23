@@ -46,6 +46,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Measures and row-level security filters that refer to a column by its bare name, `[Column]`, instead of `'Table'[Column]`.",
   DAX_MEASURES_UNQUALIFIED:
     "Measures, calculated columns, calculated tables, and calculation items that refer to a measure with a table prefix, `'Table'[Measure]`.",
+  DEFAULT_PAGE_NAME:
+    "Pages whose display name in page.json has the shape `Page <n>`, `Duplicate of <name>`, or `<name> (copy)`: the names English Power BI Desktop gives a new page and a duplicated one, and a name marked as a copy.",
   ENSURE_ALTTEXT:
     "Visuals other than shapes whose alt text is missing or empty. A visual group is checked by its own alt text, the one set on the group rather than on the visuals inside it.",
   ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY:
@@ -154,6 +156,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   REMOVE_ROLES_WITH_NO_MEMBERS: "Roles with no members.",
   REMOVE_UNUSED_CUSTOM_VISUALS:
     "Custom visuals from AppSource that the report registers in report.json and that no visual on any page uses.",
+  REPORT_LEVEL_MEASURES:
+    "Measures defined in the report's reportExtensions.json rather than in the model, reported when the model the report reads is in the input, so that each can move into it.",
   SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS:
     "Columns with IsAvailableInMdx set to false that are used to sort another column, appear in a hierarchy or a variation, or sort by another column.",
   SNOWFLAKE_SCHEMA_ARCHITECTURE:
@@ -173,4 +177,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Expressions that use the division operator right after a closing bracket or parenthesis, such as `[Sales] / [Cost]` or `SUM(...) / SUM(...)`. A slash that starts a comment is ignored.",
   USE_THE_TREATAS_FUNCTION_INSTEAD_OF_INTERSECT:
     "Measures and calculation items that call INTERSECT.",
+  VISUAL_OUTSIDE_PAGE:
+    "Visuals whose box runs past the right or bottom edge of their page by a pixel or more: `x` plus `width` beyond the page's width, or `y` plus `height` beyond its height.",
+  VISUAL_WITHOUT_FIELDS:
+    "Data visuals with no field in any of their wells. Every visual type counts as a data visual, custom visuals included, except visual groups and the types that need no fields by design, such as shapes, text boxes, images, and buttons.",
 };

@@ -5,11 +5,13 @@ import { ignoreHelp, isIgnored } from "../src/engine/ignore.js";
 import { lint } from "../src/engine/lint.js";
 import { rank } from "../src/engine/rank.js";
 import { optionsFor, runRules } from "../src/engine/run.js";
+import { skippedLine } from "../src/format/text.js";
 import { finding, namedObjects } from "../src/rules/helpers.js";
 import { PARSE_ISSUE } from "../src/rules/parse-issue.js";
 import { ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY } from "../src/rules/pbi-inspector/pages.js";
 import { REMOVE_UNUSED_CUSTOM_VISUALS } from "../src/rules/pbi-inspector/report.js";
 import { ENSURE_ALTTEXT } from "../src/rules/pbi-inspector/visuals.js";
+import { REPORT_LEVEL_MEASURES } from "../src/rules/pbiplint/measures.js";
 import type { Rule } from "../src/rules/types.js";
 import { modelFrom } from "./helpers.js";
 
@@ -231,7 +233,14 @@ describe("ignoreHelp", () => {
     expect(ignoreHelp("REDUCE_PAGES", ["Report"])).toBe(
       'This rule reports on the report itself, so there is no object to annotate. To turn the rule off for a whole project, set `"REDUCE_PAGES": "off"` under `rules` in `pbiplint.config.json`.',
     );
-    expect(ignoreHelp("X", ["ReportMeasure"])).toMatch(/^This rule reports on the report itself/);
+    // A report measure has an annotations array in the schema, but pbiplint reads none on it.
+    expect(ignoreHelp("X", ["ReportMeasure"])).toBe(
+      'This rule reports on measures defined in the report, and pbiplint reads no annotation on them, so there is no object to annotate. To turn the rule off for a whole project, set `"X": "off"` under `rules` in `pbiplint.config.json`.',
+    );
+    expect(ignoreHelp("X", ["Bookmark"])).toMatch(/^This rule reports on the report itself/);
+    expect(ignoreHelp("X", ["Report", "ReportMeasure"])).toMatch(
+      /^This rule reports on the report itself/,
+    );
     // A rule that spans both layers keeps the TMDL form: its objects are model objects.
     expect(ignoreHelp("NOT_REACHED_FROM_REPORT", ["Column", "Measure"])).toMatch(
       /^To ignore this rule on one object, add `annotation/,
@@ -562,6 +571,63 @@ describe("lint over a project", () => {
       ["ENSURE_ALTTEXT", "w"],
     ]);
     expect(r.summary.ignored).toBe(2);
+  });
+  it("reads no ignore annotation on a report measure, though the schema allows one", () => {
+    const r = lint(
+      [
+        // The model the report reads, without which the rule does not run.
+        ...modelFiles,
+        {
+          path: "definition/reportExtensions.json",
+          text: j({
+            entities: [
+              {
+                name: "Sales",
+                measures: [
+                  {
+                    name: "Net Margin",
+                    expression: "1",
+                    annotations: [{ name: "pbiplint.ignore", value: "REPORT_LEVEL_MEASURES" }],
+                  },
+                ],
+              },
+            ],
+          }),
+        },
+      ],
+      { rules: [REPORT_LEVEL_MEASURES] },
+    );
+    expect(r.findings.map((f) => [f.ruleId, f.objectId])).toEqual([
+      ["REPORT_LEVEL_MEASURES", "Sales.Net Margin"],
+    ]);
+    expect(r.summary.ignored).toBe(0);
+  });
+  it("skips REPORT_LEVEL_MEASURES on a report that reads a published model", () => {
+    const extensions = {
+      path: "definition/reportExtensions.json",
+      text: j({
+        entities: [{ name: "Sales", measures: [{ name: "Net Margin", expression: "1" }] }],
+      }),
+    };
+    // pairingDecision gives this reason when definition.pbir connects to a published model, and
+    // the CLI and the browser pass it to lint as the model's absence.
+    const reportOnly = lint([...reportFiles, extensions], {
+      absent: { model: "this report reads a published model" },
+    });
+    expect(reportOnly.findings.filter((f) => f.ruleId === "REPORT_LEVEL_MEASURES")).toEqual([]);
+    expect(reportOnly.summary.rulesSkipped).toContainEqual({
+      id: "REPORT_LEVEL_MEASURES",
+      reason: "noModel",
+    });
+    // The skipped line carries the reason rules/report-level-measures.md quotes.
+    expect(skippedLine(reportOnly)).toMatch(
+      /\d+ rules skipped \(this report reads a published model\)/,
+    );
+    // With the model in the run, the same measure is reported.
+    const both = lint([...modelFiles, ...reportFiles, extensions]);
+    expect(
+      both.findings.filter((f) => f.ruleId === "REPORT_LEVEL_MEASURES").map((f) => f.objectId),
+    ).toEqual(["Sales.Net Margin"]);
   });
   it("keeps an invalid-JSON detail on one line, whatever the engine's message spans", () => {
     const r = lint([{ path: "definition/pages/p/page.json", text: '{\n  "a": 1,\n  "b": }\n' }]);

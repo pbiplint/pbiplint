@@ -123,6 +123,7 @@ A visual that a bookmark or a button reveals is hidden on purpose, such as a det
 
 - `REDUCE_VISUALS_ON_PAGE` does not count hidden visuals, so a page can stay under that rule's limit while carrying hidden visuals this rule reports.
 - `BROKEN_FIELD_REFERENCE` reads a hidden visual's fields as it reads a visible one's, so a left-behind visual whose field was renamed is reported there too.
+- `VISUAL_WITHOUT_FIELDS` reports the opposite case, a data visual with nothing in its wells.
 
 ## Links
 

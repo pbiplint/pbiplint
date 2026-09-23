@@ -23,7 +23,7 @@ describe("microsoft-bpa pack", () => {
   it("has unique slugs across the default rule set", () => {
     const slugs = defaultRules.map((r) => slug(r.id));
     expect(new Set(slugs).size).toBe(slugs.length);
-    expect(defaultRules.length).toBe(89);
+    expect(defaultRules.length).toBe(93);
   });
   it("gives every rule a scope, a name without the category prefix, and a category from the fixed list", () => {
     for (const r of microsoftBpaRules) {

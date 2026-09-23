@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { buildIndexes } from "../src/index/build.js";
 import { buildModel } from "../src/model/build.js";
 import { buildReport } from "../src/pbir/build.js";
+import { PARSE_ISSUE } from "../src/rules/parse-issue.js";
 import {
   BROKEN_FIELD_REFERENCE,
   NOT_REACHED_FROM_REPORT,
@@ -11,8 +12,10 @@ import {
   bound,
   column,
   j,
+  lineOf,
   measure,
   page,
+  pretty,
   projectFrom,
   reportFindings,
   reportObjectIds,
@@ -29,10 +32,6 @@ const tmdl = `table Sales
 	measure 'Sales LY' = CALCULATE([Total Sales])
 	measure 'Sales YoY %' = [Total Sales] - [Sales LY]
 `;
-
-/** The 1-based line of the first occurrence of `needle` in `text`, at or after `from`. */
-const lineOf = (text: string, needle: string, from = 0): number =>
-  text.slice(0, text.indexOf(needle, from)).split("\n").length;
 
 describe("BROKEN_FIELD_REFERENCE", () => {
   it("names the object carrying each unresolved reference, with the field and the reason", () => {
@@ -114,6 +113,79 @@ describe("BROKEN_FIELD_REFERENCE", () => {
     ];
     expect(reportObjectIds(BROKEN_FIELD_REFERENCE, files, tmdl)).toEqual([]);
   });
+  it("reports a reference still naming the report's extension after its measure moved into the model", () => {
+    // Desktop binds a report measure with `"Schema": "extension"`; the measure has since moved
+    // into the model, and the input holds no reportExtensions.json, so nothing in the report
+    // defines it.
+    const text = pretty(
+      JSON.parse(
+        bound("p", "v", "cardVisual", [
+          {
+            Measure: {
+              Expression: { SourceRef: { Schema: "extension", Entity: "Sales" } },
+              Property: "Net Margin",
+            },
+          },
+        ]).text,
+      ),
+    );
+    const files = [page("p"), { path: "definition/pages/p/visuals/v/visual.json", text }];
+    const withMeasure = `${tmdl}\tmeasure 'Net Margin' = [Total Sales] * 0.1\n`;
+    expect(
+      reportFindings(BROKEN_FIELD_REFERENCE, files, withMeasure).map((f) => [
+        f.objectName,
+        f.detail,
+        f.location,
+      ]),
+    ).toEqual([
+      [
+        'cardVisual (v) on "Page p"',
+        `[Net Margin]: no measure named "Net Margin" on "Sales": the report defines no extension measures`,
+        { file: "definition/pages/p/visuals/v/visual.json", line: lineOf(text, '"field"') },
+      ],
+    ]);
+  });
+  it("leaves a reference naming the report's extension unreported while reportExtensions.json cannot be read", () => {
+    // Both sides of the merge define Net Margin, and the model has one too. pbiplint reads neither
+    // side, so it says nothing of what the file defines; PARSE_ISSUE names the file instead.
+    const inExtension = {
+      Measure: {
+        Expression: { SourceRef: { Schema: "extension", Entity: "Sales" } },
+        Property: "Net Margin",
+      },
+    };
+    const side = (expression: string) =>
+      j({ entities: [{ name: "Sales", measures: [{ name: "Net Margin", expression }] }] });
+    const files = [
+      page("p"),
+      bound("p", "v1", "cardVisual", [inExtension]),
+      bound("p", "v2", "cardVisual", [inExtension]),
+      bound("p", "v3", "cardVisual", [inExtension]),
+      {
+        path: "definition/reportExtensions.json",
+        text: [
+          "<<<<<<< HEAD",
+          side("[Total Sales] * 0.1"),
+          "=======",
+          side("[Total Sales] * 0.2"),
+          ">>>>>>> main",
+        ].join("\n"),
+      },
+    ];
+    const withMeasure = `${tmdl}\tmeasure 'Net Margin' = [Total Sales] * 0.1\n`;
+    expect(reportFindings(BROKEN_FIELD_REFERENCE, files, withMeasure)).toEqual([]);
+    expect(
+      reportFindings(PARSE_ISSUE, files, withMeasure).map((f) => [
+        f.objectName,
+        f.location?.line,
+        f.detail,
+      ]),
+    ).toEqual([
+      ["definition/reportExtensions.json", 1, "merge conflict marker: <<<<<<< HEAD"],
+      ["definition/reportExtensions.json", 3, "merge conflict marker: ======="],
+      ["definition/reportExtensions.json", 5, "merge conflict marker: >>>>>>> main"],
+    ]);
+  });
   it("keeps one finding per file when two pages share a display name and a visual id", () => {
     const files = [
       page("p1", { displayName: "Same" }),
@@ -182,7 +254,6 @@ describe("BROKEN_FIELD_REFERENCE", () => {
     ]);
   });
   it("points at the reference's own line in a pretty-printed report.json and bookmark", () => {
-    const pretty = (v: unknown) => JSON.stringify(v, null, 2);
     const reportText = pretty({
       themeCollection: { baseTheme: { name: "CY24SU10" } },
       filterConfig: {
@@ -215,7 +286,6 @@ describe("BROKEN_FIELD_REFERENCE", () => {
     expect(findings.map((f) => f.location)).toEqual(expected);
   });
   it("reports one finding for a missing column an applied page filter names twice", () => {
-    const pretty = (v: unknown) => JSON.stringify(v, null, 2);
     const pageText = pretty({
       name: "p",
       displayName: "Page p",
@@ -261,7 +331,6 @@ describe("BROKEN_FIELD_REFERENCE", () => {
     ]);
   });
   it("reports one finding for a missing column a visual binds and filters, on the binding's line", () => {
-    const pretty = (v: unknown) => JSON.stringify(v, null, 2);
     const visualText = pretty({
       name: "v",
       position: { x: 0, y: 0, z: 0, height: 100, width: 100 },
@@ -295,7 +364,6 @@ describe("BROKEN_FIELD_REFERENCE", () => {
     ]);
   });
   it("fires on a visual whose conditional formatting names a missing measure, at that line", () => {
-    const pretty = (v: unknown) => JSON.stringify(v, null, 2);
     const visualText = pretty({
       name: "v",
       position: { x: 0, y: 0, z: 0, height: 100, width: 100 },
@@ -332,7 +400,6 @@ describe("BROKEN_FIELD_REFERENCE", () => {
     ]);
   });
   it("folds a sort entry that repeats a missing bound field into the binding's finding", () => {
-    const pretty = (v: unknown) => JSON.stringify(v, null, 2);
     const visualText = pretty({
       name: "v",
       position: { x: 0, y: 0, z: 0, height: 100, width: 100 },

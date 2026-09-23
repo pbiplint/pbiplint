@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { resolveConfig } from "../src/engine/config.js";
 import { effectiveSeverity } from "../src/engine/rank.js";
-import { pbiplintRule } from "../src/rules/pbiplint/define.js";
+import { pbiplintRule, type PbiplintRuleSpec } from "../src/rules/pbiplint/define.js";
 import { pbiplintRules } from "../src/rules/pbiplint/index.js";
 import { defaultRules } from "../src/rules/index.js";
 
 describe("pbiplintRule", () => {
-  const rule = pbiplintRule({
+  const spec: PbiplintRuleSpec = {
     id: "X_RULE",
     name: "X",
     category: "Report Design",
@@ -16,7 +16,8 @@ describe("pbiplintRule", () => {
     options: [{ name: "expect", type: "string", values: ["none"] }],
     policySeverity: (o) => (o.expect === "none" ? 2 : undefined),
     check: () => [],
-  });
+  };
+  const rule = pbiplintRule(spec);
   it("derives needs from the layer and marks the rule built in", () => {
     expect(rule).toMatchObject({
       status: "builtin",
@@ -24,7 +25,13 @@ describe("pbiplintRule", () => {
       references: [],
       description: "X",
     });
-    expect(pbiplintRule({ ...rule, layer: "report" }).needs).toEqual(["report"]);
+    expect(pbiplintRule({ ...spec, layer: "report" }).needs).toEqual(["report"]);
+  });
+  it("takes the needs a rule declares over the ones its layer implies", () => {
+    expect(pbiplintRule({ ...spec, layer: "report", needs: ["model", "report"] })).toMatchObject({
+      layer: "report",
+      needs: ["model", "report"],
+    });
   });
   it("lets a policy raise the severity unless the config overrides it", () => {
     expect(effectiveSeverity(rule, resolveConfig())).toBe(1);

@@ -18,6 +18,13 @@ export interface FieldRef {
    * From entry names no model table (a subquery, say), or a source that names no table at all.
    */
   noTable?: "undeclaredAlias" | "nonTableAlias" | "noSource";
+  /**
+   * The schema the reference names, when it names one: in the semanticQuery schema's words, "the
+   * name of the schema containing the referenced entity", read from the SourceRef or from the
+   * From entry its alias names. Power BI Desktop writes `"extension"` in every reference to a
+   * measure defined in the report's reportExtensions.json; a reference to a model field names none.
+   */
+  schema?: string;
   pointer: string;
 }
 
@@ -135,7 +142,11 @@ export interface BookmarksHeader {
   items: { name: string; children: string[] }[];
 }
 
-/** One report-level measure, defined in the report rather than in the model. */
+/**
+ * One report-level measure, defined in the report rather than in the model. It carries no
+ * annotations: pbiplint reads no ignore on a report measure, so a rule on one is turned off in
+ * config.
+ */
 export interface ReportMeasure {
   table: string;
   name: string;
@@ -143,7 +154,6 @@ export interface ReportMeasure {
   hidden: boolean;
   file: string;
   line: number;
-  annotations: Record<string, string>;
 }
 
 /** How the report names the semantic model it reads, or that it names none. */
@@ -166,6 +176,13 @@ export interface Report {
   bookmarksHeader: BookmarksHeader;
   bookmarks: Bookmark[];
   measures: ReportMeasure[];
+  /**
+   * What became of definition/reportExtensions.json: `absent` when the input holds none, `read`
+   * when it parsed to an object and its measures are in `measures`, `unread` when it did not (a
+   * merge conflict or invalid JSON, which PARSE_ISSUE reports), so `measures` says nothing of what
+   * the file defines.
+   */
+  extensions: "absent" | "read" | "unread";
   datasetReference: DatasetReference;
   files: string[];
   issues: ParseIssue[];

@@ -180,7 +180,10 @@ slicer and four data visuals whose per-field entries Desktop writes)
   `visualContainerObjects` including `general[].properties.altText` and
   `title`, and `visualLink[]` with `type`, `bookmark`,
   `navigationSection`, `drillthroughSection`, `webUrl`, `qna`.
-  `mobile.json` beside it is the mobile layout.
+  `mobile.json` beside it is the mobile layout. Amended 2026-09-23
+  with pull request 4: a grouped visual's `position` is relative to
+  its parent group (Desktop-saved files; the schema speaks only of the
+  page).
 - `definition/bookmarks/bookmarks.json`: `items[]` (`name`, optional
   `children`). `<name>.bookmark.json`: `name`, `displayName`, `options`,
   `explorationState` with `activeSection` (page name) and
@@ -202,6 +205,11 @@ slicer and four data visuals whose per-field entries Desktop writes)
   entry; a slicer with no selection has no `filter`.
 - Desktop names a duplicated page "Duplicate of <name>" in current
   builds; older copy could read "<name> (copy)". Both are matched.
+  Amended 2026-09-23 with pull request 4: English Desktop writes
+  `Page <n>` for a new page and `Duplicate of <name>` for a duplicate
+  (nested when a duplicate is duplicated), on tooltip and drillthrough
+  pages too; Desktop localises both names; no source shows a Desktop
+  build writing `<name> (copy)`.
 
 ### 3.5 Authoring toolchain for the sample report
 
@@ -358,6 +366,20 @@ and the fields used per visual. Built in a report-only run too, with
 everything unresolved; the rules that need resolution are skipped with
 reason `noModel`.
 
+Amended 2026-09-23 with pull request 4: a reference that names a
+schema, in its `SourceRef` or in the `From` entry of its alias,
+resolves among the report's own measures only (Power BI Desktop writes
+`"Schema": "extension"` in every reference to a report measure, and
+Microsoft's reportExtension schema says to leave the schema empty for a
+model measure), so a reference left naming the extension after its
+measure moved into the model is unresolved, whatever the model holds.
+While reportExtensions.json cannot be read (merge-conflict markers or
+invalid JSON, which section 5 makes a `PARSE_ISSUE` finding), such a
+reference resolves to `unread`, which no rule reports, because pbiplint
+cannot say what the file defines; with no reportExtensions.json in the
+input, it stays unresolved, with a reason saying the report defines no
+extension measures.
+
 **Reachability index.** Roots: every resolved report reference; both
 columns of every relationship; columns named in RLS and OLS filters;
 variation default columns; the extension measures' DAX references.
@@ -408,6 +430,11 @@ open; Desktop writes `false` whenever the pane was collapsed. Filters pane
 says unknown, and `FILTERS_PANE_STATE` reports nothing under any policy,
 when `report.json` was not read (absent, or unreadable). That unknown
 Filters pane fact links no rule, because the rule cannot fire then.
+
+Amended 2026-09-23 with Michael: Report measures shows its count
+whenever the report defines measures, and links `REPORT_LEVEL_MEASURES`
+only when that rule fires, that is, with the model the report reads in
+the run (section 8.3).
 
 **Cost.** Linear in the JSON. The demo report's largest visual is
 61 KB, most under 5 KB; a 300-visual report is a few megabytes and
@@ -540,6 +567,25 @@ are diagnostics.
 | VISUAL_WITHOUT_FIELDS | Visual | Report Design | warning | A data visual with nothing bound; shapes, text boxes, images, buttons, and groups excluded |
 | VISUAL_OUTSIDE_PAGE | Visual | Report Design | warning | `x + width` past the page width or `y + height` past the page height |
 | REPORT_LEVEL_MEASURES | ReportMeasure | Maintenance | warning | Any measure in `reportExtensions.json`; the fix is to move it into the model |
+
+Amended 2026-09-23 with pull request 4, reading the conditions rather
+than changing them: `VISUAL_WITHOUT_FIELDS` counts a visual's well
+entries, and takes every visual type for a data visual except the
+thirteen that bind nothing by design (those without data roles in
+Microsoft's visual catalog, the paginated report visual, and the Power
+Automate visual, whose fields Learn makes optional), so a custom visual
+counts as a data visual; `VISUAL_OUTSIDE_PAGE` checks ungrouped
+visuals and top-level groups, whose positions are page-relative, and
+reports an edge passed by at least 1 px; `DEFAULT_PAGE_NAME` reads a
+display name its page.json records, and matches the English names
+Desktop gives and the `<name> (copy)` form.
+
+Amended 2026-09-23 with Michael: `REPORT_LEVEL_MEASURES` reports a
+measure only when the run holds the model the report reads; a report
+that reads a published model is left alone, because Learn presents
+report measures as the supported route for an author who cannot change
+a shared model. The rule needs both layers, so a run without the model
+skips it.
 
 ### 8.4 Native, tier 3
 

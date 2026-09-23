@@ -124,7 +124,11 @@ const stockReport = (): LintFile[] => [
     }),
   },
 ];
-/** The model a project rule's example runs against: Sales with Amount and Region, and the measure Total Sales. */
+/**
+ * The model the example of any report or project rule whose needs include the model runs against:
+ * Sales with Amount and Region, and the measure Total Sales. So REPORT_LEVEL_MEASURES gets it and
+ * PARSE_ISSUE does not.
+ */
 const STOCK_MODEL: LintFile = {
   path: "definition/tables/Sales.tmdl",
   text: "table Sales\n\tcolumn Amount\n\t\tdataType: decimal\n\t\tsourceColumn: Amount\n\tcolumn Region\n\t\tdataType: string\n\t\tsourceColumn: Region\n\tmeasure 'Total Sales' = SUM('Sales'[Amount])\n\tpartition Sales = m\n\t\tmode: import\n\t\tsource = 1\n",
@@ -229,7 +233,7 @@ function checkExample(rule: Rule, example: string): void {
     // A fix is a fix, not a suppression.
     expect(`${fires!.text}${fixed!.text}`).not.toContain("pbiplint.ignore");
     const config = configFence(example);
-    const withModel = rule.layer === "project";
+    const withModel = rule.needs.includes("model");
     check(runPbir(fires!, withModel, config), runPbir(fixed!, withModel, config));
   };
   const infos = infoStrings(example);

@@ -3,6 +3,7 @@ import { RULE_SUMMARIES } from "../rule-summaries.data.js";
 import type {
   Category,
   Layer,
+  LayerName,
   ObjectType,
   Rule,
   RuleContext,
@@ -19,18 +20,23 @@ export interface PbiplintRuleSpec {
   severity: Severity;
   scope: ObjectType[];
   layer: Layer;
+  /** The layers the rule cannot run without, when they are not the ones its `layer` implies. */
+  needs?: readonly LayerName[];
   options?: readonly RuleOption[];
   references?: string[];
   policySeverity?(options: RuleOptions): Severity | undefined;
   check(project: Project, ctx: RuleContext): RuleFinding[];
 }
 
-/** One of pbiplint's own rules: built in, needing the layers its `layer` names, described by its page. */
+/**
+ * One of pbiplint's own rules: built in, needing the layers its `layer` names unless it declares
+ * its own, described by its page.
+ */
 export function pbiplintRule(spec: PbiplintRuleSpec): Rule {
-  const { options, references, policySeverity, ...rest } = spec;
+  const { needs, options, references, policySeverity, ...rest } = spec;
   return {
     ...rest,
-    needs: spec.layer === "project" ? ["model", "report"] : [spec.layer],
+    needs: needs ?? (spec.layer === "project" ? ["model", "report"] : [spec.layer]),
     ...(options ? { options } : {}),
     ...(policySeverity ? { policySeverity } : {}),
     description: RULE_SUMMARIES[spec.id] ?? spec.name,

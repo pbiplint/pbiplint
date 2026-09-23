@@ -457,6 +457,8 @@ describe("buildReport", () => {
       ["Sales", "Net Margin", false, 7],
       ["Sales", "Margin %", false, 8],
     ]);
+    // A report measure carries no annotations: pbiplint reads no ignore on one.
+    expect(report.measures[0]).not.toHaveProperty("annotations");
   });
 });
 
@@ -487,6 +489,20 @@ describe("buildReport tolerance", () => {
     // The page file could not be read, so the visual's page is a stub named by its folder.
     expect(report.pages.map((p) => [p.id, p.displayName])).toEqual([["a", "a"]]);
     expect(report.pages[0]!.visuals.map((v) => v.id)).toEqual(["v"]);
+  });
+  it("records whether reportExtensions.json was in the input and could be read", () => {
+    const extensions = (...texts: string[]) =>
+      buildReport(texts.map((text) => ({ path: "definition/reportExtensions.json", text }))).report
+        .extensions;
+    const side = (expression: string) =>
+      j({ entities: [{ name: "Sales", measures: [{ name: "Net Margin", expression }] }] });
+    expect(extensions()).toBe("absent");
+    expect(extensions(j({ name: "extension", entities: [] }))).toBe("read");
+    expect(
+      extensions(["<<<<<<< HEAD", side("1"), "=======", side("2"), ">>>>>>> main"].join("\n")),
+    ).toBe("unread");
+    expect(extensions('{ "entities": [ }')).toBe("unread");
+    expect(extensions("[]")).toBe("unread");
   });
   it("ignores a .platform of another part and a definition.pbir with a connection", () => {
     const { report } = buildReport([

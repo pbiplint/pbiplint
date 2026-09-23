@@ -9,13 +9,15 @@ import {
   landingPageNotSet,
   openingPage,
   openingPageInvalid,
+  reportMeasuresToMove,
 } from "../rules/report-helpers.js";
 import type { Fact, Project } from "./types.js";
 
 /** `n info`-style nouns are the caller's business; these take an s. */
 const n = plural;
 
-function reportFacts(report: Report, known: ReadonlySet<string>): Fact[] {
+/** The report's facts; the project is there for a fact whose rule reads the model beside it. */
+function reportFacts(project: Project, report: Report, known: ReadonlySet<string>): Fact[] {
   const facts: Fact[] = [];
   // The candidates are ordered from the most specific rule to the broadest, and the fact links to
   // the first the run actually carries, so leaving the specific rule out of a run does not cost
@@ -130,7 +132,8 @@ function reportFacts(report: Report, known: ReadonlySet<string>): Fact[] {
     ),
   );
 
-  // Report measures.
+  // Report measures. The count shows whenever the report defines any; the rule is linked only when
+  // it reports them, which takes the model the report reads in the run.
   const measures = report.measures.length;
   facts.push(
     withRule(
@@ -142,7 +145,7 @@ function reportFacts(report: Report, known: ReadonlySet<string>): Fact[] {
             detail: "defined in the report, not the model",
           }
         : { layer: "report", label: "Report measures", value: "none" },
-      measures ? "REPORT_LEVEL_MEASURES" : undefined,
+      reportMeasuresToMove(project).length > 0 ? "REPORT_LEVEL_MEASURES" : undefined,
     ),
   );
 
@@ -192,7 +195,7 @@ export function buildFacts(
   knownRules: ReadonlySet<string>,
 ): Fact[] {
   if (!project.report) return [];
-  const facts: Fact[] = reportFacts(project.report, knownRules);
+  const facts: Fact[] = reportFacts(project, project.report, knownRules);
   const model = project.model;
   if (model) {
     const columns = model.tables.reduce((s, t) => s + t.columns.length, 0);

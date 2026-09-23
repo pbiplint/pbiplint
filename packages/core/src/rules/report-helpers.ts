@@ -9,6 +9,7 @@ import {
   visualLabel,
 } from "../pbir/names.js";
 import type { Bookmark, Page, Report, ReportMeasure, Visual } from "../pbir/types.js";
+import type { Project } from "../project/types.js";
 import type { RuleFinding } from "./types.js";
 
 const at = (file: string, text: string, pointer?: string) => ({
@@ -24,7 +25,8 @@ const inReportJson = (r: Report, pointer?: string) =>
 /**
  * Finding factories for report objects. `objectId` is what parity compares; `object` is what the
  * ignore check reads. Report-level findings carry no `object`: they are switched off in config,
- * not by an annotation in report.json (spec section 5).
+ * not by an annotation in report.json (spec section 5). Report measures carry none either, since
+ * pbiplint reads no annotation on a measure in reportExtensions.json.
  */
 export const reportFinding = {
   report: (r: Report, detail?: string, objectId = "report", pointer?: string): RuleFinding =>
@@ -114,7 +116,6 @@ export const reportFinding = {
         objectName: reportMeasureLabel(m),
         objectId: `${m.table}.${m.name}`,
         location: { file: m.file, line: m.line },
-        object: m,
       },
       detail,
     ),
@@ -130,6 +131,15 @@ export const visiblePages = (r: Report): Page[] => r.pages.filter((p) => !isHidd
  * model field, still counts, and a group, which has no wells, never does.
  */
 export const hiddenVisualWithFields = (v: Visual): boolean => v.isHidden && v.projectionCount > 0;
+
+/**
+ * The report measures REPORT_LEVEL_MEASURES reports, which the Report measures fact shares: every
+ * measure the report defines when the run holds the model the report reads, so each can move into
+ * it, and none otherwise. A report that reads a published model is left alone, since report
+ * measures are the supported route for an author who cannot change a shared model.
+ */
+export const reportMeasuresToMove = (project: Project): ReportMeasure[] =>
+  project.model && project.report ? project.report.measures : [];
 
 /** The page a report opens on, what decided it, and the name pages.json gives it. */
 export interface OpeningPage {

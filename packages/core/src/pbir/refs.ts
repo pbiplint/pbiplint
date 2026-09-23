@@ -6,8 +6,21 @@ const isRecord = (v: unknown): v is Record<string, unknown> =>
 /** A JSON pointer segment, with `~` and `/` escaped as RFC 6901 says. */
 export const escapePointer = (s: string): string => s.replace(/~/g, "~0").replace(/\//g, "~1");
 
-/** Where a field's source leads: the table and, through a variation, the date column and variation. */
-type Source = Pick<FieldRef, "table" | "variation" | "noTable">;
+/**
+ * Where a field's source leads: the table, the schema it names if any, and, through a variation,
+ * the date column and variation.
+ */
+type Source = Pick<FieldRef, "table" | "variation" | "noTable" | "schema">;
+
+/** What a From entry's alias stands for: its Entity, or "" for a subquery, and its Schema. */
+interface Alias {
+  entity: string;
+  schema?: string;
+}
+
+/** A schema name, when the node carries a non-empty one. */
+const schemaOf = (node: Record<string, unknown>): { schema?: string } =>
+  typeof node.Schema === "string" && node.Schema !== "" ? { schema: node.Schema } : {};
 
 /**
  * The source of a Column, Measure, or Hierarchy, which the semanticQuery schema says is a
@@ -15,9 +28,10 @@ type Source = Pick<FieldRef, "table" | "variation" | "noTable">;
  * SourceRef names its table as an Entity or through an alias a From list declares. A
  * PropertyVariationSource is a date column's variation: its own SourceRef gives the column's
  * table. A TransformTableRef names a transform's output, not a model table, so it yields nothing
- * and the reference is not collected.
+ * and the reference is not collected. A SourceRef may name a Schema beside its Entity, and a From
+ * entry beside its alias's Entity; a variation's source keeps what its own SourceRef names.
  */
-function sourceOf(expression: unknown, aliases: ReadonlyMap<string, string>): Source | undefined {
+function sourceOf(expression: unknown, aliases: ReadonlyMap<string, Alias>): Source | undefined {
   if (!isRecord(expression)) return { table: "", noTable: "noSource" };
   if (isRecord(expression.TransformTableRef)) return undefined;
   const variation = expression.PropertyVariationSource;
@@ -31,11 +45,15 @@ function sourceOf(expression: unknown, aliases: ReadonlyMap<string, string>): So
     return { ...inner, variation: { column: variation.Property, name: variation.Name } };
   }
   const ref = expression.SourceRef;
-  if (isRecord(ref) && typeof ref.Entity === "string") return { table: ref.Entity };
+  if (isRecord(ref) && typeof ref.Entity === "string")
+    return { table: ref.Entity, ...schemaOf(ref) };
   if (isRecord(ref) && typeof ref.Source === "string") {
-    const table = aliases.get(ref.Source);
-    if (table === undefined) return { table: "", noTable: "undeclaredAlias" };
-    return table === "" ? { table, noTable: "nonTableAlias" } : { table };
+    const alias = aliases.get(ref.Source);
+    if (alias === undefined) return { table: "", noTable: "undeclaredAlias" };
+    const schema = alias.schema !== undefined ? { schema: alias.schema } : {};
+    return alias.entity === ""
+      ? { table: "", noTable: "nonTableAlias", ...schema }
+      : { table: alias.entity, ...schema };
   }
   return { table: "", noTable: "noSource" };
 }
@@ -49,11 +67,13 @@ function sourceOf(expression: unknown, aliases: ReadonlyMap<string, string>): So
  * source yields no table (an alias with no From in scope, an alias for a subquery, a source that
  * names nothing) has an empty table and says why in `noTable`, which the index reports as
  * unresolved. A reference whose source is a transform's output is not a model field and is left out.
+ * A reference that names a Schema, in its SourceRef or in the From entry of its alias, carries it,
+ * as Desktop's references to the report's own measures do (`"Schema": "extension"`).
  */
 export function collectFieldRefs(
   node: unknown,
   pointer = "",
-  aliases: ReadonlyMap<string, string> = new Map(),
+  aliases: ReadonlyMap<string, Alias> = new Map(),
 ): FieldRef[] {
   const out: FieldRef[] = [];
   const push = (
@@ -70,10 +90,11 @@ export function collectFieldRefs(
       ...(level !== undefined ? { level } : {}),
       ...(source.variation ? { variation: source.variation } : {}),
       ...(source.noTable ? { noTable: source.noTable } : {}),
+      ...(source.schema !== undefined ? { schema: source.schema } : {}),
       pointer: p,
     });
   };
-  const walk = (n: unknown, p: string, scope: ReadonlyMap<string, string>): void => {
+  const walk = (n: unknown, p: string, scope: ReadonlyMap<string, Alias>): void => {
     if (Array.isArray(n)) {
       n.forEach((item, i) => walk(item, `${p}/${i}`, scope));
       return;
@@ -85,7 +106,10 @@ export function collectFieldRefs(
       // entry names no Entity, and the alias it introduces is not the outer table.
       for (const f of n.From)
         if (isRecord(f) && typeof f.Name === "string")
-          next.set(f.Name, typeof f.Entity === "string" ? f.Entity : "");
+          next.set(f.Name, {
+            entity: typeof f.Entity === "string" ? f.Entity : "",
+            ...schemaOf(f),
+          });
       scope = next;
     }
     if (isRecord(n.Column) && typeof n.Column.Property === "string") {

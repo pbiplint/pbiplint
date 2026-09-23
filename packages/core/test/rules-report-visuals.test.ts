@@ -5,7 +5,7 @@ import {
   ENSURE_ALTTEXT,
   ENSURE_THEME_COLOURS,
 } from "../src/rules/pbi-inspector/visuals.js";
-import { column, lit, page, reportObjectIds, visual } from "./report-helpers.js";
+import { column, lit, measure, page, reportObjectIds, visual } from "./report-helpers.js";
 
 const solid = (value: string) => ({ solid: { color: lit(value) } });
 
@@ -250,5 +250,49 @@ describe("ENSURE_ALTTEXT", () => {
     const line = findings[0]!.location!.line;
     expect(line).toBeGreaterThan(1);
     expect(text.split("\n")[line - 1]).toContain('"altText"');
+  });
+
+  /**
+   * A visual group's container as Desktop writes it: no `visual` key, and the group's own alt text,
+   * when set, under `visualGroup.objects.general`. Pretty-printed, so a finding's line can be read.
+   */
+  const group = (name: string, altText?: unknown): LintFile => ({
+    path: `definition/pages/p/visuals/${name}/visual.json`,
+    text: JSON.stringify(
+      {
+        name,
+        position: { x: 0, y: 0, z: 0, height: 300, width: 400, tabOrder: 0 },
+        visualGroup: {
+          displayName: "Group 1",
+          groupMode: "ScaleMode",
+          ...(altText === undefined ? {} : { objects: { general: [{ properties: { altText } }] } }),
+        },
+      },
+      null,
+      2,
+    ),
+  });
+
+  it("reads a visual group's own alt text: fires on a group with none or an empty one, not on one that has alt text", () => {
+    const files = [
+      page("p"),
+      group("groupBound", { expr: measure("Sales", "Overview alt text") }),
+      group("groupEmpty", lit("''")),
+      group("groupNone"),
+      group("groupText", lit("'Sales overview: total sales and the monthly trend'")),
+    ];
+    expect(reportObjectIds(ENSURE_ALTTEXT, files)).toEqual(["groupEmpty", "groupNone"]);
+  });
+
+  it("points an empty group alt text's finding at the altText line", () => {
+    const empty = group("groupEmpty", lit("''"));
+    const { findings } = lint([page("p"), empty], {
+      rules: [ENSURE_ALTTEXT],
+      config: { failOn: "none" },
+    });
+    expect(findings).toHaveLength(1);
+    const line = findings[0]!.location!.line;
+    expect(line).toBeGreaterThan(1);
+    expect(empty.text.split("\n")[line - 1]).toContain('"altText"');
   });
 });

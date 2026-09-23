@@ -201,15 +201,24 @@ function buildVisual(
   const vco = isRecord(visual.visualContainerObjects) ? visual.visualContainerObjects : {};
   const properties = (entry: unknown): Record<string, unknown> | undefined =>
     isRecord(entry) && isRecord(entry.properties) ? entry.properties : undefined;
-  let altText: string | undefined;
-  if (Array.isArray(vco.general))
-    for (const entry of vco.general) {
-      const props = properties(entry);
-      if (!props || !("altText" in props)) continue;
-      const value = literal(props.altText);
-      if (value !== undefined && value !== "") altText = value;
-      else if (isBoundExpression(props.altText)) altText = "(expression)";
-    }
+  /** The alt text in a `general` array: a literal that is not empty, or "(expression)" when bound. */
+  const altTextIn = (general: unknown): string | undefined => {
+    let found: string | undefined;
+    if (Array.isArray(general))
+      for (const entry of general) {
+        const props = properties(entry);
+        if (!props || !("altText" in props)) continue;
+        const value = literal(props.altText);
+        if (value !== undefined && value !== "") found = value;
+        else if (isBoundExpression(props.altText)) found = "(expression)";
+      }
+    return found;
+  };
+  // A group's container has no `visual`; the group keeps its own alt text in its own objects.
+  const group = isRecord(json.visualGroup) ? json.visualGroup : undefined;
+  const altText = group
+    ? altTextIn(isRecord(group.objects) ? group.objects.general : undefined)
+    : altTextIn(vco.general);
   const actions: VisualAction[] = [];
   if (Array.isArray(vco.visualLink))
     vco.visualLink.forEach((entry, i) => {
@@ -234,7 +243,7 @@ function buildVisual(
     file,
     text,
     json,
-    type: str(visual.visualType) ?? (isRecord(json.visualGroup) ? "visualGroup" : "unknown"),
+    type: str(visual.visualType) ?? (group ? "visualGroup" : "unknown"),
     position: {
       x: num(pos.x) ?? 0,
       y: num(pos.y) ?? 0,
@@ -244,7 +253,7 @@ function buildVisual(
       ...(num(pos.tabOrder) !== undefined ? { tabOrder: num(pos.tabOrder) } : {}),
     },
     isHidden: json.isHidden === true,
-    isGroup: isRecord(json.visualGroup),
+    isGroup: group !== undefined,
     ...(str(json.parentGroupName) !== undefined ? { groupId: str(json.parentGroupName) } : {}),
     ...(title !== undefined ? { title } : {}),
     ...(altText !== undefined ? { altText } : {}),

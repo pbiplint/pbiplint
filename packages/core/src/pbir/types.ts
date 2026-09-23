@@ -47,7 +47,10 @@ export interface Visual {
   isGroup: boolean;
   groupId?: string;
   title?: string;
-  /** The alt text literal, or "(expression)" when it is bound to a measure or aggregation. */
+  /**
+   * The alt text literal, or "(expression)" when it is bound to a measure or aggregation. A
+   * group's is its own, read from `visualGroup.objects` rather than the visual's container objects.
+   */
   altText?: string;
   fields: VisualField[];
   /**

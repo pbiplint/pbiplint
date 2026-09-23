@@ -247,6 +247,37 @@ describe("buildReport", () => {
     expect(v2!.hasMobileLayout).toBe(false);
     expect(v2!.isHidden).toBe(false);
   });
+  it("reads a group's own alt text under visualGroup.objects, by the rules a visual's follows", () => {
+    // A group's container has no `visual` key; its alt text sits in the group's own objects.
+    const group = (name: string, altText?: unknown) => ({
+      path: `definition/pages/p1/visuals/${name}/visual.json`,
+      text: j({
+        $schema: schema("visualContainer", "2.8.0"),
+        name,
+        position: { x: 0, y: 0, z: 0, height: 300, width: 400, tabOrder: 0 },
+        visualGroup: {
+          displayName: "Group 1",
+          groupMode: "ScaleMode",
+          ...(altText === undefined ? {} : { objects: { general: [{ properties: { altText } }] } }),
+        },
+      }),
+    });
+    const { report: grouped } = buildReport([
+      { path: "definition/pages/p1/page.json", text: page("p1") },
+      group("bound", {
+        expr: { Measure: { Expression: { SourceRef: { Entity: "Sales" } }, Property: "Alt" } },
+      }),
+      group("empty", lit("''")),
+      group("none"),
+      group("text", lit("'Sales overview: total sales and the monthly trend'")),
+    ]);
+    expect(grouped.pages[0]!.visuals.map((v) => [v.id, v.isGroup, v.altText])).toEqual([
+      ["bound", true, "(expression)"],
+      ["empty", true, undefined],
+      ["none", true, undefined],
+      ["text", true, "Sales overview: total sales and the monthly trend"],
+    ]);
+  });
   it("reads bookmarks and their header, and report-level measures with their lines", () => {
     expect(report.bookmarksHeader.items).toEqual([{ name: "b1", children: ["b2"] }]);
     const b = report.bookmarks[0]!;

@@ -76,21 +76,23 @@ export const ENSURE_THEME_COLOURS = inspectorRule(
 
 /**
  * Where an alt text finding points: the first `general` entry that carries an `altText` key (an
- * empty one, since the visual fires), or the container objects when no entry carries one. The
- * segments are fixed keys and array indexes, so none needs escaping.
+ * empty one, since the visual fires), or the container objects when no entry carries one. A
+ * visual group keeps its objects under `visualGroup` rather than `visual`, so its pointer starts
+ * there. The segments are fixed keys and array indexes, so none needs escaping.
  */
 function altTextPointer(json: unknown): string {
-  const vco =
-    isRecord(json) && isRecord(json.visual) && isRecord(json.visual.visualContainerObjects)
+  const group = isRecord(json) && isRecord(json.visualGroup) ? json.visualGroup : undefined;
+  const base = group ? "/visualGroup/objects" : "/visual/visualContainerObjects";
+  const objects = group
+    ? group.objects
+    : isRecord(json) && isRecord(json.visual)
       ? json.visual.visualContainerObjects
       : undefined;
-  const general = vco && Array.isArray(vco.general) ? vco.general : [];
+  const general = isRecord(objects) && Array.isArray(objects.general) ? objects.general : [];
   const i = general.findIndex(
     (entry) => isRecord(entry) && isRecord(entry.properties) && "altText" in entry.properties,
   );
-  return i === -1
-    ? "/visual/visualContainerObjects"
-    : `/visual/visualContainerObjects/general/${i}/properties/altText`;
+  return i === -1 ? base : `${base}/general/${i}/properties/altText`;
 }
 
 export const ENSURE_ALTTEXT = inspectorRule(

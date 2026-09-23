@@ -39,25 +39,27 @@ function readingOrder(visuals: Visual[]): Visual[] {
 /**
  * Whether a member takes a known place in its scope's tab order: visible, with a tabOrder of 0 or
  * more. Desktop writes a negative tabOrder for a visual hidden from the tab order, and one with
- * none leaves its place unknown. A hidden group is left out, and its children with it.
+ * none leaves its place unknown.
  */
 const compared = (v: Visual): boolean =>
   !v.isHidden && v.position.tabOrder !== undefined && v.position.tabOrder >= 0;
 
 /**
  * The first disagreement in tab sequence from one scope down: the scope's compared members, then
- * the scope of each group among them, in tab order. Desktop writes a grouped visual's x, y, and
- * tabOrder relative to its group, so the members of one scope share an origin and their own
- * positions order them. A scope agrees when its tab order, ties broken by reading order, is the
- * reading order or the strict top-then-left order Desktop's "match visual order" button writes.
+ * the scope of each visible group in it, those the tab sequence reaches first. Desktop writes a
+ * grouped visual's x, y, and tabOrder relative to its group, so the members of one scope share an
+ * origin and their own positions order them. A scope agrees when its tab order, ties broken by
+ * reading order, is the reading order or the strict top-then-left order Desktop's "match visual
+ * order" button writes.
  */
 function firstDisagreement(
-  members: Visual[],
+  scope: Visual[],
   scopes: ReadonlyMap<string | undefined, Visual[]>,
   seen: Set<Visual>,
   group?: Visual,
 ): string | undefined {
-  // A scope of fewer than two has no order to disagree with; its group, if any, is still entered.
+  const members = scope.filter(compared);
+  // A scope of fewer than two has no order to disagree with; its groups are still entered.
   const layout = members.length < 2 ? members : readingOrder(members);
   const read = new Map(layout.map((v, k) => [v, k]));
   const tabs = [...members].sort((a, b) => tab(a) - tab(b) || read.get(a)! - read.get(b)!);
@@ -70,12 +72,19 @@ function firstDisagreement(
         : `tab order visits ${visualName(tabs[i]!)} where the layout reads ${visualName(layout[i]!)}`;
     return group ? `in ${visualName(group)}, ${detail}` : detail;
   }
-  for (const g of tabs) {
+  // The groups the tab sequence reaches, in its order, then the visible ones it does not reach (no
+  // tabOrder, or a negative one), in reading order: their children still have an order of their
+  // own. A hidden group's children are left out with it.
+  const unreached = scope.filter((v) => v.isGroup && !v.isHidden && !compared(v));
+  const groups = [
+    ...tabs.filter((v) => v.isGroup),
+    ...(unreached.length < 2 ? unreached : readingOrder(unreached)),
+  ];
+  for (const g of groups) {
     // A group is visited once, whatever its members claim as their parent.
-    if (!g.isGroup || seen.has(g)) continue;
+    if (seen.has(g)) continue;
     seen.add(g);
-    const inner = (scopes.get(g.id) ?? []).filter(compared);
-    const found = firstDisagreement(inner, scopes, seen, g);
+    const found = firstDisagreement(scopes.get(g.id) ?? [], scopes, seen, g);
     if (found !== undefined) return found;
   }
   return undefined;
@@ -98,8 +107,7 @@ export const TAB_ORDER_FOLLOWS_LAYOUT = pbiplintRule({
         if (scope) scope.push(v);
         else scopes.set(v.groupId, [v]);
       }
-      const top = (scopes.get(undefined) ?? []).filter(compared);
-      const detail = firstDisagreement(top, scopes, new Set());
+      const detail = firstDisagreement(scopes.get(undefined) ?? [], scopes, new Set());
       return detail === undefined ? [] : [reportFinding.page(p, undefined, detail)];
     }),
 });

@@ -355,7 +355,8 @@ describe("TAB_ORDER_FOLLOWS_LAYOUT", () => {
     displayName: string,
     x: number,
     y: number,
-    tabOrder: number,
+    // Left out of the JSON when undefined, as Desktop leaves it out.
+    tabOrder: number | undefined,
     container: Record<string, unknown> = {},
   ) => ({
     path: `definition/pages/p/visuals/${name}/visual.json`,
@@ -473,6 +474,43 @@ describe("TAB_ORDER_FOLLOWS_LAYOUT", () => {
       at("d", 0, 400, 2000),
     ];
     expect(detail(files)).toEqual([]);
+  });
+  it("compares the children of a group that has no place in the tab order", () => {
+    // The group records no tabOrder, or a negative one, so it takes no place among the page's
+    // members; its children still have an order of their own.
+    const grouped = (tabOrder: number | undefined) => [
+      page("p"),
+      group("g", "Filters", 0, 0, tabOrder),
+      at("k", 500, 0, 1000),
+      at("s1", 0, 0, 1000, { parentGroupName: "g" }),
+      at("s2", 0, 60, 0, { parentGroupName: "g" }),
+    ];
+    const fired = [
+      "p",
+      'in Group "Filters", tab order starts at cardVisual (s2) but the layout reads cardVisual (s1) first',
+    ];
+    expect(detail(grouped(undefined))).toEqual([fired]);
+    expect(detail(grouped(-1))).toEqual([fired]);
+  });
+  it("visits the groups the tab sequence reaches before those it does not", () => {
+    const files = [
+      page("p"),
+      // Unreached, and first in reading order; its children disagree.
+      group("unplaced", "Unplaced", 0, 0, undefined),
+      at("u1", 0, 0, 1000, { parentGroupName: "unplaced" }),
+      at("u2", 0, 100, 0, { parentGroupName: "unplaced" }),
+      // Reached, below it on the page; its children disagree too, and are reported first.
+      group("placed", "Placed", 0, 300, 0),
+      at("k", 500, 300, 1000),
+      at("p1", 0, 0, 1000, { parentGroupName: "placed" }),
+      at("p2", 0, 100, 0, { parentGroupName: "placed" }),
+    ];
+    expect(detail(files)).toEqual([
+      [
+        "p",
+        'in Group "Placed", tab order starts at cardVisual (p2) but the layout reads cardVisual (p1) first',
+      ],
+    ]);
   });
   it("leaves out a hidden visual and the children of a hidden group", () => {
     const files = [

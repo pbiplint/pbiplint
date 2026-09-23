@@ -26,15 +26,18 @@ const REPORT_ONLY = new Set(["Report", "Bookmark", "ReportMeasure"]);
  * How to silence a rule, in Markdown, for the foot of a rule page's "When to ignore it" section
  * and for the SARIF help block. Written once so the two surfaces cannot drift. The site build
  * carries a copy (packages/web/src/build/pages.ts) that a test holds equal, because the build
- * imports nothing from core. A rule scoped to files alone has no object to annotate; a rule scoped
- * to report objects alone is ignored in the JSON of the pages or visuals it reaches, named as its
- * scope names them, and otherwise has nothing to annotate either. A scope with any model object
- * keeps the TMDL form, because its objects are model objects.
+ * imports nothing from core. A rule scoped to files alone has no object to annotate, nor has one
+ * scoped to report measures alone, whose schema allows annotations pbiplint does not read; a rule
+ * scoped to report objects alone is ignored in the JSON of the pages or visuals it reaches, named
+ * as its scope names them, and otherwise has nothing to annotate either. A scope with any model
+ * object keeps the TMDL form, because its objects are model objects.
  */
 export function ignoreHelp(ruleId: string, scope: readonly string[] = []): string {
   const project = `To turn the rule off for a whole project, set \`"${ruleId}": "off"\` under \`rules\` in \`pbiplint.config.json\`.`;
   if (scope.length > 0 && scope.every((s) => s === "File"))
     return `This rule reports on files, so there is no object to annotate. ${project}`;
+  if (scope.length > 0 && scope.every((s) => s === "ReportMeasure"))
+    return `This rule reports on measures defined in the report, and pbiplint reads no annotation on them, so there is no object to annotate. ${project}`;
   const reportScoped =
     scope.length > 0 && scope.every((s) => REPORT_ANNOTATED.has(s) || REPORT_ONLY.has(s));
   const page = scope.includes("Page");

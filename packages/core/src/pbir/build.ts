@@ -327,7 +327,6 @@ function readExtensions(
         hidden: m.hidden === true,
         file,
         line: lineOfPointer(text, `/entities/${ei}/measures/${mi}`),
-        annotations: {},
       });
     });
   });

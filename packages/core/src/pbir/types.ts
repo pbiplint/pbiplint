@@ -135,7 +135,11 @@ export interface BookmarksHeader {
   items: { name: string; children: string[] }[];
 }
 
-/** One report-level measure, defined in the report rather than in the model. */
+/**
+ * One report-level measure, defined in the report rather than in the model. It carries no
+ * annotations: pbiplint reads no ignore on a report measure, so a rule on one is turned off in
+ * config.
+ */
 export interface ReportMeasure {
   table: string;
   name: string;
@@ -143,7 +147,6 @@ export interface ReportMeasure {
   hidden: boolean;
   file: string;
   line: number;
-  annotations: Record<string, string>;
 }
 
 /** How the report names the semantic model it reads, or that it names none. */

@@ -457,6 +457,8 @@ describe("buildReport", () => {
       ["Sales", "Net Margin", false, 7],
       ["Sales", "Margin %", false, 8],
     ]);
+    // A report measure carries no annotations: pbiplint reads no ignore on one.
+    expect(report.measures[0]).not.toHaveProperty("annotations");
   });
 });
 

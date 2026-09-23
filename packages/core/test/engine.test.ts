@@ -231,7 +231,14 @@ describe("ignoreHelp", () => {
     expect(ignoreHelp("REDUCE_PAGES", ["Report"])).toBe(
       'This rule reports on the report itself, so there is no object to annotate. To turn the rule off for a whole project, set `"REDUCE_PAGES": "off"` under `rules` in `pbiplint.config.json`.',
     );
-    expect(ignoreHelp("X", ["ReportMeasure"])).toMatch(/^This rule reports on the report itself/);
+    // A report measure has an annotations array in the schema, but pbiplint reads none on it.
+    expect(ignoreHelp("X", ["ReportMeasure"])).toBe(
+      'This rule reports on measures defined in the report, and pbiplint reads no annotation on them, so there is no object to annotate. To turn the rule off for a whole project, set `"X": "off"` under `rules` in `pbiplint.config.json`.',
+    );
+    expect(ignoreHelp("X", ["Bookmark"])).toMatch(/^This rule reports on the report itself/);
+    expect(ignoreHelp("X", ["Report", "ReportMeasure"])).toMatch(
+      /^This rule reports on the report itself/,
+    );
     // A rule that spans both layers keeps the TMDL form: its objects are model objects.
     expect(ignoreHelp("NOT_REACHED_FROM_REPORT", ["Column", "Measure"])).toMatch(
       /^To ignore this rule on one object, add `annotation/,

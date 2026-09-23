@@ -24,7 +24,8 @@ const inReportJson = (r: Report, pointer?: string) =>
 /**
  * Finding factories for report objects. `objectId` is what parity compares; `object` is what the
  * ignore check reads. Report-level findings carry no `object`: they are switched off in config,
- * not by an annotation in report.json (spec section 5).
+ * not by an annotation in report.json (spec section 5). Report measures carry none either, since
+ * pbiplint reads no annotation on a measure in reportExtensions.json.
  */
 export const reportFinding = {
   report: (r: Report, detail?: string, objectId = "report", pointer?: string): RuleFinding =>
@@ -114,7 +115,6 @@ export const reportFinding = {
         objectName: reportMeasureLabel(m),
         objectId: `${m.table}.${m.name}`,
         location: { file: m.file, line: m.line },
-        object: m,
       },
       detail,
     ),

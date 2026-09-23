@@ -81,6 +81,8 @@ describe("report finding names", () => {
       objectId: "Sales.Net Margin",
       location: { file: "definition/reportExtensions.json" },
     });
+    // No object for the ignore check: pbiplint reads no annotation on a report measure.
+    expect(reportFinding.reportMeasure(report.measures[0]!)).not.toHaveProperty("object");
   });
   it("locate a report-level finding at a property's line, and never in a file the input lacks", () => {
     const reportText = j({

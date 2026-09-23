@@ -3,6 +3,8 @@
 
 /** What each rule checks, one paragraph in pbiplint's own words, keyed by rule id. */
 export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
+  ACTION_WITHOUT_DESTINATION:
+    "Buttons, shapes, and images whose page navigation, drillthrough, or bookmark action is switched on but has no destination: the property that holds the destination for the action's type is missing from visual.json or empty.",
   ADD_DATA_CATEGORY_FOR_COLUMNS:
     "Columns with no data category whose name contains country, continent, or city and whose type is text, or whose name is exactly latitude or longitude and whose type is decimal or double.",
   "AVOID_BI-DIRECTIONAL_RELATIONSHIPS_AGAINST_HIGH-CARDINALITY_COLUMNS":
@@ -172,7 +174,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   SPLIT_DATE_AND_TIME:
     "DateTime columns holding values that are not at midnight. Whether any row carries a time is a statistic of the loaded data, not of the model files, so pbiplint lists this rule but does not run it: it needs statistics that only a live model carries.",
   TAB_ORDER_FOLLOWS_LAYOUT:
-    "Pages whose tab order, the order keyboard users move through the visuals in, disagrees with the order the layout reads in: rows from top to bottom, and left to right within a row.",
+    "Pages whose tab order, the order keyboard users move through the visuals in, disagrees with the order the layout reads in: rows from top to bottom, and left to right within a row. The rule checks this only when the project's policy asks for tab order to follow the layout, and reports nothing without it.",
   TRIM_OBJECT_NAMES:
     "Names that start or end with a space, across every named object type in the model.",
   UNNECESSARY_COLUMNS:

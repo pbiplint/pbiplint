@@ -14,7 +14,7 @@ sources:
 
 ## What it checks
 
-Pages whose tab order, the order keyboard users move through the visuals in, disagrees with the order the layout reads in: rows from top to bottom, and left to right within a row.
+Pages whose tab order, the order keyboard users move through the visuals in, disagrees with the order the layout reads in: rows from top to bottom, and left to right within a row. The rule checks this only when the project's policy asks for tab order to follow the layout, and reports nothing without it.
 
 A visual joins the current row when its top edge is no further from the top edge of the row's first visual than half the median height of the visuals being compared; otherwise it starts the next row. A tab order that sorts the visuals strictly by their top edges, then by their left edges, also agrees. Groups are compared one level at a time, because Power BI Desktop's saved files record a grouped visual's position and tab order relative to its group: first the visuals and groups that sit directly on the page, each group taking one place at its own position, then the visuals inside each group among themselves. Hidden visuals, the visuals of a hidden group, visuals hidden from the tab order, and visuals with no tab order value are left out, and so is a page set up as a tooltip, whether its page.json marks it by its `type` or by its `pageBinding`.
 
@@ -22,7 +22,7 @@ Each finding names the page, as `Page "Overview"`, at line 1 of its page.json, a
 
 ## Example
 
-The policy is set in `pbiplint.config.json`, and the config below applies to both documents: it asks for tab order to follow the layout.
+The policy is set in `pbiplint.config.json`, and the config below applies to both documents: it asks for tab order to follow the layout. Without it, neither document is reported.
 
 ```json pbiplint.config.json
 {
@@ -178,11 +178,11 @@ In visual.json, the order is `position.tabOrder`, lowest first, as in the exampl
 
 ## When to ignore it
 
-A page laid out to be read in columns, such as a column of slicers down the left side that readers should work through before the charts beside it: rows cut across the columns, so the rule reads the top chart before the lower slicers. Grouping the column, by selecting its visuals and choosing Group on the Format menu, lets the rule read it as one place in the order, with its slicers ordered among themselves; put the group where it belongs in the Tab order list, and the finding usually clears without ignoring it. An order that departs from the layout on purpose, such as buttons along the top that readers should reach after the page's content, is a choice the rule cannot see; ignore the finding on that page.
+The rule reports nothing until the project sets the policy, so a team that does not hold its reports to a tab order leaves the policy unset rather than ignoring findings page by page. Under the policy, a page laid out to be read in columns, such as a column of slicers down the left side that readers should work through before the charts beside it: rows cut across the columns, so the rule reads the top chart before the lower slicers. Grouping the column, by selecting its visuals and choosing Group on the Format menu, lets the rule read it as one place in the order, with its slicers ordered among themselves; put the group where it belongs in the Tab order list, and the finding usually clears without ignoring it. An order that departs from the layout on purpose, such as buttons along the top that readers should reach after the page's content, is a choice the rule cannot see; ignore the finding on that page.
 
 ## Quirks
 
-- A tab order nobody set cannot be told apart from one somebody did. Nearly every visual in Power BI Desktop's saved files carries a `tabOrder`, whether or not anyone set one, and by the North Carolina Department of Information Technology's account the tab order is set by the order in which visuals are added, so a page nobody ordered is compared like any other. Most pages in Power BI Desktop's saved files have a tab order that disagrees with their layout, so expect a report whose tab order was never set to be reported on most of its pages.
+- The rule waits for the policy because a tab order nobody set cannot be told apart from one somebody did. Nearly every visual in Power BI Desktop's saved files carries a `tabOrder`, whether or not anyone set one, and by the North Carolina Department of Information Technology's account the tab order is set by the order in which visuals are added, so once the policy is set, a page nobody ordered is compared like any other. Most pages in Power BI Desktop's saved files have a tab order that disagrees with their layout, so when a team sets the policy on a report whose tab order was never set, expect findings on most of its pages until the order is set.
 - Power BI Desktop's saved files show a negative `tabOrder` on some visuals, such as the image and shape of a decorative header, and pbiplint reads a negative value as hidden from the tab order, which Microsoft does not document. Some files leave `tabOrder` out altogether. Both are left out of the comparison. A group with no place in the tab order still has its own visuals compared among themselves.
 - A decorative shape, line, image, or text box takes part in the reading order like any visual unless it is hidden from the tab order, which Microsoft advises for decorative objects. A background shape at the top left of the page reads first. A divider line across the page starts a row that the visuals just below it join, when their top edges are as close to its own as a row allows, and since the line starts furthest left, it reads first in that row, ahead of the visuals beneath it.
 - A page set up as a tooltip is not checked, whether its page.json marks it by its `type` or by its `pageBinding`. Microsoft describes report tooltips as appearing when readers hover over a visual, and says readers can't tab through a tooltip's content. Drillthrough pages and hidden pages are checked.

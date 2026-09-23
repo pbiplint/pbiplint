@@ -67,6 +67,8 @@ export function ignoreHelp(ruleId: string, scope: readonly string[] = []): strin
     return `This rule reports on files, so there is no object to annotate. ${project}`;
   if (scope.length > 0 && scope.every((s) => s === "ReportMeasure"))
     return `This rule reports on measures defined in the report, and pbiplint reads no annotation on them, so there is no object to annotate. ${project}`;
+  if (scope.length > 0 && scope.every((s) => s === "Bookmark"))
+    return `This rule reports on bookmarks, and a bookmark's file has no place for an annotation, so there is no object to annotate. ${project}`;
   const reportScoped =
     scope.length > 0 && scope.every((s) => REPORT_ANNOTATED.has(s) || REPORT_ONLY.has(s));
   const page = scope.includes("Page");

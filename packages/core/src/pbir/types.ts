@@ -123,7 +123,10 @@ export interface PagesHeader {
   landingPageName?: string;
 }
 
-/** One bookmark, read from its bookmark.json, with what it captures. */
+/**
+ * One bookmark, read from its bookmark.json, with what it captures. It carries no annotations:
+ * Microsoft's bookmark schema has no place for one, so a rule on a bookmark is turned off in config.
+ */
 export interface Bookmark {
   id: string;
   displayName: string;
@@ -133,7 +136,6 @@ export interface Bookmark {
   pages: string[];
   visuals: { page: string; visual: string }[];
   refs: FieldRef[];
-  annotations: Record<string, string>;
 }
 
 /** The bookmarks folder's own bookmarks.json: the order of the bookmarks and their groups. */

@@ -76,6 +76,8 @@ describe("report finding names", () => {
       objectType: "Bookmark",
       objectId: "b1",
     });
+    // No object for the ignore check either: a bookmark's file has no place for an annotation.
+    expect(reportFinding.bookmark(report.bookmarks[0]!)).not.toHaveProperty("object");
     expect(reportFinding.reportMeasure(report.measures[0]!)).toMatchObject({
       objectType: "ReportMeasure",
       objectId: "Sales.Net Margin",

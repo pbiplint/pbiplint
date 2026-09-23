@@ -260,6 +260,7 @@ describe("rulePage", () => {
       coreIgnoreHelp("X", ["Page", "Visual", "Report"]),
     );
     expect(ignoreHelp("X", ["ReportMeasure"])).toBe(coreIgnoreHelp("X", ["ReportMeasure"]));
+    expect(ignoreHelp("X", ["Bookmark"])).toBe(coreIgnoreHelp("X", ["Bookmark"]));
     // A page without the section gets nothing appended.
     const live = read("avoid-bi-directional-relationships-against-high-cardinality-columns");
     expect(rulePage(live, "x").html).not.toContain("pbiplint.ignore");

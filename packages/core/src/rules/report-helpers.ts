@@ -26,7 +26,8 @@ const inReportJson = (r: Report, pointer?: string) =>
  * Finding factories for report objects. `objectId` is what parity compares; `object` is what the
  * ignore check reads. Report-level findings carry no `object`: they are switched off in config,
  * not by an annotation in report.json (spec section 5). Report measures carry none either, since
- * pbiplint reads no annotation on a measure in reportExtensions.json.
+ * pbiplint reads no annotation on a measure in reportExtensions.json, and neither do bookmarks,
+ * since Microsoft's bookmark schema allows no annotation in a bookmark's file.
  */
 export const reportFinding = {
   report: (r: Report, detail?: string, objectId = "report", pointer?: string): RuleFinding =>
@@ -105,7 +106,6 @@ export const reportFinding = {
         objectName: bookmarkLabel(b),
         objectId: b.id,
         location: at(b.file, b.text, pointer),
-        object: b,
       },
       detail,
     ),

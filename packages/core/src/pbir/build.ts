@@ -302,7 +302,6 @@ function buildBookmark(
     pages: Object.keys(sections),
     visuals,
     refs: collectFieldRefs(state, "/explorationState"),
-    annotations: {},
   };
 }
 

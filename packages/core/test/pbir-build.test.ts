@@ -473,6 +473,8 @@ describe("buildReport", () => {
       { page: "p1", visual: "v1" },
       { page: "p1", visual: "gone" },
     ]);
+    // Microsoft's bookmark schema declares no annotations, so the reader keeps none.
+    expect(b).not.toHaveProperty("annotations");
     expect(report.measures.map((m) => [m.table, m.name, m.hidden, m.line])).toEqual([
       ["Sales", "Net Margin", false, 7],
       ["Sales", "Margin %", false, 8],

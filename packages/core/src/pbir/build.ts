@@ -128,7 +128,6 @@ function readReportJson(
         : undefined,
   };
   report.filters = filtersOf(json.filterConfig, file, "/filterConfig");
-  report.annotations = annotationsOf(json.annotations);
 }
 
 function buildPage(
@@ -346,7 +345,6 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
     files: [],
     issues: [],
     schemaVersions: {},
-    annotations: {},
   };
   const diagnostics: Diagnostic[] = [];
   const reportedFamilies = new Set<string>();

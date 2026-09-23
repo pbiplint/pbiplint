@@ -149,5 +149,4 @@ export interface Report {
   files: string[];
   issues: ParseIssue[];
   schemaVersions: { report?: string; page?: string; visual?: string };
-  annotations: Record<string, string>;
 }

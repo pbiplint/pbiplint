@@ -18,7 +18,11 @@ const at = (file: string, text: string, pointer?: string) => ({
 const withDetail = (f: RuleFinding, detail?: string): RuleFinding =>
   detail === undefined ? f : { ...f, detail };
 
-/** Finding factories for report objects. `objectId` is what parity compares; `object` is what the ignore check reads. */
+/**
+ * Finding factories for report objects. `objectId` is what parity compares; `object` is what the
+ * ignore check reads. Report-level findings carry no `object`: they are switched off in config,
+ * not by an annotation in report.json (spec section 5).
+ */
 export const reportFinding = {
   report: (r: Report, detail?: string, objectId = "report"): RuleFinding =>
     withDetail(
@@ -27,7 +31,6 @@ export const reportFinding = {
         objectName: REPORT_LABEL,
         objectId,
         ...(r.file ? { location: { file: r.file, line: 1 } } : {}),
-        object: r,
       },
       detail,
     ),
@@ -71,7 +74,6 @@ export const reportFinding = {
         objectName: REPORT_FILTER_LABEL,
         objectId: "report",
         location: at(r.file ?? "definition/report.json", r.text ?? "", pointer),
-        object: r,
       },
       detail,
     ),

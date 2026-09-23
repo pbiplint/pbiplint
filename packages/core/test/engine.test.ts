@@ -7,6 +7,9 @@ import { rank } from "../src/engine/rank.js";
 import { optionsFor, runRules } from "../src/engine/run.js";
 import { finding, namedObjects } from "../src/rules/helpers.js";
 import { PARSE_ISSUE } from "../src/rules/parse-issue.js";
+import { ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY } from "../src/rules/pbi-inspector/pages.js";
+import { REMOVE_UNUSED_CUSTOM_VISUALS } from "../src/rules/pbi-inspector/report.js";
+import { ENSURE_ALTTEXT } from "../src/rules/pbi-inspector/visuals.js";
 import type { Rule } from "../src/rules/types.js";
 import { modelFrom } from "./helpers.js";
 
@@ -510,6 +513,55 @@ describe("lint over a project", () => {
     const group = r.groups.find((g) => g.rule.id === "PARSE_ISSUE")!;
     expect(group.rule.layer).toBe("project");
     expect(group.findings.map((f) => f.layer)).toEqual(["model", "report"]);
+  });
+  it("honours an ignore annotation in a page.json or visual.json, never in report.json", () => {
+    const ignore = (value: string) => ({ annotations: [{ name: "pbiplint.ignore", value }] });
+    const card = (name: string, extra: Record<string, unknown> = {}) => ({
+      path: `definition/pages/p/visuals/${name}/visual.json`,
+      text: j({
+        name,
+        position: { x: 0, y: 0, z: 0, height: 100, width: 100 },
+        visual: { visualType: "card" },
+        ...extra,
+      }),
+    });
+    const r = lint(
+      [
+        {
+          path: "definition/report.json",
+          text: j({ publicCustomVisuals: ["chiclet"], ...ignore("*") }),
+        },
+        {
+          path: "definition/pages/p/page.json",
+          text: j({
+            name: "p",
+            displayName: "P",
+            height: 1000,
+            ...ignore("ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY"),
+          }),
+        },
+        {
+          path: "definition/pages/q/page.json",
+          text: j({ name: "q", displayName: "Q", height: 1000 }),
+        },
+        card("v", ignore("*")),
+        card("w"),
+      ],
+      {
+        rules: [
+          REMOVE_UNUSED_CUSTOM_VISUALS,
+          ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY,
+          ENSURE_ALTTEXT,
+        ],
+      },
+    );
+    // Report-level findings are switched off in config, so the report.json annotation silences nothing.
+    expect(r.findings.map((f) => [f.ruleId, f.objectId])).toEqual([
+      ["REMOVE_UNUSED_CUSTOM_VISUALS", "chiclet"],
+      ["ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY", "q"],
+      ["ENSURE_ALTTEXT", "w"],
+    ]);
+    expect(r.summary.ignored).toBe(2);
   });
   it("keeps an invalid-JSON detail on one line, whatever the engine's message spans", () => {
     const r = lint([{ path: "definition/pages/p/page.json", text: '{\n  "a": 1,\n  "b": }\n' }]);

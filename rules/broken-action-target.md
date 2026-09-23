@@ -119,13 +119,13 @@ There is no legitimate case. An action whose destination is not in the report ha
 - A destination set with conditional formatting, the fx button beside Destination, is not checked. Microsoft documents a page navigation destination based on a measure, or on a column of page names picked in a slicer, and pbiplint does not evaluate either, so it cannot know which pages the button reaches.
 - An action with no destination set is not reported, since Microsoft does not document what such an action does when selected. In Power BI Desktop's saved files most such buttons carry a tooltip.
 - Back, Web URL, Q&A, Apply all slicers, Clear all slicers, and Data function actions are not checked.
-- The page navigator and the bookmark navigator are not checked, nor is the report page a visual uses as its tooltip. Microsoft says both navigators update automatically as pages and bookmarks are added or removed.
+- The page navigator and the bookmark navigator are not checked, and neither are the page and bookmark names they keep in their settings, which in Power BI Desktop's saved files sometimes name pages and bookmarks the report does not have. The report page a visual uses as its tooltip is not checked either.
 - A drillthrough action is checked only for whether the page it names exists, not for whether that page is set up as a drillthrough page.
 - Every visual that carries an action is checked, hidden or not, and the action's type is read without regard to case.
 
 ## Related rules
 
-- `BROKEN_BOOKMARK_REFERENCE` reports the case this rule leaves out: a bookmark action whose bookmark exists but whose own page or captured visuals do not.
+- `BROKEN_BOOKMARK_REFERENCE` clears with the same fix when a bookmark's active page is the page an action names: putting that page back under its `name` clears the action here and the bookmark's missing active page there.
 
 ## Links
 

@@ -132,13 +132,13 @@ A saved selection is also what readers come back to. Microsoft says readers can 
 
 ## How to fix it
 
-In Power BI Desktop, clear the slicer and save the report in that state, as Microsoft recommends before publishing: select the slicer's Clear button, an eraser icon, then save. On the original slicer the Clear button sits in the Slicer header and shows when you hover over it; on the Slicer (new) visuals it sits in the Visual container header, and it is not there while that header is turned off, so turn the header on first. Check any bookmark that captures the slicer as well, since a bookmark saves slicer state of its own.
+In Power BI Desktop, clear the slicer and save the report in that state, as Microsoft recommends before publishing: select the slicer's Clear button, an eraser icon, then save. On the original slicer the Clear button sits in the Slicer header and shows when you hover over it; on the Slicer (new) visuals it sits in the Visual container header. Either way, if the header that holds it is turned off, turn that header on first, as Microsoft advises for the Slicer header, since the Clear button is not there without it. Check any bookmark that captures the slicer as well, since a bookmark saves slicer state of its own.
 
 In visual.json, the selection is the `filter` property under `objects.general[0].properties`: remove it, as the example does, and leave the rest of `general` as it is.
 
 ## When to ignore it
 
-A default selection readers are meant to start from, which Microsoft endorses: "you might intentionally save a default selection so that report consumers start with a specific set of filters." Examples are a relative date slicer set to this month, a button slicer or list slicer with Force selection on, which Microsoft says keeps one item selected at all times, and a field parameter slicer saved on the field the visuals should open with. Microsoft singles out range slicers, and date range slicers above all, as best saved cleared, so a saved date range deserves a second look. Without a policy the finding is info, a prompt to check each selection; with `expect` set to `none`, ignore it on the slicers whose default is deliberate.
+A default selection readers are meant to start from, which Microsoft endorses for slicers other than range slicers: "you might intentionally save a default selection so that report consumers start with a specific set of filters." Examples are a slicer of any type with Force selection on, which Microsoft describes as keeping one item selected and choosing the first available item when none is, a single-select slicer saved on the scenario a page opens in, such as Actual rather than Budget, and a field parameter slicer saved on the field the visuals should open with. Microsoft recommends saving range slicers cleared, and says date range slicers typically work best when they start that way, so a saved range deserves a second look. Without a policy the finding is info, a prompt to check each selection; with `expect` set to `none`, ignore it on the slicers whose default is deliberate.
 
 ## Quirks
 
@@ -149,10 +149,6 @@ A default selection readers are meant to start from, which Microsoft endorses: "
 - A hidden slicer is reported like a visible one. Microsoft notes that slicers continue to filter a report page whether or not they are visible.
 - A slicer from AppSource is a custom visual, not one of Microsoft's slicers, and is not recognised.
 - Only the slicer as saved in visual.json is read. A bookmark that captures a different selection is not.
-
-## Related rules
-
-- `FILTERS_PANE_STATE` is the other policy rule about the state a report opens in, the Filters pane open or closed.
 
 ## Links
 

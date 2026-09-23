@@ -77,7 +77,7 @@ Microsoft's PBIR documentation, in its answer about a bookmark file copied from 
 
 ## How to fix it
 
-In Power BI Desktop, on the View tab, select Bookmarks to open the Bookmarks pane. Go to the page the bookmark should show, arrange its visuals as the bookmark should leave them, then select More options (...) next to the bookmark's name and choose Update. If nobody needs the bookmark any more, choose Delete from the same menu. Deleting it and adding a new one from the right page also works, but the new bookmark gets a new `name`, so any button that pointed at the old one has to be pointed at the new one; `BROKEN_ACTION_TARGET` reports those. For a captured visual that is no longer on the page, opening the report in Desktop and saving it is enough, since Desktop removes such visuals from the bookmark when it saves.
+In Power BI Desktop, on the View tab, select Bookmarks to open the Bookmarks pane. Go to the page the bookmark should show, arrange its visuals as the bookmark should leave them, then select More options (...) next to the bookmark's name and choose Update. If nobody needs the bookmark any more, choose Delete from the same menu. Deleting it and adding a new one from the right page also works, but the new bookmark gets a new `name`, so point any button that used the old one at the new one; `BROKEN_ACTION_TARGET` reports any that still name it. For a captured visual that is no longer on the page, opening the report in Desktop and saving it is enough, since Desktop removes such visuals from the bookmark when it saves.
 
 In the bookmark file, a captured visual is a key under `explorationState.sections.<page>.visualContainers`, named by the visual's `name`: remove the key that names nothing, as the example does. A missing page is `activeSection` and the matching key of `sections`. Pointing both at the `name` of a page that exists leaves the bookmark holding state for the old page's visuals, which that page does not have, so for a missing page, recapture the bookmark in Desktop instead.
 
@@ -96,8 +96,8 @@ There is no legitimate case. A bookmark that names a page or visual the report l
 
 ## Related rules
 
-- `BROKEN_ACTION_TARGET` reports a button whose bookmark action names a bookmark the report does not have at all.
-- `BROKEN_FIELD_REFERENCE` reports a bookmark whose captured filters or visual state name a field the model does not have.
+- `BROKEN_ACTION_TARGET` clears with the same fix when a button's page navigation or drillthrough names the page a bookmark lost: putting that page back under its `name` clears the bookmark's missing active page here and the action there.
+- `BROKEN_FIELD_REFERENCE` fires on the same object, a bookmark, when its captured filters or visual state name a field the model does not have.
 
 ## Links
 

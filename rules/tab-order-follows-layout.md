@@ -172,16 +172,12 @@ A page laid out to be read in columns, such as a column of slicers down the left
 
 ## Quirks
 
-- A tab order nobody set cannot be told apart from one somebody did. Power BI Desktop gives visuals a tab order whether or not anyone sets one, in the order they were added by the account of the North Carolina Department of Information Technology, so a page nobody ordered is compared like any other. Most pages in Power BI Desktop's saved files have a tab order that disagrees with their layout, so expect a report whose tab order was never set to be reported on most of its pages.
-- Power BI Desktop's saved files write a negative `tabOrder` for a visual hidden from the tab order, and some leave `tabOrder` out altogether. Both are left out of the comparison. A group with no place in the tab order still has its own visuals compared among themselves.
+- A tab order nobody set cannot be told apart from one somebody did. Nearly every visual in Power BI Desktop's saved files carries a `tabOrder`, whether or not anyone set one, and by the North Carolina Department of Information Technology's account the tab order is set by the order in which visuals are added, so a page nobody ordered is compared like any other. Most pages in Power BI Desktop's saved files have a tab order that disagrees with their layout, so expect a report whose tab order was never set to be reported on most of its pages.
+- Power BI Desktop's saved files show a negative `tabOrder` on visuals set aside from the tab order, such as the image and shape of a decorative header, and pbiplint reads a negative value as hidden from the tab order. Some files leave `tabOrder` out altogether. Both are left out of the comparison. A group with no place in the tab order still has its own visuals compared among themselves.
 - A decorative shape, line, image, or text box takes part in the reading order like any visual unless it is hidden from the tab order, which Microsoft advises for decorative objects. A background shape at the top left of the page reads first, and a divider line across the page starts a row of its own.
 - A tooltip page is not checked. Microsoft describes report tooltips as appearing when readers hover over a visual, and says readers can't tab through a tooltip's content. Drillthrough pages and hidden pages are checked.
 - Two visuals with the same tab order value, or at the same position, are no disagreement in whichever order they come.
 - A page gets one finding, on the first place where the orders part, taking groups in tab order. Once that is fixed, lint again: the page may part from its layout further on.
-
-## Related rules
-
-- `ENSURE_ALTTEXT` serves the same keyboard and screen reader users, and a decorative visual that page advises taking out of the tab order is left out of this rule's comparison too.
 
 ## Links
 

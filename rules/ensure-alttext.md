@@ -96,10 +96,6 @@ A purely decorative element, such as a background image, carries nothing for a s
 - Alt text that is set but empty counts as missing.
 - A visual group's own alt text counts: pbiplint reads it under `visualGroup`, where a group keeps it, and reports a group only when that alt text is missing or empty. PBI Inspector looks for a group's alt text where a visual keeps it, so it reports every group, with or without alt text of its own.
 
-## Related rules
-
-- `TAB_ORDER_FOLLOWS_LAYOUT` serves the same keyboard and screen reader users, who meet the page's visuals in its tab order.
-
 ## Links
 
 - [Design Power BI reports for accessibility](https://learn.microsoft.com/power-bi/create-reports/desktop-accessibility-creating-reports)

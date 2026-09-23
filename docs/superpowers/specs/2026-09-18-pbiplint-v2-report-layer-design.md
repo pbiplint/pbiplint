@@ -180,7 +180,10 @@ slicer and four data visuals whose per-field entries Desktop writes)
   `visualContainerObjects` including `general[].properties.altText` and
   `title`, and `visualLink[]` with `type`, `bookmark`,
   `navigationSection`, `drillthroughSection`, `webUrl`, `qna`.
-  `mobile.json` beside it is the mobile layout.
+  `mobile.json` beside it is the mobile layout. Amended 2026-09-23
+  with pull request 4: a grouped visual's `position` is relative to
+  its parent group (Desktop-saved files; the schema speaks only of the
+  page).
 - `definition/bookmarks/bookmarks.json`: `items[]` (`name`, optional
   `children`). `<name>.bookmark.json`: `name`, `displayName`, `options`,
   `explorationState` with `activeSection` (page name) and
@@ -202,6 +205,11 @@ slicer and four data visuals whose per-field entries Desktop writes)
   entry; a slicer with no selection has no `filter`.
 - Desktop names a duplicated page "Duplicate of <name>" in current
   builds; older copy could read "<name> (copy)". Both are matched.
+  Amended 2026-09-23 with pull request 4: English Desktop writes
+  `Page <n>` for a new page and `Duplicate of <name>` for a duplicate
+  (nested when a duplicate is duplicated), on tooltip and drillthrough
+  pages too; Desktop localises both names; no source shows a Desktop
+  build writing `<name> (copy)`.
 
 ### 3.5 Authoring toolchain for the sample report
 
@@ -540,6 +548,15 @@ are diagnostics.
 | VISUAL_WITHOUT_FIELDS | Visual | Report Design | warning | A data visual with nothing bound; shapes, text boxes, images, buttons, and groups excluded |
 | VISUAL_OUTSIDE_PAGE | Visual | Report Design | warning | `x + width` past the page width or `y + height` past the page height |
 | REPORT_LEVEL_MEASURES | ReportMeasure | Maintenance | warning | Any measure in `reportExtensions.json`; the fix is to move it into the model |
+
+Amended 2026-09-23 with pull request 4, reading the conditions rather
+than changing them: `VISUAL_WITHOUT_FIELDS` counts a visual's well
+entries, and its data visuals are the types Microsoft's catalog gives
+data roles, less the paginated report and Power Automate visuals, whose
+fields Learn makes optional; `VISUAL_OUTSIDE_PAGE` checks ungrouped
+visuals and top-level groups, whose positions are page-relative, and
+reports an edge passed by at least 1 px; `DEFAULT_PAGE_NAME` reads a
+display name its page.json records, and matches the English names.
 
 ### 8.4 Native, tier 3
 

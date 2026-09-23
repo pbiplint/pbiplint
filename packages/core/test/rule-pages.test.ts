@@ -124,7 +124,10 @@ const stockReport = (): LintFile[] => [
     }),
   },
 ];
-/** The model a project rule's example runs against: Sales with Amount and Region, and the measure Total Sales. */
+/**
+ * The model the example of any rule whose needs include the model runs against: Sales with Amount
+ * and Region, and the measure Total Sales. So REPORT_LEVEL_MEASURES gets it and PARSE_ISSUE does not.
+ */
 const STOCK_MODEL: LintFile = {
   path: "definition/tables/Sales.tmdl",
   text: "table Sales\n\tcolumn Amount\n\t\tdataType: decimal\n\t\tsourceColumn: Amount\n\tcolumn Region\n\t\tdataType: string\n\t\tsourceColumn: Region\n\tmeasure 'Total Sales' = SUM('Sales'[Amount])\n\tpartition Sales = m\n\t\tmode: import\n\t\tsource = 1\n",

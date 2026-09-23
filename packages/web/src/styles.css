@@ -216,10 +216,14 @@ textarea {
   font-size: 13px;
   resize: vertical;
 }
+/* The site's focus ring for its controls and links. A code block shares it, because the site
+   renders every pre with tabindex="0", so one that scrolls sideways can be scrolled from the
+   keyboard, which makes it a tab stop too. */
 textarea:focus,
 button:focus-visible,
 input:focus-visible,
-a:focus-visible {
+a:focus-visible,
+pre:focus-visible {
   outline: 2px solid var(--brand-teal);
   outline-offset: 2px;
 }

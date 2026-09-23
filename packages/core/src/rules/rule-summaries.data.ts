@@ -28,6 +28,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   "AVOID_USING_MANY-TO-MANY_RELATIONSHIPS_ON_TABLES_USED_FOR_DYNAMIC_ROW_LEVEL_SECURITY":
     "Regular tables that carry a row-level security filter in any role and take part in a many-to-many relationship.",
   AVOID_USING_THE_IFERROR_FUNCTION: "Measures and calculated columns that call IFERROR.",
+  BROKEN_FIELD_REFERENCE:
+    "References in the report to a table, column, measure, hierarchy, or hierarchy level that the model does not have, wherever the report names a field: a visual's wells, formatting, and sort, a filter on a visual, a page, or the whole report, a drillthrough or tooltip page's fields, and a bookmark.",
   CALCULATION_GROUPS_WITH_NO_CALCULATION_ITEMS:
     "Calculation groups that contain no calculation items.",
   "CHECK_IF_BI-DIRECTIONAL_AND_MANY-TO-MANY_RELATIONSHIPS_ARE_VALID":
@@ -59,12 +61,16 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "CALCULATE or CALCULATETABLE whose first filter argument is `FILTER('Table', 'Table'[Column] ...)`.",
   FILTER_MEASURE_VALUES_BY_COLUMNS:
     "CALCULATE or CALCULATETABLE whose first filter argument is `FILTER('Table', [Measure] ...)`.",
+  FILTERS_PANE_STATE:
+    "A report whose Filters pane, as saved in report.json, is not in the state the project's policy expects, open or closed. Without a policy the rule reports nothing.",
   FIRST_LETTER_OF_OBJECTS_MUST_BE_CAPITALIZED:
     "Tables, measures, hierarchies, calculated columns, calculated tables, and calculation groups whose first character has an upper case form and is not upper case.",
   FIX_REFERENTIAL_INTEGRITY_VIOLATIONS:
     "Relationships where the many side holds key values that do not exist on the one side. The count of offending rows is a statistic of the loaded data, not of the model files, so pbiplint lists this rule but does not run it: it needs statistics that only a live model carries.",
   "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS":
     "Visible columns whose name starts with Is and whose type is whole number, and visible columns whose name ends with the word Flag after a space and whose type is not text.",
+  HIDDEN_VISUAL_WITH_FIELDS:
+    "Visuals hidden with the eye icon in the Selection pane, saved as `isHidden` in visual.json, that still have fields in their wells.",
   HIDE_FACT_TABLE_COLUMNS:
     "Visible numeric columns that a measure aggregates directly with a fully qualified reference, such as `SUM('Sales'[Amount])`. COUNT, COUNTBLANK, SUM, AVERAGE, MIN, MAX, DISTINCTCOUNT, VALUES, DISTINCT, and the A-suffixed COUNTA, AVERAGEA, MAXA, and MINA count as aggregations.",
   HIDE_FOREIGN_KEYS:
@@ -76,6 +82,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Measures whose static format string is not a recognized whole-number, currency, or percentage format. The only format strings the rule accepts are `#,0`, `#,0.0`, and any string containing `$` or `%`. A measure with no format string at all fires too, and that is the common case: the rule reads only the format string, so it cannot tell an unformatted currency or ratio from an unformatted count.",
   ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS:
     "Hidden columns, or columns in hidden tables, that still have IsAvailableInMdx set to true and are not used to sort another column, in a hierarchy, or in a variation, and do not themselves sort by another column.",
+  LANDING_PAGE_NOT_SET:
+    "A report whose pages.json sets no landing page, so it opens on the page that was active when it was last saved, or, when pages.json records no active page either, on the first page.",
   LARGE_TABLES_SHOULD_BE_PARTITIONED:
     "Tables with more than 25 million rows and a single partition. The row count is a statistic of the loaded data, not of the model files, so pbiplint lists this rule but does not run it: it needs statistics that only a live model carries.",
   "LIMIT_ROW_LEVEL_SECURITY_(RLS)_LOGIC":
@@ -98,12 +106,16 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Text columns with month in the name, but not months, that have no sort-by column.",
   MONTHCOLUMN_FORMATSTRING:
     "DateTime columns with month in the name whose format string is not exactly `MMMM yyyy`.",
+  NOT_REACHED_FROM_REPORT:
+    "Columns and measures that nothing in the report reaches, directly or through the model. The walk starts from every field the report names, both columns of every relationship except one to an auto date/time table, the columns that row-level and object-level security name, the default column of every variation, and the fields the report's own measures reference, and it follows DAX references, sort-by and group-by columns, and calculated tables until nothing new is reached.",
   NUMERIC_COLUMN_SUMMARIZE_BY:
     "Visible whole number, decimal, or double columns whose default summarization is anything other than None.",
   OBJECTS_SHOULD_NOT_START_OR_END_WITH_A_SPACE:
     "Names that start or end with a space, for the model, tables, measures, hierarchies, perspectives, partitions, data columns, and calculated columns.",
   OBJECTS_WITH_NO_DESCRIPTION:
     "Visible tables, columns, measures, and calculation groups with no description. Visibility is the object's own flag.",
+  OPENING_PAGE_INVALID:
+    "A pages.json whose landing page names a page the report does not have, or, when no landing page is set, whose active page names a page the report does not have or a page hidden from readers.",
   PARSE_ISSUE:
     "Lines the TMDL parser could not use: space indentation, an unterminated code fence, a line at an impossible indentation, a line in no form the parser recognizes, and a `///` description with a blank line between it and its declaration; and a report JSON file that is not valid JSON or carries a merge conflict marker.",
   PARTITION_NAME_SHOULD_MATCH_TABLE_NAME_FOR_SINGLE_PARTITION_TABLES:

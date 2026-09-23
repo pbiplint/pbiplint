@@ -189,6 +189,28 @@ describe("buildModel on hand-written constructs", () => {
     });
   });
 
+  it("reads the columns a field parameter's display column groups by", () => {
+    const m = modelFrom(`table Metric
+	column Metric
+		dataType: string
+		sortByColumn: 'Metric Order'
+
+		relatedColumnDetails
+			groupByColumn: 'Metric Fields'
+
+	column 'Metric Fields'
+		dataType: string
+		isHidden
+
+	column 'Metric Order'
+		dataType: int64
+		isHidden
+`);
+    const [display, fields] = m.tables[0]!.columns;
+    expect(display!.groupByColumns).toEqual(["Metric Fields"]);
+    expect(fields!.groupByColumns).toEqual([]);
+  });
+
   it("keeps ignore annotations and source locations on objects", () => {
     const m = modelFrom(
       "table T\n\tannotation pbiplint.ignore = A, B\n\n\tcolumn C\n\t\tdataType: string\n\n\t\tannotation pbiplint.ignore = *\n",

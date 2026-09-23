@@ -1,8 +1,9 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { buildIndexes } from "../src/index/build.js";
 import { buildReport } from "../src/pbir/build.js";
 import type { Column, Measure } from "../src/model/types.js";
-import { modelFrom } from "./helpers.js";
+import { fixturesDir, modelFrom } from "./helpers.js";
 
 const j = (v: unknown) => JSON.stringify(v);
 const column = (entity: string, property: string) => ({
@@ -127,6 +128,134 @@ describe("buildReachabilityIndex", () => {
     expect(reach.reasonFor(meas("Sales YoY %"))).toBe(
       "nothing in the report reaches it, and no measure or column references it",
     );
+  });
+  it("reaches a measure bound only in a visual's conditional formatting, and what its DAX references", () => {
+    const [pageFile, visualFile] = visualBinding(column("Sales", "Amount"));
+    const json = JSON.parse(visualFile!.text) as { visual: Record<string, unknown> };
+    json.visual.objects = {
+      dataPoint: [
+        { properties: { fill: { solid: { color: { expr: measure("Sales", "Sales YoY %") } } } } },
+      ],
+    };
+    const { report } = buildReport([pageFile!, { ...visualFile!, text: j(json) }]);
+    const reach = buildIndexes({ model, report }).reachability!;
+    expect(reach.pathTo(meas("Sales YoY %"))).toEqual(["[Sales YoY %]"]);
+    expect(reach.pathTo(meas("Sales LY"))).toEqual(["[Sales YoY %]", "[Sales LY]"]);
+    expect(reach.reached(meas("Total Sales"))).toBe(true);
+  });
+  it("reaches a date variation's levels, what their columns need, and the date column itself", () => {
+    // tvw-baseline's local date table behind a date column's variation, with no relationship, so
+    // only the report's reference can reach the date column.
+    const LDT = "LocalDateTable_1b2c1fde-0cf3-455e-bfee-a8e4970804e0";
+    const dated = modelFrom(`table Sales
+	column OrderDate
+		dataType: dateTime
+
+		variation Variation
+			isDefault
+			defaultHierarchy: ${LDT}.'Date Hierarchy'
+
+${readFileSync(`${fixturesDir}tvw-baseline.SemanticModel/definition/tables/${LDT}.tmdl`, "utf8")}`);
+    const level = (name: string) => ({
+      HierarchyLevel: {
+        Expression: {
+          Hierarchy: {
+            Expression: {
+              PropertyVariationSource: {
+                Expression: { SourceRef: { Entity: "Sales" } },
+                Name: "Variation",
+                Property: "OrderDate",
+              },
+            },
+            Hierarchy: "Date Hierarchy",
+          },
+        },
+        Level: name,
+      },
+    });
+    const { report } = buildReport(visualBinding(level("Year"), level("Quarter")));
+    const reach = buildIndexes({ model: dated, report }).reachability!;
+    const at = (table: string, name: string): Column =>
+      dated.tables.find((t) => t.name === table)!.columns.find((c) => c.name === name)!;
+    expect(reach.reached(at("Sales", "OrderDate"))).toBe(true);
+    expect(reach.pathTo(at(LDT, "QuarterNo"))).toEqual([
+      `'${LDT}'[Quarter]`,
+      `'${LDT}'[QuarterNo]`,
+    ]);
+    expect(
+      dated.tables
+        .find((t) => t.name === LDT)!
+        .columns.filter((c) => !reach.reached(c))
+        .map((c) => c.name),
+    ).toEqual(["Month", "Day"]);
+  });
+  it("reaches the hidden Fields column a field parameter's display column groups by", () => {
+    const param = modelFrom(`table Metric
+	column Metric
+		dataType: string
+		sortByColumn: 'Metric Order'
+
+		relatedColumnDetails
+			groupByColumn: 'Metric Fields'
+
+	column 'Metric Fields'
+		dataType: string
+		isHidden
+
+	column 'Metric Order'
+		dataType: int64
+		isHidden
+
+	column Unused
+		dataType: string
+`);
+    const { report } = buildReport(visualBinding(column("Metric", "Metric")));
+    const reach = buildIndexes({ model: param, report }).reachability!;
+    const at = (name: string): Column => param.tables[0]!.columns.find((c) => c.name === name)!;
+    expect(reach.pathTo(at("Metric Fields"))).toEqual([
+      "'Metric'[Metric]",
+      "'Metric'[Metric Fields]",
+    ]);
+    expect(reach.reached(at("Metric Order"))).toBe(true);
+    expect(reach.reached(at("Unused"))).toBe(false);
+    // When nothing reaches the display column, the Fields column's reason names it.
+    const { report: other } = buildReport(visualBinding(column("Metric", "Unused")));
+    const unused = buildIndexes({ model: param, report: other }).reachability!;
+    expect(unused.reasonFor(at("Metric Fields"))).toBe(
+      "referenced only by 'Metric'[Metric], which nothing reaches either",
+    );
+  });
+  it("roots no relationship to an auto date/time table, and leaves those tables out of the unreached list", () => {
+    const fixture = `${fixturesDir}tvw-baseline.SemanticModel/definition/tables/`;
+    const LDT = "LocalDateTable_1b2c1fde-0cf3-455e-bfee-a8e4970804e0";
+    const TEMPLATE = "DateTableTemplate_f2afc5fc-2d0d-478c-92e8-dc0f26f32175";
+    const dated = modelFrom(`table Sales
+	column Amount
+		dataType: decimal
+	column OrderDate
+		dataType: dateTime
+
+		variation Variation
+			isDefault
+			relationship: r1
+			defaultHierarchy: ${LDT}.'Date Hierarchy'
+
+${readFileSync(`${fixture}${LDT}.tmdl`, "utf8")}
+${readFileSync(`${fixture}${TEMPLATE}.tmdl`, "utf8")}
+relationship r1
+	joinOnDateBehavior: datePartOnly
+	fromColumn: Sales.OrderDate
+	toColumn: ${LDT}.Date
+`);
+    const { report } = buildReport(visualBinding(column("Sales", "Amount")));
+    const reach = buildIndexes({ model: dated, report }).reachability!;
+    const table = (name: string) => dated.tables.find((t) => t.name === name)!;
+    // The index stays truthful about what is reached; the list is what an author can act on.
+    expect(reach.reached(table("Sales").columns.find((c) => c.name === "OrderDate")!)).toBe(false);
+    expect(reach.reached(table(LDT).columns.find((c) => c.name === "Date")!)).toBe(false);
+    const u = reach.unreached();
+    expect(u.columns.map((c) => `${c.table.name}.${c.name}`)).toEqual(["Sales.OrderDate"]);
+    expect(u.tables).toEqual([]);
   });
   it("is absent in a report-only or model-only project", () => {
     const { report } = buildReport(visualBinding(column("Sales", "Amount")));

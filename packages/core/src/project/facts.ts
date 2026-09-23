@@ -1,7 +1,15 @@
 import { plural } from "../format/text.js";
 import type { Indexes } from "../index/build.js";
 import type { Report } from "../pbir/types.js";
-import { allVisuals, isHiddenPage } from "../rules/report-helpers.js";
+import {
+  allVisuals,
+  filtersPaneState,
+  hiddenVisualWithFields,
+  isHiddenPage,
+  landingPageNotSet,
+  openingPage,
+  openingPageInvalid,
+} from "../rules/report-helpers.js";
 import type { Fact, Project } from "./types.js";
 
 /** `n info`-style nouns are the caller's business; these take an s. */
@@ -17,21 +25,22 @@ function reportFacts(report: Report, known: ReadonlySet<string>): Fact[] {
     return ruleId === undefined ? fact : { ...fact, ruleId };
   };
   const pages = report.pages;
-  const byId = new Map(pages.map((p) => [p.id, p]));
-  const header = report.pagesHeader;
 
-  // Opens on.
-  const target = header.landingPageName ?? header.activePageName;
-  const opened = target === undefined ? undefined : byId.get(target);
-  const invalid = target !== undefined && (opened === undefined || isHiddenPage(opened));
+  // Opens on. A hidden landing page says "(hidden)", which is true, but links no rule for it.
+  const opens = openingPage(report);
   const value =
-    target === undefined
+    opens === undefined
       ? "unknown"
-      : opened === undefined
-        ? `"${target}" (no such page)`
-        : isHiddenPage(opened)
-          ? `${opened.displayName} (hidden)`
-          : opened.displayName;
+      : opens.page === undefined
+        ? `"${opens.name}" (no such page)`
+        : isHiddenPage(opens.page)
+          ? `${opens.page.displayName} (hidden)`
+          : opens.page.displayName;
+  const how = {
+    landing: "landing page",
+    active: "the page open when it was saved; no landing page set",
+    first: "the first page; no landing page set",
+  };
   facts.push(
     withRule(
       {
@@ -39,31 +48,39 @@ function reportFacts(report: Report, known: ReadonlySet<string>): Fact[] {
         label: "Opens on",
         value,
         detail:
-          header.landingPageName !== undefined
-            ? "landing page"
-            : "the page open when it was saved; no landing page set",
+          report.pagesHeader.file === undefined
+            ? "pages.json was not read"
+            : opens === undefined
+              ? "no landing page set"
+              : how[opens.by],
       },
-      invalid ? "OPENING_PAGE_INVALID" : undefined,
-      header.landingPageName === undefined ? "LANDING_PAGE_NOT_SET" : undefined,
+      openingPageInvalid(opens) ? "OPENING_PAGE_INVALID" : undefined,
+      landingPageNotSet(report) ? "LANDING_PAGE_NOT_SET" : undefined,
     ),
   );
 
-  // Filters pane. Desktop collapses the pane unless the file says expanded.
-  const pane = report.filtersPane;
+  // Filters pane. Unknown, like Opens on, when the file that records it was not read; the rule is
+  // silent then, so the fact links no rule.
+  const pane = filtersPaneState(report);
   facts.push(
-    withRule(
-      {
-        layer: "report",
-        label: "Filters pane",
-        value:
-          pane.visible === false
-            ? "hidden from readers"
-            : pane.expanded === true
-              ? "open"
-              : "closed",
-      },
-      "FILTERS_PANE_STATE",
-    ),
+    pane === undefined
+      ? {
+          layer: "report",
+          label: "Filters pane",
+          value: "unknown",
+          detail: "report.json was not read",
+        }
+      : withRule(
+          {
+            layer: "report",
+            label: "Filters pane",
+            value: pane.state,
+            ...(pane.recordedAt === undefined
+              ? { detail: "read as open; report.json does not record it" }
+              : {}),
+          },
+          "FILTERS_PANE_STATE",
+        ),
   );
 
   // Pages.
@@ -90,7 +107,7 @@ function reportFacts(report: Report, known: ReadonlySet<string>): Fact[] {
   // Visuals.
   const visuals = allVisuals(report).filter((v) => !v.isGroup);
   const hiddenVisuals = visuals.filter((v) => v.isHidden);
-  const hiddenWithFields = hiddenVisuals.filter((v) => v.fields.length > 0).length;
+  const hiddenWithFields = visuals.filter(hiddenVisualWithFields).length;
   const registered = report.publicCustomVisuals;
   const usedTypes = new Set(visuals.map((v) => v.type));
   const used = registered.filter((t) => usedTypes.has(t)).length;
@@ -108,7 +125,7 @@ function reportFacts(report: Report, known: ReadonlySet<string>): Fact[] {
         value: String(visuals.length),
         ...(visualParts.length ? { detail: visualParts.join("; ") } : {}),
       },
-      hiddenWithFields > 0 ? "HIDDEN_VISUALS_STILL_QUERY" : undefined,
+      hiddenWithFields > 0 ? "HIDDEN_VISUAL_WITH_FIELDS" : undefined,
       registered.length > used ? "REMOVE_UNUSED_CUSTOM_VISUALS" : undefined,
     ),
   );

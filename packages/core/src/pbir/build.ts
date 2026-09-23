@@ -128,7 +128,6 @@ function readReportJson(
         : undefined,
   };
   report.filters = filtersOf(json.filterConfig, file, "/filterConfig");
-  report.annotations = annotationsOf(json.annotations);
 }
 
 function buildPage(
@@ -170,6 +169,18 @@ const stubPage = (id: string): Page => ({
   visuals: [],
   annotations: {},
 });
+
+/** A projection's `field` and what lies beneath it, which is exactly what a visual's `fields` read. */
+const PROJECTION_FIELD = /^\/visual\/query\/queryState\/[^/]+\/projections\/\d+\/field(\/|$)/;
+
+/**
+ * Whether a reference at this pointer in visual.json is already read into the visual's `fields` or
+ * `filters`. Everything else, a field parameter in a role included, is a property reference.
+ */
+const readElsewhere = (pointer: string): boolean =>
+  PROJECTION_FIELD.test(pointer) ||
+  pointer === "/filterConfig" ||
+  pointer.startsWith("/filterConfig/");
 
 function buildVisual(
   page: Page,
@@ -237,6 +248,7 @@ function buildVisual(
       });
     });
   const title = Array.isArray(vco.title) ? literal(properties(vco.title[0])?.text) : undefined;
+  const propertyRefs = collectFieldRefs(json).filter((r) => !readElsewhere(r.pointer));
   return {
     id: str(json.name) ?? id,
     page,
@@ -259,6 +271,7 @@ function buildVisual(
     ...(altText !== undefined ? { altText } : {}),
     fields,
     projectionCount,
+    propertyRefs,
     showAllRoles,
     filters: filtersOf(json.filterConfig, file, "/filterConfig"),
     actions,
@@ -346,7 +359,6 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
     files: [],
     issues: [],
     schemaVersions: {},
-    annotations: {},
   };
   const diagnostics: Diagnostic[] = [];
   const reportedFamilies = new Set<string>();
@@ -403,6 +415,7 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
     } else if (f.path === "definition/pages/pages.json") {
       report.pagesHeader = {
         file: f.path,
+        text: f.text,
         pageOrder: Array.isArray(json.pageOrder)
           ? json.pageOrder.filter((p): p is string => typeof p === "string")
           : [],

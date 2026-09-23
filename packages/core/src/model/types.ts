@@ -62,6 +62,11 @@ export interface Column extends Named {
   summarizeBy?: string;
   sourceColumn?: string;
   sortByColumn?: string;
+  /**
+   * The columns `relatedColumnDetails` names in `groupByColumn`, on the same table: a field
+   * parameter's display column groups by its hidden Fields column, which the parameter needs.
+   */
+  groupByColumns: string[];
   dataCategory?: string;
   expression?: string;
   variations: Variation[];

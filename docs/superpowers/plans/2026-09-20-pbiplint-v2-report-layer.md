@@ -19,7 +19,7 @@
 - Never a closing keyword (`closes`, `fixes`, `resolves`) next to an issue number in a commit message or pull request body, even in a sentence about one. Write "tracked in #9".
 - Main cannot be rewound (ruleset 23615692, no bypass). Every change lands through a pull request from a branch off main. Each pull request in this plan starts from main after the previous one merges. Commit messages end with the two trailers the harness provides (`Co-Authored-By` and `Claude-Session`).
 - `gh` has three accounts; the global active account is `michaelmckinleyconsulting` and must stay that way. Any command that needs the pbiplint org runs after `gh auth switch --user TheDataPractitioner` and is followed by `gh auth switch --user michaelmckinleyconsulting`. The repo-local git config already commits as TheDataPractitioner.
-- Subagents run only on Fable 5.1 or Opus 5, never Sonnet or Haiku: implementers and task reviewers on Opus, the final whole-branch review of each pull request on Fable.
+- From pull request 3 on, every agent runs on Opus 5.5, never Sonnet, Haiku, or Fable: the primary agent and every subagent it dispatches (implementers, task reviewers, re-reviewers, and the final whole-branch review of each pull request), dispatched with the model `opus` (Michael, 2026-09-23). Pull requests 1 and 2 ran implementers and task reviewers on Opus 5 and their whole-branch reviews on Fable 5.1; task texts that say so are the record of those runs.
 - The site build (`packages/web/src/build/*.ts`) imports nothing from `@pbiplint/core`; its copies (`CATEGORY_ORDER`, `ignoreHelp`) are held equal to core's by `packages/web/test/generate.test.ts`.
 - Ported rule ids stay verbatim from `Base-rules.json`, including `HIDE_TOOLTIP_DRILLTROUGH_PAGES`, because parity compares on ids. All ported report rules are severity `warning`. Thresholds default to the source's values (20, 6, 4, 4, 10, 720).
 - Work from `~/Projects/pbiplint` on a branch, never inside a git worktree (the isolation guard fights the tooling). Never edit anything under OneDrive; copy from it.
@@ -43,7 +43,7 @@ Spec section 14 fixes the order. Each pull request is a branch off main, cut aft
 | 7. The browser | `v2-browser` | 36 to 41 | Walkers, `selectProject`, results page with facts and layer tags, diagnostics as notices, browser tests, performance budget |
 | 8. Docs and release | `v2-release` | 42 to 43 | README, CONTRIBUTING, RELEASING, About, 0.2.0 |
 
-Every pull request ends with the same closing task shape: run everything CI runs, check the branch for closing keywords and em dashes, dispatch the Fable whole-branch review, apply its fixes, push, open the pull request as TheDataPractitioner, switch back, report the URL, stop.
+Every pull request ends with the same closing task shape: run everything CI runs, check the branch for closing keywords and em dashes, dispatch the whole-branch review, apply its fixes, push, open the pull request as TheDataPractitioner, switch back, report the URL, stop.
 
 ## Facts every task relies on (verified 2026-09-20 on main at 47fc70e)
 
@@ -5692,7 +5692,7 @@ Shared facts for the three native pull requests:
 | LANDING_PAGE_NOT_SET | No landing page set |
 | OPENING_PAGE_INVALID | Opening page missing or hidden |
 | FILTERS_PANE_STATE | Filters pane state differs from policy |
-| HIDDEN_VISUALS_STILL_QUERY | Hidden visuals still run their queries |
+| HIDDEN_VISUAL_WITH_FIELDS | Hidden visual with fields bound |
 | DEFAULT_PAGE_NAME | Page keeps its default name |
 | VISUAL_WITHOUT_FIELDS | Data visual with no fields |
 | VISUAL_OUTSIDE_PAGE | Visual extends past the page |
@@ -5986,10 +5986,13 @@ describe("LANDING_PAGE_NOT_SET", () => {
 });
 
 describe("OPENING_PAGE_INVALID", () => {
-  it("fires when the landing page, or the active page without one, is missing or hidden", () => {
+  it("fires when the landing page is missing, or without one when the active page is missing or hidden", () => {
     expect(reportObjectIds(OPENING_PAGE_INVALID, pages({ activePageName: "h" }))).toEqual(["report"]);
+    expect(reportObjectIds(OPENING_PAGE_INVALID, pages({ activePageName: "gone" }))).toEqual(["report"]);
     expect(reportObjectIds(OPENING_PAGE_INVALID, pages({ activePageName: "p", landingPageName: "gone" }))).toEqual(["report"]);
     expect(reportObjectIds(OPENING_PAGE_INVALID, pages({ activePageName: "h", landingPageName: "p" }))).toEqual([]);
+    // A hidden landing page is a supported design: readers always open on it (spec 8.2, amended 2026-09-23).
+    expect(reportObjectIds(OPENING_PAGE_INVALID, pages({ activePageName: "p", landingPageName: "h" }))).toEqual([]);
     expect(reportObjectIds(OPENING_PAGE_INVALID, pages({ activePageName: "p" }))).toEqual([]);
   });
 });
@@ -6063,7 +6066,8 @@ export const OPENING_PAGE_INVALID = pbiplintRule({
     const page = report.pages.find((p) => p.id === target);
     const pointer = which === "landing" ? "/landingPageName" : "/activePageName";
     if (!page) return [atPagesHeader(report, pointer, `${which} page "${target}" does not exist`)];
-    if (isHiddenPage(page)) return [atPagesHeader(report, pointer, `${which} page "${page.displayName}" is hidden from readers`)];
+    // A hidden landing page is a supported design; a hidden active page is a report saved while on a helper page.
+    if (which === "active" && isHiddenPage(page)) return [atPagesHeader(report, pointer, `active page "${page.displayName}" is hidden from readers`)];
     return [];
   },
 });
@@ -6103,12 +6107,13 @@ git commit -m "feat(rules): landing page, opening page validity, and the Filters
 
 ---
 
-### Task 23: HIDDEN_VISUALS_STILL_QUERY and the native quiet check
+### Task 23: HIDDEN_VISUAL_WITH_FIELDS and the native quiet check
 
 **Files:**
 - Create: `packages/core/src/rules/pbiplint/visuals.ts`
 - Modify: `packages/core/src/rules/pbiplint/index.ts`, `packages/core/test/pack.test.ts` (89); not `packages/web/test/generate.test.ts`, whose pins hold at 72 (decision 15), so the sentence's "and 7 built into pbiplint" arrives with pull request 7, the site reaching 3 built in at Task 24 when the two `project` pages publish
 - Modify: `packages/core/test/report-parity.test.ts` (the native check), `tests/expectations/base-rules-passes.report.json`, `shelfmart.report.json`, `pbip-and-github-demo.report.json`, `base-rules-fails.report.json` (`native` maps)
+- Modify: `packages/core/src/project/facts.ts` (the Visuals fact's candidate id becomes `HIDDEN_VISUAL_WITH_FIELDS`), `packages/core/test/facts.test.ts` (its `ALL` set becomes the `defaultRules` ids)
 - Test: `packages/core/test/rules-native-visuals.test.ts`
 
 - [ ] **Step 1: Write the failing tests**
@@ -6117,10 +6122,10 @@ Create `packages/core/test/rules-native-visuals.test.ts`:
 
 ```ts
 import { describe, expect, it } from "vitest";
-import { HIDDEN_VISUALS_STILL_QUERY } from "../src/rules/pbiplint/visuals.js";
+import { HIDDEN_VISUAL_WITH_FIELDS } from "../src/rules/pbiplint/visuals.js";
 import { bound, column, page, reportObjectIds, visual } from "./report-helpers.js";
 
-describe("HIDDEN_VISUALS_STILL_QUERY", () => {
+describe("HIDDEN_VISUAL_WITH_FIELDS", () => {
   it("fires on a hidden visual with fields bound and not on an empty one", () => {
     const files = [
       page("p"),
@@ -6128,7 +6133,7 @@ describe("HIDDEN_VISUALS_STILL_QUERY", () => {
       visual("p", "hiddenEmpty", "textbox", { isHidden: true }),
       bound("p", "shown", "cardVisual", [column("Sales", "Amount")]),
     ];
-    expect(reportObjectIds(HIDDEN_VISUALS_STILL_QUERY, files)).toEqual(["hiddenBound"]);
+    expect(reportObjectIds(HIDDEN_VISUAL_WITH_FIELDS, files)).toEqual(["hiddenBound"]);
   });
 });
 ```
@@ -6165,11 +6170,11 @@ import { plural } from "../../format/text.js";
 import { allVisuals, reportFinding } from "../report-helpers.js";
 import { pbiplintRule } from "./define.js";
 
-export const HIDDEN_VISUALS_STILL_QUERY = pbiplintRule({
-  id: "HIDDEN_VISUALS_STILL_QUERY",
-  name: "Hidden visuals still run their queries",
-  category: "Performance",
-  severity: 2,
+export const HIDDEN_VISUAL_WITH_FIELDS = pbiplintRule({
+  id: "HIDDEN_VISUAL_WITH_FIELDS",
+  name: "Hidden visual with fields bound",
+  category: "Maintenance",
+  severity: 1,
   scope: ["Visual"],
   layer: "report",
   check: ({ report }) =>
@@ -6180,7 +6185,7 @@ export const HIDDEN_VISUALS_STILL_QUERY = pbiplintRule({
       : [],
 });
 
-export const visualRules = [HIDDEN_VISUALS_STILL_QUERY];
+export const visualRules = [HIDDEN_VISUAL_WITH_FIELDS];
 ```
 
 Append `...visualRules` to `pbiplintRules`; counts 89. Then pin: run the failing native checks, read every finding they report on `base-rules-passes` and `shelfmart` (and, for the two other fixtures, add a `native` map too so every fixture pins the tier-1 rules), and judge each one: a real broken reference, a real hidden visual with fields, a real missing landing page goes into `native` by name; a finding that is wrong is a rule bug to fix before pinning. Write the maps as sorted lists of object ids (report findings) or object names (model findings, for `NOT_REACHED_FROM_REPORT`). Record in the SDD ledger what each fixture fires and why it is right.
@@ -6192,14 +6197,14 @@ Expected: PASS apart from the six pending pages.
 
 ```bash
 git add packages/core/src packages/core/test tests/expectations
-git commit -m "feat(rules): hidden visuals that still query, and the native quiet check on every fixture"
+git commit -m "feat(rules): hidden visuals left with fields bound, and the native quiet check on every fixture"
 ```
 
 ---
 
 ### Task 24: The six tier-1 pages
 
-Scaffold, then draft with Task 19's brief and these notes, review, delete the pending set, regenerate, test, commit. Add the six slugs to a `PENDING_PAGES` set again for the scaffold step (`broken-field-reference`, `not-reached-from-report`, `landing-page-not-set`, `opening-page-invalid`, `filters-pane-state`, `hidden-visuals-still-query`) and delete the set once the pages are written, exactly as Tasks 18 and 19 did.
+Scaffold, then draft with Task 19's brief and these notes, review, delete the pending set, regenerate, test, commit. Add the six slugs to a `PENDING_PAGES` set again for the scaffold step (`broken-field-reference`, `not-reached-from-report`, `landing-page-not-set`, `opening-page-invalid`, `filters-pane-state`, `hidden-visual-with-fields`) and delete the set once the pages are written, exactly as Tasks 18 and 19 did.
 
 Two of these pages publish to the site before the rule behind them can run: `broken-field-reference` and `not-reached-from-report` are layer `project` and need both layers, and a `project` page publishes as soon as either family does, so from this pull request the site carries them while its browser always skips the rules (decision 15). That is accepted. If it is ever not, move those two pages to pull request 7 rather than change the gate.
 
@@ -6212,7 +6217,7 @@ Because those two publish, this is the one task in pull requests 2 to 6 where th
 | landing-page-not-set | `pages.json` without `landingPageName`; fixed with it | Desktop route: page settings, set as landing page (pagesMetadata 1.1.0). When to ignore: a one-page report. Related: `OPENING_PAGE_INVALID` |
 | opening-page-invalid | `pages.json` whose `activePageName` is a hidden page (`tree.json` with the hidden page); fixed names the visible one | Related: `LANDING_PAGE_NOT_SET`, `HIDE_TOOLTIP_DRILLTROUGH_PAGES` |
 | filters-pane-state | `report.json` with `expanded: true` plus the config fence `{ "rules": { "FILTERS_PANE_STATE": { "expect": "closed" } } }`; fixed `expanded: false` | Says the rule is silent without the policy and shows the config. When to ignore: none beyond not setting a policy |
-| hidden-visuals-still-query | `visual.json` with `isHidden: true` and a field; fixed removes the visual's fields or, better, the visual (show it as an empty text box) | How to fix: delete it, or move it off the page; a bookmark that shows it is the legitimate case. Related: `REDUCE_VISUALS_ON_PAGE` (hidden visuals are not counted there), `VISUAL_WITHOUT_FIELDS` |
+| hidden-visual-with-fields | `visual.json` with `isHidden: true` and a field; fixed removes the visual's fields or, better, the visual (show it as an empty text box) | How to fix: delete it, or move it off the page; a bookmark that shows it is the legitimate case. Related: `REDUCE_VISUALS_ON_PAGE` (hidden visuals are not counted there), `VISUAL_WITHOUT_FIELDS` |
 
 Commit message: `docs(rules): six tier-1 native pages`.
 
@@ -6223,7 +6228,7 @@ As Task 20 Steps 1 to 3 (add `/rules/broken-field-reference/` to the e2e `PAGES`
 ```
 Pull request 3 of 8 for the report layer, tracked in #9.
 
-- `pbiplintRule` and the first six native rules: BROKEN_FIELD_REFERENCE and NOT_REACHED_FROM_REPORT read both layers; LANDING_PAGE_NOT_SET, OPENING_PAGE_INVALID, FILTERS_PANE_STATE (a policy rule, silent without `expect`), and HIDDEN_VISUALS_STILL_QUERY read the report.
+- `pbiplintRule` and the first six native rules: BROKEN_FIELD_REFERENCE and NOT_REACHED_FROM_REPORT read both layers; LANDING_PAGE_NOT_SET, OPENING_PAGE_INVALID, FILTERS_PANE_STATE (a policy rule, silent without `expect`), and HIDDEN_VISUAL_WITH_FIELDS read the report.
 - A policy rule can raise its severity under its policy (`policySeverity`), unless the config sets one.
 - Every fixture's expectation file gains a `native` map; the two quiet fixtures list by name every native finding they produce, and the test fails on any other.
 - Six pages, each proven through the engine; the two project-rule pages run against a stock model the test supplies.
@@ -6375,7 +6380,7 @@ export const VISUAL_OUTSIDE_PAGE = pbiplintRule({
       : [],
 });
 
-export const visualRules = [HIDDEN_VISUALS_STILL_QUERY, VISUAL_WITHOUT_FIELDS, VISUAL_OUTSIDE_PAGE];
+export const visualRules = [HIDDEN_VISUAL_WITH_FIELDS, VISUAL_WITHOUT_FIELDS, VISUAL_OUTSIDE_PAGE];
 ```
 
 Create `packages/core/src/rules/pbiplint/measures.ts`:
@@ -6866,7 +6871,7 @@ The report, page by page. Visual ids are chosen once; the table names the visual
 
 | Page (display name) | Settings | Visuals | Plants |
 |---|---|---|---|
-| Overview | 1280 by 720, visible, the active page is not this one | "Sales by region": clusteredBarChart bound to `'Sales'[Region]` (Category) and `[Total Sales]` (Y); "Total Sales", "Order Count", "Average Order Value": cardVisual each bound to that measure; "Sales by category": donutChart bound to `'Product'[Category]` and `[Total Sales]`; "Category" slicer bound to `'Product'[Category]` with a saved selection (`filterConfig` entry of type Categorical carrying a `filter` with a `Where` selecting "Bikes"); "Go to detail": actionButton with `visualLink` type PageNavigation whose `navigationSection` is `deadpage00000000000000` (no such page); "Sales trend (old)": lineChart, `isHidden: true`, bound to `'Date'[Month]` and `[Total Sales]`; "Debug table": tableEx, `isHidden: true`, bound to six Sales columns; "Placeholder": cardVisual with no query; "Notes": textbox at x 1200 width 200 (past the right edge) | BROKEN_FIELD_REFERENCE (Sales has no Region), SLICER_SELECTION_SAVED, BROKEN_ACTION_TARGET, HIDDEN_VISUALS_STILL_QUERY (two), VISUAL_WITHOUT_FIELDS, VISUAL_OUTSIDE_PAGE |
+| Overview | 1280 by 720, visible, the active page is not this one | "Sales by region": clusteredBarChart bound to `'Sales'[Region]` (Category) and `[Total Sales]` (Y); "Total Sales", "Order Count", "Average Order Value": cardVisual each bound to that measure; "Sales by category": donutChart bound to `'Product'[Category]` and `[Total Sales]`; "Category" slicer bound to `'Product'[Category]` with a saved selection (`filterConfig` entry of type Categorical carrying a `filter` with a `Where` selecting "Bikes"); "Go to detail": actionButton with `visualLink` type PageNavigation whose `navigationSection` is `deadpage00000000000000` (no such page); "Sales trend (old)": lineChart, `isHidden: true`, bound to `'Date'[Month]` and `[Total Sales]`; "Debug table": tableEx, `isHidden: true`, bound to six Sales columns; "Placeholder": cardVisual with no query; "Notes": textbox at x 1200 width 200 (past the right edge) | BROKEN_FIELD_REFERENCE (Sales has no Region), SLICER_SELECTION_SAVED, BROKEN_ACTION_TARGET, HIDDEN_VISUAL_WITH_FIELDS (two), VISUAL_WITHOUT_FIELDS, VISUAL_OUTSIDE_PAGE |
 | Page 2 | visible | "Total Quantity" card bound to `[Total Quantity]`, its value colour a hex literal (a `solid.color` whose Literal is `'#1F77B4'` under the card's formatting objects, the property shape copied from a fixture visual that sets a colour) | DEFAULT_PAGE_NAME, ENSURE_THEME_COLOURS |
 | Duplicate of Overview | visible | "Sales by brand": clusteredBarChart bound to `'Product'[Brand]` (Category) and `[Total Sales]` (Y), with `showAll: true` on the Category role | DEFAULT_PAGE_NAME, AVOID_SHOW_ITEMS_WITH_NO_DATA |
 | Product tooltip | `pageBinding.type: "Tooltip"`, visibility AlwaysVisible (absent), 320 by 240 | "Product name" card bound to `'Product'[Product Name]` | HIDE_TOOLTIP_DRILLTROUGH_PAGES |
@@ -6963,7 +6968,7 @@ git commit -m "feat(sample): Messy Sales Demo.Report, one planted violation per 
     "LANDING_PAGE_NOT_SET": ["report"],
     "OPENING_PAGE_INVALID": ["report"],
     "FILTERS_PANE_STATE": ["report"],
-    "HIDDEN_VISUALS_STILL_QUERY": ["<sales trend (old) id>", "<debug table id>"],
+    "HIDDEN_VISUAL_WITH_FIELDS": ["<sales trend (old) id>", "<debug table id>"],
     "DEFAULT_PAGE_NAME": ["<page 2 id>", "<duplicate page id>"],
     "VISUAL_WITHOUT_FIELDS": ["<placeholder id>"],
     "VISUAL_OUTSIDE_PAGE": ["<notes id>"],
@@ -7562,7 +7567,7 @@ The report layer: the 11 base rules of [PBI Inspector](https://github.com/NatVan
 by Nat Van Gulck, ported so the results match its command line on the same report, with three
 documented deviations where the source is noisier than it means to be; and pbiplint's own rules
 for a report's correctness and readiness: fields the model does not have, model objects the report
-never reaches, the opening page, the Filters pane, hidden visuals that still query, default page
+never reaches, the opening page, the Filters pane, hidden visuals left with fields bound, default page
 names, empty visuals, visuals past the page edge, report-level measures, broken button and
 bookmark targets, tab order against layout, and saved slicer selections. "Report at a glance"
 states what the report will do whether or not anything fired.
@@ -7635,7 +7640,7 @@ git commit -m "chore: release v0.2.0"
 git log --format=%B main..HEAD | grep -inE '\b(close[sd]?|fix(e[sd])?|resolve[sd]?)\b[[:space:]]*#[0-9]+' ; git diff main..HEAD | grep -c $'\u2014'
 ```
 
-Dispatch the Fable whole-branch review (docs only; it reads for accuracy against the code on main). Then:
+Dispatch the whole-branch review (docs only; it reads for accuracy against the code on main). Then:
 
 ```bash
 git push -u origin v2-release
@@ -7678,7 +7683,7 @@ Spec sections and the tasks that carry them: 4 (Tasks 8, 10, 36, 37), 5 (Tasks 3
 
 ## Execution notes
 
-- Execution is subagent-driven (`superpowers:subagent-driven-development`), one pull request at a time: implementers and task reviewers on Opus 5, the whole-branch review on Fable 5.1. The ledger lives at `.superpowers/sdd/2026-09-20-pbiplint-v2-report-layer/progress.md` (git-ignored) in the shape of `.superpowers/sdd/2026-09-19-rule-pages-template/`: a pre-flight scan of produces-versus-consumes across the pull request's tasks, one line per task event, and rulings written as "Ruling: what. Why: why. Cost if wrong: cost." Each pull request's tasks are one execution unit; the session stops after opening the pull request and resumes from the ledger when Michael says merge.
+- Execution is subagent-driven (`superpowers:subagent-driven-development`), one pull request at a time, with every agent on Opus 5.5 from pull request 3 on: the primary agent, implementers, task reviewers, re-reviewers, and the whole-branch review (Michael, 2026-09-23; pull requests 1 and 2 ran implementers and task reviewers on Opus 5 and the whole-branch review on Fable 5.1). The ledger lives at `.superpowers/sdd/2026-09-20-pbiplint-v2-report-layer/progress.md` (git-ignored) in the shape of `.superpowers/sdd/2026-09-19-rule-pages-template/`: a pre-flight scan of produces-versus-consumes across the pull request's tasks, one line per task event, and rulings written as "Ruling: what. Why: why. Cost if wrong: cost." Each pull request's tasks are one execution unit; the session stops after opening the pull request and resumes from the ledger when Michael says merge.
 - A task's implementer sees only its own task text plus the Global Constraints, the Decisions, the shared facts of its pull request, and the Interfaces blocks of the tasks it consumes; the ledger records what each brief contained.
 - The escalation rule for parity (pull request 2's shared facts) and the manual checks named in each pull request body are the only places the session stops for Michael inside a pull request.
 - Where a task says "counts to N", the numbers are 72 (today), 77 and 80 (inside pull request 2), 83 (after it), 85 and 88 (inside pull request 3), 89, 93, 97; `pack.test.ts` and `generate.test.ts` pin them and the index sentence.

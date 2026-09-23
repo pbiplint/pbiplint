@@ -9,6 +9,7 @@ import {
   type Severity,
 } from "../rules/types.js";
 import type { ResolvedConfig } from "./config.js";
+import { optionsFor } from "./run.js";
 
 export interface RuleSummary {
   id: string;
@@ -28,8 +29,9 @@ export interface RankedGroup {
   findings: Finding[];
 }
 
+/** The config's severity for the rule, else what a policy rule's options raise it to, else its own. */
 export const effectiveSeverity = (rule: Rule, config: ResolvedConfig): Severity =>
-  config.severity.get(rule.id) ?? rule.severity;
+  config.severity.get(rule.id) ?? rule.policySeverity?.(optionsFor(rule, config)) ?? rule.severity;
 
 export function summarizeRule(
   rule: Rule,

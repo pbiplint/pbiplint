@@ -1,7 +1,8 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { buildReportReferenceIndex } from "../src/index/report-refs.js";
+import { buildReportReferenceIndex, type Resolution } from "../src/index/report-refs.js";
 import { buildReport } from "../src/pbir/build.js";
-import { modelFrom } from "./helpers.js";
+import { fixturesDir, modelFrom } from "./helpers.js";
 
 const j = (v: unknown) => JSON.stringify(v);
 const column = (entity: string, property: string) => ({
@@ -168,6 +169,46 @@ describe("buildReportReferenceIndex", () => {
         .map((r) => [r.ref.kind, r.resolution.kind]),
     ).toEqual([["measure", "reportMeasure"]]);
   });
+  it("owns a visual's formatting and sort references as visualProperty, after its fields and filters", () => {
+    const { report: formatted } = buildReport([
+      { path: "definition/pages/p1/page.json", text: j({ name: "p1", displayName: "Overview" }) },
+      {
+        path: "definition/pages/p1/visuals/v/visual.json",
+        text: j({
+          name: "v",
+          position: {},
+          filterConfig: {
+            filters: [{ name: "vf", field: column("Sales", "Region"), type: "Categorical" }],
+          },
+          visual: {
+            visualType: "cardVisual",
+            query: {
+              queryState: { Data: { projections: [{ field: measure("Sales", "Total Sales") }] } },
+              sortDefinition: { sort: [{ field: measure("Sales", "Total Sales") }] },
+            },
+            objects: {
+              labels: [
+                {
+                  properties: { color: { solid: { color: { expr: measure("Sales", "Colour") } } } },
+                },
+              ],
+            },
+          },
+        }),
+      },
+    ]);
+    const idx = buildReportReferenceIndex(formatted, model);
+    expect(idx.refs.map((r) => [r.owner.kind, r.ref.name, r.resolution.kind])).toEqual([
+      ["visualField", "Total Sales", "measure"],
+      ["visualFilter", "Region", "column"],
+      ["visualProperty", "Total Sales", "measure"],
+      ["visualProperty", "Colour", "unresolved"],
+    ]);
+    const v = formatted.pages[0]!.visuals[0]!;
+    expect(idx.refs.every((r) => r.owner.object === v)).toBe(true);
+    // fieldsOf stays the role bindings.
+    expect(idx.fieldsOf(v).map((r) => r.owner.kind)).toEqual(["visualField"]);
+  });
   it("marks everything unresolved with one reason when there is no model, except report measures", () => {
     const without = buildReportReferenceIndex(report, undefined);
     const kinds = new Set(without.refs.map((r) => r.resolution.kind));
@@ -176,5 +217,148 @@ describe("buildReportReferenceIndex", () => {
       kind: "unresolved",
       reason: "no model in the input",
     });
+  });
+});
+
+// Desktop's own local date table, as tvw-baseline carries it, behind a date column's variation.
+const LDT = "LocalDateTable_1b2c1fde-0cf3-455e-bfee-a8e4970804e0";
+const localDateTable = readFileSync(
+  `${fixturesDir}tvw-baseline.SemanticModel/definition/tables/${LDT}.tmdl`,
+  "utf8",
+);
+const dated = modelFrom(`table Sales
+	column OrderDate
+		dataType: dateTime
+
+		variation Variation
+			isDefault
+			defaultHierarchy: ${LDT}.'Date Hierarchy'
+
+	column DueDate
+		dataType: dateTime
+
+		variation Variation
+			isDefault
+			defaultHierarchy: LocalDateTable_gone.'Date Hierarchy'
+
+	column ShipDate
+		dataType: dateTime
+
+		variation Variation
+			isDefault
+
+${localDateTable}`);
+const variationOf = (property: string, name = "Variation") => ({
+  PropertyVariationSource: {
+    Expression: { SourceRef: { Entity: "Sales" } },
+    Name: name,
+    Property: property,
+  },
+});
+const dateLevel = (
+  property: string,
+  level: string,
+  { variation = "Variation", hierarchy = "Date Hierarchy" } = {},
+) => ({
+  HierarchyLevel: {
+    Expression: {
+      Hierarchy: { Expression: variationOf(property, variation), Hierarchy: hierarchy },
+    },
+    Level: level,
+  },
+});
+/** The resolutions of the given fields, bound in one visual's roles, against the dated model. */
+const resolutionsOf = (...fields: unknown[]) => {
+  const { report: r } = buildReport([
+    { path: "definition/pages/p1/page.json", text: j({ name: "p1", displayName: "P" }) },
+    {
+      path: "definition/pages/p1/visuals/v1/visual.json",
+      text: j({
+        name: "v1",
+        position: {},
+        visual: {
+          visualType: "clusteredColumnChart",
+          query: { queryState: { Category: { projections: fields.map((field) => ({ field })) } } },
+        },
+      }),
+    },
+  ]);
+  return buildReportReferenceIndex(r, dated).refs.map((x) => x.resolution);
+};
+const reasonOf = (res: Resolution): string => (res.kind === "unresolved" ? res.reason : res.kind);
+
+describe("a reference through a date column's variation (Desktop's auto date/time)", () => {
+  it("resolves to the local date table's hierarchy level, remembering the date column", () => {
+    const [year] = resolutionsOf(dateLevel("OrderDate", "Year"));
+    if (year?.kind !== "hierarchy") throw new Error(`resolved to ${year?.kind}`);
+    expect([year.hierarchy.table.name, year.hierarchy.name, year.level?.name]).toEqual([
+      LDT,
+      "Date Hierarchy",
+      "Year",
+    ]);
+    expect(year.variationOf?.name).toBe("OrderDate");
+    expect(year.variationOf?.table.name).toBe("Sales");
+  });
+  it("resolves a column read through the variation to the local date table's column", () => {
+    const [quarter] = resolutionsOf({
+      Column: { Expression: variationOf("OrderDate"), Property: "Quarter" },
+    });
+    if (quarter?.kind !== "column") throw new Error(`resolved to ${quarter?.kind}`);
+    expect([quarter.column.table.name, quarter.column.name]).toEqual([LDT, "Quarter"]);
+    expect(quarter.variationOf?.name).toBe("OrderDate");
+  });
+  it("says which step is missing: the column, the variation, the hierarchy, or the level", () => {
+    expect(
+      resolutionsOf(
+        dateLevel("Nope", "Year"),
+        dateLevel("OrderDate", "Year", { variation: "Other" }),
+        dateLevel("ShipDate", "Year"),
+        dateLevel("DueDate", "Year"),
+        dateLevel("OrderDate", "Year", { hierarchy: "Fiscal" }),
+        dateLevel("OrderDate", "Week"),
+      ).map(reasonOf),
+    ).toEqual([
+      'no column named "Nope" on "Sales"',
+      'no variation named "Other" on column "OrderDate" of "Sales"',
+      'variation "Variation" on column "ShipDate" of "Sales" names no default hierarchy',
+      'no table named "LocalDateTable_gone"',
+      `no hierarchy named "Fiscal" on "${LDT}"`,
+      `no level named "Week" in hierarchy "Date Hierarchy" on "${LDT}"`,
+    ]);
+  });
+  it("keeps the undeclared-alias reason for an undeclared alias, and names the other empty sources", () => {
+    const aliased = (source: string) => ({
+      Column: { Expression: { SourceRef: { Source: source } }, Property: "OrderDate" },
+    });
+    const { report: r } = buildReport([
+      {
+        path: "definition/pages/p1/page.json",
+        text: j({
+          name: "p1",
+          displayName: "P",
+          filterConfig: {
+            filters: [
+              {
+                name: "f",
+                type: "Advanced",
+                filter: {
+                  From: [{ Name: "sub", Expression: { Subquery: {} }, Type: 2 }],
+                  Where: [
+                    { Condition: { Not: { Expression: aliased("d") } } },
+                    { Condition: { Not: { Expression: aliased("sub") } } },
+                    { Condition: { Not: { Expression: { Column: { Property: "OrderDate" } } } } },
+                  ],
+                },
+              },
+            ],
+          },
+        }),
+      },
+    ]);
+    expect(buildReportReferenceIndex(r, dated).refs.map((x) => reasonOf(x.resolution))).toEqual([
+      "a filter alias that no From list declares",
+      "an alias whose From entry names no model table",
+      "a source that names no model table",
+    ]);
   });
 });

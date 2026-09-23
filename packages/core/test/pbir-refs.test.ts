@@ -100,4 +100,90 @@ describe("collectFieldRefs", () => {
     const refs = collectFieldRefs({ "a/b": [column("T", "C")], Column: "not a ref" }, "");
     expect(refs).toEqual([{ kind: "column", table: "T", name: "C", pointer: "/a~1b/0" }]);
   });
+  it("reads Desktop's auto date/time hierarchy through its PropertyVariationSource", () => {
+    // The shape Power BI Desktop writes when Auto date/time is on and a chart shows a date
+    // column's Year: the hierarchy's source is the column's variation, not a table.
+    const field = {
+      HierarchyLevel: {
+        Expression: {
+          Hierarchy: {
+            Expression: {
+              PropertyVariationSource: {
+                Expression: { SourceRef: { Entity: "Sales" } },
+                Name: "Variation",
+                Property: "OrderDate",
+              },
+            },
+            Hierarchy: "Date Hierarchy",
+          },
+        },
+        Level: "Year",
+      },
+    };
+    expect(collectFieldRefs({ field }, "/p")).toEqual([
+      {
+        kind: "hierarchyLevel",
+        table: "Sales",
+        name: "Date Hierarchy",
+        level: "Year",
+        variation: { column: "OrderDate", name: "Variation" },
+        pointer: "/p/field",
+      },
+    ]);
+  });
+  it("reads a variation source for a column, a measure, and an aggregation, through an alias too", () => {
+    const variation = (source: unknown) => ({
+      PropertyVariationSource: { Expression: source, Name: "Variation", Property: "OrderDate" },
+    });
+    const refs = collectFieldRefs({
+      From: [{ Name: "s", Entity: "Sales", Type: 0 }],
+      a: { Column: { Expression: variation({ SourceRef: { Source: "s" } }), Property: "Year" } },
+      b: { Measure: { Expression: variation({ SourceRef: { Entity: "Sales" } }), Property: "M" } },
+      c: {
+        Aggregation: {
+          Expression: {
+            Column: { Expression: variation({ SourceRef: { Entity: "Sales" } }), Property: "Day" },
+          },
+          Function: 3,
+        },
+      },
+    });
+    const via = { column: "OrderDate", name: "Variation" };
+    expect(refs).toEqual([
+      { kind: "column", table: "Sales", name: "Year", variation: via, pointer: "/a" },
+      { kind: "measure", table: "Sales", name: "M", variation: via, pointer: "/b" },
+      { kind: "aggregation", table: "Sales", name: "Day", variation: via, pointer: "/c" },
+    ]);
+  });
+  it("skips a TransformTableRef, which names a transform's output rather than a model table", () => {
+    const transformed = { Expression: { TransformTableRef: { Source: "t" } }, Property: "X" };
+    const refs = collectFieldRefs({
+      a: { Column: transformed },
+      b: { Measure: transformed },
+      c: { Aggregation: { Expression: { Column: transformed }, Function: 0 } },
+    });
+    expect(refs).toEqual([]);
+  });
+  it("says why a reference has no table: an undeclared alias, an alias for no table, or no source", () => {
+    const aliased = (source: string) => ({
+      Column: { Expression: { SourceRef: { Source: source } }, Property: "Year" },
+    });
+    const refs = collectFieldRefs({
+      From: [
+        { Name: "sub", Expression: { Subquery: { Query: { From: [], Select: [] } } }, Type: 2 },
+      ],
+      a: aliased("d"),
+      b: aliased("sub"),
+      c: { Column: { Expression: { SourceRef: {} }, Property: "Year" } },
+      d: { Column: { Expression: { Literal: { Value: "1L" } }, Property: "Year" } },
+      e: { Column: { Property: "Year" } },
+    });
+    expect(refs.map((r) => [r.pointer, r.table, r.noTable])).toEqual([
+      ["/a", "", "undeclaredAlias"],
+      ["/b", "", "nonTableAlias"],
+      ["/c", "", "noSource"],
+      ["/d", "", "noSource"],
+      ["/e", "", "noSource"],
+    ]);
+  });
 });

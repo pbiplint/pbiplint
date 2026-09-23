@@ -5,7 +5,15 @@
   "captured": "2026-09-22",
   "deviations": {},
   "ours": {},
-  "native": {},
+  "native": {
+    "LANDING_PAGE_NOT_SET": [
+      "report"
+    ],
+    "HIDDEN_VISUAL_WITH_FIELDS": [
+      "0f2d9f89bd9c0e146925",
+      "c5be22dcf11a01f64810"
+    ]
+  },
   "results": {
     "ENSURE_ALTTEXT": {
       "ReportSection8952e5fd70dcea579d3b": {

@@ -6,6 +6,18 @@ export interface FieldRef {
   table: string;
   name: string;
   level?: string;
+  /**
+   * Set when the field's source is a date column's variation (a PropertyVariationSource), the way
+   * Power BI Desktop binds its auto date/time hierarchy: `table` is the date column's table,
+   * `column` the date column, and `name` the variation. The field itself (`name` above) is then
+   * on the table the variation leads to, such as Desktop's local date table.
+   */
+  variation?: { column: string; name: string };
+  /**
+   * Why `table` is empty, when it is: an alias no From list in scope declares, an alias whose
+   * From entry names no model table (a subquery, say), or a source that names no table at all.
+   */
+  noTable?: "undeclaredAlias" | "nonTableAlias" | "noSource";
   pointer: string;
 }
 
@@ -60,6 +72,13 @@ export interface Visual {
    * two roles is two.
    */
   projectionCount: number;
+  /**
+   * Every field reference in visual.json outside the wells' projections and the filters: a role's
+   * field parameters, formatting, conditional formatting, reference labels, a bound title or alt
+   * text, sort, expansion states, a group's own objects, and any property Desktop adds later. Read
+   * from the whole file, so a new property is covered without a code change.
+   */
+  propertyRefs: FieldRef[];
   showAllRoles: string[];
   filters: ReportFilter[];
   actions: VisualAction[];
@@ -90,6 +109,8 @@ export interface Page {
 /** The pages folder's own pages.json: the order of the pages and which one opens. */
 export interface PagesHeader {
   file?: string;
+  /** The text of that pages.json, so a finding about the opening page can point at its line. */
+  text?: string;
   pageOrder: string[];
   activePageName?: string;
   landingPageName?: string;
@@ -149,5 +170,4 @@ export interface Report {
   files: string[];
   issues: ParseIssue[];
   schemaVersions: { report?: string; page?: string; visual?: string };
-  annotations: Record<string, string>;
 }

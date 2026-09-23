@@ -4,7 +4,7 @@ import { optionsFor } from "../src/engine/run.js";
 import { resolveConfig } from "../src/engine/config.js";
 import { buildReport } from "../src/pbir/build.js";
 import type { Project } from "../src/project/types.js";
-import type { Rule } from "../src/rules/types.js";
+import type { Rule, RuleFinding } from "../src/rules/types.js";
 import { modelFrom } from "./helpers.js";
 
 export const j = (v: unknown): string => JSON.stringify(v);
@@ -61,6 +61,20 @@ export function projectFrom(reportFiles: LintFile[], tmdl?: string): Project {
   return tmdl === undefined ? { report } : { report, model: modelFrom(tmdl) };
 }
 
+/** Run one rule and return its findings, in emission order. */
+export function reportFindings(
+  rule: Rule,
+  reportFiles: LintFile[],
+  tmdl?: string,
+  options: Record<string, unknown> = {},
+): RuleFinding[] {
+  const project = projectFrom(reportFiles, tmdl);
+  // optionsFor reads the config's options by the rule's own id, so the map is set directly.
+  const config = resolveConfig();
+  if (Object.keys(options).length) config.options.set(rule.id, options);
+  return rule.check(project, { indexes: buildIndexes(project), options: optionsFor(rule, config) });
+}
+
 /** Run one rule and return the object ids it flags, in emission order. */
 export function reportObjectIds(
   rule: Rule,
@@ -68,11 +82,5 @@ export function reportObjectIds(
   tmdl?: string,
   options: Record<string, unknown> = {},
 ): string[] {
-  const project = projectFrom(reportFiles, tmdl);
-  // optionsFor reads the config's options by the rule's own id, so the map is set directly.
-  const config = resolveConfig();
-  if (Object.keys(options).length) config.options.set(rule.id, options);
-  return rule
-    .check(project, { indexes: buildIndexes(project), options: optionsFor(rule, config) })
-    .map((f) => f.objectId ?? f.objectName);
+  return reportFindings(rule, reportFiles, tmdl, options).map((f) => f.objectId ?? f.objectName);
 }

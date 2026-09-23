@@ -353,10 +353,10 @@ describe("a whole-project report", () => {
     expect(lines[2]).toBe("Notice: the walk stopped 64 folders deep inside Deep");
     expect(text).toContain("\nReport at a glance\n");
     expect(text).toMatch(
-      /\n {2}Opens on {9}Overview \(the page open when it was saved; no landing page set\)\n/,
+      /\n {2}Opens on {9}Overview \(the page open when it was saved; no landing page set\) {22}LANDING_PAGE_NOT_SET\n/,
     );
     expect(text).toMatch(
-      /\n {2}Model {12}1 table, 1 column, 1 measure \(1 column and 1 measure not reached from this report\)\n/,
+      /\n {2}Model {12}1 table, 1 column, 1 measure \(1 column and 1 measure not reached from this report\) {3}NOT_REACHED_FROM_REPORT\n/,
     );
     // PARSE_ISSUE is an Error Prevention error, so it ranks first; the model's DAX error follows.
     expect(text).toMatch(/\n {2}1\. File could not be fully parsed {2}\(1 error\) {3}\[report\]\n/);
@@ -404,7 +404,7 @@ describe("a whole-project report", () => {
     expect(md).toContain("Model: 2 files. Report: 4 files.");
     expect(md).toContain("> Notice: the walk stopped 64 folders deep inside Deep");
     expect(md).toContain(
-      "## Report at a glance\n\n| Fact | Value | Rule |\n|---|---|---|\n| Opens on | Overview (the page open when it was saved; no landing page set) |  |",
+      "## Report at a glance\n\n| Fact | Value | Rule |\n|---|---|---|\n| Opens on | Overview (the page open when it was saved; no landing page set) | [LANDING_PAGE_NOT_SET](https://pbiplint.com/rules/landing-page-not-set) |",
     );
     expect(md).toMatch(/## ERROR: File could not be fully parsed \(1\) · report/);
   });

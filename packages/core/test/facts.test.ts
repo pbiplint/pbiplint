@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildIndexes } from "../src/index/build.js";
 import { buildReport } from "../src/pbir/build.js";
 import { buildFacts } from "../src/project/facts.js";
+import { defaultRules } from "../src/rules/index.js";
 import { modelFrom } from "./helpers.js";
 
 const j = (v: unknown) => JSON.stringify(v);
@@ -39,17 +40,7 @@ const visual = (
     },
   }),
 });
-const ALL = new Set([
-  "LANDING_PAGE_NOT_SET",
-  "OPENING_PAGE_INVALID",
-  "FILTERS_PANE_STATE",
-  "HIDE_TOOLTIP_DRILLTROUGH_PAGES",
-  "HIDDEN_VISUALS_STILL_QUERY",
-  "REMOVE_UNUSED_CUSTOM_VISUALS",
-  "REPORT_LEVEL_MEASURES",
-  "SLICER_SELECTION_SAVED",
-  "NOT_REACHED_FROM_REPORT",
-]);
+const ALL = new Set(defaultRules.map((r) => r.id));
 const model = modelFrom(
   "table Sales\n\tcolumn Amount\n\t\tdataType: decimal\n\tcolumn Region\n\t\tdataType: string\n\tmeasure Total = SUM('Sales'[Amount])\n\tmeasure Other = 1\n",
 );
@@ -135,21 +126,19 @@ describe("buildFacts", () => {
         label: "Visuals",
         value: "4",
         detail: "1 hidden; 2 custom visual types registered, 1 used",
-        ruleId: "HIDDEN_VISUALS_STILL_QUERY",
+        ruleId: "HIDDEN_VISUAL_WITH_FIELDS",
       },
       {
         layer: "report",
         label: "Report measures",
         value: "2",
         detail: "defined in the report, not the model",
-        ruleId: "REPORT_LEVEL_MEASURES",
       },
       {
         layer: "report",
         label: "Slicers",
         value: "2",
         detail: "1 with a saved selection",
-        ruleId: "SLICER_SELECTION_SAVED",
       },
       { layer: "report", label: "Mobile layouts", value: "1 of 3 pages" },
       {
@@ -192,7 +181,10 @@ describe("buildFacts", () => {
     });
     expect(facts.find((f) => f.label === "Model")).toBeUndefined();
     const closed = buildReport([
-      { path: "definition/report.json", text: j({}) },
+      {
+        path: "definition/report.json",
+        text: j({ objects: { outspacePane: [{ properties: { expanded: lit("false") } }] } }),
+      },
       { path: "definition/pages/pages.json", text: j({ pageOrder: ["p3"], activePageName: "p3" }) },
       page("p3", "Scratch", { visibility: "HiddenInViewMode" }),
     ]).report;
@@ -221,6 +213,114 @@ describe("buildFacts", () => {
       value: "none",
     });
   });
+  it("reads an unrecorded pane as open, no named page as the first page, and a hidden landing page as fine", () => {
+    const unrecorded = buildReport([
+      { path: "definition/report.json", text: j({}) },
+      { path: "definition/pages/pages.json", text: j({ pageOrder: ["p2", "p1"] }) },
+      page("p1", "Overview"),
+      page("p2", "Summary"),
+    ]).report;
+    const f = buildFacts({ report: unrecorded }, buildIndexes({ report: unrecorded }), ALL);
+    expect(f[0]).toEqual({
+      layer: "report",
+      label: "Opens on",
+      value: "Summary",
+      detail: "the first page; no landing page set",
+      ruleId: "LANDING_PAGE_NOT_SET",
+    });
+    expect(f[1]).toEqual({
+      layer: "report",
+      label: "Filters pane",
+      value: "open",
+      detail: "read as open; report.json does not record it",
+      ruleId: "FILTERS_PANE_STATE",
+    });
+    // With no report.json read, absent or unreadable, nothing says what state the pane is in.
+    const pagesOnly = [
+      { path: "definition/pages/pages.json", text: j({ pageOrder: ["p1"], activePageName: "p1" }) },
+      page("p1", "Overview"),
+    ];
+    const conflicted = [
+      "{",
+      "<<<<<<< HEAD",
+      '  "objects": {}',
+      "=======",
+      "}",
+      ">>>>>>> theirs",
+    ].join("\n");
+    for (const files of [
+      pagesOnly,
+      [...pagesOnly, { path: "definition/report.json", text: conflicted }],
+    ]) {
+      const unread = buildReport(files).report;
+      expect(
+        buildFacts({ report: unread }, buildIndexes({ report: unread }), ALL).find(
+          (fact) => fact.label === "Filters pane",
+        ),
+      ).toEqual({
+        layer: "report",
+        label: "Filters pane",
+        value: "unknown",
+        detail: "report.json was not read",
+      });
+    }
+    // A hidden landing page is a true fact, but not one OPENING_PAGE_INVALID flags.
+    const hiddenLanding = buildReport([
+      {
+        path: "definition/pages/pages.json",
+        text: j({ pageOrder: ["p3"], activePageName: "p3", landingPageName: "p3" }),
+      },
+      page("p3", "Scratch", { visibility: "HiddenInViewMode" }),
+    ]).report;
+    expect(
+      buildFacts({ report: hiddenLanding }, buildIndexes({ report: hiddenLanding }), ALL)[0],
+    ).toEqual({
+      layer: "report",
+      label: "Opens on",
+      value: "Scratch (hidden)",
+      detail: "landing page",
+    });
+    // With no pages there is nothing to open, so LANDING_PAGE_NOT_SET does not fire and the fact links no rule.
+    const empty = buildReport([
+      { path: "definition/report.json", text: j({}) },
+      { path: "definition/pages/pages.json", text: j({ pageOrder: [] }) },
+    ]).report;
+    expect(buildFacts({ report: empty }, buildIndexes({ report: empty }), ALL)[0]).toEqual({
+      layer: "report",
+      label: "Opens on",
+      value: "unknown",
+      detail: "no landing page set",
+    });
+  });
+  it("says unknown when pages.json was not read, whether it is absent or unreadable", () => {
+    const unknown = {
+      layer: "report",
+      label: "Opens on",
+      value: "unknown",
+      detail: "pages.json was not read",
+    };
+    const absent = buildReport([
+      { path: "definition/report.json", text: j({}) },
+      page("a", "Alpha"),
+      page("b", "Beta"),
+    ]).report;
+    expect(buildFacts({ report: absent }, buildIndexes({ report: absent }), ALL)[0]).toEqual(
+      unknown,
+    );
+    const conflicted = buildReport([
+      { path: "definition/report.json", text: j({}) },
+      {
+        path: "definition/pages/pages.json",
+        text: '{\n  "pageOrder": ["b", "a"],\n<<<<<<< HEAD\n  "activePageName": "b"\n=======\n  "activePageName": "a"\n>>>>>>> theirs\n}',
+      },
+      page("a", "Alpha"),
+      page("b", "Beta"),
+    ]).report;
+    expect(conflicted.issues.length).toBeGreaterThan(0);
+    expect(
+      buildFacts({ report: conflicted }, buildIndexes({ report: conflicted }), ALL)[0],
+    ).toEqual(unknown);
+  });
   it("links a fact to the first of its candidate rules the run knows", () => {
     const { report } = buildReport(files);
     const project = { model, report };
@@ -231,6 +331,23 @@ describe("buildFacts", () => {
     );
     expect(facts.find((f) => f.label === "Opens on")!.ruleId).toBe("LANDING_PAGE_NOT_SET");
     expect(facts.find((f) => f.label === "Visuals")!.ruleId).toBe("REMOVE_UNUSED_CUSTOM_VISUALS");
+  });
+  it("links the Visuals fact to HIDDEN_VISUAL_WITH_FIELDS by the rule's own count of fields in wells", () => {
+    // A visual calculation references no model field, and is still a field in a well.
+    const calc = { NativeVisualCalculation: { Language: "dax", Expression: "1", Name: "One" } };
+    const { report } = buildReport([
+      page("p1", "Overview"),
+      visual("p1", "v1", "tableEx", { isHidden: true }, [calc]),
+    ]);
+    expect(report.pages[0]!.visuals[0]!.fields).toEqual([]);
+    const facts = buildFacts({ report }, buildIndexes({ report }), ALL);
+    expect(facts.find((f) => f.label === "Visuals")).toEqual({
+      layer: "report",
+      label: "Visuals",
+      value: "1",
+      detail: "1 hidden",
+      ruleId: "HIDDEN_VISUAL_WITH_FIELDS",
+    });
   });
   it("gives a model-only run no facts at all, because the block is about the report", () => {
     expect(buildFacts({ model }, buildIndexes({ model }), ALL)).toEqual([]);

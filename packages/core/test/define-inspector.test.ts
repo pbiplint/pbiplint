@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { microsoftBpaRules } from "../src/rules/microsoft-bpa/index.js";
 import { inspectorRule } from "../src/rules/pbi-inspector/define.js";
 import { INSPECTOR_RULES } from "../src/rules/pbi-inspector/inspector-rules.data.js";
 import { pbiInspectorRules } from "../src/rules/pbi-inspector/index.js";
@@ -56,8 +57,9 @@ describe("inspectorRule", () => {
     ).toThrow(/NOPE/);
   });
   it("is in the default rule set after the model rules", () => {
-    expect(
-      defaultRules.slice(defaultRules.length - pbiInspectorRules.length).map((r) => r.id),
-    ).toEqual(pbiInspectorRules.map((r) => r.id));
+    const start = 1 + microsoftBpaRules.length;
+    expect(defaultRules.slice(start, start + pbiInspectorRules.length).map((r) => r.id)).toEqual(
+      pbiInspectorRules.map((r) => r.id),
+    );
   });
 });

@@ -135,6 +135,8 @@ export {
   type InspectorRuleSpec,
 } from "./rules/pbi-inspector/define.js";
 export { pbiInspectorRules } from "./rules/pbi-inspector/index.js";
+export { pbiplintRule, type PbiplintRuleSpec } from "./rules/pbiplint/define.js";
+export { pbiplintRules } from "./rules/pbiplint/index.js";
 export { allVisuals, isHiddenPage, reportFinding, visiblePages } from "./rules/report-helpers.js";
 export * from "./rules/types.js";
 export { parseTmdl } from "./tmdl/parse.js";

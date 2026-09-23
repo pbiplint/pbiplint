@@ -77,13 +77,13 @@ export const reportFinding = {
       },
       detail,
     ),
-  bookmark: (b: Bookmark, detail?: string): RuleFinding =>
+  bookmark: (b: Bookmark, detail?: string, pointer?: string): RuleFinding =>
     withDetail(
       {
         objectType: "Bookmark",
         objectName: bookmarkLabel(b),
         objectId: b.id,
-        location: { file: b.file, line: 1 },
+        location: at(b.file, b.text, pointer),
         object: b,
       },
       detail,

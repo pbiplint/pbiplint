@@ -356,7 +356,7 @@ describe("a whole-project report", () => {
       /\n {2}Opens on {9}Overview \(the page open when it was saved; no landing page set\)\n/,
     );
     expect(text).toMatch(
-      /\n {2}Model {12}1 table, 1 column, 1 measure \(1 column and 1 measure not reached from this report\)\n/,
+      /\n {2}Model {12}1 table, 1 column, 1 measure \(1 column and 1 measure not reached from this report\) {3}NOT_REACHED_FROM_REPORT\n/,
     );
     // PARSE_ISSUE is an Error Prevention error, so it ranks first; the model's DAX error follows.
     expect(text).toMatch(/\n {2}1\. File could not be fully parsed {2}\(1 error\) {3}\[report\]\n/);

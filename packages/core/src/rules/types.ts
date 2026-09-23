@@ -139,5 +139,7 @@ export interface Rule {
   fixExpression?: string;
   references: string[];
   status: RuleStatus;
+  /** A policy rule's severity under its options, read when the config sets no severity for it. */
+  policySeverity?(options: RuleOptions): Severity | undefined;
   check(project: Project, ctx: RuleContext): RuleFinding[];
 }

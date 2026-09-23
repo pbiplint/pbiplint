@@ -4,7 +4,7 @@ import {
   LANDING_PAGE_NOT_SET,
   OPENING_PAGE_INVALID,
 } from "../src/rules/pbiplint/opening.js";
-import { j, lit, page, reportFindings, reportObjectIds } from "./report-helpers.js";
+import { j, lineOf, lit, page, pretty, reportFindings, reportObjectIds } from "./report-helpers.js";
 
 const pages = (header: Record<string, unknown>) => [
   { path: "definition/pages/pages.json", text: j({ pageOrder: ["p", "h"], ...header }) },
@@ -12,10 +12,6 @@ const pages = (header: Record<string, unknown>) => [
   page("h", { visibility: "HiddenInViewMode" }),
 ];
 
-const pretty = (v: unknown) => JSON.stringify(v, null, 2);
-/** The 1-based line of the first occurrence of `needle` in `text`. */
-const lineOf = (text: string, needle: string): number =>
-  text.slice(0, text.indexOf(needle)).split("\n").length;
 /** A report-level finding as the opening rules build it: no `object`, so config switches it off. */
 const onReport = (file: string, line: number, detail: string) => ({
   objectType: "Report",

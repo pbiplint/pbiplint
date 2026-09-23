@@ -5,6 +5,7 @@ import { ignoreHelp, isIgnored } from "../src/engine/ignore.js";
 import { lint } from "../src/engine/lint.js";
 import { rank } from "../src/engine/rank.js";
 import { optionsFor, runRules } from "../src/engine/run.js";
+import { skippedLine } from "../src/format/text.js";
 import { finding, namedObjects } from "../src/rules/helpers.js";
 import { PARSE_ISSUE } from "../src/rules/parse-issue.js";
 import { ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY } from "../src/rules/pbi-inspector/pages.js";
@@ -608,12 +609,20 @@ describe("lint over a project", () => {
         entities: [{ name: "Sales", measures: [{ name: "Net Margin", expression: "1" }] }],
       }),
     };
-    const reportOnly = lint([...reportFiles, extensions]);
+    // pairingDecision gives this reason when definition.pbir connects to a published model, and
+    // the CLI and the browser pass it to lint as the model's absence.
+    const reportOnly = lint([...reportFiles, extensions], {
+      absent: { model: "this report reads a published model" },
+    });
     expect(reportOnly.findings.filter((f) => f.ruleId === "REPORT_LEVEL_MEASURES")).toEqual([]);
     expect(reportOnly.summary.rulesSkipped).toContainEqual({
       id: "REPORT_LEVEL_MEASURES",
       reason: "noModel",
     });
+    // The skipped line carries the reason rules/report-level-measures.md quotes.
+    expect(skippedLine(reportOnly)).toMatch(
+      /\d+ rules skipped \(this report reads a published model\)/,
+    );
     // With the model in the run, the same measure is reported.
     const both = lint([...modelFiles, ...reportFiles, extensions]);
     expect(

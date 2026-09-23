@@ -12,8 +12,10 @@ import {
   bound,
   column,
   j,
+  lineOf,
   measure,
   page,
+  pretty,
   projectFrom,
   reportFindings,
   reportObjectIds,
@@ -30,10 +32,6 @@ const tmdl = `table Sales
 	measure 'Sales LY' = CALCULATE([Total Sales])
 	measure 'Sales YoY %' = [Total Sales] - [Sales LY]
 `;
-
-/** The 1-based line of the first occurrence of `needle` in `text`, at or after `from`. */
-const lineOf = (text: string, needle: string, from = 0): number =>
-  text.slice(0, text.indexOf(needle, from)).split("\n").length;
 
 describe("BROKEN_FIELD_REFERENCE", () => {
   it("names the object carrying each unresolved reference, with the field and the reason", () => {
@@ -119,7 +117,7 @@ describe("BROKEN_FIELD_REFERENCE", () => {
     // Desktop binds a report measure with `"Schema": "extension"`; the measure has since moved
     // into the model, and the input holds no reportExtensions.json, so nothing in the report
     // defines it.
-    const text = JSON.stringify(
+    const text = pretty(
       JSON.parse(
         bound("p", "v", "cardVisual", [
           {
@@ -130,8 +128,6 @@ describe("BROKEN_FIELD_REFERENCE", () => {
           },
         ]).text,
       ),
-      null,
-      2,
     );
     const files = [page("p"), { path: "definition/pages/p/visuals/v/visual.json", text }];
     const withMeasure = `${tmdl}\tmeasure 'Net Margin' = [Total Sales] * 0.1\n`;
@@ -258,7 +254,6 @@ describe("BROKEN_FIELD_REFERENCE", () => {
     ]);
   });
   it("points at the reference's own line in a pretty-printed report.json and bookmark", () => {
-    const pretty = (v: unknown) => JSON.stringify(v, null, 2);
     const reportText = pretty({
       themeCollection: { baseTheme: { name: "CY24SU10" } },
       filterConfig: {
@@ -291,7 +286,6 @@ describe("BROKEN_FIELD_REFERENCE", () => {
     expect(findings.map((f) => f.location)).toEqual(expected);
   });
   it("reports one finding for a missing column an applied page filter names twice", () => {
-    const pretty = (v: unknown) => JSON.stringify(v, null, 2);
     const pageText = pretty({
       name: "p",
       displayName: "Page p",
@@ -337,7 +331,6 @@ describe("BROKEN_FIELD_REFERENCE", () => {
     ]);
   });
   it("reports one finding for a missing column a visual binds and filters, on the binding's line", () => {
-    const pretty = (v: unknown) => JSON.stringify(v, null, 2);
     const visualText = pretty({
       name: "v",
       position: { x: 0, y: 0, z: 0, height: 100, width: 100 },
@@ -371,7 +364,6 @@ describe("BROKEN_FIELD_REFERENCE", () => {
     ]);
   });
   it("fires on a visual whose conditional formatting names a missing measure, at that line", () => {
-    const pretty = (v: unknown) => JSON.stringify(v, null, 2);
     const visualText = pretty({
       name: "v",
       position: { x: 0, y: 0, z: 0, height: 100, width: 100 },
@@ -408,7 +400,6 @@ describe("BROKEN_FIELD_REFERENCE", () => {
     ]);
   });
   it("folds a sort entry that repeats a missing bound field into the binding's finding", () => {
-    const pretty = (v: unknown) => JSON.stringify(v, null, 2);
     const visualText = pretty({
       name: "v",
       position: { x: 0, y: 0, z: 0, height: 100, width: 100 },

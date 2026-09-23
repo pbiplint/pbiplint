@@ -6,18 +6,16 @@ import {
   bound,
   column,
   j,
+  lineOf,
   measure,
   page,
+  pretty,
   projectFrom,
   reportFindings,
   reportObjectIds,
   visual,
 } from "./report-helpers.js";
 
-const pretty = (v: unknown) => JSON.stringify(v, null, 2);
-/** The 1-based line of the first occurrence of `needle` in `text`. */
-const lineOf = (text: string, needle: string): number =>
-  text.slice(0, text.indexOf(needle)).split("\n").length;
 /** What every tier-2 rule shares: a warning on the report layer, built into pbiplint. */
 const tier2 = { severity: 2, layer: "report", needs: ["report"], status: "builtin" };
 
@@ -32,6 +30,15 @@ describe("DEFAULT_PAGE_NAME", () => {
       page("f", { displayName: "Duplicate of Duplicate of Overview" }),
     ];
     expect(reportObjectIds(DEFAULT_PAGE_NAME, files)).toEqual(["a", "b", "c", "f"]);
+  });
+  it("matches only the page numbers Desktop gives, from 1 without leading zeros", () => {
+    const files = [
+      page("a", { displayName: "Page 1" }),
+      page("b", { displayName: "Page 10" }),
+      page("c", { displayName: "Page 01" }),
+      page("d", { displayName: "Page 0" }),
+    ];
+    expect(reportObjectIds(DEFAULT_PAGE_NAME, files)).toEqual(["a", "b"]);
   });
   it("says which name it matched, never who gave it", () => {
     const files = [
@@ -170,6 +177,17 @@ describe("VISUAL_WITHOUT_FIELDS", () => {
       {
         path: "definition/pages/p/visuals/bare/visual.json",
         text: j({ name: "bare", position: {} }),
+      },
+    ];
+    expect(projectFrom(files).report!.pages[0]!.visuals[0]!.type).toBe("unknown");
+    expect(reportObjectIds(VISUAL_WITHOUT_FIELDS, files)).toEqual([]);
+  });
+  it("leaves a visual that records no visualType alone", () => {
+    const files = [
+      page("p"),
+      {
+        path: "definition/pages/p/visuals/typeless/visual.json",
+        text: j({ name: "typeless", position: {}, visual: {} }),
       },
     ];
     expect(projectFrom(files).report!.pages[0]!.visuals[0]!.type).toBe("unknown");

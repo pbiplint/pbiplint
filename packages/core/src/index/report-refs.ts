@@ -63,10 +63,10 @@ const q = (s: string): string => `"${s}"`;
 
 /**
  * Every field reference in the report with what it resolves to. Resolution is by name without
- * regard to case, the way the model's own reference index resolves DAX. A measure is looked up on
- * the table the reference names, then among the report's own measures, and a measure that lives
- * on another table is reported as such, since Desktop breaks the visual the same way when a
- * measure moves. A reference that names a schema (Desktop writes `extension` for a report measure)
+ * regard to case, the way the model's own reference index resolves DAX. A measure is looked up
+ * among the report's own measures first, by the table and name the reference gives, then on the
+ * model table it names, and a measure that lives on another table is reported as such, since
+ * Desktop breaks the visual the same way when a measure moves. A reference that names a schema (Desktop writes `extension` for a report measure)
  * resolves among the report's own measures only, and is `unread` while reportExtensions.json
  * could not be read. Without a model, every other reference is unresolved with one reason.
  */

@@ -8,6 +8,11 @@ import type { Rule, RuleFinding } from "../src/rules/types.js";
 import { modelFrom } from "./helpers.js";
 
 export const j = (v: unknown): string => JSON.stringify(v);
+/** Indented JSON, as Power BI Desktop writes it, so each key sits on a line of its own. */
+export const pretty = (v: unknown): string => JSON.stringify(v, null, 2);
+/** The 1-based line of the first occurrence of `needle` in `text`, at or after `from`. */
+export const lineOf = (text: string, needle: string, from = 0): number =>
+  text.slice(0, text.indexOf(needle, from)).split("\n").length;
 export const column = (entity: string, property: string) => ({
   Column: { Expression: { SourceRef: { Entity: entity } }, Property: property },
 });

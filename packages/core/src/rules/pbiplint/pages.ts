@@ -4,11 +4,12 @@ import { pbiplintRule } from "./define.js";
 
 /**
  * The names English Power BI Desktop gives a new or duplicated page (a duplicate of a duplicate
- * nests), and a name marked as a copy, each with what the finding says of it. The detail names the
- * pattern, never who typed the name, which pbiplint cannot read.
+ * nests), and a name marked as a copy, each with what the finding says of it. Desktop numbers new
+ * pages from 1 without leading zeros, so `Page 0` and `Page 01` are not its names. The detail names
+ * the pattern, never who typed the name, which pbiplint cannot read.
  */
 const DEFAULT_NAMES: [RegExp, string][] = [
-  [/^Page \d+$/, "is the name Power BI Desktop gives a new page"],
+  [/^Page [1-9]\d*$/, "is the name Power BI Desktop gives a new page"],
   [/^Duplicate of .+$/, "is the name Power BI Desktop gives a duplicated page"],
   [/^.+ \(copy\)$/, "is named as a copy"],
 ];

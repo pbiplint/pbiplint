@@ -139,7 +139,9 @@ export function lineOfPointer(text: string, pointer: string): number {
   const matches = (): boolean => path.length === want.length && path.every((p, i) => p === want[i]);
   let line = 1;
   let expectKey = false;
-  for (let i = 0; i < text.length; i++) {
+  // The text a finding factory holds keeps the BOM readJson drops. It is not part of the document,
+  // and the scalar skip below would never move past it, because a regex `\s` matches it.
+  for (let i = text.charCodeAt(0) === 0xfeff ? 1 : 0; i < text.length; i++) {
     const ch = text[i]!;
     if (ch === "\n") {
       line++;

@@ -93,4 +93,10 @@ describe("lineOfPointer", () => {
     expect(lineOfPointer('{\n  "a/b": 1,\n  "c~d": 2\n}', "/a~1b")).toBe(2);
     expect(lineOfPointer('{\n  "a/b": 1,\n  "c~d": 2\n}', "/c~0d")).toBe(3);
   });
+  it("reads past a BOM, which the finding factories' file text keeps", () => {
+    expect(lineOfPointer(`\ufeff${doc}`, "/position/height")).toBe(5);
+    expect(
+      lineOfPointer('\ufeff{\n  "pageOrder": [],\n  "activePageName": "p"\n}', "/activePageName"),
+    ).toBe(3);
+  });
 });

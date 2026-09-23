@@ -12,6 +12,8 @@ import type { Bookmark, Page, Report, ReportMeasure, Visual } from "../pbir/type
 import type { Project } from "../project/types.js";
 import type { RuleFinding } from "./types.js";
 
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v);
 const at = (file: string, text: string, pointer?: string) => ({
   file,
   line: pointer ? lineOfPointer(text, pointer) : 1,
@@ -131,6 +133,41 @@ export const visiblePages = (r: Report): Page[] => r.pages.filter((p) => !isHidd
  * model field, still counts, and a group, which has no wells, never does.
  */
 export const hiddenVisualWithFields = (v: Visual): boolean => v.isHidden && v.projectionCount > 0;
+
+/**
+ * The slicer types in Microsoft's visual catalog: the slicer, the button slicer, the list slicer,
+ * the input slicer, and `filterSlicer`. A slicer from AppSource is a custom visual, not one of them.
+ */
+const SLICER_TYPES = new Set([
+  "slicer",
+  "advancedSlicerVisual",
+  "listSlicer",
+  "textSlicer",
+  "filterSlicer",
+]);
+
+/** Whether the visual is one of Microsoft's slicers; the Slicers fact counts these. */
+export const isSlicer = (v: Visual): boolean => SLICER_TYPES.has(v.type);
+
+/**
+ * SLICER_SELECTION_SAVED's condition, which the Slicers fact shares: the pointer of a slicer's
+ * saved selection, the first `general` entry whose `filter` holds a `Where` with a condition in
+ * it, or undefined when the slicer opens with nothing selected. Every catalog slicer keeps its
+ * selection there. Its `filterConfig` entries are Filters pane filters, never the selection, and
+ * Select all writes no filter, even in inverted selection mode.
+ */
+export function slicerSelection(v: Visual): string | undefined {
+  if (!isSlicer(v) || !isRecord(v.json) || !isRecord(v.json.visual)) return undefined;
+  const objects = v.json.visual.objects;
+  const general = isRecord(objects) && Array.isArray(objects.general) ? objects.general : [];
+  const i = general.findIndex((entry) => {
+    const props = isRecord(entry) && isRecord(entry.properties) ? entry.properties : {};
+    const filter =
+      isRecord(props.filter) && isRecord(props.filter.filter) ? props.filter.filter : {};
+    return Array.isArray(filter.Where) && filter.Where.length > 0;
+  });
+  return i === -1 ? undefined : `/visual/objects/general/${i}/properties/filter`;
+}
 
 /**
  * The report measures REPORT_LEVEL_MEASURES reports, which the Report measures fact shares: every

@@ -1,5 +1,10 @@
 import { plural } from "../../format/text.js";
-import { allVisuals, hiddenVisualWithFields, reportFinding } from "../report-helpers.js";
+import {
+  allVisuals,
+  hiddenVisualWithFields,
+  reportFinding,
+  slicerSelection,
+} from "../report-helpers.js";
 import { pbiplintRule } from "./define.js";
 
 export const HIDDEN_VISUAL_WITH_FIELDS = pbiplintRule({
@@ -95,4 +100,30 @@ export const VISUAL_OUTSIDE_PAGE = pbiplintRule({
       : [],
 });
 
-export const visualRules = [HIDDEN_VISUAL_WITH_FIELDS, VISUAL_WITHOUT_FIELDS, VISUAL_OUTSIDE_PAGE];
+export const SLICER_SELECTION_SAVED = pbiplintRule({
+  id: "SLICER_SELECTION_SAVED",
+  name: "Slicer saved with a selection",
+  category: "Report Design",
+  severity: 1,
+  scope: ["Visual"],
+  layer: "report",
+  options: [{ name: "expect", type: "string", values: ["none"] }],
+  policySeverity: (o) => (o.expect === "none" ? 2 : undefined),
+  // A hidden slicer still filters, and each synced copy carries the selection it reports.
+  check: ({ report }) =>
+    report
+      ? allVisuals(report).flatMap((v) => {
+          const selection = slicerSelection(v);
+          return selection === undefined
+            ? []
+            : [reportFinding.visual(v, selection, "opens with this selection applied")];
+        })
+      : [],
+});
+
+export const visualRules = [
+  HIDDEN_VISUAL_WITH_FIELDS,
+  VISUAL_WITHOUT_FIELDS,
+  VISUAL_OUTSIDE_PAGE,
+  SLICER_SELECTION_SAVED,
+];

@@ -52,6 +52,19 @@ export function literal(prop: unknown): string | undefined {
 const isBoundExpression = (prop: unknown): boolean =>
   isRecord(prop) && isRecord(prop.expr) && !("Literal" in prop.expr);
 
+/**
+ * The property that holds each action type's destination, keyed by the type in lower case, since
+ * the type is matched without regard to case. Microsoft's capability data spells the types
+ * `PageNavigation`, `Drillthrough`, `Bookmark`, `WebUrl`, and `Qna`; the others name no target.
+ */
+const ACTION_TARGETS: ReadonlyMap<string, string> = new Map([
+  ["pagenavigation", "navigationSection"],
+  ["drillthrough", "drillthroughSection"],
+  ["bookmark", "bookmark"],
+  ["weburl", "webUrl"],
+  ["qna", "qna"],
+]);
+
 /** `annotations: [{ name, value }]` as the record every Ignorable carries. */
 function annotationsOf(v: unknown): Record<string, string> {
   const out: Record<string, string> = {};
@@ -236,15 +249,17 @@ function buildVisual(
       const props = properties(entry);
       const type = props ? literal(props.type) : undefined;
       if (!props || type === undefined) return;
-      const target =
-        literal(props.navigationSection) ??
-        literal(props.bookmark) ??
-        literal(props.drillthroughSection) ??
-        literal(props.webUrl);
+      const at = `/visual/visualContainerObjects/visualLink/${i}/properties`;
+      // Only the type's own property: one another type left behind is not the destination.
+      const key = ACTION_TARGETS.get(type.toLowerCase());
+      const prop = key === undefined ? undefined : props[key];
+      const target = literal(prop);
       actions.push({
         type,
-        ...(target !== undefined ? { target } : {}),
-        pointer: `/visual/visualContainerObjects/visualLink/${i}/properties`,
+        on: literal(props.show) !== "false",
+        ...(target ? { target } : {}),
+        ...(isBoundExpression(prop) ? { conditional: true as const } : {}),
+        pointer: prop === undefined ? at : `${at}/${key}`,
       });
     });
   const title = Array.isArray(vco.title) ? literal(properties(vco.title[0])?.text) : undefined;
@@ -292,10 +307,15 @@ function buildBookmark(
 ): Bookmark {
   const state = isRecord(json.explorationState) ? json.explorationState : {};
   const sections = isRecord(state.sections) ? state.sections : {};
-  const visuals: { page: string; visual: string }[] = [];
+  const visuals: Bookmark["visuals"] = [];
   for (const [page, section] of Object.entries(sections))
     if (isRecord(section) && isRecord(section.visualContainers))
-      for (const visual of Object.keys(section.visualContainers)) visuals.push({ page, visual });
+      for (const visual of Object.keys(section.visualContainers))
+        visuals.push({
+          page,
+          visual,
+          pointer: `/explorationState/sections/${escapePointer(page)}/visualContainers/${escapePointer(visual)}`,
+        });
   return {
     id: str(json.name) ?? id,
     displayName: str(json.displayName) ?? id,

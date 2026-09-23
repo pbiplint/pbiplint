@@ -417,6 +417,11 @@ says unknown, and `FILTERS_PANE_STATE` reports nothing under any policy,
 when `report.json` was not read (absent, or unreadable). That unknown
 Filters pane fact links no rule, because the rule cannot fire then.
 
+Amended 2026-09-23 with Michael: Report measures shows its count
+whenever the report defines measures, and links `REPORT_LEVEL_MEASURES`
+only when that rule fires, that is, with the model the report reads in
+the run (section 8.3).
+
 **Cost.** Linear in the JSON. The demo report's largest visual is
 61 KB, most under 5 KB; a 300-visual report is a few megabytes and
 lints well under a second in the browser. No new dependency.
@@ -551,12 +556,21 @@ are diagnostics.
 
 Amended 2026-09-23 with pull request 4, reading the conditions rather
 than changing them: `VISUAL_WITHOUT_FIELDS` counts a visual's well
-entries, and its data visuals are the types Microsoft's catalog gives
-data roles, less the paginated report and Power Automate visuals, whose
-fields Learn makes optional; `VISUAL_OUTSIDE_PAGE` checks ungrouped
+entries, and takes every visual type for a data visual except the
+thirteen that bind nothing by design (those without data roles in
+Microsoft's visual catalog, the paginated report visual, and the Power
+Automate visual, whose fields Learn makes optional), so a custom visual
+counts as a data visual; `VISUAL_OUTSIDE_PAGE` checks ungrouped
 visuals and top-level groups, whose positions are page-relative, and
 reports an edge passed by at least 1 px; `DEFAULT_PAGE_NAME` reads a
 display name its page.json records, and matches the English names.
+
+Amended 2026-09-23 with Michael: `REPORT_LEVEL_MEASURES` reports a
+measure only when the run holds the model the report reads; a report
+that reads a published model is left alone, because Learn presents
+report measures as the supported route for an author who cannot change
+a shared model. The rule needs both layers, so a run without the model
+skips it.
 
 ### 8.4 Native, tier 3
 

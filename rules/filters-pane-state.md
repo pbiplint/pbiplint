@@ -91,6 +91,10 @@ Only when the project has no single state its reports should open with, and then
 - A bookmark can carry its own Filters pane state, since the pane's open, closed, and visible states are all bookmarkable. The rule reads only the state saved in report.json.
 - Hiding the Filters pane while you edit, with Filters on the View tab, changes only what Power BI Desktop shows you, not what readers see, so the rule does not read it.
 
+## Related rules
+
+- `SLICER_SELECTION_SAVED` is the other policy rule about the state a report opens in, a slicer saved with a selection.
+
 ## Links
 
 - [Format filters in Power BI reports, including how to hide the Filters pane from readers](https://learn.microsoft.com/power-bi/create-reports/power-bi-report-filter)

@@ -577,7 +577,8 @@ Automate visual, whose fields Learn makes optional), so a custom visual
 counts as a data visual; `VISUAL_OUTSIDE_PAGE` checks ungrouped
 visuals and top-level groups, whose positions are page-relative, and
 reports an edge passed by at least 1 px; `DEFAULT_PAGE_NAME` reads a
-display name its page.json records, and matches the English names.
+display name its page.json records, and matches the English names
+Desktop gives and the `<name> (copy)` form.
 
 Amended 2026-09-23 with Michael: `REPORT_LEVEL_MEASURES` reports a
 measure only when the run holds the model the report reads; a report

@@ -70,7 +70,7 @@ In visual.json, a visual's fields are the `projections` under `query.queryState`
 
 ## When to ignore it
 
-A custom visual that takes no fields, such as one that only draws a logo or a menu, is not a data visual, but pbiplint cannot tell that from the file and counts it as one. Check the Visualizations pane with the visual selected: if it offers no wells to fill, ignore the finding on it.
+A custom visual, or a visual type newer than pbiplint, that takes no fields, such as a custom visual that only draws a logo or a menu, is not a data visual, but pbiplint cannot tell that from the file and counts it as one. Check the Visualizations pane with the visual selected: if it offers no wells to fill, ignore the finding on it.
 
 ## Quirks
 
@@ -78,7 +78,7 @@ A custom visual that takes no fields, such as one that only draws a logo or a me
 - A visual calculation in a well counts as a field, though it names nothing in the model.
 - Slicers are data visuals here, so a slicer with no field is reported.
 - A hidden visual is checked like a visible one.
-- A visual.json with neither a `visual` nor a `visualGroup` holds no visual to judge, and is not checked.
+- A visual.json with neither a `visual` nor a `visualGroup` holds no visual to judge, and is not checked. Neither is a `visual` that records no `visualType`, since pbiplint cannot tell what type of visual it is.
 
 ## Related rules
 

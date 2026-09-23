@@ -52,9 +52,9 @@ const compared = (v: Visual): boolean =>
  * The first disagreement in tab sequence from one scope down: the scope's compared members, then
  * the scope of each visible group in it, those the tab sequence reaches first. Desktop writes a
  * grouped visual's x, y, and tabOrder relative to its group, so the members of one scope share an
- * origin and their own positions order them. A scope agrees when its tab order, ties broken by
- * reading order, is the reading order or the strict top-then-left order Desktop's "match visual
- * order" button writes.
+ * origin and their own positions order them. A scope agrees when its tab order is the reading
+ * order or the strict top-then-left order Desktop's "match visual order" button writes, a tie in
+ * tabOrder broken by whichever of the two it is compared with, so a tie alone is no disagreement.
  */
 function firstDisagreement(
   scope: Visual[],
@@ -65,11 +65,15 @@ function firstDisagreement(
   const members = scope.filter(compared);
   // A scope of fewer than two has no order to disagree with; its groups are still entered.
   const layout = members.length < 2 ? members : readingOrder(members);
-  const read = new Map(layout.map((v, k) => [v, k]));
-  const tabs = [...members].sort((a, b) => tab(a) - tab(b) || read.get(a)! - read.get(b)!);
   const strict = [...members].sort(byTopThenLeft);
+  /** The members in tab order, a tie broken by the order they are then compared with. */
+  const inTabOrder = (order: Visual[]): Visual[] => {
+    const place = new Map(order.map((v, k) => [v, k]));
+    return [...members].sort((a, b) => tab(a) - tab(b) || place.get(a)! - place.get(b)!);
+  };
+  const tabs = inTabOrder(layout);
   const i = layout.findIndex((v, k) => v !== tabs[k]);
-  if (i !== -1 && strict.some((v, k) => v !== tabs[k])) {
+  if (i !== -1 && inTabOrder(strict).some((v, k) => v !== strict[k])) {
     const detail =
       i === 0
         ? `tab order starts at ${visualName(tabs[0]!)} but the layout reads ${visualName(layout[0]!)} first`

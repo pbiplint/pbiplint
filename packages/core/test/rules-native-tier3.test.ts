@@ -625,6 +625,19 @@ describe("TAB_ORDER_FOLLOWS_LAYOUT", () => {
     expect(detail([page("p"), at("a", 0, 0, 1000), at("b", 200, 0, 1000)])).toEqual([]);
     expect(detail([page("p"), at("a", 0, 0, 1000), at("b", 0, 0, 2000)])).toEqual([]);
   });
+  it("takes a tie in tab order for no disagreement with the strict top-then-left order too", () => {
+    // One row to the tolerant reading, which reads y first, so only the strict order can agree:
+    // it reads x, u, v, y, and the tab order is that apart from the tie between v and y.
+    const probe = (yTab: number) => [
+      page("p"),
+      at("x", 200, 0, 0),
+      at("u", 400, 2, 500),
+      at("v", 300, 15, 1000),
+      at("y", 0, 20, yTab),
+    ];
+    expect(detail(probe(1000))).toEqual([]);
+    expect(detail(probe(1001))).toEqual([]);
+  });
   it("sits on line 1 of the page's page.json", () => {
     const [f] = reportFindings(TAB_ORDER_FOLLOWS_LAYOUT, [
       page("p"),

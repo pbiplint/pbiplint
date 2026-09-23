@@ -113,7 +113,8 @@ There is no legitimate exception, because a reference the model cannot resolve i
 - A measure defined in the report itself, in reportExtensions.json, resolves like a model measure, so a visual bound to one is not reported. A reference inside such a measure's own DAX is not reported by this rule at all.
 - Each object reports a missing field once, however many times it names it. A filter that names the field in its `field` and again in its condition is one finding, and so is a visual that binds a field and also filters or sorts by it. The finding keeps one line, chosen in this order rather than by position in the file: the well that binds the field, else the first filter that names it, else the first formatting property or sort entry that does.
 - A field a visual names anywhere in its file counts, not only the fields in its wells: conditional formatting, a title bound to a measure, a card's reference label, and the sort all name fields, so a missing field in any of them is reported.
-- A filter condition that reaches its table through an alias the filter never declares is reported by the field's name alone, as `[Region]: a filter alias that no From list declares`.
+- A filter condition that reaches its table through an alias the filter never declares is reported by the field's name alone, as `[Region]: a filter alias that no From list declares`. A reference whose alias stands for a subquery rather than a table, or whose source names no table at all, is labelled the same way, with `an alias whose From entry names no model table` or `a source that names no model table`.
+- With Auto date/time on, Power BI Desktop gives a date column a hidden table of its own, with a hierarchy named Date Hierarchy, and the report reaches that hierarchy through the date column's variation (`PropertyVariationSource` in the JSON) rather than by a table name. The rule follows the same path, from the date column through its variation to the hierarchy and its level, and labels a break with the date column and the hierarchy, as `'Sales'[OrderDate].[Date Hierarchy].[Week]: no level named "Week" in hierarchy "Date Hierarchy" on "LocalDateTable_…"`.
 - The rule compares the report with its model, so it runs only when both are in the input.
 
 ## Related rules
@@ -124,3 +125,4 @@ There is no legitimate exception, because a reference the model cannot resolve i
 
 - [Report view in Power BI Desktop, including the error a visual shows for fields the model does not have](https://learn.microsoft.com/power-bi/create-reports/desktop-report-view)
 - [Troubleshoot field errors in conditional formatting](https://learn.microsoft.com/power-bi/visuals/power-bi-visualization-conditional-formatting#troubleshoot-field-errors-in-conditional-formatting)
+- [Auto date/time in Power BI Desktop, including the hidden table and its Date Hierarchy](https://learn.microsoft.com/power-bi/transform-model/desktop-auto-date-time)

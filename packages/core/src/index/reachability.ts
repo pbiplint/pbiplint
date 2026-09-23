@@ -26,8 +26,9 @@ const nameOf = (n: Node): string =>
 
 /**
  * What the report reaches in the model, to a fixed point (spec section 6). Roots: every resolved
- * report reference, both columns of every relationship, columns named in RLS and OLS, variation
- * default columns, and the references of the report's own measures. From a reached object: a
+ * report reference (a hierarchy's level columns, and the date column a variation reference goes
+ * through), both columns of every relationship, columns named in RLS and OLS, variation default
+ * columns, and the references of the report's own measures. From a reached object: a
  * measure reaches what its DAX references; a calculated column likewise; a column reaches its
  * table, its sort-by column, and, on a calculated table, the table's expression references; a
  * calculation group table reaches its items' references. The path kept for each object is the
@@ -69,6 +70,8 @@ export function buildReachabilityIndex(
       for (const level of res.level ? [res.level] : res.hierarchy.levels)
         if (level.column !== undefined)
           reach(columnOf(res.hierarchy.table.name, level.column), null);
+    // A field read through a date column's variation uses that column too.
+    if ("variationOf" in res) reach(res.variationOf, null);
   }
   for (const rel of model.relationships) {
     reach(columnOf(rel.fromTable, rel.fromColumn), null);

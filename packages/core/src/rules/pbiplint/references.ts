@@ -6,14 +6,18 @@ import type { RuleFinding } from "../types.js";
 import { pbiplintRule } from "./define.js";
 
 /**
- * `'Sales'[Region]`, `[Net Margin]`, `'Date'[Calendar].[Year]`. A reference through an alias no
- * From list declares has no table, and its reason says so, so it is labelled by its name alone.
+ * `'Sales'[Region]`, `[Net Margin]`, `'Date'[Calendar].[Year]`, and, through a date column's
+ * variation, `'Sales'[OrderDate].[Date Hierarchy].[Year]`. A reference whose source yields no
+ * table has its reason say so, so it is labelled by its names alone.
  */
 const fieldLabel = (ref: FieldRef): string => {
-  const field =
-    ref.kind === "measure" || ref.table === ""
+  const inTable = (name: string): string =>
+    ref.table === "" ? measureRef(name) : columnRef(ref.table, name);
+  const field = ref.variation
+    ? `${inTable(ref.variation.column)}.${measureRef(ref.name)}`
+    : ref.kind === "measure"
       ? measureRef(ref.name)
-      : columnRef(ref.table, ref.name);
+      : inTable(ref.name);
   return ref.kind === "hierarchyLevel" && ref.level ? `${field}.${measureRef(ref.level)}` : field;
 };
 

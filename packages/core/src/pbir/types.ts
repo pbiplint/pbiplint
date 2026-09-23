@@ -6,6 +6,18 @@ export interface FieldRef {
   table: string;
   name: string;
   level?: string;
+  /**
+   * Set when the field's source is a date column's variation (a PropertyVariationSource), the way
+   * Power BI Desktop binds its auto date/time hierarchy: `table` is the date column's table,
+   * `column` the date column, and `name` the variation. The field itself (`name` above) is then
+   * on the table the variation leads to, such as Desktop's local date table.
+   */
+  variation?: { column: string; name: string };
+  /**
+   * Why `table` is empty, when it is: an alias no From list in scope declares, an alias whose
+   * From entry names no model table (a subquery, say), or a source that names no table at all.
+   */
+  noTable?: "undeclaredAlias" | "nonTableAlias" | "noSource";
   pointer: string;
 }
 

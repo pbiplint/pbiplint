@@ -1,8 +1,9 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { buildIndexes } from "../src/index/build.js";
 import { buildReport } from "../src/pbir/build.js";
 import type { Column, Measure } from "../src/model/types.js";
-import { modelFrom } from "./helpers.js";
+import { fixturesDir, modelFrom } from "./helpers.js";
 
 const j = (v: unknown) => JSON.stringify(v);
 const column = (entity: string, property: string) => ({
@@ -141,6 +142,52 @@ describe("buildReachabilityIndex", () => {
     expect(reach.pathTo(meas("Sales YoY %"))).toEqual(["[Sales YoY %]"]);
     expect(reach.pathTo(meas("Sales LY"))).toEqual(["[Sales YoY %]", "[Sales LY]"]);
     expect(reach.reached(meas("Total Sales"))).toBe(true);
+  });
+  it("reaches a date variation's levels, what their columns need, and the date column itself", () => {
+    // tvw-baseline's local date table behind a date column's variation, with no relationship, so
+    // only the report's reference can reach the date column.
+    const LDT = "LocalDateTable_1b2c1fde-0cf3-455e-bfee-a8e4970804e0";
+    const dated = modelFrom(`table Sales
+	column OrderDate
+		dataType: dateTime
+
+		variation Variation
+			isDefault
+			defaultHierarchy: ${LDT}.'Date Hierarchy'
+
+${readFileSync(`${fixturesDir}tvw-baseline.SemanticModel/definition/tables/${LDT}.tmdl`, "utf8")}`);
+    const level = (name: string) => ({
+      HierarchyLevel: {
+        Expression: {
+          Hierarchy: {
+            Expression: {
+              PropertyVariationSource: {
+                Expression: { SourceRef: { Entity: "Sales" } },
+                Name: "Variation",
+                Property: "OrderDate",
+              },
+            },
+            Hierarchy: "Date Hierarchy",
+          },
+        },
+        Level: name,
+      },
+    });
+    const { report } = buildReport(visualBinding(level("Year"), level("Quarter")));
+    const reach = buildIndexes({ model: dated, report }).reachability!;
+    const at = (table: string, name: string): Column =>
+      dated.tables.find((t) => t.name === table)!.columns.find((c) => c.name === name)!;
+    expect(reach.reached(at("Sales", "OrderDate"))).toBe(true);
+    expect(reach.pathTo(at(LDT, "QuarterNo"))).toEqual([
+      `'${LDT}'[Quarter]`,
+      `'${LDT}'[QuarterNo]`,
+    ]);
+    expect(
+      dated.tables
+        .find((t) => t.name === LDT)!
+        .columns.filter((c) => !reach.reached(c))
+        .map((c) => c.name),
+    ).toEqual(["Month", "Day"]);
   });
   it("is absent in a report-only or model-only project", () => {
     const { report } = buildReport(visualBinding(column("Sales", "Amount")));

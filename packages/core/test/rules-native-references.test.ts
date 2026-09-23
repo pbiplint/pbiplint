@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildIndexes } from "../src/index/build.js";
+import { buildModel } from "../src/model/build.js";
+import { buildReport } from "../src/pbir/build.js";
 import {
   BROKEN_FIELD_REFERENCE,
   NOT_REACHED_FROM_REPORT,
@@ -13,7 +15,9 @@ import {
   page,
   projectFrom,
   reportObjectIds,
+  visual,
 } from "./report-helpers.js";
+import { fixturesDir, parseModelDir } from "./helpers.js";
 
 const tmdl = `table Sales
 	column Amount
@@ -318,6 +322,71 @@ describe("NOT_REACHED_FROM_REPORT", () => {
       [
         "'Sales'[Region]",
         "nothing in the report reaches it, and no measure or column references it",
+      ],
+    ]);
+  });
+});
+
+describe("Desktop's auto date/time hierarchy, on tvw-baseline's model", () => {
+  // tvw-baseline is a Desktop-saved model with Auto date/time on: Customer[Join Date] carries a
+  // variation whose default hierarchy is on this local date table.
+  const LDT = "LocalDateTable_1b2c1fde-0cf3-455e-bfee-a8e4970804e0";
+  const model = buildModel(parseModelDir(`${fixturesDir}tvw-baseline.SemanticModel`));
+  const joinDate = (level: string) => ({
+    HierarchyLevel: {
+      Expression: {
+        Hierarchy: {
+          Expression: {
+            PropertyVariationSource: {
+              Expression: { SourceRef: { Entity: "Customer" } },
+              Name: "Variation",
+              Property: "Join Date",
+            },
+          },
+          Hierarchy: "Date Hierarchy",
+        },
+      },
+      Level: level,
+    },
+  });
+  const run = (...levels: string[]) => {
+    const { report } = buildReport([
+      page("p"),
+      visual(
+        "p",
+        "v",
+        "clusteredColumnChart",
+        {},
+        {
+          query: {
+            queryState: {
+              Category: { projections: levels.map((l) => ({ field: joinDate(l) })) },
+            },
+          },
+        },
+      ),
+    ]);
+    const project = { model, report };
+    const ctx = { indexes: buildIndexes(project), options: {} };
+    return {
+      broken: BROKEN_FIELD_REFERENCE.check(project, ctx),
+      unreached: NOT_REACHED_FROM_REPORT.check(project, ctx),
+    };
+  };
+  it("raises no broken reference for a chart on the date's Year and Quarter", () => {
+    expect(run("Year", "Quarter").broken).toEqual([]);
+  });
+  it("does not list the levels the chart shows, or what those levels need, as unreached", () => {
+    const onLocalDateTable = run("Year", "Quarter")
+      .unreached.map((f) => f.objectName)
+      .filter((n) => n.startsWith(`'${LDT}'`));
+    expect(onLocalDateTable).toEqual([`'${LDT}'[Month]`, `'${LDT}'[Day]`]);
+  });
+  it("names the date column and the hierarchy when a level is missing", () => {
+    expect(run("Week").broken.map((f) => [f.objectId, f.detail])).toEqual([
+      [
+        "v",
+        `'Customer'[Join Date].[Date Hierarchy].[Week]: no level named "Week" in hierarchy "Date Hierarchy" on "${LDT}"`,
       ],
     ]);
   });

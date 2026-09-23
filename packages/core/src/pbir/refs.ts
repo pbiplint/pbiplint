@@ -6,13 +6,38 @@ const isRecord = (v: unknown): v is Record<string, unknown> =>
 /** A JSON pointer segment, with `~` and `/` escaped as RFC 6901 says. */
 export const escapePointer = (s: string): string => s.replace(/~/g, "~0").replace(/\//g, "~1");
 
-/** The table a SourceRef names: its Entity, or the alias its Source points at within the enclosing filter. */
-function entityOf(expression: unknown, aliases: ReadonlyMap<string, string>): string {
-  const ref = isRecord(expression) ? expression.SourceRef : undefined;
-  if (!isRecord(ref)) return "";
-  if (typeof ref.Entity === "string") return ref.Entity;
-  if (typeof ref.Source === "string") return aliases.get(ref.Source) ?? "";
-  return "";
+/** Where a field's source leads: the table and, through a variation, the date column and variation. */
+type Source = Pick<FieldRef, "table" | "variation" | "noTable">;
+
+/**
+ * The source of a Column, Measure, or Hierarchy, which the semanticQuery schema says is a
+ * SourceRef, a PropertyVariationSource, or (for a Column or Measure) a TransformTableRef. A
+ * SourceRef names its table as an Entity or through an alias a From list declares. A
+ * PropertyVariationSource is a date column's variation: its own SourceRef gives the column's
+ * table. A TransformTableRef names a transform's output, not a model table, so it yields nothing
+ * and the reference is not collected.
+ */
+function sourceOf(expression: unknown, aliases: ReadonlyMap<string, string>): Source | undefined {
+  if (!isRecord(expression)) return { table: "", noTable: "noSource" };
+  if (isRecord(expression.TransformTableRef)) return undefined;
+  const variation = expression.PropertyVariationSource;
+  if (
+    isRecord(variation) &&
+    typeof variation.Property === "string" &&
+    typeof variation.Name === "string"
+  ) {
+    const inner = sourceOf(variation.Expression, aliases);
+    if (!inner) return undefined;
+    return { ...inner, variation: { column: variation.Property, name: variation.Name } };
+  }
+  const ref = expression.SourceRef;
+  if (isRecord(ref) && typeof ref.Entity === "string") return { table: ref.Entity };
+  if (isRecord(ref) && typeof ref.Source === "string") {
+    const table = aliases.get(ref.Source);
+    if (table === undefined) return { table: "", noTable: "undeclaredAlias" };
+    return table === "" ? { table, noTable: "nonTableAlias" } : { table };
+  }
+  return { table: "", noTable: "noSource" };
 }
 
 /**
@@ -20,8 +45,10 @@ function entityOf(expression: unknown, aliases: ReadonlyMap<string, string>): st
  * condition, a bookmark's state, a page binding's parameters. Column, Measure, Aggregation, and
  * HierarchyLevel are recognised wherever they sit, so a property the schema adds later is covered
  * without a change here. A `From` list declares aliases for the object that carries it and
- * everything beneath it, which is how a filter's Where refers to its own table; an alias with no
- * From in scope yields a reference with an empty table, which the index reports as unresolved.
+ * everything beneath it, which is how a filter's Where refers to its own table; a reference whose
+ * source yields no table (an alias with no From in scope, an alias for a subquery, a source that
+ * names nothing) has an empty table and says why in `noTable`, which the index reports as
+ * unresolved. A reference whose source is a transform's output is not a model field and is left out.
  */
 export function collectFieldRefs(
   node: unknown,
@@ -29,6 +56,23 @@ export function collectFieldRefs(
   aliases: ReadonlyMap<string, string> = new Map(),
 ): FieldRef[] {
   const out: FieldRef[] = [];
+  const push = (
+    kind: FieldRef["kind"],
+    source: Source,
+    name: string,
+    p: string,
+    level?: string,
+  ): void => {
+    out.push({
+      kind,
+      table: source.table,
+      name,
+      ...(level !== undefined ? { level } : {}),
+      ...(source.variation ? { variation: source.variation } : {}),
+      ...(source.noTable ? { noTable: source.noTable } : {}),
+      pointer: p,
+    });
+  };
   const walk = (n: unknown, p: string, scope: ReadonlyMap<string, string>): void => {
     if (Array.isArray(n)) {
       n.forEach((item, i) => walk(item, `${p}/${i}`, scope));
@@ -45,32 +89,20 @@ export function collectFieldRefs(
       scope = next;
     }
     if (isRecord(n.Column) && typeof n.Column.Property === "string") {
-      out.push({
-        kind: "column",
-        table: entityOf(n.Column.Expression, scope),
-        name: n.Column.Property,
-        pointer: p,
-      });
+      const source = sourceOf(n.Column.Expression, scope);
+      if (source) push("column", source, n.Column.Property, p);
       return;
     }
     if (isRecord(n.Measure) && typeof n.Measure.Property === "string") {
-      out.push({
-        kind: "measure",
-        table: entityOf(n.Measure.Expression, scope),
-        name: n.Measure.Property,
-        pointer: p,
-      });
+      const source = sourceOf(n.Measure.Expression, scope);
+      if (source) push("measure", source, n.Measure.Property, p);
       return;
     }
     if (isRecord(n.Aggregation) && isRecord(n.Aggregation.Expression)) {
       const inner = n.Aggregation.Expression.Column;
       if (isRecord(inner) && typeof inner.Property === "string") {
-        out.push({
-          kind: "aggregation",
-          table: entityOf(inner.Expression, scope),
-          name: inner.Property,
-          pointer: p,
-        });
+        const source = sourceOf(inner.Expression, scope);
+        if (source) push("aggregation", source, inner.Property, p);
         return;
       }
     }
@@ -81,13 +113,15 @@ export function collectFieldRefs(
         : undefined
       : n.Hierarchy;
     if (isRecord(hierarchy) && typeof hierarchy.Hierarchy === "string") {
-      out.push({
-        kind: "hierarchyLevel",
-        table: entityOf(hierarchy.Expression, scope),
-        name: hierarchy.Hierarchy,
-        ...(typeof level?.Level === "string" ? { level: level.Level } : {}),
-        pointer: p,
-      });
+      const source = sourceOf(hierarchy.Expression, scope);
+      if (source)
+        push(
+          "hierarchyLevel",
+          source,
+          hierarchy.Hierarchy,
+          p,
+          typeof level?.Level === "string" ? level.Level : undefined,
+        );
       return;
     }
     for (const [key, value] of Object.entries(n)) walk(value, `${p}/${escapePointer(key)}`, scope);

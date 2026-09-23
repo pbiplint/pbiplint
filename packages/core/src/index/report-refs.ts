@@ -1,3 +1,4 @@
+import { splitQualifiedName } from "../model/build.js";
 import type { Column, Hierarchy, Level, Measure, Model, Table } from "../model/types.js";
 import type { Bookmark, FieldRef, Page, Report, ReportMeasure, Visual } from "../pbir/types.js";
 import { extractRefs } from "./references.js";
@@ -25,11 +26,15 @@ export type ReportRefOwner =
 
 export type ReportRefOwnerKind = ReportRefOwner["kind"];
 
+/**
+ * What a reference resolves to. `variationOf` is the date column whose variation the reference
+ * went through (Desktop's auto date/time), which the visual uses as surely as the level it shows.
+ */
 export type Resolution =
-  | { kind: "column"; column: Column }
-  | { kind: "measure"; measure: Measure }
+  | { kind: "column"; column: Column; variationOf?: Column }
+  | { kind: "measure"; measure: Measure; variationOf?: Column }
   | { kind: "reportMeasure"; measure: ReportMeasure }
-  | { kind: "hierarchy"; hierarchy: Hierarchy; level?: Level }
+  | { kind: "hierarchy"; hierarchy: Hierarchy; level?: Level; variationOf?: Column }
   | { kind: "unresolved"; reason: string };
 
 export interface ReportRef {
@@ -77,17 +82,55 @@ export function buildReportReferenceIndex(
   const measureOf = (t: Table, name: string): Measure | undefined =>
     t.measures.find((m) => lower(m.name) === lower(name));
 
+  const unresolved = (reason: string): Resolution => ({ kind: "unresolved", reason });
+  const NO_TABLE: Record<NonNullable<FieldRef["noTable"]>, string> = {
+    undeclaredAlias: "a filter alias that no From list declares",
+    nonTableAlias: "an alias whose From entry names no model table",
+    noSource: "a source that names no model table",
+  };
+
+  /**
+   * The table a date column's variation leads to, found through the table of the variation's
+   * default hierarchy, as the model reads `defaultHierarchy`. On a Desktop model that is the local
+   * date table, whose hierarchy the auto date/time binding names.
+   */
+  const throughVariation = (
+    t: Table,
+    via: NonNullable<FieldRef["variation"]>,
+  ): { table: Table; source: Column } | Resolution => {
+    const source = columnOf(t, via.column);
+    if (!source) return unresolved(`no column named ${q(via.column)} on ${q(t.name)}`);
+    const variation = source.variations.find((v) => lower(v.name) === lower(via.name));
+    const on = `column ${q(source.name)} of ${q(t.name)}`;
+    if (!variation) return unresolved(`no variation named ${q(via.name)} on ${on}`);
+    if (variation.defaultHierarchy === undefined)
+      return unresolved(`variation ${q(variation.name)} on ${on} names no default hierarchy`);
+    const target = splitQualifiedName(variation.defaultHierarchy).table;
+    const table = tables.get(lower(target));
+    if (!table) return unresolved(`no table named ${q(target)}`);
+    return { table, source };
+  };
+
   const resolve = (ref: FieldRef): Resolution => {
     const extension = reportMeasures.get(`${lower(ref.table)}\u0000${lower(ref.name)}`);
-    if (ref.kind === "measure" && extension) return { kind: "reportMeasure", measure: extension };
-    if (!model) return { kind: "unresolved", reason: "no model in the input" };
-    if (ref.table === "")
-      return { kind: "unresolved", reason: "a filter alias that no From list declares" };
-    const t = tables.get(lower(ref.table));
-    if (!t) return { kind: "unresolved", reason: `no table named ${q(ref.table)}` };
+    if (ref.kind === "measure" && extension && !ref.variation)
+      return { kind: "reportMeasure", measure: extension };
+    if (!model) return unresolved("no model in the input");
+    if (ref.noTable) return unresolved(NO_TABLE[ref.noTable]);
+    const named = tables.get(lower(ref.table));
+    if (!named) return unresolved(`no table named ${q(ref.table)}`);
+    let t = named;
+    let variationOf: Column | undefined;
+    if (ref.variation) {
+      const target = throughVariation(named, ref.variation);
+      if ("kind" in target) return target;
+      t = target.table;
+      variationOf = target.source;
+    }
+    const via = variationOf ? { variationOf } : {};
     if (ref.kind === "column" || ref.kind === "aggregation") {
       const c = columnOf(t, ref.name);
-      if (c) return { kind: "column", column: c };
+      if (c) return { kind: "column", column: c, ...via };
       if (measureOf(t, ref.name))
         return {
           kind: "unresolved",
@@ -97,7 +140,7 @@ export function buildReportReferenceIndex(
     }
     if (ref.kind === "measure") {
       const m = measureOf(t, ref.name);
-      if (m) return { kind: "measure", measure: m };
+      if (m) return { kind: "measure", measure: m, ...via };
       const elsewhere = measuresByName.get(lower(ref.name));
       if (elsewhere)
         return {
@@ -109,14 +152,14 @@ export function buildReportReferenceIndex(
     const h = t.hierarchies.find((x) => lower(x.name) === lower(ref.name));
     if (!h)
       return { kind: "unresolved", reason: `no hierarchy named ${q(ref.name)} on ${q(t.name)}` };
-    if (ref.level === undefined) return { kind: "hierarchy", hierarchy: h };
+    if (ref.level === undefined) return { kind: "hierarchy", hierarchy: h, ...via };
     const level = h.levels.find((l) => lower(l.name) === lower(ref.level!));
     if (!level)
       return {
         kind: "unresolved",
         reason: `no level named ${q(ref.level)} in hierarchy ${q(h.name)} on ${q(t.name)}`,
       };
-    return { kind: "hierarchy", hierarchy: h, level };
+    return { kind: "hierarchy", hierarchy: h, level, ...via };
   };
 
   const refs: ReportRef[] = [];

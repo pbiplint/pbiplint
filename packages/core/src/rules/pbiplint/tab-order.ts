@@ -8,7 +8,11 @@ const median = (xs: number[]): number => {
   return s.length % 2 ? s[(s.length - 1) / 2]! : (s[s.length / 2 - 1]! + s[s.length / 2]!) / 2;
 };
 
-/** A member's place in its scope's tab order; every member compared has one. */
+/**
+ * A member's place in its scope's tab order. Every compared member records one; a group the tab
+ * sequence does not reach may not, and its missing tabOrder counts as 0 only to break a position
+ * tie among such groups.
+ */
 const tab = (v: Visual): number => v.position.tabOrder ?? 0;
 
 /** Top to bottom, then left to right, with no tolerance; two at one position go in tab order. */
@@ -100,6 +104,8 @@ export const TAB_ORDER_FOLLOWS_LAYOUT = pbiplintRule({
   // One finding per page, on the first scope in tab sequence whose order disagrees.
   check: ({ report }) =>
     (report?.pages ?? []).flatMap((p) => {
+      // A tooltip page shows on hover, not as a page a reader tabs through.
+      if (p.bindingType === "Tooltip") return [];
       // Each scope's members by the group they sit in: the page's own under no group.
       const scopes = new Map<string | undefined, Visual[]>();
       for (const v of p.visuals) {

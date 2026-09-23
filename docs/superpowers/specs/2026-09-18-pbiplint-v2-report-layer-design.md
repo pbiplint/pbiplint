@@ -669,7 +669,9 @@ group; it leaves out a hidden visual, a negative `tabOrder` (a visual
 hidden from the tab order), and a missing one, and a scope agrees when
 its tab order equals the tolerant reading order or a strict sort by `y`
 then `x`, the order Desktop's "match visual order" button writes (by a
-third party's account). "Desktop always writes `tabOrder`" does not
+third party's account). It leaves out a tooltip page, which shows on
+hover rather than being a page a reader tabs through; drillthrough and
+hidden pages are checked. "Desktop always writes `tabOrder`" does not
 hold for every visual (511 of 13,026 lack it); a tab order the author
 never touched is still what cannot be detected.
 `SLICER_SELECTION_SAVED` reads the five slicer types in Microsoft's

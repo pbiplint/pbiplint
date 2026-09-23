@@ -512,6 +512,86 @@ describe("TAB_ORDER_FOLLOWS_LAYOUT", () => {
       ],
     ]);
   });
+  it("visits groups it does not reach in reading order, the upper one first", () => {
+    // Neither group records a tabOrder, and lower's file comes first; both groups' children disagree.
+    const files = [
+      page("p"),
+      group("lower", "Lower", 0, 300, undefined),
+      at("l1", 0, 0, 1000, { parentGroupName: "lower" }),
+      at("l2", 0, 100, 0, { parentGroupName: "lower" }),
+      group("upper", "Upper", 0, 0, undefined),
+      at("u1", 0, 0, 1000, { parentGroupName: "upper" }),
+      at("u2", 0, 100, 0, { parentGroupName: "upper" }),
+    ];
+    expect(detail(files)).toEqual([
+      [
+        "p",
+        'in Group "Upper", tab order starts at cardVisual (u2) but the layout reads cardVisual (u1) first',
+      ],
+    ]);
+  });
+  it("compares a group with no tabOrder nested inside a group the tab sequence reaches", () => {
+    const files = [
+      page("p"),
+      group("outer", "Outer", 0, 0, 0),
+      at("k", 500, 0, 1000),
+      group("inner", "Inner", 0, 0, undefined, { parentGroupName: "outer" }),
+      at("i1", 0, 0, 1000, { parentGroupName: "inner" }),
+      at("i2", 0, 100, 0, { parentGroupName: "inner" }),
+    ];
+    expect(detail(files)).toEqual([
+      [
+        "p",
+        'in Group "Inner", tab order starts at cardVisual (i2) but the layout reads cardVisual (i1) first',
+      ],
+    ]);
+  });
+  it("enters each group once when a group names its own name as its parent", () => {
+    // Two containers are named g, the second inside the first, so the scope of g holds a group
+    // named g. The check still ends, and goes on to the next group, whose children disagree.
+    const files = [
+      page("p"),
+      group("g", "Outer", 0, 0, 0),
+      {
+        path: "definition/pages/p/visuals/gCopy/visual.json",
+        text: j({
+          name: "g",
+          parentGroupName: "g",
+          position: { x: 0, y: 0, z: 0, width: 400, height: 200, tabOrder: 0 },
+          visualGroup: { displayName: "Inner", groupMode: "ScaleMode" },
+        }),
+      },
+      at("c1", 0, 250, 1000, { parentGroupName: "g" }),
+      at("c2", 0, 400, 2000, { parentGroupName: "g" }),
+      group("h", "Later", 0, 300, 1000),
+      at("d1", 0, 0, 1000, { parentGroupName: "h" }),
+      at("d2", 0, 100, 0, { parentGroupName: "h" }),
+    ];
+    expect(detail(files)).toEqual([
+      [
+        "p",
+        'in Group "Later", tab order starts at cardVisual (d2) but the layout reads cardVisual (d1) first',
+      ],
+    ]);
+  });
+  it("leaves a tooltip page out, and checks drillthrough and hidden pages", () => {
+    // A tooltip page shows on hover; readers do not tab through it.
+    const disagreeing = (extra: Record<string, unknown>) => [
+      page("p", extra),
+      at("a", 0, 0, 2000),
+      at("b", 0, 200, 1000),
+    ];
+    expect(detail(disagreeing({ pageBinding: { type: "Tooltip" } }))).toEqual([]);
+    expect(
+      reportObjectIds(
+        TAB_ORDER_FOLLOWS_LAYOUT,
+        disagreeing({ pageBinding: { type: "Drillthrough" } }),
+      ),
+    ).toEqual(["p"]);
+    expect(
+      reportObjectIds(TAB_ORDER_FOLLOWS_LAYOUT, disagreeing({ visibility: "HiddenInViewMode" })),
+    ).toEqual(["p"]);
+  });
   it("leaves out a hidden visual and the children of a hidden group", () => {
     const files = [
       page("p"),

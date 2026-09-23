@@ -90,6 +90,8 @@ export interface Page {
 /** The pages folder's own pages.json: the order of the pages and which one opens. */
 export interface PagesHeader {
   file?: string;
+  /** The text of that pages.json, so a finding about the opening page can point at its line. */
+  text?: string;
   pageOrder: string[];
   activePageName?: string;
   landingPageName?: string;

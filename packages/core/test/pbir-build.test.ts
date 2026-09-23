@@ -195,6 +195,7 @@ describe("buildReport", () => {
   it("orders pages by pageOrder and reads their header, binding, filters, and annotations", () => {
     expect(report.pagesHeader).toEqual({
       file: "definition/pages/pages.json",
+      text: pagesJson,
       pageOrder: ["p2", "p1"],
       activePageName: "p1",
       landingPageName: "p2",

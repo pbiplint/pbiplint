@@ -401,6 +401,7 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
     } else if (f.path === "definition/pages/pages.json") {
       report.pagesHeader = {
         file: f.path,
+        text: f.text,
         pageOrder: Array.isArray(json.pageOrder)
           ? json.pageOrder.filter((p): p is string => typeof p === "string")
           : [],

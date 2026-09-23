@@ -1,7 +1,14 @@
 import { plural } from "../format/text.js";
 import type { Indexes } from "../index/build.js";
 import type { Report } from "../pbir/types.js";
-import { allVisuals, isHiddenPage } from "../rules/report-helpers.js";
+import {
+  allVisuals,
+  filtersPaneState,
+  isHiddenPage,
+  landingPageNotSet,
+  openingPage,
+  openingPageInvalid,
+} from "../rules/report-helpers.js";
 import type { Fact, Project } from "./types.js";
 
 /** `n info`-style nouns are the caller's business; these take an s. */
@@ -17,50 +24,46 @@ function reportFacts(report: Report, known: ReadonlySet<string>): Fact[] {
     return ruleId === undefined ? fact : { ...fact, ruleId };
   };
   const pages = report.pages;
-  const byId = new Map(pages.map((p) => [p.id, p]));
-  const header = report.pagesHeader;
 
-  // Opens on.
-  const target = header.landingPageName ?? header.activePageName;
-  const opened = target === undefined ? undefined : byId.get(target);
-  const invalid = target !== undefined && (opened === undefined || isHiddenPage(opened));
+  // Opens on. A hidden landing page says "(hidden)", which is true, but links no rule for it.
+  const opens = openingPage(report);
   const value =
-    target === undefined
+    opens === undefined
       ? "unknown"
-      : opened === undefined
-        ? `"${target}" (no such page)`
-        : isHiddenPage(opened)
-          ? `${opened.displayName} (hidden)`
-          : opened.displayName;
+      : opens.page === undefined
+        ? `"${opens.name}" (no such page)`
+        : isHiddenPage(opens.page)
+          ? `${opens.page.displayName} (hidden)`
+          : opens.page.displayName;
+  const how = {
+    landing: "landing page",
+    active: "the page open when it was saved; no landing page set",
+    first: "the first page; no landing page set",
+  };
   facts.push(
     withRule(
       {
         layer: "report",
         label: "Opens on",
         value,
-        detail:
-          header.landingPageName !== undefined
-            ? "landing page"
-            : "the page open when it was saved; no landing page set",
+        detail: opens === undefined ? "no landing page set" : how[opens.by],
       },
-      invalid ? "OPENING_PAGE_INVALID" : undefined,
-      header.landingPageName === undefined ? "LANDING_PAGE_NOT_SET" : undefined,
+      openingPageInvalid(opens) ? "OPENING_PAGE_INVALID" : undefined,
+      landingPageNotSet(report) ? "LANDING_PAGE_NOT_SET" : undefined,
     ),
   );
 
-  // Filters pane. Desktop collapses the pane unless the file says expanded.
-  const pane = report.filtersPane;
+  // Filters pane.
+  const pane = filtersPaneState(report);
   facts.push(
     withRule(
       {
         layer: "report",
         label: "Filters pane",
-        value:
-          pane.visible === false
-            ? "hidden from readers"
-            : pane.expanded === true
-              ? "open"
-              : "closed",
+        value: pane.state,
+        ...(pane.recordedAt === undefined
+          ? { detail: "the default; report.json does not record it" }
+          : {}),
       },
       "FILTERS_PANE_STATE",
     ),

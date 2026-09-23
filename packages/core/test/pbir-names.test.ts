@@ -82,4 +82,51 @@ describe("report finding names", () => {
       location: { file: "definition/reportExtensions.json" },
     });
   });
+  it("locate a report-level finding at a property's line, and never in a file the input lacks", () => {
+    const reportText = j({
+      objects: {
+        outspacePane: [{ properties: { expanded: { expr: { Literal: { Value: "true" } } } } }],
+      },
+    });
+    const { report: whole } = buildReport([
+      { path: "definition/report.json", text: reportText },
+      { path: "definition/pages/pages.json", text: j({ pageOrder: ["p1"], activePageName: "p1" }) },
+      { path: "definition/pages/p1/page.json", text: j({ name: "p1", displayName: "Overview" }) },
+    ]);
+    // pages.json read: the finding sits in it, at the pointer's line (line 1 without one).
+    expect(reportFinding.pagesHeader(whole, "/activePageName", "why")).toEqual({
+      objectType: "Report",
+      objectName: "Report",
+      objectId: "report",
+      location: { file: "definition/pages/pages.json", line: 5 },
+      detail: "why",
+    });
+    expect(reportFinding.pagesHeader(whole).location).toEqual({
+      file: "definition/pages/pages.json",
+      line: 1,
+    });
+    expect(
+      reportFinding.report(whole, "why", "report", "/objects/outspacePane/0/properties/expanded"),
+    ).toEqual({
+      objectType: "Report",
+      objectName: "Report",
+      objectId: "report",
+      location: { file: "definition/report.json", line: 6 },
+      detail: "why",
+    });
+    // pages.json not read: exactly what reportFinding.report gives, report.json line 1 or nothing.
+    const { report: noHeader } = buildReport([
+      { path: "definition/report.json", text: reportText },
+      { path: "definition/pages/p1/page.json", text: j({ name: "p1", displayName: "Overview" }) },
+    ]);
+    expect(reportFinding.pagesHeader(noHeader, "/activePageName", "why")).toEqual(
+      reportFinding.report(noHeader, "why"),
+    );
+    expect(reportFinding.pagesHeader(noHeader, "/activePageName").location).toEqual({
+      file: "definition/report.json",
+      line: 1,
+    });
+    expect(reportFinding.pagesHeader(report, "/activePageName").location).toBeUndefined();
+    expect(reportFinding.report(report, undefined, "report", "/objects").location).toBeUndefined();
+  });
 });

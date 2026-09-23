@@ -192,7 +192,10 @@ describe("buildFacts", () => {
     });
     expect(facts.find((f) => f.label === "Model")).toBeUndefined();
     const closed = buildReport([
-      { path: "definition/report.json", text: j({}) },
+      {
+        path: "definition/report.json",
+        text: j({ objects: { outspacePane: [{ properties: { expanded: lit("false") } }] } }),
+      },
       { path: "definition/pages/pages.json", text: j({ pageOrder: ["p3"], activePageName: "p3" }) },
       page("p3", "Scratch", { visibility: "HiddenInViewMode" }),
     ]).report;
@@ -219,6 +222,53 @@ describe("buildFacts", () => {
       layer: "report",
       label: "Mobile layouts",
       value: "none",
+    });
+  });
+  it("reads an unrecorded pane as open, no named page as the first page, and a hidden landing page as fine", () => {
+    const unrecorded = buildReport([
+      { path: "definition/report.json", text: j({}) },
+      { path: "definition/pages/pages.json", text: j({ pageOrder: ["p2", "p1"] }) },
+      page("p1", "Overview"),
+      page("p2", "Summary"),
+    ]).report;
+    const f = buildFacts({ report: unrecorded }, buildIndexes({ report: unrecorded }), ALL);
+    expect(f[0]).toEqual({
+      layer: "report",
+      label: "Opens on",
+      value: "Summary",
+      detail: "the first page; no landing page set",
+      ruleId: "LANDING_PAGE_NOT_SET",
+    });
+    expect(f[1]).toEqual({
+      layer: "report",
+      label: "Filters pane",
+      value: "open",
+      detail: "the default; report.json does not record it",
+      ruleId: "FILTERS_PANE_STATE",
+    });
+    // A hidden landing page is a true fact, but not one OPENING_PAGE_INVALID flags.
+    const hiddenLanding = buildReport([
+      {
+        path: "definition/pages/pages.json",
+        text: j({ pageOrder: ["p3"], activePageName: "p3", landingPageName: "p3" }),
+      },
+      page("p3", "Scratch", { visibility: "HiddenInViewMode" }),
+    ]).report;
+    expect(
+      buildFacts({ report: hiddenLanding }, buildIndexes({ report: hiddenLanding }), ALL)[0],
+    ).toEqual({
+      layer: "report",
+      label: "Opens on",
+      value: "Scratch (hidden)",
+      detail: "landing page",
+    });
+    // With no pages there is nothing to open, so LANDING_PAGE_NOT_SET does not fire and the fact links no rule.
+    const empty = buildReport([{ path: "definition/report.json", text: j({}) }]).report;
+    expect(buildFacts({ report: empty }, buildIndexes({ report: empty }), ALL)[0]).toEqual({
+      layer: "report",
+      label: "Opens on",
+      value: "unknown",
+      detail: "no landing page set",
     });
   });
   it("links a fact to the first of its candidate rules the run knows", () => {

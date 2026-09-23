@@ -17,6 +17,9 @@ const at = (file: string, text: string, pointer?: string) => ({
 });
 const withDetail = (f: RuleFinding, detail?: string): RuleFinding =>
   detail === undefined ? f : { ...f, detail };
+/** A report-level finding's location in report.json, or none when report.json was not read. */
+const inReportJson = (r: Report, pointer?: string) =>
+  r.file ? { location: at(r.file, r.text ?? "", pointer) } : {};
 
 /**
  * Finding factories for report objects. `objectId` is what parity compares; `object` is what the
@@ -24,13 +27,29 @@ const withDetail = (f: RuleFinding, detail?: string): RuleFinding =>
  * not by an annotation in report.json (spec section 5).
  */
 export const reportFinding = {
-  report: (r: Report, detail?: string, objectId = "report"): RuleFinding =>
+  report: (r: Report, detail?: string, objectId = "report", pointer?: string): RuleFinding =>
     withDetail(
       {
         objectType: "Report",
         objectName: REPORT_LABEL,
         objectId,
-        ...(r.file ? { location: { file: r.file, line: 1 } } : {}),
+        ...inReportJson(r, pointer),
+      },
+      detail,
+    ),
+  /**
+   * A finding on the report located in pages.json, where the opening page is set. Without a
+   * pages.json in the input it sits where `report` puts it, never at a path the input lacks.
+   */
+  pagesHeader: (r: Report, pointer?: string, detail?: string): RuleFinding =>
+    withDetail(
+      {
+        objectType: "Report",
+        objectName: REPORT_LABEL,
+        objectId: "report",
+        ...(r.pagesHeader.file
+          ? { location: at(r.pagesHeader.file, r.pagesHeader.text ?? "", pointer) }
+          : inReportJson(r)),
       },
       detail,
     ),
@@ -104,3 +123,63 @@ export const reportFinding = {
 export const allVisuals = (r: Report): Visual[] => r.pages.flatMap((p) => p.visuals);
 export const isHiddenPage = (p: Page): boolean => p.visibility === "HiddenInViewMode";
 export const visiblePages = (r: Report): Page[] => r.pages.filter((p) => !isHiddenPage(p));
+
+/** The page a report opens on, what decided it, and the name pages.json gives it. */
+export interface OpeningPage {
+  by: "landing" | "active" | "first";
+  name: string;
+  /** The page that name resolves to; absent when no page has that name. */
+  page?: Page;
+}
+
+/**
+ * Where the report opens: the landing page when one is set, else the page open when it was saved,
+ * else the first page in pageOrder, which is the pagesMetadata schema's default when pages.json
+ * names neither. Undefined when it names neither and there are no pages: nothing opens.
+ */
+export function openingPage(r: Report): OpeningPage | undefined {
+  const { landingPageName, activePageName } = r.pagesHeader;
+  const name = landingPageName ?? activePageName;
+  if (name !== undefined)
+    return {
+      by: landingPageName !== undefined ? "landing" : "active",
+      name,
+      page: r.pages.find((p) => p.id === name),
+    };
+  const first = r.pages[0];
+  return first === undefined ? undefined : { by: "first", name: first.id, page: first };
+}
+
+/**
+ * OPENING_PAGE_INVALID's condition, which the Opens on fact shares: a landing page that names no
+ * page, or, with no landing page, an active page that names no page or a hidden one. A hidden
+ * landing page is a supported design, since readers always open on it; a hidden active page is a
+ * report saved while on a helper page.
+ */
+export const openingPageInvalid = (o: OpeningPage | undefined): boolean =>
+  o !== undefined &&
+  o.by !== "first" &&
+  (o.page === undefined || (o.by === "active" && isHiddenPage(o.page)));
+
+/** LANDING_PAGE_NOT_SET's condition, which the Opens on fact shares: no landing page, and a page to open. */
+export const landingPageNotSet = (r: Report): boolean =>
+  r.pagesHeader.landingPageName === undefined && r.pages.length > 0;
+
+export type FiltersPaneState = "open" | "closed" | "hidden from readers";
+
+/**
+ * The Filters pane as readers first see it, and the report.json property that records it.
+ * `visible: false` hides the pane whatever `expanded` says; otherwise `expanded` decides, and
+ * without it the pane is open: Desktop writes "false" for a collapsed pane and no key for an open
+ * one, and a new report opens with the pane expanded. `recordedAt` is absent when the file records
+ * neither, so the state is that default.
+ */
+export function filtersPaneState(r: Report): { state: FiltersPaneState; recordedAt?: string } {
+  const property = (key: string) => `/objects/outspacePane/0/properties/${key}`;
+  const pane = r.filtersPane;
+  if (pane.visible === false)
+    return { state: "hidden from readers", recordedAt: property("visible") };
+  if (pane.expanded !== undefined)
+    return { state: pane.expanded ? "open" : "closed", recordedAt: property("expanded") };
+  return { state: "open" };
+}

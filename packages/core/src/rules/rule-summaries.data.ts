@@ -44,7 +44,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Measures and row-level security filters that refer to a column by its bare name, `[Column]`, instead of `'Table'[Column]`.",
   DAX_MEASURES_UNQUALIFIED:
     "Measures, calculated columns, calculated tables, and calculation items that refer to a measure with a table prefix, `'Table'[Measure]`.",
-  ENSURE_ALTTEXT: "Visuals other than shapes whose alt text is missing or empty.",
+  ENSURE_ALTTEXT:
+    "Visuals other than shapes whose alt text is missing or empty. A visual group is checked by its own alt text, the one set on the group rather than on the visuals inside it.",
   ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY:
     "Visible pages taller than the threshold, 720 pixels by default.",
   ENSURE_TABLES_HAVE_RELATIONSHIPS:

@@ -10,6 +10,7 @@ import { PARSE_ISSUE } from "../src/rules/parse-issue.js";
 import { ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY } from "../src/rules/pbi-inspector/pages.js";
 import { REMOVE_UNUSED_CUSTOM_VISUALS } from "../src/rules/pbi-inspector/report.js";
 import { ENSURE_ALTTEXT } from "../src/rules/pbi-inspector/visuals.js";
+import { REPORT_LEVEL_MEASURES } from "../src/rules/pbiplint/measures.js";
 import type { Rule } from "../src/rules/types.js";
 import { modelFrom } from "./helpers.js";
 
@@ -569,6 +570,34 @@ describe("lint over a project", () => {
       ["ENSURE_ALTTEXT", "w"],
     ]);
     expect(r.summary.ignored).toBe(2);
+  });
+  it("reads no ignore annotation on a report measure, though the schema allows one", () => {
+    const r = lint(
+      [
+        {
+          path: "definition/reportExtensions.json",
+          text: j({
+            entities: [
+              {
+                name: "Sales",
+                measures: [
+                  {
+                    name: "Net Margin",
+                    expression: "1",
+                    annotations: [{ name: "pbiplint.ignore", value: "REPORT_LEVEL_MEASURES" }],
+                  },
+                ],
+              },
+            ],
+          }),
+        },
+      ],
+      { rules: [REPORT_LEVEL_MEASURES] },
+    );
+    expect(r.findings.map((f) => [f.ruleId, f.objectId])).toEqual([
+      ["REPORT_LEVEL_MEASURES", "Sales.Net Margin"],
+    ]);
+    expect(r.summary.ignored).toBe(0);
   });
   it("keeps an invalid-JSON detail on one line, whatever the engine's message spans", () => {
     const r = lint([{ path: "definition/pages/p/page.json", text: '{\n  "a": 1,\n  "b": }\n' }]);

@@ -133,6 +133,7 @@ describe("buildFacts", () => {
         label: "Report measures",
         value: "2",
         detail: "defined in the report, not the model",
+        ruleId: "REPORT_LEVEL_MEASURES",
       },
       {
         layer: "report",

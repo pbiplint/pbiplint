@@ -65,6 +65,10 @@ function buildColumn(c: TmdlNode, table: Table): Column {
     };
   });
   const sortBy = str(p.sortbycolumn);
+  const groupByColumns = c.children
+    .filter((ch) => ch.type === "relatedcolumndetails")
+    .flatMap((d) => d.children.filter((g) => g.kind === "prop" && g.type === "groupbycolumn"))
+    .flatMap((g) => (g.value === undefined ? [] : [unquoteName(g.value)]));
   return {
     ...named(c),
     table,
@@ -77,6 +81,7 @@ function buildColumn(c: TmdlNode, table: Table): Column {
     summarizeBy: str(p.summarizeby),
     sourceColumn: str(p.sourcecolumn),
     sortByColumn: sortBy === undefined ? undefined : unquoteName(sortBy),
+    groupByColumns,
     dataCategory: str(p.datacategory),
     expression: c.value,
     variations,

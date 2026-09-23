@@ -28,11 +28,12 @@ const nameOf = (n: Node): string =>
  * What the report reaches in the model, to a fixed point (spec section 6). Roots: every resolved
  * report reference (a hierarchy's level columns, and the date column a variation reference goes
  * through), both columns of every relationship, columns named in RLS and OLS, variation default
- * columns, and the references of the report's own measures. From a reached object: a
- * measure reaches what its DAX references; a calculated column likewise; a column reaches its
- * table, its sort-by column, and, on a calculated table, the table's expression references; a
- * calculation group table reaches its items' references. The path kept for each object is the
- * shortest, so a finding's detail can say what reached it or why nothing did.
+ * columns, and the references of the report's own measures. From a reached object: a measure
+ * reaches what its DAX references; a calculated column likewise; a column reaches its table, its
+ * sort-by column, the columns it groups by (a field parameter's hidden Fields column), and, on a
+ * calculated table, the table's expression references; a calculation group table reaches its
+ * items' references. The path kept for each object is the shortest, so a finding's detail can
+ * say what reached it or why nothing did.
  */
 export function buildReachabilityIndex(
   model: Model,
@@ -103,6 +104,7 @@ export function buildReachabilityIndex(
     reach(n.table, n);
     if (n.kind === "calculated") reachDax(n, n);
     if (n.sortByColumn !== undefined) reach(columnOf(n.table.name, n.sortByColumn), n);
+    for (const g of n.groupByColumns) reach(columnOf(n.table.name, g), n);
   }
 
   // A reference owner is not always something a reason can name: a table permission's object is a
@@ -112,15 +114,16 @@ export function buildReachabilityIndex(
   const NAMEABLE: ReadonlySet<RefOwnerKind> = new Set(["measure", "calculatedColumn"]);
   const daxReferrers = (owners: readonly RefOwner[]): Node[] =>
     owners.filter((o) => NAMEABLE.has(o.kind)).map((o) => o.object as Column | Measure);
-  // The v1 reference index records DAX references only, so a column a sibling sorts by has no DAX
-  // referrer at all. The walk follows that sort-by edge, so the reason has to read through it too.
+  // The v1 reference index records DAX references only, so a column a sibling sorts or groups by
+  // has no DAX referrer at all. The walk follows those edges, so the reason has to read them too.
   const referrersOf = (n: Column | Measure): Node[] => {
     if (isMeasure(n)) return daxReferrers(references.measureReferencedBy(n));
     const dax = daxReferrers(references.columnReferencedBy(n));
-    const sortedBy = n.table.columns.filter(
-      (c) => c.sortByColumn !== undefined && c.sortByColumn.toLowerCase() === n.name.toLowerCase(),
+    const same = (name: string): boolean => name.toLowerCase() === n.name.toLowerCase();
+    const siblings = n.table.columns.filter(
+      (c) => (c.sortByColumn !== undefined && same(c.sortByColumn)) || c.groupByColumns.some(same),
     );
-    return [...dax, ...sortedBy.filter((c) => !dax.includes(c))];
+    return [...dax, ...siblings.filter((c) => !dax.includes(c))];
   };
   return {
     reached: (n) => parent.has(n),

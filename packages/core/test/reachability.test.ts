@@ -189,6 +189,42 @@ ${readFileSync(`${fixturesDir}tvw-baseline.SemanticModel/definition/tables/${LDT
         .map((c) => c.name),
     ).toEqual(["Month", "Day"]);
   });
+  it("reaches the hidden Fields column a field parameter's display column groups by", () => {
+    const param = modelFrom(`table Metric
+	column Metric
+		dataType: string
+		sortByColumn: 'Metric Order'
+
+		relatedColumnDetails
+			groupByColumn: 'Metric Fields'
+
+	column 'Metric Fields'
+		dataType: string
+		isHidden
+
+	column 'Metric Order'
+		dataType: int64
+		isHidden
+
+	column Unused
+		dataType: string
+`);
+    const { report } = buildReport(visualBinding(column("Metric", "Metric")));
+    const reach = buildIndexes({ model: param, report }).reachability!;
+    const at = (name: string): Column => param.tables[0]!.columns.find((c) => c.name === name)!;
+    expect(reach.pathTo(at("Metric Fields"))).toEqual([
+      "'Metric'[Metric]",
+      "'Metric'[Metric Fields]",
+    ]);
+    expect(reach.reached(at("Metric Order"))).toBe(true);
+    expect(reach.reached(at("Unused"))).toBe(false);
+    // When nothing reaches the display column, the Fields column's reason names it.
+    const { report: other } = buildReport(visualBinding(column("Metric", "Unused")));
+    const unused = buildIndexes({ model: param, report: other }).reachability!;
+    expect(unused.reasonFor(at("Metric Fields"))).toBe(
+      "referenced only by 'Metric'[Metric], which nothing reaches either",
+    );
+  });
   it("is absent in a report-only or model-only project", () => {
     const { report } = buildReport(visualBinding(column("Sales", "Amount")));
     expect(buildIndexes({ report }).reachability).toBeUndefined();

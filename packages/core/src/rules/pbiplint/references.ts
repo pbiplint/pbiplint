@@ -20,8 +20,8 @@ const fieldLabel = (ref: FieldRef): string => {
 /**
  * The first finding for each object and missing field. One field can be named several times on an
  * object: an applied filter names it in `field` and again in its `Where`, a visual's own filter
- * entry repeats a role binding, a bookmark's state can repeat it. The index keeps every reference;
- * the rule reports the field once, at its earliest reference.
+ * entry or sort entry repeats a role binding, a bookmark's state can repeat it. The index keeps
+ * every reference; the rule reports the field once, at its earliest reference.
  */
 const firstPerObjectAndField = (findings: RuleFinding[]): RuleFinding[] => {
   const seen = new Set<string>();
@@ -49,6 +49,7 @@ export const BROKEN_FIELD_REFERENCE = pbiplintRule({
         switch (o.kind) {
           case "visualField":
           case "visualFilter":
+          case "visualProperty":
             return [reportFinding.visual(o.object, r.ref.pointer, detail)];
           case "pageFilter":
             return [reportFinding.pageFilter(o.object, r.ref.pointer, detail)];

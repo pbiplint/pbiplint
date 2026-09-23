@@ -168,6 +168,46 @@ describe("buildReportReferenceIndex", () => {
         .map((r) => [r.ref.kind, r.resolution.kind]),
     ).toEqual([["measure", "reportMeasure"]]);
   });
+  it("owns a visual's formatting and sort references as visualProperty, after its fields and filters", () => {
+    const { report: formatted } = buildReport([
+      { path: "definition/pages/p1/page.json", text: j({ name: "p1", displayName: "Overview" }) },
+      {
+        path: "definition/pages/p1/visuals/v/visual.json",
+        text: j({
+          name: "v",
+          position: {},
+          filterConfig: {
+            filters: [{ name: "vf", field: column("Sales", "Region"), type: "Categorical" }],
+          },
+          visual: {
+            visualType: "cardVisual",
+            query: {
+              queryState: { Data: { projections: [{ field: measure("Sales", "Total Sales") }] } },
+              sortDefinition: { sort: [{ field: measure("Sales", "Total Sales") }] },
+            },
+            objects: {
+              labels: [
+                {
+                  properties: { color: { solid: { color: { expr: measure("Sales", "Colour") } } } },
+                },
+              ],
+            },
+          },
+        }),
+      },
+    ]);
+    const idx = buildReportReferenceIndex(formatted, model);
+    expect(idx.refs.map((r) => [r.owner.kind, r.ref.name, r.resolution.kind])).toEqual([
+      ["visualField", "Total Sales", "measure"],
+      ["visualFilter", "Region", "column"],
+      ["visualProperty", "Total Sales", "measure"],
+      ["visualProperty", "Colour", "unresolved"],
+    ]);
+    const v = formatted.pages[0]!.visuals[0]!;
+    expect(idx.refs.every((r) => r.owner.object === v)).toBe(true);
+    // fieldsOf stays the role bindings.
+    expect(idx.fieldsOf(v).map((r) => r.owner.kind)).toEqual(["visualField"]);
+  });
   it("marks everything unresolved with one reason when there is no model, except report measures", () => {
     const without = buildReportReferenceIndex(report, undefined);
     const kinds = new Set(without.refs.map((r) => r.resolution.kind));

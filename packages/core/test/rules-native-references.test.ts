@@ -205,6 +205,77 @@ describe("BROKEN_FIELD_REFERENCE", () => {
       ],
     ]);
   });
+  it("fires on a visual whose conditional formatting names a missing measure, at that line", () => {
+    const pretty = (v: unknown) => JSON.stringify(v, null, 2);
+    const visualText = pretty({
+      name: "v",
+      position: { x: 0, y: 0, z: 0, height: 100, width: 100 },
+      visual: {
+        visualType: "cardVisual",
+        query: {
+          queryState: { Data: { projections: [{ field: measure("Sales", "Total Sales") }] } },
+        },
+        objects: {
+          labels: [
+            { properties: { color: { solid: { color: { expr: measure("Sales", "Colour") } } } } },
+          ],
+        },
+      },
+    });
+    const files = [
+      page("p"),
+      { path: "definition/pages/p/visuals/v/visual.json", text: visualText },
+    ];
+    const project = projectFrom(files, tmdl);
+    const findings = BROKEN_FIELD_REFERENCE.check(project, {
+      indexes: buildIndexes(project),
+      options: {},
+    });
+    // The reference's pointer ends at the property's `expr`, so the finding sits on that line.
+    const line = lineOf(visualText, '"expr"', visualText.indexOf('"objects"'));
+    expect(line).toBeGreaterThan(lineOf(visualText, '"objects"'));
+    expect(findings.map((f) => [f.objectId, f.detail, f.location])).toEqual([
+      [
+        "v",
+        `[Colour]: no measure named "Colour" on "Sales"`,
+        { file: "definition/pages/p/visuals/v/visual.json", line },
+      ],
+    ]);
+  });
+  it("folds a sort entry that repeats a missing bound field into the binding's finding", () => {
+    const pretty = (v: unknown) => JSON.stringify(v, null, 2);
+    const visualText = pretty({
+      name: "v",
+      position: { x: 0, y: 0, z: 0, height: 100, width: 100 },
+      visual: {
+        visualType: "tableEx",
+        query: {
+          queryState: { Values: { projections: [{ field: measure("Sales", "Profit") }] } },
+          sortDefinition: {
+            sort: [{ field: measure("Sales", "Profit"), direction: "Descending" }],
+          },
+        },
+      },
+    });
+    const files = [
+      page("p"),
+      { path: "definition/pages/p/visuals/v/visual.json", text: visualText },
+    ];
+    const project = projectFrom(files, tmdl);
+    const findings = BROKEN_FIELD_REFERENCE.check(project, {
+      indexes: buildIndexes(project),
+      options: {},
+    });
+    const binding = lineOf(visualText, '"field"');
+    expect(binding).toBeLessThan(lineOf(visualText, '"sortDefinition"'));
+    expect(findings.map((f) => [f.objectId, f.detail, f.location])).toEqual([
+      [
+        "v",
+        `[Profit]: no measure named "Profit" on "Sales"`,
+        { file: "definition/pages/p/visuals/v/visual.json", line: binding },
+      ],
+    ]);
+  });
   it("labels a reference through an undeclared alias by its bare name", () => {
     const aliased = {
       Column: { Expression: { SourceRef: { Source: "s" } }, Property: "Region" },

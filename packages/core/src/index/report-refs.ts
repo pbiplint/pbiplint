@@ -2,7 +2,11 @@ import type { Column, Hierarchy, Level, Measure, Model, Table } from "../model/t
 import type { Bookmark, FieldRef, Page, Report, ReportMeasure, Visual } from "../pbir/types.js";
 import { extractRefs } from "./references.js";
 
-/** What holds a report reference, discriminated on `kind` so `object` narrows with it. */
+/**
+ * What holds a report reference: a visual's role binding, a visual's filter, any other property of
+ * a visual (formatting, a bound title, sort), a page's filter or binding, the report filter, a
+ * bookmark, or a report measure's DAX. Discriminated on `kind` so `object` narrows with it.
+ */
 export type ReportRefOwner =
   | {
       kind: "visualField";
@@ -11,6 +15,8 @@ export type ReportRefOwner =
       role: string;
     }
   | { kind: "visualFilter"; object: Visual }
+  /** A reference elsewhere in the visual's file: formatting, a bound title, sort, and the like. */
+  | { kind: "visualProperty"; object: Visual }
   | { kind: "pageFilter"; object: Page }
   | { kind: "pageBinding"; object: Page }
   | { kind: "reportFilter"; object: Report }
@@ -137,6 +143,8 @@ export function buildReportReferenceIndex(
         v.file,
         v.filters.flatMap((f) => f.refs),
       );
+      // After the fields and filters, so a sort entry repeating a binding yields to the binding.
+      add({ kind: "visualProperty", object: v }, v.file, v.propertyRefs);
     }
   }
   for (const b of report.bookmarks) add({ kind: "bookmark", object: b }, b.file, b.refs);

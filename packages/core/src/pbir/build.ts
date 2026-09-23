@@ -236,6 +236,12 @@ function buildVisual(
       });
     });
   const title = Array.isArray(vco.title) ? literal(properties(vco.title[0])?.text) : undefined;
+  // The wells are `fields` and the filters are `filters`; everything else the file names is here.
+  const under = (pointer: string, prefix: string) =>
+    pointer === prefix || pointer.startsWith(`${prefix}/`);
+  const propertyRefs = collectFieldRefs(json).filter(
+    (r) => !under(r.pointer, "/visual/query/queryState") && !under(r.pointer, "/filterConfig"),
+  );
   return {
     id: str(json.name) ?? id,
     page,
@@ -258,6 +264,7 @@ function buildVisual(
     ...(altText !== undefined ? { altText } : {}),
     fields,
     projectionCount,
+    propertyRefs,
     showAllRoles,
     filters: filtersOf(json.filterConfig, file, "/filterConfig"),
     actions,

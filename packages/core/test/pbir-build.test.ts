@@ -279,6 +279,115 @@ describe("buildReport", () => {
       ["text", true, "Sales overview: total sales and the monthly trend"],
     ]);
   });
+  it("reads a visual's field references outside its wells and filters, each once, with its pointer", () => {
+    const measure = (property: string) => ({
+      Measure: { Expression: { SourceRef: { Entity: "Sales" } }, Property: property },
+    });
+    const { report: formatted } = buildReport([
+      { path: "definition/pages/p1/page.json", text: page("p1") },
+      {
+        path: "definition/pages/p1/visuals/v/visual.json",
+        text: j({
+          $schema: schema("visualContainer", "2.8.0"),
+          name: "v",
+          position: { x: 0, y: 0, z: 0, height: 100, width: 100, tabOrder: 0 },
+          filterConfig: {
+            filters: [
+              {
+                name: "vf",
+                field: column("Product", "Brand"),
+                type: "Categorical",
+                filter: {
+                  From: [{ Name: "p", Entity: "Product" }],
+                  Where: [
+                    {
+                      Condition: {
+                        In: {
+                          Expressions: [
+                            {
+                              Column: {
+                                Expression: { SourceRef: { Source: "p" } },
+                                Property: "Brand",
+                              },
+                            },
+                          ],
+                          Values: [[lit("'A'")]],
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+          visual: {
+            visualType: "clusteredBarChart",
+            query: {
+              queryState: {
+                Category: { projections: [{ field: column("Product", "Category") }] },
+                Y: { projections: [{ field: measure("Total Sales") }] },
+              },
+              // The sort repeats a bound field; it is still a reference of its own, at its own line.
+              sortDefinition: {
+                sort: [{ field: measure("Total Sales"), direction: "Descending" }],
+              },
+            },
+            objects: {
+              dataPoint: [
+                { properties: { fill: { solid: { color: { expr: measure("Colour") } } } } },
+              ],
+            },
+            visualContainerObjects: {
+              title: [{ properties: { text: { expr: measure("Title") } } }],
+            },
+          },
+        }),
+      },
+      {
+        path: "definition/pages/p1/visuals/g/visual.json",
+        text: j({
+          $schema: schema("visualContainer", "2.8.0"),
+          name: "g",
+          position: { x: 0, y: 0, z: 0, height: 100, width: 100, tabOrder: 0 },
+          visualGroup: {
+            displayName: "Group",
+            groupMode: "ScaleMode",
+            objects: { general: [{ properties: { altText: { expr: measure("Alt") } } }] },
+          },
+        }),
+      },
+    ]);
+    const v = formatted.pages[0]!.visuals.find((x) => x.id === "v");
+    const g = formatted.pages[0]!.visuals.find((x) => x.id === "g");
+    const refs = (x: typeof v) => x!.propertyRefs.map((r) => [r.kind, r.table, r.name, r.pointer]);
+    expect(refs(v)).toEqual([
+      ["measure", "Sales", "Total Sales", "/visual/query/sortDefinition/sort/0/field"],
+      [
+        "measure",
+        "Sales",
+        "Colour",
+        "/visual/objects/dataPoint/0/properties/fill/solid/color/expr",
+      ],
+      ["measure", "Sales", "Title", "/visual/visualContainerObjects/title/0/properties/text/expr"],
+    ]);
+    // The wells and the filters keep their own references; none is read twice.
+    expect(v!.fields.map((f) => f.ref.name)).toEqual(["Category", "Total Sales"]);
+    expect(v!.filters.flatMap((f) => f.refs.map((r) => r.name))).toEqual(["Brand", "Brand"]);
+    expect(refs(g)).toEqual([
+      ["measure", "Sales", "Alt", "/visualGroup/objects/general/0/properties/altText/expr"],
+    ]);
+    // A bound alt text is a reference too; a literal title is not.
+    const [, v2] = report.pages[0]!.visuals;
+    expect(refs(v2)).toEqual([
+      [
+        "measure",
+        "Sales",
+        "Alt",
+        "/visual/visualContainerObjects/general/0/properties/altText/expr",
+      ],
+    ]);
+    expect(report.pages[1]!.visuals[0]!.propertyRefs).toEqual([]);
+  });
   it("reads bookmarks and their header, and report-level measures with their lines", () => {
     expect(report.bookmarksHeader.items).toEqual([{ name: "b1", children: ["b2"] }]);
     const b = report.bookmarks[0]!;

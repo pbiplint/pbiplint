@@ -128,6 +128,20 @@ describe("buildReachabilityIndex", () => {
       "nothing in the report reaches it, and no measure or column references it",
     );
   });
+  it("reaches a measure bound only in a visual's conditional formatting, and what its DAX references", () => {
+    const [pageFile, visualFile] = visualBinding(column("Sales", "Amount"));
+    const json = JSON.parse(visualFile!.text) as { visual: Record<string, unknown> };
+    json.visual.objects = {
+      dataPoint: [
+        { properties: { fill: { solid: { color: { expr: measure("Sales", "Sales YoY %") } } } } },
+      ],
+    };
+    const { report } = buildReport([pageFile!, { ...visualFile!, text: j(json) }]);
+    const reach = buildIndexes({ model, report }).reachability!;
+    expect(reach.pathTo(meas("Sales YoY %"))).toEqual(["[Sales YoY %]"]);
+    expect(reach.pathTo(meas("Sales LY"))).toEqual(["[Sales YoY %]", "[Sales LY]"]);
+    expect(reach.reached(meas("Total Sales"))).toBe(true);
+  });
   it("is absent in a report-only or model-only project", () => {
     const { report } = buildReport(visualBinding(column("Sales", "Amount")));
     expect(buildIndexes({ report }).reachability).toBeUndefined();

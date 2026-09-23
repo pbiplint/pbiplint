@@ -392,8 +392,8 @@ block or its heading.
 
 Amended 2026-09-23: Opens on names the first page in `pageOrder` when
 `pages.json` sets neither a landing page nor an active page, and says
-unknown when `pages.json` was not read (absent, or unreadable) or the
-report has no pages. The fact links `OPENING_PAGE_INVALID` when that
+unknown when `pages.json` was not read (absent, or unreadable) or names
+neither page in a report with no pages. The fact links `OPENING_PAGE_INVALID` when that
 rule fires, else `LANDING_PAGE_NOT_SET` when it fires.
 Filters pane reads a `report.json` that does not record `expanded` as
 open, the state a new report opens with; Desktop writes `false` whenever

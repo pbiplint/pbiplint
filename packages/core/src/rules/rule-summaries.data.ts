@@ -3,6 +3,8 @@
 
 /** What each rule checks, one paragraph in pbiplint's own words, keyed by rule id. */
 export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
+  ACTION_WITHOUT_DESTINATION:
+    "Buttons, shapes, and images whose page navigation, drillthrough, or bookmark action is switched on but has no destination: the property that holds the destination for the action's type is missing from visual.json or empty.",
   ADD_DATA_CATEGORY_FOR_COLUMNS:
     "Columns with no data category whose name contains country, continent, or city and whose type is text, or whose name is exactly latitude or longitude and whose type is decimal or double.",
   "AVOID_BI-DIRECTIONAL_RELATIONSHIPS_AGAINST_HIGH-CARDINALITY_COLUMNS":
@@ -28,6 +30,10 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   "AVOID_USING_MANY-TO-MANY_RELATIONSHIPS_ON_TABLES_USED_FOR_DYNAMIC_ROW_LEVEL_SECURITY":
     "Regular tables that carry a row-level security filter in any role and take part in a many-to-many relationship.",
   AVOID_USING_THE_IFERROR_FUNCTION: "Measures and calculated columns that call IFERROR.",
+  BROKEN_ACTION_TARGET:
+    "Buttons, shapes, and images whose page navigation, drillthrough, or bookmark action names a page or a bookmark the report does not have, matched against the `name` in each page.json and bookmark file.",
+  BROKEN_BOOKMARK_REFERENCE:
+    "Bookmarks whose active page, or another page they capture, is not in the report, or which capture a visual that is not on its page, matched against the `name` in each page.json and visual.json.",
   BROKEN_FIELD_REFERENCE:
     "References in the report to a table, column, measure, hierarchy, or hierarchy level that the model does not have, wherever the report names a field: a visual's wells, formatting, and sort, a filter on a visual, a page, or the whole report, a drillthrough or tooltip page's fields, and a bookmark.",
   CALCULATION_GROUPS_WITH_NO_CALCULATION_ITEMS:
@@ -160,11 +166,15 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Measures defined in the report's reportExtensions.json rather than in the model, reported when the model the report reads is in the input, so that each can move into it.",
   SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS:
     "Columns with IsAvailableInMdx set to false that are used to sort another column, appear in a hierarchy or a variation, or sort by another column.",
+  SLICER_SELECTION_SAVED:
+    "Slicers saved with a selection, so that the report opens with it applied: a slicer, button slicer, list slicer, input slicer, or `filterSlicer` whose visual.json holds a `filter` with a condition under `objects.general`, where Power BI Desktop saves the selection. It is info without a policy, and a warning when the project's policy expects no saved selections.",
   SNOWFLAKE_SCHEMA_ARCHITECTURE:
     "Tables that are on the from side of one relationship and the to side of another, which is what a dimension related to a sub-dimension looks like.",
   SPECIAL_CHARS_IN_OBJECT_NAMES: "Names containing a tab, line feed, or carriage return.",
   SPLIT_DATE_AND_TIME:
     "DateTime columns holding values that are not at midnight. Whether any row carries a time is a statistic of the loaded data, not of the model files, so pbiplint lists this rule but does not run it: it needs statistics that only a live model carries.",
+  TAB_ORDER_FOLLOWS_LAYOUT:
+    "Pages whose tab order, the order keyboard users move through the visuals in, disagrees with the order the layout reads in: rows from top to bottom, and left to right within a row. The rule checks this only when the project's policy asks for tab order to follow the layout, and reports nothing without it.",
   TRIM_OBJECT_NAMES:
     "Names that start or end with a space, across every named object type in the model.",
   UNNECESSARY_COLUMNS:

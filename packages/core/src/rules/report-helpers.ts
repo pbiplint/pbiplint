@@ -12,6 +12,8 @@ import type { Bookmark, Page, Report, ReportMeasure, Visual } from "../pbir/type
 import type { Project } from "../project/types.js";
 import type { RuleFinding } from "./types.js";
 
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v);
 const at = (file: string, text: string, pointer?: string) => ({
   file,
   line: pointer ? lineOfPointer(text, pointer) : 1,
@@ -26,7 +28,8 @@ const inReportJson = (r: Report, pointer?: string) =>
  * Finding factories for report objects. `objectId` is what parity compares; `object` is what the
  * ignore check reads. Report-level findings carry no `object`: they are switched off in config,
  * not by an annotation in report.json (spec section 5). Report measures carry none either, since
- * pbiplint reads no annotation on a measure in reportExtensions.json.
+ * pbiplint reads no annotation on a measure in reportExtensions.json, and neither do bookmarks,
+ * since Microsoft's bookmark schema allows no annotation in a bookmark's file.
  */
 export const reportFinding = {
   report: (r: Report, detail?: string, objectId = "report", pointer?: string): RuleFinding =>
@@ -105,7 +108,6 @@ export const reportFinding = {
         objectName: bookmarkLabel(b),
         objectId: b.id,
         location: at(b.file, b.text, pointer),
-        object: b,
       },
       detail,
     ),
@@ -126,11 +128,55 @@ export const isHiddenPage = (p: Page): boolean => p.visibility === "HiddenInView
 export const visiblePages = (r: Report): Page[] => r.pages.filter((p) => !isHiddenPage(p));
 
 /**
+ * Whether the page is set up as a tooltip. page.json marks one in either of two places: its own
+ * `type`, which Microsoft's page schema gives as "Page to be used as tooltip." and which alone
+ * marks most tooltip pages in Desktop-saved reports, or its `pageBinding`'s `type`, "Binding to be
+ * used as tooltip page." in the same schema.
+ */
+export const isTooltipPage = (p: Page): boolean =>
+  p.type === "Tooltip" || p.bindingType === "Tooltip";
+
+/**
  * HIDDEN_VISUAL_WITH_FIELDS's condition, which the Visuals fact shares: a hidden visual with a field
  * in any of its wells. It counts the wells' entries, so a visual calculation, which references no
  * model field, still counts, and a group, which has no wells, never does.
  */
 export const hiddenVisualWithFields = (v: Visual): boolean => v.isHidden && v.projectionCount > 0;
+
+/**
+ * The slicer types in Microsoft's visual catalog: the slicer, the button slicer, the list slicer,
+ * the input slicer, and `filterSlicer`. A slicer from AppSource is a custom visual, not one of them.
+ */
+const SLICER_TYPES = new Set([
+  "slicer",
+  "advancedSlicerVisual",
+  "listSlicer",
+  "textSlicer",
+  "filterSlicer",
+]);
+
+/** Whether the visual is one of Microsoft's slicers; the Slicers fact counts these. */
+export const isSlicer = (v: Visual): boolean => SLICER_TYPES.has(v.type);
+
+/**
+ * SLICER_SELECTION_SAVED's condition, which the Slicers fact shares: the pointer of a slicer's
+ * saved selection, the first `general` entry whose `filter` holds a `Where` with a condition in
+ * it, or undefined when the slicer opens with nothing selected. Every catalog slicer keeps its
+ * selection there. Its `filterConfig` entries are Filters pane filters, never the selection, and
+ * Select all writes no filter, even in inverted selection mode.
+ */
+export function slicerSelection(v: Visual): string | undefined {
+  if (!isSlicer(v) || !isRecord(v.json) || !isRecord(v.json.visual)) return undefined;
+  const objects = v.json.visual.objects;
+  const general = isRecord(objects) && Array.isArray(objects.general) ? objects.general : [];
+  const i = general.findIndex((entry) => {
+    const props = isRecord(entry) && isRecord(entry.properties) ? entry.properties : {};
+    const filter =
+      isRecord(props.filter) && isRecord(props.filter.filter) ? props.filter.filter : {};
+    return Array.isArray(filter.Where) && filter.Where.length > 0;
+  });
+  return i === -1 ? undefined : `/visual/objects/general/${i}/properties/filter`;
+}
 
 /**
  * The report measures REPORT_LEVEL_MEASURES reports, which the Report measures fact shares: every

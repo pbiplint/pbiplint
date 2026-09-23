@@ -6,10 +6,12 @@ import {
   filtersPaneState,
   hiddenVisualWithFields,
   isHiddenPage,
+  isSlicer,
   landingPageNotSet,
   openingPage,
   openingPageInvalid,
   reportMeasuresToMove,
+  slicerSelection,
 } from "../rules/report-helpers.js";
 import type { Fact, Project } from "./types.js";
 
@@ -149,9 +151,9 @@ function reportFacts(project: Project, report: Report, known: ReadonlySet<string
     ),
   );
 
-  // Slicers.
-  const slicers = visuals.filter((v) => v.type === "slicer");
-  const saved = slicers.filter((v) => v.filters.some((f) => f.applied)).length;
+  // Slicers: Microsoft's slicer types, and those saved with a selection, as the rule reads them.
+  const slicers = visuals.filter(isSlicer);
+  const saved = slicers.filter((v) => slicerSelection(v) !== undefined).length;
   facts.push(
     withRule(
       slicers.length

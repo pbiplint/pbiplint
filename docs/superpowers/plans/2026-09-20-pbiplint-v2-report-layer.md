@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Read a whole Power BI project (model and report), port fab-inspector's 11 base report rules with parity pinned by committed fixtures, ship pbiplint's 14 native report rules in three tiers with a page each, show a facts block beside the findings, give the input walk a diagnostics channel, and release 0.2.0, landed as eight pull requests in the order the spec sequences them.
+**Goal:** Read a whole Power BI project (model and report), port fab-inspector's 11 base report rules with parity pinned by committed fixtures, ship pbiplint's 15 native report rules (amended 2026-09-23 with Michael) in three tiers with a page each, show a facts block beside the findings, give the input walk a diagnostics channel, and release 0.2.0, landed as eight pull requests in the order the spec sequences them.
 
 **Architecture:** One `lint(files)` call reads both parts: `.tmdl` files route to the TMDL parser and model builder that v1 has, everything else routes to a new tolerant PBIR reader (`packages/core/src/pbir/`) that builds a report object model. A `Project = { model?, report? }` plus three model indexes, a report reference index, and a reachability index feed every rule through one `check(project, ctx)` signature; the 72 model rules keep their bodies behind `bpaRule`, the 11 ports sit behind `inspectorRule`, the native rules behind `pbiplintRule`. Facts and diagnostics ride on the result into every formatter, the CLI, and the site. Parity with fab-inspector is a committed JSON expectation per fixture, with a `deviations` map for the three documented differences.
 
@@ -38,7 +38,7 @@ Spec section 14 fixes the order. Each pull request is a branch off main, cut aft
 | 2. Ported rules with parity | `v2-ported-rules` | 12 to 20 | Vendored ruleset, four fixtures, oracle script and expectations, 11 ports, page tooling for report rules, 11 pages |
 | 3. Native rules, tier 1 | `v2-native-tier-1` | 21 to 25 | `pbiplintRule`, 6 rules, quiet checks, 6 pages |
 | 4. Native rules, tier 2 | `v2-native-tier-2` | 26 to 28 | 4 rules, 4 pages |
-| 5. Native rules, tier 3 | `v2-native-tier-3` | 29 to 31 | 4 rules, 4 pages |
+| 5. Native rules, tier 3 | `v2-native-tier-3` | 29 to 31 | 5 rules, 5 pages (amended 2026-09-23 with Michael) |
 | 6. The sample project | `v2-sample-report` | 32 to 35 | `examples/messy-sales` becomes a PBIP with a report that plants every violation, hand expectations, updated pins |
 | 7. The browser | `v2-browser` | 36 to 41 | Walkers, `selectProject`, results page with facts and layer tags, diagnostics as notices, browser tests, performance budget |
 | 8. Docs and release | `v2-release` | 42 to 43 | README, CONTRIBUTING, RELEASING, About, 0.2.0 |
@@ -104,7 +104,7 @@ Recorded so a reviewer can see them as decisions rather than drift. None reopens
 6. **`LintResult.model` stays** (`project.model`, or the empty model `buildModel([])` when the layer is absent) so the API is additive; `project`, `layers`, `facts`, `diagnostics` are added.
 7. **The skipped line uses parentheses**, `14 rules skipped (no report in the input)`, matching v1's `(need a live model)`.
 8. **The directory-input route applies the depth cap by path depth**, so all three browser routes report `depth-cap` the same way and the browser test can drive it with a real deep folder.
-9. **The sample ships a `pbiplint.config.json`** setting `FILTERS_PANE_STATE` to `expect: "closed"`, because a policy rule fires only under a policy and the definition of done wants every native rule to fire on the sample. `OPENING_PAGE_INVALID`, native and not on the spec's planted list, is planted as a hidden active page. The seven ported rules the spec's list left out (objects within visuals, TopN filters, Advanced filters, page count, Show items with no data, theme colours, alt text) are planted too, approved by Michael on 2026-09-20 and written into spec section 11, so the sample fires all 25 report rules.
+9. **The sample ships a `pbiplint.config.json`** setting `FILTERS_PANE_STATE` to `expect: "closed"`, and `TAB_ORDER_FOLLOWS_LAYOUT` to `expect: "layout"` (amended 2026-09-23 with Michael), because a policy rule fires only under a policy and the definition of done wants every native rule to fire on the sample. `OPENING_PAGE_INVALID`, native and not on the spec's planted list, is planted as a hidden active page. The seven ported rules the spec's list left out (objects within visuals, TopN filters, Advanced filters, page count, Show items with no data, theme colours, alt text) are planted too, approved by Michael on 2026-09-20 and written into spec section 11, so the sample fires all 26 report rules (amended 2026-09-23 with Michael).
 10. **A visual's `mobile.json` marks the visual**; a page "has a mobile layout" when any of its visuals does. That is the fact the spec asks for.
 11. **`AVOID_SHOW_ITEMS_WITH_NO_DATA` reads `showAll` on any role**, as the spec's table says, while the source reads the Category role only. Parity on both oracle fixtures decides whether that is a difference: if it is, Task 16 stops and reports it to Michael as a fourth deviation candidate rather than deciding.
 12. **Report-level measures resolve field references.** A visual bound to a measure from `reportExtensions.json` is not a broken reference; `BROKEN_FIELD_REFERENCE` fires only on names neither the model nor the report defines.
@@ -138,8 +138,8 @@ Recorded so a reviewer can see them as decisions rather than drift. None reopens
 | `scripts/sanitize-fixture.mjs`, `scripts/fab-expectations.mjs`, `tests/expectations/*.report.json` | report mode, oracle converter, expectations | 2 |
 | `packages/core/test/report-parity.test.ts`, `fixtures.test.ts`, `helpers.ts` | parity harness, fixture smoke, `readProjectFiles` | 2 |
 | `packages/core/test/rule-pages.test.ts`, `scripts/sync-rule-pages.mjs`, `scripts/generate-rule-pages.mjs` | `pbir` hook and stock model, captions, `layer`, per-layer sources | 2 |
-| `rules/*.md` (25 new pages) | the report rule pages | 2, 3, 4, 5 |
-| `packages/core/src/rules/pbiplint/*` | `pbiplintRule`, 14 native rules | 3, 4, 5 |
+| `rules/*.md` (26 new pages; amended 2026-09-23 with Michael) | the report rule pages | 2, 3, 4, 5 |
+| `packages/core/src/rules/pbiplint/*` | `pbiplintRule`, 15 native rules (amended 2026-09-23 with Michael) | 3, 4, 5 |
 | `examples/messy-sales/**` | PBIP layout, the report, the config | 6 |
 | `packages/cli/src/sample.ts`, `build.mjs`, `scripts/check-pack.mjs`, `packages/web/src/sample.ts` | the sample as a project | 6 |
 | `packages/web/src/input/*.ts`, `main.ts`, `results/render.ts`, `styles.css`, `index.html`, `content/about.md` | the browser | 7 |
@@ -5698,13 +5698,14 @@ Shared facts for the three native pull requests:
 | VISUAL_OUTSIDE_PAGE | Visual extends past the page |
 | REPORT_LEVEL_MEASURES | Measure defined in the report |
 | BROKEN_ACTION_TARGET | Action points at nothing |
+| ACTION_WITHOUT_DESTINATION | Action has no destination |
 | BROKEN_BOOKMARK_REFERENCE | Bookmark refers to a missing page or visual |
 | TAB_ORDER_FOLLOWS_LAYOUT | Tab order disagrees with the layout |
 | SLICER_SELECTION_SAVED | Slicer saved with a selection |
 
 - Every native rule is pinned two ways (spec section 10): a unit test on inline JSON, and the `native` map in the expectation files. The quiet check: `base-rules-passes.report.json` and `shelfmart.report.json` list by name every native finding they produce, and the test fails on any other. `LANDING_PAGE_NOT_SET` fires on every fixture (none has a `landingPageName`) and `NOT_REACHED_FROM_REPORT` fires wherever the model holds more than the report uses; both are listed by name, however long the list.
 - Each tier's pages follow Task 19's brief with the notes in that tier's page task; `sources` is empty (builtin); a `project` rule's example runs against the stock model, and its page says so in one sentence before the fences ("The example runs against a model with one table, Sales, holding Amount and Region and the measure Total Sales.").
-- Pack and page counts: 89 after tier 1, 93 after tier 2, 97 after tier 3; the index sentence's "built into pbiplint" count follows.
+- Pack and page counts: 89 after tier 1, 93 after tier 2, 98 after tier 3 (amended 2026-09-23 with Michael); the index sentence's "built into pbiplint" count follows.
 
 ### Task 21: `pbiplintRule`, BROKEN_FIELD_REFERENCE, NOT_REACHED_FROM_REPORT
 
@@ -6871,7 +6872,7 @@ The report, page by page. Visual ids are chosen once; the table names the visual
 
 | Page (display name) | Settings | Visuals | Plants |
 |---|---|---|---|
-| Overview | 1280 by 720, visible, the active page is not this one | "Sales by region": clusteredBarChart bound to `'Sales'[Region]` (Category) and `[Total Sales]` (Y); "Total Sales", "Order Count", "Average Order Value": cardVisual each bound to that measure; "Sales by category": donutChart bound to `'Product'[Category]` and `[Total Sales]`; "Category" slicer bound to `'Product'[Category]` with a saved selection (`filterConfig` entry of type Categorical carrying a `filter` with a `Where` selecting "Bikes"); "Go to detail": actionButton with `visualLink` type PageNavigation whose `navigationSection` is `deadpage00000000000000` (no such page); "Sales trend (old)": lineChart, `isHidden: true`, bound to `'Date'[Month]` and `[Total Sales]`; "Debug table": tableEx, `isHidden: true`, bound to six Sales columns; "Placeholder": cardVisual with no query; "Notes": textbox at x 1200 width 200 (past the right edge) | BROKEN_FIELD_REFERENCE (Sales has no Region), SLICER_SELECTION_SAVED, BROKEN_ACTION_TARGET, HIDDEN_VISUAL_WITH_FIELDS (two), VISUAL_WITHOUT_FIELDS, VISUAL_OUTSIDE_PAGE |
+| Overview | 1280 by 720, visible, the active page is not this one | "Sales by region": clusteredBarChart bound to `'Sales'[Region]` (Category) and `[Total Sales]` (Y); "Total Sales", "Order Count", "Average Order Value": cardVisual each bound to that measure; "Sales by category": donutChart bound to `'Product'[Category]` and `[Total Sales]`; "Category" slicer bound to `'Product'[Category]` with a saved selection (the selection is in `visual.objects.general[0].properties.filter`, a `filter` whose `Where` selects "Bikes"); "Go to detail": actionButton with `visualLink` type PageNavigation whose `navigationSection` is `deadpage00000000000000` (no such page); "Next page": actionButton with `visualLink` type PageNavigation, `show` true, and no `navigationSection` (amended 2026-09-23 with Michael); "Sales trend (old)": lineChart, `isHidden: true`, bound to `'Date'[Month]` and `[Total Sales]`; "Debug table": tableEx, `isHidden: true`, bound to six Sales columns; "Placeholder": cardVisual with no query; "Notes": textbox at x 1200 width 200 (past the right edge) | BROKEN_FIELD_REFERENCE (Sales has no Region), SLICER_SELECTION_SAVED, BROKEN_ACTION_TARGET, ACTION_WITHOUT_DESTINATION, HIDDEN_VISUAL_WITH_FIELDS (two), VISUAL_WITHOUT_FIELDS, VISUAL_OUTSIDE_PAGE |
 | Page 2 | visible | "Total Quantity" card bound to `[Total Quantity]`, its value colour a hex literal (a `solid.color` whose Literal is `'#1F77B4'` under the card's formatting objects, the property shape copied from a fixture visual that sets a colour) | DEFAULT_PAGE_NAME, ENSURE_THEME_COLOURS |
 | Duplicate of Overview | visible | "Sales by brand": clusteredBarChart bound to `'Product'[Brand]` (Category) and `[Total Sales]` (Y), with `showAll: true` on the Category role | DEFAULT_PAGE_NAME, AVOID_SHOW_ITEMS_WITH_NO_DATA |
 | Product tooltip | `pageBinding.type: "Tooltip"`, visibility AlwaysVisible (absent), 320 by 240 | "Product name" card bound to `'Product'[Product Name]` | HIDE_TOOLTIP_DRILLTROUGH_PAGES |
@@ -6896,7 +6897,8 @@ Report-level files:
 {
   "$schema": "https://pbiplint.com/schema/pbiplint.config.schema.json",
   "rules": {
-    "FILTERS_PANE_STATE": { "expect": "closed" }
+    "FILTERS_PANE_STATE": { "expect": "closed" },
+    "TAB_ORDER_FOLLOWS_LAYOUT": { "expect": "layout" }
   }
 }
 ```
@@ -6920,7 +6922,7 @@ node scripts/sanitize-fixture.mjs examples/messy-sales
 node packages/cli/dist/pbiplint.mjs examples/messy-sales --fail-on none
 ```
 
-(build the CLI first with `npm run build -w pbiplint`). Expected: the facts block reads, in substance, `Opens on Scratch (hidden) (the page open when it was saved; no landing page set)`, `Filters pane open`, `Pages 11 (1 hidden, 1 tooltip)`, `Visuals 43 (2 hidden; 1 custom visual type registered, 0 used)`, `Report measures 2`, `Slicers 1 (1 with a saved selection)`, `Mobile layouts none`, `Schema versions report 3.2.0, page 2.1.0, visual 2.8.0`, `Model 7 tables, 74 columns, 14 measures; N columns and 2 measures not reached`; and every one of the 25 report rules appears in the groups, each with the count the table implies; nothing else appears apart from `NOT_REACHED_FROM_REPORT` and the model rules. Fix the JSON until that is so.
+(build the CLI first with `npm run build -w pbiplint`). Expected: the facts block reads, in substance, `Opens on Scratch (hidden) (the page open when it was saved; no landing page set)`, `Filters pane open`, `Pages 11 (1 hidden, 1 tooltip)`, `Visuals 43 (2 hidden; 1 custom visual type registered, 0 used)`, `Report measures 2`, `Slicers 1 (1 with a saved selection)`, `Mobile layouts none`, `Schema versions report 3.2.0, page 2.1.0, visual 2.8.0`, `Model 7 tables, 74 columns, 14 measures; N columns and 2 measures not reached`; and every one of the 26 report rules (amended 2026-09-23 with Michael) appears in the groups, FILTERS_PANE_STATE and TAB_ORDER_FOLLOWS_LAYOUT under the config's policies, each with the count the table implies; nothing else appears apart from `NOT_REACHED_FROM_REPORT` and the model rules. Fix the JSON until that is so.
 
 - [ ] **Step 3: Commit**
 
@@ -6974,6 +6976,7 @@ git commit -m "feat(sample): Messy Sales Demo.Report, one planted violation per 
     "VISUAL_OUTSIDE_PAGE": ["<notes id>"],
     "REPORT_LEVEL_MEASURES": ["Sales.Net Margin", "Sales.Margin % (report)"],
     "BROKEN_ACTION_TARGET": ["<go to detail id>"],
+    "ACTION_WITHOUT_DESTINATION": ["<next page button id>"],
     "BROKEN_BOOKMARK_REFERENCE": ["<bookmark id>"],
     "TAB_ORDER_FOLLOWS_LAYOUT": ["<detail page id>"],
     "SLICER_SELECTION_SAVED": ["<category slicer id>"]
@@ -7008,8 +7011,8 @@ As Task 20 Steps 1 to 3, branch `v2-sample-report`, title "v2 sample: Messy Sale
 ```
 Pull request 6 of 8 for the report layer, tracked in #9.
 
-- `examples/messy-sales` is now a PBIP folder: the model moved (unchanged) into `Messy Sales Demo.SemanticModel`, a hand-authored `Messy Sales Demo.Report` beside it, a `.pbip`, and a `pbiplint.config.json` that sets the Filters pane policy so that rule can fire.
-- The report plants one violation per report rule, all 25: the spec's list, the seven ported rules it left out (approved 2026-09-20, spec section 11 amended), and a hidden active page. Every other visual carries alt text and nothing else fires. Validated with `powerbi-report-author validate` after every page.
+- `examples/messy-sales` is now a PBIP folder: the model moved (unchanged) into `Messy Sales Demo.SemanticModel`, a hand-authored `Messy Sales Demo.Report` beside it, a `.pbip`, and a `pbiplint.config.json` that sets the Filters pane and tab order policies so those rules can fire.
+- The report plants one violation per report rule, all 26: the spec's list, the seven ported rules it left out (approved 2026-09-20, spec section 11 amended), and a hidden active page. Every other visual carries alt text and nothing else fires. Validated with `powerbi-report-author validate` after every page.
 - `--sample`, the site bundle, and `check:pack` carry the whole project. `tests/expectations/messy-sales.report.json` pins every planted finding by id.
 - Totals move from 161 findings in 11 files to <new totals>; every pin is updated.
 
@@ -7537,18 +7540,19 @@ against it, plus pbiplint's own rules for what is broken, unfinished, or expensi
 and for what the model holds that the report never reaches. Power Query rules follow.
 ```
 
-In "Use it", the first command line becomes `npx pbiplint path/to/Project        # a PBIP folder, a .pbip file, a .SemanticModel or .Report folder, or one .tmdl file` and the browser sentence names the three folder kinds. In "Configure it", after the config example, add:
+In "Use it", the first command line becomes `npx pbiplint path/to/Project        # a PBIP folder, a .pbip file, a .SemanticModel or .Report folder, or one .tmdl file` and the browser sentence names the three folder kinds. In "Configure it", after the config example, add (three policy rules and the tab-order policy in the example, amended 2026-09-23 with Michael):
 
 ```markdown
 A rule that takes options is set with an object. The thresholds of the ported report rules and
-the two policy rules are examples; each rule's page lists its options:
+the three policy rules are examples; each rule's page lists its options:
 
 ```json
 {
   "rules": {
     "REDUCE_VISUALS_ON_PAGE": { "severity": "error", "max": 15 },
     "FILTERS_PANE_STATE": { "expect": "closed" },
-    "SLICER_SELECTION_SAVED": { "expect": "none" }
+    "SLICER_SELECTION_SAVED": { "expect": "none" },
+    "TAB_ORDER_FOLLOWS_LAYOUT": { "expect": "layout" }
   }
 }
 ```
@@ -7671,7 +7675,7 @@ Report the URL and stop. Michael merges, tags, watches the release, and does the
 
 | Done when | Where it is done | Where it is checked |
 |---|---|---|
-| Every rule in section 8 exists with a page, a fixture that fires it, and, for the ported set, parity with the oracle or a documented deviation | Tasks 15 to 19 (ported), 21 to 31 (native), 33 to 34 (the sample fires them) | `report-parity.test.ts` (parity, deviations, coverage, native), `rule-pages.test.ts` (every rule has a page whose example fires), `pack.test.ts` (97) |
+| Every rule in section 8 exists with a page, a fixture that fires it, and, for the ported set, parity with the oracle or a documented deviation | Tasks 15 to 19 (ported), 21 to 31 (native), 33 to 34 (the sample fires them) | `report-parity.test.ts` (parity, deviations, coverage, native), `rule-pages.test.ts` (every rule has a page whose example fires), `pack.test.ts` (98, amended 2026-09-23 with Michael) |
 | `base-rules-passes` and ShelfMart are quiet under the native rules except as listed by name | Tasks 23, 26, 29 (the `native` maps) | `report-parity.test.ts`, "native rules on $name" |
 | A whole-PBIP drop, a report-only drop, and a model-only drop render correctly in three browsers; the CLI accepts every input shape in section 4 | Tasks 36 to 39 (browser), Task 10 (CLI) | `home.spec.ts` (the three drops plus the existing model-only tests), `walk.test.ts` |
 | The depth cap and both legacy formats surface as diagnostics | Tasks 8, 10, 36, 37 | `route.test.ts`, `walk.test.ts`, `cli.test.ts`, `read-drop.test.ts`, `pick-folder.test.ts`, `project-files.test.ts`, `home.spec.ts` |
@@ -7686,6 +7690,6 @@ Spec sections and the tasks that carry them: 4 (Tasks 8, 10, 36, 37), 5 (Tasks 3
 - Execution is subagent-driven (`superpowers:subagent-driven-development`), one pull request at a time, with every agent on Opus 5.5 from pull request 3 on: the primary agent, implementers, task reviewers, re-reviewers, and the whole-branch review (Michael, 2026-09-23; pull requests 1 and 2 ran implementers and task reviewers on Opus 5 and the whole-branch review on Fable 5.1). The ledger lives at `.superpowers/sdd/2026-09-20-pbiplint-v2-report-layer/progress.md` (git-ignored) in the shape of `.superpowers/sdd/2026-09-19-rule-pages-template/`: a pre-flight scan of produces-versus-consumes across the pull request's tasks, one line per task event, and rulings written as "Ruling: what. Why: why. Cost if wrong: cost." Each pull request's tasks are one execution unit; the session stops after opening the pull request and resumes from the ledger when Michael says merge.
 - A task's implementer sees only its own task text plus the Global Constraints, the Decisions, the shared facts of its pull request, and the Interfaces blocks of the tasks it consumes; the ledger records what each brief contained.
 - The escalation rule for parity (pull request 2's shared facts) and the manual checks named in each pull request body are the only places the session stops for Michael inside a pull request.
-- Where a task says "counts to N", the numbers are 72 (today), 77 and 80 (inside pull request 2), 83 (after it), 85 and 88 (inside pull request 3), 89, 93, 97; `pack.test.ts` and `generate.test.ts` pin them and the index sentence.
+- Where a task says "counts to N", the numbers are 72 (today), 77 and 80 (inside pull request 2), 83 (after it), 85 and 88 (inside pull request 3), 89, 93, 97 (inside pull request 5), 98 (after it; amended 2026-09-23 with Michael); `pack.test.ts` and `generate.test.ts` pin them and the index sentence.
 - The site's pins move on a different clock: `generate.test.ts` holds the page count, the rules index sentence, and the sitemap at 72 through pull requests 2 to 6, apart from Task 24, where the two `project` pages publish and take it to 74, while `pack.test.ts` moves as the line above says, because `SITE_LAYERS` publishes the model layer only until pull request 7 (decision 15).
 - Nothing in this plan runs Tabular Editor or fab-inspector in CI; the oracle runs once, by hand, in Task 14, and again only when `docs/RELEASING.md` says to.

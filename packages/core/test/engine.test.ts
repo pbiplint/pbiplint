@@ -237,7 +237,13 @@ describe("ignoreHelp", () => {
     expect(ignoreHelp("X", ["ReportMeasure"])).toBe(
       'This rule reports on measures defined in the report, and pbiplint reads no annotation on them, so there is no object to annotate. To turn the rule off for a whole project, set `"X": "off"` under `rules` in `pbiplint.config.json`.',
     );
-    expect(ignoreHelp("X", ["Bookmark"])).toMatch(/^This rule reports on the report itself/);
+    // Microsoft's bookmark schema has no place for an annotation.
+    expect(ignoreHelp("BROKEN_BOOKMARK_REFERENCE", ["Bookmark"])).toBe(
+      'This rule reports on bookmarks, and a bookmark\'s file has no place for an annotation, so there is no object to annotate. To turn the rule off for a whole project, set `"BROKEN_BOOKMARK_REFERENCE": "off"` under `rules` in `pbiplint.config.json`.',
+    );
+    expect(ignoreHelp("X", ["Report", "Bookmark"])).toMatch(
+      /^This rule reports on the report itself/,
+    );
     expect(ignoreHelp("X", ["Report", "ReportMeasure"])).toMatch(
       /^This rule reports on the report itself/,
     );

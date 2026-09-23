@@ -88,6 +88,7 @@ const files = [
     path: "definition/pages/p1/page.json",
     text: page("p1", {
       visibility: "HiddenInViewMode",
+      type: "Tooltip",
       pageBinding: { type: "Tooltip", parameters: [{ field: column("Product", "Category") }] },
       filterConfig: {
         filters: [
@@ -192,7 +193,7 @@ describe("buildReport", () => {
     expect(report.issues).toEqual([]);
     expect(diagnostics).toEqual([]);
   });
-  it("orders pages by pageOrder and reads their header, binding, filters, and annotations", () => {
+  it("orders pages by pageOrder and reads their header, type, binding, filters, and annotations", () => {
     expect(report.pagesHeader).toEqual({
       file: "definition/pages/pages.json",
       text: pagesJson,
@@ -204,12 +205,35 @@ describe("buildReport", () => {
     const p1 = report.pages[1]!;
     expect(p1.displayName).toBe("Page p1");
     expect(p1.visibility).toBe("HiddenInViewMode");
+    // page.json's own `type`, apart from its pageBinding's; p2 sets neither.
+    expect(p1.type).toBe("Tooltip");
+    expect(report.pages[0]!.type).toBeUndefined();
     expect(p1.bindingType).toBe("Tooltip");
     expect(p1.bindingRefs.map((r) => r.name)).toEqual(["Category"]);
     expect(p1.filters.map((f) => [f.type, f.applied])).toEqual([["Advanced", true]]);
     expect(p1.annotations).toEqual({ "pbiplint.ignore": "X" });
     expect(p1.file).toBe("definition/pages/p1/page.json");
     expect(report.schemaVersions).toEqual({ report: "3.2.0", page: "2.1.0", visual: "2.8.0" });
+  });
+  it("orders pages by the name each page.json gives, while a visual joins its page by folder", () => {
+    // Learn: renaming a page's `name` is supported, and Desktop keeps the folder; pages.json,
+    // bookmarks, and actions follow the name.
+    const { report: renamed } = buildReport([
+      {
+        path: "definition/pages/pages.json",
+        text: j({ pageOrder: ["page_dashboard", "p1", "page_dashboard"] }),
+      },
+      { path: "definition/pages/p1/page.json", text: page("p1") },
+      { path: "definition/pages/646039348818b651e02c/page.json", text: page("page_dashboard") },
+      { path: "definition/pages/646039348818b651e02c/visuals/v/visual.json", text: visual("v") },
+      { path: "definition/pages/zz/page.json", text: page("zz") },
+    ]);
+    // A page pageOrder lists twice comes out once; one it does not list comes after.
+    expect(renamed.pages.map((p) => [p.id, p.file, p.visuals.map((v) => v.id)])).toEqual([
+      ["page_dashboard", "definition/pages/646039348818b651e02c/page.json", ["v"]],
+      ["p1", "definition/pages/p1/page.json", []],
+      ["zz", "definition/pages/zz/page.json", []],
+    ]);
   });
   it("reads a visual's type, position, fields per role, showAll, title, alt text, actions, filters, and mobile layout", () => {
     const v1 = report.pages[1]!.visuals[0]!;
@@ -230,13 +254,76 @@ describe("buildReport", () => {
     expect(v1.actions).toEqual([
       {
         type: "PageNavigation",
+        on: true,
         target: "p2",
-        pointer: "/visual/visualContainerObjects/visualLink/0/properties",
+        pointer: "/visual/visualContainerObjects/visualLink/0/properties/navigationSection",
       },
     ]);
     expect(v1.filters.map((f) => f.name)).toEqual(["vf"]);
     expect(v1.hasMobileLayout).toBe(true);
     expect(v1.file).toBe("definition/pages/p1/visuals/v1/visual.json");
+  });
+  it("reads an action's destination only from the property its type owns, and whether it is on", () => {
+    const entry = (properties: Record<string, unknown>) => ({ properties });
+    const { report: linked } = buildReport([
+      { path: "definition/pages/p1/page.json", text: page("p1") },
+      {
+        path: "definition/pages/p1/visuals/b/visual.json",
+        text: j({
+          $schema: schema("visualContainer", "2.8.0"),
+          name: "b",
+          position: { x: 0, y: 0, z: 0, height: 40, width: 120, tabOrder: 0 },
+          visual: {
+            visualType: "actionButton",
+            visualContainerObjects: {
+              visualLink: [
+                // A bookmark left behind when the type became PageNavigation is not its target.
+                entry({
+                  show: lit("true"),
+                  type: lit("'PageNavigation'"),
+                  navigationSection: lit("'p2'"),
+                  bookmark: lit("'b9'"),
+                }),
+                // Switched off.
+                entry({ show: lit("false"), type: lit("'Bookmark'"), bookmark: lit("'b1'") }),
+                // A destination set by conditional formatting.
+                entry({
+                  type: lit("'PageNavigation'"),
+                  navigationSection: {
+                    expr: {
+                      Measure: {
+                        Expression: { SourceRef: { Entity: "Sales" } },
+                        Property: "Destination",
+                      },
+                    },
+                  },
+                }),
+                // An empty destination.
+                entry({ type: lit("'PageNavigation'"), navigationSection: lit("''") }),
+                // No property of its own, only another type's.
+                entry({ type: lit("'Bookmark'"), navigationSection: lit("'p2'") }),
+                // The type is matched without regard to case.
+                entry({ type: lit("'drillthrough'"), drillthroughSection: lit("'p1'") }),
+                entry({ type: lit("'Back'") }),
+                // No type: not an action.
+                entry({ show: lit("true"), tooltip: lit("'Help'") }),
+              ],
+            },
+          },
+        }),
+      },
+    ]);
+    const at = (i: number, property?: string) =>
+      `/visual/visualContainerObjects/visualLink/${i}/properties${property ? `/${property}` : ""}`;
+    expect(linked.pages[0]!.visuals[0]!.actions).toEqual([
+      { type: "PageNavigation", on: true, target: "p2", pointer: at(0, "navigationSection") },
+      { type: "Bookmark", on: false, target: "b1", pointer: at(1, "bookmark") },
+      { type: "PageNavigation", on: true, conditional: true, pointer: at(2, "navigationSection") },
+      { type: "PageNavigation", on: true, pointer: at(3, "navigationSection") },
+      { type: "Bookmark", on: true, pointer: at(4) },
+      { type: "drillthrough", on: true, target: "p1", pointer: at(5, "drillthroughSection") },
+      { type: "Back", on: true, pointer: at(6) },
+    ]);
   });
   it("marks a group, a member of a group, and an alt text bound to an expression", () => {
     const [g1, v2] = report.pages[0]!.visuals;
@@ -450,9 +537,15 @@ describe("buildReport", () => {
     const b = report.bookmarks[0]!;
     expect([b.id, b.displayName, b.activePage, b.pages]).toEqual(["b1", "Reset", "p1", ["p1"]]);
     expect(b.visuals).toEqual([
-      { page: "p1", visual: "v1" },
-      { page: "p1", visual: "gone" },
+      { page: "p1", visual: "v1", pointer: "/explorationState/sections/p1/visualContainers/v1" },
+      {
+        page: "p1",
+        visual: "gone",
+        pointer: "/explorationState/sections/p1/visualContainers/gone",
+      },
     ]);
+    // Microsoft's bookmark schema declares no annotations, so the reader keeps none.
+    expect(b).not.toHaveProperty("annotations");
     expect(report.measures.map((m) => [m.table, m.name, m.hidden, m.line])).toEqual([
       ["Sales", "Net Margin", false, 7],
       ["Sales", "Margin %", false, 8],
@@ -487,7 +580,7 @@ describe("buildReport tolerance", () => {
       ["definition/pages/a/page.json", 1],
     ]);
     // The page file could not be read, so the visual's page is a stub named by its folder.
-    expect(report.pages.map((p) => [p.id, p.displayName])).toEqual([["a", "a"]]);
+    expect(report.pages.map((p) => [p.id, p.displayName, p.type])).toEqual([["a", "a", undefined]]);
     expect(report.pages[0]!.visuals.map((v) => v.id)).toEqual(["v"]);
   });
   it("records whether reportExtensions.json was in the input and could be read", () => {

@@ -27,6 +27,7 @@ const visual = (
   type: string,
   extra: Record<string, unknown> = {},
   fields: unknown[] = [],
+  inner: Record<string, unknown> = {},
 ) => ({
   path: `definition/pages/${pageId}/visuals/${name}/visual.json`,
   text: j({
@@ -37,6 +38,7 @@ const visual = (
     visual: {
       visualType: type,
       query: { queryState: { Values: { projections: fields.map((field) => ({ field })) } } },
+      ...inner,
     },
   }),
 });
@@ -61,25 +63,53 @@ const files = [
   page("p1", "Overview"),
   page("p2", "Tips", { pageBinding: { type: "Tooltip" } }),
   page("p3", "Scratch", { visibility: "HiddenInViewMode" }),
+  // A slicer saves its selection in its general filter; its filterConfig entry is a Filters pane
+  // filter with nothing applied.
   visual(
     "p1",
     "v1",
     "slicer",
     {
       filterConfig: {
-        filters: [
+        filters: [{ name: "f", field: column("Sales", "Region"), type: "Categorical" }],
+      },
+    },
+    [column("Sales", "Region")],
+    {
+      objects: {
+        general: [
           {
-            name: "f",
-            field: column("Sales", "Region"),
-            type: "Categorical",
-            filter: { Where: [] },
+            properties: {
+              filter: {
+                filter: {
+                  Version: 2,
+                  From: [{ Name: "s", Entity: "Sales", Type: 0 }],
+                  Where: [
+                    {
+                      Condition: {
+                        In: {
+                          Expressions: [
+                            {
+                              Column: {
+                                Expression: { SourceRef: { Source: "s" } },
+                                Property: "Region",
+                              },
+                            },
+                          ],
+                          Values: [[{ Literal: { Value: "'West'" } }]],
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
           },
         ],
       },
     },
-    [column("Sales", "Region")],
   ),
-  visual("p1", "v2", "slicer", {}, [column("Sales", "Region")]),
+  visual("p1", "v2", "advancedSlicerVisual", {}, [column("Sales", "Region")]),
   visual("p1", "v3", "cardVisual", { isHidden: true }, [
     { Measure: { Expression: { SourceRef: { Entity: "Sales" } }, Property: "Total" } },
   ]),
@@ -140,6 +170,7 @@ describe("buildFacts", () => {
         label: "Slicers",
         value: "2",
         detail: "1 with a saved selection",
+        ruleId: "SLICER_SELECTION_SAVED",
       },
       { layer: "report", label: "Mobile layouts", value: "1 of 3 pages" },
       {

@@ -183,11 +183,29 @@ slicer and four data visuals whose per-field entries Desktop writes)
   `mobile.json` beside it is the mobile layout. Amended 2026-09-23
   with pull request 4: a grouped visual's `position` is relative to
   its parent group (Desktop-saved files; the schema speaks only of the
-  page).
+  page). Amended 2026-09-23 with pull request 5, reading the
+  conditions rather than changing them: `position.tabOrder` may be
+  absent (the visualContainer schema does not require it, and 511 of
+  13,026 Desktop-saved visual.json files lack it), is negative for a
+  visual hidden from the tab order (Desktop-saved files; Learn says
+  only that clicking the number next to an object hides it from the
+  tab order), and restarts at 0 inside each group, as `x` and `y` are
+  relative to it (Desktop-saved files); and a `visualLink` entry keeps
+  the previous type's target property when its `type` changes (891
+  Desktop-saved entries carry another type's target, 700 of them
+  naming nothing), so only the property that belongs to the entry's
+  type is its destination.
 - `definition/bookmarks/bookmarks.json`: `items[]` (`name`, optional
   `children`). `<name>.bookmark.json`: `name`, `displayName`, `options`,
   `explorationState` with `activeSection` (page name) and
-  `sections[<page>].visualContainers[<visual>]`.
+  `sections[<page>].visualContainers[<visual>]`. Amended 2026-09-23
+  with pull request 5, reading the conditions rather than changing
+  them: a bookmark captures one page, so `sections` has one key, equal
+  to `activeSection` (576 of 576 Desktop-saved bookmarks; Learn: a
+  bookmark captures the current state of a report page), and it keeps
+  groups apart from visuals, under
+  `sections[<page>].visualContainerGroups` (Microsoft's bookmark
+  schema: `visualContainers` "Does not include state of groups").
 - `definition/reportExtensions.json` (reportExtension 1.0.0): `name`,
   `entities[]` with `name` and `measures[]` (`name`, `dataType`,
   `expression`, `hidden`, `formatString`, `displayFolder`, ...). These
@@ -202,7 +220,15 @@ slicer and four data visuals whose per-field entries Desktop writes)
   (`Categorical`, `Advanced`, `TopN`, ...), and, only when a condition
   is applied, `filter: { Version, From, Where }`. A slicer's saved
   selection is a `filter` with a `Where` on its own `filterConfig`
-  entry; a slicer with no selection has no `filter`.
+  entry; a slicer with no selection has no `filter`. Amended 2026-09-23
+  with pull request 5, reading the conditions rather than changing
+  them, a correction to the sentence on slicers: a slicer's saved
+  selection is the `filter` under
+  `visual.objects.general[].properties.filter`, for every slicer type
+  in Microsoft's visual catalog (Microsoft's capability data gives each
+  of them that property, and Desktop-saved files keep the selection
+  there); a `filterConfig` entry on a slicer holds a visual-level
+  filter of the Filters pane, never the selection.
 - Desktop names a duplicated page "Duplicate of <name>" in current
   builds; older copy could read "<name> (copy)". Both are matched.
   Amended 2026-09-23 with pull request 4: English Desktop writes
@@ -317,8 +343,9 @@ path and raw text.
   measures.
 - `PagesHeader`: `pageOrder`, `activePageName`, `landingPageName`.
 - `Page`: id (`name`), display name, width, height, display option,
-  visibility, binding type (tooltip, drillthrough) and parameters,
-  filters, visuals, file, `annotations`.
+  visibility, the page's own `type` (tooltip, drillthrough), binding
+  type (tooltip, drillthrough) and parameters, filters, visuals, file,
+  `annotations`.
 - `Visual`: id, page, position (x, y, z, width, height, tabOrder),
   type, `isHidden`, group membership, filters, fields bound per role,
   title text, alt text, actions (type and target), `annotations`, raw
@@ -346,6 +373,14 @@ report finding also carries `objectId` (the page, visual, or bookmark
 finding has a file; the line is the property's line when the rule
 points at one (`altText`, `height`, a reference), resolved from a JSON
 pointer by a small position scanner over the raw text, else 1.
+
+Amended 2026-09-23 with pull request 5, reading the conditions rather
+than changing them: a group has no `visualType` and no title
+(Microsoft's visualContainer schema makes `visual` and `visualGroup`
+exclusive), so a group whose `visualGroup` records a `displayName` is
+named `Group "<displayName>"`, labelled `Group "Filters" on
+"Overview"`, and a group without one keeps `visualGroup (<first six
+characters of the id>)`.
 
 **Ignores.** `annotations` on visuals and pages carry
 `{ "name": "pbiplint.ignore", "value": "RULE_ID_1, RULE_ID_2" }` or
@@ -435,6 +470,15 @@ Amended 2026-09-23 with Michael: Report measures shows its count
 whenever the report defines measures, and links `REPORT_LEVEL_MEASURES`
 only when that rule fires, that is, with the model the report reads in
 the run (section 8.3).
+
+Amended 2026-09-23 with pull request 5, reading the conditions rather
+than changing them: Slicers counts the five slicer types in Microsoft's
+visual catalog (`slicer`, `advancedSlicerVisual`, `listSlicer`,
+`textSlicer`, `filterSlicer`), and a slicer with a saved selection is
+one whose `visual.objects.general[].properties.filter` holds a `filter`
+with a non-empty `Where` (Microsoft's capability data and Desktop-saved
+files, section 3.4), which is the condition `SLICER_SELECTION_SAVED`
+reports.
 
 **Cost.** Linear in the JSON. The demo report's largest visual is
 61 KB, most under 5 KB; a 300-visual report is a few megabytes and
@@ -592,9 +636,64 @@ skips it.
 | Id | Scope | Category | Severity | What it catches |
 |---|---|---|---|---|
 | BROKEN_ACTION_TARGET | Visual | Error Prevention | error | A button's `navigationSection`, `bookmark`, or `drillthroughSection` names nothing that exists |
+| ACTION_WITHOUT_DESTINATION | Visual | Report Design | warning | A button's page navigation, drillthrough, or bookmark action is on but names no destination |
 | BROKEN_BOOKMARK_REFERENCE | Bookmark | Error Prevention | warning | A bookmark's active page, or a page or visual it captures, does not exist |
-| TAB_ORDER_FOLLOWS_LAYOUT | Page | Accessibility | warning | Tab order disagrees with reading order (top to bottom, left to right, with a row tolerance of half the median visual height). Desktop always writes `tabOrder`, so "not set" is not detectable; disagreement with the layout is. The page documents the heuristic |
+| TAB_ORDER_FOLLOWS_LAYOUT | Page | Accessibility | warning | Tab order disagrees with reading order (top to bottom, left to right, with a row tolerance of half the median visual height). Desktop always writes `tabOrder`, so "not set" is not detectable; disagreement with the layout is. The page documents the heuristic; policy `expect: layout`, silent without it |
 | SLICER_SELECTION_SAVED | Visual | Report Design | info | A slicer carries a saved selection; policy `expect: none` raises it to warning |
+
+Amended 2026-09-23 with pull request 5, reading the conditions rather
+than changing them, against Microsoft's schemas and capability data,
+Learn, and 13,026 Desktop-saved visual.json files.
+`BROKEN_ACTION_TARGET` reads every `visualLink` entry, on any visual
+that carries one (Learn: buttons, shapes, and images carry actions),
+hidden or not. It checks the types `PageNavigation`, `Drillthrough`,
+and `Bookmark` (Microsoft's capability data spells them so; the type is
+compared without regard to case), reads the destination only from the
+property that belongs to the entry's type, never from one an earlier
+type left behind, and takes it only as a literal, resolved against
+page.json `name` or the bookmark's `name`. An entry whose `show` is
+false is switched off and is not checked, and a destination set by
+conditional formatting is an expression pbiplint cannot evaluate. Nor
+does it check the page navigator's pages, the bookmark navigator's
+group and bookmarks, a visual's report-page tooltip, or a drillthrough
+action that names a page that is not a drillthrough page.
+`BROKEN_BOOKMARK_REFERENCE` reports a missing active page once, a
+`sections` key that names no page only when it differs from
+`activeSection` (Desktop writes one key, equal to it), and a captured
+visual that is not on a page that exists; it reads neither
+`visualContainerGroups` nor `options.targetVisualNames`.
+`TAB_ORDER_FOLLOWS_LAYOUT` compares scope by scope, the page's own
+visuals and groups and then each group's children, because Desktop
+writes a grouped visual's `x`, `y`, and `tabOrder` relative to its
+group, and it leaves out a hidden visual, a negative `tabOrder` (a
+visual hidden from the tab order), and a missing one. It leaves out a
+page set up as a tooltip, whether page.json marks it by its `type` or
+by its `pageBinding`, since a tooltip shows on hover rather than being
+a page a reader tabs through; drillthrough and hidden pages are
+checked. "Desktop always writes `tabOrder`" does not hold for every
+visual (511 of 13,026 lack it); a tab order the author never touched
+is still what cannot be detected.
+`SLICER_SELECTION_SAVED` reads the five slicer types in Microsoft's
+catalog and the selection under
+`visual.objects.general[].properties.filter` with a non-empty `Where`
+(section 3.4), never a `filterConfig` entry; Select all writes no
+filter and is no selection, a hidden slicer counts, and each synced
+copy reports the selection it carries.
+
+Amended 2026-09-23 with Michael, three changes to the conditions
+above. An action switched on whose own destination property is absent
+or an empty literal is `ACTION_WITHOUT_DESTINATION`'s, at warning,
+since a button that goes nowhere is unfinished work and
+`BROKEN_ACTION_TARGET` is an error; Microsoft's own FinOps report uses
+such buttons for their tooltips, and the rule still reports them. For
+`TAB_ORDER_FOLLOWS_LAYOUT`, a tab order that sorts strictly top to
+bottom, then left to right, also agrees, so the order Desktop's "match
+visual order" button writes (by a third party's account) clears the
+finding. `TAB_ORDER_FOLLOWS_LAYOUT` is a policy rule, silent until
+`expect: "layout"` is set, because it reports most pages of a report
+nobody ordered (under the policy, 559 of the 659 eligible
+Desktop-saved pages in a corpus of public reports, about 85%) and a
+check that fires everywhere is tuned out.
 
 Mobile layouts and themes are facts only in v2.
 
@@ -719,15 +818,19 @@ unused measure; no landing page; the Filters pane saved open; two
 hidden visuals with fields bound; a page called "Page 2" and a
 duplicated page; a data visual with no fields; a visual past the right
 edge; two report-level measures; a button pointing at a deleted page;
-a bookmark capturing a deleted visual; a page whose tab order runs
-backwards; a slicer with a saved selection; one registered custom
-visual no visual uses; a tooltip page left visible; a page taller than
-720; one page with more than 20 visuals. Amended 2026-09-20 with the
+a button whose page navigation has no destination; a bookmark
+capturing a deleted visual; a page whose tab order runs backwards; a
+slicer with a saved selection; one registered custom visual no visual
+uses; a tooltip page left visible; a page taller than 720; one page
+with more than 20 visuals. Amended 2026-09-20 with the
 plan: the seven ported rules that list leaves out are planted too (a
 visual with seven fields, a page with five TopN and five applied
 Advanced filters, eleven pages, a visual with Show items with no data,
 a hex colour, a visual without alt text), so the sample fires every
-report rule. Everything else is clean.
+report rule. Amended 2026-09-23 with Michael:
+`ACTION_WITHOUT_DESTINATION` is planted, and the sample's config sets
+`TAB_ORDER_FOLLOWS_LAYOUT`'s policy so that rule fires. Everything else
+is clean.
 
 **Sanitising.** No registered resources, the stock Fluent theme, no
 `.pbi`, no `cache.abf`. `scripts/sanitize-fixture.mjs` gains a report

@@ -34,16 +34,34 @@ export interface ReportFilter {
   type?: string;
   field?: FieldRef;
   refs: FieldRef[];
-  /** True when the entry carries a `filter` object, that is, a condition is set; a slicer with no selection has none. */
+  /**
+   * True when the entry carries a `filter` object, that is, a condition is set. A slicer's own
+   * selection is not one of these: Desktop saves it in the slicer's `general` objects.
+   */
   applied: boolean;
   file: string;
   pointer: string;
 }
 
-/** One action a visual carries, such as a drillthrough or a page navigation on a button. */
+/**
+ * One action a visual carries, one `visualLink` entry with a `type`, such as a page navigation or
+ * a drillthrough on a button, a shape, or an image.
+ */
 export interface VisualAction {
+  /** The type literal as written: `PageNavigation`, `Drillthrough`, `Bookmark`, `Back`, `WebUrl`, ... */
   type: string;
+  /** False only when the entry's `show` literal is `false`, that is, the action is switched off. */
+  on: boolean;
+  /**
+   * The destination, unquoted: the literal of the property that belongs to the type
+   * (`navigationSection`, `drillthroughSection`, `bookmark`, `webUrl`, `qna`). Absent when that
+   * property is absent, empty, or not a literal. Desktop keeps the previous type's property when
+   * an author changes the type, so another type's property is never read.
+   */
   target?: string;
+  /** Set when that property is an expression other than a literal: a destination set by conditional formatting. */
+  conditional?: true;
+  /** The pointer of that property when the entry has it, else of the entry's `properties`. */
   pointer: string;
 }
 
@@ -65,6 +83,8 @@ export interface Visual {
   isHidden: boolean;
   isGroup: boolean;
   groupId?: string;
+  /** A group's display name, as its `visualGroup` records it; a visual has none. */
+  displayName?: string;
   title?: string;
   /**
    * The alt text literal, or "(expression)" when it is bound to a measure or aggregation. A
@@ -105,6 +125,13 @@ export interface Page {
   height?: number;
   displayOption?: string;
   visibility?: string;
+  /**
+   * page.json's own `type`, in Microsoft's page schema the page's "specific usage": `Tooltip`,
+   * "Page to be used as tooltip.", or `Drillthrough`, "Page to be used as drillthrough." It is
+   * apart from `bindingType`, which is read from `pageBinding`; Desktop-saved reports mark most
+   * tooltip pages by this alone, with no `pageBinding`. A stub page has none.
+   */
+  type?: string;
   bindingType?: string;
   bindingRefs: FieldRef[];
   filters: ReportFilter[];
@@ -123,17 +150,21 @@ export interface PagesHeader {
   landingPageName?: string;
 }
 
-/** One bookmark, read from its bookmark.json, with what it captures. */
+/**
+ * One bookmark, read from its bookmark.json, with what it captures. It carries no annotations:
+ * Microsoft's bookmark schema has no place for one, so a rule on a bookmark is turned off in config.
+ */
 export interface Bookmark {
   id: string;
   displayName: string;
   file: string;
   text: string;
   activePage?: string;
+  /** The keys of `sections`: the pages it captures. Desktop writes one, the active page. */
   pages: string[];
-  visuals: { page: string; visual: string }[];
+  /** Each `visualContainers` key of each section, with its pointer; groups are captured apart. */
+  visuals: { page: string; visual: string; pointer: string }[];
   refs: FieldRef[];
-  annotations: Record<string, string>;
 }
 
 /** The bookmarks folder's own bookmarks.json: the order of the bookmarks and their groups. */

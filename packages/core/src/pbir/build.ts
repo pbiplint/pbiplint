@@ -52,6 +52,19 @@ export function literal(prop: unknown): string | undefined {
 const isBoundExpression = (prop: unknown): boolean =>
   isRecord(prop) && isRecord(prop.expr) && !("Literal" in prop.expr);
 
+/**
+ * The property that holds each action type's destination, keyed by the type in lower case, since
+ * the type is matched without regard to case. Microsoft's capability data spells the types
+ * `PageNavigation`, `Drillthrough`, `Bookmark`, `WebUrl`, and `Qna`; the others name no target.
+ */
+const ACTION_TARGETS: ReadonlyMap<string, string> = new Map([
+  ["pagenavigation", "navigationSection"],
+  ["drillthrough", "drillthroughSection"],
+  ["bookmark", "bookmark"],
+  ["weburl", "webUrl"],
+  ["qna", "qna"],
+]);
+
 /** `annotations: [{ name, value }]` as the record every Ignorable carries. */
 function annotationsOf(v: unknown): Record<string, string> {
   const out: Record<string, string> = {};
@@ -148,6 +161,7 @@ function buildPage(
     height: num(json.height),
     displayOption: str(json.displayOption),
     visibility: str(json.visibility),
+    type: str(json.type),
     bindingType: binding ? str(binding.type) : undefined,
     bindingRefs: binding ? collectFieldRefs(binding.parameters, "/pageBinding/parameters") : [],
     filters: filtersOf(json.filterConfig, file, "/filterConfig"),
@@ -236,15 +250,17 @@ function buildVisual(
       const props = properties(entry);
       const type = props ? literal(props.type) : undefined;
       if (!props || type === undefined) return;
-      const target =
-        literal(props.navigationSection) ??
-        literal(props.bookmark) ??
-        literal(props.drillthroughSection) ??
-        literal(props.webUrl);
+      const at = `/visual/visualContainerObjects/visualLink/${i}/properties`;
+      // Only the type's own property: one another type left behind is not the destination.
+      const key = ACTION_TARGETS.get(type.toLowerCase());
+      const prop = key === undefined ? undefined : props[key];
+      const target = literal(prop);
       actions.push({
         type,
-        ...(target !== undefined ? { target } : {}),
-        pointer: `/visual/visualContainerObjects/visualLink/${i}/properties`,
+        on: literal(props.show) !== "false",
+        ...(target ? { target } : {}),
+        ...(isBoundExpression(prop) ? { conditional: true as const } : {}),
+        pointer: prop === undefined ? at : `${at}/${key}`,
       });
     });
   const title = Array.isArray(vco.title) ? literal(properties(vco.title[0])?.text) : undefined;
@@ -267,6 +283,9 @@ function buildVisual(
     isHidden: json.isHidden === true,
     isGroup: group !== undefined,
     ...(str(json.parentGroupName) !== undefined ? { groupId: str(json.parentGroupName) } : {}),
+    ...(group && str(group.displayName) !== undefined
+      ? { displayName: str(group.displayName) }
+      : {}),
     ...(title !== undefined ? { title } : {}),
     ...(altText !== undefined ? { altText } : {}),
     fields,
@@ -289,10 +308,15 @@ function buildBookmark(
 ): Bookmark {
   const state = isRecord(json.explorationState) ? json.explorationState : {};
   const sections = isRecord(state.sections) ? state.sections : {};
-  const visuals: { page: string; visual: string }[] = [];
+  const visuals: Bookmark["visuals"] = [];
   for (const [page, section] of Object.entries(sections))
     if (isRecord(section) && isRecord(section.visualContainers))
-      for (const visual of Object.keys(section.visualContainers)) visuals.push({ page, visual });
+      for (const visual of Object.keys(section.visualContainers))
+        visuals.push({
+          page,
+          visual,
+          pointer: `/explorationState/sections/${escapePointer(page)}/visualContainers/${escapePointer(visual)}`,
+        });
   return {
     id: str(json.name) ?? id,
     displayName: str(json.displayName) ?? id,
@@ -302,7 +326,6 @@ function buildBookmark(
     pages: Object.keys(sections),
     visuals,
     refs: collectFieldRefs(state, "/explorationState"),
-    annotations: {},
   };
 }
 
@@ -341,8 +364,9 @@ const BOOKMARK_FILE = /^definition\/bookmarks\/([^/]+)\.bookmark\.json$/;
 /**
  * Builds the report object model from the report's files (paths relative to the .Report folder).
  * Unknown properties are ignored, every schema version seen is read the same way, a file that
- * cannot be read is an issue and the rest still builds. Pages come out in pageOrder, then any page
- * the header does not list; visuals in file order within a page.
+ * cannot be read is an issue and the rest still builds. Pages come out in pageOrder, matched on
+ * each page.json's `name`, then any page the header does not list, by folder; visuals in file
+ * order within a page.
  */
 export function buildReport(files: LintFile[]): { report: Report; diagnostics: Diagnostic[] } {
   const report: Report = {
@@ -362,7 +386,7 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
   };
   const diagnostics: Diagnostic[] = [];
   const reportedFamilies = new Set<string>();
-  const pagesById = new Map<string, Page>();
+  const pagesByFolder = new Map<string, Page>();
   const visuals: {
     pageId: string;
     id: string;
@@ -431,7 +455,7 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
       };
     } else if ((m = PAGE_FILE.exec(f.path))) {
       const page = buildPage(m[1]!, f.path, f.text, json, version);
-      pagesById.set(m[1]!, page);
+      pagesByFolder.set(m[1]!, page);
       report.schemaVersions.page = highest(report.schemaVersions.page, version);
     } else if ((m = VISUAL_FILE.exec(f.path))) {
       visuals.push({ pageId: m[1]!, id: m[2]!, file: f.path, text: f.text, json, version });
@@ -466,21 +490,26 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
     }
   }
   for (const v of visuals) {
-    let page = pagesById.get(v.pageId);
+    let page = pagesByFolder.get(v.pageId);
     if (!page) {
       page = stubPage(v.pageId);
-      pagesById.set(v.pageId, page);
+      pagesByFolder.set(v.pageId, page);
     }
     page.visuals.push(
       buildVisual(page, v.id, v.file, v.text, v.json, v.version, mobile.has(`${v.pageId}/${v.id}`)),
     );
   }
-  const ordered = report.pagesHeader.pageOrder.flatMap((id) =>
-    pagesById.has(id) ? [pagesById.get(id)!] : [],
-  );
-  const rest = [...pagesById.keys()]
-    .filter((id) => !report.pagesHeader.pageOrder.includes(id))
-    .sort((a, b) => a.localeCompare(b, "en"));
-  report.pages = [...ordered, ...rest.map((id) => pagesById.get(id)!)];
+  // pageOrder names a page by its page.json `name`, as bookmarks and actions do. A rename can set
+  // the name apart from the folder (Learn: Desktop keeps the folder), which only joins a
+  // visual.json to its page, above.
+  const byFolder = [...pagesByFolder.entries()]
+    .sort(([a], [b]) => a.localeCompare(b, "en"))
+    .map(([, page]) => page);
+  const listed = new Set<Page>();
+  for (const name of report.pagesHeader.pageOrder) {
+    const page = byFolder.find((p) => p.id === name && !listed.has(p));
+    if (page) listed.add(page);
+  }
+  report.pages = [...listed, ...byFolder.filter((p) => !listed.has(p))];
   return { report, diagnostics };
 }

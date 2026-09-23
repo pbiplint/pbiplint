@@ -372,6 +372,14 @@ unreached set grouped so a dead chain reads top-down. The existing
 `UNNECESSARY_*` rules keep their one-hop logic for Tabular Editor
 parity; `NOT_REACHED_FROM_REPORT` reads this index.
 
+Amended 2026-09-23 with pull request 3: a report reference through a
+date column's variation (Desktop's auto date/time hierarchy, a
+`PropertyVariationSource` in the JSON) resolves to the level on the
+local date table the variation names and reaches the date column too;
+a reached column adds its group-by columns (`relatedColumnDetails`,
+such as a field parameter's hidden Fields column); and a relationship
+to a Desktop-managed date table roots neither end (section 8.2).
+
 **Facts.** Structured list, `{ layer, label, value, detail?, ruleId? }`:
 
 | Label | Value | Rule id when it applies |

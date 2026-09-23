@@ -341,8 +341,9 @@ const BOOKMARK_FILE = /^definition\/bookmarks\/([^/]+)\.bookmark\.json$/;
 /**
  * Builds the report object model from the report's files (paths relative to the .Report folder).
  * Unknown properties are ignored, every schema version seen is read the same way, a file that
- * cannot be read is an issue and the rest still builds. Pages come out in pageOrder, then any page
- * the header does not list; visuals in file order within a page.
+ * cannot be read is an issue and the rest still builds. Pages come out in pageOrder, matched on
+ * each page.json's `name`, then any page the header does not list, by folder; visuals in file
+ * order within a page.
  */
 export function buildReport(files: LintFile[]): { report: Report; diagnostics: Diagnostic[] } {
   const report: Report = {
@@ -362,7 +363,7 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
   };
   const diagnostics: Diagnostic[] = [];
   const reportedFamilies = new Set<string>();
-  const pagesById = new Map<string, Page>();
+  const pagesByFolder = new Map<string, Page>();
   const visuals: {
     pageId: string;
     id: string;
@@ -431,7 +432,7 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
       };
     } else if ((m = PAGE_FILE.exec(f.path))) {
       const page = buildPage(m[1]!, f.path, f.text, json, version);
-      pagesById.set(m[1]!, page);
+      pagesByFolder.set(m[1]!, page);
       report.schemaVersions.page = highest(report.schemaVersions.page, version);
     } else if ((m = VISUAL_FILE.exec(f.path))) {
       visuals.push({ pageId: m[1]!, id: m[2]!, file: f.path, text: f.text, json, version });
@@ -466,21 +467,26 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
     }
   }
   for (const v of visuals) {
-    let page = pagesById.get(v.pageId);
+    let page = pagesByFolder.get(v.pageId);
     if (!page) {
       page = stubPage(v.pageId);
-      pagesById.set(v.pageId, page);
+      pagesByFolder.set(v.pageId, page);
     }
     page.visuals.push(
       buildVisual(page, v.id, v.file, v.text, v.json, v.version, mobile.has(`${v.pageId}/${v.id}`)),
     );
   }
-  const ordered = report.pagesHeader.pageOrder.flatMap((id) =>
-    pagesById.has(id) ? [pagesById.get(id)!] : [],
-  );
-  const rest = [...pagesById.keys()]
-    .filter((id) => !report.pagesHeader.pageOrder.includes(id))
-    .sort((a, b) => a.localeCompare(b, "en"));
-  report.pages = [...ordered, ...rest.map((id) => pagesById.get(id)!)];
+  // pageOrder names a page by its page.json `name`, as bookmarks and actions do. A rename can set
+  // the name apart from the folder (Learn: Desktop keeps the folder), which only joins a
+  // visual.json to its page, above.
+  const byFolder = [...pagesByFolder.entries()]
+    .sort(([a], [b]) => a.localeCompare(b, "en"))
+    .map(([, page]) => page);
+  const listed = new Set<Page>();
+  for (const name of report.pagesHeader.pageOrder) {
+    const page = byFolder.find((p) => p.id === name && !listed.has(p));
+    if (page) listed.add(page);
+  }
+  report.pages = [...listed, ...byFolder.filter((p) => !listed.has(p))];
   return { report, diagnostics };
 }

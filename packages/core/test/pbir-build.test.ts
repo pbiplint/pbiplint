@@ -211,6 +211,26 @@ describe("buildReport", () => {
     expect(p1.file).toBe("definition/pages/p1/page.json");
     expect(report.schemaVersions).toEqual({ report: "3.2.0", page: "2.1.0", visual: "2.8.0" });
   });
+  it("orders pages by the name each page.json gives, while a visual joins its page by folder", () => {
+    // Learn: renaming a page's `name` is supported, and Desktop keeps the folder; pages.json,
+    // bookmarks, and actions follow the name.
+    const { report: renamed } = buildReport([
+      {
+        path: "definition/pages/pages.json",
+        text: j({ pageOrder: ["page_dashboard", "p1", "page_dashboard"] }),
+      },
+      { path: "definition/pages/p1/page.json", text: page("p1") },
+      { path: "definition/pages/646039348818b651e02c/page.json", text: page("page_dashboard") },
+      { path: "definition/pages/646039348818b651e02c/visuals/v/visual.json", text: visual("v") },
+      { path: "definition/pages/zz/page.json", text: page("zz") },
+    ]);
+    // A page pageOrder lists twice comes out once; one it does not list comes after.
+    expect(renamed.pages.map((p) => [p.id, p.file, p.visuals.map((v) => v.id)])).toEqual([
+      ["page_dashboard", "definition/pages/646039348818b651e02c/page.json", ["v"]],
+      ["p1", "definition/pages/p1/page.json", []],
+      ["zz", "definition/pages/zz/page.json", []],
+    ]);
+  });
   it("reads a visual's type, position, fields per role, showAll, title, alt text, actions, filters, and mobile layout", () => {
     const v1 = report.pages[1]!.visuals[0]!;
     expect(v1.id).toBe("v1");

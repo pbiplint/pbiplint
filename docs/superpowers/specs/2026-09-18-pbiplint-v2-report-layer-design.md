@@ -335,6 +335,13 @@ markers (`<<<<<<<`, `=======`, `>>>>>>>` at line start), produces a
 `PARSE_ISSUE` finding with file and line. Every part keeps its file
 path and raw text.
 
+Amended 2026-09-23 with Michael (release triage, DQ8): the parser
+knows the newest version Microsoft publishes of each schema family it
+reads, and the diagnostic is given only for a newer major version.
+Power BI Desktop saves files on minor versions Microsoft has not
+published (visualContainer 2.10.0 to 2.12.0 in Desktop-saved reports),
+which the parser reads as the family's known shape.
+
 **Object model.**
 
 - `Report`: file, schema version, theme name, `publicCustomVisuals`,

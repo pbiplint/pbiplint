@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { buildIndexes } from "../src/index/build.js";
-import { BROKEN_ACTION_TARGET, BROKEN_BOOKMARK_REFERENCE } from "../src/rules/pbiplint/actions.js";
+import {
+  ACTION_WITHOUT_DESTINATION,
+  BROKEN_ACTION_TARGET,
+  BROKEN_BOOKMARK_REFERENCE,
+} from "../src/rules/pbiplint/actions.js";
 import { TAB_ORDER_FOLLOWS_LAYOUT } from "../src/rules/pbiplint/tab-order.js";
 import { SLICER_SELECTION_SAVED } from "../src/rules/pbiplint/visuals.js";
 import {
@@ -228,6 +232,84 @@ describe("BROKEN_ACTION_TARGET", () => {
       name: "Action points at nothing",
       category: "Error Prevention",
       severity: 3,
+      scope: ["Visual"],
+    });
+  });
+});
+
+describe("ACTION_WITHOUT_DESTINATION", () => {
+  /** A button with one action, indented, so a finding's line can be read. */
+  const button = (name: string, properties: Record<string, unknown>, container = {}) => {
+    const path = `definition/pages/p/visuals/${name}/visual.json`;
+    const text = pretty({
+      name,
+      position: { x: 0, y: 0, z: 0, height: 40, width: 120, tabOrder: 0 },
+      ...container,
+      visual: {
+        visualType: "actionButton",
+        visualContainerObjects: {
+          visualLink: [{ properties: { show: lit("true"), ...properties } }],
+        },
+      },
+    });
+    return { path, text };
+  };
+
+  it("fires on an action that is on and names no destination, empty or absent", () => {
+    const empty = button("empty", { type: lit("'PageNavigation'"), navigationSection: lit("''") });
+    const absent = button("absent", { type: lit("'Bookmark'") });
+    const findings = reportFindings(ACTION_WITHOUT_DESTINATION, [page("p"), absent, empty]);
+    expect(findings.map((f) => [f.objectId, f.detail, f.location!.line])).toEqual([
+      ["absent", "Bookmark action has no destination", lineOf(absent.text, '"properties"')],
+      [
+        "empty",
+        "Page navigation action has no destination",
+        lineOf(empty.text, '"navigationSection"'),
+      ],
+    ]);
+    expect(lineOf(empty.text, '"navigationSection"')).toBeGreaterThan(
+      lineOf(empty.text, '"properties"'),
+    );
+  });
+  it("reads the three types BROKEN_ACTION_TARGET checks, whatever their case, hidden or not", () => {
+    const files = [
+      page("p"),
+      button("drill", { type: lit("'DrillThrough'") }, { isHidden: true }),
+      // Back and Web URL name no page or bookmark, so nothing is missing from them.
+      button("back", { type: lit("'Back'") }),
+      button("web", { type: lit("'WebUrl'"), webUrl: lit("''") }),
+    ];
+    expect(
+      reportFindings(ACTION_WITHOUT_DESTINATION, files).map((f) => [f.objectId, f.detail]),
+    ).toEqual([["drill", "Drillthrough action has no destination"]]);
+  });
+  it("leaves alone an action that is off, set by conditional formatting, or names a page", () => {
+    const files = [
+      page("p"),
+      button("off", { show: lit("false"), type: lit("'PageNavigation'") }),
+      button("fx", {
+        type: lit("'PageNavigation'"),
+        navigationSection: { expr: measure("Sales", "Destination") },
+      }),
+      // A page that does not exist is BROKEN_ACTION_TARGET's.
+      button("gone", { type: lit("'PageNavigation'"), navigationSection: lit("'gone'") }),
+      button("toP", { type: lit("'PageNavigation'"), navigationSection: lit("'p'") }),
+    ];
+    expect(reportObjectIds(ACTION_WITHOUT_DESTINATION, files)).toEqual([]);
+    expect(reportObjectIds(BROKEN_ACTION_TARGET, files)).toEqual(["gone"]);
+  });
+  it("is a warning on the visual", () => {
+    const [f] = reportFindings(ACTION_WITHOUT_DESTINATION, [
+      page("p"),
+      button("b", { type: lit("'PageNavigation'") }),
+    ]);
+    expect(f).toMatchObject({ objectType: "Visual", objectId: "b" });
+    expect(f).toHaveProperty("object");
+    expect(ACTION_WITHOUT_DESTINATION).toMatchObject({
+      ...tier3,
+      name: "Action has no destination",
+      category: "Report Design",
+      severity: 2,
       scope: ["Visual"],
     });
   });

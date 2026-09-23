@@ -31,7 +31,7 @@ export const BROKEN_ACTION_TARGET = pbiplintRule({
       v.actions.flatMap((a): RuleFinding[] => {
         // Not checked: navigators' pages and bookmarks, tooltip pages, a drillthrough page's binding.
         const checked = CHECKED.get(a.type.toLowerCase());
-        // Switched off, set by conditional formatting, or left empty: no destination to resolve.
+        // Off or conditional: nothing to resolve. An empty destination is ACTION_WITHOUT_DESTINATION's.
         if (!checked || !a.on || a.target === undefined) return [];
         if (names[checked.object].has(a.target)) return [];
         return [
@@ -44,6 +44,29 @@ export const BROKEN_ACTION_TARGET = pbiplintRule({
       }),
     );
   },
+});
+
+export const ACTION_WITHOUT_DESTINATION = pbiplintRule({
+  id: "ACTION_WITHOUT_DESTINATION",
+  name: "Action has no destination",
+  category: "Report Design",
+  severity: 2,
+  scope: ["Visual"],
+  layer: "report",
+  // The same three types as BROKEN_ACTION_TARGET, on any visual, hidden or not. The pointer is the
+  // destination property when it is there and empty, else the entry's properties.
+  check: ({ report }) =>
+    report
+      ? allVisuals(report).flatMap((v) =>
+          v.actions.flatMap((a): RuleFinding[] => {
+            const checked = CHECKED.get(a.type.toLowerCase());
+            if (!checked || !a.on || a.target !== undefined || a.conditional) return [];
+            return [
+              reportFinding.visual(v, a.pointer, `${checked.action} action has no destination`),
+            ];
+          }),
+        )
+      : [],
 });
 
 const SECTIONS = "/explorationState/sections";
@@ -95,4 +118,8 @@ export const BROKEN_BOOKMARK_REFERENCE = pbiplintRule({
   },
 });
 
-export const actionRules = [BROKEN_ACTION_TARGET, BROKEN_BOOKMARK_REFERENCE];
+export const actionRules = [
+  BROKEN_ACTION_TARGET,
+  ACTION_WITHOUT_DESTINATION,
+  BROKEN_BOOKMARK_REFERENCE,
+];

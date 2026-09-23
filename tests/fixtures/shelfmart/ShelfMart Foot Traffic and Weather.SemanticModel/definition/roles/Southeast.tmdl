@@ -1,0 +1,7 @@
+role Southeast
+	modelPermission: read
+
+	tablePermission Store = [Region] == "Southeast"
+
+	annotation PBI_Id = a8136b804a784169a42b7eea3baacd63
+

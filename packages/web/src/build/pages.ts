@@ -32,8 +32,10 @@ const STATUS_LABEL: Record<string, string> = {
 const SOURCE_NAMES: Record<string, string> = {
   "https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json":
     "Microsoft's Best Practice Analyzer ruleset",
+  "https://github.com/NatVanG/fab-inspector/blob/main/Rules/Base-rules.json":
+    "PBI Inspector's base rules by Nat Van Gulck",
 };
-/** The caption a fenced example carries, by the word after `tmdl` in its info string. */
+/** The caption a fenced example carries, by the word after `tmdl` or `pbir` in its info string. */
 const EXAMPLE_CAPTION: Record<string, string> = {
   fires: "Fires the rule",
   fixed: "After the fix",
@@ -49,6 +51,11 @@ const list = (v: string | string[] | undefined): string[] => (Array.isArray(v) ?
 /** escapeHtml plus the apostrophe, for text inside <code>, matching what marked writes there. */
 const escapeCode = (s: string): string => escapeHtml(s).replace(/'/g, "&#39;");
 
+/** Report objects whose page.json or visual.json carries an `annotations` array an ignore can go in. */
+const REPORT_ANNOTATED = new Set(["Page", "Visual"]);
+/** The other report objects: a rule scoped to these alone is turned off for the project instead. */
+const REPORT_ONLY = new Set(["Report", "Bookmark", "ReportMeasure"]);
+
 /**
  * How to silence a rule, appended to a page's "When to ignore it" section. Core exports the same
  * text as ignoreHelp; this copy is deliberate for the reason CATEGORY_ORDER gives, and a test
@@ -58,6 +65,24 @@ export function ignoreHelp(ruleId: string, scope: readonly string[] = []): strin
   const project = `To turn the rule off for a whole project, set \`"${ruleId}": "off"\` under \`rules\` in \`pbiplint.config.json\`.`;
   if (scope.length > 0 && scope.every((s) => s === "File"))
     return `This rule reports on files, so there is no object to annotate. ${project}`;
+  const reportScoped =
+    scope.length > 0 && scope.every((s) => REPORT_ANNOTATED.has(s) || REPORT_ONLY.has(s));
+  const page = scope.includes("Page");
+  const visual = scope.includes("Visual");
+  if (reportScoped && (page || visual)) {
+    const [object, file] =
+      page && visual
+        ? ["page or visual", "page.json or visual.json"]
+        : page
+          ? ["page", "page.json"]
+          : ["visual", "visual.json"];
+    return (
+      `To ignore this rule on one ${object}, add \`{ "name": "pbiplint.ignore", "value": "${ruleId}" }\` to the ` +
+      `\`annotations\` array of its ${file}. Power BI Desktop keeps the annotation. ${project}`
+    );
+  }
+  if (reportScoped)
+    return `This rule reports on the report itself, so there is no object to annotate. ${project}`;
   return (
     `To ignore this rule on one object, add \`annotation pbiplint.ignore = ${ruleId}\` under ` +
     `the object in its TMDL file. Power BI Desktop keeps the annotation. ${project}`
@@ -191,18 +216,26 @@ const RULE_LAYERS: readonly RuleLayer[] = ["model", "report", "project"];
  * While this list names one family, no report page is published, so the attribution the ported
  * report set adds has no page to sit on: that one holds by construction and needs no flag. A layer
  * column does not. A badge on every row would read `model` on all of them, a column that
- * distinguishes nothing, so the pull request that adds the column renders it only when this list
- * names more than one family.
+ * distinguishes nothing, so the index's badge and the rule page's layer item both wait on
+ * showsLayers below.
  */
 export const SITE_LAYERS: readonly SiteLayer[] = ["model"];
 
 /**
- * The layer a page declares, `model` when its frontmatter has no `layer` key at all, because the
- * pages predate the key. A key that is present and says nothing readable is an error rather than a
- * fall back to `model`: `layer:` on its own is the form a scaffolded page carries, the way `video:`
- * does on every page today, and reading it as the model layer is how a report page would reach the
- * site by accident. A typo is an error for the same reason parseFrontmatter gives, and `source`
- * names the page the way it does.
+ * Whether the site names a rule's layer: the badge on each row of the rules index and the item in
+ * a rule page's meta line. Only when more than one family is published, since with one every
+ * published page would carry the same word. The index and the page take the published list as an
+ * argument defaulting to SITE_LAYERS, so a test can render the two-family site before it exists.
+ */
+export const showsLayers = (published: readonly SiteLayer[] = SITE_LAYERS): boolean =>
+  new Set(published).size > 1;
+
+/**
+ * The layer a page's frontmatter declares, which decides whether the site publishes the page
+ * (decision 15). A page with no `layer` key at all counts as `model`. A key that is present but
+ * empty, or names no layer, is an error rather than a fall back to `model`: the site publishes the
+ * model layer, so reading a blank or mistyped key as `model` is how a report page would reach the
+ * site by accident. `source` names the page in the error, as parseFrontmatter's errors do.
  */
 export function pageLayer(data: Frontmatter, source: string): RuleLayer {
   // An absent key and a present but empty one are different things in the parsed frontmatter, and
@@ -252,8 +285,10 @@ export const headingId = (text: string): string =>
 /**
  * The site's Markdown renderer. marked adds no heading ids of its own since v8, so headings get
  * them here. On a rule page, a fence whose info string is `tmdl fires` or `tmdl fixed` renders as
- * a captioned figure, and a code span naming another rule links to its page; returning false
- * from an override hands the token back to marked's default renderer.
+ * a captioned figure, and so does `pbir fires <file>` or `pbir fixed <file>`, as JSON with the
+ * file it stands for in the caption (a `tree.json` document names its files by its keys, so its
+ * caption stays bare). A code span naming another rule links to its page; returning false from an
+ * override hands the token back to marked's default renderer.
  */
 function siteMarkdown(links: RuleLinks = new Map(), self = ""): Marked {
   return new Marked({
@@ -262,11 +297,17 @@ function siteMarkdown(links: RuleLinks = new Map(), self = ""): Marked {
         return `<h${depth} id="${headingId(text)}">${this.parser.parseInline(tokens)}</h${depth}>\n`;
       },
       code({ text, lang, escaped }: Tokens.Code): string | false {
-        const example = /^tmdl (fires|fixed)$/.exec(lang ?? "");
+        const example = /^(tmdl|pbir) (fires|fixed)(?: (\S+))?$/.exec(lang ?? "");
         if (!example) return false;
-        const kind = example[1]!;
+        const language = example[1] === "pbir" ? "json" : "tmdl";
+        const kind = example[2]!;
+        const file = example[3];
+        const caption =
+          file !== undefined && file !== "tree.json"
+            ? `${EXAMPLE_CAPTION[kind]} in ${escapeHtml(file)}`
+            : EXAMPLE_CAPTION[kind]!;
         const code = (escaped ? text : escapeCode(text)).replace(/\n$/, "");
-        return `<figure class="example ${kind}">\n<figcaption>${EXAMPLE_CAPTION[kind]!}</figcaption>\n<pre><code class="language-tmdl">${code}\n</code></pre>\n</figure>\n`;
+        return `<figure class="example ${kind}">\n<figcaption>${caption}</figcaption>\n<pre><code class="language-${language}">${code}\n</code></pre>\n</figure>\n`;
       },
       codespan({ text }: Tokens.Codespan): string | false {
         const slug = links.get(text);
@@ -352,15 +393,22 @@ export interface RuleMeta {
   category: string;
   severity: string;
   status: string;
+  layer: RuleLayer;
   summary: string;
 }
 
+/**
+ * A rule page and the metadata the index lists it by. `published` is the list showsLayers reads,
+ * SITE_LAYERS unless a test renders the two-family site.
+ */
 export function rulePage(
   markdown: string,
   slug: string,
   links: RuleLinks = new Map(),
+  published: readonly SiteLayer[] = SITE_LAYERS,
 ): { html: string; meta: RuleMeta } {
-  const { data, body } = parseFrontmatter(markdown, `rules/${slug}.md`);
+  const source = `rules/${slug}.md`;
+  const { data, body } = parseFrontmatter(markdown, source);
   const title = /^# (.+)$/m.exec(body)?.[1] ?? str(data.name);
   const meta: RuleMeta = {
     slug,
@@ -369,13 +417,15 @@ export function rulePage(
     category: str(data.category),
     severity: str(data.severity),
     status: str(data.status),
+    layer: pageLayer(data, source),
     summary: firstParagraph(section(body, "What it checks")),
   };
+  const layerItem = showsLayers(published) ? ` · ${escapeHtml(meta.layer)} layer` : "";
   const video = str(data.video);
   const main = `<article class="rule">
   <p class="eyebrow"><a href="/rules/">Rules</a> / ${escapeHtml(meta.category)}</p>
   <h1>${escapeHtml(title)}</h1>
-  <p class="meta"><span class="badge ${escapeHtml(meta.severity)}">${escapeHtml(meta.severity)}</span> <code>${escapeHtml(meta.id)}</code> · ${escapeHtml(STATUS_LABEL[meta.status] ?? meta.status)} · scope: ${escapeHtml(list(data.scope).join(", "))}</p>
+  <p class="meta"><span class="badge ${escapeHtml(meta.severity)}">${escapeHtml(meta.severity)}</span> <code>${escapeHtml(meta.id)}</code> · ${escapeHtml(STATUS_LABEL[meta.status] ?? meta.status)}${layerItem} · scope: ${escapeHtml(list(data.scope).join(", "))}</p>
   ${video ? `<p class="video"><a href="${escapeHtml(video)}">Watch the video for this rule</a></p>` : ""}
   ${render(withIgnoreHelp(body.replace(/^# .+\n/m, ""), meta.id, list(data.scope)), links, meta.id)}
   ${attribution(list(data.sources))}<p class="cta"><a class="button" href="/">Check a model for this</a> <a href="https://github.com/pbiplint/pbiplint/edit/main/rules/${escapeHtml(slug)}.md">Improve this page</a></p>
@@ -391,7 +441,11 @@ export function rulePage(
   };
 }
 
-export function rulesIndex(metas: RuleMeta[]): string {
+/** The rules index. `published` is the list showsLayers reads, as rulePage's is. */
+export function rulesIndex(
+  metas: RuleMeta[],
+  published: readonly SiteLayer[] = SITE_LAYERS,
+): string {
   // CATEGORY_ORDER drives the sections, so a rule with any other category would be in the count
   // at the top of the page and in no list below it. Fail the build rather than ship a rule page
   // nothing links to.
@@ -400,7 +454,35 @@ export function rulesIndex(metas: RuleMeta[]): string {
       throw new Error(
         `${m.slug}: unknown category "${m.category}" (add it to CATEGORY_ORDER in packages/web/src/build/pages.ts)`,
       );
-  const count = (status: string): number => metas.filter((m) => m.status === status).length;
+  const count = (status: string, layer?: RuleLayer): number =>
+    metas.filter((m) => m.status === status && (layer === undefined || m.layer === layer)).length;
+  // A clause whose count is zero is left out. Until pull request 7 the site publishes no report
+  // page (decision 15), and "0 report rules ported from PBI Inspector's base rules" on the live
+  // index advertises a source the page below lists nothing from, which is the promise this gate
+  // exists to avoid making. Written as a rule rather than a fixed string, so it stays right as the
+  // counts move and when the gate opens.
+  const clauses: [number, string][] = [
+    [
+      count("ported", "model"),
+      "model rules ported from Microsoft's Best Practice Analyzer ruleset so the results match Tabular Editor",
+    ],
+    [
+      count("needsLiveModel"),
+      "listed but not run because they need statistics only a live model has",
+    ],
+    [count("ported", "report"), "report rules ported from PBI Inspector's base rules"],
+    [count("builtin"), "built into pbiplint"],
+  ];
+  const parts = clauses.filter(([n]) => n > 0).map(([n, text]) => `${n} ${text}`);
+  // Two clauses read "A and B"; three or more take a serial comma, "A, B, and C".
+  const sources =
+    parts.length > 2
+      ? `${parts.slice(0, -1).join(", ")}, and ${parts.at(-1)}`
+      : parts.join(" and ");
+  const layerBadge = (m: RuleMeta): string =>
+    showsLayers(published)
+      ? ` <span class="layer ${escapeHtml(m.layer)}">${escapeHtml(m.layer)}</span>`
+      : "";
   const sections = CATEGORY_ORDER.map((category) => {
     const rows = metas
       .filter((m) => m.category === category)
@@ -411,14 +493,14 @@ export function rulesIndex(metas: RuleMeta[]): string {
     const items = rows
       .map(
         (m) =>
-          `  <li><a href="/rules/${escapeHtml(m.slug)}/">${escapeHtml(m.title)}</a> <span class="badge ${escapeHtml(m.severity)}">${escapeHtml(m.severity)}</span>${m.status === "needsLiveModel" ? ' <span class="badge muted">needs a live model</span>' : ""}<br /><span class="summary">${renderInline(m.summary)}</span></li>`,
+          `  <li><a href="/rules/${escapeHtml(m.slug)}/">${escapeHtml(m.title)}</a> <span class="badge ${escapeHtml(m.severity)}">${escapeHtml(m.severity)}</span>${layerBadge(m)}${m.status === "needsLiveModel" ? ' <span class="badge muted">needs a live model</span>' : ""}<br /><span class="summary">${renderInline(m.summary)}</span></li>`,
       )
       .join("\n");
     return `<h2 id="${headingId(category)}">${escapeHtml(category)}</h2>\n<ul class="rule-list">\n${items}\n</ul>`;
   }).join("\n");
   const main = `<article class="prose">
 <h1>Rules</h1>
-<p>${metas.length} rules: ${count("ported")} ported from the Microsoft Best Practice Analyzer ruleset so the results match Tabular Editor, ${count("needsLiveModel")} listed but not run because they need statistics only a live model has, and ${count("builtin")} built into pbiplint. Ranked by severity, then category, then how many objects they hit.</p>
+<p>${metas.length} rules: ${sources}. Ranked by severity, then category, then how many objects they hit.</p>
 ${sections}
 </article>`;
   return page({

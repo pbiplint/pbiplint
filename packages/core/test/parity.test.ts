@@ -14,13 +14,13 @@ interface Expectation {
 const repoRoot = new URL("../../../", import.meta.url).pathname;
 const expectationsDir = repoRoot + "tests/expectations/";
 const expectations: Expectation[] = readdirSync(expectationsDir)
-  .filter((f) => f.endsWith(".json"))
+  .filter((f) => f.endsWith(".json") && !f.endsWith(".report.json"))
   .map((f) => ({
     name: f.replace(/\.json$/, ""),
     ...(JSON.parse(readFileSync(expectationsDir + f, "utf8")) as Omit<Expectation, "name">),
   }));
 
-const ported = defaultRules.filter((r) => r.status === "ported");
+const ported = defaultRules.filter((r) => r.status === "ported" && r.layer === "model");
 const expectedCounts = new Map<string, number>(ported.map((r) => [r.id, 0]));
 
 describe.each(expectations)("parity with Tabular Editor: $name", (exp) => {

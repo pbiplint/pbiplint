@@ -44,6 +44,13 @@ describe("exampleMarkdown", () => {
       "**Fires the rule**\n\n```tmdl\ntable A\n```\n\n**After the fix**\n\n```tmdl\ntable B\n```",
     );
   });
+  it("captions pbir fences with their file, bare for a tree, and reduces their info strings to json", () => {
+    expect(
+      exampleMarkdown("```pbir fires visual.json\n{}\n```\n\n```pbir fixed tree.json\n{}\n```"),
+    ).toBe(
+      "**Fires the rule in visual.json**\n\n```json\n{}\n```\n\n**After the fix**\n\n```json\n{}\n```",
+    );
+  });
 });
 
 describe("helpMarkdown", () => {

@@ -1,0 +1,28 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainerMobileState/1.4.0/schema.json",
+  "objects": {
+    "data": [],
+    "header": [],
+    "date": [],
+    "slider": [
+      {
+        "properties": {
+          "show": {
+            "expr": {
+              "Literal": {
+                "Value": "true"
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "position": {
+    "x": 0,
+    "y": 94,
+    "z": 12,
+    "height": 98,
+    "width": 324
+  }
+}

@@ -1,0 +1,553 @@
+/// The Date dimension table.  This is at the granularity of one day.  This table contains several columns useful for date, calendar, and time intelligence analysis.  It is also formatted as a date table within this semantic model.
+table Date
+	lineageTag: a0d2a952-513a-4923-b1bd-90638ac838fa
+	dataCategory: Time
+
+	/// The integer value of the date in the format yyyyMMdd
+	column 'Date Key'
+		dataType: int64
+		isKey
+		formatString: 0
+		lineageTag: b2f1c4c3-e431-4746-bb47-ae7580b9be20
+		summarizeBy: none
+		sourceColumn: Date Key
+
+		annotation SummarizationSetBy = User
+
+	/// The date of the row
+	column Date
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: 98647da7-68d6-4a0a-a81d-9d9518ec8719
+		isDefaultLabel
+		summarizeBy: none
+		sourceColumn: Date
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	/// The number of the day of the month.  E.g., 1, 2, 3, ... 28, 29, 30, 31
+	column 'Day of Month'
+		dataType: int64
+		formatString: 0
+		lineageTag: b45af18c-ff57-4846-92d4-bc77878072f8
+		summarizeBy: none
+		sourceColumn: Day of Month
+
+		annotation SummarizationSetBy = User
+
+	/// The number of the day of the month followed by the suffix for that number.  E.g., "1st", "2nd", "3rd", "4th", etc.  This column is sorted by the Day of Month column.
+	column 'Day Suffix'
+		dataType: string
+		lineageTag: 2ed06b8e-797d-474c-b4f5-f21abba05ead
+		summarizeBy: none
+		sourceColumn: Day Suffix
+		sortByColumn: 'Day of Month'
+
+		changedProperty = SortByColumn
+
+		annotation SummarizationSetBy = Automatic
+
+	/// The number of the day of the week.  E.g., 1, 2, 3, 4, 5, 6, 7
+	column 'Day of Week'
+		dataType: int64
+		formatString: 0
+		lineageTag: 78fbbcd0-95cb-4350-9497-53a0b113b6e3
+		summarizeBy: none
+		sourceColumn: Day of Week
+
+		annotation SummarizationSetBy = User
+
+	/// The name of the day of the week.  E.g., "Sunday", "Monday", etc.  This column is sorted by the Day of Week column.
+	column 'Day Name'
+		dataType: string
+		lineageTag: b03201aa-448d-4966-94e7-a23fc59acbe4
+		summarizeBy: none
+		sourceColumn: Day Name
+		sortByColumn: 'Day of Week'
+
+		changedProperty = SortByColumn
+
+		annotation SummarizationSetBy = Automatic
+
+	/// The iteration of that day of the week in the month.  E.g., if the date is the second Tuesday in the month, the value would be 2.
+	column 'Day of Week in Month'
+		dataType: int64
+		formatString: 0
+		lineageTag: 03462190-40af-4010-83ff-5179c13a9c1f
+		summarizeBy: none
+		sourceColumn: Day of Week in Month
+
+		annotation SummarizationSetBy = User
+
+	/// The iteration of that day of the week in the year.  E.g., if the date is the second Tuesday in the year, the value would be 2.
+	column 'Day of Week in Year'
+		dataType: int64
+		formatString: 0
+		lineageTag: c9c86da0-645a-4df5-84df-1262946c5997
+		summarizeBy: none
+		sourceColumn: Day of Week in Year
+
+		annotation SummarizationSetBy = User
+
+	/// The number of the day of the quarter. E.g., 1, 2, 3, ...
+	column 'Day of Quarter'
+		dataType: int64
+		formatString: 0
+		lineageTag: bb04e2a8-63de-413e-8aa2-c016b5fcdb94
+		summarizeBy: none
+		sourceColumn: Day of Quarter
+
+		annotation SummarizationSetBy = User
+
+	/// The number of the day of the year.  E.g., 1, 2, 3, ...
+	column 'Day of Year'
+		dataType: int64
+		formatString: 0
+		lineageTag: 9fee52eb-9eb2-4b33-9c64-0cbbbdcf57cc
+		summarizeBy: none
+		sourceColumn: Day of Year
+
+		annotation SummarizationSetBy = User
+
+	/// The number of the week in the month.  E.g., 1, 2, 3, ...
+	column 'Week of Month'
+		dataType: int64
+		formatString: 0
+		lineageTag: e1bc2834-0f4f-4803-ab1c-ccd530bb90b7
+		summarizeBy: none
+		sourceColumn: Week of Month
+
+		annotation SummarizationSetBy = User
+
+	/// The number of the week in the year.  E.g., 1, 2, 3, ...
+	column 'Week of Year'
+		dataType: int64
+		formatString: 0
+		lineageTag: ab5eab4d-61c2-481d-9694-eeeada2dad72
+		summarizeBy: none
+		sourceColumn: Week of Year
+
+		annotation SummarizationSetBy = User
+
+	/// The number of the month in the year
+	column Month
+		dataType: int64
+		formatString: 0
+		lineageTag: 9cb797b4-fb41-46f0-b7a2-a5806f5c8704
+		summarizeBy: none
+		sourceColumn: Month
+
+		annotation SummarizationSetBy = User
+
+	/// The name of the month.  This column is sorted by the Month column.
+	column 'Month Name'
+		dataType: string
+		lineageTag: 79b3c6a0-5eab-4db3-9904-50fd5a3dfb6e
+		summarizeBy: none
+		sourceColumn: Month Name
+		sortByColumn: Month
+
+		changedProperty = SortByColumn
+
+		annotation SummarizationSetBy = Automatic
+
+	/// The first three letters of the name of the month.  E.g., "Jan", "Feb", "Mar", ....  This column is sorted by the Month column.
+	column 'Month Short Name'
+		dataType: string
+		lineageTag: 9e692864-cca7-4c47-be25-dc0150362373
+		summarizeBy: none
+		sourceColumn: Month Short Name
+		sortByColumn: Month
+
+		changedProperty = SortByColumn
+
+		annotation SummarizationSetBy = Automatic
+
+	/// The number of the month in the quarter.  E.g., 1, 2, 3, ....
+	column 'Month of Quarter'
+		dataType: int64
+		formatString: 0
+		lineageTag: f4011d65-b07c-4ac4-8087-96b738293fc2
+		summarizeBy: none
+		sourceColumn: Month of Quarter
+
+		annotation SummarizationSetBy = User
+
+	/// The number of the quarter in the year.
+	column Quarter
+		dataType: int64
+		formatString: 0
+		lineageTag: 8b75af18-49db-47b4-a1a3-69e23ea463b8
+		summarizeBy: none
+		sourceColumn: Quarter
+
+		annotation SummarizationSetBy = User
+
+	/// The name of the quarter in the year.  E.g., "First", "Second", "Third", and "Fourth".  This column is sorted by the Quarter column.
+	column 'Quarter Name'
+		dataType: string
+		lineageTag: 85ea3cb0-a888-4fdb-8fb9-ee463b998fd6
+		summarizeBy: none
+		sourceColumn: Quarter Name
+		sortByColumn: Quarter
+
+		changedProperty = SortByColumn
+
+		annotation SummarizationSetBy = Automatic
+
+	/// The four-digit year of the date
+	column Year
+		dataType: int64
+		formatString: 0
+		lineageTag: 2b24e97d-5167-4007-8008-8873f6657542
+		summarizeBy: none
+		sourceColumn: Year
+
+		annotation SummarizationSetBy = User
+
+	/// The four-digit year of the date preceded by "CY".  E.g., "CY2023", "CY2024", "CY2025", ....  This column is sorted by the Year column.
+	column 'Year Name'
+		dataType: string
+		lineageTag: 66ea01f5-9fa7-473d-b837-27a66fb6ec36
+		summarizeBy: none
+		sourceColumn: Year Name
+		sortByColumn: Year
+
+		changedProperty = SortByColumn
+
+		annotation SummarizationSetBy = Automatic
+
+	/// The first three letters of the month name and the year, concatenated with a hyphen in between.  E.g., "Jan-2025", "Feb-2025", "Mar-2025", ....  This column is sorted by the YYYYMM column.
+	column 'Short Month-Year'
+		dataType: string
+		lineageTag: ab1c434d-a601-46b9-914a-f323427bea1c
+		summarizeBy: none
+		sourceColumn: Short Month-Year
+		sortByColumn: YYYYMM
+
+		changedProperty = SortByColumn
+
+		annotation SummarizationSetBy = Automatic
+
+	/// The first three letters of the month name and the two-digit year, concatenated with a hyphen in between.  E.g., "Jan-25", "Feb-25", "Mar-25", ....  This column is sorted by the YYYYMM column.
+	column 'Short Month-Short Year'
+		dataType: string
+		lineageTag: fb314b26-a73f-41fa-a7a0-e8cd13e210ab
+		summarizeBy: none
+		sourceColumn: Short Month-Short Year
+		sortByColumn: YYYYMM
+
+		changedProperty = SortByColumn
+
+		annotation SummarizationSetBy = Automatic
+
+	/// The month and year of the date in the format MMyyyy.  This column is sorted by the YYYYMM column.
+	column MMYYYY
+		dataType: string
+		lineageTag: 49737fea-badc-4d98-ba2e-686b769a9cb1
+		summarizeBy: none
+		sourceColumn: MMYYYY
+		sortByColumn: YYYYMM
+
+		changedProperty = SortByColumn
+
+		annotation SummarizationSetBy = Automatic
+
+	/// The year and month of the date in the format yyyyMM.  E.g., 202501, 202502, 202503, ...
+	column YYYYMM
+		dataType: int64
+		formatString: 0
+		lineageTag: d5540d07-0736-445a-9481-a2d923210601
+		summarizeBy: none
+		sourceColumn: YYYYMM
+
+		annotation SummarizationSetBy = User
+
+	/// The date of the first day in the previous month
+	column 'First Day of Previous Month'
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: 75816e54-3711-4515-9dd5-c40802fe6e25
+		summarizeBy: none
+		sourceColumn: First Day of Previous Month
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	/// The date of the last day in the previous month
+	column 'Last Day of Previous Month'
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: be42f209-f430-4acb-9a36-ac6886fe552d
+		summarizeBy: none
+		sourceColumn: Last Day of Previous Month
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	/// The date of the first day in the current month
+	column 'First Day of Month'
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: b786c2ac-dc71-49e9-bb04-ab037763e4b3
+		summarizeBy: none
+		sourceColumn: First Day of Month
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	/// The date of the last day in the current month
+	column 'Last Day of Month'
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: 1ec570ad-f590-49c8-b025-61baf358242f
+		summarizeBy: none
+		sourceColumn: Last Day of Month
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	/// The date of the first day in the next month
+	column 'First Day of Next Month'
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: 9d8e7e8a-46c3-427a-85e3-c4b94a7eac7b
+		summarizeBy: none
+		sourceColumn: First Day of Next Month
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	/// The date of the last day in the next month
+	column 'Last Day of Next Month'
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: dcd6870c-ee53-47f4-a752-357dc2dcd802
+		summarizeBy: none
+		sourceColumn: Last Day of Next Month
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	/// The date of the first day in the previous quarter
+	column 'First Day of Previous Quarter'
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: 6219ffbd-ae15-4f76-b7f3-5e4156287dd5
+		summarizeBy: none
+		sourceColumn: First Day of Previous Quarter
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	/// The date of the last day in the previous quarter
+	column 'Last Day of Previous Quarter'
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: aa4b45b5-53f4-4001-8f08-8e316bf1a94f
+		summarizeBy: none
+		sourceColumn: Last Day of Previous Quarter
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	/// The date of the first day in the current quarter
+	column 'First Day of Quarter'
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: 2be1843e-d930-4375-b3e3-7f70f7f6a9f7
+		summarizeBy: none
+		sourceColumn: First Day of Quarter
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	/// The date of the last day in the current quarter
+	column 'Last Day of Quarter'
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: 19e248f4-7814-4dd9-9203-d4ad094656d0
+		summarizeBy: none
+		sourceColumn: Last Day of Quarter
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	/// The date of the first day in the next quarter
+	column 'First Day of Next Quarter'
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: 8c44ed10-f172-4a91-9b82-7ca0151ba975
+		summarizeBy: none
+		sourceColumn: First Day of Next Quarter
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	/// The date of the last day in the next quarter
+	column 'Last Day of Next Quarter'
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: 62b084d8-6b30-4cc1-aa2b-b31769c8a423
+		summarizeBy: none
+		sourceColumn: Last Day of Next Quarter
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	/// The date of the first day in the previous year
+	column 'First Day of Previous Year'
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: e6de9f93-01f4-4bc7-b349-c06a63a42514
+		summarizeBy: none
+		sourceColumn: First Day of Previous Year
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	/// The date of the last day in the previous year
+	column 'Last Day of Previous Year'
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: 78066fa8-cfbf-4c19-9148-f92f09700674
+		summarizeBy: none
+		sourceColumn: Last Day of Previous Year
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	/// The date of the first day in the current year
+	column 'First Day of Year'
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: fe9d41a0-b8ae-455b-9c4f-cb0bdf88e2ae
+		summarizeBy: none
+		sourceColumn: First Day of Year
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	/// The date of the last day in the current year
+	column 'Last Day of Year'
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: ffd05759-1923-4beb-95b1-2b8bbd8d71c2
+		summarizeBy: none
+		sourceColumn: Last Day of Year
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	/// The date of the first day in the next year
+	column 'First Day of Next Year'
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: 1538948e-b892-4cbc-806a-99e0003d8eaa
+		summarizeBy: none
+		sourceColumn: First Day of Next Year
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	/// The date of the last day in the next year
+	column 'Last Day of Next Year'
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: 81f07eb7-e657-4449-9abd-3b2ade94005a
+		summarizeBy: none
+		sourceColumn: Last Day of Next Year
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	/// A True/False field indicating whether the day is a weekday
+	column 'Is Weekend'
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		lineageTag: f4236c6d-6234-4cb4-a501-920a6d1b122c
+		summarizeBy: none
+		sourceColumn: Is Weekend
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Date = m
+		mode: import
+		queryGroup: 'Dimension Queries'
+		source =
+				let
+				    Duration = Duration.Days(DateTime.Date(DateTime.LocalNow()) - #"Start Date") + 1,
+				    DateList = List.Dates(#"Start Date", Duration, #duration(1, 0, 0, 0)),
+				    #"Converted to Table" = Table.FromList(DateList, Splitter.SplitByNothing(), null, null, ExtraValues.Error),
+				    #"Renamed Column" = Table.RenameColumns(#"Converted to Table",{{"Column1", "Date"}}),
+				    #"Assigned Data Type" = Table.TransformColumnTypes(#"Renamed Column",{{"Date", type date}}),
+				    #"Added Date Key" = Table.AddColumn(#"Assigned Data Type", "Date Key", each Date.Year([Date]) * 10000 + Date.Month([Date]) * 100 + Date.Day([Date]), Int64.Type),
+				    #"Moved the Date Key Column to the First Position" = Table.ReorderColumns(#"Added Date Key",{"Date Key", "Date"}),
+				    #"Added Day of Month" = Table.AddColumn(#"Moved the Date Key Column to the First Position", "Day of Month", each Date.Day([Date]), Int64.Type),
+				    #"Added Day Suffix" = Table.AddColumn(#"Added Day of Month", "Day Suffix", each Number.ToText([Day of Month]) & (if List.Contains({11, 12, 13}, [Day of Month]) then "th" else if List.Contains({1, 21, 31}, [Day of Month]) then "st" else if List.Contains({2, 22}, [Day of Month]) then "nd" else if List.Contains({3, 23}, [Day of Month]) then "rd" else "th"), type text),
+				    #"Added Day of Week" = Table.AddColumn(#"Added Day Suffix", "Day of Week", each Date.DayOfWeek([Date], 0) + 1, Int64.Type),
+				    #"Added Day Name" = Table.AddColumn(#"Added Day of Week", "Day Name", each Date.DayOfWeekName([Date]), type text),
+				    #"Added Day of Week in Month" = Table.AddColumn(#"Added Day Name", "Day of Week in Month", each Date.WeekOfMonth([Date]), Int64.Type),
+				    #"Added Day of Week in Year" = Table.AddColumn(#"Added Day of Week in Month", "Day of Week in Year", each Date.WeekOfYear([Date]), Int64.Type),
+				    #"Added Day of Quarter" = Table.AddColumn(#"Added Day of Week in Year", "Day of Quarter", each Duration.Days([Date] - Date.StartOfQuarter([Date])) + 1, Int64.Type),
+				    #"Added Day of Year" = Table.AddColumn(#"Added Day of Quarter", "Day of Year", each Duration.Days([Date] - Date.StartOfYear([Date])) + 1, Int64.Type),
+				    #"Added Week of Month" = Table.AddColumn(#"Added Day of Year", "Week of Month", each Date.WeekOfMonth([Date]), Int64.Type),
+				    #"Added Week of Year" = Table.AddColumn(#"Added Week of Month", "Week of Year", each Date.WeekOfYear([Date]), Int64.Type),
+				    #"Added Month" = Table.AddColumn(#"Added Week of Year", "Month", each Date.Month([Date]), Int64.Type),
+				    #"Added Month Name" = Table.AddColumn(#"Added Month", "Month Name", each Date.MonthName([Date]), type text),
+				    #"Added Month Short Name" = Table.AddColumn(#"Added Month Name", "Month Short Name", each Text.Start([Month Name], 3), type text),
+				    #"Added Month of Quarter" = Table.AddColumn(#"Added Month Short Name", "Month of Quarter", each if List.Contains({1, 4, 7, 10}, [Month]) then 1 else if List.Contains({2, 5, 8, 11}, [Month]) then 2 else if List.Contains({3, 6, 9, 12}, [Month]) then 3 else 0, Int64.Type),
+				    #"Added Quarter" = Table.AddColumn(#"Added Month of Quarter", "Quarter", each Date.QuarterOfYear([Date]), Int64.Type),
+				    #"Added Quarter Name" = Table.AddColumn(#"Added Quarter", "Quarter Name", each if [Quarter] = 1 then "First" else if [Quarter] = 2 then "Second" else if [Quarter] = 3 then "Third" else if [Quarter] = 4 then "Fourth" else "", type text),
+				    #"Added Year" = Table.AddColumn(#"Added Quarter Name", "Year", each Date.Year([Date]), Int64.Type),
+				    #"Added Year Name" = Table.AddColumn(#"Added Year", "Year Name", each "CY" & Number.ToText([Year]), type text),
+				    #"Added Short Month-Year" = Table.AddColumn(#"Added Year Name", "Short Month-Year", each Text.Start([Month Name], 3) & "-" & Number.ToText([Year]), type text),
+				    #"Added Short Month-Short Year" = Table.AddColumn(#"Added Short Month-Year", "Short Month-Short Year", each Text.Start([Month Name], 3) & "-" & Text.End(Number.ToText([Year]), 2), type text),
+				    #"Added  MMYYYY" = Table.AddColumn(#"Added Short Month-Short Year", "MMYYYY", each Number.ToText([Month], "00") & Number.ToText([Year]), type text),
+				    #"Added YYYYMM" = Table.AddColumn(#"Added  MMYYYY", "YYYYMM", each [Year] * 100 + [Month], Int64.Type),
+				    #"Added First Day of Previous Month" = Table.AddColumn(#"Added YYYYMM", "First Day of Previous Month", each Date.StartOfMonth(Date.From(Date.AddMonths([Date], -1))), type date),
+				    #"Added Last Day of Previous Month" = Table.AddColumn(#"Added First Day of Previous Month", "Last Day of Previous Month", each Date.EndOfMonth(Date.AddMonths([Date], -1)), type date),
+				    #"Added First Day of Month" = Table.AddColumn(#"Added Last Day of Previous Month", "First Day of Month", each Date.StartOfMonth([Date]), type date),
+				    #"Added Last Day of Month" = Table.AddColumn(#"Added First Day of Month", "Last Day of Month", each Date.EndOfMonth([Date]), type date),
+				    #"Added First Day of Next Month" = Table.AddColumn(#"Added Last Day of Month", "First Day of Next Month", each Date.StartOfMonth(Date.From(Date.AddMonths([Date], 1))), type date),
+				    #"Added Last Day of Next Month" = Table.AddColumn(#"Added First Day of Next Month", "Last Day of Next Month", each Date.EndOfMonth(Date.AddMonths([Date], 1)), type date),
+				    #"Added First Day of Previous Quarter" = Table.AddColumn(#"Added Last Day of Next Month", "First Day of Previous Quarter", each Date.StartOfQuarter(Date.AddDays(Date.StartOfQuarter([Date]), -1)), type date),
+				    #"Added Last Day of Previous Quarter" = Table.AddColumn(#"Added First Day of Previous Quarter", "Last Day of Previous Quarter", each Date.AddDays(Date.StartOfQuarter([Date]), -1), type date),
+				    #"Added First Day of Quarter" = Table.AddColumn(#"Added Last Day of Previous Quarter", "First Day of Quarter", each Date.StartOfQuarter([Date]), type date),
+				    #"Added Last Day of Quarter" = Table.AddColumn(#"Added First Day of Quarter", "Last Day of Quarter", each Date.EndOfQuarter([Date]), type date),
+				    #"Added First Day of Next Quarter" = Table.AddColumn(#"Added Last Day of Quarter", "First Day of Next Quarter", each Date.AddDays(Date.EndOfQuarter([Date]), 1), type date),
+				    #"Added Last Day of Next Quarter" = Table.AddColumn(#"Added First Day of Next Quarter", "Last Day of Next Quarter", each Date.EndOfQuarter(Date.AddDays(Date.EndOfQuarter([Date]), 1)), type date),
+				    #"Added First Day of Previous Year" = Table.AddColumn(#"Added Last Day of Next Quarter", "First Day of Previous Year", each Date.StartOfYear(Date.AddDays(Date.StartOfYear([Date]), -1)), type date),
+				    #"Added Last Day of Previous Year" = Table.AddColumn(#"Added First Day of Previous Year", "Last Day of Previous Year", each Date.AddDays(Date.StartOfYear([Date]), -1), type date),
+				    #"Added First Day of Year" = Table.AddColumn(#"Added Last Day of Previous Year", "First Day of Year", each Date.StartOfYear([Date]), type date),
+				    #"Added Last Day of Year" = Table.AddColumn(#"Added First Day of Year", "Last Day of Year", each Date.EndOfYear([Date]), type date),
+				    #"Added First Day of Next Year" = Table.AddColumn(#"Added Last Day of Year", "First Day of Next Year", each Date.AddDays(Date.EndOfYear([Date]), 1), type date),
+				    #"Added Last Day of Next Year" = Table.AddColumn(#"Added First Day of Next Year", "Last Day of Next Year", each Date.EndOfYear(Date.AddDays(Date.EndOfYear([Date]), 1)), type date),
+				    #"Added Is Weekend" = Table.AddColumn(#"Added Last Day of Next Year", "Is Weekend", each if List.Contains({1, 2, 3, 4, 5}, Date.DayOfWeek([Date])) then true else false, type logical)
+				in
+				    #"Added Is Weekend"
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

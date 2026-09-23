@@ -115,8 +115,10 @@ results: `Base-rules-fails.Report` 10 failures, matching the
 repository's own test expectations; `Base-rules-passes.Report` 1
 failure (`REDUCE_PAGES`, 13 pages); Michael's PBIP and GitHub Demo
 report 2 failures (`REDUCE_OBJECTS_WITHIN_VISUALS`,
-`REDUCE_ADVANCED_FILTERS`, the latter because a date slicer's filter
-entry is typed `Advanced` with nothing applied).
+`REDUCE_ADVANCED_FILTERS`, the latter because five visuals on the page
+carry a filter entry typed `Advanced` with nothing applied: a date
+slicer and four data visuals whose per-field entries Desktop writes)
+(amended 2026-09-22 after the oracle run).
 
 ### 3.3 Fixtures available
 
@@ -466,7 +468,7 @@ compares on ids. All ported rules are `warning`.
 | REDUCE_VISUALS_ON_PAGE | Page | Performance | `max` 20 | Hidden visuals and shapes, slicers, buttons, text boxes excluded, as the source does |
 | REDUCE_OBJECTS_WITHIN_VISUALS | Visual | Performance | `max` 6 | **Deviation:** count the fields bound to the visual's roles once, not every `projections` array in the file |
 | REDUCE_TOPN_FILTERS | Page | Performance | `max` 4 | |
-| REDUCE_ADVANCED_FILTERS | Page | Performance | `max` 4 | **Deviation:** count only filters with a condition applied; the source counts a slicer typed Advanced with nothing set |
+| REDUCE_ADVANCED_FILTERS | Page | Performance | `max` 4 | **Deviation:** count only filters with a condition applied; the source also counts an Advanced filter with nothing set, such as a slicer's or one Desktop writes for a visual's own fields (amended 2026-09-22 after the oracle run) |
 | REDUCE_PAGES | Report | Performance | `max` 10 | |
 | AVOID_SHOW_ITEMS_WITH_NO_DATA | Visual | Performance | | `query.queryState.<role>.showAll` true |
 | HIDE_TOOLTIP_DRILLTROUGH_PAGES | Page | Report Design | | Binding type tooltip or drillthrough and visibility not `HiddenInViewMode` |

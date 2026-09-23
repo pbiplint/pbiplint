@@ -1,0 +1,43 @@
+{
+  "fixture": "tests/fixtures/shelfmart",
+  "report": "ShelfMart Foot Traffic and Weather.Report",
+  "oracle": "fab-inspector CLI 3.4.0 with Base-rules.json sha256 22868be9acd696c96e62f214dbe0efc72fd1bfffda1736b3b9a4d7fba21f883c, every rule enabled",
+  "captured": "2026-09-22",
+  "deviations": {},
+  "ours": {},
+  "native": {},
+  "results": {
+    "ENSURE_ALTTEXT": {
+      "bc7f8766efc449010862": {
+        "pass": false,
+        "actual": [
+          "083100cf12c447a14241",
+          "a648553b7b03de901882",
+          "38925a93264ee53275ea",
+          "0edbd49de3f312e71cd0",
+          "c7714e09d9d9ef9d3867",
+          "5e6c2d1145718eed516d",
+          "df53758b398e30da20b7",
+          "46350eb8e37035e623a4",
+          "562b365c1dc736db5f0b"
+        ]
+      }
+    },
+    "ENSURE_THEME_COLOURS": {
+      "bc7f8766efc449010862": {
+        "pass": false,
+        "actual": [
+          "5e6c2d1145718eed516d"
+        ]
+      }
+    },
+    "REDUCE_OBJECTS_WITHIN_VISUALS": {
+      "bc7f8766efc449010862": {
+        "pass": false,
+        "actual": [
+          "a648553b7b03de901882"
+        ]
+      }
+    }
+  }
+}

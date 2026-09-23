@@ -95,6 +95,7 @@ describe("rulePage", () => {
       category: "Formatting",
       severity: "warning",
       status: "ported",
+      layer: "model",
     });
     expect(meta.summary.startsWith("Visible columns whose name matches")).toBe(true);
     expect(html).toContain("<h1>Hide foreign keys</h1>");
@@ -156,6 +157,45 @@ describe("rulePage", () => {
     expect(html).toContain("<pre><code>DAX here\n</code></pre>");
     expect(html).toContain('<h2 id="example">Example</h2>');
   });
+  it("renders a pbir fence as a captioned JSON figure that names its file, bare for a tree", () => {
+    const page = read("hide-foreign-keys").replace(
+      "## Why it matters",
+      '## Example\n\n```pbir fires visual.json\n{ "name": "v" }\n```\n\n```pbir fixed tree.json\n{ "definition/pages/p/page.json": {} }\n```\n\n## Why it matters',
+    );
+    const { html } = rulePage(page, "hide-foreign-keys");
+    expect(html).toContain(
+      '<figure class="example fires">\n<figcaption>Fires the rule in visual.json</figcaption>\n<pre><code class="language-json">{ &quot;name&quot;: &quot;v&quot; }\n</code></pre>\n</figure>',
+    );
+    expect(html).toContain(
+      '<figure class="example fixed">\n<figcaption>After the fix</figcaption>\n<pre><code class="language-json">',
+    );
+    const escaped = rulePage(
+      page.replace("pbir fires visual.json", "pbir fires a<b.json"),
+      "hide-foreign-keys",
+    ).html;
+    expect(escaped).toContain("<figcaption>Fires the rule in a&lt;b.json</figcaption>");
+  });
+  it("credits PBI Inspector for a page whose source is its ruleset", () => {
+    const page = read("hide-foreign-keys").replace(
+      /sources:\n( {2}- .*\n)+/,
+      "sources:\n  - https://github.com/NatVanG/fab-inspector/blob/main/Rules/Base-rules.json\n",
+    );
+    expect(rulePage(page, "x").html).toContain(
+      `<p class="sources">Ported from <a href="https://github.com/NatVanG/fab-inspector/blob/main/Rules/Base-rules.json">PBI Inspector's base rules by Nat Van Gulck</a>.</p>`,
+    );
+  });
+  it("names the page's layer in its meta line only when the site publishes more than one family", () => {
+    // One family published: every published page would name the same layer, so none does.
+    const meta = (html: string): string => /<p class="meta">.*<\/p>/.exec(html)?.[0] ?? "";
+    const single = meta(rulePage(read("hide-foreign-keys"), "hide-foreign-keys").html);
+    expect(single).toContain("· ported · scope: ");
+    expect(single).not.toContain(" layer");
+    // Both families published, as from pull request 7: the item follows the status.
+    const both = (slug: string): string =>
+      meta(rulePage(read(slug), slug, new Map(), ["model", "report"]).html);
+    expect(both("hide-foreign-keys")).toContain("· ported · model layer · scope: ");
+    expect(both("parse-issue")).toContain("· built in · project layer · scope: ");
+  });
   it("links a code span that names another rule, and only another rule", () => {
     const page = read("hide-foreign-keys").replace(
       "## Quirks",
@@ -188,6 +228,14 @@ describe("rulePage", () => {
     expect(ignoreHelp("X", ["File"])).toBe(coreIgnoreHelp("X", ["File"]));
     expect(ignoreHelp("X", [])).toBe(coreIgnoreHelp("X", []));
     expect(ignoreHelp("X", ["File", "Table"])).toBe(coreIgnoreHelp("X", ["File", "Table"]));
+    expect(ignoreHelp("X", ["Visual"])).toBe(coreIgnoreHelp("X", ["Visual"]));
+    expect(ignoreHelp("X", ["Page"])).toBe(coreIgnoreHelp("X", ["Page"]));
+    expect(ignoreHelp("X", ["Page", "Visual"])).toBe(coreIgnoreHelp("X", ["Page", "Visual"]));
+    expect(ignoreHelp("X", ["Report"])).toBe(coreIgnoreHelp("X", ["Report"]));
+    expect(ignoreHelp("X", ["Page", "Visual", "Report"])).toBe(
+      coreIgnoreHelp("X", ["Page", "Visual", "Report"]),
+    );
+    expect(ignoreHelp("X", ["ReportMeasure"])).toBe(coreIgnoreHelp("X", ["ReportMeasure"]));
     // A page without the section gets nothing appended.
     const live = read("avoid-bi-directional-relationships-against-high-cardinality-columns");
     expect(rulePage(live, "x").html).not.toContain("pbiplint.ignore");
@@ -271,10 +319,11 @@ describe("ruleLinks and attribution", () => {
 describe("pageLayer and SITE_LAYERS", () => {
   const source = "rules/made-up.md";
   it("reads the layer a page declares, and counts a page with no layer key as model", () => {
-    // Every page today predates the key, so the whole rule set reads as the model layer.
+    // Every page carries the key; a page from before it, or one written without it, reads as model.
     expect(pageLayer(parseFrontmatter(read("hide-foreign-keys"), source).data, source)).toBe(
       "model",
     );
+    expect(pageLayer(parseFrontmatter(read("parse-issue"), source).data, source)).toBe("project");
     expect(pageLayer({}, source)).toBe("model");
     expect(pageLayer({ layer: "model" }, source)).toBe("model");
     expect(pageLayer({ layer: "report" }, source)).toBe("report");
@@ -317,7 +366,9 @@ describe("generateSite", () => {
       '<a href="/rules/mark-primary-keys/"><code>MARK_PRIMARY_KEYS</code></a>',
     );
     const index = readFileSync(join(out, "rules/index.html"), "utf8");
-    expect(index).toContain("72 rules: 66 ported");
+    expect(index).toContain(
+      "72 rules: 66 model rules ported from Microsoft's Best Practice Analyzer ruleset so the results match Tabular Editor, 5 listed but not run because they need statistics only a live model has, and 1 built into pbiplint.",
+    );
     expect(index).toContain('<h2 id="error-prevention">Error Prevention</h2>');
     expect((index.match(/needs a live model/g) ?? []).length).toBe(5);
     for (const m of metas) expect(index).toContain(`href="/rules/${m.slug}/"`);
@@ -385,10 +436,11 @@ describe("generateSite", () => {
     const out = mkdtempSync(join(tmpdir(), "pbiplint-layer-"));
     const rules = mkdtempSync(join(tmpdir(), "pbiplint-layerrules-"));
     writeFileSync(join(rules, "hide-foreign-keys.md"), read("hide-foreign-keys"));
-    writeFileSync(
-      join(rules, "mark-primary-keys.md"),
-      read("mark-primary-keys").replace("status: ported\n", "status: ported\nlayer: report\n"),
-    );
+    const report = read("mark-primary-keys").replace("layer: model\n", "layer: report\n");
+    // The page's own key is replaced rather than a second one added, which parseFrontmatter would
+    // read in place of the first. A missed anchor would leave the page on the model layer.
+    expect(report).toContain("layer: report\n");
+    writeFileSync(join(rules, "mark-primary-keys.md"), report);
     const metas = generateSite({ outDir: out, rulesDir: rules });
     // Not rendered, and not among the metas the caller gets back.
     expect(metas.map((m) => m.slug)).toEqual(["hide-foreign-keys"]);
@@ -396,7 +448,9 @@ describe("generateSite", () => {
     expect(existsSync(join(out, "rules/mark-primary-keys/index.html"))).toBe(false);
     // Not in the index: neither in the count at the top nor in a list below it.
     const index = readFileSync(join(out, "rules/index.html"), "utf8");
-    expect(index).toContain("1 rules: 1 ported");
+    expect(index).toContain(
+      "1 rules: 1 model rules ported from Microsoft's Best Practice Analyzer ruleset so the results match Tabular Editor.",
+    );
     expect(index).toContain('href="/rules/hide-foreign-keys/"');
     expect(index).not.toContain("mark-primary-keys");
     expect(index).not.toContain("Mark primary keys");
@@ -411,27 +465,25 @@ describe("generateSite", () => {
     expect(page).not.toContain('<a href="/rules/mark-primary-keys/">');
   });
   it("publishes a project page while one family is published, the way PARSE_ISSUE's page needs", () => {
-    // PARSE_ISSUE is layer project in core, so Task 18 writes `layer: project` onto its page. It
-    // declares needs: [], so it fires on a model-only run and gating its page would take one off
-    // the site that belongs there. The two project rules that do need both layers publish a page
-    // early in exchange, which decision 15 records as a known exception.
+    // PARSE_ISSUE is layer project in core, and its page says so. It declares needs: [], so it
+    // fires on a model-only run and gating its page would take one off the site that belongs
+    // there. The two project rules that do need both layers publish a page early in exchange,
+    // which decision 15 records as a known exception.
     const out = mkdtempSync(join(tmpdir(), "pbiplint-project-"));
     const rules = mkdtempSync(join(tmpdir(), "pbiplint-projectrules-"));
     writeFileSync(join(rules, "hide-foreign-keys.md"), read("hide-foreign-keys"));
-    const fixture = read("parse-issue").replace(
-      "id: PARSE_ISSUE\n",
-      "id: PARSE_ISSUE\nlayer: project\n",
-    );
-    // A missed anchor would leave the fixture with no layer key, so it would read as the model
-    // layer, publish anyway, and every assertion below would pass while proving nothing. The gate
-    // test next door needs no such guard: there the mutation is what makes the page disappear.
-    expect(fixture).toContain("layer: project");
+    const fixture = read("parse-issue");
+    // A page that lost its key would read as the model layer, publish anyway, and every assertion
+    // below would pass while proving nothing about the project layer.
+    expect(fixture).toContain("\nlayer: project\n");
     writeFileSync(join(rules, "parse-issue.md"), fixture);
     const metas = generateSite({ outDir: out, rulesDir: rules });
     expect(metas.map((m) => m.slug)).toEqual(["hide-foreign-keys", "parse-issue"]);
     expect(existsSync(join(out, "rules/parse-issue/index.html"))).toBe(true);
     const index = readFileSync(join(out, "rules/index.html"), "utf8");
-    expect(index).toContain("2 rules: 1 ported");
+    expect(index).toContain(
+      "2 rules: 1 model rules ported from Microsoft's Best Practice Analyzer ruleset so the results match Tabular Editor and 1 built into pbiplint.",
+    );
     expect(index).toContain('href="/rules/parse-issue/"');
     expect(readFileSync(join(out, "public/sitemap.xml"), "utf8")).toContain(
       "<loc>https://pbiplint.com/rules/parse-issue/</loc>",
@@ -440,10 +492,9 @@ describe("generateSite", () => {
   it("names the page when a rule page's layer is not a layer at all", () => {
     const out = mkdtempSync(join(tmpdir(), "pbiplint-badlayer-"));
     const rules = mkdtempSync(join(tmpdir(), "pbiplint-badlayerrules-"));
-    writeFileSync(
-      join(rules, "hide-foreign-keys.md"),
-      read("hide-foreign-keys").replace("status: ported\n", "status: ported\nlayer: reprot\n"),
-    );
+    const typo = read("hide-foreign-keys").replace("layer: model\n", "layer: reprot\n");
+    expect(typo).toContain("layer: reprot\n");
+    writeFileSync(join(rules, "hide-foreign-keys.md"), typo);
     expect(() => generateSite({ outDir: out, rulesDir: rules })).toThrow(
       'rules/hide-foreign-keys.md: unknown layer "reprot" (expected one of model, report, project, or no layer key at all)',
     );
@@ -488,6 +539,30 @@ describe("rulesIndex", () => {
     );
     // Every real rule still passes.
     expect(() => rulesIndex(metas)).not.toThrow();
+  });
+  it("badges each rule with its layer only when the site publishes more than one family", () => {
+    // One family published: a badge would read model on every row, a column that tells no row
+    // from another, so there is none.
+    expect(rulesIndex(metas)).not.toContain('class="layer');
+    // Both families published, as from pull request 7: the badge follows the severity badge.
+    const report: RuleMeta = {
+      ...metas[0]!,
+      slug: "a-report-rule",
+      title: "A report rule",
+      severity: "warning",
+      status: "ported",
+      layer: "report",
+    };
+    const index = rulesIndex([...metas, report], ["model", "report"]);
+    expect(index).toContain('<span class="layer report">report</span>');
+    expect(index).toContain('<span class="layer model">model</span>');
+    expect(index).toContain(
+      '<a href="/rules/a-report-rule/">A report rule</a> <span class="badge warning">warning</span> <span class="layer report">report</span><br />',
+    );
+    // With a report rule published, the count names its source in the clause the gate holds back.
+    expect(index).toContain(
+      "73 rules: 66 model rules ported from Microsoft's Best Practice Analyzer ruleset so the results match Tabular Editor, 5 listed but not run because they need statistics only a live model has, 1 report rules ported from PBI Inspector's base rules, and 1 built into pbiplint.",
+    );
   });
 });
 

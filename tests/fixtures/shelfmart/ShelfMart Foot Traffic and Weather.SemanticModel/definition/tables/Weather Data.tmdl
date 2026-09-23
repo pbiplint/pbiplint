@@ -1,0 +1,145 @@
+/// At the granularity of store-date, this contains weather and climatic data for each store over the time period of this report
+table 'Weather Data'
+	lineageTag: 4f0d4644-2b5d-4ff5-8bc6-c0c6226644dc
+
+	/// The Store ID of the store for which the weather observation was taken
+	column 'Store ID'
+		dataType: int64
+		formatString: 0
+		lineageTag: 3d62703b-41ea-4fb1-8f64-ed70bfaee954
+		summarizeBy: none
+		sourceColumn: Store ID
+
+		annotation SummarizationSetBy = Automatic
+
+	/// The date of the weather observation
+	column Date
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: 897b55f2-e73f-4146-9032-3161080d023c
+		summarizeBy: none
+		sourceColumn: Date
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	/// The maximum temperature for a given day at a given store
+	column 'Maximum Temperature F'
+		dataType: double
+		formatString: #,0
+		lineageTag: 80752e8c-891f-4a01-9fa4-44123c50ae25
+		summarizeBy: none
+		sourceColumn: Maximum Temperature F
+
+		annotation SummarizationSetBy = User
+
+		annotation PBI_FormatHint = {"isDecimal":true}
+
+	/// The minimum temperature for a given day at a given store
+	column 'Minimum Temperature F'
+		dataType: double
+		formatString: #,0
+		lineageTag: 2dc1a1c0-24a6-49e7-9d61-7eb5b1a1894e
+		summarizeBy: none
+		sourceColumn: Minimum Temperature F
+
+		annotation SummarizationSetBy = User
+
+		annotation PBI_FormatHint = {"isDecimal":true}
+
+	/// The average temperature for a given day at a given store
+	column 'Average Temperature F'
+		dataType: double
+		formatString: #,0
+		lineageTag: 24e461df-e686-4383-9a9f-e21765bf50fc
+		summarizeBy: none
+		sourceColumn: Average Temperature F
+
+		annotation SummarizationSetBy = User
+
+		annotation PBI_FormatHint = {"isDecimal":true}
+
+	/// The total precipitation in inches for the given store on the given date
+	column 'Total Precipitation Inches'
+		dataType: double
+		formatString: #,0.00
+		lineageTag: a044ed23-cbae-4025-a030-54aabf860dd8
+		summarizeBy: none
+		sourceColumn: Total Precipitation Inches
+
+		annotation SummarizationSetBy = User
+
+	/// The snowfall in centimeters for the given store on the given date
+	column 'Total Snow Centimeters'
+		dataType: double
+		formatString: #,0.00
+		lineageTag: e65720bc-8063-40b3-b110-90dc0fa95040
+		summarizeBy: none
+		sourceColumn: Total Snow Centimeters
+
+		annotation SummarizationSetBy = User
+
+	/// The average of the maximum temperature on a given month and day for a given store between 2015 and 2024
+	column 'Average High Temperature'
+		dataType: double
+		formatString: #,0
+		lineageTag: eb6a6f8c-068b-4dd3-adf6-48e59ef1c6a3
+		summarizeBy: none
+		sourceColumn: Average High Temperature
+
+		annotation SummarizationSetBy = User
+
+		annotation PBI_FormatHint = {"isDecimal":true}
+
+	/// A description of the relative difference between the Maximum Temperature F for the given store on the given date and the 10-year Average High Temperature for the given store on the given month and day.  For store-days more than 5 degrees F above the 10-year average, it reads "Hot Days"; for store-days more than 5 degrees F below the 10-year average, it reads "Cold Days"; for all other store-days, it reads "Moderate Days".  This column is sorted by the Temperature Deviation Day Sort By column.
+	column 'Temperature Deviation Day'
+		dataType: string
+		lineageTag: ead13373-dce7-41cb-995e-ad0b852602e0
+		summarizeBy: none
+		sourceColumn: Temperature Deviation Day
+		sortByColumn: 'Temperature Deviation Day Sort By'
+
+		changedProperty = SortByColumn
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Used to sort the Temperature Deviation Day column.  "Hot Days" is 1, "Moderate Days' is 2, "Cold Days" is 3, and anything else is null.
+	column 'Temperature Deviation Day Sort By'
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 32da8a04-e1bd-4386-91e8-7823dbc96266
+		summarizeBy: none
+		sourceColumn: Temperature Deviation Day Sort By
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = User
+
+	partition 'Weather Data' = m
+		mode: import
+		queryGroup: 'Fact Queries'
+		source =
+				let
+				    Source = Folder.Files("C:\Demo\Data\Weather Data"),
+				    #"Filtered Rows" = Table.SelectRows(Source, each ([Folder Path] = "C:\Demo\Data\Weather Data\") and ([Extension] = ".csv" and [Attributes]?[Hidden]? <> true)),
+				    #"Invoke Transform File" = Table.AddColumn(#"Filtered Rows", "Transform File", each #"Transform File"([Content])),
+				    #"Removed Other Columns" = Table.SelectColumns(#"Invoke Transform File", {"Transform File"}),
+				    #"Expanded Files in Folder" = Table.ExpandTableColumn(#"Removed Other Columns", "Transform File", Table.ColumnNames(#"Transform File"(#"Sample File"))),
+				    #"Removed Columns" = Table.RemoveColumns(#"Expanded Files in Folder",{"WillItRain", "ChanceOfRain", "WillItSnow", "ChanceOfSnow"}),
+				    #"Renamed Columns" = Table.RenameColumns(#"Removed Columns",{{"StoreID", "Store ID"}, {"MaxTemp_F", "Maximum Temperature F"}, {"MinTemp_F", "Minimum Temperature F"}, {"AvgTemp_F", "Average Temperature F"}, {"TotalPrecip_In", "Total Precipitation Inches"}, {"TotalSnow_Cm", "Total Snow Centimeters"}}),
+				    #"Assign Initial Datatypes" = Table.TransformColumnTypes(#"Renamed Columns",{{"Store ID", Int64.Type}, {"Date", type date}, {"Maximum Temperature F", type number}, {"Minimum Temperature F", type number}, {"Average Temperature F", type number}, {"Total Precipitation Inches", type number}, {"Total Snow Centimeters", type number}}),
+				    #"Added Key Column" = Table.AddColumn(#"Assign Initial Datatypes", "Key", each Text.From([Store ID]) & "-" & Text.PadStart(Text.From(Date.Month([Date])), 2, "0") & "-" & Text.PadStart(Text.From(Date.Day([Date])), 2, "0"), type text),
+				    #"Merged with Average High Temperature Summary Query" = Table.NestedJoin(#"Added Key Column", {"Key"}, #"Average High Temperature Summary", {"Key"}, "Average High Temperature Summary", JoinKind.LeftOuter),
+				    #"Expanded Average High Temperature Summary" = Table.ExpandTableColumn(#"Merged with Average High Temperature Summary Query", "Average High Temperature Summary", {"Average High Temperature"}, {"Average High Temperature"}),
+				    #"Removed Key Column" = Table.RemoveColumns(#"Expanded Average High Temperature Summary",{"Key"}),
+				    #"Added Temperature Deviation Day" = Table.AddColumn(#"Removed Key Column", "Temperature Deviation Day", each if [Maximum Temperature F] - [Average High Temperature] > 5 then "Hot Days (+5F)" else if [Average High Temperature] - [Maximum Temperature F] < 5 then "Cold Days (-5F)" else "Moderate Days", type text),
+				    #"Added Temperature Deviation Day Sort By" = Table.AddColumn(#"Added Temperature Deviation Day", "Temperature Deviation Day Sort By", each if [Temperature Deviation Day] = "Hot Days (+5F)" then 1 else if [Temperature Deviation Day] = "Moderate Days" then 2 else if [Temperature Deviation Day] = "Cold Days (-5F)" then 3 else null, Int64.Type)
+				in
+				    #"Added Temperature Deviation Day Sort By"
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

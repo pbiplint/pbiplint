@@ -1,0 +1,147 @@
+/// Contains data on foot traffic into stores.  This table is at a grain of Store-Date.
+table 'Foot Traffic'
+	lineageTag: 3b711c4d-a797-41e0-9e4c-4bcdd708017a
+
+	/// The sum of the foot traffic
+	measure 'Total Foot Traffic' =
+			
+			SUM('Foot Traffic'[Foot Traffic])
+		lineageTag: 037da48f-1fd6-4091-904e-86fd38fcd6e6
+
+		formatStringDefinition =
+				SWITCH(
+				    TRUE(),
+				    SELECTEDMEASURE() > 10^10, "0,,,.0B",
+				    SELECTEDMEASURE() > 10^9, "0,,,.00B",
+				    SELECTEDMEASURE() > 10^8, "0,,.M",
+				    SELECTEDMEASURE() > 10^7, "0,,.0M",
+				    SELECTEDMEASURE() > 10^6, "0,,.00M",
+				    SELECTEDMEASURE() > 10^5, "0,.k",
+				    SELECTEDMEASURE() > 10^4, "0,.0k",
+				    "0,0"
+				)
+
+	/// The sum of the foot traffic for the same period last year
+	measure 'Total Foot Traffic SPLY' =
+			
+			CALCULATE(
+			    [Total Foot Traffic],
+			    SAMEPERIODLASTYEAR('Date'[Date])
+			)
+		lineageTag: c5a7f6b3-d2d5-4469-bf61-4251548be23a
+
+		formatStringDefinition =
+				SWITCH(
+				    TRUE(),
+				    SELECTEDMEASURE() > 10^10, "0,,,.0B",
+				    SELECTEDMEASURE() > 10^9, "0,,,.00B",
+				    SELECTEDMEASURE() > 10^8, "0,,.M",
+				    SELECTEDMEASURE() > 10^7, "0,,.0M",
+				    SELECTEDMEASURE() > 10^6, "0,,.00M",
+				    SELECTEDMEASURE() > 10^5, "0,.k",
+				    SELECTEDMEASURE() > 10^4, "0,.0k",
+				    "0,0"
+				)
+
+	/// Returns the year-over-year (YoY) growth percentage (%) of total foot traffic, computed by comparing the [Total Foot Traffic] to the [Total Foot Traffic SPLY]
+	measure 'Total Foot Traffic YoY with Arrow' = ```
+			
+			VAR varMeasure = [Total Foot Traffic YoY]
+			VAR varUpArrow = UNICHAR(129129)
+			VAR varDownArrow = UNICHAR(129131)
+			VAR varMeasureWithUpArrow = FORMAT(varMeasure, "#,0.0%") & " " & varUpArrow
+			VAR varMeasureWithDownArrow = FORMAT(varMeasure, ";(#,0.0%)") & " " & varDownArrow
+			VAR varResult = 
+			    SWITCH(
+			        TRUE(),
+			        varMeasure > 0, varMeasureWithUpArrow,
+			        varMeasure < 0, varMeasureWithDownArrow,
+			        varMeasure
+			    )
+			RETURN varResult
+			```
+		formatString: #,0%;-#,0%;#,0%
+		lineageTag: f96f9eee-03ef-4932-b437-105af068d66f
+
+	/// Returns the year-over-year (YoY) growth percentage (%) of total foot traffic, computed by comparing the [Total Foot Traffic] to the [Total Foot Traffic SPLY]
+	measure 'Total Foot Traffic YoY' =
+			
+			DIVIDE(
+			    [Total Foot Traffic] - [Total Foot Traffic SPLY],
+			    [Total Foot Traffic SPLY],
+			    BLANK()
+			)
+		formatString: #,0%;-#,0%;#,0%
+		lineageTag: 9da76e1f-cd2d-4940-a566-b66eb62f4d73
+
+	/// Returns "Green" when the [Total Foot Traffic YoY] measure is positive, "Red" when negative, and "Black otherwise (i.e., when 0).  This measure is used for conditionally formatting the [Total Foot Traffic YoY with Arrow] measure.
+	measure 'Total Foot Traffic YoY with Arrow Conditional Formatting' = ```
+			
+			VAR varMeasure = [Total Foot Traffic YoY]
+			VAR varResult = 
+			    SWITCH(
+			        TRUE(),
+			        varMeasure > 0, "#1CBAA4",
+			        varMeasure < 0, "#FD625E",
+			        "#252423"
+			    )
+			RETURN varResult
+			```
+		lineageTag: 1f2c8a10-2e5c-49c3-aaf5-c0969154b373
+
+	/// The Date of the record for the given store
+	column Date
+		dataType: dateTime
+		isHidden
+		formatString: Short Date
+		lineageTag: ac94d931-d8b4-4f5a-b351-b203182c69c1
+		summarizeBy: none
+		sourceColumn: Date
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	/// The number of purchasers in the given store on the given date
+	column 'Foot Traffic'
+		dataType: int64
+		isHidden
+		formatString: #,0
+		lineageTag: 3eed99bd-6bbe-4574-a150-031f3aab8063
+		summarizeBy: none
+		sourceColumn: Foot Traffic
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = User
+
+	/// The Store ID of the record for the given date
+	column 'Store ID'
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 53d454fb-d868-41fb-8b68-c25d233278ed
+		summarizeBy: none
+		sourceColumn: Store ID
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'Foot Traffic' = m
+		mode: import
+		queryGroup: 'Fact Queries'
+		source =
+				let
+				    Source = Csv.Document(File.Contents("C:\Demo\Data\fctFootTraffic.csv"),[Delimiter=",", Columns=3, Encoding=65001, QuoteStyle=QuoteStyle.None]),
+				    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+				    #"Assigned Initial Datatypes" = Table.TransformColumnTypes(#"Promoted Headers",{{"Store ID", Int64.Type}, {"Date", type date}, {"Foot Traffic", Int64.Type}})
+				in
+				    #"Assigned Initial Datatypes"
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

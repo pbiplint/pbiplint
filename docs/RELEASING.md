@@ -29,6 +29,16 @@ Do these once, at the first release, not before.
 
    From then on the workflow publishes without a token and npm attaches provenance.
 
+## Release hold until the report layer is live
+
+From the merge of the v2 plan's pull request 2 until pull request 7 sets `SITE_LAYERS` to both
+families, publish nothing from main. The CLI on main links to the report rule pages, and the site
+does not publish those pages until pull request 7 (decision 15 in
+`docs/superpowers/plans/2026-09-20-pbiplint-v2-report-layer.md`), so a release cut in that window
+would send its users to pages that do not exist yet. If a 0.1.x patch is needed meanwhile, cut it
+from a branch off the `v0.1.2` tag and tag that branch's release commit, not main. The 0.2.0
+release pull request removes this section.
+
 ## Every release
 
 1. On a branch from main, set the version in both packages and regenerate the core's version file:
@@ -102,6 +112,18 @@ in step 4 above, and push the tag, which creates the GitHub release and skips th
 because both versions are already on the registry. Note what that means: a tag pushed after a
 manual publish exercises none of the publishing path, so it proves the workflow runs and nothing
 more. The first release that actually publishes is the first real test of it.
+
+## Report parity expectations
+
+The report rules are pinned to fab-inspector, a development-time oracle only. Refresh the
+expectation files when a fixture changes or when the port source moves to a new commit:
+
+1. Clone the ruleset and fixtures at the pinned commit (see `packages/core/src/rules/pbi-inspector/inspector-rules.data.ts` for the commit and sha):
+   `git clone --filter=blob:none --sparse --no-checkout https://github.com/NatVanG/fab-inspector.git && cd fab-inspector && git sparse-checkout set FabInspector.Tests/Files/pbip Rules && git checkout <commit>`
+2. Download `osx-arm64-CLI.zip` from the fab-inspector release the expectation files name, unzip it, and clear the quarantine flag. It needs the Homebrew .NET:
+   `export DOTNET_ROOT=/opt/homebrew/Cellar/dotnet/<version>/libexec DOTNET_ROLL_FORWARD=Major`
+3. For each fixture: `node scripts/fab-expectations.mjs tests/fixtures/<name> tests/expectations/<name>.report.json --cli <path to PBIRInspectorCLI> --cli-version <release of the zip, such as 3.4.0> --rules <path to Base-rules.json>`. The script runs the oracle with every rule enabled, writes the version into the file's `oracle` string, and keeps `deviations`, `ours`, and `native` from the existing file.
+4. `npm test`. A difference that is not one of the documented deviations is a bug in a port or a change in the source. A deviation is added only on purpose, and it needs four things that the parity and rule-page tests check together: its one sentence in the file's `deviations` map, pbiplint's object ids under `ours`, a fixture on which the two lists differ, and the same sentence in the rule page's Quirks section.
 
 ## The hyphenated name, settled
 

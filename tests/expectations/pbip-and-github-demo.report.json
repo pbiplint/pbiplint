@@ -1,0 +1,54 @@
+{
+  "fixture": "tests/fixtures/pbip-and-github-demo",
+  "report": "PBIP and GitHub Demo.Report",
+  "oracle": "fab-inspector CLI 3.4.0 with Base-rules.json sha256 22868be9acd696c96e62f214dbe0efc72fd1bfffda1736b3b9a4d7fba21f883c, every rule enabled",
+  "captured": "2026-09-22",
+  "deviations": {
+    "REDUCE_ADVANCED_FILTERS": "pbiplint counts only Advanced filters with a condition applied, where PBI Inspector also counts an Advanced filter with nothing set, such as a slicer's or one Power BI Desktop writes for a visual's own fields."
+  },
+  "ours": {
+    "REDUCE_ADVANCED_FILTERS": []
+  },
+  "native": {},
+  "results": {
+    "ENSURE_ALTTEXT": {
+      "d3583278a4fc59eaa0d6": {
+        "pass": false,
+        "actual": [
+          "21c6fe685817de69aa28",
+          "c897ed0802274ab55e2d",
+          "30ea5a93c53109204e2c",
+          "aa7c0395b9dc27606d6d",
+          "bb02cbe56c425edbe011",
+          "81e55f42a5a0e75a0007",
+          "99a57e01807b781d6d23",
+          "f2bc7055559c949b77ac",
+          "f214605589d80a14a70a",
+          "330004a0919de7ea8635",
+          "43811631260ee3580e9a",
+          "5bfdd080d26ace982d7e",
+          "096193a525ec376a0147",
+          "e5ee7466d19ec360d420",
+          "86f45ac9960618a71432",
+          "3d9c80144abca427957c",
+          "d2c5e0d448a1e034b8eb",
+          "e5d4fa535dda402ac1ca"
+        ]
+      }
+    },
+    "REDUCE_ADVANCED_FILTERS": {
+      "d3583278a4fc59eaa0d6": {
+        "pass": false,
+        "actual": false
+      }
+    },
+    "REDUCE_OBJECTS_WITHIN_VISUALS": {
+      "d3583278a4fc59eaa0d6": {
+        "pass": false,
+        "actual": [
+          "c897ed0802274ab55e2d"
+        ]
+      }
+    }
+  }
+}

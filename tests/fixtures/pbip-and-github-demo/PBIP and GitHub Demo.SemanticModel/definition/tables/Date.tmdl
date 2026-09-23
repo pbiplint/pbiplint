@@ -1,0 +1,110 @@
+/// Date dimension with daily grain — one row per day from January 1 2024 through December 31 2025. Marked as the model's date table so time intelligence measures resolve correctly. Daily grain is required by Power BI time-intelligence functions (sparse calendars silently produce wrong results).
+table Date
+	lineageTag: b02a60a3-a1a2-599d-8fa0-50b1b4c3a35f
+	dataCategory: Time
+
+	measure 'Max Year' = MAX('Date'[Year])
+		formatString: 0
+		lineageTag: ca894948-852b-4100-a5b1-810b623e0c12
+
+	/// Date key. M source is `type date` — required for date-table participation.
+	column Date
+		dataType: dateTime
+		isKey
+		formatString: Long Date
+		lineageTag: 5b5d1b92-9f4b-506a-8868-305e58aece10
+		summarizeBy: none
+		sourceColumn: Date
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	/// Calendar year as a 4-digit integer.
+	column Year
+		dataType: int64
+		formatString: 0
+		lineageTag: 12ac3e17-614f-55a3-87c2-1f1828c8c893
+		summarizeBy: none
+		sourceColumn: Year
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Quarter as `Q1` through `Q4`. Sorts by Quarter Number so Q1 comes before Q2 in axes and slicers.
+	column Quarter
+		dataType: string
+		lineageTag: 7767c6b7-b19c-5a2f-b9b7-d172fdca6aa9
+		summarizeBy: none
+		sourceColumn: Quarter
+		sortByColumn: 'Quarter Number'
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Sort source for Quarter (1–4). Hidden but kept MDX-available so the sort works.
+	column 'Quarter Number'
+		dataType: int64
+		isHidden
+		lineageTag: 325e7a55-29e5-591b-b3b0-889e1a6553de
+		summarizeBy: none
+		sourceColumn: Quarter Number
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Month name (January through December). Sorts by Month Number so months come out in calendar order, not alphabetical.
+	column Month
+		dataType: string
+		lineageTag: b200b0e0-0a3a-543c-b41d-c5cc6e5ccc3e
+		summarizeBy: none
+		sourceColumn: Month
+		sortByColumn: 'Month Number'
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Sort source for Month (1–12). Hidden but kept MDX-available so the sort works.
+	column 'Month Number'
+		dataType: int64
+		isHidden
+		lineageTag: 91bb19d0-4102-5ee2-9174-08ca3af9f400
+		summarizeBy: none
+		sourceColumn: Month Number
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Year → Quarter → Month → Date drill-down for time-based analysis. Named "Calendar" so it doesn't collide with the Date column on the same table — TOM gives columns and hierarchies the same namespace within a table.
+	hierarchy Calendar
+		lineageTag: 2717dea9-87a5-5bf6-86e8-78bff88639d4
+
+		/// Top of the drill-down.
+		level Year
+			lineageTag: dbd64b20-8184-5522-8c9f-3c5fd432726f
+			column: Year
+
+		/// Quarter within year.
+		level Quarter
+			lineageTag: 22447e85-b64c-53c3-bbb8-63c82a17d1d7
+			column: Quarter
+
+		/// Month within quarter.
+		level Month
+			lineageTag: 4a42abed-0029-5c8d-b829-bbb9556dfd87
+			column: Month
+
+		/// Day-level leaf of the hierarchy.
+		level Date
+			lineageTag: 7b780a4a-3c4b-5118-b053-c7b20580386a
+			column: Date
+
+	partition Date = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents("C:\Demo\Data\date.csv"),[Delimiter=",", Columns=6, Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+				    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers", {{"Date", type date}, {"Year", Int64.Type}, {"Quarter", Text.Type}, {"Quarter Number", Int64.Type}, {"Month", Text.Type}, {"Month Number", Int64.Type}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table
+
+	annotation PBI_NavigationStepName = Navigation
+

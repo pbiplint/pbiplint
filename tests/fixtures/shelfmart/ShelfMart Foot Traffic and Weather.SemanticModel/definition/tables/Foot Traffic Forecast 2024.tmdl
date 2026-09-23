@@ -1,0 +1,126 @@
+/// Forecast foot traffic for each store for each month in 2024
+table 'Foot Traffic Forecast 2024'
+	lineageTag: e3d32b5f-a5c7-4e02-8264-54555156a7e5
+
+	/// The sum of the forecast foot traffic
+	measure 'Total Forecast Foot Traffic' =
+			
+			SUM('Foot Traffic Forecast 2024'[Foot Traffic Forecast])
+		lineageTag: 7bae6552-5a0e-42ef-84a1-f19888567412
+
+		formatStringDefinition =
+				SWITCH(
+				    TRUE(),
+				    SELECTEDMEASURE() > 10^10, "0,,,.0B",
+				    SELECTEDMEASURE() > 10^9, "0,,,.00B",
+				    SELECTEDMEASURE() > 10^8, "0,,.M",
+				    SELECTEDMEASURE() > 10^7, "0,,.0M",
+				    SELECTEDMEASURE() > 10^6, "0,,.00M",
+				    SELECTEDMEASURE() > 10^5, "0,.k",
+				    SELECTEDMEASURE() > 10^4, "0,.0k",
+				    "0,0"
+				)
+
+	/// Returns the total foot traffic in excess of the forecasted total foot traffic, as a percentage of the forecast
+	measure 'Foot Traffic over Forecast with Arrow' = ```
+			
+			VAR varMeasure = [Foot Traffic over Forecast]
+			VAR varUpArrow = UNICHAR(129129)
+			VAR varDownArrow = UNICHAR(129131)
+			VAR varMeasureWithUpArrow = FORMAT(varMeasure, "#,0.0%") & " " & varUpArrow
+			VAR varMeasureWithDownArrow = FORMAT(varMeasure, ";(#,0.0%)") & " " & varDownArrow
+			VAR varResult = 
+			    SWITCH(
+			        TRUE(),
+			        varMeasure > 0, varMeasureWithUpArrow,
+			        varMeasure < 0, varMeasureWithDownArrow,
+			        varMeasure
+			    )
+			RETURN varResult
+			```
+		formatString: #,0%;-#,0%;#,0%
+		lineageTag: 911c0d3e-673f-47ed-aff0-65242871110c
+
+	/// Returns the total foot traffic in excess of the forecasted total foot traffic, as a percentage of the forecast
+	measure 'Foot Traffic over Forecast' =
+			
+			DIVIDE(
+			    [Total Foot Traffic] - [Total Forecast Foot Traffic],
+			    [Total Forecast Foot Traffic],
+			    BLANK()
+			)
+		formatString: #,0%;-#,0%;#,0%
+		lineageTag: c3b722ea-1044-4f66-8fe6-5adc9cfeb102
+
+	/// Returns "Green" when the [Foot Traffic over Forecast] measure is positive, "Red" when negative, and "Black otherwise (i.e., when 0).  This measure is used for conditionally formatting the [Foot Traffic over Forecast with Arrow] measure.
+	measure 'Foot Traffic over Forecast with Arrow Conditional Formatting' = ```
+			
+			VAR varMeasure = [Foot Traffic over Forecast]
+			VAR varResult = 
+			    SWITCH(
+			        TRUE(),
+			        varMeasure > 0, "#1CBAA4",
+			        varMeasure < 0, "#FD625E",
+			        "#252423"
+			    )
+			RETURN varResult
+			```
+		lineageTag: e06018c9-77bc-4085-98a3-7e9424db7d6a
+
+	/// The ID for the store.  The primary key for the table.
+	column 'Store ID'
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: e0a278ea-3c31-468f-ab33-0f58ba2f9911
+		summarizeBy: none
+		sourceColumn: Store ID
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	/// The month for which the forecast is made
+	column Month
+		dataType: dateTime
+		isHidden
+		formatString: Short Date
+		lineageTag: d73e5c9f-8857-4044-8a8d-47c75e338009
+		summarizeBy: none
+		sourceColumn: Month
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	/// The forecast foot traffic for the given store in the given month
+	column 'Foot Traffic Forecast'
+		dataType: int64
+		isHidden
+		formatString: #,0
+		lineageTag: 32c8192d-a2d6-4639-8c21-434b31c7acb0
+		summarizeBy: none
+		sourceColumn: Foot Traffic Forecast
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = User
+
+	partition 'Foot Traffic Forecast 2024' = m
+		mode: import
+		queryGroup: 'Fact Queries'
+		source =
+				let
+				    Source = Excel.Workbook(File.Contents("C:\Demo\Data\Forecast 2024.xlsx"), null, true),
+				    FootTrafficForecast2024_Table = Source{[Item="FootTrafficForecast2024",Kind="Table"]}[Data],
+				    #"Unpivoted Other Columns" = Table.UnpivotOtherColumns(FootTrafficForecast2024_Table, {"Store ID"}, "Month", "Foot Traffic Forecast"),
+				    #"Assign Initial Datatypes" = Table.TransformColumnTypes(#"Unpivoted Other Columns",{{"Store ID", Int64.Type}, {"Month", type date}, {"Foot Traffic Forecast", Int64.Type}})
+				in
+				    #"Assign Initial Datatypes"
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

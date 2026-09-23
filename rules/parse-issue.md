@@ -5,6 +5,7 @@ category: Error Prevention
 severity: error
 scope: [File]
 status: builtin
+layer: project
 video:
 sources:
 ---
@@ -33,17 +34,47 @@ table Sales
 
 The first snippet is indented with spaces, so both lines under the table are reported, and the model pbiplint checks has a Sales table with no columns.
 
+```pbir fires page.json
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/page/2.1.0/schema.json",
+  "name": "d3583278a4fc59eaa0d6",
+<<<<<<< HEAD
+  "displayName": "Sales overview",
+=======
+  "displayName": "Overview",
+>>>>>>> rename-pages
+  "displayOption": "FitToPage",
+  "height": 720,
+  "width": 1280
+}
+```
+
+```pbir fixed page.json
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/page/2.1.0/schema.json",
+  "name": "d3583278a4fc59eaa0d6",
+  "displayName": "Sales overview",
+  "displayOption": "FitToPage",
+  "height": 720,
+  "width": 1280
+}
+```
+
+The second pair is a page.json saved in the middle of a merge, with both branches' names for the page still in it. Each of the three marker lines is reported, and nothing in the file is read until it is valid JSON again.
+
 ## Why it matters
 
 The parser skipped the line, so whatever it declared, a column, a property, a measure, is missing from the model the rules see. Findings on that object and on anything that references it may be missing or wrong, and a result that looks clean may not be. The orphaned description is the mild case: no declaration is lost, only the description, which stops at the blank line instead of reaching the object below it, so that object is read as having none. Tabular Editor's TMDL reader is stricter and refuses to open a file that puts a blank line after a `///` line at all.
 
+In a report, a JSON file that is not valid JSON, or that carries a conflict marker, is not read at all, so nothing in it reaches the rules. A visual whose visual.json fails is left out of every rule. A page whose page.json fails has no display name, size, visibility, or filters as far as the rules know, and nothing to say it is a tooltip or drillthrough page, so the rules that read those say nothing about it; its visuals sit in files of their own and are still checked, and an ignore annotation in the page.json no longer applies. A report.json that fails takes the report's theme, custom visuals, filters, and filter pane settings with it. None of those rules says what it could not read, so here too a result that looks clean may not be.
+
 ## How to fix it
 
-Open the file at the reported line. TMDL is indented with tabs, and expression blocks open and close with ``` on their own lines. A `///` description must sit directly above its declaration, with no blank line between them. Power BI Desktop writes valid TMDL, so a parse issue usually means a hand edit or a merge conflict marker.
+Open the file at the reported line. TMDL is indented with tabs, and expression blocks open and close with ``` on their own lines. A `///` description must sit directly above its declaration, with no blank line between them. Power BI Desktop writes valid TMDL, so a parse issue usually means a hand edit or a merge conflict marker. In a report JSON file, the finding names the file and the line where the JSON stops being valid or where a conflict marker sits: resolve the conflict or restore the JSON at that line, then reopen the report in Power BI Desktop to confirm that it loads.
 
 ## When to ignore it
 
-Not on purpose. A parse issue means the model pbiplint checked is not the model in the file, so every other result on that file is in doubt until the line is fixed. The one exception is a line that Power BI Desktop wrote and opens without complaint and pbiplint still reports: that is a gap in pbiplint's parser. Report it with the line. Until it is fixed, only the project-wide switch quiets it, and that also hides real parse issues, so weigh the two.
+Not on purpose. A parse issue means the model pbiplint checked is not the model in the file, or, in a report JSON file, that nothing the file defines was checked, so every other result on that file is in doubt until the line is fixed. The one exception is a line that Power BI Desktop wrote and opens without complaint and pbiplint still reports, in a TMDL file or a report JSON file: that is a gap in pbiplint's parser. Report it with the line. Until it is fixed, only the project-wide switch quiets it, and that also hides real parse issues, so weigh the two.
 
 ## Links
 

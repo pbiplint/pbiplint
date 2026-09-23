@@ -38,11 +38,25 @@ export const firstParagraph = (s) =>
     ?.replace(/\s+/g, " ")
     .trim() ?? "";
 
-/** The Example section for the help block: each fence captioned, its info string reduced to `tmdl`. */
+/**
+ * The Example section for the help block: each fence captioned, its info string reduced to `tmdl`
+ * or, for a `pbir` fence, to `json`, with the file the document stands for in the caption. A
+ * `tree.json` document names its files by its keys, so its caption stays bare, as on the site.
+ */
 export const exampleMarkdown = (example) =>
   example
     .replace(/^```tmdl fires[ \t]*$/gm, "**Fires the rule**\n\n```tmdl")
-    .replace(/^```tmdl fixed[ \t]*$/gm, "**After the fix**\n\n```tmdl");
+    .replace(/^```tmdl fixed[ \t]*$/gm, "**After the fix**\n\n```tmdl")
+    .replace(
+      /^```pbir fires (\S+)[ \t]*$/gm,
+      (_line, file) =>
+        `**Fires the rule${file === "tree.json" ? "" : ` in ${file}`}**\n\n\`\`\`json`,
+    )
+    .replace(
+      /^```pbir fixed (\S+)[ \t]*$/gm,
+      (_line, file) =>
+        `**After the fix${file === "tree.json" ? "" : ` in ${file}`}**\n\n\`\`\`json`,
+    );
 
 /**
  * Markdown help for SARIF consumers: the page minus its What section, in the page's order, with

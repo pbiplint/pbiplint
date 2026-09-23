@@ -1,0 +1,71 @@
+relationship d3ef9b99-55da-d607-dac3-d00791c51474
+	isActive: false
+	fromColumn: 'Last Refresh'.'Latest Refresh Date'
+	toColumn: Date.Date
+
+relationship 285dc4fe-ef25-d9ff-f801-8ef5abb20557
+	isActive: false
+	fromColumn: 'Last Refresh'.'Latest Refresh Datetime'
+	toColumn: Date.Date
+
+relationship 54b751f1-45e1-7ba0-bbd7-57e1d9f14f7a
+	fromColumn: 'Foot Traffic'.Date
+	toColumn: Date.Date
+
+relationship 459821d8-e460-8398-dcf5-a3cadc83b2d0
+	fromColumn: 'Average Revenue per Visit'.Date
+	toColumn: Date.Date
+
+relationship AutoDetected_c3e4e261-1b7c-4a4f-a80d-b081623bdf80
+	fromColumn: 'Average Revenue per Visit'.'Store ID'
+	toColumn: Store.'Store ID'
+
+relationship eb1b626a-8e6c-0c70-8466-6b30556591d1
+	isActive: false
+	fromColumn: Store.'Open Date'
+	toColumn: Date.Date
+
+relationship AutoDetected_1e3c57e0-c5db-4189-b329-1ae3a1d1dc46
+	fromColumn: 'Foot Traffic'.'Store ID'
+	toColumn: Store.'Store ID'
+
+relationship AutoDetected_39eb5bb8-a62f-44a4-ba19-2c2d2fb6a655
+	fromColumn: 'Weather Data'.'Store ID'
+	toColumn: Store.'Store ID'
+
+relationship 64b8968a-a0e2-4944-fd62-b2843357fc10
+	fromColumn: 'Weather Data'.Date
+	toColumn: Date.Date
+
+relationship AutoDetected_4ef3adc5-d03f-4f97-8d8c-e5b5e603e4b0
+	fromColumn: 'Foot Traffic Forecast 2024'.'Store ID'
+	toColumn: Store.'Store ID'
+
+relationship AutoDetected_6930aab1-31d3-4034-8c5d-31b87f04a52b
+	fromColumn: 'Average Revenue per Visit Forecast 2024'.'Store ID'
+	toColumn: Store.'Store ID'
+
+relationship dd59c049-6ba7-6b83-fd3e-44408bb48aa5
+	fromColumn: 'Foot Traffic Forecast 2024'.Month
+	toColumn: Date.Date
+
+relationship c8c68eac-d84c-89d6-3249-c860403ab886
+	fromColumn: 'Average Revenue per Visit Forecast 2024'.Month
+	toColumn: Date.Date
+
+relationship AutoDetected_38a47890-b57c-4ed7-93ac-08caab12dcd8
+	fromColumn: 'Revenue per Store Forecast 2024'.'Store ID'
+	toColumn: Store.'Store ID'
+
+relationship a0829096-0c2b-9618-99d0-f42eabd63f6f
+	fromColumn: 'Revenue per Store Forecast 2024'.Month
+	toColumn: Date.Date
+
+relationship AutoDetected_c778ee01-6ad0-4024-8143-f7031b2548b8
+	fromColumn: 'Revenue per Store'.'Store ID'
+	toColumn: Store.'Store ID'
+
+relationship c1fb35d1-46b3-ef00-2c36-521042f5a92e
+	fromColumn: 'Revenue per Store'.Date
+	toColumn: Date.Date
+

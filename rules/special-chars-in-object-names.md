@@ -5,6 +5,7 @@ category: Naming Conventions
 severity: warning
 scope: [Model, Table, Measure, Hierarchy, Perspective, Partition, Column, CalculatedColumn, CalculatedTable, CalculatedTableColumn, CalculationGroupTable, CalculationItem]
 status: ported
+layer: model
 video:
 sources:
   - https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json

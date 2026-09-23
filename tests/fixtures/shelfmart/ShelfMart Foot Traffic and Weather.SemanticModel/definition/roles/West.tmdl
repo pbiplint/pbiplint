@@ -1,0 +1,7 @@
+role West
+	modelPermission: read
+
+	tablePermission Store = [Region] == "West"
+
+	annotation PBI_Id = d4ec1551e2d74f37990fe56eebd6aa60
+

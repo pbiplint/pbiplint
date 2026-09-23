@@ -5,6 +5,7 @@ category: Error Prevention
 severity: error
 scope: [Table, Measure, Hierarchy, Level, Perspective, Partition, Column, CalculatedColumn, CalculatedTable, CalculatedTableColumn, Role, CalculationGroupTable, CalculationItem]
 status: ported
+layer: model
 video:
 sources:
   - https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json

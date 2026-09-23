@@ -1,0 +1,7 @@
+role Southwest
+	modelPermission: read
+
+	tablePermission Store = [Region] == "Southwest"
+
+	annotation PBI_Id = ae7d4352348e46c994f1725a18a68552
+

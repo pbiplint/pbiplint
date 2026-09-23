@@ -222,6 +222,7 @@ describe("buildReport", () => {
       ["Y", "measure", "Sales", "Total Sales"],
     ]);
     expect(v1.fields[0]!.ref.pointer).toBe("/visual/query/queryState/Category/projections/0/field");
+    expect(v1.projectionCount).toBe(2);
     expect(v1.showAllRoles).toEqual(["Category"]);
     expect(v1.title).toBe("Sales by category");
     expect(v1.altText).toBe("Bar chart of sales by category");
@@ -240,10 +241,42 @@ describe("buildReport", () => {
     const [g1, v2] = report.pages[0]!.visuals;
     expect(g1!.isGroup).toBe(true);
     expect(g1!.type).toBe("visualGroup");
+    expect(g1!.projectionCount).toBe(0);
     expect(v2!.groupId).toBe("g1");
     expect(v2!.altText).toBe("(expression)");
     expect(v2!.hasMobileLayout).toBe(false);
     expect(v2!.isHidden).toBe(false);
+  });
+  it("reads a group's own alt text under visualGroup.objects, by the rules a visual's follows", () => {
+    // A group's container has no `visual` key; its alt text sits in the group's own objects.
+    const group = (name: string, altText?: unknown) => ({
+      path: `definition/pages/p1/visuals/${name}/visual.json`,
+      text: j({
+        $schema: schema("visualContainer", "2.8.0"),
+        name,
+        position: { x: 0, y: 0, z: 0, height: 300, width: 400, tabOrder: 0 },
+        visualGroup: {
+          displayName: "Group 1",
+          groupMode: "ScaleMode",
+          ...(altText === undefined ? {} : { objects: { general: [{ properties: { altText } }] } }),
+        },
+      }),
+    });
+    const { report: grouped } = buildReport([
+      { path: "definition/pages/p1/page.json", text: page("p1") },
+      group("bound", {
+        expr: { Measure: { Expression: { SourceRef: { Entity: "Sales" } }, Property: "Alt" } },
+      }),
+      group("empty", lit("''")),
+      group("none"),
+      group("text", lit("'Sales overview: total sales and the monthly trend'")),
+    ]);
+    expect(grouped.pages[0]!.visuals.map((v) => [v.id, v.isGroup, v.altText])).toEqual([
+      ["bound", true, "(expression)"],
+      ["empty", true, undefined],
+      ["none", true, undefined],
+      ["text", true, "Sales overview: total sales and the monthly trend"],
+    ]);
   });
   it("reads bookmarks and their header, and report-level measures with their lines", () => {
     expect(report.bookmarksHeader.items).toEqual([{ name: "b1", children: ["b2"] }]);

@@ -47,9 +47,19 @@ export interface Visual {
   isGroup: boolean;
   groupId?: string;
   title?: string;
-  /** The alt text literal, or "(expression)" when it is bound to a measure or aggregation. */
+  /**
+   * The alt text literal, or "(expression)" when it is bound to a measure or aggregation. A
+   * group's is its own, read from `visualGroup.objects` rather than the visual's container objects.
+   */
   altText?: string;
   fields: VisualField[];
+  /**
+   * The entries in the `projections` arrays of the visual's roles, one per field in a well: a
+   * column, a measure, a visual calculation, a sparkline, or an arithmetic expression is one entry
+   * however many field references it holds (a visual calculation holds none), and a field bound in
+   * two roles is two.
+   */
+  projectionCount: number;
   showAllRoles: string[];
   filters: ReportFilter[];
   actions: VisualAction[];

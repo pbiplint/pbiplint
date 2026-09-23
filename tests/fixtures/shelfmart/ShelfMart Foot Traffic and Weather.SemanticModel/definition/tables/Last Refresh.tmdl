@@ -1,0 +1,223 @@
+/// A table containing information about the last time the dataset was refreshed.  It lists it in the following formats:  dattime, date, year, month, day, time, minute, and second.
+table 'Last Refresh'
+	lineageTag: 35313593-fa98-4be3-933a-74da8601cc91
+
+	/// The date when the dataset was last refreshed
+	measure 'Last Refresh Date' =
+			
+			SELECTEDVALUE('Last Refresh'[Latest Refresh Date])
+		formatString: Short Date
+		lineageTag: d49dd941-225c-40c7-b6e8-98f3cbfe0508
+
+	/// The datetime when the dataset was last refreshed
+	measure 'Last Refresh Datetime' =
+			
+			SELECTEDVALUE('Last Refresh'[Latest Refresh Datetime])
+		formatString: General Date
+		lineageTag: 2dfed1bc-389f-475f-95eb-11ad19737278
+
+	/// The day component of the datetime when the dataset was last refreshed
+	measure 'Last Refresh Day' =
+			
+			SELECTEDVALUE('Last Refresh'[Latest Refresh Day])
+		formatString: 0
+		lineageTag: e792400c-c3bb-426b-b9cb-75890944309d
+
+	/// The hour component of the datetime when the dataset was last refreshed
+	measure 'Last Refresh Hour' =
+			
+			SELECTEDVALUE('Last Refresh'[Latest Refresh Hour])
+		formatString: 0
+		lineageTag: 0a4d4465-bf5d-488e-842c-968f512d33cf
+
+	/// The minute component of the datetime when the dataset was last refreshed
+	measure 'Last Refresh Minute' =
+			
+			SELECTEDVALUE('Last Refresh'[Latest Refresh Minute])
+		formatString: 0
+		lineageTag: f311c9ff-065f-40ff-9aa9-bd5c2ca6dcee
+
+	/// The month component of the datetime when the dataset was last refreshed
+	measure 'Last Refresh Month' =
+			
+			SELECTEDVALUE('Last Refresh'[Latest Refresh Month])
+		formatString: 0
+		lineageTag: 01116dd0-045d-4635-94b5-0eda0010c15f
+
+	/// The second component of the datetime when the dataset was last refreshed
+	measure 'Last Refresh Second' =
+			
+			SELECTEDVALUE('Last Refresh'[Latest Refresh Second])
+		formatString: 0.00
+		lineageTag: 4afa82c8-b1b3-4cd0-af9a-0f2ed7efc7d0
+
+	/// The time component of the datetime when the dataset was last refreshed
+	measure 'Last Refresh Time' =
+			
+			SELECTEDVALUE('Last Refresh'[Latest Refresh Time])
+		formatString: h:nn:ss AM/PM
+		lineageTag: e22ccddd-c90f-4e9d-bb0e-8d05d1f01d4f
+
+		annotation PBI_FormatHint = {"isDateTimeCustom":true}
+
+	/// The year component of the datetime when the dataset was last refreshed
+	measure 'Last Refresh Year' =
+			
+			SELECTEDVALUE('Last Refresh'[Latest Refresh Year])
+		formatString: 0
+		lineageTag: b6e2efa9-03ba-4598-9c8c-cc706df0a1d7
+
+	/// Creates a dynamic statement of the date and time when the dataset was last refreshed.  E.g., "Data last refreshed on 3/14/2001 at 1:30:55 PM"
+	measure 'Last Refresh Text' =
+			
+			"Data last refreshed on " & [Last Refresh Date] & " at " & [Last Refresh Time]
+		lineageTag: 78ffc6f5-c825-46d8-ac7e-d122950d9f21
+
+	/// The datetime when the dataset was last refreshed
+	column 'Latest Refresh Datetime'
+		dataType: dateTime
+		isHidden
+		isKey
+		formatString: General Date
+		lineageTag: 6c527764-1c4e-4579-94d0-d7b81f62e53b
+		isDefaultLabel
+		summarizeBy: none
+		sourceColumn: Latest Refresh Datetime
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	/// The date when the dataset was last refreshed
+	column 'Latest Refresh Date'
+		dataType: dateTime
+		isHidden
+		formatString: Short Date
+		lineageTag: 5d7083e6-d953-46e4-b055-c681191570a8
+		summarizeBy: none
+		sourceColumn: Latest Refresh Date
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	/// The year component of the datetime when the dataset was last refreshed
+	column 'Latest Refresh Year'
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 624cb514-4c64-4bb2-b32c-a1eb8870c065
+		summarizeBy: none
+		sourceColumn: Latest Refresh Year
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = User
+
+	/// The month component of the datetime when the dataset was last refreshed
+	column 'Latest Refresh Month'
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: abb5e0bb-7620-4c2c-bc6b-458af47841da
+		summarizeBy: none
+		sourceColumn: Latest Refresh Month
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = User
+
+	/// The day component of the datetime when the dataset was last refreshed
+	column 'Latest Refresh Day'
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: dc8cfec4-70d8-45d6-b08f-2c2ed109d026
+		summarizeBy: none
+		sourceColumn: Latest Refresh Day
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = User
+
+	/// The time component of the datetime when the dataset was last refreshed
+	column 'Latest Refresh Time'
+		dataType: dateTime
+		isHidden
+		formatString: Long Time
+		lineageTag: 1305e946-ed58-46c5-84fe-2bddd89a9d3c
+		summarizeBy: none
+		sourceColumn: Latest Refresh Time
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Time
+
+	/// The hour component of the datetime when the dataset was last refreshed
+	column 'Latest Refresh Hour'
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: c1875b90-71b8-48b4-addd-d6114c666075
+		summarizeBy: none
+		sourceColumn: Latest Refresh Hour
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = User
+
+	/// The minute component of the datetime when the dataset was last refreshed
+	column 'Latest Refresh Minute'
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 5da67f41-73d3-4c27-bc6e-1a0476edda8d
+		summarizeBy: none
+		sourceColumn: Latest Refresh Minute
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = User
+
+	/// The second component of the datetime when the dataset was last refreshed
+	column 'Latest Refresh Second'
+		dataType: double
+		isHidden
+		lineageTag: e7399f9a-da92-4096-80d1-33638266b5b8
+		summarizeBy: none
+		sourceColumn: Latest Refresh Second
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = User
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	partition 'Last Refresh' = m
+		mode: import
+		queryGroup: Support
+		source =
+				let
+				    #"Latest Refresh Datetime" = DateTime.LocalNow(),
+				    #"Converted to Table" = #table(1, {{#"Latest Refresh Datetime"}}),
+				    #"Renamed Column1 to Latest Refresh Datetime" = Table.RenameColumns(#"Converted to Table",{{"Column1", "Latest Refresh Datetime"}}),
+				    #"Assigned Initial Datatype" = Table.TransformColumnTypes(#"Renamed Column1 to Latest Refresh Datetime",{{"Latest Refresh Datetime", type datetime}}),
+				    #"Added Latest Refresh Date" = Table.AddColumn(#"Assigned Initial Datatype", "Latest Refresh Date", each DateTime.Date([Latest Refresh Datetime]), type date),
+				    #"Added Latest Refresh Year" = Table.AddColumn(#"Added Latest Refresh Date", "Latest Refresh Year", each Date.Year([Latest Refresh Datetime]), Int64.Type),
+				    #"Added Latest Refresh Month" = Table.AddColumn(#"Added Latest Refresh Year", "Latest Refresh Month", each Date.Month([Latest Refresh Datetime]), Int64.Type),
+				    #"Added Latest Refresh Day" = Table.AddColumn(#"Added Latest Refresh Month", "Latest Refresh Day", each Date.Day([Latest Refresh Datetime]), Int64.Type),
+				    #"Added Latest Refresh Time" = Table.AddColumn(#"Added Latest Refresh Day", "Latest Refresh Time", each DateTime.Time([Latest Refresh Datetime]), type time),
+				    #"Added Latest Refresh Hour" = Table.AddColumn(#"Added Latest Refresh Time", "Latest Refresh Hour", each Time.Hour([Latest Refresh Datetime]), Int64.Type),
+				    #"Added Latest Refresh Minute" = Table.AddColumn(#"Added Latest Refresh Hour", "Latest Refresh Minute", each Time.Minute([Latest Refresh Datetime]), Int64.Type),
+				    #"Added Latest Refresh Second" = Table.AddColumn(#"Added Latest Refresh Minute", "Latest Refresh Second", each Time.Second([Latest Refresh Datetime]), type number)
+				in
+				    #"Added Latest Refresh Second"
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

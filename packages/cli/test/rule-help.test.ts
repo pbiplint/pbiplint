@@ -28,11 +28,21 @@ describe.each(defaultRules.map((r) => [r.id, r] as const))("SARIF help for %s", 
       expect(markdown).toContain(normalize(ignoreHelp(rule.id, rule.scope)));
     if (section(page, "Example")) {
       // The template allows a sentence or two around the fences, so pin the captions and their
-      // reduced info strings within the Example section rather than right after its heading.
+      // reduced info strings within the Example section rather than right after its heading. A
+      // tmdl fence reduces to tmdl; a pbir fence reduces to json and its caption names the file
+      // the document stands for, except a tree.json, whose keys name its files.
       const example = markdown.split("### Example")[1]?.split("### Why it matters")[0] ?? "";
       expect(example).not.toBe("");
-      expect(example).toContain("**Fires the rule** ```tmdl");
-      expect(example).toContain("**After the fix** ```tmdl");
+      const fences = [
+        ...section(page, "Example").matchAll(/^```(tmdl|pbir) (fires|fixed)(?: (\S+))?[ \t]*$/gm),
+      ];
+      expect(new Set(fences.map((m) => m[2]))).toEqual(new Set(["fires", "fixed"]));
+      for (const [, form, kind, file] of fences) {
+        const caption = kind === "fires" ? "Fires the rule" : "After the fix";
+        const named = form === "pbir" && file !== "tree.json" ? ` in ${file}` : "";
+        const language = form === "pbir" ? "json" : "tmdl";
+        expect(example).toContain(`**${caption}${named}** \`\`\`${language}`);
+      }
     }
     expect(markdown).toContain(`Read more: ${ruleUrl(rule.id)}`);
   });

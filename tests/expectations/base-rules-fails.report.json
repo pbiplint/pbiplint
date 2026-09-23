@@ -1,0 +1,272 @@
+{
+  "fixture": "tests/fixtures/base-rules-fails",
+  "report": "Base-rules-fails.Report",
+  "oracle": "fab-inspector CLI 3.4.0 with Base-rules.json sha256 22868be9acd696c96e62f214dbe0efc72fd1bfffda1736b3b9a4d7fba21f883c, every rule enabled",
+  "captured": "2026-09-22",
+  "deviations": {
+    "ENSURE_THEME_COLOURS": "pbiplint looks for hex literals in colour properties only, where PBI Inspector matches a hex-looking pattern anywhere in the visual's JSON, including titles and text."
+  },
+  "ours": {
+    "ENSURE_THEME_COLOURS": []
+  },
+  "native": {},
+  "results": {
+    "AVOID_SHOW_ITEMS_WITH_NO_DATA": {
+      "ReportSection5f326c8a8185db501ad9": {
+        "pass": false,
+        "actual": [
+          "797168e1f1e7658ceae6",
+          "97ad01a2b8fbfca3220c"
+        ]
+      }
+    },
+    "ENSURE_ALTTEXT": {
+      "ReportSection8952e5fd70dcea579d3b": {
+        "pass": false,
+        "actual": [
+          "c7537ad56de9ad55aec5",
+          "c923890a1b150c50c526"
+        ]
+      },
+      "ReportSection5f326c8a8185db501ad9": {
+        "pass": false,
+        "actual": [
+          "5997591ca215542849b0",
+          "797168e1f1e7658ceae6",
+          "826ca01b78b4d39a5519",
+          "97ad01a2b8fbfca3220c",
+          "d8882d629c770e538199"
+        ]
+      },
+      "ReportSectionfb0835fa991786b43a3f": {
+        "pass": false,
+        "actual": [
+          "08d13d2e8daba0407e29",
+          "4501e10957dcc0d0a762",
+          "c5be22dcf11a01f64810",
+          "73819a61425e5985ae8d",
+          "ae32d4870b0494a0c319",
+          "789bb03790eca4d0e025",
+          "c2f0a76480e2a9d6e11b",
+          "efe8fa5c68c062cd3976",
+          "1b9a3c4d92e7ac303246",
+          "a47e2064030c8877712b",
+          "de27fc71e1de760eda5d",
+          "aedaaaa2560c9981693e",
+          "6ceaef15dcd98018c82e",
+          "cf871f00d0e8790cce73",
+          "28b48968b2f2ffad6c55",
+          "da570baa35ab0703c7be",
+          "d8d71594ac5026c5000b",
+          "423cfdb39037ea1db380",
+          "fe65270602a904dd30b2",
+          "13b2653c089d00c2918b",
+          "0091cca09d96248e56b8",
+          "411d5a52673974b37812",
+          "d3ccc97e9c739fe9da2a",
+          "4df7d75ef1fbfd2581e3",
+          "609bfa769ba8ee2d9cb1"
+        ]
+      },
+      "ReportSection3440cc1dc4ec63ca3d06": {
+        "pass": false,
+        "actual": [
+          "3b2c4e90a78f9bf92492",
+          "b84180aba74c604c49df",
+          "9b049318c5cbfc7759d5",
+          "3336fb99a3600998d408",
+          "8b93d2363dc6be4dd81c",
+          "8b6553e711e5bddd75dd",
+          "20d6273040453a220300",
+          "0e1feb172e192d6ea8cf"
+        ]
+      },
+      "ReportSectionadc267c0d12e40458799": {
+        "pass": false,
+        "actual": [
+          "2e0a7e2d7d5fdfe4a594"
+        ]
+      },
+      "ReportSection15e341c562357430db00": {
+        "pass": false,
+        "actual": [
+          "70decca9243ac7ec9b09",
+          "51bd28a74d10071452b2",
+          "ea105fd87310401a682d",
+          "5434f7a805bb049d88b2"
+        ]
+      },
+      "ReportSection6b18d49925d7cb5d47ab": {
+        "pass": false,
+        "actual": [
+          "f761d8a73589b14e3f57",
+          "bbc75e5df52527942a69",
+          "1954ea05ff0aabedcca0",
+          "12bdabcb27a547b75d69"
+        ]
+      },
+      "ReportSectionf6b09351c4832839a008": {
+        "pass": false,
+        "actual": [
+          "84ea064fb2e52a46eb62",
+          "c8a4a9ab08c29eb74671",
+          "ca510430264de0060d24",
+          "0b2a4c54a10b1b3c8597"
+        ]
+      },
+      "ReportSectionc9582afbe6f823e9059c": {
+        "pass": false,
+        "actual": [
+          "85573979ecf319df2ca4"
+        ]
+      },
+      "ReportSection64b69f4ca30b28f5a6ef": {
+        "pass": false,
+        "actual": [
+          "5b9c69622752439f71e3",
+          "c452bd077192b9b5730d",
+          "20370078d9784d07f5a5",
+          "ed44f20bec75208a2ceb",
+          "56aa9bed8d2b1fc055f1"
+        ]
+      },
+      "ReportSectionced22200e213f42c2058": {
+        "pass": false,
+        "actual": [
+          "0f2d9f89bd9c0e146925",
+          "3079984930093299b0b3"
+        ]
+      },
+      "ReportSection4602098ba1ff5a3805a9": {
+        "pass": false,
+        "actual": [
+          "f194638008b295259875",
+          "e01f1b14a56aa478e620",
+          "e78a74b8026f736154be",
+          "4044afc9306abf91e79d",
+          "94b0607fbdf1330369a0"
+        ]
+      },
+      "ReportSectionda78c5766b725c3c4ff9": {
+        "pass": false,
+        "actual": [
+          "cfd3bb0c5f3fd3aaca0c",
+          "de394a09580f676104f7",
+          "20765fa192dcfee4c758",
+          "75c1f0c92c7a38225ca4",
+          "559be0fccb6a87113514"
+        ]
+      },
+      "ReportSection": {
+        "pass": false,
+        "actual": [
+          "5094f3ff553da63e610e",
+          "f33c36cc9219f5796fa7",
+          "004ba1a278a57081b35c",
+          "9fc6ae0a41d3cd37389c"
+        ]
+      },
+      "ReportSection6c3c3f97279fafdeeb57": {
+        "pass": false,
+        "actual": [
+          "1a67964cf02b6170c3b8"
+        ]
+      },
+      "ReportSectionbd84ac4ab02b609b308b": {
+        "pass": false,
+        "actual": [
+          "77e06971dd8c0771a281",
+          "c9236828800c1c109d91",
+          "3392a770bcc03ab857c3"
+        ]
+      },
+      "ReportSectiond7d52b137add50d28b88": {
+        "pass": false,
+        "actual": [
+          "94136bbf6eab04e67ba1",
+          "bfb15e1c290403dbbcd0",
+          "98560f0e407009a4191a",
+          "ac0cb853b452a904b2e3",
+          "8062a42f6c5296c16228",
+          "bfb9671fcc478a23c60d",
+          "f34b179d0a809d07006c",
+          "821faa3ab495260b7206"
+        ]
+      },
+      "ReportSection173123d944b02370086c": {
+        "pass": false,
+        "actual": [
+          "1951abd4b45e61531cde",
+          "dac93603286ab3ec4064",
+          "98264aa8e106300ce4ea",
+          "bb6326d73913814b909c"
+        ]
+      }
+    },
+    "ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY": {
+      "report": {
+        "pass": false,
+        "actual": [
+          "ReportSectionc9582afbe6f823e9059c"
+        ]
+      }
+    },
+    "ENSURE_THEME_COLOURS": {
+      "ReportSection6c3c3f97279fafdeeb57": {
+        "pass": false,
+        "actual": [
+          "1a67964cf02b6170c3b8"
+        ]
+      }
+    },
+    "HIDE_TOOLTIP_DRILLTROUGH_PAGES": {
+      "report": {
+        "pass": false,
+        "actual": [
+          "ReportSection8952e5fd70dcea579d3b",
+          "ReportSectionadc267c0d12e40458799"
+        ]
+      }
+    },
+    "REDUCE_ADVANCED_FILTERS": {
+      "ReportSectiond7d52b137add50d28b88": {
+        "pass": false,
+        "actual": false
+      }
+    },
+    "REDUCE_OBJECTS_WITHIN_VISUALS": {
+      "ReportSection4602098ba1ff5a3805a9": {
+        "pass": false,
+        "actual": [
+          "e78a74b8026f736154be"
+        ]
+      }
+    },
+    "REDUCE_PAGES": {
+      "report": {
+        "pass": false,
+        "actual": false
+      }
+    },
+    "REDUCE_TOPN_FILTERS": {
+      "ReportSection3440cc1dc4ec63ca3d06": {
+        "pass": false,
+        "actual": false
+      }
+    },
+    "REDUCE_VISUALS_ON_PAGE": {
+      "ReportSectionfb0835fa991786b43a3f": {
+        "pass": false,
+        "actual": false
+      }
+    },
+    "REMOVE_UNUSED_CUSTOM_VISUALS": {
+      "report": {
+        "pass": false,
+        "actual": [
+          "Aquarium1442671919391"
+        ]
+      }
+    }
+  }
+}

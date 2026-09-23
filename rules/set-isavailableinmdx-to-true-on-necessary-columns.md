@@ -5,6 +5,7 @@ category: Error Prevention
 severity: error
 scope: [Column, CalculatedColumn, CalculatedTableColumn]
 status: ported
+layer: model
 video:
 sources:
   - https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json

@@ -636,6 +636,7 @@ skips it.
 | Id | Scope | Category | Severity | What it catches |
 |---|---|---|---|---|
 | BROKEN_ACTION_TARGET | Visual | Error Prevention | error | A button's `navigationSection`, `bookmark`, or `drillthroughSection` names nothing that exists |
+| ACTION_WITHOUT_DESTINATION | Visual | Report Design | warning | A button's page navigation, drillthrough, or bookmark action is on but names no destination |
 | BROKEN_BOOKMARK_REFERENCE | Bookmark | Error Prevention | warning | A bookmark's active page, or a page or visual it captures, does not exist |
 | TAB_ORDER_FOLLOWS_LAYOUT | Page | Accessibility | warning | Tab order disagrees with reading order (top to bottom, left to right, with a row tolerance of half the median visual height). Desktop always writes `tabOrder`, so "not set" is not detectable; disagreement with the layout is. The page documents the heuristic |
 | SLICER_SELECTION_SAVED | Visual | Report Design | info | A slicer carries a saved selection; policy `expect: none` raises it to warning |
@@ -651,13 +652,11 @@ compared without regard to case), reads the destination only from the
 property that belongs to the entry's type, never from one an earlier
 type left behind, and takes it only as a literal, resolved against
 page.json `name` or the bookmark's `name`. An entry whose `show` is
-false is switched off and is not checked; a destination set by
-conditional formatting is an expression pbiplint cannot evaluate; an
-empty or absent destination is not reported (most are tooltip-only
-buttons, some in Microsoft's own reports, and no source says what one
-does). Nor does it check the page navigator's pages, the bookmark
-navigator's group and bookmarks, a visual's report-page tooltip, or a
-drillthrough action that names a page that is not a drillthrough page.
+false is switched off and is not checked, and a destination set by
+conditional formatting is an expression pbiplint cannot evaluate. Nor
+does it check the page navigator's pages, the bookmark navigator's
+group and bookmarks, a visual's report-page tooltip, or a drillthrough
+action that names a page that is not a drillthrough page.
 `BROKEN_BOOKMARK_REFERENCE` reports a missing active page once, a
 `sections` key that names no page only when it differs from
 `activeSection` (Desktop writes one key, equal to it), and a captured
@@ -666,23 +665,34 @@ visual that is not on a page that exists; it reads neither
 `TAB_ORDER_FOLLOWS_LAYOUT` compares scope by scope, the page's own
 visuals and groups and then each group's children, because Desktop
 writes a grouped visual's `x`, `y`, and `tabOrder` relative to its
-group; it leaves out a hidden visual, a negative `tabOrder` (a visual
-hidden from the tab order), and a missing one, and a scope agrees when
-its tab order equals the tolerant reading order or a strict sort by `y`
-then `x`, the order Desktop's "match visual order" button writes (by a
-third party's account). It leaves out a page set up as a tooltip,
-whether page.json marks it by its `type` or by its `pageBinding`, since
-a tooltip shows on hover rather than being a page a reader tabs
-through; drillthrough and hidden pages are checked. "Desktop always
-writes `tabOrder`" does not hold for every visual (511 of 13,026 lack
-it); a tab order the author never touched is still what cannot be
-detected.
+group, and it leaves out a hidden visual, a negative `tabOrder` (a
+visual hidden from the tab order), and a missing one. It leaves out a
+page set up as a tooltip, whether page.json marks it by its `type` or
+by its `pageBinding`, since a tooltip shows on hover rather than being
+a page a reader tabs through; drillthrough and hidden pages are
+checked. "Desktop always writes `tabOrder`" does not hold for every
+visual (511 of 13,026 lack it); a tab order the author never touched
+is still what cannot be detected.
 `SLICER_SELECTION_SAVED` reads the five slicer types in Microsoft's
 catalog and the selection under
 `visual.objects.general[].properties.filter` with a non-empty `Where`
 (section 3.4), never a `filterConfig` entry; Select all writes no
 filter and is no selection, a hidden slicer counts, and each synced
 copy reports the selection it carries.
+
+Amended 2026-09-23 with Michael, three changes to the conditions
+above. An action switched on whose own destination property is absent
+or an empty literal is `ACTION_WITHOUT_DESTINATION`'s, at warning,
+since a button that goes nowhere is unfinished work and
+`BROKEN_ACTION_TARGET` is an error; Microsoft's own FinOps report uses
+such buttons for their tooltips, and the rule still reports them. For
+`TAB_ORDER_FOLLOWS_LAYOUT`, a tab order that sorts strictly top to
+bottom, then left to right, also agrees, so the order Desktop's "match
+visual order" button writes (by a third party's account) clears the
+finding. `TAB_ORDER_FOLLOWS_LAYOUT` is a policy rule, silent until
+`expect: "layout"` is set, because it reports most pages of a report
+nobody ordered (about 94% of Desktop-saved pages in a corpus of public
+reports) and a check that fires everywhere is tuned out.
 
 Mobile layouts and themes are facts only in v2.
 
@@ -807,15 +817,19 @@ unused measure; no landing page; the Filters pane saved open; two
 hidden visuals with fields bound; a page called "Page 2" and a
 duplicated page; a data visual with no fields; a visual past the right
 edge; two report-level measures; a button pointing at a deleted page;
-a bookmark capturing a deleted visual; a page whose tab order runs
-backwards; a slicer with a saved selection; one registered custom
-visual no visual uses; a tooltip page left visible; a page taller than
-720; one page with more than 20 visuals. Amended 2026-09-20 with the
+a button whose page navigation has no destination; a bookmark
+capturing a deleted visual; a page whose tab order runs backwards; a
+slicer with a saved selection; one registered custom visual no visual
+uses; a tooltip page left visible; a page taller than 720; one page
+with more than 20 visuals. Amended 2026-09-20 with the
 plan: the seven ported rules that list leaves out are planted too (a
 visual with seven fields, a page with five TopN and five applied
 Advanced filters, eleven pages, a visual with Show items with no data,
 a hex colour, a visual without alt text), so the sample fires every
-report rule. Everything else is clean.
+report rule. Amended 2026-09-23 with Michael:
+`ACTION_WITHOUT_DESTINATION` is planted, and the sample's config sets
+`TAB_ORDER_FOLLOWS_LAYOUT`'s policy so that rule fires. Everything else
+is clean.
 
 **Sanitising.** No registered resources, the stock Fluent theme, no
 `.pbi`, no `cache.abf`. `scripts/sanitize-fixture.mjs` gains a report

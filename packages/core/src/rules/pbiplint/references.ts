@@ -17,6 +17,22 @@ const fieldLabel = (ref: FieldRef): string => {
   return ref.kind === "hierarchyLevel" && ref.level ? `${field}.${measureRef(ref.level)}` : field;
 };
 
+/**
+ * The first finding for each object and missing field. One field can be named several times on an
+ * object: an applied filter names it in `field` and again in its `Where`, a visual's own filter
+ * entry repeats a role binding, a bookmark's state can repeat it. The index keeps every reference;
+ * the rule reports the field once, at its earliest reference.
+ */
+const firstPerObjectAndField = (findings: RuleFinding[]): RuleFinding[] => {
+  const seen = new Set<string>();
+  return findings.filter((f) => {
+    const key = [f.objectType, f.objectId, f.objectName, f.detail].join("\u0000");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
 export const BROKEN_FIELD_REFERENCE = pbiplintRule({
   id: "BROKEN_FIELD_REFERENCE",
   name: "Field the model does not have",
@@ -25,28 +41,30 @@ export const BROKEN_FIELD_REFERENCE = pbiplintRule({
   scope: ["Visual", "Page", "Report", "Bookmark"],
   layer: "project",
   check: (_project, ctx) =>
-    ctx.indexes.reportRefs!.unresolved().flatMap((r): RuleFinding[] => {
-      if (r.resolution.kind !== "unresolved") return [];
-      const detail = `${fieldLabel(r.ref)}: ${r.resolution.reason}`;
-      const o = r.owner;
-      switch (o.kind) {
-        case "visualField":
-        case "visualFilter":
-          return [reportFinding.visual(o.object, r.ref.pointer, detail)];
-        case "pageFilter":
-          return [reportFinding.pageFilter(o.object, r.ref.pointer, detail)];
-        case "pageBinding":
-          return [reportFinding.page(o.object, r.ref.pointer, detail)];
-        case "reportFilter":
-          return [reportFinding.reportFilter(o.object, r.ref.pointer, detail)];
-        case "bookmark":
-          return [reportFinding.bookmark(o.object, detail, r.ref.pointer)];
-        // A report measure's DAX is the measure's own problem; REPORT_LEVEL_MEASURES sends it to
-        // the model, where the DAX rules read it.
-        case "reportMeasure":
-          return [];
-      }
-    }),
+    firstPerObjectAndField(
+      ctx.indexes.reportRefs!.unresolved().flatMap((r): RuleFinding[] => {
+        if (r.resolution.kind !== "unresolved") return [];
+        const detail = `${fieldLabel(r.ref)}: ${r.resolution.reason}`;
+        const o = r.owner;
+        switch (o.kind) {
+          case "visualField":
+          case "visualFilter":
+            return [reportFinding.visual(o.object, r.ref.pointer, detail)];
+          case "pageFilter":
+            return [reportFinding.pageFilter(o.object, r.ref.pointer, detail)];
+          case "pageBinding":
+            return [reportFinding.page(o.object, r.ref.pointer, detail)];
+          case "reportFilter":
+            return [reportFinding.reportFilter(o.object, r.ref.pointer, detail)];
+          case "bookmark":
+            return [reportFinding.bookmark(o.object, detail, r.ref.pointer)];
+          // A report measure's DAX is the measure's own problem; REPORT_LEVEL_MEASURES sends it to
+          // the model, where the DAX rules read it.
+          case "reportMeasure":
+            return [];
+        }
+      }),
+    ),
 });
 
 export const NOT_REACHED_FROM_REPORT = pbiplintRule({

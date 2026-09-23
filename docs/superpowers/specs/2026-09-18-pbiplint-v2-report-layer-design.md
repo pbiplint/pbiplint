@@ -691,8 +691,9 @@ bottom, then left to right, also agrees, so the order Desktop's "match
 visual order" button writes (by a third party's account) clears the
 finding. `TAB_ORDER_FOLLOWS_LAYOUT` is a policy rule, silent until
 `expect: "layout"` is set, because it reports most pages of a report
-nobody ordered (about 94% of Desktop-saved pages in a corpus of public
-reports) and a check that fires everywhere is tuned out.
+nobody ordered (under the policy, 559 of the 659 eligible
+Desktop-saved pages in a corpus of public reports, about 85%) and a
+check that fires everywhere is tuned out.
 
 Mobile layouts and themes are facts only in v2.
 

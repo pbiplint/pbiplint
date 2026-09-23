@@ -94,13 +94,13 @@ The chart asks the Sales table for a Profit measure it does not have, so the fin
 
 ## Why it matters
 
-A visual that names a field the model does not have cannot show its data. Power BI Desktop draws an error on the visual, with a warning naming the fields that do not exist, and conditional formatting that names a missing field puts a warning on the visual and in the Format pane. The error sits on that visual alone, so nothing points at the break until someone looks at it. The cause is usually on the model side: a column or measure renamed or deleted after the report was built, the two causes Microsoft's documentation gives for a field error, or a measure moved to another table. Catching it before the report is published spares readers a visual that shows an error where its numbers should be.
+A visual that names a field the model does not have cannot show its data. Power BI Desktop draws an error on the visual, with a warning naming the fields that do not exist, and conditional formatting that names a missing field puts a warning on the visual and in the Format pane. The error sits on that visual alone, so nothing points at the break until someone looks at it. The causes Microsoft's documentation gives for a missing field are on the model side: a field deleted from the model, or renamed, after the report was built. Catching it before the report is published spares readers a visual that shows an error where its numbers should be.
 
 ## How to fix it
 
 In Power BI Desktop, select the visual that the finding names; it shows an error that names the fields it cannot find. In the Visualizations pane, remove the broken field from its well and add the field you meant from the Data pane. For a field used in conditional formatting, open the formatting option's fx dialog and pick a valid field, or remove the formatting and apply it again with the right one. For a filter, remove the broken card from the Filters pane and add the field again. For a bookmark, fix the page it shows first, then select the bookmark and choose Update from its More options menu, so it captures the page again.
 
-In the report's JSON, a field reference names its table in `Entity` and its column or measure in `Property`, as in the example: correct the name, or, for a measure that moved, the table, and change the `queryRef` beside it to match. When the model is what changed and the report is right, renaming the field back in the model fixes every reference to it at once.
+In the report's JSON, a field reference names its table in `Entity` and its column or measure in `Property`, as in the example: correct the name, or, for a measure that moved, the table, and change the `queryRef` and `nativeQueryRef` beside it to match. When the model is what changed and the report is right, renaming the field back in the model fixes every reference to it at once.
 
 ## When to ignore it
 
@@ -111,8 +111,8 @@ There is no legitimate exception, because a reference the model cannot resolve i
 - Names are matched without regard to case, so `'sales'[region]` finds the Region column on Sales.
 - A reference names the measure's table as well as the measure, so a measure that lives on another table is reported with the table it is on, as `[Total Sales]: [Total Sales] is on "Sales", not "Product"`, rather than as missing.
 - A measure defined in the report itself, in reportExtensions.json, resolves like a model measure, so a visual bound to one is not reported. A reference inside such a measure's own DAX is not reported by this rule at all.
-- Each object reports a missing field once, however many times it names it. A filter that names the field in its `field` and again in its condition is one finding, and so is a visual that binds a field and also filters or sorts by it. The finding sits on the binding's line, or, for a field no well holds, on the first filter, formatting property, or sort entry that names it.
-- A field a visual names anywhere in its file counts, not only the fields in its wells: conditional formatting, a title bound to a measure, a card's reference label, and the sort all name fields, and a missing one breaks the visual just the same.
+- Each object reports a missing field once, however many times it names it. A filter that names the field in its `field` and again in its condition is one finding, and so is a visual that binds a field and also filters or sorts by it. The finding keeps one line, chosen in this order rather than by position in the file: the well that binds the field, else the first filter that names it, else the first formatting property or sort entry that does.
+- A field a visual names anywhere in its file counts, not only the fields in its wells: conditional formatting, a title bound to a measure, a card's reference label, and the sort all name fields, so a missing field in any of them is reported.
 - A filter condition that reaches its table through an alias the filter never declares is reported by the field's name alone, as `[Region]: a filter alias that no From list declares`.
 - The rule compares the report with its model, so it runs only when both are in the input.
 

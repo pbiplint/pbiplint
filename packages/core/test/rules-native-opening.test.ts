@@ -173,7 +173,7 @@ describe("FILTERS_PANE_STATE", () => {
         expect: "open",
       }),
     ).toEqual([]);
-    // An absent `expanded` is open: Desktop writes "false" for a collapsed pane and no key for an open one.
+    // An absent `expanded` is read as open: Desktop records "false" only when the pane was collapsed.
     expect(reportObjectIds(FILTERS_PANE_STATE, report({}), undefined, { expect: "open" })).toEqual(
       [],
     );

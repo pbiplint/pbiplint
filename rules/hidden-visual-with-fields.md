@@ -105,7 +105,7 @@ Power BI does not run a hidden visual's query until a bookmark or the Selection 
 
 ## How to fix it
 
-Find out first whether anything shows the visual. In Power BI Desktop, open the Bookmarks pane from the View tab and select each bookmark in turn, watching whether the visual appears, and, for each button on the page, check the Action section of its Format pane for the bookmark it applies. If one of them shows the visual, it is working as built; leave it.
+Find out first whether anything shows the visual. In Power BI Desktop, open the Bookmarks pane from the View tab and select each bookmark in turn, watching whether the visual appears. A bookmark can be linked to a button, a shape, or an image, on this page or another, so check the Action section in the Format pane of each one that has an action for the bookmark it applies. If a bookmark shows the visual, it is working as built; leave it.
 
 If nothing does, delete it. Open the Selection pane from the View tab, select the eye icon beside the visual to show it, confirm it is the one you mean, and delete it from the page. In the report folder, the visual is the folder under the page's `visuals` folder that carries its `name`, as in the example, and deleting that folder removes it.
 

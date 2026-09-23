@@ -396,8 +396,7 @@ unknown when `pages.json` was not read (absent, or unreadable) or names
 neither page in a report with no pages. The fact links `OPENING_PAGE_INVALID` when that
 rule fires, else `LANDING_PAGE_NOT_SET` when it fires.
 Filters pane reads a `report.json` that does not record `expanded` as
-open, the state a new report opens with; Desktop writes `false` whenever
-the pane was collapsed.
+open; Desktop writes `false` whenever the pane was collapsed.
 
 **Cost.** Linear in the JSON. The demo report's largest visual is
 61 KB, most under 5 KB; a 300-visual report is a few megabytes and

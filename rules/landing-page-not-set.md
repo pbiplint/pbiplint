@@ -16,7 +16,7 @@ sources:
 
 A report whose pages.json sets no landing page, so it opens on the page that was active when it was last saved, or, when pages.json records no active page either, on the first page.
 
-The finding is on the report, as `Report`, at the `activePageName` line of pages.json, and its detail names the page the report opens on now, as `opens on "Products", the page open when it was saved` or `opens on "Overview", the first page`. When the active page names a page the report does not have, the detail says so rather than naming one: `no landing page set; the active page "5f1e2a0c9b7d43e6a8f1" does not exist`.
+The finding is on the report, as `Report`, at the `activePageName` line of pages.json, or on line 1 when pages.json records no active page, and its detail names the page the report opens on now, as `opens on "Products", the page open when it was saved` or `opens on "Overview", the first page`. When the active page names a page the report does not have, the detail says so rather than naming one: `no landing page set; the active page "5f1e2a0c9b7d43e6a8f1" does not exist`.
 
 ## Example
 

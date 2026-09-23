@@ -1,4 +1,13 @@
-import type { Relationship } from "./types.js";
+import type { Relationship, Table } from "./types.js";
+
+/**
+ * A table Power BI Desktop manages for Auto date/time, by the names it gives them: a calculated
+ * table named `LocalDateTable_<id>` (behind a date column's variation) or `DateTableTemplate_<id>`.
+ * REMOVE_AUTO-DATE_TABLE reports them, and NOT_REACHED_FROM_REPORT leaves them out.
+ */
+export const isAutoDateTable = (t: Table): boolean =>
+  t.kind === "calculated" &&
+  (t.name.startsWith("DateTableTemplate_") || t.name.startsWith("LocalDateTable_"));
 
 /** `'Name'` with embedded single quotes doubled, as DAX and Tabular Editor write table names. */
 export const tableRef = (name: string): string => `'${name.replace(/'/g, "''")}'`;

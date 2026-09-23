@@ -1,3 +1,4 @@
+import { isAutoDateTable } from "../../model/names.js";
 import type { Table } from "../../model/types.js";
 import {
   allColumns,
@@ -37,13 +38,7 @@ export const DATE_CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE = bpaRule(
 );
 
 export const REMOVE_AUTO_DATE_TABLE = bpaRule("REMOVE_AUTO-DATE_TABLE", (m) =>
-  m.tables
-    .filter(
-      (t) =>
-        t.kind === "calculated" &&
-        (t.name.startsWith("DateTableTemplate_") || t.name.startsWith("LocalDateTable_")),
-    )
-    .map(finding.table),
+  m.tables.filter(isAutoDateTable).map(finding.table),
 );
 
 export const REDUCE_USAGE_OF_CALCULATED_TABLES = bpaRule("REDUCE_USAGE_OF_CALCULATED_TABLES", (m) =>

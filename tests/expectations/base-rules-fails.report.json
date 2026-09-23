@@ -10,15 +10,6 @@
     "ENSURE_THEME_COLOURS": []
   },
   "native": {
-    "NOT_REACHED_FROM_REPORT": [
-      "'DateTableTemplate_6b07bb7c-f59e-4738-852d-77414fd15999'[Année]",
-      "'DateTableTemplate_6b07bb7c-f59e-4738-852d-77414fd15999'[Date]",
-      "'DateTableTemplate_6b07bb7c-f59e-4738-852d-77414fd15999'[Jour]",
-      "'DateTableTemplate_6b07bb7c-f59e-4738-852d-77414fd15999'[Mois]",
-      "'DateTableTemplate_6b07bb7c-f59e-4738-852d-77414fd15999'[NoMois]",
-      "'DateTableTemplate_6b07bb7c-f59e-4738-852d-77414fd15999'[NoTrimestre]",
-      "'DateTableTemplate_6b07bb7c-f59e-4738-852d-77414fd15999'[Trimestre]"
-    ],
     "LANDING_PAGE_NOT_SET": [
       "report"
     ],

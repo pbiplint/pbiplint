@@ -512,6 +512,14 @@ Phil Seamark (Microsoft) writes that hidden visuals do not fire a query
 until they are made visible, so the old name and category claimed a cost
 the report does not pay.
 
+Amended 2026-09-23 with Michael: `NOT_REACHED_FROM_REPORT` leaves
+Desktop's auto date/time tables (calculated tables whose names start
+with `LocalDateTable_` or `DateTableTemplate_`, as
+`REMOVE_AUTO-DATE_TABLE` recognises them) out of its findings, and a
+relationship to one of them roots neither of its columns, which narrows
+section 6's relationship roots, so a date column the report never uses
+is reported; `REMOVE_AUTO-DATE_TABLE` covers the tables themselves.
+
 Malformed JSON and conflict markers use `PARSE_ISSUE`; legacy formats
 are diagnostics.
 

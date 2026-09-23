@@ -1,4 +1,4 @@
-import { columnRef, measureRef, tableRef } from "../model/names.js";
+import { columnRef, isAutoDateTable, measureRef, tableRef } from "../model/names.js";
 import type { Column, Measure, Model, Table } from "../model/types.js";
 import type { ReferenceIndex, RefOwner, RefOwnerKind } from "./references.js";
 import type { ReportReferenceIndex } from "./report-refs.js";
@@ -9,7 +9,12 @@ export interface ReachabilityIndex {
   reached(object: Node): boolean;
   /** Names from a root to the object, root first; empty when unreached. */
   pathTo(object: Node): string[];
-  /** Unreached objects in model order; a table is listed when every column and measure on it is unreached. */
+  /**
+   * Unreached objects in model order; a table is listed when every column and measure on it is
+   * unreached. Desktop's auto date/time tables are left out whether reached or not: Desktop
+   * manages them, so there is nothing to delete, and REMOVE_AUTO-DATE_TABLE reports them.
+   * `reached` and `pathTo` still answer truthfully for their columns.
+   */
   unreached(): { tables: Table[]; columns: Column[]; measures: Measure[] };
   /** Why an unreached column or measure is unreached, as the finding's detail. */
   reasonFor(object: Column | Measure): string;
@@ -27,13 +32,13 @@ const nameOf = (n: Node): string =>
 /**
  * What the report reaches in the model, to a fixed point (spec section 6). Roots: every resolved
  * report reference (a hierarchy's level columns, and the date column a variation reference goes
- * through), both columns of every relationship, columns named in RLS and OLS, variation default
- * columns, and the references of the report's own measures. From a reached object: a measure
- * reaches what its DAX references; a calculated column likewise; a column reaches its table, its
- * sort-by column, the columns it groups by (a field parameter's hidden Fields column), and, on a
- * calculated table, the table's expression references; a calculation group table reaches its
- * items' references. The path kept for each object is the shortest, so a finding's detail can
- * say what reached it or why nothing did.
+ * through), both columns of every relationship except one to an auto date/time table, columns
+ * named in RLS and OLS, variation default columns, and the references of the report's own
+ * measures. From a reached object: a measure reaches what its DAX references; a calculated column
+ * likewise; a column reaches its table, its sort-by column, the columns it groups by (a field
+ * parameter's hidden Fields column), and, on a calculated table, the table's expression
+ * references; a calculation group table reaches its items' references. The path kept for each
+ * object is the shortest, so a finding's detail can say what reached it or why nothing did.
  */
 export function buildReachabilityIndex(
   model: Model,
@@ -74,7 +79,14 @@ export function buildReachabilityIndex(
     // A field read through a date column's variation uses that column too.
     if ("variationOf" in res) reach(res.variationOf, null);
   }
+  // A relationship to one of Desktop's auto date/time tables is Desktop's, added for the date
+  // column's hierarchy, not a use of the date column, so it roots neither end.
+  const autoDate = (table: string): boolean => {
+    const t = tables.get(table.toLowerCase());
+    return t !== undefined && isAutoDateTable(t);
+  };
   for (const rel of model.relationships) {
+    if (autoDate(rel.fromTable) || autoDate(rel.toTable)) continue;
     reach(columnOf(rel.fromTable, rel.fromColumn), null);
     reach(columnOf(rel.toTable, rel.toColumn), null);
   }
@@ -134,9 +146,10 @@ export function buildReachabilityIndex(
       return path;
     },
     unreached: () => {
-      const columns = model.tables.flatMap((t) => t.columns.filter((c) => !parent.has(c)));
-      const measures = model.tables.flatMap((t) => t.measures.filter((m) => !parent.has(m)));
-      const tables = model.tables.filter(
+      const listed = model.tables.filter((t) => !isAutoDateTable(t));
+      const columns = listed.flatMap((t) => t.columns.filter((c) => !parent.has(c)));
+      const measures = listed.flatMap((t) => t.measures.filter((m) => !parent.has(m)));
+      const tables = listed.filter(
         (t) => (t.columns.length > 0 || t.measures.length > 0) && !parent.has(t),
       );
       return { tables, columns, measures };

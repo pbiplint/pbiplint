@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { buildIndexes } from "../src/index/build.js";
 import { buildModel } from "../src/model/build.js";
@@ -14,6 +15,7 @@ import {
   measure,
   page,
   projectFrom,
+  reportFindings,
   reportObjectIds,
   visual,
 } from "./report-helpers.js";
@@ -371,16 +373,28 @@ describe("Desktop's auto date/time hierarchy, on tvw-baseline's model", () => {
     return {
       broken: BROKEN_FIELD_REFERENCE.check(project, ctx),
       unreached: NOT_REACHED_FROM_REPORT.check(project, ctx),
+      reach: ctx.indexes.reachability!,
     };
   };
   it("raises no broken reference for a chart on the date's Year and Quarter", () => {
     expect(run("Year", "Quarter").broken).toEqual([]);
   });
-  it("does not list the levels the chart shows, or what those levels need, as unreached", () => {
-    const onLocalDateTable = run("Year", "Quarter")
-      .unreached.map((f) => f.objectName)
-      .filter((n) => n.startsWith(`'${LDT}'`));
-    expect(onLocalDateTable).toEqual([`'${LDT}'[Month]`, `'${LDT}'[Day]`]);
+  it("reaches the levels the chart shows and what they need, and lists none of them", () => {
+    const { unreached, reach } = run("Year", "Quarter");
+    const names = unreached.map((f) => f.objectName);
+    expect(names).not.toContain("'Customer'[Join Date]");
+    // Desktop's auto date/time tables are left out of the list (ruling D42), reached or not.
+    expect(
+      names.filter((n) => n.startsWith("'LocalDateTable_") || n.startsWith("'DateTableTemplate_")),
+    ).toEqual([]);
+    const ldt = model.tables.find((t) => t.name === LDT)!;
+    expect(ldt.columns.filter((c) => reach.reached(c)).map((c) => c.name)).toEqual([
+      "Date",
+      "Year",
+      "MonthNo",
+      "QuarterNo",
+      "Quarter",
+    ]);
   });
   it("names the date column and the hierarchy when a level is missing", () => {
     expect(run("Week").broken.map((f) => [f.objectId, f.detail])).toEqual([
@@ -389,5 +403,77 @@ describe("Desktop's auto date/time hierarchy, on tvw-baseline's model", () => {
         `'Customer'[Join Date].[Date Hierarchy].[Week]: no level named "Week" in hierarchy "Date Hierarchy" on "${LDT}"`,
       ],
     ]);
+  });
+});
+
+describe("NOT_REACHED_FROM_REPORT and Desktop's auto date/time tables", () => {
+  // A date column with Desktop's local date table behind its variation and the relationship
+  // Desktop adds to it, beside the date table template, both as tvw-baseline carries them.
+  const tables = `${fixturesDir}tvw-baseline.SemanticModel/definition/tables/`;
+  const LDT = "LocalDateTable_1b2c1fde-0cf3-455e-bfee-a8e4970804e0";
+  const localDateTable = readFileSync(`${tables}${LDT}.tmdl`, "utf8").replace(
+    /Calendar\(.*\)/,
+    "Calendar(MIN('Sales'[OrderDate]), MAX('Sales'[OrderDate]))",
+  );
+  const template = readFileSync(
+    `${tables}DateTableTemplate_f2afc5fc-2d0d-478c-92e8-dc0f26f32175.tmdl`,
+    "utf8",
+  );
+  const dated = `table Sales
+	column Amount
+		dataType: decimal
+	column OrderDate
+		dataType: dateTime
+
+		variation Variation
+			isDefault
+			relationship: r1
+			defaultHierarchy: ${LDT}.'Date Hierarchy'
+
+	measure 'Total Sales' = SUM('Sales'[Amount])
+
+${localDateTable}
+${template}
+relationship r1
+	joinOnDateBehavior: datePartOnly
+	fromColumn: Sales.OrderDate
+	toColumn: ${LDT}.Date
+`;
+  const year = {
+    HierarchyLevel: {
+      Expression: {
+        Hierarchy: {
+          Expression: {
+            PropertyVariationSource: {
+              Expression: { SourceRef: { Entity: "Sales" } },
+              Name: "Variation",
+              Property: "OrderDate",
+            },
+          },
+          Hierarchy: "Date Hierarchy",
+        },
+      },
+      Level: "Year",
+    },
+  };
+  const unreachedFor = (...fields: unknown[]) =>
+    reportFindings(
+      NOT_REACHED_FROM_REPORT,
+      [page("p"), bound("p", "v", "tableEx", fields)],
+      dated,
+    ).map((f) => f.objectName);
+  it("lists no auto date/time table's column, and reports the date column nothing uses", () => {
+    // The relationship to the local date table is Desktop's, not a use of the date column.
+    expect(unreachedFor(measure("Sales", "Total Sales"))).toEqual(["'Sales'[OrderDate]"]);
+  });
+  it("still reaches the level a visual binds through the variation, and the date column", () => {
+    expect(unreachedFor(measure("Sales", "Total Sales"), year)).toEqual([]);
+    const project = projectFrom(
+      [page("p"), bound("p", "v", "tableEx", [measure("Sales", "Total Sales"), year])],
+      dated,
+    );
+    const reach = buildIndexes(project).reachability!;
+    const ldt = project.model!.tables.find((t) => t.name === LDT)!;
+    expect(reach.reached(ldt.columns.find((c) => c.name === "Year")!)).toBe(true);
   });
 });

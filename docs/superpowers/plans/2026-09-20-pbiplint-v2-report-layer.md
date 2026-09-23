@@ -19,7 +19,7 @@
 - Never a closing keyword (`closes`, `fixes`, `resolves`) next to an issue number in a commit message or pull request body, even in a sentence about one. Write "tracked in #9".
 - Main cannot be rewound (ruleset 23615692, no bypass). Every change lands through a pull request from a branch off main. Each pull request in this plan starts from main after the previous one merges. Commit messages end with the two trailers the harness provides (`Co-Authored-By` and `Claude-Session`).
 - `gh` has three accounts; the global active account is `michaelmckinleyconsulting` and must stay that way. Any command that needs the pbiplint org runs after `gh auth switch --user TheDataPractitioner` and is followed by `gh auth switch --user michaelmckinleyconsulting`. The repo-local git config already commits as TheDataPractitioner.
-- Subagents run only on Fable 5.1 or Opus 5, never Sonnet or Haiku: implementers and task reviewers on Opus, the final whole-branch review of each pull request on Fable.
+- From pull request 3 on, every agent runs on Opus 5.5, never Sonnet, Haiku, or Fable: the primary agent and every subagent it dispatches (implementers, task reviewers, re-reviewers, and the final whole-branch review of each pull request), dispatched with the model `opus` (Michael, 2026-09-23). Pull requests 1 and 2 ran implementers and task reviewers on Opus 5 and their whole-branch reviews on Fable 5.1; task texts that say so are the record of those runs.
 - The site build (`packages/web/src/build/*.ts`) imports nothing from `@pbiplint/core`; its copies (`CATEGORY_ORDER`, `ignoreHelp`) are held equal to core's by `packages/web/test/generate.test.ts`.
 - Ported rule ids stay verbatim from `Base-rules.json`, including `HIDE_TOOLTIP_DRILLTROUGH_PAGES`, because parity compares on ids. All ported report rules are severity `warning`. Thresholds default to the source's values (20, 6, 4, 4, 10, 720).
 - Work from `~/Projects/pbiplint` on a branch, never inside a git worktree (the isolation guard fights the tooling). Never edit anything under OneDrive; copy from it.
@@ -43,7 +43,7 @@ Spec section 14 fixes the order. Each pull request is a branch off main, cut aft
 | 7. The browser | `v2-browser` | 36 to 41 | Walkers, `selectProject`, results page with facts and layer tags, diagnostics as notices, browser tests, performance budget |
 | 8. Docs and release | `v2-release` | 42 to 43 | README, CONTRIBUTING, RELEASING, About, 0.2.0 |
 
-Every pull request ends with the same closing task shape: run everything CI runs, check the branch for closing keywords and em dashes, dispatch the Fable whole-branch review, apply its fixes, push, open the pull request as TheDataPractitioner, switch back, report the URL, stop.
+Every pull request ends with the same closing task shape: run everything CI runs, check the branch for closing keywords and em dashes, dispatch the whole-branch review, apply its fixes, push, open the pull request as TheDataPractitioner, switch back, report the URL, stop.
 
 ## Facts every task relies on (verified 2026-09-20 on main at 47fc70e)
 
@@ -7635,7 +7635,7 @@ git commit -m "chore: release v0.2.0"
 git log --format=%B main..HEAD | grep -inE '\b(close[sd]?|fix(e[sd])?|resolve[sd]?)\b[[:space:]]*#[0-9]+' ; git diff main..HEAD | grep -c $'\u2014'
 ```
 
-Dispatch the Fable whole-branch review (docs only; it reads for accuracy against the code on main). Then:
+Dispatch the whole-branch review (docs only; it reads for accuracy against the code on main). Then:
 
 ```bash
 git push -u origin v2-release
@@ -7678,7 +7678,7 @@ Spec sections and the tasks that carry them: 4 (Tasks 8, 10, 36, 37), 5 (Tasks 3
 
 ## Execution notes
 
-- Execution is subagent-driven (`superpowers:subagent-driven-development`), one pull request at a time: implementers and task reviewers on Opus 5, the whole-branch review on Fable 5.1. The ledger lives at `.superpowers/sdd/2026-09-20-pbiplint-v2-report-layer/progress.md` (git-ignored) in the shape of `.superpowers/sdd/2026-09-19-rule-pages-template/`: a pre-flight scan of produces-versus-consumes across the pull request's tasks, one line per task event, and rulings written as "Ruling: what. Why: why. Cost if wrong: cost." Each pull request's tasks are one execution unit; the session stops after opening the pull request and resumes from the ledger when Michael says merge.
+- Execution is subagent-driven (`superpowers:subagent-driven-development`), one pull request at a time, with every agent on Opus 5.5 from pull request 3 on: the primary agent, implementers, task reviewers, re-reviewers, and the whole-branch review (Michael, 2026-09-23; pull requests 1 and 2 ran implementers and task reviewers on Opus 5 and the whole-branch review on Fable 5.1). The ledger lives at `.superpowers/sdd/2026-09-20-pbiplint-v2-report-layer/progress.md` (git-ignored) in the shape of `.superpowers/sdd/2026-09-19-rule-pages-template/`: a pre-flight scan of produces-versus-consumes across the pull request's tasks, one line per task event, and rulings written as "Ruling: what. Why: why. Cost if wrong: cost." Each pull request's tasks are one execution unit; the session stops after opening the pull request and resumes from the ledger when Michael says merge.
 - A task's implementer sees only its own task text plus the Global Constraints, the Decisions, the shared facts of its pull request, and the Interfaces blocks of the tasks it consumes; the ledger records what each brief contained.
 - The escalation rule for parity (pull request 2's shared facts) and the manual checks named in each pull request body are the only places the session stops for Michael inside a pull request.
 - Where a task says "counts to N", the numbers are 72 (today), 77 and 80 (inside pull request 2), 83 (after it), 85 and 88 (inside pull request 3), 89, 93, 97; `pack.test.ts` and `generate.test.ts` pin them and the index sentence.

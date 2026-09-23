@@ -366,6 +366,14 @@ and the fields used per visual. Built in a report-only run too, with
 everything unresolved; the rules that need resolution are skipped with
 reason `noModel`.
 
+Amended 2026-09-23 with pull request 4: a reference that names a
+schema, in its `SourceRef` or in the `From` entry of its alias,
+resolves among the report's own measures only (Power BI Desktop writes
+`"Schema": "extension"` in every reference to a report measure, and
+Microsoft's reportExtension schema says to leave the schema empty for a
+model measure), so a reference left naming the extension after its
+measure moved into the model is unresolved, whatever the model holds.
+
 **Reachability index.** Roots: every resolved report reference; both
 columns of every relationship; columns named in RLS and OLS filters;
 variation default columns; the extension measures' DAX references.

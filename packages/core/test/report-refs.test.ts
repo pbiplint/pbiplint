@@ -362,3 +362,78 @@ describe("a reference through a date column's variation (Desktop's auto date/tim
     ]);
   });
 });
+
+describe("a reference that names the report's extension schema", () => {
+  // Desktop writes `"Schema": "extension"` in every reference to a report measure, and Microsoft's
+  // reportExtension schema says to leave the schema empty for a model measure.
+  const inExtension = (kind: "Measure" | "Column", entity: string, property: string) => ({
+    [kind]: {
+      Expression: { SourceRef: { Schema: "extension", Entity: entity } },
+      Property: property,
+    },
+  });
+  /** A card bound to the given fields, with reportExtensions.json defining `measures` on Sales. */
+  const indexOf = (fields: unknown[], measures: string[], m = model) => {
+    const { report: r } = buildReport([
+      { path: "definition/pages/p1/page.json", text: j({ name: "p1", displayName: "P" }) },
+      {
+        path: "definition/pages/p1/visuals/v1/visual.json",
+        text: j({
+          name: "v1",
+          position: {},
+          visual: {
+            visualType: "cardVisual",
+            query: { queryState: { Data: { projections: fields.map((field) => ({ field })) } } },
+          },
+        }),
+      },
+      {
+        path: "definition/reportExtensions.json",
+        text: j({
+          name: "extension",
+          entities: [
+            { name: "Sales", measures: measures.map((name) => ({ name, expression: "1" })) },
+          ],
+        }),
+      },
+    ]);
+    return buildReportReferenceIndex(r, m);
+  };
+  /** The model the report reads, after Net Margin moved into it. */
+  const moved = modelFrom(`table Sales
+	column Amount
+		dataType: decimal
+	measure 'Total Sales' = SUM('Sales'[Amount])
+	measure 'Net Margin' = [Total Sales] * 0.1
+`);
+
+  it("resolves to the report's measure while reportExtensions.json defines it", () => {
+    const [ref] = indexOf([inExtension("Measure", "Sales", "Net Margin")], ["Net Margin"]).refs;
+    expect(ref!.resolution.kind).toBe("reportMeasure");
+  });
+  it("resolves to the report's measure with no model in the run", () => {
+    const [ref] = indexOf(
+      [inExtension("Measure", "Sales", "Net Margin")],
+      ["Net Margin"],
+      undefined,
+    ).refs;
+    expect(ref!.resolution.kind).toBe("reportMeasure");
+  });
+  it("is unresolved once the measure is gone from reportExtensions.json, though the model has it", () => {
+    const index = indexOf(
+      [inExtension("Measure", "Sales", "Net Margin"), measure("Sales", "Net Margin")],
+      [],
+      moved,
+    );
+    expect(index.refs.map((r) => reasonOf(r.resolution))).toEqual([
+      `no measure named "Net Margin" on "Sales" in the report's extension`,
+      "measure",
+    ]);
+  });
+  it("says the report's extension defines measures only, for a column that names it", () => {
+    const index = indexOf([inExtension("Column", "Sales", "Amount")], ["Net Margin"], moved);
+    expect(index.refs.map((r) => reasonOf(r.resolution))).toEqual([
+      `the report's extension defines only measures, so no column named "Amount" on "Sales"`,
+    ]);
+  });
+});

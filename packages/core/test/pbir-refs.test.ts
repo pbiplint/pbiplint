@@ -155,6 +155,44 @@ describe("collectFieldRefs", () => {
       { kind: "aggregation", table: "Sales", name: "Day", variation: via, pointer: "/c" },
     ]);
   });
+  it("reads the schema a SourceRef names, or the From entry its alias names, and no other", () => {
+    // Desktop writes `"Schema": "extension"` in every reference to a measure defined in the
+    // report's reportExtensions.json; a reference to a model field names no schema.
+    const extension = (source: Record<string, unknown>, property: string) => ({
+      Measure: { Expression: { SourceRef: source }, Property: property },
+    });
+    const refs = collectFieldRefs({
+      a: extension({ Schema: "extension", Entity: "Sales" }, "Net Margin"),
+      b: {
+        From: [{ Name: "s", Schema: "extension", Entity: "Sales", Type: 0 }],
+        Where: [{ Condition: extension({ Source: "s" }, "Net Margin") }],
+      },
+      c: extension({ Entity: "Sales" }, "Total Sales"),
+      d: extension({ Schema: "", Entity: "Sales" }, "Total Sales"),
+      e: {
+        Measure: {
+          Expression: {
+            PropertyVariationSource: {
+              Expression: { SourceRef: { Schema: "extension", Entity: "Sales" } },
+              Name: "Variation",
+              Property: "OrderDate",
+            },
+          },
+          Property: "M",
+        },
+      },
+    });
+    expect(refs.map((r) => [r.pointer, r.table, r.name, r.schema])).toEqual([
+      ["/a", "Sales", "Net Margin", "extension"],
+      ["/b/Where/0/Condition", "Sales", "Net Margin", "extension"],
+      ["/c", "Sales", "Total Sales", undefined],
+      ["/d", "Sales", "Total Sales", undefined],
+      ["/e", "Sales", "M", "extension"],
+    ]);
+    // No schema named, no key at all, so every existing reference keeps its shape.
+    expect(refs[2]).not.toHaveProperty("schema");
+    expect(refs[3]).not.toHaveProperty("schema");
+  });
   it("skips a TransformTableRef, which names a transform's output rather than a model table", () => {
     const transformed = { Expression: { TransformTableRef: { Source: "t" } }, Property: "X" };
     const refs = collectFieldRefs({

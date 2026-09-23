@@ -61,7 +61,9 @@ const q = (s: string): string => `"${s}"`;
  * regard to case, the way the model's own reference index resolves DAX. A measure is looked up on
  * the table the reference names, then among the report's own measures, and a measure that lives
  * on another table is reported as such, since Desktop breaks the visual the same way when a
- * measure moves. Without a model, everything but a report measure is unresolved with one reason.
+ * measure moves. A reference that names a schema (Desktop writes `extension` for a report measure)
+ * resolves among the report's own measures only. Without a model, every other reference is
+ * unresolved with one reason.
  */
 export function buildReportReferenceIndex(
   report: Report,
@@ -111,10 +113,30 @@ export function buildReportReferenceIndex(
     return { table, source };
   };
 
+  /**
+   * A reference that names a schema and is not one of the report's own measures. The report's
+   * extension defines measures only, so a column or a hierarchy named in it is unresolved too.
+   */
+  const notInExtension = (ref: FieldRef): Resolution => {
+    if (ref.noTable) return unresolved(NO_TABLE[ref.noTable]);
+    if (ref.kind === "measure")
+      return unresolved(
+        `no measure named ${q(ref.name)} on ${q(ref.table)} in the report's extension`,
+      );
+    const what = ref.kind === "hierarchyLevel" ? "hierarchy" : "column";
+    return unresolved(
+      `the report's extension defines only measures, so no ${what} named ${q(ref.name)} on ${q(ref.table)}`,
+    );
+  };
+
   const resolve = (ref: FieldRef): Resolution => {
     const extension = reportMeasures.get(`${lower(ref.table)}\u0000${lower(ref.name)}`);
     if (ref.kind === "measure" && extension && !ref.variation)
       return { kind: "reportMeasure", measure: extension };
+    // A reference that names a schema, as Desktop's reference to a report measure names
+    // "extension", is looked up among the report's own measures only, which the line above did,
+    // with or without a model: a model field of the same name is not the one it names.
+    if (ref.schema !== undefined) return notInExtension(ref);
     if (!model) return unresolved("no model in the input");
     if (ref.noTable) return unresolved(NO_TABLE[ref.noTable]);
     const named = tables.get(lower(ref.table));

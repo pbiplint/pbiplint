@@ -114,6 +114,39 @@ describe("BROKEN_FIELD_REFERENCE", () => {
     ];
     expect(reportObjectIds(BROKEN_FIELD_REFERENCE, files, tmdl)).toEqual([]);
   });
+  it("reports a reference still naming the report's extension after its measure moved into the model", () => {
+    // Desktop binds a report measure with `"Schema": "extension"`; the measure has since moved
+    // into the model and out of reportExtensions.json, so the extension no longer defines it.
+    const text = JSON.stringify(
+      JSON.parse(
+        bound("p", "v", "cardVisual", [
+          {
+            Measure: {
+              Expression: { SourceRef: { Schema: "extension", Entity: "Sales" } },
+              Property: "Net Margin",
+            },
+          },
+        ]).text,
+      ),
+      null,
+      2,
+    );
+    const files = [page("p"), { path: "definition/pages/p/visuals/v/visual.json", text }];
+    const withMeasure = `${tmdl}\tmeasure 'Net Margin' = [Total Sales] * 0.1\n`;
+    expect(
+      reportFindings(BROKEN_FIELD_REFERENCE, files, withMeasure).map((f) => [
+        f.objectName,
+        f.detail,
+        f.location,
+      ]),
+    ).toEqual([
+      [
+        'cardVisual (v) on "Page p"',
+        `[Net Margin]: no measure named "Net Margin" on "Sales" in the report's extension`,
+        { file: "definition/pages/p/visuals/v/visual.json", line: lineOf(text, '"field"') },
+      ],
+    ]);
+  });
   it("keeps one finding per file when two pages share a display name and a visual id", () => {
     const files = [
       page("p1", { displayName: "Same" }),

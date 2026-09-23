@@ -18,6 +18,13 @@ export interface FieldRef {
    * From entry names no model table (a subquery, say), or a source that names no table at all.
    */
   noTable?: "undeclaredAlias" | "nonTableAlias" | "noSource";
+  /**
+   * The schema the reference names, when it names one: in the semanticQuery schema's words, "the
+   * name of the schema containing the referenced entity", read from the SourceRef or from the
+   * From entry its alias names. Power BI Desktop writes `"extension"` in every reference to a
+   * measure defined in the report's reportExtensions.json; a reference to a model field names none.
+   */
+  schema?: string;
   pointer: string;
 }
 

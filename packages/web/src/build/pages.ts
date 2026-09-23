@@ -1,4 +1,4 @@
-import { Marked, type Tokens } from "marked";
+import { Marked, Renderer, type Tokens } from "marked";
 
 export const SITE = "https://pbiplint.com";
 
@@ -283,11 +283,21 @@ export const headingId = (text: string): string =>
     .replace(/\s+/g, "-");
 
 /**
+ * How every code block opens: as a tab stop, so a block whose long line scrolls sideways can be
+ * scrolled from the keyboard.
+ */
+const PRE = '<pre tabindex="0">';
+/** marked's own fence renderer, for a fence that is not an example, whose output gains PRE. */
+const plainFence = new Renderer();
+
+/**
  * The site's Markdown renderer. marked adds no heading ids of its own since v8, so headings get
  * them here. On a rule page, a fence whose info string is `tmdl fires` or `tmdl fixed` renders as
  * a captioned figure, and so does `pbir fires <file>` or `pbir fixed <file>`, as JSON with the
  * file it stands for in the caption (a `tree.json` document names its files by its keys, so its
- * caption stays bare). A code span naming another rule links to its page; returning false from an
+ * caption stays bare). Any other fence renders as marked writes it. Every code block is a tab
+ * stop, since a long line scrolls inside it and a keyboard could not otherwise reach what is out of
+ * view (WCAG 2.1.1). A code span naming another rule links to its page; returning false from an
  * override hands the token back to marked's default renderer.
  */
 function siteMarkdown(links: RuleLinks = new Map(), self = ""): Marked {
@@ -296,9 +306,10 @@ function siteMarkdown(links: RuleLinks = new Map(), self = ""): Marked {
       heading({ tokens, depth, text }: Tokens.Heading): string {
         return `<h${depth} id="${headingId(text)}">${this.parser.parseInline(tokens)}</h${depth}>\n`;
       },
-      code({ text, lang, escaped }: Tokens.Code): string | false {
+      code(token: Tokens.Code): string {
+        const { text, lang, escaped } = token;
         const example = /^(tmdl|pbir) (fires|fixed)(?: (\S+))?$/.exec(lang ?? "");
-        if (!example) return false;
+        if (!example) return plainFence.code(token).replace(/^<pre>/, PRE);
         const language = example[1] === "pbir" ? "json" : "tmdl";
         const kind = example[2]!;
         const file = example[3];
@@ -307,7 +318,7 @@ function siteMarkdown(links: RuleLinks = new Map(), self = ""): Marked {
             ? `${EXAMPLE_CAPTION[kind]} in ${escapeHtml(file)}`
             : EXAMPLE_CAPTION[kind]!;
         const code = (escaped ? text : escapeCode(text)).replace(/\n$/, "");
-        return `<figure class="example ${kind}">\n<figcaption>${caption}</figcaption>\n<pre><code class="language-${language}">${code}\n</code></pre>\n</figure>\n`;
+        return `<figure class="example ${kind}">\n<figcaption>${caption}</figcaption>\n${PRE}<code class="language-${language}">${code}\n</code></pre>\n</figure>\n`;
       },
       codespan({ text }: Tokens.Codespan): string | false {
         const slug = links.get(text);

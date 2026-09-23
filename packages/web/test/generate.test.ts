@@ -142,19 +142,19 @@ describe("rulePage", () => {
     );
     expect(withVideo.html).toContain('href="https://youtu.be/abc"');
   });
-  it("renders an example fence as a captioned figure and leaves other fences alone", () => {
+  it("renders an example fence as a captioned figure and any other fence as a plain code block", () => {
     const page = read("hide-foreign-keys").replace(
       "## Why it matters",
       "## Example\n\n```tmdl fires\ntable T\n\tcolumn 'A'\n```\n\n```tmdl fixed\ntable T\n```\n\n```\nDAX here\n```\n\n## Why it matters",
     );
     const { html } = rulePage(page, "hide-foreign-keys");
     expect(html).toContain(
-      '<figure class="example fires">\n<figcaption>Fires the rule</figcaption>\n<pre><code class="language-tmdl">table T\n\tcolumn &#39;A&#39;\n</code></pre>\n</figure>',
+      '<figure class="example fires">\n<figcaption>Fires the rule</figcaption>\n<pre tabindex="0"><code class="language-tmdl">table T\n\tcolumn &#39;A&#39;\n</code></pre>\n</figure>',
     );
     expect(html).toContain(
       '<figure class="example fixed">\n<figcaption>After the fix</figcaption>',
     );
-    expect(html).toContain("<pre><code>DAX here\n</code></pre>");
+    expect(html).toContain('<pre tabindex="0"><code>DAX here\n</code></pre>');
     expect(html).toContain('<h2 id="example">Example</h2>');
   });
   it("renders a pbir fence as a captioned JSON figure that names its file, bare for a tree", () => {
@@ -164,16 +164,40 @@ describe("rulePage", () => {
     );
     const { html } = rulePage(page, "hide-foreign-keys");
     expect(html).toContain(
-      '<figure class="example fires">\n<figcaption>Fires the rule in visual.json</figcaption>\n<pre><code class="language-json">{ &quot;name&quot;: &quot;v&quot; }\n</code></pre>\n</figure>',
+      '<figure class="example fires">\n<figcaption>Fires the rule in visual.json</figcaption>\n<pre tabindex="0"><code class="language-json">{ &quot;name&quot;: &quot;v&quot; }\n</code></pre>\n</figure>',
     );
     expect(html).toContain(
-      '<figure class="example fixed">\n<figcaption>After the fix</figcaption>\n<pre><code class="language-json">',
+      '<figure class="example fixed">\n<figcaption>After the fix</figcaption>\n<pre tabindex="0"><code class="language-json">',
     );
     const escaped = rulePage(
       page.replace("pbir fires visual.json", "pbir fires a<b.json"),
       "hide-foreign-keys",
     ).html;
     expect(escaped).toContain("<figcaption>Fires the rule in a&lt;b.json</figcaption>");
+  });
+  it("makes every code block a tab stop, so one that scrolls sideways can be scrolled from the keyboard", () => {
+    // A long line scrolls inside its block (pre has overflow-x: auto); without a tab stop, a
+    // keyboard cannot reach what is scrolled out of view (WCAG 2.1.1, axe's
+    // scrollable-region-focusable). Example figures, plain fences, and content pages all count.
+    const pres = (html: string): string[] => html.match(/<pre\b[^>]*>/g) ?? [];
+    const page = read("hide-foreign-keys").replace(
+      "## Why it matters",
+      "## Example\n\n```pbir fires visual.json\n{}\n```\n\n```tmdl fixed\ntable T\n```\n\n```\nplain\n```\n\n```dax\nEVALUATE T\n```\n\n## Why it matters",
+    );
+    const { html } = rulePage(page, "hide-foreign-keys");
+    const own = pres(rulePage(read("hide-foreign-keys"), "hide-foreign-keys").html).length;
+    expect(pres(html).length).toBe(own + 4);
+    expect(pres(html).filter((tag) => tag !== '<pre tabindex="0">')).toEqual([]);
+    expect(html).toContain(
+      '<pre tabindex="0"><code class="language-dax">EVALUATE T\n</code></pre>',
+    );
+    const content = contentPage(
+      "---\ntitle: T\ndescription: D\n---\n\n# T\n\n```\nnpx pbiplint .\n```\n",
+      "/t/",
+      "content/t.md",
+    );
+    expect(pres(content)).toEqual(['<pre tabindex="0">']);
+    expect(content).toContain('<pre tabindex="0"><code>npx pbiplint .\n</code></pre>');
   });
   it("credits PBI Inspector for a page whose source is its ruleset", () => {
     const page = read("hide-foreign-keys").replace(

@@ -216,10 +216,13 @@ textarea {
   font-size: 13px;
   resize: vertical;
 }
+/* A code block is a tab stop (the site renders every pre with tabindex="0" so one that scrolls
+   sideways can be scrolled from the keyboard), so it shows focus the way a control does. */
 textarea:focus,
 button:focus-visible,
 input:focus-visible,
-a:focus-visible {
+a:focus-visible,
+pre:focus-visible {
   outline: 2px solid var(--brand-teal);
   outline-offset: 2px;
 }

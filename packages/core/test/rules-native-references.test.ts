@@ -288,6 +288,66 @@ describe("BROKEN_FIELD_REFERENCE", () => {
       r.findings.filter((f) => f.ruleId === "BROKEN_FIELD_REFERENCE").map((f) => f.detail),
     ).toEqual([`'Store'[City]: no table named "Store"`]);
   });
+  describe("a line at the root that took the declarations under it", () => {
+    /** Sales with its second column followed by `line`, which lost its tabs, and two more fields. */
+    const salesWith = (line: string) =>
+      [
+        "table Sales",
+        "\tcolumn Amount",
+        "\t\tdataType: decimal",
+        "\t\tsourceColumn: Amount",
+        "",
+        "\tcolumn Quantity",
+        "\t\tdataType: int64",
+        "\t\tsourceColumn: Quantity",
+        "",
+        line,
+        "",
+        "\tcolumn Region",
+        "\t\tdataType: string",
+        "\t\tsourceColumn: Region",
+        "",
+        "\tmeasure Total = SUM(Sales[Amount])",
+        "",
+      ].join("\n");
+    const run = (text: string) => {
+      const r = lint([
+        { path: "definition/tables/Sales.tmdl", text },
+        page("p"),
+        bound("p", "v", "tableEx", [column("Sales", "Region"), measure("Sales", "Total")]),
+      ]);
+      return {
+        parse: r.findings
+          .filter((f) => f.ruleId === "PARSE_ISSUE")
+          .map((f) => [f.location?.line, f.detail]),
+        broken: r.findings.filter((f) => f.ruleId === "BROKEN_FIELD_REFERENCE"),
+      };
+    };
+
+    it("is one PARSE_ISSUE, and no finding for the fields under it, for a column's annotation", () => {
+      expect(run(salesWith("annotation SummarizationSetBy = Automatic"))).toEqual({
+        parse: [
+          [
+            10,
+            '"annotation" at the root of a file has lines under it, which TMDL does not allow: annotation SummarizationSetBy = Automatic',
+          ],
+        ],
+        broken: [],
+      });
+    });
+
+    it("is one PARSE_ISSUE, and no finding for the fields under it, for a column's property", () => {
+      expect(run(salesWith("summarizeBy: none"))).toEqual({
+        parse: [
+          [
+            10,
+            '"summarizeBy" is a property, which TMDL allows only under an object: summarizeBy: none',
+          ],
+        ],
+        broken: [],
+      });
+    });
+  });
   it("keeps one finding per file when two pages share a display name and a visual id", () => {
     const files = [
       page("p1", { displayName: "Same" }),

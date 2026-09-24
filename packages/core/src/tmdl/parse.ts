@@ -41,10 +41,12 @@ function splitHeader(
 
 /**
  * Generic TMDL tree parser. Unknown object types and properties parse as generic nodes,
- * so a construct this code has never seen never aborts a run. An object at the root of a file
- * whose type TMDL does not declare there (root-types.ts) is also a parse issue; nested ones are
- * not checked. Each issue says whether it can take an object out of the model
- * (`TmdlParseIssue.canDropObjects`); every one can except a description nothing claims.
+ * so a construct this code has never seen never aborts a run. A line at the root of a file that
+ * TMDL does not allow there is also a parse issue: an object or a flag whose type TMDL does not
+ * declare there (root-types.ts), a property or an expression with no name, and an annotation or
+ * an extended property with lines under it. Nested lines are not checked. Each issue says whether
+ * it can take an object out of the model (`TmdlParseIssue.canDropObjects`); every one can except
+ * a description nothing claims.
  */
 export function parseTmdl(file: string, text: string): ParsedFile {
   // Power BI Desktop writes TMDL as UTF-8 with a BOM; it is not part of the first line.
@@ -164,10 +166,13 @@ export function parseTmdl(file: string, text: string): ParsedFile {
     };
     let node: TmdlNode;
     let m: RegExpExecArray | null;
+    /** The line's keyword as written, for a reason that names it; a `ref` line has none. */
+    let word: string | undefined;
     if ((m = REF.exec(content))) {
       node = { ...base, kind: "ref", type: m[1]!.toLowerCase(), name: unquoteName(m[2]!) };
     } else if ((m = PROP.exec(content))) {
-      node = { ...base, kind: "prop", type: m[1]!.toLowerCase(), value: unquoteValue(m[2] ?? "") };
+      word = m[1]!;
+      node = { ...base, kind: "prop", type: word.toLowerCase(), value: unquoteValue(m[2] ?? "") };
     } else {
       const h = splitHeader(content);
       if (!h) {
@@ -182,6 +187,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
         i++;
         continue;
       }
+      word = h.type;
       if (h.hasEq) {
         const value =
           h.inline === "```" ? collectFenced() : h.inline === "" ? collectBlock() : h.inline;
@@ -194,17 +200,23 @@ export function parseTmdl(file: string, text: string): ParsedFile {
       } else {
         node = { ...base, kind: "flag", type: h.type.toLowerCase() };
       }
-      // A root declaration whose type TMDL does not declare at the root, such as a misspelt `table`
-      // or a `column` that lost its tab. It stays a generic root, which the model does not read, so
-      // nothing under it reaches a rule.
-      if (indent === 0 && node.kind !== "expr" && !isRootType(h.type))
-        issues.push({
-          file,
-          line: lineNo,
-          text: raw,
-          reason: `"${h.type}" is not a type TMDL declares at the root of a file`,
-          canDropObjects: true,
-        });
+    }
+    // A line at the root that TMDL does not allow there. A property, or an expression with no name
+    // (`source =`), belongs under an object whatever its word: `queryGroup: Support` is a property
+    // although `queryGroup` is also a root type. A declaration or a flag is checked by its word, such
+    // as a misspelt `table` or a `column` that lost its tab; Desktop writes a bare `database` flag
+    // on the first line of database.tmdl. Either way the line stays a generic root, which the model
+    // does not read, so nothing under it reaches a rule. Only the header line is reported: an
+    // expression's value block was read above as its value.
+    if (indent === 0 && word !== undefined) {
+      const reason =
+        node.kind === "prop" || node.kind === "expr"
+          ? `"${word}" is a property, which TMDL allows only under an object`
+          : isRootType(word)
+            ? undefined
+            : `"${word}" is not a type TMDL declares at the root of a file`;
+      if (reason !== undefined)
+        issues.push({ file, line: lineNo, text: raw, reason, canDropObjects: true });
     }
 
     if (pendingDescription) {
@@ -238,5 +250,26 @@ export function parseTmdl(file: string, text: string): ParsedFile {
   // A description on the last line has no blank line after it to reach the check above. Desktop
   // always writes a trailing newline, which does, but a hand-edited file need not.
   if (pendingDescription) orphanDescription(pendingDescription);
+  // A root annotation or extended property with lines under it: the tab-indented lines after its
+  // value that the loop above attached to it as children. TMDL gives neither one a child line. An
+  // annotation's value is inline, and an extended property's multi-line value is the block that
+  // collectBlock or collectFenced read as its value, so a line under one can only come from a lost
+  // tab, as when a column's `annotation SummarizationSetBy = Automatic` loses its two and every
+  // column and measure after it attaches to it. The model never reads those children. One issue,
+  // on the annotation's own line, placed in line order.
+  for (const r of roots) {
+    if (r.kind === "ref" || r.kind === "expr" || r.children.length === 0) continue;
+    if (r.type !== "annotation" && r.type !== "extendedproperty") continue;
+    const text = lines[r.line - 1]!;
+    const issue = {
+      file,
+      line: r.line,
+      text,
+      reason: `"${/^\w+/.exec(text)![0]}" at the root of a file has lines under it, which TMDL does not allow`,
+      canDropObjects: true,
+    };
+    const at = issues.findIndex((i) => i.line > r.line);
+    issues.splice(at === -1 ? issues.length : at, 0, issue);
+  }
   return { file, roots, issues, lineCount: lines.length };
 }

@@ -385,15 +385,176 @@ describe("root object types", () => {
     });
   });
 
-  it("keeps today's reading of ref lines, properties, and expressions at the root", () => {
+  it("keeps today's reading of ref lines at the root, and reports properties and expressions there", () => {
     // `ref table` with no name misses the ref form and reads as a declaration of type `ref`.
     const pf = parseTmdl("t.tmdl", "ref tabel Sales\nref table\nculture: en-US\nsource = 1\n");
-    expect(pf.issues).toEqual([]);
+    expect(pf.issues.map((i) => [i.line, i.text, i.reason])).toEqual([
+      [3, "culture: en-US", '"culture" is a property, which TMDL allows only under an object'],
+      [4, "source = 1", '"source" is a property, which TMDL allows only under an object'],
+    ]);
     expect(pf.roots.map((r) => [r.kind, r.type])).toEqual([
       ["ref", "tabel"],
       ["object", "ref"],
       ["prop", "culture"],
       ["expr", "source"],
+    ]);
+  });
+});
+
+describe("properties at the root, and lines under a root annotation or extended property", () => {
+  const PROPERTY = (word: string) =>
+    `"${word}" is a property, which TMDL allows only under an object`;
+  const UNDER = (word: string) =>
+    `"${word}" at the root of a file has lines under it, which TMDL does not allow`;
+  const one = (text: string) =>
+    parseTmdl("tables/Sales.tmdl", text).issues.map((i) => [
+      i.line,
+      i.text,
+      i.reason,
+      i.canDropObjects,
+    ]);
+
+  it("reports a property that lost its tabs on its own line, once, and takes the lines under it out", () => {
+    // The columns below attach to the property as children, which the model never reads.
+    const text = [
+      "table Sales",
+      "\tcolumn Amount",
+      "\t\tdataType: decimal",
+      "\tcolumn Quantity",
+      "sourceColumn: Quantity",
+      "",
+      "\tcolumn Region",
+      "\t\tdataType: string",
+      "",
+    ].join("\n");
+    expect(one(text)).toEqual([[5, "sourceColumn: Quantity", PROPERTY("sourceColumn"), true]]);
+    expect(parseTmdl("t.tmdl", text).roots[0]!.children.map((c) => c.name)).toEqual([
+      "Amount",
+      "Quantity",
+    ]);
+  });
+
+  it("names the property's word as written, a word TMDL declares at the root as an object included", () => {
+    // `queryGroup` is a root object type, but `queryGroup: Support` is the property an expression
+    // carries, so the word check alone would pass it.
+    expect(one("queryGroup: Support\ndataType: decimal\n")).toEqual([
+      [1, "queryGroup: Support", PROPERTY("queryGroup"), true],
+      [2, "dataType: decimal", PROPERTY("dataType"), true],
+    ]);
+  });
+
+  it("reports an expression with no name at the root once, on its first line, not on its value", () => {
+    const text = [
+      "table Sales",
+      "\tpartition Sales = m",
+      "\t\tmode: import",
+      "source =",
+      "\t\t\t\tlet",
+      '\t\t\t\t    Source = Csv.Document(File.Contents("sales.csv"))',
+      "\t\t\t\tin",
+      "\t\t\t\t    Source",
+      "",
+      "\tcolumn Region",
+      "\t\tdataType: string",
+      "",
+      "expression =",
+      "\t\t1",
+      "",
+    ].join("\n");
+    expect(one(text)).toEqual([
+      [4, "source =", PROPERTY("source"), true],
+      [13, "expression =", PROPERTY("expression"), true],
+    ]);
+  });
+
+  it("reports a root annotation with a column under it once, on the annotation's line", () => {
+    // A column's annotation that lost its two tabs: the next column attaches to it.
+    const text = [
+      "table Sales",
+      "\tcolumn Amount",
+      "\t\tdataType: decimal",
+      "annotation SummarizationSetBy = Automatic",
+      "",
+      "\tcolumn Region",
+      "\t\tdataType: string",
+      "\t\tsummarizeBy: none",
+      "",
+      "\tmeasure Total = SUM(Sales[Amount])",
+      "",
+    ].join("\n");
+    expect(one(text)).toEqual([
+      [4, "annotation SummarizationSetBy = Automatic", UNDER("annotation"), true],
+    ]);
+  });
+
+  it("reports a root extended property with a measure under its value once, on its line", () => {
+    // The JSON block is its value, which the parser reads as such; the measure after it is not.
+    const text = [
+      "table Parameter",
+      "\tcolumn 'Parameter Fields'",
+      "\t\tdataType: string",
+      "extendedProperty ParameterMetadata =",
+      "\t\t\t\t{",
+      '\t\t\t\t  "version": 3,',
+      '\t\t\t\t  "kind": 2',
+      "\t\t\t\t}",
+      "",
+      "\tmeasure Total = 1",
+      "",
+    ].join("\n");
+    expect(one(text)).toEqual([
+      [4, "extendedProperty ParameterMetadata =", UNDER("extendedProperty"), true],
+    ]);
+  });
+
+  it("names the word as written and keeps the issues in line order", () => {
+    const text = [
+      "table Sales",
+      "\tcolumn Amount",
+      "Annotation SummarizationSetBy = Automatic",
+      "    column Spaced",
+      "\tcolumn Region",
+      "",
+    ].join("\n");
+    expect(one(text)).toEqual([
+      [3, "Annotation SummarizationSetBy = Automatic", UNDER("Annotation"), true],
+      [4, "    column Spaced", "space indentation (TMDL requires tabs)", true],
+    ]);
+  });
+
+  it("reads a root annotation or extended property with nothing under it, a bare database, and createOrReplace, as before", () => {
+    // Desktop writes a bare `database` on the first line of database.tmdl, with its properties
+    // under it, and a model-level annotation at the root of model.tmdl.
+    const text = [
+      "database",
+      "\tcompatibilityLevel: 1567",
+      "",
+      'annotation PBI_QueryOrder = ["Sales"]',
+      "",
+      "annotation __PBI_TimeIntelligenceEnabled = 1",
+      "ref table Sales",
+      "",
+      "extendedProperty ParameterMetadata =",
+      "\t\t{",
+      '\t\t  "version": 1',
+      "\t\t}",
+      "",
+      "createOrReplace",
+      "",
+      "\ttable Product",
+      "\t\tcolumn Key",
+      "\t\t\tdataType: int64",
+      "",
+    ].join("\n");
+    const pf = parseTmdl("t.tmdl", text);
+    expect(pf.issues).toEqual([]);
+    expect(pf.roots.map((r) => [r.kind, r.type, r.children.length])).toEqual([
+      ["flag", "database", 1],
+      ["object", "annotation", 0],
+      ["object", "annotation", 0],
+      ["ref", "table", 0],
+      ["object", "extendedproperty", 0],
+      ["flag", "createorreplace", 1],
     ]);
   });
 });

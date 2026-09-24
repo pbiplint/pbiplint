@@ -19,8 +19,10 @@
  * https://blog.crossjoin.co.uk/2026/05/03/connecting-power-bi-semantic-models-to-data-sources-automatically-with-binding-hints/
  *
  * Any other word declared at the root is a parse issue, a misspelt `table` and a `column` that
- * lost its tab alike. Only the root is checked: a misspelt keyword under a known object, such as
- * `columm Amount` under a table, still parses as a generic child.
+ * lost its tab alike. A property or an expression with no name is one at the root whatever its
+ * word, and so is an annotation or an extended property with lines under it (parse.ts). Only the
+ * root is checked: a misspelt keyword under a known object, such as `columm Amount` under a table,
+ * still parses as a generic child.
  */
 /** The types `model/build.ts` reads into the model. Keep in step with its root switch. */
 const MODELED = [

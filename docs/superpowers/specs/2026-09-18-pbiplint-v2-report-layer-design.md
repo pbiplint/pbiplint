@@ -871,12 +871,13 @@ by its folder, and the rules already read it so.
 Malformed JSON and conflict markers use `PARSE_ISSUE`; legacy formats
 are diagnostics.
 
-Amended 2026-09-24 with Michael (release triage, batch D): a TMDL object
-at the root of a file whose type TMDL does not define, such as a
-misspelt `table`, is also a `PARSE_ISSUE` finding on its declaration
-line, and nothing under it reaches the model, as before. Only the root
-is checked, against a list of the types TMDL defines there that sits
-beside the parser with its Microsoft Learn sources.
+Amended 2026-09-24 with Michael (release triage, batch D): an object at
+the root of a TMDL file whose type TMDL does not declare there (a
+misspelt `table`, or a `column` that lost its tab, for example) is also
+a `PARSE_ISSUE` finding on its declaration line, and nothing under it
+reaches the model, as before. Only the root is checked, against a list
+of the words TMDL allows there that sits beside the parser with its
+sources.
 
 ### 8.3 Native, tier 2
 

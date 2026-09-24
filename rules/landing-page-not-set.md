@@ -93,6 +93,7 @@ A report with a single page opens on that page whatever pages.json says, so a la
 
 - The rule reads pages.json. Without one in the input, or with one that cannot be read, it reports nothing, since nothing then says which page opens. A report with no pages is not reported either.
 - When the active page names a page the report does not have, the finding does not name a page to open on. `OPENING_PAGE_INVALID` reports that page.
+- When the page the report opens on has a page.json that cannot be read, such as one holding merge-conflict markers, the finding names the page by its `name`, as pages.json does, since its display name is in the file pbiplint could not read. The file's own `PARSE_ISSUE` finding names it.
 
 ## Related rules
 

@@ -91,7 +91,8 @@ There is no legitimate case. A bookmark that names a page or visual the report l
 - The rule reports a missing active page whether or not the bookmark's Current page option is on. With it off, Microsoft says the bookmark applies its settings to whichever page is being viewed, but the visuals it captured are still those of the page that is gone.
 - A captured visual is checked against the page it is captured under, and only when that page exists: a missing page is reported in place of the visuals captured under it.
 - Groups, which a bookmark keeps apart from visuals under `visualContainerGroups`, are not checked, nor is the list of visuals the Selected visuals option applies to, `options.targetVisualNames`. Power BI Desktop's saved files write that list in every bookmark, whether or not Selected visuals is on.
-- Pages and visuals are matched by `name`, never by display name, and never by folder name. Microsoft says renaming a `name` is supported, and that Power BI Desktop keeps the original folder names when it saves.
+- Pages and visuals are matched by `name`, never by display name, and never by folder name, except when their own file cannot be read, as the next point says. Microsoft says renaming a `name` is supported, and that Power BI Desktop keeps the original folder names when it saves.
+- A page or a visual whose own file cannot be read, such as a page.json or a visual.json holding merge-conflict markers, is not reported missing, because pbiplint does not guess what a file it could not read says. It is known by its folder name instead, which Microsoft's PBIR documentation says is a page's or a visual's `name` by default, so a bookmark that captures it is not reported. The file's own `PARSE_ISSUE` finding names it.
 - bookmarks.json, which holds the bookmarks' order and groups, is not checked: a name it lists with no bookmark file, or a bookmark file it does not list, is not reported.
 
 ## Related rules
@@ -103,3 +104,4 @@ There is no legitimate case. A bookmark that names a page or visual the report l
 
 - [Create report bookmarks in Power BI, including what a bookmark captures and how to update one](https://learn.microsoft.com/power-bi/create-reports/desktop-bookmarks)
 - [Power BI Desktop project report folder, including the bookmark files and why Desktop removes invalid visuals from a copied bookmark](https://learn.microsoft.com/power-bi/developer/projects/projects-report#common-pbir-errors)
+- [The PBIR naming convention, how pages and visuals get their folder names and what renaming one keeps](https://learn.microsoft.com/power-bi/developer/projects/projects-report#pbir-naming-convention)

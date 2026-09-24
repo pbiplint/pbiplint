@@ -879,6 +879,17 @@ reaches the model, as before. Only the root is checked, against a list
 of the words TMDL allows there that sits beside the parser with its
 sources.
 
+Amended 2026-09-24 with Michael (release triage, batch D, ruling H82):
+while a TMDL file has a parse issue that can take an object out of the
+model, which is any but an orphaned `///` description, a reference to a
+table the model does not have, or to a field missing from a table whose
+own file has such an issue, resolves to `unread` (section 6) and
+`BROKEN_FIELD_REFERENCE` does not report it, since the object could be
+declared in the part pbiplint could not read. A measure found on another
+table, and a column name a measure on the table holds, are still
+reported, since a measure's name is unique in the model and a column
+cannot share a name with a measure on its table.
+
 ### 8.3 Native, tier 2
 
 | Id | Scope | Category | Severity | What it catches |

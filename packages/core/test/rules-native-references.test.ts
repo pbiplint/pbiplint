@@ -510,6 +510,60 @@ describe("NOT_REACHED_FROM_REPORT", () => {
   });
 });
 
+describe("NOT_REACHED_FROM_REPORT and aggregation tables", () => {
+  it("lists neither an aggregation table's columns nor the detail fields they map to", () => {
+    // Report queries name the DirectQuery detail table, and Power BI answers them from the
+    // imported aggregation table where it can, so no visual names Sales by Day.
+    const aggregated = `table Sales
+	column Amount
+		dataType: decimal
+	column 'Order Date'
+		dataType: dateTime
+	column Region
+		dataType: string
+	measure 'Order Count' = COUNTROWS('Sales')
+	partition Sales = m
+		mode: directQuery
+		source = let Source = Sql.Database("finance", "Warehouse") in Source{[Item = "Sales"]}[Data]
+
+table 'Sales by Day'
+	isHidden
+
+	column 'Order Date'
+		dataType: dateTime
+
+		alternateOf
+			baseColumn: Sales.'Order Date'
+
+	column Amount
+		dataType: decimal
+
+		alternateOf
+			summarization: sum
+			baseColumn: Sales.Amount
+
+	column 'Order Count'
+		dataType: int64
+
+		alternateOf
+			summarization: count
+			baseTable: Sales
+
+	partition 'Sales by Day' = m
+		mode: import
+		source = let Source = Sql.Database("finance", "Warehouse") in Source{[Item = "vwSalesByDay"]}[Data]
+`;
+    const r = lint([
+      { path: "definition/tables/Sales.tmdl", text: aggregated },
+      page("p"),
+      bound("p", "v", "cardVisual", [measure("Sales", "Order Count")]),
+    ]);
+    expect(
+      r.findings.filter((f) => f.ruleId === "NOT_REACHED_FROM_REPORT").map((f) => f.objectName),
+    ).toEqual(["'Sales'[Region]"]);
+  });
+});
+
 describe("Desktop's auto date/time hierarchy, on tvw-baseline's model", () => {
   // tvw-baseline is a Desktop-saved model with Auto date/time on: Customer[Join Date] carries a
   // variation whose default hierarchy is on this local date table.

@@ -33,12 +33,14 @@ const nameOf = (n: Node): string =>
  * What the report reaches in the model, to a fixed point (spec section 6). Roots: every resolved
  * report reference (a hierarchy's level columns, and the date column a variation reference goes
  * through), both columns of every relationship except one to an auto date/time table, columns
- * named in RLS and OLS, variation default columns, and the references of the report's own
- * measures. From a reached object: a measure reaches what its DAX references; a calculated column
- * likewise; a column reaches its table, its sort-by column, the columns it groups by (a field
- * parameter's hidden Fields column), and, on a calculated table, the table's expression
- * references; a calculation group table reaches its items' references. The path kept for each
- * object is the shortest, so a finding's detail can say what reached it or why nothing did.
+ * named in RLS and OLS, variation default columns, every column with an `alternateOf` mapping (an
+ * aggregation table's), and the references of the report's own measures. From a reached object: a
+ * measure reaches what its DAX references; a calculated column likewise; a column reaches its
+ * table, its sort-by column, the columns it groups by (a field parameter's hidden Fields column),
+ * the base column or table its `alternateOf` mapping names, and, on a calculated table, the
+ * table's expression references; a calculation group table reaches its items' references. The
+ * path kept for each object is the shortest, so a finding's detail can say what reached it or why
+ * nothing did.
  */
 export function buildReachabilityIndex(
   model: Model,
@@ -100,6 +102,10 @@ export function buildReachabilityIndex(
     for (const c of t.columns)
       for (const v of c.variations)
         if (v.defaultColumn) reach(columnOf(v.defaultColumn.table, v.defaultColumn.column), null);
+  // An aggregation table's columns: report queries name the detail table, and Power BI answers
+  // them from the aggregation table where it can, so no report names these columns. Rooted last,
+  // so a base column the report also reaches keeps the report's path.
+  for (const t of model.tables) for (const c of t.columns) if (c.alternateOf) reach(c, null);
 
   while (queue.length) {
     const n = queue.shift()!;
@@ -117,6 +123,10 @@ export function buildReachabilityIndex(
     if (n.kind === "calculated") reachDax(n, n);
     if (n.sortByColumn !== undefined) reach(columnOf(n.table.name, n.sortByColumn), n);
     for (const g of n.groupByColumns) reach(columnOf(n.table.name, g), n);
+    // The detail column an aggregation column maps to, or the table whose rows it counts.
+    const base = n.alternateOf;
+    if (base?.baseColumn) reach(columnOf(base.baseTable ?? "", base.baseColumn), n);
+    else if (base?.baseTable) reach(tables.get(base.baseTable.toLowerCase()), n);
   }
 
   // A reference owner is not always something a reason can name: a table permission's object is a

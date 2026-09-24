@@ -359,10 +359,12 @@ markers (`<<<<<<<`, `=======`, `>>>>>>>` at line start), produces a
 path and raw text.
 
 Amended 2026-09-23 with Michael (release triage, DQ8): the parser
-knows the newest version Microsoft publishes of each schema family it
-reads in the report's definition folder (Microsoft's
-`fabric/item/report/definition` schemas), and the diagnostic is given
-only for a newer major version.
+knows the newest version Microsoft publishes of the schema family of
+each report file it reads a property from: the definition folder's
+files (Microsoft's `fabric/item/report/definition` schemas),
+definition.pbir (`fabric/item/report/definitionProperties`), and the
+report's `.platform` (`fabric/gitIntegration/platformProperties`). The
+diagnostic is given only for a newer major version.
 Power BI Desktop saves files on minor versions Microsoft has not
 published (visualContainer 2.10.0 to 2.12.0 in Desktop-saved reports),
 which the parser reads as the family's known shape.

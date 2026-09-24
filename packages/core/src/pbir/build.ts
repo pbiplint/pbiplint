@@ -15,9 +15,12 @@ import type {
 } from "./types.js";
 
 /**
- * The newest version Microsoft publishes of each schema family this reader reads (in
- * github.com/microsoft/json-schemas, under fabric/item/report/definition). A file on a newer minor
- * or patch version is read as that family's known shape without a notice: Power BI Desktop saves
+ * The newest version Microsoft publishes (in github.com/microsoft/json-schemas) of the schema
+ * family of every report file this reader reads a property from: the definition folder's files
+ * (fabric/item/report/definition), definition.pbir (fabric/item/report/definitionProperties),
+ * and the report's .platform (fabric/gitIntegration/platformProperties). The project's .pbip is
+ * parsed but nothing is read from it, so its family is not listed. A file on a newer minor or
+ * patch version is read as that family's known shape without a notice: Power BI Desktop saves
  * versions Microsoft has not published, such as visualContainer 2.10.0 to 2.12.0. Only a newer
  * major version, which may change the shape, is a diagnostic, so nobody mistakes what pbiplint
  * could not know for clean. Unknown properties are ignored either way.
@@ -31,6 +34,8 @@ export const KNOWN_SCHEMAS: Readonly<Record<string, string>> = {
   bookmark: "2.1.0",
   reportExtension: "1.0.0",
   visualContainerMobileState: "2.4.0",
+  definitionProperties: "2.0.0",
+  platformProperties: "2.1.0",
 };
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>

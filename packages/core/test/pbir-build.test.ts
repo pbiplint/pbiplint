@@ -575,7 +575,9 @@ describe("the schema notice", () => {
   });
 
   it("knows the newest version Microsoft publishes of each family the reader reads", () => {
-    // github.com/microsoft/json-schemas, fabric/item/report/definition/<family>/, 2026-09-23.
+    // github.com/microsoft/json-schemas, 2026-09-23: fabric/item/report/definition/<family>/,
+    // then fabric/item/report/definitionProperties/ (definition.pbir) and
+    // fabric/gitIntegration/platformProperties/ (the report's .platform).
     expect(KNOWN_SCHEMAS).toEqual({
       report: "3.3.0",
       page: "2.1.0",
@@ -585,7 +587,54 @@ describe("the schema notice", () => {
       bookmark: "2.1.0",
       reportExtension: "1.0.0",
       visualContainerMobileState: "2.4.0",
+      definitionProperties: "2.0.0",
+      platformProperties: "2.1.0",
     });
+  });
+  it("gives the notice for a definition.pbir or a .platform on a newer major, and reads it", () => {
+    const pbir = (version: string) => ({
+      path: "definition.pbir",
+      text: j({
+        $schema: `https://developer.microsoft.com/json-schemas/fabric/item/report/definitionProperties/${version}/schema.json`,
+        version: "4.0",
+        datasetReference: { byPath: { path: "../Demo.SemanticModel" } },
+      }),
+    });
+    const platform = (version: string) => ({
+      path: ".platform",
+      text: j({
+        $schema: `https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/${version}/schema.json`,
+        metadata: { type: "Report", displayName: "Demo" },
+        config: { version: "2.0", logicalId: "00000000-0000-0000-0000-000000000000" },
+      }),
+    });
+    const newerPbir = buildReport([pbir("3.0.0")]);
+    expect(newerPbir.diagnostics).toEqual([
+      {
+        kind: "schema-newer-than-known",
+        path: "definition.pbir",
+        message:
+          "definition.pbir uses definitionProperties schema 3.0.0, a newer major version than the 2.0.0 this version of pbiplint knows; properties it does not know are ignored",
+      },
+    ]);
+    expect(newerPbir.report.datasetReference).toEqual({
+      kind: "byPath",
+      path: "../Demo.SemanticModel",
+    });
+    const newerPlatform = buildReport([platform("3.0.0")]);
+    expect(newerPlatform.diagnostics).toEqual([
+      {
+        kind: "schema-newer-than-known",
+        path: ".platform",
+        message:
+          ".platform uses platformProperties schema 3.0.0, a newer major version than the 2.1.0 this version of pbiplint knows; properties it does not know are ignored",
+      },
+    ]);
+    expect(newerPlatform.report.displayName).toBe("Demo");
+    // The known major raises none: Desktop saves definitionProperties 2.0.0 and
+    // platformProperties 2.0.0, and a newer minor is read as the family's known shape.
+    for (const file of [pbir("2.0.0"), pbir("2.1.0"), platform("2.0.0"), platform("2.2.0")])
+      expect(buildReport([file]).diagnostics).toEqual([]);
   });
   it("reads a newer minor version within the known major without a notice", () => {
     // Desktop saves visualContainer 2.10.0 to 2.12.0, which Microsoft has not published.

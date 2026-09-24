@@ -28,8 +28,12 @@ export const REDUCE_VISUALS_ON_PAGE = inspectorRule(
 
 /**
  * Counts the entries in the projections of the visual's roles, one per field in a well, as the
- * source's `count($..projections[*])` does. Deviation: only the roles' projections, not every
- * `projections` array anywhere in the file.
+ * source's `count($..projections[*])` counts them there.
+ *
+ * Deviation: pbiplint counts the fields bound to the visual's roles once, where PBI Inspector counts every projections array in the file and can count a field twice.
+ *
+ * No oracle fixture shows the difference, so no expectation file records the deviation;
+ * rules-report-counts.test.ts pins pbiplint's count.
  */
 export const REDUCE_OBJECTS_WITHIN_VISUALS = inspectorRule(
   "REDUCE_OBJECTS_WITHIN_VISUALS",

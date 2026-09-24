@@ -141,4 +141,10 @@ export { allVisuals, isHiddenPage, reportFinding, visiblePages } from "./rules/r
 export * from "./rules/types.js";
 export { parseTmdl } from "./tmdl/parse.js";
 export { unquoteName, unquoteValue } from "./tmdl/quote.js";
-export type { ParsedFile, ParseIssue, TmdlNode, TmdlNodeKind } from "./tmdl/types.js";
+export type {
+  ParsedFile,
+  ParseIssue,
+  TmdlNode,
+  TmdlNodeKind,
+  TmdlParseIssue,
+} from "./tmdl/types.js";

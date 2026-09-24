@@ -1,6 +1,6 @@
 import { unquoteName, unquoteValue } from "./quote.js";
 import { isRootType } from "./root-types.js";
-import type { ParsedFile, ParseIssue, TmdlNode } from "./types.js";
+import type { ParsedFile, TmdlNode, TmdlParseIssue } from "./types.js";
 
 const HEADER = /^([A-Za-z_]\w*)(?:\s+(.+))?$/;
 const PROP = /^([A-Za-z_]\w*):(?:\s(.*))?$/;
@@ -43,14 +43,15 @@ function splitHeader(
  * Generic TMDL tree parser. Unknown object types and properties parse as generic nodes,
  * so a construct this code has never seen never aborts a run. An object at the root of a file
  * whose type TMDL does not declare there (root-types.ts) is also a parse issue; nested ones are
- * not checked.
+ * not checked. Each issue says whether it can take an object out of the model
+ * (`TmdlParseIssue.canDropObjects`); every one can except a description nothing claims.
  */
 export function parseTmdl(file: string, text: string): ParsedFile {
   // Power BI Desktop writes TMDL as UTF-8 with a BOM; it is not part of the first line.
   const body = text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
   const lines = body.replace(/\r\n?/g, "\n").split("\n");
   const roots: TmdlNode[] = [];
-  const issues: ParseIssue[] = [];
+  const issues: TmdlParseIssue[] = [];
   const stack: TmdlNode[] = [];
   /**
    * The `///` lines seen since the last declaration, and the line and raw text of the first of
@@ -58,13 +59,17 @@ export function parseTmdl(file: string, text: string): ParsedFile {
    * bindings: there is no line number to hold when no description is pending.
    */
   let pendingDescription: { line: number; text: string; lines: string[] } | null = null;
-  /** A pending description that nothing will claim: report it and drop it. */
+  /**
+   * A pending description that nothing will claim: report it and drop it. The declaration below
+   * the blank line is still read, so the issue loses a description and no object.
+   */
   const orphanDescription = (pending: { line: number; text: string }): void => {
     issues.push({
       file,
       line: pending.line,
       text: pending.text,
       reason: "description is not followed by a declaration",
+      canDropObjects: false,
     });
     pendingDescription = null;
   };
@@ -89,12 +94,14 @@ export function parseTmdl(file: string, text: string): ParsedFile {
       i++;
       continue;
     }
+    // The line is skipped, whatever it declared.
     if (/^\s/.test(content)) {
       issues.push({
         file,
         line: lineNo,
         text: raw,
         reason: "space indentation (TMDL requires tabs)",
+        canDropObjects: true,
       });
       i++;
       continue;
@@ -135,7 +142,14 @@ export function parseTmdl(file: string, text: string): ParsedFile {
       }
       if (j >= lines.length)
         // "code fence", the words rules/parse-issue.md uses, so the finding and the page agree.
-        issues.push({ file, line: lineNo, text: raw, reason: "unterminated code fence" });
+        // The rest of the file is read as this expression, so every declaration below is lost.
+        issues.push({
+          file,
+          line: lineNo,
+          text: raw,
+          reason: "unterminated code fence",
+          canDropObjects: true,
+        });
       const boundary = j < lines.length ? leadingWs(lines[j]!) : 0;
       i = j;
       return out.map((l) => l.slice(Math.min(boundary, leadingWs(l)))).join("\n");
@@ -157,7 +171,14 @@ export function parseTmdl(file: string, text: string): ParsedFile {
     } else {
       const h = splitHeader(content);
       if (!h) {
-        issues.push({ file, line: lineNo, text: raw, reason: "unrecognized line" });
+        // Skipped, and it may have been a declaration the parser could not make out.
+        issues.push({
+          file,
+          line: lineNo,
+          text: raw,
+          reason: "unrecognized line",
+          canDropObjects: true,
+        });
         i++;
         continue;
       }
@@ -182,6 +203,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
           line: lineNo,
           text: raw,
           reason: `"${h.type}" is not a type TMDL declares at the root of a file`,
+          canDropObjects: true,
         });
     }
 
@@ -191,8 +213,15 @@ export function parseTmdl(file: string, text: string): ParsedFile {
     }
     stack.length = indent;
     const parent = indent > 0 ? stack[indent - 1] : undefined;
+    // Skipped with everything under it, which has no parent either.
     if (indent > 0 && !parent) {
-      issues.push({ file, line: lineNo, text: raw, reason: "orphan indentation" });
+      issues.push({
+        file,
+        line: lineNo,
+        text: raw,
+        reason: "orphan indentation",
+        canDropObjects: true,
+      });
       i++;
       continue;
     }

@@ -26,9 +26,21 @@ export interface ParseIssue {
   reason: string;
 }
 
+/** A line of a TMDL file the parser could not use. */
+export interface TmdlParseIssue extends ParseIssue {
+  /**
+   * Whether the issue can take an object out of the model: a line the parser skipped, which may
+   * have declared one, or a line it read but the model does not hold, with everything under it.
+   * False only for a `///` description that nothing claims, which loses the description and no
+   * declaration. Set where the parser pushes the issue, so a rule that must not report what the
+   * file may declare (BROKEN_FIELD_REFERENCE) reads this and never the reason's words.
+   */
+  canDropObjects: boolean;
+}
+
 export interface ParsedFile {
   file: string;
   roots: TmdlNode[];
-  issues: ParseIssue[];
+  issues: TmdlParseIssue[];
   lineCount: number;
 }

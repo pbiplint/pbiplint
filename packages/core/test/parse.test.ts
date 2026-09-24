@@ -62,6 +62,7 @@ describe("parseTmdl", () => {
         line: 2,
         text: "\t/// Described",
         reason: "description is not followed by a declaration",
+        canDropObjects: false,
       },
     ]);
   });
@@ -79,6 +80,7 @@ describe("parseTmdl", () => {
         line: 2,
         text: "\t/// One",
         reason: "description is not followed by a declaration",
+        canDropObjects: false,
       },
     ]);
   });
@@ -89,6 +91,7 @@ describe("parseTmdl", () => {
       line: 2,
       text: "\t/// Described",
       reason: "description is not followed by a declaration",
+      canDropObjects: false,
     };
     expect(parseTmdl("t.tmdl", "table T\n\t/// Described\n").issues).toEqual([orphan]);
     // The same file without the final newline: nothing follows the description there either.
@@ -204,6 +207,32 @@ describe("parseTmdl", () => {
     ]);
   });
 
+  it("marks each issue by whether it can take an object out of the model, which only an orphaned description cannot", () => {
+    // A rule that reports a missing object reads the mark, never the reason's words.
+    const pf = parseTmdl(
+      "bad.tmdl",
+      [
+        "table T",
+        "\t/// Described",
+        "",
+        "    column Spaced",
+        "\t'Unit Price'",
+        "\t\t\t\tisHidden",
+        "tabel Sales",
+        "\tmeasure M = ```",
+        "\t\tx",
+      ].join("\n"),
+    );
+    expect(pf.issues.map((i) => [i.line, i.reason, i.canDropObjects])).toEqual([
+      [2, "description is not followed by a declaration", false],
+      [4, "space indentation (TMDL requires tabs)", true],
+      [5, "unrecognized line", true],
+      [6, "orphan indentation", true],
+      [7, '"tabel" is not a type TMDL declares at the root of a file', true],
+      [8, "unterminated code fence", true],
+    ]);
+  });
+
   it("reports orphan indentation", () => {
     const pf = parseTmdl("bad.tmdl", "\t\tcolumn C\n");
     expect(pf.issues[0]).toMatchObject({ line: 1, reason: "orphan indentation" });
@@ -233,6 +262,7 @@ describe("root object types", () => {
         line: 5,
         text: "tabel Sales",
         reason: '"tabel" is not a type TMDL declares at the root of a file',
+        canDropObjects: true,
       },
     ]);
   });

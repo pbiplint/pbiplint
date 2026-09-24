@@ -945,6 +945,33 @@ describe("buildFacts", () => {
       value: "unknown",
       detail: "a page with a mobile layout could not be read",
     });
+    const mobileFact = (...extra: { path: string; text: string }[]) => {
+      const { report } = buildReport([page("p2", "Detail"), visual("p2", "b", "card"), ...extra]);
+      return buildFacts({ report }, buildIndexes({ report }), ALL).find(
+        (f) => f.label === "Mobile layouts",
+      );
+    };
+    const strayMobile = { path: "definition/pages/p1/visuals/a/mobile.json", text: j({}) };
+    // An unread visual.json alone in that folder, with no page.json in the input, is enough.
+    expect(
+      mobileFact({ path: "definition/pages/p1/visuals/a/visual.json", text: "{" }, strayMobile),
+    ).toEqual({
+      layer: "report",
+      label: "Mobile layouts",
+      value: "unknown",
+      detail: "a page with a mobile layout could not be read",
+    });
+    // A stray mobile.json in a folder with no page.json and no visual.json, where nothing failed
+    // to read: no unread file could define a page there, so none is true.
+    expect(mobileFact(strayMobile)).toEqual({
+      layer: "report",
+      label: "Mobile layouts",
+      value: "none",
+    });
+    // Nor does a file that could not be read in another page's folder make it unknown.
+    expect(
+      mobileFact(strayMobile, { path: "definition/pages/p3/visuals/c/visual.json", text: "{" }),
+    ).toEqual({ layer: "report", label: "Mobile layouts", value: "none" });
   });
   it("names an opening page whose page.json could not be read as pages.json names it, and never calls it missing", () => {
     const opensOn = (header: Record<string, unknown>) => {

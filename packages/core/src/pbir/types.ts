@@ -146,9 +146,10 @@ export interface Page {
    */
   unreadVisuals: string[];
   /**
-   * Whether a mobile.json that was read sits in this page's folder, under a visual's folder, which
-   * gives the page a mobile layout (decision 10). Read from the mobile.json files themselves, so a
-   * mobile layout whose visual.json could not be read still counts.
+   * Whether a mobile.json that was read sits in this page's folder, under a visual's folder: a
+   * visual's mobile.json marks its mobile layout, and the page has one when any mobile.json in its
+   * folder was read. Read from the mobile.json files themselves, so a mobile layout whose
+   * visual.json could not be read still counts.
    */
   hasMobileLayout: boolean;
   annotations: Record<string, string>;

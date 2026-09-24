@@ -1,4 +1,4 @@
-import { holdsFieldReferences, isMobileFile, isVisualFile } from "../pbir/build.js";
+import { holdsFieldReferences, isMobileFile, isVisualFile, pageFolderOf } from "../pbir/build.js";
 import { lineOfPointer } from "../pbir/json.js";
 import {
   bookmarkLabel,
@@ -162,12 +162,25 @@ export function customVisualUseUnknown(r: Report): boolean {
 export const mobileFileUnread = (r: Report): boolean => r.unreadDefinitionFiles.some(isMobileFile);
 
 /**
- * Whether a mobile.json was read. Every one that was read marks the page in its folder
- * (`Page.hasMobileLayout`), unless no page object stands for that folder, because neither its
- * page.json nor any visual.json in it could be read.
+ * Whether a mobile.json that was read sits in a page folder no page object stands for, while that
+ * folder holds a page.json or a visual.json that could not be read. Every other mobile.json that
+ * was read marks the page in its folder (`Page.hasMobileLayout`); this one's page is not counted,
+ * and the unread file may be what defines it, so the Mobile layouts fact cannot say none. A stray
+ * mobile.json in a folder where nothing failed to read marks no page, and none stays: no file
+ * pbiplint could not read could define a page there.
  */
-export const mobileFileRead = (r: Report): boolean =>
-  r.files.some((f) => isMobileFile(f) && !r.unreadDefinitionFiles.includes(f));
+export function mobilePageUnread(r: Report): boolean {
+  const placed = new Set(r.pages.map((p) => pageFolderOf(p.file)));
+  const unread = new Set([
+    ...r.unreadPages,
+    ...r.unreadDefinitionFiles.filter(isVisualFile).map(pageFolderOf),
+  ]);
+  return r.files.some((f) => {
+    if (!isMobileFile(f) || r.unreadDefinitionFiles.includes(f)) return false;
+    const folder = pageFolderOf(f);
+    return !placed.has(folder) && unread.has(folder);
+  });
+}
 
 export const allVisuals = (r: Report): Visual[] => r.pages.flatMap((p) => p.visuals);
 export const isHiddenPage = (p: Page): boolean => p.visibility === "HiddenInViewMode";

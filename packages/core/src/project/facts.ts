@@ -13,8 +13,8 @@ import {
   isSlicer,
   isTooltipPage,
   landingPageNotSet,
-  mobileFileRead,
   mobileFileUnread,
+  mobilePageUnread,
   openingPage,
   openingPageInvalid,
   reportMeasuresToMove,
@@ -221,14 +221,14 @@ function reportFacts(project: Project, report: Report, known: ReadonlySet<string
   // Mobile layouts and schema versions. A page counts by the mobile.json files read in its folder,
   // so a mobile layout pbiplint read counts even when its visual.json could not be read. None reads
   // unknown while a mobile.json could not be read, since the layout it marks is not counted, or
-  // while a mobile.json that was read has no page to count, since neither its page.json nor any
-  // visual.json beside it could be read. A count above none is a lower bound and stays.
+  // while a mobile.json that was read has no page to count and a page.json or a visual.json in its
+  // folder could not be read (`mobilePageUnread`). A count above none is a lower bound and stays.
   const mobilePages = pages.filter((p) => p.hasMobileLayout).length;
   const mobileUnknown = mobilePages
     ? undefined
     : mobileFileUnread(report)
       ? "a mobile.json could not be read"
-      : mobileFileRead(report)
+      : mobilePageUnread(report)
         ? "a page with a mobile layout could not be read"
         : undefined;
   facts.push(

@@ -641,10 +641,11 @@ a page by the mobile.json files read in its folder, so a mobile layout
 pbiplint read counts even when its visual.json could not be read
 (ruling H75). While a mobile.json could not be read, it reads
 `unknown`, with `a mobile.json could not be read`, in place of `none`,
-and while a mobile.json that was read has no page to count, since
-neither the page.json nor any visual.json in its folder could be read,
-it reads `unknown`, with `a page with a mobile layout could not be
-read`. A count that is not none, such
+and while a mobile.json that was read has no page to count and a
+page.json or a visual.json in its folder could not be read, it reads
+`unknown`, with `a page with a mobile layout could not be read`. A stray
+mobile.json in a folder where nothing failed to read marks no page, and
+`none` stays (ruling H76). A count that is not none, such
 as Pages, the Visuals count and its hidden count, or `1 of 3 pages`, is
 a lower bound and stays as it is. Opens on
 names a landing or active page whose page.json could not be read by

@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://pbiplint.com/schema/pbiplint.config.schema.json",
   "title": "pbiplint configuration",
-  "description": "Rules on or off, severity overrides, and the fail threshold. Saved as pbiplint.config.json next to the project or anywhere above it.",
+  "description": "Rules on or off, severity overrides, rule options, and the fail threshold. Saved as pbiplint.config.json next to the project or anywhere above it.",
   "type": "object",
   "additionalProperties": false,
   "properties": {

@@ -90,6 +90,9 @@ describe("resolveConfig", () => {
     expect(() => resolveConfig({ failOn: "sometimes" })).toThrow(/failOn/);
     expect(() => resolveConfig({ rulez: {} })).toThrow(/unknown key "rulez"/);
     expect(() => resolveConfig([])).toThrow(ConfigError);
+    expect(() => resolveConfig({ rules: ["A"] })).toThrow(
+      'pbiplint.config.json: "rules" must be an object of rule id to "off", "info", "warning", "error", or an object with a severity and options',
+    );
   });
   it("accepts a string $schema so editors can validate the file", () => {
     expect(() =>

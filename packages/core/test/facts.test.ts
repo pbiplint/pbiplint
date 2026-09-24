@@ -294,9 +294,14 @@ describe("buildFacts", () => {
       "}",
       ">>>>>>> theirs",
     ].join("\n");
+    const notAnObject = [...pagesOnly, { path: "definition/report.json", text: "[]" }];
+    expect(buildReport(notAnObject).report.issues.map((i) => [i.file, i.line, i.reason])).toEqual([
+      ["definition/report.json", 1, "not a JSON object (the file holds an array)"],
+    ]);
     for (const files of [
       pagesOnly,
       [...pagesOnly, { path: "definition/report.json", text: conflicted }],
+      notAnObject,
     ]) {
       const unread = buildReport(files).report;
       expect(
@@ -365,6 +370,18 @@ describe("buildFacts", () => {
     expect(conflicted.issues.length).toBeGreaterThan(0);
     expect(
       buildFacts({ report: conflicted }, buildIndexes({ report: conflicted }), ALL)[0],
+    ).toEqual(unknown);
+    const notAnObject = buildReport([
+      { path: "definition/report.json", text: j({}) },
+      { path: "definition/pages/pages.json", text: "[]" },
+      page("a", "Alpha"),
+      page("b", "Beta"),
+    ]).report;
+    expect(notAnObject.issues.map((i) => [i.file, i.line, i.reason])).toEqual([
+      ["definition/pages/pages.json", 1, "not a JSON object (the file holds an array)"],
+    ]);
+    expect(
+      buildFacts({ report: notAnObject }, buildIndexes({ report: notAnObject }), ALL)[0],
     ).toEqual(unknown);
   });
   it("links a fact to the first of its candidate rules the run knows", () => {

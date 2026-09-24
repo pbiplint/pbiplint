@@ -74,5 +74,6 @@ describe("pairingDecision", () => {
       datasetReference('{"datasetReference":{"byPath":{"path":"../M.SemanticModel"}}}'),
     ).toEqual({ kind: "byPath", path: "../M.SemanticModel" });
     expect(datasetReference("not json")).toEqual({ kind: "none" });
+    expect(datasetReference("[]")).toEqual({ kind: "none" });
   });
 });

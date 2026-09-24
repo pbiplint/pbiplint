@@ -520,6 +520,36 @@ describe("lint over a project", () => {
       ["report", "definition/pages/p/page.json", 3, "merge conflict marker: <<<<<<< HEAD"],
     ]);
   });
+  it("reports a page.json or visual.json that is not a JSON object, and reads the rest", () => {
+    const r = lint([
+      { path: "definition/pages/p/page.json", text: '\n"Sales overview"\n' },
+      {
+        path: "definition/pages/p/visuals/v/visual.json",
+        text: j({ name: "v", position: {}, visual: { visualType: "card" } }),
+      },
+      { path: "definition/pages/p/visuals/w/visual.json", text: "null" },
+    ]);
+    expect(
+      r.findings
+        .filter((f) => f.ruleId === "PARSE_ISSUE")
+        .map((f) => [f.location?.file, f.location?.line, f.detail]),
+    ).toEqual([
+      [
+        "definition/pages/p/page.json",
+        2,
+        'not a JSON object (the file holds a string): "Sales overview"',
+      ],
+      [
+        "definition/pages/p/visuals/w/visual.json",
+        1,
+        "not a JSON object (the file holds null): null",
+      ],
+    ]);
+    // As for invalid JSON, the visual that reads still sits under a stub page named by its folder.
+    expect(
+      r.project.report!.pages.map((p) => [p.id, p.displayName, p.visuals.map((v) => v.id)]),
+    ).toEqual([["p", "p", ["v"]]]);
+  });
   it("tags a parse-issue group that spans both layers as a project group", () => {
     const r = lint([
       { path: "definition/tables/Sales.tmdl", text: "table Sales\n  column Amount\n" },

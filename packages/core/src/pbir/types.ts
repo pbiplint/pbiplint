@@ -210,8 +210,8 @@ export interface Report {
   /**
    * What became of definition/reportExtensions.json: `absent` when the input holds none, `read`
    * when it parsed to an object and its measures are in `measures`, `unread` when it did not (a
-   * merge conflict or invalid JSON, which PARSE_ISSUE reports), so `measures` says nothing of what
-   * the file defines.
+   * merge conflict, invalid JSON, or a document that is not an object, which PARSE_ISSUE reports),
+   * so `measures` says nothing of what the file defines.
    */
   extensions: "absent" | "read" | "unread";
   datasetReference: DatasetReference;

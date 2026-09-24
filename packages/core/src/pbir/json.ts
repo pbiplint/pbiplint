@@ -1,7 +1,7 @@
 import type { ParseIssue } from "../tmdl/types.js";
 
 export interface JsonRead {
-  /** The parsed document, or undefined when the text could not be read. */
+  /** The parsed document, a JSON object, or undefined when the text could not be read as one. */
   json: unknown;
   issues: ParseIssue[];
   /** The document's `$schema` URL, when it has one. */
@@ -12,6 +12,18 @@ export interface JsonRead {
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
+
+/** What a parsed document holds when it is not an object, as a parse issue names it. */
+const kindOf = (v: unknown): string =>
+  v === null
+    ? "null"
+    : Array.isArray(v)
+      ? "an array"
+      : typeof v === "string"
+        ? "a string"
+        : typeof v === "number"
+          ? "a number"
+          : "a boolean";
 
 /** A git conflict marker at the start of a line: the file was saved mid-merge. */
 const CONFLICT_MARKER = /^(?:<{7}|={7}|>{7})(?:\s|$)/;
@@ -69,9 +81,11 @@ function lineOfParseError(body: string, message: string): number {
 }
 
 /**
- * Reads one PBIR JSON file tolerantly. Conflict markers and invalid JSON become parse issues with
- * a line, in the same shape the TMDL parser reports, so PARSE_ISSUE lists them beside everything
- * else; the document is then undefined and the caller reads nothing from it.
+ * Reads one PBIR JSON file tolerantly. Conflict markers, invalid JSON, and a document that parses
+ * to something other than an object become parse issues with a line, in the same shape the TMDL
+ * parser reports, so PARSE_ISSUE lists them beside everything else; the document is then undefined
+ * and the caller reads nothing from it. An object is the only document a report file can hold:
+ * Microsoft's schema for each one, definition.pbir and .platform included, has an object root.
  */
 export function readJson(file: string, text: string): JsonRead {
   // Desktop writes JSON with a BOM at times; it is not part of the document.
@@ -83,10 +97,9 @@ export function readJson(file: string, text: string): JsonRead {
       : [],
   );
   if (issues.length > 0) return { json: undefined, issues };
+  let json: unknown;
   try {
-    const json: unknown = JSON.parse(body);
-    const schema = isRecord(json) && typeof json.$schema === "string" ? json.$schema : undefined;
-    return { json, issues, schema, schemaVersion: schemaVersionOf(schema) };
+    json = JSON.parse(body);
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     const line = lineOfParseError(body, message);
@@ -98,6 +111,24 @@ export function readJson(file: string, text: string): JsonRead {
       issues: [{ file, line, text: lines[line - 1] ?? "", reason: `not valid JSON (${flat})` }],
     };
   }
+  if (!isRecord(json)) {
+    // The document parsed, so only JSON whitespace sits before it: its first line is the first
+    // one holding anything else.
+    const start = lines.findIndex((line) => /\S/.test(line));
+    return {
+      json: undefined,
+      issues: [
+        {
+          file,
+          line: start + 1,
+          text: lines[start] ?? "",
+          reason: `not a JSON object (the file holds ${kindOf(json)})`,
+        },
+      ],
+    };
+  }
+  const schema = typeof json.$schema === "string" ? json.$schema : undefined;
+  return { json, issues, schema, schemaVersion: schemaVersionOf(schema) };
 }
 
 const SCHEMA_TAIL = /\/([^/]+)\/(\d+\.\d+\.\d+)\/schema\.json$/;

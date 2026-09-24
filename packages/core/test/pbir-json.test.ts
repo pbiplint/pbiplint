@@ -56,6 +56,48 @@ describe("readJson", () => {
     expect(r.issues[0]!.reason).toMatch(/^not valid JSON/);
     expect(r.issues[0]!.line).toBe(3);
   });
+  it("reports a document that is not a JSON object, saying what the file holds", () => {
+    // Microsoft's schema gives every report file an object root, so nothing else is read from one.
+    const kinds: [string, string][] = [
+      ["[]", "an array"],
+      ['"Sales overview"', "a string"],
+      ["720", "a number"],
+      ["true", "a boolean"],
+      ["false", "a boolean"],
+      ["null", "null"],
+    ];
+    for (const [text, kind] of kinds) {
+      const r = readJson("definition/report.json", text);
+      expect(r.json).toBeUndefined();
+      expect(r.schema).toBeUndefined();
+      expect(r.issues).toEqual([
+        {
+          file: "definition/report.json",
+          line: 1,
+          text,
+          reason: `not a JSON object (the file holds ${kind})`,
+        },
+      ]);
+    }
+  });
+  it("gives the line a document that is not an object starts on, past blank lines and a BOM", () => {
+    expect(readJson("x.json", '\n[\n  "a"\n]\n').issues).toEqual([
+      { file: "x.json", line: 2, text: "[", reason: "not a JSON object (the file holds an array)" },
+    ]);
+    expect(readJson("x.json", "\ufeff  \r\n\t null\r\n").issues).toEqual([
+      {
+        file: "x.json",
+        line: 2,
+        text: "\t null",
+        reason: "not a JSON object (the file holds null)",
+      },
+    ]);
+  });
+  it("still reads an object with no issue, wherever it starts", () => {
+    const r = readJson("x.json", '\ufeff\n\n  { "a": 1 }\n');
+    expect(r.issues).toEqual([]);
+    expect(r.json).toEqual({ a: 1 });
+  });
   it("does not read the document's own text as the engine's line or offset", () => {
     // V8 quotes a slice of the broken document in its message, so a document that says "line 5"
     // or "position 400" of its own is quoted back and must not be mistaken for the engine saying

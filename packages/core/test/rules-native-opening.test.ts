@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { lint, type LintResult } from "../src/engine/lint.js";
 import {
   FILTERS_PANE_STATE,
   LANDING_PAGE_NOT_SET,
@@ -11,6 +12,12 @@ const pages = (header: Record<string, unknown>) => [
   page("p"),
   page("h", { visibility: "HiddenInViewMode" }),
 ];
+
+/** The PARSE_ISSUE findings of a run, as the file, the line, and the detail. */
+const parseIssues = (r: LintResult) =>
+  r.findings
+    .filter((f) => f.ruleId === "PARSE_ISSUE")
+    .map((f) => [f.location?.file, f.location?.line, f.detail]);
 
 /** A report-level finding as the opening rules build it: no `object`, so config switches it off. */
 const onReport = (file: string, line: number, detail: string) => ({
@@ -88,6 +95,18 @@ describe("LANDING_PAGE_NOT_SET", () => {
         page("b"),
       ]),
     ).toEqual([]);
+  });
+  it("says nothing when pages.json holds no object, and PARSE_ISSUE names the file", () => {
+    const r = lint([
+      { path: "definition/report.json", text: j({}) },
+      { path: "definition/pages/pages.json", text: "[]" },
+      page("a"),
+      page("b"),
+    ]);
+    expect(r.findings.filter((f) => f.ruleId === "LANDING_PAGE_NOT_SET")).toEqual([]);
+    expect(parseIssues(r)).toEqual([
+      ["definition/pages/pages.json", 1, "not a JSON object (the file holds an array): []"],
+    ]);
   });
   it("never names a page the report does not have", () => {
     expect(reportFindings(LANDING_PAGE_NOT_SET, pages({ activePageName: "gone" }))).toEqual([
@@ -212,6 +231,20 @@ describe("FILTERS_PANE_STATE", () => {
           { expect: policy },
         ),
       ).toEqual([]);
+    }
+  });
+  it("says nothing under either policy when report.json holds no object, and PARSE_ISSUE names the file", () => {
+    const files = [
+      { path: "definition/pages/pages.json", text: j({ pageOrder: ["p"], activePageName: "p" }) },
+      page("p"),
+      { path: "definition/report.json", text: "[]" },
+    ];
+    for (const policy of ["open", "closed"]) {
+      const r = lint(files, { config: { rules: { FILTERS_PANE_STATE: { expect: policy } } } });
+      expect(r.findings.filter((f) => f.ruleId === "FILTERS_PANE_STATE")).toEqual([]);
+      expect(parseIssues(r)).toEqual([
+        ["definition/report.json", 1, "not a JSON object (the file holds an array): []"],
+      ]);
     }
   });
   it("claims a saved state only when report.json records one", () => {

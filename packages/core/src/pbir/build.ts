@@ -437,6 +437,7 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
       report.datasetReference = datasetReferenceOf(json);
       continue;
     }
+    // readJson gives an object or nothing, so this only narrows the type.
     if (!isRecord(json)) continue;
     let m: RegExpExecArray | null;
     if (f.path.endsWith(".platform")) {

@@ -17,17 +17,23 @@ export const REDUCE_VISUALS_ON_PAGE = inspectorRule(
   (report, ctx) =>
     report.pages.flatMap((p) => {
       // A visual group container is counted, as the source counts everything with no excluded type.
+      // A visual is left out by its own isHidden only, so one hidden through its group is counted;
+      // the detail does not call the count visible for that reason.
       const n = p.visuals.filter((v) => !v.isHidden && !NOT_COUNTED.has(v.type)).length;
       return n > max(ctx)
-        ? [reportFinding.page(p, undefined, `${n} visible visuals, more than ${max(ctx)}`)]
+        ? [reportFinding.page(p, undefined, `${n} visuals, more than ${max(ctx)}`)]
         : [];
     }),
 );
 
 /**
  * Counts the entries in the projections of the visual's roles, one per field in a well, as the
- * source's `count($..projections[*])` does. Deviation: only the roles' projections, not every
- * `projections` array anywhere in the file.
+ * source's `count($..projections[*])` counts them there.
+ *
+ * Deviation: pbiplint counts the fields bound to the visual's roles once, where PBI Inspector counts every projections array in the file and can count a field twice.
+ *
+ * No oracle fixture shows the difference, so no expectation file records the deviation;
+ * rules-report-counts.test.ts pins pbiplint's count.
  */
 export const REDUCE_OBJECTS_WITHIN_VISUALS = inspectorRule(
   "REDUCE_OBJECTS_WITHIN_VISUALS",

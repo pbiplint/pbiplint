@@ -52,6 +52,54 @@ describe("DEFAULT_PAGE_NAME", () => {
       '"Overview (copy)" is named as a copy',
     ]);
   });
+  it("knows the names Desktop gives a new page in other languages, as saved files show them", () => {
+    const files = [
+      page("a", { displayName: "Seite 1" }),
+      page("b", { displayName: "Página 1" }),
+      page("c", { displayName: "Pagina 12" }),
+      page("d", { displayName: "ページ 1" }),
+    ];
+    expect(reportFindings(DEFAULT_PAGE_NAME, files).map((f) => f.detail)).toEqual([
+      '"Seite 1" is the name Power BI Desktop gives a new page',
+      '"Página 1" is the name Power BI Desktop gives a new page',
+      '"Pagina 12" is the name Power BI Desktop gives a new page',
+      '"ページ 1" is the name Power BI Desktop gives a new page',
+    ]);
+  });
+  it("knows the names Desktop gives a duplicated page in other languages, nesting included", () => {
+    const files = [
+      page("a", { displayName: 'Duplikat von "Umsatz"' }),
+      page("b", { displayName: 'Duplikat von "Duplikat von "C-HPU Ziele""' }),
+      page("c", { displayName: "Duplicado de Resumen PPTO" }),
+      page("d", { displayName: "Doublon de ForeCasting" }),
+      page("e", { displayName: "Duplicata de Configuração Camara" }),
+      page("f", { displayName: "Duplikat av Review" }),
+    ];
+    const detail = "is the name Power BI Desktop gives a duplicated page";
+    expect(reportFindings(DEFAULT_PAGE_NAME, files).map((f) => f.detail)).toEqual([
+      `"Duplikat von "Umsatz"" ${detail}`,
+      `"Duplikat von "Duplikat von "C-HPU Ziele""" ${detail}`,
+      `"Duplicado de Resumen PPTO" ${detail}`,
+      `"Doublon de ForeCasting" ${detail}`,
+      `"Duplicata de Configuração Camara" ${detail}`,
+      `"Duplikat av Review" ${detail}`,
+    ]);
+  });
+  it("matches the localised forms exactly, so a near miss stays quiet", () => {
+    const files = [
+      page("a", { displayName: "Seite 01" }),
+      page("b", { displayName: "Seite 0" }),
+      page("c", { displayName: "Duplikat von Sales" }),
+      page("d", { displayName: "Pagina" }),
+      page("e", { displayName: "Seite 1 Umsatz" }),
+      page("f", { displayName: "seite 1" }),
+      // Japanese Desktop separates the number with an ASCII space, not an ideographic one.
+      page("g", { displayName: "ページ\u30001" }),
+      page("h", { displayName: "Duplikat von " }),
+      page("i", { displayName: "Doublon de" }),
+    ];
+    expect(reportObjectIds(DEFAULT_PAGE_NAME, files)).toEqual([]);
+  });
   it("reads only a display name page.json records, not the folder id it falls back to", () => {
     const files = [
       // A stub page: its visual is there, its page.json is not.

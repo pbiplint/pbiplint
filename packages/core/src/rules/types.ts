@@ -1,5 +1,6 @@
 import type { Indexes } from "../index/build.js";
 import type { SourceLocation } from "../model/types.js";
+import type { Report } from "../pbir/types.js";
 import type { Project } from "../project/types.js";
 
 export type Category =
@@ -132,6 +133,13 @@ export interface Rule {
   layer: Layer;
   /** The layers the rule cannot run without; it is skipped with `noModel` or `noReport` when one is absent. */
   needs: readonly LayerName[];
+  /**
+   * The unread report files that stop the rule: a predicate over the report, one of those in
+   * report-helpers.ts such as `fieldFileUnread`, that holds when a file the rule's findings depend
+   * on could not be read. The engine then skips the rule with the reason `reportFileUnread`, so it
+   * reports nothing and the skipped line says why.
+   */
+  skipWhenUnread?: (report: Report) => boolean;
   /** Options the config may set for this rule; an option the rule does not declare is a ConfigError. */
   options?: readonly RuleOption[];
   /** What the rule checks, one paragraph from the rule page in pbiplint's own words. */

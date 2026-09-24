@@ -99,6 +99,7 @@ When readers are meant to start on a hidden page, make it the landing page: Powe
 - When a landing page is set, the active page is not checked, since the landing page overrides it.
 - When pages.json names neither a landing page nor an active page, the report opens on the first page in its page order, which exists by definition, so nothing is reported. Nothing is reported when that first page is hidden either, because Microsoft does not document what Power BI shows readers in that case.
 - A page is matched by its `name`, exactly as pages.json writes it, not by its display name.
+- A landing page or an active page whose page.json cannot be read, such as one holding merge-conflict markers, is not reported, because pbiplint does not guess what a file it could not read says: the page is there under its folder name, which Microsoft's PBIR documentation says is a page's `name` by default, and whether it is hidden is in the file that could not be read. The file's own `PARSE_ISSUE` finding names it.
 - The rule reads pages.json. Without one in the input, or with one that cannot be read, it reports nothing.
 
 ## Related rules
@@ -111,3 +112,4 @@ When readers are meant to start on a hidden page, make it the landing page: Powe
 - [Set the landing page for a Power BI report](https://learn.microsoft.com/power-bi/create-reports/power-bi-set-landing-page)
 - [Report view in Power BI Desktop, including how hidden pages behave](https://learn.microsoft.com/power-bi/create-reports/desktop-report-view)
 - [External changes to PBIR files, and the errors Power BI Desktop fixes when it opens them](https://learn.microsoft.com/power-bi/developer/projects/projects-report#external-changes-to-pbir-files)
+- [The PBIR naming convention, how a page gets its folder name](https://learn.microsoft.com/power-bi/developer/projects/projects-report#pbir-naming-convention)

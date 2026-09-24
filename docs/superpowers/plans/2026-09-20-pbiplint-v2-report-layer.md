@@ -4,7 +4,7 @@
 
 **Goal:** Read a whole Power BI project (model and report), port fab-inspector's 11 base report rules with parity pinned by committed fixtures, ship pbiplint's 15 native report rules (amended 2026-09-23 with Michael) in three tiers with a page each, show a facts block beside the findings, give the input walk a diagnostics channel, and release 0.2.0, landed as eight pull requests in the order the spec sequences them.
 
-**Architecture:** One `lint(files)` call reads both parts: `.tmdl` files route to the TMDL parser and model builder that v1 has, everything else routes to a new tolerant PBIR reader (`packages/core/src/pbir/`) that builds a report object model. A `Project = { model?, report? }` plus three model indexes, a report reference index, and a reachability index feed every rule through one `check(project, ctx)` signature; the 72 model rules keep their bodies behind `bpaRule`, the 11 ports sit behind `inspectorRule`, the native rules behind `pbiplintRule`. Facts and diagnostics ride on the result into every formatter, the CLI, and the site. Parity with fab-inspector is a committed JSON expectation per fixture, with a `deviations` map for the three documented differences.
+**Architecture:** One `lint(files)` call reads both parts: `.tmdl` files route to the TMDL parser and model builder that v1 has, everything else routes to a new tolerant PBIR reader (`packages/core/src/pbir/`) that builds a report object model. A `Project = { model?, report? }` plus three model indexes, a report reference index, and a reachability index feed every rule through one `check(project, ctx)` signature; the 72 model rules keep their bodies behind `bpaRule`, the 11 ports sit behind `inspectorRule`, the native rules behind `pbiplintRule`. Facts and diagnostics ride on the result into every formatter, the CLI, and the site. Parity with fab-inspector is a committed JSON expectation per fixture, with a `deviations` map for the documented differences a fixture shows (two of the four); the two no fixture shows are pinned by unit tests (amended 2026-09-24 with Michael; release triage, DQ6).
 
 **Tech Stack:** TypeScript strict ESM, vitest 5, esbuild, Vite 8 static site, marked 18, Playwright (Chromium, Firefox, WebKit), Node 20/22 in CI (Node 26 locally). Development-time oracles only: fab-inspector CLI 3.4.0 under Homebrew .NET 10, `@microsoft/powerbi-report-authoring-cli` 0.1.4 for validating the sample report.
 
@@ -105,7 +105,7 @@ Recorded so a reviewer can see them as decisions rather than drift. None reopens
 7. **The skipped line uses parentheses**, `14 rules skipped (no report in the input)`, matching v1's `(need a live model)`.
 8. **The directory-input route applies the depth cap by path depth**, so all three browser routes report `depth-cap` the same way and the browser test can drive it with a real deep folder.
 9. **The sample ships a `pbiplint.config.json`** setting `FILTERS_PANE_STATE` to `expect: "closed"`, and `TAB_ORDER_FOLLOWS_LAYOUT` to `expect: "layout"` (amended 2026-09-23 with Michael), because a policy rule fires only under a policy and the definition of done wants every native rule to fire on the sample. `OPENING_PAGE_INVALID`, native and not on the spec's planted list, is planted as a hidden active page. The seven ported rules the spec's list left out (objects within visuals, TopN filters, Advanced filters, page count, Show items with no data, theme colours, alt text) are planted too, approved by Michael on 2026-09-20 and written into spec section 11, so the sample fires all 26 report rules (amended 2026-09-23 with Michael).
-10. **A visual's `mobile.json` marks the visual**; a page "has a mobile layout" when any of its visuals does. That is the fact the spec asks for.
+10. **A visual's `mobile.json` marks the visual**; a page "has a mobile layout" when any of its visuals does. That is the fact the spec asks for. A page counts as having a mobile layout when a mobile.json in its folder was read, so a mobile layout pbiplint read counts even when its visual.json could not be (amended 2026-09-24 with Michael; release triage, H75).
 11. **`AVOID_SHOW_ITEMS_WITH_NO_DATA` reads `showAll` on any role**, as the spec's table says, while the source reads the Category role only. Parity on both oracle fixtures decides whether that is a difference: if it is, Task 16 stops and reports it to Michael as a fourth deviation candidate rather than deciding.
 12. **Report-level measures resolve field references.** A visual bound to a measure from `reportExtensions.json` is not a broken reference; `BROKEN_FIELD_REFERENCE` fires only on names neither the model nor the report defines.
 13. **A `pbir` figure's caption names the file the document stands for**: "Fires the rule in visual.json", "After the fix in visual.json". Approved by Michael on 2026-09-20 and written into spec section 7. A `tree.json` document names its files itself, so its caption is the bare "Fires the rule" or "After the fix". The SARIF help block's bold captions say the same.
@@ -7574,22 +7574,22 @@ To ignore a report rule on one page or visual, add an annotation to its JSON; De
 ```
 ```
 
-In "What it checks", after the first paragraph:
+In "What it checks", after the first paragraph (four documented deviations, one where the source is quieter than it means to be, amended 2026-09-24 with Michael; release triage, DQ6):
 
 ```markdown
 The report layer: the 11 base rules of [PBI Inspector](https://github.com/NatVanG/fab-inspector)
-by Nat Van Gulck, ported so the results match its command line on the same report, with three
-documented deviations where the source is noisier than it means to be; and pbiplint's own rules
-for a report's correctness and readiness: fields the model does not have, model objects the report
-never reaches, the opening page, the Filters pane, hidden visuals left with fields bound, default page
-names, empty visuals, visuals past the page edge, report-level measures, broken button and
-bookmark targets, tab order against layout, and saved slicer selections. "Report at a glance"
+by Nat Van Gulck, ported so the results match its command line on the same report, with four
+documented deviations where the source is noisier, or quieter, than it means to be; and pbiplint's
+own rules for a report's correctness and readiness: fields the model does not have, model objects
+the report never reaches, the opening page, the Filters pane, hidden visuals left with fields bound,
+default page names, empty visuals, visuals past the page edge, report-level measures, broken button
+and bookmark targets, tab order against layout, and saved slicer selections. "Report at a glance"
 states what the report will do whether or not anything fired.
 ```
 
 - [ ] **Step 2: CONTRIBUTING**
 
-In "Layout", the `packages/core` line becomes "parser (TMDL and PBIR), object models, indexes, rules, ranking, formatters" and the fixtures line names `tests/fixtures` (model fixtures and whole-PBIP project fixtures), `tests/expectations` (`<name>.json` from Tabular Editor, `<name>.report.json` from fab-inspector or by hand). After "Adding or changing a rule", add:
+In "Layout", the `packages/core` line becomes "parser (TMDL and PBIR), object models, indexes, rules, ranking, formatters" and the fixtures line names `tests/fixtures` (model fixtures and whole-PBIP project fixtures), `tests/expectations` (`<name>.json` from Tabular Editor, `<name>.report.json` from fab-inspector or by hand). After "Adding or changing a rule", add (amended 2026-09-24 with Michael; release triage, DQ6: "Deviating from a ported rule" now also covers a source that misses what its rule means to report, and a deviation no fixture shows):
 
 ```markdown
 ## Adding a report rule
@@ -7601,7 +7601,7 @@ In "Layout", the `packages/core` line becomes "parser (TMDL and PBIR), object mo
 
 ## Deviating from a ported rule
 
-A port matches its source unless the source is wrong in a way that would make pbiplint noisy on real reports. Adding a deviation needs three things that a test holds together: one sentence in the `deviations` map of an expectation file whose fixture shows the difference, pbiplint's own result for that rule under `ours` in the same file, and the same sentence under Quirks on the rule's page. A deviation that shows no difference on its fixture fails the test. Refreshing the oracle's results is in `docs/RELEASING.md`.
+A port matches its source unless the source is wrong in a way that would make pbiplint noisy on real reports, or miss what the rule means to report. Adding a deviation needs three things that a test holds together: one sentence in the `deviations` map of an expectation file whose fixture shows the difference, pbiplint's own result for that rule under `ours` in the same file, and the same sentence under Quirks on the rule's page. A deviation that shows no difference on its fixture fails the test. A deviation no fixture shows yet has no expectation entry: its sentence goes under Quirks on the rule's page and in the rule's doc comment, and the rule's unit tests pin pbiplint's behaviour until a fixture shows it. Refreshing the oracle's results is in `docs/RELEASING.md`.
 ```
 
 Under "Refreshing parity expectations", add one line: "The report rules are pinned to fab-inspector the same way; the steps are in docs/RELEASING.md under Report parity expectations."

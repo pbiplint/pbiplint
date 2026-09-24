@@ -17,7 +17,9 @@ sources:
 
 Tooltip pages and drillthrough pages that are not hidden.
 
-Each finding names the page, as `Page "Product tooltip"`, and its detail says which kind it is, as `tooltip page is visible to readers`.
+Microsoft's page schema gives two places for marking a page as a tooltip or drillthrough page: the page's own `type` in page.json, and the `type` inside its `pageBinding`. The rule reads a tooltip page from either one set to `Tooltip`, and a drillthrough page from its `pageBinding` alone, set to `Drillthrough`, as PBI Inspector does.
+
+Each finding names the page, as `Page "Product tooltip"`, and its detail says which kind it is, as `tooltip page is visible to readers`. Its line in page.json is the `pageBinding` when that marks the page, and otherwise, for a tooltip page marked by its own `type` alone, that `type`.
 
 ## Example
 
@@ -66,6 +68,7 @@ A drillthrough page that also works as a page in its own right, with a slicer of
 
 ## Quirks
 
+- pbiplint reads a tooltip page from page.json's own `type` as well as its `pageBinding`, where PBI Inspector reads only `pageBinding.type`, so it also reports the tooltip pages Power BI Desktop marks by `type` alone.
 - The id keeps the source's spelling, DRILLTROUGH, because pbiplint's results are compared with the source's rule by rule on the id. Use that spelling wherever the id is written, in `pbiplint.config.json` and in an annotation alike.
 
 ## Related rules
@@ -78,3 +81,4 @@ A drillthrough page that also works as a page in its own right, with a slicer of
 - [Create report tooltips in Power BI](https://learn.microsoft.com/power-bi/create-reports/desktop-tooltips)
 - [Extend visuals with report page tooltips](https://learn.microsoft.com/power-bi/guidance/report-page-tooltips)
 - [Use report page drillthrough](https://learn.microsoft.com/power-bi/guidance/report-drillthrough)
+- [Microsoft's page schema, where a page's own type or its page binding marks it as a tooltip or drillthrough page](https://github.com/microsoft/json-schemas/tree/main/fabric/item/report/definition/page)

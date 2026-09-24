@@ -202,6 +202,27 @@ describe("BROKEN_ACTION_TARGET", () => {
     const files = [renamed, at("toName", "page_dashboard"), at("toFolder", "646039348818b651e02c")];
     expect(reportObjectIds(BROKEN_ACTION_TARGET, files)).toEqual(["toFolder"]);
   });
+  it("says nothing of a page or a bookmark whose own file could not be read, found by its folder or file name", () => {
+    const button = (name: string, props: Record<string, unknown>) =>
+      visual("p", name, "actionButton", {}, link(props));
+    const files = [
+      page("p"),
+      // Desktop names a bookmark's file after the bookmark's name.
+      { path: "definition/bookmarks/b2.bookmark.json", text: '{ "name": "b2", ' },
+      // A page whose page.json could not be read and one of whose visuals was: the visual's page
+      // is a stub named by its folder, which is the page's name in Desktop-saved files.
+      { path: "definition/pages/s/page.json", text: "<<<<<<< HEAD\n{}\n" },
+      visual("s", "card", "cardVisual"),
+      // A page whose page.json could not be read and which has no visual that was.
+      { path: "definition/pages/u/page.json", text: "[]" },
+      button("toUnreadBookmark", { type: lit("'Bookmark'"), bookmark: lit("'b2'") }),
+      button("toStub", { type: lit("'PageNavigation'"), navigationSection: lit("'s'") }),
+      button("toUnreadPage", { type: lit("'Drillthrough'"), drillthroughSection: lit("'u'") }),
+      button("toGone", { type: lit("'PageNavigation'"), navigationSection: lit("'gone'") }),
+      button("toGoneBookmark", { type: lit("'Bookmark'"), bookmark: lit("'b9'") }),
+    ];
+    expect(reportObjectIds(BROKEN_ACTION_TARGET, files)).toEqual(["toGone", "toGoneBookmark"]);
+  });
   it("sits on the line of the target property", () => {
     const text = pretty({
       name: "button",
@@ -389,6 +410,59 @@ describe("BROKEN_BOOKMARK_REFERENCE", () => {
     );
     const files = [renamed, visual("646039348818b651e02c", "v", "cardVisual"), b];
     expect(reportObjectIds(BROKEN_BOOKMARK_REFERENCE, files)).toEqual([]);
+  });
+  it("says nothing of a page or a visual whose own file could not be read, found by its folder name", () => {
+    const details = (files: { path: string; text: string }[]) =>
+      reportFindings(BROKEN_BOOKMARK_REFERENCE, files).map((f) => f.detail);
+    // Desktop names a visual's folder after the visual's name, so the unread one is known by it.
+    const captured = bookmark("b7", {
+      activeSection: "p",
+      sections: { p: { visualContainers: { v: {}, unread: {}, missing: {} } } },
+    });
+    expect(
+      details([
+        page("p"),
+        visual("p", "v", "cardVisual"),
+        { path: "definition/pages/p/visuals/unread/visual.json", text: '{ "name": "unread", ' },
+        captured,
+      ]),
+    ).toEqual(['captured visual "missing" is not on page "Page p"']);
+    // An active page and another captured page whose page.json could not be read, with no visual
+    // of theirs read, and the visuals captured under them.
+    expect(
+      details([
+        page("p"),
+        { path: "definition/pages/u/page.json", text: "<<<<<<< HEAD\n{}\n" },
+        { path: "definition/pages/w/page.json", text: "[]" },
+        bookmark("b8", {
+          activeSection: "u",
+          sections: { u: { visualContainers: { x: {} } }, w: {}, gone: {} },
+        }),
+      ]),
+    ).toEqual(['captured page "gone" does not exist']);
+    // A stub page, whose page.json could not be read and one of whose visuals was, holds both.
+    expect(
+      details([
+        { path: "definition/pages/s/page.json", text: "{" },
+        visual("s", "read", "cardVisual"),
+        { path: "definition/pages/s/visuals/unread/visual.json", text: "[]" },
+        bookmark("b9", {
+          activeSection: "s",
+          sections: { s: { visualContainers: { read: {}, unread: {}, missing: {} } } },
+        }),
+      ]),
+    ).toEqual(['captured visual "missing" is not on page "s"']);
+    // A page renamed by hand keeps its folder, where the unread visual sits.
+    expect(
+      details([
+        renamed,
+        { path: "definition/pages/646039348818b651e02c/visuals/unread/visual.json", text: "{" },
+        bookmark("b10", {
+          activeSection: "page_dashboard",
+          sections: { page_dashboard: { visualContainers: { unread: {} } } },
+        }),
+      ]),
+    ).toEqual([]);
   });
   it("names the bookmark and carries nothing to ignore it by", () => {
     const [f] = reportFindings(BROKEN_BOOKMARK_REFERENCE, [
@@ -864,7 +938,7 @@ describe("SLICER_SELECTION_SAVED", () => {
     ];
     expect(reportObjectIds(SLICER_SELECTION_SAVED, files)).toEqual(["second"]);
   });
-  it("fires on every slicer type in Microsoft's catalog, hidden or not, and on no other visual", () => {
+  it("fires on every slicer type in Microsoft's catalog, hidden or not", () => {
     const files = [
       page("p"),
       slicer("button", bikes, "advancedSlicerVisual"),
@@ -872,9 +946,6 @@ describe("SLICER_SELECTION_SAVED", () => {
       slicer("hidden", bikes, "slicer", { isHidden: true }),
       slicer("input", bikes, "textSlicer"),
       slicer("list", bikes, "listSlicer"),
-      // An AppSource slicer is a custom visual, not one of Microsoft's slicers.
-      slicer("zChiclet", bikes, "ChicletSlicer1448559807354"),
-      slicer("zTable", bikes, "tableEx"),
     ];
     expect(reportObjectIds(SLICER_SELECTION_SAVED, files)).toEqual([
       "button",
@@ -884,19 +955,62 @@ describe("SLICER_SELECTION_SAVED", () => {
       "list",
     ]);
   });
-  it("sits on the line of the selection's filter", () => {
-    const file = slicer("saved", bikes);
-    const text = pretty(JSON.parse(file.text));
-    const line = lineOf(text, '"filter"');
-    expect(line).toBeGreaterThan(1);
-    const [f] = reportFindings(SLICER_SELECTION_SAVED, [page("p"), { ...file, text }]);
-    expect(f).toMatchObject({
-      objectType: "Visual",
-      objectId: "saved",
-      detail: "opens with this selection applied",
-      location: { file: "definition/pages/p/visuals/saved/visual.json", line },
-    });
-    expect(f).toHaveProperty("object");
+  it("reads a saved selection on any visual type, so custom slicers from AppSource fire too", () => {
+    // Desktop-saved files keep an AppSource slicer's selection in the same general filter, and
+    // every visual type that carries one there filters the page, so no list of types is kept.
+    const contains = [
+      {
+        Condition: {
+          Contains: {
+            Left: { Column: { Expression: { SourceRef: { Source: "p" } }, Property: "Category" } },
+            Right: { Literal: { Value: "'Bik'" } },
+          },
+        },
+      },
+    ];
+    const files = [
+      page("p"),
+      slicer("chiclet", bikes, "ChicletSlicer1448559807354"),
+      slicer("hierarchy", bikes, "HierarchySlicer1458836712039"),
+      slicer("textFilter", contains, "textFilter25A4896A83E0487089E2B90C9AE57C8A"),
+      // A type Desktop-saved files show with a selection there, named on no list.
+      slicer("toggle", bikes, "advancedtoggleswitch"),
+      // A custom visual with general settings and no filter has nothing selected.
+      slicer(
+        "zChicletClear",
+        undefined,
+        "ChicletSlicer1448559807354",
+        {},
+        { general: [{ properties: { selfFilterEnabled: lit("true") } }] },
+      ),
+      // An empty Where selects nothing, on a custom visual as on a catalog slicer.
+      slicer("zChicletEmpty", [], "ChicletSlicer1448559807354"),
+      // A catalog slicer with nothing selected, and a visual with no general entry at all.
+      slicer("zClear", undefined),
+      slicer("zTable", undefined, "tableEx"),
+    ];
+    expect(reportObjectIds(SLICER_SELECTION_SAVED, files)).toEqual([
+      "chiclet",
+      "hierarchy",
+      "textFilter",
+      "toggle",
+    ]);
+  });
+  it("sits on the line of the selection's filter, on a catalog slicer and an AppSource slicer alike", () => {
+    for (const type of ["slicer", "ChicletSlicer1448559807354"]) {
+      const file = slicer("saved", bikes, type);
+      const text = pretty(JSON.parse(file.text));
+      const line = lineOf(text, '"filter"');
+      expect(line).toBeGreaterThan(1);
+      const [f] = reportFindings(SLICER_SELECTION_SAVED, [page("p"), { ...file, text }]);
+      expect(f, type).toMatchObject({
+        objectType: "Visual",
+        objectId: "saved",
+        detail: "opens with this selection applied",
+        location: { file: "definition/pages/p/visuals/saved/visual.json", line },
+      });
+      expect(f, type).toHaveProperty("object");
+    }
     expect(SLICER_SELECTION_SAVED).toMatchObject({
       ...tier3,
       name: "Slicer saved with a selection",

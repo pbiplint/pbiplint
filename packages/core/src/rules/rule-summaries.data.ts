@@ -53,7 +53,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   DAX_MEASURES_UNQUALIFIED:
     "Measures, calculated columns, calculated tables, and calculation items that refer to a measure with a table prefix, `'Table'[Measure]`.",
   DEFAULT_PAGE_NAME:
-    "Pages whose display name in page.json has the shape `Page <n>`, `Duplicate of <name>`, or `<name> (copy)`: the names English Power BI Desktop gives a new page and a duplicated one, and a name marked as a copy.",
+    "Pages whose display name in page.json has the shape `Page <n>`, `Duplicate of <name>`, or `<name> (copy)`: the names English Power BI Desktop gives a new page and a duplicated one, and a name marked as a copy. The rule also matches the forms Desktop-saved files show for a new or duplicated page in other languages, such as `Seite <n>` and `Doublon de <name>`.",
   ENSURE_ALTTEXT:
     "Visuals other than shapes whose alt text is missing or empty. A visual group is checked by its own alt text, the one set on the group rather than on the visuals inside it.",
   ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY:
@@ -78,7 +78,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS":
     "Visible columns whose name starts with Is and whose type is whole number, and visible columns whose name ends with the word Flag after a space and whose type is not text.",
   HIDDEN_VISUAL_WITH_FIELDS:
-    "Visuals hidden with the eye icon in the Selection pane, saved as `isHidden` in visual.json, that still have fields in their wells.",
+    "Visuals hidden in the Selection pane, with their own eye icon or with that of a group they sit in, that still have fields in their wells.",
   HIDE_FACT_TABLE_COLUMNS:
     "Visible numeric columns that a measure aggregates directly with a fully qualified reference, such as `SUM('Sales'[Amount])`. COUNT, COUNTBLANK, SUM, AVERAGE, MIN, MAX, DISTINCTCOUNT, VALUES, DISTINCT, and the A-suffixed COUNTA, AVERAGEA, MAXA, and MINA count as aggregations.",
   HIDE_FOREIGN_KEYS:
@@ -149,7 +149,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   "REDUCE_USAGE_OF_LONG-LENGTH_COLUMNS_WITH_HIGH_CARDINALITY":
     "Text columns where more than 500,000 rows hold values longer than 100 characters. That count is a statistic of the loaded data, not of the model files, so pbiplint lists this rule but does not run it: it needs statistics that only a live model carries.",
   REDUCE_VISUALS_ON_PAGE:
-    "Pages with more visible visuals than the threshold, 20 by default, not counting shapes, slicers, buttons, and text boxes.",
+    "Pages with more visuals than the threshold, 20 by default, counting every visual except shapes, slicers, buttons, text boxes, and a visual hidden by `isHidden` in its own visual.json.",
   RELATIONSHIP_COLUMNS_SAME_DATA_TYPE: "Relationships whose two columns have different data types.",
   RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE:
     "Any column that takes part in a relationship and is not a whole number.",
@@ -167,7 +167,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS:
     "Columns with IsAvailableInMdx set to false that are used to sort another column, appear in a hierarchy or a variation, or sort by another column.",
   SLICER_SELECTION_SAVED:
-    "Slicers saved with a selection, so that the report opens with it applied: a slicer, button slicer, list slicer, input slicer, or `filterSlicer` whose visual.json holds a `filter` with a condition under `objects.general`, where Power BI Desktop saves the selection. It is info without a policy, and a warning when the project's policy expects no saved selections.",
+    "Slicers saved with a selection, so that the report opens with it applied: any visual whose visual.json holds a `filter` with a condition under `objects.general`, which is where Power BI Desktop saves the selection of a slicer, button slicer, list slicer, input slicer, or `filterSlicer`, and of a custom slicer from AppSource that filters through the Visual Filters API. It is info without a policy, and a warning when the project's policy expects no saved selections.",
   SNOWFLAKE_SCHEMA_ARCHITECTURE:
     "Tables that are on the from side of one relationship and the to side of another, which is what a dimension related to a sub-dimension looks like.",
   SPECIAL_CHARS_IN_OBJECT_NAMES: "Names containing a tab, line feed, or carriage return.",

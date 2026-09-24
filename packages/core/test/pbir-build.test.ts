@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildReport, KNOWN_SCHEMAS, literal } from "../src/pbir/build.js";
+import { buildReport, holdsFieldReferences, KNOWN_SCHEMAS, literal } from "../src/pbir/build.js";
+import { fieldFileUnread, visualFileUnread } from "../src/rules/report-helpers.js";
 
 const schema = (family: string, version: string) =>
   `https://developer.microsoft.com/json-schemas/fabric/item/report/definition/${family}/${version}/schema.json`;
@@ -748,6 +749,19 @@ describe("buildReport tolerance", () => {
     expect(report.bookmarks).toEqual([]);
     expect(report.datasetReference).toEqual({ kind: "none" });
     expect(report.extensions).toBe("unread");
+    // The definition files among them, which a rule that must see every reference cannot do
+    // without; the .pbip, the .platform, and definition.pbir hold no field references.
+    expect(report.unreadDefinitionFiles).toEqual([
+      "definition/bookmarks/b.bookmark.json",
+      "definition/bookmarks/bookmarks.json",
+      "definition/pages/a/page.json",
+      "definition/pages/a/visuals/v/mobile.json",
+      "definition/pages/a/visuals/w/visual.json",
+      "definition/pages/pages.json",
+      "definition/report.json",
+      "definition/reportExtensions.json",
+      "definition/version.json",
+    ]);
     // The page file was not read, so the visual's page is a stub named by its folder, as it is for
     // invalid JSON; the visual.json that holds null is left out, and the unread mobile.json does
     // not give the other visual a mobile layout.
@@ -759,6 +773,9 @@ describe("buildReport tolerance", () => {
     // there is not an issue; invalid JSON and a conflict marker still are, as for any report file.
     const issues = (path: string, text: string) =>
       buildReport([{ path, text }]).report.issues.map((i) => [i.file, i.line, i.reason]);
+    // Such a file is not part of the report, so one that cannot be read is not an unread report file.
+    const unread = (path: string, text: string) =>
+      buildReport([{ path, text }]).report.unreadDefinitionFiles;
     for (const path of [
       "definition/notes/owners.json",
       "definition/pages/a/notes.json",
@@ -775,7 +792,171 @@ describe("buildReport tolerance", () => {
         [path, 3, "merge conflict marker"],
         [path, 5, "merge conflict marker"],
       ]);
+      expect(unread(path, '["alice",]')).toEqual([]);
+      expect(unread(path, "<<<<<<< HEAD\n[]\n")).toEqual([]);
     }
+  });
+  it("lists each definition file the PBIR format defines that could not be read, and no other file", () => {
+    const { report } = buildReport([
+      { path: "../Demo.pbip", text: "{" },
+      { path: ".platform", text: "<<<<<<< HEAD\n{}\n" },
+      { path: "definition.pbir", text: "{" },
+      { path: "definition/report.json", text: j({ $schema: schema("report", "3.2.0") }) },
+      { path: "definition/pages/a/page.json", text: page("a") },
+      { path: "definition/pages/a/visuals/v/visual.json", text: '{ "name": "v", ' },
+      { path: "definition/pages/a/visuals/w/visual.json", text: visual("w") },
+      { path: "definition/notes/owners.json", text: '["alice",]' },
+      {
+        path: "definition/reportExtensions.json",
+        text: '{\n<<<<<<< HEAD\n  "entities": []\n=======\n}\n>>>>>>> theirs\n',
+      },
+    ]);
+    expect(report.unreadDefinitionFiles).toEqual([
+      "definition/pages/a/visuals/v/visual.json",
+      "definition/reportExtensions.json",
+    ]);
+    // Every file that could not be read is still a parse issue, whether or not it is listed.
+    expect(report.issues.map((i) => i.file)).toEqual([
+      "../Demo.pbip",
+      ".platform",
+      "definition.pbir",
+      "definition/notes/owners.json",
+      "definition/pages/a/visuals/v/visual.json",
+      "definition/reportExtensions.json",
+      "definition/reportExtensions.json",
+      "definition/reportExtensions.json",
+    ]);
+    const clean = buildReport([
+      { path: "definition/report.json", text: j({}) },
+      { path: "definition/pages/a/visuals/w/visual.json", text: visual("w") },
+    ]);
+    expect(clean.report.unreadDefinitionFiles).toEqual([]);
+    // The one test the engine's skip and the Model fact's unknown share.
+    expect(fieldFileUnread(report)).toBe(true);
+    expect(fieldFileUnread(clean.report)).toBe(false);
+    const ownFileOnly = buildReport([
+      { path: "definition/report.json", text: j({}) },
+      { path: "definition/notes/owners.json", text: '["alice",]' },
+    ]);
+    expect(fieldFileUnread(ownFileOnly.report)).toBe(false);
+  });
+  it("marks a page as having a mobile layout by the mobile.json read in its folder, whether or not that visual's visual.json was", () => {
+    const { report } = buildReport([
+      // a: the visual's visual.json is invalid, its mobile.json was read.
+      { path: "definition/pages/a/page.json", text: page("a") },
+      { path: "definition/pages/a/visuals/v/visual.json", text: '{ "name": "v", ' },
+      { path: "definition/pages/a/visuals/v/mobile.json", text: j({}) },
+      // b: a stub page, its page.json unread, one visual read with a mobile.json.
+      { path: "definition/pages/b/page.json", text: "{" },
+      { path: "definition/pages/b/visuals/w/visual.json", text: visual("w") },
+      { path: "definition/pages/b/visuals/w/mobile.json", text: j({}) },
+      // c: a visual with no mobile.json, and one whose mobile.json could not be read.
+      { path: "definition/pages/c/page.json", text: page("c") },
+      { path: "definition/pages/c/visuals/x/visual.json", text: visual("x") },
+      { path: "definition/pages/c/visuals/y/visual.json", text: visual("y") },
+      { path: "definition/pages/c/visuals/y/mobile.json", text: "[]" },
+    ]);
+    expect(report.pages.map((p) => [p.id, p.hasMobileLayout])).toEqual([
+      ["a", true],
+      ["b", true],
+      ["c", false],
+    ]);
+    expect(buildReport(files).report.pages.map((p) => [p.id, p.hasMobileLayout])).toEqual([
+      ["p2", false],
+      ["p1", true],
+    ]);
+  });
+  it("records the pages, visuals, and bookmarks whose own file could not be read, by the folder or file name Desktop gives them", () => {
+    const { report } = buildReport([
+      // pages.json, a mobile.json, and bookmarks.json name no page, visual, or bookmark of their own.
+      { path: "definition/pages/pages.json", text: "{" },
+      { path: "definition/pages/a/page.json", text: page("a") },
+      { path: "definition/pages/a/visuals/v/visual.json", text: visual("v") },
+      { path: "definition/pages/a/visuals/v/mobile.json", text: "[]" },
+      { path: "definition/pages/a/visuals/w/visual.json", text: "<<<<<<< HEAD\n{}\n" },
+      // A page whose page.json could not be read and one of whose visuals was: its stub page keeps
+      // the visual that could not be read as well.
+      { path: "definition/pages/s/page.json", text: "{" },
+      { path: "definition/pages/s/visuals/x/visual.json", text: visual("x") },
+      { path: "definition/pages/s/visuals/y/visual.json", text: "[]" },
+      // A page none of whose files could be read has no page object to hold its visual.
+      { path: "definition/pages/u/page.json", text: "{" },
+      { path: "definition/pages/u/visuals/z/visual.json", text: "{" },
+      // A page renamed by hand keeps its folder, where its visuals sit.
+      { path: "definition/pages/646039348818b651e02c/page.json", text: page("page_dashboard") },
+      { path: "definition/pages/646039348818b651e02c/visuals/r/visual.json", text: "{" },
+      { path: "definition/bookmarks/bookmarks.json", text: "{" },
+      { path: "definition/bookmarks/b1.bookmark.json", text: "[]" },
+      { path: "definition/bookmarks/b2.bookmark.json", text: j({ name: "b2" }) },
+    ]);
+    expect(report.unreadPages).toEqual(["s", "u"]);
+    expect(report.unreadBookmarks).toEqual(["b1"]);
+    expect(report.pages.map((p) => [p.id, p.unreadVisuals])).toEqual([
+      ["page_dashboard", ["r"]],
+      ["a", ["w"]],
+      ["s", ["y"]],
+    ]);
+    expect(visualFileUnread(report)).toBe(true);
+    // A page.json or a mobile.json that could not be read is not a visual that could not be.
+    const noVisual = buildReport([
+      { path: "definition/pages/a/page.json", text: "{" },
+      { path: "definition/pages/a/visuals/v/visual.json", text: visual("v") },
+      { path: "definition/pages/a/visuals/v/mobile.json", text: "{" },
+    ]).report;
+    expect(visualFileUnread(noVisual)).toBe(false);
+    expect(noVisual.pages.map((p) => [p.id, p.unreadVisuals])).toEqual([["a", []]]);
+    // Every file read: nothing recorded.
+    const clean = buildReport(files).report;
+    expect([clean.unreadPages, clean.unreadBookmarks]).toEqual([[], []]);
+    expect(clean.pages.flatMap((p) => p.unreadVisuals)).toEqual([]);
+  });
+  it("tells a definition file the report's field references are read from from one that holds none", () => {
+    // The files report-refs.ts reads references from: the report's filters, its measures' DAX, a
+    // page's filters and binding, a visual, and a bookmark's captured state.
+    for (const path of [
+      "definition/report.json",
+      "definition/reportExtensions.json",
+      "definition/pages/a/page.json",
+      "definition/pages/a/visuals/v/visual.json",
+      "definition/bookmarks/b.bookmark.json",
+    ])
+      expect(holdsFieldReferences(path), path).toBe(true);
+    // The rest of the definition folder names no field, nor does a file the format does not define.
+    for (const path of [
+      "definition/version.json",
+      "definition/pages/pages.json",
+      "definition/bookmarks/bookmarks.json",
+      "definition/pages/a/visuals/v/mobile.json",
+      "definition/notes/owners.json",
+      "definition.pbir",
+      ".platform",
+    ])
+      expect(holdsFieldReferences(path), path).toBe(false);
+    // Each of those four unread alone leaves every field reference read; any of the five does not.
+    const unreadAlone = (path: string) =>
+      fieldFileUnread(
+        buildReport([
+          { path: "definition/report.json", text: j({}) },
+          { path: "definition/pages/a/page.json", text: page("a") },
+          { path: "definition/pages/a/visuals/v/visual.json", text: visual("v") },
+          { path, text: "<<<<<<< HEAD\n{}\n" },
+        ]).report,
+      );
+    for (const path of [
+      "definition/version.json",
+      "definition/pages/pages.json",
+      "definition/bookmarks/bookmarks.json",
+      "definition/pages/a/visuals/v/mobile.json",
+    ])
+      expect(unreadAlone(path), path).toBe(false);
+    for (const path of [
+      "definition/report.json",
+      "definition/reportExtensions.json",
+      "definition/pages/a/page.json",
+      "definition/pages/a/visuals/v/visual.json",
+      "definition/bookmarks/b.bookmark.json",
+    ])
+      expect(unreadAlone(path), path).toBe(true);
   });
   it("records whether reportExtensions.json was in the input and could be read", () => {
     const extensions = (...texts: string[]) =>

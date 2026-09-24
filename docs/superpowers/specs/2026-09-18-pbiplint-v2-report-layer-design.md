@@ -228,7 +228,11 @@ slicer and four data visuals whose per-field entries Desktop writes)
   in Microsoft's visual catalog (Microsoft's capability data gives each
   of them that property, and Desktop-saved files keep the selection
   there); a `filterConfig` entry on a slicer holds a visual-level
-  filter of the Filters pane, never the selection.
+  filter of the Filters pane, never the selection. Amended 2026-09-24
+  with Michael (release triage, DQ5): a saved selection is read in that
+  place on any visual type, so custom slicers from AppSource, which keep
+  theirs there too, are covered; in Desktop-saved files every visual
+  type that carries `general.filter` is a filtering visual.
 - Desktop names a duplicated page "Duplicate of <name>" in current
   builds; older copy could read "<name> (copy)". Both are matched.
   Amended 2026-09-23 with pull request 4: English Desktop writes
@@ -399,6 +403,20 @@ a `PARSE_ISSUE` finding, and a document that is not an object is not.
   groups.
 - `ReportMeasure`: table, name, DAX, hidden, file, line.
 
+Amended 2026-09-24 with Michael (release triage): the model records
+what a definition file that could not be read would have defined, by
+the folder or file name Power BI Desktop gives it, which Learn's PBIR
+naming convention says is the object's `name` by default: `Report`
+gains the pages whose page.json could not be read (by folder; 713 of
+714 Desktop-saved pages keep their `name` as their folder) and the
+bookmarks whose `<name>.bookmark.json` could not be read (576 of 576),
+and `Page` gains the visuals in its folder whose visual.json could not
+be read (13,026 of 13,026). The unread visuals sit on the page because
+a visual.json is joined to its page by folder, and a page's `name` can
+differ from its folder after a rename. A page whose page.json could not
+be read and one of whose visuals was read is, as before, a page named
+by its folder.
+
 **Field references** are found by one walker over any JSON node,
 yielding `{ kind: column | measure | hierarchyLevel | aggregation,
 table, name, owner, jsonPointer }`, resolving `From` aliases within the
@@ -496,10 +514,10 @@ aggregation table when it covers the query.
 | Opens on | landing page display name, or the active page with "the page open when it was saved; no landing page set" | `LANDING_PAGE_NOT_SET` |
 | Filters pane | open / closed / hidden from readers | `FILTERS_PANE_STATE` |
 | Pages | count; hidden; tooltip; drillthrough | `HIDE_TOOLTIP_DRILLTROUGH_PAGES` |
-| Visuals | count; hidden; custom visual types registered and used | `HIDDEN_VISUAL_WITH_FIELDS`, `REMOVE_UNUSED_CUSTOM_VISUALS` |
+| Visuals | count; hidden; custom visual types registered and used (the used count unknown while a visual.json could not be read and a registered type is used by no visual that was read, amended 2026-09-24 with Michael) | `HIDDEN_VISUAL_WITH_FIELDS`, `REMOVE_UNUSED_CUSTOM_VISUALS` |
 | Report measures | count | `REPORT_LEVEL_MEASURES` |
-| Slicers | count; with a saved selection | `SLICER_SELECTION_SAVED` |
-| Mobile layouts | pages with one, of total | |
+| Slicers | count of the catalog slicers; saved selections, those on custom slicers named; unknown in place of none while a visual.json could not be read (amended 2026-09-24 with Michael) | `SLICER_SELECTION_SAVED` |
+| Mobile layouts | pages with one, counted by the mobile.json files read in their folders, of total; unknown in place of none while a mobile.json, or the page of one, could not be read (amended 2026-09-24 with Michael) | |
 | Schema versions | report, page, visual (highest seen) | |
 | Model | tables, columns, measures; with both parts, columns and measures not reached from this report | `NOT_REACHED_FROM_REPORT` |
 
@@ -541,6 +559,100 @@ schema gives it, page.json's own `type` or its `pageBinding.type`
 links a rule only when that rule ran in the run, so a rule turned off
 in config or skipped links nothing.
 
+Amended 2026-09-24 with Michael (release triage, DQ6, narrowed by
+ruling H68): Pages counts a drillthrough page by its `pageBinding.type`
+alone, as it did before, and a tooltip page by either marking, the
+readings `HIDE_TOOLTIP_DRILLTROUGH_PAGES` shares from this amendment on
+(section 8.1). page.json's own `type` of `Drillthrough` alone does not
+make a page a drillthrough page, because in the research corpus it
+marks pages that are no drillthrough target (section 8.1).
+
+Amended 2026-09-24 with Michael (release triage, DQ4): Visuals counts a
+visual hidden through an ancestor group as hidden, as well as one with
+its own `isHidden`, the reading `HIDDEN_VISUAL_WITH_FIELDS` shares from
+this amendment on (section 8.2).
+
+Amended 2026-09-24 with Michael (release triage, DQ5): a saved
+selection is read on any visual type, so custom slicers from AppSource
+are covered; in Desktop-saved files every visual type that carries
+`general.filter` is a filtering visual. Slicers counts a visual as a
+slicer when it is one of the five catalog types, with a selection or
+without, or carries a saved selection, and its "with a saved selection"
+count covers every visual that carries one, so it never exceeds the
+slicer count; this is the reading `SLICER_SELECTION_SAVED` shares
+(section 8.4). Amended 2026-09-24 with Michael (release triage, ruling
+H72), replacing the count above: counting a custom slicer by its
+selection made clearing the selection lower the count, which read as a
+deleted slicer. The value now counts the five catalog types only, with
+a selection or without, so clearing a selection never changes it, and
+reads `none` when there is none of them. The detail counts every saved
+selection, the ones `SLICER_SELECTION_SAVED` reports, and names those
+on a visual that is not a catalog slicer: `2 saved selections, 1 on a
+custom slicer`, `1 saved selection` when none is on a custom slicer, or
+`no saved selection` beside catalog slicers that open clear. With no
+catalog slicer and a custom slicer's selection the value reads `none`
+and the detail names the selection, so the row says there is no
+catalog slicer and a custom one carries a selection, and it keeps
+reading `none` when that selection is cleared. The fact links
+`SLICER_SELECTION_SAVED` whenever a selection is saved.
+
+Amended 2026-09-24 with Michael (release triage, DQ3): when a report
+file under the definition folder could not be read, that is, a file
+the PBIR format defines there (section 5) whose read raised a
+`PARSE_ISSUE` (invalid JSON, merge-conflict markers, or a document that
+is not a JSON object), `NOT_REACHED_FROM_REPORT` is skipped, with the
+reason on the skipped line (section 7), because pbiplint cannot say
+what an unread file reaches. The Model fact then keeps its table,
+column, and measure counts, its not-reached clause says unknown ("not
+reached from this report: unknown, a report file could not be read"),
+and it links no rule. The report's `.platform`, definition.pbir, and
+the project's `.pbip` name no field, and a JSON file under the
+definition folder that the format does not define is not part of the
+report, so none of them counts. Amended 2026-09-24 with Michael
+(release triage, E8, ruling H70): of those files, only one the
+reachability walk reads field references from skips the rule and makes
+the not-reached clause unknown: report.json (the report's filters),
+reportExtensions.json (its measures' DAX), a page.json (the page's
+filters and binding), a visual.json, and a bookmark file, the owners
+the report reference index reads (`holdsFieldReferences` in
+pbir/build.ts, the predicate `fieldFileUnread`). version.json,
+pages.json, bookmarks.json, and a visual's mobile.json name no field
+the walk reads, so one of them unread, a merge conflict in pages.json
+included, leaves the rule running and the fact counting.
+
+Amended 2026-09-24 with Michael (release triage, ruling H71): a fact
+that states absence or non-use says nothing about what an unread file
+could hold, and says unknown only where the unread file could change
+what it would say (narrowed by ruling H74). While a visual.json could
+not be read and a registered custom visual type is used by no visual
+that was read, the Visuals fact's custom visual clause reads `2 custom
+visual types registered, used: unknown, a visual.json could not be
+read` and links no rule for it, since the unread visual could be of
+that type (`REMOVE_UNUSED_CUSTOM_VISUALS` is skipped on the same
+condition, section 8.1); with every registered type used by a visual
+that was read, it keeps its count. While a visual.json could not be
+read, the Slicers fact says unknown where it would say none, since the
+unread visual could be a catalog slicer or carry a selection: its value
+reads `unknown` in place of `none`, and its detail reads `saved
+selections: unknown, a visual.json could not be read` in place of `no
+saved selection`, or ends `; a visual.json could not be read` after the
+selections it counted when the value is unknown. Mobile layouts counts
+a page by the mobile.json files read in its folder, so a mobile layout
+pbiplint read counts even when its visual.json could not be read
+(ruling H75). While a mobile.json could not be read, it reads
+`unknown`, with `a mobile.json could not be read`, in place of `none`,
+and while a mobile.json that was read has no page to count and a
+page.json or a visual.json in its folder could not be read, it reads
+`unknown`, with `a page with a mobile layout could not be read`. A stray
+mobile.json in a folder where nothing failed to read marks no page, and
+`none` stays (ruling H76). A count that is not none, such
+as Pages, the Visuals count and its hidden count, or `1 of 3 pages`, is
+a lower bound and stays as it is. Opens on
+names a landing or active page whose page.json could not be read by
+the name pages.json gives it, as it names a page known only by its
+folder, and never calls it "(no such page)"; `OPENING_PAGE_INVALID`
+does not fire on it (section 8.2).
+
 **Cost.** Linear in the JSON. The demo report's largest visual is
 61 KB, most under 5 KB; a 300-visual report is a few megabytes and
 lints well under a second in the browser. No new dependency.
@@ -557,8 +669,26 @@ vendored ruleset, description from the page) and
 needsLiveModel | builtin`; native rules are `builtin`.
 
 **Skips.** `rulesSkipped` reasons: `disabled | needsLiveModel |
-noModel | noReport`; the skipped line says "14 rules skipped: no
-report in the input".
+noModel | noReport | reportFileUnread`; the skipped line says "14 rules
+skipped: no report in the input". Amended 2026-09-24 with Michael
+(release triage, DQ3): a rule that declares `needsEveryReportFileRead`
+beside `needs`, which only `NOT_REACHED_FROM_REPORT` does, is skipped
+with `reportFileUnread` when a report file under the definition folder
+could not be read (section 6), and the skipped line says "1 rule
+skipped (a report file could not be read)"; a missing layer's reason
+comes first. The JSON document carries the reason in
+`summary.rulesSkipped`; SARIF, which lists no skipped rule, gains
+nothing. Amended 2026-09-24 with Michael (release triage, E8 and ruling
+H71): the field is now `skipWhenUnread`, a predicate over the report
+that names which unread files stop the rule, one exported per condition
+from report-helpers.ts. `NOT_REACHED_FROM_REPORT` sets
+`fieldFileUnread`, a file the report's field references are read from
+(section 6), and `REMOVE_UNUSED_CUSTOM_VISUALS` sets
+`customVisualUseUnknown`, a visual.json while a registered custom
+visual type is used by no visual that was read (section 8.1, narrowed
+by ruling H74); no other rule sets one. run.ts stays the one place that
+skips, with the same reason and the same words, and the facts call the
+same predicates.
 
 **Object types.** `Report`, `Page`, `Visual`, `Bookmark`,
 `ReportMeasure` join `ObjectType`.
@@ -620,16 +750,53 @@ compares on ids. All ported rules are `warning`.
 | Id | Scope | Category | Options | Notes |
 |---|---|---|---|---|
 | REMOVE_UNUSED_CUSTOM_VISUALS | Report | Performance | | One finding per unused custom visual |
-| REDUCE_VISUALS_ON_PAGE | Page | Performance | `max` 20 | Hidden visuals and shapes, slicers, buttons, text boxes excluded, as the source does |
+| REDUCE_VISUALS_ON_PAGE | Page | Performance | `max` 20 | Visuals with their own `isHidden` and shapes, slicers, buttons, text boxes excluded, as the source does (amended 2026-09-24 with Michael) |
 | REDUCE_OBJECTS_WITHIN_VISUALS | Visual | Performance | `max` 6 | **Deviation:** count the fields bound to the visual's roles once, not every `projections` array in the file |
 | REDUCE_TOPN_FILTERS | Page | Performance | `max` 4 | |
 | REDUCE_ADVANCED_FILTERS | Page | Performance | `max` 4 | **Deviation:** count only filters with a condition applied; the source also counts an Advanced filter with nothing set, such as a slicer's or one Desktop writes for a visual's own fields (amended 2026-09-22 after the oracle run) |
 | REDUCE_PAGES | Report | Performance | `max` 10 | |
 | AVOID_SHOW_ITEMS_WITH_NO_DATA | Visual | Performance | | `query.queryState.<role>.showAll` true |
-| HIDE_TOOLTIP_DRILLTROUGH_PAGES | Page | Report Design | | Binding type tooltip or drillthrough and visibility not `HiddenInViewMode` |
+| HIDE_TOOLTIP_DRILLTROUGH_PAGES | Page | Report Design | | Tooltip or drillthrough page and visibility not `HiddenInViewMode`. **Deviation:** reads a tooltip page from page.json's own `type` as well as `pageBinding.type`; a drillthrough page from `pageBinding.type` alone, as the source does (amended 2026-09-24 with Michael) |
 | ENSURE_THEME_COLOURS | Visual | Report Design | | **Deviation:** hex literals in colour properties only, not in any string |
 | ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY | Page | Report Design | `maxHeight` 720 | Visible pages only |
 | ENSURE_ALTTEXT | Visual | Accessibility | | Source ships it off; pbiplint ships it on. Shapes excluded, as the source does |
+
+Amended 2026-09-24 with Michael (release triage, DQ6, narrowed by
+ruling H68): `HIDE_TOOLTIP_DRILLTROUGH_PAGES` reads a tooltip page from
+either marking Microsoft's page schema gives it, page.json's own `type`
+or `pageBinding.type`, where the source reads only `pageBinding.type`,
+so it also reports the tooltip pages Power BI Desktop marks by `type`
+alone (78 of the 83 tooltip pages in the research corpus of
+Desktop-saved reports). It is the fourth documented deviation. It reads
+a drillthrough page from `pageBinding.type` alone, as the source does:
+in the research corpus of Desktop-saved reports the three pages marked
+`Drillthrough` by page.json's own `type` alone carry no drillthrough
+fields (a visible ordinary page in one report, two hidden pages whose
+`pageBinding.type` is `Default` in another), while all 88 pages whose
+`pageBinding.type` is `Drillthrough` carry them. The finding points at
+`pageBinding` when that marks the page, else at `type`. The Pages fact
+counts tooltip and drillthrough pages the same way (section 6).
+
+Amended 2026-09-24 with Michael (release triage, DQ4):
+`REDUCE_VISUALS_ON_PAGE` leaves out a visual by its own `isHidden`
+only, as the source's test does, so a visual hidden only through its
+group is counted and the hidden group itself is not. This is not a
+deviation: the row now names what its "hidden visuals" always meant,
+because `HIDDEN_VISUAL_WITH_FIELDS` and the Visuals fact now also count
+a visual hidden through an ancestor group as hidden (sections 6 and
+8.2). The ported rules keep reading the visual's own `isHidden`.
+
+Amended 2026-09-24 with Michael (release triage, ruling H71):
+`REMOVE_UNUSED_CUSTOM_VISUALS` is skipped, with "a report file could
+not be read" on the skipped line (section 7), while a visual.json could
+not be read and a registered type is used by no visual that was read,
+because the unread visual could be of that type and the registration
+would be reported as unused. With no custom visual registered, or
+every registered type used by a visual that was read, the unread file
+cannot change its answer and it runs (narrowed by ruling H74). This is
+what it does on a file neither tool can read, not a deviation: the
+oracle fixtures all parse, so parity cannot show it. The Visuals fact's
+used count says unknown on the same condition (section 6).
 
 ### 8.2 Native, tier 1
 
@@ -640,7 +807,7 @@ compares on ids. All ported rules are `warning`.
 | LANDING_PAGE_NOT_SET | Report | report | Report Design | info | No `landingPageName`; the report opens wherever it was saved |
 | OPENING_PAGE_INVALID | Report | report | Error Prevention | error | The landing page names a page that does not exist; or, with no landing page, the active page names a page that does not exist or is hidden |
 | FILTERS_PANE_STATE | Report | report | Report Design | warning | Policy `expect: open \| closed`; fires when the saved state disagrees |
-| HIDDEN_VISUAL_WITH_FIELDS | Visual | report | Maintenance | info | `isHidden` with fields bound; it runs its query only when a bookmark or the Selection pane shows it, so one nothing shows is left behind |
+| HIDDEN_VISUAL_WITH_FIELDS | Visual | report | Maintenance | info | `isHidden`, its own or an ancestor group's (amended 2026-09-24 with Michael), with fields bound; it runs its query only when a bookmark or the Selection pane shows it, so one nothing shows is left behind |
 
 Amended 2026-09-23 with Michael, after checking the two rows against
 Microsoft's own account. `OPENING_PAGE_INVALID` no longer flags a hidden
@@ -660,6 +827,46 @@ with `LocalDateTable_` or `DateTableTemplate_`, as
 relationship to one of them roots neither of its columns, which narrows
 section 6's relationship roots, so a date column the report never uses
 is reported; `REMOVE_AUTO-DATE_TABLE` covers the tables themselves.
+
+Amended 2026-09-24 with Michael (release triage, DQ4):
+`HIDDEN_VISUAL_WITH_FIELDS` counts a visual hidden through an ancestor
+group as hidden (in the research corpus's Desktop-saved reports, only
+452 of the 1,911 visuals directly inside the 216 hidden groups carry
+`isHidden` themselves), and so does the Visuals fact's hidden count
+(section 6). The groups above a visual are followed through
+`parentGroupName` on the visual's own page, each at most once, so a
+group that names itself or a cycle of groups ends the walk. A visual
+with its own `isHidden` is reported at that line as before; one hidden
+only through a group is reported at line 1 of its visual.json, and its
+detail names the outermost hidden group, as `3 fields bound, hidden with
+Group "Filters"`. The ported rules still read the visual's own
+`isHidden`, as their source does.
+
+Amended 2026-09-24 with Michael (release triage, DQ3):
+`NOT_REACHED_FROM_REPORT` is skipped, with the reason "a report file
+could not be read" on the skipped line (section 7), when a report file
+under the definition folder could not be read, since the unread file
+may reach any field and pbiplint cannot say what it reaches; the Model
+fact's not-reached clause then says unknown (section 6).
+`BROKEN_FIELD_REFERENCE` keeps running, because a broken reference in a
+file that was read is broken whatever another file says. Amended
+2026-09-24 with Michael (release triage, E8, ruling H70): the skip is
+narrowed to an unread file the reachability walk reads field references
+from, report.json, reportExtensions.json, a page.json, a visual.json,
+or a bookmark file; version.json, pages.json, bookmarks.json, and a
+visual's mobile.json name no field the walk reads, so one of them
+unread no longer silences the rule, whose count would be right (section
+6).
+
+Amended 2026-09-24 with Michael (release triage, ruling H71): a rule
+that reports a page as missing says nothing about a page whose
+page.json could not be read, which is known by its folder name
+(section 5). `OPENING_PAGE_INVALID` does not report a landing or active
+page whose page.json could not be read, since it is neither missing nor
+known to be hidden, and `LANDING_PAGE_NOT_SET` names such a page as
+pages.json does, where it would have said the active page does not
+exist. With a visual of the page read, the page was already one named
+by its folder, and the rules already read it so.
 
 Malformed JSON and conflict markers use `PARSE_ISSUE`; legacy formats
 are diagnostics.
@@ -692,6 +899,14 @@ report measures as the supported route for an author who cannot change
 a shared model. The rule needs both layers, so a run without the model
 skips it.
 
+Amended 2026-09-24 with Michael (release triage, DQ1):
+`DEFAULT_PAGE_NAME` also matches the names Power BI Desktop gives a
+new or duplicated page in other languages, exactly as Desktop-saved
+files show them (`Seite <n>`, `Página <n>`, `Pagina <n>`, `ページ <n>`;
+`Duplikat von "<name>"`, `Duplicado de <name>`, `Doublon de <name>`,
+`Duplicata de <name>`, `Duplikat av <name>`); Microsoft publishes no
+list.
+
 ### 8.4 Native, tier 3
 
 | Id | Scope | Category | Severity | What it catches |
@@ -700,7 +915,7 @@ skips it.
 | ACTION_WITHOUT_DESTINATION | Visual | Report Design | warning | A button's page navigation, drillthrough, or bookmark action is on but names no destination |
 | BROKEN_BOOKMARK_REFERENCE | Bookmark | Error Prevention | warning | A bookmark's active page, or a page or visual it captures, does not exist |
 | TAB_ORDER_FOLLOWS_LAYOUT | Page | Accessibility | warning | Tab order disagrees with reading order (top to bottom, left to right, with a row tolerance of half the median visual height). Desktop always writes `tabOrder`, so "not set" is not detectable; disagreement with the layout is. The page documents the heuristic; policy `expect: layout`, silent without it |
-| SLICER_SELECTION_SAVED | Visual | Report Design | info | A slicer carries a saved selection; policy `expect: none` raises it to warning |
+| SLICER_SELECTION_SAVED | Visual | Report Design | info | A slicer carries a saved selection (any visual that saves one, amended 2026-09-24 with Michael); policy `expect: none` raises it to warning |
 
 Amended 2026-09-23 with pull request 5, reading the conditions rather
 than changing them, against Microsoft's schemas and capability data,
@@ -741,6 +956,20 @@ catalog and the selection under
 filter and is no selection, a hidden slicer counts, and each synced
 copy reports the selection it carries.
 
+Amended 2026-09-24 with Michael (release triage, DQ5): a saved
+selection is read on any visual type, so custom slicers from AppSource
+are covered; in Desktop-saved files every visual type that carries
+`general.filter` is a filtering visual. In the 26 Desktop-saved
+repositories of the pull request 5 research corpus, the visuals with a
+selection there are `slicer` 510, `advancedSlicerVisual` 26,
+`listSlicer` 14, and four AppSource visuals the reports register in
+`publicCustomVisuals`: `advancedtoggleswitch` 13,
+`ChicletSlicer1448559807354` 6,
+`textFilter25A4896A83E0487089E2B90C9AE57C8A` (the Text Filter) 2, and
+`HierarchySlicer1458836712039` 2. `SLICER_SELECTION_SAVED` reports each
+with the label, detail, and line it gives a catalog slicer, and no
+list of visual types is kept.
+
 Amended 2026-09-23 with Michael, three changes to the conditions
 above. An action switched on whose own destination property is absent
 or an empty literal is `ACTION_WITHOUT_DESTINATION`'s, at warning,
@@ -755,6 +984,19 @@ finding. `TAB_ORDER_FOLLOWS_LAYOUT` is a policy rule, silent until
 nobody ordered (under the policy, 559 of the 659 eligible
 Desktop-saved pages in a corpus of public reports, about 85%) and a
 check that fires everywhere is tuned out.
+
+Amended 2026-09-24 with Michael (release triage, ruling H71): a rule
+that reports a page, a visual, or a bookmark as missing says nothing
+about one whose own file could not be read, which the report model
+knows by its folder or file name (section 5).
+`BROKEN_BOOKMARK_REFERENCE` does not report an active page or a
+captured page whose page.json could not be read, nor a captured visual
+whose folder is on the bookmark's page and whose visual.json could not
+be read. `BROKEN_ACTION_TARGET` does not report a bookmark target whose
+`<name>.bookmark.json` exists but could not be read, nor a page target
+whose page.json could not be read; with a visual of that page read, the
+page was already one named by its folder, and a page with none read is
+now covered too.
 
 Mobile layouts and themes are facts only in v2.
 
@@ -837,8 +1079,19 @@ pbiplint's own committed expectation (`ours` in the same file) instead
 of the oracle's. Adding a deviation requires the sentence, a fixture
 that shows the difference, and the same sentence in the rule page's
 Quirks section (a required part of the template whenever a quirk
-exists); a test checks that the three agree. Three are known
+exists); a test checks that the three agree. Four are known
 now (section 8.1).
+
+Amended 2026-09-24 with Michael (release triage, DQ6, narrowed by
+ruling H68): the fourth, `HIDE_TOOLTIP_DRILLTROUGH_PAGES` reading a
+tooltip page from page.json's own `type`, is latent on the fixtures,
+whose tooltip pages all carry `pageBinding`, so no fixture shows the
+difference. It is handled as the `REDUCE_OBJECTS_WITHIN_VISUALS`
+deviation is (pull request 2, ruling C29): no expectation file records
+it, since the parity test rejects a deviation with no visible
+difference; the sentence is on the rule's page under Quirks and in the
+rule's doc comment; and unit tests pin pbiplint's behaviour. A fixture
+that shows it later records it there.
 
 **Native rules** have no oracle. Each is pinned two ways: a
 hand-written expectation on a fixture that fires it (the sample report

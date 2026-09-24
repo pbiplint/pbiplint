@@ -19,7 +19,7 @@ export const LANDING_PAGE_NOT_SET = pbiplintRule({
     if (!report || !opens) return [];
     const pointer = opens.by === "active" ? "/activePageName" : undefined;
     // Never name a page the report does not have; OPENING_PAGE_INVALID reports it beside this.
-    if (opens.page === undefined)
+    if (opens.page === undefined && !opens.unread)
       return [
         reportFinding.pagesHeader(
           report,
@@ -27,10 +27,12 @@ export const LANDING_PAGE_NOT_SET = pbiplintRule({
           `no landing page set; the active page "${opens.name}" does not exist`,
         ),
       ];
+    // A page whose page.json could not be read goes by the name pages.json gives it, the same
+    // name a stub page (one whose page.json was not read but a visual of which was) takes from
+    // its folder.
+    const name = opens.page?.displayName ?? opens.name;
     const which = opens.by === "first" ? "the first page" : "the page open when it was saved";
-    return [
-      reportFinding.pagesHeader(report, pointer, `opens on "${opens.page.displayName}", ${which}`),
-    ];
+    return [reportFinding.pagesHeader(report, pointer, `opens on "${name}", ${which}`)];
   },
 });
 

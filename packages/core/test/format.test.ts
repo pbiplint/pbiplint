@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { lint } from "../src/engine/lint.js";
 import { finding } from "../src/rules/helpers.js";
+import { fieldFileUnread } from "../src/rules/report-helpers.js";
 import type { Rule } from "../src/rules/types.js";
 import {
   formatJson,
@@ -87,6 +88,43 @@ describe("summary wording", () => {
     );
     expect(text.split("\n")[1]).toBe(
       "Model: 1 file. 1 rule run, 1 rule disabled by config, 1 finding ignored by annotation",
+    );
+  });
+  it("says a rule was skipped because a report file could not be read, in text, Markdown, and JSON", () => {
+    const wholeReport = (id: string): Rule => ({
+      ...base,
+      id,
+      name: id,
+      category: "Maintenance",
+      severity: 1,
+      layer: "project",
+      needs: ["model", "report"],
+      skipWhenUnread: fieldFileUnread,
+      check: () => [],
+    });
+    const run = (rules: Rule[]) =>
+      lint(
+        [
+          { path: "a.tmdl", text: "table A\n\tcolumn X\n\t\tdataType: string\n" },
+          { path: "definition/pages/p/page.json", text: '{ "name": "p" }' },
+          { path: "definition/pages/p/visuals/v/visual.json", text: '{\n  "name": "v",\n' },
+        ],
+        { rules: [oneColumn, ...rules] },
+      );
+    const one = run([wholeReport("WHOLE_REPORT")]);
+    expect(formatText(one).split("\n")[1]).toBe(
+      "Model: 1 file. Report: 2 files. 1 rule run, 1 rule skipped (a report file could not be read)",
+    );
+    expect(formatMarkdown(one).split("\n")[2]).toBe(
+      "1 finding (0 errors, 1 warning, 0 info) in 3 files. Model: 1 file. Report: 2 files. 1 rule run, 1 rule skipped (a report file could not be read).",
+    );
+    expect(JSON.parse(formatJson(one)).summary.rulesSkipped).toEqual([
+      { id: "WHOLE_REPORT", reason: "reportFileUnread" },
+    ]);
+    // SARIF lists no skipped rule for any reason, so it gains nothing here.
+    expect(JSON.parse(formatSarif(one)).runs[0].invocations).toBeUndefined();
+    expect(formatText(run([wholeReport("A"), wholeReport("B")])).split("\n")[1]).toBe(
+      "Model: 1 file. Report: 2 files. 1 rule run, 2 rules skipped (a report file could not be read)",
     );
   });
 });
@@ -320,15 +358,18 @@ describe("formatResult", () => {
 
 describe("a whole-project report", () => {
   const j = (v: unknown) => JSON.stringify(v);
+  const readable = [
+    {
+      path: "definition/report.json",
+      text: j({ $schema: "https://x/report/3.2.0/schema.json" }),
+    },
+    { path: "definition/pages/pages.json", text: j({ pageOrder: ["p"], activePageName: "p" }) },
+    { path: "definition/pages/p/page.json", text: j({ name: "p", displayName: "Overview" }) },
+  ];
   const project = lint(
     [
       ...files,
-      {
-        path: "definition/report.json",
-        text: j({ $schema: "https://x/report/3.2.0/schema.json" }),
-      },
-      { path: "definition/pages/pages.json", text: j({ pageOrder: ["p"], activePageName: "p" }) },
-      { path: "definition/pages/p/page.json", text: j({ name: "p", displayName: "Overview" }) },
+      ...readable,
       {
         path: "definition/pages/p/visuals/v/visual.json",
         text: '{\n  "name": "v",\n<<<<<<< HEAD\n}\n',
@@ -347,16 +388,18 @@ describe("a whole-project report", () => {
   it("prints the layers line, notices, the facts block, and a layer tag on every group in text", () => {
     const text = formatText(project);
     const lines = text.split("\n");
+    // The visual.json with a conflict marker could not be read, so NOT_REACHED_FROM_REPORT is
+    // skipped; the report registers no custom visual, so REMOVE_UNUSED_CUSTOM_VISUALS runs.
     expect(lines[1]).toMatch(
-      /^Model: 2 files\. Report: 4 files\. \d+ rules run, 5 rules skipped \(need a live model\)$/,
+      /^Model: 2 files\. Report: 4 files\. \d+ rules run, 5 rules skipped \(need a live model\), 1 rule skipped \(a report file could not be read\)$/,
     );
     expect(lines[2]).toBe("Notice: the walk stopped 64 folders deep inside Deep");
     expect(text).toContain("\nReport at a glance\n");
     expect(text).toMatch(
-      /\n {2}Opens on {9}Overview \(the page open when it was saved; no landing page set\) {22}LANDING_PAGE_NOT_SET\n/,
+      /\n {2}Opens on {9}Overview \(the page open when it was saved; no landing page set\) {41}LANDING_PAGE_NOT_SET\n/,
     );
     expect(text).toMatch(
-      /\n {2}Model {12}1 table, 1 column, 1 measure \(1 column and 1 measure not reached from this report\) {3}NOT_REACHED_FROM_REPORT\n/,
+      /\n {2}Model {12}1 table, 1 column, 1 measure \(not reached from this report: unknown, a report file could not be read\)\n/,
     );
     // PARSE_ISSUE is an Error Prevention error, so it ranks first; the model's DAX error follows.
     expect(text).toMatch(/\n {2}1\. File could not be fully parsed {2}\(1 error\) {3}\[report\]\n/);
@@ -365,6 +408,15 @@ describe("a whole-project report", () => {
       /\nERROR {2}\[report\] {3}File could not be fully parsed {2}PARSE_ISSUE {2}\(1\)\n/,
     );
     expect(text).toMatch(/\nERROR {2}\[model\] {4}Column references should be fully qualified/);
+  });
+  it("prints the counted Model row with NOT_REACHED_FROM_REPORT in the margin when every report file was read", () => {
+    const text = formatText(lint([...files, ...readable]));
+    expect(text.split("\n")[1]).toMatch(
+      /^Model: 2 files\. Report: 3 files\. \d+ rules run, 5 rules skipped \(need a live model\)$/,
+    );
+    expect(text).toMatch(
+      /\n {2}Model {12}1 table, 1 column, 1 measure \(1 column and 1 measure not reached from this report\) {3}NOT_REACHED_FROM_REPORT\n/,
+    );
   });
   it("tags a parse-issue group spanning both layers as project in the text header", () => {
     const spanning = lint([
@@ -402,6 +454,12 @@ describe("a whole-project report", () => {
   it("mirrors the same in markdown, with the facts as a table", () => {
     const md = formatMarkdown(project);
     expect(md).toContain("Model: 2 files. Report: 4 files.");
+    expect(md).toMatch(
+      /, 5 rules skipped \(need a live model\), 1 rule skipped \(a report file could not be read\)\.\n/,
+    );
+    expect(md).toContain(
+      "| Model | 1 table, 1 column, 1 measure (not reached from this report: unknown, a report file could not be read) |  |",
+    );
     expect(md).toContain("> Notice: the walk stopped 64 folders deep inside Deep");
     expect(md).toContain(
       "## Report at a glance\n\n| Fact | Value | Rule |\n|---|---|---|\n| Opens on | Overview (the page open when it was saved; no landing page set) | [LANDING_PAGE_NOT_SET](https://pbiplint.com/rules/landing-page-not-set) |",

@@ -136,6 +136,22 @@ export interface Page {
   bindingRefs: FieldRef[];
   filters: ReportFilter[];
   visuals: Visual[];
+  /**
+   * The folder names of the visuals in this page's folder whose visual.json could not be read.
+   * Power BI Desktop names a visual's folder after the visual's `name` (Learn's PBIR naming
+   * convention; every one of 13,026 visuals in Desktop-saved files), so these are the names of
+   * visuals the page has that pbiplint could not read. Kept on the page, not the report, because a
+   * visual.json is joined to its page by folder here, and a page's `name` can differ from its
+   * folder after a rename.
+   */
+  unreadVisuals: string[];
+  /**
+   * Whether a mobile.json that was read sits in this page's folder, under a visual's folder: a
+   * visual's mobile.json marks its mobile layout, and the page has one when any mobile.json in its
+   * folder was read. Read from the mobile.json files themselves, so a mobile layout whose
+   * visual.json could not be read still counts.
+   */
+  hasMobileLayout: boolean;
   annotations: Record<string, string>;
   schemaVersion?: string;
 }
@@ -217,5 +233,26 @@ export interface Report {
   datasetReference: DatasetReference;
   files: string[];
   issues: ParseIssue[];
+  /**
+   * The files under definition/ that the PBIR format defines and that could not be read (a merge
+   * conflict, invalid JSON, or a document that is not an object, each a PARSE_ISSUE), in path
+   * order. Whatever such a file says is missing from this report, so a rule whose findings depend
+   * on one is skipped while it is listed, through the predicate its `skipWhenUnread` names.
+   * definition.pbir, the .platform, and the .pbip are not part of the definition folder, and a
+   * JSON file of the author's own is not part of the report, so none of them is listed.
+   */
+  unreadDefinitionFiles: string[];
+  /**
+   * The folder names of the pages whose page.json could not be read. Desktop names a page's folder
+   * after its `name` (713 of 714 pages in Desktop-saved files; a rename by hand keeps the folder),
+   * so a rule that looks a page up by name reads this before it says no such page exists. A page
+   * of these with a visual that was read is also in `pages`, as a stub named by its folder.
+   */
+  unreadPages: string[];
+  /**
+   * The names of the bookmarks whose bookmark file could not be read, from the file name
+   * `<name>.bookmark.json`, which Desktop gives every bookmark (576 of 576 in Desktop-saved files).
+   */
+  unreadBookmarks: string[];
   schemaVersions: { report?: string; page?: string; visual?: string };
 }

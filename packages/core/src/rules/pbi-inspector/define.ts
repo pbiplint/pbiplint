@@ -16,17 +16,20 @@ export interface InspectorRuleSpec {
   category: Category;
   scope: ObjectType[];
   options?: RuleOption[];
+  /** The unread report files that stop the rule (Rule.skipWhenUnread). */
+  skipWhenUnread?: (report: Report) => boolean;
 }
 
 /**
  * A port of one fab-inspector base rule: the id and name from the vendored ruleset, the category,
  * scope, and options from the spec, the description from the rule page, the behaviour from
- * `check`. Every port is a warning, as the source's CLI reports them. The three deviations from
- * the source are pinned by `ours` in the expectation files and named on the pages.
+ * `check`. Every port is a warning, as the source's CLI reports them. The four deviations from
+ * the source are named on the pages and in the rules' doc comments; those a fixture shows are
+ * pinned by `ours` in the expectation files, the others by the rules' unit tests.
  */
 export function inspectorRule(
   id: string,
-  { category, scope, options }: InspectorRuleSpec,
+  { category, scope, options, skipWhenUnread }: InspectorRuleSpec,
   check: (report: Report, ctx: RuleContext) => RuleFinding[],
 ): Rule {
   const meta = inspectorMetaOf(id);
@@ -38,6 +41,7 @@ export function inspectorRule(
     scope,
     layer: "report",
     needs: ["report"],
+    ...(skipWhenUnread ? { skipWhenUnread } : {}),
     ...(options ? { options } : {}),
     description: RULE_SUMMARIES[id] ?? meta.name,
     references: [],

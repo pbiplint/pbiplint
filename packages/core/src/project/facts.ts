@@ -3,16 +3,23 @@ import type { Indexes } from "../index/build.js";
 import type { Report } from "../pbir/types.js";
 import {
   allVisuals,
+  customVisualUseUnknown,
+  fieldFileUnread,
   filtersPaneState,
   hiddenVisualWithFields,
+  isDrillthroughPage,
   isHiddenPage,
+  isHiddenVisual,
   isSlicer,
   isTooltipPage,
   landingPageNotSet,
+  mobileFileUnread,
+  mobilePageUnread,
   openingPage,
   openingPageInvalid,
   reportMeasuresToMove,
   slicerSelection,
+  visualFileUnread,
 } from "../rules/report-helpers.js";
 import type { Fact, Project } from "./types.js";
 
@@ -31,13 +38,17 @@ function reportFacts(project: Project, report: Report, known: ReadonlySet<string
   };
   const pages = report.pages;
 
-  // Opens on. A hidden landing page says "(hidden)", which is true, but links no rule for it.
+  // Opens on. A hidden landing page says "(hidden)", which is true, but links no rule for it. A
+  // page whose page.json could not be read goes by the name pages.json gives it, the same name a
+  // stub page takes from its folder, and is never called missing.
   const opens = openingPage(report);
   const value =
     opens === undefined
       ? "unknown"
       : opens.page === undefined
-        ? `"${opens.name}" (no such page)`
+        ? opens.unread
+          ? opens.name
+          : `"${opens.name}" (no such page)`
         : isHiddenPage(opens.page)
           ? `${opens.page.displayName} (hidden)`
           : opens.page.displayName;
@@ -89,12 +100,12 @@ function reportFacts(project: Project, report: Report, known: ReadonlySet<string
   );
 
   // Pages. A tooltip page counts by either marking Microsoft's page schema gives it, page.json's
-  // own `type` or its `pageBinding.type` (Desktop-saved reports mark most by `type` alone); a
-  // drillthrough page by its `pageBinding.type`, which every drillthrough target in Desktop-saved
-  // reports carries.
+  // own `type` or its `pageBinding.type` (Desktop-saved reports mark most tooltip pages by `type`
+  // alone); a drillthrough page by its `pageBinding.type` alone, which every drillthrough target in
+  // Desktop-saved reports carries. HIDE_TOOLTIP_DRILLTROUGH_PAGES shares both readings.
   const hidden = pages.filter(isHiddenPage).length;
   const tooltip = pages.filter(isTooltipPage).length;
-  const drill = pages.filter((p) => p.bindingType === "Drillthrough").length;
+  const drill = pages.filter(isDrillthroughPage).length;
   const pageParts = [
     hidden && `${hidden} hidden`,
     tooltip && `${tooltip} tooltip`,
@@ -112,17 +123,25 @@ function reportFacts(project: Project, report: Report, known: ReadonlySet<string
     ),
   );
 
-  // Visuals.
+  // Visuals. A visual hidden through its group counts as hidden, the reading
+  // HIDDEN_VISUAL_WITH_FIELDS shares. While a visual.json could not be read and a registered
+  // custom visual type is used by no visual that was read, how many are used is unknown, since the
+  // unread visual could be of that type; REMOVE_UNUSED_CUSTOM_VISUALS is skipped on the same
+  // condition, so the fact links it only when it can fire. The count and the hidden count are
+  // lower bounds, and never read none.
   const visuals = allVisuals(report).filter((v) => !v.isGroup);
-  const hiddenVisuals = visuals.filter((v) => v.isHidden);
+  const hiddenVisuals = visuals.filter(isHiddenVisual);
   const hiddenWithFields = visuals.filter(hiddenVisualWithFields).length;
   const registered = report.publicCustomVisuals;
   const usedTypes = new Set(visuals.map((v) => v.type));
   const used = registered.filter((t) => usedTypes.has(t)).length;
+  const usedUnknown = customVisualUseUnknown(report);
   const visualParts = [
     hiddenVisuals.length ? `${hiddenVisuals.length} hidden` : "",
     registered.length
-      ? `${n(registered.length, "custom visual type")} registered, ${used} used`
+      ? `${n(registered.length, "custom visual type")} registered, ${
+          usedUnknown ? "used: unknown, a visual.json could not be read" : `${used} used`
+        }`
       : "",
   ].filter(Boolean);
   facts.push(
@@ -134,7 +153,7 @@ function reportFacts(project: Project, report: Report, known: ReadonlySet<string
         ...(visualParts.length ? { detail: visualParts.join("; ") } : {}),
       },
       hiddenWithFields > 0 ? "HIDDEN_VISUAL_WITH_FIELDS" : undefined,
-      registered.length > used ? "REMOVE_UNUSED_CUSTOM_VISUALS" : undefined,
+      registered.length > used && !usedUnknown ? "REMOVE_UNUSED_CUSTOM_VISUALS" : undefined,
     ),
   );
 
@@ -164,30 +183,65 @@ function reportFacts(project: Project, report: Report, known: ReadonlySet<string
         ),
   );
 
-  // Slicers: Microsoft's slicer types, and those saved with a selection, as the rule reads them.
-  const slicers = visuals.filter(isSlicer);
-  const saved = slicers.filter((v) => slicerSelection(v) !== undefined).length;
+  // Slicers: the value counts Microsoft's slicer types only (`isSlicer`), with a selection or
+  // without, so clearing a selection never changes it. A custom slicer from AppSource is known only
+  // by the selection it carries, so the detail counts every saved selection, as
+  // SLICER_SELECTION_SAVED reads them, and names those on a visual that is not a built-in slicer.
+  // With no built-in slicer the value is none, and a custom slicer's selection still shows in the
+  // detail beside it. While a visual.json could not be read, that visual could be a slicer or carry
+  // a selection, so what would read none, the value or "no saved selection", reads unknown; a count
+  // above none is a lower bound and stays.
+  const slicers = visuals.filter(isSlicer).length;
+  const selected = visuals.filter((v) => slicerSelection(v) !== undefined);
+  const custom = selected.filter((v) => !isSlicer(v)).length;
+  const visualUnread = visualFileUnread(report);
+  const unreadVisual = "a visual.json could not be read";
+  const slicerValue = slicers ? String(slicers) : visualUnread ? "unknown" : "none";
+  const selections = selected.length
+    ? n(selected.length, "saved selection") +
+      (custom ? `, ${custom} on ${custom === 1 ? "a custom slicer" : "custom slicers"}` : "") +
+      (slicerValue === "unknown" ? `; ${unreadVisual}` : "")
+    : visualUnread
+      ? `saved selections: unknown, ${unreadVisual}`
+      : slicers
+        ? "no saved selection"
+        : undefined;
   facts.push(
     withRule(
-      slicers.length
-        ? {
-            layer: "report",
-            label: "Slicers",
-            value: String(slicers.length),
-            detail: `${saved} with a saved selection`,
-          }
-        : { layer: "report", label: "Slicers", value: "none" },
-      saved > 0 ? "SLICER_SELECTION_SAVED" : undefined,
+      {
+        layer: "report",
+        label: "Slicers",
+        value: slicerValue,
+        ...(selections === undefined ? {} : { detail: selections }),
+      },
+      selected.length > 0 ? "SLICER_SELECTION_SAVED" : undefined,
     ),
   );
 
-  // Mobile layouts and schema versions.
-  const mobilePages = pages.filter((p) => p.visuals.some((v) => v.hasMobileLayout)).length;
-  facts.push({
-    layer: "report",
-    label: "Mobile layouts",
-    value: mobilePages ? `${mobilePages} of ${n(pages.length, "page")}` : "none",
-  });
+  // Mobile layouts and schema versions. A page counts by the mobile.json files read in its folder,
+  // so a mobile layout pbiplint read counts even when its visual.json could not be read. None reads
+  // unknown while a mobile.json could not be read, since the layout it marks is not counted, or
+  // while a mobile.json that was read has no page to count and a page.json or a visual.json in its
+  // folder could not be read (`mobilePageUnread`). A count above none is a lower bound and stays.
+  const mobilePages = pages.filter((p) => p.hasMobileLayout).length;
+  const mobileUnknown = mobilePages
+    ? undefined
+    : mobileFileUnread(report)
+      ? "a mobile.json could not be read"
+      : mobilePageUnread(report)
+        ? "a page with a mobile layout could not be read"
+        : undefined;
+  facts.push(
+    mobilePages
+      ? {
+          layer: "report",
+          label: "Mobile layouts",
+          value: `${mobilePages} of ${n(pages.length, "page")}`,
+        }
+      : mobileUnknown
+        ? { layer: "report", label: "Mobile layouts", value: "unknown", detail: mobileUnknown }
+        : { layer: "report", label: "Mobile layouts", value: "none" },
+  );
   const sv = report.schemaVersions;
   const versions = [
     sv.report && `report ${sv.report}`,
@@ -222,7 +276,12 @@ export function buildFacts(
       value: `${n(model.tables.length, "table")}, ${n(columns, "column")}, ${n(measures, "measure")}`,
     };
     const reach = indexes.reachability;
-    if (reach) {
+    // Unknown when a file the report's field references are read from could not be read, the case
+    // NOT_REACHED_FROM_REPORT is skipped in: what that file would have reached is not known, so the
+    // fact gives no count and links no rule.
+    if (reach && fieldFileUnread(project.report)) {
+      fact.detail = "not reached from this report: unknown, a report file could not be read";
+    } else if (reach) {
       const u = reach.unreached();
       fact.detail = `${n(u.columns.length, "column")} and ${n(u.measures.length, "measure")} not reached from this report`;
       if (u.columns.length + u.measures.length > 0 && knownRules.has("NOT_REACHED_FROM_REPORT"))

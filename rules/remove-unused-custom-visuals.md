@@ -86,6 +86,7 @@ A report kept as a starting point for other reports, which registers the visuals
 - Only the AppSource visuals listed in `publicCustomVisuals` are checked. A visual imported from a .pbiviz file is stored in the report's CustomVisuals folder instead, and pbiplint does not read that folder, so an unused visual imported from a file is not reported.
 - A visual counts as used when any visual in the report has its type name, on any page, hidden pages and hidden visuals included.
 - The finding is on the report rather than on a page or visual, because an unused visual has neither, so it cannot be ignored for one visual alone.
+- While a visual.json cannot be read, such as one holding merge-conflict markers, and a registered visual is not used by any visual pbiplint could read, the rule reports nothing, because the unread visual could be the one that uses it and pbiplint does not guess what a file it could not read says. The skipped line gives the reason, `a report file could not be read`, the file's own `PARSE_ISSUE` finding names it, and the Visuals line of Report at a glance says how many registered types are used is unknown. When the report registers no custom visual, or every one it registers is used by a visual that was read, the unread file cannot change the answer, and the rule runs.
 
 ## Links
 

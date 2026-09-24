@@ -175,6 +175,8 @@ function buildPage(
     bindingRefs: binding ? collectFieldRefs(binding.parameters, "/pageBinding/parameters") : [],
     filters: filtersOf(json.filterConfig, file, "/filterConfig"),
     visuals: [],
+    unreadVisuals: [],
+    hasMobileLayout: false,
     annotations: annotationsOf(json.annotations),
     schemaVersion: version,
   };
@@ -190,6 +192,8 @@ const stubPage = (id: string): Page => ({
   bindingRefs: [],
   filters: [],
   visuals: [],
+  unreadVisuals: [],
+  hasMobileLayout: false,
   annotations: {},
 });
 
@@ -378,17 +382,43 @@ const DEFINITION_FILES: ReadonlySet<string> = new Set([
   "definition/bookmarks/bookmarks.json",
 ]);
 
+/** Whether the file is one Learn's PBIR folder table names under definition/: the report itself. */
+const definitionFile = (path: string): boolean =>
+  DEFINITION_FILES.has(path) ||
+  [PAGE_FILE, VISUAL_FILE, MOBILE_FILE, BOOKMARK_FILE].some((re) => re.test(path));
+
+/**
+ * Whether the report's field references are read from this definition file, as the reference
+ * index in index/report-refs.ts reads them: report.json (the report's filters),
+ * reportExtensions.json (its measures' DAX), a page.json (the page's filters and binding), a
+ * visual.json (its wells, filters, and every other property), and a bookmark file (its captured
+ * state). version.json, pages.json, bookmarks.json, and a visual's mobile.json name no field.
+ */
+export const holdsFieldReferences = (path: string): boolean =>
+  path === "definition/report.json" ||
+  path === "definition/reportExtensions.json" ||
+  [PAGE_FILE, VISUAL_FILE, BOOKMARK_FILE].some((re) => re.test(path));
+
+/** Whether the definition file is a visual's visual.json, the one file that gives a visual its type. */
+export const isVisualFile = (path: string): boolean => VISUAL_FILE.test(path);
+
+/** Whether the definition file is a visual's mobile.json, which marks the visual's mobile layout. */
+export const isMobileFile = (path: string): boolean => MOBILE_FILE.test(path);
+
+/** The page folder a file under definition/pages/<folder>/ sits in, or undefined for any other file. */
+export const pageFolderOf = (path: string): string | undefined =>
+  /^definition\/pages\/([^/]+)\//.exec(path)?.[1];
+
 /**
  * Whether the PBIR format defines the file: definition.pbir, the report's .platform, the project's
- * .pbip, and the files Learn's PBIR folder table names under definition/. Microsoft publishes a
- * schema for each, with an object root; any other JSON under definition/ is the author's own.
+ * .pbip, and the definition files. Microsoft publishes a schema for each, with an object root; any
+ * other JSON under definition/ is the author's own.
  */
 const definedByPbir = (path: string): boolean =>
   path.endsWith("definition.pbir") ||
   path.endsWith(".platform") ||
   path.endsWith(".pbip") ||
-  DEFINITION_FILES.has(path) ||
-  [PAGE_FILE, VISUAL_FILE, MOBILE_FILE, BOOKMARK_FILE].some((re) => re.test(path));
+  definitionFile(path);
 
 /**
  * Builds the report object model from the report's files (paths relative to the .Report folder).
@@ -411,6 +441,9 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
     datasetReference: { kind: "none" },
     files: [],
     issues: [],
+    unreadDefinitionFiles: [],
+    unreadPages: [],
+    unreadBookmarks: [],
     schemaVersions: {},
   };
   const diagnostics: Diagnostic[] = [];
@@ -425,6 +458,10 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
     version?: string;
   }[] = [];
   const mobile = new Set<string>();
+  /** The page folders a mobile.json that was read sits in. */
+  const mobilePages = new Set<string>();
+  /** Each visual.json that could not be read, as its page's folder and its own. */
+  const unreadVisuals: { pageId: string; id: string }[] = [];
   const highest = (current: string | undefined, seen: string | undefined): string | undefined =>
     seen === undefined
       ? current
@@ -439,6 +476,14 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
     if (f.path === "definition/reportExtensions.json") report.extensions = "unread";
     const read = readJson(f.path, f.text, { objectRoot: definedByPbir(f.path) });
     report.issues.push(...read.issues);
+    if (read.issues.length > 0 && definitionFile(f.path)) {
+      report.unreadDefinitionFiles.push(f.path);
+      // The object the file would have defined, by the folder or file name Desktop gives it.
+      let u: RegExpExecArray | null;
+      if ((u = PAGE_FILE.exec(f.path))) report.unreadPages.push(u[1]!);
+      else if ((u = VISUAL_FILE.exec(f.path))) unreadVisuals.push({ pageId: u[1]!, id: u[2]! });
+      else if ((u = BOOKMARK_FILE.exec(f.path))) report.unreadBookmarks.push(u[1]!);
+    }
     if (read.json === undefined) continue;
     const family = schemaFamilyOf(read.schema);
     const version = read.schemaVersion;
@@ -494,6 +539,7 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
       report.schemaVersions.visual = highest(report.schemaVersions.visual, version);
     } else if ((m = MOBILE_FILE.exec(f.path))) {
       mobile.add(`${m[1]}/${m[2]}`);
+      mobilePages.add(m[1]!);
     } else if (f.path === "definition/bookmarks/bookmarks.json") {
       report.bookmarksHeader = {
         file: f.path,
@@ -529,6 +575,16 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
     page.visuals.push(
       buildVisual(page, v.id, v.file, v.text, v.json, v.version, mobile.has(`${v.pageId}/${v.id}`)),
     );
+  }
+  // After the stubs, so a page whose page.json was not read but one of whose visuals was holds its
+  // unread visuals too. A folder with no page object, whose page is in `unreadPages`, has no page
+  // to hold them.
+  for (const v of unreadVisuals) pagesByFolder.get(v.pageId)?.unreadVisuals.push(v.id);
+  // A page has a mobile layout when a mobile.json that was read sits in its folder, whether or not
+  // that visual's visual.json could be read. A folder with no page object has no page to mark.
+  for (const folder of mobilePages) {
+    const page = pagesByFolder.get(folder);
+    if (page) page.hasMobileLayout = true;
   }
   // pageOrder names a page by its page.json `name`, as bookmarks and actions do. A rename can set
   // the name apart from the folder (Learn: Desktop keeps the folder), which only joins a

@@ -15,9 +15,9 @@ sources:
 
 ## What it checks
 
-Pages with more visible visuals than the threshold, 20 by default, not counting shapes, slicers, buttons, and text boxes.
+Pages with more visuals than the threshold, 20 by default, counting every visual except shapes, slicers, buttons, text boxes, and a visual hidden by `isHidden` in its own visual.json.
 
-Each finding names the page, as `Page "Overview"`, and its detail gives the count, as `23 visible visuals, more than 20`.
+Each finding names the page, as `Page "Overview"`, and its detail gives the count, as `23 visuals, more than 20`.
 
 ## Example
 
@@ -161,9 +161,9 @@ A page of light visuals can carry more than the default without keeping anyone w
 
 ## Quirks
 
-- Hidden visuals are not counted, and neither are shapes, slicers, buttons, and text boxes, which is how the source counts. A slicer runs a query of its own, so a page crowded with slicers can be slow without being reported.
+- A visual with `isHidden` of its own is not counted, and neither are shapes, slicers, buttons, and text boxes, which is how the source counts. A visual hidden only through its group is counted, as the source counts it. A slicer runs a query of its own, so a page crowded with slicers can be slow without being reported.
 - The exclusions go by visual type, so only a slicer of the type `slicer` is left out. The newer list slicer and button slicer are written as `listSlicer` and `advancedSlicerVisual`, and they are counted.
-- A visual group counts as one visual, and each visual inside it counts as well.
+- A visual group counts as one visual, and each visual inside it counts as well. Each is judged by its own `isHidden`, so a hidden group is not counted, while the visuals in it are unless they carry `isHidden` themselves.
 - Every page is checked, hidden tooltip and drillthrough pages included.
 
 ## Related rules

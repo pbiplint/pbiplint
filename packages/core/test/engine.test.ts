@@ -12,6 +12,7 @@ import { PARSE_ISSUE } from "../src/rules/parse-issue.js";
 import { ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY } from "../src/rules/pbi-inspector/pages.js";
 import { REMOVE_UNUSED_CUSTOM_VISUALS } from "../src/rules/pbi-inspector/report.js";
 import { ENSURE_ALTTEXT } from "../src/rules/pbi-inspector/visuals.js";
+import { defaultRules } from "../src/rules/index.js";
 import { REPORT_LEVEL_MEASURES } from "../src/rules/pbiplint/measures.js";
 import type { Rule } from "../src/rules/types.js";
 import { modelFrom } from "./helpers.js";
@@ -778,6 +779,94 @@ describe("lint over a project", () => {
     expect(fact("Report measures", off("HIDDEN_VISUAL_WITH_FIELDS"))).toEqual({
       ...measures,
       ruleId: "REPORT_LEVEL_MEASURES",
+    });
+  });
+  describe("NOT_REACHED_FROM_REPORT with a report file that could not be read", () => {
+    // A readable visual naming Sales[Region], which the model does not have, beside the files each
+    // case adds. Amount is bound nowhere, so with every file read the rule reports it.
+    const regionCard = {
+      path: "definition/pages/p/visuals/r/visual.json",
+      text: j({
+        name: "r",
+        position: {},
+        visual: {
+          visualType: "card",
+          query: {
+            queryState: {
+              Values: {
+                projections: [
+                  {
+                    field: {
+                      Column: {
+                        Expression: { SourceRef: { Entity: "Sales" } },
+                        Property: "Region",
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      }),
+    };
+    const run = (...extra: { path: string; text: string }[]) => {
+      const r = lint([...modelFiles, ...reportFiles, regionCard, ...extra]);
+      const ids = (id: string) =>
+        r.findings.filter((f) => f.ruleId === id).map((f) => f.objectId ?? f.objectName);
+      return { r, ids };
+    };
+    const skipped = { id: "NOT_REACHED_FROM_REPORT", reason: "reportFileUnread" };
+    it("reports what is not reached when every report file was read", () => {
+      const { r, ids } = run();
+      expect(ids("NOT_REACHED_FROM_REPORT")).toEqual(["'Sales'[Amount]"]);
+      expect(r.summary.rulesSkipped).not.toContainEqual(skipped);
+    });
+    it("is skipped with the reason when a visual.json is invalid JSON, while BROKEN_FIELD_REFERENCE runs", () => {
+      const { r, ids } = run({
+        path: "definition/pages/p/visuals/v/visual.json",
+        text: '{\n  "name": "v",\n  "visual": {\n',
+      });
+      expect(r.summary.rulesSkipped).toContainEqual(skipped);
+      expect(ids("NOT_REACHED_FROM_REPORT")).toEqual([]);
+      // A broken reference in a file that was read is broken whatever the unread file says.
+      expect(ids("BROKEN_FIELD_REFERENCE")).toEqual(["r"]);
+      expect(ids("PARSE_ISSUE")).toEqual(["definition/pages/p/visuals/v/visual.json"]);
+      expect(skippedLine(r)).toContain("1 rule skipped (a report file could not be read)");
+    });
+    it("is skipped with the reason when reportExtensions.json holds merge-conflict markers", () => {
+      const side = (expression: string) =>
+        j({ entities: [{ name: "Sales", measures: [{ name: "Net Margin", expression }] }] });
+      const { r, ids } = run({
+        path: "definition/reportExtensions.json",
+        text: [
+          "<<<<<<< HEAD",
+          side("SUM('Sales'[Amount])"),
+          "=======",
+          side("1"),
+          ">>>>>>> main",
+        ].join("\n"),
+      });
+      expect(r.summary.rulesSkipped).toContainEqual(skipped);
+      expect(ids("NOT_REACHED_FROM_REPORT")).toEqual([]);
+      expect(r.summary.rulesSkipped.map((s) => s.id)).not.toContain("BROKEN_FIELD_REFERENCE");
+      expect(ids("BROKEN_FIELD_REFERENCE")).toEqual(["r"]);
+    });
+    it("runs when the file that could not be read is the author's own or the report's .platform", () => {
+      for (const file of [
+        { path: "definition/notes/owners.json", text: '["alice",]' },
+        { path: ".platform", text: '{\n  "metadata": {\n' },
+      ]) {
+        const { r, ids } = run(file);
+        expect(ids("PARSE_ISSUE"), file.path).toEqual([file.path]);
+        expect(r.summary.rulesSkipped, file.path).not.toContainEqual(skipped);
+        expect(ids("NOT_REACHED_FROM_REPORT"), file.path).toEqual(["'Sales'[Amount]"]);
+      }
+    });
+    it("is the only rule that needs every report file read", () => {
+      expect(defaultRules.filter((r) => r.needsEveryReportFileRead).map((r) => r.id)).toEqual([
+        "NOT_REACHED_FROM_REPORT",
+      ]);
     });
   });
   it("keeps an invalid-JSON detail on one line, whatever the engine's message spans", () => {

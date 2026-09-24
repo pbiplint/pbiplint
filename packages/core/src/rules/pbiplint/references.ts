@@ -81,6 +81,9 @@ export const NOT_REACHED_FROM_REPORT = pbiplintRule({
   severity: 1,
   scope: ["Column", "CalculatedColumn", "CalculatedTableColumn", "Measure"],
   layer: "project",
+  // A report file that could not be read may reach any field in the model, so while one is unread
+  // the rule cannot say what the report does not reach.
+  needsEveryReportFileRead: true,
   check: (_project, ctx) => {
     const reach = ctx.indexes.reachability!;
     const { columns, measures } = reach.unreached();

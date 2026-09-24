@@ -619,6 +619,43 @@ describe("buildFacts", () => {
       }
     });
   });
+  it("says the not-reached clause of Model is unknown when a report file could not be read, and links no rule", () => {
+    const modelFact = (...extra: { path: string; text: string }[]) => {
+      const { report } = buildReport([...files, ...extra]);
+      const project = { model, report };
+      return buildFacts(project, buildIndexes(project), ALL).find((f) => f.label === "Model");
+    };
+    const counted = {
+      layer: "model",
+      label: "Model",
+      value: "1 table, 2 columns, 2 measures",
+    };
+    const unknown = {
+      ...counted,
+      detail:
+        "columns and measures not reached from this report: unknown, a report file could not be read",
+    };
+    // A definition file the PBIR format defines, unread for any of the three reasons: the rule is
+    // skipped, and what the file would have reached is not known, so the fact links no rule.
+    expect(
+      modelFact({ path: "definition/pages/p1/visuals/v9/visual.json", text: '{ "name": "v9", ' }),
+    ).toEqual(unknown);
+    expect(
+      modelFact({ path: "definition/pages/p1/visuals/v9/visual.json", text: "<<<<<<< HEAD\n{}\n" }),
+    ).toEqual(unknown);
+    expect(modelFact({ path: "definition/pages/p1/visuals/v9/visual.json", text: "[]" })).toEqual(
+      unknown,
+    );
+    // Unchanged when the file that could not be read is the report's .platform or the author's own.
+    const reached = {
+      ...counted,
+      detail: "0 columns and 1 measure not reached from this report",
+      ruleId: "NOT_REACHED_FROM_REPORT",
+    };
+    expect(modelFact({ path: ".platform", text: "{" })).toEqual(reached);
+    expect(modelFact({ path: "definition/notes/owners.json", text: "{" })).toEqual(reached);
+    expect(modelFact()).toEqual(reached);
+  });
   it("gives a model-only run no facts at all, because the block is about the report", () => {
     expect(buildFacts({ model }, buildIndexes({ model }), ALL)).toEqual([]);
   });

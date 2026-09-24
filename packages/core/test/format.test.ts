@@ -384,16 +384,17 @@ describe("a whole-project report", () => {
   it("prints the layers line, notices, the facts block, and a layer tag on every group in text", () => {
     const text = formatText(project);
     const lines = text.split("\n");
+    // The visual.json with a conflict marker could not be read, so NOT_REACHED_FROM_REPORT is skipped.
     expect(lines[1]).toMatch(
-      /^Model: 2 files\. Report: 4 files\. \d+ rules run, 5 rules skipped \(need a live model\)$/,
+      /^Model: 2 files\. Report: 4 files\. \d+ rules run, 5 rules skipped \(need a live model\), 1 rule skipped \(a report file could not be read\)$/,
     );
     expect(lines[2]).toBe("Notice: the walk stopped 64 folders deep inside Deep");
     expect(text).toContain("\nReport at a glance\n");
     expect(text).toMatch(
-      /\n {2}Opens on {9}Overview \(the page open when it was saved; no landing page set\) {22}LANDING_PAGE_NOT_SET\n/,
+      /\n {2}Opens on {9}Overview \(the page open when it was saved; no landing page set\) {62}LANDING_PAGE_NOT_SET\n/,
     );
     expect(text).toMatch(
-      /\n {2}Model {12}1 table, 1 column, 1 measure \(1 column and 1 measure not reached from this report\) {3}NOT_REACHED_FROM_REPORT\n/,
+      /\n {2}Model {12}1 table, 1 column, 1 measure \(columns and measures not reached from this report: unknown, a report file could not be read\)\n/,
     );
     // PARSE_ISSUE is an Error Prevention error, so it ranks first; the model's DAX error follows.
     expect(text).toMatch(/\n {2}1\. File could not be fully parsed {2}\(1 error\) {3}\[report\]\n/);
@@ -439,6 +440,12 @@ describe("a whole-project report", () => {
   it("mirrors the same in markdown, with the facts as a table", () => {
     const md = formatMarkdown(project);
     expect(md).toContain("Model: 2 files. Report: 4 files.");
+    expect(md).toMatch(
+      /, 5 rules skipped \(need a live model\), 1 rule skipped \(a report file could not be read\)\.\n/,
+    );
+    expect(md).toContain(
+      "| Model | 1 table, 1 column, 1 measure (columns and measures not reached from this report: unknown, a report file could not be read) |  |",
+    );
     expect(md).toContain("> Notice: the walk stopped 64 folders deep inside Deep");
     expect(md).toContain(
       "## Report at a glance\n\n| Fact | Value | Rule |\n|---|---|---|\n| Opens on | Overview (the page open when it was saved; no landing page set) | [LANDING_PAGE_NOT_SET](https://pbiplint.com/rules/landing-page-not-set) |",

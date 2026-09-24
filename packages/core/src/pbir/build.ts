@@ -175,6 +175,7 @@ function buildPage(
     bindingRefs: binding ? collectFieldRefs(binding.parameters, "/pageBinding/parameters") : [],
     filters: filtersOf(json.filterConfig, file, "/filterConfig"),
     visuals: [],
+    unreadVisuals: [],
     annotations: annotationsOf(json.annotations),
     schemaVersion: version,
   };
@@ -190,6 +191,7 @@ const stubPage = (id: string): Page => ({
   bindingRefs: [],
   filters: [],
   visuals: [],
+  unreadVisuals: [],
   annotations: {},
 });
 
@@ -395,6 +397,9 @@ export const holdsFieldReferences = (path: string): boolean =>
   path === "definition/reportExtensions.json" ||
   [PAGE_FILE, VISUAL_FILE, BOOKMARK_FILE].some((re) => re.test(path));
 
+/** Whether the definition file is a visual's visual.json, the one file that gives a visual its type. */
+export const isVisualFile = (path: string): boolean => VISUAL_FILE.test(path);
+
 /**
  * Whether the PBIR format defines the file: definition.pbir, the report's .platform, the project's
  * .pbip, and the definition files. Microsoft publishes a schema for each, with an object root; any
@@ -428,6 +433,8 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
     files: [],
     issues: [],
     unreadDefinitionFiles: [],
+    unreadPages: [],
+    unreadBookmarks: [],
     schemaVersions: {},
   };
   const diagnostics: Diagnostic[] = [];
@@ -442,6 +449,8 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
     version?: string;
   }[] = [];
   const mobile = new Set<string>();
+  /** Each visual.json that could not be read, as its page's folder and its own. */
+  const unreadVisuals: { pageId: string; id: string }[] = [];
   const highest = (current: string | undefined, seen: string | undefined): string | undefined =>
     seen === undefined
       ? current
@@ -456,7 +465,14 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
     if (f.path === "definition/reportExtensions.json") report.extensions = "unread";
     const read = readJson(f.path, f.text, { objectRoot: definedByPbir(f.path) });
     report.issues.push(...read.issues);
-    if (read.issues.length > 0 && definitionFile(f.path)) report.unreadDefinitionFiles.push(f.path);
+    if (read.issues.length > 0 && definitionFile(f.path)) {
+      report.unreadDefinitionFiles.push(f.path);
+      // The object the file would have defined, by the folder or file name Desktop gives it.
+      let u: RegExpExecArray | null;
+      if ((u = PAGE_FILE.exec(f.path))) report.unreadPages.push(u[1]!);
+      else if ((u = VISUAL_FILE.exec(f.path))) unreadVisuals.push({ pageId: u[1]!, id: u[2]! });
+      else if ((u = BOOKMARK_FILE.exec(f.path))) report.unreadBookmarks.push(u[1]!);
+    }
     if (read.json === undefined) continue;
     const family = schemaFamilyOf(read.schema);
     const version = read.schemaVersion;
@@ -548,6 +564,10 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
       buildVisual(page, v.id, v.file, v.text, v.json, v.version, mobile.has(`${v.pageId}/${v.id}`)),
     );
   }
+  // After the stubs, so a page whose page.json was not read but one of whose visuals was holds its
+  // unread visuals too. A folder with no page object, whose page is in `unreadPages`, has no page
+  // to hold them.
+  for (const v of unreadVisuals) pagesByFolder.get(v.pageId)?.unreadVisuals.push(v.id);
   // pageOrder names a page by its page.json `name`, as bookmarks and actions do. A rename can set
   // the name apart from the folder (Learn: Desktop keeps the folder), which only joins a
   // visual.json to its page, above.

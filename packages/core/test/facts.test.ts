@@ -708,6 +708,62 @@ describe("buildFacts", () => {
     ])
       expect(modelFact({ path, text: conflicted }), path).toEqual(unknown);
   });
+  it("says how many registered custom visual types are used is unknown while a visual.json could not be read, and links no rule for it", () => {
+    const visualsFact = (...extra: { path: string; text: string }[]) => {
+      const { report } = buildReport([...files, ...extra]);
+      const project = { model, report };
+      return buildFacts(
+        project,
+        buildIndexes(project),
+        new Set(["REMOVE_UNUSED_CUSTOM_VISUALS"]),
+      ).find((f) => f.label === "Visuals");
+    };
+    const counted = { layer: "report", label: "Visuals", value: "4" };
+    expect(visualsFact()).toEqual({
+      ...counted,
+      detail: "1 hidden; 2 custom visual types registered, 1 used",
+      ruleId: "REMOVE_UNUSED_CUSTOM_VISUALS",
+    });
+    expect(
+      visualsFact({ path: "definition/pages/p1/visuals/v9/visual.json", text: '{ "name": "v9", ' }),
+    ).toEqual({
+      ...counted,
+      detail:
+        "1 hidden; 2 custom visual types registered, used: unknown, a visual.json could not be read",
+    });
+    // A page.json or a mobile.json that could not be read holds no visual's type.
+    expect(visualsFact({ path: "definition/pages/p9/page.json", text: "{" })).toEqual(
+      visualsFact(),
+    );
+    expect(visualsFact({ path: "definition/pages/p1/visuals/v2/mobile.json", text: "{" })).toEqual(
+      visualsFact(),
+    );
+  });
+  it("names an opening page whose page.json could not be read as pages.json names it, and never calls it missing", () => {
+    const opensOn = (header: Record<string, unknown>) => {
+      const { report } = buildReport([
+        { path: "definition/pages/pages.json", text: j({ pageOrder: ["p1", "u"], ...header }) },
+        page("p1", "Overview"),
+        { path: "definition/pages/u/page.json", text: "<<<<<<< HEAD\n{}\n" },
+      ]);
+      return buildFacts({ report }, buildIndexes({ report }), ALL).find(
+        (f) => f.label === "Opens on",
+      );
+    };
+    expect(opensOn({ activePageName: "p1", landingPageName: "u" })).toEqual({
+      layer: "report",
+      label: "Opens on",
+      value: "u",
+      detail: "landing page",
+    });
+    expect(opensOn({ activePageName: "u" })).toEqual({
+      layer: "report",
+      label: "Opens on",
+      value: "u",
+      detail: "the page open when it was saved; no landing page set",
+      ruleId: "LANDING_PAGE_NOT_SET",
+    });
+  });
   it("gives a model-only run no facts at all, because the block is about the report", () => {
     expect(buildFacts({ model }, buildIndexes({ model }), ALL)).toEqual([]);
   });

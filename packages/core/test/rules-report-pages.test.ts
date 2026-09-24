@@ -5,6 +5,7 @@ import {
   ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY,
 } from "../src/rules/pbi-inspector/pages.js";
 import { REMOVE_UNUSED_CUSTOM_VISUALS } from "../src/rules/pbi-inspector/report.js";
+import { visualFileUnread } from "../src/rules/report-helpers.js";
 import { j, page, pretty, reportObjectIds, visual } from "./report-helpers.js";
 
 describe("REMOVE_UNUSED_CUSTOM_VISUALS", () => {
@@ -26,6 +27,40 @@ describe("REMOVE_UNUSED_CUSTOM_VISUALS", () => {
         page("p"),
       ]),
     ).toEqual([]);
+  });
+  it("is skipped while a visual.json could not be read, since that visual could be of any registered type", () => {
+    const files = [
+      {
+        path: "definition/report.json",
+        text: j({ publicCustomVisuals: ["ChicletSlicer1448559807354", "Used123"] }),
+      },
+      page("p"),
+      visual("p", "v", "Used123"),
+    ];
+    const run = (...extra: { path: string; text: string }[]) =>
+      lint([...files, ...extra], { rules: [REMOVE_UNUSED_CUSTOM_VISUALS] });
+    const unread = run({
+      path: "definition/pages/p/visuals/w/visual.json",
+      text: '{ "name": "w", ',
+    });
+    expect(unread.summary.rulesSkipped).toEqual([
+      { id: "REMOVE_UNUSED_CUSTOM_VISUALS", reason: "reportFileUnread" },
+    ]);
+    expect(unread.findings).toEqual([]);
+    // A page.json, a mobile.json, or pages.json that could not be read holds no visual's type.
+    for (const file of [
+      { path: "definition/pages/q/page.json", text: "{" },
+      { path: "definition/pages/p/visuals/v/mobile.json", text: "{" },
+      { path: "definition/pages/pages.json", text: "<<<<<<< HEAD\n{}\n" },
+    ]) {
+      const r = run(file);
+      expect(r.summary.rulesSkipped, file.path).toEqual([]);
+      expect(
+        r.findings.map((f) => f.objectId),
+        file.path,
+      ).toEqual(["ChicletSlicer1448559807354"]);
+    }
+    expect(REMOVE_UNUSED_CUSTOM_VISUALS.skipWhenUnread).toBe(visualFileUnread);
   });
 });
 

@@ -16,6 +16,7 @@ import {
   openingPageInvalid,
   reportMeasuresToMove,
   slicerSelection,
+  visualFileUnread,
 } from "../rules/report-helpers.js";
 import type { Fact, Project } from "./types.js";
 
@@ -34,13 +35,17 @@ function reportFacts(project: Project, report: Report, known: ReadonlySet<string
   };
   const pages = report.pages;
 
-  // Opens on. A hidden landing page says "(hidden)", which is true, but links no rule for it.
+  // Opens on. A hidden landing page says "(hidden)", which is true, but links no rule for it. A
+  // page whose page.json could not be read goes by the name pages.json gives it, the same name a
+  // stub page takes from its folder, and is never called missing.
   const opens = openingPage(report);
   const value =
     opens === undefined
       ? "unknown"
       : opens.page === undefined
-        ? `"${opens.name}" (no such page)`
+        ? opens.unread
+          ? opens.name
+          : `"${opens.name}" (no such page)`
         : isHiddenPage(opens.page)
           ? `${opens.page.displayName} (hidden)`
           : opens.page.displayName;
@@ -116,17 +121,22 @@ function reportFacts(project: Project, report: Report, known: ReadonlySet<string
   );
 
   // Visuals. A visual hidden through its group counts as hidden, the reading
-  // HIDDEN_VISUAL_WITH_FIELDS shares.
+  // HIDDEN_VISUAL_WITH_FIELDS shares. While a visual.json could not be read, how many registered
+  // custom visual types are used is unknown, since that visual could be of any of them, and
+  // REMOVE_UNUSED_CUSTOM_VISUALS is skipped, so the fact links it only when it can fire.
   const visuals = allVisuals(report).filter((v) => !v.isGroup);
   const hiddenVisuals = visuals.filter(isHiddenVisual);
   const hiddenWithFields = visuals.filter(hiddenVisualWithFields).length;
   const registered = report.publicCustomVisuals;
   const usedTypes = new Set(visuals.map((v) => v.type));
   const used = registered.filter((t) => usedTypes.has(t)).length;
+  const usedUnknown = visualFileUnread(report);
   const visualParts = [
     hiddenVisuals.length ? `${hiddenVisuals.length} hidden` : "",
     registered.length
-      ? `${n(registered.length, "custom visual type")} registered, ${used} used`
+      ? `${n(registered.length, "custom visual type")} registered, ${
+          usedUnknown ? "used: unknown, a visual.json could not be read" : `${used} used`
+        }`
       : "",
   ].filter(Boolean);
   facts.push(
@@ -138,7 +148,7 @@ function reportFacts(project: Project, report: Report, known: ReadonlySet<string
         ...(visualParts.length ? { detail: visualParts.join("; ") } : {}),
       },
       hiddenWithFields > 0 ? "HIDDEN_VISUAL_WITH_FIELDS" : undefined,
-      registered.length > used ? "REMOVE_UNUSED_CUSTOM_VISUALS" : undefined,
+      registered.length > used && !usedUnknown ? "REMOVE_UNUSED_CUSTOM_VISUALS" : undefined,
     ),
   );
 

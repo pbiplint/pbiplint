@@ -14,7 +14,7 @@ import { REMOVE_UNUSED_CUSTOM_VISUALS } from "../src/rules/pbi-inspector/report.
 import { ENSURE_ALTTEXT } from "../src/rules/pbi-inspector/visuals.js";
 import { defaultRules } from "../src/rules/index.js";
 import { REPORT_LEVEL_MEASURES } from "../src/rules/pbiplint/measures.js";
-import { fieldFileUnread } from "../src/rules/report-helpers.js";
+import { fieldFileUnread, visualFileUnread } from "../src/rules/report-helpers.js";
 import type { Rule } from "../src/rules/types.js";
 import { modelFrom } from "./helpers.js";
 
@@ -842,7 +842,8 @@ describe("lint over a project", () => {
       // A broken reference in a file that was read is broken whatever the unread file says.
       expect(ids("BROKEN_FIELD_REFERENCE")).toEqual(["r"]);
       expect(ids("PARSE_ISSUE")).toEqual(["definition/pages/p/visuals/v/visual.json"]);
-      expect(skippedLine(r)).toContain("1 rule skipped (a report file could not be read)");
+      // REMOVE_UNUSED_CUSTOM_VISUALS is skipped beside it: the unread visual could be of any type.
+      expect(skippedLine(r)).toContain("2 rules skipped (a report file could not be read)");
     });
     it("is skipped with the reason when reportExtensions.json holds merge-conflict markers", () => {
       const side = (expression: string) =>
@@ -899,10 +900,13 @@ describe("lint over a project", () => {
         expect(skippedLine(r), file.path).not.toContain("a report file could not be read");
       }
     });
-    it("is the only rule an unread file of the report's field references stops", () => {
+    it("is the only rule an unread file of the report's field references stops, and REMOVE_UNUSED_CUSTOM_VISUALS the only one an unread visual.json does", () => {
       expect(
-        defaultRules.filter((r) => r.skipWhenUnread === fieldFileUnread).map((r) => r.id),
-      ).toEqual(["NOT_REACHED_FROM_REPORT"]);
+        defaultRules.filter((r) => r.skipWhenUnread).map((r) => [r.id, r.skipWhenUnread]),
+      ).toEqual([
+        ["REMOVE_UNUSED_CUSTOM_VISUALS", visualFileUnread],
+        ["NOT_REACHED_FROM_REPORT", fieldFileUnread],
+      ]);
     });
   });
   it("keeps an invalid-JSON detail on one line, whatever the engine's message spans", () => {

@@ -22,9 +22,11 @@ export const BROKEN_ACTION_TARGET = pbiplintRule({
   layer: "report",
   check: ({ report }) => {
     if (!report) return [];
+    // A page or a bookmark whose own file could not be read is there, under the folder or file
+    // name Desktop gives it, so a destination naming it is not reported.
     const names = {
-      page: new Set(report.pages.map((p) => p.id)),
-      bookmark: new Set(report.bookmarks.map((b) => b.id)),
+      page: new Set([...report.pages.map((p) => p.id), ...report.unreadPages]),
+      bookmark: new Set([...report.bookmarks.map((b) => b.id), ...report.unreadBookmarks]),
     };
     // Every visual that carries an action is read, hidden or not: buttons, shapes, and images.
     return allVisuals(report).flatMap((v) =>
@@ -79,12 +81,15 @@ export const BROKEN_BOOKMARK_REFERENCE = pbiplintRule({
   scope: ["Bookmark"],
   layer: "report",
   // Groups are captured apart from visuals and are not read, nor is the list of target visuals.
+  // A page or a visual whose own file could not be read is there, under the folder name Desktop
+  // gives it, so it is never reported missing.
   check: ({ report }) => {
     if (!report) return [];
     const pages = new Map(report.pages.map((p) => [p.id, p]));
+    const missing = (id: string): boolean => !pages.has(id) && !report.unreadPages.includes(id);
     return report.bookmarks.flatMap((b): RuleFinding[] => {
       const out: RuleFinding[] = [];
-      if (b.activePage !== undefined && !pages.has(b.activePage))
+      if (b.activePage !== undefined && missing(b.activePage))
         out.push(
           reportFinding.bookmark(
             b,
@@ -94,7 +99,7 @@ export const BROKEN_BOOKMARK_REFERENCE = pbiplintRule({
         );
       // Desktop writes one section, the active page's, so a missing one is reported once, above.
       for (const id of b.pages)
-        if (id !== b.activePage && !pages.has(id))
+        if (id !== b.activePage && missing(id))
           out.push(
             reportFinding.bookmark(
               b,
@@ -104,7 +109,7 @@ export const BROKEN_BOOKMARK_REFERENCE = pbiplintRule({
           );
       for (const { page, visual, pointer } of b.visuals) {
         const p = pages.get(page);
-        if (p && !p.visuals.some((v) => v.id === visual))
+        if (p && !p.visuals.some((v) => v.id === visual) && !p.unreadVisuals.includes(visual))
           out.push(
             reportFinding.bookmark(
               b,

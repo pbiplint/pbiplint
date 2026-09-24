@@ -1,4 +1,4 @@
-import { holdsFieldReferences } from "../pbir/build.js";
+import { holdsFieldReferences, isVisualFile } from "../pbir/build.js";
 import { lineOfPointer } from "../pbir/json.js";
 import {
   bookmarkLabel,
@@ -135,6 +135,13 @@ export const reportFinding = {
 export const fieldFileUnread = (r: Report): boolean =>
   r.unreadDefinitionFiles.some(holdsFieldReferences);
 
+/**
+ * Whether a visual.json could not be read. The visual it holds could be of any type, so
+ * REMOVE_UNUSED_CUSTOM_VISUALS sets this as its `skipWhenUnread` and the Visuals fact says how
+ * many registered custom visual types are used is unknown.
+ */
+export const visualFileUnread = (r: Report): boolean => r.unreadDefinitionFiles.some(isVisualFile);
+
 export const allVisuals = (r: Report): Visual[] => r.pages.flatMap((p) => p.visuals);
 export const isHiddenPage = (p: Page): boolean => p.visibility === "HiddenInViewMode";
 export const visiblePages = (r: Report): Page[] => r.pages.filter((p) => !isHiddenPage(p));
@@ -250,8 +257,13 @@ export const reportMeasuresToMove = (project: Project): ReportMeasure[] =>
 export interface OpeningPage {
   by: "landing" | "active" | "first";
   name: string;
-  /** The page that name resolves to; absent when no page has that name. */
+  /** The page that name resolves to; absent when no page read has that name. */
   page?: Page;
+  /**
+   * Set when no page read has that name but the page.json in the folder of that name could not be
+   * read (`Report.unreadPages`): the page is there, and what its page.json says is not known.
+   */
+  unread?: true;
 }
 
 /**
@@ -264,12 +276,15 @@ export function openingPage(r: Report): OpeningPage | undefined {
   if (r.pagesHeader.file === undefined) return undefined;
   const { landingPageName, activePageName } = r.pagesHeader;
   const name = landingPageName ?? activePageName;
-  if (name !== undefined)
+  if (name !== undefined) {
+    const page = r.pages.find((p) => p.id === name);
     return {
       by: landingPageName !== undefined ? "landing" : "active",
       name,
-      page: r.pages.find((p) => p.id === name),
+      page,
+      ...(page === undefined && r.unreadPages.includes(name) ? { unread: true as const } : {}),
     };
+  }
   const first = r.pages[0];
   return first === undefined ? undefined : { by: "first", name: first.id, page: first };
 }
@@ -278,12 +293,13 @@ export function openingPage(r: Report): OpeningPage | undefined {
  * OPENING_PAGE_INVALID's condition, which the Opens on fact shares: a landing page that names no
  * page, or, with no landing page, an active page that names no page or a hidden one. A hidden
  * landing page is a supported design, since readers always open on it; a hidden active page is a
- * report saved while on a helper page.
+ * report saved while on a helper page. A page whose page.json could not be read is neither
+ * missing nor known to be hidden, so it is not invalid.
  */
 export const openingPageInvalid = (o: OpeningPage | undefined): boolean =>
   o !== undefined &&
   o.by !== "first" &&
-  (o.page === undefined || (o.by === "active" && isHiddenPage(o.page)));
+  (o.page === undefined ? o.unread === undefined : o.by === "active" && isHiddenPage(o.page));
 
 /**
  * LANDING_PAGE_NOT_SET's condition, which the Opens on fact shares: a pages.json that was read

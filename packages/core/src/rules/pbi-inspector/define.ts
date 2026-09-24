@@ -16,6 +16,8 @@ export interface InspectorRuleSpec {
   category: Category;
   scope: ObjectType[];
   options?: RuleOption[];
+  /** The unread report files that stop the rule (Rule.skipWhenUnread). */
+  skipWhenUnread?: (report: Report) => boolean;
 }
 
 /**
@@ -27,7 +29,7 @@ export interface InspectorRuleSpec {
  */
 export function inspectorRule(
   id: string,
-  { category, scope, options }: InspectorRuleSpec,
+  { category, scope, options, skipWhenUnread }: InspectorRuleSpec,
   check: (report: Report, ctx: RuleContext) => RuleFinding[],
 ): Rule {
   const meta = inspectorMetaOf(id);
@@ -39,6 +41,7 @@ export function inspectorRule(
     scope,
     layer: "report",
     needs: ["report"],
+    ...(skipWhenUnread ? { skipWhenUnread } : {}),
     ...(options ? { options } : {}),
     description: RULE_SUMMARIES[id] ?? meta.name,
     references: [],

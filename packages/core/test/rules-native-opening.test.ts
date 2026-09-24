@@ -169,6 +169,42 @@ describe("OPENING_PAGE_INVALID", () => {
   });
 });
 
+describe("an opening page whose page.json could not be read", () => {
+  // Page u is in pageOrder and its folder holds a page.json that could not be read. With no visual
+  // of it read there is no page object for it, so it is known by its folder name alone, which is
+  // the page's name in Desktop-saved files.
+  const unread = { path: "definition/pages/u/page.json", text: '{ "name": "u", ' };
+  const files = (header: Record<string, unknown>) => [
+    { path: "definition/pages/pages.json", text: j({ pageOrder: ["p", "u"], ...header }) },
+    page("p"),
+    unread,
+  ];
+  it("is not reported missing by OPENING_PAGE_INVALID, whether it is the landing page or the active page", () => {
+    expect(
+      reportObjectIds(OPENING_PAGE_INVALID, files({ activePageName: "p", landingPageName: "u" })),
+    ).toEqual([]);
+    expect(reportObjectIds(OPENING_PAGE_INVALID, files({ activePageName: "u" }))).toEqual([]);
+    // A page no folder holds is still missing.
+    expect(
+      reportFindings(OPENING_PAGE_INVALID, files({ activePageName: "u", landingPageName: "gone" })),
+    ).toEqual([onReport("definition/pages/pages.json", 1, 'landing page "gone" does not exist')]);
+  });
+  it("is named by LANDING_PAGE_NOT_SET as pages.json names it, as a page whose visuals were read is", () => {
+    const opensOnU = [
+      onReport("definition/pages/pages.json", 1, 'opens on "u", the page open when it was saved'),
+    ];
+    expect(reportFindings(LANDING_PAGE_NOT_SET, files({ activePageName: "u" }))).toEqual(opensOnU);
+    // The same page with a visual that was read is a stub page named by its folder.
+    const card = {
+      path: "definition/pages/u/visuals/c/visual.json",
+      text: j({ name: "c", position: {}, visual: { visualType: "card" } }),
+    };
+    expect(reportFindings(LANDING_PAGE_NOT_SET, [...files({ activePageName: "u" }), card])).toEqual(
+      opensOnU,
+    );
+  });
+});
+
 describe("FILTERS_PANE_STATE", () => {
   const report = (pane: Record<string, unknown>) => [
     {

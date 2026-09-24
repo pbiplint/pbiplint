@@ -388,9 +388,10 @@ describe("a whole-project report", () => {
   it("prints the layers line, notices, the facts block, and a layer tag on every group in text", () => {
     const text = formatText(project);
     const lines = text.split("\n");
-    // The visual.json with a conflict marker could not be read, so NOT_REACHED_FROM_REPORT is skipped.
+    // The visual.json with a conflict marker could not be read, so NOT_REACHED_FROM_REPORT and
+    // REMOVE_UNUSED_CUSTOM_VISUALS are skipped.
     expect(lines[1]).toMatch(
-      /^Model: 2 files\. Report: 4 files\. \d+ rules run, 5 rules skipped \(need a live model\), 1 rule skipped \(a report file could not be read\)$/,
+      /^Model: 2 files\. Report: 4 files\. \d+ rules run, 5 rules skipped \(need a live model\), 2 rules skipped \(a report file could not be read\)$/,
     );
     expect(lines[2]).toBe("Notice: the walk stopped 64 folders deep inside Deep");
     expect(text).toContain("\nReport at a glance\n");
@@ -454,7 +455,7 @@ describe("a whole-project report", () => {
     const md = formatMarkdown(project);
     expect(md).toContain("Model: 2 files. Report: 4 files.");
     expect(md).toMatch(
-      /, 5 rules skipped \(need a live model\), 1 rule skipped \(a report file could not be read\)\.\n/,
+      /, 5 rules skipped \(need a live model\), 2 rules skipped \(a report file could not be read\)\.\n/,
     );
     expect(md).toContain(
       "| Model | 1 table, 1 column, 1 measure (not reached from this report: unknown, a report file could not be read) |  |",

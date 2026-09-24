@@ -202,6 +202,27 @@ describe("BROKEN_ACTION_TARGET", () => {
     const files = [renamed, at("toName", "page_dashboard"), at("toFolder", "646039348818b651e02c")];
     expect(reportObjectIds(BROKEN_ACTION_TARGET, files)).toEqual(["toFolder"]);
   });
+  it("says nothing of a page or a bookmark whose own file could not be read, found by its folder or file name", () => {
+    const button = (name: string, props: Record<string, unknown>) =>
+      visual("p", name, "actionButton", {}, link(props));
+    const files = [
+      page("p"),
+      // Desktop names a bookmark's file after the bookmark's name.
+      { path: "definition/bookmarks/b2.bookmark.json", text: '{ "name": "b2", ' },
+      // A page whose page.json could not be read and one of whose visuals was: the visual's page
+      // is a stub named by its folder, which is the page's name in Desktop-saved files.
+      { path: "definition/pages/s/page.json", text: "<<<<<<< HEAD\n{}\n" },
+      visual("s", "card", "cardVisual"),
+      // A page whose page.json could not be read and which has no visual that was.
+      { path: "definition/pages/u/page.json", text: "[]" },
+      button("toUnreadBookmark", { type: lit("'Bookmark'"), bookmark: lit("'b2'") }),
+      button("toStub", { type: lit("'PageNavigation'"), navigationSection: lit("'s'") }),
+      button("toUnreadPage", { type: lit("'Drillthrough'"), drillthroughSection: lit("'u'") }),
+      button("toGone", { type: lit("'PageNavigation'"), navigationSection: lit("'gone'") }),
+      button("toGoneBookmark", { type: lit("'Bookmark'"), bookmark: lit("'b9'") }),
+    ];
+    expect(reportObjectIds(BROKEN_ACTION_TARGET, files)).toEqual(["toGone", "toGoneBookmark"]);
+  });
   it("sits on the line of the target property", () => {
     const text = pretty({
       name: "button",
@@ -389,6 +410,59 @@ describe("BROKEN_BOOKMARK_REFERENCE", () => {
     );
     const files = [renamed, visual("646039348818b651e02c", "v", "cardVisual"), b];
     expect(reportObjectIds(BROKEN_BOOKMARK_REFERENCE, files)).toEqual([]);
+  });
+  it("says nothing of a page or a visual whose own file could not be read, found by its folder name", () => {
+    const details = (files: { path: string; text: string }[]) =>
+      reportFindings(BROKEN_BOOKMARK_REFERENCE, files).map((f) => f.detail);
+    // Desktop names a visual's folder after the visual's name, so the unread one is known by it.
+    const captured = bookmark("b7", {
+      activeSection: "p",
+      sections: { p: { visualContainers: { v: {}, unread: {}, missing: {} } } },
+    });
+    expect(
+      details([
+        page("p"),
+        visual("p", "v", "cardVisual"),
+        { path: "definition/pages/p/visuals/unread/visual.json", text: '{ "name": "unread", ' },
+        captured,
+      ]),
+    ).toEqual(['captured visual "missing" is not on page "Page p"']);
+    // An active page and another captured page whose page.json could not be read, with no visual
+    // of theirs read, and the visuals captured under them.
+    expect(
+      details([
+        page("p"),
+        { path: "definition/pages/u/page.json", text: "<<<<<<< HEAD\n{}\n" },
+        { path: "definition/pages/w/page.json", text: "[]" },
+        bookmark("b8", {
+          activeSection: "u",
+          sections: { u: { visualContainers: { x: {} } }, w: {}, gone: {} },
+        }),
+      ]),
+    ).toEqual(['captured page "gone" does not exist']);
+    // A stub page, whose page.json could not be read and one of whose visuals was, holds both.
+    expect(
+      details([
+        { path: "definition/pages/s/page.json", text: "{" },
+        visual("s", "read", "cardVisual"),
+        { path: "definition/pages/s/visuals/unread/visual.json", text: "[]" },
+        bookmark("b9", {
+          activeSection: "s",
+          sections: { s: { visualContainers: { read: {}, unread: {}, missing: {} } } },
+        }),
+      ]),
+    ).toEqual(['captured visual "missing" is not on page "s"']);
+    // A page renamed by hand keeps its folder, where the unread visual sits.
+    expect(
+      details([
+        renamed,
+        { path: "definition/pages/646039348818b651e02c/visuals/unread/visual.json", text: "{" },
+        bookmark("b10", {
+          activeSection: "page_dashboard",
+          sections: { page_dashboard: { visualContainers: { unread: {} } } },
+        }),
+      ]),
+    ).toEqual([]);
   });
   it("names the bookmark and carries nothing to ignore it by", () => {
     const [f] = reportFindings(BROKEN_BOOKMARK_REFERENCE, [

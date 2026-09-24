@@ -216,8 +216,9 @@ const SLICER_TYPES = new Set([
 
 /**
  * Whether the visual is one of Microsoft's slicers. The Slicers fact counts these, selection or
- * not, and any other visual that carries a saved selection (`slicerSelection`), such as a custom
- * slicer from AppSource, which is known by that selection rather than by a list of type names.
+ * not, and only these, so clearing a selection never changes its count. A custom slicer from
+ * AppSource is known by the saved selection it carries (`slicerSelection`) rather than by a list of
+ * type names, so the fact names it among the saved selections instead.
  */
 export const isSlicer = (v: Visual): boolean => SLICER_TYPES.has(v.type);
 

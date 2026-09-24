@@ -169,7 +169,7 @@ describe("buildFacts", () => {
         layer: "report",
         label: "Slicers",
         value: "2",
-        detail: "1 with a saved selection",
+        detail: "1 saved selection",
         ruleId: "SLICER_SELECTION_SAVED",
       },
       { layer: "report", label: "Mobile layouts", value: "1 of 3 pages" },
@@ -596,45 +596,81 @@ describe("buildFacts", () => {
       );
     };
 
-    it("counts a custom slicer with a saved selection among the slicers and those with one, the reading SLICER_SELECTION_SAVED shares", () => {
-      // A catalog slicer with nothing selected is still a slicer; a custom visual with nothing
-      // selected, and a table, are not counted.
+    it("counts the built-in slicers, and every saved selection, naming those on custom slicers", () => {
+      // The reviewer's mixed case: a built-in slicer with nothing selected, a Chiclet Slicer with a
+      // selection, one without, and a table. The Chiclets are not counted as slicers; the one with
+      // a selection is named in the detail.
       expect(slicers(clearSlicer, chiclet, plainChiclet, table)).toEqual({
         layer: "report",
         label: "Slicers",
-        value: "2",
-        detail: "1 with a saved selection",
+        value: "1",
+        detail: "1 saved selection, 1 on a custom slicer",
         ruleId: "SLICER_SELECTION_SAVED",
       });
-      // Custom slicers alone, each with a selection, make both numbers.
-      expect(slicers(chiclet, hierarchy)).toEqual({
+      expect(slicers(savedSlicer, clearSlicer, chiclet)).toEqual({
         layer: "report",
         label: "Slicers",
         value: "2",
-        detail: "2 with a saved selection",
+        detail: "2 saved selections, 1 on a custom slicer",
         ruleId: "SLICER_SELECTION_SAVED",
       });
-      // A catalog slicer with nothing selected counts, and links no rule, since none fires.
+      // No clause for custom slicers when every selection is on a built-in one.
+      expect(slicers(savedSlicer, clearSlicer)).toEqual({
+        layer: "report",
+        label: "Slicers",
+        value: "2",
+        detail: "1 saved selection",
+        ruleId: "SLICER_SELECTION_SAVED",
+      });
+      // Built-in slicers with nothing selected link no rule, since none fires.
       expect(slicers(clearSlicer, plainChiclet)).toEqual({
         layer: "report",
         label: "Slicers",
         value: "1",
-        detail: "0 with a saved selection",
+        detail: "no saved selection",
       });
     });
-    it("never counts more slicers with a saved selection than slicers", () => {
-      for (const visuals of [
-        [clearSlicer],
-        [chiclet],
-        [plainChiclet, table],
-        [clearSlicer, chiclet],
-        [clearSlicer, chiclet, hierarchy],
-        [savedSlicer, chiclet, hierarchy, plainChiclet],
+    it("reads none, with the selections in the detail, when only custom slicers carry one", () => {
+      expect(slicers(chiclet, hierarchy, table)).toEqual({
+        layer: "report",
+        label: "Slicers",
+        value: "none",
+        detail: "2 saved selections, 2 on custom slicers",
+        ruleId: "SLICER_SELECTION_SAVED",
+      });
+      expect(slicers(chiclet)).toEqual({
+        layer: "report",
+        label: "Slicers",
+        value: "none",
+        detail: "1 saved selection, 1 on a custom slicer",
+        ruleId: "SLICER_SELECTION_SAVED",
+      });
+      // No built-in slicer and no selection: none, as before.
+      expect(slicers(plainChiclet, table)).toEqual({
+        layer: "report",
+        label: "Slicers",
+        value: "none",
+      });
+    });
+    it("keeps its count when a selection is cleared, so a cleared custom slicer does not read as deleted", () => {
+      const cleared = {
+        saved: visual("p1", "saved", "slicer", {}, region),
+        chiclet: visual("p1", "chiclet", "ChicletSlicer1448559807354", {}, region),
+        hierarchy: visual("p1", "hierarchy", "HierarchySlicer1458836712039", {}, region),
+      };
+      for (const [selected, clear] of [
+        [[chiclet], [cleared.chiclet]],
+        [
+          [savedSlicer, chiclet, hierarchy],
+          [cleared.saved, cleared.chiclet, cleared.hierarchy],
+        ],
+        [
+          [clearSlicer, chiclet, plainChiclet],
+          [clearSlicer, cleared.chiclet, plainChiclet],
+        ],
       ]) {
-        const fact = slicers(...visuals)!;
-        const count = fact.value === "none" ? 0 : Number(fact.value);
-        const saved = fact.detail === undefined ? 0 : Number(/^(\d+) with/.exec(fact.detail)![1]);
-        expect(saved, visuals.map((v) => v.path).join(", ")).toBeLessThanOrEqual(count);
+        const names = selected!.map((v) => v.path).join(", ");
+        expect(slicers(...clear!)!.value, names).toBe(slicers(...selected!)!.value);
       }
     });
   });

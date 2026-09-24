@@ -178,23 +178,30 @@ function reportFacts(project: Project, report: Report, known: ReadonlySet<string
         ),
   );
 
-  // Slicers: Microsoft's slicer types and any other visual that carries a saved selection, such as
-  // a custom slicer from AppSource; then every visual saved with a selection, as the rule reads
-  // them. Each visual with a selection is among the slicers, so the second never exceeds the first.
-  const selected = new Set(visuals.filter((v) => slicerSelection(v) !== undefined));
-  const slicers = visuals.filter((v) => isSlicer(v) || selected.has(v));
-  const saved = selected.size;
+  // Slicers: the value counts Microsoft's slicer types only (`isSlicer`), with a selection or
+  // without, so clearing a selection never changes it. A custom slicer from AppSource is known only
+  // by the selection it carries, so the detail counts every saved selection, as
+  // SLICER_SELECTION_SAVED reads them, and names those on a visual that is not a built-in slicer.
+  // With no built-in slicer the value is none, and a custom slicer's selection still shows in the
+  // detail beside it.
+  const slicers = visuals.filter(isSlicer).length;
+  const selected = visuals.filter((v) => slicerSelection(v) !== undefined);
+  const custom = selected.filter((v) => !isSlicer(v)).length;
+  const selections = selected.length
+    ? n(selected.length, "saved selection") +
+      (custom ? `, ${custom} on ${custom === 1 ? "a custom slicer" : "custom slicers"}` : "")
+    : slicers
+      ? "no saved selection"
+      : undefined;
   facts.push(
     withRule(
-      slicers.length
-        ? {
-            layer: "report",
-            label: "Slicers",
-            value: String(slicers.length),
-            detail: `${saved} with a saved selection`,
-          }
-        : { layer: "report", label: "Slicers", value: "none" },
-      saved > 0 ? "SLICER_SELECTION_SAVED" : undefined,
+      {
+        layer: "report",
+        label: "Slicers",
+        value: slicers ? String(slicers) : "none",
+        ...(selections === undefined ? {} : { detail: selections }),
+      },
+      selected.length > 0 ? "SLICER_SELECTION_SAVED" : undefined,
     ),
   );
 

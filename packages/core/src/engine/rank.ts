@@ -62,7 +62,8 @@ export function summarizeRule(
 
 /**
  * Group findings by rule and order the groups by severity (error first), category priority,
- * finding count (more first), then rule id. Findings inside a group keep model order.
+ * finding count (more first), then rule id. Findings inside a group keep the order the rule
+ * returned them in.
  */
 export function rank(findings: Finding[], rules: Rule[], config: ResolvedConfig): RankedGroup[] {
   const byId = new Map(rules.map((r) => [r.id, r]));

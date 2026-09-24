@@ -4,7 +4,7 @@
 
 **Goal:** Read a whole Power BI project (model and report), port fab-inspector's 11 base report rules with parity pinned by committed fixtures, ship pbiplint's 15 native report rules (amended 2026-09-23 with Michael) in three tiers with a page each, show a facts block beside the findings, give the input walk a diagnostics channel, and release 0.2.0, landed as eight pull requests in the order the spec sequences them.
 
-**Architecture:** One `lint(files)` call reads both parts: `.tmdl` files route to the TMDL parser and model builder that v1 has, everything else routes to a new tolerant PBIR reader (`packages/core/src/pbir/`) that builds a report object model. A `Project = { model?, report? }` plus three model indexes, a report reference index, and a reachability index feed every rule through one `check(project, ctx)` signature; the 72 model rules keep their bodies behind `bpaRule`, the 11 ports sit behind `inspectorRule`, the native rules behind `pbiplintRule`. Facts and diagnostics ride on the result into every formatter, the CLI, and the site. Parity with fab-inspector is a committed JSON expectation per fixture, with a `deviations` map for the four documented differences where a fixture shows them; the two no fixture shows are pinned by unit tests (amended 2026-09-24 with Michael; release triage, DQ6).
+**Architecture:** One `lint(files)` call reads both parts: `.tmdl` files route to the TMDL parser and model builder that v1 has, everything else routes to a new tolerant PBIR reader (`packages/core/src/pbir/`) that builds a report object model. A `Project = { model?, report? }` plus three model indexes, a report reference index, and a reachability index feed every rule through one `check(project, ctx)` signature; the 72 model rules keep their bodies behind `bpaRule`, the 11 ports sit behind `inspectorRule`, the native rules behind `pbiplintRule`. Facts and diagnostics ride on the result into every formatter, the CLI, and the site. Parity with fab-inspector is a committed JSON expectation per fixture, with a `deviations` map for the documented differences a fixture shows (two of the four); the two no fixture shows are pinned by unit tests (amended 2026-09-24 with Michael; release triage, DQ6).
 
 **Tech Stack:** TypeScript strict ESM, vitest 5, esbuild, Vite 8 static site, marked 18, Playwright (Chromium, Firefox, WebKit), Node 20/22 in CI (Node 26 locally). Development-time oracles only: fab-inspector CLI 3.4.0 under Homebrew .NET 10, `@microsoft/powerbi-report-authoring-cli` 0.1.4 for validating the sample report.
 
@@ -7579,17 +7579,17 @@ In "What it checks", after the first paragraph (four documented deviations, one 
 ```markdown
 The report layer: the 11 base rules of [PBI Inspector](https://github.com/NatVanG/fab-inspector)
 by Nat Van Gulck, ported so the results match its command line on the same report, with four
-documented deviations where the source is noisier, or quieter, than it means to be; and pbiplint's own rules
-for a report's correctness and readiness: fields the model does not have, model objects the report
-never reaches, the opening page, the Filters pane, hidden visuals left with fields bound, default page
-names, empty visuals, visuals past the page edge, report-level measures, broken button and
-bookmark targets, tab order against layout, and saved slicer selections. "Report at a glance"
+documented deviations where the source is noisier, or quieter, than it means to be; and pbiplint's
+own rules for a report's correctness and readiness: fields the model does not have, model objects
+the report never reaches, the opening page, the Filters pane, hidden visuals left with fields bound,
+default page names, empty visuals, visuals past the page edge, report-level measures, broken button
+and bookmark targets, tab order against layout, and saved slicer selections. "Report at a glance"
 states what the report will do whether or not anything fired.
 ```
 
 - [ ] **Step 2: CONTRIBUTING**
 
-In "Layout", the `packages/core` line becomes "parser (TMDL and PBIR), object models, indexes, rules, ranking, formatters" and the fixtures line names `tests/fixtures` (model fixtures and whole-PBIP project fixtures), `tests/expectations` (`<name>.json` from Tabular Editor, `<name>.report.json` from fab-inspector or by hand). After "Adding or changing a rule", add (in "Deviating from a ported rule", a source that misses what its rule means to report, and a deviation no fixture shows, amended 2026-09-24 with Michael; release triage, DQ6):
+In "Layout", the `packages/core` line becomes "parser (TMDL and PBIR), object models, indexes, rules, ranking, formatters" and the fixtures line names `tests/fixtures` (model fixtures and whole-PBIP project fixtures), `tests/expectations` (`<name>.json` from Tabular Editor, `<name>.report.json` from fab-inspector or by hand). After "Adding or changing a rule", add (amended 2026-09-24 with Michael; release triage, DQ6: "Deviating from a ported rule" now also covers a source that misses what its rule means to report, and a deviation no fixture shows):
 
 ```markdown
 ## Adding a report rule

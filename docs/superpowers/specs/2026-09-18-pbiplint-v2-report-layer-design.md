@@ -565,6 +565,20 @@ count covers every visual that carries one, so it never exceeds the
 slicer count; this is the reading `SLICER_SELECTION_SAVED` shares
 (section 8.4).
 
+Amended 2026-09-24 with Michael (release triage, DQ3): when a report
+file under the definition folder could not be read, that is, a file
+the PBIR format defines there (section 5) whose read raised a
+`PARSE_ISSUE` (invalid JSON, merge-conflict markers, or a document that
+is not a JSON object), `NOT_REACHED_FROM_REPORT` is skipped, with the
+reason on the skipped line (section 7), because pbiplint cannot say
+what an unread file reaches. The Model fact then keeps its table,
+column, and measure counts, its not-reached clause says unknown
+("columns and measures not reached from this report: unknown, a report
+file could not be read"), and it links no rule. The report's
+`.platform`, definition.pbir, and the project's `.pbip` name no field,
+and a JSON file under the definition folder that the format does not
+define is not part of the report, so none of them counts.
+
 **Cost.** Linear in the JSON. The demo report's largest visual is
 61 KB, most under 5 KB; a 300-visual report is a few megabytes and
 lints well under a second in the browser. No new dependency.
@@ -581,8 +595,16 @@ vendored ruleset, description from the page) and
 needsLiveModel | builtin`; native rules are `builtin`.
 
 **Skips.** `rulesSkipped` reasons: `disabled | needsLiveModel |
-noModel | noReport`; the skipped line says "14 rules skipped: no
-report in the input".
+noModel | noReport | reportFileUnread`; the skipped line says "14 rules
+skipped: no report in the input". Amended 2026-09-24 with Michael
+(release triage, DQ3): a rule that declares `needsEveryReportFileRead`
+beside `needs`, which only `NOT_REACHED_FROM_REPORT` does, is skipped
+with `reportFileUnread` when a report file under the definition folder
+could not be read (section 6), and the skipped line says "1 rule
+skipped (a report file could not be read)"; a missing layer's reason
+comes first. The JSON document carries the reason in
+`summary.rulesSkipped`; SARIF, which lists no skipped rule, gains
+nothing.
 
 **Object types.** `Report`, `Page`, `Visual`, `Bookmark`,
 `ReportMeasure` join `ObjectType`.
@@ -717,6 +739,15 @@ hidden only through a group is reported at line 1 of its visual.json,
 and its detail names the outermost hidden group, as `3 fields bound,
 hidden with Group "Filters"`. The ported rules still read the visual's
 own `isHidden`, as their source does.
+
+Amended 2026-09-24 with Michael (release triage, DQ3):
+`NOT_REACHED_FROM_REPORT` is skipped, with the reason "a report file
+could not be read" on the skipped line (section 7), when a report file
+under the definition folder could not be read, since the unread file
+may reach any field and pbiplint cannot say what it reaches; the Model
+fact's not-reached clause then says unknown (section 6).
+`BROKEN_FIELD_REFERENCE` keeps running, because a broken reference in a
+file that was read is broken whatever another file says.
 
 Malformed JSON and conflict markers use `PARSE_ISSUE`; legacy formats
 are diagnostics.

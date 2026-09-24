@@ -93,7 +93,7 @@ A report with a single page opens on that page whatever pages.json says, so a la
 
 - The rule reads pages.json. Without one in the input, or with one that cannot be read, it reports nothing, since nothing then says which page opens. A report with no pages is not reported either.
 - When the active page names a page the report does not have, the finding does not name a page to open on. `OPENING_PAGE_INVALID` reports that page.
-- When the page the report opens on has a page.json that cannot be read, such as one holding merge-conflict markers, the finding names the page by its `name`, as pages.json does, since its display name is in the file pbiplint could not read. The file's own `PARSE_ISSUE` finding names it.
+- When the active page has a page.json that cannot be read, such as one holding merge-conflict markers, the finding names that page by its `name`, as pages.json does, since its display name is in the file pbiplint could not read. The file's own `PARSE_ISSUE` finding names it.
 
 ## Related rules
 
@@ -102,3 +102,5 @@ A report with a single page opens on that page whatever pages.json says, so a la
 ## Links
 
 - [Set the landing page for a Power BI report](https://learn.microsoft.com/power-bi/create-reports/power-bi-set-landing-page)
+- [Microsoft's pagesMetadata schema for pages.json, which names pages by their `name`, not their display name](https://github.com/microsoft/json-schemas/tree/main/fabric/item/report/definition/pagesMetadata)
+- [Microsoft's page schema for page.json, which holds a page's `name` and its user-facing display name](https://github.com/microsoft/json-schemas/tree/main/fabric/item/report/definition/page)

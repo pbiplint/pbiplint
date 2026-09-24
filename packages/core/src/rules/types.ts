@@ -133,10 +133,9 @@ export interface Rule {
   /** The layers the rule cannot run without; it is skipped with `noModel` or `noReport` when one is absent. */
   needs: readonly LayerName[];
   /**
-   * True when a report file that could not be read would make the rule's findings false, because
-   * it reads what the whole report uses: the rule is then skipped with `reportFileUnread` whenever
-   * a definition file is unread (`Report.unreadDefinitionFiles`). A rule that reports what a file
-   * it did read says leaves this off, since that holds whatever another file says.
+   * When true, the engine skips the rule, with the reason `reportFileUnread`, on a run where a
+   * report definition file could not be read (`reportFileUnread` in report-helpers.ts, from
+   * `Report.unreadDefinitionFiles`), so the rule reports nothing and the skipped line says why.
    */
   needsEveryReportFileRead?: boolean;
   /** Options the config may set for this rule; an option the rule does not declare is a ConfigError. */

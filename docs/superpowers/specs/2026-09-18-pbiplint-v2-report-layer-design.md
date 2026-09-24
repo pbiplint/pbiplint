@@ -329,6 +329,20 @@ Markdown formats, in JSON, and on stderr in the CLI. The two legacy
 kinds make the layer count as absent. This closes the carry-over from
 issue #22.
 
+Amended 2026-09-23 with Michael (release triage, A7): `unread-file`
+also covers a folder under the input that cannot be entered or listed,
+and the walk goes on with the rest. A part folder (a `.Report` or
+`.SemanticModel`) that cannot be read, or none of whose files could be
+read, makes that layer absent with the reason "the report folder could
+not be read" or "the model folder could not be read". The input
+itself, when it cannot be read at all, is refused with
+`Could not read <input>: <reason>`, as an input that does not exist is.
+So is an input none of whose files could be read, with the reason of
+the first refusal, since a run over it would report no findings with
+nothing linted. A notice does not change the exit code, which follows
+the findings as it does for the legacy formats. The browser's resolver
+in pull request 7 makes the same decisions.
+
 ## 5. PBIR parser and report object model
 
 **Parser.** Plain JSON, read tolerantly: unknown properties ignored;
@@ -342,7 +356,9 @@ path and raw text.
 
 Amended 2026-09-23 with Michael (release triage, DQ8): the parser
 knows the newest version Microsoft publishes of each schema family it
-reads, and the diagnostic is given only for a newer major version.
+reads in the report's definition folder (Microsoft's
+`fabric/item/report/definition` schemas), and the diagnostic is given
+only for a newer major version.
 Power BI Desktop saves files on minor versions Microsoft has not
 published (visualContainer 2.10.0 to 2.12.0 in Desktop-saved reports),
 which the parser reads as the family's known shape.

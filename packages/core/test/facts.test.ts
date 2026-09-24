@@ -441,10 +441,9 @@ describe("buildFacts", () => {
       });
     }
   });
-  it("counts a drillthrough page by page.json's own type or its pageBinding, once for both", () => {
-    // The same two markings, read the way HIDE_TOOLTIP_DRILLTROUGH_PAGES reads them.
+  it("counts a drillthrough page by its pageBinding, once when page.json's own type marks it too", () => {
+    // Read the way HIDE_TOOLTIP_DRILLTROUGH_PAGES reads it.
     for (const marks of [
-      { type: "Drillthrough" },
       { pageBinding: { type: "Drillthrough" } },
       { type: "Drillthrough", pageBinding: { type: "Drillthrough" } },
     ]) {
@@ -459,6 +458,26 @@ describe("buildFacts", () => {
         ruleId: "HIDE_TOOLTIP_DRILLTROUGH_PAGES",
       });
     }
+  });
+  it("does not count a page marked as a drillthrough by page.json's own type alone", () => {
+    // In the research corpus that marking alone is on pages that are no drillthrough target: an
+    // ordinary visible page, and hidden navigation pages whose pageBinding type is Default.
+    const pagesFact = (marks: Record<string, unknown>) => {
+      const { report } = buildReport([page("p1", "Overview"), page("p2", "Sales", marks)]);
+      return buildFacts({ report }, buildIndexes({ report }), ALL).find((f) => f.label === "Pages");
+    };
+    expect(pagesFact({ type: "Drillthrough" })).toEqual({
+      layer: "report",
+      label: "Pages",
+      value: "2",
+    });
+    expect(
+      pagesFact({
+        type: "Drillthrough",
+        visibility: "HiddenInViewMode",
+        pageBinding: { type: "Default" },
+      }),
+    ).toEqual({ layer: "report", label: "Pages", value: "2", detail: "1 hidden" });
   });
   it("links a fact to the first of its candidate rules the run knows", () => {
     const { report } = buildReport(files);

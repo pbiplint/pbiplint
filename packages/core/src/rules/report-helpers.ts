@@ -137,12 +137,12 @@ export const isTooltipPage = (p: Page): boolean =>
   p.type === "Tooltip" || p.bindingType === "Tooltip";
 
 /**
- * Whether the page is set up as a drillthrough target, read from the same two places: its own
- * `type`, "Page to be used as drillthrough." in Microsoft's page schema, or its `pageBinding`'s
- * `type`, "Binding to be used as drillthrough." in the same schema.
+ * Whether the page is set up as a drillthrough target, read from its `pageBinding`'s `type` alone,
+ * "Binding to be used as drillthrough." in Microsoft's page schema, as PBI Inspector reads it. Every
+ * drillthrough target in Desktop-saved reports carries that binding, while page.json's own `type`
+ * of Drillthrough alone also marks pages that are no drillthrough target, so it is not read here.
  */
-export const isDrillthroughPage = (p: Page): boolean =>
-  p.type === "Drillthrough" || p.bindingType === "Drillthrough";
+export const isDrillthroughPage = (p: Page): boolean => p.bindingType === "Drillthrough";
 
 /**
  * The outermost hidden group the visual sits in, or undefined when no group above it is hidden.

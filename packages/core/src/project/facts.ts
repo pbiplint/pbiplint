@@ -90,9 +90,10 @@ function reportFacts(project: Project, report: Report, known: ReadonlySet<string
         ),
   );
 
-  // Pages. A tooltip or drillthrough page counts by either marking Microsoft's page schema gives
-  // it, page.json's own `type` or its `pageBinding.type` (Desktop-saved reports mark most tooltip
-  // pages by `type` alone), the reading HIDE_TOOLTIP_DRILLTROUGH_PAGES shares.
+  // Pages. A tooltip page counts by either marking Microsoft's page schema gives it, page.json's
+  // own `type` or its `pageBinding.type` (Desktop-saved reports mark most tooltip pages by `type`
+  // alone); a drillthrough page by its `pageBinding.type` alone, which every drillthrough target in
+  // Desktop-saved reports carries. HIDE_TOOLTIP_DRILLTROUGH_PAGES shares both readings.
   const hidden = pages.filter(isHiddenPage).length;
   const tooltip = pages.filter(isTooltipPage).length;
   const drill = pages.filter(isDrillthroughPage).length;

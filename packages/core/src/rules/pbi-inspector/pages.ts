@@ -10,13 +10,14 @@ import { inspectorRule } from "./define.js";
 const BOUND_TYPES = new Set(["Tooltip", "Drillthrough"]);
 
 /**
- * A visible page that page.json marks as a tooltip or drillthrough page. The finding points at
- * `pageBinding` when the binding's `type` marks the page, else at the page's own `type`, and its
- * detail names the kind that marking gives.
+ * A visible page that page.json marks as a tooltip page (`isTooltipPage`, by its own `type` or its
+ * `pageBinding`) or a drillthrough page (`isDrillthroughPage`, by its `pageBinding` alone). The
+ * finding points at `pageBinding` when the binding's `type` marks the page, else at the page's own
+ * `type`, and its detail names the kind that marking gives.
  *
- * Deviation: pbiplint reads a tooltip or drillthrough page from page.json's own `type` as well as its `pageBinding`, where PBI Inspector reads only `pageBinding.type`, so it also reports the tooltip pages Power BI Desktop marks by `type` alone.
+ * Deviation: pbiplint reads a tooltip page from page.json's own `type` as well as its `pageBinding`, where PBI Inspector reads only `pageBinding.type`, so it also reports the tooltip pages Power BI Desktop marks by `type` alone.
  *
- * No oracle fixture has a page marked by `type` alone, so no expectation file records the
+ * No oracle fixture has a tooltip page marked by `type` alone, so no expectation file records the
  * deviation; rules-report-pages.test.ts pins pbiplint's behaviour.
  */
 export const HIDE_TOOLTIP_DRILLTROUGH_PAGES = inspectorRule(
@@ -27,7 +28,7 @@ export const HIDE_TOOLTIP_DRILLTROUGH_PAGES = inspectorRule(
       .filter((p) => (isTooltipPage(p) || isDrillthroughPage(p)) && !isHiddenPage(p))
       .map((p) => {
         const byBinding = p.bindingType !== undefined && BOUND_TYPES.has(p.bindingType);
-        // Without a marking pageBinding, the page's own type is Tooltip or Drillthrough.
+        // Without a marking pageBinding, the page's own type is Tooltip.
         const kind = byBinding ? p.bindingType! : p.type!;
         return reportFinding.page(
           p,

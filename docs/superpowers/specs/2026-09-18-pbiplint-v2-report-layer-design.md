@@ -545,10 +545,13 @@ schema gives it, page.json's own `type` or its `pageBinding.type`
 links a rule only when that rule ran in the run, so a rule turned off
 in config or skipped links nothing.
 
-Amended 2026-09-24 with Michael (release triage, DQ6): Pages counts a
-drillthrough page the same way, by page.json's own `type` or its
-`pageBinding.type`, the reading `HIDE_TOOLTIP_DRILLTROUGH_PAGES` shares
-from this amendment on (section 8.1).
+Amended 2026-09-24 with Michael (release triage, DQ6, narrowed by
+ruling H68): Pages counts a drillthrough page by its `pageBinding.type`
+alone, as it did before, and a tooltip page by either marking, the
+readings `HIDE_TOOLTIP_DRILLTROUGH_PAGES` shares from this amendment on
+(section 8.1). page.json's own `type` of `Drillthrough` alone does not
+make a page a drillthrough page, because in the research corpus it
+marks pages that are no drillthrough target (section 8.1).
 
 Amended 2026-09-24 with Michael (release triage, DQ4): Visuals counts a
 visual hidden through an ancestor group as hidden, as well as one with
@@ -672,21 +675,26 @@ compares on ids. All ported rules are `warning`.
 | REDUCE_ADVANCED_FILTERS | Page | Performance | `max` 4 | **Deviation:** count only filters with a condition applied; the source also counts an Advanced filter with nothing set, such as a slicer's or one Desktop writes for a visual's own fields (amended 2026-09-22 after the oracle run) |
 | REDUCE_PAGES | Report | Performance | `max` 10 | |
 | AVOID_SHOW_ITEMS_WITH_NO_DATA | Visual | Performance | | `query.queryState.<role>.showAll` true |
-| HIDE_TOOLTIP_DRILLTROUGH_PAGES | Page | Report Design | | Tooltip or drillthrough page and visibility not `HiddenInViewMode`. **Deviation:** reads page.json's own `type` as well as `pageBinding.type` (amended 2026-09-24 with Michael) |
+| HIDE_TOOLTIP_DRILLTROUGH_PAGES | Page | Report Design | | Tooltip or drillthrough page and visibility not `HiddenInViewMode`. **Deviation:** reads a tooltip page from page.json's own `type` as well as `pageBinding.type`; a drillthrough page from `pageBinding.type` alone, as the source does (amended 2026-09-24 with Michael) |
 | ENSURE_THEME_COLOURS | Visual | Report Design | | **Deviation:** hex literals in colour properties only, not in any string |
 | ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY | Page | Report Design | `maxHeight` 720 | Visible pages only |
 | ENSURE_ALTTEXT | Visual | Accessibility | | Source ships it off; pbiplint ships it on. Shapes excluded, as the source does |
 
-Amended 2026-09-24 with Michael (release triage, DQ6):
-`HIDE_TOOLTIP_DRILLTROUGH_PAGES` reads a tooltip or drillthrough page
-from either marking Microsoft's page schema gives it, page.json's own
-`type` or `pageBinding.type`, where the source reads only
-`pageBinding.type`, so it also reports the tooltip pages Power BI
-Desktop marks by `type` alone (78 of the 83 tooltip pages in the
-research corpus of Desktop-saved reports). It is the fourth documented
-deviation. The finding points at `pageBinding` when that marks the
-page, else at `type`. The Pages fact counts tooltip and drillthrough
-pages the same way (section 6).
+Amended 2026-09-24 with Michael (release triage, DQ6, narrowed by
+ruling H68): `HIDE_TOOLTIP_DRILLTROUGH_PAGES` reads a tooltip page from
+either marking Microsoft's page schema gives it, page.json's own `type`
+or `pageBinding.type`, where the source reads only `pageBinding.type`,
+so it also reports the tooltip pages Power BI Desktop marks by `type`
+alone (78 of the 83 tooltip pages in the research corpus of
+Desktop-saved reports). It is the fourth documented deviation. It reads
+a drillthrough page from `pageBinding.type` alone, as the source does:
+in the research corpus of Desktop-saved reports the three pages marked
+`Drillthrough` by page.json's own `type` alone carry no drillthrough
+fields (a visible ordinary page in one report, two hidden pages whose
+`pageBinding.type` is `Default` in another), while all 88 pages whose
+`pageBinding.type` is `Drillthrough` carry them. The finding points at
+`pageBinding` when that marks the page, else at `type`. The Pages fact
+counts tooltip and drillthrough pages the same way (section 6).
 
 Amended 2026-09-24 with Michael (release triage, DQ4):
 `REDUCE_VISUALS_ON_PAGE` leaves out a visual by its own `isHidden`
@@ -950,15 +958,16 @@ Quirks section (a required part of the template whenever a quirk
 exists); a test checks that the three agree. Four are known
 now (section 8.1).
 
-Amended 2026-09-24 with Michael (release triage, DQ6): the fourth,
-`HIDE_TOOLTIP_DRILLTROUGH_PAGES` reading page.json's own `type`, is
-latent on the fixtures, whose tooltip and drillthrough pages all carry
-`pageBinding`, so no fixture shows the difference. It is handled as the
-`REDUCE_OBJECTS_WITHIN_VISUALS` deviation is (pull request 2, ruling
-C29): no expectation file records it, since the parity test rejects a
-deviation with no visible difference; the sentence is on the rule's
-page under Quirks and in the rule's doc comment; and unit tests pin
-pbiplint's behaviour. A fixture that shows it later records it there.
+Amended 2026-09-24 with Michael (release triage, DQ6, narrowed by
+ruling H68): the fourth, `HIDE_TOOLTIP_DRILLTROUGH_PAGES` reading a
+tooltip page from page.json's own `type`, is latent on the fixtures,
+whose tooltip pages all carry `pageBinding`, so no fixture shows the
+difference. It is handled as the `REDUCE_OBJECTS_WITHIN_VISUALS`
+deviation is (pull request 2, ruling C29): no expectation file records
+it, since the parity test rejects a deviation with no visible
+difference; the sentence is on the rule's page under Quirks and in the
+rule's doc comment; and unit tests pin pbiplint's behaviour. A fixture
+that shows it later records it there.
 
 **Native rules** have no oracle. Each is pinned two ways: a
 hand-written expectation on a fixture that fires it (the sample report

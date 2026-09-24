@@ -41,10 +41,12 @@ describe("HIDE_TOOLTIP_DRILLTROUGH_PAGES", () => {
     expect(reportObjectIds(HIDE_TOOLTIP_DRILLTROUGH_PAGES, files)).toEqual(["drill", "tip"]);
   });
 
-  // The documented deviation: Microsoft's page schema also marks a tooltip or drillthrough page by
-  // page.json's own `type` ("Page to be used as tooltip.", "Page to be used as drillthrough."), and
-  // Desktop-saved reports mark most tooltip pages by it alone. PBI Inspector reads only
-  // `pageBinding.type`; no oracle fixture has a page marked by `type` alone, so these pin it.
+  // The documented deviation: Microsoft's page schema also marks a tooltip page by page.json's own
+  // `type` ("Page to be used as tooltip."), and Desktop-saved reports mark most tooltip pages by it
+  // alone. PBI Inspector reads only `pageBinding.type`; no oracle fixture has a page marked by
+  // `type` alone, so these pin it. A drillthrough page is read from its `pageBinding` alone, as PBI
+  // Inspector reads it: in the research corpus `type` Drillthrough alone marks pages that are no
+  // drillthrough target, and every drillthrough target carries the binding.
   /** Lint one pretty-printed page with the rule; the finding's detail and the text of its line. */
   const lintPage = (name: string, extra: Record<string, unknown>) => {
     const file = page(name, extra);
@@ -66,14 +68,12 @@ describe("HIDE_TOOLTIP_DRILLTROUGH_PAGES", () => {
     ]);
   });
 
-  it("fires on a visible page marked as a drillthrough by page.json's own type alone, at the type line", () => {
-    expect(lintPage("drill", { type: "Drillthrough", visibility: "AlwaysVisible" })).toEqual([
-      {
-        objectId: "drill",
-        detail: "drillthrough page is visible to readers",
-        line: '"type": "Drillthrough",',
-      },
-    ]);
+  it("leaves a visible page marked as a drillthrough by page.json's own type alone", () => {
+    expect(lintPage("drill", { type: "Drillthrough", visibility: "AlwaysVisible" })).toEqual([]);
+    // The schema's third binding type, Default, is "No specific usage of this binding."
+    expect(
+      lintPage("drill", { type: "Drillthrough", pageBinding: { name: "b", type: "Default" } }),
+    ).toEqual([]);
   });
 
   it("leaves a hidden page marked by type alone", () => {

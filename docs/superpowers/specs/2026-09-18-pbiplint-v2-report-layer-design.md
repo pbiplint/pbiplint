@@ -403,6 +403,20 @@ a `PARSE_ISSUE` finding, and a document that is not an object is not.
   groups.
 - `ReportMeasure`: table, name, DAX, hidden, file, line.
 
+Amended 2026-09-24 with Michael (release triage): the model records
+what a definition file that could not be read would have defined, by
+the folder or file name Power BI Desktop gives it, which Learn's PBIR
+naming convention says is the object's `name` by default: `Report`
+gains the pages whose page.json could not be read (by folder; 713 of
+714 Desktop-saved pages keep their `name` as their folder) and the
+bookmarks whose `<name>.bookmark.json` could not be read (576 of 576),
+and `Page` gains the visuals in its folder whose visual.json could not
+be read (13,026 of 13,026). The unread visuals sit on the page because
+a visual.json is joined to its page by folder, and a page's `name` can
+differ from its folder after a rename. A page whose page.json could not
+be read and one of whose visuals was read is, as before, a page named
+by its folder.
+
 **Field references** are found by one walker over any JSON node,
 yielding `{ kind: column | measure | hierarchyLevel | aggregation,
 table, name, owner, jsonPointer }`, resolving `From` aliases within the
@@ -500,9 +514,9 @@ aggregation table when it covers the query.
 | Opens on | landing page display name, or the active page with "the page open when it was saved; no landing page set" | `LANDING_PAGE_NOT_SET` |
 | Filters pane | open / closed / hidden from readers | `FILTERS_PANE_STATE` |
 | Pages | count; hidden; tooltip; drillthrough | `HIDE_TOOLTIP_DRILLTROUGH_PAGES` |
-| Visuals | count; hidden; custom visual types registered and used | `HIDDEN_VISUAL_WITH_FIELDS`, `REMOVE_UNUSED_CUSTOM_VISUALS` |
+| Visuals | count; hidden; custom visual types registered and used (the used count unknown while a visual.json could not be read, amended 2026-09-24 with Michael) | `HIDDEN_VISUAL_WITH_FIELDS`, `REMOVE_UNUSED_CUSTOM_VISUALS` |
 | Report measures | count | `REPORT_LEVEL_MEASURES` |
-| Slicers | count; with a saved selection | `SLICER_SELECTION_SAVED` |
+| Slicers | count of the catalog slicers; saved selections, those on custom slicers named (amended 2026-09-24 with Michael) | `SLICER_SELECTION_SAVED` |
 | Mobile layouts | pages with one, of total | |
 | Schema versions | report, page, visual (highest seen) | |
 | Model | tables, columns, measures; with both parts, columns and measures not reached from this report | `NOT_REACHED_FROM_REPORT` |
@@ -566,7 +580,21 @@ slicer when it is one of the five catalog types, with a selection or
 without, or carries a saved selection, and its "with a saved selection"
 count covers every visual that carries one, so it never exceeds the
 slicer count; this is the reading `SLICER_SELECTION_SAVED` shares
-(section 8.4).
+(section 8.4). Amended 2026-09-24 with Michael (release triage, ruling
+H72), replacing the count above: counting a custom slicer by its
+selection made clearing the selection lower the count, which read as a
+deleted slicer. The value now counts the five catalog types only, with
+a selection or without, so clearing a selection never changes it, and
+reads `none` when there is none of them. The detail counts every saved
+selection, the ones `SLICER_SELECTION_SAVED` reports, and names those
+on a visual that is not a catalog slicer: `2 saved selections, 1 on a
+custom slicer`, `1 saved selection` when none is on a custom slicer, or
+`no saved selection` beside catalog slicers that open clear. With no
+catalog slicer and a custom slicer's selection the value reads `none`
+and the detail names the selection, so the row says there is no
+catalog slicer and a custom one carries a selection, and it keeps
+reading `none` when that selection is cleared. The fact links
+`SLICER_SELECTION_SAVED` whenever a selection is saved.
 
 Amended 2026-09-24 with Michael (release triage, DQ3): when a report
 file under the definition folder could not be read, that is, a file
@@ -580,7 +608,29 @@ reached from this report: unknown, a report file could not be read"),
 and it links no rule. The report's `.platform`, definition.pbir, and
 the project's `.pbip` name no field, and a JSON file under the
 definition folder that the format does not define is not part of the
-report, so none of them counts.
+report, so none of them counts. Amended 2026-09-24 with Michael
+(release triage, E8, ruling H70): of those files, only one the
+reachability walk reads field references from skips the rule and makes
+the not-reached clause unknown: report.json (the report's filters),
+reportExtensions.json (its measures' DAX), a page.json (the page's
+filters and binding), a visual.json, and a bookmark file, the owners
+the report reference index reads (`holdsFieldReferences` in
+pbir/build.ts, the predicate `fieldFileUnread`). version.json,
+pages.json, bookmarks.json, and a visual's mobile.json name no field
+the walk reads, so one of them unread, a merge conflict in pages.json
+included, leaves the rule running and the fact counting.
+
+Amended 2026-09-24 with Michael (release triage, ruling H71): a fact
+that states absence or non-use says nothing about what an unread file
+could hold. While a visual.json could not be read, the Visuals fact's
+custom visual clause reads `2 custom visual types registered, used:
+unknown, a visual.json could not be read` and links no rule for it,
+since the unread visual could be of any registered type
+(`REMOVE_UNUSED_CUSTOM_VISUALS` is skipped then, section 8.1). Opens on
+names a landing or active page whose page.json could not be read by
+the name pages.json gives it, as it names a page known only by its
+folder, and never calls it "(no such page)"; `OPENING_PAGE_INVALID`
+does not fire on it (section 8.2).
 
 **Cost.** Linear in the JSON. The demo report's largest visual is
 61 KB, most under 5 KB; a 300-visual report is a few megabytes and
@@ -607,7 +657,16 @@ could not be read (section 6), and the skipped line says "1 rule
 skipped (a report file could not be read)"; a missing layer's reason
 comes first. The JSON document carries the reason in
 `summary.rulesSkipped`; SARIF, which lists no skipped rule, gains
-nothing.
+nothing. Amended 2026-09-24 with Michael (release triage, E8 and ruling
+H71): the field is now `skipWhenUnread`, a predicate over the report
+that names which unread files stop the rule, one exported per condition
+from report-helpers.ts. `NOT_REACHED_FROM_REPORT` sets
+`fieldFileUnread`, a file the report's field references are read from
+(section 6), and `REMOVE_UNUSED_CUSTOM_VISUALS` sets `visualFileUnread`,
+a visual.json (section 8.1); no other rule sets one. run.ts stays the
+one place that skips, with the same reason and the same words, and the
+facts call the same predicates. A run with an unreadable visual.json
+now says "2 rules skipped (a report file could not be read)".
 
 **Object types.** `Report`, `Page`, `Visual`, `Bookmark`,
 `ReportMeasure` join `ObjectType`.
@@ -705,6 +764,15 @@ because `HIDDEN_VISUAL_WITH_FIELDS` and the Visuals fact now also count
 a visual hidden through an ancestor group as hidden (sections 6 and
 8.2). The ported rules keep reading the visual's own `isHidden`.
 
+Amended 2026-09-24 with Michael (release triage, ruling H71):
+`REMOVE_UNUSED_CUSTOM_VISUALS` is skipped, with "a report file could
+not be read" on the skipped line (section 7), while a visual.json could
+not be read, because the unread visual could be of any registered type
+and a registration it uses would be reported as unused. This is what it
+does on a file neither tool can read, not a deviation: the oracle
+fixtures all parse, so parity cannot show it. The Visuals fact's used
+count says unknown then (section 6).
+
 ### 8.2 Native, tier 1
 
 | Id | Scope | Layer | Category | Severity | What it catches |
@@ -756,7 +824,24 @@ under the definition folder could not be read, since the unread file
 may reach any field and pbiplint cannot say what it reaches; the Model
 fact's not-reached clause then says unknown (section 6).
 `BROKEN_FIELD_REFERENCE` keeps running, because a broken reference in a
-file that was read is broken whatever another file says.
+file that was read is broken whatever another file says. Amended
+2026-09-24 with Michael (release triage, E8, ruling H70): the skip is
+narrowed to an unread file the reachability walk reads field references
+from, report.json, reportExtensions.json, a page.json, a visual.json,
+or a bookmark file; version.json, pages.json, bookmarks.json, and a
+visual's mobile.json name no field the walk reads, so one of them
+unread no longer silences the rule, whose count would be right (section
+6).
+
+Amended 2026-09-24 with Michael (release triage, ruling H71): a rule
+that reports a page as missing says nothing about a page whose
+page.json could not be read, which is known by its folder name
+(section 5). `OPENING_PAGE_INVALID` does not report a landing or active
+page whose page.json could not be read, since it is neither missing nor
+known to be hidden, and `LANDING_PAGE_NOT_SET` names such a page as
+pages.json does, where it would have said the active page does not
+exist. With a visual of the page read, the page was already one named
+by its folder, and the rules already read it so.
 
 Malformed JSON and conflict markers use `PARSE_ISSUE`; legacy formats
 are diagnostics.
@@ -874,6 +959,19 @@ finding. `TAB_ORDER_FOLLOWS_LAYOUT` is a policy rule, silent until
 nobody ordered (under the policy, 559 of the 659 eligible
 Desktop-saved pages in a corpus of public reports, about 85%) and a
 check that fires everywhere is tuned out.
+
+Amended 2026-09-24 with Michael (release triage, ruling H71): a rule
+that reports a page, a visual, or a bookmark as missing says nothing
+about one whose own file could not be read, which the report model
+knows by its folder or file name (section 5).
+`BROKEN_BOOKMARK_REFERENCE` does not report an active page or a
+captured page whose page.json could not be read, nor a captured visual
+whose folder is on the bookmark's page and whose visual.json could not
+be read. `BROKEN_ACTION_TARGET` does not report a bookmark target whose
+`<name>.bookmark.json` exists but could not be read, nor a page target
+whose page.json could not be read; with a visual of that page read, the
+page was already one named by its folder, and a page with none read is
+now covered too.
 
 Mobile layouts and themes are facts only in v2.
 

@@ -737,16 +737,17 @@ is reported; `REMOVE_AUTO-DATE_TABLE` covers the tables themselves.
 
 Amended 2026-09-24 with Michael (release triage, DQ4):
 `HIDDEN_VISUAL_WITH_FIELDS` counts a visual hidden through an ancestor
-group as hidden (Desktop-saved files mark a hidden group's children
-themselves in only 453 of 1,981 cases), and so does the Visuals fact's
-hidden count (section 6). The groups above a visual are followed
-through `parentGroupName` on the visual's own page, each at most once,
-so a group that names itself or a cycle of groups ends the walk. A
-visual with its own `isHidden` is reported at that line as before; one
-hidden only through a group is reported at line 1 of its visual.json,
-and its detail names the outermost hidden group, as `3 fields bound,
-hidden with Group "Filters"`. The ported rules still read the visual's
-own `isHidden`, as their source does.
+group as hidden (in the research corpus's Desktop-saved reports, only
+452 of the 1,911 visuals directly inside the 216 hidden groups carry
+`isHidden` themselves), and so does the Visuals fact's hidden count
+(section 6). The groups above a visual are followed through
+`parentGroupName` on the visual's own page, each at most once, so a
+group that names itself or a cycle of groups ends the walk. A visual
+with its own `isHidden` is reported at that line as before; one hidden
+only through a group is reported at line 1 of its visual.json, and its
+detail names the outermost hidden group, as `3 fields bound, hidden with
+Group "Filters"`. The ported rules still read the visual's own
+`isHidden`, as their source does.
 
 Amended 2026-09-24 with Michael (release triage, DQ3):
 `NOT_REACHED_FROM_REPORT` is skipped, with the reason "a report file

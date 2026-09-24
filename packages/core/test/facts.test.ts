@@ -421,6 +421,26 @@ describe("buildFacts", () => {
       buildFacts({ report: notAnObject }, buildIndexes({ report: notAnObject }), ALL)[0],
     ).toEqual(unknown);
   });
+  it("counts a tooltip page by page.json's own type or its pageBinding, once for both", () => {
+    // Microsoft's page schema marks a tooltip page either way; Desktop-saved reports mark most by
+    // `type` alone.
+    for (const marks of [
+      { type: "Tooltip" },
+      { pageBinding: { type: "Tooltip" } },
+      { type: "Tooltip", pageBinding: { type: "Tooltip" } },
+    ]) {
+      const { report } = buildReport([page("p1", "Overview"), page("p2", "Tips", marks)]);
+      expect(
+        buildFacts({ report }, buildIndexes({ report }), ALL).find((f) => f.label === "Pages"),
+      ).toEqual({
+        layer: "report",
+        label: "Pages",
+        value: "2",
+        detail: "1 tooltip",
+        ruleId: "HIDE_TOOLTIP_DRILLTROUGH_PAGES",
+      });
+    }
+  });
   it("links a fact to the first of its candidate rules the run knows", () => {
     const { report } = buildReport(files);
     const project = { model, report };

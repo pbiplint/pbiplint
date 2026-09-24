@@ -202,7 +202,8 @@ function reportFacts(project: Project, report: Report, known: ReadonlySet<string
 /**
  * The "Report at a glance" block: structured, in the order the spec's table lists, and built only
  * when the report layer is present, so a run without a report produces none and no surface shows
- * the block. A fact links to a rule only when that rule is in the run's rule set.
+ * the block. A fact links to a rule only when that rule ran in the run, so a rule turned off in
+ * config, or skipped for want of a layer or a live model, links nothing.
  */
 export function buildFacts(
   project: Project,

@@ -665,6 +665,69 @@ describe("lint over a project", () => {
       both.findings.filter((f) => f.ruleId === "REPORT_LEVEL_MEASURES").map((f) => f.objectId),
     ).toEqual(["Sales.Net Margin"]);
   });
+  it("links a fact to a rule only when the rule ran, so a rule turned off in config links nothing", () => {
+    const files = [
+      ...modelFiles,
+      ...reportFiles,
+      {
+        path: "definition/pages/p/visuals/v/visual.json",
+        text: j({
+          name: "v",
+          position: {},
+          isHidden: true,
+          visual: {
+            visualType: "card",
+            query: {
+              queryState: {
+                Values: {
+                  projections: [
+                    {
+                      field: {
+                        Column: {
+                          Expression: { SourceRef: { Entity: "Sales" } },
+                          Property: "Amount",
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      },
+      {
+        path: "definition/reportExtensions.json",
+        text: j({
+          entities: [{ name: "Sales", measures: [{ name: "Net Margin", expression: "1" }] }],
+        }),
+      },
+    ];
+    const fact = (label: string, config?: { rules: Record<string, "off"> }) =>
+      lint(files, config ? { config } : {}).facts.find((f) => f.label === label);
+    const measures = {
+      layer: "report",
+      label: "Report measures",
+      value: "1",
+      detail: "defined in the report, not the model",
+    };
+    const visuals = { layer: "report", label: "Visuals", value: "1", detail: "1 hidden" };
+    // With every rule on, both facts link the rule that checks them.
+    expect(fact("Report measures")).toEqual({ ...measures, ruleId: "REPORT_LEVEL_MEASURES" });
+    expect(fact("Visuals")).toEqual({ ...visuals, ruleId: "HIDDEN_VISUAL_WITH_FIELDS" });
+    // Turned off, the rule's page is not linked; the fact keeps its count, and the other its link.
+    const off = (id: string) => ({ rules: { [id]: "off" as const } });
+    expect(fact("Report measures", off("REPORT_LEVEL_MEASURES"))).toEqual(measures);
+    expect(fact("Visuals", off("REPORT_LEVEL_MEASURES"))).toEqual({
+      ...visuals,
+      ruleId: "HIDDEN_VISUAL_WITH_FIELDS",
+    });
+    expect(fact("Visuals", off("HIDDEN_VISUAL_WITH_FIELDS"))).toEqual(visuals);
+    expect(fact("Report measures", off("HIDDEN_VISUAL_WITH_FIELDS"))).toEqual({
+      ...measures,
+      ruleId: "REPORT_LEVEL_MEASURES",
+    });
+  });
   it("keeps an invalid-JSON detail on one line, whatever the engine's message spans", () => {
     const r = lint([{ path: "definition/pages/p/page.json", text: '{\n  "a": 1,\n  "b": }\n' }]);
     const issues = r.findings.filter((f) => f.ruleId === "PARSE_ISSUE");

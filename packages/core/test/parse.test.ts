@@ -63,6 +63,7 @@ describe("parseTmdl", () => {
         text: "\t/// Described",
         reason: "description is not followed by a declaration",
         canDropObjects: false,
+        canDropRootLines: false,
       },
     ]);
   });
@@ -81,6 +82,7 @@ describe("parseTmdl", () => {
         text: "\t/// One",
         reason: "description is not followed by a declaration",
         canDropObjects: false,
+        canDropRootLines: false,
       },
     ]);
   });
@@ -92,6 +94,7 @@ describe("parseTmdl", () => {
       text: "\t/// Described",
       reason: "description is not followed by a declaration",
       canDropObjects: false,
+      canDropRootLines: false,
     };
     expect(parseTmdl("t.tmdl", "table T\n\t/// Described\n").issues).toEqual([orphan]);
     // The same file without the final newline: nothing follows the description there either.
@@ -263,6 +266,7 @@ describe("root object types", () => {
         text: "tabel Sales",
         reason: '"tabel" is not a type TMDL declares at the root of a file',
         canDropObjects: true,
+        canDropRootLines: true,
       },
     ]);
   });
@@ -555,6 +559,48 @@ describe("properties at the root, and lines under a root annotation or extended 
       ["ref", "table", 0],
       ["object", "extendedproperty", 0],
       ["flag", "createorreplace", 1],
+    ]);
+  });
+});
+
+describe("whether a parse issue can take a line at the root of a file with it", () => {
+  // A line at the root may be a table's declaration, and TMDL lets a table's declaration sit in
+  // more than one file, so a file with such an issue may declare a table its roots do not show.
+  const marks = (text: string) =>
+    parseTmdl("t.tmdl", text).issues.map((i) => [i.line, i.canDropRootLines]);
+
+  it("marks an issue on a line at the root, and a code fence left open that read one", () => {
+    expect(marks("tabel Sales\n\tmeasure Total = 1\n")).toEqual([[1, true]]);
+    expect(marks("'Sales'\n\tmeasure Total = 1\n")).toEqual([
+      [1, true],
+      [2, false],
+    ]);
+    expect(marks("dataType: decimal\n")).toEqual([[1, true]]);
+    expect(marks("expression =\n\t\t1\n")).toEqual([[1, true]]);
+    expect(marks("annotation A = 1\n\tcolumn Region\n")).toEqual([[1, true]]);
+    // The fence reads every line below it into its expression, a table's declaration included.
+    expect(marks("table Sales\n\tmeasure M = ```\n\t\tx\n\ntable Product\n")).toEqual([[2, true]]);
+    expect(marks("table Sales\n\tmeasure M = ```\n\t\tx\n\tmeasure N = 1\n")).toEqual([[2, false]]);
+  });
+
+  it("marks a table line indented with spaces alone, and no other line indented with spaces", () => {
+    // Spaces before a `table` line kept it from the root, where the table's declaration sits; a
+    // column line indented with spaces was meant to sit under the table above it.
+    expect(marks("  table Sales\n\tmeasure Total = 1\n")).toEqual([
+      [1, true],
+      [2, false],
+    ]);
+    expect(marks("table Sales\n    column Amount\n\t    measure Total = 1\n")).toEqual([
+      [2, false],
+      [3, false],
+    ]);
+  });
+
+  it("does not mark a line nested under an object, or a description nothing claims", () => {
+    expect(marks("table Sales\n\t'Unit Price'\n\t\t\tisHidden\n\t/// Described\n\n")).toEqual([
+      [2, false],
+      [3, false],
+      [4, false],
     ]);
   });
 });

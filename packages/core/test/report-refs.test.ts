@@ -624,6 +624,21 @@ describe("a reference into a model file pbiplint could not fully read", () => {
     ]);
   });
 
+  it("counts a file whose issue can take a line at the root with it for every table, since that line could declare one", () => {
+    const MEASURES = "definition/tables/measures.tmdl";
+    const lost = "tabel Sales\n\tmeasure Profit = 1\n";
+    expect(
+      resolutions(modelOf({ [SALES]: sales, [MEASURES]: lost }), measure("Sales", "Profit")),
+    ).toEqual([unread(partly('no measure named "Profit" on "Sales"', MEASURES))]);
+    // A file that declares the table and could not be fully read is named first.
+    expect(
+      resolutions(
+        modelOf({ [MEASURES]: lost, [SALES]: sales + spaced }),
+        measure("Sales", "Profit"),
+      ),
+    ).toEqual([unread(partly('no measure named "Profit" on "Sales"', SALES))]);
+  });
+
   it("stays unresolved while the only parse issue is an orphaned description, which drops no declaration", () => {
     const m = modelOf({
       [SALES]: sales.replace("\tcolumn Region\n", "\t/// Described\n\n\tcolumn Region\n"),

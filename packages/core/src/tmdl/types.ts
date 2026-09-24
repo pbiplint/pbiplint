@@ -37,6 +37,15 @@ export interface TmdlParseIssue extends ParseIssue {
    * the file may declare (BROKEN_FIELD_REFERENCE) reads this and never the reason's words.
    */
   canDropObjects: boolean;
+  /**
+   * Whether the issue can take a line at the root of the file with it: it sits on one, a line with
+   * no indentation or a `table` line whose only indentation is spaces, or it is a code fence left
+   * open that read one into its expression, as it reads every line below it. A line at the root
+   * may be a table's declaration, and TMDL lets a table's declaration sit in more than one file, so
+   * a file with such an issue may declare a table its roots do not show. Set where the parser
+   * pushes the issue, as `canDropObjects` is, and never true where that is false.
+   */
+  canDropRootLines: boolean;
 }
 
 export interface ParsedFile {

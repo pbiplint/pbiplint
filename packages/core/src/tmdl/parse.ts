@@ -12,6 +12,16 @@ const tabIndent = (line: string): number => {
   return n;
 };
 const leadingWs = (line: string): number => line.length - line.trimStart().length;
+/**
+ * Whether a line the parser could not use may have been a line at the root of the file, such as a
+ * table's declaration: one with no indentation, or a `table` line whose only indentation is
+ * spaces, which kept it from the root. Any other line indented with spaces was meant to sit under
+ * the object above it.
+ */
+const mayBeRootLine = (line: string): boolean =>
+  line.trim() !== "" &&
+  tabIndent(line) === 0 &&
+  (!/^\s/.test(line) || splitHeader(line)?.type.toLowerCase() === "table");
 
 /** Split `<type> <name> [= expr]` on the first `=` outside single quotes. */
 function splitHeader(
@@ -72,6 +82,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
       text: pending.text,
       reason: "description is not followed by a declaration",
       canDropObjects: false,
+      canDropRootLines: false,
     });
     pendingDescription = null;
   };
@@ -104,6 +115,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
         text: raw,
         reason: "space indentation (TMDL requires tabs)",
         canDropObjects: true,
+        canDropRootLines: mayBeRootLine(raw),
       });
       i++;
       continue;
@@ -151,6 +163,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
           text: raw,
           reason: "unterminated code fence",
           canDropObjects: true,
+          canDropRootLines: out.some(mayBeRootLine),
         });
       const boundary = j < lines.length ? leadingWs(lines[j]!) : 0;
       i = j;
@@ -183,6 +196,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
           text: raw,
           reason: "unrecognized line",
           canDropObjects: true,
+          canDropRootLines: mayBeRootLine(raw),
         });
         i++;
         continue;
@@ -216,7 +230,14 @@ export function parseTmdl(file: string, text: string): ParsedFile {
             ? undefined
             : `"${word}" is not a type TMDL declares at the root of a file`;
       if (reason !== undefined)
-        issues.push({ file, line: lineNo, text: raw, reason, canDropObjects: true });
+        issues.push({
+          file,
+          line: lineNo,
+          text: raw,
+          reason,
+          canDropObjects: true,
+          canDropRootLines: true,
+        });
     }
 
     if (pendingDescription) {
@@ -233,6 +254,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
         text: raw,
         reason: "orphan indentation",
         canDropObjects: true,
+        canDropRootLines: false,
       });
       i++;
       continue;
@@ -267,6 +289,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
       text,
       reason: `"${/^\w+/.exec(text)![0]}" at the root of a file has lines under it, which TMDL does not allow`,
       canDropObjects: true,
+      canDropRootLines: true,
     };
     const at = issues.findIndex((i) => i.line > r.line);
     issues.splice(at === -1 ? issues.length : at, 0, issue);

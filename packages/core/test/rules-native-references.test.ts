@@ -348,6 +348,36 @@ describe("BROKEN_FIELD_REFERENCE", () => {
       });
     });
   });
+  // TMDL lets a table's declaration sit in more than one file, such as one file for every table's
+  // measures. Sales.tmdl is read in full; the measures file's own `table Sales` line is lost, so
+  // its measure could be on Sales.
+  it.each([
+    ["misspelt", "tabel Sales", ['"tabel" is not a type TMDL declares at the root of a file']],
+    [
+      "indented with spaces",
+      "  table Sales",
+      ["space indentation (TMDL requires tabs)", "orphan indentation"],
+    ],
+  ])(
+    "says nothing about a measure a second file held when that file's table line is %s",
+    (_, tableLine, reasons) => {
+      const r = lint([
+        { path: "definition/tables/Sales.tmdl", text: "table Sales\n\tcolumn Amount\n" },
+        {
+          path: "definition/tables/measures.tmdl",
+          text: `${tableLine}\n\tmeasure Total = SUM(Sales[Amount])\n`,
+        },
+        page("p"),
+        bound("p", "v", "cardVisual", [measure("Sales", "Total")]),
+      ]);
+      expect(r.findings.filter((f) => f.ruleId === "BROKEN_FIELD_REFERENCE")).toEqual([]);
+      expect(
+        r.findings
+          .filter((f) => f.ruleId === "PARSE_ISSUE")
+          .map((f) => [f.location?.file, f.detail?.split(":")[0]]),
+      ).toEqual(reasons.map((reason) => ["definition/tables/measures.tmdl", reason]));
+    },
+  );
   it("keeps one finding per file when two pages share a display name and a visual id", () => {
     const files = [
       page("p1", { displayName: "Same" }),

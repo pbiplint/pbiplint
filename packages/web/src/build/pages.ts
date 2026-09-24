@@ -41,7 +41,7 @@ const EXAMPLE_CAPTION: Record<string, string> = {
   fixed: "After the fix",
 };
 /**
- * The info string of the fence a policy rule's page uses for the config its example runs under.
+ * The info string of the fence that holds the config, on a page whose example runs under one.
  * It renders as a figure captioned with the file name, and is neither an example that fires nor
  * one that is fixed.
  */

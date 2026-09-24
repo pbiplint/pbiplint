@@ -43,8 +43,8 @@ describe.each(defaultRules.map((r) => [r.id, r] as const))("SARIF help for %s", 
         const language = form === "pbir" ? "json" : "tmdl";
         expect(example).toContain(`**${caption}${named}** \`\`\`${language}`);
       }
-      // A policy rule's page shows the config its example runs under. The help captions it with
-      // the file and hands a Markdown reader a plain json fence, not the page's info string.
+      // A page whose example runs under a config shows that config. The help captions it with the
+      // file and hands a Markdown reader a plain json fence, not the page's info string.
       if (/^```json pbiplint\.config\.json[ \t]*$/m.test(section(page, "Example")))
         expect(example).toContain("**pbiplint.config.json** ```json");
       expect(example).not.toContain("json pbiplint.config.json");

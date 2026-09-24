@@ -68,3 +68,7 @@ A value that genuinely needs more than four decimal places has to stay Double, a
 - `RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE` reports the same column when it is also on either side of a relationship, so a Double key fires both. Changing it to `int64` clears both; changing it to `decimal` clears only this one.
 - `NUMERIC_COLUMN_SUMMARIZE_BY` counts Double among its numeric types, so a visible Double column is reported there too until its summarize-by is set to none.
 - `ADD_DATA_CATEGORY_FOR_COLUMNS` accepts either Double or Decimal on a column named Latitude or Longitude, so setting the data category it asks for does not take the column out of this rule, and the two findings sit on the same column.
+
+## Links
+
+- [Data types in Power BI, including where Desktop sets a column's type and the precision of each number type](https://learn.microsoft.com/power-bi/connect-data/desktop-data-types)

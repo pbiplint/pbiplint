@@ -390,6 +390,30 @@ describe("pbiplint CLI", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+  it.skipIf(noModes)(
+    "refuses an input none of whose files could be read, rather than report no findings",
+    async () => {
+      const root = pbipProject("pbiplint-locked-all-");
+      const model = join(root, "Demo.SemanticModel");
+      const locked = [join(model, "definition"), join(root, "Demo.Report")];
+      for (const p of locked) chmodSync(p, 0o000);
+      try {
+        // A part given on its own whose definition cannot be listed, and a project whose every
+        // part was refused, are each an input that could not be read.
+        for (const input of [model, root, join(root, "Demo.pbip")]) {
+          const r = await run([input]);
+          expect(r.code).toBe(2);
+          expect(r.out).toBe("");
+          expect(r.err).toBe(
+            `pbiplint: Could not read ${input}: EACCES: permission denied\nRun pbiplint --help for usage.\n`,
+          );
+        }
+      } finally {
+        for (const p of locked) chmodSync(p, 0o755);
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+  );
   it("lists the layer of every rule", async () => {
     const r = await run(["rules"]);
     expect(r.out).toMatch(/^PARSE_ISSUE\s+project\s+builtin/m);

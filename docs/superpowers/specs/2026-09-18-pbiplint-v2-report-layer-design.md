@@ -573,7 +573,7 @@ is not a JSON object), `NOT_REACHED_FROM_REPORT` is skipped, with the
 reason on the skipped line (section 7), because pbiplint cannot say
 what an unread file reaches. The Model fact then keeps its table,
 column, and measure counts, its not-reached clause says unknown ("not
-reached from this report: unknown (a report file could not be read)"),
+reached from this report: unknown, a report file could not be read"),
 and it links no rule. The report's `.platform`, definition.pbir, and
 the project's `.pbip` name no field, and a JSON file under the
 definition folder that the format does not define is not part of the

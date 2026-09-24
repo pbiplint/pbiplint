@@ -632,7 +632,7 @@ describe("buildFacts", () => {
     };
     const unknown = {
       ...counted,
-      detail: "not reached from this report: unknown (a report file could not be read)",
+      detail: "not reached from this report: unknown, a report file could not be read",
     };
     // A definition file the PBIR format defines, unread for any of the three reasons: the rule is
     // skipped, and what the file would have reached is not known, so the fact links no rule.

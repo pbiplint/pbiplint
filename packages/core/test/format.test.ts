@@ -394,10 +394,10 @@ describe("a whole-project report", () => {
     expect(lines[2]).toBe("Notice: the walk stopped 64 folders deep inside Deep");
     expect(text).toContain("\nReport at a glance\n");
     expect(text).toMatch(
-      /\n {2}Opens on {9}Overview \(the page open when it was saved; no landing page set\) {42}LANDING_PAGE_NOT_SET\n/,
+      /\n {2}Opens on {9}Overview \(the page open when it was saved; no landing page set\) {41}LANDING_PAGE_NOT_SET\n/,
     );
     expect(text).toMatch(
-      /\n {2}Model {12}1 table, 1 column, 1 measure \(not reached from this report: unknown \(a report file could not be read\)\)\n/,
+      /\n {2}Model {12}1 table, 1 column, 1 measure \(not reached from this report: unknown, a report file could not be read\)\n/,
     );
     // PARSE_ISSUE is an Error Prevention error, so it ranks first; the model's DAX error follows.
     expect(text).toMatch(/\n {2}1\. File could not be fully parsed {2}\(1 error\) {3}\[report\]\n/);
@@ -456,7 +456,7 @@ describe("a whole-project report", () => {
       /, 5 rules skipped \(need a live model\), 1 rule skipped \(a report file could not be read\)\.\n/,
     );
     expect(md).toContain(
-      "| Model | 1 table, 1 column, 1 measure (not reached from this report: unknown (a report file could not be read)) |  |",
+      "| Model | 1 table, 1 column, 1 measure (not reached from this report: unknown, a report file could not be read) |  |",
     );
     expect(md).toContain("> Notice: the walk stopped 64 folders deep inside Deep");
     expect(md).toContain(

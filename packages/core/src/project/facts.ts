@@ -230,7 +230,7 @@ export function buildFacts(
     // Unknown when a report file could not be read, the case NOT_REACHED_FROM_REPORT is skipped in:
     // what that file would have reached is not known, so the fact gives no count and links no rule.
     if (reach && project.report.unreadDefinitionFiles.length > 0) {
-      fact.detail = "not reached from this report: unknown (a report file could not be read)";
+      fact.detail = "not reached from this report: unknown, a report file could not be read";
     } else if (reach) {
       const u = reach.unreached();
       fact.detail = `${n(u.columns.length, "column")} and ${n(u.measures.length, "measure")} not reached from this report`;

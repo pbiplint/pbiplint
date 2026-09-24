@@ -1,7 +1,7 @@
 import { columnRef, measureRef } from "../../model/names.js";
 import type { FieldRef } from "../../pbir/types.js";
 import { finding } from "../helpers.js";
-import { reportFinding } from "../report-helpers.js";
+import { fieldFileUnread, reportFinding } from "../report-helpers.js";
 import type { RuleFinding } from "../types.js";
 import { pbiplintRule } from "./define.js";
 
@@ -81,9 +81,10 @@ export const NOT_REACHED_FROM_REPORT = pbiplintRule({
   severity: 1,
   scope: ["Column", "CalculatedColumn", "CalculatedTableColumn", "Measure"],
   layer: "project",
-  // A report file that could not be read may reach any field in the model, so while one is unread
-  // the rule cannot say what the report does not reach.
-  needsEveryReportFileRead: true,
+  // A file the report's field references are read from may reach any field in the model, so while
+  // one could not be read the rule cannot say what the report does not reach. A definition file
+  // that names no field, such as pages.json, does not stop it.
+  skipWhenUnread: fieldFileUnread,
   check: (_project, ctx) => {
     const reach = ctx.indexes.reachability!;
     const { columns, measures } = reach.unreached();

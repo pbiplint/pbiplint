@@ -220,10 +220,10 @@ export interface Report {
   /**
    * The files under definition/ that the PBIR format defines and that could not be read (a merge
    * conflict, invalid JSON, or a document that is not an object, each a PARSE_ISSUE), in path
-   * order. Whatever such a file says is missing from this report, so a rule that has to see all of
-   * it cannot say anything true while the list is not empty. definition.pbir, the .platform, and
-   * the .pbip name no field, and a JSON file of the author's own is not part of the report, so
-   * none of them is listed.
+   * order. Whatever such a file says is missing from this report, so a rule whose findings depend
+   * on one is skipped while it is listed, through the predicate its `skipWhenUnread` names.
+   * definition.pbir, the .platform, and the .pbip are not part of the definition folder, and a
+   * JSON file of the author's own is not part of the report, so none of them is listed.
    */
   unreadDefinitionFiles: string[];
   schemaVersions: { report?: string; page?: string; visual?: string };

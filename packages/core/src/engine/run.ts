@@ -1,6 +1,5 @@
 import type { Indexes } from "../index/build.js";
 import type { Project } from "../project/types.js";
-import { reportFileUnread } from "../rules/report-helpers.js";
 import { layerOf, type Finding, type Rule, type RuleOptions } from "../rules/types.js";
 import type { ResolvedConfig } from "./config.js";
 import { isIgnored } from "./ignore.js";
@@ -62,7 +61,7 @@ export function runRules(
       });
       continue;
     }
-    if (rule.needsEveryReportFileRead && project.report && reportFileUnread(project.report)) {
+    if (rule.skipWhenUnread && project.report && rule.skipWhenUnread(project.report)) {
       result.rulesSkipped.push({ id: rule.id, reason: "reportFileUnread" });
       continue;
     }

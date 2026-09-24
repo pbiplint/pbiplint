@@ -674,6 +674,40 @@ describe("buildFacts", () => {
     expect(modelFact({ path: "definition/notes/owners.json", text: "{" })).toEqual(reached);
     expect(modelFact()).toEqual(reached);
   });
+  it("counts what is not reached while a definition file that holds no field reference could not be read, and says unknown for one that holds them", () => {
+    /** The Model fact with each extra file taking the place of a file at its path. */
+    const modelFact = (...extra: { path: string; text: string }[]) => {
+      const kept = files.filter((f) => !extra.some((e) => e.path === f.path));
+      const { report } = buildReport([...kept, ...extra]);
+      const project = { model, report };
+      return buildFacts(project, buildIndexes(project), ALL).find((f) => f.label === "Model");
+    };
+    const counted = { layer: "model", label: "Model", value: "1 table, 2 columns, 2 measures" };
+    const reached = {
+      ...counted,
+      detail: "0 columns and 1 measure not reached from this report",
+      ruleId: "NOT_REACHED_FROM_REPORT",
+    };
+    const unknown = {
+      ...counted,
+      detail: "not reached from this report: unknown, a report file could not be read",
+    };
+    const conflicted = "<<<<<<< HEAD\n{}\n=======\n{}\n>>>>>>> main\n";
+    for (const path of [
+      "definition/version.json",
+      "definition/pages/pages.json",
+      "definition/bookmarks/bookmarks.json",
+      "definition/pages/p1/visuals/v4/mobile.json",
+    ])
+      expect(modelFact({ path, text: conflicted }), path).toEqual(reached);
+    for (const path of [
+      "definition/report.json",
+      "definition/reportExtensions.json",
+      "definition/pages/p2/page.json",
+      "definition/bookmarks/b1.bookmark.json",
+    ])
+      expect(modelFact({ path, text: conflicted }), path).toEqual(unknown);
+  });
   it("gives a model-only run no facts at all, because the block is about the report", () => {
     expect(buildFacts({ model }, buildIndexes({ model }), ALL)).toEqual([]);
   });

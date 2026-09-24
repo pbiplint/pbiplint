@@ -1,3 +1,4 @@
+import { holdsFieldReferences } from "../pbir/build.js";
 import { lineOfPointer } from "../pbir/json.js";
 import {
   bookmarkLabel,
@@ -124,11 +125,15 @@ export const reportFinding = {
 };
 
 /**
- * Whether a report file could not be read: a file under the definition folder that the PBIR
- * format defines, recorded in `Report.unreadDefinitionFiles`. The engine skips a rule that sets
- * `needsEveryReportFileRead` when this holds, and the Model fact's not-reached clause says unknown.
+ * Whether a file the report's field references are read from could not be read: report.json,
+ * reportExtensions.json, a page.json, a visual.json, or a bookmark file (`holdsFieldReferences`),
+ * found among `Report.unreadDefinitionFiles`. Such a file may reference any field in the model,
+ * so NOT_REACHED_FROM_REPORT sets this as its `skipWhenUnread` and the Model fact's not-reached
+ * clause says unknown. version.json, pages.json, bookmarks.json, and a mobile.json name no field,
+ * so one of them unread changes neither.
  */
-export const reportFileUnread = (r: Report): boolean => r.unreadDefinitionFiles.length > 0;
+export const fieldFileUnread = (r: Report): boolean =>
+  r.unreadDefinitionFiles.some(holdsFieldReferences);
 
 export const allVisuals = (r: Report): Visual[] => r.pages.flatMap((p) => p.visuals);
 export const isHiddenPage = (p: Page): boolean => p.visibility === "HiddenInViewMode";

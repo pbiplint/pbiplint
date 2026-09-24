@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { lint } from "../src/engine/lint.js";
 import { finding } from "../src/rules/helpers.js";
+import { fieldFileUnread } from "../src/rules/report-helpers.js";
 import type { Rule } from "../src/rules/types.js";
 import {
   formatJson,
@@ -98,7 +99,7 @@ describe("summary wording", () => {
       severity: 1,
       layer: "project",
       needs: ["model", "report"],
-      needsEveryReportFileRead: true,
+      skipWhenUnread: fieldFileUnread,
       check: () => [],
     });
     const run = (rules: Rule[]) =>

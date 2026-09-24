@@ -3,6 +3,7 @@ import type { Indexes } from "../index/build.js";
 import type { Report } from "../pbir/types.js";
 import {
   allVisuals,
+  fieldFileUnread,
   filtersPaneState,
   hiddenVisualWithFields,
   isDrillthroughPage,
@@ -13,7 +14,6 @@ import {
   landingPageNotSet,
   openingPage,
   openingPageInvalid,
-  reportFileUnread,
   reportMeasuresToMove,
   slicerSelection,
 } from "../rules/report-helpers.js";
@@ -229,9 +229,10 @@ export function buildFacts(
       value: `${n(model.tables.length, "table")}, ${n(columns, "column")}, ${n(measures, "measure")}`,
     };
     const reach = indexes.reachability;
-    // Unknown when a report file could not be read, the case NOT_REACHED_FROM_REPORT is skipped in:
-    // what that file would have reached is not known, so the fact gives no count and links no rule.
-    if (reach && reportFileUnread(project.report)) {
+    // Unknown when a file the report's field references are read from could not be read, the case
+    // NOT_REACHED_FROM_REPORT is skipped in: what that file would have reached is not known, so the
+    // fact gives no count and links no rule.
+    if (reach && fieldFileUnread(project.report)) {
       fact.detail = "not reached from this report: unknown, a report file could not be read";
     } else if (reach) {
       const u = reach.unreached();

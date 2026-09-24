@@ -384,6 +384,18 @@ const definitionFile = (path: string): boolean =>
   [PAGE_FILE, VISUAL_FILE, MOBILE_FILE, BOOKMARK_FILE].some((re) => re.test(path));
 
 /**
+ * Whether the report's field references are read from this definition file, as the reference
+ * index in index/report-refs.ts reads them: report.json (the report's filters),
+ * reportExtensions.json (its measures' DAX), a page.json (the page's filters and binding), a
+ * visual.json (its wells, filters, and every other property), and a bookmark file (its captured
+ * state). version.json, pages.json, bookmarks.json, and a visual's mobile.json name no field.
+ */
+export const holdsFieldReferences = (path: string): boolean =>
+  path === "definition/report.json" ||
+  path === "definition/reportExtensions.json" ||
+  [PAGE_FILE, VISUAL_FILE, BOOKMARK_FILE].some((re) => re.test(path));
+
+/**
  * Whether the PBIR format defines the file: definition.pbir, the report's .platform, the project's
  * .pbip, and the definition files. Microsoft publishes a schema for each, with an object root; any
  * other JSON under definition/ is the author's own.

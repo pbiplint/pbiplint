@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildReport, KNOWN_SCHEMAS, literal } from "../src/pbir/build.js";
-import { reportFileUnread } from "../src/rules/report-helpers.js";
+import { buildReport, holdsFieldReferences, KNOWN_SCHEMAS, literal } from "../src/pbir/build.js";
+import { fieldFileUnread } from "../src/rules/report-helpers.js";
 
 const schema = (family: string, version: string) =>
   `https://developer.microsoft.com/json-schemas/fabric/item/report/definition/${family}/${version}/schema.json`;
@@ -832,13 +832,61 @@ describe("buildReport tolerance", () => {
     ]);
     expect(clean.report.unreadDefinitionFiles).toEqual([]);
     // The one test the engine's skip and the Model fact's unknown share.
-    expect(reportFileUnread(report)).toBe(true);
-    expect(reportFileUnread(clean.report)).toBe(false);
+    expect(fieldFileUnread(report)).toBe(true);
+    expect(fieldFileUnread(clean.report)).toBe(false);
     const ownFileOnly = buildReport([
       { path: "definition/report.json", text: j({}) },
       { path: "definition/notes/owners.json", text: '["alice",]' },
     ]);
-    expect(reportFileUnread(ownFileOnly.report)).toBe(false);
+    expect(fieldFileUnread(ownFileOnly.report)).toBe(false);
+  });
+  it("tells a definition file the report's field references are read from from one that holds none", () => {
+    // The files report-refs.ts reads references from: the report's filters, its measures' DAX, a
+    // page's filters and binding, a visual, and a bookmark's captured state.
+    for (const path of [
+      "definition/report.json",
+      "definition/reportExtensions.json",
+      "definition/pages/a/page.json",
+      "definition/pages/a/visuals/v/visual.json",
+      "definition/bookmarks/b.bookmark.json",
+    ])
+      expect(holdsFieldReferences(path), path).toBe(true);
+    // The rest of the definition folder names no field, nor does a file the format does not define.
+    for (const path of [
+      "definition/version.json",
+      "definition/pages/pages.json",
+      "definition/bookmarks/bookmarks.json",
+      "definition/pages/a/visuals/v/mobile.json",
+      "definition/notes/owners.json",
+      "definition.pbir",
+      ".platform",
+    ])
+      expect(holdsFieldReferences(path), path).toBe(false);
+    // Each of those four unread alone leaves every field reference read; any of the five does not.
+    const unreadAlone = (path: string) =>
+      fieldFileUnread(
+        buildReport([
+          { path: "definition/report.json", text: j({}) },
+          { path: "definition/pages/a/page.json", text: page("a") },
+          { path: "definition/pages/a/visuals/v/visual.json", text: visual("v") },
+          { path, text: "<<<<<<< HEAD\n{}\n" },
+        ]).report,
+      );
+    for (const path of [
+      "definition/version.json",
+      "definition/pages/pages.json",
+      "definition/bookmarks/bookmarks.json",
+      "definition/pages/a/visuals/v/mobile.json",
+    ])
+      expect(unreadAlone(path), path).toBe(false);
+    for (const path of [
+      "definition/report.json",
+      "definition/reportExtensions.json",
+      "definition/pages/a/page.json",
+      "definition/pages/a/visuals/v/visual.json",
+      "definition/bookmarks/b.bookmark.json",
+    ])
+      expect(unreadAlone(path), path).toBe(true);
   });
   it("records whether reportExtensions.json was in the input and could be read", () => {
     const extensions = (...texts: string[]) =>

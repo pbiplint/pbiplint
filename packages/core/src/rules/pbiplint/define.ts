@@ -1,3 +1,4 @@
+import type { Report } from "../../pbir/types.js";
 import type { Project } from "../../project/types.js";
 import { RULE_SUMMARIES } from "../rule-summaries.data.js";
 import type {
@@ -22,8 +23,8 @@ export interface PbiplintRuleSpec {
   layer: Layer;
   /** The layers the rule cannot run without, when they are not the ones its `layer` implies. */
   needs?: readonly LayerName[];
-  /** True when the rule is skipped while a report file could not be read (Rule.needsEveryReportFileRead). */
-  needsEveryReportFileRead?: boolean;
+  /** The unread report files that stop the rule (Rule.skipWhenUnread). */
+  skipWhenUnread?: (report: Report) => boolean;
   options?: readonly RuleOption[];
   references?: string[];
   policySeverity?(options: RuleOptions): Severity | undefined;

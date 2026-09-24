@@ -14,6 +14,7 @@ import { REMOVE_UNUSED_CUSTOM_VISUALS } from "../src/rules/pbi-inspector/report.
 import { ENSURE_ALTTEXT } from "../src/rules/pbi-inspector/visuals.js";
 import { defaultRules } from "../src/rules/index.js";
 import { REPORT_LEVEL_MEASURES } from "../src/rules/pbiplint/measures.js";
+import { fieldFileUnread } from "../src/rules/report-helpers.js";
 import type { Rule } from "../src/rules/types.js";
 import { modelFrom } from "./helpers.js";
 
@@ -315,7 +316,7 @@ describe("runRules", () => {
     expect(r.rulesRun).toEqual(["EVERY_COLUMN"]);
     expect(r.findings.map((f) => f.layer)).toEqual(["model"]);
   });
-  it("skips a rule that needs every report file read when one could not be, and runs the rest", () => {
+  it("skips a rule when a report file its skipWhenUnread names could not be read, and runs the rest", () => {
     const both = { ...base, layer: "project" as const, needs: ["model", "report"] as const };
     const wholeReport: Rule = {
       ...both,
@@ -323,7 +324,7 @@ describe("runRules", () => {
       name: "Whole report",
       category: "Maintenance",
       severity: 1,
-      needsEveryReportFileRead: true,
+      skipWhenUnread: fieldFileUnread,
       check: ({ model }) => [finding.model(model!)],
     };
     const anyReport: Rule = {
@@ -352,6 +353,11 @@ describe("runRules", () => {
       "ANY_REPORT",
     ]);
     expect(run([page, { path: ".platform", text: "{" }]).rulesRun).toEqual([
+      "WHOLE_REPORT",
+      "ANY_REPORT",
+    ]);
+    // Nor does a file the predicate leaves out: pages.json holds no field reference.
+    expect(run([page, { path: "definition/pages/pages.json", text: "{" }]).rulesRun).toEqual([
       "WHOLE_REPORT",
       "ANY_REPORT",
     ]);
@@ -810,8 +816,12 @@ describe("lint over a project", () => {
         },
       }),
     };
+    /** Lints the project with the extra files, each taking the place of a file at its path. */
     const run = (...extra: { path: string; text: string }[]) => {
-      const r = lint([...modelFiles, ...reportFiles, regionCard, ...extra]);
+      const kept = [...modelFiles, ...reportFiles, regionCard].filter(
+        (f) => !extra.some((e) => e.path === f.path),
+      );
+      const r = lint([...kept, ...extra]);
       const ids = (id: string) =>
         r.findings.filter((f) => f.ruleId === id).map((f) => f.objectId ?? f.objectName);
       return { r, ids };
@@ -863,10 +873,36 @@ describe("lint over a project", () => {
         expect(ids("NOT_REACHED_FROM_REPORT"), file.path).toEqual(["'Sales'[Amount]"]);
       }
     });
-    it("is the only rule that needs every report file read", () => {
-      expect(defaultRules.filter((r) => r.needsEveryReportFileRead).map((r) => r.id)).toEqual([
-        "NOT_REACHED_FROM_REPORT",
-      ]);
+    it("is skipped when report.json, a page.json, or a bookmark file could not be read, each a file it reads fields from", () => {
+      for (const file of [
+        { path: "definition/report.json", text: '{\n  "filterConfig": {\n' },
+        { path: "definition/pages/p/page.json", text: "<<<<<<< HEAD\n{}\n" },
+        { path: "definition/bookmarks/b.bookmark.json", text: "[]" },
+      ]) {
+        const { r, ids } = run(file);
+        expect(r.summary.rulesSkipped, file.path).toContainEqual(skipped);
+        expect(ids("NOT_REACHED_FROM_REPORT"), file.path).toEqual([]);
+        expect(ids("PARSE_ISSUE"), file.path).toEqual([file.path]);
+      }
+    });
+    it("runs when version.json, pages.json, bookmarks.json, or a mobile.json could not be read, since none holds a field reference", () => {
+      for (const file of [
+        { path: "definition/version.json", text: "{" },
+        { path: "definition/pages/pages.json", text: "<<<<<<< HEAD\n{}\n" },
+        { path: "definition/bookmarks/bookmarks.json", text: '{ "items": [' },
+        { path: "definition/pages/p/visuals/r/mobile.json", text: "[]" },
+      ]) {
+        const { r, ids } = run(file);
+        expect(ids("PARSE_ISSUE"), file.path).toEqual([file.path]);
+        expect(r.summary.rulesSkipped, file.path).not.toContainEqual(skipped);
+        expect(ids("NOT_REACHED_FROM_REPORT"), file.path).toEqual(["'Sales'[Amount]"]);
+        expect(skippedLine(r), file.path).not.toContain("a report file could not be read");
+      }
+    });
+    it("is the only rule an unread file of the report's field references stops", () => {
+      expect(
+        defaultRules.filter((r) => r.skipWhenUnread === fieldFileUnread).map((r) => r.id),
+      ).toEqual(["NOT_REACHED_FROM_REPORT"]);
     });
   });
   it("keeps an invalid-JSON detail on one line, whatever the engine's message spans", () => {

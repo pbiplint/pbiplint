@@ -357,15 +357,18 @@ describe("formatResult", () => {
 
 describe("a whole-project report", () => {
   const j = (v: unknown) => JSON.stringify(v);
+  const readable = [
+    {
+      path: "definition/report.json",
+      text: j({ $schema: "https://x/report/3.2.0/schema.json" }),
+    },
+    { path: "definition/pages/pages.json", text: j({ pageOrder: ["p"], activePageName: "p" }) },
+    { path: "definition/pages/p/page.json", text: j({ name: "p", displayName: "Overview" }) },
+  ];
   const project = lint(
     [
       ...files,
-      {
-        path: "definition/report.json",
-        text: j({ $schema: "https://x/report/3.2.0/schema.json" }),
-      },
-      { path: "definition/pages/pages.json", text: j({ pageOrder: ["p"], activePageName: "p" }) },
-      { path: "definition/pages/p/page.json", text: j({ name: "p", displayName: "Overview" }) },
+      ...readable,
       {
         path: "definition/pages/p/visuals/v/visual.json",
         text: '{\n  "name": "v",\n<<<<<<< HEAD\n}\n',
@@ -403,6 +406,15 @@ describe("a whole-project report", () => {
       /\nERROR {2}\[report\] {3}File could not be fully parsed {2}PARSE_ISSUE {2}\(1\)\n/,
     );
     expect(text).toMatch(/\nERROR {2}\[model\] {4}Column references should be fully qualified/);
+  });
+  it("prints the counted Model row with NOT_REACHED_FROM_REPORT in the margin when every report file was read", () => {
+    const text = formatText(lint([...files, ...readable]));
+    expect(text.split("\n")[1]).toMatch(
+      /^Model: 2 files\. Report: 3 files\. \d+ rules run, 5 rules skipped \(need a live model\)$/,
+    );
+    expect(text).toMatch(
+      /\n {2}Model {12}1 table, 1 column, 1 measure \(1 column and 1 measure not reached from this report\) {3}NOT_REACHED_FROM_REPORT\n/,
+    );
   });
   it("tags a parse-issue group spanning both layers as project in the text header", () => {
     const spanning = lint([

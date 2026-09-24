@@ -514,10 +514,10 @@ aggregation table when it covers the query.
 | Opens on | landing page display name, or the active page with "the page open when it was saved; no landing page set" | `LANDING_PAGE_NOT_SET` |
 | Filters pane | open / closed / hidden from readers | `FILTERS_PANE_STATE` |
 | Pages | count; hidden; tooltip; drillthrough | `HIDE_TOOLTIP_DRILLTROUGH_PAGES` |
-| Visuals | count; hidden; custom visual types registered and used (the used count unknown while a visual.json could not be read, amended 2026-09-24 with Michael) | `HIDDEN_VISUAL_WITH_FIELDS`, `REMOVE_UNUSED_CUSTOM_VISUALS` |
+| Visuals | count; hidden; custom visual types registered and used (the used count unknown while a visual.json could not be read and a registered type is used by no visual that was read, amended 2026-09-24 with Michael) | `HIDDEN_VISUAL_WITH_FIELDS`, `REMOVE_UNUSED_CUSTOM_VISUALS` |
 | Report measures | count | `REPORT_LEVEL_MEASURES` |
-| Slicers | count of the catalog slicers; saved selections, those on custom slicers named (amended 2026-09-24 with Michael) | `SLICER_SELECTION_SAVED` |
-| Mobile layouts | pages with one, of total | |
+| Slicers | count of the catalog slicers; saved selections, those on custom slicers named; unknown in place of none while a visual.json could not be read (amended 2026-09-24 with Michael) | `SLICER_SELECTION_SAVED` |
+| Mobile layouts | pages with one, of total; unknown in place of none while a mobile.json could not be read (amended 2026-09-24 with Michael) | |
 | Schema versions | report, page, visual (highest seen) | |
 | Model | tables, columns, measures; with both parts, columns and measures not reached from this report | `NOT_REACHED_FROM_REPORT` |
 
@@ -622,11 +622,25 @@ included, leaves the rule running and the fact counting.
 
 Amended 2026-09-24 with Michael (release triage, ruling H71): a fact
 that states absence or non-use says nothing about what an unread file
-could hold. While a visual.json could not be read, the Visuals fact's
-custom visual clause reads `2 custom visual types registered, used:
-unknown, a visual.json could not be read` and links no rule for it,
-since the unread visual could be of any registered type
-(`REMOVE_UNUSED_CUSTOM_VISUALS` is skipped then, section 8.1). Opens on
+could hold, and says unknown only where the unread file could change
+what it would say (narrowed by ruling H74). While a visual.json could
+not be read and a registered custom visual type is used by no visual
+that was read, the Visuals fact's custom visual clause reads `2 custom
+visual types registered, used: unknown, a visual.json could not be
+read` and links no rule for it, since the unread visual could be of
+that type (`REMOVE_UNUSED_CUSTOM_VISUALS` is skipped on the same
+condition, section 8.1); with every registered type used by a visual
+that was read, it keeps its count. While a visual.json could not be
+read, the Slicers fact says unknown where it would say none, since the
+unread visual could be a catalog slicer or carry a selection: its value
+reads `unknown` in place of `none`, and its detail reads `saved
+selections: unknown, a visual.json could not be read` in place of `no
+saved selection`, or ends `; a visual.json could not be read` after the
+selections it counted when the value is unknown. While a mobile.json
+could not be read, Mobile layouts reads `unknown`, with `a mobile.json
+could not be read`, in place of `none`. A count that is not none, such
+as Pages, the Visuals count and its hidden count, or `1 of 3 pages`, is
+a lower bound and stays as it is. Opens on
 names a landing or active page whose page.json could not be read by
 the name pages.json gives it, as it names a page known only by its
 folder, and never calls it "(no such page)"; `OPENING_PAGE_INVALID`
@@ -662,11 +676,12 @@ H71): the field is now `skipWhenUnread`, a predicate over the report
 that names which unread files stop the rule, one exported per condition
 from report-helpers.ts. `NOT_REACHED_FROM_REPORT` sets
 `fieldFileUnread`, a file the report's field references are read from
-(section 6), and `REMOVE_UNUSED_CUSTOM_VISUALS` sets `visualFileUnread`,
-a visual.json (section 8.1); no other rule sets one. run.ts stays the
-one place that skips, with the same reason and the same words, and the
-facts call the same predicates. A run with an unreadable visual.json
-now says "2 rules skipped (a report file could not be read)".
+(section 6), and `REMOVE_UNUSED_CUSTOM_VISUALS` sets
+`customVisualUseUnknown`, a visual.json while a registered custom
+visual type is used by no visual that was read (section 8.1, narrowed
+by ruling H74); no other rule sets one. run.ts stays the one place that
+skips, with the same reason and the same words, and the facts call the
+same predicates.
 
 **Object types.** `Report`, `Page`, `Visual`, `Bookmark`,
 `ReportMeasure` join `ObjectType`.
@@ -767,11 +782,14 @@ a visual hidden through an ancestor group as hidden (sections 6 and
 Amended 2026-09-24 with Michael (release triage, ruling H71):
 `REMOVE_UNUSED_CUSTOM_VISUALS` is skipped, with "a report file could
 not be read" on the skipped line (section 7), while a visual.json could
-not be read, because the unread visual could be of any registered type
-and a registration it uses would be reported as unused. This is what it
-does on a file neither tool can read, not a deviation: the oracle
-fixtures all parse, so parity cannot show it. The Visuals fact's used
-count says unknown then (section 6).
+not be read and a registered type is used by no visual that was read,
+because the unread visual could be of that type and the registration
+would be reported as unused. With no custom visual registered, or
+every registered type used by a visual that was read, the unread file
+cannot change its answer and it runs (narrowed by ruling H74). This is
+what it does on a file neither tool can read, not a deviation: the
+oracle fixtures all parse, so parity cannot show it. The Visuals fact's
+used count says unknown on the same condition (section 6).
 
 ### 8.2 Native, tier 1
 

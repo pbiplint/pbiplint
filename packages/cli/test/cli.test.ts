@@ -292,6 +292,84 @@ describe("pbiplint CLI", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+  it.skipIf(asRoot)(
+    "says a part could not be read when its definition lists but none of its files read",
+    async () => {
+      const root = pbipProject("pbiplint-locked-files-");
+      const def = join(root, "Demo.Report", "definition");
+      const locked = [join(def, "pages"), join(def, "report.json")];
+      for (const p of locked) chmodSync(p, 0o000);
+      try {
+        const r = await run([root, "--format", "json", "--fail-on", "warning"]);
+        const notices = [
+          unread("Demo.Report/definition/pages", "EACCES: permission denied"),
+          unread("Demo.Report/definition/report.json", "EACCES: permission denied"),
+        ];
+        expect(r.err).toBe(notices.map((n) => `pbiplint: notice: ${n.message}\n`).join(""));
+        expect(r.code).toBe(1);
+        const doc = JSON.parse(r.out);
+        expect(doc.layers.report).toEqual({
+          present: false,
+          reason: "the report folder could not be read",
+        });
+        expect(doc.diagnostics).toEqual(notices);
+      } finally {
+        for (const p of locked) chmodSync(p, 0o755);
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+  );
+  it.skipIf(asRoot)(
+    "names a folder once though a part given on its own is walked for each layer",
+    async () => {
+      const root = pbipProject("pbiplint-locked-once-");
+      const locked = join(root, "Demo.Report", "definition", "pages");
+      chmodSync(locked, 0o000);
+      try {
+        const r = await run([join(root, "Demo.Report"), "--format", "json"]);
+        const notice = unread("definition/pages", "EACCES: permission denied");
+        expect(r.err).toBe(`pbiplint: notice: ${notice.message}\n`);
+        const doc = JSON.parse(r.out);
+        expect(doc.layers.report.present).toBe(true);
+        expect(doc.diagnostics).toEqual([notice]);
+      } finally {
+        chmodSync(locked, 0o755);
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+  );
+  it.skipIf(asRoot)(
+    "refuses a .pbip it was pointed at and cannot read, and notes one it found",
+    async () => {
+      const root = pbipProject("pbiplint-locked-pbip-");
+      const pbip = join(root, "Demo.pbip");
+      chmodSync(pbip, 0o000);
+      try {
+        const named = await run([pbip]);
+        expect(named.code).toBe(2);
+        expect(named.err).toBe(
+          `pbiplint: Could not read ${pbip}: EACCES: permission denied\nRun pbiplint --help for usage.\n`,
+        );
+        const found = await run([root, "--fail-on", "none"]);
+        expect(found.code).toBe(0);
+        expect(found.err).toBe(
+          `pbiplint: notice: ${unread("Demo.pbip", "EACCES: permission denied").message}\n`,
+        );
+      } finally {
+        chmodSync(pbip, 0o644);
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+  );
+  it("leaves an error that is not the operating system's to surface as unexpected", async () => {
+    // Node refuses a path holding a NUL byte with ERR_INVALID_ARG_VALUE: a code, but no system
+    // call, so it is not a file the resolver could not read.
+    const r = await run(["a\u0000b"]);
+    expect(r.code).toBe(2);
+    expect(r.err).toMatch(/^pbiplint: unexpected error: TypeError: .* without null bytes/);
+    expect(r.err).toMatch(/\n\s+at resolveProject /);
+    expect(r.err).not.toContain("Could not read");
+  });
   it.skipIf(asRoot)("refuses an input folder it cannot read at all, naming it", async () => {
     const root = pbipProject("pbiplint-locked-input-");
     chmodSync(root, 0o000);

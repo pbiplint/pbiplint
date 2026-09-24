@@ -143,9 +143,10 @@ const UNREAD_PART: Record<LayerName, string> = {
 
 /**
  * The part at `folder`, read by `read`. A part folder that cannot be entered, or whose definition
- * folder cannot be listed, is a notice naming the folder that refused, and its layer is absent
- * with a reason, so it never reads as absent without a word. A plain folder given on its own has
- * no layer to name.
+ * folder cannot be listed, is a notice naming the folder that refused. A part that yields nothing
+ * while something in it could not be read was not found empty either, so in both cases its layer
+ * is absent with a reason and never reads as absent without a word. A plain folder given on its
+ * own has no layer to name.
  */
 function readPart(
   w: Walk,
@@ -153,17 +154,26 @@ function readPart(
   folder: string,
   read: (w: Walk, folder: string) => ResolvedPart | undefined,
 ): ResolvedPart | undefined {
+  let part: ResolvedPart | undefined;
   try {
     // Entering the folder is tried first, so a folder that refuses entry is the one named rather
     // than the first entry looked up inside it.
     accessSync(folder, constants.X_OK);
-    return read(w, folder);
+    part = read(w, folder);
   } catch (e) {
     if (!isSystemError(e)) throw e;
     unread(w, e.path ?? folder, e);
-    if (layer) w.project.absent[layer] = UNREAD_PART[layer];
-    return undefined;
   }
+  // Any notice at or under the folder counts, not only one this read added: a part given on its
+  // own is read for each layer, and a path is named once.
+  const at = toPosix(relative(w.base, folder));
+  const refused = w.project.diagnostics.some(
+    (d) =>
+      d.kind === "unread-file" &&
+      (at === "" || d.path === at || d.path?.startsWith(`${at}/`) === true),
+  );
+  if (!part && layer && refused) w.project.absent[layer] = UNREAD_PART[layer];
+  return part;
 }
 
 /**
@@ -257,14 +267,16 @@ function resolveFolder(input: string, path: string, preferred?: string): Resolve
 
   // The folder is itself one part.
   if (isDir(join(path, "definition"))) {
-    const layer = name.endsWith(".SemanticModel")
-      ? "model"
-      : name.endsWith(".Report")
-        ? "report"
-        : undefined;
-    const model = readPart(w, layer, path, modelPart);
+    // The folder's name says which part it is, and only the reader for that part may record a
+    // reason: a .Report is read for .tmdl files first, and finding none is not a refusal.
+    const model = readPart(
+      w,
+      name.endsWith(".SemanticModel") ? "model" : undefined,
+      path,
+      modelPart,
+    );
     if (model) return { ...out, model };
-    const report = readPart(w, layer, path, reportPart);
+    const report = readPart(w, name.endsWith(".Report") ? "report" : undefined, path, reportPart);
     if (report) return { ...out, report, absent: loneReportAbsent(report, path) };
   }
   // A definition folder given directly: a model's is read as v1 did, a report's from its parent.
@@ -329,7 +341,12 @@ function resolveFolder(input: string, path: string, preferred?: string): Resolve
     // relative to, so it carries that relative path and a finding on it points at the real file.
     if (pbip !== undefined) {
       const p = join(path, pbip);
-      const text = attempt(w, p, () => readFileSync(p, "utf8"));
+      // A .pbip the user named is the input, refused like any input that cannot be read; one
+      // found beside the parts is a notice.
+      const text =
+        preferred !== undefined
+          ? readFileSync(p, "utf8")
+          : attempt(w, p, () => readFileSync(p, "utf8"));
       if (text !== undefined) report.files.push({ path: toPosix(relative(report.root, p)), text });
     }
     const pbir = report.files.find((f) => f.path === "definition.pbir");

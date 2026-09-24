@@ -13,6 +13,7 @@ import {
   isSlicer,
   isTooltipPage,
   landingPageNotSet,
+  mobileFileRead,
   mobileFileUnread,
   openingPage,
   openingPageInvalid,
@@ -217,9 +218,19 @@ function reportFacts(project: Project, report: Report, known: ReadonlySet<string
     ),
   );
 
-  // Mobile layouts and schema versions. While a mobile.json could not be read, the layout it marks
-  // is not counted, so none reads unknown; a count above none is a lower bound and stays.
-  const mobilePages = pages.filter((p) => p.visuals.some((v) => v.hasMobileLayout)).length;
+  // Mobile layouts and schema versions. A page counts by the mobile.json files read in its folder,
+  // so a mobile layout pbiplint read counts even when its visual.json could not be read. None reads
+  // unknown while a mobile.json could not be read, since the layout it marks is not counted, or
+  // while a mobile.json that was read has no page to count, since neither its page.json nor any
+  // visual.json beside it could be read. A count above none is a lower bound and stays.
+  const mobilePages = pages.filter((p) => p.hasMobileLayout).length;
+  const mobileUnknown = mobilePages
+    ? undefined
+    : mobileFileUnread(report)
+      ? "a mobile.json could not be read"
+      : mobileFileRead(report)
+        ? "a page with a mobile layout could not be read"
+        : undefined;
   facts.push(
     mobilePages
       ? {
@@ -227,13 +238,8 @@ function reportFacts(project: Project, report: Report, known: ReadonlySet<string
           label: "Mobile layouts",
           value: `${mobilePages} of ${n(pages.length, "page")}`,
         }
-      : mobileFileUnread(report)
-        ? {
-            layer: "report",
-            label: "Mobile layouts",
-            value: "unknown",
-            detail: "a mobile.json could not be read",
-          }
+      : mobileUnknown
+        ? { layer: "report", label: "Mobile layouts", value: "unknown", detail: mobileUnknown }
         : { layer: "report", label: "Mobile layouts", value: "none" },
   );
   const sv = report.schemaVersions;

@@ -912,6 +912,40 @@ describe("buildFacts", () => {
         value: "none",
       });
   });
+  it("counts a page by the mobile.json read in its folder, even when that visual's visual.json could not be read", () => {
+    const { report } = buildReport([
+      page("p1", "Overview"),
+      page("p2", "Detail"),
+      visual("p2", "b", "card"),
+      // p1's only visual: its visual.json is invalid, its mobile.json was read.
+      { path: "definition/pages/p1/visuals/a/visual.json", text: '{ "name": "a", ' },
+      { path: "definition/pages/p1/visuals/a/mobile.json", text: j({ position: {} }) },
+    ]);
+    expect(
+      buildFacts({ report }, buildIndexes({ report }), ALL).find(
+        (f) => f.label === "Mobile layouts",
+      ),
+    ).toEqual({ layer: "report", label: "Mobile layouts", value: "1 of 2 pages" });
+    // A mobile.json read in a folder with no page to count, since neither the page.json nor any
+    // visual.json there could be read: the fact cannot say none.
+    const orphan = buildReport([
+      page("p2", "Detail"),
+      visual("p2", "b", "card"),
+      { path: "definition/pages/p1/page.json", text: "{" },
+      { path: "definition/pages/p1/visuals/a/visual.json", text: "{" },
+      { path: "definition/pages/p1/visuals/a/mobile.json", text: j({ position: {} }) },
+    ]).report;
+    expect(
+      buildFacts({ report: orphan }, buildIndexes({ report: orphan }), ALL).find(
+        (f) => f.label === "Mobile layouts",
+      ),
+    ).toEqual({
+      layer: "report",
+      label: "Mobile layouts",
+      value: "unknown",
+      detail: "a page with a mobile layout could not be read",
+    });
+  });
   it("names an opening page whose page.json could not be read as pages.json names it, and never calls it missing", () => {
     const opensOn = (header: Record<string, unknown>) => {
       const { report } = buildReport([

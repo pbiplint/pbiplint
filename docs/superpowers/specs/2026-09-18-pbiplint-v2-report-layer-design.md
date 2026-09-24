@@ -517,7 +517,7 @@ aggregation table when it covers the query.
 | Visuals | count; hidden; custom visual types registered and used (the used count unknown while a visual.json could not be read and a registered type is used by no visual that was read, amended 2026-09-24 with Michael) | `HIDDEN_VISUAL_WITH_FIELDS`, `REMOVE_UNUSED_CUSTOM_VISUALS` |
 | Report measures | count | `REPORT_LEVEL_MEASURES` |
 | Slicers | count of the catalog slicers; saved selections, those on custom slicers named; unknown in place of none while a visual.json could not be read (amended 2026-09-24 with Michael) | `SLICER_SELECTION_SAVED` |
-| Mobile layouts | pages with one, of total; unknown in place of none while a mobile.json could not be read (amended 2026-09-24 with Michael) | |
+| Mobile layouts | pages with one, counted by the mobile.json files read in their folders, of total; unknown in place of none while a mobile.json, or the page of one, could not be read (amended 2026-09-24 with Michael) | |
 | Schema versions | report, page, visual (highest seen) | |
 | Model | tables, columns, measures; with both parts, columns and measures not reached from this report | `NOT_REACHED_FROM_REPORT` |
 
@@ -636,9 +636,15 @@ unread visual could be a catalog slicer or carry a selection: its value
 reads `unknown` in place of `none`, and its detail reads `saved
 selections: unknown, a visual.json could not be read` in place of `no
 saved selection`, or ends `; a visual.json could not be read` after the
-selections it counted when the value is unknown. While a mobile.json
-could not be read, Mobile layouts reads `unknown`, with `a mobile.json
-could not be read`, in place of `none`. A count that is not none, such
+selections it counted when the value is unknown. Mobile layouts counts
+a page by the mobile.json files read in its folder, so a mobile layout
+pbiplint read counts even when its visual.json could not be read
+(ruling H75). While a mobile.json could not be read, it reads
+`unknown`, with `a mobile.json could not be read`, in place of `none`,
+and while a mobile.json that was read has no page to count, since
+neither the page.json nor any visual.json in its folder could be read,
+it reads `unknown`, with `a page with a mobile layout could not be
+read`. A count that is not none, such
 as Pages, the Visuals count and its hidden count, or `1 of 3 pages`, is
 a lower bound and stays as it is. Opens on
 names a landing or active page whose page.json could not be read by

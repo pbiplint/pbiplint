@@ -840,6 +840,32 @@ describe("buildReport tolerance", () => {
     ]);
     expect(fieldFileUnread(ownFileOnly.report)).toBe(false);
   });
+  it("marks a page as having a mobile layout by the mobile.json read in its folder, whether or not that visual's visual.json was", () => {
+    const { report } = buildReport([
+      // a: the visual's visual.json is invalid, its mobile.json was read.
+      { path: "definition/pages/a/page.json", text: page("a") },
+      { path: "definition/pages/a/visuals/v/visual.json", text: '{ "name": "v", ' },
+      { path: "definition/pages/a/visuals/v/mobile.json", text: j({}) },
+      // b: a stub page, its page.json unread, one visual read with a mobile.json.
+      { path: "definition/pages/b/page.json", text: "{" },
+      { path: "definition/pages/b/visuals/w/visual.json", text: visual("w") },
+      { path: "definition/pages/b/visuals/w/mobile.json", text: j({}) },
+      // c: a visual with no mobile.json, and one whose mobile.json could not be read.
+      { path: "definition/pages/c/page.json", text: page("c") },
+      { path: "definition/pages/c/visuals/x/visual.json", text: visual("x") },
+      { path: "definition/pages/c/visuals/y/visual.json", text: visual("y") },
+      { path: "definition/pages/c/visuals/y/mobile.json", text: "[]" },
+    ]);
+    expect(report.pages.map((p) => [p.id, p.hasMobileLayout])).toEqual([
+      ["a", true],
+      ["b", true],
+      ["c", false],
+    ]);
+    expect(buildReport(files).report.pages.map((p) => [p.id, p.hasMobileLayout])).toEqual([
+      ["p2", false],
+      ["p1", true],
+    ]);
+  });
   it("records the pages, visuals, and bookmarks whose own file could not be read, by the folder or file name Desktop gives them", () => {
     const { report } = buildReport([
       // pages.json, a mobile.json, and bookmarks.json name no page, visual, or bookmark of their own.

@@ -161,6 +161,14 @@ export function customVisualUseUnknown(r: Report): boolean {
  */
 export const mobileFileUnread = (r: Report): boolean => r.unreadDefinitionFiles.some(isMobileFile);
 
+/**
+ * Whether a mobile.json was read. Every one that was read marks the page in its folder
+ * (`Page.hasMobileLayout`), unless no page object stands for that folder, because neither its
+ * page.json nor any visual.json in it could be read.
+ */
+export const mobileFileRead = (r: Report): boolean =>
+  r.files.some((f) => isMobileFile(f) && !r.unreadDefinitionFiles.includes(f));
+
 export const allVisuals = (r: Report): Visual[] => r.pages.flatMap((p) => p.visuals);
 export const isHiddenPage = (p: Page): boolean => p.visibility === "HiddenInViewMode";
 export const visiblePages = (r: Report): Page[] => r.pages.filter((p) => !isHiddenPage(p));

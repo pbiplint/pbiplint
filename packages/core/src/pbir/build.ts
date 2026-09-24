@@ -176,6 +176,7 @@ function buildPage(
     filters: filtersOf(json.filterConfig, file, "/filterConfig"),
     visuals: [],
     unreadVisuals: [],
+    hasMobileLayout: false,
     annotations: annotationsOf(json.annotations),
     schemaVersion: version,
   };
@@ -192,6 +193,7 @@ const stubPage = (id: string): Page => ({
   filters: [],
   visuals: [],
   unreadVisuals: [],
+  hasMobileLayout: false,
   annotations: {},
 });
 
@@ -452,6 +454,8 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
     version?: string;
   }[] = [];
   const mobile = new Set<string>();
+  /** The page folders a mobile.json that was read sits in. */
+  const mobilePages = new Set<string>();
   /** Each visual.json that could not be read, as its page's folder and its own. */
   const unreadVisuals: { pageId: string; id: string }[] = [];
   const highest = (current: string | undefined, seen: string | undefined): string | undefined =>
@@ -531,6 +535,7 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
       report.schemaVersions.visual = highest(report.schemaVersions.visual, version);
     } else if ((m = MOBILE_FILE.exec(f.path))) {
       mobile.add(`${m[1]}/${m[2]}`);
+      mobilePages.add(m[1]!);
     } else if (f.path === "definition/bookmarks/bookmarks.json") {
       report.bookmarksHeader = {
         file: f.path,
@@ -571,6 +576,12 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
   // unread visuals too. A folder with no page object, whose page is in `unreadPages`, has no page
   // to hold them.
   for (const v of unreadVisuals) pagesByFolder.get(v.pageId)?.unreadVisuals.push(v.id);
+  // A page has a mobile layout when a mobile.json that was read sits in its folder, whether or not
+  // that visual's visual.json could be read. A folder with no page object has no page to mark.
+  for (const folder of mobilePages) {
+    const page = pagesByFolder.get(folder);
+    if (page) page.hasMobileLayout = true;
+  }
   // pageOrder names a page by its page.json `name`, as bookmarks and actions do. A rename can set
   // the name apart from the folder (Learn: Desktop keeps the folder), which only joins a
   // visual.json to its page, above.

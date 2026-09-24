@@ -47,7 +47,7 @@ table Sales
 
 ## Why it matters
 
-Double is binary floating point, so values like 0.1 have no exact representation and sums drift in the last digits. Two totals that should match can differ by a fraction of a cent, and a money column stored as Double compresses worse than the same values as Fixed Decimal Number, so it costs memory as well. Fixed Decimal Number stores four decimal places exactly, and Whole Number compresses best of all.
+Double is binary floating point, so values like 0.1 have no exact representation and sums drift in the last digits. Two totals that should match can differ by a fraction of a cent. Fixed Decimal Number stores four decimal places exactly, and Whole Number has no fraction to lose. Fixed Decimal Number can be cheaper as well: the engine holds it as a whole number with the four places assumed, so it is more likely to encode the column by value, where a sum works on the stored numbers without looking each one up, and the column may compress better.
 
 ## How to fix it
 
@@ -72,3 +72,4 @@ A value that genuinely needs more than four decimal places has to stay Double, a
 ## Links
 
 - [Data types in Power BI, including where Desktop sets a column's type and the precision of each number type](https://learn.microsoft.com/power-bi/connect-data/desktop-data-types)
+- [Performance Tuning of Tabular Models in SQL Server 2012 Analysis Services, Microsoft's white paper (a Word download) on how the engine encodes columns, where Fixed Decimal Number goes by Currency](https://learn.microsoft.com/previous-versions/sql/sql-server-2012/dn393915%28v=msdn.10%29)

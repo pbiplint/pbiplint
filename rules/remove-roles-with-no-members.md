@@ -71,7 +71,7 @@ On a Power BI semantic model, role membership is held in the service and is neve
 
 ## Quirks
 
-- Power BI Desktop never writes role members, so every role in a Desktop-authored project is flagged.
+- Power BI Desktop never writes role members, so every role in a Desktop-authored project is flagged. pbiplint keeps the rule on all the same: the rules it ports from Microsoft's Best Practice Analyzer ruleset are all on by default, each at the ruleset's own severity. For this rule that is info, so these findings do not fail a default run, which fails only on errors.
 - Only the member declarations under the role are counted. `modelPermission` and the role's table permissions make no difference, so a role that filters every table in the model reads exactly like one that does nothing.
 
 ## Related rules

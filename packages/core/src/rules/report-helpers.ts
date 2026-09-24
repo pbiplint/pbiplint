@@ -145,11 +145,42 @@ export const isDrillthroughPage = (p: Page): boolean =>
   p.type === "Drillthrough" || p.bindingType === "Drillthrough";
 
 /**
- * HIDDEN_VISUAL_WITH_FIELDS's condition, which the Visuals fact shares: a hidden visual with a field
- * in any of its wells. It counts the wells' entries, so a visual calculation, which references no
- * model field, still counts, and a group, which has no wells, never does.
+ * The outermost hidden group the visual sits in, or undefined when no group above it is hidden.
+ * It follows `groupId`, visual.json's `parentGroupName`, from group to group among the visuals of
+ * the visual's own page, following only a group. A group that names itself, or a chain of groups
+ * that comes back round, is followed once.
  */
-export const hiddenVisualWithFields = (v: Visual): boolean => v.isHidden && v.projectionCount > 0;
+export function hidingGroup(v: Visual): Visual | undefined {
+  const seen = new Set([v.id]);
+  let outermost: Visual | undefined;
+  let id = v.groupId;
+  while (id !== undefined && !seen.has(id)) {
+    seen.add(id);
+    const group = v.page.visuals.find((g) => g.isGroup && g.id === id);
+    if (group === undefined) break;
+    if (group.isHidden) outermost = group;
+    id = group.groupId;
+  }
+  return outermost;
+}
+
+/**
+ * Whether the visual is hidden on its page: by its own `isHidden`, or by a hidden group above it.
+ * Hiding a group in the Selection pane hides every visual in it, and Power BI Desktop's saved
+ * files do not always write `isHidden` on those visuals themselves. HIDDEN_VISUAL_WITH_FIELDS and
+ * the Visuals fact's hidden count read this. The ported rules read the visual's own `isHidden`
+ * instead, as their source does, and parity with PBI Inspector depends on it.
+ */
+export const isHiddenVisual = (v: Visual): boolean => v.isHidden || hidingGroup(v) !== undefined;
+
+/**
+ * HIDDEN_VISUAL_WITH_FIELDS's condition, which the Visuals fact shares: a visual hidden by its own
+ * `isHidden` or through its group, with a field in any of its wells. It counts the wells'
+ * entries, so a visual calculation, which references no model field, still counts, and a group,
+ * which has no wells, never does.
+ */
+export const hiddenVisualWithFields = (v: Visual): boolean =>
+  isHiddenVisual(v) && v.projectionCount > 0;
 
 /**
  * The slicer types in Microsoft's visual catalog: the slicer, the button slicer, the list slicer,

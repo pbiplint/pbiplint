@@ -7,6 +7,7 @@ import {
   hiddenVisualWithFields,
   isDrillthroughPage,
   isHiddenPage,
+  isHiddenVisual,
   isSlicer,
   isTooltipPage,
   landingPageNotSet,
@@ -112,9 +113,10 @@ function reportFacts(project: Project, report: Report, known: ReadonlySet<string
     ),
   );
 
-  // Visuals.
+  // Visuals. A visual hidden through its group counts as hidden, the reading
+  // HIDDEN_VISUAL_WITH_FIELDS shares.
   const visuals = allVisuals(report).filter((v) => !v.isGroup);
-  const hiddenVisuals = visuals.filter((v) => v.isHidden);
+  const hiddenVisuals = visuals.filter(isHiddenVisual);
   const hiddenWithFields = visuals.filter(hiddenVisualWithFields).length;
   const registered = report.publicCustomVisuals;
   const usedTypes = new Set(visuals.map((v) => v.type));

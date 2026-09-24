@@ -488,6 +488,42 @@ describe("buildFacts", () => {
       ruleId: "HIDDEN_VISUAL_WITH_FIELDS",
     });
   });
+  it("counts a visual hidden through its group as hidden, the reading HIDDEN_VISUAL_WITH_FIELDS shares", () => {
+    // Hiding a group hides every visual in it, whether or not each visual carries isHidden itself.
+    // Groups are not counted as visuals; a visual in a visible group is not hidden.
+    const group = (pageId: string, name: string, extra: Record<string, unknown> = {}) => ({
+      path: `definition/pages/${pageId}/visuals/${name}/visual.json`,
+      text: j({
+        name,
+        position: {},
+        visualGroup: { displayName: name, groupMode: "ScaleMode" },
+        ...extra,
+      }),
+    });
+    const visuals = (hiddenGroup: boolean) => {
+      const { report } = buildReport([
+        page("p1", "Overview"),
+        group("p1", "outer", hiddenGroup ? { isHidden: true } : {}),
+        group("p1", "inner", { parentGroupName: "outer" }),
+        visual("p1", "bound", "cardVisual", { parentGroupName: "outer" }, [
+          column("Sales", "Amount"),
+        ]),
+        visual("p1", "note", "textbox", { parentGroupName: "inner" }),
+        visual("p1", "loose", "cardVisual", {}, [column("Sales", "Amount")]),
+      ]);
+      return buildFacts({ report }, buildIndexes({ report }), ALL).find(
+        (f) => f.label === "Visuals",
+      );
+    };
+    expect(visuals(true)).toEqual({
+      layer: "report",
+      label: "Visuals",
+      value: "3",
+      detail: "2 hidden",
+      ruleId: "HIDDEN_VISUAL_WITH_FIELDS",
+    });
+    expect(visuals(false)).toEqual({ layer: "report", label: "Visuals", value: "3" });
+  });
   it("gives a model-only run no facts at all, because the block is about the report", () => {
     expect(buildFacts({ model }, buildIndexes({ model }), ALL)).toEqual([]);
   });

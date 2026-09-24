@@ -1,7 +1,9 @@
 import { plural } from "../../format/text.js";
+import { visualName } from "../../pbir/names.js";
 import {
   allVisuals,
   hiddenVisualWithFields,
+  hidingGroup,
   reportFinding,
   slicerSelection,
 } from "../report-helpers.js";
@@ -15,14 +17,20 @@ export const HIDDEN_VISUAL_WITH_FIELDS = pbiplintRule({
   scope: ["Visual"],
   layer: "report",
   // A hidden visual runs no query until a bookmark or the Selection pane shows it, so the finding
-  // is one nothing may show, left behind with its fields, not a cost the report pays.
+  // is one nothing may show, left behind with its fields, not a cost the report pays. A visual
+  // hidden only through its group has no isHidden of its own to point at, so its finding sits on
+  // line 1 and names the outermost hidden group.
   check: ({ report }) =>
     report
       ? allVisuals(report)
           .filter(hiddenVisualWithFields)
-          .map((v) =>
-            reportFinding.visual(v, "/isHidden", `${plural(v.projectionCount, "field")} bound`),
-          )
+          .map((v) => {
+            const fields = `${plural(v.projectionCount, "field")} bound`;
+            const group = v.isHidden ? undefined : hidingGroup(v);
+            return group
+              ? reportFinding.visual(v, undefined, `${fields}, hidden with ${visualName(group)}`)
+              : reportFinding.visual(v, "/isHidden", fields);
+          })
       : [],
 });
 

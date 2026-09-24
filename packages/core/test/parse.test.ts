@@ -511,6 +511,13 @@ describe("properties at the root, and lines under a root annotation or extended 
     ]);
   });
 
+  it("reports a property named annotation or extendedProperty with a line under it once, as a property", () => {
+    expect(one("annotation: x\n\tcolumn C\nextendedProperty: y\n\tmeasure M = 1\n")).toEqual([
+      [1, "annotation: x", PROPERTY("annotation"), true],
+      [3, "extendedProperty: y", PROPERTY("extendedProperty"), true],
+    ]);
+  });
+
   it("names the word as written and keeps the issues in line order", () => {
     const text = [
       "table Sales",
@@ -569,18 +576,28 @@ describe("whether a parse issue can take a line at the root of a file with it", 
   const marks = (text: string) =>
     parseTmdl("t.tmdl", text).issues.map((i) => [i.line, i.canDropRootLines]);
 
-  it("marks an issue on a line at the root, and a code fence left open that read one", () => {
+  it("marks an issue on a line at the root that could be a table's, and a code fence left open that read one", () => {
+    // A misspelt word, a flag such as `tableSales` that lost its space, and a line the parser could
+    // not make out may each be a `table` line.
     expect(marks("tabel Sales\n\tmeasure Total = 1\n")).toEqual([[1, true]]);
+    expect(marks("tableSales\n")).toEqual([[1, true]]);
     expect(marks("'Sales'\n\tmeasure Total = 1\n")).toEqual([
       [1, true],
       [2, false],
     ]);
-    expect(marks("dataType: decimal\n")).toEqual([[1, true]]);
-    expect(marks("expression =\n\t\t1\n")).toEqual([[1, true]]);
-    expect(marks("annotation A = 1\n\tcolumn Region\n")).toEqual([[1, true]]);
     // The fence reads every line below it into its expression, a table's declaration included.
     expect(marks("table Sales\n\tmeasure M = ```\n\t\tx\n\ntable Product\n")).toEqual([[2, true]]);
     expect(marks("table Sales\n\tmeasure M = ```\n\t\tx\n\tmeasure N = 1\n")).toEqual([[2, false]]);
+  });
+
+  it("does not mark a property, an expression with no name, or an annotation with lines under it, at the root", () => {
+    // None of them is a `table` line, and the lines under each are indented, so none can take one.
+    expect(marks("dataType: decimal\n")).toEqual([[1, false]]);
+    expect(marks("expression =\n\t\t1\n")).toEqual([[1, false]]);
+    expect(marks("annotation A = 1\n\tcolumn Region\n")).toEqual([[1, false]]);
+    expect(marks("extendedProperty P =\n\t\t{}\n\tmeasure M = 1\n\ntable Sales\n")).toEqual([
+      [1, false],
+    ]);
   });
 
   it("marks a table line indented with spaces alone, and no other line indented with spaces", () => {

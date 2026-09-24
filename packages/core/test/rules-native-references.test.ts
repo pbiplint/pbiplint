@@ -378,6 +378,37 @@ describe("BROKEN_FIELD_REFERENCE", () => {
       ).toEqual(reasons.map((reason) => ["definition/tables/measures.tmdl", reason]));
     },
   );
+  // A lost-tab line at the root that cannot be a `table` line, nor take one with it, quiets only
+  // the table its own file declares.
+  it.each([
+    ["a column's property", "summarizeBy: none", '"summarizeBy" is a property'],
+    [
+      "a column's annotation with lines under it",
+      "annotation SummarizationSetBy = Automatic",
+      '"annotation" at the root of a file has lines under it',
+    ],
+  ])(
+    "still reports a field missing from a table read in full when another file has %s at its root",
+    (_, line, reason) => {
+      const r = lint([
+        { path: "definition/tables/Sales.tmdl", text: "table Sales\n\tcolumn Amount\n" },
+        {
+          path: "definition/tables/Product.tmdl",
+          text: `table Product\n\tcolumn Category\n${line}\n\tcolumn Colour\n`,
+        },
+        page("p"),
+        bound("p", "v", "tableEx", [column("Sales", "Nope"), column("Product", "Colour")]),
+      ]);
+      expect(
+        r.findings.filter((f) => f.ruleId === "BROKEN_FIELD_REFERENCE").map((f) => f.detail),
+      ).toEqual([`'Sales'[Nope]: no column named "Nope" on "Sales"`]);
+      expect(
+        r.findings
+          .filter((f) => f.ruleId === "PARSE_ISSUE")
+          .map((f) => [f.location?.file, f.detail?.startsWith(reason)]),
+      ).toEqual([["definition/tables/Product.tmdl", true]]);
+    },
+  );
   it("keeps one finding per file when two pages share a display name and a visual id", () => {
     const files = [
       page("p1", { displayName: "Same" }),

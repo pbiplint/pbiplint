@@ -229,6 +229,8 @@ export function parseTmdl(file: string, text: string): ParsedFile {
           : isRootType(word)
             ? undefined
             : `"${word}" is not a type TMDL declares at the root of a file`;
+      // A misspelt word or a flag (`tableSales`, a lost space) may be a `table` line; a property
+      // or an expression with no name cannot be one, and the lines under it are indented.
       if (reason !== undefined)
         issues.push({
           file,
@@ -236,7 +238,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
           text: raw,
           reason,
           canDropObjects: true,
-          canDropRootLines: true,
+          canDropRootLines: node.kind === "object" || node.kind === "flag",
         });
     }
 
@@ -278,9 +280,10 @@ export function parseTmdl(file: string, text: string): ParsedFile {
   // collectBlock or collectFenced read as its value, so a line under one can only come from a lost
   // tab, as when a column's `annotation SummarizationSetBy = Automatic` loses its two and every
   // column and measure after it attaches to it. The model never reads those children. One issue,
-  // on the annotation's own line, placed in line order.
+  // on the annotation's own line, placed in line order. A property or an expression with no name
+  // of that word already has its issue. The lines under it are indented, so none is a `table` line.
   for (const r of roots) {
-    if (r.kind === "ref" || r.kind === "expr" || r.children.length === 0) continue;
+    if ((r.kind !== "object" && r.kind !== "flag") || r.children.length === 0) continue;
     if (r.type !== "annotation" && r.type !== "extendedproperty") continue;
     const text = lines[r.line - 1]!;
     const issue = {
@@ -289,7 +292,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
       text,
       reason: `"${/^\w+/.exec(text)![0]}" at the root of a file has lines under it, which TMDL does not allow`,
       canDropObjects: true,
-      canDropRootLines: true,
+      canDropRootLines: false,
     };
     const at = issues.findIndex((i) => i.line > r.line);
     issues.splice(at === -1 ? issues.length : at, 0, issue);

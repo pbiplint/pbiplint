@@ -606,7 +606,7 @@ describe("a reference into a model file pbiplint could not fully read", () => {
     ]);
   });
 
-  it("stays unresolved on a table whose own file was read in full, whatever another file holds", () => {
+  it("stays unresolved on a table whose own file was read in full, whatever a line nested in another file loses", () => {
     const m = modelOf({ [SALES]: sales, [PRODUCT]: product + spaced });
     expect(resolutions(m, column("Sales", "Nope"), column("Product", "Gone"))).toEqual([
       unresolved('no column named "Nope" on "Sales"'),

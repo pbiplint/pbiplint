@@ -74,7 +74,7 @@ const q = (s: string): string => `"${s}"`;
  * could not be read. Without a model, every other reference is unresolved with one reason. A
  * table the model does not have is `unread` while any model file could not be fully read, and a
  * field missing from a table is `unread` while a file that declares the table could not be, or
- * while a model file could not read a line at its root, which could have declared the table.
+ * while a model file has an issue that could have taken a `table` line with it.
  */
 export function buildReportReferenceIndex(
   report: Report,
@@ -119,8 +119,8 @@ export function buildReportReferenceIndex(
    * Something missing from table `t`: its columns, measures, hierarchies, and their variations and
    * levels sit under its declaration, so only a file that declares it could hold the missing
    * thing. The model merges a table declared in several files, so each of them counts. So does a
-   * file whose issue can take a line at the root with it (`TmdlParseIssue.canDropRootLines`),
-   * since that line could be the table's declaration in a second file, such as a misspelt
+   * file whose issue can take a `table` line with it (`TmdlParseIssue.canDropRootLines`), since
+   * that line could be the table's declaration in a second file, such as a misspelt
    * `table Sales` over the measures a file holds for Sales. A file that declares the table is
    * named first.
    */

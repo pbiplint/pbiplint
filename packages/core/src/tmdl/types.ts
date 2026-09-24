@@ -38,12 +38,14 @@ export interface TmdlParseIssue extends ParseIssue {
    */
   canDropObjects: boolean;
   /**
-   * Whether the issue can take a line at the root of the file with it: it sits on one, a line with
-   * no indentation or a `table` line whose only indentation is spaces, or it is a code fence left
-   * open that read one into its expression, as it reads every line below it. A line at the root
-   * may be a table's declaration, and TMDL lets a table's declaration sit in more than one file, so
-   * a file with such an issue may declare a table its roots do not show. Set where the parser
-   * pushes the issue, as `canDropObjects` is, and never true where that is false.
+   * Whether the issue can take a table's declaration line with it: it sits on a line at the root
+   * that could be one, a line the parser could not make out or a declaration or flag whose type
+   * TMDL does not declare at the root, or on a `table` line whose only indentation is spaces, or it
+   * is a code fence left open that read a line at the root into its expression. A property, an
+   * expression with no name, and an annotation with lines under it cannot be a `table` line and
+   * are not marked. TMDL lets a table's declaration sit in more than one file, so a file with such
+   * an issue may declare a table its roots do not show. Set where the parser pushes the issue, as
+   * `canDropObjects` is, and never true where that is false.
    */
   canDropRootLines: boolean;
 }

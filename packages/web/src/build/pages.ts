@@ -54,8 +54,34 @@ const str = (v: string | string[] | undefined): string =>
   Array.isArray(v) ? (v[0] ?? "") : (v ?? "");
 const list = (v: string | string[] | undefined): string[] => (Array.isArray(v) ? v : v ? [v] : []);
 
-/** escapeHtml plus the apostrophe, for text inside <code>, matching what marked writes there. */
-const escapeCode = (s: string): string => escapeHtml(s).replace(/'/g, "&#39;");
+/**
+ * A C0 control character other than tab, line feed, and carriage return, or U+007F. A rule page
+ * can need one in an example, such as the U+0001 the invalid-character pages show, which a copy of
+ * the example has to keep to fire the rule. Written raw, it is an invisible byte in the page that
+ * an HTML parser reports as a parse error, so the renderer writes each as a character reference
+ * (characterReferences below), and check-site.ts fails the build on one that reaches a page raw.
+ * The reference is visible in the page's source and in a diff. It is not valid HTML either: the
+ * standard makes a reference to a control character a parse error too, which parse5 names
+ * control-character-reference, except for U+000C, which HTML counts as whitespace. A browser
+ * recovers from both the same way.
+ */
+// eslint-disable-next-line no-control-regex -- matching control characters is the whole point
+export const CONTROL_CHARACTER = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
+
+/**
+ * Each CONTROL_CHARACTER as a decimal character reference, `&#1;` for U+0001, the form marked
+ * uses for the apostrophe. A browser parses the reference to the same character, so the text it
+ * shows, and the text a reader copies, is unchanged. U+0000 is the exception: a browser drops it
+ * raw and reads `&#0;` as U+FFFD, and no page carries one.
+ */
+const characterReferences = (s: string): string =>
+  s.replace(CONTROL_CHARACTER, (c) => `&#${c.charCodeAt(0)};`);
+
+/**
+ * escapeHtml plus the apostrophe, for text inside <code>, matching what marked writes there, with
+ * each control character a reference.
+ */
+const escapeCode = (s: string): string => characterReferences(escapeHtml(s).replace(/'/g, "&#39;"));
 
 /** Report objects whose page.json or visual.json carries an `annotations` array an ignore can go in. */
 const REPORT_ANNOTATED = new Set(["Page", "Visual"]);
@@ -310,7 +336,10 @@ const figurePre = (id: string): string =>
  * character headingId never writes, so no heading on the page can take a caption's id.
  */
 const captionId = (n: number): string => `code_${n}`;
-/** marked's own fence renderer, for a fence that is not a figure, whose output gains PRE. */
+/**
+ * marked's own fence renderer, for a fence that is not a figure, whose output gains PRE and has
+ * its control characters written as references, which marked's escaping leaves raw.
+ */
 const plainFence = new Renderer();
 
 /**
@@ -327,8 +356,11 @@ const plainFence = new Renderer();
  * as something: a figure's block is labelled by its caption, whose id (captionId) counts the
  * page's figures in document order, and any other block is "Code block". The count starts again
  * with each document parsed, so every page's ids start at `code_1` whichever renderer parses it.
- * A code span naming another rule links to its page; returning false from an override hands the
- * token back to marked's default renderer.
+ *
+ * Every code block and code span writes a control character as a character reference
+ * (CONTROL_CHARACTER). A code span naming another rule links to its page; the renderer writes
+ * every other code span too, rather than handing it back to marked, whose escaping would leave a
+ * control character raw.
  */
 function siteMarkdown(links: RuleLinks = new Map(), self = ""): Marked {
   let figures = 0;
@@ -345,14 +377,14 @@ function siteMarkdown(links: RuleLinks = new Map(), self = ""): Marked {
       },
       code(token: Tokens.Code): string {
         const { text, lang, escaped } = token;
-        const code = (escaped ? text : escapeCode(text)).replace(/\n$/, "");
+        const code = (escaped ? characterReferences(text) : escapeCode(text)).replace(/\n$/, "");
         const figure = (classes: string, caption: string, language: string): string => {
           const id = captionId(++figures);
           return `<figure class="${classes}">\n<figcaption id="${id}">${caption}</figcaption>\n${figurePre(id)}<code class="language-${language}">${code}\n</code></pre>\n</figure>\n`;
         };
         if (lang === CONFIG_FENCE) return figure("example", "pbiplint.config.json", "json");
         const example = /^(tmdl|pbir) (fires|fixed)(?: (\S+))?$/.exec(lang ?? "");
-        if (!example) return plainFence.code(token).replace(/^<pre>/, PRE);
+        if (!example) return characterReferences(plainFence.code(token)).replace(/^<pre>/, PRE);
         const language = example[1] === "pbir" ? "json" : "tmdl";
         const kind = example[2]!;
         const file = example[3];
@@ -362,10 +394,11 @@ function siteMarkdown(links: RuleLinks = new Map(), self = ""): Marked {
             : EXAMPLE_CAPTION[kind]!;
         return figure(`example ${kind}`, caption, language);
       },
-      codespan({ text }: Tokens.Codespan): string | false {
+      codespan({ text }: Tokens.Codespan): string {
+        const code = `<code>${escapeCode(text)}</code>`;
         const slug = links.get(text);
-        if (slug === undefined || text === self) return false;
-        return `<a href="/rules/${escapeHtml(slug)}/"><code>${escapeCode(text)}</code></a>`;
+        if (slug === undefined || text === self) return code;
+        return `<a href="/rules/${escapeHtml(slug)}/">${code}</a>`;
       },
     },
   });

@@ -71,6 +71,15 @@ test("a code block is a region a screen reader names, by its caption when it has
   await expect(page.getByRole("region", { name: "Code block", exact: true })).toHaveCount(1);
 });
 
+test("a control character an example needs reaches the page's text, so a copy of it still fires the rule", async ({
+  page,
+}) => {
+  // The page writes U+0001 as a character reference; the browser parses it back to the character.
+  await page.goto("/rules/avoid-invalid-name-characters/");
+  const fires = page.getByRole("region", { name: "Fires the rule", exact: true });
+  expect(await fires.textContent()).toContain("column 'Order\u0001ID'");
+});
+
 test("no page template has an accessibility violation", async ({ page }) => {
   for (const path of PAGES) {
     await page.goto(path);

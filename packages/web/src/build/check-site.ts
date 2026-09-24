@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import type { Plugin } from "vite";
+import { CONTROL_CHARACTER } from "./pages.js";
 
 export interface SiteReport {
   files: number;
@@ -179,6 +180,14 @@ function checkHtml(rel: string, html: string, report: SiteReport): void {
   }
   // An inline stylesheet can reach off the origin exactly as a file can.
   for (const m of html.matchAll(STYLE_BLOCK)) checkStyle(rel, m[1]!, report);
+  // The renderer writes a control character as a reference (CONTROL_CHARACTER in pages.ts), so
+  // one that is here raw came from somewhere that does not, and, U+000C aside, which HTML reads
+  // as whitespace, an HTML parser reports it as a parse error.
+  for (const m of html.matchAll(CONTROL_CHARACTER)) {
+    const code = m[0].charCodeAt(0).toString(16).toUpperCase().padStart(4, "0");
+    const line = html.slice(0, m.index).split("\n").length;
+    report.problems.push(`${rel}: raw control character U+${code} on line ${line}`);
+  }
 }
 
 function checkScript(rel: string, code: string, report: SiteReport): void {

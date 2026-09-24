@@ -36,6 +36,13 @@ import {
 const read = (slug: string): string => readFileSync(join(RULES_DIR, `${slug}.md`), "utf8");
 const home = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 
+/**
+ * A C0 control character other than tab, line feed, and carriage return, or U+007F: what an HTML
+ * parser reports as an error in text, and what the renderer writes as a character reference.
+ */
+// eslint-disable-next-line no-control-regex -- finding control characters is what this is for
+const CONTROL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/;
+
 describe("parseFrontmatter", () => {
   it("reads scalars, bracket lists, dash lists, and empty keys", () => {
     const { data, body } = parseFrontmatter(
@@ -261,6 +268,56 @@ describe("rulePage", () => {
       );
     expect(ids(content())).toEqual(["code_1"]);
     expect(ids(content())).toEqual(["code_1"]);
+  });
+  it("writes a control character in a code block or code span as a character reference, and leaves tab and line feed raw", () => {
+    // An HTML parser reports a raw C0 control character in text as an error. A reference parses
+    // to the same character, so the text a browser shows, and a reader copies, is unchanged.
+    const page = read("hide-foreign-keys").replace(
+      "## Why it matters",
+      [
+        "## Example",
+        "",
+        "```tmdl fires",
+        "table T\n\tcolumn 'A\u0001B'",
+        "```",
+        "",
+        "```json pbiplint.config.json",
+        '{ "x": "a\u0001b" }',
+        "```",
+        "",
+        "```",
+        "plain\u0001fence\u007f",
+        "```",
+        "",
+        "A span `a\u0001b` and a form feed `c\u000cd`.",
+        "",
+        "## Why it matters",
+      ].join("\n"),
+    );
+    const { html } = rulePage(page, "hide-foreign-keys");
+    expect(html).toContain("table T\n\tcolumn &#39;A&#1;B&#39;\n</code></pre>");
+    expect(html).toContain("{ &quot;x&quot;: &quot;a&#1;b&quot; }\n</code></pre>");
+    expect(html).toContain("plain&#1;fence&#127;\n</code></pre>");
+    // marked writes a plain code span itself unless the renderer does, so this is the case a
+    // span that names no rule has to cover.
+    expect(html).toContain("A span <code>a&#1;b</code> and a form feed <code>c&#12;d</code>.");
+    // A tab and a line feed are whitespace to an HTML parser and stay as they are.
+    expect(html).toContain("table T\n\tcolumn");
+    expect(html).not.toMatch(CONTROL);
+  });
+  it("writes the U+0001 the two invalid-character pages carry as a reference, and the tab in special-chars-in-object-names raw", () => {
+    for (const slug of ["avoid-invalid-name-characters", "avoid-invalid-description-characters"]) {
+      expect(read(slug)).toContain("\u0001");
+      const { html } = rulePage(read(slug), slug);
+      expect(html, slug).toContain("&#1;");
+      expect(html, slug).not.toContain("\u0001");
+    }
+    const tab = rulePage(
+      read("special-chars-in-object-names"),
+      "special-chars-in-object-names",
+    ).html;
+    expect(tab).not.toContain("&#9;");
+    expect(tab).not.toMatch(CONTROL);
   });
   it("credits PBI Inspector for a page whose source is its ruleset", () => {
     const page = read("hide-foreign-keys").replace(

@@ -130,7 +130,7 @@ A Top N filter has to rank every item before it can keep the first few: to show 
 
 ## How to fix it
 
-Keep Top N where the ranking is the point of the visual and take it off where it is not. In Power BI Desktop, select the visual, find its card under Filters on this visual in the Filters pane, and remove it with the X on the card, or set its Filter type back to Basic filtering. A visual that only needs its largest items first can sort by the measure instead (More options on the visual, then Sort axis) and let the reader scroll. Two Top N filters on the same field, as in the example, rank the same items twice; where they rank by the same measure, keep the one on the visual whose point is the ranking, and let the other sort by the measure instead. In visual.json, a Top N filter is an entry with `"type": "TopN"` in `filterConfig.filters`, and deleting the entry removes it.
+Keep Top N where the ranking is the point of the visual and take it off where it is not. In Power BI Desktop, select the visual, find its card under Filters on this visual in the Filters pane, and remove it with the X on the card, or set its Filter type back to Basic filtering. A visual that only needs its largest items first can sort by the measure instead (More options on the visual, then Sort axis) and let the reader scroll. Two Top N filters on the same field, as in the example, rank the same items twice; where they rank by the same measure, keep the one on the visual whose point is the ranking, and let the other sort by the measure. In visual.json, a Top N filter is an entry with `"type": "TopN"` in `filterConfig.filters`, and deleting the entry removes it.
 
 ## When to ignore it
 

@@ -6,7 +6,7 @@ import { isIgnored } from "./ignore.js";
 
 export interface SkippedRule {
   id: string;
-  reason: "disabled" | "needsLiveModel" | "noModel" | "noReport";
+  reason: "disabled" | "needsLiveModel" | "noModel" | "noReport" | "reportFileUnread";
 }
 
 export interface RuleError {
@@ -59,6 +59,10 @@ export function runRules(
         id: rule.id,
         reason: missing === "model" ? "noModel" : "noReport",
       });
+      continue;
+    }
+    if (rule.needsEveryReportFileRead && project.report?.unreadDefinitionFiles.length) {
+      result.rulesSkipped.push({ id: rule.id, reason: "reportFileUnread" });
       continue;
     }
     result.rulesRun.push(rule.id);

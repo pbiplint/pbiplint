@@ -748,6 +748,19 @@ describe("buildReport tolerance", () => {
     expect(report.bookmarks).toEqual([]);
     expect(report.datasetReference).toEqual({ kind: "none" });
     expect(report.extensions).toBe("unread");
+    // The definition files among them, which a rule that must see every reference cannot do
+    // without; the .pbip, the .platform, and definition.pbir hold no field references.
+    expect(report.unreadDefinitionFiles).toEqual([
+      "definition/bookmarks/b.bookmark.json",
+      "definition/bookmarks/bookmarks.json",
+      "definition/pages/a/page.json",
+      "definition/pages/a/visuals/v/mobile.json",
+      "definition/pages/a/visuals/w/visual.json",
+      "definition/pages/pages.json",
+      "definition/report.json",
+      "definition/reportExtensions.json",
+      "definition/version.json",
+    ]);
     // The page file was not read, so the visual's page is a stub named by its folder, as it is for
     // invalid JSON; the visual.json that holds null is left out, and the unread mobile.json does
     // not give the other visual a mobile layout.
@@ -759,6 +772,9 @@ describe("buildReport tolerance", () => {
     // there is not an issue; invalid JSON and a conflict marker still are, as for any report file.
     const issues = (path: string, text: string) =>
       buildReport([{ path, text }]).report.issues.map((i) => [i.file, i.line, i.reason]);
+    // Such a file is not part of the report, so one that cannot be read is not an unread report file.
+    const unread = (path: string, text: string) =>
+      buildReport([{ path, text }]).report.unreadDefinitionFiles;
     for (const path of [
       "definition/notes/owners.json",
       "definition/pages/a/notes.json",
@@ -775,7 +791,45 @@ describe("buildReport tolerance", () => {
         [path, 3, "merge conflict marker"],
         [path, 5, "merge conflict marker"],
       ]);
+      expect(unread(path, '["alice",]')).toEqual([]);
+      expect(unread(path, "<<<<<<< HEAD\n[]\n")).toEqual([]);
     }
+  });
+  it("lists each definition file the PBIR format defines that could not be read, and no other file", () => {
+    const { report } = buildReport([
+      { path: "../Demo.pbip", text: "{" },
+      { path: ".platform", text: "<<<<<<< HEAD\n{}\n" },
+      { path: "definition.pbir", text: "{" },
+      { path: "definition/report.json", text: j({ $schema: schema("report", "3.2.0") }) },
+      { path: "definition/pages/a/page.json", text: page("a") },
+      { path: "definition/pages/a/visuals/v/visual.json", text: '{ "name": "v", ' },
+      { path: "definition/pages/a/visuals/w/visual.json", text: visual("w") },
+      { path: "definition/notes/owners.json", text: '["alice",]' },
+      {
+        path: "definition/reportExtensions.json",
+        text: '{\n<<<<<<< HEAD\n  "entities": []\n=======\n}\n>>>>>>> theirs\n',
+      },
+    ]);
+    expect(report.unreadDefinitionFiles).toEqual([
+      "definition/pages/a/visuals/v/visual.json",
+      "definition/reportExtensions.json",
+    ]);
+    // Every file that could not be read is still a parse issue, whether or not it is listed.
+    expect(report.issues.map((i) => i.file)).toEqual([
+      "../Demo.pbip",
+      ".platform",
+      "definition.pbir",
+      "definition/notes/owners.json",
+      "definition/pages/a/visuals/v/visual.json",
+      "definition/reportExtensions.json",
+      "definition/reportExtensions.json",
+      "definition/reportExtensions.json",
+    ]);
+    const clean = buildReport([
+      { path: "definition/report.json", text: j({}) },
+      { path: "definition/pages/a/visuals/w/visual.json", text: visual("w") },
+    ]);
+    expect(clean.report.unreadDefinitionFiles).toEqual([]);
   });
   it("records whether reportExtensions.json was in the input and could be read", () => {
     const extensions = (...texts: string[]) =>

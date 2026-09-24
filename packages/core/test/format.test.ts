@@ -89,6 +89,43 @@ describe("summary wording", () => {
       "Model: 1 file. 1 rule run, 1 rule disabled by config, 1 finding ignored by annotation",
     );
   });
+  it("says a rule was skipped because a report file could not be read, in text, Markdown, and JSON", () => {
+    const wholeReport = (id: string): Rule => ({
+      ...base,
+      id,
+      name: id,
+      category: "Maintenance",
+      severity: 1,
+      layer: "project",
+      needs: ["model", "report"],
+      needsEveryReportFileRead: true,
+      check: () => [],
+    });
+    const run = (rules: Rule[]) =>
+      lint(
+        [
+          { path: "a.tmdl", text: "table A\n\tcolumn X\n\t\tdataType: string\n" },
+          { path: "definition/pages/p/page.json", text: '{ "name": "p" }' },
+          { path: "definition/pages/p/visuals/v/visual.json", text: '{\n  "name": "v",\n' },
+        ],
+        { rules: [oneColumn, ...rules] },
+      );
+    const one = run([wholeReport("WHOLE_REPORT")]);
+    expect(formatText(one).split("\n")[1]).toBe(
+      "Model: 1 file. Report: 2 files. 1 rule run, 1 rule skipped (a report file could not be read)",
+    );
+    expect(formatMarkdown(one).split("\n")[2]).toBe(
+      "1 finding (0 errors, 1 warning, 0 info) in 3 files. Model: 1 file. Report: 2 files. 1 rule run, 1 rule skipped (a report file could not be read).",
+    );
+    expect(JSON.parse(formatJson(one)).summary.rulesSkipped).toEqual([
+      { id: "WHOLE_REPORT", reason: "reportFileUnread" },
+    ]);
+    // SARIF lists no skipped rule for any reason, so it gains nothing here.
+    expect(JSON.parse(formatSarif(one)).runs[0].invocations).toBeUndefined();
+    expect(formatText(run([wholeReport("A"), wholeReport("B")])).split("\n")[1]).toBe(
+      "Model: 1 file. Report: 2 files. 1 rule run, 2 rules skipped (a report file could not be read)",
+    );
+  });
 });
 
 describe("formatText with a crashing rule", () => {

@@ -5,6 +5,7 @@ import { ignoreHelp, isIgnored } from "../src/engine/ignore.js";
 import { lint } from "../src/engine/lint.js";
 import { rank } from "../src/engine/rank.js";
 import { optionsFor, runRules } from "../src/engine/run.js";
+import { buildReport } from "../src/pbir/build.js";
 import { skippedLine } from "../src/format/text.js";
 import { finding, namedObjects } from "../src/rules/helpers.js";
 import { PARSE_ISSUE } from "../src/rules/parse-issue.js";
@@ -312,6 +313,54 @@ describe("runRules", () => {
     expect(r.rulesSkipped).toEqual([{ id: "REPORT_ONLY", reason: "noReport" }]);
     expect(r.rulesRun).toEqual(["EVERY_COLUMN"]);
     expect(r.findings.map((f) => f.layer)).toEqual(["model"]);
+  });
+  it("skips a rule that needs every report file read when one could not be, and runs the rest", () => {
+    const both = { ...base, layer: "project" as const, needs: ["model", "report"] as const };
+    const wholeReport: Rule = {
+      ...both,
+      id: "WHOLE_REPORT",
+      name: "Whole report",
+      category: "Maintenance",
+      severity: 1,
+      needsEveryReportFileRead: true,
+      check: ({ model }) => [finding.model(model!)],
+    };
+    const anyReport: Rule = {
+      ...both,
+      id: "ANY_REPORT",
+      name: "Any report",
+      category: "Maintenance",
+      severity: 1,
+      check: ({ model }) => [finding.model(model!)],
+    };
+    const m = modelFrom("table A\n\tcolumn X\n\t\tdataType: string\n");
+    const run = (files: { path: string; text: string }[], withModel = true) => {
+      const project = { ...(withModel ? { model: m } : {}), report: buildReport(files).report };
+      return runRules(project, buildIndexes(project), [wholeReport, anyReport], resolveConfig());
+    };
+    const page = { path: "definition/pages/p/page.json", text: '{ "name": "p" }' };
+    const broken = run([page, { path: "definition/pages/p/visuals/v/visual.json", text: "{" }]);
+    expect(broken.rulesSkipped).toEqual([{ id: "WHOLE_REPORT", reason: "reportFileUnread" }]);
+    expect(broken.rulesRun).toEqual(["ANY_REPORT"]);
+    expect(broken.findings.map((f) => f.ruleId)).toEqual(["ANY_REPORT"]);
+    // Every file read: both run.
+    expect(run([page]).rulesRun).toEqual(["WHOLE_REPORT", "ANY_REPORT"]);
+    // A file the PBIR format does not define, and the report's .platform, do not count.
+    expect(run([page, { path: "definition/notes.json", text: "{" }]).rulesRun).toEqual([
+      "WHOLE_REPORT",
+      "ANY_REPORT",
+    ]);
+    expect(run([page, { path: ".platform", text: "{" }]).rulesRun).toEqual([
+      "WHOLE_REPORT",
+      "ANY_REPORT",
+    ]);
+    // A missing layer is the reason the reader needs first: with no model, nothing was compared.
+    expect(run([page, { path: "definition/report.json", text: "[]" }], false).rulesSkipped).toEqual(
+      [
+        { id: "WHOLE_REPORT", reason: "noModel" },
+        { id: "ANY_REPORT", reason: "noModel" },
+      ],
+    );
   });
 });
 

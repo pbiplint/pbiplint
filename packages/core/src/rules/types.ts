@@ -132,6 +132,13 @@ export interface Rule {
   layer: Layer;
   /** The layers the rule cannot run without; it is skipped with `noModel` or `noReport` when one is absent. */
   needs: readonly LayerName[];
+  /**
+   * True when a report file that could not be read would make the rule's findings false, because
+   * it reads what the whole report uses: the rule is then skipped with `reportFileUnread` whenever
+   * a definition file is unread (`Report.unreadDefinitionFiles`). A rule that reports what a file
+   * it did read says leaves this off, since that holds whatever another file says.
+   */
+  needsEveryReportFileRead?: boolean;
   /** Options the config may set for this rule; an option the rule does not declare is a ConfigError. */
   options?: readonly RuleOption[];
   /** What the rule checks, one paragraph from the rule page in pbiplint's own words. */

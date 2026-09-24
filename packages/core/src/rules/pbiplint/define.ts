@@ -22,6 +22,8 @@ export interface PbiplintRuleSpec {
   layer: Layer;
   /** The layers the rule cannot run without, when they are not the ones its `layer` implies. */
   needs?: readonly LayerName[];
+  /** True when the rule is skipped while a report file could not be read (Rule.needsEveryReportFileRead). */
+  needsEveryReportFileRead?: boolean;
   options?: readonly RuleOption[];
   references?: string[];
   policySeverity?(options: RuleOptions): Severity | undefined;

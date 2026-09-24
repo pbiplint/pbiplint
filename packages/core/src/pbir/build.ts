@@ -378,17 +378,21 @@ const DEFINITION_FILES: ReadonlySet<string> = new Set([
   "definition/bookmarks/bookmarks.json",
 ]);
 
+/** Whether the file is one Learn's PBIR folder table names under definition/: the report itself. */
+const definitionFile = (path: string): boolean =>
+  DEFINITION_FILES.has(path) ||
+  [PAGE_FILE, VISUAL_FILE, MOBILE_FILE, BOOKMARK_FILE].some((re) => re.test(path));
+
 /**
  * Whether the PBIR format defines the file: definition.pbir, the report's .platform, the project's
- * .pbip, and the files Learn's PBIR folder table names under definition/. Microsoft publishes a
- * schema for each, with an object root; any other JSON under definition/ is the author's own.
+ * .pbip, and the definition files. Microsoft publishes a schema for each, with an object root; any
+ * other JSON under definition/ is the author's own.
  */
 const definedByPbir = (path: string): boolean =>
   path.endsWith("definition.pbir") ||
   path.endsWith(".platform") ||
   path.endsWith(".pbip") ||
-  DEFINITION_FILES.has(path) ||
-  [PAGE_FILE, VISUAL_FILE, MOBILE_FILE, BOOKMARK_FILE].some((re) => re.test(path));
+  definitionFile(path);
 
 /**
  * Builds the report object model from the report's files (paths relative to the .Report folder).
@@ -411,6 +415,7 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
     datasetReference: { kind: "none" },
     files: [],
     issues: [],
+    unreadDefinitionFiles: [],
     schemaVersions: {},
   };
   const diagnostics: Diagnostic[] = [];
@@ -439,6 +444,7 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
     if (f.path === "definition/reportExtensions.json") report.extensions = "unread";
     const read = readJson(f.path, f.text, { objectRoot: definedByPbir(f.path) });
     report.issues.push(...read.issues);
+    if (read.issues.length > 0 && definitionFile(f.path)) report.unreadDefinitionFiles.push(f.path);
     if (read.json === undefined) continue;
     const family = schemaFamilyOf(read.schema);
     const version = read.schemaVersion;

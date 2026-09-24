@@ -134,21 +134,30 @@ function reportFacts(project: Project, report: Report, known: ReadonlySet<string
     ),
   );
 
-  // Report measures. The count shows whenever the report defines any; the rule is linked only when
-  // it reports them, which takes the model the report reads in the run.
+  // Report measures. Unknown, like Filters pane, when reportExtensions.json is in the input but was
+  // not read; the rule cannot report measures it did not read, so the fact links no rule. Otherwise
+  // the count shows whenever the report defines any, and the rule is linked only when it reports
+  // them, which takes the model the report reads in the run.
   const measures = report.measures.length;
   facts.push(
-    withRule(
-      measures
-        ? {
-            layer: "report",
-            label: "Report measures",
-            value: String(measures),
-            detail: "defined in the report, not the model",
-          }
-        : { layer: "report", label: "Report measures", value: "none" },
-      reportMeasuresToMove(project).length > 0 ? "REPORT_LEVEL_MEASURES" : undefined,
-    ),
+    report.extensions === "unread"
+      ? {
+          layer: "report",
+          label: "Report measures",
+          value: "unknown",
+          detail: "reportExtensions.json was not read",
+        }
+      : withRule(
+          measures
+            ? {
+                layer: "report",
+                label: "Report measures",
+                value: String(measures),
+                detail: "defined in the report, not the model",
+              }
+            : { layer: "report", label: "Report measures", value: "none" },
+          reportMeasuresToMove(project).length > 0 ? "REPORT_LEVEL_MEASURES" : undefined,
+        ),
   );
 
   // Slicers: Microsoft's slicer types, and those saved with a selection, as the rule reads them.

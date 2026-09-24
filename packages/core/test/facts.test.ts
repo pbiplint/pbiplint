@@ -201,6 +201,43 @@ describe("buildFacts", () => {
     // A report that reads a published model: the rule leaves its measures alone.
     expect(measures({ report })).toEqual(shown);
   });
+  it("says unknown for report measures when reportExtensions.json was not read, and none when it defines none", () => {
+    const base = [
+      { path: "definition/report.json", text: j({}) },
+      { path: "definition/pages/pages.json", text: j({ pageOrder: ["p1"], activePageName: "p1" }) },
+      page("p1", "Overview"),
+    ];
+    const measures = (extensions: { path: string; text: string }[]) => {
+      const { report } = buildReport([...base, ...extensions]);
+      const project = { model, report };
+      return buildFacts(project, buildIndexes(project), ALL).find(
+        (f) => f.label === "Report measures",
+      );
+    };
+    const extensions = (text: string) => [{ path: "definition/reportExtensions.json", text }];
+    const conflicted = [
+      "{",
+      "<<<<<<< HEAD",
+      '  "entities": []',
+      "=======",
+      "}",
+      ">>>>>>> theirs",
+    ].join("\n");
+    // In the input and not read: invalid JSON, a merge conflict, or a document that is not an
+    // object. The rule cannot report measures it did not read, so the fact links none.
+    for (const text of ['{ "entities": [', conflicted, "[]"])
+      expect(measures(extensions(text))).toEqual({
+        layer: "report",
+        label: "Report measures",
+        value: "unknown",
+        detail: "reportExtensions.json was not read",
+      });
+    const none = { layer: "report", label: "Report measures", value: "none" };
+    // No reportExtensions.json in the input, or one that defines no measures.
+    expect(measures([])).toEqual(none);
+    expect(measures(extensions(j({ entities: [] })))).toEqual(none);
+    expect(measures(extensions(j({ entities: [{ name: "Sales", measures: [] }] })))).toEqual(none);
+  });
   it("names a landing page, a hidden or missing opening page, a closed or hidden pane, and drops rule ids the run lacks", () => {
     const { report } = buildReport([
       {

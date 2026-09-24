@@ -119,7 +119,7 @@ export function buildReportReferenceIndex(
    * Something missing from table `t`: its columns, measures, hierarchies, and their variations and
    * levels sit under its declaration, so only a file that declares it could hold the missing
    * thing. The model merges a table declared in several files, so each of them counts. So does a
-   * file whose issue can take a `table` line with it (`TmdlParseIssue.canDropRootLines`), since
+   * file whose issue can take a `table` line with it (`TmdlParseIssue.canDropTableLine`), since
    * that line could be the table's declaration in a second file, such as a misspelt
    * `table Sales` over the measures a file holds for Sales. A file that declares the table is
    * named first.
@@ -131,7 +131,7 @@ export function buildReportReferenceIndex(
         (f) =>
           partlyRead.has(f.file) &&
           f.roots.some((r) => r.kind === "object" && r.type === "table" && r.name === t.name),
-      ) ?? files.find((f) => f.issues.some((i) => i.canDropRootLines))
+      ) ?? files.find((f) => f.issues.some((i) => i.canDropTableLine))
     )?.file;
     return file === undefined ? unresolved(reason) : unread(reason, file);
   };

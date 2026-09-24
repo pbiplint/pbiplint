@@ -47,7 +47,7 @@ export interface TmdlParseIssue extends ParseIssue {
    * an issue may declare a table its roots do not show. Set where the parser pushes the issue, as
    * `canDropObjects` is, and never true where that is false.
    */
-  canDropRootLines: boolean;
+  canDropTableLine: boolean;
 }
 
 export interface ParsedFile {

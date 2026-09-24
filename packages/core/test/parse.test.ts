@@ -63,7 +63,7 @@ describe("parseTmdl", () => {
         text: "\t/// Described",
         reason: "description is not followed by a declaration",
         canDropObjects: false,
-        canDropRootLines: false,
+        canDropTableLine: false,
       },
     ]);
   });
@@ -82,7 +82,7 @@ describe("parseTmdl", () => {
         text: "\t/// One",
         reason: "description is not followed by a declaration",
         canDropObjects: false,
-        canDropRootLines: false,
+        canDropTableLine: false,
       },
     ]);
   });
@@ -94,7 +94,7 @@ describe("parseTmdl", () => {
       text: "\t/// Described",
       reason: "description is not followed by a declaration",
       canDropObjects: false,
-      canDropRootLines: false,
+      canDropTableLine: false,
     };
     expect(parseTmdl("t.tmdl", "table T\n\t/// Described\n").issues).toEqual([orphan]);
     // The same file without the final newline: nothing follows the description there either.
@@ -266,7 +266,7 @@ describe("root object types", () => {
         text: "tabel Sales",
         reason: '"tabel" is not a type TMDL declares at the root of a file',
         canDropObjects: true,
-        canDropRootLines: true,
+        canDropTableLine: true,
       },
     ]);
   });
@@ -574,7 +574,7 @@ describe("whether a parse issue can take a line at the root of a file with it", 
   // A line at the root may be a table's declaration, and TMDL lets a table's declaration sit in
   // more than one file, so a file with such an issue may declare a table its roots do not show.
   const marks = (text: string) =>
-    parseTmdl("t.tmdl", text).issues.map((i) => [i.line, i.canDropRootLines]);
+    parseTmdl("t.tmdl", text).issues.map((i) => [i.line, i.canDropTableLine]);
 
   it("marks an issue on a line at the root that could be a table's, and a code fence left open that read one", () => {
     // A misspelt word, a flag such as `tableSales` that lost its space, and a line the parser could

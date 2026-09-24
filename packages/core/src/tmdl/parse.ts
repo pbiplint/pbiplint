@@ -82,7 +82,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
       text: pending.text,
       reason: "description is not followed by a declaration",
       canDropObjects: false,
-      canDropRootLines: false,
+      canDropTableLine: false,
     });
     pendingDescription = null;
   };
@@ -115,7 +115,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
         text: raw,
         reason: "space indentation (TMDL requires tabs)",
         canDropObjects: true,
-        canDropRootLines: mayBeRootLine(raw),
+        canDropTableLine: mayBeRootLine(raw),
       });
       i++;
       continue;
@@ -163,7 +163,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
           text: raw,
           reason: "unterminated code fence",
           canDropObjects: true,
-          canDropRootLines: out.some(mayBeRootLine),
+          canDropTableLine: out.some(mayBeRootLine),
         });
       const boundary = j < lines.length ? leadingWs(lines[j]!) : 0;
       i = j;
@@ -196,7 +196,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
           text: raw,
           reason: "unrecognized line",
           canDropObjects: true,
-          canDropRootLines: mayBeRootLine(raw),
+          canDropTableLine: mayBeRootLine(raw),
         });
         i++;
         continue;
@@ -238,7 +238,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
           text: raw,
           reason,
           canDropObjects: true,
-          canDropRootLines: node.kind === "object" || node.kind === "flag",
+          canDropTableLine: node.kind === "object" || node.kind === "flag",
         });
     }
 
@@ -256,7 +256,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
         text: raw,
         reason: "orphan indentation",
         canDropObjects: true,
-        canDropRootLines: false,
+        canDropTableLine: false,
       });
       i++;
       continue;
@@ -292,7 +292,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
       text,
       reason: `"${/^\w+/.exec(text)![0]}" at the root of a file has lines under it, which TMDL does not allow`,
       canDropObjects: true,
-      canDropRootLines: false,
+      canDropTableLine: false,
     };
     const at = issues.findIndex((i) => i.line > r.line);
     issues.splice(at === -1 ? issues.length : at, 0, issue);

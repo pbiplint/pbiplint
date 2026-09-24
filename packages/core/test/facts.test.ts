@@ -441,6 +441,25 @@ describe("buildFacts", () => {
       });
     }
   });
+  it("counts a drillthrough page by page.json's own type or its pageBinding, once for both", () => {
+    // The same two markings, read the way HIDE_TOOLTIP_DRILLTROUGH_PAGES reads them.
+    for (const marks of [
+      { type: "Drillthrough" },
+      { pageBinding: { type: "Drillthrough" } },
+      { type: "Drillthrough", pageBinding: { type: "Drillthrough" } },
+    ]) {
+      const { report } = buildReport([page("p1", "Overview"), page("p2", "Detail", marks)]);
+      expect(
+        buildFacts({ report }, buildIndexes({ report }), ALL).find((f) => f.label === "Pages"),
+      ).toEqual({
+        layer: "report",
+        label: "Pages",
+        value: "2",
+        detail: "1 drillthrough",
+        ruleId: "HIDE_TOOLTIP_DRILLTROUGH_PAGES",
+      });
+    }
+  });
   it("links a fact to the first of its candidate rules the run knows", () => {
     const { report } = buildReport(files);
     const project = { model, report };

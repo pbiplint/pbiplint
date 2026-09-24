@@ -137,6 +137,14 @@ export const isTooltipPage = (p: Page): boolean =>
   p.type === "Tooltip" || p.bindingType === "Tooltip";
 
 /**
+ * Whether the page is set up as a drillthrough target, read from the same two places: its own
+ * `type`, "Page to be used as drillthrough." in Microsoft's page schema, or its `pageBinding`'s
+ * `type`, "Binding to be used as drillthrough." in the same schema.
+ */
+export const isDrillthroughPage = (p: Page): boolean =>
+  p.type === "Drillthrough" || p.bindingType === "Drillthrough";
+
+/**
  * HIDDEN_VISUAL_WITH_FIELDS's condition, which the Visuals fact shares: a hidden visual with a field
  * in any of its wells. It counts the wells' entries, so a visual calculation, which references no
  * model field, still counts, and a group, which has no wells, never does.

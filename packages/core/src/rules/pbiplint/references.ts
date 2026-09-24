@@ -46,6 +46,9 @@ export const BROKEN_FIELD_REFERENCE = pbiplintRule({
   severity: 3,
   scope: ["Visual", "Page", "Report", "Bookmark"],
   layer: "project",
+  // `unresolved()` leaves out an `unread` reference, whose target could sit in a file pbiplint
+  // could not fully read: reportExtensions.json, or a model file with a parse issue that can take
+  // an object out of the model. That file's own PARSE_ISSUE finding says why.
   check: (_project, ctx) =>
     firstPerObjectAndField(
       ctx.indexes.reportRefs!.unresolved().flatMap((r): RuleFinding[] => {

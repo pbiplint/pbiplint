@@ -871,6 +871,34 @@ by its folder, and the rules already read it so.
 Malformed JSON and conflict markers use `PARSE_ISSUE`; legacy formats
 are diagnostics.
 
+Amended 2026-09-24 with Michael (release triage, batch D): a line at
+the root of a TMDL file that TMDL does not allow there (a misspelt
+`table`, a `column` or a property that lost its tabs, or an annotation
+with lines under it, for example) is also a `PARSE_ISSUE` finding on
+that line, and nothing under it reaches the model, as before. Only the
+root is checked. An object or a flag is checked against a list of the
+words TMDL allows there that sits beside the parser with its sources; a
+property or an expression with no name is a finding whatever its word;
+and an annotation or an extended property is one when lines sit under
+it, since TMDL gives neither a child line.
+
+Amended 2026-09-24 with Michael (release triage, batch D, ruling H82):
+while a TMDL file has a parse issue that can take an object out of the
+model, which is any but an orphaned `///` description, a reference to a
+table the model does not have, or to a field missing from a table whose
+own file has such an issue, resolves to `unread` (section 6) and
+`BROKEN_FIELD_REFERENCE` does not report it, since the object could be
+declared in the part pbiplint could not read. So does a reference to a
+field missing from any table while another file has an issue that could
+have taken a `table` line with it: a line at the root of the file that
+pbiplint could not read or whose type TMDL does not declare there, a
+`table` line indented with spaces, or a code fence left open above a
+line at the root. TMDL lets a table's declaration sit in more than one
+file, so that line could have declared the table again. A measure found
+on another table, and a column name a measure on the table holds, are
+still reported, since a measure's name is unique in the model and a
+column cannot share a name with a measure on its table.
+
 ### 8.3 Native, tier 2
 
 | Id | Scope | Category | Severity | What it catches |

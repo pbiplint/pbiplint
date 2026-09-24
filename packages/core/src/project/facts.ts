@@ -90,8 +90,8 @@ function reportFacts(project: Project, report: Report, known: ReadonlySet<string
 
   // Pages. A tooltip page counts by either marking Microsoft's page schema gives it, page.json's
   // own `type` or its `pageBinding.type` (Desktop-saved reports mark most by `type` alone); a
-  // drillthrough page by its `pageBinding.type`, which every drillthrough target in the research
-  // corpus carries.
+  // drillthrough page by its `pageBinding.type`, which every drillthrough target in Desktop-saved
+  // reports carries.
   const hidden = pages.filter(isHiddenPage).length;
   const tooltip = pages.filter(isTooltipPage).length;
   const drill = pages.filter((p) => p.bindingType === "Drillthrough").length;

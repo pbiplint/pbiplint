@@ -103,8 +103,11 @@ export function buildReachabilityIndex(
       for (const v of c.variations)
         if (v.defaultColumn) reach(columnOf(v.defaultColumn.table, v.defaultColumn.column), null);
   // An aggregation table's columns: report queries name the detail table, and Power BI answers
-  // them from the aggregation table where it can, so no report names these columns. Rooted last,
-  // so a base column the report also reaches keeps the report's path.
+  // them from the aggregation table where it can, so no report names these columns. The walk is
+  // breadth-first and keeps the first path it finds, so of two paths of the same length the one
+  // from the earlier root wins. Rooted last, a mapped base column keeps the report's path when
+  // the report names it or reaches it in one step, as a measure's DAX reaches a column, and the
+  // mapping's path when the report's is longer.
   for (const t of model.tables) for (const c of t.columns) if (c.alternateOf) reach(c, null);
 
   while (queue.length) {

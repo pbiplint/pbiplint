@@ -456,10 +456,10 @@ such as a field parameter's hidden Fields column); and a relationship
 to a Desktop-managed date table roots neither end (section 8.2).
 
 Amended 2026-09-23 with Michael (release triage, A10): every column
-with an `alternateOf` mapping, a user-defined aggregation table's
-column, is a root, and a reached one reaches the base column or table
-its mapping names; no report names an aggregation column, since report
-queries refer to the detail table and Power BI redirects them to the
+with an `alternateOf` mapping, an aggregation table's column, is a
+root, and a reached one reaches the base column or table its mapping
+names; no report names an aggregation column, since report queries
+refer to the detail table and Power BI redirects them to the
 aggregation table when it covers the query.
 
 **Facts.** Structured list, `{ layer, label, value, detail?, ruleId? }`:

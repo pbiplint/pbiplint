@@ -78,7 +78,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS":
     "Visible columns whose name starts with Is and whose type is whole number, and visible columns whose name ends with the word Flag after a space and whose type is not text.",
   HIDDEN_VISUAL_WITH_FIELDS:
-    "Visuals hidden with the eye icon in the Selection pane, saved as `isHidden` in visual.json, that still have fields in their wells.",
+    "Visuals hidden in the Selection pane, with their own eye icon or with that of a group they sit in, that still have fields in their wells.",
   HIDE_FACT_TABLE_COLUMNS:
     "Visible numeric columns that a measure aggregates directly with a fully qualified reference, such as `SUM('Sales'[Amount])`. COUNT, COUNTBLANK, SUM, AVERAGE, MIN, MAX, DISTINCTCOUNT, VALUES, DISTINCT, and the A-suffixed COUNTA, AVERAGEA, MAXA, and MINA count as aggregations.",
   HIDE_FOREIGN_KEYS:

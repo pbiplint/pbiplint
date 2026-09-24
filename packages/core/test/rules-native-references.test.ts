@@ -217,6 +217,77 @@ describe("BROKEN_FIELD_REFERENCE", () => {
       ],
     ]);
   });
+  it("says nothing about a table a misspelt keyword took out of the model, which PARSE_ISSUE reports", () => {
+    const r = lint([
+      { path: "definition/tables/Sales.tmdl", text: tmdl.replace("table Sales", "tabel Sales") },
+      page("p"),
+      bound("p", "v", "tableEx", [column("Sales", "Amount"), measure("Sales", "Total Sales")]),
+    ]);
+    expect(r.findings.filter((f) => f.ruleId === "BROKEN_FIELD_REFERENCE")).toEqual([]);
+    expect(
+      r.findings.filter((f) => f.ruleId === "PARSE_ISSUE").map((f) => [f.location, f.detail]),
+    ).toEqual([
+      [
+        { file: "definition/tables/Sales.tmdl", line: 1 },
+        '"tabel" is not a type TMDL declares at the root of a file: tabel Sales',
+      ],
+    ]);
+  });
+  it("says nothing about a field missing from a table whose own file has a parse issue, and reports one on a table read in full", () => {
+    // Sales loses Amount to a line indented with spaces, Returns loses a measure to an unterminated
+    // code fence, and Stock loses a column to a line the parser does not recognize. Product's file is
+    // clean, so its missing column is reported whatever the other files hold.
+    const r = lint([
+      {
+        path: "definition/tables/Sales.tmdl",
+        text: tmdl.replace("\tcolumn Amount", "    column Amount"),
+      },
+      {
+        path: "definition/tables/Returns.tmdl",
+        text: "table Returns\n\tmeasure Refunds = ```\n\t\t\t1\n\tmeasure 'Return Rate' = 0.1\n",
+      },
+      {
+        path: "definition/tables/Stock.tmdl",
+        text: "table Stock\n\t'On Hand'\n\tcolumn Warehouse\n\t\tdataType: string\n",
+      },
+      {
+        path: "definition/tables/Product.tmdl",
+        text: "table Product\n\tcolumn Category\n\t\tdataType: string\n",
+      },
+      page("p"),
+      bound("p", "v", "tableEx", [
+        column("Sales", "Amount"),
+        measure("Returns", "Return Rate"),
+        column("Stock", "On Hand"),
+        column("Product", "Colour"),
+      ]),
+    ]);
+    expect(
+      r.findings.filter((f) => f.ruleId === "BROKEN_FIELD_REFERENCE").map((f) => f.detail),
+    ).toEqual([`'Product'[Colour]: no column named "Colour" on "Product"`]);
+    expect(
+      r.findings.filter((f) => f.ruleId === "PARSE_ISSUE").map((f) => f.location?.file),
+    ).toEqual([
+      "definition/tables/Sales.tmdl",
+      "definition/tables/Sales.tmdl",
+      "definition/tables/Returns.tmdl",
+      "definition/tables/Stock.tmdl",
+    ]);
+  });
+  it("reports a missing table while the model's only parse issue is an orphaned description", () => {
+    const r = lint([
+      {
+        path: "definition/tables/Sales.tmdl",
+        text: tmdl.replace("\tcolumn Region", "\t/// Described\n\n\tcolumn Region"),
+      },
+      page("p"),
+      bound("p", "v", "tableEx", [column("Store", "City")]),
+    ]);
+    expect(r.findings.filter((f) => f.ruleId === "PARSE_ISSUE")).toHaveLength(1);
+    expect(
+      r.findings.filter((f) => f.ruleId === "BROKEN_FIELD_REFERENCE").map((f) => f.detail),
+    ).toEqual([`'Store'[City]: no table named "Store"`]);
+  });
   it("keeps one finding per file when two pages share a display name and a visual id", () => {
     const files = [
       page("p1", { displayName: "Same" }),

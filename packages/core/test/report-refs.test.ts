@@ -1,8 +1,10 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { buildReportReferenceIndex, type Resolution } from "../src/index/report-refs.js";
+import { buildModel } from "../src/model/build.js";
 import type { Model } from "../src/model/types.js";
 import { buildReport } from "../src/pbir/build.js";
+import { parseTmdl } from "../src/tmdl/parse.js";
 import { fixturesDir, modelFrom } from "./helpers.js";
 
 const j = (v: unknown) => JSON.stringify(v);
@@ -474,5 +476,258 @@ describe("a reference that names the report's extension schema", () => {
         reason: `no measure named "Net Margin" on "Sales": the report defines no extension measures`,
       },
     ]);
+  });
+});
+
+describe("a reference into a model file pbiplint could not fully read", () => {
+  const SALES = "definition/tables/Sales.tmdl";
+  const PRODUCT = "definition/tables/Product.tmdl";
+  const sales = `table Sales
+	column Amount
+		dataType: decimal
+	column Region
+		dataType: string
+	measure 'Total Sales' = SUM('Sales'[Amount])
+	hierarchy Geography
+		level Region
+			column: Region
+`;
+  const product = `table Product
+	column Category
+		dataType: string
+`;
+  /** A line indented with spaces, which the parser skips, so what it declares is not read. */
+  const spaced = "    column Lost\n";
+  /** A model read through the parser from TMDL files by path. */
+  const modelOf = (files: Record<string, string>): Model =>
+    buildModel(Object.entries(files).map(([path, text]) => parseTmdl(path, text)));
+  const level = (entity: string, hierarchy: string, name: string) => ({
+    HierarchyLevel: {
+      Expression: {
+        Hierarchy: { Expression: { SourceRef: { Entity: entity } }, Hierarchy: hierarchy },
+      },
+      Level: name,
+    },
+  });
+  /** A card bound to the given fields, and report measures on Sales with the given DAX. */
+  const indexOf = (m: Model, fields: unknown[], measures: Record<string, string> = {}) => {
+    const { report: r } = buildReport([
+      { path: "definition/pages/p1/page.json", text: j({ name: "p1", displayName: "P" }) },
+      {
+        path: "definition/pages/p1/visuals/v1/visual.json",
+        text: j({
+          name: "v1",
+          position: {},
+          visual: {
+            visualType: "cardVisual",
+            query: { queryState: { Data: { projections: fields.map((field) => ({ field })) } } },
+          },
+        }),
+      },
+      ...(Object.keys(measures).length
+        ? [
+            {
+              path: "definition/reportExtensions.json",
+              text: j({
+                entities: [
+                  {
+                    name: "Sales",
+                    measures: Object.entries(measures).map(([name, expression]) => ({
+                      name,
+                      expression,
+                    })),
+                  },
+                ],
+              }),
+            },
+          ]
+        : []),
+    ]);
+    return buildReportReferenceIndex(r, m);
+  };
+  const resolutions = (m: Model, ...fields: unknown[]): Resolution[] =>
+    indexOf(m, fields).refs.map((r) => r.resolution);
+  const unread = (reason: string): Resolution => ({ kind: "unread", reason });
+  const unresolved = (reason: string): Resolution => ({ kind: "unresolved", reason });
+  const partly = (what: string, file = "a model file") =>
+    `${what}, and ${file} could not be fully read`;
+
+  it("is unread when a misspelt keyword took the table out of the model", () => {
+    const m = modelOf({ [SALES]: sales.replace("table Sales", "tabel Sales"), [PRODUCT]: product });
+    expect(m.files.flatMap((f) => f.issues).map((i) => [i.file, i.line])).toEqual([[SALES, 1]]);
+    const index = indexOf(m, [column("Sales", "Amount"), measure("Sales", "Total Sales")]);
+    expect(index.refs.map((r) => r.resolution)).toEqual([
+      unread(partly('no table named "Sales"')),
+      unread(partly('no table named "Sales"')),
+    ]);
+    expect(index.unresolved()).toEqual([]);
+  });
+
+  it("is unread when a missing field's table has, in its own file, a line indented with spaces", () => {
+    const m = modelOf({
+      [SALES]: sales.replace("\tcolumn Amount\n", "    column Amount\n"),
+      [PRODUCT]: product,
+    });
+    expect(
+      resolutions(
+        m,
+        column("Sales", "Amount"),
+        measure("Sales", "Profit"),
+        level("Sales", "Calendar", "Year"),
+        level("Sales", "Geography", "Country"),
+      ),
+    ).toEqual([
+      unread(partly('no column named "Amount" on "Sales"', SALES)),
+      unread(partly('no measure named "Profit" on "Sales"', SALES)),
+      unread(partly('no hierarchy named "Calendar" on "Sales"', SALES)),
+      unread(partly('no level named "Country" in hierarchy "Geography" on "Sales"', SALES)),
+    ]);
+  });
+
+  it("is unread when an unterminated code fence swallows a measure in its table's file", () => {
+    const m = modelOf({
+      [SALES]: sales.replace(
+        "\tmeasure 'Total Sales' = SUM('Sales'[Amount])\n",
+        "\tmeasure 'Total Sales' = ```\n\t\t\tSUM('Sales'[Amount])\n\tmeasure Profit = [Total Sales] * 0.1\n",
+      ),
+    });
+    expect(m.files[0]!.issues.map((i) => i.reason)).toEqual(["unterminated code fence"]);
+    expect(resolutions(m, measure("Sales", "Profit"))).toEqual([
+      unread(partly('no measure named "Profit" on "Sales"', SALES)),
+    ]);
+  });
+
+  it("is unread when a line the parser does not recognize stands in its table's file", () => {
+    // The column's keyword is gone, so the line declares nothing the parser can read.
+    const m = modelOf({ [SALES]: sales.replace("\tcolumn Amount\n", "\t'Amount'\n") });
+    expect(m.files[0]!.issues.map((i) => i.reason)).toContain("unrecognized line");
+    expect(resolutions(m, column("Sales", "Amount"))).toEqual([
+      unread(partly('no column named "Amount" on "Sales"', SALES)),
+    ]);
+  });
+
+  it("stays unresolved on a table whose own file was read in full, whatever another file holds", () => {
+    const m = modelOf({ [SALES]: sales, [PRODUCT]: product + spaced });
+    expect(resolutions(m, column("Sales", "Nope"), column("Product", "Gone"))).toEqual([
+      unresolved('no column named "Nope" on "Sales"'),
+      unread(partly('no column named "Gone" on "Product"', PRODUCT)),
+    ]);
+  });
+
+  it("counts each file that declares the table, as the model merges a table declared twice", () => {
+    const m = modelOf({
+      [SALES]: sales,
+      "definition/tables/More Sales.tmdl": `table Sales\n${spaced}`,
+    });
+    expect(resolutions(m, column("Sales", "Nope"))).toEqual([
+      unread(partly('no column named "Nope" on "Sales"', "definition/tables/More Sales.tmdl")),
+    ]);
+  });
+
+  it("stays unresolved while the only parse issue is an orphaned description, which drops no declaration", () => {
+    const m = modelOf({
+      [SALES]: sales.replace("\tcolumn Region\n", "\t/// Described\n\n\tcolumn Region\n"),
+      [PRODUCT]: product,
+    });
+    expect(m.files.flatMap((f) => f.issues).map((i) => i.reason)).toEqual([
+      "description is not followed by a declaration",
+    ]);
+    expect(resolutions(m, column("Store", "City"), column("Sales", "Nope"))).toEqual([
+      unresolved('no table named "Store"'),
+      unresolved('no column named "Nope" on "Sales"'),
+    ]);
+  });
+
+  it("still says a measure is not a column, and names the table a measure is on, while the files are partly read", () => {
+    // A column cannot share a name with a measure on its table, and a measure's name is unique in
+    // the model, so no line pbiplint could not read can hold the column or the measure asked for.
+    const m = modelOf({ [SALES]: sales + spaced, [PRODUCT]: product + spaced });
+    expect(
+      resolutions(m, column("Sales", "Total Sales"), measure("Product", "Total Sales")),
+    ).toEqual([
+      unresolved('"Total Sales" is a measure on "Sales", not a column'),
+      unresolved('[Total Sales] is on "Sales", not "Product"'),
+    ]);
+  });
+
+  it("reads a report measure's DAX by the same conditions, a bare name against every model file", () => {
+    const dax = { "Net Margin": "[Total Sales] - [Missing] + 'Sales'[Gone]" };
+    const refsOf = (m: Model) =>
+      indexOf(m, [], dax)
+        .refs.filter((r) => r.owner.kind === "reportMeasure")
+        .map((r) => [r.ref.name, r.resolution.kind === "measure" ? "measure" : r.resolution]);
+    // A bare [Missing] could be a measure on any table, so another table's file is enough.
+    expect(refsOf(modelOf({ [SALES]: sales, [PRODUCT]: product + spaced }))).toEqual([
+      ["Gone", unresolved('no column named "Gone" on "Sales"')],
+      ["Total Sales", "measure"],
+      ["Missing", unread(partly('no measure or column named "Missing"'))],
+    ]);
+    expect(refsOf(modelOf({ [SALES]: sales + spaced, [PRODUCT]: product }))).toEqual([
+      ["Gone", unread(partly('no column named "Gone" on "Sales"', SALES))],
+      ["Total Sales", "measure"],
+      ["Missing", unread(partly('no measure or column named "Missing"'))],
+    ]);
+  });
+
+  describe("through a date column's variation", () => {
+    const LDT_FILE = `definition/tables/${LDT}.tmdl`;
+    const datedSales = `table Sales
+	column OrderDate
+		dataType: dateTime
+
+		variation Variation
+			isDefault
+			defaultHierarchy: ${LDT}.'Date Hierarchy'
+
+	column DueDate
+		dataType: dateTime
+
+		variation Variation
+			isDefault
+			defaultHierarchy: LocalDateTable_gone.'Date Hierarchy'
+
+	column ShipDate
+		dataType: dateTime
+
+		variation Variation
+			isDefault
+`;
+    const steps = [
+      dateLevel("Nope", "Year"),
+      dateLevel("OrderDate", "Year", { variation: "Other" }),
+      dateLevel("ShipDate", "Year"),
+      dateLevel("DueDate", "Year"),
+      dateLevel("OrderDate", "Year", { hierarchy: "Fiscal" }),
+      dateLevel("OrderDate", "Week"),
+    ];
+    it("follows the table each missing step would sit in, when the date column's file is partly read", () => {
+      const m = modelOf({ [SALES]: datedSales + spaced, [LDT_FILE]: localDateTable });
+      expect(resolutions(m, ...steps)).toEqual([
+        unread(partly('no column named "Nope" on "Sales"', SALES)),
+        unread(partly('no variation named "Other" on column "OrderDate" of "Sales"', SALES)),
+        unread(
+          partly(
+            'variation "Variation" on column "ShipDate" of "Sales" names no default hierarchy',
+            SALES,
+          ),
+        ),
+        unread(partly('no table named "LocalDateTable_gone"')),
+        unresolved(`no hierarchy named "Fiscal" on "${LDT}"`),
+        unresolved(`no level named "Week" in hierarchy "Date Hierarchy" on "${LDT}"`),
+      ]);
+    });
+    it("follows the table each missing step would sit in, when the local date table's file is partly read", () => {
+      const m = modelOf({ [SALES]: datedSales, [LDT_FILE]: localDateTable + spaced });
+      expect(resolutions(m, ...steps)).toEqual([
+        unresolved('no column named "Nope" on "Sales"'),
+        unresolved('no variation named "Other" on column "OrderDate" of "Sales"'),
+        unresolved(
+          'variation "Variation" on column "ShipDate" of "Sales" names no default hierarchy',
+        ),
+        unread(partly('no table named "LocalDateTable_gone"')),
+        unread(partly(`no hierarchy named "Fiscal" on "${LDT}"`, LDT_FILE)),
+        unread(partly(`no level named "Week" in hierarchy "Date Hierarchy" on "${LDT}"`, LDT_FILE)),
+      ]);
+    });
   });
 });

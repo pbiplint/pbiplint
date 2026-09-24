@@ -692,6 +692,14 @@ report measures as the supported route for an author who cannot change
 a shared model. The rule needs both layers, so a run without the model
 skips it.
 
+Amended 2026-09-24 with Michael (release triage, DQ1):
+`DEFAULT_PAGE_NAME` also matches the names Power BI Desktop gives a
+new or duplicated page in other languages, exactly as Desktop-saved
+files show them (`Seite <n>`, `Página <n>`, `Pagina <n>`, `ページ <n>`;
+`Duplikat von "<name>"`, `Duplicado de <name>`, `Doublon de <name>`,
+`Duplicata de <name>`, `Duplikat av <name>`); Microsoft publishes no
+list.
+
 ### 8.4 Native, tier 3
 
 | Id | Scope | Category | Severity | What it catches |

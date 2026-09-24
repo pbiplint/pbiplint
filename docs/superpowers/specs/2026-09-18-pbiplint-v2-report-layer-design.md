@@ -572,12 +572,12 @@ the PBIR format defines there (section 5) whose read raised a
 is not a JSON object), `NOT_REACHED_FROM_REPORT` is skipped, with the
 reason on the skipped line (section 7), because pbiplint cannot say
 what an unread file reaches. The Model fact then keeps its table,
-column, and measure counts, its not-reached clause says unknown
-("columns and measures not reached from this report: unknown, a report
-file could not be read"), and it links no rule. The report's
-`.platform`, definition.pbir, and the project's `.pbip` name no field,
-and a JSON file under the definition folder that the format does not
-define is not part of the report, so none of them counts.
+column, and measure counts, its not-reached clause says unknown ("not
+reached from this report: unknown (a report file could not be read)"),
+and it links no rule. The report's `.platform`, definition.pbir, and
+the project's `.pbip` name no field, and a JSON file under the
+definition folder that the format does not define is not part of the
+report, so none of them counts.
 
 **Cost.** Linear in the JSON. The demo report's largest visual is
 61 KB, most under 5 KB; a 300-visual report is a few megabytes and

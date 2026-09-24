@@ -205,14 +205,17 @@ describe("pbiplint CLI", () => {
       "pbiplint: notice: Demo.Report is stored as a single report.json, which pbiplint cannot read; save it in the PBIR format from Power BI Desktop\n",
     );
   });
-  // Root reads a folder whatever its mode, so a locked folder proves nothing there.
-  const asRoot = process.getuid?.() === 0;
+  // These tests have the operating system refuse a read, as a POSIX system does for a user (CI
+  // runs them on Ubuntu). Root reads a folder whatever its mode, and Windows ignores a mode of 000
+  // and makes a symbolic link only in Developer Mode or as an administrator, so they skip there.
+  const onWindows = process.platform === "win32";
+  const noModes = onWindows || process.getuid?.() === 0;
   const unread = (path: string, reason: string) => ({
     kind: "unread-file",
     path,
     message: `${path} could not be read (${reason}), so it was not linted`,
   });
-  it.skipIf(asRoot)(
+  it.skipIf(noModes)(
     "lints the rest of a project around a folder it cannot read, with a notice naming it",
     async () => {
       const root = pbipProject("pbiplint-locked-");
@@ -244,7 +247,7 @@ describe("pbiplint CLI", () => {
       }
     },
   );
-  it.skipIf(asRoot)(
+  it.skipIf(noModes)(
     "leaves out a part folder it cannot read, saying so, and lints the other part",
     async () => {
       const root = pbipProject("pbiplint-locked-part-");
@@ -271,28 +274,31 @@ describe("pbiplint CLI", () => {
       }
     },
   );
-  it("gives a notice for a directory where it reads a file, and lints the rest", async () => {
-    // A link is how a directory reaches a file read: a real directory is walked into instead.
-    const root = pbipProject("pbiplint-isdir-");
-    try {
-      const def = join(root, "Demo.Report", "definition");
-      rmSync(join(def, "report.json"));
-      symlinkSync(join(def, "pages"), join(def, "report.json"));
-      const r = await run([root, "--format", "json", "--fail-on", "warning"]);
-      const notice = unread(
-        "Demo.Report/definition/report.json",
-        "EISDIR: illegal operation on a directory",
-      );
-      expect(r.err).toBe(`pbiplint: notice: ${notice.message}\n`);
-      expect(r.code).toBe(1);
-      const doc = JSON.parse(r.out);
-      expect(doc.layers.report.present).toBe(true);
-      expect(doc.diagnostics).toEqual([notice]);
-    } finally {
-      rmSync(root, { recursive: true, force: true });
-    }
-  });
-  it.skipIf(asRoot)(
+  it.skipIf(onWindows)(
+    "gives a notice for a directory where it reads a file, and lints the rest",
+    async () => {
+      // A link is how a directory reaches a file read: a real directory is walked into instead.
+      const root = pbipProject("pbiplint-isdir-");
+      try {
+        const def = join(root, "Demo.Report", "definition");
+        rmSync(join(def, "report.json"));
+        symlinkSync(join(def, "pages"), join(def, "report.json"));
+        const r = await run([root, "--format", "json", "--fail-on", "warning"]);
+        const notice = unread(
+          "Demo.Report/definition/report.json",
+          "EISDIR: illegal operation on a directory",
+        );
+        expect(r.err).toBe(`pbiplint: notice: ${notice.message}\n`);
+        expect(r.code).toBe(1);
+        const doc = JSON.parse(r.out);
+        expect(doc.layers.report.present).toBe(true);
+        expect(doc.diagnostics).toEqual([notice]);
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+  );
+  it.skipIf(noModes)(
     "says a part could not be read when its definition lists but none of its files read",
     async () => {
       const root = pbipProject("pbiplint-locked-files-");
@@ -319,7 +325,7 @@ describe("pbiplint CLI", () => {
       }
     },
   );
-  it.skipIf(asRoot)(
+  it.skipIf(noModes)(
     "names a folder once though a part given on its own is walked for each layer",
     async () => {
       const root = pbipProject("pbiplint-locked-once-");
@@ -338,7 +344,7 @@ describe("pbiplint CLI", () => {
       }
     },
   );
-  it.skipIf(asRoot)(
+  it.skipIf(noModes)(
     "refuses a .pbip it was pointed at and cannot read, and notes one it found",
     async () => {
       const root = pbipProject("pbiplint-locked-pbip-");
@@ -370,7 +376,7 @@ describe("pbiplint CLI", () => {
     expect(r.err).toMatch(/\n\s+at resolveProject /);
     expect(r.err).not.toContain("Could not read");
   });
-  it.skipIf(asRoot)("refuses an input folder it cannot read at all, naming it", async () => {
+  it.skipIf(noModes)("refuses an input folder it cannot read at all, naming it", async () => {
     const root = pbipProject("pbiplint-locked-input-");
     chmodSync(root, 0o000);
     try {

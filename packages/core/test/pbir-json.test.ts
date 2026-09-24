@@ -93,6 +93,18 @@ describe("readJson", () => {
       },
     ]);
   });
+  it("returns a document that is not an object as it is when the file's format sets no root", () => {
+    const r = readJson("definition/notes/owners.json", '["alice"]', { objectRoot: false });
+    expect(r.issues).toEqual([]);
+    expect(r.json).toEqual(["alice"]);
+    expect(r.schema).toBeUndefined();
+    // Invalid JSON is still an issue there.
+    const invalid = readJson("definition/notes/owners.json", '["alice",]', { objectRoot: false });
+    expect(invalid.json).toBeUndefined();
+    expect(invalid.issues.map((i) => [i.line, i.reason])).toEqual([
+      [1, expect.stringMatching(/^not valid JSON \(/)],
+    ]);
+  });
   it("still reads an object with no issue, wherever it starts", () => {
     const r = readJson("x.json", '\ufeff\n\n  { "a": 1 }\n');
     expect(r.issues).toEqual([]);

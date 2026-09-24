@@ -364,6 +364,26 @@ const PAGE_FILE = /^definition\/pages\/([^/]+)\/page\.json$/;
 const VISUAL_FILE = /^definition\/pages\/([^/]+)\/visuals\/([^/]+)\/visual\.json$/;
 const MOBILE_FILE = /^definition\/pages\/([^/]+)\/visuals\/([^/]+)\/mobile\.json$/;
 const BOOKMARK_FILE = /^definition\/bookmarks\/([^/]+)\.bookmark\.json$/;
+/** The files under definition/ that Learn's PBIR folder table names, besides the four above. */
+const DEFINITION_FILES: ReadonlySet<string> = new Set([
+  "definition/version.json",
+  "definition/report.json",
+  "definition/reportExtensions.json",
+  "definition/pages/pages.json",
+  "definition/bookmarks/bookmarks.json",
+]);
+
+/**
+ * Whether the PBIR format defines the file: definition.pbir, the report's .platform, the project's
+ * .pbip, and the files Learn's PBIR folder table names under definition/. Microsoft publishes a
+ * schema for each, with an object root; any other JSON under definition/ is the author's own.
+ */
+const definedByPbir = (path: string): boolean =>
+  path.endsWith("definition.pbir") ||
+  path.endsWith(".platform") ||
+  path.endsWith(".pbip") ||
+  DEFINITION_FILES.has(path) ||
+  [PAGE_FILE, VISUAL_FILE, MOBILE_FILE, BOOKMARK_FILE].some((re) => re.test(path));
 
 /**
  * Builds the report object model from the report's files (paths relative to the .Report folder).
@@ -412,7 +432,7 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
     // Unread until it parses to an object below, so a file that fails on the way is not taken
     // for one that defines no measures.
     if (f.path === "definition/reportExtensions.json") report.extensions = "unread";
-    const read = readJson(f.path, f.text);
+    const read = readJson(f.path, f.text, { objectRoot: definedByPbir(f.path) });
     report.issues.push(...read.issues);
     if (read.json === undefined) continue;
     const family = schemaFamilyOf(read.schema);
@@ -437,7 +457,8 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
       report.datasetReference = datasetReferenceOf(json);
       continue;
     }
-    // readJson gives an object or nothing, so this only narrows the type.
+    // Only a file the PBIR format does not define can hold something other than an object here,
+    // and nothing below reads one.
     if (!isRecord(json)) continue;
     let m: RegExpExecArray | null;
     if (f.path.endsWith(".platform")) {

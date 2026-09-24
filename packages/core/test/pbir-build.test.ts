@@ -662,34 +662,71 @@ describe("buildReport tolerance", () => {
     expect(report.pages[0]!.visuals.map((v) => v.id)).toEqual(["v"]);
   });
   it("keeps a file whose document is not a JSON object as an issue and reads nothing from it", () => {
+    // Every file the PBIR format defines, each of which Microsoft's schema gives an object root.
     const { report } = buildReport([
+      { path: "../Demo.pbip", text: "[]" },
       { path: ".platform", text: "[]" },
       { path: "definition.pbir", text: "[]" },
+      { path: "definition/version.json", text: "[]" },
       { path: "definition/report.json", text: "[]" },
       { path: "definition/pages/pages.json", text: "\n[]\n" },
       { path: "definition/pages/a/page.json", text: '"Sales overview"' },
       { path: "definition/pages/a/visuals/v/visual.json", text: visual("v") },
+      { path: "definition/pages/a/visuals/v/mobile.json", text: "[]" },
       { path: "definition/pages/a/visuals/w/visual.json", text: "null" },
       { path: "definition/reportExtensions.json", text: "[]" },
+      { path: "definition/bookmarks/bookmarks.json", text: "[]" },
+      { path: "definition/bookmarks/b.bookmark.json", text: "[]" },
     ]);
     const holds = (kind: string) => `not a JSON object (the file holds ${kind})`;
     expect(report.issues.map((i) => [i.file, i.line, i.text, i.reason])).toEqual([
+      ["../Demo.pbip", 1, "[]", holds("an array")],
       [".platform", 1, "[]", holds("an array")],
       ["definition.pbir", 1, "[]", holds("an array")],
+      ["definition/bookmarks/b.bookmark.json", 1, "[]", holds("an array")],
+      ["definition/bookmarks/bookmarks.json", 1, "[]", holds("an array")],
       ["definition/pages/a/page.json", 1, '"Sales overview"', holds("a string")],
+      ["definition/pages/a/visuals/v/mobile.json", 1, "[]", holds("an array")],
       ["definition/pages/a/visuals/w/visual.json", 1, "null", holds("null")],
       ["definition/pages/pages.json", 2, "[]", holds("an array")],
       ["definition/report.json", 1, "[]", holds("an array")],
       ["definition/reportExtensions.json", 1, "[]", holds("an array")],
+      ["definition/version.json", 1, "[]", holds("an array")],
     ]);
     expect(report.file).toBeUndefined();
     expect(report.pagesHeader).toEqual({ pageOrder: [] });
+    expect(report.bookmarksHeader).toEqual({ items: [] });
+    expect(report.bookmarks).toEqual([]);
     expect(report.datasetReference).toEqual({ kind: "none" });
     expect(report.extensions).toBe("unread");
     // The page file was not read, so the visual's page is a stub named by its folder, as it is for
-    // invalid JSON; the visual.json that holds null is left out.
+    // invalid JSON; the visual.json that holds null is left out, and the unread mobile.json does
+    // not give the other visual a mobile layout.
     expect(report.pages.map((p) => [p.id, p.displayName, p.json])).toEqual([["a", "a", undefined]]);
-    expect(report.pages[0]!.visuals.map((v) => v.id)).toEqual(["v"]);
+    expect(report.pages[0]!.visuals.map((v) => [v.id, v.hasMobileLayout])).toEqual([["v", false]]);
+  });
+  it("reads a JSON file the PBIR format does not define as before, whatever document it holds", () => {
+    // Microsoft publishes no schema for a file of the author's own under definition, so an array
+    // there is not an issue; invalid JSON and a conflict marker still are, as for any report file.
+    const issues = (path: string, text: string) =>
+      buildReport([{ path, text }]).report.issues.map((i) => [i.file, i.line, i.reason]);
+    for (const path of [
+      "definition/notes/owners.json",
+      "definition/pages/a/notes.json",
+      "definition/pages/a/visuals/v/extra.json",
+      "definition/bookmarks/b.json",
+    ]) {
+      expect(issues(path, '["alice"]')).toEqual([]);
+      expect(issues(path, "null")).toEqual([]);
+      expect(issues(path, '["alice",]')).toEqual([
+        [path, 1, expect.stringMatching(/^not valid JSON \(/)],
+      ]);
+      expect(issues(path, '<<<<<<< HEAD\n["alice"]\n=======\n["bob"]\n>>>>>>> main\n')).toEqual([
+        [path, 1, "merge conflict marker"],
+        [path, 3, "merge conflict marker"],
+        [path, 5, "merge conflict marker"],
+      ]);
+    }
   });
   it("records whether reportExtensions.json was in the input and could be read", () => {
     const extensions = (...texts: string[]) =>

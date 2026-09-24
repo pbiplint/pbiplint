@@ -1,13 +1,26 @@
 import type { ParseIssue } from "../tmdl/types.js";
 
 export interface JsonRead {
-  /** The parsed document, a JSON object, or undefined when the text could not be read as one. */
+  /**
+   * The parsed document, or undefined when the text could not be read. A JSON object unless the
+   * options said the file's format sets no root.
+   */
   json: unknown;
   issues: ParseIssue[];
   /** The document's `$schema` URL, when it has one. */
   schema?: string;
   /** The version segment of that URL: `3.2.0` for `.../report/3.2.0/schema.json`. */
   schemaVersion?: string;
+}
+
+export interface ReadJsonOptions {
+  /**
+   * Whether the file's format gives it an object root, so that a document that is not an object
+   * is a parse issue. True by default, for the files the PBIR format defines: Microsoft's schema
+   * for each one, definition.pbir and .platform included, has an object root. False for a file
+   * the format does not define, whose document is then returned whatever it holds.
+   */
+  objectRoot?: boolean;
 }
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>
@@ -81,13 +94,12 @@ function lineOfParseError(body: string, message: string): number {
 }
 
 /**
- * Reads one PBIR JSON file tolerantly. Conflict markers, invalid JSON, and a document that parses
- * to something other than an object become parse issues with a line, in the same shape the TMDL
- * parser reports, so PARSE_ISSUE lists them beside everything else; the document is then undefined
- * and the caller reads nothing from it. An object is the only document a report file can hold:
- * Microsoft's schema for each one, definition.pbir and .platform included, has an object root.
+ * Reads one PBIR JSON file tolerantly. Conflict markers, invalid JSON, and, unless the options say
+ * the file's format sets no root, a document that parses to something other than an object become
+ * parse issues with a line, in the same shape the TMDL parser reports, so PARSE_ISSUE lists them
+ * beside everything else; the document is then undefined and the caller reads nothing from it.
  */
-export function readJson(file: string, text: string): JsonRead {
+export function readJson(file: string, text: string, options: ReadJsonOptions = {}): JsonRead {
   // Desktop writes JSON with a BOM at times; it is not part of the document.
   const body = text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
   const lines = body.split(LINE_BREAK);
@@ -112,6 +124,7 @@ export function readJson(file: string, text: string): JsonRead {
     };
   }
   if (!isRecord(json)) {
+    if (options.objectRoot === false) return { json, issues };
     // The document parsed, so only JSON whitespace sits before it: its first line is the first
     // one holding anything else.
     const start = lines.findIndex((line) => /\S/.test(line));

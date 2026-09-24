@@ -228,7 +228,11 @@ slicer and four data visuals whose per-field entries Desktop writes)
   in Microsoft's visual catalog (Microsoft's capability data gives each
   of them that property, and Desktop-saved files keep the selection
   there); a `filterConfig` entry on a slicer holds a visual-level
-  filter of the Filters pane, never the selection.
+  filter of the Filters pane, never the selection. Amended 2026-09-24
+  with Michael (release triage, DQ5): a saved selection is read in that
+  place on any visual type, so custom slicers from AppSource, which keep
+  theirs there too, are covered; in Desktop-saved files every visual
+  type that carries `general.filter` is a filtering visual.
 - Desktop names a duplicated page "Duplicate of <name>" in current
   builds; older copy could read "<name> (copy)". Both are matched.
   Amended 2026-09-23 with pull request 4: English Desktop writes
@@ -551,6 +555,16 @@ visual hidden through an ancestor group as hidden, as well as one with
 its own `isHidden`, the reading `HIDDEN_VISUAL_WITH_FIELDS` shares from
 this amendment on (section 8.2).
 
+Amended 2026-09-24 with Michael (release triage, DQ5): a saved
+selection is read on any visual type, so custom slicers from AppSource
+are covered; in Desktop-saved files every visual type that carries
+`general.filter` is a filtering visual. Slicers counts a visual as a
+slicer when it is one of the five catalog types, with a selection or
+without, or carries a saved selection, and its "with a saved selection"
+count covers every visual that carries one, so it never exceeds the
+slicer count; this is the reading `SLICER_SELECTION_SAVED` shares
+(section 8.4).
+
 **Cost.** Linear in the JSON. The demo report's largest visual is
 61 KB, most under 5 KB; a 300-visual report is a few megabytes and
 lints well under a second in the browser. No new dependency.
@@ -791,6 +805,20 @@ catalog and the selection under
 (section 3.4), never a `filterConfig` entry; Select all writes no
 filter and is no selection, a hidden slicer counts, and each synced
 copy reports the selection it carries.
+
+Amended 2026-09-24 with Michael (release triage, DQ5): a saved
+selection is read on any visual type, so custom slicers from AppSource
+are covered; in Desktop-saved files every visual type that carries
+`general.filter` is a filtering visual. In the 26 Desktop-saved
+repositories of the pull request 5 research corpus, the visuals with a
+selection there are `slicer` 510, `advancedSlicerVisual` 26,
+`listSlicer` 14, and four AppSource visuals the reports register in
+`publicCustomVisuals`: `advancedtoggleswitch` 13,
+`ChicletSlicer1448559807354` 6,
+`textFilter25A4896A83E0487089E2B90C9AE57C8A` (the Text Filter) 2, and
+`HierarchySlicer1458836712039` 2. `SLICER_SELECTION_SAVED` reports each
+with the label, detail, and line it gives a catalog slicer, and no
+list of visual types is kept.
 
 Amended 2026-09-23 with Michael, three changes to the conditions
 above. An action switched on whose own destination property is absent

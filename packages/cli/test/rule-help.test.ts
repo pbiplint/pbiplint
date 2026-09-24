@@ -55,7 +55,7 @@ describe.each(defaultRules.map((r) => [r.id, r] as const))("SARIF help for %s", 
   it("has a plain-text form with no Markdown syntax", () => {
     // A code span leaves this shape behind once its delimiters are gone. Backticks a sentence is
     // about, such as the ``` that opens a TMDL expression block, are its content rather than
-    // syntax, so they stay: PARSE_ISSUE reads "open and close with ``` on their own lines".
+    // syntax, so they stay: PARSE_ISSUE reads "three backticks (```) after the `=`".
     expect(help!.text).not.toMatch(/`[^`\n]+`/);
     expect(help!.text).not.toMatch(/^```/m);
     expect(help!.text).not.toContain("### ");

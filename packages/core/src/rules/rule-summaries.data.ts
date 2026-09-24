@@ -149,7 +149,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   "REDUCE_USAGE_OF_LONG-LENGTH_COLUMNS_WITH_HIGH_CARDINALITY":
     "Text columns where more than 500,000 rows hold values longer than 100 characters. That count is a statistic of the loaded data, not of the model files, so pbiplint lists this rule but does not run it: it needs statistics that only a live model carries.",
   REDUCE_VISUALS_ON_PAGE:
-    "Pages with more visible visuals than the threshold, 20 by default, not counting shapes, slicers, buttons, and text boxes.",
+    "Pages with more visuals than the threshold, 20 by default, counting every visual except shapes, slicers, buttons, text boxes, and a visual hidden by `isHidden` in its own visual.json.",
   RELATIONSHIP_COLUMNS_SAME_DATA_TYPE: "Relationships whose two columns have different data types.",
   RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE:
     "Any column that takes part in a relationship and is not a whole number.",

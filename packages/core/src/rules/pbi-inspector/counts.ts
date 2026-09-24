@@ -17,9 +17,11 @@ export const REDUCE_VISUALS_ON_PAGE = inspectorRule(
   (report, ctx) =>
     report.pages.flatMap((p) => {
       // A visual group container is counted, as the source counts everything with no excluded type.
+      // A visual is left out by its own isHidden only, so one hidden through its group is counted;
+      // the detail does not call the count visible for that reason.
       const n = p.visuals.filter((v) => !v.isHidden && !NOT_COUNTED.has(v.type)).length;
       return n > max(ctx)
-        ? [reportFinding.page(p, undefined, `${n} visible visuals, more than ${max(ctx)}`)]
+        ? [reportFinding.page(p, undefined, `${n} visuals, more than ${max(ctx)}`)]
         : [];
     }),
 );

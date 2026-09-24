@@ -224,7 +224,8 @@ describe("HIDDEN_VISUAL_WITH_FIELDS", () => {
 
   it("leaves the ported REDUCE_VISUALS_ON_PAGE reading each visual's own isHidden, as its source does", () => {
     // PBI Inspector counts a visual without isHidden of its own, whatever its group; parity with it
-    // depends on the port doing the same. The hidden group itself is not counted.
+    // depends on the port doing the same. The hidden group itself is not counted, and the detail
+    // does not call the two it counts visible, since the Visuals fact counts them as hidden.
     const files = [
       page("p"),
       group("g", "Filters", { isHidden: true }),
@@ -233,6 +234,6 @@ describe("HIDDEN_VISUAL_WITH_FIELDS", () => {
     ];
     expect(
       reportFindings(REDUCE_VISUALS_ON_PAGE, files, undefined, { max: 1 }).map((f) => f.detail),
-    ).toEqual(["2 visible visuals, more than 1"]);
+    ).toEqual(["2 visuals, more than 1"]);
   });
 });

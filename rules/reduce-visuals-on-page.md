@@ -15,9 +15,9 @@ sources:
 
 ## What it checks
 
-Pages with more visible visuals than the threshold, 20 by default, not counting shapes, slicers, buttons, and text boxes.
+Pages with more visuals than the threshold, 20 by default, counting every visual except shapes, slicers, buttons, text boxes, and a visual hidden by `isHidden` in its own visual.json.
 
-Each finding names the page, as `Page "Overview"`, and its detail gives the count, as `23 visible visuals, more than 20`.
+Each finding names the page, as `Page "Overview"`, and its detail gives the count, as `23 visuals, more than 20`.
 
 ## Example
 

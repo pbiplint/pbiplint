@@ -1,14 +1,23 @@
 import { describe, expect, it } from "vitest";
 import { lint, type LintFile } from "../src/engine/lint.js";
 import * as rules from "../src/rules/pbi-inspector/counts.js";
-import { bound, column, j, measure, page, reportObjectIds, visual } from "./report-helpers.js";
+import {
+  bound,
+  column,
+  j,
+  measure,
+  page,
+  reportFindings,
+  reportObjectIds,
+  visual,
+} from "./report-helpers.js";
 
 const pages = (n: number) => Array.from({ length: n }, (_, i) => page(`p${i}`));
 const many = (pageId: string, n: number, type = "cardVisual", container = {}) =>
   Array.from({ length: n }, (_, i) => visual(pageId, `${type}${i}`, type, container));
 
 describe("REDUCE_VISUALS_ON_PAGE", () => {
-  it("counts visible visuals that are not shapes, slicers, buttons, or text boxes, against max", () => {
+  it("counts visuals without their own isHidden, other than shapes, slicers, buttons, and text boxes, against max", () => {
     const over = [page("p"), ...many("p", 21)];
     expect(reportObjectIds(rules.REDUCE_VISUALS_ON_PAGE, over)).toEqual(["p"]);
     const excluded = [
@@ -27,6 +36,15 @@ describe("REDUCE_VISUALS_ON_PAGE", () => {
         max: 2,
       }),
     ).toEqual(["p"]);
+  });
+
+  it("gives the count and the threshold in the detail", () => {
+    const files = [page("p"), ...many("p", 3)];
+    expect(
+      reportFindings(rules.REDUCE_VISUALS_ON_PAGE, files, undefined, { max: 2 }).map(
+        (f) => f.detail,
+      ),
+    ).toEqual(["3 visuals, more than 2"]);
   });
 });
 

@@ -579,6 +579,23 @@ describe("lint over a project", () => {
       ["report", "definition/pages/p/page.json", 3, "merge conflict marker: <<<<<<< HEAD"],
     ]);
   });
+  it("reports a TMDL root object of a type TMDL does not define through PARSE_ISSUE", () => {
+    const r = lint([
+      {
+        path: "definition/tables/Sales.tmdl",
+        text: "tabel Sales\n\tcolumn Amount\n\t\tdataType: decimal\n",
+      },
+    ]);
+    expect(
+      r.findings
+        .filter((f) => f.ruleId === "PARSE_ISSUE")
+        .map((f) => [f.layer, f.objectName, f.location?.line, f.detail]),
+    ).toEqual([
+      ["model", "definition/tables/Sales.tmdl", 1, 'unknown object type "tabel": tabel Sales'],
+    ]);
+    // Nothing under the declaration reaches the model, as before.
+    expect(r.model.tables).toEqual([]);
+  });
   it("reports a page.json or visual.json that is not a JSON object, and reads the rest", () => {
     const r = lint([
       { path: "definition/pages/p/page.json", text: '\n"Sales overview"\n' },

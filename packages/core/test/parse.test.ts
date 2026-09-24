@@ -220,3 +220,134 @@ describe("parseTmdl", () => {
     });
   });
 });
+
+describe("root object types", () => {
+  it("reports a root object of a type TMDL does not define on its declaration line", () => {
+    const pf = parseTmdl(
+      "tables/Sales.tmdl",
+      "table Product\n\tcolumn Key\n\t\tdataType: int64\n\ntabel Sales\n\tcolumn Amount\n\t\tdataType: decimal\n",
+    );
+    expect(pf.issues).toEqual([
+      {
+        file: "tables/Sales.tmdl",
+        line: 5,
+        text: "tabel Sales",
+        reason: 'unknown object type "tabel"',
+      },
+    ]);
+  });
+
+  it("compares the type without regard to case and names the word as written", () => {
+    // TMDL reads keywords without regard to case, so `Table` is a table.
+    expect(parseTmdl("t.tmdl", "Table Sales\n").issues).toEqual([]);
+    expect(parseTmdl("t.tmdl", "Tabel Sales\n").issues.map((i) => i.reason)).toEqual([
+      'unknown object type "Tabel"',
+    ]);
+  });
+
+  it("reports an unknown type declared with a value or with no name", () => {
+    const pf = parseTmdl(
+      "t.tmdl",
+      'expresion Server = "localhost"\n\ndatabse\n\tcompatibilityLevel: 1567\n',
+    );
+    expect(pf.issues.map((i) => [i.line, i.text, i.reason])).toEqual([
+      [1, 'expresion Server = "localhost"', 'unknown object type "expresion"'],
+      [3, "databse", 'unknown object type "databse"'],
+    ]);
+  });
+
+  it("reads every root type TMDL defines without an issue, whether the model holds it or not", () => {
+    const text = [
+      "database Sales",
+      "\tcompatibilityLevel: 1567",
+      "",
+      "model Model",
+      "\tculture: en-US",
+      "",
+      "queryGroup 'Fact Queries'",
+      "",
+      'annotation PBI_QueryOrder = ["Sales"]',
+      "",
+      "extendedProperty ParameterMetadata =",
+      "\t\t{",
+      '\t\t  "version": 1',
+      "\t\t}",
+      "",
+      'bindingInfo \'{"kind":"AzureDataExplorer","path":"help"}\'',
+      "\ttype: dataBindingHint",
+      "",
+      "ref table Sales",
+      "",
+      "table Sales",
+      "\tcolumn Amount",
+      "\t\tdataType: decimal",
+      "",
+      "relationship 0b6c2c56-8c9d-4d5f-9b1a-2f3f8a4c1e11",
+      "\tfromColumn: Sales.Key",
+      "\ttoColumn: Product.Key",
+      "",
+      "role Readers",
+      "\tmodelPermission: read",
+      "",
+      "perspective Finance",
+      "\tperspectiveTable Sales",
+      "",
+      "cultureInfo en-US",
+      "",
+      'expression Server = "localhost"',
+      "",
+      "function Double = (x: INT64) => x * 2",
+      "",
+      "dataSource 'Legacy SQL' = provider",
+      "",
+      "createOrReplace",
+      "",
+      "\ttable Product",
+      "\t\tcolumn Key",
+      "\t\t\tdataType: int64",
+      "",
+    ].join("\n");
+    const pf = parseTmdl("t.tmdl", text);
+    expect(pf.issues).toEqual([]);
+    expect(pf.roots.filter((r) => r.kind !== "ref").map((r) => r.type)).toEqual([
+      "database",
+      "model",
+      "querygroup",
+      "annotation",
+      "extendedproperty",
+      "bindinginfo",
+      "table",
+      "relationship",
+      "role",
+      "perspective",
+      "cultureinfo",
+      "expression",
+      "function",
+      "datasource",
+      "createorreplace",
+    ]);
+  });
+
+  it("reads a misspelt keyword under a known object as a generic child, as before", () => {
+    // Only the root is checked: a nested keyword keeps the parser's generic reading.
+    const pf = parseTmdl("t.tmdl", "table Sales\n\tcolumm Amount\n\t\tdataType: decimal\n");
+    expect(pf.issues).toEqual([]);
+    expect(pf.roots[0]!.children[0]).toMatchObject({
+      kind: "object",
+      type: "columm",
+      name: "Amount",
+    });
+  });
+
+  it("keeps today's reading of ref lines, properties, and expressions at the root", () => {
+    // `ref table` with no name misses the ref form and reads as a declaration of type `ref`.
+    const pf = parseTmdl("t.tmdl", "ref tabel Sales\nref table\nculture: en-US\nsource = 1\n");
+    expect(pf.issues).toEqual([]);
+    expect(pf.roots.map((r) => [r.kind, r.type])).toEqual([
+      ["ref", "tabel"],
+      ["object", "ref"],
+      ["prop", "culture"],
+      ["expr", "source"],
+    ]);
+  });
+});

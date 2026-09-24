@@ -1,4 +1,5 @@
 import { unquoteName, unquoteValue } from "./quote.js";
+import { isRootType } from "./root-types.js";
 import type { ParsedFile, ParseIssue, TmdlNode } from "./types.js";
 
 const HEADER = /^([A-Za-z_]\w*)(?:\s+(.+))?$/;
@@ -40,7 +41,8 @@ function splitHeader(
 
 /**
  * Generic TMDL tree parser. Unknown object types and properties parse as generic nodes,
- * so a construct this code has never seen never aborts a run.
+ * so a construct this code has never seen never aborts a run. An object at the root of a file
+ * whose type TMDL does not define (root-types.ts) is also a parse issue; nested ones are not.
  */
 export function parseTmdl(file: string, text: string): ParsedFile {
   // Power BI Desktop writes TMDL as UTF-8 with a BOM; it is not part of the first line.
@@ -170,6 +172,10 @@ export function parseTmdl(file: string, text: string): ParsedFile {
       } else {
         node = { ...base, kind: "flag", type: h.type.toLowerCase() };
       }
+      // A root declaration of a type TMDL does not define, such as a misspelt `table`. It stays a
+      // generic root, which the model does not read, so nothing under it reaches a rule.
+      if (indent === 0 && node.kind !== "expr" && !isRootType(h.type))
+        issues.push({ file, line: lineNo, text: raw, reason: `unknown object type "${h.type}"` });
     }
 
     if (pendingDescription) {

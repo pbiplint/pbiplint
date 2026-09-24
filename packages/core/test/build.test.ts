@@ -278,3 +278,82 @@ describe("buildModel on hand-written constructs", () => {
     expect(m.location).toEqual({ file: "", line: 0 });
   });
 });
+
+describe("buildModel on root object types", () => {
+  it("leaves out a root object of a type TMDL does not define, and everything under it", () => {
+    const pf = parseTmdl(
+      "tables/Sales.tmdl",
+      "table Product\n\tcolumn Key\n\t\tdataType: int64\n\ntabel Sales\n\tcolumn Amount\n\t\tdataType: decimal\n\tmeasure Total = SUM(Sales[Amount])\n",
+    );
+    const m = buildModel([pf]);
+    expect(m.tables.map((t) => t.name)).toEqual(["Product"]);
+    expect(pf.issues.map((i) => [i.line, i.reason])).toEqual([[5, 'unknown object type "tabel"']]);
+  });
+
+  it("builds each root type it models, and holds nothing of the types TMDL defines that it does not model", () => {
+    const pf = parseTmdl(
+      "t.tmdl",
+      [
+        "database Sales",
+        "\tcompatibilityLevel: 1567",
+        "",
+        "model Model",
+        "\tculture: en-US",
+        "",
+        "queryGroup 'Fact Queries'",
+        "",
+        'annotation PBI_QueryOrder = ["Sales"]',
+        "",
+        "extendedProperty ParameterMetadata =",
+        "\t\t{",
+        '\t\t  "version": 1',
+        "\t\t}",
+        "",
+        'bindingInfo \'{"kind":"AzureDataExplorer","path":"help"}\'',
+        "\ttype: dataBindingHint",
+        "",
+        "table Sales",
+        "\tcolumn Key",
+        "\t\tdataType: int64",
+        "",
+        "relationship r1",
+        "\tfromColumn: Sales.Key",
+        "\ttoColumn: Product.Key",
+        "",
+        "role Readers",
+        "\tmodelPermission: read",
+        "",
+        "perspective Finance",
+        "\tperspectiveTable Sales",
+        "",
+        "cultureInfo en-US",
+        "",
+        'expression Server = "localhost"',
+        "",
+        "function Double = (x: INT64) => x * 2",
+        "",
+        "dataSource 'Legacy SQL' = provider",
+        "",
+        "createOrReplace",
+        "",
+        "\ttable Product",
+        "\t\tcolumn Key",
+        "\t\t\tdataType: int64",
+        "",
+      ].join("\n"),
+    );
+    expect(pf.issues).toEqual([]);
+    const m = buildModel([pf]);
+    expect(m.props.culture).toBe("en-US");
+    expect(m.annotations).toEqual({ PBI_QueryOrder: '["Sales"]' });
+    // Product sits under createOrReplace, a script command the model does not read.
+    expect(m.tables.map((t) => t.name)).toEqual(["Sales"]);
+    expect(m.relationships.map((r) => r.name)).toEqual(["r1"]);
+    expect(m.roles.map((r) => r.name)).toEqual(["Readers"]);
+    expect(m.perspectives.map((p) => [p.name, p.tables])).toEqual([["Finance", ["Sales"]]]);
+    expect(m.cultures.map((c) => c.name)).toEqual(["en-US"]);
+    expect(m.expressions.map((e) => e.name)).toEqual(["Server"]);
+    expect(m.functions.map((f) => f.name)).toEqual(["Double"]);
+    expect(m.dataSources.map((d) => [d.name, d.kind])).toEqual([["Legacy SQL", "provider"]]);
+  });
+});

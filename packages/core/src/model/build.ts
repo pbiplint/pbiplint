@@ -322,7 +322,9 @@ export function buildModel(files: ParsedFile[]): Model {
           break;
         }
         default:
-          break; // database, queryGroup, extendedProperty, unknown: kept in files, not modeled
+          // database, queryGroup, extendedProperty, bindingInfo, createOrReplace: kept in files,
+          // not modeled. A type TMDL does not define is a parse issue (tmdl/root-types.ts).
+          break;
       }
     }
   }

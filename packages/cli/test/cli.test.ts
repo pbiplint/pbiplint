@@ -60,6 +60,12 @@ describe("pbiplint CLI", () => {
     expect(r.code).toBe(1);
     expect(JSON.parse(r.out).summary.findings).toBe(161);
   });
+  it("--sample reads the model of the bundled project and prints no notice", async () => {
+    const r = await run(["--sample", "--fail-on", "none"]);
+    expect(r.code).toBe(0);
+    expect(r.out.split("\n")[1]).toMatch(/^Model: 11 files\. /);
+    expect(r.err).toBe("");
+  });
   it("respects --fail-on and exits 0 when nothing reaches the threshold", async () => {
     expect((await run([sample, "--fail-on", "none"])).code).toBe(0);
     expect((await run([join(repo, "tests/fixtures/kitchen-sink.SemanticModel")])).code).toBe(0);

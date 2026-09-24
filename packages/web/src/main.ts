@@ -11,7 +11,7 @@ import { InputError, selectModel, type InputTree } from "./input/model-files.js"
 import { directoryPicker, readDirectoryInput, readPickedDirectory } from "./input/pick-folder.js";
 import { readDataTransfer } from "./input/read-drop.js";
 import { renderResults } from "./results/render.js";
-import { SAMPLE_FILES, SAMPLE_NAME } from "./sample.js";
+import { SAMPLE_CONFIG, SAMPLE_FILES, SAMPLE_NAME } from "./sample.js";
 
 /**
  * The page's own element, checked rather than cast: a #paste that stopped being a textarea would
@@ -147,6 +147,10 @@ byId("try-sample", HTMLButtonElement).addEventListener("click", () => {
   run({
     files: SAMPLE_FILES,
     source: `${SAMPLE_NAME} (${plural(SAMPLE_FILES.length, "file")})`,
+    config:
+      SAMPLE_CONFIG === undefined
+        ? undefined
+        : { path: "pbiplint.config.json", text: SAMPLE_CONFIG },
     read: SAMPLE_FILES.map((f) => f.path),
   });
 });

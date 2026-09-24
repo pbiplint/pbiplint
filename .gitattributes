@@ -6,7 +6,7 @@
 # only at this length here, so the deliberate seven-character ones are not reported as leftovers.
 rules/parse-issue.md conflict-marker-size=32
 
-examples/** -text
-# Fixtures are test inputs, not code: GitHub collapses them in a pull request diff and leaves them
-# out of the language stats.
+# The sample and the fixtures are test inputs, not code: GitHub collapses them in a pull request
+# diff and leaves them out of the language stats.
+examples/** -text linguist-generated=true
 tests/fixtures/** -text linguist-generated=true

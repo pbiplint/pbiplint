@@ -55,7 +55,9 @@ it("exports the summary helpers the site shares with the text format", () => {
   // The sample ranks fourteen groups, so the cap is what makes this a list of five rather than
   // all of them. A model with fewer groups than the cap cannot tell the two apart, which is what
   // the earlier fixture here did.
-  const result = lint(readModelFiles(join(examplesDir, "messy-sales")));
+  const result = lint(
+    readModelFiles(join(examplesDir, "messy-sales/Messy Sales Demo.SemanticModel")),
+  );
   expect(skippedLine(result)).toMatch(/rules run/);
   expect(result.groups.length).toBeGreaterThan(5);
   // The five the site puts under "Fix these first" and the text format prints at the top, in rank

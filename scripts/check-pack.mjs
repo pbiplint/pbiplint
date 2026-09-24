@@ -27,8 +27,9 @@ export const REQUIRED = {
     "LICENSE",
     "NOTICE",
     "dist/pbiplint.mjs",
-    "sample/definition/model.tmdl",
-    "sample/definition/tables/Sales.tmdl",
+    "sample/Messy Sales Demo.SemanticModel/definition/model.tmdl",
+    "sample/Messy Sales Demo.SemanticModel/definition/tables/Sales.tmdl",
+    "sample/Messy Sales Demo.pbip",
   ],
 };
 /**

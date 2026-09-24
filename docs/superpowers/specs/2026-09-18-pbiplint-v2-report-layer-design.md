@@ -498,6 +498,15 @@ with a non-empty `Where` (Microsoft's capability data and Desktop-saved
 files, section 3.4), which is the condition `SLICER_SELECTION_SAVED`
 reports.
 
+Amended 2026-09-23 with Michael (release triage, A3 to A5): Report
+measures says unknown, with "reportExtensions.json was not read", when
+that file is in the input but could not be read, and then links no
+rule. Pages counts a tooltip page by either marking Microsoft's page
+schema gives it, page.json's own `type` or its `pageBinding.type`
+(Desktop-saved reports mark most tooltip pages by `type` alone). A fact
+links a rule only when that rule ran in the run, so a rule turned off
+in config or skipped links nothing.
+
 **Cost.** Linear in the JSON. The demo report's largest visual is
 61 KB, most under 5 KB; a 300-visual report is a few megabytes and
 lints well under a second in the browser. No new dependency.

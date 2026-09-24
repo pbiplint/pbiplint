@@ -337,11 +337,15 @@ read, makes that layer absent with the reason "the report folder could
 not be read" or "the model folder could not be read". The input
 itself, when it cannot be read at all, is refused with
 `Could not read <input>: <reason>`, as an input that does not exist is.
-So is an input none of whose files could be read, with the reason of
-the first refusal, since a run over it would report no findings with
-nothing linted. A notice does not change the exit code, which follows
-the findings as it does for the legacy formats. The browser's resolver
-in pull request 7 makes the same decisions.
+So is an input none of whose files could be read, since a run over it
+would report no findings with nothing linted. The input itself was
+read then, and a refused run prints no notices, so the message names
+the path that refused first, with its reason: the input joined with
+that path relative to the input (or to a `.pbip`'s folder), as in
+`Could not read Demo/Demo.Report/definition: EACCES: permission denied`
+for the input `Demo`. A notice does not change the exit code, which
+follows the findings as it does for the legacy formats. The browser's
+resolver in pull request 7 makes the same decisions.
 
 ## 5. PBIR parser and report object model
 

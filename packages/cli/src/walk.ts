@@ -61,8 +61,11 @@ interface Walk {
   /** The folder the input names; a notice's path is relative to it. */
   base: string;
   project: ResolvedProject;
-  /** The first refusal a notice recorded: the input's own when nothing else could be read. */
-  refusal?: SystemError;
+  /**
+   * The first refusal a notice recorded, with the path the notice named: a run that could read
+   * nothing is refused naming that path.
+   */
+  refusal?: { path: string; error: SystemError };
 }
 
 /**
@@ -71,8 +74,8 @@ interface Walk {
  * report, so each path is named once.
  */
 function unread(w: Walk, p: string, e: SystemError): void {
-  w.refusal ??= e;
   const path = toPosix(relative(w.base, p));
+  w.refusal ??= { path, error: e };
   if (w.project.diagnostics.some((d) => d.kind === "unread-file" && d.path === path)) return;
   w.project.diagnostics.push({
     kind: "unread-file",
@@ -252,9 +255,9 @@ export function resolveProject(input: string): ResolvedProject {
     return resolveFolder(input, path);
   } catch (e) {
     // What cannot be read below the input is a notice (attempt and readPart), so what reaches
-    // here is the input itself: its stat, its listing, the one file it names, or an input none of
-    // whose files could be read (resolveFolder). It is refused as "does not exist" is; anything
-    // that is not the operating system's is a bug and says so.
+    // here is the input itself: its stat, its listing, or the one file it names. It is refused as
+    // "does not exist" is; anything that is not the operating system's is a bug and says so. An
+    // input none of whose files could be read is refused in resolveFolder.
     if (isSystemError(e)) throw new UsageError(`Could not read ${input}: ${reasonOf(e)}`);
     throw e;
   }
@@ -265,14 +268,21 @@ export function resolveProject(input: string): ResolvedProject {
  * a project holding more than one is read as the user asked instead of refused.
  *
  * A folder of which nothing could be read, while something in it was refused, is an input that
- * could not be read, refused with the first refusal's reason: a run over it would report no
- * findings in 0 files and read as clean with nothing linted. A legacy part on its own refuses
- * nothing, so it stays a notice.
+ * could not be read: a run over it would report no findings in 0 files and read as clean with
+ * nothing linted. It is refused naming the first path that refused, with that refusal's reason:
+ * the folder itself was read, so what refused is below it, and a refused run prints none of the
+ * notices that name it. A legacy part on its own refuses nothing, so it stays a notice.
  */
 function resolveFolder(input: string, path: string, preferred?: string): ResolvedProject {
   const w: Walk = { base: path, project: { root: path, absent: {}, diagnostics: [] } };
   const project = readFolder(w, input, path, preferred);
-  if (!project.model && !project.report && w.refusal) throw w.refusal;
+  if (!project.model && !project.report && w.refusal) {
+    const { path: below, error } = w.refusal;
+    // Joined to `input`, as readFolder's messages name the folder, in the notices' forward
+    // slashes. The folder itself, were it to refuse once read, is named by `input` alone.
+    const named = below === "" ? input : toPosix(join(input, below));
+    throw new UsageError(`Could not read ${named}: ${reasonOf(error)}`);
+  }
   return project;
 }
 
@@ -388,7 +398,7 @@ function readFolder(w: Walk, input: string, path: string, preferred?: string): R
   readTree(w, path, path, (n) => n.endsWith(".tmdl"), direct);
   if (direct.length) return { ...out, model: { root: path, files: direct } };
   // Nothing to lint but something to say: a legacy part alone, or a part that could not be read,
-  // which resolveFolder turns into a refusal of the input.
+  // which resolveFolder turns into a refused run naming the path that refused.
   if (out.diagnostics.length) return out;
   throw new UsageError(
     `No semantic model or report found at ${input} (expected ${EXPECTED_INPUT})`,

@@ -395,17 +395,27 @@ describe("pbiplint CLI", () => {
     async () => {
       const root = pbipProject("pbiplint-locked-all-");
       const model = join(root, "Demo.SemanticModel");
-      const locked = [join(model, "definition"), join(root, "Demo.Report")];
+      const report = join(root, "Demo.Report");
+      const locked = [join(model, "definition"), report];
       for (const p of locked) chmodSync(p, 0o000);
       try {
         // A part given on its own whose definition cannot be listed, and a project whose every
-        // part was refused, are each an input that could not be read.
-        for (const input of [model, root, join(root, "Demo.pbip")]) {
+        // part was refused, are each an input that could not be read. The message names the
+        // first path that refused, below the input (or below a .pbip's folder), since the input
+        // itself was read; the model is walked before the report. A part folder that refuses as
+        // the input is the input's own refusal, and names the input.
+        const cases: [input: string, refused: string][] = [
+          [model, `${model}/definition`],
+          [root, `${root}/Demo.SemanticModel/definition`],
+          [join(root, "Demo.pbip"), `${root}/Demo.SemanticModel/definition`],
+          [report, report],
+        ];
+        for (const [input, refused] of cases) {
           const r = await run([input]);
           expect(r.code).toBe(2);
           expect(r.out).toBe("");
           expect(r.err).toBe(
-            `pbiplint: Could not read ${input}: EACCES: permission denied\nRun pbiplint --help for usage.\n`,
+            `pbiplint: Could not read ${refused}: EACCES: permission denied\nRun pbiplint --help for usage.\n`,
           );
         }
       } finally {

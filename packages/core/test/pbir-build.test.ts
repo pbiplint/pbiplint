@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildReport, KNOWN_SCHEMAS, literal } from "../src/pbir/build.js";
+import { reportFileUnread } from "../src/rules/report-helpers.js";
 
 const schema = (family: string, version: string) =>
   `https://developer.microsoft.com/json-schemas/fabric/item/report/definition/${family}/${version}/schema.json`;
@@ -830,6 +831,14 @@ describe("buildReport tolerance", () => {
       { path: "definition/pages/a/visuals/w/visual.json", text: visual("w") },
     ]);
     expect(clean.report.unreadDefinitionFiles).toEqual([]);
+    // The one test the engine's skip and the Model fact's unknown share.
+    expect(reportFileUnread(report)).toBe(true);
+    expect(reportFileUnread(clean.report)).toBe(false);
+    const ownFileOnly = buildReport([
+      { path: "definition/report.json", text: j({}) },
+      { path: "definition/notes/owners.json", text: '["alice",]' },
+    ]);
+    expect(reportFileUnread(ownFileOnly.report)).toBe(false);
   });
   it("records whether reportExtensions.json was in the input and could be read", () => {
     const extensions = (...texts: string[]) =>

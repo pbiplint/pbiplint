@@ -13,6 +13,7 @@ import {
   landingPageNotSet,
   openingPage,
   openingPageInvalid,
+  reportFileUnread,
   reportMeasuresToMove,
   slicerSelection,
 } from "../rules/report-helpers.js";
@@ -230,7 +231,7 @@ export function buildFacts(
     const reach = indexes.reachability;
     // Unknown when a report file could not be read, the case NOT_REACHED_FROM_REPORT is skipped in:
     // what that file would have reached is not known, so the fact gives no count and links no rule.
-    if (reach && project.report.unreadDefinitionFiles.length > 0) {
+    if (reach && reportFileUnread(project.report)) {
       fact.detail = "not reached from this report: unknown, a report file could not be read";
     } else if (reach) {
       const u = reach.unreached();

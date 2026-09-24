@@ -123,6 +123,13 @@ export const reportFinding = {
     ),
 };
 
+/**
+ * Whether a report file could not be read: a file under the definition folder that the PBIR
+ * format defines, recorded in `Report.unreadDefinitionFiles`. The engine skips a rule that sets
+ * `needsEveryReportFileRead` when this holds, and the Model fact's not-reached clause says unknown.
+ */
+export const reportFileUnread = (r: Report): boolean => r.unreadDefinitionFiles.length > 0;
+
 export const allVisuals = (r: Report): Visual[] => r.pages.flatMap((p) => p.visuals);
 export const isHiddenPage = (p: Page): boolean => p.visibility === "HiddenInViewMode";
 export const visiblePages = (r: Report): Page[] => r.pages.filter((p) => !isHiddenPage(p));

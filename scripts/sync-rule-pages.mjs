@@ -41,10 +41,14 @@ export const firstParagraph = (s) =>
 /**
  * The Example section for the help block: each fence captioned, its info string reduced to `tmdl`
  * or, for a `pbir` fence, to `json`, with the file the document stands for in the caption. A
- * `tree.json` document names its files by its keys, so its caption stays bare, as on the site.
+ * `tree.json` document names its files by its keys, so its caption stays bare, as on the site. A
+ * policy rule's `json pbiplint.config.json` fence, the config its example runs under, is captioned
+ * with the file name and reduced to `json`, so a Markdown reader gets a plain JSON fence rather
+ * than an info string it does not know.
  */
 export const exampleMarkdown = (example) =>
   example
+    .replace(/^```json pbiplint\.config\.json[ \t]*$/gm, "**pbiplint.config.json**\n\n```json")
     .replace(/^```tmdl fires[ \t]*$/gm, "**Fires the rule**\n\n```tmdl")
     .replace(/^```tmdl fixed[ \t]*$/gm, "**After the fix**\n\n```tmdl")
     .replace(

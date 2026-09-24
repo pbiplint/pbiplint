@@ -40,6 +40,12 @@ const EXAMPLE_CAPTION: Record<string, string> = {
   fires: "Fires the rule",
   fixed: "After the fix",
 };
+/**
+ * The info string of the fence a policy rule's page uses for the config its example runs under.
+ * It renders as a figure captioned with the file name, and is neither an example that fires nor
+ * one that is fixed.
+ */
+const CONFIG_FENCE = "json pbiplint.config.json";
 
 export const escapeHtml = (s: string): string =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -291,7 +297,7 @@ export const headingId = (text: string): string =>
  * scrolled from the keyboard.
  */
 const PRE = '<pre tabindex="0">';
-/** marked's own fence renderer, for a fence that is not an example, whose output gains PRE. */
+/** marked's own fence renderer, for a fence that is not a figure, whose output gains PRE. */
 const plainFence = new Renderer();
 
 /**
@@ -299,10 +305,12 @@ const plainFence = new Renderer();
  * them here. On a rule page, a fence whose info string is `tmdl fires` or `tmdl fixed` renders as
  * a captioned figure, and so does `pbir fires <file>` or `pbir fixed <file>`, as JSON with the
  * file it stands for in the caption (a `tree.json` document names its files by its keys, so its
- * caption stays bare). Any other fence renders as marked writes it. Every code block is a tab
- * stop, since a long line scrolls inside it and a keyboard could not otherwise reach what is out of
- * view (WCAG 2.1.1). A code span naming another rule links to its page; returning false from an
- * override hands the token back to marked's default renderer.
+ * caption stays bare). A `json pbiplint.config.json` fence renders as a JSON figure captioned
+ * `pbiplint.config.json`, without the fires or fixed class, since it is the config an example
+ * runs under rather than an example. Any other fence renders as marked writes it. Every code block
+ * is a tab stop, since a long line scrolls inside it and a keyboard could not otherwise reach what
+ * is out of view (WCAG 2.1.1). A code span naming another rule links to its page; returning false
+ * from an override hands the token back to marked's default renderer.
  */
 function siteMarkdown(links: RuleLinks = new Map(), self = ""): Marked {
   return new Marked({
@@ -312,6 +320,10 @@ function siteMarkdown(links: RuleLinks = new Map(), self = ""): Marked {
       },
       code(token: Tokens.Code): string {
         const { text, lang, escaped } = token;
+        const code = (escaped ? text : escapeCode(text)).replace(/\n$/, "");
+        const figure = (classes: string, caption: string, language: string): string =>
+          `<figure class="${classes}">\n<figcaption>${caption}</figcaption>\n${PRE}<code class="language-${language}">${code}\n</code></pre>\n</figure>\n`;
+        if (lang === CONFIG_FENCE) return figure("example", "pbiplint.config.json", "json");
         const example = /^(tmdl|pbir) (fires|fixed)(?: (\S+))?$/.exec(lang ?? "");
         if (!example) return plainFence.code(token).replace(/^<pre>/, PRE);
         const language = example[1] === "pbir" ? "json" : "tmdl";
@@ -321,8 +333,7 @@ function siteMarkdown(links: RuleLinks = new Map(), self = ""): Marked {
           file !== undefined && file !== "tree.json"
             ? `${EXAMPLE_CAPTION[kind]} in ${escapeHtml(file)}`
             : EXAMPLE_CAPTION[kind]!;
-        const code = (escaped ? text : escapeCode(text)).replace(/\n$/, "");
-        return `<figure class="example ${kind}">\n<figcaption>${caption}</figcaption>\n${PRE}<code class="language-${language}">${code}\n</code></pre>\n</figure>\n`;
+        return figure(`example ${kind}`, caption, language);
       },
       codespan({ text }: Tokens.Codespan): string | false {
         const slug = links.get(text);

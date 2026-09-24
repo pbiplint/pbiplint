@@ -65,8 +65,9 @@ pre code {
   background: none;
   padding: 0;
 }
-/* A rule page's example: the snippet that fires and the same snippet fixed, captioned by the
-   renderer so every page reads the same. */
+/* A rule page's example: the snippet that fires and the same snippet fixed, and on a policy
+   rule's page the pbiplint.config.json it runs under, captioned by the renderer so every page
+   reads the same. */
 .example {
   margin: 16px 0;
 }

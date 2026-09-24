@@ -175,6 +175,22 @@ describe("rulePage", () => {
     ).html;
     expect(escaped).toContain("<figcaption>Fires the rule in a&lt;b.json</figcaption>");
   });
+  it("renders a pbiplint.config.json fence as a JSON figure captioned with the file, with no fires or fixed class", () => {
+    // A policy rule fires only under a policy, so its page shows the config beside the documents.
+    const { html } = rulePage(read("filters-pane-state"), "filters-pane-state");
+    expect(html).toContain(
+      '<figure class="example">\n<figcaption>pbiplint.config.json</figcaption>\n<pre tabindex="0"><code class="language-json">{\n  &quot;rules&quot;: {\n    &quot;FILTERS_PANE_STATE&quot;: { &quot;expect&quot;: &quot;closed&quot; }\n  }\n}\n</code></pre>\n</figure>',
+    );
+    expect(html).not.toContain("language-json pbiplint.config.json");
+    // Only that exact info string: another file name is a plain fence, as marked writes it.
+    const other = read("hide-foreign-keys").replace(
+      "## Why it matters",
+      "## Example\n\n```json other.json\n{}\n```\n\n## Why it matters",
+    );
+    const plain = rulePage(other, "hide-foreign-keys").html;
+    expect(plain).toContain('<pre tabindex="0"><code class="language-json">{}\n</code></pre>');
+    expect(plain).not.toContain("<figcaption>other.json</figcaption>");
+  });
   it("makes every code block a tab stop, so one that scrolls sideways can be scrolled from the keyboard", () => {
     // A long line scrolls inside its block (pre has overflow-x: auto); without a tab stop, a
     // keyboard cannot reach what is scrolled out of view (WCAG 2.1.1, axe's

@@ -10,7 +10,7 @@
  *
  * No Learn page spells two of the words. `extendedProperty` is how Microsoft's sample PBIP spells
  * it, under a column at line 26 of
- * https://github.com/microsoft/Analysis-Services/blob/master/pbidevmode/fabricps-pbip/SamplePBIP/Sales.SemanticModel/definition/tables/Parameter%20-%20Measure.tmdl
+ * https://github.com/microsoft/Analysis-Services/blob/master/pbidevmode/fabricps-pbip/SamplePBIP/Sales.SemanticModel/definition/tables/Parameter%20-%20Measure.tmdl,
  * while the overview's list puts model-level ones at the root (TOM's type names do not settle a
  * TMDL word: TOM's Culture is written `cultureInfo`).
  * `bindingInfo` is TOM's ObjectType.BindingInfo,

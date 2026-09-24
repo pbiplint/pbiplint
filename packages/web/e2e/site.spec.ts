@@ -66,9 +66,10 @@ test("a code block is a region a screen reader names, by its caption when it has
   await expect(
     page.getByRole("region", { name: "After the fix in visual.json", exact: true }),
   ).toHaveCount(1);
-  // A plain fence has no caption, so it is named for what it is.
+  // A plain fence has no caption, so it is named for what it is and its place among the page's
+  // plain blocks, which keeps two of them on one page apart.
   await page.goto("/rules/avoid-duplicate-measures/");
-  await expect(page.getByRole("region", { name: "Code block", exact: true })).toHaveCount(1);
+  await expect(page.getByRole("region", { name: "Code block 1", exact: true })).toHaveCount(1);
 });
 
 test("a control character an example needs reaches the page's text, so a copy of it still fires the rule", async ({

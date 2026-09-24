@@ -319,15 +319,19 @@ export const headingId = (text: string): string =>
     .replace(/\s+/g, "-");
 
 /**
- * How a code block opens: as a tab stop, so a block whose long line scrolls sideways can be
- * scrolled from the keyboard, and as a named region, so a screen reader that lands on the tab stop
- * says what it has reached. A plain fence has no caption to take a name from, so it is "Code
- * block"; a figure's block is named by its caption (figurePre below).
+ * How a page's nth plain code block opens: as a tab stop, so a block whose long line scrolls
+ * sideways can be scrolled from the keyboard, and as a named region, so a screen reader that lands
+ * on the tab stop says what it has reached. A plain fence has no caption to take a name from, so
+ * it is "Code block 1", "Code block 2", and so on in document order, counted apart from the
+ * figures. The number keeps two of them on one page apart: axe's landmark-unique check fails two
+ * regions with one name, and a screen reader's list of regions could not tell them apart either.
+ * A figure's block is named by its caption (figurePre below).
  */
-const PRE = '<pre tabindex="0" role="region" aria-label="Code block">';
+const plainPre = (n: number): string =>
+  `<pre tabindex="0" role="region" aria-label="Code block ${n}">`;
 /**
- * How a figure's code block opens: PRE's tab stop and region, named by the figure's caption, so a
- * screen reader announces "Fires the rule in visual.json, region" when the block takes focus.
+ * How a figure's code block opens: plainPre's tab stop and region, named by the figure's caption,
+ * so a screen reader announces "Fires the rule in visual.json, region" when the block takes focus.
  */
 const figurePre = (id: string): string =>
   `<pre tabindex="0" role="region" aria-labelledby="${id}">`;
@@ -337,8 +341,8 @@ const figurePre = (id: string): string =>
  */
 const captionId = (n: number): string => `code_${n}`;
 /**
- * marked's own fence renderer, for a fence that is not a figure, whose output gains PRE and has
- * its control characters written as references, which marked's escaping leaves raw.
+ * marked's own fence renderer, for a fence that is not a figure, whose output gains plainPre and
+ * has its control characters written as references, which marked's escaping leaves raw.
  */
 const plainFence = new Renderer();
 
@@ -354,8 +358,9 @@ const plainFence = new Renderer();
  * Every code block is a tab stop, since a long line scrolls inside it and a keyboard could not
  * otherwise reach what is out of view (WCAG 2.1.1), and a named region, so the stop is announced
  * as something: a figure's block is labelled by its caption, whose id (captionId) counts the
- * page's figures in document order, and any other block is "Code block". The count starts again
- * with each document parsed, so every page's ids start at `code_1` whichever renderer parses it.
+ * page's figures in document order, and any other block is "Code block" with its own count,
+ * "Code block 1", "Code block 2" (plainPre). Both counts start again with each document parsed,
+ * so every page starts at `code_1` and "Code block 1" whichever renderer parses it.
  *
  * Every code block and code span writes a control character as a character reference
  * (CONTROL_CHARACTER). A code span naming another rule links to its page; the renderer writes
@@ -364,10 +369,12 @@ const plainFence = new Renderer();
  */
 function siteMarkdown(links: RuleLinks = new Map(), self = ""): Marked {
   let figures = 0;
+  let plainBlocks = 0;
   return new Marked({
     hooks: {
       preprocess(markdown: string): string {
         figures = 0;
+        plainBlocks = 0;
         return markdown;
       },
     },
@@ -384,7 +391,11 @@ function siteMarkdown(links: RuleLinks = new Map(), self = ""): Marked {
         };
         if (lang === CONFIG_FENCE) return figure("example", "pbiplint.config.json", "json");
         const example = /^(tmdl|pbir) (fires|fixed)(?: (\S+))?$/.exec(lang ?? "");
-        if (!example) return characterReferences(plainFence.code(token)).replace(/^<pre>/, PRE);
+        if (!example)
+          return characterReferences(plainFence.code(token)).replace(
+            /^<pre>/,
+            plainPre(++plainBlocks),
+          );
         const language = example[1] === "pbir" ? "json" : "tmdl";
         const kind = example[2]!;
         const file = example[3];

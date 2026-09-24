@@ -163,7 +163,7 @@ describe("rulePage", () => {
       '<figure class="example fixed">\n<figcaption id="code_4">After the fix</figcaption>\n<pre tabindex="0" role="region" aria-labelledby="code_4">',
     );
     expect(html).toContain(
-      '<pre tabindex="0" role="region" aria-label="Code block"><code>DAX here\n</code></pre>',
+      '<pre tabindex="0" role="region" aria-label="Code block 1"><code>DAX here\n</code></pre>',
     );
     expect(html).toContain('<h2 id="example">Example</h2>');
   });
@@ -199,7 +199,7 @@ describe("rulePage", () => {
     );
     const plain = rulePage(other, "hide-foreign-keys").html;
     expect(plain).toContain(
-      '<pre tabindex="0" role="region" aria-label="Code block"><code class="language-json">{}\n</code></pre>',
+      '<pre tabindex="0" role="region" aria-label="Code block 1"><code class="language-json">{}\n</code></pre>',
     );
     expect(plain).not.toContain(">other.json</figcaption>");
   });
@@ -208,9 +208,12 @@ describe("rulePage", () => {
     // keyboard cannot reach what is scrolled out of view (WCAG 2.1.1, axe's
     // scrollable-region-focusable). A tab stop with no role or name is announced as nothing in
     // particular, so each block is a region: a figure's is named by its caption, and any other is
-    // "Code block". Example figures, config figures, plain fences, and content pages all count.
+    // "Code block" and its place among the page's plain blocks. Example figures, config figures,
+    // plain fences, and content pages all count.
     const pres = (html: string): string[] => html.match(/<pre\b[^>]*>/g) ?? [];
-    const plainPre = '<pre tabindex="0" role="region" aria-label="Code block">';
+    const plainPre = (n: number): string =>
+      `<pre tabindex="0" role="region" aria-label="Code block ${n}">`;
+    const plain = /^<pre tabindex="0" role="region" aria-label="Code block \d+">$/;
     const figurePre = /^<pre tabindex="0" role="region" aria-labelledby="code_\d+">$/;
     const page = read("hide-foreign-keys").replace(
       "## Why it matters",
@@ -219,16 +222,40 @@ describe("rulePage", () => {
     const { html } = rulePage(page, "hide-foreign-keys");
     const own = pres(rulePage(read("hide-foreign-keys"), "hide-foreign-keys").html).length;
     expect(pres(html).length).toBe(own + 5);
-    expect(pres(html).filter((tag) => tag !== plainPre && !figurePre.test(tag))).toEqual([]);
-    expect(pres(html).filter((tag) => tag === plainPre)).toHaveLength(2);
-    expect(html).toContain(`${plainPre}<code class="language-dax">EVALUATE T\n</code></pre>`);
+    expect(pres(html).filter((tag) => !plain.test(tag) && !figurePre.test(tag))).toEqual([]);
+    expect(pres(html).filter((tag) => plain.test(tag))).toEqual([plainPre(1), plainPre(2)]);
+    expect(html).toContain(`${plainPre(2)}<code class="language-dax">EVALUATE T\n</code></pre>`);
     const content = contentPage(
       "---\ntitle: T\ndescription: D\n---\n\n# T\n\n```\nnpx pbiplint .\n```\n",
       "/t/",
       "content/t.md",
     );
-    expect(pres(content)).toEqual([plainPre]);
-    expect(content).toContain(`${plainPre}<code>npx pbiplint .\n</code></pre>`);
+    expect(pres(content)).toEqual([plainPre(1)]);
+    expect(content).toContain(`${plainPre(1)}<code>npx pbiplint .\n</code></pre>`);
+  });
+  it("names each plain block on a page apart from the others, counted apart from the figures and restarted on each page", () => {
+    // axe's landmark-unique check, which the e2e scan runs, fails two regions with one name, so
+    // two plain fences on a page cannot both be "Code block".
+    const labels = (html: string): string[] =>
+      [...html.matchAll(/<pre [^>]*aria-label="([^"]+)"/g)].map((m) => m[1]!);
+    const page = read("hide-foreign-keys").replace(
+      "## Why it matters",
+      "## Example\n\n```\nfirst\n```\n\n```tmdl fires\ntable T\n```\n\n```dax\nsecond\n```\n\n## Why it matters",
+    );
+    const { html } = rulePage(page, "hide-foreign-keys");
+    expect(labels(html)).toEqual(["Code block 1", "Code block 2"]);
+    expect(new Set(labels(html)).size).toBe(2);
+    // The figure between them keeps its own count: the page's two figures, then this one.
+    expect(html).toContain('<figcaption id="code_3">Fires the rule</figcaption>');
+    // A second page, and a content page rendered twice through the shared renderer, start again.
+    expect(labels(rulePage(page, "hide-foreign-keys").html)).toEqual([
+      "Code block 1",
+      "Code block 2",
+    ]);
+    const content = (): string =>
+      contentPage("---\ntitle: T\ndescription: D\n---\n\n```\na\n```\n", "/t/", "content/t.md");
+    expect(labels(content())).toEqual(["Code block 1"]);
+    expect(labels(content())).toEqual(["Code block 1"]);
   });
   it("gives each figure on a page its own caption id, and names each figure's block by one of them", () => {
     // PARSE_ISSUE's page carries four figures, a TMDL pair and a PBIR pair.

@@ -1,4 +1,12 @@
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -177,6 +185,43 @@ describe("pbiplint CLI", () => {
     expect(r.err).toBe(
       "pbiplint: notice: Demo.Report is stored as a single report.json, which pbiplint cannot read; save it in the PBIR format from Power BI Desktop\n",
     );
+  });
+  // Root reads a folder whatever its mode, so the locked folder proves nothing there.
+  it.skipIf(process.getuid?.() === 0)(
+    "reports a folder it cannot read as a usage error naming it",
+    async () => {
+      const root = mkdtempSync(join(tmpdir(), "pbiplint-locked-"));
+      const locked = join(root, "Demo.Report", "definition", "pages");
+      mkdirSync(locked, { recursive: true });
+      writeFileSync(join(root, "Demo.Report", "definition", "report.json"), "{}");
+      chmodSync(locked, 0o000);
+      try {
+        const r = await run([root]);
+        expect(r.code).toBe(2);
+        expect(r.err).toBe(
+          `pbiplint: Could not read ${locked}: EACCES: permission denied\nRun pbiplint --help for usage.\n`,
+        );
+      } finally {
+        chmodSync(locked, 0o755);
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+  );
+  it("reports a directory where it reads a file as a usage error naming it", async () => {
+    // A link is how a directory reaches a file read: a real directory is walked into instead.
+    const root = mkdtempSync(join(tmpdir(), "pbiplint-isdir-"));
+    try {
+      const def = join(root, "Demo.Report", "definition");
+      mkdirSync(join(def, "pages"), { recursive: true });
+      symlinkSync(join(def, "pages"), join(def, "report.json"));
+      const r = await run([root]);
+      expect(r.code).toBe(2);
+      expect(r.err).toBe(
+        `pbiplint: Could not read ${join(def, "report.json")}: EISDIR: illegal operation on a directory\nRun pbiplint --help for usage.\n`,
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
   it("lists the layer of every rule", async () => {
     const r = await run(["rules"]);

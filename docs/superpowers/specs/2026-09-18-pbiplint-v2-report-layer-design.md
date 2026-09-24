@@ -546,6 +546,11 @@ drillthrough page the same way, by page.json's own `type` or its
 `pageBinding.type`, the reading `HIDE_TOOLTIP_DRILLTROUGH_PAGES` shares
 from this amendment on (section 8.1).
 
+Amended 2026-09-24 with Michael (release triage, DQ4): Visuals counts a
+visual hidden through an ancestor group as hidden, as well as one with
+its own `isHidden`, the reading `HIDDEN_VISUAL_WITH_FIELDS` shares from
+this amendment on (section 8.2).
+
 **Cost.** Linear in the JSON. The demo report's largest visual is
 61 KB, most under 5 KB; a 300-visual report is a few megabytes and
 lints well under a second in the browser. No new dependency.
@@ -656,7 +661,7 @@ pages the same way (section 6).
 | LANDING_PAGE_NOT_SET | Report | report | Report Design | info | No `landingPageName`; the report opens wherever it was saved |
 | OPENING_PAGE_INVALID | Report | report | Error Prevention | error | The landing page names a page that does not exist; or, with no landing page, the active page names a page that does not exist or is hidden |
 | FILTERS_PANE_STATE | Report | report | Report Design | warning | Policy `expect: open \| closed`; fires when the saved state disagrees |
-| HIDDEN_VISUAL_WITH_FIELDS | Visual | report | Maintenance | info | `isHidden` with fields bound; it runs its query only when a bookmark or the Selection pane shows it, so one nothing shows is left behind |
+| HIDDEN_VISUAL_WITH_FIELDS | Visual | report | Maintenance | info | `isHidden`, its own or an ancestor group's (amended 2026-09-24 with Michael), with fields bound; it runs its query only when a bookmark or the Selection pane shows it, so one nothing shows is left behind |
 
 Amended 2026-09-23 with Michael, after checking the two rows against
 Microsoft's own account. `OPENING_PAGE_INVALID` no longer flags a hidden
@@ -676,6 +681,19 @@ with `LocalDateTable_` or `DateTableTemplate_`, as
 relationship to one of them roots neither of its columns, which narrows
 section 6's relationship roots, so a date column the report never uses
 is reported; `REMOVE_AUTO-DATE_TABLE` covers the tables themselves.
+
+Amended 2026-09-24 with Michael (release triage, DQ4):
+`HIDDEN_VISUAL_WITH_FIELDS` counts a visual hidden through an ancestor
+group as hidden (Desktop-saved files mark a hidden group's children
+themselves in only 453 of 1,981 cases), and so does the Visuals fact's
+hidden count (section 6). The groups above a visual are followed
+through `parentGroupName` on the visual's own page, each at most once,
+so a group that names itself or a cycle of groups ends the walk. A
+visual with its own `isHidden` is reported at that line as before; one
+hidden only through a group is reported at line 1 of its visual.json,
+and its detail names the outermost hidden group, as `3 fields bound,
+hidden with Group "Filters"`. The ported rules still read the visual's
+own `isHidden`, as their source does.
 
 Malformed JSON and conflict markers use `PARSE_ISSUE`; legacy formats
 are diagnostics.

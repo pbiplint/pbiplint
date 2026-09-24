@@ -147,14 +147,17 @@ describe("rulePage", () => {
       "## Why it matters",
       "## Example\n\n```tmdl fires\ntable T\n\tcolumn 'A'\n```\n\n```tmdl fixed\ntable T\n```\n\n```\nDAX here\n```\n\n## Why it matters",
     );
+    // The page's own example comes first, so the two figures added here are the third and fourth.
     const { html } = rulePage(page, "hide-foreign-keys");
     expect(html).toContain(
-      '<figure class="example fires">\n<figcaption>Fires the rule</figcaption>\n<pre tabindex="0"><code class="language-tmdl">table T\n\tcolumn &#39;A&#39;\n</code></pre>\n</figure>',
+      '<figure class="example fires">\n<figcaption id="code_3">Fires the rule</figcaption>\n<pre tabindex="0" role="region" aria-labelledby="code_3"><code class="language-tmdl">table T\n\tcolumn &#39;A&#39;\n</code></pre>\n</figure>',
     );
     expect(html).toContain(
-      '<figure class="example fixed">\n<figcaption>After the fix</figcaption>',
+      '<figure class="example fixed">\n<figcaption id="code_4">After the fix</figcaption>\n<pre tabindex="0" role="region" aria-labelledby="code_4">',
     );
-    expect(html).toContain('<pre tabindex="0"><code>DAX here\n</code></pre>');
+    expect(html).toContain(
+      '<pre tabindex="0" role="region" aria-label="Code block"><code>DAX here\n</code></pre>',
+    );
     expect(html).toContain('<h2 id="example">Example</h2>');
   });
   it("renders a pbir fence as a captioned JSON figure that names its file, bare for a tree", () => {
@@ -164,22 +167,22 @@ describe("rulePage", () => {
     );
     const { html } = rulePage(page, "hide-foreign-keys");
     expect(html).toContain(
-      '<figure class="example fires">\n<figcaption>Fires the rule in visual.json</figcaption>\n<pre tabindex="0"><code class="language-json">{ &quot;name&quot;: &quot;v&quot; }\n</code></pre>\n</figure>',
+      '<figure class="example fires">\n<figcaption id="code_3">Fires the rule in visual.json</figcaption>\n<pre tabindex="0" role="region" aria-labelledby="code_3"><code class="language-json">{ &quot;name&quot;: &quot;v&quot; }\n</code></pre>\n</figure>',
     );
     expect(html).toContain(
-      '<figure class="example fixed">\n<figcaption>After the fix</figcaption>\n<pre tabindex="0"><code class="language-json">',
+      '<figure class="example fixed">\n<figcaption id="code_4">After the fix</figcaption>\n<pre tabindex="0" role="region" aria-labelledby="code_4"><code class="language-json">',
     );
     const escaped = rulePage(
       page.replace("pbir fires visual.json", "pbir fires a<b.json"),
       "hide-foreign-keys",
     ).html;
-    expect(escaped).toContain("<figcaption>Fires the rule in a&lt;b.json</figcaption>");
+    expect(escaped).toContain('<figcaption id="code_3">Fires the rule in a&lt;b.json</figcaption>');
   });
   it("renders a pbiplint.config.json fence as a JSON figure captioned with the file, with no fires or fixed class", () => {
     // A policy rule fires only under a policy, so its page shows the config beside the documents.
     const { html } = rulePage(read("filters-pane-state"), "filters-pane-state");
     expect(html).toContain(
-      '<figure class="example">\n<figcaption>pbiplint.config.json</figcaption>\n<pre tabindex="0"><code class="language-json">{\n  &quot;rules&quot;: {\n    &quot;FILTERS_PANE_STATE&quot;: { &quot;expect&quot;: &quot;closed&quot; }\n  }\n}\n</code></pre>\n</figure>',
+      '<figure class="example">\n<figcaption id="code_1">pbiplint.config.json</figcaption>\n<pre tabindex="0" role="region" aria-labelledby="code_1"><code class="language-json">{\n  &quot;rules&quot;: {\n    &quot;FILTERS_PANE_STATE&quot;: { &quot;expect&quot;: &quot;closed&quot; }\n  }\n}\n</code></pre>\n</figure>',
     );
     expect(html).not.toContain("language-json pbiplint.config.json");
     // Only that exact info string: another file name is a plain fence, as marked writes it.
@@ -188,32 +191,76 @@ describe("rulePage", () => {
       "## Example\n\n```json other.json\n{}\n```\n\n## Why it matters",
     );
     const plain = rulePage(other, "hide-foreign-keys").html;
-    expect(plain).toContain('<pre tabindex="0"><code class="language-json">{}\n</code></pre>');
-    expect(plain).not.toContain("<figcaption>other.json</figcaption>");
+    expect(plain).toContain(
+      '<pre tabindex="0" role="region" aria-label="Code block"><code class="language-json">{}\n</code></pre>',
+    );
+    expect(plain).not.toContain(">other.json</figcaption>");
   });
-  it("makes every code block a tab stop, so one that scrolls sideways can be scrolled from the keyboard", () => {
+  it("makes every code block a named region and a tab stop, so it can be scrolled from the keyboard and a screen reader says what it is", () => {
     // A long line scrolls inside its block (pre has overflow-x: auto); without a tab stop, a
     // keyboard cannot reach what is scrolled out of view (WCAG 2.1.1, axe's
-    // scrollable-region-focusable). Example figures, plain fences, and content pages all count.
+    // scrollable-region-focusable). A tab stop with no role or name is announced as nothing in
+    // particular, so each block is a region: a figure's is named by its caption, and any other is
+    // "Code block". Example figures, config figures, plain fences, and content pages all count.
     const pres = (html: string): string[] => html.match(/<pre\b[^>]*>/g) ?? [];
+    const plainPre = '<pre tabindex="0" role="region" aria-label="Code block">';
+    const figurePre = /^<pre tabindex="0" role="region" aria-labelledby="code_\d+">$/;
     const page = read("hide-foreign-keys").replace(
       "## Why it matters",
-      "## Example\n\n```pbir fires visual.json\n{}\n```\n\n```tmdl fixed\ntable T\n```\n\n```\nplain\n```\n\n```dax\nEVALUATE T\n```\n\n## Why it matters",
+      "## Example\n\n```pbir fires visual.json\n{}\n```\n\n```tmdl fixed\ntable T\n```\n\n```json pbiplint.config.json\n{}\n```\n\n```\nplain\n```\n\n```dax\nEVALUATE T\n```\n\n## Why it matters",
     );
     const { html } = rulePage(page, "hide-foreign-keys");
     const own = pres(rulePage(read("hide-foreign-keys"), "hide-foreign-keys").html).length;
-    expect(pres(html).length).toBe(own + 4);
-    expect(pres(html).filter((tag) => tag !== '<pre tabindex="0">')).toEqual([]);
-    expect(html).toContain(
-      '<pre tabindex="0"><code class="language-dax">EVALUATE T\n</code></pre>',
-    );
+    expect(pres(html).length).toBe(own + 5);
+    expect(pres(html).filter((tag) => tag !== plainPre && !figurePre.test(tag))).toEqual([]);
+    expect(pres(html).filter((tag) => tag === plainPre)).toHaveLength(2);
+    expect(html).toContain(`${plainPre}<code class="language-dax">EVALUATE T\n</code></pre>`);
     const content = contentPage(
       "---\ntitle: T\ndescription: D\n---\n\n# T\n\n```\nnpx pbiplint .\n```\n",
       "/t/",
       "content/t.md",
     );
-    expect(pres(content)).toEqual(['<pre tabindex="0">']);
-    expect(content).toContain('<pre tabindex="0"><code>npx pbiplint .\n</code></pre>');
+    expect(pres(content)).toEqual([plainPre]);
+    expect(content).toContain(`${plainPre}<code>npx pbiplint .\n</code></pre>`);
+  });
+  it("gives each figure on a page its own caption id, and names each figure's block by one of them", () => {
+    // PARSE_ISSUE's page carries four figures, a TMDL pair and a PBIR pair.
+    const { html } = rulePage(read("parse-issue"), "parse-issue");
+    const captions = [...html.matchAll(/<figcaption id="([^"]+)">/g)].map((m) => m[1]!);
+    const labelled = [...html.matchAll(/<pre [^>]*aria-labelledby="([^"]+)"/g)].map((m) => m[1]!);
+    expect(captions).toEqual(["code_1", "code_2", "code_3", "code_4"]);
+    expect(labelled).toEqual(captions);
+    // Every caption id is unique among all the page's ids, headings included.
+    const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]!);
+    expect(new Set(ids).size).toBe(ids.length);
+    // Each block is named by its own figure's caption, the one just above it.
+    for (const id of captions)
+      expect(html).toMatch(
+        new RegExp(`<figcaption id="${id}">[^<]*</figcaption>\\n<pre [^>]*aria-labelledby="${id}"`),
+      );
+  });
+  it("numbers the caption ids per page, so every page's start again", () => {
+    const first = rulePage(read("hide-foreign-keys"), "hide-foreign-keys").html;
+    const second = rulePage(read("filters-pane-state"), "filters-pane-state").html;
+    const ids = (html: string): string[] =>
+      [...html.matchAll(/<figcaption id="([^"]+)">/g)].map((m) => m[1]!);
+    expect(ids(first)).toEqual(["code_1", "code_2"]);
+    expect(ids(second)).toEqual(["code_1", "code_2", "code_3"]);
+    // Rendering the first page again gives the same ids, not ones carried on from the last page.
+    expect(ids(rulePage(read("hide-foreign-keys"), "hide-foreign-keys").html)).toEqual([
+      "code_1",
+      "code_2",
+    ]);
+    // Content pages share one renderer across pages, so the count has to start again per parse
+    // rather than per renderer.
+    const content = (): string =>
+      contentPage(
+        "---\ntitle: T\ndescription: D\n---\n\n# T\n\n```tmdl fires\ntable T\n```\n",
+        "/t/",
+        "content/t.md",
+      );
+    expect(ids(content())).toEqual(["code_1"]);
+    expect(ids(content())).toEqual(["code_1"]);
   });
   it("credits PBI Inspector for a page whose source is its ruleset", () => {
     const page = read("hide-foreign-keys").replace(

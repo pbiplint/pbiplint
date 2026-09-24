@@ -293,10 +293,23 @@ export const headingId = (text: string): string =>
     .replace(/\s+/g, "-");
 
 /**
- * How every code block opens: as a tab stop, so a block whose long line scrolls sideways can be
- * scrolled from the keyboard.
+ * How a code block opens: as a tab stop, so a block whose long line scrolls sideways can be
+ * scrolled from the keyboard, and as a named region, so a screen reader that lands on the tab stop
+ * says what it has reached. A plain fence has no caption to take a name from, so it is "Code
+ * block"; a figure's block is named by its caption (figurePre below).
  */
-const PRE = '<pre tabindex="0">';
+const PRE = '<pre tabindex="0" role="region" aria-label="Code block">';
+/**
+ * How a figure's code block opens: PRE's tab stop and region, named by the figure's caption, so a
+ * screen reader announces "Fires the rule in visual.json, region" when the block takes focus.
+ */
+const figurePre = (id: string): string =>
+  `<pre tabindex="0" role="region" aria-labelledby="${id}">`;
+/**
+ * The id of a page's nth figure caption, counted from 1 in document order. The underscore is one
+ * character headingId never writes, so no heading on the page can take a caption's id.
+ */
+const captionId = (n: number): string => `code_${n}`;
 /** marked's own fence renderer, for a fence that is not a figure, whose output gains PRE. */
 const plainFence = new Renderer();
 
@@ -307,13 +320,25 @@ const plainFence = new Renderer();
  * file it stands for in the caption (a `tree.json` document names its files by its keys, so its
  * caption stays bare). A `json pbiplint.config.json` fence renders as a JSON figure captioned
  * `pbiplint.config.json`, without the fires or fixed class, since it is the config an example
- * runs under rather than an example. Any other fence renders as marked writes it. Every code block
- * is a tab stop, since a long line scrolls inside it and a keyboard could not otherwise reach what
- * is out of view (WCAG 2.1.1). A code span naming another rule links to its page; returning false
- * from an override hands the token back to marked's default renderer.
+ * runs under rather than an example. Any other fence renders as marked writes it.
+ *
+ * Every code block is a tab stop, since a long line scrolls inside it and a keyboard could not
+ * otherwise reach what is out of view (WCAG 2.1.1), and a named region, so the stop is announced
+ * as something: a figure's block is labelled by its caption, whose id (captionId) counts the
+ * page's figures in document order, and any other block is "Code block". The count starts again
+ * with each document parsed, so every page's ids start at `code_1` whichever renderer parses it.
+ * A code span naming another rule links to its page; returning false from an override hands the
+ * token back to marked's default renderer.
  */
 function siteMarkdown(links: RuleLinks = new Map(), self = ""): Marked {
+  let figures = 0;
   return new Marked({
+    hooks: {
+      preprocess(markdown: string): string {
+        figures = 0;
+        return markdown;
+      },
+    },
     renderer: {
       heading({ tokens, depth, text }: Tokens.Heading): string {
         return `<h${depth} id="${headingId(text)}">${this.parser.parseInline(tokens)}</h${depth}>\n`;
@@ -321,8 +346,10 @@ function siteMarkdown(links: RuleLinks = new Map(), self = ""): Marked {
       code(token: Tokens.Code): string {
         const { text, lang, escaped } = token;
         const code = (escaped ? text : escapeCode(text)).replace(/\n$/, "");
-        const figure = (classes: string, caption: string, language: string): string =>
-          `<figure class="${classes}">\n<figcaption>${caption}</figcaption>\n${PRE}<code class="language-${language}">${code}\n</code></pre>\n</figure>\n`;
+        const figure = (classes: string, caption: string, language: string): string => {
+          const id = captionId(++figures);
+          return `<figure class="${classes}">\n<figcaption id="${id}">${caption}</figcaption>\n${figurePre(id)}<code class="language-${language}">${code}\n</code></pre>\n</figure>\n`;
+        };
         if (lang === CONFIG_FENCE) return figure("example", "pbiplint.config.json", "json");
         const example = /^(tmdl|pbir) (fires|fixed)(?: (\S+))?$/.exec(lang ?? "");
         if (!example) return plainFence.code(token).replace(/^<pre>/, PRE);

@@ -2,8 +2,9 @@ import { AxeBuilder } from "@axe-core/playwright";
 import { expect, test } from "./fixtures.js";
 
 // The generated pages and the properties every page shares: the policy, the build marker, the
-// deep-link anchors, and an accessibility scan of each page template. Every test also ends by
-// proving no console error was written and no request left the origin (see fixtures.ts).
+// deep-link anchors, the names code blocks carry, and an accessibility scan of each page template.
+// Every test also ends by proving no console error was written and no request left the origin
+// (see fixtures.ts).
 
 const PAGES = [
   "/",
@@ -51,6 +52,23 @@ test("a section of a rule page, the rules index, and the About page can be deep-
     await expect(heading).toBeInViewport();
     expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
   }
+});
+
+test("a code block is a region a screen reader names, by its caption when it has one", async ({
+  page,
+}) => {
+  // The name the browser computes is what a screen reader announces when the block takes focus.
+  await page.goto("/rules/broken-field-reference/");
+  const fires = page.getByRole("region", { name: "Fires the rule in visual.json", exact: true });
+  await expect(fires).toHaveCount(1);
+  await fires.focus();
+  await expect(fires).toBeFocused();
+  await expect(
+    page.getByRole("region", { name: "After the fix in visual.json", exact: true }),
+  ).toHaveCount(1);
+  // A plain fence has no caption, so it is named for what it is.
+  await page.goto("/rules/avoid-duplicate-measures/");
+  await expect(page.getByRole("region", { name: "Code block", exact: true })).toHaveCount(1);
 });
 
 test("no page template has an accessibility violation", async ({ page }) => {

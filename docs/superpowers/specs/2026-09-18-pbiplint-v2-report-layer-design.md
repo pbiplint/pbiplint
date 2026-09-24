@@ -340,8 +340,8 @@ itself, when it cannot be read at all, is refused with
 So is an input none of whose files could be read, since a run over it
 would report no findings with nothing linted. The input itself was
 read then, and a refused run prints no notices, so the message names
-the path that refused first, with its reason: the input joined with
-that path relative to the input (or to a `.pbip`'s folder), as in
+the path that refused first, with its reason: the input (or, for a
+`.pbip`, its folder) joined with that path relative to it, as in
 `Could not read Demo/Demo.Report/definition: EACCES: permission denied`
 for the input `Demo`. A notice does not change the exit code, which
 follows the findings as it does for the legacy formats. The browser's

@@ -890,13 +890,14 @@ own file has such an issue, resolves to `unread` (section 6) and
 `BROKEN_FIELD_REFERENCE` does not report it, since the object could be
 declared in the part pbiplint could not read. So does a reference to a
 field missing from any table while another file has an issue that could
-have taken a `table` line with it: one on a line at the root of the file
-or on a `table` line indented with spaces, or a code fence left open
-above a line at the root. TMDL lets a table's declaration sit in more
-than one file, so that line could have declared the table again. A
-measure found on another table, and a column name a measure on the table
-holds, are still reported, since a measure's name is unique in the model
-and a column cannot share a name with a measure on its table.
+have taken a `table` line with it: a line at the root of the file that
+pbiplint could not read or whose type TMDL does not declare there, a
+`table` line indented with spaces, or a code fence left open above a
+line at the root. TMDL lets a table's declaration sit in more than one
+file, so that line could have declared the table again. A measure found
+on another table, and a column name a measure on the table holds, are
+still reported, since a measure's name is unique in the model and a
+column cannot share a name with a measure on its table.
 
 ### 8.3 Native, tier 2
 

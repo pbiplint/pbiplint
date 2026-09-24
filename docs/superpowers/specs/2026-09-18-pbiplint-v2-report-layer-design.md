@@ -342,9 +342,15 @@ Power BI Desktop saves files on minor versions Microsoft has not
 published (visualContainer 2.10.0 to 2.12.0 in Desktop-saved reports),
 which the parser reads as the family's known shape.
 
-Amended 2026-09-23 with Michael (release triage, A2): so does a file
-whose document parses but is not a JSON object, since Microsoft's
-schemas give every report file an object root; nothing in it is read.
+Amended 2026-09-23 with Michael (release triage, A2): a file whose
+document parses but is not a JSON object also produces a `PARSE_ISSUE`
+finding, since Microsoft's schemas give every file the PBIR format
+defines an object root; nothing in it is read. Those files are
+definition.pbir, the report's `.platform`, the project's `.pbip`, and,
+under `definition/`, the files Learn's PBIR folder table names. Any
+other JSON file under `definition/` is the author's own, with no schema,
+and keeps the reading above: invalid JSON or a conflict marker there is
+a `PARSE_ISSUE` finding, and a document that is not an object is not.
 
 **Object model.**
 
@@ -419,12 +425,13 @@ resolves among the report's own measures only (Power BI Desktop writes
 Microsoft's reportExtension schema says to leave the schema empty for a
 model measure), so a reference left naming the extension after its
 measure moved into the model is unresolved, whatever the model holds.
-While reportExtensions.json cannot be read (merge-conflict markers or
-invalid JSON, which section 5 makes a `PARSE_ISSUE` finding), such a
-reference resolves to `unread`, which no rule reports, because pbiplint
-cannot say what the file defines; with no reportExtensions.json in the
-input, it stays unresolved, with a reason saying the report defines no
-extension measures.
+While reportExtensions.json cannot be read (merge-conflict markers,
+invalid JSON, or a document that is not a JSON object, which section 5
+makes a `PARSE_ISSUE` finding), such a reference resolves to `unread`,
+which no rule reports, because pbiplint cannot say what the file
+defines; with no reportExtensions.json in the input, it stays
+unresolved, with a reason saying the report defines no extension
+measures.
 
 **Reachability index.** Roots: every resolved report reference; both
 columns of every relationship; columns named in RLS and OLS filters;

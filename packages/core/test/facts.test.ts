@@ -774,6 +774,143 @@ describe("buildFacts", () => {
     expect(visualsFact({ path: "definition/pages/p1/visuals/v2/mobile.json", text: "{" })).toEqual(
       visualsFact(),
     );
+    // Every registered type used by a visual that was read: the unread one cannot change the count.
+    const allUsed = buildReport([
+      {
+        path: "definition/report.json",
+        text: j({ publicCustomVisuals: ["Used123"] }),
+      },
+      page("p1", "Overview"),
+      visual("p1", "v4", "Used123"),
+      { path: "definition/pages/p1/visuals/v9/visual.json", text: "[]" },
+    ]).report;
+    expect(
+      buildFacts({ report: allUsed }, buildIndexes({ report: allUsed }), ALL).find(
+        (f) => f.label === "Visuals",
+      ),
+    ).toEqual({
+      layer: "report",
+      label: "Visuals",
+      value: "1",
+      detail: "1 custom visual type registered, 1 used",
+    });
+  });
+  it("says unknown for slicers or saved selections only where a visual.json that could not be read could change it", () => {
+    const region = [column("Sales", "Region")];
+    const selection = {
+      objects: {
+        general: [
+          {
+            properties: {
+              filter: {
+                filter: {
+                  Version: 2,
+                  From: [{ Name: "s", Entity: "Sales", Type: 0 }],
+                  Where: [
+                    {
+                      Condition: {
+                        In: {
+                          Expressions: [
+                            {
+                              Column: {
+                                Expression: { SourceRef: { Source: "s" } },
+                                Property: "Region",
+                              },
+                            },
+                          ],
+                          Values: [[{ Literal: { Value: "'West'" } }]],
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        ],
+      },
+    };
+    const clearSlicer = visual("p1", "clear", "slicer", {}, region);
+    const savedSlicer = visual("p1", "saved", "slicer", {}, region, selection);
+    const chiclet = visual("p1", "chiclet", "ChicletSlicer1448559807354", {}, region, selection);
+    const table = visual("p1", "table", "tableEx", {}, region);
+    const unread = { path: "definition/pages/p1/visuals/v9/visual.json", text: '{ "name": "v9", ' };
+    const slicers = (...visuals: { path: string; text: string }[]) => {
+      const { report } = buildReport([page("p1", "Overview"), ...visuals]);
+      return buildFacts({ report }, buildIndexes({ report }), ALL).find(
+        (f) => f.label === "Slicers",
+      );
+    };
+    const row = (value: string, detail: string, ruleId?: string) => ({
+      layer: "report",
+      label: "Slicers",
+      value,
+      detail,
+      ...(ruleId ? { ruleId } : {}),
+    });
+    const unknownSelections = "saved selections: unknown, a visual.json could not be read";
+    // The unread visual could be a slicer, or carry a selection: neither "none" nor "no saved
+    // selection" can be said.
+    expect(slicers(table, unread)).toEqual(row("unknown", unknownSelections));
+    expect(slicers(clearSlicer, unread)).toEqual(row("1", unknownSelections));
+    expect(slicers(chiclet, unread)).toEqual(
+      row(
+        "unknown",
+        "1 saved selection, 1 on a custom slicer; a visual.json could not be read",
+        "SLICER_SELECTION_SAVED",
+      ),
+    );
+    // Counts that never read none are lower bounds and stay as they are.
+    expect(slicers(savedSlicer, chiclet, unread)).toEqual(
+      row("1", "2 saved selections, 1 on a custom slicer", "SLICER_SELECTION_SAVED"),
+    );
+    // A page.json or a mobile.json that could not be read holds no visual.
+    for (const file of [
+      { path: "definition/pages/p9/page.json", text: "{" },
+      { path: "definition/pages/p1/visuals/table/mobile.json", text: "{" },
+    ]) {
+      expect(slicers(table, file), file.path).toEqual({
+        layer: "report",
+        label: "Slicers",
+        value: "none",
+      });
+      expect(slicers(clearSlicer, file), file.path).toEqual(row("1", "no saved selection"));
+    }
+  });
+  it("says unknown for mobile layouts only when a mobile.json that could not be read could add one", () => {
+    const mobile = (...extra: { path: string; text: string }[]) => {
+      const { report } = buildReport([
+        page("p1", "Overview"),
+        page("p2", "Detail"),
+        visual("p1", "a", "card"),
+        visual("p2", "b", "card"),
+        ...extra,
+      ]);
+      return buildFacts({ report }, buildIndexes({ report }), ALL).find(
+        (f) => f.label === "Mobile layouts",
+      );
+    };
+    const unreadMobile = { path: "definition/pages/p1/visuals/a/mobile.json", text: "{" };
+    expect(mobile(unreadMobile)).toEqual({
+      layer: "report",
+      label: "Mobile layouts",
+      value: "unknown",
+      detail: "a mobile.json could not be read",
+    });
+    // A count that is not none is a lower bound and stays.
+    expect(
+      mobile(unreadMobile, { path: "definition/pages/p2/visuals/b/mobile.json", text: j({}) }),
+    ).toEqual({ layer: "report", label: "Mobile layouts", value: "1 of 2 pages" });
+    // A visual.json or a page.json that could not be read holds no mobile layout.
+    for (const file of [
+      { path: "definition/pages/p1/visuals/c/visual.json", text: "{" },
+      { path: "definition/pages/p3/page.json", text: "{" },
+    ])
+      expect(mobile(file), file.path).toEqual({
+        layer: "report",
+        label: "Mobile layouts",
+        value: "none",
+      });
   });
   it("names an opening page whose page.json could not be read as pages.json names it, and never calls it missing", () => {
     const opensOn = (header: Record<string, unknown>) => {

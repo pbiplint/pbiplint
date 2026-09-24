@@ -3,6 +3,7 @@ import type { Indexes } from "../index/build.js";
 import type { Report } from "../pbir/types.js";
 import {
   allVisuals,
+  customVisualUseUnknown,
   fieldFileUnread,
   filtersPaneState,
   hiddenVisualWithFields,
@@ -12,6 +13,7 @@ import {
   isSlicer,
   isTooltipPage,
   landingPageNotSet,
+  mobileFileUnread,
   openingPage,
   openingPageInvalid,
   reportMeasuresToMove,
@@ -121,16 +123,18 @@ function reportFacts(project: Project, report: Report, known: ReadonlySet<string
   );
 
   // Visuals. A visual hidden through its group counts as hidden, the reading
-  // HIDDEN_VISUAL_WITH_FIELDS shares. While a visual.json could not be read, how many registered
-  // custom visual types are used is unknown, since that visual could be of any of them, and
-  // REMOVE_UNUSED_CUSTOM_VISUALS is skipped, so the fact links it only when it can fire.
+  // HIDDEN_VISUAL_WITH_FIELDS shares. While a visual.json could not be read and a registered
+  // custom visual type is used by no visual that was read, how many are used is unknown, since the
+  // unread visual could be of that type; REMOVE_UNUSED_CUSTOM_VISUALS is skipped on the same
+  // condition, so the fact links it only when it can fire. The count and the hidden count are
+  // lower bounds, and never read none.
   const visuals = allVisuals(report).filter((v) => !v.isGroup);
   const hiddenVisuals = visuals.filter(isHiddenVisual);
   const hiddenWithFields = visuals.filter(hiddenVisualWithFields).length;
   const registered = report.publicCustomVisuals;
   const usedTypes = new Set(visuals.map((v) => v.type));
   const used = registered.filter((t) => usedTypes.has(t)).length;
-  const usedUnknown = visualFileUnread(report);
+  const usedUnknown = customVisualUseUnknown(report);
   const visualParts = [
     hiddenVisuals.length ? `${hiddenVisuals.length} hidden` : "",
     registered.length
@@ -183,35 +187,55 @@ function reportFacts(project: Project, report: Report, known: ReadonlySet<string
   // by the selection it carries, so the detail counts every saved selection, as
   // SLICER_SELECTION_SAVED reads them, and names those on a visual that is not a built-in slicer.
   // With no built-in slicer the value is none, and a custom slicer's selection still shows in the
-  // detail beside it.
+  // detail beside it. While a visual.json could not be read, that visual could be a slicer or carry
+  // a selection, so what would read none, the value or "no saved selection", reads unknown; a count
+  // above none is a lower bound and stays.
   const slicers = visuals.filter(isSlicer).length;
   const selected = visuals.filter((v) => slicerSelection(v) !== undefined);
   const custom = selected.filter((v) => !isSlicer(v)).length;
+  const visualUnread = visualFileUnread(report);
+  const unreadVisual = "a visual.json could not be read";
+  const slicerValue = slicers ? String(slicers) : visualUnread ? "unknown" : "none";
   const selections = selected.length
     ? n(selected.length, "saved selection") +
-      (custom ? `, ${custom} on ${custom === 1 ? "a custom slicer" : "custom slicers"}` : "")
-    : slicers
-      ? "no saved selection"
-      : undefined;
+      (custom ? `, ${custom} on ${custom === 1 ? "a custom slicer" : "custom slicers"}` : "") +
+      (slicerValue === "unknown" ? `; ${unreadVisual}` : "")
+    : visualUnread
+      ? `saved selections: unknown, ${unreadVisual}`
+      : slicers
+        ? "no saved selection"
+        : undefined;
   facts.push(
     withRule(
       {
         layer: "report",
         label: "Slicers",
-        value: slicers ? String(slicers) : "none",
+        value: slicerValue,
         ...(selections === undefined ? {} : { detail: selections }),
       },
       selected.length > 0 ? "SLICER_SELECTION_SAVED" : undefined,
     ),
   );
 
-  // Mobile layouts and schema versions.
+  // Mobile layouts and schema versions. While a mobile.json could not be read, the layout it marks
+  // is not counted, so none reads unknown; a count above none is a lower bound and stays.
   const mobilePages = pages.filter((p) => p.visuals.some((v) => v.hasMobileLayout)).length;
-  facts.push({
-    layer: "report",
-    label: "Mobile layouts",
-    value: mobilePages ? `${mobilePages} of ${n(pages.length, "page")}` : "none",
-  });
+  facts.push(
+    mobilePages
+      ? {
+          layer: "report",
+          label: "Mobile layouts",
+          value: `${mobilePages} of ${n(pages.length, "page")}`,
+        }
+      : mobileFileUnread(report)
+        ? {
+            layer: "report",
+            label: "Mobile layouts",
+            value: "unknown",
+            detail: "a mobile.json could not be read",
+          }
+        : { layer: "report", label: "Mobile layouts", value: "none" },
+  );
   const sv = report.schemaVersions;
   const versions = [
     sv.report && `report ${sv.report}`,

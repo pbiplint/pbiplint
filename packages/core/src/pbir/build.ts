@@ -400,6 +400,9 @@ export const holdsFieldReferences = (path: string): boolean =>
 /** Whether the definition file is a visual's visual.json, the one file that gives a visual its type. */
 export const isVisualFile = (path: string): boolean => VISUAL_FILE.test(path);
 
+/** Whether the definition file is a visual's mobile.json, which marks the visual's mobile layout. */
+export const isMobileFile = (path: string): boolean => MOBILE_FILE.test(path);
+
 /**
  * Whether the PBIR format defines the file: definition.pbir, the report's .platform, the project's
  * .pbip, and the definition files. Microsoft publishes a schema for each, with an object root; any

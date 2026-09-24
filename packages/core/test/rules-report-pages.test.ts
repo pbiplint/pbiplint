@@ -5,7 +5,7 @@ import {
   ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY,
 } from "../src/rules/pbi-inspector/pages.js";
 import { REMOVE_UNUSED_CUSTOM_VISUALS } from "../src/rules/pbi-inspector/report.js";
-import { visualFileUnread } from "../src/rules/report-helpers.js";
+import { customVisualUseUnknown } from "../src/rules/report-helpers.js";
 import { j, page, pretty, reportObjectIds, visual } from "./report-helpers.js";
 
 describe("REMOVE_UNUSED_CUSTOM_VISUALS", () => {
@@ -60,7 +60,34 @@ describe("REMOVE_UNUSED_CUSTOM_VISUALS", () => {
         file.path,
       ).toEqual(["ChicletSlicer1448559807354"]);
     }
-    expect(REMOVE_UNUSED_CUSTOM_VISUALS.skipWhenUnread).toBe(visualFileUnread);
+    expect(REMOVE_UNUSED_CUSTOM_VISUALS.skipWhenUnread).toBe(customVisualUseUnknown);
+  });
+  it("runs while a visual.json could not be read when the unread visual could not change its answer", () => {
+    const unread = { path: "definition/pages/p/visuals/w/visual.json", text: '{ "name": "w", ' };
+    const run = (registered: string[] | undefined) =>
+      lint(
+        [
+          {
+            path: "definition/report.json",
+            text: j(registered === undefined ? {} : { publicCustomVisuals: registered }),
+          },
+          page("p"),
+          visual("p", "v", "Used123"),
+          unread,
+        ],
+        { rules: [REMOVE_UNUSED_CUSTOM_VISUALS] },
+      );
+    // No custom visual registered, or every registered type used by a visual that was read.
+    for (const registered of [undefined, [], ["Used123"]]) {
+      const r = run(registered);
+      expect(r.summary.rulesSkipped, String(registered)).toEqual([]);
+      expect(r.summary.rulesRun, String(registered)).toBe(1);
+      expect(r.findings, String(registered)).toEqual([]);
+    }
+    // A registered type no visual that was read uses: the unread one could, so the rule is skipped.
+    expect(run(["Used123", "ChicletSlicer1448559807354"]).summary.rulesSkipped).toEqual([
+      { id: "REMOVE_UNUSED_CUSTOM_VISUALS", reason: "reportFileUnread" },
+    ]);
   });
 });
 

@@ -1,4 +1,4 @@
-import { holdsFieldReferences, isVisualFile } from "../pbir/build.js";
+import { holdsFieldReferences, isMobileFile, isVisualFile } from "../pbir/build.js";
 import { lineOfPointer } from "../pbir/json.js";
 import {
   bookmarkLabel,
@@ -136,11 +136,30 @@ export const fieldFileUnread = (r: Report): boolean =>
   r.unreadDefinitionFiles.some(holdsFieldReferences);
 
 /**
- * Whether a visual.json could not be read. The visual it holds could be of any type, so
- * REMOVE_UNUSED_CUSTOM_VISUALS sets this as its `skipWhenUnread` and the Visuals fact says how
- * many registered custom visual types are used is unknown.
+ * Whether a visual.json could not be read. The visual it holds could be of any type, a slicer
+ * included, and could carry a saved selection, so the Slicers fact says unknown where it would
+ * otherwise say none.
  */
 export const visualFileUnread = (r: Report): boolean => r.unreadDefinitionFiles.some(isVisualFile);
+
+/**
+ * Whether a registered custom visual type is used by no visual that was read while a visual.json
+ * could not be read: the unread visual could be of that type, so whether it is used is unknown.
+ * REMOVE_UNUSED_CUSTOM_VISUALS sets this as its `skipWhenUnread`, and the Visuals fact says the
+ * used count is unknown on the same condition. With no custom visual registered, or every
+ * registered type used by a visual that was read, the unread visual changes neither.
+ */
+export function customVisualUseUnknown(r: Report): boolean {
+  if (!visualFileUnread(r)) return false;
+  const used = new Set(allVisuals(r).map((v) => v.type));
+  return r.publicCustomVisuals.some((t) => !used.has(t));
+}
+
+/**
+ * Whether a visual's mobile.json could not be read. The Mobile layouts fact says unknown then
+ * where it would otherwise say none, since that file marks a mobile layout.
+ */
+export const mobileFileUnread = (r: Report): boolean => r.unreadDefinitionFiles.some(isMobileFile);
 
 export const allVisuals = (r: Report): Visual[] => r.pages.flatMap((p) => p.visuals);
 export const isHiddenPage = (p: Page): boolean => p.visibility === "HiddenInViewMode";

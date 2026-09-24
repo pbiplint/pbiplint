@@ -7008,6 +7008,8 @@ git commit -m "test(sample): pin every planted violation and the new totals"
 
 ### Task 35: Verification and pull request 6
 
+If pull request 6 keeps the site's sample model-only until pull request 7, as the B7 paragraph in Task 32 recommends and asks pull request 6 to record in the ledger, the body below leaves "the site bundle" out of what carries the whole project and, in place of "every pin is updated", says the CLI's pins move while the site's sample and its pins stay at 161 findings in 11 files until pull request 7 (amended 2026-09-23 with Michael; release triage, B7).
+
 As Task 20 Steps 1 to 3, branch `v2-sample-report`, title "v2 sample: Messy Sales Demo becomes a PBIP with a report that plants every report rule", body:
 
 ```
@@ -7276,6 +7278,8 @@ git commit -m "feat(web): selectProject mirrors the CLI on a tree of paths, with
 **Files:**
 - Modify: `packages/web/src/results/render.ts`, `packages/web/src/main.ts`, `packages/web/src/styles.css`, `packages/web/index.html`, `packages/web/content/about.md`, `packages/web/src/build/pages.ts` (`SITE_LAYERS` gains `report`, and the layer column's condition turns true with it: until this flip the browser would link to report rule pages the site does not publish, and no static check catches a 404 behind a link built at runtime)
 - Test: `packages/web/test/render.test.ts`, `packages/web/test/home.test.ts`, `packages/web/test/styles.test.ts`, `packages/web/test/generate.test.ts` (the pinned `SITE_LAYERS` value, the page count, the index sentence, and the sitemap all move to the full count here; its layer tests go red until they do, which is the forcing function in this direction)
+
+If pull request 6 kept the site's sample model-only, as the B7 paragraph in Task 32 recommends, this task also modifies `packages/web/src/sample.ts`, restoring its three globs (the report's files, the `.pbip`, and `pbiplint.config.json`) so that `SAMPLE_FILES` holds the report and `SAMPLE_CONFIG` the config as Step 1 expects, and moves the web sample pins Task 34 then left alone, which brings `packages/web/test/sample.test.ts` and `packages/web/e2e/home.spec.ts` into this task beside the render, home, and export tests Step 1 already updates (amended 2026-09-23 with Michael; release triage, B7).
 
 **Interfaces:**
 - `RenderOptions.source` becomes the project label without counts; `renderResults` builds the heading from `result.layers`: `Results for <source> (model, 11 files · report, 46 files)`, or `(report, 46 files)` / `(model, 11 files)` for one layer; `SAMPLE_NAME` stays "the sample project".

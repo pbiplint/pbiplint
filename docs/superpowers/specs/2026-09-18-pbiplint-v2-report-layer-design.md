@@ -630,7 +630,7 @@ compares on ids. All ported rules are `warning`.
 | Id | Scope | Category | Options | Notes |
 |---|---|---|---|---|
 | REMOVE_UNUSED_CUSTOM_VISUALS | Report | Performance | | One finding per unused custom visual |
-| REDUCE_VISUALS_ON_PAGE | Page | Performance | `max` 20 | Hidden visuals and shapes, slicers, buttons, text boxes excluded, as the source does |
+| REDUCE_VISUALS_ON_PAGE | Page | Performance | `max` 20 | Visuals with their own `isHidden` and shapes, slicers, buttons, text boxes excluded, as the source does (amended 2026-09-24 with Michael) |
 | REDUCE_OBJECTS_WITHIN_VISUALS | Visual | Performance | `max` 6 | **Deviation:** count the fields bound to the visual's roles once, not every `projections` array in the file |
 | REDUCE_TOPN_FILTERS | Page | Performance | `max` 4 | |
 | REDUCE_ADVANCED_FILTERS | Page | Performance | `max` 4 | **Deviation:** count only filters with a condition applied; the source also counts an Advanced filter with nothing set, such as a slicer's or one Desktop writes for a visual's own fields (amended 2026-09-22 after the oracle run) |
@@ -651,6 +651,15 @@ research corpus of Desktop-saved reports). It is the fourth documented
 deviation. The finding points at `pageBinding` when that marks the
 page, else at `type`. The Pages fact counts tooltip and drillthrough
 pages the same way (section 6).
+
+Amended 2026-09-24 with Michael (release triage, DQ4):
+`REDUCE_VISUALS_ON_PAGE` leaves out a visual by its own `isHidden`
+only, as the source's test does, so a visual hidden only through its
+group is counted and the hidden group itself is not. This is not a
+deviation: the row now names what its "hidden visuals" always meant,
+because `HIDDEN_VISUAL_WITH_FIELDS` and the Visuals fact now also count
+a visual hidden through an ancestor group as hidden (sections 6 and
+8.2). The ported rules keep reading the visual's own `isHidden`.
 
 ### 8.2 Native, tier 1
 

@@ -57,13 +57,17 @@ const list = (v: string | string[] | undefined): string[] => (Array.isArray(v) ?
 /**
  * A C0 control character other than tab, line feed, and carriage return, or U+007F. A rule page
  * can need one in an example, such as the U+0001 the invalid-character pages show, which a copy of
- * the example has to keep to fire the rule. Written raw, it is an invisible byte in the page that
- * an HTML parser reports as a parse error, so the renderer writes each as a character reference
- * (characterReferences below), and check-site.ts fails the build on one that reaches a page raw.
- * The reference is visible in the page's source and in a diff. It is not valid HTML either: the
- * standard makes a reference to a control character a parse error too, which parse5 names
- * control-character-reference, except for U+000C, which HTML counts as whitespace. A browser
- * recovers from both the same way.
+ * the example has to keep to fire the rule. Written raw, it is an invisible byte in the page, so
+ * the renderer writes each as a character reference (characterReferences below), and
+ * check-site.ts fails the build on one that reaches a page raw. The reference is visible in the
+ * page's source and in a diff.
+ *
+ * Neither form is valid HTML. The standard makes a raw control character a parse error, which
+ * parse5 names control-character-in-input-stream, and a reference to one a parse error too,
+ * control-character-reference, and a browser keeps the character either way. Two are exceptions.
+ * U+000C is whitespace to HTML, so neither form is an error. U+0000 has errors of its own: raw it
+ * is unexpected-null-character and a browser drops it, and as a reference it is
+ * null-character-reference and a browser reads it as U+FFFD.
  */
 // eslint-disable-next-line no-control-regex -- matching control characters is the whole point
 export const CONTROL_CHARACTER = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;

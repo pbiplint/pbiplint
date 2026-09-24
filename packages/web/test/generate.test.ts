@@ -446,6 +446,68 @@ describe("rulePage", () => {
   });
 });
 
+describe("code region names", () => {
+  // axe's landmark-unique check, which the e2e scan runs, fails two regions with one name, and a
+  // screen reader's list of regions could not tell them apart either. A figure's block takes its
+  // caption's text as its name, so two figures with one caption on a page repeat a name.
+
+  /**
+   * Each code region's name on a page, in document order: a figure's block by the text of the
+   * caption its aria-labelledby names, a plain block by its aria-label. A labelledby that names no
+   * caption on the page reads as a problem rather than a name.
+   */
+  const regionNames = (html: string): string[] => {
+    const captions = new Map(
+      [...html.matchAll(/<figcaption id="([^"]+)">([^<]*)<\/figcaption>/g)].map((m) => [
+        m[1]!,
+        m[2]!,
+      ]),
+    );
+    return [...html.matchAll(/<pre [^>]*?(aria-labelledby|aria-label)="([^"]+)"/g)].map((m) =>
+      m[1] === "aria-label" ? m[2]! : (captions.get(m[2]!) ?? `no caption with id ${m[2]}`),
+    );
+  };
+  const repeated = (names: string[]): string[] => names.filter((n, i) => names.indexOf(n) !== i);
+
+  it("finds a caption a page repeats, so the check on every page below can fail", () => {
+    const page = read("hide-foreign-keys").replace(
+      "## Why it matters",
+      "## Example\n\n```tmdl fires\ntable T\n```\n\n## Why it matters",
+    );
+    expect(regionNames(rulePage(page, "hide-foreign-keys").html)).toEqual([
+      "Fires the rule",
+      "After the fix",
+      "Fires the rule",
+    ]);
+    expect(repeated(regionNames(rulePage(page, "hide-foreign-keys").html))).toEqual([
+      "Fires the rule",
+    ]);
+  });
+  it("gives the code regions on every rule page, published or not, names that differ", () => {
+    // Every page of every layer, not only the ones SITE_LAYERS publishes today, so a report page
+    // that repeats a caption fails when it is written rather than when pull request 7 publishes
+    // it. Each is rendered the way generate.ts renders a rule page, with the link map built from
+    // the same pages.
+    const pages = readdirSync(RULES_DIR)
+      .filter((f) => f.endsWith(".md"))
+      .sort()
+      .map((file) => ({
+        slug: file.replace(/\.md$/, ""),
+        markdown: read(file.replace(/\.md$/, "")),
+      }));
+    expect(pages.some((p) => /\nlayer: report\n/.test(p.markdown))).toBe(true);
+    const links = ruleLinks(pages);
+    const problems = pages.flatMap(({ slug, markdown }) => {
+      const names = regionNames(rulePage(markdown, slug, links).html);
+      return [
+        ...names.filter((n) => n.startsWith("no caption")),
+        ...repeated(names).map((n) => `repeats "${n}"`),
+      ].map((problem) => `rules/${slug}.md: ${problem}`);
+    });
+    expect(problems).toEqual([]);
+  });
+});
+
 describe("withIgnoreHelp", () => {
   it("appends to the section whether or not another section follows it", () => {
     const help = ignoreHelp("X", ["Column"]);

@@ -125,7 +125,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   OPENING_PAGE_INVALID:
     "A pages.json whose landing page names a page the report does not have, or, when no landing page is set, whose active page names a page the report does not have or a page hidden from readers.",
   PARSE_ISSUE:
-    "Lines the TMDL parser could not use: space indentation, an unterminated code fence, a line at an impossible indentation, a line in no form the parser recognizes, and a `///` description with a blank line between it and its declaration; and a report JSON file that is not valid JSON, that carries a merge conflict marker, or whose content is not a JSON object.",
+    "Lines the TMDL parser could not use: space indentation, an unterminated code fence, a line at an impossible indentation, a line in no form the parser recognizes, and a `///` description with a blank line between it and its declaration; a report JSON file that is not valid JSON or carries a merge conflict marker; and a report file Microsoft publishes a schema for, such as report.json or a page.json, whose content is not a JSON object.",
   PARTITION_NAME_SHOULD_MATCH_TABLE_NAME_FOR_SINGLE_PARTITION_TABLES:
     "Regular tables with exactly one partition whose name differs from the table name. Calculated tables and calculation groups are not checked.",
   PERCENTAGE_FORMATTING:

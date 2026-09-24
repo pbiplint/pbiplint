@@ -22,13 +22,13 @@ test("lints the sample project and announces the result", async ({ page }) => {
   const results = page.locator("#results");
   await expect(results).toBeVisible();
   await expect(results.locator(".summary")).toContainText(
-    "161 findings (16 errors, 39 warnings, 106 info) in 11 files",
+    "185 findings (16 errors, 54 warnings, 115 info) in 14 files",
   );
   await expect(page.locator("#announce")).toHaveText(
-    /^Results for the sample project \(11 files\): 161 findings/,
+    /^Results for the sample project \(14 files\): 185 findings/,
   );
   await expect(results.locator(".fix-first li")).toHaveCount(5);
-  await expect(results.locator("details.files summary")).toHaveText("Files read (11)");
+  await expect(results.locator("details.files summary")).toHaveText("Files read (14)");
   await expect(page.locator("#status")).toBeHidden();
 });
 
@@ -124,7 +124,7 @@ test("downloads the Markdown report", async ({ page }) => {
   ]);
   expect(download.suggestedFilename()).toMatch(/\.md$/);
   const text = readFileSync((await download.path())!, "utf8");
-  expect(text).toContain("161 findings");
+  expect(text).toContain("185 findings");
 });
 
 test("copies the Markdown report from the button beside the downloads", async ({

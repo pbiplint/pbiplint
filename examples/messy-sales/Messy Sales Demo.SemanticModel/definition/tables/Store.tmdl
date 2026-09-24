@@ -93,6 +93,21 @@ table Store
 
 		annotation SummarizationSetBy = Automatic
 
+	hierarchy Geography
+		lineageTag: 9ab56f94-f99e-4596-a2fd-369f95ecc191
+
+		level Country
+			lineageTag: 5bf46aba-afcc-42cc-b0c4-bf07c23a706c
+			column: Country
+
+		level State
+			lineageTag: bb36069f-7132-4327-926e-ae06fe92ccae
+			column: State
+
+		level City
+			lineageTag: c112895e-4034-438f-bac3-5fcab2e46f2c
+			column: City
+
 	partition Store = m
 		mode: import
 		source =

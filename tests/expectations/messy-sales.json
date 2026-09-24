@@ -1,7 +1,7 @@
 {
   "fixture": "examples/messy-sales/Messy Sales Demo.SemanticModel",
   "oracle": "Tabular Editor CLI 0.5.2.11639 with BPARules.json sha256 ddb9cff4c2a0611a6467e2559d38319d9867381998066473ffa1e11c2d360392",
-  "captured": "2026-09-04",
+  "captured": "2026-09-24",
   "skipRules": {},
   "findings": {
     "ADD_DATA_CATEGORY_FOR_COLUMNS": [
@@ -18,12 +18,16 @@
       "'Store'[Longitude]"
     ],
     "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
-      "'Date'"
+      "'Date'",
+      "'DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92'",
+      "'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'"
     ],
     "DATECOLUMN_FORMATSTRING": [
       "'Customer'[Join Date]",
       "'Date'[Date]",
+      "'DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92'[Date]",
       "'Employee'[Hire Date]",
+      "'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'[Date]",
       "'Promotion'[End Date]",
       "'Promotion'[Start Date]",
       "'Sales'[Sale Date]",
@@ -32,6 +36,10 @@
     "DAX_COLUMNS_FULLY_QUALIFIED": [
       "[Distinct Customers]",
       "[Total Quantity]"
+    ],
+    "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+      "'DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92'",
+      "'Employee Grouping'"
     ],
     "HIDE_FACT_TABLE_COLUMNS": [
       "'Sales'[Discount Amount]",
@@ -42,6 +50,7 @@
     ],
     "HIDE_FOREIGN_KEYS": [
       "'Customer'[Customer ID]",
+      "'Customer'[Join Date]",
       "'Employee'[Employee ID]",
       "'Product'[Product ID]",
       "'Promotion'[Promotion ID]",
@@ -68,6 +77,13 @@
       "[Total Margin]",
       "[Total Quantity]",
       "[Total Sales]"
+    ],
+    "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+      "'DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92'[Date]",
+      "'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'[Date]"
+    ],
+    "MARK_PRIMARY_KEYS": [
+      "'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'[Date]"
     ],
     "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
       "Model"
@@ -99,6 +115,8 @@
       "'Date'[Quarter]",
       "'Date'[Week of Year]",
       "'Date'[Year]",
+      "'Employee Grouping'",
+      "'Employee Grouping'[Employee Grouping]",
       "'Employee'",
       "'Employee'[Department]",
       "'Employee'[Email]",
@@ -184,11 +202,33 @@
       "[Total Quantity]",
       "[Total Sales]"
     ],
+    "REDUCE_NUMBER_OF_CALCULATED_COLUMNS": [
+      "Model"
+    ],
+    "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+      "'DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92'",
+      "'Employee Grouping'",
+      "'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'"
+    ],
     "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+      "'Customer'[Join Date]",
       "'Date'[Date]",
+      "'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'[Date]",
       "'Sales'[Sale Date]"
     ],
+    "REMOVE_AUTO-DATE_TABLE": [
+      "'DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92'",
+      "'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'"
+    ],
+    "SNOWFLAKE_SCHEMA_ARCHITECTURE": [
+      "'Customer'"
+    ],
+    "UNNECESSARY_COLUMNS": [
+      "'Employee Grouping'[Employee Grouping Fields]"
+    ],
     "USE_THE_DIVIDE_FUNCTION_FOR_DIVISION": [
+      "'DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92'[QuarterNo]",
+      "'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'[QuarterNo]",
       "[Average Order Value]",
       "[Margin %]",
       "[Sales YoY %]"

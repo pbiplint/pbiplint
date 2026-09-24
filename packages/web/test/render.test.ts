@@ -38,13 +38,13 @@ afterEach(() => {
 
 describe("renderResults", () => {
   it("opens with the privacy line, the summary, and the five groups to fix first", () => {
-    renderResults(container, result, { source: "the sample project (11 files)" });
+    renderResults(container, result, { source: "the sample project (14 files)" });
     expect(container.querySelector(".privacy")!.textContent).toContain("Nothing was uploaded");
     expect(container.querySelector("h2")!.textContent).toBe(
-      "Results for the sample project (11 files)",
+      "Results for the sample project (14 files)",
     );
     expect(container.querySelector(".summary")!.textContent).toContain(
-      "161 findings (16 errors, 39 warnings, 106 info) in 11 files",
+      "185 findings (16 errors, 54 warnings, 115 info) in 14 files",
     );
     const first = [...container.querySelectorAll(".fix-first li")];
     expect(first.length).toBe(5);
@@ -54,12 +54,16 @@ describe("renderResults", () => {
   });
   it("counts the severity nouns as the text format does, with info taking no s", () => {
     // Guards the shared pluralisation: "error" and "warning" take an s, "info" is the same word
-    // for one finding and many. The sample's top five carry the singular and plural cases; the
-    // info case is rendered from the one info group the sample has, since the top five has none.
+    // for one finding and many. The sample's top five carry the plural cases; the singular
+    // warning and the info case are each rendered from a group of the sample's own, since the
+    // top five has neither.
     renderResults(container, result, { source: "x" });
     const top = [...container.querySelectorAll(".fix-first li")].map((li) => li.textContent);
     expect(top[0]).toContain("(2 errors)");
-    expect(top[3]).toContain("(1 warning)");
+    expect(top[3]).toContain("(3 warnings)");
+    const one = result.groups.find((g) => g.rule.severity === 2 && g.findings.length === 1)!;
+    renderResults(container, { ...result, groups: [one] }, { source: "x" });
+    expect(container.querySelector(".fix-first li")!.textContent).toContain("(1 warning)");
     const info = result.groups.find((g) => g.rule.severity === 1)!;
     renderResults(container, { ...result, groups: [info] }, { source: "x" });
     expect(container.querySelector(".fix-first li")!.textContent).toContain(

@@ -19,6 +19,9 @@ ref table Customer
 ref table Store
 ref table Employee
 ref table Promotion
+ref table DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92
+ref table LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d
+ref table 'Employee Grouping'
 
 ref cultureInfo en-US
 

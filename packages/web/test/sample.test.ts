@@ -20,7 +20,10 @@ describe("bundled sample", () => {
       "definition/relationships.tmdl",
       "definition/tables/Customer.tmdl",
       "definition/tables/Date.tmdl",
+      "definition/tables/DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92.tmdl",
+      "definition/tables/Employee Grouping.tmdl",
       "definition/tables/Employee.tmdl",
+      "definition/tables/LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d.tmdl",
       "definition/tables/Product.tmdl",
       "definition/tables/Promotion.tmdl",
       "definition/tables/Sales.tmdl",
@@ -32,7 +35,7 @@ describe("bundled sample", () => {
   });
   it("exposes the sample's config and its layer counts", () => {
     expect(SAMPLE_CONFIG).toBeUndefined();
-    expect(sampleLayers(SAMPLE_FILES)).toEqual({ model: 11, report: 0 });
+    expect(sampleLayers(SAMPLE_FILES)).toEqual({ model: 14, report: 0 });
   });
   it("sorts with the locale it asks for, not the order code units happen to give", () => {
     const files = sampleFiles({
@@ -79,7 +82,7 @@ describe("bundled sample", () => {
   it("lints to the same numbers as pbiplint --sample", () => {
     const { summary } = lint(SAMPLE_FILES);
     expect([summary.findings, summary.errors, summary.warnings, summary.infos]).toEqual([
-      161, 16, 39, 106,
+      185, 16, 54, 115,
     ]);
   });
 });

@@ -81,6 +81,11 @@ table Customer
 		summarizeBy: none
 		sourceColumn: Join Date
 
+		variation Variation
+			isDefault
+			relationship: 0a8d08ea-ec2d-4f5c-9688-4767079a3fa4
+			defaultHierarchy: LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d.'Date Hierarchy'
+
 		annotation SummarizationSetBy = Automatic
 
 		annotation UnderlyingDateTimeDataType = Date

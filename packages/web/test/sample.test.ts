@@ -57,14 +57,14 @@ describe("bundled sample", () => {
     });
     expect(files.map((f) => f.path).sort()).toEqual(
       [
-        "Messy Sales Demo.pbip",
+        "../Messy Sales Demo.pbip",
         "definition.pbir",
         "definition/report.json",
         "definition/tables/B.tmdl",
       ].sort(),
     );
-    // A file beside the parts belongs to neither, and passed on it would land in the report,
-    // where lint routes every path that is not .tmdl.
+    // A file beside the parts belongs to neither: lint would read it as nothing, and the results
+    // heading would still count it.
     expect(() => sampleFiles({ "/x/examples/messy-sales/README.md": "" })).toThrow(
       /outside the sample project/,
     );

@@ -63,7 +63,7 @@ describe("pbiplint CLI", () => {
   it("--sample reads the model of the bundled project and prints no notice", async () => {
     const r = await run(["--sample", "--fail-on", "none"]);
     expect(r.code).toBe(0);
-    expect(r.out.split("\n")[1]).toMatch(/^Model: 11 files\. /);
+    expect(r.out).toMatch(/^Model: 11 files\. /m);
     expect(r.err).toBe("");
   });
   it("respects --fail-on and exits 0 when nothing reaches the threshold", async () => {

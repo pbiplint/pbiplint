@@ -16,11 +16,12 @@ const SAMPLE_ROOT = "examples/messy-sales/";
 
 /**
  * The globbed files as the page lints them: each part's files by their path relative to that part
- * (`definition/...`, `definition.pbir`), and the project file by its bare name, sorted with an
- * explicit locale so the list reads the same whatever machine built the bundle. A key from outside
- * the sample project is refused rather than sliced, since indexOf gives -1 for one and slicing
- * from there would cut the key at an offset that means nothing; so is a file beside the parts,
- * which belongs to neither.
+ * (`definition/...`, `definition.pbir`), and the project file as `../<name>.pbip`, one level above
+ * the report root. That is the path the CLI gives lint, so a finding on the project file reads the
+ * same on both surfaces. Sorted with an explicit locale so the list reads the same whatever machine
+ * built the bundle. A key from outside the sample project is refused rather than sliced, since
+ * indexOf gives -1 for one and slicing from there would cut the key at an offset that means
+ * nothing; so is a file beside the parts, which belongs to neither.
  */
 export function sampleFiles(raw: Record<string, string>): LintFile[] {
   return Object.entries(raw)
@@ -30,7 +31,7 @@ export function sampleFiles(raw: Record<string, string>): LintFile[] {
       const rel = key.slice(at + SAMPLE_ROOT.length);
       const part = /^[^/]+\.(SemanticModel|Report)\/(.+)$/.exec(rel);
       if (part) return { path: part[2]!, text };
-      if (rel.endsWith(".pbip") && !rel.includes("/")) return { path: rel, text };
+      if (rel.endsWith(".pbip") && !rel.includes("/")) return { path: `../${rel}`, text };
       throw new Error(`Sample file outside the sample project: ${key}`);
     })
     .sort((a, b) => a.path.localeCompare(b.path, "en"));

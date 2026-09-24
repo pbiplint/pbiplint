@@ -115,7 +115,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   MONTHCOLUMN_FORMATSTRING:
     "DateTime columns with month in the name whose format string is not exactly `MMMM yyyy`.",
   NOT_REACHED_FROM_REPORT:
-    "Columns and measures that nothing in the report reaches, directly or through the model. The walk starts from every field the report names, both columns of every relationship except one to an auto date/time table, the columns that row-level and object-level security name, the default column of every variation, and the fields the report's own measures reference, and it follows DAX references, sort-by and group-by columns, and calculated tables until nothing new is reached.",
+    "Columns and measures that nothing in the report reaches, directly or through the model. The walk starts from every field the report names, both columns of every relationship except one to an auto date/time table, the columns that row-level and object-level security name, the default column of every variation, the columns of an aggregation table (the ones with an `alternateOf` mapping), and the fields the report's own measures reference, and it follows DAX references, sort-by and group-by columns, the detail column or table each mapping names, and calculated tables until nothing new is reached.",
   NUMERIC_COLUMN_SUMMARIZE_BY:
     "Visible whole number, decimal, or double columns whose default summarization is anything other than None.",
   OBJECTS_SHOULD_NOT_START_OR_END_WITH_A_SPACE:

@@ -102,6 +102,7 @@ A measure kept for another report on the same model, or for people who analyze t
 - DAX references are found by pattern, the way the model rules find them, so a field named inside a string or a comment of a reached measure counts as reached.
 - A table that nothing reaches has no finding of its own. Each of its columns and measures is reported instead.
 - The rule compares the report with its model, so it runs only when both are in the input.
+- The rule also needs every file of the report read. While a file in the report's definition folder cannot be read, such as a visual.json holding merge-conflict markers or a reportExtensions.json that is not valid JSON, the rule reports nothing, because that file may use any field in the model and pbiplint cannot say what a file it did not read reaches. The skipped line gives the reason, `a report file could not be read`, the file's own `PARSE_ISSUE` finding names it, and the Model line of Report at a glance says the count is unknown. A .platform or definition.pbir that cannot be read, or a JSON file of your own in the definition folder, does not stop the rule: pbiplint reads no field from any of them.
 
 ## Related rules
 

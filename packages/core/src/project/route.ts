@@ -51,7 +51,9 @@ export function pairingDecision(
   if (siblingModelFolder === undefined) return { useModel: false };
   if (ref.kind === "none") return { useModel: true };
   const named = ref.path.replace(/\\/g, "/").replace(/\/+$/, "").split("/").pop() ?? "";
-  if (named === siblingModelFolder) return { useModel: true };
+  // Windows and macOS file systems compare names without regard to case by default, so a path
+  // written in another case still names the folder beside the report.
+  if (named.toLowerCase() === siblingModelFolder.toLowerCase()) return { useModel: true };
   return {
     useModel: false,
     reason: `this report reads a model outside the input (${ref.path})`,

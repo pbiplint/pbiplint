@@ -293,6 +293,11 @@ run; the model layer is reported as absent with the reason ("this
 report reads a published model"), not as an error. A `byPath` that
 names a different folder than the one beside it is a diagnostic.
 
+Amended 2026-09-23 with Michael (release triage, A6): the folder
+`byPath` names is compared with the one beside the report without
+regard to case, as Windows and macOS file systems compare names by
+default.
+
 **What is read.** `.tmdl` under the model's `definition`;
 `definition.pbir`, `.platform`, and every `.json` under the report's
 `definition` (pages, visuals, mobile layouts, bookmarks, extensions);

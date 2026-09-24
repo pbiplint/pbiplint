@@ -342,6 +342,10 @@ Power BI Desktop saves files on minor versions Microsoft has not
 published (visualContainer 2.10.0 to 2.12.0 in Desktop-saved reports),
 which the parser reads as the family's known shape.
 
+Amended 2026-09-23 with Michael (release triage, A2): so does a file
+whose document parses but is not a JSON object, since Microsoft's
+schemas give every report file an object root; nothing in it is read.
+
 **Object model.**
 
 - `Report`: file, schema version, theme name, `publicCustomVisuals`,

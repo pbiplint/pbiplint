@@ -2,15 +2,25 @@ import type { Page } from "../../pbir/types.js";
 import { reportFinding } from "../report-helpers.js";
 import { pbiplintRule } from "./define.js";
 
+const NEW_PAGE = "is the name Power BI Desktop gives a new page";
+const DUPLICATE = "is the name Power BI Desktop gives a duplicated page";
+
 /**
- * The names English Power BI Desktop gives a new or duplicated page (a duplicate of a duplicate
- * nests), and a name marked as a copy, each with what the finding says of it. Desktop numbers new
- * pages from 1 without leading zeros, so `Page 0` and `Page 01` are not its names. The detail names
- * the pattern, never who typed the name, which pbiplint cannot read.
+ * The names Power BI Desktop gives a new or duplicated page (a duplicate of a duplicate nests), and
+ * a name marked as a copy, each with what the finding says of it. Desktop names pages in the
+ * language it runs in, and Microsoft publishes no list of those names, so the forms other than
+ * English are exactly the ones Desktop-saved page.json files show: `Seite 1` (German), `Página 1`
+ * (Spanish), `Pagina 1` (Italian), `ページ 1` (Japanese, with an ASCII space), and duplicates named
+ * `Duplikat von "<name>"` (German, the name in straight double quotes), `Duplicado de` (Spanish),
+ * `Doublon de` (French), `Duplicata de` (Portuguese), and `Duplikat av` (Norwegian). A language
+ * not listed is a missed finding, never a false one. Desktop numbers new pages from 1 without
+ * leading zeros, so `Page 0` and `Page 01` are not its names. The detail names the pattern, never
+ * who typed the name, which pbiplint cannot read.
  */
 const DEFAULT_NAMES: [RegExp, string][] = [
-  [/^Page [1-9]\d*$/, "is the name Power BI Desktop gives a new page"],
-  [/^Duplicate of .+$/, "is the name Power BI Desktop gives a duplicated page"],
+  [/^(?:Page|Seite|Página|Pagina|ページ) [1-9]\d*$/, NEW_PAGE],
+  [/^(?:Duplicate of|Duplicado de|Doublon de|Duplicata de|Duplikat av) .+$/, DUPLICATE],
+  [/^Duplikat von ".+"$/, DUPLICATE],
   [/^.+ \(copy\)$/, "is named as a copy"],
 ];
 

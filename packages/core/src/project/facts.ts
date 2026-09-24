@@ -7,6 +7,7 @@ import {
   hiddenVisualWithFields,
   isHiddenPage,
   isSlicer,
+  isTooltipPage,
   landingPageNotSet,
   openingPage,
   openingPageInvalid,
@@ -87,9 +88,12 @@ function reportFacts(project: Project, report: Report, known: ReadonlySet<string
         ),
   );
 
-  // Pages.
+  // Pages. A tooltip page counts by either marking Microsoft's page schema gives it, page.json's
+  // own `type` or its `pageBinding.type` (Desktop-saved reports mark most by `type` alone); a
+  // drillthrough page by its `pageBinding.type`, which every drillthrough target in Desktop-saved
+  // reports carries.
   const hidden = pages.filter(isHiddenPage).length;
-  const tooltip = pages.filter((p) => p.bindingType === "Tooltip").length;
+  const tooltip = pages.filter(isTooltipPage).length;
   const drill = pages.filter((p) => p.bindingType === "Drillthrough").length;
   const pageParts = [
     hidden && `${hidden} hidden`,
@@ -134,21 +138,30 @@ function reportFacts(project: Project, report: Report, known: ReadonlySet<string
     ),
   );
 
-  // Report measures. The count shows whenever the report defines any; the rule is linked only when
-  // it reports them, which takes the model the report reads in the run.
+  // Report measures. Unknown, like Filters pane, when reportExtensions.json is in the input but was
+  // not read; the rule cannot report measures it did not read, so the fact links no rule. Otherwise
+  // the count shows whenever the report defines any, and the rule is linked only when it reports
+  // them, which takes the model the report reads in the run.
   const measures = report.measures.length;
   facts.push(
-    withRule(
-      measures
-        ? {
-            layer: "report",
-            label: "Report measures",
-            value: String(measures),
-            detail: "defined in the report, not the model",
-          }
-        : { layer: "report", label: "Report measures", value: "none" },
-      reportMeasuresToMove(project).length > 0 ? "REPORT_LEVEL_MEASURES" : undefined,
-    ),
+    report.extensions === "unread"
+      ? {
+          layer: "report",
+          label: "Report measures",
+          value: "unknown",
+          detail: "reportExtensions.json was not read",
+        }
+      : withRule(
+          measures
+            ? {
+                layer: "report",
+                label: "Report measures",
+                value: String(measures),
+                detail: "defined in the report, not the model",
+              }
+            : { layer: "report", label: "Report measures", value: "none" },
+          reportMeasuresToMove(project).length > 0 ? "REPORT_LEVEL_MEASURES" : undefined,
+        ),
   );
 
   // Slicers: Microsoft's slicer types, and those saved with a selection, as the rule reads them.
@@ -189,7 +202,8 @@ function reportFacts(project: Project, report: Report, known: ReadonlySet<string
 /**
  * The "Report at a glance" block: structured, in the order the spec's table lists, and built only
  * when the report layer is present, so a run without a report produces none and no surface shows
- * the block. A fact links to a rule only when that rule is in the run's rule set.
+ * the block. A fact links to a rule only when that rule ran in the run, so a rule turned off in
+ * config, or skipped for want of a layer or a live model, links nothing.
  */
 export function buildFacts(
   project: Project,

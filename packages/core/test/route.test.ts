@@ -69,10 +69,43 @@ describe("pairingDecision", () => {
       },
     });
   });
+  it("matches the folder byPath names with the one beside the report without regard to case", () => {
+    expect(
+      pairingDecision(
+        { kind: "byPath", path: "../sales.semanticmodel" },
+        "Sales.SemanticModel",
+        "Sales.Report",
+      ),
+    ).toEqual({ useModel: true });
+    expect(
+      pairingDecision(
+        { kind: "byPath", path: "..\\SALES.SEMANTICMODEL\\" },
+        "Sales.SemanticModel",
+        "Sales.Report",
+      ),
+    ).toEqual({ useModel: true });
+    expect(
+      pairingDecision(
+        { kind: "byPath", path: "../returns.semanticmodel" },
+        "Sales.SemanticModel",
+        "Sales.Report",
+      ),
+    ).toEqual({
+      useModel: false,
+      reason: "this report reads a model outside the input (../returns.semanticmodel)",
+      diagnostic: {
+        kind: "model-reference-mismatch",
+        path: "Sales.Report/definition.pbir",
+        message:
+          "Sales.Report/definition.pbir points at ../returns.semanticmodel, not at Sales.SemanticModel beside it, so the model was not paired with this report",
+      },
+    });
+  });
   it("reads the dataset reference out of definition.pbir text", () => {
     expect(
       datasetReference('{"datasetReference":{"byPath":{"path":"../M.SemanticModel"}}}'),
     ).toEqual({ kind: "byPath", path: "../M.SemanticModel" });
     expect(datasetReference("not json")).toEqual({ kind: "none" });
+    expect(datasetReference("[]")).toEqual({ kind: "none" });
   });
 });

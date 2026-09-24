@@ -90,6 +90,9 @@ describe("resolveConfig", () => {
     expect(() => resolveConfig({ failOn: "sometimes" })).toThrow(/failOn/);
     expect(() => resolveConfig({ rulez: {} })).toThrow(/unknown key "rulez"/);
     expect(() => resolveConfig([])).toThrow(ConfigError);
+    expect(() => resolveConfig({ rules: ["A"] })).toThrow(
+      'pbiplint.config.json: "rules" must be an object of rule id to "off", "info", "warning", "error", or an object with a severity and options',
+    );
   });
   it("accepts a string $schema so editors can validate the file", () => {
     expect(() =>
@@ -520,6 +523,36 @@ describe("lint over a project", () => {
       ["report", "definition/pages/p/page.json", 3, "merge conflict marker: <<<<<<< HEAD"],
     ]);
   });
+  it("reports a page.json or visual.json that is not a JSON object, and reads the rest", () => {
+    const r = lint([
+      { path: "definition/pages/p/page.json", text: '\n"Sales overview"\n' },
+      {
+        path: "definition/pages/p/visuals/v/visual.json",
+        text: j({ name: "v", position: {}, visual: { visualType: "card" } }),
+      },
+      { path: "definition/pages/p/visuals/w/visual.json", text: "null" },
+    ]);
+    expect(
+      r.findings
+        .filter((f) => f.ruleId === "PARSE_ISSUE")
+        .map((f) => [f.location?.file, f.location?.line, f.detail]),
+    ).toEqual([
+      [
+        "definition/pages/p/page.json",
+        2,
+        'not a JSON object (the file holds a string): "Sales overview"',
+      ],
+      [
+        "definition/pages/p/visuals/w/visual.json",
+        1,
+        "not a JSON object (the file holds null): null",
+      ],
+    ]);
+    // As for invalid JSON, the visual that reads still sits under a stub page named by its folder.
+    expect(
+      r.project.report!.pages.map((p) => [p.id, p.displayName, p.visuals.map((v) => v.id)]),
+    ).toEqual([["p", "p", ["v"]]]);
+  });
   it("tags a parse-issue group that spans both layers as a project group", () => {
     const r = lint([
       { path: "definition/tables/Sales.tmdl", text: "table Sales\n  column Amount\n" },
@@ -634,6 +667,69 @@ describe("lint over a project", () => {
     expect(
       both.findings.filter((f) => f.ruleId === "REPORT_LEVEL_MEASURES").map((f) => f.objectId),
     ).toEqual(["Sales.Net Margin"]);
+  });
+  it("links a fact to a rule only when the rule ran, so a rule turned off in config links nothing", () => {
+    const files = [
+      ...modelFiles,
+      ...reportFiles,
+      {
+        path: "definition/pages/p/visuals/v/visual.json",
+        text: j({
+          name: "v",
+          position: {},
+          isHidden: true,
+          visual: {
+            visualType: "card",
+            query: {
+              queryState: {
+                Values: {
+                  projections: [
+                    {
+                      field: {
+                        Column: {
+                          Expression: { SourceRef: { Entity: "Sales" } },
+                          Property: "Amount",
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      },
+      {
+        path: "definition/reportExtensions.json",
+        text: j({
+          entities: [{ name: "Sales", measures: [{ name: "Net Margin", expression: "1" }] }],
+        }),
+      },
+    ];
+    const fact = (label: string, config?: { rules: Record<string, "off"> }) =>
+      lint(files, config ? { config } : {}).facts.find((f) => f.label === label);
+    const measures = {
+      layer: "report",
+      label: "Report measures",
+      value: "1",
+      detail: "defined in the report, not the model",
+    };
+    const visuals = { layer: "report", label: "Visuals", value: "1", detail: "1 hidden" };
+    // With every rule on, both facts link the rule that checks them.
+    expect(fact("Report measures")).toEqual({ ...measures, ruleId: "REPORT_LEVEL_MEASURES" });
+    expect(fact("Visuals")).toEqual({ ...visuals, ruleId: "HIDDEN_VISUAL_WITH_FIELDS" });
+    // Turned off, the rule's page is not linked; the fact keeps its count, and the other its link.
+    const off = (id: string) => ({ rules: { [id]: "off" as const } });
+    expect(fact("Report measures", off("REPORT_LEVEL_MEASURES"))).toEqual(measures);
+    expect(fact("Visuals", off("REPORT_LEVEL_MEASURES"))).toEqual({
+      ...visuals,
+      ruleId: "HIDDEN_VISUAL_WITH_FIELDS",
+    });
+    expect(fact("Visuals", off("HIDDEN_VISUAL_WITH_FIELDS"))).toEqual(visuals);
+    expect(fact("Report measures", off("HIDDEN_VISUAL_WITH_FIELDS"))).toEqual({
+      ...measures,
+      ruleId: "REPORT_LEVEL_MEASURES",
+    });
   });
   it("keeps an invalid-JSON detail on one line, whatever the engine's message spans", () => {
     const r = lint([{ path: "definition/pages/p/page.json", text: '{\n  "a": 1,\n  "b": }\n' }]);

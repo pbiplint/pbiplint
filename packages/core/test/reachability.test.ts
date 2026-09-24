@@ -225,6 +225,82 @@ ${readFileSync(`${fixturesDir}tvw-baseline.SemanticModel/definition/tables/${LDT
       "referenced only by 'Metric'[Metric], which nothing reaches either",
     );
   });
+  it("roots an aggregation table's columns, and reaches the base column or table each mapping names", () => {
+    // A DirectQuery detail table, an imported aggregation table mapped to it in the forms Power BI
+    // writes, a count of another table's rows (its name in another case, which TMDL reads the
+    // same), and a mapping to a table the model does not have.
+    const agg = modelFrom(`table Sales
+	column Amount
+		dataType: decimal
+	column 'Order Date'
+		dataType: dateTime
+	column Quantity
+		dataType: int64
+	measure 'Order Count' = COUNTROWS('Sales')
+	measure 'Total Sales' = SUM('Sales'[Amount])
+	partition Sales = m
+		mode: directQuery
+		source = let Source = Sql.Database("finance", "Warehouse") in Source{[Item = "Sales"]}[Data]
+
+table Returns
+	column 'Return ID'
+		dataType: int64
+	partition Returns = m
+		mode: directQuery
+		source = let Source = Sql.Database("finance", "Warehouse") in Source{[Item = "Returns"]}[Data]
+
+table 'Sales Agg'
+	isHidden
+	column 'Order Date'
+		dataType: dateTime
+		alternateOf
+			baseColumn: Sales.'Order Date'
+	column Amount
+		dataType: decimal
+		alternateOf
+			summarization: sum
+			baseColumn: Sales.Amount
+	column 'Return Count'
+		dataType: int64
+		alternateOf
+			summarization: count
+			baseTable: returns
+	column Orphan
+		dataType: decimal
+		alternateOf
+			summarization: sum
+			baseColumn: Gone.Amount
+	partition 'Sales Agg' = m
+		mode: import
+		source = let Source = Sql.Database("finance", "Warehouse") in Source{[Item = "vwSalesAgg"]}[Data]
+`);
+    const { report } = buildReport(visualBinding(measure("Sales", "Order Count")));
+    const reach = buildIndexes({ model: agg, report }).reachability!;
+    const table = (name: string) => agg.tables.find((t) => t.name === name)!;
+    const at = (t: string, name: string): Column => table(t).columns.find((c) => c.name === name)!;
+    // No report names an aggregation column, so each is a root of its own.
+    for (const name of ["Order Date", "Amount", "Return Count", "Orphan"])
+      expect(reach.pathTo(at("Sales Agg", name))).toEqual([`'Sales Agg'[${name}]`]);
+    expect(reach.pathTo(at("Sales", "Order Date"))).toEqual([
+      "'Sales Agg'[Order Date]",
+      "'Sales'[Order Date]",
+    ]);
+    expect(reach.pathTo(at("Sales", "Amount"))).toEqual(["'Sales Agg'[Amount]", "'Sales'[Amount]"]);
+    // A count of rows needs the table, not any one of its columns.
+    expect(reach.pathTo(table("Returns"))).toEqual(["'Sales Agg'[Return Count]", "'Returns'"]);
+    expect(reach.reached(at("Returns", "Return ID"))).toBe(false);
+    const u = reach.unreached();
+    expect(u.columns.map((c) => `${c.table.name}.${c.name}`)).toEqual([
+      "Sales.Quantity",
+      "Returns.Return ID",
+    ]);
+    expect(u.tables).toEqual([]);
+    // A base column the report reaches as well keeps the report's path.
+    const { report: summed } = buildReport(visualBinding(measure("Sales", "Total Sales")));
+    expect(
+      buildIndexes({ model: agg, report: summed }).reachability!.pathTo(at("Sales", "Amount")),
+    ).toEqual(["[Total Sales]", "'Sales'[Amount]"]);
+  });
   it("roots no relationship to an auto date/time table, and leaves those tables out of the unreached list", () => {
     const fixture = `${fixturesDir}tvw-baseline.SemanticModel/definition/tables/`;
     const LDT = "LocalDateTable_1b2c1fde-0cf3-455e-bfee-a8e4970804e0";

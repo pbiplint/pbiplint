@@ -115,7 +115,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   MONTHCOLUMN_FORMATSTRING:
     "DateTime columns with month in the name whose format string is not exactly `MMMM yyyy`.",
   NOT_REACHED_FROM_REPORT:
-    "Columns and measures that nothing in the report reaches, directly or through the model. The walk starts from every field the report names, both columns of every relationship except one to an auto date/time table, the columns that row-level and object-level security name, the default column of every variation, and the fields the report's own measures reference, and it follows DAX references, sort-by and group-by columns, and calculated tables until nothing new is reached.",
+    "Columns and measures that nothing in the report reaches, directly or through the model. The walk starts from every field the report names, both columns of every relationship except one to an auto date/time table, the columns that row-level and object-level security name, the default column of every variation, the columns of an aggregation table (the ones with an `alternateOf` mapping), and the fields the report's own measures reference, and it follows DAX references, sort-by and group-by columns, the detail column or table each mapping names, and calculated tables until nothing new is reached.",
   NUMERIC_COLUMN_SUMMARIZE_BY:
     "Visible whole number, decimal, or double columns whose default summarization is anything other than None.",
   OBJECTS_SHOULD_NOT_START_OR_END_WITH_A_SPACE:
@@ -125,7 +125,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   OPENING_PAGE_INVALID:
     "A pages.json whose landing page names a page the report does not have, or, when no landing page is set, whose active page names a page the report does not have or a page hidden from readers.",
   PARSE_ISSUE:
-    "Lines the TMDL parser could not use: space indentation, an unterminated code fence, a line at an impossible indentation, a line in no form the parser recognizes, and a `///` description with a blank line between it and its declaration; and a report JSON file that is not valid JSON or carries a merge conflict marker.",
+    "Lines the TMDL parser could not use: space indentation, an unterminated code fence, a line at an impossible indentation, a line in no form the parser recognizes, and a `///` description with a blank line between it and its declaration; a report JSON file that is not valid JSON or carries a merge conflict marker; and a report file Microsoft publishes a schema for, such as report.json or a page.json, whose content is not a JSON object.",
   PARTITION_NAME_SHOULD_MATCH_TABLE_NAME_FOR_SINGLE_PARTITION_TABLES:
     "Regular tables with exactly one partition whose name differs from the table name. Calculated tables and calculation groups are not checked.",
   PERCENTAGE_FORMATTING:

@@ -293,6 +293,11 @@ run; the model layer is reported as absent with the reason ("this
 report reads a published model"), not as an error. A `byPath` that
 names a different folder than the one beside it is a diagnostic.
 
+Amended 2026-09-23 with Michael (release triage, A6): the folder
+`byPath` names is compared with the one beside the report without
+regard to case, as Windows and macOS file systems compare names by
+default.
+
 **What is read.** `.tmdl` under the model's `definition`;
 `definition.pbir`, `.platform`, and every `.json` under the report's
 `definition` (pages, visuals, mobile layouts, bookmarks, extensions);
@@ -324,6 +329,24 @@ Markdown formats, in JSON, and on stderr in the CLI. The two legacy
 kinds make the layer count as absent. This closes the carry-over from
 issue #22.
 
+Amended 2026-09-23 with Michael (release triage, A7): `unread-file`
+also covers a folder under the input that cannot be entered or listed,
+and the walk goes on with the rest. A part folder (a `.Report` or
+`.SemanticModel`) that cannot be read, or none of whose files could be
+read, makes that layer absent with the reason "the report folder could
+not be read" or "the model folder could not be read". The input
+itself, when it cannot be read at all, is refused with
+`Could not read <input>: <reason>`, as an input that does not exist is.
+So is an input none of whose files could be read, since a run over it
+would report no findings with nothing linted. The input itself was
+read then, and a refused run prints no notices, so the message names
+the path that refused first, with its reason: the input (or, for a
+`.pbip`, its folder) joined with that path relative to it, as in
+`Could not read Demo/Demo.Report/definition: EACCES: permission denied`
+for the input `Demo`. A notice does not change the exit code, which
+follows the findings as it does for the legacy formats. The browser's
+resolver in pull request 7 makes the same decisions.
+
 ## 5. PBIR parser and report object model
 
 **Parser.** Plain JSON, read tolerantly: unknown properties ignored;
@@ -334,6 +357,27 @@ failure. A file that is not valid JSON, or that carries merge-conflict
 markers (`<<<<<<<`, `=======`, `>>>>>>>` at line start), produces a
 `PARSE_ISSUE` finding with file and line. Every part keeps its file
 path and raw text.
+
+Amended 2026-09-23 with Michael (release triage, DQ8): the parser
+knows the newest version Microsoft publishes of the schema family of
+each report file it reads a property from: the definition folder's
+files (Microsoft's `fabric/item/report/definition` schemas),
+definition.pbir (`fabric/item/report/definitionProperties`), and the
+report's `.platform` (`fabric/gitIntegration/platformProperties`). The
+diagnostic is given only for a newer major version.
+Power BI Desktop saves files on minor versions Microsoft has not
+published (visualContainer 2.10.0 to 2.12.0 in Desktop-saved reports),
+which the parser reads as the family's known shape.
+
+Amended 2026-09-23 with Michael (release triage, A2): a file whose
+document parses but is not a JSON object also produces a `PARSE_ISSUE`
+finding, since Microsoft's schemas give every file the PBIR format
+defines an object root; nothing in it is read. Those files are
+definition.pbir, the report's `.platform`, the project's `.pbip`, and,
+under `definition/`, the files Learn's PBIR folder table names. Any
+other JSON file under `definition/` is the author's own, with no schema,
+and keeps the reading above: invalid JSON or a conflict marker there is
+a `PARSE_ISSUE` finding, and a document that is not an object is not.
 
 **Object model.**
 
@@ -408,12 +452,13 @@ resolves among the report's own measures only (Power BI Desktop writes
 Microsoft's reportExtension schema says to leave the schema empty for a
 model measure), so a reference left naming the extension after its
 measure moved into the model is unresolved, whatever the model holds.
-While reportExtensions.json cannot be read (merge-conflict markers or
-invalid JSON, which section 5 makes a `PARSE_ISSUE` finding), such a
-reference resolves to `unread`, which no rule reports, because pbiplint
-cannot say what the file defines; with no reportExtensions.json in the
-input, it stays unresolved, with a reason saying the report defines no
-extension measures.
+While reportExtensions.json cannot be read (merge-conflict markers,
+invalid JSON, or a document that is not a JSON object, which section 5
+makes a `PARSE_ISSUE` finding), such a reference resolves to `unread`,
+which no rule reports, because pbiplint cannot say what the file
+defines; with no reportExtensions.json in the input, it stays
+unresolved, with a reason saying the report defines no extension
+measures.
 
 **Reachability index.** Roots: every resolved report reference; both
 columns of every relationship; columns named in RLS and OLS filters;
@@ -436,6 +481,13 @@ local date table the variation names and reaches the date column too;
 a reached column adds its group-by columns (`relatedColumnDetails`,
 such as a field parameter's hidden Fields column); and a relationship
 to a Desktop-managed date table roots neither end (section 8.2).
+
+Amended 2026-09-23 with Michael (release triage, A10): every column
+with an `alternateOf` mapping, an aggregation table's column, is a
+root, and a reached one reaches the base column or table its mapping
+names; no report names an aggregation column, since report queries
+refer to the detail table and Power BI redirects them to the
+aggregation table when it covers the query.
 
 **Facts.** Structured list, `{ layer, label, value, detail?, ruleId? }`:
 
@@ -479,6 +531,15 @@ one whose `visual.objects.general[].properties.filter` holds a `filter`
 with a non-empty `Where` (Microsoft's capability data and Desktop-saved
 files, section 3.4), which is the condition `SLICER_SELECTION_SAVED`
 reports.
+
+Amended 2026-09-23 with Michael (release triage, A3 to A5): Report
+measures says unknown, with "reportExtensions.json was not read", when
+that file is in the input but could not be read, and then links no
+rule. Pages counts a tooltip page by either marking Microsoft's page
+schema gives it, page.json's own `type` or its `pageBinding.type`
+(Desktop-saved reports mark most tooltip pages by `type` alone). A fact
+links a rule only when that rule ran in the run, so a rule turned off
+in config or skipped links nothing.
 
 **Cost.** Linear in the JSON. The demo report's largest visual is
 61 KB, most under 5 KB; a 300-visual report is a few megabytes and

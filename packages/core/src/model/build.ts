@@ -1,6 +1,7 @@
 import { unquoteName } from "../tmdl/quote.js";
 import type { ParsedFile, TmdlNode } from "../tmdl/types.js";
 import type {
+  AlternateOf,
   CalculationGroup,
   CalculationItem,
   Column,
@@ -53,6 +54,23 @@ export function splitQualifiedName(ref: string): { table: string; column: string
     : { table: "", column: unquoteName(ref) };
 }
 
+/**
+ * A column's `alternateOf` block. A qualified `baseColumn` is split into its table and column; a
+ * bare one is a column of the block's `baseTable`.
+ */
+function readAlternateOf(c: TmdlNode): AlternateOf | undefined {
+  const block = c.children.find((ch) => ch.type === "alternateof");
+  if (!block) return undefined;
+  const baseTable = str(block.props.basetable);
+  const baseColumn = str(block.props.basecolumn);
+  const qualified = baseColumn === undefined ? undefined : splitQualifiedName(baseColumn);
+  return {
+    summarization: lower(block.props.summarization),
+    baseTable: qualified?.table || (baseTable === undefined ? undefined : unquoteName(baseTable)),
+    baseColumn: qualified?.column,
+  };
+}
+
 function buildColumn(c: TmdlNode, table: Table): Column {
   const p = c.props;
   const variations: Variation[] = objects(c, "variation").map((v) => {
@@ -69,6 +87,7 @@ function buildColumn(c: TmdlNode, table: Table): Column {
     .filter((ch) => ch.type === "relatedcolumndetails")
     .flatMap((d) => d.children.filter((g) => g.kind === "prop" && g.type === "groupbycolumn"))
     .flatMap((g) => (g.value === undefined ? [] : [unquoteName(g.value)]));
+  const alternateOf = readAlternateOf(c);
   return {
     ...named(c),
     table,
@@ -85,7 +104,8 @@ function buildColumn(c: TmdlNode, table: Table): Column {
     dataCategory: str(p.datacategory),
     expression: c.value,
     variations,
-    hasAlternateOf: c.children.some((ch) => ch.type === "alternateof"),
+    alternateOf,
+    hasAlternateOf: alternateOf !== undefined,
   };
 }
 

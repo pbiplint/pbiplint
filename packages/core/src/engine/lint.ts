@@ -90,7 +90,8 @@ export function lint(files: LintFile[], options: LintOptions = {}): LintResult {
   const indexes = buildIndexes(project);
   const run = runRules(project, indexes, rules, config);
   const groups = rank(run.findings, rules, config);
-  const facts = buildFacts(project, indexes, new Set(rules.map((r) => r.id)));
+  // Only the rules that ran: a fact never links the page of a rule turned off or skipped.
+  const facts = buildFacts(project, indexes, new Set(run.rulesRun));
   const count = (severity: number) =>
     groups.filter((g) => g.rule.severity === severity).reduce((n, g) => n + g.findings.length, 0);
   const summary: LintSummary = {

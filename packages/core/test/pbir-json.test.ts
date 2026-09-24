@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   lineOfPointer,
+  newerMajor,
   newerThan,
   readJson,
   schemaFamilyOf,
@@ -55,6 +56,60 @@ describe("readJson", () => {
     expect(r.issues[0]!.reason).toMatch(/^not valid JSON/);
     expect(r.issues[0]!.line).toBe(3);
   });
+  it("reports a document that is not a JSON object, saying what the file holds", () => {
+    // Microsoft's schema gives every report file an object root, so nothing else is read from one.
+    const kinds: [string, string][] = [
+      ["[]", "an array"],
+      ['"Sales overview"', "a string"],
+      ["720", "a number"],
+      ["true", "a boolean"],
+      ["false", "a boolean"],
+      ["null", "null"],
+    ];
+    for (const [text, kind] of kinds) {
+      const r = readJson("definition/report.json", text);
+      expect(r.json).toBeUndefined();
+      expect(r.schema).toBeUndefined();
+      expect(r.issues).toEqual([
+        {
+          file: "definition/report.json",
+          line: 1,
+          text,
+          reason: `not a JSON object (the file holds ${kind})`,
+        },
+      ]);
+    }
+  });
+  it("gives the line a document that is not an object starts on, past blank lines and a BOM", () => {
+    expect(readJson("x.json", '\n[\n  "a"\n]\n').issues).toEqual([
+      { file: "x.json", line: 2, text: "[", reason: "not a JSON object (the file holds an array)" },
+    ]);
+    expect(readJson("x.json", "\ufeff  \r\n\t null\r\n").issues).toEqual([
+      {
+        file: "x.json",
+        line: 2,
+        text: "\t null",
+        reason: "not a JSON object (the file holds null)",
+      },
+    ]);
+  });
+  it("returns a document that is not an object as it is when the file's format sets no root", () => {
+    const r = readJson("definition/notes/owners.json", '["alice"]', { objectRoot: false });
+    expect(r.issues).toEqual([]);
+    expect(r.json).toEqual(["alice"]);
+    expect(r.schema).toBeUndefined();
+    // Invalid JSON is still an issue there.
+    const invalid = readJson("definition/notes/owners.json", '["alice",]', { objectRoot: false });
+    expect(invalid.json).toBeUndefined();
+    expect(invalid.issues.map((i) => [i.line, i.reason])).toEqual([
+      [1, expect.stringMatching(/^not valid JSON \(/)],
+    ]);
+  });
+  it("still reads an object with no issue, wherever it starts", () => {
+    const r = readJson("x.json", '\ufeff\n\n  { "a": 1 }\n');
+    expect(r.issues).toEqual([]);
+    expect(r.json).toEqual({ a: 1 });
+  });
   it("does not read the document's own text as the engine's line or offset", () => {
     // V8 quotes a slice of the broken document in its message, so a document that says "line 5"
     // or "position 400" of its own is quoted back and must not be mistaken for the engine saying
@@ -74,6 +129,22 @@ describe("newerThan", () => {
     expect(newerThan("2.10.0", "2.9.0")).toBe(true);
     expect(newerThan("3.2.0", "3.2.0")).toBe(false);
     expect(newerThan("1.0.0", "3.2.0")).toBe(false);
+  });
+});
+
+describe("newerMajor", () => {
+  it("is true only when the first segment is greater, compared as a number", () => {
+    expect(newerMajor("2.9.0", "2.9.0")).toBe(false);
+    expect(newerMajor("2.12.0", "2.9.0")).toBe(false);
+    expect(newerMajor("2.9.1", "2.9.0")).toBe(false);
+    expect(newerMajor("3.0.0", "2.9.0")).toBe(true);
+    expect(newerMajor("10.0.0", "9.1.0")).toBe(true);
+    expect(newerMajor("1.4.0", "2.1.0")).toBe(false);
+  });
+  it("reads only the major segment when the others are missing", () => {
+    expect(newerMajor("3", "2.9.0")).toBe(true);
+    expect(newerMajor("2", "2.9.0")).toBe(false);
+    expect(newerMajor("2.12", "2")).toBe(false);
   });
 });
 

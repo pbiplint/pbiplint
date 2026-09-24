@@ -124,7 +124,7 @@ export function resolveConfig(raw: unknown = {}): ResolvedConfig {
   if (raw.rules !== undefined) {
     if (!isRecord(raw.rules))
       throw new ConfigError(
-        'pbiplint.config.json: "rules" must be an object of rule id to "off" | "info" | "warning" | "error"',
+        'pbiplint.config.json: "rules" must be an object of rule id to "off", "info", "warning", "error", or an object with a severity and options',
       );
     for (const [id, v] of Object.entries(raw.rules)) {
       if (v === "off") out.disabled.add(id);

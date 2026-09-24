@@ -189,6 +189,58 @@ describe("buildModel on hand-written constructs", () => {
     });
   });
 
+  it("reads an alternateOf mapping in each form TMDL writes it", () => {
+    // Power BI writes the base column qualified with its table and leaves out groupBy, the
+    // default summarization; a count of the table's rows names the table alone. The quoted form is
+    // TMDL's rule for a name with a space, and the bare column beside baseTable is a hand-written
+    // form pbiplint's own aggregation page shows.
+    const m = modelFrom(`table 'Sales Agg'
+	column account_company_name
+		dataType: string
+		isAvailableInMdx: false
+
+		alternateOf
+			baseColumn: account.company_name
+
+	column Amount
+		dataType: decimal
+		alternateOf
+			summarization: sum
+			baseColumn: Sales.Amount
+
+	column 2
+		dataType: int64
+		alternateOf
+			summarization: count
+			baseTable: account
+
+	column 'Order Date'
+		dataType: dateTime
+		alternateOf
+			baseColumn: 'Sales Detail'.'Order Date'
+
+	column Region
+		dataType: string
+		alternateOf
+			summarization: groupBy
+			baseColumn: Sales Region
+			baseTable: 'Sales Detail'
+
+	column Unmapped
+		dataType: string
+`);
+    const cols = m.tables[0]!.columns;
+    expect(cols.map((c) => c.alternateOf)).toEqual([
+      { baseTable: "account", baseColumn: "company_name" },
+      { summarization: "sum", baseTable: "Sales", baseColumn: "Amount" },
+      { summarization: "count", baseTable: "account" },
+      { baseTable: "Sales Detail", baseColumn: "Order Date" },
+      { summarization: "groupby", baseTable: "Sales Detail", baseColumn: "Sales Region" },
+      undefined,
+    ]);
+    expect(cols.map((c) => c.hasAlternateOf)).toEqual([true, true, true, true, true, false]);
+  });
+
   it("reads the columns a field parameter's display column groups by", () => {
     const m = modelFrom(`table Metric
 	column Metric

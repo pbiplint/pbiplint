@@ -50,6 +50,20 @@ export interface Variation {
   defaultColumn?: { table: string; column: string };
 }
 
+/**
+ * An aggregation column's mapping to the detail data it summarizes, from the column's `alternateOf`
+ * block, names unquoted. Power BI writes the base column qualified (`baseColumn: Sales.Amount`) and
+ * a count of a table's rows as `baseTable` alone. `baseTable` is the detail table either way (a
+ * bare `baseColumn` beside a `baseTable` reads as a column of it); `baseColumn` is the column's own
+ * name, absent for a row count. `summarization` is lowercased (groupby, sum, count, min, max) and
+ * absent when the block leaves it out, which Power BI does for groupby, the default.
+ */
+export interface AlternateOf {
+  summarization?: string;
+  baseTable?: string;
+  baseColumn?: string;
+}
+
 export interface Column extends Named {
   table: Table;
   kind: ColumnKind;
@@ -70,6 +84,8 @@ export interface Column extends Named {
   dataCategory?: string;
   expression?: string;
   variations: Variation[];
+  alternateOf?: AlternateOf;
+  /** Whether the column has an `alternateOf` block, so is part of an aggregation table. */
   hasAlternateOf: boolean;
 }
 

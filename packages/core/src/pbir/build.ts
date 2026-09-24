@@ -1,6 +1,6 @@
 import type { LintFile } from "../engine/lint.js";
 import type { Diagnostic } from "../project/types.js";
-import { lineOfPointer, newerThan, readJson, schemaFamilyOf } from "./json.js";
+import { lineOfPointer, newerMajor, newerThan, readJson, schemaFamilyOf } from "./json.js";
 import { collectFieldRefs, escapePointer } from "./refs.js";
 import type {
   Bookmark,
@@ -15,18 +15,27 @@ import type {
 } from "./types.js";
 
 /**
- * The newest schema version of each family this reader was written against. A file on a newer
- * one still parses (unknown properties are ignored); it is a diagnostic so nobody mistakes what
- * pbiplint could not know for clean.
+ * The newest version Microsoft publishes (in github.com/microsoft/json-schemas) of the schema
+ * family of every report file this reader reads a property from: the definition folder's files
+ * (fabric/item/report/definition), definition.pbir (fabric/item/report/definitionProperties),
+ * and the report's .platform (fabric/gitIntegration/platformProperties). The project's .pbip is
+ * parsed but nothing is read from it, so its family is not listed. A file on a newer minor or
+ * patch version is read as that family's known shape without a notice: Power BI Desktop saves
+ * versions Microsoft has not published, such as visualContainer 2.10.0 to 2.12.0. Only a newer
+ * major version, which may change the shape, is a diagnostic, so nobody mistakes what pbiplint
+ * could not know for clean. Unknown properties are ignored either way.
  */
 export const KNOWN_SCHEMAS: Readonly<Record<string, string>> = {
   report: "3.3.0",
-  page: "2.3.1",
-  visualContainer: "2.8.0",
+  page: "2.1.0",
+  visualContainer: "2.9.0",
   pagesMetadata: "1.1.0",
-  bookmark: "1.0.0",
+  bookmarksMetadata: "1.0.0",
+  bookmark: "2.1.0",
   reportExtension: "1.0.0",
-  visualContainerMobileState: "1.4.0",
+  visualContainerMobileState: "2.4.0",
+  definitionProperties: "2.0.0",
+  platformProperties: "2.1.0",
 };
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>
@@ -360,6 +369,26 @@ const PAGE_FILE = /^definition\/pages\/([^/]+)\/page\.json$/;
 const VISUAL_FILE = /^definition\/pages\/([^/]+)\/visuals\/([^/]+)\/visual\.json$/;
 const MOBILE_FILE = /^definition\/pages\/([^/]+)\/visuals\/([^/]+)\/mobile\.json$/;
 const BOOKMARK_FILE = /^definition\/bookmarks\/([^/]+)\.bookmark\.json$/;
+/** The files under definition/ that Learn's PBIR folder table names, besides the four above. */
+const DEFINITION_FILES: ReadonlySet<string> = new Set([
+  "definition/version.json",
+  "definition/report.json",
+  "definition/reportExtensions.json",
+  "definition/pages/pages.json",
+  "definition/bookmarks/bookmarks.json",
+]);
+
+/**
+ * Whether the PBIR format defines the file: definition.pbir, the report's .platform, the project's
+ * .pbip, and the files Learn's PBIR folder table names under definition/. Microsoft publishes a
+ * schema for each, with an object root; any other JSON under definition/ is the author's own.
+ */
+const definedByPbir = (path: string): boolean =>
+  path.endsWith("definition.pbir") ||
+  path.endsWith(".platform") ||
+  path.endsWith(".pbip") ||
+  DEFINITION_FILES.has(path) ||
+  [PAGE_FILE, VISUAL_FILE, MOBILE_FILE, BOOKMARK_FILE].some((re) => re.test(path));
 
 /**
  * Builds the report object model from the report's files (paths relative to the .Report folder).
@@ -408,7 +437,7 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
     // Unread until it parses to an object below, so a file that fails on the way is not taken
     // for one that defines no measures.
     if (f.path === "definition/reportExtensions.json") report.extensions = "unread";
-    const read = readJson(f.path, f.text);
+    const read = readJson(f.path, f.text, { objectRoot: definedByPbir(f.path) });
     report.issues.push(...read.issues);
     if (read.json === undefined) continue;
     const family = schemaFamilyOf(read.schema);
@@ -416,15 +445,16 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
     if (
       family &&
       version &&
-      KNOWN_SCHEMAS[family] &&
-      newerThan(version, KNOWN_SCHEMAS[family]!) &&
+      // An own property only: a family named `constructor` or `toString` is not a known one.
+      Object.hasOwn(KNOWN_SCHEMAS, family) &&
+      newerMajor(version, KNOWN_SCHEMAS[family]!) &&
       !reportedFamilies.has(family)
     ) {
       reportedFamilies.add(family);
       diagnostics.push({
         kind: "schema-newer-than-known",
         path: f.path,
-        message: `${f.path} uses ${family} schema ${version}, newer than the ${KNOWN_SCHEMAS[family]} this version of pbiplint knows; properties it does not know are ignored`,
+        message: `${f.path} uses ${family} schema ${version}, a newer major version than the ${KNOWN_SCHEMAS[family]} this version of pbiplint knows; properties it does not know are ignored`,
       });
     }
     const json = read.json;
@@ -432,6 +462,8 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
       report.datasetReference = datasetReferenceOf(json);
       continue;
     }
+    // Only a file the PBIR format does not define can hold something other than an object here,
+    // and nothing below reads one.
     if (!isRecord(json)) continue;
     let m: RegExpExecArray | null;
     if (f.path.endsWith(".platform")) {
@@ -471,10 +503,9 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
                 ? [
                     {
                       name: item.name,
+                      // A group lists its bookmarks by name (bookmarksMetadata 1.0.0).
                       children: Array.isArray(item.children)
-                        ? item.children.flatMap((c) =>
-                            isRecord(c) && typeof c.name === "string" ? [c.name] : [],
-                          )
+                        ? item.children.filter((c): c is string => typeof c === "string")
                         : [],
                     },
                   ]

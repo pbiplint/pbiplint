@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { lint } from "../src/engine/lint.js";
 import { buildIndexes } from "../src/index/build.js";
 import { buildModel } from "../src/model/build.js";
 import { buildReport } from "../src/pbir/build.js";
@@ -184,6 +185,36 @@ describe("BROKEN_FIELD_REFERENCE", () => {
       ["definition/reportExtensions.json", 1, "merge conflict marker: <<<<<<< HEAD"],
       ["definition/reportExtensions.json", 3, "merge conflict marker: ======="],
       ["definition/reportExtensions.json", 5, "merge conflict marker: >>>>>>> main"],
+    ]);
+  });
+  it("leaves a reference naming the report's extension unreported while reportExtensions.json holds no object", () => {
+    // `[]` is valid JSON, but not the object Microsoft's schema gives the file, so no measure is read
+    // from it and nothing says what the extension defines. Neither does the model define Net Margin,
+    // so a reference resolved against the model or an empty extension would be reported.
+    const inExtension = {
+      Measure: {
+        Expression: { SourceRef: { Schema: "extension", Entity: "Sales" } },
+        Property: "Net Margin",
+      },
+    };
+    const r = lint([
+      { path: "definition/tables/Sales.tmdl", text: tmdl },
+      page("p"),
+      bound("p", "v", "cardVisual", [inExtension]),
+      { path: "definition/reportExtensions.json", text: "[]" },
+    ]);
+    expect(r.project.report!.extensions).toBe("unread");
+    expect(r.findings.filter((f) => f.ruleId === "BROKEN_FIELD_REFERENCE")).toEqual([]);
+    expect(
+      r.findings
+        .filter((f) => f.ruleId === "PARSE_ISSUE")
+        .map((f) => [f.objectName, f.location, f.detail]),
+    ).toEqual([
+      [
+        "definition/reportExtensions.json",
+        { file: "definition/reportExtensions.json", line: 1 },
+        "not a JSON object (the file holds an array): []",
+      ],
     ]);
   });
   it("keeps one finding per file when two pages share a display name and a visual id", () => {
@@ -476,6 +507,60 @@ describe("NOT_REACHED_FROM_REPORT", () => {
         "nothing in the report reaches it, and no measure or column references it",
       ],
     ]);
+  });
+});
+
+describe("NOT_REACHED_FROM_REPORT and aggregation tables", () => {
+  it("lists neither an aggregation table's columns nor the detail fields they map to", () => {
+    // Report queries name the DirectQuery detail table, and Power BI answers them from the
+    // imported aggregation table where it can, so no visual names Sales by Day.
+    const aggregated = `table Sales
+	column Amount
+		dataType: decimal
+	column 'Order Date'
+		dataType: dateTime
+	column Region
+		dataType: string
+	measure 'Order Count' = COUNTROWS('Sales')
+	partition Sales = m
+		mode: directQuery
+		source = let Source = Sql.Database("finance", "Warehouse") in Source{[Item = "Sales"]}[Data]
+
+table 'Sales by Day'
+	isHidden
+
+	column 'Order Date'
+		dataType: dateTime
+
+		alternateOf
+			baseColumn: Sales.'Order Date'
+
+	column Amount
+		dataType: decimal
+
+		alternateOf
+			summarization: sum
+			baseColumn: Sales.Amount
+
+	column 'Order Count'
+		dataType: int64
+
+		alternateOf
+			summarization: count
+			baseTable: Sales
+
+	partition 'Sales by Day' = m
+		mode: import
+		source = let Source = Sql.Database("finance", "Warehouse") in Source{[Item = "vwSalesByDay"]}[Data]
+`;
+    const r = lint([
+      { path: "definition/tables/Sales.tmdl", text: aggregated },
+      page("p"),
+      bound("p", "v", "cardVisual", [measure("Sales", "Order Count")]),
+    ]);
+    expect(
+      r.findings.filter((f) => f.ruleId === "NOT_REACHED_FROM_REPORT").map((f) => f.objectName),
+    ).toEqual(["'Sales'[Region]"]);
   });
 });
 

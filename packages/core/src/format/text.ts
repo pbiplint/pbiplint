@@ -20,12 +20,13 @@ export interface FormatOptions {
   help?: Readonly<Record<string, RuleHelp>>;
   rules?: import("../rules/types.js").Rule[];
   /**
-   * Posix path (forward slashes, no leading "./", no trailing slash) joined in front of each
-   * SARIF artifact URI so code scanning can resolve it from the repository root. The text, JSON,
-   * and markdown formats ignore it: their paths stay relative to the model root.
+   * Posix path (forward slashes, no leading "./", no trailing slash) joined in front of a model
+   * finding's SARIF artifact URI so code scanning can resolve it from the repository root. The
+   * text, JSON, and markdown formats ignore both prefixes: each finding's path there stays
+   * relative to its part's root, the model's or the report's.
    */
   pathPrefix?: string;
-  /** The same for report findings; falls back to pathPrefix. */
+  /** The report's prefix, joined in front of a report finding's SARIF artifact URI; falls back to pathPrefix. */
   reportPathPrefix?: string;
 }
 

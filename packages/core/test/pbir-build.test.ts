@@ -153,7 +153,8 @@ const files = [
   },
   {
     path: "definition/bookmarks/bookmarks.json",
-    text: j({ items: [{ name: "b1", children: [{ name: "b2" }] }] }),
+    // Desktop and Microsoft's bookmarksMetadata schema list a group's children by bookmark name.
+    text: j({ items: [{ name: "b1", displayName: "Group", children: ["b2"] }] }),
   },
   {
     path: "definition/bookmarks/b1.bookmark.json",
@@ -555,6 +556,132 @@ describe("buildReport", () => {
   });
 });
 
+describe("the schema notice", () => {
+  const onVisual = (version: string, id = "v") => ({
+    path: `definition/pages/p/visuals/${id}/visual.json`,
+    text: visual(id).replace(
+      schema("visualContainer", "2.8.0"),
+      schema("visualContainer", version),
+    ),
+  });
+  const onBookmark = (version: string, id = "b") => ({
+    path: `definition/bookmarks/${id}.bookmark.json`,
+    text: j({
+      $schema: schema("bookmark", version),
+      name: id,
+      displayName: id,
+      explorationState: {},
+    }),
+  });
+
+  it("knows the newest version Microsoft publishes of each family the reader reads", () => {
+    // github.com/microsoft/json-schemas, 2026-09-23: fabric/item/report/definition/<family>/,
+    // then fabric/item/report/definitionProperties/ (definition.pbir) and
+    // fabric/gitIntegration/platformProperties/ (the report's .platform).
+    expect(KNOWN_SCHEMAS).toEqual({
+      report: "3.3.0",
+      page: "2.1.0",
+      visualContainer: "2.9.0",
+      pagesMetadata: "1.1.0",
+      bookmarksMetadata: "1.0.0",
+      bookmark: "2.1.0",
+      reportExtension: "1.0.0",
+      visualContainerMobileState: "2.4.0",
+      definitionProperties: "2.0.0",
+      platformProperties: "2.1.0",
+    });
+  });
+  it("gives the notice for a definition.pbir or a .platform on a newer major, and reads it", () => {
+    const pbir = (version: string) => ({
+      path: "definition.pbir",
+      text: j({
+        $schema: `https://developer.microsoft.com/json-schemas/fabric/item/report/definitionProperties/${version}/schema.json`,
+        version: "4.0",
+        datasetReference: { byPath: { path: "../Demo.SemanticModel" } },
+      }),
+    });
+    const platform = (version: string) => ({
+      path: ".platform",
+      text: j({
+        $schema: `https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/${version}/schema.json`,
+        metadata: { type: "Report", displayName: "Demo" },
+        config: { version: "2.0", logicalId: "00000000-0000-0000-0000-000000000000" },
+      }),
+    });
+    const newerPbir = buildReport([pbir("3.0.0")]);
+    expect(newerPbir.diagnostics).toEqual([
+      {
+        kind: "schema-newer-than-known",
+        path: "definition.pbir",
+        message:
+          "definition.pbir uses definitionProperties schema 3.0.0, a newer major version than the 2.0.0 this version of pbiplint knows; properties it does not know are ignored",
+      },
+    ]);
+    expect(newerPbir.report.datasetReference).toEqual({
+      kind: "byPath",
+      path: "../Demo.SemanticModel",
+    });
+    const newerPlatform = buildReport([platform("3.0.0")]);
+    expect(newerPlatform.diagnostics).toEqual([
+      {
+        kind: "schema-newer-than-known",
+        path: ".platform",
+        message:
+          ".platform uses platformProperties schema 3.0.0, a newer major version than the 2.1.0 this version of pbiplint knows; properties it does not know are ignored",
+      },
+    ]);
+    expect(newerPlatform.report.displayName).toBe("Demo");
+    // The known major raises none: Desktop saves definitionProperties 2.0.0 and
+    // platformProperties 2.0.0, and a newer minor is read as the family's known shape.
+    for (const file of [pbir("2.0.0"), pbir("2.1.0"), platform("2.0.0"), platform("2.2.0")])
+      expect(buildReport([file]).diagnostics).toEqual([]);
+  });
+  it("reads a newer minor version within the known major without a notice", () => {
+    // Desktop saves visualContainer 2.10.0 to 2.12.0, which Microsoft has not published.
+    expect(buildReport([onVisual("2.12.0")]).diagnostics).toEqual([]);
+  });
+  it("gives the notice for a newer major version, naming the version and the one it knows", () => {
+    expect(buildReport([onVisual("3.0.0")]).diagnostics).toEqual([
+      {
+        kind: "schema-newer-than-known",
+        path: "definition/pages/p/visuals/v/visual.json",
+        message:
+          "definition/pages/p/visuals/v/visual.json uses visualContainer schema 3.0.0, a newer major version than the 2.9.0 this version of pbiplint knows; properties it does not know are ignored",
+      },
+    ]);
+    expect(buildReport([onBookmark("3.0.0")]).diagnostics.map((d) => d.message)).toEqual([
+      "definition/bookmarks/b.bookmark.json uses bookmark schema 3.0.0, a newer major version than the 2.1.0 this version of pbiplint knows; properties it does not know are ignored",
+    ]);
+  });
+  it("gives the notice once per family however many of its files are on a newer major", () => {
+    const { diagnostics } = buildReport([
+      onVisual("3.0.0", "a"),
+      onVisual("3.1.0", "b"),
+      onBookmark("3.0.0", "x"),
+      onBookmark("4.0.0", "y"),
+    ]);
+    expect(diagnostics.map((d) => d.path)).toEqual([
+      "definition/bookmarks/x.bookmark.json",
+      "definition/pages/p/visuals/a/visual.json",
+    ]);
+  });
+  it("reads an older version without a notice", () => {
+    expect(buildReport([onVisual("1.2.0"), onBookmark("1.4.0")]).diagnostics).toEqual([]);
+  });
+  it("reads a file whose schema family is the name of an Object member, with no notice", () => {
+    for (const family of ["constructor", "toString", "hasOwnProperty", "__proto__"]) {
+      const { report, diagnostics } = buildReport([
+        {
+          path: "definition/pages/p/visuals/v/visual.json",
+          text: visual("v").replace(schema("visualContainer", "2.8.0"), schema(family, "9.0.0")),
+        },
+      ]);
+      expect(diagnostics).toEqual([]);
+      expect(report.pages[0]!.visuals.map((v) => v.id)).toEqual(["v"]);
+    }
+  });
+});
+
 describe("buildReport tolerance", () => {
   it("reports a schema newer than it knows once per family and ignores families it does not know", () => {
     const { diagnostics } = buildReport([
@@ -568,7 +695,7 @@ describe("buildReport tolerance", () => {
       path: "definition/pages/a/page.json",
     });
     expect(diagnostics[0]!.message).toContain(
-      `newer than the ${KNOWN_SCHEMAS.page} this version of pbiplint knows`,
+      `a newer major version than the ${KNOWN_SCHEMAS.page} this version of pbiplint knows`,
     );
   });
   it("keeps a file with a conflict marker as an issue and still builds everything else", () => {
@@ -582,6 +709,73 @@ describe("buildReport tolerance", () => {
     // The page file could not be read, so the visual's page is a stub named by its folder.
     expect(report.pages.map((p) => [p.id, p.displayName, p.type])).toEqual([["a", "a", undefined]]);
     expect(report.pages[0]!.visuals.map((v) => v.id)).toEqual(["v"]);
+  });
+  it("keeps a file whose document is not a JSON object as an issue and reads nothing from it", () => {
+    // Every file the PBIR format defines, each of which Microsoft's schema gives an object root.
+    const { report } = buildReport([
+      { path: "../Demo.pbip", text: "[]" },
+      { path: ".platform", text: "[]" },
+      { path: "definition.pbir", text: "[]" },
+      { path: "definition/version.json", text: "[]" },
+      { path: "definition/report.json", text: "[]" },
+      { path: "definition/pages/pages.json", text: "\n[]\n" },
+      { path: "definition/pages/a/page.json", text: '"Sales overview"' },
+      { path: "definition/pages/a/visuals/v/visual.json", text: visual("v") },
+      { path: "definition/pages/a/visuals/v/mobile.json", text: "[]" },
+      { path: "definition/pages/a/visuals/w/visual.json", text: "null" },
+      { path: "definition/reportExtensions.json", text: "[]" },
+      { path: "definition/bookmarks/bookmarks.json", text: "[]" },
+      { path: "definition/bookmarks/b.bookmark.json", text: "[]" },
+    ]);
+    const holds = (kind: string) => `not a JSON object (the file holds ${kind})`;
+    expect(report.issues.map((i) => [i.file, i.line, i.text, i.reason])).toEqual([
+      ["../Demo.pbip", 1, "[]", holds("an array")],
+      [".platform", 1, "[]", holds("an array")],
+      ["definition.pbir", 1, "[]", holds("an array")],
+      ["definition/bookmarks/b.bookmark.json", 1, "[]", holds("an array")],
+      ["definition/bookmarks/bookmarks.json", 1, "[]", holds("an array")],
+      ["definition/pages/a/page.json", 1, '"Sales overview"', holds("a string")],
+      ["definition/pages/a/visuals/v/mobile.json", 1, "[]", holds("an array")],
+      ["definition/pages/a/visuals/w/visual.json", 1, "null", holds("null")],
+      ["definition/pages/pages.json", 2, "[]", holds("an array")],
+      ["definition/report.json", 1, "[]", holds("an array")],
+      ["definition/reportExtensions.json", 1, "[]", holds("an array")],
+      ["definition/version.json", 1, "[]", holds("an array")],
+    ]);
+    expect(report.file).toBeUndefined();
+    expect(report.pagesHeader).toEqual({ pageOrder: [] });
+    expect(report.bookmarksHeader).toEqual({ items: [] });
+    expect(report.bookmarks).toEqual([]);
+    expect(report.datasetReference).toEqual({ kind: "none" });
+    expect(report.extensions).toBe("unread");
+    // The page file was not read, so the visual's page is a stub named by its folder, as it is for
+    // invalid JSON; the visual.json that holds null is left out, and the unread mobile.json does
+    // not give the other visual a mobile layout.
+    expect(report.pages.map((p) => [p.id, p.displayName, p.json])).toEqual([["a", "a", undefined]]);
+    expect(report.pages[0]!.visuals.map((v) => [v.id, v.hasMobileLayout])).toEqual([["v", false]]);
+  });
+  it("reads a JSON file the PBIR format does not define as before, whatever document it holds", () => {
+    // Microsoft publishes no schema for a file of the author's own under definition, so an array
+    // there is not an issue; invalid JSON and a conflict marker still are, as for any report file.
+    const issues = (path: string, text: string) =>
+      buildReport([{ path, text }]).report.issues.map((i) => [i.file, i.line, i.reason]);
+    for (const path of [
+      "definition/notes/owners.json",
+      "definition/pages/a/notes.json",
+      "definition/pages/a/visuals/v/extra.json",
+      "definition/bookmarks/b.json",
+    ]) {
+      expect(issues(path, '["alice"]')).toEqual([]);
+      expect(issues(path, "null")).toEqual([]);
+      expect(issues(path, '["alice",]')).toEqual([
+        [path, 1, expect.stringMatching(/^not valid JSON \(/)],
+      ]);
+      expect(issues(path, '<<<<<<< HEAD\n["alice"]\n=======\n["bob"]\n>>>>>>> main\n')).toEqual([
+        [path, 1, "merge conflict marker"],
+        [path, 3, "merge conflict marker"],
+        [path, 5, "merge conflict marker"],
+      ]);
+    }
   });
   it("records whether reportExtensions.json was in the input and could be read", () => {
     const extensions = (...texts: string[]) =>

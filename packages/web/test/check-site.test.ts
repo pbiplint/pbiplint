@@ -173,6 +173,20 @@ describe("checkSite", () => {
     expect(problem?.endsWith("...")).toBe(true);
     expect(problem?.length).toBeLessThan(120);
   });
+  it("names a raw control character in a page, the set the renderer writes as references", () => {
+    // One that reaches a page raw came from somewhere that does not write the reference. U+000C
+    // aside, which HTML reads as whitespace, an HTML parser reports it as a parse error. A
+    // reference, a tab, a line feed, and a carriage return pass.
+    const dir = site({
+      "index.html": `<html><head>${META}</head><body><pre>a\u0001b</pre>\n<p>c\u007fd\u000ce</p></body></html>`,
+      "a/index.html": `<html><head>${META}</head><body><pre>a&#1;b\tc\r\nd</pre></body></html>`,
+    });
+    expect(checkSite(dir).problems).toEqual([
+      "index.html: raw control character U+0001 on line 1",
+      "index.html: raw control character U+000C on line 2",
+      "index.html: raw control character U+007F on line 2",
+    ]);
+  });
   it("reads every unquoted attribute on a tag, not only the first", () => {
     const dir = site({
       "index.html": `<html><head>${META}</head><body><img src=/a.png srcset=https://evil.example/x.png></body></html>`,

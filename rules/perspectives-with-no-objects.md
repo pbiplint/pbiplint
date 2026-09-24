@@ -15,7 +15,7 @@ sources:
 
 ## What it checks
 
-Perspectives that contain no tables. Adding any column, measure, or hierarchy to a perspective adds its table, so a perspective with no tables is empty.
+Perspectives that contain no tables. The rule reads only a perspective's table entries, which is enough: each column, measure, and hierarchy a perspective includes sits under the entry for its table, so with no table entry it includes nothing.
 
 Each finding names the perspective on its own, as `Sales View`, with no table and no quotes around it, because a perspective belongs to the model rather than to a table.
 

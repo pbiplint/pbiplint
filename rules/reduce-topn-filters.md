@@ -122,7 +122,7 @@ The example lowers the threshold to 2 so that it stays short; the default is 4. 
 }
 ```
 
-The fix takes the Top N filter off the table, which repeated the bar chart's ranking of the same products.
+The fix takes the Top N filter off the table, where it filtered Product Name, the same field as the bar chart's Top N filter. That leaves two visuals with a Top N filter, which a threshold of 2 allows.
 
 ## Why it matters
 
@@ -130,7 +130,7 @@ A Top N filter has to rank every item before it can keep the first few: to show 
 
 ## How to fix it
 
-Keep Top N where the ranking is the point of the visual and take it off where it is not. In Power BI Desktop, select the visual, find its card under Filters on this visual in the Filters pane, and remove it with the X on the card, or set its Filter type back to Basic filtering. A visual that only needs its largest items first can sort by the measure instead (More options on the visual, then Sort axis) and let the reader scroll. Two rankings of the same thing, as in the example, can become one. In visual.json, a Top N filter is an entry with `"type": "TopN"` in `filterConfig.filters`, and deleting the entry removes it.
+Keep Top N where the ranking is the point of the visual and take it off where it is not. In Power BI Desktop, select the visual, find its card under Filters on this visual in the Filters pane, and remove it with the X on the card, or set its Filter type back to Basic filtering. A visual that only needs its largest items first can sort by the measure instead (More options on the visual, then Sort axis) and let the reader scroll. Two Top N filters on the same field, as in the example, rank the same items twice; where they rank by the same measure, keep the one on the visual whose point is the ranking, and let the other sort by the measure. In visual.json, a Top N filter is an entry with `"type": "TopN"` in `filterConfig.filters`, and deleting the entry removes it.
 
 ## When to ignore it
 

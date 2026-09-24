@@ -131,7 +131,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   PERCENTAGE_FORMATTING:
     "Measures with a percent format string other than `#,0.0%;-#,0.0%;#,0.0%`.",
   PERSPECTIVES_WITH_NO_OBJECTS:
-    "Perspectives that contain no tables. Adding any column, measure, or hierarchy to a perspective adds its table, so a perspective with no tables is empty.",
+    "Perspectives that contain no tables. The rule reads only a perspective's table entries, which is enough: each column, measure, and hierarchy a perspective includes sits under the entry for its table, so with no table entry it includes nothing.",
   PROVIDE_FORMAT_STRING_FOR_MEASURES:
     "Visible measures with no format string and no dynamic format string.",
   REDUCE_ADVANCED_FILTERS:

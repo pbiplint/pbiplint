@@ -69,19 +69,18 @@ table 'Sales by Day'
 		dataType: dateTime
 		formatString: mm/dd/yyyy
 		sourceColumn: OrderDate
+
 		alternateOf
-			summarization: groupBy
-			baseColumn: Order Date
-			baseTable: Sales
+			baseColumn: Sales.'Order Date'
 
 	column Amount
 		dataType: decimal
 		summarizeBy: sum
 		sourceColumn: Amount
+
 		alternateOf
 			summarization: sum
-			baseColumn: Amount
-			baseTable: Sales
+			baseColumn: Sales.Amount
 
 	partition 'Sales by Day' = m
 		mode: import
@@ -94,7 +93,7 @@ In DirectQuery every visual sends a query to the source. Aggregation tables let 
 
 ## How to fix it
 
-Build a summary table at the grain the reports use most, one row per day and region rather than one per transaction, and load it from a view in the source so the two tables stay consistent. Import it, keep the detail table in DirectQuery, and in Power BI Desktop right-click the summary table in the model view, choose Manage aggregations, and map each of its columns to the detail column it summarizes and the function that summarizes it. In the TMDL file that mapping is an `alternateOf` block under each aggregation column, which is the only thing the rule looks for, naming `baseTable`, `baseColumn`, and a `summarization` such as sum or groupBy. Hide the summary table afterwards: report authors write their measures against the detail table, and the engine redirects the query when it can. Any one aggregation mapping anywhere in the model clears this finding, so treat the rule as a prompt to start rather than a measure of how far you got.
+Build a summary table at the grain the reports use most, one row per day and region rather than one per transaction, and load it from a view in the source so the two tables stay consistent. Import it, keep the detail table in DirectQuery, and in Power BI Desktop right-click the summary table in the model view, choose Manage aggregations, and map each of its columns to the detail column it summarizes and the function that summarizes it. In the TMDL file that mapping is an `alternateOf` block under each aggregation column, which is the only thing the rule looks for. The block names the detail column in `baseColumn`, qualified by its table as in `Sales.'Order Date'`, or, for Count table rows, names the detail table alone in `baseTable`. It sets a `summarization`, such as `sum` or `count`, for every function except group by, which it leaves out. The summary table should be hidden, because report authors write their measures against the detail table and the engine redirects the query when it can. The Manage aggregations dialog hides it for you when you select Apply all, if it is not hidden already; in the TMDL file that is `isHidden` on the table, as in the example. Any one aggregation mapping anywhere in the model clears this finding, so treat the rule as a prompt to start rather than a measure of how far you got.
 
 ## When to ignore it
 
@@ -112,4 +111,4 @@ The question is whether there is a summary worth precomputing. A DirectQuery tab
 
 ## Links
 
-- [Use aggregations in Power BI Desktop](https://docs.microsoft.com/power-bi/transform-model/desktop-aggregations)
+- [User-defined aggregations in Power BI, including the Manage aggregations dialog and its summarization functions](https://learn.microsoft.com/power-bi/transform-model/aggregations-advanced)

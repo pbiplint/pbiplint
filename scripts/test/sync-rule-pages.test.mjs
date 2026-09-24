@@ -51,6 +51,15 @@ describe("exampleMarkdown", () => {
       "**Fires the rule in visual.json**\n\n```json\n{}\n```\n\n**After the fix**\n\n```json\n{}\n```",
     );
   });
+  it("captions a pbiplint.config.json fence with the file and reduces its info string to json", () => {
+    expect(
+      exampleMarkdown(
+        '```json pbiplint.config.json\n{ "rules": {} }\n```\n\n```pbir fires report.json\n{}\n```',
+      ),
+    ).toBe(
+      '**pbiplint.config.json**\n\n```json\n{ "rules": {} }\n```\n\n**Fires the rule in report.json**\n\n```json\n{}\n```',
+    );
+  });
 });
 
 describe("helpMarkdown", () => {

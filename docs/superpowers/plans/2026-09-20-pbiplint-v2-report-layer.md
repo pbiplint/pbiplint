@@ -6720,6 +6720,8 @@ Shared facts for this pull request:
 - `sampleDir()` in the CLI returns the PBIP folder (it looks for a folder holding a `.SemanticModel` child or a `definition` child, in that order of candidates).
 - `packages/web/src/sample.ts` exports `SAMPLE_FILES: LintFile[]` with part-relative paths for both parts (the model's `definition/...`, the report's `definition/...`, `definition.pbir`, `.platform`, and `Messy Sales Demo.pbip`), `SAMPLE_CONFIG: string | undefined` (the config file's text), `SAMPLE_NAME = "the sample project"`, and `sampleLayers(files): { model: number; report: number }` for the results heading. Until Task 33 adds the report, the report glob matches nothing and the sample stays model-only, so every pinned count holds.
 
+Amended 2026-09-23 with Michael (release triage, B7): pull request 6 records a decision in the ledger on whether the site's sample stays model-only until pull request 7, and the controller's recommendation is that it does. Until then the browser lints no report (`packages/web/src/browser-rules.ts` leaves out every rule that needs one until Task 37 deletes it) and the results page shows no facts (until Task 38), so the report's files in "Try the sample project" would be counted in the heading while the page ran none of the report rules and showed none of the report's facts. If the sample stays model-only, `packages/web/src/sample.ts` keeps globbing the model's files only: its TMDL glob follows the model into `Messy Sales Demo.SemanticModel`, and the code's globs for the report's files, the `.pbip`, and `pbiplint.config.json` are left out until pull request 7. The web sample tests stay as they are, at the eleven model paths and 161 findings in 11 files, so Task 34 moves none of its web pins. Task 35's body then leaves "the site bundle" out of what carries the whole project and, in place of "every pin is updated", says the CLI's pins move while the site's sample and its pins stay at 161 findings in 11 files until pull request 7. Task 38 restores all three globs (the report's files, the `.pbip`, and the config) and moves those tests. The site's sample is then the whole project, and with the config's policies its totals match the CLI's; Task 38's render test reads `SAMPLE_CONFIG`. The CLI's sample (`packages/cli`) stays as this task has it, whole project included, because the CLI reads reports from pull request 1 on.
+
 - [ ] **Step 1: Move the model and write the project file**
 
 ```bash
@@ -7006,6 +7008,8 @@ git commit -m "test(sample): pin every planted violation and the new totals"
 
 ### Task 35: Verification and pull request 6
 
+If pull request 6 keeps the site's sample model-only until pull request 7, as the B7 paragraph in Task 32 recommends and asks pull request 6 to record in the ledger, the body below leaves "the site bundle" out of what carries the whole project and, in place of "every pin is updated", says the CLI's pins move while the site's sample and its pins stay at 161 findings in 11 files until pull request 7 (amended 2026-09-23 with Michael; release triage, B7).
+
 As Task 20 Steps 1 to 3, branch `v2-sample-report`, title "v2 sample: Messy Sales Demo becomes a PBIP with a report that plants every report rule", body:
 
 ```
@@ -7275,6 +7279,8 @@ git commit -m "feat(web): selectProject mirrors the CLI on a tree of paths, with
 - Modify: `packages/web/src/results/render.ts`, `packages/web/src/main.ts`, `packages/web/src/styles.css`, `packages/web/index.html`, `packages/web/content/about.md`, `packages/web/src/build/pages.ts` (`SITE_LAYERS` gains `report`, and the layer column's condition turns true with it: until this flip the browser would link to report rule pages the site does not publish, and no static check catches a 404 behind a link built at runtime)
 - Test: `packages/web/test/render.test.ts`, `packages/web/test/home.test.ts`, `packages/web/test/styles.test.ts`, `packages/web/test/generate.test.ts` (the pinned `SITE_LAYERS` value, the page count, the index sentence, and the sitemap all move to the full count here; its layer tests go red until they do, which is the forcing function in this direction)
 
+If pull request 6 kept the site's sample model-only, as the B7 paragraph in Task 32 recommends, this task also modifies `packages/web/src/sample.ts`, restoring its three globs (the report's files, the `.pbip`, and `pbiplint.config.json`) so that `SAMPLE_FILES` holds the report and `SAMPLE_CONFIG` the config as Step 1 expects, and moves the web sample pins Task 34 then left alone, which brings `packages/web/test/sample.test.ts` and `packages/web/e2e/home.spec.ts` into this task beside the render, home, and export tests Step 1 already updates (amended 2026-09-23 with Michael; release triage, B7).
+
 **Interfaces:**
 - `RenderOptions.source` becomes the project label without counts; `renderResults` builds the heading from `result.layers`: `Results for <source> (model, 11 files · report, 46 files)`, or `(report, 46 files)` / `(model, 11 files)` for one layer; `SAMPLE_NAME` stays "the sample project".
 - New markup, from the mockup: `<section class="facts"><h3>Report at a glance</h3><dl>…</dl></section>` between the notices and "Fix these first"; each `<dd>` holds the value and, in a `<span class="detail">`, the detail; a fact with a `ruleId` wraps its value in `<a class="fact flag" href="#rule-<slug>">` when the run has that group, else `<a class="fact" href="/rules/<slug>/">`. Diagnostics render as `<p class="notice">` after the input notes. Fix-first items end with `<span class="layer <l>">`. `renderFilters` adds `box("layer", "model", "Model")` and `box("layer", "report", "Report")` when both layers have groups, between the severity boxes and the categories, with a `gap` span each side. Groups carry `data-layer` and a `<span class="layer <l>">` after the name; `applyFilters` reads `layer` too.
@@ -7488,7 +7494,11 @@ Run `npx vitest run packages/web/test/home-guards.test.ts packages/web/test/home
 
 ### Task 41: Verification and pull request 7
 
-As Task 20 Steps 1 to 3, branch `v2-browser`, title "v2 browser: drop a whole project, Report at a glance, layer tags, notices", body:
+As Task 20 Steps 1 to 3, branch `v2-browser`, title "v2 browser: drop a whole project, Report at a glance, layer tags, notices", and the body below.
+
+Amended 2026-09-23 with Michael (release triage, B7): Task 20 Step 3 ends with "Report the URL and stop"; here the stop comes one step later. Once the pull request is open and its URL reported, the session starts the local preview, `npm run build -w @pbiplint/web && npm run preview -w @pbiplint/web`, leaves it running, gives Michael the local URL it prints, and stops for his go-ahead before any merge. During the preview Michael checks the report rule pages the site publishes from this pull request on and the manual checks the body names, among them arrow-key scrolling of a focused wide code block in real Safari: Playwright's WebKit did not scroll it sideways, so the e2e suite cannot stand in for Safari there (tracked in #69). The body's manual-check line names that check too.
+
+The body:
 
 ```
 Pull request 7 of 8 for the report layer, tracked in #9.
@@ -7499,7 +7509,7 @@ Pull request 7 of 8 for the report layer, tracked in #9.
 - Home and About copy say a PBIP folder lints both parts and a report alone is valid input.
 - Browser tests in Chromium, Firefox, and WebKit: a whole-PBIP drop, a report-only drop, two reports, the depth cap, and a 300-visual report linting in under two seconds (generated by scripts/make-big-report.mjs, not committed).
 
-Manual checks for Michael (CONTRIBUTING's table): "Choose a folder" in Chrome on the sample PBIP; a real folder dragged from Finder; the facts panel's links; the page at phone width.
+Manual checks for Michael (CONTRIBUTING's table): "Choose a folder" in Chrome on the sample PBIP; a real folder dragged from Finder; the facts panel's links; the page at phone width. Beyond the table, in real Safari: arrow-key scrolling of a focused wide code block, which Playwright's WebKit did not scroll sideways (tracked in #69).
 
 Next: pull request 8, docs and the 0.2.0 release.
 ```
@@ -7620,6 +7630,8 @@ git commit -m "docs: the report layer in the README, CONTRIBUTING, and the core 
 
 ### Task 43: Version 0.2.0 and pull request 8
 
+Amended 2026-09-23 with Michael (release triage, B7): before Step 1's version bump, the session runs the built CLI over a few of Michael's own PBIP projects saved by Power BI Desktop: the ones he names in pull request 8's kickoff prompt, which the session that writes that prompt asks him for. At least one of them is saved in the PBIR format, because a PBIR-Legacy project (a `report.json`) gives only a notice and runs no report rule. Each is copied from OneDrive to a scratch folder outside the repository (read-only: nothing under OneDrive is edited in place, and no copy is ever committed). The session builds the CLI (`npm run build -w pbiplint`), runs `node packages/cli/dist/pbiplint.mjs <copy> --fail-on none` on each copy, and reads every finding, fact, and notice against the report itself. Any finding or notice that looks wrong is a bug to fix before the release, not a line to accept: the fix lands on this branch with a test of its own, and Step 2's whole-branch review covers it. Step 2's body says what the runs found, in terms that name nothing from the projects, because the body is public.
+
 - [ ] **Step 1: Bump, following docs/RELEASING.md step 1**
 
 ```bash
@@ -7644,7 +7656,7 @@ git commit -m "chore: release v0.2.0"
 git log --format=%B main..HEAD | grep -inE '\b(close[sd]?|fix(e[sd])?|resolve[sd]?)\b[[:space:]]*#[0-9]+' ; git diff main..HEAD | grep -c $'\u2014'
 ```
 
-Dispatch the whole-branch review (docs only; it reads for accuracy against the code on main). Then:
+Dispatch the whole-branch review. With no fix on the branch it reviews the docs only, reading them for accuracy against the code on main; if the run before Step 1 put a fix on this branch, it reviews that fix and its test and reads the docs against the branch's code (amended 2026-09-23 with Michael; release triage, B7). Then:
 
 ```bash
 git push -u origin v2-release
@@ -7655,6 +7667,7 @@ Pull request 8 of 8 for the report layer, tracked in #9.
 - README, CONTRIBUTING (adding a report rule; deviating from a ported rule), and the core README describe the report layer, the config options, and the JSON ignore annotation.
 - Version 0.2.0 in both packages, the README status line, and the lockfile.
 - docs/RELEASING.md drops its release hold section, since the site now publishes the report rule pages the CLI links to.
+- Before the bump, the built CLI ran over <n> of Michael's own projects saved by Power BI Desktop: <what the runs found, and what became of each finding or notice that looked wrong>.
 
 After the merge, Michael tags per docs/RELEASING.md step 3 (`git fetch origin main && git tag v0.2.0 origin/main && git push origin v0.2.0`); the Release workflow publishes both packages through trusted publishing (this is the first real exercise of that path since v0.1.2). Then step 6: bump the pbiplint-version default in pbiplint/action and release it, and move the action's sample checkout pin past the sample pull request so its fixture SARIF is regenerated against the whole project.
 

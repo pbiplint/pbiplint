@@ -222,7 +222,7 @@ describe("parseTmdl", () => {
 });
 
 describe("root object types", () => {
-  it("reports a root object of a type TMDL does not define on its declaration line", () => {
+  it("reports an object at the root whose type TMDL does not declare there, on its declaration line", () => {
     const pf = parseTmdl(
       "tables/Sales.tmdl",
       "table Product\n\tcolumn Key\n\t\tdataType: int64\n\ntabel Sales\n\tcolumn Amount\n\t\tdataType: decimal\n",
@@ -232,7 +232,7 @@ describe("root object types", () => {
         file: "tables/Sales.tmdl",
         line: 5,
         text: "tabel Sales",
-        reason: 'unknown object type "tabel"',
+        reason: '"tabel" is not a type TMDL declares at the root of a file',
       },
     ]);
   });
@@ -241,18 +241,34 @@ describe("root object types", () => {
     // TMDL reads keywords without regard to case, so `Table` is a table.
     expect(parseTmdl("t.tmdl", "Table Sales\n").issues).toEqual([]);
     expect(parseTmdl("t.tmdl", "Tabel Sales\n").issues.map((i) => i.reason)).toEqual([
-      'unknown object type "Tabel"',
+      '"Tabel" is not a type TMDL declares at the root of a file',
     ]);
   });
 
-  it("reports an unknown type declared with a value or with no name", () => {
+  it("reports a word TMDL does not declare at the root, declared with a value or with no name", () => {
     const pf = parseTmdl(
       "t.tmdl",
       'expresion Server = "localhost"\n\ndatabse\n\tcompatibilityLevel: 1567\n',
     );
     expect(pf.issues.map((i) => [i.line, i.text, i.reason])).toEqual([
-      [1, 'expresion Server = "localhost"', 'unknown object type "expresion"'],
-      [3, "databse", 'unknown object type "databse"'],
+      [
+        1,
+        'expresion Server = "localhost"',
+        '"expresion" is not a type TMDL declares at the root of a file',
+      ],
+      [3, "databse", '"databse" is not a type TMDL declares at the root of a file'],
+    ]);
+  });
+
+  it("reports a child type or a property that lost its tab, which TMDL declares only under an object", () => {
+    // The word is a TMDL word, so the reason says where it may stand rather than calling it unknown.
+    const pf = parseTmdl(
+      "tables/Sales.tmdl",
+      "table Sales\n\tcolumn Key\n\t\tdataType: int64\n\ncolumn Amount\n\tdataType: decimal\nisHidden\n",
+    );
+    expect(pf.issues.map((i) => [i.line, i.text, i.reason])).toEqual([
+      [5, "column Amount", '"column" is not a type TMDL declares at the root of a file'],
+      [7, "isHidden", '"isHidden" is not a type TMDL declares at the root of a file'],
     ]);
   });
 

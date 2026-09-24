@@ -277,6 +277,7 @@ export function buildModel(files: ParsedFile[]): Model {
   for (const f of files) {
     for (const r of f.roots) {
       if (r.kind === "ref" || r.kind === "prop" || r.kind === "expr") continue;
+      // Keep the cases in step with MODELED in tmdl/root-types.ts.
       switch (r.type) {
         case "model":
           Object.assign(model, named(r, r.name ?? "Model"), {
@@ -322,8 +323,8 @@ export function buildModel(files: ParsedFile[]): Model {
           break;
         }
         default:
-          // database, queryGroup, extendedProperty, bindingInfo, createOrReplace: kept in files,
-          // not modeled. A type TMDL does not define is a parse issue (tmdl/root-types.ts).
+          // The words in NOT_MODELED in tmdl/root-types.ts: kept in files, not modeled. Any other
+          // word at the root is a parse issue.
           break;
       }
     }

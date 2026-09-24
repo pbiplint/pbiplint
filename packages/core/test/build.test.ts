@@ -280,14 +280,16 @@ describe("buildModel on hand-written constructs", () => {
 });
 
 describe("buildModel on root object types", () => {
-  it("leaves out a root object of a type TMDL does not define, and everything under it", () => {
+  it("leaves out an object at the root whose type TMDL does not declare there, and everything under it", () => {
     const pf = parseTmdl(
       "tables/Sales.tmdl",
       "table Product\n\tcolumn Key\n\t\tdataType: int64\n\ntabel Sales\n\tcolumn Amount\n\t\tdataType: decimal\n\tmeasure Total = SUM(Sales[Amount])\n",
     );
     const m = buildModel([pf]);
     expect(m.tables.map((t) => t.name)).toEqual(["Product"]);
-    expect(pf.issues.map((i) => [i.line, i.reason])).toEqual([[5, 'unknown object type "tabel"']]);
+    expect(pf.issues.map((i) => [i.line, i.reason])).toEqual([
+      [5, '"tabel" is not a type TMDL declares at the root of a file'],
+    ]);
   });
 
   it("builds each root type it models, and holds nothing of the types TMDL defines that it does not model", () => {

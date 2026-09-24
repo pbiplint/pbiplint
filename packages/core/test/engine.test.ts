@@ -579,7 +579,7 @@ describe("lint over a project", () => {
       ["report", "definition/pages/p/page.json", 3, "merge conflict marker: <<<<<<< HEAD"],
     ]);
   });
-  it("reports a TMDL root object of a type TMDL does not define through PARSE_ISSUE", () => {
+  it("reports a TMDL object at the root whose type TMDL does not declare there through PARSE_ISSUE", () => {
     const r = lint([
       {
         path: "definition/tables/Sales.tmdl",
@@ -591,7 +591,12 @@ describe("lint over a project", () => {
         .filter((f) => f.ruleId === "PARSE_ISSUE")
         .map((f) => [f.layer, f.objectName, f.location?.line, f.detail]),
     ).toEqual([
-      ["model", "definition/tables/Sales.tmdl", 1, 'unknown object type "tabel": tabel Sales'],
+      [
+        "model",
+        "definition/tables/Sales.tmdl",
+        1,
+        '"tabel" is not a type TMDL declares at the root of a file: tabel Sales',
+      ],
     ]);
     // Nothing under the declaration reaches the model, as before.
     expect(r.model.tables).toEqual([]);

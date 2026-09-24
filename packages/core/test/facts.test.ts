@@ -524,6 +524,101 @@ describe("buildFacts", () => {
     });
     expect(visuals(false)).toEqual({ layer: "report", label: "Visuals", value: "3" });
   });
+  describe("Slicers", () => {
+    const region = [column("Sales", "Region")];
+    /** A visual of the given type whose general entry holds a saved selection of West. */
+    const selecting = (name: string, type: string) =>
+      visual("p1", name, type, {}, region, {
+        objects: {
+          general: [
+            {
+              properties: {
+                filter: {
+                  filter: {
+                    Version: 2,
+                    From: [{ Name: "s", Entity: "Sales", Type: 0 }],
+                    Where: [
+                      {
+                        Condition: {
+                          In: {
+                            Expressions: [
+                              {
+                                Column: {
+                                  Expression: { SourceRef: { Source: "s" } },
+                                  Property: "Region",
+                                },
+                              },
+                            ],
+                            Values: [[{ Literal: { Value: "'West'" } }]],
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          ],
+        },
+      });
+    const clearSlicer = visual("p1", "clear", "slicer", {}, region);
+    const savedSlicer = selecting("saved", "slicer");
+    const chiclet = selecting("chiclet", "ChicletSlicer1448559807354");
+    const hierarchy = selecting("hierarchy", "HierarchySlicer1458836712039");
+    // A custom visual with general settings and no filter carries no selection.
+    const plainChiclet = visual("p1", "plain", "ChicletSlicer1448559807354", {}, region, {
+      objects: { general: [{ properties: { selfFilterEnabled: lit("true") } }] },
+    });
+    const table = visual("p1", "table", "tableEx", {}, region);
+    const slicers = (...visuals: { path: string; text: string }[]) => {
+      const { report } = buildReport([page("p1", "Overview"), ...visuals]);
+      return buildFacts({ report }, buildIndexes({ report }), ALL).find(
+        (f) => f.label === "Slicers",
+      );
+    };
+
+    it("counts a custom slicer with a saved selection among the slicers and those with one, the reading SLICER_SELECTION_SAVED shares", () => {
+      // A catalog slicer with nothing selected is still a slicer; a custom visual with nothing
+      // selected, and a table, are not counted.
+      expect(slicers(clearSlicer, chiclet, plainChiclet, table)).toEqual({
+        layer: "report",
+        label: "Slicers",
+        value: "2",
+        detail: "1 with a saved selection",
+        ruleId: "SLICER_SELECTION_SAVED",
+      });
+      // Custom slicers alone, each with a selection, make both numbers.
+      expect(slicers(chiclet, hierarchy)).toEqual({
+        layer: "report",
+        label: "Slicers",
+        value: "2",
+        detail: "2 with a saved selection",
+        ruleId: "SLICER_SELECTION_SAVED",
+      });
+      // A catalog slicer with nothing selected counts, and links no rule, since none fires.
+      expect(slicers(clearSlicer, plainChiclet)).toEqual({
+        layer: "report",
+        label: "Slicers",
+        value: "1",
+        detail: "0 with a saved selection",
+      });
+    });
+    it("never counts more slicers with a saved selection than slicers", () => {
+      for (const visuals of [
+        [clearSlicer],
+        [chiclet],
+        [plainChiclet, table],
+        [clearSlicer, chiclet],
+        [clearSlicer, chiclet, hierarchy],
+        [savedSlicer, chiclet, hierarchy, plainChiclet],
+      ]) {
+        const fact = slicers(...visuals)!;
+        const count = fact.value === "none" ? 0 : Number(fact.value);
+        const saved = fact.detail === undefined ? 0 : Number(/^(\d+) with/.exec(fact.detail)![1]);
+        expect(saved, visuals.map((v) => v.path).join(", ")).toBeLessThanOrEqual(count);
+      }
+    });
+  });
   it("gives a model-only run no facts at all, because the block is about the report", () => {
     expect(buildFacts({ model }, buildIndexes({ model }), ALL)).toEqual([]);
   });

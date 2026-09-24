@@ -117,7 +117,8 @@ export const SLICER_SELECTION_SAVED = pbiplintRule({
   layer: "report",
   options: [{ name: "expect", type: "string", values: ["none"] }],
   policySeverity: (o) => (o.expect === "none" ? 2 : undefined),
-  // A hidden slicer still filters, and each synced copy carries the selection it reports.
+  // A hidden slicer still filters, and each synced copy carries the selection it reports. Any
+  // visual type is read, so a custom slicer from AppSource with a selection is reported too.
   check: ({ report }) =>
     report
       ? allVisuals(report).flatMap((v) => {

@@ -864,7 +864,7 @@ describe("SLICER_SELECTION_SAVED", () => {
     ];
     expect(reportObjectIds(SLICER_SELECTION_SAVED, files)).toEqual(["second"]);
   });
-  it("fires on every slicer type in Microsoft's catalog, hidden or not, and on no other visual", () => {
+  it("fires on every slicer type in Microsoft's catalog, hidden or not", () => {
     const files = [
       page("p"),
       slicer("button", bikes, "advancedSlicerVisual"),
@@ -872,9 +872,6 @@ describe("SLICER_SELECTION_SAVED", () => {
       slicer("hidden", bikes, "slicer", { isHidden: true }),
       slicer("input", bikes, "textSlicer"),
       slicer("list", bikes, "listSlicer"),
-      // An AppSource slicer is a custom visual, not one of Microsoft's slicers.
-      slicer("zChiclet", bikes, "ChicletSlicer1448559807354"),
-      slicer("zTable", bikes, "tableEx"),
     ];
     expect(reportObjectIds(SLICER_SELECTION_SAVED, files)).toEqual([
       "button",
@@ -884,19 +881,62 @@ describe("SLICER_SELECTION_SAVED", () => {
       "list",
     ]);
   });
-  it("sits on the line of the selection's filter", () => {
-    const file = slicer("saved", bikes);
-    const text = pretty(JSON.parse(file.text));
-    const line = lineOf(text, '"filter"');
-    expect(line).toBeGreaterThan(1);
-    const [f] = reportFindings(SLICER_SELECTION_SAVED, [page("p"), { ...file, text }]);
-    expect(f).toMatchObject({
-      objectType: "Visual",
-      objectId: "saved",
-      detail: "opens with this selection applied",
-      location: { file: "definition/pages/p/visuals/saved/visual.json", line },
-    });
-    expect(f).toHaveProperty("object");
+  it("reads a saved selection on any visual type, so custom slicers from AppSource fire too", () => {
+    // Desktop-saved files keep an AppSource slicer's selection in the same general filter, and
+    // every visual type that carries one there filters the page, so no list of types is kept.
+    const contains = [
+      {
+        Condition: {
+          Contains: {
+            Left: { Column: { Expression: { SourceRef: { Source: "p" } }, Property: "Category" } },
+            Right: { Literal: { Value: "'Bik'" } },
+          },
+        },
+      },
+    ];
+    const files = [
+      page("p"),
+      slicer("chiclet", bikes, "ChicletSlicer1448559807354"),
+      slicer("hierarchy", bikes, "HierarchySlicer1458836712039"),
+      slicer("textFilter", contains, "textFilter25A4896A83E0487089E2B90C9AE57C8A"),
+      // A type Desktop-saved files show with a selection there, named on no list.
+      slicer("toggle", bikes, "advancedtoggleswitch"),
+      // A custom visual with general settings and no filter has nothing selected.
+      slicer(
+        "zChicletClear",
+        undefined,
+        "ChicletSlicer1448559807354",
+        {},
+        { general: [{ properties: { selfFilterEnabled: lit("true") } }] },
+      ),
+      // An empty Where selects nothing, on a custom visual as on a catalog slicer.
+      slicer("zChicletEmpty", [], "ChicletSlicer1448559807354"),
+      // A catalog slicer with nothing selected, and a visual with no general entry at all.
+      slicer("zClear", undefined),
+      slicer("zTable", undefined, "tableEx"),
+    ];
+    expect(reportObjectIds(SLICER_SELECTION_SAVED, files)).toEqual([
+      "chiclet",
+      "hierarchy",
+      "textFilter",
+      "toggle",
+    ]);
+  });
+  it("sits on the line of the selection's filter, on a catalog slicer and an AppSource slicer alike", () => {
+    for (const type of ["slicer", "ChicletSlicer1448559807354"]) {
+      const file = slicer("saved", bikes, type);
+      const text = pretty(JSON.parse(file.text));
+      const line = lineOf(text, '"filter"');
+      expect(line).toBeGreaterThan(1);
+      const [f] = reportFindings(SLICER_SELECTION_SAVED, [page("p"), { ...file, text }]);
+      expect(f, type).toMatchObject({
+        objectType: "Visual",
+        objectId: "saved",
+        detail: "opens with this selection applied",
+        location: { file: "definition/pages/p/visuals/saved/visual.json", line },
+      });
+      expect(f, type).toHaveProperty("object");
+    }
     expect(SLICER_SELECTION_SAVED).toMatchObject({
       ...tier3,
       name: "Slicer saved with a selection",

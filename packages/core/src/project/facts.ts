@@ -166,9 +166,12 @@ function reportFacts(project: Project, report: Report, known: ReadonlySet<string
         ),
   );
 
-  // Slicers: Microsoft's slicer types, and those saved with a selection, as the rule reads them.
-  const slicers = visuals.filter(isSlicer);
-  const saved = slicers.filter((v) => slicerSelection(v) !== undefined).length;
+  // Slicers: Microsoft's slicer types and any other visual that carries a saved selection, such as
+  // a custom slicer from AppSource; then every visual saved with a selection, as the rule reads
+  // them. Each visual with a selection is among the slicers, so the second never exceeds the first.
+  const selected = new Set(visuals.filter((v) => slicerSelection(v) !== undefined));
+  const slicers = visuals.filter((v) => isSlicer(v) || selected.has(v));
+  const saved = selected.size;
   facts.push(
     withRule(
       slicers.length

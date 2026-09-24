@@ -184,7 +184,8 @@ export const hiddenVisualWithFields = (v: Visual): boolean =>
 
 /**
  * The slicer types in Microsoft's visual catalog: the slicer, the button slicer, the list slicer,
- * the input slicer, and `filterSlicer`. A slicer from AppSource is a custom visual, not one of them.
+ * the input slicer, and `filterSlicer`. A slicer from AppSource is a custom visual, not one of
+ * them; it is known by the saved selection it carries instead (`slicerSelection`).
  */
 const SLICER_TYPES = new Set([
   "slicer",
@@ -194,18 +195,25 @@ const SLICER_TYPES = new Set([
   "filterSlicer",
 ]);
 
-/** Whether the visual is one of Microsoft's slicers; the Slicers fact counts these. */
+/**
+ * Whether the visual is one of Microsoft's slicers. The Slicers fact counts these, selection or
+ * not, and any other visual that carries a saved selection (`slicerSelection`), such as a custom
+ * slicer from AppSource, which is known by that selection rather than by a list of type names.
+ */
 export const isSlicer = (v: Visual): boolean => SLICER_TYPES.has(v.type);
 
 /**
- * SLICER_SELECTION_SAVED's condition, which the Slicers fact shares: the pointer of a slicer's
+ * SLICER_SELECTION_SAVED's condition, which the Slicers fact shares: the pointer of a visual's
  * saved selection, the first `general` entry whose `filter` holds a `Where` with a condition in
- * it, or undefined when the slicer opens with nothing selected. Every catalog slicer keeps its
- * selection there. Its `filterConfig` entries are Filters pane filters, never the selection, and
- * Select all writes no filter, even in inverted selection mode.
+ * it, or undefined when the visual opens with nothing selected. It is read on any visual type, by
+ * where the selection sits rather than by a list of types: every catalog slicer keeps its
+ * selection there, custom slicers from AppSource keep theirs in the same place, and in
+ * Desktop-saved files every visual type that carries `general.filter` is a filtering visual. A
+ * slicer's `filterConfig` entries are Filters pane filters, never the selection, and Select all
+ * writes no filter, even in inverted selection mode.
  */
 export function slicerSelection(v: Visual): string | undefined {
-  if (!isSlicer(v) || !isRecord(v.json) || !isRecord(v.json.visual)) return undefined;
+  if (!isRecord(v.json) || !isRecord(v.json.visual)) return undefined;
   const objects = v.json.visual.objects;
   const general = isRecord(objects) && Array.isArray(objects.general) ? objects.general : [];
   const i = general.findIndex((entry) => {

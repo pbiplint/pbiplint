@@ -376,6 +376,44 @@ An unread definition.pbir, `.platform`, or `.pbip` changes nothing,
 since none names a field. No unread path is a `PARSE_ISSUE` finding:
 the `unread-file` notice names it, and the notice is unchanged.
 
+Amended 2026-09-25 with Michael (pull request 7, #86): a `.pbip`
+given to the CLI resolves to the one report its `artifacts` entry
+names, that `path` taken relative to the `.pbip`'s folder, and to the
+model that report's `definition.pbir` names by path, taken relative
+to the report folder, wherever each sits, instead of to its whole
+folder. Nothing else in the `.pbip`'s folder is read or refused, so a
+project that sits beside others in one folder lints with both parts
+(`PBIWorkspace/Cost.pbip` in mewancegeka/PBIWorkspace was refused as
+a folder holding two semantic models). The `.pbip`'s folder stays the
+project root: the config search starts there, notices name paths
+relative to it, and a run of which nothing could be read is refused
+naming the path joined to it, as above. Microsoft's pbipProperties
+1.0.0 schema gives `artifacts` as an array of
+`{ "report": { "path" } }` entries only, with no limit on their
+number and no model entry, so a `.pbip` reaches its model only
+through the report's
+`definition.pbir`; all 71 of the 71 `.pbip` files in the local
+corpora name exactly one report. A `.pbip` naming more than one report
+is refused with the names and "point at one of them", as a folder
+holding more than one is (`Both.pbip names 2 reports; point at one of
+them: Cost.Report, Sales.Report`), and one naming a report folder that
+is not there is refused as an input that does not exist is
+(`Cost.pbip names Cost.Report, which does not exist`, the path as the
+`.pbip` writes it). On this route `byConnection` leaves the model out
+with the reason "this report reads a published model"; a `byPath`
+naming a folder that is not there leaves it out with the reason "this
+report reads a model that is not there (<path>)"; a report with no
+`definition.pbir`, or one naming no model, is read alone. The two
+legacy formats give their notices and reasons as the folder route
+does, and a legacy report's `definition.pbir` still names its model.
+`model-reference-mismatch` does not arise, since the path is followed
+rather than compared with a folder beside the report. A `.pbip` that
+names no report (one that is not valid JSON, is not an object, or
+whose `artifacts` holds no report entry) is read as its folder, as
+before, and core still reports one that is not valid JSON. Folder
+input, and a `.pbip` found inside a folder given as input, are
+unchanged, refusals included.
+
 ## 5. PBIR parser and report object model
 
 **Parser.** Plain JSON, read tolerantly: unknown properties ignored;

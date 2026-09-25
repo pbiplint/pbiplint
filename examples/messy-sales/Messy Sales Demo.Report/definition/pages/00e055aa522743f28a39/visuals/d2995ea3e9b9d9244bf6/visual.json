@@ -1,0 +1,31 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.8.0/schema.json",
+  "name": "d2995ea3e9b9d9244bf6",
+  "position": {
+    "x": 1000,
+    "y": 160,
+    "z": 4000,
+    "height": 240,
+    "width": 320,
+    "tabOrder": 4000
+  },
+  "visualGroup": {
+    "displayName": "Promotion notes",
+    "groupMode": "ScaleMode",
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "altText": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Notes on promotions with the total discount given'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

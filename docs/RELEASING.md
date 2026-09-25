@@ -86,7 +86,7 @@ release pull request removes this section.
    ```
 
    The exit code is 1 and the two summary lines are identical. `npm test` pins those same totals,
-   in `packages/web/test/sample.test.ts`.
+   in `packages/cli/test/cli.test.ts`.
 
 6. Bump the GitHub Action's pin. In https://github.com/pbiplint/action, change the
    `pbiplint-version` default in `action.yml` and the version in the README's inputs table to the
@@ -122,7 +122,7 @@ expectation files when a fixture changes or when the port source moves to a new 
    `git clone --filter=blob:none --sparse --no-checkout https://github.com/NatVanG/fab-inspector.git && cd fab-inspector && git sparse-checkout set FabInspector.Tests/Files/pbip Rules && git checkout <commit>`
 2. Download `osx-arm64-CLI.zip` from the fab-inspector release the expectation files name, unzip it, and clear the quarantine flag. It needs the Homebrew .NET:
    `export DOTNET_ROOT=/opt/homebrew/Cellar/dotnet/<version>/libexec DOTNET_ROLL_FORWARD=Major`
-3. For each fixture: `node scripts/fab-expectations.mjs tests/fixtures/<name> tests/expectations/<name>.report.json --cli <path to PBIRInspectorCLI> --cli-version <release of the zip, such as 3.4.0> --rules <path to Base-rules.json>`. The script runs the oracle with every rule enabled, writes the version into the file's `oracle` string, and keeps `deviations`, `ours`, and `native` from the existing file.
+3. For each fixture: `node scripts/fab-expectations.mjs tests/fixtures/<name> tests/expectations/<name>.report.json --cli <path to PBIRInspectorCLI> --cli-version <release of the zip, such as 3.4.0> --rules <path to Base-rules.json>`. The sample is recaptured the same way, from `examples/messy-sales` into `tests/expectations/messy-sales.report.json`. The script runs the oracle with every rule enabled, writes the version into the file's `oracle` string, and keeps `deviations`, `ours`, and `native` from the existing file.
 4. `npm test`. A difference that is not one of the documented deviations is a bug in a port or a change in the source. A deviation is added only on purpose, and it needs four things that the parity and rule-page tests check together: its one sentence in the file's `deviations` map, pbiplint's object ids under `ours`, a fixture on which the two lists differ, and the same sentence in the rule page's Quirks section.
 
 ## The hyphenated name, settled

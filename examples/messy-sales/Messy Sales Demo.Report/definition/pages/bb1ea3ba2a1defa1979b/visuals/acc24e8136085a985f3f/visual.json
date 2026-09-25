@@ -1,0 +1,32 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.8.0/schema.json",
+  "name": "acc24e8136085a985f3f",
+  "position": {
+    "x": 650,
+    "y": 160,
+    "z": 3000,
+    "height": 360,
+    "width": 610,
+    "tabOrder": 3000
+  },
+  "visualGroup": {
+    "displayName": "Employee details",
+    "groupMode": "ScaleMode",
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "altText": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Hidden panel of employee cost and sales details'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "isHidden": true
+}

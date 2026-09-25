@@ -55,7 +55,7 @@ describe("home page", () => {
     await tick();
     const results = document.getElementById("results")!;
     expect(results.hidden).toBe(false);
-    expect(results.querySelector(".summary")!.textContent).toContain("161 findings");
+    expect(results.querySelector(".summary")!.textContent).toContain("185 findings");
     expect(document.getElementById("status")!.hidden).toBe(true);
   });
   it("announces a run as one sentence through a live region that exists before the run", async () => {
@@ -69,7 +69,7 @@ describe("home page", () => {
     document.getElementById("try-sample")!.click();
     await tick();
     expect(announcer.textContent).toBe(
-      "Results for the sample project (11 files): 161 findings (16 errors, 39 warnings, 106 info) in 11 files.",
+      "Results for the sample project (14 files): 185 findings (16 errors, 54 warnings, 115 info) in 14 files.",
     );
     expect(document.getElementById("results")!.hasAttribute("aria-live")).toBe(false);
     expect(document.querySelectorAll("#results [aria-live]").length).toBe(0);
@@ -130,7 +130,7 @@ describe("home page", () => {
     // The same rule the status line follows: a hidden block is out of the accessibility tree, so
     // content rendered into one arrives where nothing can reach it.
     expect(order).toEqual(["hidden=false", "render"]);
-    expect(results.querySelector(".summary")!.textContent).toContain("161 findings");
+    expect(results.querySelector(".summary")!.textContent).toContain("185 findings");
   });
   it("scrolls a problem message only as far as needed, so the textarea stays in view", () => {
     const status = document.getElementById("status")!;

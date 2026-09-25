@@ -19,7 +19,8 @@ Node 20.19 or later (or 22.12 or later), which Vite needs for the site build. No
 - `packages/cli`: the `pbiplint` command. Folder walk, config discovery, output, exit codes.
 - `packages/web`: the site, a static Vite build. `src/build` generates the rule pages, the rules index, the about page, and the sitemap from `rules/*.md` and `content/about.md` into gitignored folders, and fails the build if any page references the network. `npm run dev -w @pbiplint/web` serves it.
 - `rules/`: one Markdown page per rule, written by hand. Content, not code; see Rule pages below.
-- `tests/fixtures`, `tests/expectations`, `examples/messy-sales`: parity fixtures and the Tabular Editor results they must match.
+- `tests/fixtures`, `tests/expectations`: parity fixtures and the Tabular Editor results they must match.
+- `examples/messy-sales`: the sample project `pbiplint --sample` lints, a PBIP folder whose model (`Messy Sales Demo.SemanticModel`) is also a Tabular Editor parity fixture, with its report (`Messy Sales Demo.Report`, which plants a violation of every report rule) and the `pbiplint.config.json` that sets the policies two of those rules need to fire.
 
 ## Adding or changing a rule
 
@@ -41,7 +42,7 @@ node scripts/te-expectations.mjs tests/fixtures/rule-zoo.SemanticModel tests/exp
 
 `te` is the Tabular Editor 3 command line (Windows, macOS, Linux). The free Tabular Editor 2 CLI on Windows works too with its own flags. Without either, submit hand-verified expectations and say so in the pull request. Keep the `skipRules` entries and their reasons.
 
-New fixtures must be sanitized: `node scripts/sanitize-fixture.mjs <dir>` rewrites data paths and removes junk files. TMDL carries no data.
+New fixtures must be sanitized: `node scripts/sanitize-fixture.mjs <modelDir | projectDir>` rewrites every absolute path in the TMDL to `C:\Demo\Data\<name>`, deletes what does not belong in a fixture (Desktop caches and layouts, registered resources, custom visual packages, `.pbix` files), and edits a report's `report.json` so it no longer names the resources it deleted. TMDL carries no data.
 
 ## Rule pages
 

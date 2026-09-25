@@ -1,0 +1,205 @@
+{
+  "fixture": "examples/messy-sales",
+  "report": "Messy Sales Demo.Report",
+  "oracle": "fab-inspector CLI 3.4.0 with Base-rules.json sha256 22868be9acd696c96e62f214dbe0efc72fd1bfffda1736b3b9a4d7fba21f883c, every rule enabled",
+  "captured": "2026-09-25",
+  "deviations": {
+    "AVOID_SHOW_ITEMS_WITH_NO_DATA": "Every well is checked, where the source checks the Category well only, so pbiplint also reports the option on a matrix's Rows or Columns and on any other well a visual has.",
+    "ENSURE_ALTTEXT": "A visual group's own alt text counts: pbiplint reads it under `visualGroup`, where a group keeps it, and reports a group only when that alt text is missing or empty. PBI Inspector looks for a group's alt text where a visual keeps it, so it reports every group, with or without alt text of its own."
+  },
+  "ours": {
+    "AVOID_SHOW_ITEMS_WITH_NO_DATA": [
+      "1e7f28bf49e435b68c50",
+      "598cfda00746e83f4896"
+    ],
+    "ENSURE_ALTTEXT": [
+      "2a7e16428070011e60ec"
+    ]
+  },
+  "native": {
+    "BROKEN_FIELD_REFERENCE": [
+      "88530bc0f64114317e2e"
+    ],
+    "NOT_REACHED_FROM_REPORT": [
+      "[Sales LY]",
+      "[Sales YoY %]",
+      "'Customer'[City]",
+      "'Customer'[Country]",
+      "'Customer'[Customer Name]",
+      "'Customer'[Email]",
+      "'Customer'[Loyalty Tier]",
+      "'Customer'[Postal Code]",
+      "'Customer'[Region]",
+      "'Customer'[Segment]",
+      "'Customer'[State]",
+      "'Date'[Day Number]",
+      "'Date'[Day of Week]",
+      "'Date'[Is Weekend]",
+      "'Date'[Month Number]",
+      "'Date'[Quarter Number]",
+      "'Date'[Quarter]",
+      "'Date'[Week of Year]",
+      "'Date'[Year]",
+      "'Employee'[Email]",
+      "'Employee'[Hire Date]",
+      "'Employee'[Manager ID]",
+      "'Product'[Color]",
+      "'Product'[Discontinued]",
+      "'Product'[List Price]",
+      "'Product'[Size]",
+      "'Product'[Standard Cost]",
+      "'Product'[Subcategory]",
+      "'Product'[Supplier Name]",
+      "'Promotion'[Discount Pct]",
+      "'Promotion'[End Date]",
+      "'Promotion'[Promotion Type]",
+      "'Promotion'[Start Date]",
+      "'Sales'[Net Amount]",
+      "'Store'[Latitude]",
+      "'Store'[Longitude]",
+      "'Store'[Open Date]",
+      "'Store'[Region]",
+      "'Store'[Square Feet]",
+      "'Store'[Store Name]"
+    ],
+    "LANDING_PAGE_NOT_SET": [
+      "report"
+    ],
+    "OPENING_PAGE_INVALID": [
+      "report"
+    ],
+    "FILTERS_PANE_STATE": [
+      "report"
+    ],
+    "HIDDEN_VISUAL_WITH_FIELDS": [
+      "db47426e580241dac6b8",
+      "4457e97e02f61c8f609b",
+      "3fa0fc35d2dd20b9b1f2",
+      "de6a17691cc952e6d7dd"
+    ],
+    "DEFAULT_PAGE_NAME": [
+      "52db6f0b218c638f8761",
+      "27f668864829019f9251"
+    ],
+    "VISUAL_WITHOUT_FIELDS": [
+      "bda61916a7b1efdee3fe"
+    ],
+    "VISUAL_OUTSIDE_PAGE": [
+      "49158e1e7dce5e8d37fd",
+      "d2995ea3e9b9d9244bf6"
+    ],
+    "REPORT_LEVEL_MEASURES": [
+      "Sales.Net Margin",
+      "Sales.Margin % (report)"
+    ],
+    "BROKEN_ACTION_TARGET": [
+      "6500e9c3f9d74f2958c7"
+    ],
+    "ACTION_WITHOUT_DESTINATION": [
+      "307e834045a168e7a394"
+    ],
+    "BROKEN_BOOKMARK_REFERENCE": [
+      "f56cd9f5f68d30c0e4e3"
+    ],
+    "TAB_ORDER_FOLLOWS_LAYOUT": [
+      "3485dcffc49d1608c370"
+    ],
+    "SLICER_SELECTION_SAVED": [
+      "2b5386e9de3e1fbb1afa"
+    ]
+  },
+  "results": {
+    "AVOID_SHOW_ITEMS_WITH_NO_DATA": {
+      "27f668864829019f9251": {
+        "pass": false,
+        "actual": [
+          "1e7f28bf49e435b68c50"
+        ]
+      }
+    },
+    "ENSURE_ALTTEXT": {
+      "bb1ea3ba2a1defa1979b": {
+        "pass": false,
+        "actual": [
+          "acc24e8136085a985f3f"
+        ]
+      },
+      "b52832c4d9f487868953": {
+        "pass": false,
+        "actual": [
+          "2a7e16428070011e60ec"
+        ]
+      },
+      "00e055aa522743f28a39": {
+        "pass": false,
+        "actual": [
+          "d2995ea3e9b9d9244bf6"
+        ]
+      }
+    },
+    "ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY": {
+      "report": {
+        "pass": false,
+        "actual": [
+          "3485dcffc49d1608c370"
+        ]
+      }
+    },
+    "ENSURE_THEME_COLOURS": {
+      "52db6f0b218c638f8761": {
+        "pass": false,
+        "actual": [
+          "8edac00805f721edc1c1"
+        ]
+      }
+    },
+    "HIDE_TOOLTIP_DRILLTROUGH_PAGES": {
+      "report": {
+        "pass": false,
+        "actual": [
+          "3b33a1ae720bb93d48b9"
+        ]
+      }
+    },
+    "REDUCE_ADVANCED_FILTERS": {
+      "9f2ae77d3572304756ae": {
+        "pass": false,
+        "actual": false
+      }
+    },
+    "REDUCE_OBJECTS_WITHIN_VISUALS": {
+      "3485dcffc49d1608c370": {
+        "pass": false,
+        "actual": [
+          "6e99982d842b0d962e16"
+        ]
+      }
+    },
+    "REDUCE_PAGES": {
+      "report": {
+        "pass": false,
+        "actual": false
+      }
+    },
+    "REDUCE_TOPN_FILTERS": {
+      "9f2ae77d3572304756ae": {
+        "pass": false,
+        "actual": false
+      }
+    },
+    "REDUCE_VISUALS_ON_PAGE": {
+      "9f2ae77d3572304756ae": {
+        "pass": false,
+        "actual": false
+      }
+    },
+    "REMOVE_UNUSED_CUSTOM_VISUALS": {
+      "report": {
+        "pass": false,
+        "actual": [
+          "ChicletSlicer1448559807354"
+        ]
+      }
+    }
+  }
+}

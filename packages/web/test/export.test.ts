@@ -30,7 +30,7 @@ describe("export", () => {
     const json = exportJson(result);
     expect(json.name).toBe("pbiplint-report.json");
     const doc = JSON.parse(json.text);
-    expect(doc.summary.findings).toBe(161);
+    expect(doc.summary.findings).toBe(185);
     expect(doc.tool.version).toBe(VERSION);
   });
   it("downloads through a blob URL and revokes it only once the download can have started", () => {

@@ -52,10 +52,12 @@ it('exports the plural helper, so the site says "1 file" the way the text format
 });
 
 it("exports the summary helpers the site shares with the text format", () => {
-  // The sample ranks fourteen groups, so the cap is what makes this a list of five rather than
+  // The sample ranks twenty-two groups, so the cap is what makes this a list of five rather than
   // all of them. A model with fewer groups than the cap cannot tell the two apart, which is what
   // the earlier fixture here did.
-  const result = lint(readModelFiles(join(examplesDir, "messy-sales")));
+  const result = lint(
+    readModelFiles(join(examplesDir, "messy-sales/Messy Sales Demo.SemanticModel")),
+  );
   expect(skippedLine(result)).toMatch(/rules run/);
   expect(result.groups.length).toBeGreaterThan(5);
   // The five the site puts under "Fix these first" and the text format prints at the top, in rank
@@ -65,7 +67,7 @@ it("exports the summary helpers the site shares with the text format", () => {
     "PROVIDE_FORMAT_STRING_FOR_MEASURES",
     "AVOID_FLOATING_POINT_DATA_TYPES",
     "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE",
-    "MODEL_SHOULD_HAVE_A_DATE_TABLE",
+    "REDUCE_USAGE_OF_CALCULATED_TABLES",
   ]);
   expect(topGroups(result, 2).map((g) => g.rule.id)).toEqual([
     "DAX_COLUMNS_FULLY_QUALIFIED",

@@ -23,7 +23,7 @@ export interface InspectorRuleSpec {
 /**
  * A port of one fab-inspector base rule: the id and name from the vendored ruleset, the category,
  * scope, and options from the spec, the description from the rule page, the behaviour from
- * `check`. Every port is a warning, as the source's CLI reports them. The four deviations from
+ * `check`. Every port is a warning, as the source's CLI reports them. The six deviations from
  * the source are named on the pages and in the rules' doc comments; those a fixture shows are
  * pinned by `ours` in the expectation files, the others by the rules' unit tests.
  */

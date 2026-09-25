@@ -26,7 +26,7 @@ describe("styles.css", () => {
     const container = document.createElement("section");
     document.body.append(container);
     renderResults(container, lint(SAMPLE_FILES), {
-      source: "the sample project (11 files)",
+      source: "the sample project (14 files)",
       files: SAMPLE_FILES.map((f) => f.path),
       notes: ["Old.SemanticModel holds no .tmdl files."],
     });

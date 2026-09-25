@@ -41,9 +41,10 @@ const ported = defaultRules.filter((r) => r.status === "ported" && r.layer === "
 const native = defaultRules.filter((r) => r.status === "builtin" && r.id !== "PARSE_ISSUE");
 
 /**
- * The pbiplint.config.json at the fixture's root, the first one the CLI's search finds when it
- * lints that folder, or no settings. The sample needs its config: a policy rule such as
- * FILTERS_PANE_STATE reports only under a policy.
+ * The pbiplint.config.json at the fixture's root, or no settings. Only that one file is read:
+ * unlike the CLI's search, which walks up from the project, the harness never reads a config above
+ * the fixture. The sample needs its config: a policy rule such as FILTERS_PANE_STATE reports only
+ * under a policy.
  */
 function fixtureConfig(fixture: string): PbiplintConfig {
   const path = repoRoot + fixture + "/pbiplint.config.json";
@@ -72,12 +73,16 @@ export function oracleIds(pages: Record<string, OracleResult> | undefined): stri
     .sort();
 }
 
-/** The fixture's report was read, and nothing in either part failed to parse or threw in a rule. */
+/**
+ * The fixture's report was read, nothing in either part failed to parse or threw in a rule, and
+ * every rule its config names exists, since a misspelt id would otherwise be ignored.
+ */
 function expectCleanRead(name: string): void {
   const { files, result } = runs.get(name)!;
   expect(files.report.length).toBeGreaterThan(0);
   expect(result.findings.filter((f) => f.ruleId === "PARSE_ISSUE")).toEqual([]);
   expect(result.summary.ruleErrors).toEqual([]);
+  expect(result.summary.unknownRules).toEqual([]);
 }
 
 describe.each(oracled)("parity with fab-inspector: $name", (exp) => {
@@ -132,12 +137,17 @@ describe.each(handWritten)("planted report findings: $name", (exp) => {
   });
 });
 
+/**
+ * Oracle fixtures only: each ported rule keeps a witness fab-inspector confirms. The sample plants
+ * every rule, so counting it would let a rule lose its last oracle witness unnoticed; its own test
+ * below requires every ported rule planted.
+ */
 describe("report parity coverage", () => {
-  it("fires every ported report rule on at least one fixture", () => {
+  it("fires every ported report rule on at least one oracle fixture", () => {
     const fired = new Set<string>();
-    for (const exp of expectations)
-      for (const id of Object.keys(exp.results ?? exp.ours))
-        if (oracleIds(exp.results?.[id]).length || (exp.ours[id] ?? []).length) fired.add(id);
+    for (const exp of oracled)
+      for (const id of Object.keys(exp.results))
+        if (oracleIds(exp.results[id]).length || (exp.ours[id] ?? []).length) fired.add(id);
     const silent = ported.map((r) => r.id).filter((id) => !fired.has(id));
     expect(silent).toEqual([]);
   });

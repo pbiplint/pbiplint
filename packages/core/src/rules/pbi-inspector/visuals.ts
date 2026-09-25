@@ -3,6 +3,11 @@ import { literal } from "../../pbir/build.js";
 import { allVisuals, reportFinding } from "../report-helpers.js";
 import { inspectorRule } from "./define.js";
 
+/**
+ * Deviation: pbiplint checks every well, where PBI Inspector checks the Category well only, so it also reports the option on a matrix's Rows or Columns and on any other well a visual has.
+ *
+ * The sample's matrix has the option on Rows, so its expectation file records the deviation.
+ */
 export const AVOID_SHOW_ITEMS_WITH_NO_DATA = inspectorRule(
   "AVOID_SHOW_ITEMS_WITH_NO_DATA",
   { category: "Performance", scope: ["Visual"] },
@@ -95,6 +100,11 @@ function altTextPointer(json: unknown): string {
   return i === -1 ? base : `${base}/general/${i}/properties/altText`;
 }
 
+/**
+ * Deviation: a visual group's own alt text counts. pbiplint reads it under `visualGroup`, where a group keeps it, and reports a group only when it is missing or empty; PBI Inspector looks for a group's alt text where a visual keeps it, so it reports every group.
+ *
+ * The sample's two groups carry alt text, so its expectation file records the deviation.
+ */
 export const ENSURE_ALTTEXT = inspectorRule(
   "ENSURE_ALTTEXT",
   { category: "Accessibility", scope: ["Visual"] },

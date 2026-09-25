@@ -21,15 +21,23 @@ test("lints the sample project and announces the result", async ({ page }) => {
   await page.getByRole("button", { name: "Try the sample project" }).click();
   const results = page.locator("#results");
   await expect(results).toBeVisible();
+  await expect(results.locator("h2")).toHaveText(
+    "Results for the sample project (model, 14 files · report, 77 files)",
+  );
   await expect(results.locator(".summary")).toContainText(
-    "185 findings (16 errors, 54 warnings, 115 info) in 14 files",
+    "256 findings (19 errors, 77 warnings, 160 info) in 91 files",
   );
   await expect(page.locator("#announce")).toHaveText(
-    /^Results for the sample project \(14 files\): 185 findings/,
+    /^Results for the sample project \(model, 14 files · report, 77 files\): 256 findings/,
   );
+  await expect(results.locator("section.facts h3")).toHaveText("Report at a glance");
   await expect(results.locator(".fix-first li")).toHaveCount(5);
-  await expect(results.locator("details.files summary")).toHaveText("Files read (14)");
+  await expect(results.locator("details.files summary")).toHaveText("Files read (92)");
   await expect(page.locator("#status")).toBeHidden();
+  // Unchecking Report hides the report's groups and leaves the model's.
+  await results.getByRole("checkbox", { name: "Report", exact: true }).uncheck();
+  await expect(results.locator('.group[data-layer="report"]').first()).toBeHidden();
+  await expect(results.locator('.group[data-layer="model"]').first()).toBeVisible();
 });
 
 test("lints pasted TMDL, and an empty paste keeps the textarea in view", async ({ page }) => {
@@ -42,7 +50,7 @@ test("lints pasted TMDL, and an empty paste keeps the textarea in view", async (
     .locator("#paste")
     .fill("table Sales\n\tcolumn Amount\n\t\tdataType: double\n\t\tsourceColumn: Amount\n");
   await lint.click();
-  await expect(page.locator("#results h2")).toHaveText("Results for pasted TMDL");
+  await expect(page.locator("#results h2")).toHaveText("Results for pasted TMDL (model, 1 file)");
   await expect(page.locator("#status")).toBeHidden();
   await expect(page.locator("#results details.files")).toHaveCount(0);
 });
@@ -52,7 +60,9 @@ test("reads a whole model from the folder input, including a file whose name sta
 }) => {
   await page.locator("#folder-input").setInputFiles(zoo);
   const results = page.locator("#results");
-  await expect(results.locator("h2")).toHaveText("Results for rule-zoo.SemanticModel (17 files)");
+  await expect(results.locator("h2")).toHaveText(
+    "Results for rule-zoo.SemanticModel (model, 17 files)",
+  );
   await results.locator("details.files summary").click();
   await expect(results.locator("details.files li")).toHaveCount(17);
   await expect(
@@ -74,7 +84,7 @@ test("the Choose a folder button opens the browser's file chooser where there is
   ]);
   await chooser.setFiles(zoo);
   await expect(page.locator("#results h2")).toHaveText(
-    "Results for rule-zoo.SemanticModel (17 files)",
+    "Results for rule-zoo.SemanticModel (model, 17 files)",
   );
 });
 
@@ -124,7 +134,7 @@ test("downloads the Markdown report", async ({ page }) => {
   ]);
   expect(download.suggestedFilename()).toMatch(/\.md$/);
   const text = readFileSync((await download.path())!, "utf8");
-  expect(text).toContain("185 findings");
+  expect(text).toContain("256 findings");
 });
 
 test("copies the Markdown report from the button beside the downloads", async ({

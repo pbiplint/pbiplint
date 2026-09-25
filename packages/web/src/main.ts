@@ -1,7 +1,6 @@
 import {
   ConfigError,
   lint,
-  plural,
   resolveConfig,
   summaryLine,
   type Diagnostic,
@@ -11,8 +10,8 @@ import {
 import { InputError, selectProject, type InputTree } from "./input/project-files.js";
 import { directoryPicker, readDirectoryInput, readPickedDirectory } from "./input/pick-folder.js";
 import { readDataTransfer } from "./input/read-drop.js";
-import { renderResults } from "./results/render.js";
-import { SAMPLE_CONFIG, SAMPLE_FILES, SAMPLE_NAME } from "./sample.js";
+import { heading, renderResults } from "./results/render.js";
+import { SAMPLE_NAME, SAMPLE_TREE } from "./sample.js";
 
 /**
  * The page's own element, checked rather than cast: a #paste that stopped being a textarea would
@@ -74,7 +73,7 @@ const superseded = (token: number): boolean => token !== latestRun;
 
 interface Run {
   files: LintFile[];
-  /** What was linted, for the results heading. */
+  /** What was linted, for the results heading, which adds each layer's file count. */
   source: string;
   config?: { path: string; text: string };
   /** What to list as read under the results: every file read, the config among them. None for a paste. */
@@ -115,8 +114,9 @@ function run({ files, source, config, read, notes, diagnostics, absent, unreadPa
     renderResults(results, result, { source, files: read, notes });
     say("");
     // The results are rebuilt on every run, so the live region is this one paragraph that never
-    // leaves the page: a screen reader hears the summary sentence, not every finding row.
-    announcer.textContent = `Results for ${source}: ${summaryLine(result)}.`;
+    // leaves the page: a screen reader hears the heading and the summary sentence, not every
+    // finding row.
+    announcer.textContent = `${heading(result, source)}: ${summaryLine(result)}.`;
     if (typeof results.scrollIntoView === "function")
       results.scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (e) {
@@ -124,12 +124,17 @@ function run({ files, source, config, read, notes, diagnostics, absent, unreadPa
   }
 }
 
-function runEntries(tree: InputTree): void {
+/**
+ * A tree of files, from a drop, a folder pick, the directory input, or the bundled sample, linted
+ * as the CLI would lint the folder. `name` is what the heading calls it; a drop is named by its
+ * project folder.
+ */
+function runEntries(tree: InputTree, name?: string): void {
   try {
     const project = selectProject(tree);
     run({
       files: project.files,
-      source: `${project.root || "the dropped file"} (${plural(project.files.length, "file")})`,
+      source: name ?? (project.root || "the dropped file"),
       config: project.config,
       read: project.read,
       notes: project.notes,
@@ -153,17 +158,11 @@ byId("lint-paste", HTMLButtonElement).addEventListener("click", () => {
   run({ files: [{ path: "pasted.tmdl", text }], source: "pasted TMDL" });
 });
 
+// The sample runs as a drop of examples/messy-sales runs, through selectProject, so its results
+// and its list of files read cannot drift from what a drop of the same folder shows.
 byId("try-sample", HTMLButtonElement).addEventListener("click", () => {
   startRun();
-  run({
-    files: SAMPLE_FILES,
-    source: `${SAMPLE_NAME} (${plural(SAMPLE_FILES.length, "file")})`,
-    config:
-      SAMPLE_CONFIG === undefined
-        ? undefined
-        : { path: "pbiplint.config.json", text: SAMPLE_CONFIG },
-    read: SAMPLE_FILES.map((f) => f.path),
-  });
+  runEntries(SAMPLE_TREE, SAMPLE_NAME);
 });
 
 // Every folder route says "Reading files..." once there is a folder to read: the drop as it lands,

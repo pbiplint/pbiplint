@@ -6,7 +6,7 @@
     <title>pbiplint: best-practice linter for Power BI projects</title>
     <meta
       name="description"
-      content="Paste TMDL or drop a .SemanticModel folder and get ranked best-practice findings with fix guidance. Runs in your browser. Nothing is uploaded."
+      content="Paste TMDL or drop a PBIP folder and get ranked best-practice findings for the semantic model and the report, with fix guidance. Runs in your browser. Nothing is uploaded."
     />
     <link rel="canonical" href="https://pbiplint.com/" />
     <meta property="og:title" content="pbiplint" />
@@ -31,11 +31,13 @@
     </header>
     <main class="container">
       <section>
-        <h1>Lint your Power BI semantic model in the browser</h1>
+        <h1>Lint your Power BI project in the browser</h1>
         <p class="lede">
-          Paste TMDL or drop a <code>.SemanticModel</code> folder. pbiplint runs the Microsoft
-          best-practice rules on it, ranks what it finds, and tells you how to fix each one. Nothing
-          is uploaded: the analysis runs in this tab.
+          Paste TMDL, or drop a PBIP folder, a <code>.SemanticModel</code> folder, or a
+          <code>.Report</code> folder. pbiplint checks the semantic model against the Microsoft
+          best-practice rules and the report against PBI Inspector's rules and its own, ranks what
+          it finds, and tells you how to fix each one. Nothing is uploaded: the analysis runs in
+          this tab.
         </p>
       </section>
       <div class="inputs">
@@ -52,25 +54,23 @@
           <h2>Drop a folder</h2>
           <div id="drop" class="drop">
             <p>
-              Drop a <code>.SemanticModel</code> folder, the PBIP folder that holds one, or a single
-              <code>.tmdl</code> file here.
+              Drop a PBIP folder, a <code>.SemanticModel</code> or <code>.Report</code> folder, or a
+              single <code>.tmdl</code> file here.
             </p>
             <button id="choose-folder" type="button" class="secondary">Choose a folder</button>
             <input id="folder-input" type="file" webkitdirectory multiple hidden />
           </div>
           <p class="hint">
-            Only .tmdl files and pbiplint.config.json are read. Nothing else in the folder is
-            opened. Chrome's folder picker skips files whose names begin or end with a space;
-            dragging the folder in reads every file.
+            Only .tmdl files, the report's JSON under its definition folder, .platform,
+            definition.pbir, the .pbip file, and pbiplint.config.json are read. Nothing else in the
+            folder is opened. Chrome's folder picker skips files whose names begin or end with a
+            space; dragging the folder in reads every file.
           </p>
         </section>
       </div>
       <div class="actions">
         <button id="try-sample" type="button" class="secondary">Try the sample project</button>
-        <p class="hint">
-          A small sales model with planted violations, the same one
-          <code>npx pbiplint --sample</code> lints.
-        </p>
+        <p class="hint">A small sales project, a model and its report, with planted violations.</p>
       </div>
       <p id="status" class="status" role="status" aria-live="polite" hidden></p>
       <p id="announce" class="visually-hidden" aria-live="polite"></p>

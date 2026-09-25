@@ -1,10 +1,11 @@
 // @vitest-environment happy-dom
-import { lint, VERSION } from "@pbiplint/core";
+import { lint, resolveConfig, VERSION } from "@pbiplint/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { copy, download, exportJson, exportMarkdown } from "../src/results/export.js";
-import { SAMPLE_FILES } from "../src/sample.js";
+import { SAMPLE_CONFIG, SAMPLE_FILES } from "../src/sample.js";
 
-const result = lint(SAMPLE_FILES);
+/** The sample as the page lints it: both parts, under the sample's own config. */
+const result = lint(SAMPLE_FILES, { config: resolveConfig(JSON.parse(SAMPLE_CONFIG)) });
 const file = { name: "x.md", type: "text/markdown", text: "# x" };
 
 /** Replaces navigator.clipboard for one test. `undefined` shadows whatever happy-dom provides. */
@@ -30,7 +31,12 @@ describe("export", () => {
     const json = exportJson(result);
     expect(json.name).toBe("pbiplint-report.json");
     const doc = JSON.parse(json.text);
-    expect(doc.summary.findings).toBe(185);
+    expect(doc.summary.findings).toBe(256);
+    expect(doc.layers).toEqual({
+      model: { present: true, files: 14 },
+      report: { present: true, files: 77 },
+    });
+    expect(md.text).toContain("Report at a glance");
     expect(doc.tool.version).toBe(VERSION);
   });
   it("downloads through a blob URL and revokes it only once the download can have started", () => {

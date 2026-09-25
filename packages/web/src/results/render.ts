@@ -3,8 +3,11 @@ import {
   plural,
   SEVERITY_LABEL,
   skippedLine,
+  slug,
   summaryLine,
   topGroups,
+  type Fact,
+  type LayerName,
   type LintResult,
   type RankedGroup,
   type Severity,
@@ -12,7 +15,10 @@ import {
 import { copy, download, exportJson, exportMarkdown } from "./export.js";
 
 export interface RenderOptions {
-  /** What was linted, for the heading: "the sample project (11 files)", "pasted TMDL". */
+  /**
+   * What was linted, without counts: "the sample project", "pasted TMDL", or a dropped folder's
+   * name. The heading adds each layer's file count from the result (see heading).
+   */
   source: string;
   /**
    * The files that were read, as paths relative to the project root, listed under the results so
@@ -47,6 +53,7 @@ export function h<K extends keyof HTMLElementTagNameMap>(
 }
 
 const SEVERITIES: readonly Severity[] = [3, 2, 1];
+const LAYERS: readonly LayerName[] = ["model", "report"];
 const pagePath = (slug: string): string => `/rules/${slug}/`;
 
 /** "1 error", "3 warnings", "106 info": the severity nouns as the text format writes them. */
@@ -56,6 +63,20 @@ const count = (n: number, severity: Severity): string => {
   // to its caller.
   return noun === "info" ? `${n} ${noun}` : plural(n, noun);
 };
+
+/**
+ * "Results for the sample project (model, 14 files · report, 77 files)": the source, then each
+ * layer the run read with its file count. Present layers only, so a run given one part says nothing
+ * about the part it was not given (decision 14), and a run that read neither part names no count.
+ * The page announces the same words ahead of the summary sentence.
+ */
+export function heading(result: LintResult, source: string): string {
+  const layers = LAYERS.flatMap((name) => {
+    const layer = result.layers[name];
+    return layer.present ? [`${name}, ${plural(layer.files, "file")}`] : [];
+  });
+  return layers.length ? `Results for ${source} (${layers.join(" · ")})` : `Results for ${source}`;
+}
 
 export function renderResults(
   container: HTMLElement,
@@ -69,7 +90,7 @@ export function renderResults(
       "Nothing was uploaded. The analysis ran in this browser tab. ",
       h("a", { href: "/about/#verify" }, "How to check that"),
     ),
-    h("h2", {}, `Results for ${options.source}`),
+    h("h2", {}, heading(result, options.source)),
     // The summary is not a live region: everything is rebuilt on each run, and a region inserted
     // with its text already set may not be announced. The page announces it through #announce.
     h("p", { class: "summary" }, `${summaryLine(result)}. ${skippedLine(result)}.`),
@@ -92,8 +113,12 @@ export function renderResults(
           ),
         ]
       : []),
-    // Right under the sentence that counts the files, so "in 11 files" expands into which ones.
+    // Right under the sentence that counts the files, so the heading's "(model, 14 files ·
+    // report, 77 files)" expands into which ones.
     ...renderFilesRead(options.files),
+    // What the report will do, whether or not anything fired: after everything that says what
+    // was read, before what to fix. A run with no report has no facts and no panel.
+    ...renderFacts(result),
   );
   // Cleared on every render and set again below only when there are filters to change, so a run
   // with no findings cannot leave the previous run's handler on the container.
@@ -124,6 +149,8 @@ export function renderResults(
             },
             "How to fix it",
           ),
+          " ",
+          layerTag(g),
         ),
       ),
     ),
@@ -136,6 +163,48 @@ export function renderResults(
   container.onchange = (event) => {
     if ((event.target as HTMLElement).matches("input[data-filter]")) applyFilters(container);
   };
+}
+
+/** A group's layer, as the tag on its row and on its fix-first item: model, report, or project. */
+const layerTag = (g: RankedGroup): HTMLElement =>
+  h("span", { class: `layer ${g.rule.layer}` }, g.rule.layer);
+
+/**
+ * "Report at a glance": what the report will do, one row per fact core gives, and nothing when it
+ * gives none (a run with no report). A fact whose rule ran links its value: to the rule's group on
+ * this page when the run has one, flagged, since there is something to fix, and to the rule's page
+ * when the rule found nothing. Every href is built from the rule id, never from report text.
+ */
+function renderFacts(result: LintResult): HTMLElement[] {
+  if (result.facts.length === 0) return [];
+  const onPage = new Map(result.groups.map((g) => [g.rule.id, g.rule.slug]));
+  const value = (f: Fact): Node | string => {
+    if (f.ruleId === undefined) return f.value;
+    const here = onPage.get(f.ruleId);
+    return here === undefined
+      ? h("a", { class: "fact", href: pagePath(slug(f.ruleId)) }, f.value)
+      : h("a", { class: "fact flag", href: `#rule-${here}` }, f.value);
+  };
+  return [
+    h(
+      "section",
+      { class: "facts" },
+      h("h3", {}, "Report at a glance"),
+      h(
+        "dl",
+        {},
+        ...result.facts.flatMap((f) => [
+          h("dt", {}, f.label),
+          h(
+            "dd",
+            {},
+            value(f),
+            ...(f.detail === undefined ? [] : [" · ", h("span", { class: "detail" }, f.detail)]),
+          ),
+        ]),
+      ),
+    ),
+  ];
 }
 
 /** The files that were read, collapsed: the count is enough until a file seems to be missing. */
@@ -198,29 +267,48 @@ function renderFilters(result: LintResult): HTMLElement {
   const categories = CATEGORY_ORDER.filter((c) => result.groups.some((g) => g.rule.category === c));
   // "Error", not "error": the category labels beside them are title case.
   const titleCase = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
+  // A Model and Report pair only when both layers have groups: with one, unchecking it would only
+  // hide everything, which the severity boxes already do.
+  const layers = LAYERS.filter((l) => result.groups.some((g) => g.rule.layer === l));
   return h(
     "fieldset",
     { class: "filters" },
     h("legend", {}, "Show"),
     ...severities.map((s) => box("severity", String(s), titleCase(SEVERITY_LABEL[s]))),
+    ...(layers.length === LAYERS.length
+      ? [h("span", { class: "gap" }), ...layers.map((l) => box("layer", l, titleCase(l)))]
+      : []),
     h("span", { class: "gap" }),
     ...categories.map((c) => box("category", c, c)),
   );
 }
 
-/** Hides every group whose severity or category is unchecked. */
+/**
+ * Hides every group whose severity, category, or layer is unchecked. A project group, whose
+ * findings fall on both layers, stays shown while either layer is checked. With no layer boxes,
+ * a run with groups on one layer, the layer hides nothing.
+ */
 export function applyFilters(container: HTMLElement): void {
+  const boxes = (kind: string): HTMLInputElement[] => [
+    ...container.querySelectorAll<HTMLInputElement>(`input[data-filter="${kind}"]`),
+  ];
   const checked = (kind: string): Set<string> =>
     new Set(
-      [...container.querySelectorAll<HTMLInputElement>(`input[data-filter="${kind}"]`)]
+      boxes(kind)
         .filter((i) => i.checked)
         .map((i) => i.value),
     );
   const severities = checked("severity");
   const categories = checked("category");
+  const byLayer = boxes("layer").length > 0;
+  const layers = checked("layer");
+  const layerShown = (layer: string): boolean =>
+    !byLayer || (layer === "project" ? layers.size > 0 : layers.has(layer));
   for (const group of container.querySelectorAll<HTMLElement>(".group"))
     group.hidden = !(
-      severities.has(group.dataset.severity ?? "") && categories.has(group.dataset.category ?? "")
+      severities.has(group.dataset.severity ?? "") &&
+      categories.has(group.dataset.category ?? "") &&
+      layerShown(group.dataset.layer ?? "")
     );
 }
 
@@ -243,6 +331,7 @@ function renderGroup(g: RankedGroup): HTMLElement {
       id: `rule-${g.rule.slug}`,
       "data-severity": String(g.rule.severity),
       "data-category": g.rule.category,
+      "data-layer": g.rule.layer,
     },
     // The summary is the disclosure control itself, so it holds no focusable child: the rule link
     // sits in the panel below, where activating it can only mean "open the page".
@@ -251,6 +340,7 @@ function renderGroup(g: RankedGroup): HTMLElement {
       {},
       h("span", { class: `badge ${label}` }, label),
       h("span", { class: "name" }, g.rule.name),
+      layerTag(g),
       // The digits are for the eye, the phrase for a screen reader: "2" beside a rule name is a
       // number with no noun, and both in the open would read the count out twice.
       h(

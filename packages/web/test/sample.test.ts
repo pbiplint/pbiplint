@@ -1,19 +1,22 @@
-import { lint } from "@pbiplint/core";
+import { lint, resolveConfig } from "@pbiplint/core";
 import { describe, expect, it } from "vitest";
+import { selectProject } from "../src/input/project-files.js";
 import {
   SAMPLE_CONFIG,
   SAMPLE_FILES,
   SAMPLE_NAME,
+  SAMPLE_TREE,
   sampleFiles,
-  sampleLayers,
+  sampleTree,
 } from "../src/sample.js";
 
 describe("bundled sample", () => {
-  it("is examples/messy-sales, model-relative and in the order the results list them", () => {
+  it("is examples/messy-sales: the model's files, then the report's, each relative to its part", () => {
     // Written out rather than compared to a re-sort of itself: the module sorts with an explicit
     // locale, and [...].sort() is the default sort, which agrees with it here by luck rather than
     // by rule.
-    expect(SAMPLE_FILES.map((f) => f.path)).toEqual([
+    const paths = SAMPLE_FILES.map((f) => f.path);
+    expect(paths.slice(0, 14)).toEqual([
       "definition/cultures/en-US.tmdl",
       "definition/database.tmdl",
       "definition/model.tmdl",
@@ -29,13 +32,62 @@ describe("bundled sample", () => {
       "definition/tables/Sales.tmdl",
       "definition/tables/Store.tmdl",
     ]);
+    // The report's 77, as the CLI counts them: the .pbip one level up, the part's own two files,
+    // and the 74 JSON files under its definition folder.
+    const report = paths.slice(14);
+    expect(report).toHaveLength(77);
+    expect(report.slice(0, 4)).toEqual([
+      "../Messy Sales Demo.pbip",
+      ".platform",
+      "definition.pbir",
+      "definition/bookmarks/bookmarks.json",
+    ]);
+    expect(report.slice(3).every((p) => p.startsWith("definition/") && p.endsWith(".json"))).toBe(
+      true,
+    );
+    expect(report).toContain("definition/report.json");
+    expect(report).toContain("definition/reportExtensions.json");
   });
   it("names itself the way the results heading and the announcement read", () => {
     expect(SAMPLE_NAME).toBe("the sample project");
   });
-  it("exposes the sample's config and its layer counts", () => {
-    expect(SAMPLE_CONFIG).toBeUndefined();
-    expect(sampleLayers(SAMPLE_FILES)).toEqual({ model: 14, report: 0 });
+  it("carries the sample's config, which sets the two policies the sample plants", () => {
+    expect(JSON.parse(SAMPLE_CONFIG)).toEqual({
+      $schema: "https://pbiplint.com/schema/pbiplint.config.schema.json",
+      rules: {
+        FILTERS_PANE_STATE: { expect: "closed" },
+        TAB_ORDER_FOLLOWS_LAYOUT: { expect: "layout" },
+      },
+    });
+  });
+  it("reads as a drop of examples/messy-sales reads, so selectProject gives lint the same files and config", () => {
+    // The button runs the sample through selectProject, as a drop of the folder runs, so the
+    // files lint sees and the config it applies are held to the ones this module lints here.
+    const project = selectProject(SAMPLE_TREE);
+    expect(project.root).toBe("messy-sales");
+    expect(project.files).toEqual(SAMPLE_FILES);
+    expect(project.config).toEqual({
+      path: "messy-sales/pbiplint.config.json",
+      text: SAMPLE_CONFIG,
+    });
+    expect(project.absent).toEqual({});
+    expect(project.notes).toEqual([]);
+    expect(project.diagnostics).toEqual([]);
+    expect(SAMPLE_TREE.modelFolders).toEqual(["messy-sales/Messy Sales Demo.SemanticModel"]);
+    expect(SAMPLE_TREE.reportFolders).toEqual(["messy-sales/Messy Sales Demo.Report"]);
+  });
+  it("lints to the numbers the CLI gives for examples/messy-sales", () => {
+    // packages/cli/test/cli.test.ts pins the same totals for `pbiplint examples/messy-sales`.
+    const result = lint(SAMPLE_FILES, { config: resolveConfig(JSON.parse(SAMPLE_CONFIG)) });
+    const { summary } = result;
+    expect([summary.findings, summary.errors, summary.warnings, summary.infos]).toEqual([
+      256, 19, 77, 160,
+    ]);
+    expect(summary.files).toBe(91);
+    expect(result.layers).toEqual({
+      model: { present: true, files: 14 },
+      report: { present: true, files: 77 },
+    });
   });
   it("sorts with the locale it asks for, not the order code units happen to give", () => {
     const files = sampleFiles({
@@ -50,22 +102,22 @@ describe("bundled sample", () => {
     // the default sort compares "B" (0x42) against "a" (0x61) and puts the capital first.
     expect([...paths].sort()).toEqual(["definition/tables/B.tmdl", "definition/tables/a.tmdl"]);
   });
-  it("gives each part its own relative paths, and refuses a file outside both parts", () => {
+  it("gives each part its own relative paths, the model's first, and refuses a file outside both parts", () => {
     const files = sampleFiles({
+      "/x/examples/messy-sales/Messy Sales Demo.Report/definition/report.json": "{}",
       "/x/examples/messy-sales/Messy Sales Demo.SemanticModel/definition/tables/B.tmdl":
         "table B\n",
-      "/x/examples/messy-sales/Messy Sales Demo.Report/definition/report.json": "{}",
       "/x/examples/messy-sales/Messy Sales Demo.Report/definition.pbir": "{}",
       "/x/examples/messy-sales/Messy Sales Demo.pbip": "{}",
     });
-    expect(files.map((f) => f.path).sort()).toEqual(
-      [
-        "../Messy Sales Demo.pbip",
-        "definition.pbir",
-        "definition/report.json",
-        "definition/tables/B.tmdl",
-      ].sort(),
-    );
+    // The model's files, then the report's with the project file among them, as the CLI and
+    // selectProject hand them to lint.
+    expect(files.map((f) => f.path)).toEqual([
+      "definition/tables/B.tmdl",
+      "../Messy Sales Demo.pbip",
+      "definition.pbir",
+      "definition/report.json",
+    ]);
     // A file beside the parts belongs to neither: lint would read it as nothing, and the results
     // heading would still count it.
     expect(() => sampleFiles({ "/x/examples/messy-sales/README.md": "" })).toThrow(
@@ -78,13 +130,25 @@ describe("bundled sample", () => {
     expect(() => sampleFiles({ "/x/examples/other/definition/model.tmdl": "" })).toThrow(
       /outside the sample project/,
     );
+    expect(() => sampleTree({ "/x/examples/other/definition/model.tmdl": "" })).toThrow(
+      /outside the sample project/,
+    );
   });
-  it("lints the model alone to the numbers the site's sample shows", () => {
-    // pbiplint --sample lints the whole project, its report included; packages/cli/test/cli.test.ts
-    // pins those totals.
-    const { summary } = lint(SAMPLE_FILES);
-    expect([summary.findings, summary.errors, summary.warnings, summary.infos]).toEqual([
-      185, 16, 54, 115,
+  it("builds the tree a drop of examples/messy-sales gives, rooted at messy-sales", () => {
+    const tree = sampleTree({
+      "/x/examples/messy-sales/pbiplint.config.json": "{}",
+      "/x/examples/messy-sales/Messy Sales Demo.Report/definition/report.json": "{}",
+      "/x/examples/messy-sales/Messy Sales Demo.SemanticModel/definition/model.tmdl": "model M\n",
+    });
+    expect(tree.entries.map((e) => e.path)).toEqual([
+      "messy-sales/Messy Sales Demo.Report/definition/report.json",
+      "messy-sales/Messy Sales Demo.SemanticModel/definition/model.tmdl",
+      "messy-sales/pbiplint.config.json",
     ]);
+    expect(tree.modelFolders).toEqual(["messy-sales/Messy Sales Demo.SemanticModel"]);
+    expect(tree.reportFolders).toEqual(["messy-sales/Messy Sales Demo.Report"]);
+    expect(tree.markers).toEqual([]);
+    expect(tree.diagnostics).toEqual([]);
+    expect(tree.unreadFolders).toEqual([]);
   });
 });

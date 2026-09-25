@@ -3,7 +3,6 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { SAMPLE_FILES } from "../src/sample.js";
 
 // happy-dom resolves a relative URL against the page's http base, so the file path is built
 // from import.meta.url instead of new URL(..., import.meta.url).
@@ -55,7 +54,13 @@ describe("home page", () => {
     await tick();
     const results = document.getElementById("results")!;
     expect(results.hidden).toBe(false);
-    expect(results.querySelector(".summary")!.textContent).toContain("185 findings");
+    expect(results.querySelector(".summary")!.textContent).toContain("256 findings");
+    expect(results.querySelector("h2")!.textContent).toBe(
+      "Results for the sample project (model, 14 files · report, 77 files)",
+    );
+    // The sample runs under its own config, so the policy rules it plants fire.
+    expect(results.querySelector("#rule-filters-pane-state")).not.toBeNull();
+    expect(results.querySelector("section.facts h3")!.textContent).toBe("Report at a glance");
     expect(document.getElementById("status")!.hidden).toBe(true);
   });
   it("announces a run as one sentence through a live region that exists before the run", async () => {
@@ -69,7 +74,7 @@ describe("home page", () => {
     document.getElementById("try-sample")!.click();
     await tick();
     expect(announcer.textContent).toBe(
-      "Results for the sample project (14 files): 185 findings (16 errors, 54 warnings, 115 info) in 14 files.",
+      "Results for the sample project (model, 14 files · report, 77 files): 256 findings (19 errors, 77 warnings, 160 info) in 91 files.",
     );
     expect(document.getElementById("results")!.hasAttribute("aria-live")).toBe(false);
     expect(document.querySelectorAll("#results [aria-live]").length).toBe(0);
@@ -88,7 +93,9 @@ describe("home page", () => {
     document.getElementById("lint-paste")!.click();
     await tick();
     expect(status.hidden).toBe(true);
-    expect(document.querySelector("#results h2")!.textContent).toBe("Results for pasted TMDL");
+    expect(document.querySelector("#results h2")!.textContent).toBe(
+      "Results for pasted TMDL (model, 1 file)",
+    );
     expect(document.querySelector("#results .summary")!.textContent).toContain("in 1 file");
   });
   it("unhides the status line before it writes the message", () => {
@@ -130,7 +137,7 @@ describe("home page", () => {
     // The same rule the status line follows: a hidden block is out of the accessibility tree, so
     // content rendered into one arrives where nothing can reach it.
     expect(order).toEqual(["hidden=false", "render"]);
-    expect(results.querySelector(".summary")!.textContent).toContain("185 findings");
+    expect(results.querySelector(".summary")!.textContent).toContain("256 findings");
   });
   it("scrolls a problem message only as far as needed, so the textarea stays in view", () => {
     const status = document.getElementById("status")!;
@@ -223,7 +230,7 @@ describe("home page", () => {
     await tick();
     expect(status.hidden).toBe(true);
     expect(document.querySelector("#results h2")!.textContent).toBe(
-      "Results for Demo.SemanticModel (1 file)",
+      "Results for Demo.SemanticModel (model, 1 file)",
     );
   });
   it("lists the files it read for the sample and a folder, and none for a paste", async () => {
@@ -231,7 +238,19 @@ describe("home page", () => {
       [...document.querySelectorAll("#results details.files li")].map((li) => li.textContent!);
     document.getElementById("try-sample")!.click();
     await tick();
-    expect(listed()).toEqual(SAMPLE_FILES.map((f) => f.path));
+    // The sample runs through selectProject as a drop of examples/messy-sales runs, so it lists
+    // what that drop reads, relative to the project folder: the model's files as they are, the
+    // report's marked "(report)", the project file among them, and the config it applied.
+    const sample = listed();
+    expect(sample).toHaveLength(92);
+    expect(sample.filter((p) => p.endsWith(" (report)"))).toHaveLength(77);
+    expect(sample.filter((p) => p.endsWith(".tmdl"))).toHaveLength(14);
+    expect(sample).toContain("Messy Sales Demo.SemanticModel/definition/model.tmdl");
+    expect(sample).toContain("Messy Sales Demo.Report/definition.pbir (report)");
+    expect(sample).toContain("Messy Sales Demo.Report/definition/report.json (report)");
+    expect(sample).toContain("Messy Sales Demo.pbip (report)");
+    expect(sample).toContain("pbiplint.config.json (config)");
+    expect(sample).toEqual([...sample].sort((a, b) => a.localeCompare(b, "en")));
     const input = document.getElementById("folder-input") as HTMLInputElement;
     const at = (path: string, text: string): File =>
       Object.assign(new File([text], path.slice(path.lastIndexOf("/") + 1)), {
@@ -282,7 +301,9 @@ describe("home page", () => {
     await tick();
     await tick();
     // The dropped PBIP folder is the project root, as the CLI takes it.
-    expect(document.querySelector("#results h2")!.textContent).toBe("Results for Proj (1 file)");
+    expect(document.querySelector("#results h2")!.textContent).toBe(
+      "Results for Proj (model, 1 file)",
+    );
     expect(document.querySelector("#results .notice")!.textContent).toMatch(
       /^Proj\/Old\.SemanticModel holds no \.tmdl files/,
     );
@@ -366,6 +387,27 @@ describe("home page", () => {
     expect(results.hidden).toBe(true);
     expect(results.children.length).toBe(0);
   });
+  it("says the page reads a whole project, and names no command that reads the sample's report", () => {
+    const text = (selector: string): string =>
+      document.querySelector(selector)!.textContent!.replace(/\s+/g, " ").trim();
+    expect(text("h1")).toBe("Lint your Power BI project in the browser");
+    expect(text(".lede")).toBe(
+      "Paste TMDL, or drop a PBIP folder, a .SemanticModel folder, or a .Report folder. pbiplint checks the semantic model against the Microsoft best-practice rules and the report against PBI Inspector's rules and its own, ranks what it finds, and tells you how to fix each one. Nothing is uploaded: the analysis runs in this tab.",
+    );
+    expect(text("#drop p")).toBe(
+      "Drop a PBIP folder, a .SemanticModel or .Report folder, or a single .tmdl file here.",
+    );
+    expect(text(".panel .hint")).toMatch(
+      /^Only \.tmdl files, the report's JSON under its definition folder, \.platform, definition\.pbir, the \.pbip file, and pbiplint\.config\.json are read\. Nothing else in the folder is opened\. /,
+    );
+    expect(text(".actions .hint")).toBe(
+      "A small sales project, a model and its report, with planted violations.",
+    );
+    // The command-line tool on npm (0.1.2) lints the model alone, so the page points at no
+    // command that would read the sample's report.
+    expect(body).not.toContain("--sample");
+    expect(html).not.toMatch(/drop a \.SemanticModel folder and get/);
+  });
   it("lets the newest input win when two reads finish out of order", async () => {
     const input = document.getElementById("folder-input") as HTMLInputElement;
     let release: (() => void) | undefined;
@@ -385,12 +427,16 @@ describe("home page", () => {
     (document.getElementById("paste") as HTMLTextAreaElement).value = "table Pasted\n";
     document.getElementById("lint-paste")!.click();
     await tick();
-    expect(document.querySelector("#results h2")!.textContent).toBe("Results for pasted TMDL");
+    expect(document.querySelector("#results h2")!.textContent).toBe(
+      "Results for pasted TMDL (model, 1 file)",
+    );
     release!();
     await tick();
     await tick();
     // The superseded read comes back last and is dropped rather than replacing the paste.
-    expect(document.querySelector("#results h2")!.textContent).toBe("Results for pasted TMDL");
+    expect(document.querySelector("#results h2")!.textContent).toBe(
+      "Results for pasted TMDL (model, 1 file)",
+    );
     expect(document.getElementById("status")!.hidden).toBe(true);
   });
 });

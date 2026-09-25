@@ -5,11 +5,13 @@ description: What pbiplint is, who makes it, and how to check for yourself that 
 
 # About pbiplint
 
-pbiplint is a free, open-source best-practice linter for Power BI projects. Paste TMDL or drop a `.SemanticModel` folder on the [home page](/), or run `npx pbiplint <path>` on your own machine, and get a ranked list of findings with a page for every rule that says what it checks, why it matters, and how to fix it.
+pbiplint is a free, open-source best-practice linter for Power BI projects. Paste TMDL or drop a PBIP folder on the [home page](/), or run `npx pbiplint <path>` on your own machine, and get a ranked list of findings with a page for every rule that says what it checks, why it matters, and how to fix it.
 
 ## What it checks
 
-Version 1 covers the semantic model: every rule from the Microsoft Best Practice Analyzer ruleset, ported so the results match Tabular Editor on the same model. Five rules need statistics only a live model has; they are listed but not run. Report rules and Power Query rules come next. The [rules index](/rules/) has the full list.
+The site reads both parts of a Power BI project: the semantic model, saved as TMDL, and the report, saved in the PBIR format. Drop a PBIP folder and both are checked together, as long as the report reads the model beside it; a report bound to a published model is checked on its own, and the results say why. A `.SemanticModel` or `.Report` folder dropped by itself is checked by itself, so a report without its model is valid input too. When both parts are checked together, the model is also judged by what the report uses: a field the report names that the model does not have is an error, and a column or measure the report never reaches is listed.
+
+The model rules are every rule from the Microsoft Best Practice Analyzer ruleset, ported so the results match Tabular Editor on the same model. Five of them need statistics only a live model has; they are listed but not run. The report rules are rules ported from PBI Inspector's base rules, by Nat Van Gulck, plus rules of pbiplint's own. Power Query rules come later. The [rules index](/rules/) has the full list.
 
 ## Who makes it
 
@@ -28,8 +30,10 @@ The command-line tool is the same code with a folder walk in front of it. It rea
 
 ## Known limits in the browser
 
+pbiplint reads one semantic model and one report per run. A folder that holds two semantic models or two reports is refused with their names; drop the one you want, or a folder that holds one of each.
+
 The "Choose a folder" button uses the browser's folder picker. In Chrome and Edge that picker does not list files whose names begin or end with a space, so a table file named that way is skipped without a message and its findings are missing. Dragging the folder onto the page, or running the command line, reads every file. The rule that flags such names, `OBJECTS_SHOULD_NOT_START_OR_END_WITH_A_SPACE`, says the same on its page.
 
 ## What it does not do
 
-pbiplint does not document models, apply fixes, or analyze query performance. For documentation there is PBIP Documenter; for query plans there is DAX Studio. The rules pbiplint ports are the Best Practice Analyzer rules, so a model that is clean here is clean there too.
+pbiplint does not document models, apply fixes, or analyze query performance. For documentation there is PBIP Documenter; for query plans there is DAX Studio. The model rules pbiplint ports are the Best Practice Analyzer rules, so a model that is clean here is clean there too.

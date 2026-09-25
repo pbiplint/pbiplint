@@ -49,7 +49,7 @@ describe("home page with a folder picker", () => {
     expect(seen).toEqual(["picked:", "walk:Reading files..."]);
     expect(document.getElementById("status")!.hidden).toBe(true);
     expect(document.querySelector("#results h2")!.textContent).toBe(
-      "Results for Demo.SemanticModel (1 file)",
+      "Results for Demo.SemanticModel (model, 1 file)",
     );
   });
   it("leaves the status line alone when the dialog is cancelled", async () => {

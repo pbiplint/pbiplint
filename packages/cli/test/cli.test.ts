@@ -71,7 +71,8 @@ describe("pbiplint CLI", () => {
         detail: "the page open when it was saved; no landing page set",
         ruleId: "OPENING_PAGE_INVALID",
       },
-      // report.json saves the pane expanded; the config's policy expects it closed.
+      // report.json saves the pane expanded. The rule is linked because pbiplint.config.json sets
+      // FILTERS_PANE_STATE's policy (it expects the pane closed); without one the fact links none.
       { layer: "report", label: "Filters pane", value: "open", ruleId: "FILTERS_PANE_STATE" },
       // Scratch is hidden, and Product tooltip is a tooltip page by its type and its binding.
       {
@@ -122,6 +123,7 @@ describe("pbiplint CLI", () => {
         ruleId: "NOT_REACHED_FROM_REPORT",
       },
     ]);
+    expect(r.err).toBe("");
   });
   it("--sample is the same as pointing at the bundled sample", async () => {
     const r = await run(["--sample", "--format", "json"]);

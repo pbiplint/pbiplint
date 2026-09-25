@@ -16,7 +16,7 @@ import {
   type ResolvedConfig,
 } from "./config.js";
 import { rank, type RankedGroup } from "./rank.js";
-import { runRules, type RuleError, type SkippedRule } from "./run.js";
+import { optionsFor, runRules, type RuleError, type SkippedRule } from "./run.js";
 
 export interface LintFile {
   /** Path relative to the part's root, forward slashes: `definition/tables/Sales.tmdl`, `definition/pages/<id>/page.json`. */
@@ -109,8 +109,14 @@ export function lint(files: LintFile[], options: LintOptions = {}): LintResult {
   const indexes = buildIndexes(project);
   const run = runRules(project, indexes, rules, config);
   const groups = rank(run.findings, rules, config);
-  // Only the rules that ran: a fact never links the page of a rule turned off or skipped.
-  const facts = buildFacts(project, indexes, new Set(run.rulesRun));
+  // Only the rules that ran: a fact never links the page of a rule turned off or skipped. Their
+  // options are the ones each was checked with, so a fact that links a rule only under a policy,
+  // as Filters pane does, reads the policy the rule read.
+  const ran = new Set(run.rulesRun);
+  const ranOptions = new Map(
+    rules.filter((r) => ran.has(r.id)).map((r) => [r.id, optionsFor(r, config)] as const),
+  );
+  const facts = buildFacts(project, indexes, ran, ranOptions);
   const count = (severity: number) =>
     groups.filter((g) => g.rule.severity === severity).reduce((n, g) => n + g.findings.length, 0);
   const summary: LintSummary = {

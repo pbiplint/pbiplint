@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { buildIndexes } from "../src/index/build.js";
-import { bindConfig, ConfigError, resolveConfig } from "../src/engine/config.js";
+import {
+  bindConfig,
+  ConfigError,
+  resolveConfig,
+  type PbiplintConfig,
+} from "../src/engine/config.js";
 import { ignoreHelp, isIgnored } from "../src/engine/ignore.js";
 import { lint } from "../src/engine/lint.js";
 import { rank } from "../src/engine/rank.js";
@@ -846,6 +851,64 @@ describe("lint over a project", () => {
       ...measures,
       ruleId: "REPORT_LEVEL_MEASURES",
     });
+  });
+  it("links the Filters pane to FILTERS_PANE_STATE only when the rule ran under an expect policy", () => {
+    // report.json saves the pane expanded, so pbiplint reads it as open.
+    const expanded = {
+      path: "definition/report.json",
+      text: j({
+        objects: {
+          outspacePane: [{ properties: { expanded: { expr: { Literal: { Value: "true" } } } } }],
+        },
+      }),
+    };
+    const files = [expanded, ...reportFiles.filter((f) => f.path !== "definition/report.json")];
+    const pane = (r: ReturnType<typeof lint>) => ({
+      fact: r.facts.find((f) => f.label === "Filters pane"),
+      findings: r.findings.filter((f) => f.ruleId === "FILTERS_PANE_STATE").map((f) => f.detail),
+      skipped: r.summary.rulesSkipped.find((s) => s.id === "FILTERS_PANE_STATE"),
+    });
+    const open = { layer: "report", label: "Filters pane", value: "open" };
+    const linked = { ...open, ruleId: "FILTERS_PANE_STATE" };
+    // No policy: the rule runs and can never fire, so the fact links nothing.
+    expect(pane(lint(files))).toEqual({ fact: open, findings: [], skipped: undefined });
+    // A policy the saved state meets: the rule ran and found nothing, and the fact links it.
+    const meets = { rules: { FILTERS_PANE_STATE: { expect: "open" } } };
+    expect(pane(lint(files, { config: meets }))).toEqual({
+      fact: linked,
+      findings: [],
+      skipped: undefined,
+    });
+    // A policy the saved state breaks, however the config writes it: with a severity, or under an
+    // id in another case, which binds to the rule as its options do.
+    const breaks: PbiplintConfig["rules"][] = [
+      { FILTERS_PANE_STATE: { expect: "closed" } },
+      { FILTERS_PANE_STATE: { severity: "error", expect: "closed" } },
+      { filters_pane_state: { expect: "closed" } },
+    ];
+    for (const rules of breaks)
+      expect(pane(lint(files, { config: { rules } })), JSON.stringify(rules)).toEqual({
+        fact: linked,
+        findings: ["saved open; the policy expects closed"],
+        skipped: undefined,
+      });
+    // Turned off with a policy in hand: the rule did not run, so the fact links nothing.
+    const off = resolveConfig({ rules: { FILTERS_PANE_STATE: { expect: "closed" } } });
+    off.disabled.add("FILTERS_PANE_STATE");
+    expect(pane(lint(files, { config: off }))).toEqual({
+      fact: open,
+      findings: [],
+      skipped: { id: "FILTERS_PANE_STATE", reason: "disabled" },
+    });
+    // report.json not read: the pane is unknown and links no rule, under a policy as without one.
+    const unread = [...files.filter((f) => f !== expanded), { path: expanded.path, text: "[]" }];
+    for (const config of [undefined, { rules: { FILTERS_PANE_STATE: { expect: "closed" } } }])
+      expect(pane(lint(unread, config ? { config } : {})).fact).toEqual({
+        layer: "report",
+        label: "Filters pane",
+        value: "unknown",
+        detail: "report.json was not read",
+      });
   });
   describe("NOT_REACHED_FROM_REPORT with a report file that could not be read", () => {
     // A readable visual naming Sales[Region], which the model does not have, beside the files each

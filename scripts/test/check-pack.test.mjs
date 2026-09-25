@@ -28,7 +28,9 @@ const cli = (extra = []) =>
     "dist/pbiplint.mjs",
     "sample/Messy Sales Demo.SemanticModel/definition/model.tmdl",
     "sample/Messy Sales Demo.SemanticModel/definition/tables/Sales.tmdl",
+    "sample/Messy Sales Demo.Report/definition/report.json",
     "sample/Messy Sales Demo.pbip",
+    "sample/pbiplint.config.json",
     ...extra,
   ]);
 
@@ -59,7 +61,9 @@ describe("packProblems", () => {
       "pbiplint: missing dist/pbiplint.mjs",
       "pbiplint: missing sample/Messy Sales Demo.SemanticModel/definition/model.tmdl",
       "pbiplint: missing sample/Messy Sales Demo.SemanticModel/definition/tables/Sales.tmdl",
+      "pbiplint: missing sample/Messy Sales Demo.Report/definition/report.json",
       "pbiplint: missing sample/Messy Sales Demo.pbip",
+      "pbiplint: missing sample/pbiplint.config.json",
       "versions differ: 0.1.0, 0.2.0",
     ]);
   });

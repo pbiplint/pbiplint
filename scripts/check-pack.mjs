@@ -29,7 +29,9 @@ export const REQUIRED = {
     "dist/pbiplint.mjs",
     "sample/Messy Sales Demo.SemanticModel/definition/model.tmdl",
     "sample/Messy Sales Demo.SemanticModel/definition/tables/Sales.tmdl",
+    "sample/Messy Sales Demo.Report/definition/report.json",
     "sample/Messy Sales Demo.pbip",
+    "sample/pbiplint.config.json",
   ],
 };
 /**

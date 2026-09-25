@@ -1,0 +1,46 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/reportExtension/1.0.0/schema.json",
+  "name": "extension",
+  "entities": [
+    {
+      "name": "Sales",
+      "measures": [
+        {
+          "name": "Net Margin",
+          "dataType": "Double",
+          "expression": "[Total Sales] - [Total Cost]",
+          "references": {
+            "measures": [
+              {
+                "entity": "Sales",
+                "name": "Total Sales"
+              },
+              {
+                "entity": "Sales",
+                "name": "Total Cost"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Margin % (report)",
+          "dataType": "Double",
+          "expression": "DIVIDE([Net Margin], [Total Sales])",
+          "references": {
+            "measures": [
+              {
+                "schema": "extension",
+                "entity": "Sales",
+                "name": "Net Margin"
+              },
+              {
+                "entity": "Sales",
+                "name": "Total Sales"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

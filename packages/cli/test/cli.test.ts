@@ -50,7 +50,7 @@ describe("pbiplint CLI", () => {
     const r = await run([sample]);
     expect(r.code).toBe(1);
     expect(r.out).toMatch(
-      /^pbiplint: 185 findings \(16 errors, 54 warnings, 115 info\) in 14 files/,
+      /^pbiplint: 268 findings \(19 errors, 75 warnings, 174 info\) in 79 files/,
     );
     expect(r.out).toContain("https://pbiplint.com/rules/provide-format-string-for-measures");
     expect(r.err).toBe("");
@@ -58,12 +58,12 @@ describe("pbiplint CLI", () => {
   it("--sample is the same as pointing at the bundled sample", async () => {
     const r = await run(["--sample", "--format", "json"]);
     expect(r.code).toBe(1);
-    expect(JSON.parse(r.out).summary.findings).toBe(185);
+    expect(JSON.parse(r.out).summary.findings).toBe(268);
   });
-  it("--sample reads the model of the bundled project and prints no notice", async () => {
+  it("--sample reads the bundled project, its model and its report, and prints no notice", async () => {
     const r = await run(["--sample", "--fail-on", "none"]);
     expect(r.code).toBe(0);
-    expect(r.out).toMatch(/^Model: 14 files\. /m);
+    expect(r.out).toMatch(/^Model: 14 files\. Report: 65 files\. /m);
     expect(r.err).toBe("");
   });
   it("respects --fail-on and exits 0 when nothing reaches the threshold", async () => {
@@ -98,7 +98,7 @@ describe("pbiplint CLI", () => {
     expect(r.code).toBe(1);
     expect(r.out).toBe("");
     expect(r.err).toBe(
-      "pbiplint: 185 findings (16 errors, 54 warnings, 115 info) in 14 files, wrote out/report.sarif\n",
+      "pbiplint: 268 findings (19 errors, 75 warnings, 174 info) in 79 files, wrote out/report.sarif\n",
     );
   });
   it("prefixes SARIF artifact URIs with the model root's path from the cwd", async () => {

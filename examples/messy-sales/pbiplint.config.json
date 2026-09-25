@@ -1,0 +1,7 @@
+{
+  "$schema": "https://pbiplint.com/schema/pbiplint.config.schema.json",
+  "rules": {
+    "FILTERS_PANE_STATE": { "expect": "closed" },
+    "TAB_ORDER_FOLLOWS_LAYOUT": { "expect": "layout" }
+  }
+}

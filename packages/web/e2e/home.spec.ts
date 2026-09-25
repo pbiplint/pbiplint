@@ -151,10 +151,14 @@ test("copies the Markdown report from the button beside the downloads", async ({
 });
 
 test("a keyboard user can reach a findings table that scrolls sideways", async ({ page }) => {
-  await page.setViewportSize({ width: 400, height: 800 });
+  // 320 CSS pixels is the width WCAG's reflow criterion (1.4.10) asks a page to fit without
+  // scrolling sideways; a data table is exempt and scrolls in its own region instead, which is what
+  // this checks. At 400 the sample's table fit in Firefox once its line numbers grew shorter.
+  await page.setViewportSize({ width: 320, height: 800 });
   await page.getByRole("button", { name: "Try the sample project" }).click();
-  // Pinned to a rule with fourteen rows of detail text, so the table is wider than the viewport
-  // whatever the ranking puts first.
+  // Pinned to one rule's group, so the ranking cannot change which table is checked. Its Location
+  // column, `definition/tables/Sales.tmdl:N` in a monospaced font, is what makes it wider than the
+  // viewport, and Firefox lays that column out narrowest of the three engines.
   const group = page.locator("#rule-integer-formatting");
   await group.locator("summary").click();
   const wrap = group.locator(".table-wrap");

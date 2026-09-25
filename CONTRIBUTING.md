@@ -20,7 +20,7 @@ Node 20.19 or later (or 22.12 or later), which Vite needs for the site build. No
 - `packages/web`: the site, a static Vite build. `src/build` generates the rule pages, the rules index, the about page, and the sitemap from `rules/*.md` and `content/about.md` into gitignored folders, and fails the build if any page references the network. `npm run dev -w @pbiplint/web` serves it.
 - `rules/`: one Markdown page per rule, written by hand. Content, not code; see Rule pages below.
 - `tests/fixtures`, `tests/expectations`: parity fixtures and the Tabular Editor results they must match.
-- `examples/messy-sales`: the sample project `pbiplint --sample` lints, a PBIP folder whose model (`Messy Sales Demo.SemanticModel`) is also a Tabular Editor parity fixture.
+- `examples/messy-sales`: the sample project `pbiplint --sample` lints, a PBIP folder whose model (`Messy Sales Demo.SemanticModel`) is also a Tabular Editor parity fixture, with its report (`Messy Sales Demo.Report`, which plants a violation of every report rule) and the `pbiplint.config.json` that sets the policies two of those rules need to fire.
 
 ## Adding or changing a rule
 

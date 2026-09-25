@@ -79,7 +79,9 @@ describe("bundled sample", () => {
       /outside the sample project/,
     );
   });
-  it("lints to the same numbers as pbiplint --sample", () => {
+  it("lints the model alone to the numbers the site's sample shows", () => {
+    // pbiplint --sample lints the whole project, its report included; packages/cli/test/cli.test.ts
+    // pins those totals.
     const { summary } = lint(SAMPLE_FILES);
     expect([summary.findings, summary.errors, summary.warnings, summary.infos]).toEqual([
       185, 16, 54, 115,

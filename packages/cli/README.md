@@ -8,7 +8,7 @@ uploaded: it reads the files you name and writes to your terminal. Node 20 or la
 
 ```bash
 npx pbiplint path/to/Model.SemanticModel
-npx pbiplint --sample                                       # a bundled model with planted violations
+npx pbiplint --sample                                       # a bundled project, a model and its report, with planted violations
 npx pbiplint path/to/model --format sarif --output pbiplint.sarif
 npx pbiplint path/to/model --format markdown
 npx pbiplint rules                                          # every rule with status and severity

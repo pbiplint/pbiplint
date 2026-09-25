@@ -86,7 +86,7 @@ release pull request removes this section.
    ```
 
    The exit code is 1 and the two summary lines are identical. `npm test` pins those same totals,
-   in `packages/web/test/sample.test.ts`.
+   in `packages/cli/test/cli.test.ts`.
 
 6. Bump the GitHub Action's pin. In https://github.com/pbiplint/action, change the
    `pbiplint-version` default in `action.yml` and the version in the README's inputs table to the

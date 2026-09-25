@@ -396,6 +396,55 @@ describe("selectProject", () => {
     expect(part.root).toBe("Old.SemanticModel");
     expect(part.diagnostics.map((d) => d.kind)).toEqual(["legacy-model-format"]);
   });
+  it("lets a folder no read would list refuse nothing, beside a legacy part or inside one", () => {
+    const legacy = {
+      kind: "legacy-model-format",
+      path: "Old.SemanticModel",
+      message:
+        "Old.SemanticModel is stored as model.bim, which pbiplint cannot read; save it in the TMDL format from Power BI Desktop",
+    };
+    // A legacy model dropped alone, whose DAXQueries folder could not be listed: the CLI returns
+    // at its legacy check and never lists that folder, so the notice is shown and refuses nothing.
+    const alone = selectProject({
+      ...emptyTree(),
+      modelFolders: ["Old.SemanticModel"],
+      markers: [{ path: "Old.SemanticModel/model.bim", kind: "legacy-model" }],
+      diagnostics: [unreadAt("Old.SemanticModel/DAXQueries")],
+      unreadFolders: ["Old.SemanticModel/DAXQueries"],
+      refusal: { path: "Old.SemanticModel/DAXQueries", reason: "locked" },
+    });
+    expect(alone.files).toEqual([]);
+    expect(alone.absent).toEqual({ model: "the model is saved in the legacy model.bim format" });
+    expect(alone.diagnostics).toEqual([unreadAt("Old.SemanticModel/DAXQueries"), legacy]);
+    // The same model beside a lintable report keeps its legacy reason and diagnostic, rather than
+    // reading as a model folder that could not be read.
+    const beside = selectProject(
+      tree(
+        proj.filter((x) => !x.path.includes(".SemanticModel")),
+        {
+          modelFolders: ["Proj/Old.SemanticModel"],
+          markers: [{ path: "Proj/Old.SemanticModel/model.bim", kind: "legacy-model" }],
+          diagnostics: [unreadAt("Proj/Old.SemanticModel/DAXQueries")],
+          unreadFolders: ["Proj/Old.SemanticModel/DAXQueries"],
+          refusal: { path: "Proj/Old.SemanticModel/DAXQueries", reason: "locked" },
+        },
+      ),
+    );
+    expect(beside.absent).toEqual({ model: "the model is saved in the legacy model.bim format" });
+    expect(beside.diagnostics).toEqual([unreadAt("Proj/Old.SemanticModel/DAXQueries"), legacy]);
+    expect(beside.notes).toEqual([]);
+    // Nor does such a folder make a model folder holding no .tmdl file one that might, beside a
+    // lintable model: it is still named in the note, not refused as a second model.
+    const note = selectProject(
+      tree(proj, {
+        modelFolders: ["Proj/Demo.SemanticModel", "Proj/Old.SemanticModel"],
+        diagnostics: [unreadAt("Proj/Old.SemanticModel/DAXQueries")],
+        unreadFolders: ["Proj/Old.SemanticModel/DAXQueries"],
+        refusal: { path: "Proj/Old.SemanticModel/DAXQueries", reason: "locked" },
+      }),
+    );
+    expect(note.notes).toEqual([expect.stringMatching(/^Proj\/Old\.SemanticModel holds no/)]);
+  });
   it("leaves out a part folder that could not be read, saying why", () => {
     const refusal = { path: "Proj/Demo.SemanticModel", reason: "permission revoked" };
     const p = selectProject(
@@ -479,22 +528,68 @@ describe("selectProject", () => {
       model: ["definition/tables/Store.tmdl"],
       report: ["definition/pages/p/page.json"],
     });
-    // The project's .pbip and the config the run uses are read too, so their notices stay.
+    // The project's .pbip is read too, so its notice stays.
     const pbip = selectProject(
       tree(
         proj.filter((x) => !x.path.endsWith(".pbip")),
         {
-          diagnostics: [unreadAt("Proj/Demo.pbip"), unreadAt("Proj/pbiplint.config.json")],
+          diagnostics: [unreadAt("Proj/Demo.pbip")],
           refusal: { path: "Proj/Demo.pbip", reason: "locked" },
         },
       ),
     );
-    expect(pbip.diagnostics.map((d) => d.path)).toEqual([
-      "Proj/Demo.pbip",
-      "Proj/pbiplint.config.json",
-    ]);
+    expect(pbip.diagnostics.map((d) => d.path)).toEqual(["Proj/Demo.pbip"]);
     expect(pbip.unreadPaths.report).toEqual(["../Demo.pbip"]);
-    expect(pbip.config).toBeUndefined();
+  });
+  it("refuses a config it could not read, as the CLI does, after what the drop holds", () => {
+    const lockedConfig = unreadAt("Proj/pbiplint.config.json", "The file is locked");
+    // Linted around, the run would apply none of the rules the config sets and read as though it
+    // had; the page refuses a config that is not valid JSON for the same reason.
+    expect(() =>
+      selectProject(
+        tree(proj, {
+          diagnostics: [lockedConfig],
+          refusal: { path: "Proj/pbiplint.config.json", reason: "The file is locked" },
+        }),
+      ),
+    ).toThrow(new InputError("Could not read Proj/pbiplint.config.json: The file is locked"));
+    // A legacy part alone is read as the CLI reads it, and then the config it would use refuses.
+    expect(() =>
+      selectProject({
+        ...emptyTree(),
+        modelFolders: ["Proj/Old.SemanticModel"],
+        markers: [{ path: "Proj/Old.SemanticModel/model.bim", kind: "legacy-model" }],
+        diagnostics: [lockedConfig],
+        refusal: { path: "Proj/pbiplint.config.json", reason: "The file is locked" },
+      }),
+    ).toThrow("Could not read Proj/pbiplint.config.json: The file is locked");
+    // What the drop holds is refused first, as the CLI resolves the project before its config:
+    // nothing read, and nothing found.
+    expect(() =>
+      selectProject({
+        ...emptyTree(),
+        modelFolders: ["Proj/Demo.SemanticModel"],
+        diagnostics: [lockedConfig, unreadAt("Proj/Demo.SemanticModel/definition/model.tmdl")],
+        refusal: { path: "Proj/pbiplint.config.json", reason: "The file is locked" },
+      }),
+    ).toThrow("Could not read Proj/Demo.SemanticModel/definition/model.tmdl: locked");
+    expect(() =>
+      selectProject({
+        ...emptyTree(),
+        diagnostics: [lockedConfig],
+        refusal: { path: "Proj/pbiplint.config.json", reason: "The file is locked" },
+      }),
+    ).toThrow("No model or report found.");
+    // A config the run would not use refuses nothing, and is never a notice: the CLI never opens
+    // it. Here a nearer one is read, and another sits inside the model folder, below the root.
+    const nearer = selectProject(
+      tree([...proj, e("Proj/pbiplint.config.json", "{}")], {
+        diagnostics: [unreadAt("Proj/Demo.SemanticModel/pbiplint.config.json")],
+        refusal: { path: "Proj/Demo.SemanticModel/pbiplint.config.json", reason: "locked" },
+      }),
+    );
+    expect(nearer.config?.path).toBe("Proj/pbiplint.config.json");
+    expect(nearer.diagnostics).toEqual([]);
   });
   it("tells lint a folder that could not be listed is a folder, under the model and under the report", () => {
     const folders = [
@@ -529,6 +624,27 @@ describe("selectProject", () => {
       }),
     );
     expect(outside.diagnostics).toEqual([unreadAt("Proj/Archive")]);
+    expect(outside.unreadPaths).toEqual({ model: [], report: [] });
+  });
+  it("tells a part a folder the walk stopped in at the depth cap is unread, without refusing anything", () => {
+    const cap = {
+      kind: "depth-cap" as const,
+      path: "Proj/Demo.Report/definition/pages/p/visuals",
+      message:
+        "the walk stopped 64 folders deep at Proj/Demo.Report/definition/pages/p/visuals, so files below it were not read",
+    };
+    const p = selectProject(tree(proj, { diagnostics: [cap] }));
+    expect(p.diagnostics).toEqual([cap]);
+    expect(p.absent).toEqual({});
+    expect(p.unreadPaths).toEqual({ model: [], report: ["definition/pages/p/visuals/"] });
+    const result = lint(p.files, {
+      absent: p.absent,
+      diagnostics: p.diagnostics,
+      unreadPaths: p.unreadPaths,
+    });
+    expect(result.project.report?.unreadDefinitionFolders).toEqual(["definition/pages/p/visuals/"]);
+    // A cap outside every part is shown and tells no part anything.
+    const outside = selectProject(tree(proj, { diagnostics: [{ ...cap, path: "Proj/Archive" }] }));
     expect(outside.unreadPaths).toEqual({ model: [], report: [] });
   });
   it("refuses two .pbip files beside a report", () => {

@@ -297,6 +297,34 @@ describe("home page", () => {
       "Old.SemanticModel is stored as model.bim, which pbiplint cannot read; save it in the TMDL format from Power BI Desktop",
     ]);
   });
+  it("passes the reason a layer was left out to lint, so the skipped line gives it", async () => {
+    const input = document.getElementById("folder-input") as HTMLInputElement;
+    const at = (path: string, text: string): File =>
+      Object.assign(new File([text], path.slice(path.lastIndexOf("/") + 1)), {
+        webkitRelativePath: path,
+      });
+    Object.defineProperty(input, "files", {
+      configurable: true,
+      value: [
+        at("Proj/Old.SemanticModel/model.bim", "{}"),
+        at("Proj/Demo.Report/definition/report.json", "{}"),
+      ],
+    });
+    try {
+      input.dispatchEvent(new Event("change"));
+    } finally {
+      Reflect.deleteProperty(input, "files");
+    }
+    await tick();
+    await tick();
+    // Without `absent` reaching lint, the model rules would say "no model in the input".
+    const summary = document.querySelector("#results .summary")!.textContent!;
+    expect(summary).toMatch(/skipped \(the model is saved in the legacy model\.bim format\)/);
+    expect(summary).not.toMatch(/no model in the input/);
+    expect([...document.querySelectorAll("#results .notice")].map((n) => n.textContent)).toEqual([
+      "Old.SemanticModel is stored as model.bim, which pbiplint cannot read; save it in the TMDL format from Power BI Desktop",
+    ]);
+  });
   it("shows a notice for a file it could not read, and times the lint", async () => {
     const input = document.getElementById("folder-input") as HTMLInputElement;
     const at = (path: string, text: string): File =>

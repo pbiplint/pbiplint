@@ -78,7 +78,8 @@ export interface SelectedProject {
   absent: Partial<Record<LayerName, string>>;
   /**
    * What could not be read under each part present, relative to that part's root, a folder with a
-   * trailing `/`: lint's `unreadPaths`. Each is also one of `diagnostics`.
+   * trailing `/`: lint's `unreadPaths`. Each is also named in `diagnostics`, a folder that refused
+   * by an `unread-file` notice and one past the depth cap by a `depth-cap` notice.
    */
   unreadPaths: Partial<Record<LayerName, string[]>>;
   /** The nearest pbiplint.config.json at or above the root, if the drop had one. */
@@ -198,6 +199,8 @@ interface Selection {
   said: Diagnostic[];
   /** The part folders a legacy diagnostic named, which need no note besides. */
   legacy: Set<string>;
+  /** The part folders a read was made for: a notice naming one of them is a refusal. */
+  attempted: Set<string>;
 }
 
 /**
@@ -240,14 +243,23 @@ function reportRead(s: Selection, folder: string): Part | undefined {
   return part.files.some((f) => f.path.startsWith("definition/")) ? part : undefined;
 }
 
-/** Whether a notice is one this run keeps: a folder always, a file only when a read covers it. */
-const kept = (s: Selection, u: Unread): boolean =>
-  u.folder || s.reads.some((r) => r.covers(u.path, false));
+/** Whether a read so far would have opened the notice's path, or listed it when it is a folder. */
+const covered = (s: Selection, u: Unread): boolean =>
+  s.reads.some((r) => r.covers(u.path, u.folder));
+
+/**
+ * Whether a notice is one the results show: a folder always, since it could have held a part, and
+ * a file only when a read covers it. Showing is not reading: a folder no read would have listed
+ * is shown and refuses nothing (`covered` and `readPart`).
+ */
+const kept = (s: Selection, u: Unread): boolean => u.folder || covered(s, u);
 
 /**
  * The part at `folder`, read by `read`, as the CLI's readPart: a part that yields nothing while a
- * notice this run keeps names the folder or something under it was not found empty either, so its
- * layer is absent with a reason. A plain folder has no layer to name.
+ * notice names the folder itself, or something under it a read so far would have opened, was not
+ * found empty either, so its layer is absent with a reason. A folder under it that no read would
+ * have listed (a model's DAXQueries, say) refuses nothing, as the CLI never lists it. A plain
+ * folder has no layer to name.
  */
 function readPart(
   s: Selection,
@@ -255,20 +267,29 @@ function readPart(
   folder: string,
   read: () => Part | undefined,
 ): Part | undefined {
+  s.attempted.add(folder);
   const part = read();
-  const refused = s.unread.some((u) => atOrWithin(u.path, folder) && kept(s, u));
+  const refused = s.unread.some(
+    (u) => u.path === folder || (within(u.path, folder) && covered(s, u)),
+  );
   if (!part && layer && refused) s.absent[layer] = UNREAD_PART[layer];
   return part;
 }
 
 /**
- * Whether a model folder holds a .tmdl file, or one or a folder the walk could not read. One with
- * neither is linted by no one, so it is named in a note rather than refused beside a lintable
- * model, and it is what the error names when nothing can be linted.
+ * Whether a model folder holds a .tmdl file, or could: one it could not read, or the folder itself
+ * or its definition folder could not be listed. One with none of these is linted by no one, so it
+ * is named in a note rather than refused beside a lintable model, and it is what the error names
+ * when nothing can be linted. Another folder in it that could not be listed (DAXQueries, say)
+ * cannot hide the definition folder, which the folder's own listing would have shown.
  */
 const holdsModel = (s: Selection, dir: string): boolean =>
   s.tree.entries.some((e) => within(e.path, dir) && e.path.endsWith(".tmdl")) ||
-  s.unread.some((u) => atOrWithin(u.path, dir) && (u.folder || u.path.endsWith(".tmdl")));
+  s.unread.some((u) =>
+    u.folder
+      ? u.path === dir || atOrWithin(u.path, join(dir, "definition"))
+      : within(u.path, dir) && u.path.endsWith(".tmdl"),
+  );
 
 const hasMarker = (s: Selection, path: string, kind: InputMarker["kind"]): boolean =>
   s.tree.markers.some((m) => m.path === path && m.kind === kind);
@@ -425,8 +446,9 @@ function readPbip(s: Selection, base: string, report: Part): void {
 
 /**
  * The nearest config at or above `root`, walking up to the drop root, as the CLI walks up to the
- * filesystem root. One the walk could not read is where the search stops, with no config: its
- * notice names it.
+ * filesystem root. One the walk could not read refuses the run, as the CLI's readConfig refuses
+ * it and as the page refuses a config that is not valid JSON: linting around it would apply none
+ * of the rules it sets and read as though it had.
  */
 function findConfig(s: Selection, root: string): SelectedProject["config"] {
   const entries = new Map(s.tree.entries.map((e) => [e.path, e]));
@@ -434,10 +456,8 @@ function findConfig(s: Selection, root: string): SelectedProject["config"] {
     const path = join(dir, CONFIG_FILE);
     const hit = entries.get(path);
     if (hit) return { path: hit.path, text: hit.text };
-    if (s.unread.some((u) => !u.folder && u.path === path)) {
-      s.reads.push({ covers: (p, folder) => !folder && p === path });
-      return undefined;
-    }
+    const refused = s.unread.find((u) => !u.folder && u.path === path);
+    if (refused) throw new InputError(`Could not read ${path}: ${reasonOf(s.tree, refused)}`);
     if (dir === "") return undefined;
   }
 }
@@ -495,7 +515,10 @@ function reasonOf(tree: InputTree, u: Unread): string {
  *
  * The walkers read more than the CLI opens, since a drop is read before anything is decided. A
  * notice about a file this run would not have read is dropped, as the CLI never names such a file;
- * one about a folder, or the depth cap, is kept, since either could hide a part.
+ * one about a folder, or the depth cap, is kept, since either could hide a part. Only what a read
+ * would have opened, or a part folder itself, refuses a part or the drop, and a folder or cap under
+ * a part is one of its unread paths. A config the run would use and could not read refuses the
+ * run, after the parts, as the CLI finds its config after the project.
  */
 export function selectProject(tree: InputTree): SelectedProject {
   const { dirs, files: filePaths, folders } = foldersOf(tree);
@@ -510,6 +533,7 @@ export function selectProject(tree: InputTree): SelectedProject {
     absent: {},
     said: [],
     legacy: new Set(),
+    attempted: new Set(),
   };
 
   // The dropped folder is the first path segment of everything; a lone file has no folder, and
@@ -518,10 +542,14 @@ export function selectProject(tree: InputTree): SelectedProject {
   const base = firsts.size === 1 && filePaths.every((p) => p.includes("/")) ? [...firsts][0]! : "";
   const { model, report } = readFolder(s, base);
   const root = base;
-  const config = findConfig(s, root);
 
-  // What each part could not read, relative to its root, from the reads that were its own.
-  for (const u of s.unread)
+  // What each part could not read, relative to its root, from the reads that were its own: the
+  // files and folders that refused, and a folder the walk stopped in at the depth cap, which is
+  // as unread as one that refused but refuses nothing.
+  const capped = tree.diagnostics
+    .filter((d) => d.kind === "depth-cap" && d.path !== undefined)
+    .map((d) => ({ path: d.path!, folder: true }));
+  for (const u of [...s.unread, ...capped])
     for (const r of s.reads) {
       if (!r.part || !r.covers(u.path, u.folder) || u.path === r.part.root) continue;
       const rel = relativeToRoot(r.part.root, u.path) + (u.folder ? "/" : "");
@@ -544,9 +572,11 @@ export function selectProject(tree: InputTree): SelectedProject {
     `${listOf(unlintable)} hold${unlintable.length === 1 ? "s" : ""} no .tmdl files`;
 
   if (!model && !report) {
-    // A drop of which nothing could be read, while something this run would have read refused, is
-    // refused naming the first such path: a run over it would read as clean with nothing linted.
-    const refused = s.unread.find((u) => kept(s, u));
+    // A drop of which nothing could be read, while something this run read refused, is refused
+    // naming the first such path: a run over it would read as clean with nothing linted. What
+    // refused counts only when a read would have opened it or it is a part folder a read was made
+    // for, so a legacy part alone refuses nothing, as in the CLI, whatever else it holds.
+    const refused = s.unread.find((u) => s.attempted.has(u.path) || covered(s, u));
     if (refused) throw new InputError(`Could not read ${refused.path}: ${reasonOf(tree, refused)}`);
     // Nothing to lint but something to say, a legacy part alone or a walk stopped at the cap: the
     // run goes on, and its notices say why nothing was linted.
@@ -556,6 +586,9 @@ export function selectProject(tree: InputTree): SelectedProject {
   const notes = unlintable.length
     ? [`${holdsNoTmdl()} and ${unlintable.length === 1 ? "was" : "were"} not linted. ${TMDL_ONLY}`]
     : [];
+  // The config after the parts, as the CLI finds it after resolveProject: a drop that is refused
+  // for what it holds is refused for that first.
+  const config = findConfig(s, root);
 
   const files = [...(model?.files ?? []).sort(byPath), ...(report?.files ?? []).sort(byPath)];
   const read = tree.entries

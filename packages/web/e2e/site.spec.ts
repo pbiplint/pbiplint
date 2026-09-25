@@ -13,6 +13,7 @@ const PAGES = [
   "/rules/parse-issue/",
   "/rules/broken-field-reference/", // the first published native rule page
   "/rules/filters-pane-state/", // a report page whose example runs under a config
+  "/rules/ensure-alttext/", // a report page with a visual.json figure
   "/about/",
   "/404.html",
 ];
@@ -94,6 +95,24 @@ test("the home page has no accessibility violation after a run with a group open
 }) => {
   await page.getByRole("button", { name: "Try the sample project" }).click();
   await expect(page.locator("#results")).toBeVisible();
+  // The sample has its report, so the scan covers the facts panel too.
+  await expect(page.locator("#results section.facts")).toBeVisible();
   await page.locator("#results .group").first().locator("summary").click();
   expect(await violations(page)).toEqual([]);
+});
+
+test("no page scrolls sideways at 320 CSS pixels", async ({ page }) => {
+  // WCAG's reflow criterion (1.4.10): at 320 CSS pixels a page fits without scrolling sideways. A
+  // code block may scroll in its own region, which leaves the page's own width alone.
+  await page.setViewportSize({ width: 320, height: 800 });
+  const wide: string[] = [];
+  for (const path of PAGES) {
+    await page.goto(path);
+    const { scroll, client } = await page.evaluate(() => ({
+      scroll: document.documentElement.scrollWidth,
+      client: document.documentElement.clientWidth,
+    }));
+    if (scroll > client) wide.push(`${path}: ${scroll} > ${client}`);
+  }
+  expect(wide).toEqual([]);
 });

@@ -1,4 +1,5 @@
-import { readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "./fixtures.js";
@@ -16,6 +17,27 @@ import { expect, test } from "./fixtures.js";
 const zoo = fileURLToPath(
   new URL("../../../tests/fixtures/rule-zoo.SemanticModel", import.meta.url),
 );
+const shelfmart = fileURLToPath(new URL("../../../tests/fixtures/shelfmart", import.meta.url));
+const demo = fileURLToPath(
+  new URL("../../../tests/fixtures/pbip-and-github-demo", import.meta.url),
+);
+// Written by scripts/make-big-report.mjs, which the web server command runs before the build.
+const big = fileURLToPath(new URL("../../../tests/generated/big-report", import.meta.url));
+
+/** A folder under the OS temp directory, built by `fill` for one test and removed after it. */
+async function withTempFolder(
+  prefix: string,
+  fill: (dir: string) => void,
+  use: (dir: string) => Promise<void>,
+): Promise<void> {
+  const dir = mkdtempSync(join(tmpdir(), prefix));
+  try {
+    fill(dir);
+    await use(dir);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
 
 test("lints the sample project and announces the result", async ({ page }) => {
   await page.getByRole("button", { name: "Try the sample project" }).click();
@@ -68,6 +90,79 @@ test("reads a whole model from the folder input, including a file whose name sta
   await expect(
     results.locator("details.files li", { hasText: "tables/ Spaced .tmdl" }),
   ).toHaveCount(1);
+});
+
+test("lints a whole PBIP from the folder input: both layers, the facts panel, and the layer filter", async ({
+  page,
+}) => {
+  await page.locator("#folder-input").setInputFiles(shelfmart);
+  const results = page.locator("#results");
+  await expect(results.locator("h2")).toHaveText(
+    /^Results for shelfmart \(model, \d+ files · report, \d+ files\)$/,
+  );
+  await expect(results.locator("section.facts h3")).toHaveText("Report at a glance");
+  await expect(results.locator("section.facts dt").first()).toHaveText("Opens on");
+  await expect(results.locator('input[data-filter="layer"]')).toHaveCount(2);
+  await results.locator('input[data-filter="layer"][value="model"]').uncheck();
+  await expect(results.locator(".group:not([hidden]) summary .layer.report").first()).toBeVisible();
+  await expect(results.locator('.group[data-layer="model"]:not([hidden])')).toHaveCount(0);
+});
+
+test("lints a report alone and says the model is absent", async ({ page }) => {
+  await page.locator("#folder-input").setInputFiles(join(demo, "PBIP and GitHub Demo.Report"));
+  await expect(page.locator("#results h2")).toHaveText(
+    /^Results for PBIP and GitHub Demo\.Report \(report, \d+ files\)$/,
+  );
+  await expect(page.locator("#results .summary")).toContainText("skipped (no model in the input)");
+});
+
+test("refuses a folder with two reports and names them", async ({ page }) => {
+  await withTempFolder(
+    "two-reports-",
+    (dir) => {
+      for (const name of ["A.Report", "B.Report"]) {
+        mkdirSync(join(dir, name, "definition"), { recursive: true });
+        writeFileSync(join(dir, name, "definition", "report.json"), "{}");
+      }
+    },
+    async (dir) => {
+      await page.locator("#folder-input").setInputFiles(dir);
+      await expect(page.locator("#status")).toHaveText(
+        /contains 2 reports; drop one of them: A\.Report, B\.Report/,
+      );
+      await expect(page.locator("#results")).toBeHidden();
+    },
+  );
+});
+
+test("a folder deeper than the cap produces a notice, not silence", async ({ page }) => {
+  await withTempFolder(
+    "deep-",
+    (root) => {
+      let dir = join(root, "Demo.SemanticModel", "definition");
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, "model.tmdl"), "model Model\n");
+      for (let i = 0; i < 66; i++) dir = join(dir, `d${i}`);
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, "Deep.tmdl"), "table Deep\n");
+    },
+    async (root) => {
+      await page.locator("#folder-input").setInputFiles(root);
+      await expect(page.locator("#results .notice")).toContainText(
+        /the walk stopped 64 folders deep at .*, so files below it were not read/,
+      );
+    },
+  );
+});
+
+test("lints a 300-visual report in under two seconds", async ({ page }) => {
+  await page.locator("#folder-input").setInputFiles(big);
+  await expect(page.locator("#results h2")).toHaveText(/report, \d+ files/);
+  const ms = Number(await page.locator("#results").getAttribute("data-lint-ms"));
+  // Kept on the test's record, so a run's report shows how close each engine came to the budget.
+  test.info().annotations.push({ type: "lint-ms", description: String(ms) });
+  expect(ms).toBeGreaterThan(0);
+  expect(ms).toBeLessThan(2000);
 });
 
 test("the Choose a folder button opens the browser's file chooser where there is no folder picker", async ({

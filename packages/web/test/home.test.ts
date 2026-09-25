@@ -375,6 +375,74 @@ describe("home page", () => {
     ]);
     expect(results.dataset.lintMs).toMatch(/^\d+$/);
   });
+  it("tells lint what it could not read, so a model file that failed stops what it could change", async () => {
+    const input = document.getElementById("folder-input") as HTMLInputElement;
+    const at = (path: string, text: string): File =>
+      Object.assign(new File([text], path.slice(path.lastIndexOf("/") + 1)), {
+        webkitRelativePath: path,
+      });
+    // The report's visual binds Store[City], and Store.tmdl, which would declare the table, could
+    // not be read.
+    const locked = Object.assign(at("Proj/Demo.SemanticModel/definition/tables/Store.tmdl", ""), {
+      text: () => Promise.reject(new Error("locked")),
+    });
+    const visual = {
+      name: "v",
+      position: { x: 0, y: 0, z: 0, height: 100, width: 100, tabOrder: 0 },
+      visual: {
+        visualType: "tableEx",
+        query: {
+          queryState: {
+            Values: {
+              projections: [
+                {
+                  field: {
+                    Column: { Expression: { SourceRef: { Entity: "Store" } }, Property: "City" },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+    };
+    Object.defineProperty(input, "files", {
+      configurable: true,
+      value: [
+        at("Proj/Demo.SemanticModel/definition/model.tmdl", "model Model\n"),
+        at(
+          "Proj/Demo.SemanticModel/definition/tables/Sales.tmdl",
+          "table Sales\n\tcolumn Amount\n\t\tdataType: decimal\n\t\tsourceColumn: Amount\n",
+        ),
+        locked,
+        at(
+          "Proj/Demo.Report/definition.pbir",
+          JSON.stringify({ datasetReference: { byPath: { path: "../Demo.SemanticModel" } } }),
+        ),
+        at("Proj/Demo.Report/definition/report.json", "{}"),
+        at(
+          "Proj/Demo.Report/definition/pages/p/page.json",
+          JSON.stringify({ name: "p", displayName: "P", height: 720, width: 1280 }),
+        ),
+        at("Proj/Demo.Report/definition/pages/p/visuals/v/visual.json", JSON.stringify(visual)),
+      ],
+    });
+    try {
+      input.dispatchEvent(new Event("change"));
+    } finally {
+      Reflect.deleteProperty(input, "files");
+    }
+    await tick();
+    await tick();
+    const results = document.getElementById("results")!;
+    expect(results.querySelector("h2")!.textContent).toMatch(/^Results for Proj \(model, 2 files/);
+    // Without `unreadPaths` reaching lint, the model would read as whole: the reference would be
+    // reported broken, and NOT_REACHED_FROM_REPORT would run.
+    expect(results.querySelector(".summary")!.textContent).toMatch(
+      /1 rule skipped \(a model file could not be fully read\)/,
+    );
+    expect(results.querySelector("#rule-broken-field-reference")).toBeNull();
+  });
   it("clears the last results when the next input fails", async () => {
     document.getElementById("try-sample")!.click();
     await tick();

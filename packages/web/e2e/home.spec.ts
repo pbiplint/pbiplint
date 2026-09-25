@@ -157,8 +157,11 @@ test("a folder deeper than the cap produces a notice, not silence", async ({ pag
 
 test("lints a 300-visual report in under two seconds", async ({ page }) => {
   await page.locator("#folder-input").setInputFiles(big);
-  await expect(page.locator("#results h2")).toHaveText(/report, \d+ files/);
-  const ms = Number(await page.locator("#results").getAttribute("data-lint-ms"));
+  const results = page.locator("#results");
+  await expect(results.locator("h2")).toHaveText(/report, \d+ files/);
+  // The run the budget holds read the whole report: the facts panel counts all 300 visuals.
+  await expect(results.locator('section.facts dt:text-is("Visuals") + dd')).toHaveText(/^300 /);
+  const ms = Number(await results.getAttribute("data-lint-ms"));
   // Kept on the test's record, so a run's report shows how close each engine came to the budget.
   test.info().annotations.push({ type: "lint-ms", description: String(ms) });
   expect(ms).toBeGreaterThan(0);

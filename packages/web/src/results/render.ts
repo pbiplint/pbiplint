@@ -15,8 +15,9 @@ export interface RenderOptions {
   /** What was linted, for the heading: "the sample project (11 files)", "pasted TMDL". */
   source: string;
   /**
-   * The files that were read, as paths relative to the model root, listed under the results so a
-   * file the browser skipped is visible by its absence. Omitted for a paste, where nothing was read.
+   * The files that were read, as paths relative to the project root, listed under the results so
+   * a file the browser skipped is visible by its absence. Omitted for a paste, where nothing was
+   * read.
    */
   files?: string[];
   /** Sentences about the input worth a notice under the summary, such as a model folder that was not linted. */
@@ -73,6 +74,9 @@ export function renderResults(
     // with its text already set may not be announced. The page announces it through #announce.
     h("p", { class: "summary" }, `${summaryLine(result)}. ${skippedLine(result)}.`),
     ...(options.notes ?? []).map((note) => h("p", { class: "notice" }, note)),
+    // What the reader could not read, or read as a legacy part, follows the input's notes, so no
+    // read failure is silent.
+    ...result.diagnostics.map((d) => h("p", { class: "notice" }, d.message)),
     ...result.summary.unknownRules.map((id) =>
       h("p", { class: "notice" }, `pbiplint.config.json names no rule called "${id}".`),
     ),

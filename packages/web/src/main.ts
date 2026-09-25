@@ -4,10 +4,11 @@ import {
   plural,
   resolveConfig,
   summaryLine,
+  type Diagnostic,
+  type LayerName,
   type LintFile,
 } from "@pbiplint/core";
-import { BROWSER_RULES, browserConfig } from "./browser-rules.js";
-import { InputError, selectModel, type InputTree } from "./input/model-files.js";
+import { InputError, selectProject, type InputTree } from "./input/project-files.js";
 import { directoryPicker, readDirectoryInput, readPickedDirectory } from "./input/pick-folder.js";
 import { readDataTransfer } from "./input/read-drop.js";
 import { renderResults } from "./results/render.js";
@@ -76,14 +77,20 @@ interface Run {
   /** What was linted, for the results heading. */
   source: string;
   config?: { path: string; text: string };
-  /** What to list as read under the results: the model files and the config. None for a paste. */
+  /** What to list as read under the results: every file read, the config among them. None for a paste. */
   read?: string[];
   /** Sentences about the input for under the summary. */
   notes?: string[];
+  /** What the reader found that the results must say, such as a file it could not read: lint's `diagnostics`. */
+  diagnostics?: Diagnostic[];
+  /** Why the reader left a layer out: lint's `absent`. */
+  absent?: Partial<Record<LayerName, string>>;
+  /** What the reader could not read under each part: lint's `unreadPaths`. */
+  unreadPaths?: Partial<Record<LayerName, string[]>>;
 }
 
 /** Every input ends up here: read the config if there is one, lint, render. Nothing touches the network. */
-function run({ files, source, config, read, notes }: Run): void {
+function run({ files, source, config, read, notes, diagnostics, absent, unreadPaths }: Run): void {
   try {
     let raw: unknown;
     if (config) {
@@ -95,10 +102,11 @@ function run({ files, source, config, read, notes }: Run): void {
         );
       }
     }
-    const result = lint(files, {
-      config: browserConfig(resolveConfig(raw)),
-      rules: BROWSER_RULES,
-    });
+    // The browser reads reports, so it lints with every default rule, as the CLI does. The time
+    // is kept on the results for the performance test to read.
+    const started = performance.now();
+    const result = lint(files, { config: resolveConfig(raw), diagnostics, absent, unreadPaths });
+    results.dataset.lintMs = String(Math.round(performance.now() - started));
     // Unhidden before it is filled, as the status line is: a hidden block is out of the
     // accessibility tree, so anything rendered into one arrives where nothing can reach it. The
     // live region that first made the order matter has since moved out to #announce; the order
@@ -118,13 +126,16 @@ function run({ files, source, config, read, notes }: Run): void {
 
 function runEntries(tree: InputTree): void {
   try {
-    const model = selectModel(tree.entries, tree.modelFolders);
+    const project = selectProject(tree);
     run({
-      files: model.files,
-      source: `${model.root || "the dropped file"} (${plural(model.files.length, "file")})`,
-      config: model.config,
-      read: model.read,
-      notes: model.notes,
+      files: project.files,
+      source: `${project.root || "the dropped file"} (${plural(project.files.length, "file")})`,
+      config: project.config,
+      read: project.read,
+      notes: project.notes,
+      diagnostics: project.diagnostics,
+      absent: project.absent,
+      unreadPaths: project.unreadPaths,
     });
   } catch (e) {
     fail(e);

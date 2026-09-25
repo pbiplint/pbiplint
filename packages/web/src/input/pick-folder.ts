@@ -1,4 +1,4 @@
-import { emptyTree, isModelFolder, isReportFolder, type InputTree } from "./model-files.js";
+import { emptyTree, isModelFolder, isReportFolder, type InputTree } from "./project-files.js";
 import { depthCap, markerOf, MAX_DEPTH, SKIP_DIRS, unread, wanted } from "./read-drop.js";
 
 // lib.dom does not type the File System Access API's picker or directory iteration, so the shape
@@ -70,7 +70,7 @@ async function walkHandle(
     try {
       next = await listing.next();
     } catch (e) {
-      unread(tree, prefix, e);
+      unread(tree, prefix, e, true);
       return;
     }
     if (next.done) return;

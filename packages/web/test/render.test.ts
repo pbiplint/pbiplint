@@ -266,6 +266,17 @@ describe("renderResults", () => {
     expect(notice.textContent).toBe("Old.SemanticModel was skipped.");
     expect(notice.previousElementSibling).toBe(container.querySelector(".summary"));
   });
+  it("shows each of the run's diagnostics as a notice after the input's notes", () => {
+    // Until the results page renders them in their own place, a notice is where a file pbiplint
+    // could not read is named, so no read failure is silent.
+    const message = "M/x.tmdl could not be read (locked), so it was not linted";
+    const run = lint(bare, { diagnostics: [{ kind: "unread-file", path: "M/x.tmdl", message }] });
+    renderResults(container, run, { source: "x", notes: ["Old.SemanticModel was skipped."] });
+    expect([...container.querySelectorAll(".notice")].map((n) => n.textContent)).toEqual([
+      "Old.SemanticModel was skipped.",
+      message,
+    ]);
+  });
   it("names every rule id the config asked for that matches no rule", () => {
     const configured = lint(SAMPLE_FILES, { config: { rules: { NOPE: "off", TYPOED: "error" } } });
     renderResults(container, configured, { source: "x" });

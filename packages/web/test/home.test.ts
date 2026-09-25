@@ -251,7 +251,11 @@ describe("home page", () => {
     }
     await tick();
     await tick();
-    expect(listed()).toEqual(["../pbiplint.config.json (config)", "definition/tables/T.tmdl"]);
+    // Relative to the dropped PBIP folder, the project root, as the CLI takes it.
+    expect(listed()).toEqual([
+      "Demo.SemanticModel/definition/tables/T.tmdl",
+      "pbiplint.config.json (config)",
+    ]);
     (document.getElementById("paste") as HTMLTextAreaElement).value = "table T\n";
     document.getElementById("lint-paste")!.click();
     await tick();
@@ -277,19 +281,48 @@ describe("home page", () => {
     ]);
     await tick();
     await tick();
-    expect(document.querySelector("#results h2")!.textContent).toBe(
-      "Results for Proj/New.SemanticModel (1 file)",
-    );
+    // The dropped PBIP folder is the project root, as the CLI takes it.
+    expect(document.querySelector("#results h2")!.textContent).toBe("Results for Proj (1 file)");
     expect(document.querySelector("#results .notice")!.textContent).toMatch(
       /^Proj\/Old\.SemanticModel holds no \.tmdl files/,
     );
+    // A legacy model alone refuses nothing: the run goes on and its notice says why nothing was
+    // linted, as the CLI's does.
     feed([at("Proj/Old.SemanticModel/model.bim", "{}")]);
     await tick();
     await tick();
-    const status = document.getElementById("status")!;
-    expect(status.hidden).toBe(false);
-    expect(status.textContent).toMatch(/^Proj\/Old\.SemanticModel holds no \.tmdl files\./);
-    expect(document.getElementById("results")!.hidden).toBe(true);
+    expect(document.getElementById("status")!.hidden).toBe(true);
+    expect(document.getElementById("results")!.hidden).toBe(false);
+    expect([...document.querySelectorAll("#results .notice")].map((n) => n.textContent)).toEqual([
+      "Old.SemanticModel is stored as model.bim, which pbiplint cannot read; save it in the TMDL format from Power BI Desktop",
+    ]);
+  });
+  it("shows a notice for a file it could not read, and times the lint", async () => {
+    const input = document.getElementById("folder-input") as HTMLInputElement;
+    const at = (path: string, text: string): File =>
+      Object.assign(new File([text], path.slice(path.lastIndexOf("/") + 1)), {
+        webkitRelativePath: path,
+      });
+    const locked = Object.assign(at("Proj/Demo.SemanticModel/definition/tables/Store.tmdl", ""), {
+      text: () => Promise.reject(new Error("locked")),
+    });
+    Object.defineProperty(input, "files", {
+      configurable: true,
+      value: [at("Proj/Demo.SemanticModel/definition/model.tmdl", "model Model\n"), locked],
+    });
+    try {
+      input.dispatchEvent(new Event("change"));
+    } finally {
+      Reflect.deleteProperty(input, "files");
+    }
+    await tick();
+    await tick();
+    const results = document.getElementById("results")!;
+    expect(results.hidden).toBe(false);
+    expect([...results.querySelectorAll(".notice")].map((n) => n.textContent)).toEqual([
+      "Proj/Demo.SemanticModel/definition/tables/Store.tmdl could not be read (locked), so it was not linted",
+    ]);
+    expect(results.dataset.lintMs).toMatch(/^\d+$/);
   });
   it("clears the last results when the next input fails", async () => {
     document.getElementById("try-sample")!.click();

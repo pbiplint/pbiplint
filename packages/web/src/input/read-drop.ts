@@ -6,7 +6,7 @@ import {
   isReportFolder,
   type InputMarker,
   type InputTree,
-} from "./model-files.js";
+} from "./project-files.js";
 
 /** A report's JSON: anything under the definition folder directly inside a .Report folder. */
 const REPORT_JSON = /(^|\/)[^/]+\.Report\/definition\/.*\.json$/;
@@ -63,11 +63,13 @@ export const depthCap = (folder: string): Diagnostic => ({
 /**
  * The `unread-file` notice (spec section 4) for a file the browser would not hand over, or a folder
  * it would not list, in the CLI's words. The first one is also the tree's refusal. A path is named
- * once, as the CLI names it. The reason is the error's message: a DOMException is an Error.
+ * once, as the CLI names it. The reason is the error's message: a DOMException is an Error. A
+ * folder (`folder`) is recorded as one, since the notice cannot say so and lint needs to know.
  */
-export function unread(tree: InputTree, path: string, e: unknown): void {
+export function unread(tree: InputTree, path: string, e: unknown, folder = false): void {
   const reason = e instanceof Error ? e.message : String(e);
   tree.refusal ??= { path, reason };
+  if (folder && !tree.unreadFolders.includes(path)) tree.unreadFolders.push(path);
   if (tree.diagnostics.some((d) => d.kind === "unread-file" && d.path === path)) return;
   tree.diagnostics.push({
     kind: "unread-file",
@@ -161,7 +163,7 @@ export async function walkEntry(entry: FileSystemEntry, tree: InputTree, depth =
         reader.readEntries(resolve, reject),
       );
     } catch (e) {
-      unread(tree, path, e);
+      unread(tree, path, e, true);
       return;
     }
     if (batch.length === 0) break;

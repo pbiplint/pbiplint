@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { emptyTree, type InputTree } from "../src/input/model-files.js";
+import { emptyTree, type InputTree } from "../src/input/project-files.js";
 import {
   MAX_DEPTH,
   SKIP_DIRS,
@@ -210,6 +210,7 @@ describe("walkEntry", () => {
       reportFolders: [],
       markers: [],
       diagnostics: [],
+      unreadFolders: [],
     };
     await walkEntry(
       dir("Proj", "/Proj", [
@@ -243,6 +244,7 @@ describe("walkEntry", () => {
       reportFolders: [],
       markers: [],
       diagnostics: [],
+      unreadFolders: [],
     };
     await walkEntry(deep, capped);
     expect(capped.entries).toEqual([]);
@@ -265,6 +267,7 @@ describe("walkEntry", () => {
       reportFolders: [],
       markers: [],
       diagnostics: [],
+      unreadFolders: [],
     };
     await walkEntry(dir("M", "/M", [bad, file("Date.tmdl", "/M/Date.tmdl", "table Date\n")]), tree);
     expect(tree.entries.map((e) => e.path)).toEqual(["M/Date.tmdl"]);
@@ -313,6 +316,8 @@ describe("walkEntry", () => {
       },
     ]);
     expect(tree.refusal).toEqual({ path: "M/A.tmdl", reason: "locked" });
+    // A file is not a folder.
+    expect(tree.unreadFolders).toEqual([]);
     // A tree that read everything has no refusal at all.
     const clean = emptyTree();
     await walkEntry(dir("M", "/M", [file("C.tmdl", "/M/C.tmdl", "table C\n")]), clean);
@@ -353,6 +358,9 @@ describe("walkEntry", () => {
       path: "P/M",
       reason: "A requested file or directory could not be found",
     });
+    // The notice does not say its path is a folder, and lint takes a folder with a trailing /, so
+    // the tree says so.
+    expect(tree.unreadFolders).toEqual(["P/M"]);
     // The walk asked for the second batch once and stopped there, rather than asking again.
     expect(listed).toBe(2);
   });

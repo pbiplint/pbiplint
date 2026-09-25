@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { emptyTree } from "../src/input/model-files.js";
+import { emptyTree } from "../src/input/project-files.js";
 import { readDirectoryInput, readPickedDirectory } from "../src/input/pick-folder.js";
 import { MAX_DEPTH } from "../src/input/read-drop.js";
 
@@ -245,6 +245,7 @@ describe("readPickedDirectory", () => {
       },
     ]);
     expect(out?.refusal).toEqual({ path: "M/Sales.tmdl", reason: "The file is locked" });
+    expect(out?.unreadFolders).toEqual([]);
   });
   it("names a folder whose listing fails, at the start or partway, once, and goes on with its siblings", async () => {
     const picked = dirHandle("P", [
@@ -275,6 +276,9 @@ describe("readPickedDirectory", () => {
       path: "P/A",
       reason: "A requested file or directory could not be found",
     });
+    // The notices do not say their paths are folders, and lint takes a folder with a trailing /,
+    // so the tree says so.
+    expect(out?.unreadFolders).toEqual(["P/A", "P/B"]);
   });
   it("returns null when the person cancels the dialog", async () => {
     const abort = async () => {
@@ -445,5 +449,7 @@ describe("readDirectoryInput", () => {
       },
     ]);
     expect(out.refusal).toEqual({ path: "M/Sales.tmdl", reason: "locked" });
+    // This route lists no folder, so it never has one it could not list.
+    expect(out.unreadFolders).toEqual([]);
   });
 });

@@ -729,6 +729,22 @@ read`, except that for a field missing from a table, a model file that
 declares the table and has a parse issue that can drop an object is
 named ahead of it.
 
+Amended 2026-09-25 with Michael (pull request 7, #86): Filters pane
+links `FILTERS_PANE_STATE` only when that rule ran and its resolved
+options carry an `expect` policy, however the config writes it, whether
+the saved state meets the policy or breaks it. The fact reads the
+options the rule is checked with, so the two cannot disagree. Under a
+policy the rule checks the pane, so the fact links it, and on the web
+results page the link leads to the rule's page when the state meets
+the policy and to its finding group when it does not (section 9).
+Without a policy the rule runs but can never fire, so the fact links
+no rule, for the reason the unknown Filters pane fact links none and as
+the other facts link their rule only when there is something for it to
+report. The value, the detail, and the unknown case are unchanged, and
+the sample sets a policy, so its facts do not move. This supersedes the
+mockup's Filters pane, which linked the rule page with a hint to set a
+policy: without one the fact links nothing and adds no detail.
+
 **Cost.** Linear in the JSON. The demo report's largest visual is
 61 KB, most under 5 KB; a 300-visual report is a few megabytes and
 lints well under a second in the browser. No new dependency.

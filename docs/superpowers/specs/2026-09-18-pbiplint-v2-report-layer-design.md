@@ -425,6 +425,23 @@ filter level, bookmarks, and, through the existing DAX extractor,
 extension measures. New visual properties are covered without a code
 change.
 
+Amended 2026-09-25 with Michael (release triage, batch E): a `Column`
+whose source is a `Subquery`, Power BI Desktop's form for a text box's
+field value (under a `Min` or an `Aggregation` in the visual's
+`objects.values`), names a column of the subquery's result, by the
+`Name` of one of the query's `Select` items, rather than a model
+field, and is not itself a reference. Desktop keeps that name when the
+model field is renamed. The walker reads the subquery's own query as
+it reads a TopN filter's subquery, with the enclosing aliases in scope
+and the query's own `From` adding and shadowing them, so the fields
+the query reads (in its `Select`, `Where`, `OrderBy`, and a
+`Transform`'s input) are resolved against the model and reached,
+including those the text box does not display. The Model fact's
+not-reached clause (section 6) counts what the reachability index
+does not reach, so it follows. A `Measure` or `Hierarchy` whose source
+is a `Subquery`, which none of the Desktop-saved reports surveyed
+writes, remains a reference whose source names no model table.
+
 **Finding names and ids.** Page: `Page "Overview"`. Visual: `"<title>"
 on "<page>"` when the visual has a title, else `<visualType> (<first
 six characters of the id>) on "<page>"`. Bookmark: `Bookmark "Reset"`.

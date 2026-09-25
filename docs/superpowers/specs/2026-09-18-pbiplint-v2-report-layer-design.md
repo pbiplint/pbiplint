@@ -430,12 +430,14 @@ whose source is a `Subquery`, Power BI Desktop's form for a text box's
 field value (under a `Min` or an `Aggregation` in the visual's
 `objects.values`), names a column of the subquery's result, by the
 `Name` of one of the query's `Select` items, rather than a model
-field, and is not itself a reference. Desktop keeps that name when the
-model field is renamed. The walker reads the subquery's own query as
-it reads a TopN filter's subquery, with the enclosing aliases in scope
-and the query's own `From` adding and shadowing them, so the fields
-the query reads (in its `Select`, `Where`, `OrderBy`, and a
-`Transform`'s input) are resolved against the model and reached,
+field, and is not itself a reference. That name can differ from the
+field the query reads (46 of the 269 such values in the Desktop-saved
+reports surveyed), so it is a label, not a model field. The walker
+reads the subquery's own query as it reads a TopN filter's subquery,
+with the enclosing aliases in scope and the query's own `From` adding
+and shadowing them, so the fields the query reads (in its `Select`,
+`Where`, `OrderBy`, a `Transform`'s input, and a subquery in its own
+`From`) are resolved against the model and reached,
 including those the text box does not display. The Model fact's
 not-reached clause (section 6) counts what the reachability index
 does not reach, so it follows. A `Measure` or `Hierarchy` whose source
@@ -678,9 +680,7 @@ and `REMOVE_AUTO-DATE_TABLE` recognise them) and their columns.
 Microsoft Learn's "Auto date/time in Power BI Desktop" says Desktop
 keeps those tables hidden, even from modelers, so the fact counts the
 tables Desktop shows, and its not-reached clause already left them
-out. A table with one of those names that is not calculated, such as a
-composite model's copy with an entity partition, is not one of them
-and stays counted.
+out.
 
 **Cost.** Linear in the JSON. The demo report's largest visual is
 61 KB, most under 5 KB; a 300-visual report is a few megabytes and

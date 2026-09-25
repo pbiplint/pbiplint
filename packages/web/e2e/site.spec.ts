@@ -12,6 +12,7 @@ const PAGES = [
   "/rules/hide-foreign-keys/",
   "/rules/parse-issue/",
   "/rules/broken-field-reference/", // the first published native rule page
+  "/rules/filters-pane-state/", // a report page whose example runs under a config
   "/about/",
   "/404.html",
 ];

@@ -10,8 +10,10 @@ import {
   ruleLinks,
   rulePage,
   rulesIndex,
+  SITE_LAYERS,
   sitemap,
   type RuleMeta,
+  type SiteLayer,
 } from "./pages.js";
 
 export const WEB_ROOT = fileURLToPath(new URL("../..", import.meta.url));
@@ -22,6 +24,8 @@ export interface GenerateOptions {
   rulesDir?: string;
   contentDir?: string;
   outDir?: string;
+  /** The file families the site publishes: SITE_LAYERS, unless a test renders another site. */
+  published?: readonly SiteLayer[];
 }
 
 /** Writes rules/<slug>/index.html, rules/index.html, about/index.html, and public/sitemap.xml under outDir. */
@@ -29,6 +33,7 @@ export function generateSite({
   rulesDir = RULES_DIR,
   contentDir = CONTENT_DIR,
   outDir = WEB_ROOT,
+  published = SITE_LAYERS,
 }: GenerateOptions = {}): RuleMeta[] {
   // The delete below is derived from outDir while the sources are read from rulesDir, so a caller
   // that pointed outDir at the repo root would erase the very Markdown this is generating from.
@@ -44,23 +49,23 @@ export function generateSite({
       markdown: readFileSync(join(rulesDir, file), "utf8"),
     }))
     // The one gate on what the site publishes, and the only one: the link map, the pages, the
-    // index, and the sitemap below all read this list, so a page on a layer SITE_LAYERS leaves
-    // out is missing from every one of them and nothing downstream has to ask about a layer again.
+    // index, and the sitemap below all read this list, so a page on a layer `published` leaves out
+    // is missing from every one of them and nothing downstream has to ask about a layer again.
     .filter(({ slug, markdown }) => {
       const source = `rules/${slug}.md`;
-      return publishesLayer(pageLayer(parseFrontmatter(markdown, source).data, source));
+      return publishesLayer(pageLayer(parseFrontmatter(markdown, source).data, source), published);
     });
   // Every page's id is known before any page renders, so a code span naming a rule links only to
   // a page this build is about to write.
   const links = ruleLinks(sources);
   for (const { slug, markdown } of sources) {
-    const { html, meta } = rulePage(markdown, slug, links);
+    const { html, meta } = rulePage(markdown, slug, links, published);
     pages.push({ slug, html });
     metas.push(meta);
   }
   // Computed before anything is deleted, so a rule the index rejects leaves the previous build in
   // place rather than a tree of pages with no index to reach them.
-  const index = rulesIndex(metas);
+  const index = rulesIndex(metas, published);
   // Every page under rules/ is generated and gitignored, so it is cleared first: a renamed or
   // deleted rule would otherwise leave a page behind that nothing links to and the sitemap no
   // longer names, until the next clean checkout.

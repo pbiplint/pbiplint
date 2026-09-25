@@ -407,6 +407,14 @@ describe("home page", () => {
     // command that would read the sample's report.
     expect(body).not.toContain("--sample");
     expect(html).not.toMatch(/drop a \.SemanticModel folder and get/);
+    // The 404 page carries the home page's description, so the two say the same.
+    const notFound = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "../404.html"),
+      "utf8",
+    );
+    const description = (page: string): string =>
+      /<meta\s+name="description"\s+content="([^"]*)"/.exec(page)?.[1] ?? "";
+    expect(description(notFound)).toBe(description(html));
   });
   it("lets the newest input win when two reads finish out of order", async () => {
     const input = document.getElementById("folder-input") as HTMLInputElement;

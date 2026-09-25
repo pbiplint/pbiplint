@@ -495,21 +495,35 @@ describe("renderResults", () => {
   it("tags fix-first items and groups with their layer, offers a layer filter, and hides a layer when unchecked", () => {
     renderResults(container, result, { source: "x" });
     expect(container.querySelector(".fix-first li .layer")).not.toBeNull();
-    // Each item ends with its group's tag.
+    // Each item's tag follows its count and comes before the rule page link, where the approved
+    // mockup (section 1) puts it, and the item still reads as one line of plain text.
+    const counts = ["1 error", "1 error", "1 error", "2 errors", "14 errors"];
     [...container.querySelectorAll(".fix-first li")].forEach((li, i) => {
-      const layer = result.groups[i]!.rule.layer;
-      expect(li.lastElementChild!.className).toBe(`layer ${layer}`);
-      expect(li.lastElementChild!.textContent).toBe(layer);
+      const { layer, name, slug } = result.groups[i]!.rule;
+      const tag = li.querySelector(".layer")!;
+      expect(tag.className).toBe(`layer ${layer}`);
+      expect(tag.textContent).toBe(layer);
+      expect(tag.previousElementSibling!.getAttribute("href")).toBe(`#rule-${slug}`);
+      expect(tag.nextElementSibling!.className).toBe("rule-link");
+      expect(li.textContent).toBe(`${name} (${counts[i]}) ${layer} · How to fix it`);
     });
     const tags = [...container.querySelectorAll(".group summary .layer")].map((t) => t.textContent);
     expect(tags).toContain("report");
     expect(tags).toContain("model");
-    // After the rule's name, and the same layer the group carries as data.
+    // Between the severity badge and the rule's name, as the mockup has it, and the same layer the
+    // group carries as data.
     for (const g of container.querySelectorAll<HTMLElement>(".group")) {
       const tag = g.querySelector("summary .layer")!;
-      expect(tag.previousElementSibling!.className).toBe("name");
+      expect(tag.previousElementSibling!.classList.contains("badge")).toBe(true);
+      expect(tag.nextElementSibling!.className).toBe("name");
       expect(tag.textContent).toBe(g.dataset.layer);
     }
+    // The whole row, in order: badge, layer tag, name, count.
+    expect(
+      [...container.querySelector("#rule-opening-page-invalid summary")!.children].map(
+        (el) => el.className,
+      ),
+    ).toEqual(["badge error", "layer report", "name", "count"]);
     const boxes = [...container.querySelectorAll<HTMLInputElement>('input[data-filter="layer"]')];
     expect(boxes.map((b) => b.value)).toEqual(["model", "report"]);
     expect(boxes.map((b) => b.parentElement!.textContent)).toEqual(["Model", "Report"]);
@@ -611,6 +625,212 @@ describe("renderResults", () => {
     renderResults(container, hostile, { source: "x" });
     expect(container.querySelector("img")).toBeNull();
     expect(container.textContent).toContain("<img src=x onerror=alert(1)>");
+  });
+});
+
+/**
+ * Clicks a link as a reader would and says whether the page left the browser's own navigation to
+ * run, then cancels that navigation: happy-dom loads the whole window again for a second click on
+ * a fragment the address already ends with.
+ */
+function follow(link: Element, init: MouseEventInit = {}): boolean {
+  let proceeds = false;
+  const stop = (event: Event): void => {
+    proceeds = !event.defaultPrevented;
+    event.preventDefault();
+  };
+  document.addEventListener("click", stop);
+  try {
+    link.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, ...init }));
+  } finally {
+    document.removeEventListener("click", stop);
+  }
+  return proceeds;
+}
+
+/** Every filter box's state, keyed by kind and value: "severity:3", "layer:report". */
+function boxStates(): Record<string, boolean> {
+  return Object.fromEntries(
+    [...container.querySelectorAll<HTMLInputElement>("input[data-filter]")].map((i) => [
+      `${i.dataset.filter}:${i.value}`,
+      i.checked,
+    ]),
+  );
+}
+
+/** Unchecks the named boxes, as a reader would, through the page's own change handler. */
+function uncheck(...keys: string[]): void {
+  for (const key of keys) {
+    const [kind, value] = key.split(":");
+    const box = [
+      ...container.querySelectorAll<HTMLInputElement>(`input[data-filter="${kind}"]`),
+    ].find((i) => i.value === value)!;
+    box.checked = false;
+    box.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+}
+
+describe("a link to a finding group", () => {
+  // The two kinds of in-page link, each to a group of the sample's found by its rule: the Opens on
+  // fact to a report group, and a fix-first name to a model group, so both layers are covered.
+  const links = [
+    {
+      kind: "the Opens on fact",
+      link: () =>
+        container.querySelector('section.facts a.fact.flag[href="#rule-opening-page-invalid"]')!,
+      id: "rule-opening-page-invalid",
+      boxes: {
+        severity: "severity:3",
+        category: "category:Error Prevention",
+        layer: "layer:report",
+      },
+      unrelated: ["severity:1", "category:Performance", "layer:model"],
+    },
+    {
+      kind: "a fix-first item",
+      link: () =>
+        container.querySelector('.fix-first li > a[href="#rule-dax-columns-fully-qualified"]')!,
+      id: "rule-dax-columns-fully-qualified",
+      boxes: { severity: "severity:3", category: "category:DAX Expressions", layer: "layer:model" },
+      unrelated: ["severity:1", "category:Performance", "layer:report"],
+    },
+  ];
+  const group = (id: string): HTMLDetailsElement =>
+    container.querySelector<HTMLDetailsElement>(`#${id}`)!;
+  /** Every group's hidden state, to compare with what the filters alone would give. */
+  const hiddenStates = (): boolean[] =>
+    [...container.querySelectorAll<HTMLElement>(".group")].map((g) => g.hidden === true);
+
+  for (const { kind, link, id, boxes, unrelated } of links)
+    for (const hiding of [
+      [boxes.severity],
+      [boxes.category],
+      [boxes.layer],
+      [boxes.severity, boxes.category, boxes.layer],
+    ])
+      it(`from ${kind}, checks again exactly ${hiding.join(" and ")}, then shows and opens the group`, () => {
+        renderResults(container, result, { source: "x" });
+        // Boxes that do not hide the group, unchecked first so the click can be seen to keep them.
+        uncheck(...unrelated, ...hiding);
+        const before = boxStates();
+        expect(group(id).hidden).toBe(true);
+        expect(group(id).open).toBe(false);
+        // The page never takes the navigation over: the browser scrolls to the group itself.
+        expect(follow(link())).toBe(true);
+        expect(group(id).hidden).toBe(false);
+        expect(group(id).open).toBe(true);
+        expect(boxStates()).toEqual({
+          ...before,
+          ...Object.fromEntries(hiding.map((key) => [key, true])),
+        });
+        // The filters were applied, not only this group unhidden: every other group is hidden
+        // exactly when the boxes as they now stand hide it, so the unrelated ones still hide theirs.
+        const after = hiddenStates();
+        expect(after.some((hidden) => hidden)).toBe(true);
+        applyFilters(container);
+        expect(hiddenStates()).toEqual(after);
+      });
+
+  it("hands the focus the browser gives the group, as it follows the link, to the group's summary", () => {
+    renderResults(container, result, { source: "x" });
+    uncheck("layer:report");
+    const target = group("rule-opening-page-invalid");
+    const summary = target.querySelector("summary")!;
+    const focus = vi.spyOn(summary, "focus");
+    expect(target.hasAttribute("tabindex")).toBe(false);
+    follow(links[0]!.link());
+    // Following the link, a browser runs its focusing steps on the group, which is focusable for
+    // that moment only; happy-dom follows no link, so the test gives the group that focus itself.
+    expect(target.getAttribute("tabindex")).toBe("-1");
+    target.focus();
+    // The view is already on the group, so the summary takes the focus without scrolling again.
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+    expect(document.activeElement).toBe(summary);
+    expect(target.hasAttribute("tabindex")).toBe(false);
+    // Once only: focus that reaches the group later, from anywhere, stays where it lands.
+    target.tabIndex = -1;
+    target.focus();
+    expect(document.activeElement).toBe(target);
+    expect(focus).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens a shown group that is closed, and changes no box", () => {
+    for (const { link, id } of links) {
+      renderResults(container, result, { source: "x" });
+      uncheck("severity:1");
+      const before = boxStates();
+      expect(group(id).hidden).toBe(false);
+      expect(group(id).open).toBe(false);
+      expect(follow(link())).toBe(true);
+      expect(group(id).open).toBe(true);
+      expect(boxStates()).toEqual(before);
+    }
+  });
+
+  it("checks both layer boxes for a project group only when neither is checked", () => {
+    // A project group stays shown while either layer is checked. The sample has no such group, so
+    // one of its groups is relabelled, as in the filter test above.
+    const mixed: LintResult = {
+      ...result,
+      groups: result.groups.map((g) =>
+        g.rule.id === "BROKEN_FIELD_REFERENCE"
+          ? { ...g, rule: { ...g.rule, layer: "project" } }
+          : g,
+      ),
+    };
+    const link = (): Element =>
+      container.querySelector('.fix-first li > a[href="#rule-broken-field-reference"]')!;
+    const id = "rule-broken-field-reference";
+    renderResults(container, mixed, { source: "x" });
+    uncheck("layer:model", "layer:report");
+    expect(group(id).hidden).toBe(true);
+    follow(link());
+    expect(group(id).hidden).toBe(false);
+    expect(group(id).open).toBe(true);
+    expect(boxStates()["layer:model"]).toBe(true);
+    expect(boxStates()["layer:report"]).toBe(true);
+    // One layer box still checked shows the group already, so a severity box alone hides it and
+    // is the only box checked again.
+    renderResults(container, mixed, { source: "x" });
+    uncheck("layer:model", "severity:3");
+    const before = boxStates();
+    follow(link());
+    expect(group(id).hidden).toBe(false);
+    expect(boxStates()).toEqual({ ...before, "severity:3": true });
+  });
+
+  it("leaves the filters alone for a rule page link, and for a click that opens a new tab", () => {
+    renderResults(container, result, { source: "x" });
+    uncheck("severity:3");
+    const before = boxStates();
+    const id = "rule-opening-page-invalid";
+    // The fix-first item's second link opens the rule page, not the group.
+    const page = container.querySelector(
+      '.fix-first a.rule-link[href="/rules/opening-page-invalid/"]',
+    )!;
+    expect(follow(page)).toBe(true);
+    expect(boxStates()).toEqual(before);
+    expect(group(id).hidden).toBe(true);
+    expect(group(id).open).toBe(false);
+    // A click with a modifier held opens the link somewhere else, so this page stays as it was.
+    const fact = container.querySelector(`section.facts a.flag[href="#${id}"]`)!;
+    for (const modifier of ["metaKey", "ctrlKey", "shiftKey", "altKey"] as const) {
+      expect(follow(fact, { [modifier]: true })).toBe(true);
+      expect(boxStates()).toEqual(before);
+      expect(group(id).hidden).toBe(true);
+    }
+    expect(group(id).open).toBe(false);
+  });
+
+  it("sets its click handler on every render and leaves none behind on a clean one", () => {
+    renderResults(container, result, { source: "x" });
+    const first = container.onclick;
+    expect(typeof first).toBe("function");
+    renderResults(container, result, { source: "x" });
+    // Assigned, never added: a re-render replaces the handler rather than stacking a second one.
+    expect(container.onclick).not.toBe(first);
+    renderResults(container, lint(bare, { rules: [] }), { source: "x" });
+    expect(container.onclick).toBeNull();
   });
 });
 

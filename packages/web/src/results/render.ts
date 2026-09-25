@@ -120,9 +120,10 @@ export function renderResults(
     // was read, before what to fix. A run with no report has no facts and no panel.
     ...renderFacts(result),
   );
-  // Cleared on every render and set again below only when there are filters to change, so a run
-  // with no findings cannot leave the previous run's handler on the container.
+  // Cleared on every render and set again below only when there are filters to change and groups
+  // to link to, so a run with no findings cannot leave the previous run's handlers on the container.
   container.onchange = null;
+  container.onclick = null;
   if (result.groups.length === 0) {
     container.append(h("p", { class: "clean" }, "No findings."));
     return;
@@ -133,13 +134,16 @@ export function renderResults(
       "ol",
       { class: "fix-first" },
       // The name jumps to the group; the second link opens the rule page, which is otherwise only
-      // reachable from inside the group once it is expanded.
+      // reachable from inside the group once it is expanded. The tag sits between the count and
+      // that link, where the approved mockup puts it.
       ...topGroups(result).map((g) =>
         h(
           "li",
           {},
           h("a", { href: `#rule-${g.rule.slug}` }, g.rule.name),
-          ` (${count(g.findings.length, g.rule.severity)}) · `,
+          ` (${count(g.findings.length, g.rule.severity)}) `,
+          layerTag(g),
+          " · ",
           h(
             "a",
             {
@@ -149,8 +153,6 @@ export function renderResults(
             },
             "How to fix it",
           ),
-          " ",
-          layerTag(g),
         ),
       ),
     ),
@@ -158,11 +160,69 @@ export function renderResults(
     renderFilters(result),
     h("div", { class: "groups" }, ...result.groups.map(renderGroup)),
   );
-  // One handler for the whole container, assigned rather than added, so re-rendering replaces it
-  // instead of stacking a second one.
+  // One handler of each kind for the whole container, assigned rather than added, so re-rendering
+  // replaces them instead of stacking a second one.
   container.onchange = (event) => {
     if ((event.target as HTMLElement).matches("input[data-filter]")) applyFilters(container);
   };
+  // A link to a group lands on its findings: a fact flag or a fix-first name whose group a filter
+  // hid would otherwise do nothing visible. The handler runs before the browser follows the link
+  // and never cancels it, so the browser scrolls to the group once it is shown, as it does for a
+  // shown one. Enter on a focused link fires the same click. A click with a modifier held opens
+  // the link somewhere else, so this page is left as it is.
+  container.onclick = (event) => {
+    if (event.defaultPrevented || event.button !== 0) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const link = event.target instanceof Element ? event.target.closest("a[href^='#rule-']") : null;
+    const id = link?.getAttribute("href")?.slice(1);
+    const group = [...container.querySelectorAll<HTMLDetailsElement>("details.group")].find(
+      (g) => g.id === id,
+    );
+    if (!group) return;
+    reveal(container, group);
+    // Following the link, the browser runs its focusing steps on the group. A group cannot take
+    // focus, so every engine gives it to the page itself, and WebKit's next Tab then skips the
+    // whole group. Focusable for that one moment, the group takes the focus instead, whenever the
+    // engine gets there (Firefox does in a later task), and hands it straight to its summary,
+    // where the view already is.
+    group.tabIndex = -1;
+    group.addEventListener(
+      "focus",
+      () => {
+        group.removeAttribute("tabindex");
+        group.querySelector("summary")?.focus({ preventScroll: true });
+      },
+      { once: true },
+    );
+  };
+}
+
+/**
+ * Shows a group a filter hid and opens it. Only the boxes that hide it are checked again (its
+ * severity, its category, and its layer when there are layer boxes) and every other box stays as
+ * the reader set it. A project group shows while either layer is checked, so both layer boxes are
+ * checked only when neither is.
+ */
+function reveal(container: HTMLElement, group: HTMLDetailsElement): void {
+  if (group.hidden) {
+    const { severity = "", category = "", layer = "" } = group.dataset;
+    const check = (box: HTMLInputElement | undefined): void => {
+      if (box) box.checked = true;
+    };
+    check(filterBoxes(container, "severity").find((b) => b.value === severity));
+    check(filterBoxes(container, "category").find((b) => b.value === category));
+    const layers = filterBoxes(container, "layer");
+    if (layer === "project") {
+      if (!layers.some((b) => b.checked)) layers.forEach(check);
+    } else check(layers.find((b) => b.value === layer));
+    applyFilters(container);
+  }
+  group.open = true;
+}
+
+/** The Show filter's boxes of one kind: severity, category, or layer. */
+function filterBoxes(container: HTMLElement, kind: string): HTMLInputElement[] {
+  return [...container.querySelectorAll<HTMLInputElement>(`input[data-filter="${kind}"]`)];
 }
 
 /** A group's layer, as the tag on its row and on its fix-first item: model, report, or project. */
@@ -289,18 +349,15 @@ function renderFilters(result: LintResult): HTMLElement {
  * a run with groups on one layer, the layer hides nothing.
  */
 export function applyFilters(container: HTMLElement): void {
-  const boxes = (kind: string): HTMLInputElement[] => [
-    ...container.querySelectorAll<HTMLInputElement>(`input[data-filter="${kind}"]`),
-  ];
   const checked = (kind: string): Set<string> =>
     new Set(
-      boxes(kind)
+      filterBoxes(container, kind)
         .filter((i) => i.checked)
         .map((i) => i.value),
     );
   const severities = checked("severity");
   const categories = checked("category");
-  const byLayer = boxes("layer").length > 0;
+  const byLayer = filterBoxes(container, "layer").length > 0;
   const layers = checked("layer");
   const layerShown = (layer: string): boolean =>
     !byLayer || (layer === "project" ? layers.size > 0 : layers.has(layer));
@@ -334,13 +391,14 @@ function renderGroup(g: RankedGroup): HTMLElement {
       "data-layer": g.rule.layer,
     },
     // The summary is the disclosure control itself, so it holds no focusable child: the rule link
-    // sits in the panel below, where activating it can only mean "open the page".
+    // sits in the panel below, where activating it can only mean "open the page". The layer tag
+    // sits between the badge and the name, where the approved mockup puts it.
     h(
       "summary",
       {},
       h("span", { class: `badge ${label}` }, label),
-      h("span", { class: "name" }, g.rule.name),
       layerTag(g),
+      h("span", { class: "name" }, g.rule.name),
       // The digits are for the eye, the phrase for a screen reader: "2" beside a rule name is a
       // number with no noun, and both in the open would read the count out twice.
       h(

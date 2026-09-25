@@ -62,6 +62,35 @@ test("lints the sample project and announces the result", async ({ page }) => {
   await expect(results.locator('.group[data-layer="model"]').first()).toBeVisible();
 });
 
+test("a link to a group the Show filter hid shows that group, opens it, and scrolls to it", async ({
+  page,
+}) => {
+  await page.getByRole("button", { name: "Try the sample project" }).click();
+  const results = page.locator("#results");
+  const report = results.getByRole("checkbox", { name: "Report", exact: true });
+  await report.uncheck();
+  const group = page.locator("#rule-opening-page-invalid");
+  const link = results.locator('section.facts a.fact.flag[href="#rule-opening-page-invalid"]');
+  await expect(group).toBeHidden();
+  await link.click();
+  await expect(group).toBeVisible();
+  await expect(group).toHaveJSProperty("open", true);
+  await expect(group).toBeInViewport();
+  await expect(report).toBeChecked();
+  // Every engine moves focus to the page itself as it follows the link, and WebKit's next Tab would
+  // then skip the whole group, so the page moves focus to the group's summary.
+  await expect(group.locator("summary")).toBeFocused();
+  // Enter on the focused link does the same, and a second visit to the same fragment, which fires
+  // no hashchange, lands there too.
+  await report.uncheck();
+  await expect(group).toBeHidden();
+  await link.focus();
+  await page.keyboard.press("Enter");
+  await expect(group).toBeVisible();
+  await expect(group).toBeInViewport();
+  await expect(group.locator("summary")).toBeFocused();
+});
+
 test("lints pasted TMDL, and an empty paste keeps the textarea in view", async ({ page }) => {
   const lint = page.getByRole("button", { name: "Lint pasted TMDL" });
   await lint.click();

@@ -371,7 +371,7 @@ describe("home page", () => {
     const results = document.getElementById("results")!;
     expect(results.hidden).toBe(false);
     expect([...results.querySelectorAll(".notice")].map((n) => n.textContent)).toEqual([
-      "Proj/Demo.SemanticModel/definition/tables/Store.tmdl could not be read (locked), so it was not linted",
+      "Demo.SemanticModel/definition/tables/Store.tmdl could not be read (locked), so it was not linted",
     ]);
     expect(results.dataset.lintMs).toMatch(/^\d+$/);
   });

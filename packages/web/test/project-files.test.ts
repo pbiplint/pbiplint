@@ -396,7 +396,7 @@ describe("selectProject", () => {
     expect(part.root).toBe("Old.SemanticModel");
     expect(part.diagnostics.map((d) => d.kind)).toEqual(["legacy-model-format"]);
   });
-  it("lets a folder no read would list refuse nothing, beside a legacy part or inside one", () => {
+  it("lets a folder no read would list refuse nothing and give no notice, beside a legacy part or inside one", () => {
     const legacy = {
       kind: "legacy-model-format",
       path: "Old.SemanticModel",
@@ -404,7 +404,7 @@ describe("selectProject", () => {
         "Old.SemanticModel is stored as model.bim, which pbiplint cannot read; save it in the TMDL format from Power BI Desktop",
     };
     // A legacy model dropped alone, whose DAXQueries folder could not be listed: the CLI returns
-    // at its legacy check and never lists that folder, so the notice is shown and refuses nothing.
+    // at its legacy check and never lists that folder, so it refuses nothing and has no notice.
     const alone = selectProject({
       ...emptyTree(),
       modelFolders: ["Old.SemanticModel"],
@@ -415,7 +415,7 @@ describe("selectProject", () => {
     });
     expect(alone.files).toEqual([]);
     expect(alone.absent).toEqual({ model: "the model is saved in the legacy model.bim format" });
-    expect(alone.diagnostics).toEqual([unreadAt("Old.SemanticModel/DAXQueries"), legacy]);
+    expect(alone.diagnostics).toEqual([legacy]);
     // The same model beside a lintable report keeps its legacy reason and diagnostic, rather than
     // reading as a model folder that could not be read.
     const beside = selectProject(
@@ -431,7 +431,7 @@ describe("selectProject", () => {
       ),
     );
     expect(beside.absent).toEqual({ model: "the model is saved in the legacy model.bim format" });
-    expect(beside.diagnostics).toEqual([unreadAt("Proj/Old.SemanticModel/DAXQueries"), legacy]);
+    expect(beside.diagnostics).toEqual([legacy]);
     expect(beside.notes).toEqual([]);
     // Nor does such a folder make a model folder holding no .tmdl file one that might, beside a
     // lintable model: it is still named in the note, not refused as a second model.
@@ -458,7 +458,8 @@ describe("selectProject", () => {
       ),
     );
     expect(p.absent).toEqual({ model: "the model folder could not be read" });
-    expect(p.diagnostics).toEqual([unreadAt("Proj/Demo.SemanticModel", "permission revoked")]);
+    // The notice names the folder relative to the dropped PBIP folder, as the CLI does.
+    expect(p.diagnostics).toEqual([unreadAt("Demo.SemanticModel", "permission revoked")]);
     expect(p.files.some((f) => f.path.endsWith(".tmdl"))).toBe(false);
     const report = selectProject(
       tree(
@@ -508,6 +509,63 @@ describe("selectProject", () => {
       }),
     ).toThrow("Could not read Proj/Demo.SemanticModel/definition/model.tmdl: The file is locked");
   });
+  it("names the path that refused first in the CLI's read order, the model's reads before the report's", () => {
+    // The walk met the report first, as a drop may list it first; the CLI reads the model first
+    // and names what refused there.
+    const both = (report: string, model: string): InputTree => ({
+      ...emptyTree(),
+      modelFolders: ["Proj/Demo.SemanticModel"],
+      reportFolders: ["Proj/Demo.Report"],
+      diagnostics: [unreadAt(report, "report locked"), unreadAt(model, "model locked")],
+      unreadFolders: [report, model],
+      refusal: { path: report, reason: "report locked" },
+    });
+    expect(() => selectProject(both("Proj/Demo.Report", "Proj/Demo.SemanticModel"))).toThrow(
+      new InputError("Could not read Proj/Demo.SemanticModel: model locked"),
+    );
+    // The CLI's own case: the model's definition folder and the whole report folder refused.
+    expect(() =>
+      selectProject(both("Proj/Demo.Report", "Proj/Demo.SemanticModel/definition")),
+    ).toThrow(new InputError("Could not read Proj/Demo.SemanticModel/definition: model locked"));
+  });
+  it("names each notice relative to the project root, as the CLI names it relative to its input", () => {
+    const cap = (path: string): Diagnostic => ({
+      kind: "depth-cap",
+      path,
+      message: `the walk stopped 64 folders deep at ${path}, so files below it were not read`,
+    });
+    const p = selectProject(
+      tree(proj, {
+        diagnostics: [
+          unreadAt("Proj/Demo.SemanticModel/definition/tables/Store.tmdl"),
+          cap("Proj/Demo.Report/definition/pages/p/visuals"),
+        ],
+        refusal: { path: "Proj/Demo.SemanticModel/definition/tables/Store.tmdl", reason: "locked" },
+      }),
+    );
+    expect(p.diagnostics).toEqual([
+      unreadAt("Demo.SemanticModel/definition/tables/Store.tmdl"),
+      cap("Demo.Report/definition/pages/p/visuals"),
+    ]);
+    // A part dropped alone is its own root, as the CLI's input.
+    const part = selectProject({
+      ...emptyTree(),
+      entries: [e("Demo.SemanticModel/definition/model.tmdl")],
+      modelFolders: ["Demo.SemanticModel"],
+      diagnostics: [unreadAt("Demo.SemanticModel/definition/tables/Store.tmdl", "gone")],
+      refusal: { path: "Demo.SemanticModel/definition/tables/Store.tmdl", reason: "gone" },
+    });
+    expect(part.diagnostics).toEqual([unreadAt("definition/tables/Store.tmdl", "gone")]);
+    // With no one folder dropped, the root is "" and every path stays as the walk wrote it.
+    const loose = selectProject({
+      ...emptyTree(),
+      entries: [e("T.tmdl")],
+      diagnostics: [unreadAt("U.tmdl")],
+      refusal: { path: "U.tmdl", reason: "locked" },
+    });
+    expect(loose.root).toBe("");
+    expect(loose.diagnostics).toEqual([unreadAt("U.tmdl")]);
+  });
   it("tells each part what it could not read, and drops a notice for a file the run would not have read", () => {
     const p = selectProject(
       tree([...proj.filter((x) => !x.path.endsWith("page.json")), e("Proj/Other/x.tmdl")], {
@@ -521,8 +579,8 @@ describe("selectProject", () => {
       }),
     );
     expect(p.diagnostics).toEqual([
-      unreadAt("Proj/Demo.SemanticModel/definition/tables/Store.tmdl"),
-      unreadAt("Proj/Demo.Report/definition/pages/p/page.json"),
+      unreadAt("Demo.SemanticModel/definition/tables/Store.tmdl"),
+      unreadAt("Demo.Report/definition/pages/p/page.json"),
     ]);
     expect(p.unreadPaths).toEqual({
       model: ["definition/tables/Store.tmdl"],
@@ -538,7 +596,7 @@ describe("selectProject", () => {
         },
       ),
     );
-    expect(pbip.diagnostics.map((d) => d.path)).toEqual(["Proj/Demo.pbip"]);
+    expect(pbip.diagnostics.map((d) => d.path)).toEqual(["Demo.pbip"]);
     expect(pbip.unreadPaths.report).toEqual(["../Demo.pbip"]);
   });
   it("refuses a config it could not read, as the CLI does, after what the drop holds", () => {
@@ -603,7 +661,7 @@ describe("selectProject", () => {
         refusal: { path: folders[0]!, reason: "locked" },
       }),
     );
-    expect(p.diagnostics).toEqual(folders.map((f) => unreadAt(f)));
+    expect(p.diagnostics).toEqual(folders.map((f) => unreadAt(f.slice("Proj/".length))));
     expect(p.unreadPaths).toEqual({
       model: ["definition/tables/"],
       report: ["definition/pages/p/visuals/"],
@@ -615,7 +673,8 @@ describe("selectProject", () => {
     });
     expect(result.project.model?.unreadPaths).toEqual(["definition/tables/"]);
     expect(result.project.report?.unreadDefinitionFolders).toEqual(["definition/pages/p/visuals/"]);
-    // A folder outside every part is still named, since it could have held one.
+    // A folder outside every part is one the CLI never lists once the parts are read, so it gives
+    // no notice for it, and neither does the browser.
     const outside = selectProject(
       tree(proj, {
         diagnostics: [unreadAt("Proj/Archive")],
@@ -623,8 +682,44 @@ describe("selectProject", () => {
         refusal: { path: "Proj/Archive", reason: "locked" },
       }),
     );
-    expect(outside.diagnostics).toEqual([unreadAt("Proj/Archive")]);
+    expect(outside.diagnostics).toEqual([]);
     expect(outside.unreadPaths).toEqual({ model: [], report: [] });
+  });
+  it("gives no notice for a folder in the model folder beside its definition folder, which the CLI never lists", () => {
+    const daxQueries = selectProject(
+      tree(proj, {
+        diagnostics: [unreadAt("Proj/Demo.SemanticModel/DAXQueries")],
+        unreadFolders: ["Proj/Demo.SemanticModel/DAXQueries"],
+        refusal: { path: "Proj/Demo.SemanticModel/DAXQueries", reason: "locked" },
+      }),
+    );
+    expect(daxQueries.diagnostics).toEqual([]);
+    expect(daxQueries.absent).toEqual({});
+    expect(daxQueries.unreadPaths).toEqual({ model: [], report: [] });
+  });
+  it("keeps a folder notice where the CLI lists the folder: the dropped folder, and any folder under loose files", () => {
+    // The CLI lists a PBIP folder to find its parts, so a dropped folder the browser could list
+    // only in part (a batch of its entries that failed after others were read) keeps its notice,
+    // named by itself, as the CLI names its input.
+    const root = selectProject(
+      tree(proj, {
+        diagnostics: [unreadAt("Proj")],
+        unreadFolders: ["Proj"],
+        refusal: { path: "Proj", reason: "locked" },
+      }),
+    );
+    expect(root.diagnostics).toEqual([unreadAt("Proj")]);
+    // Loose .tmdl files are read from every folder under the dropped one, as the CLI's readTree
+    // lists them, so a folder there that could not be listed is one that read met.
+    const loose = selectProject({
+      ...emptyTree(),
+      entries: [e("stuff/a.tmdl")],
+      diagnostics: [unreadAt("stuff/Archive")],
+      unreadFolders: ["stuff/Archive"],
+      refusal: { path: "stuff/Archive", reason: "locked" },
+    });
+    expect(loose.diagnostics).toEqual([unreadAt("Archive")]);
+    expect(loose.unreadPaths).toEqual({ model: ["Archive/"] });
   });
   it("tells a part a folder the walk stopped in at the depth cap is unread, without refusing anything", () => {
     const cap = {
@@ -634,7 +729,14 @@ describe("selectProject", () => {
         "the walk stopped 64 folders deep at Proj/Demo.Report/definition/pages/p/visuals, so files below it were not read",
     };
     const p = selectProject(tree(proj, { diagnostics: [cap] }));
-    expect(p.diagnostics).toEqual([cap]);
+    expect(p.diagnostics).toEqual([
+      {
+        kind: "depth-cap",
+        path: "Demo.Report/definition/pages/p/visuals",
+        message:
+          "the walk stopped 64 folders deep at Demo.Report/definition/pages/p/visuals, so files below it were not read",
+      },
+    ]);
     expect(p.absent).toEqual({});
     expect(p.unreadPaths).toEqual({ model: [], report: ["definition/pages/p/visuals/"] });
     const result = lint(p.files, {

@@ -95,8 +95,9 @@ export interface SelectedProject {
   read: string[];
   /**
    * What a reader of the results must know: the walk's notices about what this run would have
-   * read (a folder that could not be listed and a folder past the depth cap always, since either
-   * could hide a part), then a legacy part, then a report paired with no model beside it.
+   * read or listed, as the CLI gives them (a folder past the depth cap always, since it could hide
+   * a part), then a legacy part, then a report paired with no model beside it. Each path is
+   * relative to `root`, as the CLI's are relative to its input.
    */
   diagnostics: Diagnostic[];
 }
@@ -173,7 +174,11 @@ interface Part {
   unread: string[];
 }
 
-/** One read the CLI would make: the paths it would open, and the part those paths belong to. */
+/**
+ * One read the CLI would make: the paths it would open or list, and the part those paths belong
+ * to. Entering a part folder and listing a PBIP folder for its parts are reads too, of that folder
+ * alone and for no part.
+ */
 interface Read {
   covers: (path: string, folder: boolean) => boolean;
   part?: Part;
@@ -192,15 +197,16 @@ interface Selection {
   /** Every folder the walk shows exists, from the paths it saw and the folders it passed. */
   dirs: Set<string>;
   unread: Unread[];
-  /** The reads the CLI would have made, in order; a notice they do not cover is dropped. */
+  /**
+   * The reads the CLI would have made, in the order it makes them; a notice they do not cover is
+   * dropped, as the CLI never meets its path.
+   */
   reads: Read[];
   absent: Partial<Record<LayerName, string>>;
   /** Diagnostics selectProject adds: the legacy parts, then the pairing. */
   said: Diagnostic[];
   /** The part folders a legacy diagnostic named, which need no note besides. */
   legacy: Set<string>;
-  /** The part folders a read was made for: a notice naming one of them is a refusal. */
-  attempted: Set<string>;
 }
 
 /**
@@ -243,16 +249,28 @@ function reportRead(s: Selection, folder: string): Part | undefined {
   return part.files.some((f) => f.path.startsWith("definition/")) ? part : undefined;
 }
 
-/** Whether a read so far would have opened the notice's path, or listed it when it is a folder. */
+/**
+ * Whether a read so far would have opened the notice's path, or listed it when it is a folder;
+ * entering a part folder and listing a PBIP folder are reads too. Only such a notice is one the
+ * results show and one that can refuse, since the CLI gives no other: a folder no read would have
+ * listed (a model's DAXQueries, say, or a folder beside the parts) is never met.
+ */
 const covered = (s: Selection, u: Unread): boolean =>
   s.reads.some((r) => r.covers(u.path, u.folder));
 
 /**
- * Whether a notice is one the results show: a folder always, since it could have held a part, and
- * a file only when a read covers it. Showing is not reading: a folder no read would have listed
- * is shown and refuses nothing (`covered` and `readPart`).
+ * The notice a run of which nothing could be read is refused naming: the first path that refused
+ * in the order the CLI's reads meet them (a folder as it is entered or listed, the model's reads
+ * before the report's), since the CLI names the first refusal it met. Within one read, the walk's
+ * order.
  */
-const kept = (s: Selection, u: Unread): boolean => u.folder || covered(s, u);
+function firstRefused(s: Selection): Unread | undefined {
+  for (const r of s.reads) {
+    const u = s.unread.find((x) => r.covers(x.path, x.folder));
+    if (u) return u;
+  }
+  return undefined;
+}
 
 /**
  * The part at `folder`, read by `read`, as the CLI's readPart: a part that yields nothing while a
@@ -267,7 +285,9 @@ function readPart(
   folder: string,
   read: () => Part | undefined,
 ): Part | undefined {
-  s.attempted.add(folder);
+  // Entering the folder comes first, as the CLI's readPart tries it before anything in it, so a
+  // notice naming the folder is the run's before one naming anything under it.
+  s.reads.push({ covers: (p) => p === folder });
   const part = read();
   const refused = s.unread.some(
     (u) => u.path === folder || (within(u.path, folder) && covered(s, u)),
@@ -351,7 +371,9 @@ function readFolder(s: Selection, base: string): Parts {
     return {};
   }
 
-  // A PBIP folder: the parts sit beside each other.
+  // A PBIP folder: the parts sit beside each other. The CLI lists the folder to find them, so a
+  // notice naming it (a listing the browser could make only in part) is one this run met.
+  s.reads.push({ covers: (p) => p === base });
   const children = (is: (name: string) => boolean): string[] =>
     [...s.dirs].filter((d) => d !== base && parent(d) === base && is(nameOf(d))).sort(byName);
   const modelDirs = children(isModelFolder);
@@ -500,6 +522,33 @@ function reasonOf(tree: InputTree, u: Unread): string {
 }
 
 /**
+ * A walker's notice with its path relative to the project root, as the CLI's are relative to its
+ * input, and its message rebuilt in the same words: `<path> could not be read (<reason>), so it
+ * was not linted`, or the depth cap's `the walk stopped 64 folders deep at <path>, so files below
+ * it were not read`. The walkers write paths relative to the drop, so with the root "" nothing
+ * changes; the root itself, which has no path relative to itself, keeps its name, as the CLI
+ * names its input.
+ */
+function rebased(d: Diagnostic, root: string): Diagnostic {
+  if (root === "" || d.path === undefined || !within(d.path, root)) return d;
+  const from = d.path;
+  const path = relativeTo(from, root);
+  const m = d.message;
+  const unreadTail = "), so it was not linted";
+  const capTail = ", so files below it were not read";
+  const capAt = ` folders deep at ${from}${capTail}`;
+  const message =
+    d.kind === "unread-file" &&
+    m.startsWith(`${from} could not be read (`) &&
+    m.endsWith(unreadTail)
+      ? `${path}${m.slice(from.length)}`
+      : d.kind === "depth-cap" && m.startsWith("the walk stopped ") && m.endsWith(capAt)
+        ? `${m.slice(0, m.length - capAt.length)} folders deep at ${path}${capTail}`
+        : m;
+  return { ...d, path, message };
+}
+
+/**
  * Mirrors the CLI's resolveProject (packages/cli/src/walk.ts) on a tree of paths, making the same
  * decisions in the same order: a folder with a definition folder is one part, the model if it
  * holds .tmdl files, else a .Report's report; a definition folder dropped alone is a model; a part
@@ -514,11 +563,13 @@ function reasonOf(tree: InputTree, u: Unread): string {
  * linted, the error names it instead.
  *
  * The walkers read more than the CLI opens, since a drop is read before anything is decided. A
- * notice about a file this run would not have read is dropped, as the CLI never names such a file;
- * one about a folder, or the depth cap, is kept, since either could hide a part. Only what a read
- * would have opened, or a part folder itself, refuses a part or the drop, and a folder or cap under
- * a part is one of its unread paths. A config the run would use and could not read refuses the
- * run, after the parts, as the CLI finds its config after the project.
+ * notice about a file this run would not have read, or a folder it would not have entered or
+ * listed, is dropped, as the CLI never names such a path; one about the depth cap is kept, since
+ * it could hide a part. Only what a read would have opened or listed refuses a part or the drop,
+ * the first in the CLI's read order naming a refused drop, and a folder or cap under a part is one
+ * of its unread paths. The notices passed on name their paths relative to the root, as the CLI's
+ * are relative to its input. A config the run would use and could not read refuses the run, after
+ * the parts, as the CLI finds its config after the project.
  */
 export function selectProject(tree: InputTree): SelectedProject {
   const { dirs, files: filePaths, folders } = foldersOf(tree);
@@ -533,7 +584,6 @@ export function selectProject(tree: InputTree): SelectedProject {
     absent: {},
     said: [],
     legacy: new Set(),
-    attempted: new Set(),
   };
 
   // The dropped folder is the first path segment of everything; a lone file has no folder, and
@@ -555,11 +605,15 @@ export function selectProject(tree: InputTree): SelectedProject {
       const rel = relativeToRoot(r.part.root, u.path) + (u.folder ? "/" : "");
       if (!r.part.unread.includes(rel)) r.part.unread.push(rel);
     }
+  // The walk's notices this run met, and every depth cap, each rebased onto the root; then what
+  // this selection has to say, already written relative to it.
   const diagnostics = [
-    ...tree.diagnostics.filter((d) => {
-      const u = s.unread.find((x) => x.diagnostic === d);
-      return u === undefined || kept(s, u);
-    }),
+    ...tree.diagnostics
+      .filter((d) => {
+        const u = s.unread.find((x) => x.diagnostic === d);
+        return u === undefined || covered(s, u);
+      })
+      .map((d) => rebased(d, root)),
     ...s.said,
   ];
 
@@ -573,10 +627,11 @@ export function selectProject(tree: InputTree): SelectedProject {
 
   if (!model && !report) {
     // A drop of which nothing could be read, while something this run read refused, is refused
-    // naming the first such path: a run over it would read as clean with nothing linted. What
-    // refused counts only when a read would have opened it or it is a part folder a read was made
-    // for, so a legacy part alone refuses nothing, as in the CLI, whatever else it holds.
-    const refused = s.unread.find((u) => s.attempted.has(u.path) || covered(s, u));
+    // naming the first such path in the CLI's read order: a run over it would read as clean with
+    // nothing linted. What refused counts only when a read would have opened or listed it, so a
+    // legacy part alone refuses nothing, as in the CLI, whatever else it holds. The path stays
+    // relative to the drop, which joins it to the dropped folder as the CLI joins it to its input.
+    const refused = firstRefused(s);
     if (refused) throw new InputError(`Could not read ${refused.path}: ${reasonOf(tree, refused)}`);
     // Nothing to lint but something to say, a legacy part alone or a walk stopped at the cap: the
     // run goes on, and its notices say why nothing was linted.

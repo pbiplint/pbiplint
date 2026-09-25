@@ -393,8 +393,8 @@ naming the path joined to it, as above. Microsoft's pbipProperties
 entry, so a `.pbip` reaches its model only through the report's
 `definition.pbir`; all 71 of the 71 `.pbip` files in the local corpora
 name exactly one report. A `.pbip` naming more than one report (each
-report folder counted once, however often or however its path is
-written) is refused with the names and "point at one of them", as a
+report folder counted once by the path it resolves to, however often
+it is named) is refused with the names and "point at one of them", as a
 folder holding more than one is (`Both.pbip names 2 reports; point at
 one of them: Cost.Report, Sales.Report`), and one naming a report
 folder that is not there is refused as an input that does not exist is
@@ -407,11 +407,12 @@ report found in Cost.Report, which Cost.pbip names`. On this route
 `byConnection` leaves the model out with the reason "this report reads
 a published model"; a `byPath` naming a folder that is not there
 leaves it out with the reason "this report reads a model that is not
-there (<path>)"; a `definition.pbir` that could not be read leaves it
-out with the reason "the report's definition.pbir could not be read"
-(ruling L27), beside the `unread-file` notice naming the file, since
-which model the report reads is then not known; a report with no
-`definition.pbir`, or one naming no model, is read alone. The two
+there (<path>)"; a `definition.pbir` that could not be read (when the
+report was read) leaves it out with the reason "the report's
+definition.pbir could not be read" (ruling L27), beside the
+`unread-file` notice naming the file, since which model the report
+reads is then not known; a report with no `definition.pbir`, or one
+naming no model, is read alone. The two
 legacy formats give their notices and reasons as the folder route
 does, and a legacy report's `definition.pbir` still names its model.
 `model-reference-mismatch` does not arise, since the path is followed
@@ -784,12 +785,12 @@ policy the rule checks the pane, so the fact links it, and on the web
 results page the link leads to the rule's page when the state meets
 the policy and to its finding group when it does not (section 9).
 Without a policy the rule runs but can never fire, so the fact links
-no rule, for the reason the unknown Filters pane fact links none and as
-the other facts link their rule only when there is something for it to
-report. The value, the detail, and the unknown case are unchanged, and
-the sample sets a policy, so its facts do not move. This supersedes the
-mockup's Filters pane, which linked the rule page with a hint to set a
-policy: without one the fact links nothing and adds no detail.
+no rule, for the reason the unknown Filters pane fact links none: a
+fact links its rule only when that rule can fire. The value, the
+detail, and the unknown case are unchanged, and the sample sets a
+policy, so its facts do not move. This supersedes the mockup's Filters
+pane, which linked the rule page with a hint to set a policy: without
+one the fact links nothing and adds no detail.
 
 **Cost.** Linear in the JSON. The demo report's largest visual is
 61 KB, most under 5 KB; a 300-visual report is a few megabytes and
@@ -1377,6 +1378,19 @@ pick the report the same way, pair them through `definition.pbir`,
 and produce `files`, `config`, `notes`, `read`, and `diagnostics`. The
 home page copy, the drop hint, and the About page say a PBIP folder
 now lints both parts and that a report alone is valid input.
+
+Amended 2026-09-25 with pull request 7: the browser still differs from
+the CLI in three places. A `.SemanticModel` folder holding no TMDL
+beside one that does is linted around with a note in the browser, as
+it has been since v1, where the CLI refuses a folder with two semantic
+models. A report's `definition` folder dropped alone reads nothing in
+the browser, which cannot see the parent's `definition.pbir`, where the
+CLI reads the report, that file included, from the parent. And the
+`.pbip` input, resolving to its report and that report's model, is the
+CLI's alone (section 4's #86 note), since the browser takes folders.
+Everything else `selectProject` decides, including the notices, the
+refusals, and what reaches `lint` as unread, it decides as the CLI
+does.
 
 ## 13. CLI changes
 

@@ -353,8 +353,8 @@ function resolvePbip(input: string, path: string): ResolvedProject {
   const folder = dirname(path);
   // The input itself, refused by resolveProject when it cannot be read.
   const text = readFileSync(path, "utf8");
-  // Each report folder once, as first written: a report named twice, however its path is
-  // written, is one report.
+  // Each report folder once, as first written, counted by the path it resolves to: a report
+  // named twice as `Cost.Report`, `./Cost.Report`, or `Cost.Report/` is one report.
   const named = new Map<string, string>();
   for (const written of reportsNamed(basename(path), text)) {
     const at = resolve(folder, toPosix(written));

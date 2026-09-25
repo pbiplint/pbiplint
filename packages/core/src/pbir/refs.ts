@@ -68,7 +68,11 @@ function sourceOf(expression: unknown, aliases: ReadonlyMap<string, Alias>): Sou
  * names nothing) has an empty table and says why in `noTable`, which the index reports as
  * unresolved. A reference whose source is a transform's output is not a model field and is left out.
  * A reference that names a Schema, in its SourceRef or in the From entry of its alias, carries it,
- * as Desktop's references to the report's own measures do (`"Schema": "extension"`).
+ * as Desktop's references to the report's own measures do (`"Schema": "extension"`). A Column whose
+ * source is a Subquery, bare or under an Aggregation, is Power BI Desktop's form for a text box's
+ * field value: it names a column of the subquery's result by a Select item's Name, not a model
+ * field, so it is left out as a TopN filter's `In.Table` is, and its query is walked as a From
+ * entry's subquery is, so every field the query reads is collected where it sits.
  */
 export function collectFieldRefs(
   node: unknown,
@@ -94,6 +98,22 @@ export function collectFieldRefs(
       pointer: p,
     });
   };
+  /**
+   * Walks the query of a Column (at pointer `at`) whose source is a Subquery, with the enclosing
+   * aliases in scope and its own From adding and shadowing them, and says whether it did. A
+   * Measure or a Hierarchy over a Subquery is not read this way: none of the Desktop-saved reports
+   * surveyed writes either, so each stays a reference whose source names no model table.
+   */
+  const walkedSubquery = (
+    column: Record<string, unknown>,
+    at: string,
+    scope: ReadonlyMap<string, Alias>,
+  ): boolean => {
+    const source = column.Expression;
+    if (!isRecord(source) || !isRecord(source.Subquery)) return false;
+    walk(source.Subquery.Query, `${at}/Expression/Subquery/Query`, scope);
+    return true;
+  };
   const walk = (n: unknown, p: string, scope: ReadonlyMap<string, Alias>): void => {
     if (Array.isArray(n)) {
       n.forEach((item, i) => walk(item, `${p}/${i}`, scope));
@@ -113,6 +133,7 @@ export function collectFieldRefs(
       scope = next;
     }
     if (isRecord(n.Column) && typeof n.Column.Property === "string") {
+      if (walkedSubquery(n.Column, `${p}/Column`, scope)) return;
       const source = sourceOf(n.Column.Expression, scope);
       if (source) push("column", source, n.Column.Property, p);
       return;
@@ -125,6 +146,7 @@ export function collectFieldRefs(
     if (isRecord(n.Aggregation) && isRecord(n.Aggregation.Expression)) {
       const inner = n.Aggregation.Expression.Column;
       if (isRecord(inner) && typeof inner.Property === "string") {
+        if (walkedSubquery(inner, `${p}/Aggregation/Expression/Column`, scope)) return;
         const source = sourceOf(inner.Expression, scope);
         if (source) push("aggregation", source, inner.Property, p);
         return;

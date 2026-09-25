@@ -536,7 +536,7 @@ aggregation table when it covers the query.
 | Slicers | count of the catalog slicers; saved selections, those on custom slicers named; unknown in place of none while a visual.json could not be read (amended 2026-09-24 with Michael) | `SLICER_SELECTION_SAVED` |
 | Mobile layouts | pages with one, counted by the mobile.json files read in their folders, of total; unknown in place of none while a mobile.json, or the page of one, could not be read (amended 2026-09-24 with Michael) | |
 | Schema versions | report, page, visual (highest seen) | |
-| Model | tables, columns, measures; with both parts, columns and measures not reached from this report | `NOT_REACHED_FROM_REPORT` |
+| Model | tables, columns, measures, leaving out Desktop's hidden auto date/time tables (amended 2026-09-25 with Michael); with both parts, columns and measures not reached from this report | `NOT_REACHED_FROM_REPORT` |
 
 Amended 2026-09-20: the facts are built only when the report layer is
 present, so a model-only run produces none and no surface shows the
@@ -669,6 +669,18 @@ names a landing or active page whose page.json could not be read by
 the name pages.json gives it, as it names a page known only by its
 folder, and never calls it "(no such page)"; `OPENING_PAGE_INVALID`
 does not fire on it (section 8.2).
+
+Amended 2026-09-25 with Michael (release triage, batch E): the Model
+fact's table, column, and measure counts leave out Power BI Desktop's
+auto date/time tables (calculated tables whose names start with
+`LocalDateTable_` or `DateTableTemplate_`, as `NOT_REACHED_FROM_REPORT`
+and `REMOVE_AUTO-DATE_TABLE` recognise them) and their columns.
+Microsoft Learn's "Auto date/time in Power BI Desktop" says Desktop
+keeps those tables hidden, even from modelers, so the fact counts the
+tables Desktop shows, and its not-reached clause already left them
+out. A table with one of those names that is not calculated, such as a
+composite model's copy with an entity partition, is not one of them
+and stays counted.
 
 **Cost.** Linear in the JSON. The demo report's largest visual is
 61 KB, most under 5 KB; a 300-visual report is a few megabytes and

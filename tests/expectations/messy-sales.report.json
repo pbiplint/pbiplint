@@ -1,40 +1,16 @@
 {
   "fixture": "examples/messy-sales",
   "report": "Messy Sales Demo.Report",
-  "oracle": "hand-written; the sample plants every report rule (spec section 11, amended 2026-09-20)",
-  "captured": "2026-09-24",
-  "deviations": {},
+  "oracle": "fab-inspector CLI 3.4.0 with Base-rules.json sha256 22868be9acd696c96e62f214dbe0efc72fd1bfffda1736b3b9a4d7fba21f883c, every rule enabled",
+  "captured": "2026-09-25",
+  "deviations": {
+    "AVOID_SHOW_ITEMS_WITH_NO_DATA": "Every well is checked, where the source checks the Category well only, so pbiplint also reports the option on a matrix's Rows or Columns and on any other well a visual has.",
+    "ENSURE_ALTTEXT": "A visual group's own alt text counts: pbiplint reads it under `visualGroup`, where a group keeps it, and reports a group only when that alt text is missing or empty. PBI Inspector looks for a group's alt text where a visual keeps it, so it reports every group, with or without alt text of its own."
+  },
   "ours": {
-    "REMOVE_UNUSED_CUSTOM_VISUALS": [
-      "ChicletSlicer1448559807354"
-    ],
-    "REDUCE_VISUALS_ON_PAGE": [
-      "9f2ae77d3572304756ae"
-    ],
-    "REDUCE_OBJECTS_WITHIN_VISUALS": [
-      "6e99982d842b0d962e16"
-    ],
-    "REDUCE_TOPN_FILTERS": [
-      "9f2ae77d3572304756ae"
-    ],
-    "REDUCE_ADVANCED_FILTERS": [
-      "9f2ae77d3572304756ae"
-    ],
-    "REDUCE_PAGES": [
-      "report"
-    ],
     "AVOID_SHOW_ITEMS_WITH_NO_DATA": [
       "1e7f28bf49e435b68c50",
       "598cfda00746e83f4896"
-    ],
-    "HIDE_TOOLTIP_DRILLTROUGH_PAGES": [
-      "3b33a1ae720bb93d48b9"
-    ],
-    "ENSURE_THEME_COLOURS": [
-      "8edac00805f721edc1c1"
-    ],
-    "ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY": [
-      "3485dcffc49d1608c370"
     ],
     "ENSURE_ALTTEXT": [
       "2a7e16428070011e60ec"
@@ -131,5 +107,99 @@
     "SLICER_SELECTION_SAVED": [
       "2b5386e9de3e1fbb1afa"
     ]
+  },
+  "results": {
+    "AVOID_SHOW_ITEMS_WITH_NO_DATA": {
+      "27f668864829019f9251": {
+        "pass": false,
+        "actual": [
+          "1e7f28bf49e435b68c50"
+        ]
+      }
+    },
+    "ENSURE_ALTTEXT": {
+      "bb1ea3ba2a1defa1979b": {
+        "pass": false,
+        "actual": [
+          "acc24e8136085a985f3f"
+        ]
+      },
+      "b52832c4d9f487868953": {
+        "pass": false,
+        "actual": [
+          "2a7e16428070011e60ec"
+        ]
+      },
+      "00e055aa522743f28a39": {
+        "pass": false,
+        "actual": [
+          "d2995ea3e9b9d9244bf6"
+        ]
+      }
+    },
+    "ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY": {
+      "report": {
+        "pass": false,
+        "actual": [
+          "3485dcffc49d1608c370"
+        ]
+      }
+    },
+    "ENSURE_THEME_COLOURS": {
+      "52db6f0b218c638f8761": {
+        "pass": false,
+        "actual": [
+          "8edac00805f721edc1c1"
+        ]
+      }
+    },
+    "HIDE_TOOLTIP_DRILLTROUGH_PAGES": {
+      "report": {
+        "pass": false,
+        "actual": [
+          "3b33a1ae720bb93d48b9"
+        ]
+      }
+    },
+    "REDUCE_ADVANCED_FILTERS": {
+      "9f2ae77d3572304756ae": {
+        "pass": false,
+        "actual": false
+      }
+    },
+    "REDUCE_OBJECTS_WITHIN_VISUALS": {
+      "3485dcffc49d1608c370": {
+        "pass": false,
+        "actual": [
+          "6e99982d842b0d962e16"
+        ]
+      }
+    },
+    "REDUCE_PAGES": {
+      "report": {
+        "pass": false,
+        "actual": false
+      }
+    },
+    "REDUCE_TOPN_FILTERS": {
+      "9f2ae77d3572304756ae": {
+        "pass": false,
+        "actual": false
+      }
+    },
+    "REDUCE_VISUALS_ON_PAGE": {
+      "9f2ae77d3572304756ae": {
+        "pass": false,
+        "actual": false
+      }
+    },
+    "REMOVE_UNUSED_CUSTOM_VISUALS": {
+      "report": {
+        "pass": false,
+        "actual": [
+          "ChicletSlicer1448559807354"
+        ]
+      }
+    }
   }
 }

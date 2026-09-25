@@ -11,9 +11,8 @@ interface OracleResult {
   actual: unknown;
 }
 /**
- * A fixture's report findings. With `results`, fab-inspector's output is the oracle and `ours`
- * holds pbiplint's side of each deviation. Without it, the file is hand-written: `ours` lists
- * every ported finding the fixture plants, and any other ported finding fails.
+ * A fixture's report findings: `results` is fab-inspector's output, the oracle for the ported
+ * rules, and `ours` holds pbiplint's side of each deviation.
  */
 interface Expectation {
   name: string;
@@ -22,9 +21,8 @@ interface Expectation {
   deviations: Record<string, string>;
   ours: Record<string, string[]>;
   native: Record<string, string[]>;
-  results?: Record<string, Record<string, OracleResult>>;
+  results: Record<string, Record<string, OracleResult>>;
 }
-type OracleExpectation = Expectation & { results: NonNullable<Expectation["results"]> };
 
 const repoRoot = new URL("../../../", import.meta.url).pathname;
 const expectationsDir = repoRoot + "tests/expectations/";
@@ -34,8 +32,6 @@ const expectations: Expectation[] = readdirSync(expectationsDir)
     name: f.replace(/\.report\.json$/, ""),
     ...(JSON.parse(readFileSync(expectationsDir + f, "utf8")) as Omit<Expectation, "name">),
   }));
-const oracled = expectations.filter((exp): exp is OracleExpectation => exp.results !== undefined);
-const handWritten = expectations.filter((exp) => exp.results === undefined);
 
 const ported = defaultRules.filter((r) => r.status === "ported" && r.layer === "report");
 const native = defaultRules.filter((r) => r.status === "builtin" && r.id !== "PARSE_ISSUE");
@@ -73,28 +69,28 @@ export function oracleIds(pages: Record<string, OracleResult> | undefined): stri
     .sort();
 }
 
-/**
- * The fixture's report was read, nothing in either part failed to parse or threw in a rule, and
- * every rule its config names exists, since a misspelt id would otherwise be ignored.
- */
-function expectCleanRead(name: string): void {
-  const { files, result } = runs.get(name)!;
-  expect(files.report.length).toBeGreaterThan(0);
-  expect(result.findings.filter((f) => f.ruleId === "PARSE_ISSUE")).toEqual([]);
-  expect(result.summary.ruleErrors).toEqual([]);
-  expect(result.summary.unknownRules).toEqual([]);
+/** The ids a ported rule must report on a fixture: `ours` for a deviating rule, else the oracle's. */
+function expectedIds(exp: Expectation, id: string): string[] {
+  return exp.deviations[id] !== undefined
+    ? [...(exp.ours[id] ?? [])].sort()
+    : oracleIds(exp.results[id]);
 }
 
-describe.each(oracled)("parity with fab-inspector: $name", (exp) => {
-  const { ours } = runs.get(exp.name)!;
+describe.each(expectations)("parity with fab-inspector: $name", (exp) => {
+  const { files, result, ours } = runs.get(exp.name)!;
 
-  it("reads both parts without parse issues or rule errors", () => expectCleanRead(exp.name));
+  /**
+   * The fixture's report was read, nothing in either part failed to parse or threw in a rule, and
+   * every rule its config names exists, since a misspelt id would otherwise be ignored.
+   */
+  it("reads both parts without parse issues or rule errors", () => {
+    expect(files.report.length).toBeGreaterThan(0);
+    expect(result.findings.filter((f) => f.ruleId === "PARSE_ISSUE")).toEqual([]);
+    expect(result.summary.ruleErrors).toEqual([]);
+    expect(result.summary.unknownRules).toEqual([]);
+  });
   it.each(ported.map((r) => [r.id] as const))("%s", (id) => {
-    const expected =
-      exp.deviations[id] !== undefined
-        ? [...(exp.ours[id] ?? [])].sort()
-        : oracleIds(exp.results[id]);
-    expect([...(ours[id] ?? [])].sort()).toEqual(expected);
+    expect([...(ours[id] ?? [])].sort()).toEqual(expectedIds(exp, id));
   });
   it("has every rule the oracle failed ported", () => {
     const failed = Object.entries(exp.results)
@@ -119,33 +115,11 @@ describe.each(oracled)("parity with fab-inspector: $name", (exp) => {
   });
 });
 
-/**
- * A hand-written expectation has no oracle, so `ours` is the whole answer for every ported rule:
- * a planted finding that goes missing fails, and so does one nobody planted.
- */
-describe.each(handWritten)("planted report findings: $name", (exp) => {
-  const { ours } = runs.get(exp.name)!;
-
-  it("reads both parts without parse issues or rule errors", () => expectCleanRead(exp.name));
-  it("names only ported report rules in ours, and no deviation, since there is no oracle", () => {
-    const ids = new Set(ported.map((r) => r.id));
-    expect(Object.keys(exp.ours).filter((id) => !ids.has(id))).toEqual([]);
-    expect(exp.deviations).toEqual({});
-  });
-  it.each(ported.map((r) => [r.id] as const))("%s fires as planted", (id) => {
-    expect([...(ours[id] ?? [])].sort()).toEqual([...(exp.ours[id] ?? [])].sort());
-  });
-});
-
-/**
- * Oracle fixtures only: each ported rule keeps a witness fab-inspector confirms. The sample plants
- * every rule, so counting it would let a rule lose its last oracle witness unnoticed; its own test
- * below requires every ported rule planted.
- */
+/** Every expectation is captured from fab-inspector, so each fixture, the sample too, is a witness. */
 describe("report parity coverage", () => {
   it("fires every ported report rule on at least one oracle fixture", () => {
     const fired = new Set<string>();
-    for (const exp of oracled)
+    for (const exp of expectations)
       for (const id of Object.keys(exp.results))
         if (oracleIds(exp.results[id]).length || (exp.ours[id] ?? []).length) fired.add(id);
     const silent = ported.map((r) => r.id).filter((id) => !fired.has(id));
@@ -177,13 +151,14 @@ describe("native expectations", () => {
 
 /**
  * The sample plants every report rule (spec section 11), so each native and each ported report
- * rule has a non-empty list in its expectation, which the checks above hold the run to.
+ * rule has a non-empty list in its expectation: the native map for a native rule, the oracle's ids
+ * for a ported one, or `ours` for a deviating one. The checks above hold the run to those lists.
  */
 describe("the sample", () => {
   const sample = expectations.find((exp) => exp.name === "messy-sales");
   it("fires every native rule and every ported report rule", () => {
     expect(sample, "tests/expectations/messy-sales.report.json").toBeDefined();
     for (const r of native) expect(sample!.native[r.id]?.length, r.id).toBeGreaterThan(0);
-    for (const r of ported) expect(sample!.ours[r.id]?.length, r.id).toBeGreaterThan(0);
+    for (const r of ported) expect(expectedIds(sample!, r.id).length, r.id).toBeGreaterThan(0);
   });
 });

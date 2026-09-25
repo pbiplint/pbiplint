@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { InputTree } from "../src/input/model-files.js";
-import { MAX_DEPTH, readDataTransfer, walkEntry, wanted } from "../src/input/read-drop.js";
+import { emptyTree, type InputTree } from "../src/input/model-files.js";
+import {
+  MAX_DEPTH,
+  SKIP_DIRS,
+  readDataTransfer,
+  walkEntry,
+  wanted,
+} from "../src/input/read-drop.js";
 
 /** A fake FileSystemEntry tree: a directory reader hands out its children in batches of two, then an empty batch. */
 function dir(
@@ -56,11 +62,28 @@ function readerCount(limit: number) {
 }
 
 describe("wanted", () => {
-  it("reads only TMDL files and the config", () => {
-    expect(wanted("Sales.tmdl")).toBe(true);
-    expect(wanted("pbiplint.config.json")).toBe(true);
-    expect(wanted("report.json")).toBe(false);
-    expect(wanted("cache.abf")).toBe(false);
+  it("reads TMDL, the config, the project files, and report JSON under a .Report's definition, and nothing else", () => {
+    for (const p of [
+      "Sales.tmdl",
+      "a/b/pbiplint.config.json",
+      "X.Report/definition.pbir",
+      "X.Report/.platform",
+      "Demo.pbip",
+      "X.Report/definition/report.json",
+      "P/X.Report/definition/pages/p/visuals/v/visual.json",
+      "X.Report/definition/pages/p/visuals/v/mobile.json",
+    ])
+      expect(wanted(p), p).toBe(true);
+    for (const p of [
+      "X.Report/report.json",
+      "X.Report/StaticResources/x.json",
+      "X.Report/StaticResources/definition/x.json",
+      "X.SemanticModel/definition/x.json",
+      "notes.json",
+      "X.Report/definition/x.png",
+      "cache.abf",
+    ])
+      expect(wanted(p), p).toBe(false);
   });
 });
 
@@ -81,7 +104,7 @@ describe("walkEntry", () => {
       ]),
       file("pbiplint.config.json", "/Demo.SemanticModel/pbiplint.config.json", "{}"),
     ]);
-    const seen: InputTree = { entries: [], modelFolders: [] };
+    const seen = emptyTree();
     await walkEntry(tree, seen);
     const out = seen.entries;
     expect(seen.modelFolders).toEqual(["Demo.SemanticModel"]);
@@ -109,7 +132,7 @@ describe("walkEntry", () => {
       ]),
       dir(".git", "/Proj/.git", [dir("X.SemanticModel", "/Proj/.git/X.SemanticModel", [])]),
     ]);
-    const seen: InputTree = { entries: [], modelFolders: [] };
+    const seen = emptyTree();
     await walkEntry(tree, seen);
     expect(seen.modelFolders).toEqual(["Proj/Old.SemanticModel", "Proj/New.SemanticModel"]);
     expect(opened).toBe(0);
@@ -127,7 +150,7 @@ describe("walkEntry", () => {
       dir("node_modules", "/Proj/node_modules", [dir("pkg", "/Proj/node_modules/pkg", [inside])]),
       file("m.tmdl", "/Proj/m.tmdl", "model Model\n"),
     ]);
-    const seen: InputTree = { entries: [], modelFolders: [] };
+    const seen = emptyTree();
     await walkEntry(tree, seen);
     expect(seen.entries.map((e) => e.path)).toEqual(["Proj/m.tmdl"]);
     expect(opened).toBe(0);
@@ -139,7 +162,7 @@ describe("walkEntry", () => {
     const { state, wrap } = readerCount(MAX_DEPTH);
     const nest = (level: number): FileSystemEntry =>
       wrap(dir(`L${level}`, `/${"L/".repeat(level)}L${level}`, level < 3 ? [nest(level + 1)] : []));
-    await walkEntry(nest(0), { entries: [], modelFolders: [] });
+    await walkEntry(nest(0), emptyTree());
     expect(state.readers).toBe(4);
   });
   it("stops at the depth cap instead of looping when a folder contains itself", async () => {
@@ -163,12 +186,218 @@ describe("walkEntry", () => {
       },
     } as unknown as FileSystemDirectoryEntry;
     const wrapped = wrap(loop);
-    const tree: InputTree = { entries: [], modelFolders: [] };
+    const tree = emptyTree();
     await walkEntry(wrapped, tree);
-    expect(tree).toEqual({ entries: [], modelFolders: [] });
+    // Every level of the fake has the same fullPath, so the folder the cap names is "Loop".
+    expect(tree).toEqual({
+      ...emptyTree(),
+      diagnostics: [
+        {
+          kind: "depth-cap",
+          path: "Loop",
+          message: `the walk stopped ${MAX_DEPTH} folders deep at Loop, so files below it were not read`,
+        },
+      ],
+    });
     // One reader per level, and the level that hits the cap opens none: the walk went exactly as
     // deep as the cap allows and no deeper.
     expect(state.readers).toBe(MAX_DEPTH);
+  });
+  it("records a .Report folder, a legacy report.json and model.bim by name without opening them, and a depth-cap diagnostic", async () => {
+    const tree: InputTree = {
+      entries: [],
+      modelFolders: [],
+      reportFolders: [],
+      markers: [],
+      diagnostics: [],
+    };
+    await walkEntry(
+      dir("Proj", "/Proj", [
+        dir("Old.Report", "/Proj/Old.Report", [
+          file("report.json", "/Proj/Old.Report/report.json", "{}"),
+        ]),
+        dir("Old.SemanticModel", "/Proj/Old.SemanticModel", [
+          file("model.bim", "/Proj/Old.SemanticModel/model.bim", "{}"),
+        ]),
+        dir("New.Report", "/Proj/New.Report", [
+          dir("definition", "/Proj/New.Report/definition", [
+            file("report.json", "/Proj/New.Report/definition/report.json", "{}"),
+          ]),
+        ]),
+      ]),
+      tree,
+    );
+    expect(tree.reportFolders).toEqual(["Proj/Old.Report", "Proj/New.Report"]);
+    expect(tree.markers).toEqual([
+      { path: "Proj/Old.Report/report.json", kind: "legacy-report" },
+      { path: "Proj/Old.SemanticModel/model.bim", kind: "legacy-model" },
+    ]);
+    expect(tree.entries.map((e) => e.path)).toEqual(["Proj/New.Report/definition/report.json"]);
+    expect(tree.diagnostics).toEqual([]);
+    // A chain deeper than the cap stops with a diagnostic naming the folder it stopped in.
+    let deep = dir("bottom", "/bottom", [file("x.tmdl", "/bottom/x.tmdl", "table X\n")]);
+    for (let i = MAX_DEPTH; i >= 0; i--) deep = dir(`d${i}`, `/d${i}`, [deep]);
+    const capped: InputTree = {
+      entries: [],
+      modelFolders: [],
+      reportFolders: [],
+      markers: [],
+      diagnostics: [],
+    };
+    await walkEntry(deep, capped);
+    expect(capped.entries).toEqual([]);
+    expect(capped.diagnostics).toEqual([
+      {
+        kind: "depth-cap",
+        path: `d${MAX_DEPTH}`,
+        message: `the walk stopped ${MAX_DEPTH} folders deep at d${MAX_DEPTH}, so files below it were not read`,
+      },
+    ]);
+  });
+  it("records a file that could not be read as a diagnostic and goes on", async () => {
+    const bad = {
+      ...file("Sales.tmdl", "/M/Sales.tmdl", ""),
+      file: (_ok: unknown, fail: (e: Error) => void) => fail(new Error("locked")),
+    } as unknown as FileSystemFileEntry;
+    const tree: InputTree = {
+      entries: [],
+      modelFolders: [],
+      reportFolders: [],
+      markers: [],
+      diagnostics: [],
+    };
+    await walkEntry(dir("M", "/M", [bad, file("Date.tmdl", "/M/Date.tmdl", "table Date\n")]), tree);
+    expect(tree.entries.map((e) => e.path)).toEqual(["M/Date.tmdl"]);
+    expect(tree.diagnostics).toEqual([
+      {
+        kind: "unread-file",
+        path: "M/Sales.tmdl",
+        message: "M/Sales.tmdl could not be read (locked), so it was not linted",
+      },
+    ]);
+  });
+  it("names a file whose text will not come, and keeps the first refusal it met", async () => {
+    // entry.file() hands over a File and the read fails after: the second of the drop route's two
+    // reads. The refusal is the first path the walk could not read, and a later one never
+    // replaces it.
+    const locked = {
+      ...file("A.tmdl", "/M/A.tmdl", ""),
+      file: (_ok: unknown, fail: (e: Error) => void) => fail(new Error("locked")),
+    } as unknown as FileSystemFileEntry;
+    const unreadable = {
+      ...file("B.tmdl", "/M/B.tmdl", ""),
+      file: (ok: (f: File) => void) =>
+        ok(
+          Object.assign(new File([""], "B.tmdl"), {
+            text: () =>
+              Promise.reject(new DOMException("The file could not be read", "NotReadableError")),
+          }),
+        ),
+    } as unknown as FileSystemFileEntry;
+    const tree = emptyTree();
+    await walkEntry(
+      dir("M", "/M", [locked, unreadable, file("C.tmdl", "/M/C.tmdl", "table C\n")]),
+      tree,
+    );
+    expect(tree.entries.map((e) => e.path)).toEqual(["M/C.tmdl"]);
+    expect(tree.diagnostics).toEqual([
+      {
+        kind: "unread-file",
+        path: "M/A.tmdl",
+        message: "M/A.tmdl could not be read (locked), so it was not linted",
+      },
+      {
+        kind: "unread-file",
+        path: "M/B.tmdl",
+        message: "M/B.tmdl could not be read (The file could not be read), so it was not linted",
+      },
+    ]);
+    expect(tree.refusal).toEqual({ path: "M/A.tmdl", reason: "locked" });
+    // A tree that read everything has no refusal at all.
+    const clean = emptyTree();
+    await walkEntry(dir("M", "/M", [file("C.tmdl", "/M/C.tmdl", "table C\n")]), clean);
+    expect(clean).not.toHaveProperty("refusal");
+  });
+  it("names a folder it cannot list once, keeps the batches it had, and goes on with its siblings", async () => {
+    // Chrome hands out a folder's entries in batches; a later batch can fail after an earlier one
+    // was walked, and what that earlier batch held is still read.
+    let listed = 0;
+    const failing = {
+      ...dir("M", "/P/M", []),
+      createReader: () => ({
+        readEntries: (ok: (entries: FileSystemEntry[]) => void, fail: (e: Error) => void) => {
+          listed += 1;
+          if (listed === 1) ok([file("A.tmdl", "/P/M/A.tmdl", "table A\n")]);
+          else
+            fail(
+              new DOMException("A requested file or directory could not be found", "NotFoundError"),
+            );
+        },
+      }),
+    } as unknown as FileSystemDirectoryEntry;
+    const tree = emptyTree();
+    await walkEntry(
+      dir("P", "/P", [failing, dir("N", "/P/N", [file("B.tmdl", "/P/N/B.tmdl", "table B\n")])]),
+      tree,
+    );
+    expect(tree.entries.map((e) => e.path)).toEqual(["P/M/A.tmdl", "P/N/B.tmdl"]);
+    expect(tree.diagnostics).toEqual([
+      {
+        kind: "unread-file",
+        path: "P/M",
+        message:
+          "P/M could not be read (A requested file or directory could not be found), so it was not linted",
+      },
+    ]);
+    expect(tree.refusal).toEqual({
+      path: "P/M",
+      reason: "A requested file or directory could not be found",
+    });
+    // The walk asked for the second batch once and stopped there, rather than asking again.
+    expect(listed).toBe(2);
+  });
+  it("never walks a report's StaticResources or CustomVisuals, and says nothing about them at the cap", async () => {
+    expect(SKIP_DIRS.has("StaticResources")).toBe(true);
+    expect(SKIP_DIRS.has("CustomVisuals")).toBe(true);
+    let opened = 0;
+    const counted = (entry: FileSystemDirectoryEntry): FileSystemDirectoryEntry =>
+      ({
+        ...entry,
+        createReader: () => {
+          opened += 1;
+          return entry.createReader();
+        },
+      }) as unknown as FileSystemDirectoryEntry;
+    const tree = emptyTree();
+    await walkEntry(
+      dir("X.Report", "/X.Report", [
+        counted(
+          dir("StaticResources", "/X.Report/StaticResources", [
+            dir("definition", "/X.Report/StaticResources/definition", [
+              file("x.json", "/X.Report/StaticResources/definition/x.json", "{}"),
+            ]),
+          ]),
+        ),
+        counted(
+          dir("CustomVisuals", "/X.Report/CustomVisuals", [
+            file("pbiviz.json", "/X.Report/CustomVisuals/pbiviz.json", "{}"),
+          ]),
+        ),
+        dir("definition", "/X.Report/definition", [
+          file("report.json", "/X.Report/definition/report.json", "{}"),
+        ]),
+      ]),
+      tree,
+    );
+    expect(opened).toBe(0);
+    expect(tree.entries.map((e) => e.path)).toEqual(["X.Report/definition/report.json"]);
+    // A skipped folder that sits at the cap is still only skipped: the skip is tested first, so a
+    // folder that is never read raises no notice about not being read.
+    let deep: FileSystemEntry = dir("StaticResources", "/StaticResources", []);
+    for (let i = MAX_DEPTH - 1; i >= 0; i--) deep = dir(`d${i}`, `/d${i}`, [deep]);
+    const capped = emptyTree();
+    await walkEntry(deep, capped);
+    expect(capped.diagnostics).toEqual([]);
   });
 });
 
@@ -177,8 +406,8 @@ describe("readDataTransfer", () => {
     const entry = file("T.tmdl", "/T.tmdl", "table T\n");
     const dt = { items: [{ webkitGetAsEntry: () => entry }], files: [] } as unknown as DataTransfer;
     expect(await readDataTransfer(dt)).toEqual({
+      ...emptyTree(),
       entries: [{ path: "T.tmdl", text: "table T\n" }],
-      modelFolders: [],
     });
   });
   it("reads a top-level file from the item itself, so an entry whose file() fails still reads", async () => {
@@ -199,8 +428,8 @@ describe("readDataTransfer", () => {
       files: [],
     } as unknown as DataTransfer;
     expect(await readDataTransfer(dt)).toEqual({
+      ...emptyTree(),
       entries: [{ path: "T.tmdl", text: "table T\n" }],
-      modelFolders: [],
     });
   });
   it("falls back to flat files when an item has no entry to hand out", async () => {
@@ -214,8 +443,47 @@ describe("readDataTransfer", () => {
       files: [new File(["table T\n"], "T.tmdl"), new File(["{}"], "report.json")],
     } as unknown as DataTransfer;
     expect(await readDataTransfer(dt)).toEqual({
+      ...emptyTree(),
       entries: [{ path: "T.tmdl", text: "table T\n" }],
-      modelFolders: [],
+    });
+  });
+  it("names a dropped file whose read fails, once, on both top-level branches", async () => {
+    // Two files of the same name can be dropped side by side (from a search window, say), and a
+    // path is named once however many times it fails.
+    const failing = (name: string, reason: string): File =>
+      Object.assign(new File([""], name), { text: () => Promise.reject(new Error(reason)) });
+    const entry = file("T.tmdl", "/T.tmdl", "");
+    const viaItems = {
+      items: [
+        { webkitGetAsEntry: () => entry, getAsFile: () => failing("T.tmdl", "gone") },
+        { webkitGetAsEntry: () => entry, getAsFile: () => failing("T.tmdl", "gone again") },
+        {
+          webkitGetAsEntry: () => file("U.tmdl", "/U.tmdl", ""),
+          getAsFile: () => new File(["table U\n"], "U.tmdl"),
+        },
+      ],
+      files: [],
+    } as unknown as DataTransfer;
+    const unreadT = {
+      kind: "unread-file",
+      path: "T.tmdl",
+      message: "T.tmdl could not be read (gone), so it was not linted",
+    };
+    expect(await readDataTransfer(viaItems)).toEqual({
+      ...emptyTree(),
+      entries: [{ path: "U.tmdl", text: "table U\n" }],
+      diagnostics: [unreadT],
+      refusal: { path: "T.tmdl", reason: "gone" },
+    });
+    const flat = {
+      items: [],
+      files: [failing("T.tmdl", "gone"), new File(["table U\n"], "U.tmdl")],
+    } as unknown as DataTransfer;
+    expect(await readDataTransfer(flat)).toEqual({
+      ...emptyTree(),
+      entries: [{ path: "U.tmdl", text: "table U\n" }],
+      diagnostics: [unreadT],
+      refusal: { path: "T.tmdl", reason: "gone" },
     });
   });
   it("falls back to flat files when it does not", async () => {
@@ -224,8 +492,8 @@ describe("readDataTransfer", () => {
       files: [new File(["table T\n"], "T.tmdl"), new File(["{}"], "report.json")],
     } as unknown as DataTransfer;
     expect(await readDataTransfer(dt)).toEqual({
+      ...emptyTree(),
       entries: [{ path: "T.tmdl", text: "table T\n" }],
-      modelFolders: [],
     });
   });
 });

@@ -1,4 +1,4 @@
-import type { LintFile } from "@pbiplint/core";
+import type { Diagnostic, LintFile } from "@pbiplint/core";
 
 /** One file read from a drop, a folder pick, or a directory input. Forward slashes, relative to the drop. */
 export interface InputEntry {
@@ -6,7 +6,16 @@ export interface InputEntry {
   text: string;
 }
 
-/** What a reader saw: the files it read, and every .SemanticModel folder it passed, read or not. */
+/** A legacy part's marker file, seen by name and never opened. */
+export interface InputMarker {
+  path: string;
+  kind: "legacy-report" | "legacy-model";
+}
+
+/**
+ * What a reader saw: the files it read, every .SemanticModel and .Report folder it passed, read or
+ * not, the legacy markers it saw by name, and what it could not read.
+ */
 export interface InputTree {
   entries: InputEntry[];
   /**
@@ -14,7 +23,29 @@ export interface InputTree {
    * A folder is known by its name alone; nothing inside it is opened unless it is a wanted file.
    */
   modelFolders: string[];
+  /** Drop-relative paths of the .Report folders seen, read or not. */
+  reportFolders: string[];
+  /** A report.json directly under a .Report, or a model.bim directly under a .SemanticModel: seen by name, never opened. */
+  markers: InputMarker[];
+  /** What the walk could not do: a folder past the depth cap, a file or folder that failed to read. */
+  diagnostics: Diagnostic[];
+  /**
+   * The first path the walk could not read, with the browser's reason, as the CLI's Walk.refusal
+   * holds it: set beside the first `unread-file` diagnostic and never overwritten, so a drop of
+   * which nothing could be read is refused naming it. Absent when every read succeeded.
+   */
+  refusal?: { path: string; reason: string };
 }
+
+export const isReportFolder = (name: string): boolean => name.endsWith(".Report");
+/** A tree before any reader has filled it; no refusal, since nothing has failed yet. */
+export const emptyTree = (): InputTree => ({
+  entries: [],
+  modelFolders: [],
+  reportFolders: [],
+  markers: [],
+  diagnostics: [],
+});
 
 export interface SelectedModel {
   /**

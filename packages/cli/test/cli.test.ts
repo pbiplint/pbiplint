@@ -46,6 +46,39 @@ function pbipProject(prefix: string): string {
   return root;
 }
 
+/**
+ * Two projects in one folder, as mewancegeka/PBIWorkspace holds them (#86): Cost, whose model
+ * has one table, and Sales, whose model has two, each with a .pbip naming its report and a report
+ * of one page that reads its model.
+ */
+function workspace(): string {
+  const root = mkdtempSync(join(tmpdir(), "pbiplint-workspace-"));
+  const j = (v: unknown) => JSON.stringify(v);
+  for (const [name, tables] of [
+    ["Cost", ["Cost"]],
+    ["Sales", ["Sales", "Region"]],
+  ] as const) {
+    const model = join(root, `${name}.SemanticModel`, "definition");
+    const def = join(root, `${name}.Report`, "definition");
+    mkdirSync(model, { recursive: true });
+    mkdirSync(join(def, "pages", "p"), { recursive: true });
+    writeFileSync(
+      join(root, `${name}.pbip`),
+      j({ version: "1.0", artifacts: [{ report: { path: `${name}.Report` } }] }),
+    );
+    writeFileSync(join(model, "model.tmdl"), "model Model\n");
+    for (const t of tables) writeFileSync(join(model, `${t}.tmdl`), `table ${t}\n`);
+    writeFileSync(
+      join(root, `${name}.Report`, "definition.pbir"),
+      j({ datasetReference: { byPath: { path: `../${name}.SemanticModel` } } }),
+    );
+    writeFileSync(join(def, "report.json"), "{}");
+    writeFileSync(join(def, "pages", "pages.json"), j({ pageOrder: ["p"] }));
+    writeFileSync(join(def, "pages", "p", "page.json"), j({ name: "p", displayName: "P" }));
+  }
+  return root;
+}
+
 describe("pbiplint CLI", () => {
   it("lints the sample project and exits 1 because it has errors", async () => {
     const r = await run([sample]);
@@ -280,6 +313,32 @@ describe("pbiplint CLI", () => {
     expect(r.err).toBe(
       "pbiplint: notice: Demo.Report is stored as a single report.json, which pbiplint cannot read; save it in the PBIR format from Power BI Desktop\n",
     );
+  });
+  it("lints each project of a folder that holds two by its .pbip, and refuses the folder", async () => {
+    const root = workspace();
+    try {
+      // The model's files are model.tmdl and one per table; the report's are definition.pbir,
+      // report.json, pages.json, page.json, and the project's .pbip.
+      for (const [name, modelFiles] of [
+        ["Cost", 2],
+        ["Sales", 3],
+      ] as const) {
+        const r = await run([join(root, `${name}.pbip`), "--format", "json", "--fail-on", "none"]);
+        expect(r.code).toBe(0);
+        expect(r.err).toBe("");
+        const doc = JSON.parse(r.out);
+        expect(doc.layers.model).toEqual({ present: true, files: modelFiles });
+        expect(doc.layers.report).toEqual({ present: true, files: 5 });
+        expect(doc.diagnostics).toEqual([]);
+      }
+      const folder = await run([root]);
+      expect(folder.code).toBe(2);
+      expect(folder.err).toBe(
+        `pbiplint: ${root} contains 2 semantic models; point at one of them: Cost.SemanticModel, Sales.SemanticModel\nRun pbiplint --help for usage.\n`,
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
   // These tests have the operating system refuse a read, as a POSIX system does for a user (CI
   // runs them on Ubuntu). Root reads a folder whatever its mode, and Windows ignores a mode of 000

@@ -3,6 +3,8 @@ import { basename, dirname, join, relative, resolve } from "node:path";
 import {
   datasetReference,
   pairingDecision,
+  readJson,
+  type DatasetReference,
   type Diagnostic,
   type LayerName,
   type LintFile,
@@ -62,6 +64,22 @@ const statOf = (p: string): Stats | undefined => statSync(p, { throwIfNoEntry: f
 const isDir = (p: string): boolean => statOf(p)?.isDirectory() ?? false;
 const isFile = (p: string): boolean => statOf(p)?.isFile() ?? false;
 const byName = (a: string, b: string): number => a.localeCompare(b, "en");
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v);
+
+/**
+ * Whether the path a file names is a folder: undefined when nothing is there, and true when the
+ * operating system will not say, so the read that follows meets the refusal and names it.
+ */
+function folderAt(p: string): boolean | undefined {
+  try {
+    const stat = statOf(p);
+    return stat === undefined ? undefined : stat.isDirectory();
+  } catch (e) {
+    if (isSystemError(e)) return true;
+    throw e;
+  }
+}
 
 /** One walk under the input: where a notice's path starts, and the project it adds to. */
 interface Walk {
@@ -264,9 +282,7 @@ export function resolveProject(input: string): ResolvedProject {
           absent: {},
           diagnostics: [],
         };
-      // The project is the .pbip's own folder, and the file named is the one read there.
-      if (path.endsWith(".pbip"))
-        return resolveFolder(dirname(path), dirname(path), basename(path));
+      if (path.endsWith(".pbip")) return resolvePbip(input, path);
       throw new UsageError(`${input} is not a .tmdl file, a .pbip file, or a folder`);
     }
     return resolveFolder(input, path);
@@ -281,26 +297,143 @@ export function resolveProject(input: string): ResolvedProject {
 }
 
 /**
- * A folder, either given directly or named by a .pbip. `preferred` is that .pbip's file name, so
- * a project holding more than one is read as the user asked instead of refused.
+ * A folder, either given directly or named by a .pbip that names no report. `preferred` is that
+ * .pbip's file name, so a project holding more than one is read as the user asked instead of
+ * refused.
+ */
+function resolveFolder(input: string, path: string, preferred?: string): ResolvedProject {
+  return walked(input, path, (w) => readFolder(w, input, path, preferred));
+}
+
+/**
+ * One walk from the folder `base`, which is the project root, by `read`. `input` names that folder
+ * in a refusal.
  *
- * A folder of which nothing could be read, while something in it was refused, is an input that
+ * A walk of which nothing could be read, while something in it was refused, is an input that
  * could not be read: a run over it would report no findings in 0 files and read as clean with
  * nothing linted. It is refused naming the first path that refused, with that refusal's reason:
  * the folder itself was read, so what refused is below it, and a refused run prints none of the
  * notices that name it. A legacy part on its own refuses nothing, so it stays a notice.
  */
-function resolveFolder(input: string, path: string, preferred?: string): ResolvedProject {
-  const w: Walk = { base: path, project: { root: path, absent: {}, diagnostics: [] } };
-  const project = readFolder(w, input, path, preferred);
+function walked(input: string, base: string, read: (w: Walk) => ResolvedProject): ResolvedProject {
+  const w: Walk = { base, project: { root: base, absent: {}, diagnostics: [] } };
+  const project = read(w);
   if (!project.model && !project.report && w.refusal) {
     const { path: below, error } = w.refusal;
-    // Joined to `input`, as readFolder's messages name the folder, in the notices' forward
+    // Joined to `input`, as the readers' messages name the folder, in the notices' forward
     // slashes. The folder itself, were it to refuse once read, is named by `input` alone.
     const named = below === "" ? input : toPosix(join(input, below));
     throw new UsageError(`Could not read ${named}: ${reasonOf(error)}`);
   }
   return project;
+}
+
+/**
+ * The report paths a .pbip's `artifacts` name, as it writes them. Microsoft's pbipProperties
+ * schema gives `artifacts` as `{ "report": { "path" } }` entries only: a .pbip reaches its model
+ * through the report's definition.pbir. A .pbip that is not a JSON object names none.
+ */
+function reportsNamed(name: string, text: string): string[] {
+  const json = readJson(name, text).json;
+  if (!isRecord(json) || !Array.isArray(json.artifacts)) return [];
+  return json.artifacts.flatMap((a: unknown) =>
+    isRecord(a) && isRecord(a.report) && typeof a.report.path === "string" ? [a.report.path] : [],
+  );
+}
+
+/**
+ * A .pbip the user named (#86): the one report its `artifacts` name, its path relative to the
+ * .pbip's folder, and the model that report's definition.pbir names, wherever each sits, so a
+ * project beside others in one folder lints with both parts. Nothing else in the .pbip's folder
+ * is read or refused, and that folder stays the project root: the config search's start and the
+ * base of every notice's path. A .pbip naming more than one report is refused as a folder holding
+ * more than one is; one naming none is read as its folder, as every .pbip was before.
+ */
+function resolvePbip(input: string, path: string): ResolvedProject {
+  const folder = dirname(path);
+  // The input itself, refused by resolveProject when it cannot be read.
+  const text = readFileSync(path, "utf8");
+  const named = reportsNamed(basename(path), text);
+  if (named.length === 0) return resolveFolder(folder, folder, basename(path));
+  if (named.length > 1) {
+    const names = named.map((p) => basename(toPosix(p))).sort(byName);
+    throw new UsageError(
+      `${input} names ${named.length} reports; point at one of them: ${names.join(", ")}`,
+    );
+  }
+  const written = named[0]!;
+  const reportFolder = resolve(folder, toPosix(written));
+  const kind = folderAt(reportFolder);
+  if (kind === undefined) throw new UsageError(`${input} names ${written}, which does not exist`);
+  if (!kind) throw new UsageError(`${input} names ${written}, which is not a folder`);
+  return walked(folder, folder, (w) => readNamed(w, input, path, text, reportFolder));
+}
+
+/**
+ * The text of the report's definition.pbir, which names its model: the report part's copy when
+ * the part was read, else the file read on its own, since a legacy report, or one whose definition
+ * folder could not be read, still names its model. A report folder that could not be entered has
+ * its notice already, and nothing in it is looked up.
+ */
+function pbirOf(w: Walk, report: ResolvedPart | undefined, folder: string): string | undefined {
+  if (report) return report.files.find((f) => f.path === "definition.pbir")?.text;
+  const at = toPosix(relative(w.base, folder));
+  if (w.project.diagnostics.some((d) => d.kind === "unread-file" && d.path === at))
+    return undefined;
+  const p = join(folder, "definition.pbir");
+  return attempt(w, p, () => (isFile(p) ? readFileSync(p, "utf8") : undefined));
+}
+
+/**
+ * The report at `reportFolder`, which the .pbip at `pbip` names, and the model its definition.pbir
+ * names by path, relative to the report folder. The path is followed rather than compared with a
+ * folder beside the report, so model-reference-mismatch does not arise here.
+ */
+function readNamed(
+  w: Walk,
+  input: string,
+  pbip: string,
+  text: string,
+  reportFolder: string,
+): ResolvedProject {
+  const out = w.project;
+  const at = (p: string): string => toPosix(relative(w.base, p));
+  const report = readPart(w, "report", reportFolder, reportPart);
+  // A part folder that could not be read has said so already, and cannot be looked in.
+  if (!report && !out.absent.report && isFile(join(reportFolder, "report.json"))) {
+    out.diagnostics.push(legacyReport(reportFolder, at(reportFolder)));
+    out.absent.report = LEGACY_REPORT_REASON;
+  }
+  // The .pbip rides with the report at its path from the report root, as it does from a folder,
+  // so a finding on it points at the real file.
+  if (report) report.files.push({ path: toPosix(relative(report.root, pbip)), text });
+
+  const pbir = pbirOf(w, report, reportFolder);
+  const ref: DatasetReference = pbir === undefined ? { kind: "none" } : datasetReference(pbir);
+  let model: ResolvedPart | undefined;
+  if (ref.kind === "byPath") {
+    const modelFolder = resolve(reportFolder, toPosix(ref.path));
+    if (folderAt(modelFolder)) {
+      model = readPart(w, "model", modelFolder, modelPart);
+      if (!model && !out.absent.model && isFile(join(modelFolder, "model.bim"))) {
+        out.diagnostics.push(legacyModel(modelFolder, at(modelFolder)));
+        out.absent.model = LEGACY_MODEL_REASON;
+      }
+    } else {
+      out.absent.model = `this report reads a model that is not there (${ref.path})`;
+    }
+  } else {
+    // A report bound to a published model says so on the skipped line, as it does from a folder;
+    // one that names no model is read alone.
+    const decision = pairingDecision(ref, undefined, basename(reportFolder));
+    if (decision.reason) out.absent.model = decision.reason;
+  }
+  if (model) out.model = model;
+  if (report) out.report = report;
+  if (model || report || out.diagnostics.length) return out;
+  throw new UsageError(
+    `No semantic model or report found at ${input} (expected ${EXPECTED_INPUT})`,
+  );
 }
 
 /** The parts of the folder `w` walks, or what it has to say about them. */

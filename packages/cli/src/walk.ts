@@ -13,6 +13,13 @@ export interface ResolvedPart {
   /** Absolute path the part's finding locations are relative to. */
   root: string;
   files: LintFile[];
+  /**
+   * The paths below `root` this part's own read could not read, relative to `root` with forward
+   * slashes as `files` are, a folder written with a trailing `/`: what `lint` takes as this
+   * part's layer's `unreadPaths`. Each is also an `unread-file` notice, but the notices name a
+   * path once however many reads meet it, so this list is the part's own.
+   */
+  unread: string[];
 }
 
 export interface ResolvedProject {
@@ -84,37 +91,46 @@ function unread(w: Walk, p: string, e: SystemError): void {
   });
 }
 
-/** `call` on `p`, below the input: what the operating system refuses is a notice, and the walk goes on. */
-function attempt<T>(w: Walk, p: string, call: () => T): T | undefined {
+/**
+ * `call` on `p`, below the input: what the operating system refuses is a notice, and the walk goes
+ * on. The path is also recorded on `part`, the part being read, as `p` relative to its root, a
+ * folder (`folder`) with a trailing `/`.
+ */
+function attempt<T>(
+  w: Walk,
+  p: string,
+  call: () => T,
+  part?: ResolvedPart,
+  folder = false,
+): T | undefined {
   try {
     return call();
   } catch (e) {
     if (!isSystemError(e)) throw e;
     unread(w, p, e);
+    part?.unread.push(toPosix(relative(part.root, p)) + (folder ? "/" : ""));
     return undefined;
   }
 }
 
+/** A part at `root` with nothing read yet, for a read to fill. */
+const emptyPart = (root: string): ResolvedPart => ({ root, files: [], unread: [] });
+
 /**
- * Every file under `dir` that `keep` accepts. Listing `dir` itself is the caller's to answer for;
- * a folder or file below it that cannot be read is a notice, and the rest is still read.
+ * Every file under `dir` that `keep` accepts, into `part`, with each path relative to its root.
+ * Listing `dir` itself is the caller's to answer for; a folder or file below it that cannot be
+ * read is a notice and one of the part's unread paths, and the rest is still read.
  */
-function readTree(
-  w: Walk,
-  root: string,
-  dir: string,
-  keep: (name: string) => boolean,
-  out: LintFile[],
-): void {
+function readTree(w: Walk, part: ResolvedPart, dir: string, keep: (name: string) => boolean): void {
   for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) =>
     byName(a.name, b.name),
   )) {
     const p = join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (!SKIP_DIRS.has(entry.name)) attempt(w, p, () => readTree(w, root, p, keep, out));
+      if (!SKIP_DIRS.has(entry.name)) attempt(w, p, () => readTree(w, part, p, keep), part, true);
     } else if (keep(entry.name)) {
-      const text = attempt(w, p, () => readFileSync(p, "utf8"));
-      if (text !== undefined) out.push({ path: toPosix(relative(root, p)), text });
+      const text = attempt(w, p, () => readFileSync(p, "utf8"), part);
+      if (text !== undefined) part.files.push({ path: toPosix(relative(part.root, p)), text });
     }
   }
 }
@@ -123,23 +139,23 @@ function readTree(
 function modelPart(w: Walk, folder: string): ResolvedPart | undefined {
   const def = join(folder, "definition");
   if (!isDir(def)) return undefined;
-  const files: LintFile[] = [];
-  readTree(w, folder, def, (n) => n.endsWith(".tmdl"), files);
-  return files.length ? { root: folder, files } : undefined;
+  const part = emptyPart(folder);
+  readTree(w, part, def, (n) => n.endsWith(".tmdl"));
+  return part.files.length ? part : undefined;
 }
 
 /** The report part at `folder`: definition.pbir, .platform, and every JSON under definition, or nothing. */
 function reportPart(w: Walk, folder: string): ResolvedPart | undefined {
   const def = join(folder, "definition");
   if (!isDir(def)) return undefined;
-  const files: LintFile[] = [];
+  const part = emptyPart(folder);
   for (const name of ["definition.pbir", ".platform"]) {
     const p = join(folder, name);
-    const text = attempt(w, p, () => (isFile(p) ? readFileSync(p, "utf8") : undefined));
-    if (text !== undefined) files.push({ path: name, text });
+    const text = attempt(w, p, () => (isFile(p) ? readFileSync(p, "utf8") : undefined), part);
+    if (text !== undefined) part.files.push({ path: name, text });
   }
-  readTree(w, folder, def, (n) => n.endsWith(".json"), files);
-  return files.some((f) => f.path.startsWith("definition/")) ? { root: folder, files } : undefined;
+  readTree(w, part, def, (n) => n.endsWith(".json"));
+  return part.files.some((f) => f.path.startsWith("definition/")) ? part : undefined;
 }
 
 const UNREAD_PART: Record<LayerName, string> = {
@@ -243,6 +259,7 @@ export function resolveProject(input: string): ResolvedProject {
           model: {
             root: dirname(path),
             files: [{ path: basename(path), text: readFileSync(path, "utf8") }],
+            unread: [],
           },
           absent: {},
           diagnostics: [],
@@ -305,11 +322,12 @@ function readFolder(w: Walk, input: string, path: string, preferred?: string): R
     const report = readPart(w, name.endsWith(".Report") ? "report" : undefined, path, reportPart);
     if (report) return { ...out, report, absent: loneReportAbsent(report, path) };
   }
-  // A definition folder given directly: a model's is read as v1 did, a report's from its parent.
+  // A definition folder given directly: a model's is read as v1 did, with the folder as its root,
+  // a report's from its parent.
   if (name === "definition") {
-    const tmdl: LintFile[] = [];
-    readTree(w, path, path, (n) => n.endsWith(".tmdl"), tmdl);
-    if (tmdl.length) return { ...out, model: { root: path, files: tmdl } };
+    const tmdl = emptyPart(path);
+    readTree(w, tmdl, path, (n) => n.endsWith(".tmdl"));
+    if (tmdl.files.length) return { ...out, model: tmdl };
     const report = reportPart(w, dirname(path));
     if (report)
       return {
@@ -372,7 +390,7 @@ function readFolder(w: Walk, input: string, path: string, preferred?: string): R
       const text =
         preferred !== undefined
           ? readFileSync(p, "utf8")
-          : attempt(w, p, () => readFileSync(p, "utf8"));
+          : attempt(w, p, () => readFileSync(p, "utf8"), report);
       if (text !== undefined) report.files.push({ path: toPosix(relative(report.root, p)), text });
     }
     const pbir = report.files.find((f) => f.path === "definition.pbir");
@@ -394,9 +412,9 @@ function readFolder(w: Walk, input: string, path: string, preferred?: string): R
   if (model || report) return out;
 
   // Loose .tmdl files anywhere under a plain folder, as v1 accepted.
-  const direct: LintFile[] = [];
-  readTree(w, path, path, (n) => n.endsWith(".tmdl"), direct);
-  if (direct.length) return { ...out, model: { root: path, files: direct } };
+  const direct = emptyPart(path);
+  readTree(w, direct, path, (n) => n.endsWith(".tmdl"));
+  if (direct.files.length) return { ...out, model: direct };
   // Nothing to lint but something to say: a legacy part alone, or a part that could not be read,
   // which resolveFolder turns into a refused run naming the path that refused.
   if (out.diagnostics.length) return out;

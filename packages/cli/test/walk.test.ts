@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -211,4 +211,83 @@ describe("resolveProject", () => {
       /is not a \.tmdl file, a \.pbip file, or a folder/,
     );
   });
+});
+
+// These have the operating system refuse a read, as a POSIX system does for a user (CI runs them
+// on Ubuntu). Root reads a folder whatever its mode, and Windows ignores a mode of 000, so they
+// skip there.
+const noModes = process.platform === "win32" || process.getuid?.() === 0;
+
+describe("resolveProject and what it could not read", () => {
+  /** Runs `body` with each path's mode at 000, restoring every mode after. */
+  const locked = <T>(paths: string[], body: () => T): T => {
+    for (const p of paths) chmodSync(p, 0o000);
+    try {
+      return body();
+    } finally {
+      for (const p of paths) chmodSync(p, statSync(p).isDirectory() ? 0o755 : 0o644);
+    }
+  };
+  it.skipIf(noModes)(
+    "collects each part's unread paths as it reads that part, relative to its root, a folder with a trailing slash",
+    () => {
+      const root = pbip({ model: true, report: true });
+      const report = join(root, "Demo.Report");
+      const p = locked(
+        [
+          join(root, "Demo.SemanticModel", "definition", "tables"),
+          join(report, "definition.pbir"),
+          join(report, "definition", "pages", "p", "visuals", "v", "visual.json"),
+          join(root, "Demo.pbip"),
+        ],
+        () => resolveProject(root),
+      );
+      expect(p.model!.files.map((f) => f.path)).toEqual(["definition/model.tmdl"]);
+      expect(p.model!.unread).toEqual(["definition/tables/"]);
+      // The report's .pbip rides at its path relative to the report root, as its file would.
+      expect(p.report!.unread).toEqual([
+        "definition.pbir",
+        "definition/pages/p/visuals/v/visual.json",
+        "../Demo.pbip",
+      ]);
+      // The notice itself is unchanged: one per path, relative to the input.
+      expect(p.diagnostics.map((d) => d.path)).toEqual([
+        "Demo.SemanticModel/definition/tables",
+        "Demo.Report/definition.pbir",
+        "Demo.Report/definition/pages/p/visuals/v/visual.json",
+        "Demo.pbip",
+      ]);
+      expect(resolveProject(root).report!.unread).toEqual([]);
+      expect(resolveProject(root).model!.unread).toEqual([]);
+    },
+  );
+  it.skipIf(noModes)(
+    "keeps a report's own list when a part given on its own is read for each layer and the notice is given once",
+    () => {
+      const root = pbip({ report: true });
+      const visuals = join(root, "Demo.Report", "definition", "pages", "p", "visuals");
+      // The .Report is read for .tmdl files first, which meets the folder and gives the notice.
+      const p = locked([visuals], () => resolveProject(join(root, "Demo.Report")));
+      expect(p.diagnostics.map((d) => d.path)).toEqual(["definition/pages/p/visuals"]);
+      expect(p.model).toBeUndefined();
+      expect(p.report!.unread).toEqual(["definition/pages/p/visuals/"]);
+    },
+  );
+  it.skipIf(noModes)(
+    "reads a model's definition folder given directly as the model's root, and a report's from its parent",
+    () => {
+      const modelRoot = pbip({ model: true });
+      const def = join(modelRoot, "Demo.SemanticModel", "definition");
+      const model = locked([join(def, "tables")], () => resolveProject(def));
+      expect(model.model!.root).toBe(def);
+      expect(model.model!.unread).toEqual(["tables/"]);
+      const reportRoot = pbip({ report: true });
+      const reportDef = join(reportRoot, "Demo.Report", "definition");
+      const report = locked([join(reportDef, "pages", "p", "visuals")], () =>
+        resolveProject(reportDef),
+      );
+      expect(report.report!.root).toBe(join(reportRoot, "Demo.Report"));
+      expect(report.report!.unread).toEqual(["definition/pages/p/visuals/"]);
+    },
+  );
 });

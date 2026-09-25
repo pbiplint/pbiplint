@@ -1,5 +1,6 @@
 import {
   chmodSync,
+  cpSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -436,6 +437,88 @@ describe("pbiplint CLI", () => {
         );
       } finally {
         chmodSync(pbip, 0o644);
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+  );
+  it.skipIf(noModes)(
+    "names a model file it cannot read in the notice and reports no field that file could declare",
+    async () => {
+      // Store.tmdl declares the Store table, which the shelfmart report's visuals bind.
+      const root = mkdtempSync(join(tmpdir(), "pbiplint-locked-store-"));
+      cpSync(join(repo, "tests/fixtures/shelfmart"), root, { recursive: true });
+      const model = "ShelfMart Foot Traffic and Weather.SemanticModel";
+      const store = join(root, model, "definition", "tables", "Store.tmdl");
+      chmodSync(store, 0o000);
+      try {
+        const r = await run([root, "--format", "json", "--fail-on", "none"]);
+        const notice = unread(`${model}/definition/tables/Store.tmdl`, "EACCES: permission denied");
+        expect(r.err).toBe(`pbiplint: notice: ${notice.message}\n`);
+        expect(r.code).toBe(0);
+        const doc = JSON.parse(r.out);
+        expect(doc.diagnostics).toEqual([notice]);
+        const ids = doc.groups.map((g: { rule: { id: string } }) => g.rule.id);
+        expect(ids).not.toContain("BROKEN_FIELD_REFERENCE");
+        // The notice names the file; no parse issue does.
+        expect(ids).not.toContain("PARSE_ISSUE");
+        // What the report reaches in a model it could not fully read is not known.
+        expect(ids).not.toContain("NOT_REACHED_FROM_REPORT");
+        expect(doc.summary.rulesSkipped).toContainEqual({
+          id: "NOT_REACHED_FROM_REPORT",
+          reason: "modelFileUnread",
+        });
+        // Store and its columns are not counted, so the counts are a lower bound, as they are
+        // for a model file with a parse issue.
+        expect(doc.facts.find((f: { label: string }) => f.label === "Model")).toEqual({
+          layer: "model",
+          label: "Model",
+          value: "9 tables, 80 columns, 37 measures",
+          detail: "not reached from this report: unknown, a model file could not be fully read",
+        });
+        expect((await run([root, "--fail-on", "none"])).out).toContain(
+          "1 rule skipped (a model file could not be fully read)",
+        );
+      } finally {
+        chmodSync(store, 0o644);
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+  );
+  it.skipIf(noModes)(
+    "reads a report file it cannot read as one that could not be parsed, with a notice and no PARSE_ISSUE",
+    async () => {
+      const root = pbipProject("pbiplint-locked-visual-");
+      const folder = join(root, "Demo.Report", "definition", "pages", "p", "visuals", "v");
+      mkdirSync(folder, { recursive: true });
+      const visual = join(folder, "visual.json");
+      writeFileSync(visual, JSON.stringify({ name: "v", visual: { visualType: "slicer" } }));
+      chmodSync(visual, 0o000);
+      try {
+        const r = await run([root, "--format", "json", "--fail-on", "none"]);
+        const notice = unread(
+          "Demo.Report/definition/pages/p/visuals/v/visual.json",
+          "EACCES: permission denied",
+        );
+        expect(r.err).toBe(`pbiplint: notice: ${notice.message}\n`);
+        const doc = JSON.parse(r.out);
+        expect(doc.groups.map((g: { rule: { id: string } }) => g.rule.id)).not.toContain(
+          "PARSE_ISSUE",
+        );
+        expect(doc.summary.rulesSkipped).toContainEqual({
+          id: "NOT_REACHED_FROM_REPORT",
+          reason: "reportFileUnread",
+        });
+        expect(doc.facts.find((f: { label: string }) => f.label === "Slicers")).toEqual({
+          layer: "report",
+          label: "Slicers",
+          value: "unknown",
+          detail: "saved selections: unknown, a visual.json could not be read",
+        });
+        expect(doc.facts.find((f: { label: string }) => f.label === "Model").detail).toBe(
+          "not reached from this report: unknown, a report file could not be read",
+        );
+      } finally {
+        chmodSync(visual, 0o644);
         rmSync(root, { recursive: true, force: true });
       }
     },

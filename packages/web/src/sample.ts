@@ -5,10 +5,11 @@ import type { LintFile } from "@pbiplint/core";
 import { emptyTree, isModelFolder, isReportFolder, type InputTree } from "./input/project-files.js";
 
 // Vite inlines the sample into the bundle at build time; the page never fetches it. The globs are
-// what a drop of examples/messy-sales reads that pbiplint uses: the model's .tmdl files, the
+// what a drop of examples/messy-sales reads: the model's .tmdl files and its .platform, the
 // report's files as the CLI reads a report part (definition.pbir, .platform, and every JSON under
-// its definition folder), the project's .pbip, and pbiplint.config.json. Vite reads each call's
-// options as a literal, so they are written out on each one.
+// its definition folder), the project's .pbip, and pbiplint.config.json. sample.test.ts walks the
+// folder as the drop route does and holds the tree to it, so a file the globs miss fails there.
+// Vite reads each call's options as a literal, so they are written out on each one.
 const model = import.meta.glob(
   "../../../examples/messy-sales/*.SemanticModel/definition/**/*.tmdl",
   {
@@ -27,7 +28,15 @@ const report = import.meta.glob(
 // A dotfile needs `exhaustive`. Without it the production build matches no dotfile, even one the
 // pattern names outright, while the test run's transform does, so the site's sample would lint one
 // report file fewer than its tests. The e2e pins on the sample's counts are what catch that.
-const platform = import.meta.glob("../../../examples/messy-sales/*.Report/.platform", {
+const reportPlatform = import.meta.glob("../../../examples/messy-sales/*.Report/.platform", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+  exhaustive: true,
+}) as Record<string, string>;
+// The model's .platform is read by a drop and listed as not linted, so the tree holds it; lint never
+// takes it (decision 5: it would count as a report file), so SAMPLE_FILES does not.
+const modelPlatform = import.meta.glob("../../../examples/messy-sales/*.SemanticModel/.platform", {
   query: "?raw",
   import: "default",
   eager: true,
@@ -86,7 +95,7 @@ export function sampleFiles(raw: Record<string, string>): LintFile[] {
  * The globbed files as a drop of examples/messy-sales gives them to selectProject: each path
  * relative to examples/, so the dropped folder, and the project root, is `messy-sales`, with the
  * .SemanticModel and .Report folders the walk would pass. The sample button runs this tree, so its
- * results and its "Files read" list are the drop's, made by the same code.
+ * results and its "Files read" list are the drop's, made by the same code from the same files.
  */
 export function sampleTree(raw: Record<string, string>): InputTree {
   const tree = emptyTree();
@@ -108,7 +117,7 @@ export function sampleTree(raw: Record<string, string>): InputTree {
 export const SAMPLE_FILES: LintFile[] = sampleFiles({
   ...model,
   ...report,
-  ...platform,
+  ...reportPlatform,
   ...project,
 });
 
@@ -119,11 +128,12 @@ export const SAMPLE_CONFIG: string = (() => {
   return text;
 })();
 
-/** examples/messy-sales as a drop of the folder reads it, config included. */
+/** examples/messy-sales as a drop of the folder reads it: the model's .platform and the config included. */
 export const SAMPLE_TREE: InputTree = sampleTree({
   ...model,
+  ...modelPlatform,
   ...report,
-  ...platform,
+  ...reportPlatform,
   ...project,
   ...config,
 });

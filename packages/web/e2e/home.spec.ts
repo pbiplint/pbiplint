@@ -32,7 +32,7 @@ test("lints the sample project and announces the result", async ({ page }) => {
   );
   await expect(results.locator("section.facts h3")).toHaveText("Report at a glance");
   await expect(results.locator(".fix-first li")).toHaveCount(5);
-  await expect(results.locator("details.files summary")).toHaveText("Files read (92)");
+  await expect(results.locator("details.files summary")).toHaveText("Files read (93)");
   await expect(page.locator("#status")).toBeHidden();
   // Unchecking Report hides the report's groups and leaves the model's.
   await results.getByRole("checkbox", { name: "Report", exact: true }).uncheck();

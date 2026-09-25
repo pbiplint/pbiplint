@@ -1,6 +1,16 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { lint, resolveConfig } from "@pbiplint/core";
 import { describe, expect, it } from "vitest";
-import { selectProject } from "../src/input/project-files.js";
+import {
+  isModelFolder,
+  isReportFolder,
+  selectProject,
+  type InputEntry,
+  type InputMarker,
+} from "../src/input/project-files.js";
+import { markerOf, SKIP_DIRS, wanted } from "../src/input/read-drop.js";
 import {
   SAMPLE_CONFIG,
   SAMPLE_FILES,
@@ -75,6 +85,44 @@ describe("bundled sample", () => {
     expect(project.diagnostics).toEqual([]);
     expect(SAMPLE_TREE.modelFolders).toEqual(["messy-sales/Messy Sales Demo.SemanticModel"]);
     expect(SAMPLE_TREE.reportFolders).toEqual(["messy-sales/Messy Sales Demo.Report"]);
+  });
+  it("holds every file a drop of examples/messy-sales reads, so its files read cannot drift from a drop's", () => {
+    // The drop route, walked over the repository's copy: every folder but the ones the walkers
+    // skip, the legacy markers seen by name, and every file `wanted` keeps, read as text, each by
+    // its path from examples/. A file the sample's globs miss, or one they take that a drop would
+    // not, shows up here, which comparing the tree with SAMPLE_FILES cannot see.
+    const examples = fileURLToPath(new URL("../../../examples/", import.meta.url));
+    const entries: InputEntry[] = [];
+    const markers: InputMarker[] = [];
+    const modelFolders: string[] = [];
+    const reportFolders: string[] = [];
+    const walk = (dir: string): void => {
+      for (const d of readdirSync(join(examples, dir), { withFileTypes: true })) {
+        const path = `${dir}/${d.name}`;
+        if (d.isDirectory()) {
+          if (SKIP_DIRS.has(d.name)) continue;
+          if (isModelFolder(d.name)) modelFolders.push(path);
+          if (isReportFolder(d.name)) reportFolders.push(path);
+          walk(path);
+          continue;
+        }
+        const marker = markerOf(path);
+        if (marker) markers.push(marker);
+        else if (wanted(path))
+          entries.push({ path, text: readFileSync(join(examples, path), "utf8") });
+      }
+    };
+    walk("messy-sales");
+    const byName = (a: string, b: string): number => a.localeCompare(b, "en");
+    entries.sort((a, b) => byName(a.path, b.path));
+    // The model's .platform is among them: a drop reads it and lists it as not linted.
+    expect(entries.map((e) => e.path)).toContain(
+      "messy-sales/Messy Sales Demo.SemanticModel/.platform",
+    );
+    expect(SAMPLE_TREE.entries).toEqual(entries);
+    expect(SAMPLE_TREE.markers).toEqual(markers);
+    expect(SAMPLE_TREE.modelFolders).toEqual(modelFolders.sort(byName));
+    expect(SAMPLE_TREE.reportFolders).toEqual(reportFolders.sort(byName));
   });
   it("lints to the numbers the CLI gives for examples/messy-sales", () => {
     // packages/cli/test/cli.test.ts pins the same totals for `pbiplint examples/messy-sales`.

@@ -242,7 +242,7 @@ describe("home page", () => {
     // what that drop reads, relative to the project folder: the model's files as they are, the
     // report's marked "(report)", the project file among them, and the config it applied.
     const sample = listed();
-    expect(sample).toHaveLength(92);
+    expect(sample).toHaveLength(93);
     expect(sample.filter((p) => p.endsWith(" (report)"))).toHaveLength(77);
     expect(sample.filter((p) => p.endsWith(".tmdl"))).toHaveLength(14);
     expect(sample).toContain("Messy Sales Demo.SemanticModel/definition/model.tmdl");
@@ -250,6 +250,8 @@ describe("home page", () => {
     expect(sample).toContain("Messy Sales Demo.Report/definition/report.json (report)");
     expect(sample).toContain("Messy Sales Demo.pbip (report)");
     expect(sample).toContain("pbiplint.config.json (config)");
+    // A drop reads the model's .platform too, and lint never sees it.
+    expect(sample).toContain("Messy Sales Demo.SemanticModel/.platform (not linted)");
     expect(sample).toEqual([...sample].sort((a, b) => a.localeCompare(b, "en")));
     const input = document.getElementById("folder-input") as HTMLInputElement;
     const at = (path: string, text: string): File =>

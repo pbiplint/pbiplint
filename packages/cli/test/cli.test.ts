@@ -55,6 +55,73 @@ describe("pbiplint CLI", () => {
     expect(r.out).toContain("https://pbiplint.com/rules/provide-format-string-for-measures");
     expect(r.err).toBe("");
   });
+  it("pins the sample's Report at a glance block, as the CLI reads the project", async () => {
+    // By path, never --sample, which prefers the build's copy: the model, the report, and
+    // pbiplint.config.json are read as the CLI resolves a project folder. Every fact was read
+    // against the sample's files, and a value that disagrees with them is a bug, not a new pin.
+    const r = await run([sample, "--format", "json", "--fail-on", "none"]);
+    expect(r.code).toBe(0);
+    expect(JSON.parse(r.out).facts).toEqual([
+      // pages.json sets no landing page, and its active page is Scratch, hidden in view mode.
+      {
+        layer: "report",
+        label: "Opens on",
+        value: "Scratch (hidden)",
+        detail: "the page open when it was saved; no landing page set",
+        ruleId: "OPENING_PAGE_INVALID",
+      },
+      // report.json saves the pane expanded; the config's policy expects it closed.
+      { layer: "report", label: "Filters pane", value: "open", ruleId: "FILTERS_PANE_STATE" },
+      // Scratch is hidden, and Product tooltip is a tooltip page by its type and its binding.
+      {
+        layer: "report",
+        label: "Pages",
+        value: "11",
+        detail: "1 hidden, 1 tooltip",
+        ruleId: "HIDE_TOOLTIP_DRILLTROUGH_PAGES",
+      },
+      // 57 visual.json files, two of them groups; two visuals hidden on Overview and two inside
+      // the hidden group on Employees; report.json registers ChicletSlicer and no visual is one.
+      {
+        layer: "report",
+        label: "Visuals",
+        value: "55",
+        detail: "4 hidden; 1 custom visual type registered, 0 used",
+        ruleId: "HIDDEN_VISUAL_WITH_FIELDS",
+      },
+      // reportExtensions.json defines Net Margin and Margin % (report) on Sales.
+      {
+        layer: "report",
+        label: "Report measures",
+        value: "2",
+        detail: "defined in the report, not the model",
+        ruleId: "REPORT_LEVEL_MEASURES",
+      },
+      // One catalog slicer, Category on Overview, which saves a selection.
+      {
+        layer: "report",
+        label: "Slicers",
+        value: "1",
+        detail: "1 saved selection",
+        ruleId: "SLICER_SELECTION_SAVED",
+      },
+      // No mobile.json anywhere in the report.
+      { layer: "report", label: "Mobile layouts", value: "none" },
+      {
+        layer: "report",
+        label: "Schema versions",
+        value: "report 3.2.0, page 2.1.0, visual 2.8.0",
+      },
+      // Ten tables less Desktop's LocalDateTable and DateTableTemplate, 7 columns each.
+      {
+        layer: "model",
+        label: "Model",
+        value: "8 tables, 73 columns, 14 measures",
+        detail: "37 columns and 2 measures not reached from this report",
+        ruleId: "NOT_REACHED_FROM_REPORT",
+      },
+    ]);
+  });
   it("--sample is the same as pointing at the bundled sample", async () => {
     const r = await run(["--sample", "--format", "json"]);
     expect(r.code).toBe(1);

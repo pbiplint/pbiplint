@@ -700,6 +700,228 @@ describe("NOT_REACHED_FROM_REPORT", () => {
       ],
     ]);
   });
+  it("names the hierarchy level behind a column the report does not reach", () => {
+    const dated = `table Date
+	column Year
+		dataType: int64
+	column Quarter
+		dataType: string
+
+	hierarchy 'Calendar Hierarchy'
+		level Year
+			column: Year
+		level Quarter
+			column: Quarter
+`;
+    const year = {
+      HierarchyLevel: {
+        Expression: {
+          Hierarchy: {
+            Expression: { SourceRef: { Entity: "Date" } },
+            Hierarchy: "Calendar Hierarchy",
+          },
+        },
+        Level: "Year",
+      },
+    };
+    const findings = reportFindings(
+      NOT_REACHED_FROM_REPORT,
+      [page("p"), bound("p", "v", "tableEx", [year])],
+      dated,
+    );
+    expect(findings.map((f) => [f.objectName, f.detail])).toEqual([
+      [
+        "'Date'[Quarter]",
+        `nothing in the report reaches it, and no measure or column references it; level "Quarter" of hierarchy "Calendar Hierarchy" uses it`,
+      ],
+    ]);
+  });
+});
+
+describe("a text box's field value, read through its subquery", () => {
+  // Power BI Desktop writes a text box's field value as a Column over a Subquery, wrapped in `Min`
+  // or in an `Aggregation`; the Column's Property names a column of the subquery's result.
+  const model = `table Sales
+	column 'Total Amount'
+		dataType: decimal
+	measure 'Total Sales' = SUM('Sales'[Total Amount])
+
+table Customer
+	column 'Customer Name'
+		dataType: string
+	column 'Customer ID'
+		dataType: string
+
+table Date
+	column Date
+		dataType: dateTime
+`;
+  const aliased = (alias: string, property: string) => ({
+    Expression: { SourceRef: { Source: alias } },
+    Property: property,
+  });
+  const overSubquery = (query: Record<string, unknown>, property: string) => ({
+    Column: { Expression: { Subquery: { Query: query } }, Property: property },
+  });
+  const minOf = (value: unknown) => ({ Min: { Expression: value, IncludeAllTypes: 1 } });
+  const aggregationOf = (value: unknown) => ({ Aggregation: { Expression: value, Function: 3 } });
+  /** The text box's visual.json, its text runs showing each value, as Desktop indents it. */
+  const textBox = (name: string, ...values: [Record<string, unknown>, string][]) => ({
+    path: `definition/pages/p/visuals/${name}/visual.json`,
+    text: pretty({
+      name,
+      position: { x: 20, y: 114, z: 5000, height: 54, width: 202, tabOrder: 5000 },
+      visual: {
+        visualType: "textbox",
+        objects: {
+          general: [
+            {
+              properties: {
+                paragraphs: [
+                  {
+                    textRuns: values.map(([, id]) => ({
+                      value: {
+                        propertyIdentifier: { objectName: "values", propertyName: "expr" },
+                        selector: { id },
+                      },
+                    })),
+                  },
+                ],
+              },
+            },
+          ],
+          values: values.map(([expr, id]) => ({
+            properties: {
+              expr: {
+                expr: {
+                  ...expr,
+                  Annotations: {
+                    NaturalLanguage: {
+                      version: 1,
+                      kind: "NaturalLanguage",
+                      annotation: { name: id, utterance: id },
+                    },
+                  },
+                },
+              },
+            },
+            selector: { id },
+          })),
+        },
+      },
+    }),
+  });
+  const totalSales = minOf(
+    overSubquery(
+      {
+        Version: 2,
+        From: [{ Name: "s", Entity: "Sales", Type: 0 }],
+        Select: [{ Measure: aliased("s", "Total Sales"), Name: "Sales.Total Sales" }],
+      },
+      "Sales.Total Sales",
+    ),
+  );
+
+  it("raises no broken reference for a subquery that reads a model measure, and reaches the measure", () => {
+    const files = [page("p"), textBox("t", [totalSales, "Total Sales"])];
+    expect(reportFindings(BROKEN_FIELD_REFERENCE, files, model)).toEqual([]);
+    expect(reportFindings(NOT_REACHED_FROM_REPORT, files, model).map((f) => f.objectName)).toEqual([
+      "'Customer'[Customer Name]",
+      "'Customer'[Customer ID]",
+      "'Date'[Date]",
+    ]);
+  });
+  it("reports a column the subquery reads and the model lacks once, at error, on the inner field's line", () => {
+    // Form F3: the value is the latest Last Update, which Date does not have. The query names it in
+    // its Select and again in its OrderBy; the rule reports it once, at the Select item.
+    const lastUpdate = aggregationOf(
+      overSubquery(
+        {
+          Version: 2,
+          From: [{ Name: "d", Entity: "Date", Type: 0 }],
+          Select: [{ Column: aliased("d", "Last Update"), Name: "Date.Last Update" }],
+          OrderBy: [{ Direction: 1, Expression: { Column: aliased("d", "Last Update") } }],
+        },
+        "Date.Last Update",
+      ),
+    );
+    const box = textBox("t", [lastUpdate, "Value"]);
+    const r = lint([{ path: "definition/tables/Model.tmdl", text: model }, page("p"), box]);
+    const select = lineOf(box.text, '"Select"') + 1;
+    expect(select).toBeGreaterThan(lineOf(box.text, '"Subquery"'));
+    expect(select).toBeLessThan(lineOf(box.text, '"Last Update"'));
+    expect(r.groups.find((g) => g.rule.id === "BROKEN_FIELD_REFERENCE")?.rule.severity).toBe(3);
+    expect(
+      r.findings
+        .filter((f) => f.ruleId === "BROKEN_FIELD_REFERENCE")
+        .map((f) => [f.objectId, f.detail, f.location]),
+    ).toEqual([
+      [
+        "t",
+        `'Date'[Last Update]: no column named "Last Update" on "Date"`,
+        { file: box.path, line: select },
+      ],
+    ]);
+  });
+  it("reaches a column that only a Select item the text box does not show names", () => {
+    // Form F11: the query selects Customer ID beside the Customer Name the text box shows.
+    const names = minOf(
+      overSubquery(
+        {
+          Version: 2,
+          From: [{ Name: "c", Entity: "Customer", Type: 0 }],
+          Select: [
+            { Column: aliased("c", "Customer Name"), Name: "Customer.Customer Name" },
+            { Column: aliased("c", "Customer ID"), Name: "Customer.Customer ID" },
+          ],
+          OrderBy: [{ Direction: 1, Expression: { Column: aliased("c", "Customer Name") } }],
+        },
+        "Customer.Customer Name",
+      ),
+    );
+    const files = [page("p"), textBox("t", [names, "Customer Name"])];
+    expect(reportFindings(BROKEN_FIELD_REFERENCE, files, model)).toEqual([]);
+    expect(reportFindings(NOT_REACHED_FROM_REPORT, files, model).map((f) => f.objectName)).toEqual([
+      "[Total Sales]",
+      "'Sales'[Total Amount]",
+      "'Date'[Date]",
+    ]);
+  });
+  it("lowers the Model fact's not-reached count by what the subquery reaches, as it shortens the rule's list", () => {
+    // The fact's clause counts what the rule lists, so the two move together.
+    const run = (...files: { path: string; text: string }[]) => {
+      const r = lint([{ path: "definition/tables/Model.tmdl", text: model }, page("p"), ...files]);
+      return {
+        fact: r.facts.find((f) => f.label === "Model"),
+        listed: r.findings
+          .filter((f) => f.ruleId === "NOT_REACHED_FROM_REPORT")
+          .map((f) => f.objectName),
+      };
+    };
+    const before = run();
+    expect(before.fact?.detail).toBe("4 columns and 1 measure not reached from this report");
+    expect(before.listed).toEqual([
+      "[Total Sales]",
+      "'Sales'[Total Amount]",
+      "'Customer'[Customer Name]",
+      "'Customer'[Customer ID]",
+      "'Date'[Date]",
+    ]);
+    // The text box reaches Total Sales, and Total Sales reaches Total Amount through its DAX.
+    const after = run(textBox("t", [totalSales, "Total Sales"]));
+    expect(after.fact).toEqual({
+      layer: "model",
+      label: "Model",
+      value: "3 tables, 4 columns, 1 measure",
+      detail: "3 columns and 0 measures not reached from this report",
+      ruleId: "NOT_REACHED_FROM_REPORT",
+    });
+    expect(after.listed).toEqual([
+      "'Customer'[Customer Name]",
+      "'Customer'[Customer ID]",
+      "'Date'[Date]",
+    ]);
+  });
 });
 
 describe("NOT_REACHED_FROM_REPORT and aggregation tables", () => {

@@ -78,15 +78,15 @@
                             "Entity": "Date"
                           }
                         },
-                        "Property": "Month"
+                        "Property": "Week of Year"
                       }
                     }
                   ],
                   "ApplyCalculationGroupTo": "Sparkline"
                 }
               },
-              "queryRef": "SparklineData(Sales.Total Sales_[Date.Month])",
-              "nativeQueryRef": "Total Sales by Month"
+              "queryRef": "SparklineData(Sales.Total Sales_[Date.Week of Year])",
+              "nativeQueryRef": "Total Sales by Week of Year"
             }
           ]
         }
@@ -147,7 +147,7 @@
             }
           },
           "selector": {
-            "metadata": "SparklineData(Sales.Total Sales_[Date.Month])"
+            "metadata": "SparklineData(Sales.Total Sales_[Date.Week of Year])"
           }
         }
       ]

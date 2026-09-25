@@ -38,7 +38,6 @@
       "'Date'[Month Number]",
       "'Date'[Quarter Number]",
       "'Date'[Quarter]",
-      "'Date'[Week of Year]",
       "'Date'[Year]",
       "'Employee'[Email]",
       "'Employee'[Hire Date]",

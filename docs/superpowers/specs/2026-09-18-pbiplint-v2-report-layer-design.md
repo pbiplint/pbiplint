@@ -425,6 +425,25 @@ filter level, bookmarks, and, through the existing DAX extractor,
 extension measures. New visual properties are covered without a code
 change.
 
+Amended 2026-09-25 with Michael (release triage, batch E): a `Column`
+whose source is a `Subquery`, Power BI Desktop's form for a text box's
+field value (under a `Min` or an `Aggregation` in the visual's
+`objects.values`), names a column of the subquery's result, by the
+`Name` of one of the query's `Select` items, rather than a model
+field, and is not itself a reference. That name can differ from the
+field the query reads (46 of the 269 such values in the Desktop-saved
+reports surveyed), so it is a label, not a model field. The walker
+reads the subquery's own query as it reads a TopN filter's subquery,
+with the enclosing aliases in scope and the query's own `From` adding
+and shadowing them, so the fields the query reads (in its `Select`,
+`Where`, `OrderBy`, a `Transform`'s input, and a subquery in its own
+`From`) are resolved against the model and reached,
+including those the text box does not display. The Model fact's
+not-reached clause (section 6) counts what the reachability index
+does not reach, so it follows. A `Measure` or `Hierarchy` whose source
+is a `Subquery`, which none of the Desktop-saved reports surveyed
+writes, remains a reference whose source names no model table.
+
 **Finding names and ids.** Page: `Page "Overview"`. Visual: `"<title>"
 on "<page>"` when the visual has a title, else `<visualType> (<first
 six characters of the id>) on "<page>"`. Bookmark: `Bookmark "Reset"`.
@@ -519,7 +538,7 @@ aggregation table when it covers the query.
 | Slicers | count of the catalog slicers; saved selections, those on custom slicers named; unknown in place of none while a visual.json could not be read (amended 2026-09-24 with Michael) | `SLICER_SELECTION_SAVED` |
 | Mobile layouts | pages with one, counted by the mobile.json files read in their folders, of total; unknown in place of none while a mobile.json, or the page of one, could not be read (amended 2026-09-24 with Michael) | |
 | Schema versions | report, page, visual (highest seen) | |
-| Model | tables, columns, measures; with both parts, columns and measures not reached from this report | `NOT_REACHED_FROM_REPORT` |
+| Model | tables, columns, measures, leaving out Desktop's hidden auto date/time tables (amended 2026-09-25 with Michael); with both parts, columns and measures not reached from this report | `NOT_REACHED_FROM_REPORT` |
 
 Amended 2026-09-20: the facts are built only when the report layer is
 present, so a model-only run produces none and no surface shows the
@@ -652,6 +671,16 @@ names a landing or active page whose page.json could not be read by
 the name pages.json gives it, as it names a page known only by its
 folder, and never calls it "(no such page)"; `OPENING_PAGE_INVALID`
 does not fire on it (section 8.2).
+
+Amended 2026-09-25 with Michael (release triage, batch E): the Model
+fact's table, column, and measure counts leave out Power BI Desktop's
+auto date/time tables (calculated tables whose names start with
+`LocalDateTable_` or `DateTableTemplate_`, as `NOT_REACHED_FROM_REPORT`
+and `REMOVE_AUTO-DATE_TABLE` recognise them) and their columns.
+Microsoft Learn's "Auto date/time in Power BI Desktop" says Desktop
+keeps those tables hidden, even from modelers, so the fact counts the
+tables Desktop shows, and its not-reached clause already left them
+out.
 
 **Cost.** Linear in the JSON. The demo report's largest visual is
 61 KB, most under 5 KB; a 300-visual report is a few megabytes and

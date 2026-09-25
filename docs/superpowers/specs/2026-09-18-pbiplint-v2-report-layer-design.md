@@ -351,6 +351,31 @@ for the input `Demo`. A notice does not change the exit code, which
 follows the findings as it does for the legacy formats. The browser's
 resolver in pull request 7 makes the same decisions.
 
+Amended 2026-09-25 with Michael (pull request 7, #81): what the input
+reader could not read reaches the engine, not only the notices, so no
+finding or fact states what pbiplint did not read. `lint` takes
+`unreadPaths`, per layer like `absent`: the paths the reader could not
+read, each relative to that part's root in forward slashes as every
+file path is, a folder written with a trailing `/`
+(`definition/tables/`). It is per layer because a folder's name cannot
+route it: both parts have a `definition` folder. The CLI's walk
+collects each part's list as it reads that part, from that read rather
+than from the notices, which name a path once however many reads meet
+it; the browser's resolver in pull request 7 fills the same option. A
+model path, a `.tmdl` file or a folder, is recorded on the model and
+makes it one pbiplint could not fully read (sections 6 and 8.2). A
+report file the PBIR format defines under the definition folder joins
+the report's unread definition files as one that failed to parse does,
+through the same code, and a folder there counts, for every question a
+rule or fact asks about unread files, as every definition file it could
+hold: a visual's folder its visual.json and mobile.json, a page's
+folder its page.json and everything under it, the pages or bookmarks
+folder any file of its kind, and `definition/` anything. The page or
+visual such a folder names is recorded as its own file would record it.
+An unread definition.pbir, `.platform`, or `.pbip` changes nothing,
+since none names a field. No unread path is a `PARSE_ISSUE` finding:
+the `unread-file` notice names it, and the notice is unchanged.
+
 ## 5. PBIR parser and report object model
 
 **Parser.** Plain JSON, read tolerantly: unknown properties ignored;
@@ -682,6 +707,25 @@ keeps those tables hidden, even from modelers, so the fact counts the
 tables Desktop shows, and its not-reached clause already left them
 out.
 
+Amended 2026-09-25 with Michael (pull request 7, #81): the reachability
+walk reads the model as parsed, so while a model file has a parse issue
+that can take an object out of the model (any issue but an orphaned
+`///` description, section 8.2) or the model has a path the input
+reader could not read (section 4), anything reached only through a
+missing object would read as not reached. On that condition the Model
+fact's not-reached clause reads `not reached from this report: unknown,
+a model file could not be fully read` and links no rule; when a report
+file the walk reads field references from could not be read as well,
+the report file's unknown is the one given. The table, column, and
+measure counts stay as they are, a lower bound. A report file the input
+reader could not read counts for every fact as a file that failed to
+parse does, and a folder as every file it could hold (section 4). While
+the model has an unread path, the report reference index resolves a
+reference to a table the model does not have, or to a field missing
+from any table, to `unread`, since that path could declare any table
+and anything under one, and the reason names the path, as `no table
+named "Store", and definition/tables/Store.tmdl could not be read`.
+
 **Cost.** Linear in the JSON. The demo report's largest visual is
 61 KB, most under 5 KB; a 300-visual report is a few megabytes and
 lints well under a second in the browser. No new dependency.
@@ -718,6 +762,20 @@ visual type is used by no visual that was read (section 8.1, narrowed
 by ruling H74); no other rule sets one. run.ts stays the one place that
 skips, with the same reason and the same words, and the facts call the
 same predicates.
+
+Amended 2026-09-25 with Michael (pull request 7, #81): the skip widens
+to the model. A rule may declare `skipWhenModelUnread`, a predicate
+over the model beside `skipWhenUnread`; only `NOT_REACHED_FROM_REPORT`
+does, with `modelPartlyRead` in rules/helpers.ts, which holds while a
+model file has a parse issue that can take an object out of the model
+or the model has a path the input reader could not read (section 4).
+The rule is then skipped with the reason `modelFileUnread`, and the
+skipped line says "1 rule skipped (a model file could not be fully
+read)". The report's predicate is checked first, so a rule both stop is
+skipped with `reportFileUnread`. run.ts stays the one place that skips,
+and the Model fact calls the same predicate (section 6). The JSON
+document carries the reason in `summary.rulesSkipped`; SARIF gains
+nothing.
 
 **Object types.** `Report`, `Page`, `Visual`, `Bookmark`,
 `ReportMeasure` join `ObjectType`.
@@ -937,6 +995,26 @@ file, so that line could have declared the table again. A measure found
 on another table, and a column name a measure on the table holds, are
 still reported, since a measure's name is unique in the model and a
 column cannot share a name with a measure on its table.
+
+Amended 2026-09-25 with Michael (pull request 7, #81):
+`NOT_REACHED_FROM_REPORT` is skipped, with "a model file could not be
+fully read" on the skipped line (section 7), while a model file has a
+parse issue that can take an object out of the model or a model path
+could not be read at all (section 4): a measure used only by a dropped
+measure's DAX would otherwise be reported as not reached. The Model
+fact's not-reached clause then says unknown (section 6). A report file
+the input reader could not read stops the rule as one that failed to
+parse does, and a notice, not a `PARSE_ISSUE` finding, names it.
+`BROKEN_FIELD_REFERENCE` reads a model path the input reader could not
+read, a `.tmdl` file or a folder, as a file whose parse issue can take
+an object and a `table` line out of the model, the strongest reading
+above: a reference to a table the model does not have, or to a field
+missing from any table, resolves to `unread` and is not reported. A
+measure found on another table, and a column name a measure on the
+table holds, are still reported, as ruling H82 keeps them. With the
+shelfmart fixture's Store.tmdl unreadable, the CLI's notice names the
+file and no `BROKEN_FIELD_REFERENCE` finding is reported, where 13
+findings of `no table named "Store"` were reported before.
 
 ### 8.3 Native, tier 2
 

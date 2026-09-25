@@ -296,7 +296,7 @@ describe("resolveProject on a .pbip that names its report (#86)", () => {
   it("refuses a .pbip that names more than one report, naming them as a folder's refusal does", () => {
     const root = workspace();
     const both = join(root, "Both.pbip");
-    // A report named twice counts once, however its path is written.
+    // A report named twice counts once, by the path it resolves to.
     pbipAt(both, ["Sales.Report", "Cost.Report", "./Sales.Report"]);
     expect(() => resolveProject(both)).toThrow(
       `${both} names 2 reports; point at one of them: Cost.Report, Sales.Report`,

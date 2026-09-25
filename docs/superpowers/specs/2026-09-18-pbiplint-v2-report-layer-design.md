@@ -1388,9 +1388,18 @@ the browser, which cannot see the parent's `definition.pbir`, where the
 CLI reads the report, that file included, from the parent. And the
 `.pbip` input, resolving to its report and that report's model, is the
 CLI's alone (section 4's #86 note), since the browser takes folders.
-Everything else `selectProject` decides, including the notices, the
-refusals, and what reaches `lint` as unread, it decides as the CLI
-does.
+Beyond those three, `selectProject` gives `lint` the files and the
+unread paths the CLI would, with the same notices, except in four
+smaller ways. The notices come in another order, the walk's in walk
+order and then the browser's own, where the CLI gives them in its read
+order; and when two paths inside one read refuse and nothing else was
+read, the refusal names the first the walk met, where the CLI's walk
+goes through each folder's entries in name order, so the two can name
+different paths. Only the browser has a depth cap (`depth-cap`, 64
+folders), since the CLI's walk has none, and a folder whose listing
+fails partway is linted as far as it was listed, with a notice, in the
+browser, where the CLI reads none of it, its listing of a folder being
+all or nothing.
 
 ## 13. CLI changes
 

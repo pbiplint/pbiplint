@@ -61,6 +61,15 @@ code {
   padding: 1px 5px;
   border-radius: 4px;
 }
+/* A rule id is one long word with no hyphen to break at, such as
+   RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE, which is wider than a 320 pixel screen, and
+   so is a config line such as "AVOID_FLOATING_POINT_DATA_TYPES": "off". Inline code breaks
+   anywhere rather than widen the page (WCAG 1.4.10): in a group's meta line, a rule page's meta
+   line, and the prose that names another rule. A code block keeps its lines and scrolls instead,
+   since a pre does not wrap. */
+:not(pre) > code {
+  overflow-wrap: anywhere;
+}
 pre code {
   background: none;
   padding: 0;
@@ -77,6 +86,12 @@ pre code {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   margin: 0 0 6px;
+}
+/* The file a caption names, such as visual.json, in its own case: a file name in capitals is a
+   different file name. */
+.example figcaption code {
+  text-transform: none;
+  letter-spacing: normal;
 }
 .example pre {
   margin: 0;
@@ -131,11 +146,17 @@ h3 {
 .site-header {
   border-bottom: 1px solid var(--line-1);
 }
+/* At least 60 pixels tall rather than exactly, so on a narrow screen the links can wrap under the
+   brand instead of pushing the page sideways (WCAG 1.4.10 asks for no sideways scroll at 320). */
 .site-header .container {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  height: 60px;
+  gap: 4px 20px;
+  min-height: 60px;
+  padding-top: 8px;
+  padding-bottom: 8px;
 }
 .brand {
   display: inline-flex;
@@ -151,7 +172,8 @@ h3 {
 }
 .site-header nav {
   display: flex;
-  gap: 20px;
+  flex-wrap: wrap;
+  gap: 4px 20px;
 }
 .site-header nav a {
   color: var(--fg-2);
@@ -481,6 +503,12 @@ button.secondary:hover,
 .files ul {
   margin: 8px 0 0;
   padding-left: 20px;
+}
+/* A report's paths run long with nothing to break at, such as
+   Messy Sales Demo.Report/definition/pages/<id>/visuals/<id>/visual.json, so a path breaks anywhere
+   rather than widen the page. */
+.files li {
+  overflow-wrap: anywhere;
 }
 /* Report at a glance: what the report will do, under the summary when the input has a report. */
 .facts {

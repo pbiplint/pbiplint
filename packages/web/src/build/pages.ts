@@ -401,7 +401,8 @@ function siteMarkdown(links: RuleLinks = new Map(), self = ""): Marked {
           const id = captionId(++figures);
           return `<figure class="${classes}">\n<figcaption id="${id}">${caption}</figcaption>\n${figurePre(id)}<code class="language-${language}">${code}\n</code></pre>\n</figure>\n`;
         };
-        if (lang === CONFIG_FENCE) return figure("example", "pbiplint.config.json", "json");
+        if (lang === CONFIG_FENCE)
+          return figure("example", "<code>pbiplint.config.json</code>", "json");
         const example = /^(tmdl|pbir) (fires|fixed)(?: (\S+))?$/.exec(lang ?? "");
         if (!example)
           return characterReferences(plainFence.code(token)).replace(
@@ -411,9 +412,10 @@ function siteMarkdown(links: RuleLinks = new Map(), self = ""): Marked {
         const language = example[1] === "pbir" ? "json" : "tmdl";
         const kind = example[2]!;
         const file = example[3];
+        // The file name is code, so it keeps its case under the caption's capitals.
         const caption =
           file !== undefined && file !== "tree.json"
-            ? `${EXAMPLE_CAPTION[kind]} in ${escapeHtml(file)}`
+            ? `${EXAMPLE_CAPTION[kind]} in <code>${escapeHtml(file)}</code>`
             : EXAMPLE_CAPTION[kind]!;
         return figure(`example ${kind}`, caption, language);
       },

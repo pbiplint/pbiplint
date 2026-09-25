@@ -53,4 +53,26 @@ describe("styles.css", () => {
     // to write; either way the markup and the stylesheet have drifted apart.
     expect(used.filter((c) => !new RegExp(`\\.${c}\\b`).test(css))).toEqual([]);
   });
+  it("sets a caption's file name in its own case, under the caption's capitals", () => {
+    // The renderer wraps the file name in code (pages.ts); the caption around it is upper case.
+    expect(/\.example figcaption \{[^}]*text-transform: uppercase/.test(css)).toBe(true);
+    expect(/\.example figcaption code \{[^}]*text-transform: none/.test(css)).toBe(true);
+  });
+  it("lets the header's links and a long rule id wrap, so a narrow page does not scroll sideways", () => {
+    // At 320 pixels the brand and four links do not fit on one row, and a rule id such as
+    // RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE has no hyphen to break at. The e2e suite
+    // measures the page itself at that width.
+    const rule = (selector: string): string =>
+      new RegExp(`(?:^|\\n)${selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} \\{([^}]*)\\}`).exec(
+        css,
+      )?.[1] ?? "";
+    expect(rule(".site-header .container")).toMatch(/flex-wrap: wrap/);
+    expect(rule(".site-header .container")).not.toMatch(/(^|\s)height:/);
+    expect(rule(".site-header nav")).toMatch(/flex-wrap: wrap/);
+    // Every inline code span, a group's meta line and a rule page's among them; a code block
+    // keeps its lines and scrolls.
+    expect(rule(":not(pre) > code")).toMatch(/overflow-wrap: anywhere/);
+    // A report's paths in the files read list run long with nothing to break at, too.
+    expect(rule(".files li")).toMatch(/overflow-wrap: anywhere/);
+  });
 });

@@ -168,13 +168,15 @@ describe("rulePage", () => {
     expect(html).toContain('<h2 id="example">Example</h2>');
   });
   it("renders a pbir fence as a captioned JSON figure that names its file, bare for a tree", () => {
+    // The file name is code in the caption, so it keeps its case under the caption's small
+    // capitals: styles.css sets .example figcaption in upper case and its code back to none.
     const page = read("hide-foreign-keys").replace(
       "## Why it matters",
       '## Example\n\n```pbir fires visual.json\n{ "name": "v" }\n```\n\n```pbir fixed tree.json\n{ "definition/pages/p/page.json": {} }\n```\n\n## Why it matters',
     );
     const { html } = rulePage(page, "hide-foreign-keys");
     expect(html).toContain(
-      '<figure class="example fires">\n<figcaption id="code_3">Fires the rule in visual.json</figcaption>\n<pre tabindex="0" role="region" aria-labelledby="code_3"><code class="language-json">{ &quot;name&quot;: &quot;v&quot; }\n</code></pre>\n</figure>',
+      '<figure class="example fires">\n<figcaption id="code_3">Fires the rule in <code>visual.json</code></figcaption>\n<pre tabindex="0" role="region" aria-labelledby="code_3"><code class="language-json">{ &quot;name&quot;: &quot;v&quot; }\n</code></pre>\n</figure>',
     );
     expect(html).toContain(
       '<figure class="example fixed">\n<figcaption id="code_4">After the fix</figcaption>\n<pre tabindex="0" role="region" aria-labelledby="code_4"><code class="language-json">',
@@ -183,13 +185,15 @@ describe("rulePage", () => {
       page.replace("pbir fires visual.json", "pbir fires a<b.json"),
       "hide-foreign-keys",
     ).html;
-    expect(escaped).toContain('<figcaption id="code_3">Fires the rule in a&lt;b.json</figcaption>');
+    expect(escaped).toContain(
+      '<figcaption id="code_3">Fires the rule in <code>a&lt;b.json</code></figcaption>',
+    );
   });
   it("renders a pbiplint.config.json fence as a JSON figure captioned with the file, with no fires or fixed class", () => {
     // A policy rule fires only under a policy, so its page shows the config beside the documents.
     const { html } = rulePage(read("filters-pane-state"), "filters-pane-state");
     expect(html).toContain(
-      '<figure class="example">\n<figcaption id="code_1">pbiplint.config.json</figcaption>\n<pre tabindex="0" role="region" aria-labelledby="code_1"><code class="language-json">{\n  &quot;rules&quot;: {\n    &quot;FILTERS_PANE_STATE&quot;: { &quot;expect&quot;: &quot;closed&quot; }\n  }\n}\n</code></pre>\n</figure>',
+      '<figure class="example">\n<figcaption id="code_1"><code>pbiplint.config.json</code></figcaption>\n<pre tabindex="0" role="region" aria-labelledby="code_1"><code class="language-json">{\n  &quot;rules&quot;: {\n    &quot;FILTERS_PANE_STATE&quot;: { &quot;expect&quot;: &quot;closed&quot; }\n  }\n}\n</code></pre>\n</figure>',
     );
     expect(html).not.toContain("language-json pbiplint.config.json");
     // Only that exact info string: another file name is a plain fence, as marked writes it.
@@ -201,7 +205,7 @@ describe("rulePage", () => {
     expect(plain).toContain(
       '<pre tabindex="0" role="region" aria-label="Code block 1"><code class="language-json">{}\n</code></pre>',
     );
-    expect(plain).not.toContain(">other.json</figcaption>");
+    expect(plain).not.toContain("other.json</code></figcaption>");
   });
   it("makes every code block a named region and a tab stop, so it can be scrolled from the keyboard and a screen reader says what it is", () => {
     // A long line scrolls inside its block (pre has overflow-x: auto); without a tab stop, a
@@ -270,7 +274,7 @@ describe("rulePage", () => {
     // Each block is named by its own figure's caption, the one just above it.
     for (const id of captions)
       expect(html).toMatch(
-        new RegExp(`<figcaption id="${id}">[^<]*</figcaption>\\n<pre [^>]*aria-labelledby="${id}"`),
+        new RegExp(`<figcaption id="${id}">.*?</figcaption>\\n<pre [^>]*aria-labelledby="${id}"`),
       );
   });
   it("numbers the caption ids per page, so every page's start again", () => {
@@ -470,10 +474,12 @@ describe("code region names", () => {
    * caption on the page reads as a problem rather than a name.
    */
   const regionNames = (html: string): string[] => {
+    // A caption's text, as a browser computes the name from it: the file name's code element
+    // contributes its text.
     const captions = new Map(
-      [...html.matchAll(/<figcaption id="([^"]+)">([^<]*)<\/figcaption>/g)].map((m) => [
+      [...html.matchAll(/<figcaption id="([^"]+)">(.*?)<\/figcaption>/g)].map((m) => [
         m[1]!,
-        m[2]!,
+        m[2]!.replace(/<[^>]+>/g, ""),
       ]),
     );
     return [...html.matchAll(/<pre [^>]*?(aria-labelledby|aria-label)="([^"]+)"/g)].map((m) =>

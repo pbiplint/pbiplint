@@ -160,7 +160,9 @@ test("copies the Markdown report from the button beside the downloads", async ({
   await expect(copy).toHaveText("Copied");
 });
 
-test("a keyboard user can reach a findings table that scrolls sideways", async ({ page }) => {
+test("a keyboard user can reach a findings table that scrolls sideways, and the page itself does not", async ({
+  page,
+}) => {
   // 320 CSS pixels is the width WCAG's reflow criterion (1.4.10) asks a page to fit without
   // scrolling sideways; a data table is exempt and scrolls in its own region instead, which is what
   // this checks. At 400 the sample's table fit in Firefox once its line numbers grew shorter.
@@ -178,4 +180,15 @@ test("a keyboard user can reach a findings table that scrolls sideways", async (
   await expect(wrap).toBeFocused();
   const scrollable = await wrap.evaluate((el) => el.scrollWidth > el.clientWidth);
   expect(scrollable).toBe(true);
+  // Everything else reflows: the header's links wrap to a second line, and a long rule id in a
+  // group's meta line and a long path in the files read list break, so the page itself never
+  // scrolls sideways. The sample's longest id, RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE,
+  // has no hyphen to break at, and neither has a report path.
+  await page.locator("#rule-relationship-columns-should-be-of-integer-data-type summary").click();
+  await page.locator("#results details.files summary").click();
+  const pageWidth = await page.evaluate(() => ({
+    scroll: document.documentElement.scrollWidth,
+    client: document.documentElement.clientWidth,
+  }));
+  expect(pageWidth.scroll).toBeLessThanOrEqual(pageWidth.client);
 });

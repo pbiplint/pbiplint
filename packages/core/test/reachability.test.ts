@@ -352,6 +352,132 @@ relationship r1
     expect(indexes.reachability!.reached(meas("Total Sales"))).toBe(false);
     expect(indexes.reachability!.reached(col("Sales", "Amount"))).toBe(false);
   });
+  describe("a column a user hierarchy's level sits on", () => {
+    const NONE = "nothing in the report reaches it, and no measure or column references it";
+    const dateTable = (extra: string) =>
+      modelFrom(`table Date
+	column Date
+		dataType: dateTime
+	column Year
+		dataType: int64
+	column Quarter
+		dataType: string
+	column Month
+		dataType: string
+		sortByColumn: 'Month Number'
+	column 'Month Number'
+		dataType: int64
+	column Weekday
+		dataType: string
+${extra}`);
+    const calendar = `
+	hierarchy 'Calendar Hierarchy'
+		level Year
+			column: Year
+		level Quarter
+			column: Quarter
+		level Month
+			column: Month
+`;
+    const level = (hierarchy: string, name: string) => ({
+      HierarchyLevel: {
+        Expression: {
+          Hierarchy: { Expression: { SourceRef: { Entity: "Date" } }, Hierarchy: hierarchy },
+        },
+        Level: name,
+      },
+    });
+    /** Each unreached column of the model's one table with its reason, in model order. */
+    const reasons = (m: ReturnType<typeof modelFrom>, ...fields: unknown[]) => {
+      const reach = buildIndexes({
+        model: m,
+        report: buildReport(visualBinding(...fields)).report,
+      }).reachability!;
+      return reach.unreached().columns.map((c) => [c.name, reach.reasonFor(c)]);
+    };
+
+    it("names its own level and hierarchy on each column of a hierarchy the report binds at one level", () => {
+      expect(reasons(dateTable(calendar), level("Calendar Hierarchy", "Year"))).toEqual([
+        ["Date", NONE],
+        ["Quarter", `${NONE}; level "Quarter" of hierarchy "Calendar Hierarchy" uses it`],
+        ["Month", `${NONE}; level "Month" of hierarchy "Calendar Hierarchy" uses it`],
+        ["Month Number", "referenced only by 'Date'[Month], which nothing reaches either"],
+        ["Weekday", NONE],
+      ]);
+    });
+    it("names the level on every level's column of a hierarchy the report binds at no level", () => {
+      expect(reasons(dateTable(calendar), column("Date", "Weekday"))).toEqual([
+        ["Date", NONE],
+        ["Year", `${NONE}; level "Year" of hierarchy "Calendar Hierarchy" uses it`],
+        ["Quarter", `${NONE}; level "Quarter" of hierarchy "Calendar Hierarchy" uses it`],
+        ["Month", `${NONE}; level "Month" of hierarchy "Calendar Hierarchy" uses it`],
+        ["Month Number", "referenced only by 'Date'[Month], which nothing reaches either"],
+      ]);
+    });
+    it("names every level on a column that several hierarchies use, hierarchies and levels in model order", () => {
+      // Annual sorts first by name and sits last in the table, so the order is the model's.
+      const three = dateTable(`${calendar}
+	hierarchy Fiscal
+		level FY
+			column: Year
+		level Qtr
+			column: Quarter
+
+	hierarchy Annual
+		level Year
+			column: Year
+`);
+      expect(reasons(three, column("Date", "Weekday")).slice(1, 3)).toEqual([
+        [
+          "Year",
+          `${NONE}; level "Year" of hierarchy "Calendar Hierarchy", level "FY" of hierarchy "Fiscal", and level "Year" of hierarchy "Annual" use it`,
+        ],
+        [
+          "Quarter",
+          `${NONE}; level "Quarter" of hierarchy "Calendar Hierarchy" and level "Qtr" of hierarchy "Fiscal" use it`,
+        ],
+      ]);
+    });
+    it("appends the clause to the referrers of a level's column that only an unreached measure uses", () => {
+      const m = dateTable(
+        `\tmeasure 'Sales LY' = CALCULATE(COUNTROWS('Date'), VALUES('Date'[Quarter]))\n${calendar}`,
+      );
+      const reach = buildIndexes({
+        model: m,
+        report: buildReport(visualBinding(level("Calendar Hierarchy", "Year"))).report,
+      }).reachability!;
+      const quarter = m.tables[0]!.columns.find((c) => c.name === "Quarter")!;
+      expect(reach.reasonFor(quarter)).toBe(
+        `referenced only by [Sales LY], which nothing reaches either; level "Quarter" of hierarchy "Calendar Hierarchy" uses it`,
+      );
+      // A measure never carries the clause.
+      expect(reach.reasonFor(m.tables[0]!.measures[0]!)).toBe(NONE);
+    });
+    it("reads as before on a column no level uses, in either form", () => {
+      const byName = Object.fromEntries(
+        reasons(dateTable(calendar), level("Calendar Hierarchy", "Year")),
+      );
+      expect(byName.Weekday).toBe(NONE);
+      expect(byName["Month Number"]).toBe(
+        "referenced only by 'Date'[Month], which nothing reaches either",
+      );
+    });
+    it("matches a level to its column without regard to case, as the walk does", () => {
+      const m = dateTable(`
+	hierarchy 'Calendar Hierarchy'
+		level Year
+			column: year
+		level Quarter
+			column: QUARTER
+`);
+      expect(reasons(m, level("Calendar Hierarchy", "Year")).map(([name]) => name)).not.toContain(
+        "Year",
+      );
+      expect(Object.fromEntries(reasons(m, column("Date", "Weekday"))).Quarter).toBe(
+        `${NONE}; level "Quarter" of hierarchy "Calendar Hierarchy" uses it`,
+      );
+    });
+  });
   it("is absent in a report-only or model-only project", () => {
     const { report } = buildReport(visualBinding(column("Sales", "Amount")));
     expect(buildIndexes({ report }).reachability).toBeUndefined();

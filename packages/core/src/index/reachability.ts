@@ -1,5 +1,5 @@
 import { columnRef, isAutoDateTable, measureRef, tableRef } from "../model/names.js";
-import type { Column, Measure, Model, Table } from "../model/types.js";
+import type { Column, Level, Measure, Model, Table } from "../model/types.js";
 import type { ReferenceIndex, RefOwner, RefOwnerKind } from "./references.js";
 import type { ReportReferenceIndex } from "./report-refs.js";
 
@@ -16,7 +16,11 @@ export interface ReachabilityIndex {
    * `reached` and `pathTo` still answer truthfully for their columns.
    */
   unreached(): { tables: Table[]; columns: Column[]; measures: Measure[] };
-  /** Why an unreached column or measure is unreached, as the finding's detail. */
+  /**
+   * Why an unreached column or measure is unreached, as the finding's detail. A column that a user
+   * hierarchy's level sits on also names each such level, so a reader deleting the column learns
+   * that it changes that hierarchy.
+   */
   reasonFor(object: Column | Measure): string;
 }
 
@@ -28,6 +32,9 @@ const nameOf = (n: Node): string =>
     : isMeasure(n)
       ? measureRef(n.name)
       : columnRef(n.table.name, n.name);
+/** "A", "A and B", "A, B, and C", the list style the site's index and the browser app use. */
+const listOf = (items: string[]): string =>
+  items.length <= 2 ? items.join(" and ") : `${items.slice(0, -1).join(", ")}, and ${items.at(-1)}`;
 
 /**
  * What the report reaches in the model, to a fixed point (spec section 6). Roots: every resolved
@@ -150,6 +157,13 @@ export function buildReachabilityIndex(
     );
     return [...dax, ...siblings.filter((c) => !dax.includes(c))];
   };
+  // The user hierarchies' levels that sit on a column: hierarchies in the table's order, levels in
+  // each hierarchy's. A level names its column on its own table, matched without regard to case as
+  // `columnOf` matches it, so a level the walk roots at this column is a level the reason names.
+  const levelsOn = (c: Column): Level[] =>
+    c.table.hierarchies.flatMap((h) =>
+      h.levels.filter((l) => l.column?.toLowerCase() === c.name.toLowerCase()),
+    );
   return {
     reached: (n) => parent.has(n),
     pathTo: (n) => {
@@ -169,9 +183,14 @@ export function buildReachabilityIndex(
     },
     reasonFor: (n) => {
       const referrers = referrersOf(n).filter((r) => r !== n);
-      if (referrers.length === 0)
-        return "nothing in the report reaches it, and no measure or column references it";
-      return `referenced only by ${referrers.map(nameOf).join(", ")}, which nothing reaches either`;
+      const why =
+        referrers.length === 0
+          ? "nothing in the report reaches it, and no measure or column references it"
+          : `referenced only by ${referrers.map(nameOf).join(", ")}, which nothing reaches either`;
+      const levels = isMeasure(n) ? [] : levelsOn(n);
+      if (levels.length === 0) return why;
+      const named = levels.map((l) => `level "${l.name}" of hierarchy "${l.hierarchy.name}"`);
+      return `${why}; ${listOf(named)} ${levels.length === 1 ? "uses" : "use"} it`;
     },
   };
 }

@@ -700,6 +700,42 @@ describe("NOT_REACHED_FROM_REPORT", () => {
       ],
     ]);
   });
+  it("names the hierarchy level behind a column the report does not reach", () => {
+    const dated = `table Date
+	column Year
+		dataType: int64
+	column Quarter
+		dataType: string
+
+	hierarchy 'Calendar Hierarchy'
+		level Year
+			column: Year
+		level Quarter
+			column: Quarter
+`;
+    const year = {
+      HierarchyLevel: {
+        Expression: {
+          Hierarchy: {
+            Expression: { SourceRef: { Entity: "Date" } },
+            Hierarchy: "Calendar Hierarchy",
+          },
+        },
+        Level: "Year",
+      },
+    };
+    const findings = reportFindings(
+      NOT_REACHED_FROM_REPORT,
+      [page("p"), bound("p", "v", "tableEx", [year])],
+      dated,
+    );
+    expect(findings.map((f) => [f.objectName, f.detail])).toEqual([
+      [
+        "'Date'[Quarter]",
+        `nothing in the report reaches it, and no measure or column references it; level "Quarter" of hierarchy "Calendar Hierarchy" uses it`,
+      ],
+    ]);
+  });
 });
 
 describe("NOT_REACHED_FROM_REPORT and aggregation tables", () => {

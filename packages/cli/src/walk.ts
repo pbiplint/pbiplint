@@ -290,7 +290,7 @@ export function resolveProject(input: string): ResolvedProject {
     // What cannot be read below the input is a notice (attempt and readPart), so what reaches
     // here is the input itself: its stat, its listing, or the one file it names. It is refused as
     // "does not exist" is; anything that is not the operating system's is a bug and says so. An
-    // input none of whose files could be read is refused in resolveFolder.
+    // input none of whose files could be read is refused in walked, on both routes.
     if (isSystemError(e)) throw new UsageError(`Could not read ${input}: ${reasonOf(e)}`);
     throw e;
   }
@@ -353,20 +353,25 @@ function resolvePbip(input: string, path: string): ResolvedProject {
   const folder = dirname(path);
   // The input itself, refused by resolveProject when it cannot be read.
   const text = readFileSync(path, "utf8");
-  const named = reportsNamed(basename(path), text);
-  if (named.length === 0) return resolveFolder(folder, folder, basename(path));
-  if (named.length > 1) {
-    const names = named.map((p) => basename(toPosix(p))).sort(byName);
+  // Each report folder once, as first written: a report named twice, however its path is
+  // written, is one report.
+  const named = new Map<string, string>();
+  for (const written of reportsNamed(basename(path), text)) {
+    const at = resolve(folder, toPosix(written));
+    if (!named.has(at)) named.set(at, written);
+  }
+  if (named.size === 0) return resolveFolder(folder, folder, basename(path));
+  if (named.size > 1) {
+    const names = [...named.values()].map((p) => basename(toPosix(p))).sort(byName);
     throw new UsageError(
-      `${input} names ${named.length} reports; point at one of them: ${names.join(", ")}`,
+      `${input} names ${named.size} reports; point at one of them: ${names.join(", ")}`,
     );
   }
-  const written = named[0]!;
-  const reportFolder = resolve(folder, toPosix(written));
+  const [reportFolder, written] = [...named][0]!;
   const kind = folderAt(reportFolder);
   if (kind === undefined) throw new UsageError(`${input} names ${written}, which does not exist`);
   if (!kind) throw new UsageError(`${input} names ${written}, which is not a folder`);
-  return walked(folder, folder, (w) => readNamed(w, input, path, text, reportFolder));
+  return walked(folder, folder, (w) => readNamed(w, input, path, text, reportFolder, written));
 }
 
 /**
@@ -384,10 +389,12 @@ function pbirOf(w: Walk, report: ResolvedPart | undefined, folder: string): stri
   return attempt(w, p, () => (isFile(p) ? readFileSync(p, "utf8") : undefined));
 }
 
+const PBIR_UNREAD_REASON = "the report's definition.pbir could not be read";
+
 /**
- * The report at `reportFolder`, which the .pbip at `pbip` names, and the model its definition.pbir
- * names by path, relative to the report folder. The path is followed rather than compared with a
- * folder beside the report, so model-reference-mismatch does not arise here.
+ * The report at `reportFolder`, which the .pbip at `pbip` names as `written`, and the model its
+ * definition.pbir names by path, relative to the report folder. The path is followed rather than
+ * compared with a folder beside the report, so model-reference-mismatch does not arise here.
  */
 function readNamed(
   w: Walk,
@@ -395,6 +402,7 @@ function readNamed(
   pbip: string,
   text: string,
   reportFolder: string,
+  written: string,
 ): ResolvedProject {
   const out = w.project;
   const at = (p: string): string => toPosix(relative(w.base, p));
@@ -410,6 +418,12 @@ function readNamed(
 
   const pbir = pbirOf(w, report, reportFolder);
   const ref: DatasetReference = pbir === undefined ? { kind: "none" } : datasetReference(pbir);
+  // Refused rather than missing: on the part's own unread list, or, for a report not read, in the
+  // notice its read on its own gave.
+  const pbirPath = at(join(reportFolder, "definition.pbir"));
+  const pbirRefused =
+    report?.unread.includes("definition.pbir") === true ||
+    out.diagnostics.some((d) => d.kind === "unread-file" && d.path === pbirPath);
   let model: ResolvedPart | undefined;
   if (ref.kind === "byPath") {
     const modelFolder = resolve(reportFolder, toPosix(ref.path));
@@ -422,6 +436,10 @@ function readNamed(
     } else {
       out.absent.model = `this report reads a model that is not there (${ref.path})`;
     }
+  } else if (pbirRefused) {
+    // Which model the report reads is not known, and the skipped line says so rather than
+    // reading as a report that names none; the notice names the file.
+    out.absent.model = PBIR_UNREAD_REASON;
   } else {
     // A report bound to a published model says so on the skipped line, as it does from a folder;
     // one that names no model is read alone.
@@ -431,9 +449,9 @@ function readNamed(
   if (model) out.model = model;
   if (report) out.report = report;
   if (model || report || out.diagnostics.length) return out;
-  throw new UsageError(
-    `No semantic model or report found at ${input} (expected ${EXPECTED_INPUT})`,
-  );
+  // The input is a .pbip, so the kinds of input a folder could have held do not apply: what held
+  // nothing is the report folder it names.
+  throw new UsageError(`No semantic model or report found in ${written}, which ${input} names`);
 }
 
 /** The parts of the folder `w` walks, or what it has to say about them. */

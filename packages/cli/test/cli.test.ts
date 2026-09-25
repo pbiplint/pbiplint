@@ -503,6 +503,34 @@ describe("pbiplint CLI", () => {
     },
   );
   it.skipIf(noModes)(
+    "says why the model is left out when the report a .pbip names has a definition.pbir it cannot read",
+    async () => {
+      const root = workspace();
+      const pbir = join(root, "Cost.Report", "definition.pbir");
+      chmodSync(pbir, 0o000);
+      try {
+        const input = join(root, "Cost.pbip");
+        const r = await run([input, "--format", "json", "--fail-on", "none"]);
+        const notice = unread("Cost.Report/definition.pbir", "EACCES: permission denied");
+        expect(r.code).toBe(0);
+        expect(r.err).toBe(`pbiplint: notice: ${notice.message}\n`);
+        const doc = JSON.parse(r.out);
+        expect(doc.layers.model).toEqual({
+          present: false,
+          reason: "the report's definition.pbir could not be read",
+        });
+        expect(doc.layers.report.present).toBe(true);
+        expect(doc.diagnostics).toEqual([notice]);
+        expect((await run([input, "--fail-on", "none"])).out).toContain(
+          "rules skipped (the report's definition.pbir could not be read)",
+        );
+      } finally {
+        chmodSync(pbir, 0o644);
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+  );
+  it.skipIf(noModes)(
     "names a model file it cannot read in the notice and reports no field that file could declare",
     async () => {
       // Store.tmdl declares the Store table, which the shelfmart report's visuals bind.

@@ -296,10 +296,16 @@ describe("resolveProject on a .pbip that names its report (#86)", () => {
   it("refuses a .pbip that names more than one report, naming them as a folder's refusal does", () => {
     const root = workspace();
     const both = join(root, "Both.pbip");
-    pbipAt(both, ["Sales.Report", "Cost.Report"]);
+    // A report named twice counts once, however its path is written.
+    pbipAt(both, ["Sales.Report", "Cost.Report", "./Sales.Report"]);
     expect(() => resolveProject(both)).toThrow(
       `${both} names 2 reports; point at one of them: Cost.Report, Sales.Report`,
     );
+    const twice = join(root, "Twice.pbip");
+    pbipAt(twice, ["Cost.Report", "Cost.Report"]);
+    const p = resolveProject(twice);
+    expect(p.report!.root).toBe(join(root, "Cost.Report"));
+    expect(p.model!.root).toBe(join(root, "Cost.SemanticModel"));
   });
   it("refuses a .pbip whose report is not there, naming the path as the .pbip writes it", () => {
     const root = workspace();
@@ -315,7 +321,10 @@ describe("resolveProject on a .pbip that names its report (#86)", () => {
     expect(() => resolveProject(gone)).toThrow(`${gone} names File.Report, which is not a folder`);
     mkdirSync(join(root, "Empty.Report"));
     pbipAt(gone, ["Empty.Report"]);
-    expect(() => resolveProject(gone)).toThrow(`No semantic model or report found at ${gone}`);
+    // Worded for the report the .pbip names: the input kinds a folder could have held do not apply.
+    expect(() => resolveProject(gone)).toThrow(
+      new Error(`No semantic model or report found in Empty.Report, which ${gone} names`),
+    );
   });
   it("reads a .pbip that names no report as its folder, as before", () => {
     const root = pbip({ model: true, report: true });
@@ -562,6 +571,28 @@ describe("resolveProject and what it could not read", () => {
       expect(() =>
         locked([join(root, "Cost.Report")], () => resolveProject(join(root, "Cost.pbip"))),
       ).toThrow(`Could not read ${root}/Cost.Report: EACCES: permission denied`);
+    },
+  );
+  it.skipIf(noModes)(
+    "leaves the model out with a reason when the named report's definition.pbir cannot be read",
+    () => {
+      const root = workspace();
+      const reason = "the report's definition.pbir could not be read";
+      // A report read without its definition.pbir: the path is on the part's unread list.
+      const cost = join(root, "Cost.Report", "definition.pbir");
+      const read = locked([cost], () => resolveProject(join(root, "Cost.pbip")));
+      expect(read.report!.unread).toEqual(["definition.pbir"]);
+      expect(read.model).toBeUndefined();
+      expect(read.absent).toEqual({ model: reason });
+      expect(read.diagnostics.map((d) => d.path)).toEqual(["Cost.Report/definition.pbir"]);
+      // A legacy report, whose definition.pbir is read on its own, leaves nothing to read when
+      // that file refuses, so the run is refused naming it.
+      rmSync(join(root, "Sales.Report", "definition"), { recursive: true });
+      writeFileSync(join(root, "Sales.Report", "report.json"), "{}");
+      const sales = join(root, "Sales.Report", "definition.pbir");
+      expect(() => locked([sales], () => resolveProject(join(root, "Sales.pbip")))).toThrow(
+        `Could not read ${root}/Sales.Report/definition.pbir: EACCES: permission denied`,
+      );
     },
   );
 });

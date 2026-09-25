@@ -755,11 +755,11 @@ compares on ids. All ported rules are `warning`.
 | REDUCE_TOPN_FILTERS | Page | Performance | `max` 4 | |
 | REDUCE_ADVANCED_FILTERS | Page | Performance | `max` 4 | **Deviation:** count only filters with a condition applied; the source also counts an Advanced filter with nothing set, such as a slicer's or one Desktop writes for a visual's own fields (amended 2026-09-22 after the oracle run) |
 | REDUCE_PAGES | Report | Performance | `max` 10 | |
-| AVOID_SHOW_ITEMS_WITH_NO_DATA | Visual | Performance | | `query.queryState.<role>.showAll` true |
+| AVOID_SHOW_ITEMS_WITH_NO_DATA | Visual | Performance | | `query.queryState.<role>.showAll` true. **Deviation:** every well is read, where the source reads the Category well only (amended 2026-09-24 with Michael) |
 | HIDE_TOOLTIP_DRILLTROUGH_PAGES | Page | Report Design | | Tooltip or drillthrough page and visibility not `HiddenInViewMode`. **Deviation:** reads a tooltip page from page.json's own `type` as well as `pageBinding.type`; a drillthrough page from `pageBinding.type` alone, as the source does (amended 2026-09-24 with Michael) |
 | ENSURE_THEME_COLOURS | Visual | Report Design | | **Deviation:** hex literals in colour properties only, not in any string |
 | ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY | Page | Report Design | `maxHeight` 720 | Visible pages only |
-| ENSURE_ALTTEXT | Visual | Accessibility | | Source ships it off; pbiplint ships it on. Shapes excluded, as the source does |
+| ENSURE_ALTTEXT | Visual | Accessibility | | Source ships it off; pbiplint ships it on. Shapes excluded, as the source does. **Deviation:** a visual group's own alt text counts, where the source reports every group (amended 2026-09-24 with Michael) |
 
 Amended 2026-09-24 with Michael (release triage, DQ6, narrowed by
 ruling H68): `HIDE_TOOLTIP_DRILLTROUGH_PAGES` reads a tooltip page from
@@ -797,6 +797,16 @@ cannot change its answer and it runs (narrowed by ruling H74). This is
 what it does on a file neither tool can read, not a deviation: the
 oracle fixtures all parse, so parity cannot show it. The Visuals fact's
 used count says unknown on the same condition (section 6).
+
+Amended 2026-09-24 with Michael (pull request 6, E9): the sample
+report shows two differences from the source that no oracle fixture
+showed before. Its matrix has Show items with no data on Rows, which
+`AVOID_SHOW_ITEMS_WITH_NO_DATA` reports because it reads every well,
+where the source reads the Category well only. Its two visual groups
+carry alt text of their own, which `ENSURE_ALTTEXT` counts, where the
+source reports every group. They are the fifth and sixth documented
+deviations, and the sample's expectation, now captured from the
+oracle, records them.
 
 ### 8.2 Native, tier 1
 
@@ -1107,8 +1117,11 @@ pbiplint's own committed expectation (`ours` in the same file) instead
 of the oracle's. Adding a deviation requires the sentence, a fixture
 that shows the difference, and the same sentence in the rule page's
 Quirks section (a required part of the template whenever a quirk
-exists); a test checks that the three agree. Four are known
-now (section 8.1).
+exists); a test checks that the three agree. Six are known
+now (section 8.1). Amended 2026-09-24 with Michael (pull request 6,
+E9): the sample report shows the fifth and sixth,
+`AVOID_SHOW_ITEMS_WITH_NO_DATA` and `ENSURE_ALTTEXT`, and its
+expectation records them.
 
 Amended 2026-09-24 with Michael (release triage, DQ6, narrowed by
 ruling H68): the fourth, `HIDE_TOOLTIP_DRILLTROUGH_PAGES` reading a

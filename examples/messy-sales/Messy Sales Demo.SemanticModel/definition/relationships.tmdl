@@ -26,3 +26,4 @@ relationship 0a8d08ea-ec2d-4f5c-9688-4767079a3fa4
 	joinOnDateBehavior: datePartOnly
 	fromColumn: Customer.'Join Date'
 	toColumn: LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d.Date
+

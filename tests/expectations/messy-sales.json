@@ -1,7 +1,7 @@
 {
   "fixture": "examples/messy-sales/Messy Sales Demo.SemanticModel",
   "oracle": "Tabular Editor CLI 0.5.2.11639 with BPARules.json sha256 ddb9cff4c2a0611a6467e2559d38319d9867381998066473ffa1e11c2d360392",
-  "captured": "2026-09-24",
+  "captured": "2026-09-25",
   "skipRules": {},
   "findings": {
     "ADD_DATA_CATEGORY_FOR_COLUMNS": [

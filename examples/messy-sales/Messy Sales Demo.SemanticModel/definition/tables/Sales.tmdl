@@ -1,6 +1,48 @@
 table Sales
 	lineageTag: e5dd0f16-ac53-567e-9fd5-189bf2d92f14
 
+	measure 'Total Sales' = SUM ( 'Sales'[Total Amount] )
+		lineageTag: ca8c39c8-04a5-56b1-898d-0a73736c3cca
+
+	measure 'Total Quantity' = SUM ( [Quantity] )
+		lineageTag: 3ac4e158-858b-5e1b-8289-78d12ceb80e2
+
+	measure 'Average Unit Price' = AVERAGE ( 'Sales'[Unit Price] )
+		lineageTag: 2b5680cc-3046-5e41-bc7f-f5ff360370b2
+
+	measure 'Total Cost' = SUM ( 'Sales'[Unit Cost] )
+		lineageTag: aef7aa67-b06e-5e59-ac93-136e4a872346
+
+	measure 'Total Discount' = SUM ( 'Sales'[Discount Amount] )
+		lineageTag: 6f6edc54-d408-5aea-a787-b48f4126590a
+
+	measure 'Net Sales' = [Total Sales] - [Total Discount]
+		lineageTag: e4e79507-12c0-5c58-8e25-12963846b787
+
+	measure 'Total Margin' = [Total Sales] - [Total Cost]
+		lineageTag: b9913bc2-aa66-55c0-8965-911b688f87dd
+
+	measure 'Margin %' = [Total Margin] / [Total Sales]
+		lineageTag: f9ffc38c-cd44-5852-b85a-0f7cbc8753f4
+
+	measure 'Order Count' = DISTINCTCOUNT ( 'Sales'[Sale ID] )
+		lineageTag: e8120ffb-3d8e-5701-a3b7-6c5e283a59a3
+
+	measure 'Average Order Value' = [Total Sales] / [Order Count]
+		lineageTag: df423b46-4a20-5b0c-8e7d-a87a163b2f7a
+
+	measure 'Distinct Customers' = DISTINCTCOUNT ( [Customer ID] )
+		lineageTag: ad0bf4d6-42d5-53d9-a887-1483c9167c06
+
+	measure 'Sales YTD' = TOTALYTD ( [Total Sales], 'Date'[Date] )
+		lineageTag: e501d2df-a69b-570d-a31d-d1bbfc8694a8
+
+	measure 'Sales LY' = CALCULATE ( [Total Sales], SAMEPERIODLASTYEAR ( 'Date'[Date] ) )
+		lineageTag: 5d4245d8-0c72-584f-bcd5-efbd492fc3a7
+
+	measure 'Sales YoY %' = ( [Total Sales] - [Sales LY] ) / [Sales LY]
+		lineageTag: 0f9d5832-20e8-584c-a5b3-fd670931d428
+
 	column 'Sale ID'
 		dataType: int64
 		isKey
@@ -108,48 +150,6 @@ table Sales
 		sourceColumn: Net Amount
 
 		annotation SummarizationSetBy = Automatic
-
-	measure 'Total Sales' = SUM ( 'Sales'[Total Amount] )
-		lineageTag: ca8c39c8-04a5-56b1-898d-0a73736c3cca
-
-	measure 'Total Quantity' = SUM ( [Quantity] )
-		lineageTag: 3ac4e158-858b-5e1b-8289-78d12ceb80e2
-
-	measure 'Average Unit Price' = AVERAGE ( 'Sales'[Unit Price] )
-		lineageTag: 2b5680cc-3046-5e41-bc7f-f5ff360370b2
-
-	measure 'Total Cost' = SUM ( 'Sales'[Unit Cost] )
-		lineageTag: aef7aa67-b06e-5e59-ac93-136e4a872346
-
-	measure 'Total Discount' = SUM ( 'Sales'[Discount Amount] )
-		lineageTag: 6f6edc54-d408-5aea-a787-b48f4126590a
-
-	measure 'Net Sales' = [Total Sales] - [Total Discount]
-		lineageTag: e4e79507-12c0-5c58-8e25-12963846b787
-
-	measure 'Total Margin' = [Total Sales] - [Total Cost]
-		lineageTag: b9913bc2-aa66-55c0-8965-911b688f87dd
-
-	measure 'Margin %' = [Total Margin] / [Total Sales]
-		lineageTag: f9ffc38c-cd44-5852-b85a-0f7cbc8753f4
-
-	measure 'Order Count' = DISTINCTCOUNT ( 'Sales'[Sale ID] )
-		lineageTag: e8120ffb-3d8e-5701-a3b7-6c5e283a59a3
-
-	measure 'Average Order Value' = [Total Sales] / [Order Count]
-		lineageTag: df423b46-4a20-5b0c-8e7d-a87a163b2f7a
-
-	measure 'Distinct Customers' = DISTINCTCOUNT ( [Customer ID] )
-		lineageTag: ad0bf4d6-42d5-53d9-a887-1483c9167c06
-
-	measure 'Sales YTD' = TOTALYTD ( [Total Sales], 'Date'[Date] )
-		lineageTag: e501d2df-a69b-570d-a31d-d1bbfc8694a8
-
-	measure 'Sales LY' = CALCULATE ( [Total Sales], SAMEPERIODLASTYEAR ( 'Date'[Date] ) )
-		lineageTag: 5d4245d8-0c72-584f-bcd5-efbd492fc3a7
-
-	measure 'Sales YoY %' = ( [Total Sales] - [Sales LY] ) / [Sales LY]
-		lineageTag: 0f9d5832-20e8-584c-a5b3-fd670931d428
 
 	partition Sales = m
 		mode: import

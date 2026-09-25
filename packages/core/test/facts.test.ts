@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { buildIndexes } from "../src/index/build.js";
+import { buildModel } from "../src/model/build.js";
+import type { Model } from "../src/model/types.js";
 import { buildReport } from "../src/pbir/build.js";
 import { buildFacts } from "../src/project/facts.js";
 import { defaultRules } from "../src/rules/index.js";
+import { parseTmdl } from "../src/tmdl/parse.js";
 import { modelFrom } from "./helpers.js";
 
 const j = (v: unknown) => JSON.stringify(v);
@@ -743,6 +746,117 @@ describe("buildFacts", () => {
       "definition/bookmarks/b1.bookmark.json",
     ])
       expect(modelFact({ path, text: conflicted }), path).toEqual(unknown);
+  });
+  describe("the not-reached clause of Model on a model pbiplint could not fully read", () => {
+    const SALES = "definition/tables/Sales.tmdl";
+    /** The Model fact for the model given, beside every report file in `files`. */
+    const modelFact = (m: Model, ...extra: { path: string; text: string }[]) => {
+      const { report } = buildReport([...files, ...extra]);
+      const project = { model: m, report };
+      return buildFacts(project, buildIndexes(project), ALL).find((f) => f.label === "Model");
+    };
+    // The counts stay, a lower bound, as they do for a report file that could not be read.
+    const counted = { layer: "model", label: "Model", value: "1 table, 2 columns, 2 measures" };
+    const unknown = {
+      ...counted,
+      detail: "not reached from this report: unknown, a model file could not be fully read",
+    };
+    it("says unknown and links no rule while a model file has a parse issue that can drop an object", () => {
+      // A line indented with spaces, which the parser skips, so what it declares is not read.
+      const partly = buildModel([parseTmdl(SALES, `${sales}    measure Lost = [Other]\n`)]);
+      expect(partly.files[0]!.issues.map((i) => i.canDropObjects)).toEqual([true]);
+      expect(modelFact(partly)).toEqual(unknown);
+    });
+    it("says unknown and links no rule while a model path could not be read at all", () => {
+      expect(
+        modelFact(buildModel([parseTmdl(SALES, sales)], ["definition/tables/Store.tmdl"])),
+      ).toEqual(unknown);
+      expect(modelFact(buildModel([parseTmdl(SALES, sales)], ["definition/tables/"]))).toEqual(
+        unknown,
+      );
+    });
+    it("counts while the only parse issue is an orphaned description, which drops no declaration", () => {
+      const described = buildModel([
+        parseTmdl(
+          SALES,
+          sales.replace("\tcolumn Region\n", "\t/// Described\n\n\tcolumn Region\n"),
+        ),
+      ]);
+      expect(described.files[0]!.issues.map((i) => i.canDropObjects)).toEqual([false]);
+      expect(modelFact(described)).toEqual({
+        ...counted,
+        detail: "0 columns and 1 measure not reached from this report",
+        ruleId: "NOT_REACHED_FROM_REPORT",
+      });
+    });
+    it("gives the report file's reason when a report file could not be read as well", () => {
+      const both = buildModel([parseTmdl(SALES, sales)], ["definition/tables/Store.tmdl"]);
+      expect(
+        modelFact(both, { path: "definition/pages/p1/visuals/v9/visual.json", text: "[]" }),
+      ).toEqual({
+        ...counted,
+        detail: "not reached from this report: unknown, a report file could not be read",
+      });
+    });
+  });
+  it("counts an unread report folder as every file it could hold, for each fact that asks", () => {
+    /** The facts with the files under each unread folder left out, as a reader that could not list it. */
+    const factsBeside = (...folders: string[]) => {
+      const kept = files.filter((f) => !folders.some((d) => f.path.startsWith(d)));
+      const { report } = buildReport(kept, folders);
+      const project = { model, report };
+      return buildFacts(project, buildIndexes(project), ALL);
+    };
+    const fact = (label: string, ...folders: string[]) =>
+      factsBeside(...folders).find((f) => f.label === label);
+    // A visual's own folder could hold its visual.json and its mobile.json.
+    const visualFolder = "definition/pages/p1/visuals/v9/";
+    expect(fact("Slicers", visualFolder)).toMatchObject({
+      value: "2",
+      detail: "1 saved selection",
+    });
+    expect(fact("Visuals", visualFolder)?.detail).toBe(
+      "1 hidden; 2 custom visual types registered, used: unknown, a visual.json could not be read",
+    );
+    expect(fact("Model", visualFolder)?.detail).toBe(
+      "not reached from this report: unknown, a report file could not be read",
+    );
+    // With every visual of the only page with visuals unread, none of them is counted.
+    expect(fact("Slicers", "definition/pages/p1/visuals/")).toEqual({
+      layer: "report",
+      label: "Slicers",
+      value: "unknown",
+      detail: "saved selections: unknown, a visual.json could not be read",
+    });
+    expect(fact("Mobile layouts", "definition/pages/p1/visuals/")).toEqual({
+      layer: "report",
+      label: "Mobile layouts",
+      value: "unknown",
+      detail: "a mobile.json could not be read",
+    });
+    // The bookmarks folder holds bookmark files, which name fields, and no visual.
+    expect(fact("Model", "definition/bookmarks/")?.detail).toBe(
+      "not reached from this report: unknown, a report file could not be read",
+    );
+    expect(fact("Visuals", "definition/bookmarks/")?.detail).toBe(
+      "1 hidden; 2 custom visual types registered, 1 used",
+    );
+    // A page's folder names the page, as its page.json does.
+    const opensOn = factsBeside("definition/pages/p1/").find((f) => f.label === "Opens on");
+    expect(opensOn).toEqual({
+      layer: "report",
+      label: "Opens on",
+      value: "p1",
+      detail: "the page open when it was saved; no landing page set",
+      ruleId: "LANDING_PAGE_NOT_SET",
+    });
+    // definition/ itself holds reportExtensions.json.
+    expect(fact("Report measures", "definition/")).toEqual({
+      layer: "report",
+      label: "Report measures",
+      value: "unknown",
+      detail: "reportExtensions.json was not read",
+    });
   });
   describe("Model and Desktop's auto date/time tables", () => {
     // With Auto date/time on, Power BI Desktop adds a calculated LocalDateTable_<guid> per date

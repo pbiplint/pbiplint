@@ -1,6 +1,6 @@
 import { columnRef, measureRef } from "../../model/names.js";
 import type { FieldRef } from "../../pbir/types.js";
-import { finding } from "../helpers.js";
+import { finding, modelPartlyRead } from "../helpers.js";
 import { fieldFileUnread, reportFinding } from "../report-helpers.js";
 import type { RuleFinding } from "../types.js";
 import { pbiplintRule } from "./define.js";
@@ -47,8 +47,9 @@ export const BROKEN_FIELD_REFERENCE = pbiplintRule({
   scope: ["Visual", "Page", "Report", "Bookmark"],
   layer: "project",
   // `unresolved()` leaves out an `unread` reference, whose target could sit in a file pbiplint
-  // could not fully read: reportExtensions.json, or a model file with a parse issue that can take
-  // an object out of the model. That file's own PARSE_ISSUE finding says why.
+  // could not fully read: reportExtensions.json, a model file with a parse issue that can take an
+  // object out of the model, or a model path the input reader could not read at all. That file's
+  // own PARSE_ISSUE finding, or the input reader's notice, says why.
   check: (_project, ctx) =>
     firstPerObjectAndField(
       ctx.indexes.reportRefs!.unresolved().flatMap((r): RuleFinding[] => {
@@ -88,6 +89,9 @@ export const NOT_REACHED_FROM_REPORT = pbiplintRule({
   // one could not be read the rule cannot say what the report does not reach. A definition file
   // that names no field, such as pages.json, does not stop it.
   skipWhenUnread: fieldFileUnread,
+  // Nor can it while the model may lack an object its files declare: what only that object's DAX
+  // reaches would read as reached by nothing.
+  skipWhenModelUnread: modelPartlyRead,
   check: (_project, ctx) => {
     const reach = ctx.indexes.reachability!;
     const { columns, measures } = reach.unreached();

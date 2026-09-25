@@ -2,6 +2,7 @@ import { plural } from "../format/text.js";
 import type { Indexes } from "../index/build.js";
 import { isAutoDateTable } from "../model/names.js";
 import type { Report } from "../pbir/types.js";
+import { modelPartlyRead } from "../rules/helpers.js";
 import {
   allVisuals,
   customVisualUseUnknown,
@@ -280,11 +281,15 @@ export function buildFacts(
       value: `${n(shown.length, "table")}, ${n(columns, "column")}, ${n(measures, "measure")}`,
     };
     const reach = indexes.reachability;
-    // Unknown when a file the report's field references are read from could not be read, the case
-    // NOT_REACHED_FROM_REPORT is skipped in: what that file would have reached is not known, so the
-    // fact gives no count and links no rule.
+    // Unknown when a file the report's field references are read from could not be read, or while
+    // the model may lack an object its files declare, the cases NOT_REACHED_FROM_REPORT is skipped
+    // in, the report's first as the rule's skipped line gives it: what that file would have
+    // reached, or what only the missing object reaches, is not known, so the fact gives no count
+    // and links no rule. The table, column, and measure counts stay, a lower bound.
     if (reach && fieldFileUnread(project.report)) {
       fact.detail = "not reached from this report: unknown, a report file could not be read";
+    } else if (reach && modelPartlyRead(model)) {
+      fact.detail = "not reached from this report: unknown, a model file could not be fully read";
     } else if (reach) {
       const u = reach.unreached();
       fact.detail = `${n(u.columns.length, "column")} and ${n(u.measures.length, "measure")} not reached from this report`;

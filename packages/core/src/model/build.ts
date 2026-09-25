@@ -258,7 +258,12 @@ function finalizeKinds(model: Model): void {
   }
 }
 
-export function buildModel(files: ParsedFile[]): Model {
+/**
+ * The model the parsed files declare. `unreadPaths` are the paths under the model's root the input
+ * reader could not read (`LintOptions.unreadPaths`, relative to the root as a file's own path is);
+ * the model keeps each `.tmdl` file and folder among them as `Model.unreadPaths`.
+ */
+export function buildModel(files: ParsedFile[], unreadPaths: readonly string[] = []): Model {
   const model: Model = {
     name: "Model",
     annotations: {},
@@ -273,6 +278,7 @@ export function buildModel(files: ParsedFile[]): Model {
     functions: [],
     dataSources: [],
     files,
+    unreadPaths: unreadPaths.filter((p) => p.endsWith(".tmdl") || p.endsWith("/")),
   };
   for (const f of files) {
     for (const r of f.roots) {

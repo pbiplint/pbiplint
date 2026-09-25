@@ -1,4 +1,11 @@
-import { holdsFieldReferences, isMobileFile, isVisualFile, pageFolderOf } from "../pbir/build.js";
+import {
+  folderHolds,
+  folderHoldsFieldReferences,
+  holdsFieldReferences,
+  isMobileFile,
+  isVisualFile,
+  pageFolderOf,
+} from "../pbir/build.js";
 import { lineOfPointer } from "../pbir/json.js";
 import {
   bookmarkLabel,
@@ -127,20 +134,24 @@ export const reportFinding = {
 /**
  * Whether a file the report's field references are read from could not be read: report.json,
  * reportExtensions.json, a page.json, a visual.json, or a bookmark file (`holdsFieldReferences`),
- * found among `Report.unreadDefinitionFiles`. Such a file may reference any field in the model,
- * so NOT_REACHED_FROM_REPORT sets this as its `skipWhenUnread` and the Model fact's not-reached
+ * found among `Report.unreadDefinitionFiles`, or a folder that could hold one among
+ * `Report.unreadDefinitionFolders`. Such a file may reference any field in the model, so
+ * NOT_REACHED_FROM_REPORT sets this as its `skipWhenUnread` and the Model fact's not-reached
  * clause says unknown. version.json, pages.json, bookmarks.json, and a mobile.json name no field,
  * so one of them unread changes neither.
  */
 export const fieldFileUnread = (r: Report): boolean =>
-  r.unreadDefinitionFiles.some(holdsFieldReferences);
+  r.unreadDefinitionFiles.some(holdsFieldReferences) ||
+  r.unreadDefinitionFolders.some(folderHoldsFieldReferences);
 
 /**
- * Whether a visual.json could not be read. The visual it holds could be of any type, a slicer
- * included, and could carry a saved selection, so the Slicers fact says unknown where it would
- * otherwise say none.
+ * Whether a visual.json could not be read, or a folder that could hold one. The visual it holds
+ * could be of any type, a slicer included, and could carry a saved selection, so the Slicers fact
+ * says unknown where it would otherwise say none.
  */
-export const visualFileUnread = (r: Report): boolean => r.unreadDefinitionFiles.some(isVisualFile);
+export const visualFileUnread = (r: Report): boolean =>
+  r.unreadDefinitionFiles.some(isVisualFile) ||
+  r.unreadDefinitionFolders.some((f) => folderHolds(f, "visual"));
 
 /**
  * Whether a registered custom visual type is used by no visual that was read while a visual.json
@@ -156,18 +167,53 @@ export function customVisualUseUnknown(r: Report): boolean {
 }
 
 /**
- * Whether a visual's mobile.json could not be read. The Mobile layouts fact says unknown then
- * where it would otherwise say none, since that file marks a mobile layout.
+ * Whether a visual's mobile.json could not be read, or a folder that could hold one. The Mobile
+ * layouts fact says unknown then where it would otherwise say none, since that file marks a mobile
+ * layout.
  */
-export const mobileFileUnread = (r: Report): boolean => r.unreadDefinitionFiles.some(isMobileFile);
+export const mobileFileUnread = (r: Report): boolean =>
+  r.unreadDefinitionFiles.some(isMobileFile) ||
+  r.unreadDefinitionFolders.some((f) => folderHolds(f, "visual"));
+
+/** Whether a folder that could not be read holds the file at `path`: its own folder, or one above. */
+const inUnreadFolder = (r: Report, path: string): boolean =>
+  r.unreadDefinitionFolders.some((f) => path.startsWith(f));
+
+/**
+ * Whether the page.json of the page in folder `folder` could not be read: its own file or folder
+ * (`Report.unreadPages`), or a folder above it, such as the pages folder. Desktop names a page's
+ * folder after its `name`, so a rule that looks a page up by name asks this before it says no
+ * such page exists.
+ */
+export const pageUnread = (r: Report, folder: string): boolean =>
+  r.unreadPages.includes(folder) || inUnreadFolder(r, `definition/pages/${folder}/page.json`);
+
+/**
+ * Whether the visual.json of visual `id` on page `p` could not be read: its own file or folder
+ * (`Page.unreadVisuals`), or a folder above it, such as the page's visuals folder. Desktop names a
+ * visual's folder after its `name`, so a rule that looks a visual up by name asks this before it
+ * says the page has no such visual.
+ */
+export const visualUnread = (r: Report, p: Page, id: string): boolean =>
+  p.unreadVisuals.includes(id) ||
+  inUnreadFolder(r, `definition/pages/${pageFolderOf(p.file)}/visuals/${id}/visual.json`);
+
+/**
+ * Whether the file of bookmark `name` could not be read: its own file (`Report.unreadBookmarks`),
+ * or the bookmarks folder or one above it. Desktop names a bookmark's file after its `name`.
+ */
+export const bookmarkUnread = (r: Report, name: string): boolean =>
+  r.unreadBookmarks.includes(name) ||
+  inUnreadFolder(r, `definition/bookmarks/${name}.bookmark.json`);
 
 /**
  * Whether a mobile.json that was read sits in a page folder no page object stands for, while that
- * folder holds a page.json or a visual.json that could not be read. Every other mobile.json that
- * was read marks the page in its folder (`Page.hasMobileLayout`); this one's page is not counted,
- * and the unread file may be what defines it, so the Mobile layouts fact cannot say none. A stray
- * mobile.json in a folder where nothing failed to read marks no page, and none stays: no file
- * pbiplint could not read could define a page there.
+ * folder holds a page.json or a visual.json that could not be read, or a folder at, above, or
+ * below the page's folder could not be. Every other mobile.json that was read marks the page in
+ * its folder (`Page.hasMobileLayout`); this one's page is not counted, and the unread file may be
+ * what defines it, so the Mobile layouts fact cannot say none. A stray mobile.json in a folder
+ * where nothing failed to read marks no page, and none stays: no file pbiplint could not read
+ * could define a page there.
  */
 export function mobilePageUnread(r: Report): boolean {
   const placed = new Set(r.pages.map((p) => pageFolderOf(p.file)));
@@ -178,7 +224,12 @@ export function mobilePageUnread(r: Report): boolean {
   return r.files.some((f) => {
     if (!isMobileFile(f) || r.unreadDefinitionFiles.includes(f)) return false;
     const folder = pageFolderOf(f);
-    return !placed.has(folder) && unread.has(folder);
+    const at = `definition/pages/${folder}/`;
+    return (
+      !placed.has(folder) &&
+      (unread.has(folder) ||
+        r.unreadDefinitionFolders.some((d) => at.startsWith(d) || d.startsWith(at)))
+    );
   });
 }
 
@@ -302,7 +353,7 @@ export interface OpeningPage {
   page?: Page;
   /**
    * Set when no page read has that name but the page.json in the folder of that name could not be
-   * read (`Report.unreadPages`): the page is there, and what its page.json says is not known.
+   * read (`pageUnread`): the page is there, and what its page.json says is not known.
    */
   unread?: true;
 }
@@ -323,7 +374,7 @@ export function openingPage(r: Report): OpeningPage | undefined {
       by: landingPageName !== undefined ? "landing" : "active",
       name,
       page,
-      ...(page === undefined && r.unreadPages.includes(name) ? { unread: true as const } : {}),
+      ...(page === undefined && pageUnread(r, name) ? { unread: true as const } : {}),
     };
   }
   const first = r.pages[0];

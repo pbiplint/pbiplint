@@ -33,8 +33,10 @@ export type ReportRefOwnerKind = ReportRefOwner["kind"];
  * names the report's extension while reportExtensions.json could not be read, and one to a table
  * the model does not have, or to a field missing from a table, while a model file that could
  * declare it has a parse issue that can take an object out of the model
- * (`TmdlParseIssue.canDropObjects`). What it resolves to is unknown, so it is neither resolved nor
- * unresolved, no rule reports it, and the file's own PARSE_ISSUE finding says why.
+ * (`TmdlParseIssue.canDropObjects`) or a model path could not be read at all
+ * (`Model.unreadPaths`). What it resolves to is unknown, so it is neither resolved nor
+ * unresolved, no rule reports it, and the file's own PARSE_ISSUE finding, or the input reader's
+ * notice, says why.
  */
 export type Resolution =
   | { kind: "column"; column: Column; variationOf?: Column }
@@ -74,7 +76,9 @@ const q = (s: string): string => `"${s}"`;
  * could not be read. Without a model, every other reference is unresolved with one reason. A
  * table the model does not have is `unread` while any model file could not be fully read, and a
  * field missing from a table is `unread` while a file that declares the table could not be, or
- * while a model file has an issue that could have taken a `table` line with it.
+ * while a model file has an issue that could have taken a `table` line with it. A model path the
+ * input reader could not read at all could declare any table and anything under one, so while
+ * there is one, both are `unread`.
  */
 export function buildReportReferenceIndex(
   report: Report,
@@ -110,29 +114,45 @@ export function buildReportReferenceIndex(
     reason: `${reason}, and ${file} could not be fully read`,
   });
   /**
+   * The first model path the input reader could not read at all, which counts as a file whose
+   * issue can take an object and a `table` line with it: it could declare anything.
+   */
+  const neverRead = model?.unreadPaths[0];
+  const notRead = (reason: string, path: string): Resolution => ({
+    kind: "unread",
+    reason: `${reason}, and ${path} could not be read`,
+  });
+  /**
    * Something the model does not have that any model file could declare: a table, or a bare name
-   * in a report measure's DAX, which could be a measure on any table.
+   * in a report measure's DAX, which could be a measure on any table. A path never read is named
+   * in place of "a model file", since it is a path the reader can find.
    */
   const missing = (reason: string): Resolution =>
-    partlyRead.size > 0 ? unread(reason, "a model file") : unresolved(reason);
+    neverRead !== undefined
+      ? notRead(reason, neverRead)
+      : partlyRead.size > 0
+        ? unread(reason, "a model file")
+        : unresolved(reason);
   /**
    * Something missing from table `t`: its columns, measures, hierarchies, and their variations and
    * levels sit under its declaration, so only a file that declares it could hold the missing
    * thing. The model merges a table declared in several files, so each of them counts. So does a
    * file whose issue can take a `table` line with it (`TmdlParseIssue.canDropTableLine`), since
    * that line could be the table's declaration in a second file, such as a misspelt
-   * `table Sales` over the measures a file holds for Sales. A file that declares the table is
-   * named first.
+   * `table Sales` over the measures a file holds for Sales, and so does a path never read, which
+   * could declare the table again. A file that declares the table is named first, then a path
+   * never read.
    */
   const missingOn = (t: Table, reason: string): Resolution => {
     const files = model?.files ?? [];
-    const file = (
-      files.find(
-        (f) =>
-          partlyRead.has(f.file) &&
-          f.roots.some((r) => r.kind === "object" && r.type === "table" && r.name === t.name),
-      ) ?? files.find((f) => f.issues.some((i) => i.canDropTableLine))
-    )?.file;
+    const declaring = files.find(
+      (f) =>
+        partlyRead.has(f.file) &&
+        f.roots.some((r) => r.kind === "object" && r.type === "table" && r.name === t.name),
+    );
+    if (declaring) return unread(reason, declaring.file);
+    if (neverRead !== undefined) return notRead(reason, neverRead);
+    const file = files.find((f) => f.issues.some((i) => i.canDropTableLine))?.file;
     return file === undefined ? unresolved(reason) : unread(reason, file);
   };
   const NO_TABLE: Record<NonNullable<FieldRef["noTable"]>, string> = {

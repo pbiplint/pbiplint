@@ -410,6 +410,56 @@ export const pageFolderOf = (path: string): string | undefined =>
   /^definition\/pages\/([^/]+)\//.exec(path)?.[1];
 
 /**
+ * The folder each file the PBIR format defines under definition/ sits in (Learn's PBIR folder
+ * table), `*` standing for any one folder name: definition/ holds version.json, report.json, and
+ * reportExtensions.json; the pages folder pages.json; a page's folder its page.json; a visual's
+ * folder its visual.json and mobile.json; the bookmarks folder bookmarks.json and each bookmark.
+ */
+const HOMES = {
+  definition: "definition/",
+  pages: "definition/pages/",
+  page: "definition/pages/*/",
+  visual: "definition/pages/*/visuals/*/",
+  bookmarks: "definition/bookmarks/",
+} as const;
+
+export type DefinitionHome = keyof typeof HOMES;
+
+/**
+ * Whether a folder, its path written with a trailing `/`, could hold the files that sit in `home`
+ * under the PBIR layout: it is that folder or a folder above it. definition/pages/a/ could hold
+ * page a's page.json and the visual.json of any visual on page a; definition/pages/a/visuals/v/x/
+ * could hold neither.
+ */
+export function folderHolds(folder: string, home: DefinitionHome): boolean {
+  const have = folder.split("/").slice(0, -1);
+  const want = HOMES[home].split("/").slice(0, -1);
+  return (
+    folder.endsWith("/") &&
+    have.length <= want.length &&
+    have.every((name, i) => name !== "" && (want[i] === "*" || want[i] === name))
+  );
+}
+
+/** Whether a folder could hold any file the PBIR format defines under definition/. */
+const folderHoldsDefinitionFiles = (folder: string): boolean =>
+  (Object.keys(HOMES) as DefinitionHome[]).some((home) => folderHolds(folder, home));
+
+/**
+ * Whether a folder could hold a file the report's field references are read from
+ * (`holdsFieldReferences`): report.json and reportExtensions.json in definition/, a page.json in a
+ * page's folder, a visual.json in a visual's, a bookmark file in the bookmarks folder. Every folder
+ * that could hold a definition file could hold one of these.
+ */
+export const folderHoldsFieldReferences = (folder: string): boolean =>
+  (["definition", "page", "visual", "bookmarks"] as const).some((home) =>
+    folderHolds(folder, home),
+  );
+
+const PAGE_FOLDER = /^definition\/pages\/([^/]+)\/$/;
+const VISUAL_FOLDER = /^definition\/pages\/([^/]+)\/visuals\/([^/]+)\/$/;
+
+/**
  * Whether the PBIR format defines the file: definition.pbir, the report's .platform, the project's
  * .pbip, and the definition files. Microsoft publishes a schema for each, with an object root; any
  * other JSON under definition/ is the author's own.
@@ -425,9 +475,15 @@ const definedByPbir = (path: string): boolean =>
  * Unknown properties are ignored, every schema version seen is read the same way, a file that
  * cannot be read is an issue and the rest still builds. Pages come out in pageOrder, matched on
  * each page.json's `name`, then any page the header does not list, by folder; visuals in file
- * order within a page.
+ * order within a page. `unreadPaths` are the paths the input reader could not read
+ * (`LintOptions.unreadPaths`, relative to the same folder, a folder with a trailing `/`): a
+ * definition file among them is recorded as one that failed to parse is, with no issue, since the
+ * reader's notice names it, and a folder as every definition file it could hold.
  */
-export function buildReport(files: LintFile[]): { report: Report; diagnostics: Diagnostic[] } {
+export function buildReport(
+  files: LintFile[],
+  unreadPaths: readonly string[] = [],
+): { report: Report; diagnostics: Diagnostic[] } {
   const report: Report = {
     publicCustomVisuals: [],
     filtersPane: {},
@@ -442,6 +498,7 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
     files: [],
     issues: [],
     unreadDefinitionFiles: [],
+    unreadDefinitionFolders: [],
     unreadPages: [],
     unreadBookmarks: [],
     schemaVersions: {},
@@ -460,7 +517,7 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
   const mobile = new Set<string>();
   /** The page folders a mobile.json that was read sits in. */
   const mobilePages = new Set<string>();
-  /** Each visual.json that could not be read, as its page's folder and its own. */
+  /** Each visual.json, or visual's folder, that could not be read, as its page's folder and its own. */
   const unreadVisuals: { pageId: string; id: string }[] = [];
   const highest = (current: string | undefined, seen: string | undefined): string | undefined =>
     seen === undefined
@@ -469,21 +526,53 @@ export function buildReport(files: LintFile[]): { report: Report; diagnostics: D
         ? seen
         : current;
 
-  for (const f of [...files].sort((a, b) => a.path.localeCompare(b.path, "en"))) {
+  /**
+   * A definition file that could not be read, whether it failed to parse or the input reader could
+   * not read it at all: listed, with the object it would have defined, by the folder or file name
+   * Desktop gives it. A file the PBIR format does not define there is not part of the report and
+   * is not listed.
+   */
+  const unreadFile = (path: string): void => {
+    if (!definitionFile(path)) return;
+    report.unreadDefinitionFiles.push(path);
+    let u: RegExpExecArray | null;
+    if ((u = PAGE_FILE.exec(path))) report.unreadPages.push(u[1]!);
+    else if ((u = VISUAL_FILE.exec(path))) unreadVisuals.push({ pageId: u[1]!, id: u[2]! });
+    else if ((u = BOOKMARK_FILE.exec(path))) report.unreadBookmarks.push(u[1]!);
+    else if (path === "definition/reportExtensions.json") report.extensions = "unread";
+  };
+  /**
+   * A folder the input reader could not read: listed when it could hold a definition file, with
+   * the page or visual its own path names, as that page's or visual's file would record it.
+   */
+  const unreadFolder = (path: string): void => {
+    if (!folderHoldsDefinitionFiles(path)) return;
+    report.unreadDefinitionFolders.push(path);
+    let u: RegExpExecArray | null;
+    if ((u = PAGE_FOLDER.exec(path))) report.unreadPages.push(u[1]!);
+    else if ((u = VISUAL_FOLDER.exec(path))) unreadVisuals.push({ pageId: u[1]!, id: u[2]! });
+    if (folderHolds(path, "definition")) report.extensions = "unread";
+  };
+
+  // The files given and the paths that could not be read, in one path order, so each list of
+  // what could not be read is in path order whichever way its entries could not be.
+  const entries: { path: string; file?: LintFile }[] = [
+    ...files.map((file) => ({ path: file.path, file })),
+    ...unreadPaths.map((path) => ({ path })),
+  ].sort((a, b) => a.path.localeCompare(b.path, "en"));
+  for (const { path, file: f } of entries) {
+    if (f === undefined) {
+      if (path.endsWith("/")) unreadFolder(path);
+      else unreadFile(path);
+      continue;
+    }
     report.files.push(f.path);
     // Unread until it parses to an object below, so a file that fails on the way is not taken
     // for one that defines no measures.
     if (f.path === "definition/reportExtensions.json") report.extensions = "unread";
     const read = readJson(f.path, f.text, { objectRoot: definedByPbir(f.path) });
     report.issues.push(...read.issues);
-    if (read.issues.length > 0 && definitionFile(f.path)) {
-      report.unreadDefinitionFiles.push(f.path);
-      // The object the file would have defined, by the folder or file name Desktop gives it.
-      let u: RegExpExecArray | null;
-      if ((u = PAGE_FILE.exec(f.path))) report.unreadPages.push(u[1]!);
-      else if ((u = VISUAL_FILE.exec(f.path))) unreadVisuals.push({ pageId: u[1]!, id: u[2]! });
-      else if ((u = BOOKMARK_FILE.exec(f.path))) report.unreadBookmarks.push(u[1]!);
-    }
+    if (read.issues.length > 0) unreadFile(f.path);
     if (read.json === undefined) continue;
     const family = schemaFamilyOf(read.schema);
     const version = read.schemaVersion;

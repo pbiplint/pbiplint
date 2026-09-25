@@ -30,6 +30,16 @@ export interface Model extends Named {
   functions: DaxFunction[];
   dataSources: DataSource[];
   files: ParsedFile[];
+  /**
+   * The paths under the model's root that the input reader could not read at all
+   * (`LintOptions.unreadPaths`): a `.tmdl` file, or a folder written with a trailing `/`, in the
+   * order given. Either could declare any table and anything under any table, so each counts as a
+   * file whose parse issue can take an object and a `table` line out of the model
+   * (`TmdlParseIssue.canDropObjects` and `canDropTableLine`). The input reader's notice names each
+   * one, so none is a parse issue. Any other path, such as the model's .platform, declares nothing
+   * and is not listed.
+   */
+  unreadPaths: string[];
 }
 
 export interface Table extends Named {

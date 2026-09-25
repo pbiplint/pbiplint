@@ -43,9 +43,9 @@ const visual = (
   }),
 });
 const ALL = new Set(defaultRules.map((r) => r.id));
-const model = modelFrom(
-  "table Sales\n\tcolumn Amount\n\t\tdataType: decimal\n\tcolumn Region\n\t\tdataType: string\n\tmeasure Total = SUM('Sales'[Amount])\n\tmeasure Other = 1\n",
-);
+const sales =
+  "table Sales\n\tcolumn Amount\n\t\tdataType: decimal\n\tcolumn Region\n\t\tdataType: string\n\tmeasure Total = SUM('Sales'[Amount])\n\tmeasure Other = 1\n";
+const model = modelFrom(sales);
 
 const files = [
   {
@@ -743,6 +743,75 @@ describe("buildFacts", () => {
       "definition/bookmarks/b1.bookmark.json",
     ])
       expect(modelFact({ path, text: conflicted }), path).toEqual(unknown);
+  });
+  describe("Model and Desktop's auto date/time tables", () => {
+    // With Auto date/time on, Power BI Desktop adds a calculated LocalDateTable_<guid> per date
+    // column and a calculated DateTableTemplate_<guid>, and keeps both hidden even from modelers,
+    // so the fact counts the tables Desktop shows.
+    const LDT = "LocalDateTable_1b2c1fde-0cf3-455e-bfee-a8e4970804e0";
+    const DTT = "DateTableTemplate_f2afc5fc-2d0d-478c-92e8-dc0f26f32175";
+    /** A hidden table of two date columns over the partition given, as Desktop saves its auto tables. */
+    const dateTable = (name: string, partition: string) =>
+      `table ${name}\n\tisHidden\n\n\tcolumn Date\n\t\tdataType: dateTime\n\t\tisHidden\n\n\tcolumn Year\n\t\tdataType: int64\n\t\tisHidden\n\n\tpartition ${name} = ${partition}\n`;
+    const calculated = (source: string) => `calculated\n\t\tmode: import\n\t\tsource = ${source}\n`;
+    const store =
+      "table Store\n\tcolumn Name\n\t\tdataType: string\n\tcolumn Opened\n\t\tdataType: dateTime\n";
+    const autoPair =
+      dateTable(
+        LDT,
+        calculated(
+          "Calendar(Date(Year(MIN('Store'[Opened])), 1, 1), Date(Year(MAX('Store'[Opened])), 12, 31))",
+        ),
+      ) + dateTable(DTT, calculated("Calendar(Date(2015,1,1), Date(2015,1,1))"));
+    const modelFact = (tmdl: string, ...extra: { path: string; text: string }[]) => {
+      const { report } = buildReport([...files, ...extra]);
+      const project = { model: modelFrom(tmdl), report };
+      return buildFacts(project, buildIndexes(project), ALL).find((f) => f.label === "Model");
+    };
+    it("counts neither the calculated LocalDateTable_ and DateTableTemplate_ tables nor their columns", () => {
+      const shown = { layer: "model", label: "Model", value: "2 tables, 4 columns, 2 measures" };
+      expect(modelFact(sales + store + autoPair)).toEqual({
+        ...shown,
+        detail: "2 columns and 1 measure not reached from this report",
+        ruleId: "NOT_REACHED_FROM_REPORT",
+      });
+      // The counts stay those of the tables Desktop shows when the not-reached clause is unknown.
+      expect(
+        modelFact(sales + store + autoPair, {
+          path: "definition/pages/p1/visuals/v9/visual.json",
+          text: "[]",
+        }),
+      ).toEqual({
+        ...shown,
+        detail: "not reached from this report: unknown, a report file could not be read",
+      });
+    });
+    it("counts a LocalDateTable_ table that is not calculated, such as a composite model's copy with an entity partition", () => {
+      // The copy a composite model makes of a published model's auto table reads from that model,
+      // so it is not one of the tables Desktop adds to this one; the calculated pair beside it is.
+      const copy = dateTable(
+        "LocalDateTable_6d3e2a1b-4c5f-4e7a-9b8c-0d1e2f3a4b5c",
+        "entity\n\t\tmode: directQuery\n\t\tsource\n\t\t\tentityName: LocalDateTable_6d3e2a1b-4c5f-4e7a-9b8c-0d1e2f3a4b5c\n\t\t\texpressionSource: 'DirectQuery to AS - Sales'\n",
+      );
+      expect(modelFact(sales + store + copy + autoPair)).toEqual({
+        layer: "model",
+        label: "Model",
+        value: "3 tables, 6 columns, 2 measures",
+        detail: "4 columns and 1 measure not reached from this report",
+        ruleId: "NOT_REACHED_FROM_REPORT",
+      });
+    });
+    it("reads a model without auto date/time tables as before, an ordinary calculated table included", () => {
+      const grouping =
+        "table 'Store Grouping'\n\tcolumn Name\n\t\tdataType: string\n\n\tpartition 'Store Grouping' = calculated\n\t\tmode: import\n\t\tsource = DISTINCT('Store'[Name])\n";
+      expect(modelFact(sales + store + grouping)).toEqual({
+        layer: "model",
+        label: "Model",
+        value: "3 tables, 5 columns, 2 measures",
+        detail: "3 columns and 1 measure not reached from this report",
+        ruleId: "NOT_REACHED_FROM_REPORT",
+      });
+    });
   });
   it("says how many registered custom visual types are used is unknown while a visual.json could not be read, and links no rule for it", () => {
     const visualsFact = (...extra: { path: string; text: string }[]) => {

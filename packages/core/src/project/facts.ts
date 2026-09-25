@@ -1,5 +1,6 @@
 import { plural } from "../format/text.js";
 import type { Indexes } from "../index/build.js";
+import { isAutoDateTable } from "../model/names.js";
 import type { Report } from "../pbir/types.js";
 import {
   allVisuals,
@@ -268,12 +269,15 @@ export function buildFacts(
   const facts: Fact[] = reportFacts(project, project.report, knownRules);
   const model = project.model;
   if (model) {
-    const columns = model.tables.reduce((s, t) => s + t.columns.length, 0);
-    const measures = model.tables.reduce((s, t) => s + t.measures.length, 0);
+    // The tables Desktop shows: its auto date/time tables are hidden even from modelers, and the
+    // not-reached clause below leaves them out too.
+    const shown = model.tables.filter((t) => !isAutoDateTable(t));
+    const columns = shown.reduce((s, t) => s + t.columns.length, 0);
+    const measures = shown.reduce((s, t) => s + t.measures.length, 0);
     const fact: Fact = {
       layer: "model",
       label: "Model",
-      value: `${n(model.tables.length, "table")}, ${n(columns, "column")}, ${n(measures, "measure")}`,
+      value: `${n(shown.length, "table")}, ${n(columns, "column")}, ${n(measures, "measure")}`,
     };
     const reach = indexes.reachability;
     // Unknown when a file the report's field references are read from could not be read, the case

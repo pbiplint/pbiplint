@@ -723,8 +723,11 @@ parse does, and a folder as every file it could hold (section 4). While
 the model has an unread path, the report reference index resolves a
 reference to a table the model does not have, or to a field missing
 from any table, to `unread`, since that path could declare any table
-and anything under one, and the reason names the path, as `no table
-named "Store", and definition/tables/Store.tmdl could not be read`.
+and anything under one, and the reason names the first unread path, as
+`no table named "Store", and definition/tables/Store.tmdl could not be
+read`, except that for a field missing from a table, a model file that
+declares the table and has a parse issue that can drop an object is
+named ahead of it.
 
 **Cost.** Linear in the JSON. The demo report's largest visual is
 61 KB, most under 5 KB; a 300-visual report is a few megabytes and
@@ -1141,7 +1144,9 @@ be read. `BROKEN_ACTION_TARGET` does not report a bookmark target whose
 `<name>.bookmark.json` exists but could not be read, nor a page target
 whose page.json could not be read; with a visual of that page read, the
 page was already one named by its folder, and a page with none read is
-now covered too.
+now covered too. Amended 2026-09-25 with Michael (pull request 7, #81):
+a folder under the definition folder that could not be listed quiets a
+target or a capture it could hold, as an unread file does (section 4).
 
 Mobile layouts and themes are facts only in v2.
 

@@ -29,16 +29,6 @@ Do these once, at the first release, not before.
 
    From then on the workflow publishes without a token and npm attaches provenance.
 
-## Release hold until the report layer is live
-
-From the merge of the v2 plan's pull request 2 until pull request 7 sets `SITE_LAYERS` to both
-families, publish nothing from main. The CLI on main links to the report rule pages, and the site
-does not publish those pages until pull request 7 (decision 15 in
-`docs/superpowers/plans/2026-09-20-pbiplint-v2-report-layer.md`), so a release cut in that window
-would send its users to pages that do not exist yet. If a 0.1.x patch is needed meanwhile, cut it
-from a branch off the `v0.1.2` tag and tag that branch's release commit, not main. The 0.2.0
-release pull request removes this section.
-
 ## Every release
 
 1. On a branch from main, set the version in both packages and regenerate the core's version file:
@@ -49,8 +39,9 @@ release pull request removes this section.
    npm run version:sync
    ```
 
-   Set the same version, and the date, in the Status section of `README.md`, which nothing
-   regenerates. Then run every check:
+   Set the same version in the Status section of `README.md`, which nothing regenerates. Give it
+   no date: the README on GitHub goes live at the merge, before the tag publishes the packages,
+   and the releases page dates each version. Then run every check:
 
    ```bash
    npm test && npm run build && npm run check:pack
@@ -112,6 +103,32 @@ in step 4 above, and push the tag, which creates the GitHub release and skips th
 because both versions are already on the registry. Note what that means: a tag pushed after a
 manual publish exercises none of the publishing path, so it proves the workflow runs and nothing
 more. The first release that actually publishes is the first real test of it.
+
+## Model parity expectations
+
+The model rules are pinned to the Tabular Editor 3 command line, `te`, a development-time oracle
+only. The commands that refresh a model expectation file are in CONTRIBUTING.md under "Refreshing
+parity expectations".
+
+Every model expectation file was captured with the 0.5.2 preview build, which stops working on
+September 30, 2026. Tabular Editor CLI 0.7.0 extends the preview to October 31, 2026, and stops
+working after that date too, so a re-capture after October 31, 2026 needs the build Tabular Editor's
+installation page then offers. The 0.7.0 release post adds, "After the preview period, a license
+will be required." To install 0.7.0, sign in with a Tabular Editor account, download the build for
+your platform, and overwrite the old one. It also changes the JSON output of `te bpa run`, which
+reports a `summary` and a `findings` array in place of the `results` array that
+`scripts/te-expectations.mjs` reads, and it drops the VertiPaq rules and the `--vpa-rules` option.
+
+So a re-capture after September 30, 2026 first installs 0.7.0 (or, after October 31, 2026, the build
+the installation page then offers), teaches `scripts/te-expectations.mjs` the new shape, and checks
+every model expectation against that build before committing one that changed. Pass `--oracle`
+naming the new build as well: without it, the script keeps the oracle string already in the file, or
+writes its default, and both name 0.5.2.
+
+Sources: Tabular Editor's release post,
+[Tabular Editor CLI 0.7.0](https://tabulareditor.com/blog/tabular-editor-cli-0-7-0-release)
+(September 14, 2026), and its
+[installation page](https://docs.tabulareditor.com/en/features/te-cli/te-cli-install.html).
 
 ## Report parity expectations
 

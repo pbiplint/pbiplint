@@ -303,7 +303,7 @@ describe("pbiplint CLI", () => {
   it("names a .pbix, says how to save it as a Power BI project, and exits 2 (tracked in #88)", async () => {
     const dir = mkdtempSync(join(tmpdir(), "pbiplint-pbix-"));
     const how =
-      "is a Power BI Desktop file (.pbix), which pbiplint cannot read. pbiplint reads a report saved as a Power BI project (PBIP). In Power BI Desktop, choose File > Save as and pick Power BI project files (*.pbip) as the file type (if it isn't offered, first turn on Power BI Project (.pbip) save option under File > Options and settings > Options > Preview features).";
+      "is a Power BI Desktop file (.pbix), which pbiplint cannot read. pbiplint reads a report saved as a Power BI project (PBIP). In Power BI Desktop, open File > Options and settings > Options > Preview features and turn on each of these it lists: Power BI Project (.pbip) save option, Store reports using enhanced metadata format (PBIR), and Store semantic model using TMDL format. Then choose File > Save as and pick Power BI project files (*.pbip) as the file type.";
     try {
       const file = join(dir, "Sales.pbix");
       writeFileSync(file, "");

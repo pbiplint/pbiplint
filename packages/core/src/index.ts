@@ -23,6 +23,7 @@ export {
   type RuleSummary,
 } from "./engine/rank.js";
 export { runRules, type RuleError, type RunResult, type SkippedRule } from "./engine/run.js";
+export { showControls } from "./format/controls.js";
 export {
   factsLines,
   FORMATS,

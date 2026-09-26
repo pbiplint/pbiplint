@@ -11,6 +11,7 @@ import {
   formatText,
   FORMATS,
 } from "../src/format/index.js";
+import { showControls } from "../src/index.js";
 
 const files = [
   { path: "definition/model.tmdl", text: "model Model\n\tculture: en-US\n" },
@@ -583,5 +584,152 @@ describe("a whole-project report", () => {
     };
     expect(pbipUri("proj/Demo.Report")).toBe("proj/Demo.pbip");
     expect(pbipUri("../proj/Demo.Report")).toBe("../proj/Demo.pbip");
+  });
+});
+
+describe("showControls", () => {
+  it("writes each control character as \\u and four lowercase hex digits", () => {
+    for (const [raw, shown] of [
+      ["\u0000", "\\u0000"],
+      ["\u001b", "\\u001b"],
+      ["\u001f", "\\u001f"],
+      ["\u007f", "\\u007f"],
+      ["\u0080", "\\u0080"],
+      ["\u009f", "\\u009f"],
+      ["\u202a", "\\u202a"],
+      ["\u202e", "\\u202e"],
+      ["\u2066", "\\u2066"],
+      ["\u2069", "\\u2069"],
+    ])
+      expect(showControls(raw!), shown).toBe(shown);
+    expect(showControls("Evil\u001b[2J\nName\u202e")).toBe("Evil\\u001b[2J\\u000aName\\u202e");
+  });
+  it("leaves a character just outside each range, and a plain string, as it is", () => {
+    for (const c of ["\u0020", "\u007e", "\u00a0", "\u2029", "\u202f", "\u2065", "\u206a"])
+      expect(showControls(c), c.codePointAt(0)!.toString(16)).toBe(c);
+    // Accented letters, CJK, emoji, and a backslash already in a name print as they are.
+    const plain = "'Sales'[Total é] 売上 📈 C:\\Reports\\u001b";
+    expect(showControls(plain)).toBe(plain);
+  });
+});
+
+describe("control characters from the input", () => {
+  // eslint-disable-next-line no-control-regex -- finding control characters is what this is for
+  const RAW_CONTROL = /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/;
+  // The same less the newline, which is the document's own line break.
+  // eslint-disable-next-line no-control-regex -- finding control characters is what this is for
+  const RAW_IN_JSON = /[\u0000-\u0009\u000b-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/;
+  const hostileName = "Evil\u001b[2J\nName";
+  const hostileFile = "definition/tables/S\u0007ales.tmdl";
+  const hostile: Rule = {
+    id: "HOSTILE",
+    name: "Hostile names",
+    category: "Maintenance",
+    severity: 2,
+    scope: ["Measure"],
+    layer: "model",
+    needs: ["model"],
+    description: "",
+    references: [],
+    status: "ported",
+    check: () => [
+      {
+        ruleId: "HOSTILE",
+        layer: "model",
+        objectType: "Measure",
+        objectName: hostileName,
+        location: { file: hostileFile, line: 2 },
+        detail: "right\u202eleft",
+      },
+      {
+        ruleId: "HOSTILE",
+        layer: "model",
+        objectType: "Measure",
+        objectName: "Plain",
+        location: { file: "definition/tables/Sales.tmdl", line: 5 },
+        detail: "plain",
+      },
+    ],
+  };
+  const crashing: Rule = {
+    ...hostile,
+    id: "CRASHING",
+    name: "Crashing",
+    check() {
+      throw new Error("failed on \u009b2J");
+    },
+  };
+  const needsReport: Rule = {
+    ...hostile,
+    id: "NEEDS_REPORT",
+    name: "Needs report",
+    needs: ["report"],
+  };
+  const run = lint(files, {
+    rules: [hostile, crashing, needsReport],
+    diagnostics: [
+      { kind: "unread-file", path: "x", message: "Bad\u001b]0;title\u0007 could not be read" },
+    ],
+    absent: { report: "this report reads a model outside the input (..\u202e\\M)" },
+  });
+  const noRaw = (text: string) => text.split("\n").filter((line) => RAW_CONTROL.test(line));
+
+  it("shows them in the text format, and nothing raw reaches the output", () => {
+    const text = formatText(run);
+    expect(noRaw(text)).toEqual([]);
+    const lines = text.split("\n");
+    const name = "Evil\\u001b[2J\\u000aName";
+    const file = "definition/tables/S\\u0007ales.tmdl:2";
+    // The columns are measured on the shown text, so the detail column still lines up.
+    expect(lines).toContain(`       ${name}  ${file}  right\\u202eleft`);
+    expect(lines).toContain(
+      `       ${"Plain".padEnd(name.length)}  ${"definition/tables/Sales.tmdl:5".padEnd(file.length)}  plain`,
+    );
+    expect(lines).toContain("Notice: Bad\\u001b]0;title\\u0007 could not be read");
+    expect(lines[1]).toContain(
+      "1 rule skipped (this report reads a model outside the input (..\\u202e\\M))",
+    );
+    expect(lines).toContain("  CRASHING: failed on \\u009b2J");
+  });
+
+  it("shows them in a fact's value, and the rule column still lines up", () => {
+    const j = (v: unknown) => JSON.stringify(v);
+    const text = formatText(
+      lint([
+        ...files,
+        { path: "definition/report.json", text: j({}) },
+        { path: "definition/pages/pages.json", text: j({ pageOrder: ["p"], activePageName: "p" }) },
+        {
+          path: "definition/pages/p/page.json",
+          text: j({ name: "p", displayName: "Over\u001b[2J\u202eview" }),
+        },
+      ]),
+    );
+    expect(noRaw(text)).toEqual([]);
+    const opens = text.split("\n").find((l) => l.startsWith("  Opens on"))!;
+    const model = text.split("\n").find((l) => l.startsWith("  Model "))!;
+    expect(opens).toMatch(/^ {2}Opens on +Over\\u001b\[2J\\u202eview \(the page open/);
+    expect(opens.indexOf("LANDING_PAGE_NOT_SET")).toBe(model.indexOf("NOT_REACHED_FROM_REPORT"));
+  });
+
+  it("escapes DEL, C1, and the bidirectional controls in JSON and SARIF, which parse to the same value", () => {
+    const raw = "a\u001b\u007f\u0080\u009b\u009f\u202a\u202e\u2066\u2069\n\tz";
+    const named: Rule = {
+      ...hostile,
+      check: () => [
+        { ruleId: "HOSTILE", layer: "model", objectType: "Measure", objectName: raw, detail: raw },
+      ],
+    };
+    const result = lint(files, { rules: [named] });
+    const json = formatJson(result);
+    const sarif = formatSarif(result);
+    for (const out of [json, sarif]) expect(RAW_IN_JSON.test(out)).toBe(false);
+    expect(json).toContain(
+      '"objectName": "a\\u001b\\u007f\\u0080\\u009b\\u009f\\u202a\\u202e\\u2066\\u2069\\n\\tz"',
+    );
+    expect(JSON.parse(json).groups[0].findings[0].objectName).toBe(raw);
+    expect(JSON.parse(sarif).runs[0].results[0].message.text).toBe(
+      `${raw}: Hostile names (${raw})`,
+    );
   });
 });

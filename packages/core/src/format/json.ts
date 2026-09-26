@@ -1,5 +1,6 @@
 import type { LintResult } from "../engine/lint.js";
 import { VERSION } from "../version.js";
+import { escapeJsonControls } from "./controls.js";
 import type { FormatOptions } from "./text.js";
 
 export function formatJson(result: LintResult, options: FormatOptions = {}): string {
@@ -23,5 +24,6 @@ export function formatJson(result: LintResult, options: FormatOptions = {}): str
       })),
     })),
   };
-  return JSON.stringify(doc, null, 2) + "\n";
+  // No control character reaches a terminal the document is printed to, as in the text format.
+  return escapeJsonControls(JSON.stringify(doc, null, 2)) + "\n";
 }

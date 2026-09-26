@@ -14,6 +14,9 @@ import { describe, expect, it } from "vitest";
 import { main } from "../src/main.js";
 
 const repo = new URL("../../../", import.meta.url).pathname;
+// A control character a terminal would act on, as the CLI must never write one raw.
+// eslint-disable-next-line no-control-regex -- finding control characters is what this is for
+const RAW_CONTROL = /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/;
 const sample = join(repo, "examples/messy-sales");
 
 async function run(argv: string[], cwd = repo) {
@@ -669,6 +672,62 @@ describe("pbiplint CLI", () => {
       }
     },
   );
+  it.skipIf(onWindows)(
+    "shows the control characters in a name instead of sending them to the terminal",
+    async () => {
+      // Windows refuses a control character in a file name, so the notice's folder cannot exist
+      // there. The measure's name holds the escape sequence that clears the screen, DEL, the C1
+      // control that starts a sequence on its own (CSI), and a right-to-left override.
+      const root = mkdtempSync(join(tmpdir(), "pbiplint-controls-"));
+      const name = "Evil\u001b[2J\u007f\u009b\u202eX";
+      try {
+        const tables = join(root, "Demo.SemanticModel", "definition", "tables");
+        mkdirSync(tables, { recursive: true });
+        writeFileSync(
+          join(root, "Demo.SemanticModel", "definition", "model.tmdl"),
+          "model Model\n",
+        );
+        writeFileSync(join(tables, "T.tmdl"), `table T\n\tmeasure '${name}' = 1\n`);
+        mkdirSync(join(root, "Bad\u001b[2J.Report"));
+        writeFileSync(join(root, "Bad\u001b[2J.Report", "report.json"), "{}");
+        const notice =
+          "pbiplint: notice: Bad\\u001b[2J.Report is stored as a single report.json, which pbiplint cannot read; save it in the PBIR format from Power BI Desktop\n";
+
+        const text = await run([root, "--fail-on", "none"]);
+        expect(text.out).toContain("[Evil\\u001b[2J\\u007f\\u009b\\u202eX]");
+        expect(RAW_CONTROL.test(text.out.replace(/\n/g, ""))).toBe(false);
+        expect(text.err).toBe(notice);
+
+        const json = await run([root, "--format", "json", "--fail-on", "none"]);
+        const names = JSON.parse(json.out).groups.flatMap(
+          (g: { findings: { objectName: string }[] }) => g.findings.map((f) => f.objectName),
+        );
+        expect(names).toContain(`[${name}]`);
+        expect(RAW_CONTROL.test(json.out.replace(/\n/g, ""))).toBe(false);
+        expect(json.err).toBe(notice);
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+  );
+  it("shows the control characters in a usage error and a config's rule id on stderr", async () => {
+    const missing = await run([join(repo, "nope\u001b[2J")]);
+    expect(missing.code).toBe(2);
+    expect(missing.err).toBe(
+      `pbiplint: ${join(repo, "nope")}\\u001b[2J does not exist\nRun pbiplint --help for usage.\n`,
+    );
+    const dir = mkdtempSync(join(tmpdir(), "pbiplint-cfg-controls-"));
+    try {
+      const cfg = join(dir, "pbiplint.config.json");
+      writeFileSync(cfg, JSON.stringify({ rules: { "NOPE\u202e\u009b": "off" } }));
+      const r = await run([sample, "--config", cfg, "--format", "json", "--fail-on", "none"]);
+      expect(r.err).toBe(
+        'pbiplint: pbiplint.config.json: no rule named "NOPE\\u202e\\u009b" (run pbiplint rules for the list)\n',
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
   it("lists the layer of every rule", async () => {
     const r = await run(["rules"]);
     expect(r.out).toMatch(/^PARSE_ISSUE\s+project\s+builtin/m);

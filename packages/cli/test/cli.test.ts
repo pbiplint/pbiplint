@@ -645,6 +645,24 @@ describe("pbiplint CLI", () => {
     expect(r.err).toMatch(/^pbiplint: unexpected error: TypeError: .* without null bytes/);
     expect(r.err).toMatch(/\n\s+at resolveProject /);
     expect(r.err).not.toContain("Could not read");
+    // A line break in the error's own message is shown, not written, so it cannot forge a line of
+    // its own; the stack's frames follow it, one to a line.
+    let err = "";
+    const code = await main(["."], {
+      stdout: () => {},
+      stderr: (s) => (err += s),
+      cwd: () => {
+        throw new Error("boom\npbiplint: 0 findings\n    at forged (x.js:1:1)");
+      },
+    });
+    expect(code).toBe(2);
+    const [first, ...rest] = err.split("\n");
+    expect(first).toBe(
+      "pbiplint: unexpected error: Error: boom\\u000apbiplint: 0 findings\\u000a    at forged (x.js:1:1)",
+    );
+    expect(rest.at(-1)).toBe("");
+    expect(rest.length).toBeGreaterThan(1);
+    for (const line of rest.slice(0, -1)) expect(line).toMatch(/^ {4}at (?!forged)/);
   });
   it.skipIf(noModes)("refuses an input folder it cannot read at all, naming it", async () => {
     const root = pbipProject("pbiplint-locked-input-");

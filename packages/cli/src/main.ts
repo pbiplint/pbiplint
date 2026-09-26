@@ -110,10 +110,27 @@ export async function main(argv: string[], io: Io): Promise<number> {
       if (e instanceof UsageError) stderrLine(`Run pbiplint --help for usage.`);
       return 2;
     }
-    // A stack's lines are shown one by one, so its own line breaks stay.
-    const detail = e instanceof Error ? (e.stack ?? e.message) : String(e);
-    for (const [i, line] of detail.split("\n").entries())
+    for (const [i, line] of unexpectedLines(e).entries())
       stderrLine(i === 0 ? `pbiplint: unexpected error: ${line}` : line);
     return 2;
   }
+}
+
+/**
+ * An unexpected error as lines for stderr: its name and message, then each frame of its stack. The
+ * message can hold a line break of its own, so the stack is split only after the message, and the
+ * name and message stay one line, where `showControls` shows the break as `\u000a` and no message
+ * can write a line that reads as the CLI's. The stack starts with what `String(e)` gives, or with
+ * the name and message where a stack formatter writes those alone (as the test runner's does); a
+ * stack that starts with neither is shown whole on the one line.
+ */
+function unexpectedLines(e: unknown): string[] {
+  const head = String(e);
+  if (!(e instanceof Error) || typeof e.stack !== "string") return [head];
+  const stack = e.stack;
+  const header = [head, `${e.name}: ${e.message}`].find(
+    (h) => stack === h || stack.startsWith(`${h}\n`),
+  );
+  if (header === undefined) return [stack];
+  return stack === header ? [header] : [header, ...stack.slice(header.length + 1).split("\n")];
 }

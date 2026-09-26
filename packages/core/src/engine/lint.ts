@@ -3,7 +3,7 @@ import { buildModel } from "../model/build.js";
 import type { Model } from "../model/types.js";
 import { buildReport } from "../pbir/build.js";
 import { buildFacts } from "../project/facts.js";
-import { routeFiles } from "../project/route.js";
+import { isModelFile, isReportFile, routeFiles } from "../project/route.js";
 import type { Diagnostic, Fact, Layers, Project } from "../project/types.js";
 import { defaultRules } from "../rules/index.js";
 import type { Finding, LayerName, Rule } from "../rules/types.js";
@@ -34,16 +34,19 @@ export interface LintOptions {
   /**
    * What the input reader could not read, per layer, like `absent`: each path relative to that
    * part's root in forward slashes, as every `LintFile.path` is (`definition/tables/Store.tmdl`),
-   * and a folder written with a trailing `/` (`definition/tables/`). Per layer because a folder's
-   * name cannot route it the way a file's does: both parts have a `definition` folder. The reader
-   * names each path in its own `unread-file` diagnostic; this tells the layers what they lack, so
-   * no finding or fact states what pbiplint did not read. A model path, a `.tmdl` file or a
-   * folder, makes the model one pbiplint could not fully read (`Model.unreadPaths`). A report file
-   * the PBIR format defines under the definition folder counts as one that failed to parse, and a
-   * folder there as every such file it could hold (`Report.unreadDefinitionFiles` and
-   * `Report.unreadDefinitionFolders`); definition.pbir, the .platform, and the .pbip name no field,
-   * so passing one changes nothing. No path is a PARSE_ISSUE finding. A path is ignored when its
-   * layer is absent, since nothing of that layer was read.
+   * and a folder written with a trailing `/` (`definition/tables/`). A path written without its
+   * trailing `/` is read as a folder unless it is a file the layer reads (a `.tmdl` file for the
+   * model, a report file `isReportFile` accepts for the report), so a caller passes only such files
+   * and folders, as the CLI and the browser do. Per layer because a folder's name cannot route it
+   * the way a file's does: both parts have a `definition` folder. The reader names each path in its
+   * own `unread-file` diagnostic; this tells the layers what they lack, so no finding or fact
+   * states what pbiplint did not read. A model path, a `.tmdl` file or a folder, makes the model
+   * one pbiplint could not fully read (`Model.unreadPaths`). A report file the PBIR format defines
+   * under the definition folder counts as one that failed to parse, and a folder there as every
+   * such file it could hold (`Report.unreadDefinitionFiles` and `Report.unreadDefinitionFolders`);
+   * definition.pbir, the .platform, and the .pbip name no field, so passing one changes nothing. No
+   * path is a PARSE_ISSUE finding. A path is ignored when its layer is absent, since nothing of
+   * that layer was read.
    */
   unreadPaths?: Partial<Record<LayerName, string[]>>;
 }
@@ -85,7 +88,13 @@ export function lint(files: LintFile[], options: LintOptions = {}): LintResult {
     rules,
   );
   const routed = routeFiles(files);
-  const unread = options.unreadPaths ?? {};
+  // A path that names no file the layer reads is a folder, written with its trailing `/` or not.
+  const folders = (paths: string[] | undefined, isFile: (path: string) => boolean) =>
+    paths?.map((p) => (isFile(p) || p.endsWith("/") ? p : `${p}/`));
+  const unread = {
+    model: folders(options.unreadPaths?.model, isModelFile),
+    report: folders(options.unreadPaths?.report, isReportFile),
+  };
   const model = routed.model.length
     ? buildModel(
         routed.model.map((f) => parseTmdl(f.path, f.text)),

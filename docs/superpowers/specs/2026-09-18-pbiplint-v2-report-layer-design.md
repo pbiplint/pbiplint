@@ -374,7 +374,13 @@ folder any file of its kind, and `definition/` anything. The page or
 visual such a folder names is recorded as its own file would record it.
 An unread definition.pbir, `.platform`, or `.pbip` changes nothing,
 since none names a field. No unread path is a `PARSE_ISSUE` finding:
-the `unread-file` notice names it, and the notice is unchanged.
+the `unread-file` notice names it, and the notice is unchanged. Amended
+2026-09-25 with Michael (release triage, batch F): a path written
+without its trailing `/` is read as a folder when it is not a file the
+layer reads (a `.tmdl` file for the model, a report file for the
+report), so the model's `.platform` given to the model layer counts as
+a folder there. A caller passes only such files and folders, as the CLI
+and the browser do.
 
 Amended 2026-09-25 with Michael (pull request 7, #86): a `.pbip` given
 to the CLI resolves to the one report its `artifacts` entry names,

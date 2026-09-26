@@ -429,6 +429,34 @@ before, and core still reports one that is not valid JSON. Folder
 input, and a `.pbip` found inside a folder given as input, are
 unchanged, refusals included.
 
+Amended 2026-09-25 with Michael (release triage, batch F): a `.pbix` is
+recognised by its name alone, compared without regard to case
+(`Sales.PBIX` too), and never opened, on either surface. When nothing
+can be linted and nothing else explains why, the refusal names it and
+says how to save the report as a Power BI project, in place of saying
+that no model or report was found (or, for a `.pbix` given to the CLI,
+that the file is not an input it takes). It names the first `.pbix` the
+walk meets, in the CLI's walk order, and says how many more there are;
+the path is joined to the input, as the refusal of a run of which
+nothing could be read joins it, and the browser gives the same path
+relative to the drop. The CLI's walk is its walk for loose `.tmdl`
+files, the whole folder but the folders it skips; the browser's is its
+walk of the drop, a `.pbix` dropped on its own included. Core builds
+the words, which name the dialog and the option as Learn's Power BI
+Desktop projects page (projects-overview) labels them, the preview
+option as a condition since Microsoft has announced the format
+generally available: `Demo/Sales.pbix is a Power BI Desktop file
+(.pbix), which pbiplint cannot read. pbiplint reads a report saved as a
+Power BI project (PBIP). In Power BI Desktop, choose File > Save as and
+pick Power BI project files (*.pbip) as the file type (if it isn't
+offered, first turn on Power BI Project (.pbip) save option under
+File > Options and settings > Options > Preview features).` A `.pbix`
+beside anything else changes nothing: a run that lints anything, a
+legacy part's notice, a refused read, the refusals of two reports or
+two models, the `.pbip` route's own refusals, and the browser's refusal
+of a model folder that holds no `.tmdl` files stand as they were, with
+no notice for the `.pbix`, which is never among the files read.
+
 ## 5. PBIR parser and report object model
 
 **Parser.** Plain JSON, read tolerantly: unknown properties ignored;

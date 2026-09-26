@@ -1333,6 +1333,14 @@ saved`, when the `Where` is one `Contains` whose right side is a
 non-empty string literal (the enclosing single quotes stripped and a
 doubled `''` read as one `'`), and reads `opens with a search term
 saved` otherwise. The rule is a warning with no policy and no options.
+Amended 2026-09-25 with Michael (release triage, batch F): Michael
+checked the Power BI service, where a reader sees whatever was in the
+search box when the report was saved, with the slicer's list narrowed
+to the values that match it; the search narrows only that list, and
+whether other visuals are filtered depends on what is selected in the
+slicer. He checked the fix too: deleting the term, or selecting the
+slicer's eraser, then saving leaves the box empty when the report is
+reopened.
 
 Mobile layouts and themes are facts only in v2.
 

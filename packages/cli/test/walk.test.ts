@@ -574,6 +574,44 @@ describe("resolveProject and what it could not read", () => {
     },
   );
   it.skipIf(noModes)(
+    "names the path its walk meets first when nothing could be read, as the browser names it",
+    () => {
+      // The trees packages/web/test/project-files.test.ts drops: a folder is walked into where
+      // its name sorts, so tables/Sales.tmdl is met before tables.old, and a report's
+      // definition.pbir is read before its .platform and its definition folder.
+      const root = mkdtempSync(join(tmpdir(), "pbiplint-first-refused-"));
+      const def = join(root, "Demo.SemanticModel", "definition");
+      const tableIn = (folder: string): void => {
+        mkdirSync(join(def, folder), { recursive: true });
+        writeFileSync(join(def, folder, "Sales.tmdl"), "table Sales\n");
+      };
+      tableIn("tables");
+      tableIn("tables.old");
+      const model = join(root, "Demo.SemanticModel");
+      const sales = join(def, "tables", "Sales.tmdl");
+      expect(() => locked([join(def, "tables.old"), sales], () => resolveProject(model))).toThrow(
+        `Could not read ${model}/definition/tables/Sales.tmdl: EACCES: permission denied`,
+      );
+      tableIn("cultures");
+      expect(() =>
+        locked([sales, join(def, "tables.old"), join(def, "cultures")], () =>
+          resolveProject(model),
+        ),
+      ).toThrow(`Could not read ${model}/definition/cultures: EACCES: permission denied`);
+      const report = join(root, "Demo.Report");
+      reportAt(report, { byPath: { path: "../Demo.SemanticModel" } });
+      writeFileSync(join(report, ".platform"), "{}");
+      rmSync(join(report, "definition", "pages"), { recursive: true });
+      const files = ["definition/report.json", ".platform", "definition.pbir"];
+      expect(() =>
+        locked(
+          files.map((f) => join(report, f)),
+          () => resolveProject(report),
+        ),
+      ).toThrow(`Could not read ${report}/definition.pbir: EACCES: permission denied`);
+    },
+  );
+  it.skipIf(noModes)(
     "leaves the model out with a reason when the named report's definition.pbir cannot be read",
     () => {
       const root = workspace();

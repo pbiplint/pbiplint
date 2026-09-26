@@ -528,6 +528,88 @@ describe("selectProject", () => {
       selectProject(both("Proj/Demo.Report", "Proj/Demo.SemanticModel/definition")),
     ).toThrow(new InputError("Could not read Proj/Demo.SemanticModel/definition: model locked"));
   });
+  /**
+   * A drop of which nothing could be read: each of `refused` failed, in the order the walk met
+   * them, a path written with a trailing "/" being a folder. Each reason names the path's last
+   * segment, so the error shows which notice it came from.
+   */
+  const nothingRead = (parts: Partial<InputTree>, ...refused: string[]): InputTree => {
+    const paths = refused.map((p) => p.replace(/\/$/, ""));
+    const reason = (p: string): string => `${p.slice(p.lastIndexOf("/") + 1)} locked`;
+    return {
+      ...emptyTree(),
+      ...parts,
+      diagnostics: paths.map((p) => unreadAt(p, reason(p))),
+      unreadFolders: refused.filter((p) => p.endsWith("/")).map((p) => p.slice(0, -1)),
+      refusal: { path: paths[0]!, reason: reason(paths[0]!) },
+    };
+  };
+  it("names the path the CLI's walk meets first within one read: each folder's entries by name, depth first", () => {
+    // The walk met each pair in the reverse of the CLI's order, as a drop may list a folder's
+    // entries in any order; the CLI lists each folder sorted by name.
+    const model = { modelFolders: ["Proj/Demo.SemanticModel"] };
+    const def = "Proj/Demo.SemanticModel/definition";
+    expect(() =>
+      selectProject(nothingRead(model, `${def}/tables/b.tmdl`, `${def}/model.tmdl`)),
+    ).toThrow(new InputError(`Could not read ${def}/model.tmdl: model.tmdl locked`));
+    expect(() => selectProject(nothingRead(model, `${def}/tables/`, `${def}/cultures/`))).toThrow(
+      new InputError(`Could not read ${def}/cultures: cultures locked`),
+    );
+    // By name as localeCompare(…, "en") has it, which puts budget before Sales, where comparing
+    // code units would put Sales first.
+    expect(() =>
+      selectProject(nothingRead(model, `${def}/tables/Sales.tmdl`, `${def}/tables/budget.tmdl`)),
+    ).toThrow(new InputError(`Could not read ${def}/tables/budget.tmdl: budget.tmdl locked`));
+    // A plain folder's loose .tmdl files are one read, walked the same way.
+    expect(() => selectProject(nothingRead({}, "stuff/deeper/b.tmdl", "stuff/a.tmdl"))).toThrow(
+      new InputError("Could not read stuff/a.tmdl: a.tmdl locked"),
+    );
+  });
+  it("names a report's definition.pbir, then its .platform, then its definition folder's paths, as the CLI's reportPart reads them", () => {
+    const report = { reportFolders: ["Proj/Demo.Report"] };
+    const at = "Proj/Demo.Report";
+    // By name, the definition folder sorts before definition.pbir, and .platform before both.
+    expect(() =>
+      selectProject(nothingRead(report, `${at}/definition/report.json`, `${at}/definition.pbir`)),
+    ).toThrow(new InputError(`Could not read ${at}/definition.pbir: definition.pbir locked`));
+    expect(() =>
+      selectProject(
+        nothingRead(
+          report,
+          `${at}/definition/report.json`,
+          `${at}/.platform`,
+          `${at}/definition.pbir`,
+        ),
+      ),
+    ).toThrow(new InputError(`Could not read ${at}/definition.pbir: definition.pbir locked`));
+    expect(() =>
+      selectProject(nothingRead(report, `${at}/definition/pages/`, `${at}/.platform`)),
+    ).toThrow(new InputError(`Could not read ${at}/.platform: .platform locked`));
+    // A report dropped alone, as the CLI's test locks one.
+    expect(() =>
+      selectProject(
+        nothingRead(
+          { reportFolders: ["Demo.Report"] },
+          "Demo.Report/definition/report.json",
+          "Demo.Report/.platform",
+          "Demo.Report/definition.pbir",
+        ),
+      ),
+    ).toThrow(new InputError("Could not read Demo.Report/definition.pbir: definition.pbir locked"));
+  });
+  it("names a folder, or a file under a sibling folder, where its folder's name sorts", () => {
+    const model = { modelFolders: ["Demo.SemanticModel"] };
+    const def = "Demo.SemanticModel/definition";
+    // tables sorts before tables.old, so the CLI's walk has been through tables, and met
+    // Sales.tmdl, before it reaches tables.old. Comparing the whole paths as strings would name
+    // tables.old, since "." sorts before "/".
+    expect(() =>
+      selectProject(nothingRead(model, `${def}/tables.old/`, `${def}/tables/Sales.tmdl`)),
+    ).toThrow(new InputError(`Could not read ${def}/tables/Sales.tmdl: Sales.tmdl locked`));
+    expect(() =>
+      selectProject(nothingRead(model, `${def}/tables/Sales.tmdl`, `${def}/cultures/`)),
+    ).toThrow(new InputError(`Could not read ${def}/cultures: cultures locked`));
+  });
   it("names each notice relative to the project root, as the CLI names it relative to its input", () => {
     const cap = (path: string): Diagnostic => ({
       kind: "depth-cap",

@@ -182,6 +182,8 @@ interface Part {
 interface Read {
   covers: (path: string, folder: boolean) => boolean;
   part?: Part;
+  /** The order the CLI meets the paths this read covers, where it is not `walkOrder`. */
+  order?: (a: string, b: string) => number;
 }
 
 /** An `unread-file` notice of the tree, with whether its path is a folder. */
@@ -237,10 +239,13 @@ function reportRead(s: Selection, folder: string): Part | undefined {
   const def = join(folder, "definition");
   if (!s.dirs.has(def)) return undefined;
   const part: Part = { root: folder, files: [], sources: new Set(), unread: [] };
-  const own = new Set([join(folder, "definition.pbir"), join(folder, ".platform")]);
+  const own = [join(folder, "definition.pbir"), join(folder, ".platform")];
   const covers = (p: string, folder = false): boolean =>
-    folder ? atOrWithin(p, def) : own.has(p) || (within(p, def) && p.endsWith(".json"));
-  s.reads.push({ part, covers });
+    folder ? atOrWithin(p, def) : own.includes(p) || (within(p, def) && p.endsWith(".json"));
+  // The CLI reads definition.pbir, then .platform, and then walks the definition folder, so a
+  // path's place in that list comes before its place in the walk.
+  const rank = (p: string): number => (own.includes(p) ? own.indexOf(p) : own.length);
+  s.reads.push({ part, covers, order: (a, b) => rank(a) - rank(b) || walkOrder(a, b) });
   for (const e of s.tree.entries)
     if (covers(e.path)) {
       part.files.push({ path: relativeTo(e.path, folder), text: e.text });
@@ -259,15 +264,34 @@ const covered = (s: Selection, u: Unread): boolean =>
   s.reads.some((r) => r.covers(u.path, u.folder));
 
 /**
+ * The order the CLI's walk meets two paths in within one read. Its readTree
+ * (packages/cli/src/walk.ts) lists each folder's entries sorted by its byName, the same
+ * localeCompare(…, "en") as `byName` here, and walks into a folder where its name sorts, so a
+ * folder comes before everything in it. Comparing segment by segment gives that order where
+ * comparing whole paths would not: the walk is through `tables` and has met `tables/Sales.tmdl`
+ * before it reaches `tables.old`, though "tables.old" sorts before "tables/Sales.tmdl".
+ */
+function walkOrder(a: string, b: string): number {
+  const as = a.split("/");
+  const bs = b.split("/");
+  for (let i = 0; i < Math.min(as.length, bs.length); i++)
+    if (as[i] !== bs[i]) return byName(as[i]!, bs[i]!);
+  return as.length - bs.length;
+}
+
+/**
  * The notice a run of which nothing could be read is refused naming: the first path that refused
  * in the order the CLI's reads meet them (a folder as it is entered or listed, the model's reads
- * before the report's), since the CLI names the first refusal it met. Within one read, the walk's
- * order.
+ * before the report's), since the CLI names the first refusal it met. Within one read, the path
+ * the CLI meets first there, whatever order the drop listed them in.
  */
 function firstRefused(s: Selection): Unread | undefined {
   for (const r of s.reads) {
-    const u = s.unread.find((x) => r.covers(x.path, x.folder));
-    if (u) return u;
+    const order = r.order ?? walkOrder;
+    const [first] = s.unread
+      .filter((x) => r.covers(x.path, x.folder))
+      .sort((a, b) => order(a.path, b.path));
+    if (first) return first;
   }
   return undefined;
 }

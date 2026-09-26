@@ -798,6 +798,34 @@ policy, so its facts do not move. This supersedes the mockup's Filters
 pane, which linked the rule page with a hint to set a policy: without
 one the fact links nothing and adds no detail.
 
+Amended 2026-09-25 with Michael (release triage, batch F): a count of
+0 states that nothing is there, which pbiplint must not say about what
+it did not read, so three counts read unknown in place of 0 while what
+they count could not be read. Pages reads `unknown`, with `a page.json
+could not be read`, while a page.json could not be read or a folder
+that could hold one could not be (definition/, the pages folder, or a
+page's folder), so a report whose pages folder could not be listed no
+longer reads 0 pages beside an Opens on that names a page. Visuals
+reads `unknown` while a visual.json, or a folder that could hold one,
+could not be read, the condition the Slicers fact reads, and its
+detail names the reason once: `a visual.json could not be read`, or,
+with a custom visual type registered, the custom visual clause, which
+already ends with it (`1 custom visual type registered, used: unknown,
+a visual.json could not be read`). Each of the Model fact's table,
+column, and measure counts that would read 0 reads `tables: unknown`,
+`columns: unknown`, or `measures: unknown` while the model could not
+be fully read, the condition of the #81 note above; its not-reached
+clause gives that reason, and when the clause gives the report file's
+reason instead, the detail adds the model's after it: `not reached
+from this report: unknown, a report file could not be read; a model
+file could not be fully read`. A report file that could not be read
+makes no model count unknown, since it declares no model object. A
+count above 0 stays as it is, a lower bound (ruling H71), and the
+hidden counts, shown only above 0, are unchanged. This narrows two
+earlier readings to counts above 0: the H71 note's, which kept Pages
+and the Visuals count as they were, and the #81 note's, which kept the
+Model fact's table, column, and measure counts.
+
 **Cost.** Linear in the JSON. The demo report's largest visual is
 61 KB, most under 5 KB; a 300-visual report is a few megabytes and
 lints well under a second in the browser. No new dependency.

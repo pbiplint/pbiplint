@@ -1442,8 +1442,10 @@ the browser gives now names the path the CLI's walk meets first,
 whatever order the drop listed them in: each folder's entries in name
 order, a folder's contents before its next sibling, and a report's
 `definition.pbir`, then its `.platform`, before its `definition`
-folder, as the CLI's `reportPart` reads them. The two name the same
-path.
+folder, as the CLI's `reportPart` reads them. So the two name the
+same path, unless two different names in one folder compare equal in
+that name order, where the CLI keeps the order its listing gave and
+the browser the order of the drop.
 
 ## 13. CLI changes
 

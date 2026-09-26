@@ -21,23 +21,31 @@ export const isReportFile = (path: string): boolean =>
 export const isPbix = (path: string): boolean => /\.pbix$/i.test(path);
 
 /**
- * How to save a report as a Power BI project, in the labels Learn gives the menu path, the file
- * type, and the option.
+ * How to save a report as a Power BI project pbiplint can read, in the labels Learn gives the
+ * menu path, the three preview options, and the file type. The PBIR and TMDL options are named
+ * because, without them, a PBIP save writes a report.json report and a model.bim model: pbiplint
+ * lints neither and gives the legacy-report-format and legacy-model-format notices instead.
  */
 const SAVE_AS_PROJECT =
-  "pbiplint reads a report saved as a Power BI project (PBIP). In Power BI Desktop, choose File > Save as and pick Power BI project files (*.pbip) as the file type (if it isn't offered, first turn on Power BI Project (.pbip) save option under File > Options and settings > Options > Preview features).";
+  "pbiplint reads a report saved as a Power BI project (PBIP). In Power BI Desktop, open File > Options and settings > Options > Preview features and turn on each of these it lists: Power BI Project (.pbip) save option, Store reports using enhanced metadata format (PBIR), and Store semantic model using TMDL format. Then choose File > Save as and pick Power BI project files (*.pbip) as the file type.";
 
 /**
  * The refusal of an input of which nothing can be linted, and which nothing else explains, when
  * the walk met a .pbix (spec section 4): it names `path`, the first .pbix the walk met, counts the
  * `others` it met besides, and says how to save the report as a Power BI project. The CLI and the
- * browser both give it, so the words cannot drift. The steps and their labels are Learn's, from
- * the Power BI Desktop projects page,
- * https://learn.microsoft.com/en-us/power-bi/developer/projects/projects-overview ("Save as a
- * project" and "Enable preview features"). The preview option is a condition rather than a step:
- * Learn still calls the format a preview, while Microsoft has since announced it generally
- * available (Microsoft 365 Message Center post MC1465770, September 2, 2026), so a newer Desktop
- * may not show the option.
+ * browser both give it, so the words cannot drift. The steps and their labels are Learn's: the
+ * menu paths, the file type, and Power BI Project (.pbip) save option from the Power BI Desktop
+ * projects page ("Enable preview features" and "Save as a project"),
+ * https://learn.microsoft.com/en-us/power-bi/developer/projects/projects-overview; Store reports
+ * using enhanced metadata format (PBIR) from the report folder page ("Enable the PBIR format
+ * preview feature"), https://learn.microsoft.com/en-us/power-bi/developer/projects/projects-report;
+ * and Store semantic model using TMDL format from the semantic model folder page ("Enable TMDL
+ * format Preview feature"),
+ * https://learn.microsoft.com/en-us/power-bi/developer/projects/projects-dataset. The options are
+ * a condition ("each of these it lists") rather than steps: Learn still calls each a preview,
+ * while Microsoft has announced PBIP generally available with PBIR as its default (Microsoft 365
+ * Message Center post MC1465770, September 2, 2026, not on Learn), so a newer Desktop may list
+ * fewer of them.
  */
 export function pbixRefusal(path: string, others = 0): string {
   const what =

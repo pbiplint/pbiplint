@@ -115,10 +115,11 @@ describe("pairingDecision", () => {
 });
 
 describe("a .pbix (tracked in #88)", () => {
-  // From Learn's Power BI Desktop projects page: the menu path, the file type, and the preview
-  // option, as Learn labels them.
+  // From Learn's Power BI Desktop projects pages: the menu path, the three preview options (the
+  // PBIP save, the PBIR report format, and the TMDL model format), and the file type, as Learn
+  // labels them.
   const HOW =
-    "pbiplint reads a report saved as a Power BI project (PBIP). In Power BI Desktop, choose File > Save as and pick Power BI project files (*.pbip) as the file type (if it isn't offered, first turn on Power BI Project (.pbip) save option under File > Options and settings > Options > Preview features).";
+    "pbiplint reads a report saved as a Power BI project (PBIP). In Power BI Desktop, open File > Options and settings > Options > Preview features and turn on each of these it lists: Power BI Project (.pbip) save option, Store reports using enhanced metadata format (PBIR), and Store semantic model using TMDL format. Then choose File > Save as and pick Power BI project files (*.pbip) as the file type.";
   it("is known by its name alone, in any case", () => {
     for (const path of ["Sales.pbix", "Sales.PBIX", "Demo/old/Sales.Pbix", "a b.pbix"])
       expect(isPbix(path), path).toBe(true);

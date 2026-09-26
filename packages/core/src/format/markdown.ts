@@ -24,17 +24,20 @@ import {
 const oneLine = (s: string): string => s.replace(/\r\n?|\n/g, " ");
 
 /**
- * Text from the input, outside a code span, written so a viewer shows it as it is: each backslash
- * doubled, so none escapes what follows it; each control character shown as the text format shows
- * it; `&`, `<`, and `>` as HTML entities, so no tag or entity is read as HTML; and each `|` escaped,
- * so a table cell holds its text whole.
+ * Text from the input, outside a code span. Each backslash is doubled, so none escapes what follows
+ * it; each control character is shown as the text format shows it; `&`, `<`, and `>` are written
+ * as HTML entities, so no tag or entity is read as HTML; and `` ` ``, `[`, `]`, `*`, `_`, `~`, and
+ * `|` are escaped with a backslash (CommonMark lets any ASCII punctuation be escaped, and shows the
+ * character), so none of them opens a code span (inside which the entities would show as written),
+ * a link, an image, emphasis, or strikethrough, and a table cell holds its text whole. A bare URL
+ * is still a link where the viewer links one, as GitHub does.
  */
 const text = (s: string): string =>
   showControls(s.replace(/\\/g, "\\\\"))
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/\|/g, "\\|");
+    .replace(/[`[\]*_~|]/g, "\\$&");
 
 /** Input text in a table cell, a line break shown as a space. */
 const cell = (s: string): string => text(oneLine(s));
@@ -42,13 +45,14 @@ const cell = (s: string): string => text(oneLine(s));
 /**
  * A name from the input as a code span in a table cell, showing the whole name. A code span shows
  * its `<` and `&` as written, so nothing is entity-escaped here. Its fence is one backtick longer
- * than the longest run of backticks in the name, with a space inside each end when the name starts
- * or ends with a backtick, as CommonMark strips one such space from each side. A `|` is escaped,
- * since GitHub-flavoured Markdown splits a row into cells before it reads code spans and shows `\|`
- * as `|`. A renderer that counts the backslashes before a pipe (marked, which the site's build
- * uses) reads the pipe after an even run as the cell's end, and the rest of the name as Markdown
- * outside the span, so an odd run of backslashes before a pipe in the name gains one, and shows
- * one longer.
+ * than the longest run of backticks in the name. CommonMark strips one space from each end of a
+ * span that begins and ends with a space and is not all spaces, so a space goes inside each end
+ * when the name starts or ends with a backtick (which would otherwise join the fence) or starts and
+ * ends with a space of its own. A `|` is escaped, since GitHub-flavoured Markdown splits a row into
+ * cells before it reads code spans and shows `\|` as `|`. A renderer that counts the backslashes
+ * before a pipe (marked, which the site's build uses) reads the pipe after an even run as the
+ * cell's end, and the rest of the name as Markdown outside the span, so an odd run of backslashes
+ * before a pipe in the name gains one, and shows one longer.
  */
 function code(name: string): string {
   const shown = showControls(oneLine(name)).replace(
@@ -56,7 +60,8 @@ function code(name: string): string {
     (_, run: string) => `${run}${run.length % 2 ? "\\" : ""}\\|`,
   );
   const fence = "`".repeat(Math.max(0, ...(shown.match(/`+/g) ?? []).map((r) => r.length)) + 1);
-  const pad = shown.startsWith("`") || shown.endsWith("`") ? " " : "";
+  const spaced = shown.startsWith(" ") && shown.endsWith(" ") && /[^ ]/.test(shown);
+  const pad = shown.startsWith("`") || shown.endsWith("`") || spaced ? " " : "";
   return `${fence}${pad}${shown}${pad}${fence}`;
 }
 

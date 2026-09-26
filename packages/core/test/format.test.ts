@@ -796,6 +796,59 @@ describe("the Markdown export and what the input holds", () => {
       expect(rows(doc), name).toEqual([[name, "Measure", "", ""]]);
     }
   });
+  it("keeps the spaces at each end of a name in its code span", () => {
+    // CommonMark strips one space from each end of a code span that begins and ends with one and
+    // is not all spaces; a name that is all spaces keeps them without help.
+    for (const name of [" Sales ", "  Sales  ", " `a` ", " a", "a ", "  "]) {
+      const doc = rendered(exported({ objectName: name }));
+      expect(codes(doc), JSON.stringify(name)).toEqual([name]);
+    }
+  });
+  it("writes Markdown syntax in a detail and a location as text, not as a code span, link, image, or emphasis", () => {
+    /** The location and detail cells of a finding whose detail, and file name, hold `input`. */
+    const cellsOf = (input: string) => {
+      const file = `definition/tables/_${input}_.tmdl`;
+      const doc = rendered(exported({ detail: input, location: { file, line: 1 } }));
+      const [, , location, detail] = [...doc.querySelectorAll("tbody td")];
+      return { doc, file, location: location!, detail: detail! };
+    };
+    for (const input of [
+      // A code span would show the entities as written, `&lt;b&gt;`.
+      "`<b>` & `x`",
+      "[x](javascript:alert(1))",
+      "*em* _em_ ~~s~~ ~s~ **strong** __strong__",
+    ]) {
+      const { file, location, detail } = cellsOf(input);
+      // Text alone: no element in either cell, and the text is what the input holds.
+      expect(location.children, input).toHaveLength(0);
+      expect(detail.children, input).toHaveLength(0);
+      expect(location.textContent, input).toBe(`${file}:1`);
+      expect(detail.textContent, input).toBe(input);
+    }
+    // GitHub-flavoured Markdown links a bare https URL, as GitHub does, so the URL may be a link;
+    // it is never an image the viewer loads.
+    const image = cellsOf("![](https://example.com/t.png)");
+    expect(image.doc.querySelectorAll("img")).toHaveLength(0);
+    expect(image.detail.textContent).toBe("![](https://example.com/t.png)");
+    // A notice and the skipped line's reason are written the same way.
+    const doc = rendered(
+      exported(
+        {},
+        {
+          diagnostics: [
+            { kind: "unread-file", path: "x", message: "`<b>` [x](javascript:alert(1)) *em*" },
+          ],
+          absent: { report: "~~a~~ _b_" },
+        },
+      ),
+    );
+    const notice = doc.querySelector("blockquote p")!;
+    expect(notice.children).toHaveLength(0);
+    expect(notice.textContent).toBe("Notice: `<b>` [x](javascript:alert(1)) *em*");
+    const summary = doc.querySelector("p")!;
+    expect(summary.children).toHaveLength(0);
+    expect(summary.textContent).toMatch(/ \(~~a~~ _b_\)\.$/);
+  });
   it("keeps a name holding | in its cell, and in its code span, a backslash before it included", () => {
     for (const name of ["a|b", "a\\\\|b|"]) {
       const doc = rendered(exported({ objectName: name, detail: "d" }));

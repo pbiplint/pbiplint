@@ -113,6 +113,29 @@ because both versions are already on the registry. Note what that means: a tag p
 manual publish exercises none of the publishing path, so it proves the workflow runs and nothing
 more. The first release that actually publishes is the first real test of it.
 
+## Model parity expectations
+
+The model rules are pinned to the Tabular Editor 3 command line, `te`, a development-time oracle
+only. The commands that refresh a model expectation file are in CONTRIBUTING.md under "Refreshing
+parity expectations".
+
+Every model expectation file was captured with the 0.5.2 preview build, which stops working on
+September 30, 2026. Tabular Editor CLI 0.7.0 extends the preview to October 31, 2026. To install
+it, sign in with a Tabular Editor account, download the build for your platform, and overwrite the
+old one. It also changes the JSON output of `te bpa run`, which reports a `summary` and a
+`findings` array in place of the `results` array that `scripts/te-expectations.mjs` reads, and it
+drops the VertiPaq rules and the `--vpa-rules` option.
+
+So a re-capture after September 30, 2026 first installs 0.7.0, teaches
+`scripts/te-expectations.mjs` the new shape, and checks every model expectation against 0.7.0
+before committing one that changed. Pass `--oracle` naming the new build as well: without it, the
+script keeps the oracle string already in the file, or writes its default, and both name 0.5.2.
+
+Sources: Tabular Editor's release post,
+[Tabular Editor CLI 0.7.0](https://tabulareditor.com/blog/tabular-editor-cli-0-7-0-release)
+(September 14, 2026), and its
+[installation page](https://docs.tabulareditor.com/en/features/te-cli/te-cli-install.html).
+
 ## Report parity expectations
 
 The report rules are pinned to fab-inspector, a development-time oracle only. Refresh the

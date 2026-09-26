@@ -2,6 +2,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { pbixRefusal } from "@pbiplint/core";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 // happy-dom resolves a relative URL against the page's http base, so the file path is built
@@ -517,4 +518,75 @@ describe("home page", () => {
     );
     expect(document.getElementById("status")!.hidden).toBe(true);
   });
+  it("shows a control character in a refused .pbix's name as an escape, as the CLI does", async () => {
+    const status = document.getElementById("status")!;
+    // A right-to-left override would show "Annual‮xcod.pbix" as "Annualxibp.docx" and
+    // reorder the rest of the refusal after it.
+    dropFile("Annual‮xcod.pbix");
+    await tick();
+    await tick();
+    expect(status.textContent).toBe(pbixRefusal("Annual\\u202excod.pbix"));
+    expect(status.textContent).not.toMatch(RAW_CONTROL);
+    // An ordinary name with accents and CJK is shown as it is.
+    dropFile("Ventes café 売上.pbix");
+    await tick();
+    await tick();
+    expect(status.textContent).toBe(pbixRefusal("Ventes café 売上.pbix"));
+  });
+  it("shows a control character in a config error as an escape", async () => {
+    // V8's message for JSON that does not parse quotes the text, control characters and all.
+    feedFolder([
+      at("Proj/Demo.SemanticModel/definition/tables/T.tmdl", "table T\n"),
+      at("Proj/pbiplint.config.json", "x‮"),
+    ]);
+    await tick();
+    await tick();
+    const status = document.getElementById("status")!;
+    expect(status.textContent).toMatch(/^pbiplint\.config\.json is not valid JSON: /);
+    expect(status.textContent).toContain("x\\u202e");
+    expect(status.textContent).not.toMatch(RAW_CONTROL);
+  });
+  it("shows a control character in the folder's name as an escape in the heading and the announcement", async () => {
+    feedFolder([at("Proj‮/Demo.SemanticModel/definition/tables/T.tmdl", "table T\n")]);
+    await tick();
+    await tick();
+    expect(document.querySelector("#results h2")!.textContent).toBe(
+      "Results for Proj\\u202e (model, 1 file)",
+    );
+    expect(document.getElementById("announce")!.textContent).toMatch(
+      /^Results for Proj\\u202e \(model, 1 file\): /,
+    );
+    expect(document.getElementById("results")!.textContent).not.toMatch(RAW_CONTROL);
+  });
 });
+
+// eslint-disable-next-line no-control-regex -- the characters showControls writes as escapes
+const RAW_CONTROL = /[\u0000-\u001f\u007f-\u009f‪-‮⁦-⁩]/;
+
+/** A file as the directory input reports it, at its path relative to the chosen folder. */
+const at = (path: string, text: string): File =>
+  Object.assign(new File([text], path.slice(path.lastIndexOf("/") + 1)), {
+    webkitRelativePath: path,
+  });
+
+/** Hands files to the directory input, as choosing a folder does. */
+function feedFolder(files: File[]): void {
+  const input = document.getElementById("folder-input") as HTMLInputElement;
+  Object.defineProperty(input, "files", { configurable: true, value: files });
+  try {
+    input.dispatchEvent(new Event("change"));
+  } finally {
+    Reflect.deleteProperty(input, "files");
+  }
+}
+
+/** Drops one file on the drop zone, as a browser with the entries API hands it over. */
+function dropFile(name: string): void {
+  const file = new File([""], name);
+  const entry = { isFile: true, isDirectory: false, name, fullPath: `/${name}` };
+  const drop = new Event("drop", { bubbles: true, cancelable: true });
+  Object.defineProperty(drop, "dataTransfer", {
+    value: { items: [{ webkitGetAsEntry: () => entry, getAsFile: () => file }], files: [file] },
+  });
+  document.getElementById("drop")!.dispatchEvent(drop);
+}

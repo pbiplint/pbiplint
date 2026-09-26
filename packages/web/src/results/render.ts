@@ -2,6 +2,7 @@ import {
   CATEGORY_ORDER,
   plural,
   SEVERITY_LABEL,
+  showControls,
   skippedLine,
   slug,
   summaryLine,
@@ -68,16 +69,26 @@ const count = (n: number, severity: Severity): string => {
  * "Results for the sample project (model, 14 files · report, 78 files)": the source, then each
  * layer the run read with its file count. Present layers only, so a run given one part says nothing
  * about the part it was not given (decision 14), and a run that read neither part names no count.
- * The page announces the same words ahead of the summary sentence.
+ * The page announces the same words ahead of the summary sentence, so the source, a dropped
+ * folder's name, is shown through `showControls` here, once for both.
  */
 export function heading(result: LintResult, source: string): string {
   const layers = LAYERS.flatMap((name) => {
     const layer = result.layers[name];
     return layer.present ? [`${name}, ${plural(layer.files, "file")}`] : [];
   });
-  return layers.length ? `Results for ${source} (${layers.join(" · ")})` : `Results for ${source}`;
+  const shown = showControls(source);
+  return layers.length ? `Results for ${shown} (${layers.join(" · ")})` : `Results for ${shown}`;
 }
 
+/**
+ * Renders a run into `container`. Every string from the input (a name, a path, a location, a
+ * detail, a fact's label, value, and detail, a notice, an absent layer's reason, a config's rule
+ * id, a rule's error) is shown through core's `showControls`, as the CLI's text format shows it,
+ * so a bidirectional control in a name cannot reorder the text around it on the page, and the page
+ * and the terminal show the same text. pbiplint's own words (rule names and ids, categories, URLs,
+ * the page's fixed labels) are shown as they are.
+ */
 export function renderResults(
   container: HTMLElement,
   result: LintResult,
@@ -93,13 +104,17 @@ export function renderResults(
     h("h2", {}, heading(result, options.source)),
     // The summary is not a live region: everything is rebuilt on each run, and a region inserted
     // with its text already set may not be announced. The page announces it through #announce.
-    h("p", { class: "summary" }, `${summaryLine(result)}. ${skippedLine(result)}.`),
-    ...(options.notes ?? []).map((note) => h("p", { class: "notice" }, note)),
+    h("p", { class: "summary" }, `${summaryLine(result)}. ${showControls(skippedLine(result))}.`),
+    ...(options.notes ?? []).map((note) => h("p", { class: "notice" }, showControls(note))),
     // What the reader could not read, or read as a legacy part, follows the input's notes, so no
     // read failure is silent.
-    ...result.diagnostics.map((d) => h("p", { class: "notice" }, d.message)),
+    ...result.diagnostics.map((d) => h("p", { class: "notice" }, showControls(d.message))),
     ...result.summary.unknownRules.map((id) =>
-      h("p", { class: "notice" }, `pbiplint.config.json names no rule called "${id}".`),
+      h(
+        "p",
+        { class: "notice" },
+        `pbiplint.config.json names no rule called "${showControls(id)}".`,
+      ),
     ),
     // Beside the other notices rather than below the groups: a rule that threw is worth reporting
     // whether or not the rules that ran found anything, and a clean run stops before the groups.
@@ -109,7 +124,9 @@ export function renderResults(
             "p",
             { class: "notice" },
             "Rule errors (please report these): " +
-              result.summary.ruleErrors.map((e) => `${e.id}: ${e.message}`).join("; "),
+              result.summary.ruleErrors
+                .map((e) => `${e.id}: ${showControls(e.message)}`)
+                .join("; "),
           ),
         ]
       : []),
@@ -239,11 +256,12 @@ function renderFacts(result: LintResult): HTMLElement[] {
   if (result.facts.length === 0) return [];
   const onPage = new Map(result.groups.map((g) => [g.rule.id, g.rule.slug]));
   const value = (f: Fact): Node | string => {
-    if (f.ruleId === undefined) return f.value;
+    const shown = showControls(f.value);
+    if (f.ruleId === undefined) return shown;
     const here = onPage.get(f.ruleId);
     return here === undefined
-      ? h("a", { class: "fact", href: pagePath(slug(f.ruleId)) }, f.value)
-      : h("a", { class: "fact flag", href: `#rule-${here}` }, f.value);
+      ? h("a", { class: "fact", href: pagePath(slug(f.ruleId)) }, shown)
+      : h("a", { class: "fact flag", href: `#rule-${here}` }, shown);
   };
   return [
     h(
@@ -254,12 +272,14 @@ function renderFacts(result: LintResult): HTMLElement[] {
         "dl",
         {},
         ...result.facts.flatMap((f) => [
-          h("dt", {}, f.label),
+          h("dt", {}, showControls(f.label)),
           h(
             "dd",
             {},
             value(f),
-            ...(f.detail === undefined ? [] : [" · ", h("span", { class: "detail" }, f.detail)]),
+            ...(f.detail === undefined
+              ? []
+              : [" · ", h("span", { class: "detail" }, showControls(f.detail))]),
           ),
         ]),
       ),
@@ -275,7 +295,7 @@ function renderFilesRead(files: string[] | undefined): HTMLElement[] {
       "details",
       { class: "files" },
       h("summary", {}, `Files read (${files.length})`),
-      h("ul", {}, ...files.map((path) => h("li", { class: "mono" }, path))),
+      h("ul", {}, ...files.map((path) => h("li", { class: "mono" }, showControls(path)))),
     ),
   ];
 }
@@ -375,10 +395,14 @@ function renderGroup(g: RankedGroup): HTMLElement {
     h(
       "tr",
       {},
-      h("td", { class: "mono" }, f.objectName),
+      h("td", { class: "mono" }, showControls(f.objectName)),
       h("td", {}, f.objectType),
-      h("td", { class: "mono" }, f.location ? `${f.location.file}:${f.location.line}` : ""),
-      h("td", {}, f.detail ?? ""),
+      h(
+        "td",
+        { class: "mono" },
+        f.location ? showControls(`${f.location.file}:${f.location.line}`) : "",
+      ),
+      h("td", {}, showControls(f.detail ?? "")),
     ),
   );
   return h(

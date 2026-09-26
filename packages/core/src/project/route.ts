@@ -41,11 +41,10 @@ const SAVE_AS_PROJECT =
  * preview feature"), https://learn.microsoft.com/en-us/power-bi/developer/projects/projects-report;
  * and Store semantic model using TMDL format from the semantic model folder page ("Enable TMDL
  * format Preview feature"),
- * https://learn.microsoft.com/en-us/power-bi/developer/projects/projects-dataset. The options are
- * a condition ("each of these it lists") rather than steps: Learn still calls each a preview,
- * while Microsoft has announced PBIP generally available with PBIR as its default (Microsoft 365
- * Message Center post MC1465770, September 2, 2026, not on Learn), so a newer Desktop may list
- * fewer of them.
+ * https://learn.microsoft.com/en-us/power-bi/developer/projects/projects-dataset. Each option is
+ * conditional ("each of these it lists"): Learn still calls each a preview, while Microsoft has
+ * announced PBIP generally available with PBIR as its default (Microsoft 365 Message Center post
+ * MC1465770, September 2, 2026, not on Learn), so a newer Desktop may list fewer of them.
  */
 export function pbixRefusal(path: string, others = 0): string {
   const what =

@@ -859,32 +859,33 @@ Pages and the Visuals count as they were, and the #81 note's, which
 kept the Model fact's table, column, and measure counts.
 
 Amended 2026-09-25 with Michael (release triage, batch F): the Slicers
-fact counts saved search terms beside saved selections, every visual
-`SLICER_SEARCH_SAVED` reports (section 8.4), on any visual type, and
-its value, the count of the catalog slicers, does not change. The
-detail gives the terms after the selections, as `1 saved selection, 1
-saved search term` or `2 saved selections, 1 on a custom slicer, 2
-saved search terms`, reads `1 saved search term` alone when no
-selection is saved, and reads as before with neither: `no saved
-selection` beside catalog slicers, and no detail without one. The fact
-links `SLICER_SELECTION_SAVED` when a selection is saved, else
-`SLICER_SEARCH_SAVED` when a term is, of the two that ran, so the
-sample's link does not move. Now that the detail counts terms, a count
-it leaves out reads as none, so while a visual.json could not be read
-that count reads unknown, and the reason is given once. With neither
-counted the detail reads `saved selections and search terms: unknown, a
-visual.json could not be read`, in place of `saved selections: unknown,
-a visual.json could not be read`. With selections counted and no term
-it reads `1 saved selection; saved search terms: unknown, a visual.json
-could not be read`, or `2 saved selections, 1 on a custom slicer; saved
-search terms: unknown, a visual.json could not be read`, in place of
-the selections alone and, when the value is unknown too, in place of
-their ending `; a visual.json could not be read`. With a term counted
-and no selection it reads `1 saved search term; saved selections:
-unknown, a visual.json could not be read`. With both counted, both
-counts are lower bounds and stay, `1 saved selection, 1 saved search
-term`, ending `; a visual.json could not be read` only when the value
-is unknown.
+fact counts saved search terms beside saved selections: every visual
+whose saved term `SLICER_SEARCH_SAVED`'s condition finds (section 8.4),
+on any visual type, whether or not the rule ran and whatever an ignore
+annotation says, as the fact reads saved selections. Its value, the
+count of the catalog slicers, does not change. The detail gives the
+terms after the selections, as `1 saved selection, 1 saved search term`
+or `2 saved selections, 1 on a custom slicer, 2 saved search terms`,
+reads `1 saved search term` alone when no selection is saved, and reads
+as before with neither: `no saved selection` beside catalog slicers,
+and no detail without one. The fact links `SLICER_SELECTION_SAVED` when
+a selection is saved, else `SLICER_SEARCH_SAVED` when a term is, of the
+two that ran, so the sample's link does not move. Now that the detail
+counts terms, a count it leaves out reads as none, so while a
+visual.json could not be read that count reads unknown, and the reason
+is given once. With neither counted the detail reads `saved selections
+and search terms: unknown, a visual.json could not be read`, in place
+of `saved selections: unknown, a visual.json could not be read`. With
+selections counted and no term it reads `1 saved selection; saved
+search terms: unknown, a visual.json could not be read`, or `2 saved
+selections, 1 on a custom slicer; saved search terms: unknown, a
+visual.json could not be read`, in place of the selections alone and,
+when the value is unknown too, in place of their ending `; a
+visual.json could not be read`. With a term counted and no selection it
+reads `1 saved search term; saved selections: unknown, a visual.json
+could not be read`. With both counted, both counts are lower bounds and
+stay, `1 saved selection, 1 saved search term`, ending `; a visual.json
+could not be read` only when the value is unknown.
 
 **Cost.** Linear in the JSON. The demo report's largest visual is
 61 KB, most under 5 KB; a 300-visual report is a few megabytes and

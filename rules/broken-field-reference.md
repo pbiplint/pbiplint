@@ -103,12 +103,10 @@ In Power BI Desktop, select the visual the finding names, remove the broken fiel
 - For conditional formatting, open the formatting option's fx dialog and pick a valid field, or remove the formatting and apply it again with the right field.
 - For a filter, remove the broken card from the Filters pane and add the field again.
 - For a bookmark, fix the page it shows first. Then select the bookmark and choose Update from its More options menu, so it captures the page again.
-- For a text box's field value, delete the text box and add it again with the field you meant, or correct the field in the JSON, as described below. The value has no well, and Fix this does not repair it: it only opens the text box's Format pane.
+- For a text box's field value, delete the text box and add it again with the field you meant.
 - When the model is what changed, put the field back in the model under the name the report uses. If the field was renamed, renaming it back fixes every reference to it at once.
 
 In the report's JSON, a field reference names its table in `Entity` and its column or measure in `Property`, as in the example. Correct the name (or, for a measure that moved, the table), then make the `queryRef` and `nativeQueryRef` beside it match. A reference to a measure defined in the report also carries `"Schema": "extension"`. If that measure has moved into the model, remove the key, as `REPORT_LEVEL_MEASURES`'s page describes.
-
-A text box's field value holds a query of its own, in the text box's `values`. Correct the name everywhere the query names it: its `Select` item, and any `OrderBy` or `Where`. For a missing table, correct the `Entity` in the query's `From` list. Leave the `Select` item's `Name`, and the `Property` of the `Column` that holds the query, as they are. They name the query's result, not a model field.
 
 ## When to ignore it
 

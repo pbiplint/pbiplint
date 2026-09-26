@@ -4,7 +4,8 @@ Best-practice linter for Power BI projects. Point it at a PBIP folder, a `.pbip`
 `.SemanticModel` folder, a `.Report` folder, a `definition` folder, or one `.tmdl` file and get
 ranked findings with a link to a fix page for each rule, and, when the input has a report, a
 "Report at a glance" block that says what the report will do when someone opens it. Nothing is
-uploaded: it reads the files you name and writes to your terminal. Node 20 or later.
+uploaded: it reads the files you name and writes to your terminal. Node 20.19 or later (or 22.12
+or later).
 
 ```bash
 npx pbiplint path/to/Model.SemanticModel

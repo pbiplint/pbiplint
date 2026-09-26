@@ -69,8 +69,8 @@ steps:
 
 The $schema line is optional; with it, editors validate the file as you type.
 
-A rule that takes options is set with an object. The thresholds of the ported report rules and
-the three policy rules are examples; each rule's page lists its options:
+A rule that takes options is set with an object. The ported report rules' thresholds and the
+three policy rules are examples of it; each rule's page lists its options:
 
 ```json
 {

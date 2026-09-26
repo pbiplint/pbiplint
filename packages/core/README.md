@@ -3,7 +3,7 @@
 The linter behind [pbiplint](https://pbiplint.com): parse TMDL and PBIR, build the semantic model
 and the report, run the best-practice rules, rank the findings, and format them. Pure TypeScript
 with no dependencies, no Node APIs, and no network access, so it runs in a browser tab as well as
-in Node 20 or later.
+in Node 20.19 or later (or 22.12 or later).
 
 `lint(files)` takes both parts of a Power BI project, `.tmdl` files for the model and the report's
 JSON (paths relative to each part's root), and returns findings for both, `layers` saying which

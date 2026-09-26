@@ -111,11 +111,12 @@ only. The commands that refresh a model expectation file are in CONTRIBUTING.md 
 parity expectations".
 
 Every model expectation file was captured with the 0.5.2 preview build, which stops working on
-September 30, 2026. Tabular Editor CLI 0.7.0 extends the preview to October 31, 2026. To install
-it, sign in with a Tabular Editor account, download the build for your platform, and overwrite the
-old one. It also changes the JSON output of `te bpa run`, which reports a `summary` and a
-`findings` array in place of the `results` array that `scripts/te-expectations.mjs` reads, and it
-drops the VertiPaq rules and the `--vpa-rules` option.
+September 30, 2026. Tabular Editor CLI 0.7.0 extends the preview to October 31, 2026, and stops
+working after that date too, so a re-capture after October 31, 2026 needs the build Tabular Editor's
+installation page then offers. To install 0.7.0, sign in with a Tabular Editor account, download the
+build for your platform, and overwrite the old one. It also changes the JSON output of `te bpa run`,
+which reports a `summary` and a `findings` array in place of the `results` array that
+`scripts/te-expectations.mjs` reads, and it drops the VertiPaq rules and the `--vpa-rules` option.
 
 So a re-capture after September 30, 2026 first installs 0.7.0, teaches
 `scripts/te-expectations.mjs` the new shape, and checks every model expectation against 0.7.0

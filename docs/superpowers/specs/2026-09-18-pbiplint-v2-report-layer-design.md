@@ -460,6 +460,29 @@ files stand as they were, with no notice for the `.pbix`, which is
 never among the files read. Both surfaces give that last refusal
 (below), so beside such a folder both name the folder.
 
+Amended 2026-09-26 with Michael (pull request 8): the message's second
+half also names the PBIR and TMDL preview options. Learn makes the
+PBIR report format and the TMDL model format preview options of their
+own, and a PBIP saved without them holds a `report.json` report and a
+`model.bim` model, which pbiplint reads as legacy parts and lints not
+at all. The second half now reads, in full: `pbiplint reads a report
+saved as a Power BI project (PBIP). In Power BI Desktop, open File >
+Options and settings > Options > Preview features and turn on each of
+these it lists: Power BI Project (.pbip) save option, Store reports
+using enhanced metadata format (PBIR), and Store semantic model using
+TMDL format. Then choose File > Save as and pick Power BI project
+files (*.pbip) as the file type.` The labels are Learn's: the menu
+paths, the file type, and the PBIP option from the Power BI Desktop
+projects page (projects-overview), the PBIR option from the report
+folder page (projects-report, "Enable the PBIR format preview
+feature"), and the TMDL option from the semantic model folder page
+(projects-dataset, "Enable TMDL format Preview feature"). All three
+are a condition ("each of these it lists"), as the PBIP option was,
+since Learn still calls each a preview while MC1465770 announces
+general availability, so a newer Desktop may list fewer of them. The
+first half, which names the `.pbix` and counts the others, and the
+legacy parts' notices are unchanged.
+
 Amended 2026-09-25 with Michael (release triage, batch F): when
 nothing can be linted, no read refused, and no notice explains why,
 while one or more `.SemanticModel` folders the walk met hold no

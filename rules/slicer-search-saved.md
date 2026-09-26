@@ -123,7 +123,7 @@ Most saved terms stand alone. Of the 41 slicers found saved with a search term i
 
 ## How to fix it
 
-In Power BI Desktop, select the slicer, delete the text in its search box, and save the report. Checked in Power BI Desktop, the box then stays empty when the report is reopened. The slicer's eraser also clears the search box; then save the report. It clears the slicer's selection as well, so to keep a selection the report is meant to open with, delete the term instead. Reset to default in the service returns a reader to the report as it was published, saved term included, so the fix belongs in the saved report.
+In Power BI Desktop, select the slicer, delete the text in its search box, and save the report. Checked in Power BI Desktop, the box then stays empty when the report is reopened. The slicer's eraser also clears the search box; then save the report. The eraser clears the slicer's selection as well, so to keep a selection the report is meant to open with, delete the term instead. Reset to default in the service returns a reader to the report as it was published, saved term included, so the fix belongs in the saved report.
 
 In visual.json, the term is the `selfFilter` property in the slicer's `general` entry under `objects`: remove it, as the example does, and leave the rest of the entry as it is. That is an edit to the saved file, and `selfFilter` is the only property this rule reads.
 

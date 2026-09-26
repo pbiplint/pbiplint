@@ -641,7 +641,7 @@ aggregation table when it covers the query.
 | Pages | count; hidden; tooltip; drillthrough | `HIDE_TOOLTIP_DRILLTROUGH_PAGES` |
 | Visuals | count; hidden; custom visual types registered and used (the used count unknown while a visual.json could not be read and a registered type is used by no visual that was read, amended 2026-09-24 with Michael) | `HIDDEN_VISUAL_WITH_FIELDS`, `REMOVE_UNUSED_CUSTOM_VISUALS` |
 | Report measures | count | `REPORT_LEVEL_MEASURES` |
-| Slicers | count of the catalog slicers; saved selections, those on custom slicers named; unknown in place of none while a visual.json could not be read (amended 2026-09-24 with Michael) | `SLICER_SELECTION_SAVED` |
+| Slicers | count of the catalog slicers; saved selections, those on custom slicers named; saved search terms (amended 2026-09-25 with Michael); unknown in place of none while a visual.json could not be read (amended 2026-09-24 with Michael) | `SLICER_SELECTION_SAVED`, `SLICER_SEARCH_SAVED` |
 | Mobile layouts | pages with one, counted by the mobile.json files read in their folders, of total; unknown in place of none while a mobile.json, or the page of one, could not be read (amended 2026-09-24 with Michael) | |
 | Schema versions | report, page, visual (highest seen) | |
 | Model | tables, columns, measures, leaving out Desktop's hidden auto date/time tables (amended 2026-09-25 with Michael); with both parts, columns and measures not reached from this report | `NOT_REACHED_FROM_REPORT` |
@@ -857,6 +857,34 @@ and the hidden counts, shown only above 0, are unchanged. This narrows
 two earlier readings to counts above 0: the H71 note's, which kept
 Pages and the Visuals count as they were, and the #81 note's, which
 kept the Model fact's table, column, and measure counts.
+
+Amended 2026-09-25 with Michael (release triage, batch F): the Slicers
+fact counts saved search terms beside saved selections, every visual
+`SLICER_SEARCH_SAVED` reports (section 8.4), on any visual type, and
+its value, the count of the catalog slicers, does not change. The
+detail gives the terms after the selections, as `1 saved selection, 1
+saved search term` or `2 saved selections, 1 on a custom slicer, 2
+saved search terms`, reads `1 saved search term` alone when no
+selection is saved, and reads as before with neither: `no saved
+selection` beside catalog slicers, and no detail without one. The fact
+links `SLICER_SELECTION_SAVED` when a selection is saved, else
+`SLICER_SEARCH_SAVED` when a term is, of the two that ran, so the
+sample's link does not move. Now that the detail counts terms, a count
+it leaves out reads as none, so while a visual.json could not be read
+that count reads unknown, and the reason is given once. With neither
+counted the detail reads `saved selections and search terms: unknown, a
+visual.json could not be read`, in place of `saved selections: unknown,
+a visual.json could not be read`. With selections counted and no term
+it reads `1 saved selection; saved search terms: unknown, a visual.json
+could not be read`, or `2 saved selections, 1 on a custom slicer; saved
+search terms: unknown, a visual.json could not be read`, in place of
+the selections alone and, when the value is unknown too, in place of
+their ending `; a visual.json could not be read`. With a term counted
+and no selection it reads `1 saved search term; saved selections:
+unknown, a visual.json could not be read`. With both counted, both
+counts are lower bounds and stay, `1 saved selection, 1 saved search
+term`, ending `; a visual.json could not be read` only when the value
+is unknown.
 
 **Cost.** Linear in the JSON. The demo report's largest visual is
 61 KB, most under 5 KB; a 300-visual report is a few megabytes and
@@ -1193,6 +1221,7 @@ list.
 | BROKEN_BOOKMARK_REFERENCE | Bookmark | Error Prevention | warning | A bookmark's active page, or a page or visual it captures, does not exist |
 | TAB_ORDER_FOLLOWS_LAYOUT | Page | Accessibility | warning | Tab order disagrees with reading order (top to bottom, left to right, with a row tolerance of half the median visual height). Desktop always writes `tabOrder`, so "not set" is not detectable; disagreement with the layout is. The page documents the heuristic; policy `expect: layout`, silent without it |
 | SLICER_SELECTION_SAVED | Visual | Report Design | info | A slicer carries a saved selection (any visual that saves one, amended 2026-09-24 with Michael); policy `expect: none` raises it to warning |
+| SLICER_SEARCH_SAVED | Visual | Report Design | warning | A slicer carries a saved search term (any visual that saves one, added 2026-09-25 with Michael); no policy |
 
 Amended 2026-09-23 with pull request 5, reading the conditions rather
 than changing them, against Microsoft's schemas and capability data,
@@ -1276,6 +1305,29 @@ page was already one named by its folder, and a page with none read is
 now covered too. Amended 2026-09-25 with Michael (pull request 7, #81):
 a folder under the definition folder that could not be listed quiets a
 target or a capture it could hold, as an unread file does (section 4).
+
+Amended 2026-09-25 with Michael (release triage, batch F):
+`SLICER_SEARCH_SAVED` reports a visual whose
+`visual.objects.general[].properties.selfFilter` holds a `filter` with
+a non-empty `Where`, where Power BI Desktop's saved files keep the text
+typed in a slicer's search box; `selfFilterEnabled`, beside it, holds
+no term and alone is not reported. It reads any visual type, by where
+the term sits, as `SLICER_SELECTION_SAVED` reads a selection, and a
+hidden slicer counts: the pull request 5 corpus shows the term on
+`slicer` only, and Microsoft's slicer template for custom visuals
+declares the same `selfFilter`. In that corpus 41 slicers in 9
+repositories carry a term, each a single `Contains` on a string
+literal; 30 have no selection saved beside it, and in 9 the term sits
+on a column the slicer no longer shows, since Desktop keeps it when the
+slicer's field is swapped. Michael's check in Power BI Desktop on
+September 25, 2026 showed the saved term coming back when the report is
+reopened, with the slicer's list showing only the values that match it.
+The finding sits at the `selfFilter`'s line, and its detail names no
+column: it quotes the term, `opens with the search term "spring"
+saved`, when the `Where` is one `Contains` whose right side is a
+non-empty string literal (the enclosing single quotes stripped and a
+doubled `''` read as one `'`), and reads `opens with a search term
+saved` otherwise. The rule is a warning with no policy and no options.
 
 Mobile layouts and themes are facts only in v2.
 
@@ -1427,6 +1479,19 @@ report rule. Amended 2026-09-23 with Michael:
 `ACTION_WITHOUT_DESTINATION` is planted, and the sample's config sets
 `TAB_ORDER_FOLLOWS_LAYOUT`'s policy so that rule fires. Everything else
 is clean.
+
+Amended 2026-09-25 with Michael (release triage, batch F): a slicer
+with a leftover search term and no selection is planted too, a City
+slicer on the Stores page saved with the term spring in its search box,
+so the sample fires `SLICER_SEARCH_SAVED` (section 8.4). It is written
+in the form Power BI Desktop saves, and it stays in that form: the
+authoring toolchain's `validate` (section 3.5) flags Desktop's own
+`selfFilter` form as `PBIR_FORMATTING_PROP_NESTED`, reading its
+`filter` as a property nested out of place, as it did for every
+`selfFilter` in three Desktop-saved corpus reports, 14 of 14. So the
+sample's validation carries that error on the plant, beside the planted
+empty card's `PBIR_QUERY_STATE_MISSING` and the two past-the-edge
+warnings.
 
 **Sanitising.** No registered resources, the stock Fluent theme, no
 `.pbi`, no `cache.abf`. `scripts/sanitize-fixture.mjs` gains a report

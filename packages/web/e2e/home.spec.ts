@@ -44,17 +44,17 @@ test("lints the sample project and announces the result", async ({ page }) => {
   const results = page.locator("#results");
   await expect(results).toBeVisible();
   await expect(results.locator("h2")).toHaveText(
-    "Results for the sample project (model, 14 files · report, 77 files)",
+    "Results for the sample project (model, 14 files · report, 78 files)",
   );
   await expect(results.locator(".summary")).toContainText(
-    "256 findings (19 errors, 77 warnings, 160 info) in 91 files",
+    "257 findings (19 errors, 78 warnings, 160 info) in 92 files",
   );
   await expect(page.locator("#announce")).toHaveText(
-    /^Results for the sample project \(model, 14 files · report, 77 files\): 256 findings/,
+    /^Results for the sample project \(model, 14 files · report, 78 files\): 257 findings/,
   );
   await expect(results.locator("section.facts h3")).toHaveText("Report at a glance");
   await expect(results.locator(".fix-first li")).toHaveCount(5);
-  await expect(results.locator("details.files summary")).toHaveText("Files read (93)");
+  await expect(results.locator("details.files summary")).toHaveText("Files read (94)");
   await expect(page.locator("#status")).toBeHidden();
   // Unchecking Report hides the report's groups and leaves the model's.
   await results.getByRole("checkbox", { name: "Report", exact: true }).uncheck();
@@ -261,7 +261,7 @@ test("downloads the Markdown report", async ({ page }) => {
   ]);
   expect(download.suggestedFilename()).toMatch(/\.md$/);
   const text = readFileSync((await download.path())!, "utf8");
-  expect(text).toContain("256 findings");
+  expect(text).toContain("257 findings");
 });
 
 test("copies the Markdown report from the button beside the downloads", async ({

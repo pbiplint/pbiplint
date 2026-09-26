@@ -87,7 +87,7 @@ describe("pbiplint CLI", () => {
     const r = await run([sample]);
     expect(r.code).toBe(1);
     expect(r.out).toMatch(
-      /^pbiplint: 256 findings \(19 errors, 77 warnings, 160 info\) in 91 files/,
+      /^pbiplint: 257 findings \(19 errors, 78 warnings, 160 info\) in 92 files/,
     );
     expect(r.out).toContain("https://pbiplint.com/rules/provide-format-string-for-measures");
     expect(r.err).toBe("");
@@ -118,12 +118,12 @@ describe("pbiplint CLI", () => {
         detail: "1 hidden, 1 tooltip",
         ruleId: "HIDE_TOOLTIP_DRILLTROUGH_PAGES",
       },
-      // 57 visual.json files, two of them groups; two visuals hidden on Overview and two inside
+      // 58 visual.json files, two of them groups; two visuals hidden on Overview and two inside
       // the hidden group on Employees; report.json registers ChicletSlicer and no visual is one.
       {
         layer: "report",
         label: "Visuals",
-        value: "55",
+        value: "56",
         detail: "4 hidden; 1 custom visual type registered, 0 used",
         ruleId: "HIDDEN_VISUAL_WITH_FIELDS",
       },
@@ -135,12 +135,13 @@ describe("pbiplint CLI", () => {
         detail: "defined in the report, not the model",
         ruleId: "REPORT_LEVEL_MEASURES",
       },
-      // One catalog slicer, Category on Overview, which saves a selection.
+      // Two catalog slicers: Category on Overview, which saves a selection, and City on Stores,
+      // which saves a search term. The selection's rule is linked first.
       {
         layer: "report",
         label: "Slicers",
-        value: "1",
-        detail: "1 saved selection",
+        value: "2",
+        detail: "1 saved selection, 1 saved search term",
         ruleId: "SLICER_SELECTION_SAVED",
       },
       // No mobile.json anywhere in the report.
@@ -164,12 +165,12 @@ describe("pbiplint CLI", () => {
   it("--sample is the same as pointing at the bundled sample", async () => {
     const r = await run(["--sample", "--format", "json"]);
     expect(r.code).toBe(1);
-    expect(JSON.parse(r.out).summary.findings).toBe(256);
+    expect(JSON.parse(r.out).summary.findings).toBe(257);
   });
   it("--sample reads the bundled project, its model and its report, and prints no notice", async () => {
     const r = await run(["--sample", "--fail-on", "none"]);
     expect(r.code).toBe(0);
-    expect(r.out).toMatch(/^Model: 14 files\. Report: 77 files\. /m);
+    expect(r.out).toMatch(/^Model: 14 files\. Report: 78 files\. /m);
     expect(r.err).toBe("");
   });
   it("respects --fail-on and exits 0 when nothing reaches the threshold", async () => {
@@ -204,7 +205,7 @@ describe("pbiplint CLI", () => {
     expect(r.code).toBe(1);
     expect(r.out).toBe("");
     expect(r.err).toBe(
-      "pbiplint: 256 findings (19 errors, 77 warnings, 160 info) in 91 files, wrote out/report.sarif\n",
+      "pbiplint: 257 findings (19 errors, 78 warnings, 160 info) in 92 files, wrote out/report.sarif\n",
     );
   });
   it("prefixes SARIF artifact URIs with the model root's path from the cwd", async () => {

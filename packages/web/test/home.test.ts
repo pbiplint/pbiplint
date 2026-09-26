@@ -54,9 +54,9 @@ describe("home page", () => {
     await tick();
     const results = document.getElementById("results")!;
     expect(results.hidden).toBe(false);
-    expect(results.querySelector(".summary")!.textContent).toContain("256 findings");
+    expect(results.querySelector(".summary")!.textContent).toContain("257 findings");
     expect(results.querySelector("h2")!.textContent).toBe(
-      "Results for the sample project (model, 14 files · report, 77 files)",
+      "Results for the sample project (model, 14 files · report, 78 files)",
     );
     // The sample runs under its own config, so the policy rules it plants fire.
     expect(results.querySelector("#rule-filters-pane-state")).not.toBeNull();
@@ -74,7 +74,7 @@ describe("home page", () => {
     document.getElementById("try-sample")!.click();
     await tick();
     expect(announcer.textContent).toBe(
-      "Results for the sample project (model, 14 files · report, 77 files): 256 findings (19 errors, 77 warnings, 160 info) in 91 files.",
+      "Results for the sample project (model, 14 files · report, 78 files): 257 findings (19 errors, 78 warnings, 160 info) in 92 files.",
     );
     expect(document.getElementById("results")!.hasAttribute("aria-live")).toBe(false);
     expect(document.querySelectorAll("#results [aria-live]").length).toBe(0);
@@ -137,7 +137,7 @@ describe("home page", () => {
     // The same rule the status line follows: a hidden block is out of the accessibility tree, so
     // content rendered into one arrives where nothing can reach it.
     expect(order).toEqual(["hidden=false", "render"]);
-    expect(results.querySelector(".summary")!.textContent).toContain("256 findings");
+    expect(results.querySelector(".summary")!.textContent).toContain("257 findings");
   });
   it("scrolls a problem message only as far as needed, so the textarea stays in view", () => {
     const status = document.getElementById("status")!;
@@ -242,8 +242,8 @@ describe("home page", () => {
     // what that drop reads, relative to the project folder: the model's files as they are, the
     // report's marked "(report)", the project file among them, and the config it applied.
     const sample = listed();
-    expect(sample).toHaveLength(93);
-    expect(sample.filter((p) => p.endsWith(" (report)"))).toHaveLength(77);
+    expect(sample).toHaveLength(94);
+    expect(sample.filter((p) => p.endsWith(" (report)"))).toHaveLength(78);
     expect(sample.filter((p) => p.endsWith(".tmdl"))).toHaveLength(14);
     expect(sample).toContain("Messy Sales Demo.SemanticModel/definition/model.tmdl");
     expect(sample).toContain("Messy Sales Demo.Report/definition.pbir (report)");

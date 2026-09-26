@@ -42,10 +42,10 @@ describe("renderResults", () => {
     renderResults(container, result, { source: "the sample project" });
     expect(container.querySelector(".privacy")!.textContent).toContain("Nothing was uploaded");
     expect(container.querySelector("h2")!.textContent).toBe(
-      "Results for the sample project (model, 14 files · report, 77 files)",
+      "Results for the sample project (model, 14 files · report, 78 files)",
     );
     expect(container.querySelector(".summary")!.textContent).toContain(
-      "256 findings (19 errors, 77 warnings, 160 info) in 91 files",
+      "257 findings (19 errors, 78 warnings, 160 info) in 92 files",
     );
     const first = [...container.querySelectorAll(".fix-first li")];
     expect(first.length).toBe(5);
@@ -339,7 +339,7 @@ describe("renderResults", () => {
     expect(container.querySelector("h2")!.textContent).toBe("Results for x (model, 14 files)");
     const reportOnly = lint(SAMPLE_FILES.filter((f) => !f.path.endsWith(".tmdl")));
     renderResults(container, reportOnly, { source: "x" });
-    expect(container.querySelector("h2")!.textContent).toBe("Results for x (report, 77 files)");
+    expect(container.querySelector("h2")!.textContent).toBe("Results for x (report, 78 files)");
     // One file takes no s, and a run that read neither part has no counts to give.
     expect(heading(lint([{ path: "pasted.tmdl", text: "table T\n" }]), "pasted TMDL")).toBe(
       "Results for pasted TMDL (model, 1 file)",
@@ -429,7 +429,7 @@ describe("renderResults", () => {
       },
       {
         label: "Visuals",
-        value: "55",
+        value: "56",
         detail: "4 hidden; 1 custom visual type registered, 0 used",
         link: "fact flag #rule-hidden-visual-with-fields",
       },
@@ -441,8 +441,8 @@ describe("renderResults", () => {
       },
       {
         label: "Slicers",
-        value: "1",
-        detail: "1 saved selection",
+        value: "2",
+        detail: "1 saved selection, 1 saved search term",
         link: "fact flag #rule-slicer-selection-saved",
       },
       { label: "Mobile layouts", value: "none", detail: undefined, link: undefined },

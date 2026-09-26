@@ -65,7 +65,7 @@ const count = (n: number, severity: Severity): string => {
 };
 
 /**
- * "Results for the sample project (model, 14 files · report, 77 files)": the source, then each
+ * "Results for the sample project (model, 14 files · report, 78 files)": the source, then each
  * layer the run read with its file count. Present layers only, so a run given one part says nothing
  * about the part it was not given (decision 14), and a run that read neither part names no count.
  * The page announces the same words ahead of the summary sentence.
@@ -114,7 +114,7 @@ export function renderResults(
         ]
       : []),
     // Right under the sentence that counts the files, so the heading's "(model, 14 files ·
-    // report, 77 files)" expands into which ones.
+    // report, 78 files)" expands into which ones.
     ...renderFilesRead(options.files),
     // What the report will do, whether or not anything fired: after everything that says what
     // was read, before what to fix. A run with no report has no facts and no panel.

@@ -10,10 +10,15 @@ uploaded, ever.
 
 ## Status
 
-Version 0.1.2, released on September 18, 2026. It covers the semantic model
-layer (TMDL): every rule from the Microsoft best-practice ruleset, ported and
-verified against Tabular Editor, in the browser at https://pbiplint.com and on
-the command line. Report rules (PBIR) and Power Query rules follow.
+Version 0.2.0. It covers the semantic model layer (TMDL): every rule from the
+Microsoft best-practice ruleset, ported and verified against Tabular Editor;
+and the report layer (PBIR): the 11 base rules of PBI Inspector, ported and
+verified against it, plus pbiplint's own rules for what is broken, unfinished,
+or expensive in a report, and for what the model holds that the report never
+reaches. Power Query rules follow. The site at https://pbiplint.com runs the
+code on main; the command line runs the version npm gives you, and the
+[releases page](https://github.com/pbiplint/pbiplint/releases) lists each
+version with the date it was published.
 
 ## Use it
 

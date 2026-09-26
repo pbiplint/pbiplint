@@ -299,6 +299,27 @@ describe("pbiplint CLI", () => {
     expect(missing.code).toBe(2);
     expect(missing.err).toContain("does not exist");
   });
+  it("names a .pbix, says how to save it as a Power BI project, and exits 2 (tracked in #88)", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "pbiplint-pbix-"));
+    const how =
+      "is a Power BI Desktop file (.pbix), which pbiplint cannot read. pbiplint reads a report saved as a Power BI project (PBIP). In Power BI Desktop, choose File > Save as and pick Power BI project files (*.pbip) as the file type (if it isn't offered, first turn on Power BI Project (.pbip) save option under File > Options and settings > Options > Preview features).";
+    try {
+      const file = join(dir, "Sales.pbix");
+      writeFileSync(file, "");
+      const lone = await run([file]);
+      expect(lone.code).toBe(2);
+      expect(lone.out).toBe("");
+      expect(lone.err).toBe(`pbiplint: ${file} ${how}\nRun pbiplint --help for usage.\n`);
+      const folder = await run([dir]);
+      expect(folder.code).toBe(2);
+      expect(folder.out).toBe("");
+      expect(folder.err).toBe(
+        `pbiplint: ${dir}/Sales.pbix ${how}\nRun pbiplint --help for usage.\n`,
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
   it("lints a whole project, prints layers in JSON, and puts notices on stderr", async () => {
     const root = mkdtempSync(join(tmpdir(), "pbiplint-proj-"));
     mkdirSync(join(root, "Demo.SemanticModel", "definition"), { recursive: true });

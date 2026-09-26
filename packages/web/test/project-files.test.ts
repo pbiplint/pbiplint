@@ -6,6 +6,7 @@ import {
   relativeToRoot,
   selectProject,
   type InputEntry,
+  type InputMarker,
   type InputTree,
 } from "../src/input/project-files.js";
 
@@ -883,6 +884,105 @@ describe("selectProject", () => {
         "Demo.Report/pbiplint.config.json (config, not used)",
       ]),
     );
+  });
+});
+
+describe("selectProject and a .pbix (tracked in #88)", () => {
+  // The words for a .pbix, written out here so a change to them is seen: Learn's labels, from the
+  // Power BI Desktop projects page. The CLI's tests hold the same trees to the same words.
+  const HOW =
+    "pbiplint reads a report saved as a Power BI project (PBIP). In Power BI Desktop, choose File > Save as and pick Power BI project files (*.pbip) as the file type (if it isn't offered, first turn on Power BI Project (.pbip) save option under File > Options and settings > Options > Preview features).";
+  const one = (path: string): string =>
+    `${path} is a Power BI Desktop file (.pbix), which pbiplint cannot read. ${HOW}`;
+  const many = (path: string, others: string): string =>
+    `${path} and ${others} are Power BI Desktop files, which pbiplint cannot read. ${HOW}`;
+  const pbix = (path: string): InputMarker => ({ path, kind: "pbix" });
+  /** A tree holding these .pbix files, as the walkers record them, and `extra` besides. */
+  const withPbix = (paths: string[], extra: Partial<InputTree> = {}): InputTree => ({
+    ...emptyTree(),
+    ...extra,
+    markers: [...(extra.markers ?? []), ...paths.map(pbix)],
+  });
+  it("names a lone .pbix, the one a folder holds, and one in a folder below, in any case", () => {
+    expect(() => selectProject(withPbix(["Sales.pbix"]))).toThrow(
+      new InputError(one("Sales.pbix")),
+    );
+    expect(() => selectProject(withPbix(["Sales.pbix"]))).toThrow(InputError);
+    expect(() => selectProject(withPbix(["Demo/Sales.pbix"]))).toThrow(
+      new InputError(one("Demo/Sales.pbix")),
+    );
+    expect(() => selectProject(withPbix(["Demo/Archive/Sales.PBIX"]))).toThrow(
+      new InputError(one("Demo/Archive/Sales.PBIX")),
+    );
+  });
+  it("names the first .pbix the CLI's walk meets and counts the others, whatever order the drop listed them in", () => {
+    expect(() => selectProject(withPbix(["Demo/Sales.pbix", "Demo/Archive/Old.pbix"]))).toThrow(
+      new InputError(many("Demo/Archive/Old.pbix", "1 other .pbix file")),
+    );
+    expect(() =>
+      selectProject(
+        withPbix(["Demo/Sales.pbix", "Demo/Archive/Old.pbix", "Demo/Archive/2024.pbix"]),
+      ),
+    ).toThrow(new InputError(many("Demo/Archive/2024.pbix", "2 other .pbix files")));
+  });
+  it("changes nothing beside a project it lints, dropped inside it or beside it, and never reads one", () => {
+    const model = {
+      entries: [e("Demo/Demo.SemanticModel/definition/model.tmdl", "model Model\n")],
+      modelFolders: ["Demo/Demo.SemanticModel"],
+    };
+    const before = selectProject({ ...emptyTree(), ...model });
+    expect(before.root).toBe("Demo");
+    // Inside the dropped folder, and dropped beside it: the folder is still the project, and the
+    // .pbix is neither in what was read nor in what lint is given.
+    for (const paths of [["Demo/Demo.pbix", "Demo/Archive/Demo.PBIX"], ["Demo.pbix"]])
+      expect(selectProject(withPbix(paths, model))).toEqual(before);
+  });
+  it("gives a legacy part's notice, and every other refusal, as it does without one", () => {
+    const legacy: Partial<InputTree> = {
+      reportFolders: ["Demo/Demo.Report"],
+      markers: [{ path: "Demo/Demo.Report/report.json", kind: "legacy-report" }],
+    };
+    const notice = selectProject({ ...emptyTree(), ...legacy });
+    expect(notice.diagnostics.map((d) => d.kind)).toEqual(["legacy-report-format"]);
+    expect(selectProject(withPbix(["Demo/Demo.pbix"], legacy))).toEqual(notice);
+    // The nothing-read refusal.
+    expect(() =>
+      selectProject(
+        withPbix(["Demo/Sales.pbix"], {
+          diagnostics: [unreadAt("Demo/tables")],
+          unreadFolders: ["Demo/tables"],
+          refusal: { path: "Demo/tables", reason: "locked" },
+        }),
+      ),
+    ).toThrow(new InputError("Could not read Demo/tables: locked"));
+    // A model folder that holds no .tmdl files.
+    expect(() =>
+      selectProject(withPbix(["Demo/Sales.pbix"], { modelFolders: ["Demo/Old.SemanticModel"] })),
+    ).toThrow(
+      new InputError(
+        "Demo/Old.SemanticModel holds no .tmdl files. Only a model stored as TMDL can be linted; if it is in the older model.bim format, save it in the TMDL format from Power BI Desktop first.",
+      ),
+    );
+    // Two reports.
+    expect(() =>
+      selectProject(
+        withPbix(["Demo/Sales.pbix"], {
+          entries: [
+            e("Demo/A.Report/definition/report.json"),
+            e("Demo/B.Report/definition/report.json"),
+          ],
+          reportFolders: ["Demo/A.Report", "Demo/B.Report"],
+        }),
+      ),
+    ).toThrow(/contains 2 reports; drop one of them: A\.Report, B\.Report/);
+    // A walk stopped at the depth cap goes on with its notice, as it does without one.
+    const cap: Diagnostic = {
+      kind: "depth-cap",
+      path: "Demo/d0",
+      message: "the walk stopped 64 folders deep at Demo/d0, so files below it were not read",
+    };
+    const capped = selectProject({ ...emptyTree(), diagnostics: [cap] });
+    expect(selectProject(withPbix(["Demo/Sales.pbix"], { diagnostics: [cap] }))).toEqual(capped);
   });
 });
 

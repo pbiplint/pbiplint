@@ -97,8 +97,10 @@ export { buildFacts } from "./project/facts.js";
 export {
   datasetReference,
   isModelFile,
+  isPbix,
   isReportFile,
   pairingDecision,
+  pbixRefusal,
   routeFiles,
   type PairingDecision,
 } from "./project/route.js";

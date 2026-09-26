@@ -2,7 +2,9 @@ import { accessSync, constants, readdirSync, readFileSync, statSync, type Stats 
 import { basename, dirname, join, relative, resolve } from "node:path";
 import {
   datasetReference,
+  isPbix,
   pairingDecision,
+  pbixRefusal,
   readJson,
   type DatasetReference,
   type Diagnostic,
@@ -137,19 +139,28 @@ const emptyPart = (root: string): ResolvedPart => ({ root, files: [], unread: []
 /**
  * Every file under `dir` that `keep` accepts, into `part`, with each path relative to its root.
  * Listing `dir` itself is the caller's to answer for; a folder or file below it that cannot be
- * read is a notice and one of the part's unread paths, and the rest is still read.
+ * read is a notice and one of the part's unread paths, and the rest is still read. Given `pbix`,
+ * the walk also notes there each .pbix it passes, in the order it meets them, relative to the
+ * walk's base: by name alone, since none is ever opened.
  */
-function readTree(w: Walk, part: ResolvedPart, dir: string, keep: (name: string) => boolean): void {
+function readTree(
+  w: Walk,
+  part: ResolvedPart,
+  dir: string,
+  keep: (name: string) => boolean,
+  pbix?: string[],
+): void {
   for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) =>
     byName(a.name, b.name),
   )) {
     const p = join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (!SKIP_DIRS.has(entry.name)) attempt(w, p, () => readTree(w, part, p, keep), part, true);
+      if (!SKIP_DIRS.has(entry.name))
+        attempt(w, p, () => readTree(w, part, p, keep, pbix), part, true);
     } else if (keep(entry.name)) {
       const text = attempt(w, p, () => readFileSync(p, "utf8"), part);
       if (text !== undefined) part.files.push({ path: toPosix(relative(part.root, p)), text });
-    }
+    } else if (pbix && isPbix(entry.name)) pbix.push(toPosix(relative(w.base, p)));
   }
 }
 
@@ -283,6 +294,8 @@ export function resolveProject(input: string): ResolvedProject {
           diagnostics: [],
         };
       if (path.endsWith(".pbip")) return resolvePbip(input, path);
+      // Named for what it is, by its name alone: a .pbix is never opened.
+      if (isPbix(path)) throw new UsageError(pbixRefusal(input));
       throw new UsageError(`${input} is not a .tmdl file, a .pbip file, or a folder`);
     }
     return resolveFolder(input, path);
@@ -562,13 +575,19 @@ function readFolder(w: Walk, input: string, path: string, preferred?: string): R
   if (report) out.report = report;
   if (model || report) return out;
 
-  // Loose .tmdl files anywhere under a plain folder, as v1 accepted.
+  // Loose .tmdl files anywhere under a plain folder, as v1 accepted. The same walk, the whole
+  // folder but the skipped folders, notes each .pbix it passes, for the refusal below.
   const direct = emptyPart(path);
-  readTree(w, direct, path, (n) => n.endsWith(".tmdl"));
+  const pbix: string[] = [];
+  readTree(w, direct, path, (n) => n.endsWith(".tmdl"), pbix);
   if (direct.files.length) return { ...out, model: direct };
   // Nothing to lint but something to say: a legacy part alone, or a part that could not be read,
   // which resolveFolder turns into a refused run naming the path that refused.
   if (out.diagnostics.length) return out;
+  // Nothing else explains it, so a .pbix the walk met is named for what it is: the first it met,
+  // joined to `input` as the nothing-read refusal joins its path, and how many more.
+  if (pbix[0] !== undefined)
+    throw new UsageError(pbixRefusal(toPosix(join(input, pbix[0])), pbix.length - 1));
   throw new UsageError(
     `No semantic model or report found at ${input} (expected ${EXPECTED_INPUT})`,
   );

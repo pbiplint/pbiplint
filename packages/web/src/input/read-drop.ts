@@ -1,4 +1,4 @@
-import type { Diagnostic } from "@pbiplint/core";
+import { isPbix, type Diagnostic } from "@pbiplint/core";
 import {
   CONFIG_FILE,
   emptyTree,
@@ -78,8 +78,12 @@ export function unread(tree: InputTree, path: string, e: unknown, folder = false
   });
 }
 
-/** A legacy part's marker file, matched by the folder it sits in. */
+/**
+ * A legacy part's marker file, matched by the folder it sits in, or a .pbix, matched by its name
+ * wherever it sits. Called on files only, so a folder named like a .pbix is not one.
+ */
 export const markerOf = (path: string): InputMarker | undefined => {
+  if (isPbix(path)) return { path, kind: "pbix" };
   const m = /(^|\/)([^/]+\.(Report|SemanticModel))\/(report\.json|model\.bim)$/.exec(path);
   if (!m) return undefined;
   if (m[3] === "Report" && m[4] === "report.json") return { path, kind: "legacy-report" };
@@ -87,8 +91,16 @@ export const markerOf = (path: string): InputMarker | undefined => {
   return undefined;
 };
 
-/** A file dropped on its own, read from its File: a failed read is a notice, and the drop goes on. */
+/**
+ * A file dropped on its own, read from its File: a failed read is a notice, and the drop goes on.
+ * A .pbix is recorded by its name and never opened.
+ */
 async function readLoose(file: File, tree: InputTree): Promise<void> {
+  const marker = markerOf(file.name);
+  if (marker) {
+    tree.markers.push(marker);
+    return;
+  }
   if (!wanted(file.name)) return;
   try {
     tree.entries.push({ path: file.name, text: await file.text() });
@@ -126,7 +138,7 @@ export async function readDataTransfer(dt: DataTransfer): Promise<InputTree> {
 export async function walkEntry(entry: FileSystemEntry, tree: InputTree, depth = 0): Promise<void> {
   const path = entry.fullPath.replace(/^\//, "");
   if (entry.isFile) {
-    // A legacy part is known by its marker's name; the marker itself is never opened.
+    // A legacy part is known by its marker's name, and a .pbix by its own; neither is opened.
     const marker = markerOf(path);
     if (marker) {
       tree.markers.push(marker);

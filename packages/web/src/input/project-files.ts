@@ -1,6 +1,7 @@
 import {
   datasetReference,
   pairingDecision,
+  pbixRefusal,
   type Diagnostic,
   type LayerName,
   type LintFile,
@@ -12,15 +13,15 @@ export interface InputEntry {
   text: string;
 }
 
-/** A legacy part's marker file, seen by name and never opened. */
+/** A legacy part's marker file, or a .pbix, seen by name and never opened. */
 export interface InputMarker {
   path: string;
-  kind: "legacy-report" | "legacy-model";
+  kind: "legacy-report" | "legacy-model" | "pbix";
 }
 
 /**
  * What a reader saw: the files it read, every .SemanticModel and .Report folder it passed, read or
- * not, the legacy markers it saw by name, and what it could not read.
+ * not, the legacy markers and .pbix files it saw by name, and what it could not read.
  */
 export interface InputTree {
   entries: InputEntry[];
@@ -31,7 +32,10 @@ export interface InputTree {
   modelFolders: string[];
   /** Drop-relative paths of the .Report folders seen, read or not. */
   reportFolders: string[];
-  /** A report.json directly under a .Report, or a model.bim directly under a .SemanticModel: seen by name, never opened. */
+  /**
+   * A report.json directly under a .Report, a model.bim directly under a .SemanticModel, and any
+   * .pbix: seen by name, never opened.
+   */
   markers: InputMarker[];
   /** What the walk could not do: a folder past the depth cap, a file or folder that failed to read. */
   diagnostics: Diagnostic[];
@@ -510,13 +514,16 @@ function findConfig(s: Selection, root: string): SelectedProject["config"] {
 
 /**
  * Every folder the walk shows exists: the folders above each path it saw, and each folder it
- * passed or could not list, with the folders above those.
+ * passed or could not list, with the folders above those. A .pbix is left out, as any other file
+ * the walk does not read is: it is seen only to be named when nothing else can be, so it says
+ * nothing about where the project is, and a .pbix dropped beside a folder leaves that folder the
+ * root.
  */
 function foldersOf(tree: InputTree): { dirs: Set<string>; files: string[]; folders: string[] } {
   const unreadFolders = new Set(tree.unreadFolders);
   const files = [
     ...tree.entries.map((e) => e.path),
-    ...tree.markers.map((m) => m.path),
+    ...tree.markers.filter((m) => m.kind !== "pbix").map((m) => m.path),
     ...tree.diagnostics
       .filter((d) => d.kind === "unread-file" && d.path !== undefined && !unreadFolders.has(d.path))
       .map((d) => d.path!),
@@ -659,8 +666,18 @@ export function selectProject(tree: InputTree): SelectedProject {
     if (refused) throw new InputError(`Could not read ${refused.path}: ${reasonOf(tree, refused)}`);
     // Nothing to lint but something to say, a legacy part alone or a walk stopped at the cap: the
     // run goes on, and its notices say why nothing was linted.
-    if (diagnostics.length === 0)
-      throw new InputError(unlintable.length ? `${holdsNoTmdl()}. ${TMDL_ONLY}` : NOTHING_FOUND);
+    if (diagnostics.length === 0) {
+      if (unlintable.length) throw new InputError(`${holdsNoTmdl()}. ${TMDL_ONLY}`);
+      // Nothing else explains it, so a .pbix the walk met is named for what it is, as the CLI
+      // names it: the first its walk would meet, by its path in the drop, which is the CLI's
+      // path joined to its input, and how many more.
+      const pbix = [
+        ...new Set(tree.markers.filter((m) => m.kind === "pbix").map((m) => m.path)),
+      ].sort(walkOrder);
+      throw new InputError(
+        pbix[0] !== undefined ? pbixRefusal(pbix[0], pbix.length - 1) : NOTHING_FOUND,
+      );
+    }
   }
   const notes = unlintable.length
     ? [`${holdsNoTmdl()} and ${unlintable.length === 1 ? "was" : "were"} not linted. ${TMDL_ONLY}`]

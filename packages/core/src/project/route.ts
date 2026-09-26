@@ -13,6 +13,36 @@ export const isReportFile = (path: string): boolean =>
   path.endsWith(".pbip") ||
   /(^|\/)definition\/.*\.json$/.test(path);
 
+/**
+ * Whether a file is a Power BI Desktop file, known by its name alone: one ending in `.pbix`,
+ * compared without regard to case, as a folder's name is compared (spec section 4). pbiplint
+ * never opens one.
+ */
+export const isPbix = (path: string): boolean => /\.pbix$/i.test(path);
+
+/** How to save a report as a Power BI project, in the labels Learn gives the dialog and option. */
+const SAVE_AS_PROJECT =
+  "pbiplint reads a report saved as a Power BI project (PBIP). In Power BI Desktop, choose File > Save as and pick Power BI project files (*.pbip) as the file type (if it isn't offered, first turn on Power BI Project (.pbip) save option under File > Options and settings > Options > Preview features).";
+
+/**
+ * The refusal of an input of which nothing can be linted, and which nothing else explains, when
+ * the walk met a .pbix (spec section 4): it names `path`, the first .pbix the walk met, counts the
+ * `others` it met besides, and says how to save the report as a Power BI project. The CLI and the
+ * browser both give it, so the words cannot drift. The steps and their labels are Learn's, from
+ * the Power BI Desktop projects page,
+ * https://learn.microsoft.com/en-us/power-bi/developer/projects/projects-overview ("Save as a
+ * project" and "Enable preview features"). The preview option is a condition rather than a step:
+ * Learn still calls the format a preview, while Microsoft has since announced it generally
+ * available, so a newer Desktop may not show the option.
+ */
+export function pbixRefusal(path: string, others = 0): string {
+  const what =
+    others === 0
+      ? `${path} is a Power BI Desktop file (.pbix)`
+      : `${path} and ${others} other .pbix ${others === 1 ? "file" : "files"} are Power BI Desktop files`;
+  return `${what}, which pbiplint cannot read. ${SAVE_AS_PROJECT}`;
+}
+
 /** Files route by path: TMDL to the model, report JSON to the report, anything else nowhere. */
 export function routeFiles(files: LintFile[]): { model: LintFile[]; report: LintFile[] } {
   return {

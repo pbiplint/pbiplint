@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   datasetReference,
+  isPbix,
   isReportFile,
   pairingDecision,
+  pbixRefusal,
   routeFiles,
 } from "../src/project/route.js";
 
@@ -107,5 +109,34 @@ describe("pairingDecision", () => {
     ).toEqual({ kind: "byPath", path: "../M.SemanticModel" });
     expect(datasetReference("not json")).toEqual({ kind: "none" });
     expect(datasetReference("[]")).toEqual({ kind: "none" });
+  });
+});
+
+describe("a .pbix (tracked in #88)", () => {
+  // Learn's labels, from the Power BI Desktop projects page: the Save As dialog's file type and
+  // the preview option's checkbox, in the words Desktop shows them.
+  const HOW =
+    "pbiplint reads a report saved as a Power BI project (PBIP). In Power BI Desktop, choose File > Save as and pick Power BI project files (*.pbip) as the file type (if it isn't offered, first turn on Power BI Project (.pbip) save option under File > Options and settings > Options > Preview features).";
+  it("is known by its name alone, in any case", () => {
+    for (const path of ["Sales.pbix", "Sales.PBIX", "Demo/old/Sales.Pbix", "a b.pbix"])
+      expect(isPbix(path), path).toBe(true);
+    for (const path of ["Sales.pbip", "Sales.pbit", "Sales.pbix.txt", "Sales.pbix/x.tmdl", "pbix"])
+      expect(isPbix(path), path).toBe(false);
+  });
+  it("names one .pbix and says how to save the report as a Power BI project", () => {
+    expect(pbixRefusal("Demo/Sales.pbix")).toBe(
+      `Demo/Sales.pbix is a Power BI Desktop file (.pbix), which pbiplint cannot read. ${HOW}`,
+    );
+    expect(pbixRefusal("Sales.PBIX", 0)).toBe(
+      `Sales.PBIX is a Power BI Desktop file (.pbix), which pbiplint cannot read. ${HOW}`,
+    );
+  });
+  it("names the first of several and counts the others", () => {
+    expect(pbixRefusal("Demo/A.pbix", 1)).toBe(
+      `Demo/A.pbix and 1 other .pbix file are Power BI Desktop files, which pbiplint cannot read. ${HOW}`,
+    );
+    expect(pbixRefusal("Demo/A.pbix", 2)).toBe(
+      `Demo/A.pbix and 2 other .pbix files are Power BI Desktop files, which pbiplint cannot read. ${HOW}`,
+    );
   });
 });

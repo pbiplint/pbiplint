@@ -442,20 +442,24 @@ nothing could be read joins it, and the browser gives the same path
 relative to the drop. The CLI's walk is its walk for loose `.tmdl`
 files, the whole folder but the folders it skips; the browser's is its
 walk of the drop, a `.pbix` dropped on its own included. Core builds
-the words, which name the dialog and the option as Learn's Power BI
-Desktop projects page (projects-overview) labels them, the preview
-option as a condition since Microsoft has announced the format
-generally available: `Demo/Sales.pbix is a Power BI Desktop file
-(.pbix), which pbiplint cannot read. pbiplint reads a report saved as a
-Power BI project (PBIP). In Power BI Desktop, choose File > Save as and
-pick Power BI project files (*.pbip) as the file type (if it isn't
-offered, first turn on Power BI Project (.pbip) save option under
-File > Options and settings > Options > Preview features).` A `.pbix`
-beside anything else changes nothing: a run that lints anything, a
-legacy part's notice, a refused read, the refusals of two reports or
-two models, the `.pbip` route's own refusals, and the browser's refusal
-of a model folder that holds no `.tmdl` files stand as they were, with
-no notice for the `.pbix`, which is never among the files read.
+the words, which name the menu path, the file type, and the option as
+Learn's Power BI Desktop projects page (projects-overview) labels them,
+the preview option as a condition since Microsoft has announced the
+format generally available (in Microsoft 365 Message Center post
+MC1465770, September 2, 2026, not on Learn): `Demo/Sales.pbix is a
+Power BI Desktop file (.pbix), which pbiplint cannot read. pbiplint
+reads a report saved as a Power BI project (PBIP). In Power BI Desktop,
+choose File > Save as and pick Power BI project files (*.pbip) as the
+file type (if it isn't offered, first turn on Power BI Project (.pbip)
+save option under File > Options and settings > Options > Preview
+features).` A `.pbix` beside anything else changes nothing: a run
+that lints anything, a legacy part's notice, a refused read, the
+refusals of two reports or two models, the `.pbip` route's own
+refusals, and the browser's refusal of a model folder that holds no
+`.tmdl` files stand as they were, with no notice for the `.pbix`, which
+is never among the files read. The CLI has no refusal of its own for a
+model folder holding no `.tmdl` files, so beside one it names the
+`.pbix` where the browser names the folder.
 
 ## 5. PBIR parser and report object model
 
@@ -638,13 +642,13 @@ aggregation table when it covers the query.
 |---|---|---|
 | Opens on | landing page display name, or the active page with "the page open when it was saved; no landing page set" | `LANDING_PAGE_NOT_SET` |
 | Filters pane | open / closed / hidden from readers | `FILTERS_PANE_STATE` |
-| Pages | count; hidden; tooltip; drillthrough | `HIDE_TOOLTIP_DRILLTROUGH_PAGES` |
-| Visuals | count; hidden; custom visual types registered and used (the used count unknown while a visual.json could not be read and a registered type is used by no visual that was read, amended 2026-09-24 with Michael) | `HIDDEN_VISUAL_WITH_FIELDS`, `REMOVE_UNUSED_CUSTOM_VISUALS` |
+| Pages | count; hidden; tooltip; drillthrough; unknown in place of 0 while a page.json or a visual.json, or a folder that could hold one, could not be read (amended 2026-09-25 with Michael) | `HIDE_TOOLTIP_DRILLTROUGH_PAGES` |
+| Visuals | count; hidden; custom visual types registered and used (the used count unknown while a visual.json could not be read and a registered type is used by no visual that was read, amended 2026-09-24 with Michael); unknown in place of 0 while a visual.json, or a folder that could hold one, could not be read (amended 2026-09-25 with Michael) | `HIDDEN_VISUAL_WITH_FIELDS`, `REMOVE_UNUSED_CUSTOM_VISUALS` |
 | Report measures | count | `REPORT_LEVEL_MEASURES` |
 | Slicers | count of the catalog slicers; saved selections, those on custom slicers named; saved search terms (amended 2026-09-25 with Michael); unknown in place of none while a visual.json could not be read (amended 2026-09-24 with Michael) | `SLICER_SELECTION_SAVED`, `SLICER_SEARCH_SAVED` |
 | Mobile layouts | pages with one, counted by the mobile.json files read in their folders, of total; unknown in place of none while a mobile.json, or the page of one, could not be read (amended 2026-09-24 with Michael) | |
 | Schema versions | report, page, visual (highest seen) | |
-| Model | tables, columns, measures, leaving out Desktop's hidden auto date/time tables (amended 2026-09-25 with Michael); with both parts, columns and measures not reached from this report | `NOT_REACHED_FROM_REPORT` |
+| Model | tables, columns, measures, leaving out Desktop's hidden auto date/time tables (amended 2026-09-25 with Michael), each unknown in place of 0 while a model file could not be fully read (amended 2026-09-25 with Michael); with both parts, columns and measures not reached from this report | `NOT_REACHED_FROM_REPORT` |
 
 Amended 2026-09-20: the facts are built only when the report layer is
 present, so a model-only run produces none and no surface shows the
@@ -830,8 +834,8 @@ Amended 2026-09-25 with Michael (release triage, batch F): a count of
 0 states that nothing is there, which pbiplint must not say about what
 it did not read, so three counts read unknown in place of 0 while what
 they count could not be read. Pages reads `unknown` while a page.json
-could not be read or a folder that could hold one could not be
-(definition/, the pages folder, or a page's folder), with `a page.json
+could not be read or a folder that could hold one (definition/, the
+pages folder, or a page's folder) could not be read, with `a page.json
 could not be read`, and while a visual.json, or a folder that could
 hold one, could not be read, with `a visual.json could not be read`,
 since a visual.json names its page by its folder and that page counts
@@ -1319,10 +1323,10 @@ hidden slicer counts: the pull request 5 corpus shows the term on
 declares the same `selfFilter`. In that corpus 41 slicers in 9
 repositories carry a term, each a single `Contains` on a string
 literal; 30 have no selection saved beside it, and in 9 the term sits
-on a column the slicer no longer shows, since Desktop keeps it when the
-slicer's field is swapped. Michael's check in Power BI Desktop on
-September 25, 2026 showed the saved term coming back when the report is
-reopened, with the slicer's list showing only the values that match it.
+on a column the slicer does not show. Michael's check in Power BI
+Desktop on September 25, 2026 showed the saved term coming back when
+the report is reopened, with the slicer's list showing only the values
+that match it.
 The finding sits at the `selfFilter`'s line, and its detail names no
 column: it quotes the term, `opens with the search term "spring"
 saved`, when the `Where` is one `Contains` whose right side is a
@@ -1537,9 +1541,11 @@ whatever order the drop listed them in: each folder's entries in name
 order, a folder's contents before its next sibling, and a report's
 `definition.pbir`, then its `.platform`, before its `definition`
 folder, as the CLI's `reportPart` reads them. So the two name the
-same path, unless two different names in one folder compare equal in
-that name order, where the CLI keeps the order its listing gave and
-the browser the order of the drop.
+same path where both use the same collation data (the name order is
+`localeCompare` in English, whose data Node's ICU and the browser each
+supply, in versions that can differ), unless two different names in
+one folder compare equal in that name order, where the CLI keeps the
+order its listing gave and the browser the order of the drop.
 
 ## 13. CLI changes
 

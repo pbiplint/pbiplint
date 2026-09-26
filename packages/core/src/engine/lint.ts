@@ -44,7 +44,8 @@ export interface LintOptions {
    * one pbiplint could not fully read (`Model.unreadPaths`). A report file the PBIR format defines
    * under the definition folder counts as one that failed to parse, and a folder there as every
    * such file it could hold (`Report.unreadDefinitionFiles` and `Report.unreadDefinitionFolders`);
-   * definition.pbir, the .platform, and the .pbip name no field, so passing one changes nothing. No
+   * definition.pbir, the .platform, and the .pbip name no field, so passing one to the report layer
+   * changes nothing (a model path that is not a `.tmdl` file is read as a folder, above). No
    * path is a PARSE_ISSUE finding. A path is ignored when its layer is absent, since nothing of
    * that layer was read.
    */

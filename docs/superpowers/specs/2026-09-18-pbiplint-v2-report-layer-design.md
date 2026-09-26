@@ -1338,9 +1338,9 @@ checked the Power BI service, where a reader sees whatever was in the
 search box when the report was saved, with the slicer's list narrowed
 to the values that match it; the search narrows only that list, and
 whether other visuals are filtered depends on what is selected in the
-slicer. He checked the fix too: deleting the term, or selecting the
-slicer's eraser, then saving leaves the box empty when the report is
-reopened.
+slicer. He checked the fix too: deleting the term and saving leaves
+the box empty when the report is reopened in Power BI Desktop, and the
+slicer's eraser clears the search box.
 
 Mobile layouts and themes are facts only in v2.
 

@@ -1,8 +1,10 @@
+import { Window } from "happy-dom";
+import { marked } from "marked";
 import { describe, expect, it } from "vitest";
-import { lint } from "../src/engine/lint.js";
+import { lint, type LintOptions } from "../src/engine/lint.js";
 import { finding, modelPartlyRead } from "../src/rules/helpers.js";
 import { fieldFileUnread } from "../src/rules/report-helpers.js";
-import type { Rule } from "../src/rules/types.js";
+import type { Rule, RuleFinding } from "../src/rules/types.js";
 import {
   formatJson,
   formatMarkdown,
@@ -11,6 +13,7 @@ import {
   formatText,
   FORMATS,
 } from "../src/format/index.js";
+import { showControls } from "../src/index.js";
 
 const files = [
   { path: "definition/model.tmdl", text: "model Model\n\tculture: en-US\n" },
@@ -583,5 +586,369 @@ describe("a whole-project report", () => {
     };
     expect(pbipUri("proj/Demo.Report")).toBe("proj/Demo.pbip");
     expect(pbipUri("../proj/Demo.Report")).toBe("../proj/Demo.pbip");
+  });
+});
+
+describe("showControls", () => {
+  it("writes each control character as \\u and four lowercase hex digits", () => {
+    for (const [raw, shown] of [
+      ["\u0000", "\\u0000"],
+      ["\u001b", "\\u001b"],
+      ["\u001f", "\\u001f"],
+      ["\u007f", "\\u007f"],
+      ["\u0080", "\\u0080"],
+      ["\u009f", "\\u009f"],
+      ["\u202a", "\\u202a"],
+      ["\u202e", "\\u202e"],
+      ["\u2066", "\\u2066"],
+      ["\u2069", "\\u2069"],
+    ])
+      expect(showControls(raw!), shown).toBe(shown);
+    expect(showControls("Evil\u001b[2J\nName\u202e")).toBe("Evil\\u001b[2J\\u000aName\\u202e");
+  });
+  it("leaves a character just outside each range, and a plain string, as it is", () => {
+    for (const c of ["\u0020", "\u007e", "\u00a0", "\u2029", "\u202f", "\u2065", "\u206a"])
+      expect(showControls(c), c.codePointAt(0)!.toString(16)).toBe(c);
+    // Accented letters, CJK, emoji, and a backslash already in a name print as they are.
+    const plain = "'Sales'[Total é] 売上 📈 C:\\Reports\\u001b";
+    expect(showControls(plain)).toBe(plain);
+  });
+});
+
+describe("control characters from the input", () => {
+  // eslint-disable-next-line no-control-regex -- finding control characters is what this is for
+  const RAW_CONTROL = /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/;
+  // The same less the newline, which is the document's own line break.
+  // eslint-disable-next-line no-control-regex -- finding control characters is what this is for
+  const RAW_IN_JSON = /[\u0000-\u0009\u000b-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/;
+  const hostileName = "Evil\u001b[2J\nName";
+  const hostileFile = "definition/tables/S\u0007ales.tmdl";
+  const hostile: Rule = {
+    id: "HOSTILE",
+    name: "Hostile names",
+    category: "Maintenance",
+    severity: 2,
+    scope: ["Measure"],
+    layer: "model",
+    needs: ["model"],
+    description: "",
+    references: [],
+    status: "ported",
+    check: () => [
+      {
+        ruleId: "HOSTILE",
+        layer: "model",
+        objectType: "Measure",
+        objectName: hostileName,
+        location: { file: hostileFile, line: 2 },
+        detail: "right\u202eleft",
+      },
+      {
+        ruleId: "HOSTILE",
+        layer: "model",
+        objectType: "Measure",
+        objectName: "Plain",
+        location: { file: "definition/tables/Sales.tmdl", line: 5 },
+        detail: "plain",
+      },
+    ],
+  };
+  const crashing: Rule = {
+    ...hostile,
+    id: "CRASHING",
+    name: "Crashing",
+    check() {
+      throw new Error("failed on \u009b2J");
+    },
+  };
+  const needsReport: Rule = {
+    ...hostile,
+    id: "NEEDS_REPORT",
+    name: "Needs report",
+    needs: ["report"],
+  };
+  const run = lint(files, {
+    rules: [hostile, crashing, needsReport],
+    diagnostics: [
+      { kind: "unread-file", path: "x", message: "Bad\u001b]0;title\u0007 could not be read" },
+    ],
+    absent: { report: "this report reads a model outside the input (..\u202e\\M)" },
+  });
+  const noRaw = (text: string) => text.split("\n").filter((line) => RAW_CONTROL.test(line));
+
+  it("shows them in the text format, and nothing raw reaches the output", () => {
+    const text = formatText(run);
+    expect(noRaw(text)).toEqual([]);
+    const lines = text.split("\n");
+    const name = "Evil\\u001b[2J\\u000aName";
+    const file = "definition/tables/S\\u0007ales.tmdl:2";
+    // The columns are measured on the shown text, so the detail column still lines up.
+    expect(lines).toContain(`       ${name}  ${file}  right\\u202eleft`);
+    expect(lines).toContain(
+      `       ${"Plain".padEnd(name.length)}  ${"definition/tables/Sales.tmdl:5".padEnd(file.length)}  plain`,
+    );
+    expect(lines).toContain("Notice: Bad\\u001b]0;title\\u0007 could not be read");
+    expect(lines[1]).toContain(
+      "1 rule skipped (this report reads a model outside the input (..\\u202e\\M))",
+    );
+    expect(lines).toContain("  CRASHING: failed on \\u009b2J");
+  });
+
+  it("shows them in a fact's value, and the rule column still lines up", () => {
+    const j = (v: unknown) => JSON.stringify(v);
+    const text = formatText(
+      lint([
+        ...files,
+        { path: "definition/report.json", text: j({}) },
+        { path: "definition/pages/pages.json", text: j({ pageOrder: ["p"], activePageName: "p" }) },
+        {
+          path: "definition/pages/p/page.json",
+          text: j({ name: "p", displayName: "Over\u001b[2J\u202eview" }),
+        },
+      ]),
+    );
+    expect(noRaw(text)).toEqual([]);
+    const opens = text.split("\n").find((l) => l.startsWith("  Opens on"))!;
+    const model = text.split("\n").find((l) => l.startsWith("  Model "))!;
+    expect(opens).toMatch(/^ {2}Opens on +Over\\u001b\[2J\\u202eview \(the page open/);
+    expect(opens.indexOf("LANDING_PAGE_NOT_SET")).toBe(model.indexOf("NOT_REACHED_FROM_REPORT"));
+  });
+
+  it("escapes DEL, C1, and the bidirectional controls in JSON and SARIF, which parse to the same value", () => {
+    const raw = "a\u001b\u007f\u0080\u009b\u009f\u202a\u202e\u2066\u2069\n\tz";
+    const named: Rule = {
+      ...hostile,
+      check: () => [
+        { ruleId: "HOSTILE", layer: "model", objectType: "Measure", objectName: raw, detail: raw },
+      ],
+    };
+    const result = lint(files, { rules: [named] });
+    const json = formatJson(result);
+    const sarif = formatSarif(result);
+    for (const out of [json, sarif]) expect(RAW_IN_JSON.test(out)).toBe(false);
+    expect(json).toContain(
+      '"objectName": "a\\u001b\\u007f\\u0080\\u009b\\u009f\\u202a\\u202e\\u2066\\u2069\\n\\tz"',
+    );
+    expect(JSON.parse(json).groups[0].findings[0].objectName).toBe(raw);
+    expect(JSON.parse(sarif).runs[0].results[0].message.text).toBe(
+      `${raw}: Hostile names (${raw})`,
+    );
+  });
+});
+
+describe("the Markdown export and what the input holds", () => {
+  /** The export as a Markdown viewer shows it: rendered as GitHub-flavoured Markdown, as the site renders it. */
+  const rendered = (md: string) => {
+    const { document } = new Window();
+    document.body.innerHTML = marked.parse(md, { async: false });
+    return document;
+  };
+  type Shown = ReturnType<typeof rendered>;
+  /** Each body row of each table, as the text of its cells. */
+  const rows = (doc: Shown): string[][] =>
+    [...doc.querySelectorAll("tbody tr")].map((tr) =>
+      [...tr.querySelectorAll("td")].map((td) => td.textContent ?? ""),
+    );
+  /** The text of each code span in each table cell. */
+  const codes = (doc: Shown): string[] =>
+    [...doc.querySelectorAll("td code")].map((c) => c.textContent ?? "");
+  const one: Rule = {
+    id: "ONE",
+    name: "One finding",
+    category: "Maintenance",
+    severity: 2,
+    scope: ["Measure"],
+    layer: "model",
+    needs: ["model"],
+    description: "",
+    references: [],
+    status: "ported",
+    check: () => [],
+  };
+  // Skipped on a run with no report, so the skipped line gives the report layer's reason.
+  const needsReport: Rule = { ...one, id: "NEEDS_REPORT", needs: ["report"] };
+  /**
+   * The export of a run whose one model rule finds `finding` on a measure named M, unless it
+   * names one.
+   */
+  const exported = (finding: Partial<RuleFinding>, options: LintOptions = {}): string =>
+    formatMarkdown(
+      lint(files, {
+        ...options,
+        rules: [
+          { ...one, check: () => [{ objectType: "Measure", objectName: "M", ...finding }] },
+          needsReport,
+        ],
+      }),
+    );
+
+  it("writes HTML in a finding's detail and location as text, not as elements", () => {
+    const detail = "<script>alert(1)</script> & <b>bold</b> &amp; C:\\x\\<i>y</i> a\\|b";
+    const file = "definition/tables/<i>Sales</i>.tmdl";
+    const doc = rendered(exported({ detail, location: { file, line: 2 } }));
+    expect(doc.querySelectorAll("script, b, i")).toHaveLength(0);
+    expect(rows(doc)).toEqual([["M", "Measure", `${file}:2`, detail]]);
+  });
+  it("fences a name holding backticks so the whole name is one code span", () => {
+    for (const name of ["a`b", "a``b", "`a", "a`", "a```b`", "``"]) {
+      const doc = rendered(exported({ objectName: name }));
+      expect(codes(doc), name).toEqual([name]);
+      expect(rows(doc), name).toEqual([[name, "Measure", "", ""]]);
+    }
+  });
+  it("keeps the spaces at each end of a name in its code span", () => {
+    // CommonMark strips one space from each end of a code span that begins and ends with one and
+    // is not all spaces; a name that is all spaces keeps them without help.
+    for (const name of [" Sales ", "  Sales  ", " `a` ", " a", "a ", "  "]) {
+      const doc = rendered(exported({ objectName: name }));
+      expect(codes(doc), JSON.stringify(name)).toEqual([name]);
+    }
+  });
+  it("writes Markdown syntax in a detail and a location as text, not as a code span, link, image, or emphasis", () => {
+    /** The location and detail cells of a finding whose detail, and file name, hold `input`. */
+    const cellsOf = (input: string) => {
+      const file = `definition/tables/_${input}_.tmdl`;
+      const doc = rendered(exported({ detail: input, location: { file, line: 1 } }));
+      const [, , location, detail] = [...doc.querySelectorAll("tbody td")];
+      return { doc, file, location: location!, detail: detail! };
+    };
+    for (const input of [
+      // A code span would show the entities as written, `&lt;b&gt;`.
+      "`<b>` & `x`",
+      "[x](javascript:alert(1))",
+      "*em* _em_ ~~s~~ ~s~ **strong** __strong__",
+    ]) {
+      const { file, location, detail } = cellsOf(input);
+      // Text alone: no element in either cell, and the text is what the input holds.
+      expect(location.children, input).toHaveLength(0);
+      expect(detail.children, input).toHaveLength(0);
+      expect(location.textContent, input).toBe(`${file}:1`);
+      expect(detail.textContent, input).toBe(input);
+    }
+    // The URL inside is neither an image the viewer loads nor a link.
+    const image = cellsOf("![](https://example.com/t.png)");
+    expect(image.doc.querySelectorAll("img, td a")).toHaveLength(0);
+    expect(image.detail.textContent).toBe("![](https://example.com/t.png)");
+    // A notice and the skipped line's reason are written the same way.
+    const doc = rendered(
+      exported(
+        {},
+        {
+          diagnostics: [
+            { kind: "unread-file", path: "x", message: "`<b>` [x](javascript:alert(1)) *em*" },
+          ],
+          absent: { report: "~~a~~ _b_" },
+        },
+      ),
+    );
+    const notice = doc.querySelector("blockquote p")!;
+    expect(notice.children).toHaveLength(0);
+    expect(notice.textContent).toBe("Notice: `<b>` [x](javascript:alert(1)) *em*");
+    const summary = doc.querySelector("p")!;
+    expect(summary.children).toHaveLength(0);
+    expect(summary.textContent).toMatch(/ \(~~a~~ _b_\)\.$/);
+  });
+  it("writes a URL, a www address, an email address, and a format string as text in marked, not as a link", () => {
+    // marked's rendering: no cell holds a link, and each shows the input as written. GitHub's
+    // renderer is not asserted here, and it still links an email address, escaped or not.
+    for (const input of [
+      "https://contoso.sharepoint.com/sites/Finance_Team/Shared",
+      "www.example.com/a_b_c",
+      "first_last@example.com",
+      "mailto:first_last@example.com",
+      "$#,0.00;($#,0.00)",
+    ]) {
+      const md = exported({ detail: input });
+      const doc = rendered(md);
+      expect(doc.querySelectorAll("td a"), input).toHaveLength(0);
+      expect(rows(doc), input).toEqual([["M", "Measure", "", input]]);
+    }
+    // marked does no math, so this asserts only that the source carries `\$`, which GitHub's math
+    // does not honour.
+    expect(exported({ detail: "$#,0.00;($#,0.00)" })).toContain("\\$#,0.00;(\\$#,0.00)");
+  });
+  it("keeps a name holding | in its cell, and in its code span, a backslash before it included", () => {
+    for (const name of ["a|b", "a\\\\|b|"]) {
+      const doc = rendered(exported({ objectName: name, detail: "d" }));
+      expect(rows(doc), name).toEqual([[name, "Measure", "", "d"]]);
+    }
+    // One backslash before a pipe cannot be written in a table's code span for every viewer: the
+    // site's renderer reads `\\|` as a backslash and then a new cell. It shows doubled, and the
+    // rest of the name stays in the code span, never reaching the page as HTML.
+    const doc = rendered(exported({ objectName: "a\\|<img src=x onerror=alert(1)>", detail: "d" }));
+    expect(doc.querySelectorAll("img")).toHaveLength(0);
+    expect(rows(doc)).toEqual([["a\\\\|<img src=x onerror=alert(1)>", "Measure", "", "d"]]);
+  });
+  it("writes a notice, a fact's value, and an absent layer's reason holding < and & as text", () => {
+    const j = (v: unknown) => JSON.stringify(v);
+    const md = formatMarkdown(
+      lint(
+        [
+          ...files,
+          { path: "definition/report.json", text: j({}) },
+          {
+            path: "definition/pages/pages.json",
+            text: j({ pageOrder: ["p"], activePageName: "p" }),
+          },
+          {
+            path: "definition/pages/p/page.json",
+            text: j({ name: "p", displayName: "Over <b>view</b> & more" }),
+          },
+        ],
+        {
+          diagnostics: [
+            { kind: "unread-file", path: "x", message: "<b>x</b> & y|z could not be read" },
+          ],
+        },
+      ),
+    );
+    const doc = rendered(md);
+    expect(doc.querySelectorAll("b")).toHaveLength(0);
+    expect(doc.querySelector("blockquote")!.textContent!.trim()).toBe(
+      "Notice: <b>x</b> & y|z could not be read",
+    );
+    expect(rows(doc)).toContainEqual([
+      "Opens on",
+      "Over <b>view</b> & more (the page open when it was saved; no landing page set)",
+      "LANDING_PAGE_NOT_SET",
+    ]);
+    const absent = rendered(
+      exported({}, { absent: { report: "this report reads <i>a model</i> & more" } }),
+    );
+    expect(absent.querySelectorAll("i")).toHaveLength(0);
+    expect(absent.querySelector("p")!.textContent).toMatch(
+      / \(this report reads <i>a model<\/i> & more\)\.$/,
+    );
+  });
+  it("shows control characters, and a line break in a cell as a space, so nothing raw reaches the output", () => {
+    // eslint-disable-next-line no-control-regex -- finding control characters is what this is for
+    const RAW = /[\u0000-\u0009\u000b-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/;
+    const md = exported(
+      {
+        objectName: "Evil\u001b[2J\u202e",
+        detail: "one\r\ntwo\nthree\rfour\u0007",
+        location: { file: "definition/tables/S\u0007ales.tmdl", line: 2 },
+      },
+      {
+        diagnostics: [{ kind: "unread-file", path: "x", message: "Bad\u001b]0;t\u0007\nnext" }],
+        absent: { report: "reason\r\nwith a break" },
+      },
+    );
+    expect(RAW.test(md)).toBe(false);
+    const doc = rendered(md);
+    expect(codes(doc)).toEqual(["Evil\\u001b[2J\\u202e"]);
+    expect(rows(doc)).toEqual([
+      [
+        "Evil\\u001b[2J\\u202e",
+        "Measure",
+        "definition/tables/S\\u0007ales.tmdl:2",
+        "one two three four\\u0007",
+      ],
+    ]);
+    // Outside a table, a line break is shown as the text format shows it.
+    expect(doc.querySelector("blockquote")!.textContent!.trim()).toBe(
+      "Notice: Bad\\u001b]0;t\\u0007\\u000anext",
+    );
+    expect(doc.querySelector("p")!.textContent).toMatch(/ \(reason\\u000d\\u000awith a break\)\.$/);
   });
 });

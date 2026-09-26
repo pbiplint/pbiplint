@@ -1,5 +1,6 @@
+import { pbixRefusal } from "@pbiplint/core";
 import { describe, expect, it } from "vitest";
-import { emptyTree, type InputTree } from "../src/input/project-files.js";
+import { emptyTree, selectProject, type InputTree } from "../src/input/project-files.js";
 import {
   MAX_DEPTH,
   SKIP_DIRS,
@@ -37,6 +38,17 @@ function file(name: string, fullPath: string, text: string): FileSystemFileEntry
     name,
     fullPath,
     file: (ok: (f: File) => void) => ok(new File([text], name)),
+  } as unknown as FileSystemFileEntry;
+}
+
+/** A file entry the walk must never open: opening it is recorded, and nothing is handed back. */
+function unopened(name: string, fullPath: string, opened: string[]): FileSystemFileEntry {
+  return {
+    isFile: true,
+    isDirectory: false,
+    name,
+    fullPath,
+    file: () => opened.push(fullPath),
   } as unknown as FileSystemFileEntry;
 }
 
@@ -255,6 +267,32 @@ describe("walkEntry", () => {
         message: `the walk stopped ${MAX_DEPTH} folders deep at d${MAX_DEPTH}, so files below it were not read`,
       },
     ]);
+  });
+  it("records a .pbix by name, in any case, without opening it, and none in a folder it skips", async () => {
+    const opened: string[] = [];
+    const seen = emptyTree();
+    await walkEntry(
+      dir("Demo", "/Demo", [
+        unopened("Sales.pbix", "/Demo/Sales.pbix", opened),
+        dir("Archive", "/Demo/Archive", [unopened("Old.PBIX", "/Demo/Archive/Old.PBIX", opened)]),
+        dir(".git", "/Demo/.git", [unopened("x.pbix", "/Demo/.git/x.pbix", opened)]),
+        dir("node_modules", "/Demo/node_modules", [
+          unopened("y.pbix", "/Demo/node_modules/y.pbix", opened),
+        ]),
+        // A folder is not a file, whatever its name.
+        dir("Folder.pbix", "/Demo/Folder.pbix", []),
+      ]),
+      seen,
+    );
+    expect(opened).toEqual([]);
+    expect(seen.markers).toEqual([
+      { path: "Demo/Sales.pbix", kind: "pbix" },
+      { path: "Demo/Archive/Old.PBIX", kind: "pbix" },
+    ]);
+    expect(seen.entries).toEqual([]);
+    expect(seen.diagnostics).toEqual([]);
+    // Nothing else in the drop, so the page names the first the CLI's walk would meet.
+    expect(() => selectProject(seen)).toThrow(pbixRefusal("Demo/Archive/Old.PBIX", 1));
   });
   it("records a file that could not be read as a diagnostic and goes on", async () => {
     const bad = {
@@ -492,6 +530,27 @@ describe("readDataTransfer", () => {
       entries: [{ path: "U.tmdl", text: "table U\n" }],
       diagnostics: [unreadT],
       refusal: { path: "T.tmdl", reason: "gone" },
+    });
+  });
+  it("records a .pbix dropped on its own by name, on both top-level branches, without opening it", async () => {
+    const unread = (name: string): File =>
+      Object.assign(new File([""], name), { text: () => Promise.reject(new Error("opened")) });
+    const viaItems = {
+      items: [
+        {
+          webkitGetAsEntry: () => file("Sales.pbix", "/Sales.pbix", ""),
+          getAsFile: () => unread("Sales.pbix"),
+        },
+      ],
+      files: [],
+    } as unknown as DataTransfer;
+    const lone = await readDataTransfer(viaItems);
+    expect(lone).toEqual({ ...emptyTree(), markers: [{ path: "Sales.pbix", kind: "pbix" }] });
+    expect(() => selectProject(lone)).toThrow(pbixRefusal("Sales.pbix"));
+    const flat = { items: [], files: [unread("Sales.PBIX")] } as unknown as DataTransfer;
+    expect(await readDataTransfer(flat)).toEqual({
+      ...emptyTree(),
+      markers: [{ path: "Sales.PBIX", kind: "pbix" }],
     });
   });
   it("falls back to flat files when it does not", async () => {

@@ -42,10 +42,10 @@ describe("bundled sample", () => {
       "definition/tables/Sales.tmdl",
       "definition/tables/Store.tmdl",
     ]);
-    // The report's 77, as the CLI counts them: the .pbip one level up, the part's own two files,
-    // and the 74 JSON files under its definition folder.
+    // The report's 78, as the CLI counts them: the .pbip one level up, the part's own two files,
+    // and the 75 JSON files under its definition folder.
     const report = paths.slice(14);
-    expect(report).toHaveLength(77);
+    expect(report).toHaveLength(78);
     expect(report.slice(0, 4)).toEqual([
       "../Messy Sales Demo.pbip",
       ".platform",
@@ -129,12 +129,12 @@ describe("bundled sample", () => {
     const result = lint(SAMPLE_FILES, { config: resolveConfig(JSON.parse(SAMPLE_CONFIG)) });
     const { summary } = result;
     expect([summary.findings, summary.errors, summary.warnings, summary.infos]).toEqual([
-      256, 19, 77, 160,
+      257, 19, 78, 160,
     ]);
-    expect(summary.files).toBe(91);
+    expect(summary.files).toBe(92);
     expect(result.layers).toEqual({
       model: { present: true, files: 14 },
-      report: { present: true, files: 77 },
+      report: { present: true, files: 78 },
     });
   });
   it("sorts with the locale it asks for, not the order code units happen to give", () => {

@@ -1,9 +1,9 @@
 import { chmodSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { lint } from "@pbiplint/core";
+import { lint, noTmdlRefusal, pbixRefusal } from "@pbiplint/core";
 import { describe, expect, it } from "vitest";
-import { resolveProject } from "../src/walk.js";
+import { EXPECTED_INPUT, resolveProject } from "../src/walk.js";
 
 const repo = new URL("../../../", import.meta.url).pathname;
 const j = (v: unknown) => JSON.stringify(v);
@@ -444,6 +444,112 @@ describe("resolveProject on a .pbip that names its report (#86)", () => {
   });
 });
 
+describe("resolveProject and a .pbix (tracked in #88)", () => {
+  const folder = (): string => mkdtempSync(join(tmpdir(), "pbiplint-pbix-"));
+  it("names a .pbix given as the input, in any case, and says how to save it as a project", () => {
+    const root = folder();
+    for (const name of ["Sales.pbix", "Sales.PBIX"]) {
+      const file = join(root, name);
+      writeFileSync(file, "");
+      expect(() => resolveProject(file)).toThrow(new Error(pbixRefusal(file)));
+    }
+    // One that is not there is still named as not there.
+    const gone = join(root, "Gone.pbix");
+    expect(() => resolveProject(gone)).toThrow(new Error(`${gone} does not exist`));
+  });
+  it("names the .pbix a folder holds when it holds nothing to lint, joined to the input", () => {
+    const root = folder();
+    writeFileSync(join(root, "Sales.pbix"), "");
+    expect(() => resolveProject(root)).toThrow(new Error(pbixRefusal(`${root}/Sales.pbix`)));
+    // In a folder below the input, and in capitals.
+    const deep = folder();
+    mkdirSync(join(deep, "Archive"));
+    writeFileSync(join(deep, "Archive", "Sales.PBIX"), "");
+    expect(() => resolveProject(deep)).toThrow(
+      new Error(pbixRefusal(`${deep}/Archive/Sales.PBIX`)),
+    );
+  });
+  it("names the first .pbix its walk meets and counts the others", () => {
+    // Each folder's entries in name order, a folder's contents where its name sorts: Archive is
+    // walked before Sales.pbix, and in it 2024.pbix is met before Old.pbix.
+    const root = folder();
+    writeFileSync(join(root, "Sales.pbix"), "");
+    mkdirSync(join(root, "Archive"));
+    writeFileSync(join(root, "Archive", "Old.pbix"), "");
+    expect(() => resolveProject(root)).toThrow(
+      new Error(pbixRefusal(`${root}/Archive/Old.pbix`, 1)),
+    );
+    writeFileSync(join(root, "Archive", "2024.pbix"), "");
+    expect(() => resolveProject(root)).toThrow(
+      new Error(pbixRefusal(`${root}/Archive/2024.pbix`, 2)),
+    );
+  });
+  it("changes nothing beside a project it lints, a legacy part, or another refusal", () => {
+    const lints = pbip({ model: true, report: true });
+    const before = resolveProject(lints);
+    const beforePbip = resolveProject(join(lints, "Demo.pbip"));
+    writeFileSync(join(lints, "Demo.pbix"), "");
+    mkdirSync(join(lints, "Archive"));
+    writeFileSync(join(lints, "Archive", "Demo.PBIX"), "");
+    expect(resolveProject(lints)).toEqual(before);
+    expect(resolveProject(join(lints, "Demo.pbip"))).toEqual(beforePbip);
+    const legacy = pbip({ legacyReport: true });
+    const notice = resolveProject(legacy);
+    expect(notice.diagnostics.map((d) => d.kind)).toEqual(["legacy-report-format"]);
+    writeFileSync(join(legacy, "Demo.pbix"), "");
+    expect(resolveProject(legacy)).toEqual(notice);
+    const two = pbip({ report: true, secondReport: true });
+    writeFileSync(join(two, "Demo.pbix"), "");
+    expect(() => resolveProject(two)).toThrow(
+      /contains 2 reports; point at one of them: Demo\.Report, Other\.Report/,
+    );
+    // A report folder a .pbip names is not walked for loose files, so its refusal stands.
+    const named = folder();
+    mkdirSync(join(named, "Empty.Report"));
+    writeFileSync(join(named, "Empty.Report", "Demo.pbix"), "");
+    pbipAt(join(named, "Demo.pbip"), ["Empty.Report"]);
+    expect(() => resolveProject(join(named, "Demo.pbip"))).toThrow(
+      new Error(
+        `No semantic model or report found in Empty.Report, which ${join(named, "Demo.pbip")} names`,
+      ),
+    );
+  });
+  it("names a model folder that holds no .tmdl files ahead of a .pbix beside it, as the browser does", () => {
+    // Spec section 4; the browser's is pinned on the same tree in project-files.test.ts. Empty,
+    // and holding an empty definition folder.
+    for (const inside of ["", "definition"]) {
+      const root = folder();
+      mkdirSync(join(root, "Old.SemanticModel", inside), { recursive: true });
+      writeFileSync(join(root, "Sales.pbix"), "");
+      expect(() => resolveProject(root), inside).toThrow(
+        new Error(noTmdlRefusal([`${root}/Old.SemanticModel`])),
+      );
+    }
+  });
+  it("names a .pbix in the folder a .pbip that names no report is read as", () => {
+    const root = folder();
+    pbipAt(join(root, "Demo.pbip"), []);
+    writeFileSync(join(root, "Demo.pbix"), "");
+    expect(() => resolveProject(join(root, "Demo.pbip"))).toThrow(
+      new Error(pbixRefusal(`${root}/Demo.pbix`)),
+    );
+  });
+  it("never meets a .pbix in a folder it skips, nor takes a folder named like one for one", () => {
+    const root = folder();
+    for (const skipped of [".git", "node_modules", "StaticResources"]) {
+      mkdirSync(join(root, skipped));
+      writeFileSync(join(root, skipped, "Sales.pbix"), "");
+    }
+    mkdirSync(join(root, "Folder.pbix"));
+    const nothing = (at: string): Error =>
+      new Error(`No semantic model or report found at ${at} (expected ${EXPECTED_INPUT})`);
+    expect(() => resolveProject(root)).toThrow(nothing(root));
+    expect(() => resolveProject(join(root, "Folder.pbix"))).toThrow(
+      nothing(join(root, "Folder.pbix")),
+    );
+  });
+});
+
 // These have the operating system refuse a read, as a POSIX system does for a user (CI runs them
 // on Ubuntu). Root reads a folder whatever its mode, and Windows ignores a mode of 000, so they
 // skip there.
@@ -574,6 +680,64 @@ describe("resolveProject and what it could not read", () => {
     },
   );
   it.skipIf(noModes)(
+    "names the path its walk meets first when nothing could be read, as the browser names it",
+    () => {
+      // The trees packages/web/test/project-files.test.ts drops: a folder is walked into where
+      // its name sorts, so tables/Sales.tmdl is met before tables.old, and a report's
+      // definition.pbir is read before its .platform and its definition folder.
+      const root = mkdtempSync(join(tmpdir(), "pbiplint-first-refused-"));
+      const def = join(root, "Demo.SemanticModel", "definition");
+      const tableIn = (folder: string): void => {
+        mkdirSync(join(def, folder), { recursive: true });
+        writeFileSync(join(def, folder, "Sales.tmdl"), "table Sales\n");
+      };
+      tableIn("tables");
+      tableIn("tables.old");
+      const model = join(root, "Demo.SemanticModel");
+      const sales = join(def, "tables", "Sales.tmdl");
+      expect(() => locked([join(def, "tables.old"), sales], () => resolveProject(model))).toThrow(
+        `Could not read ${model}/definition/tables/Sales.tmdl: EACCES: permission denied`,
+      );
+      tableIn("cultures");
+      expect(() =>
+        locked([sales, join(def, "tables.old"), join(def, "cultures")], () =>
+          resolveProject(model),
+        ),
+      ).toThrow(`Could not read ${model}/definition/cultures: EACCES: permission denied`);
+      const report = join(root, "Demo.Report");
+      reportAt(report, { byPath: { path: "../Demo.SemanticModel" } });
+      writeFileSync(join(report, ".platform"), "{}");
+      rmSync(join(report, "definition", "pages"), { recursive: true });
+      const files = ["definition/report.json", ".platform", "definition.pbir"];
+      expect(() =>
+        locked(
+          files.map((f) => join(report, f)),
+          () => resolveProject(report),
+        ),
+      ).toThrow(`Could not read ${report}/definition.pbir: EACCES: permission denied`);
+    },
+  );
+  it.skipIf(noModes)(
+    "names a .pbix it could not open, since it never opens one, and refuses a failed read as before",
+    () => {
+      const root = mkdtempSync(join(tmpdir(), "pbiplint-pbix-locked-"));
+      const file = join(root, "Sales.pbix");
+      writeFileSync(file, "");
+      expect(() => locked([file], () => resolveProject(file))).toThrow(
+        new Error(pbixRefusal(file)),
+      );
+      expect(() => locked([file], () => resolveProject(root))).toThrow(
+        new Error(pbixRefusal(`${root}/Sales.pbix`)),
+      );
+      // A read that failed is what the run is refused for, as it is today.
+      mkdirSync(join(root, "tables"));
+      writeFileSync(join(root, "tables", "T.tmdl"), "table T\n");
+      expect(() => locked([join(root, "tables")], () => resolveProject(root))).toThrow(
+        new Error(`Could not read ${root}/tables: EACCES: permission denied`),
+      );
+    },
+  );
+  it.skipIf(noModes)(
     "leaves the model out with a reason when the named report's definition.pbir cannot be read",
     () => {
       const root = workspace();
@@ -593,6 +757,137 @@ describe("resolveProject and what it could not read", () => {
       expect(() => locked([sales], () => resolveProject(join(root, "Sales.pbip")))).toThrow(
         `Could not read ${root}/Sales.Report/definition.pbir: EACCES: permission denied`,
       );
+    },
+  );
+});
+
+describe("resolveProject and a model folder that holds no .tmdl files (tracked in #88)", () => {
+  // The words are core's, written out in route.test.ts; these hold which folders are named, how,
+  // and in what order. project-files.test.ts holds the browser to the same trees, naming each
+  // folder relative to the drop where these join it to the input.
+  const folder = (): string => mkdtempSync(join(tmpdir(), "pbiplint-notmdl-"));
+  /** What a model folder holding no .tmdl files holds instead, for emptyModel. */
+  const leftovers = ["", "definition", ".platform"] as const;
+  /** A model folder at `at`: empty, holding an empty definition folder, or only its .platform. */
+  function emptyModel(at: string, inside: (typeof leftovers)[number]): void {
+    mkdirSync(join(at, inside === ".platform" ? "" : inside), { recursive: true });
+    if (inside === ".platform")
+      writeFileSync(join(at, ".platform"), j({ metadata: { type: "SemanticModel" } }));
+  }
+  it("names a lone model folder given as the input", () => {
+    for (const inside of leftovers) {
+      const model = join(folder(), "Old.SemanticModel");
+      emptyModel(model, inside);
+      expect(() => resolveProject(model), inside).toThrow(new Error(noTmdlRefusal([model])));
+    }
+  });
+  it("names the model folder a folder holds, joined to the input", () => {
+    for (const inside of leftovers) {
+      const root = folder();
+      emptyModel(join(root, "Old.SemanticModel"), inside);
+      expect(() => resolveProject(root), inside).toThrow(
+        new Error(noTmdlRefusal([`${root}/Old.SemanticModel`])),
+      );
+    }
+  });
+  it("names one below that, and several in name order, as the browser lists them", () => {
+    const root = folder();
+    mkdirSync(join(root, "Models", "Old.SemanticModel"), { recursive: true });
+    expect(() => resolveProject(root)).toThrow(
+      new Error(noTmdlRefusal([`${root}/Models/Old.SemanticModel`])),
+    );
+    // One under a folder the walk skips is never met, so never named, as the browser's walkers
+    // skip the same folders.
+    for (const skipped of ["node_modules", "StaticResources"])
+      mkdirSync(join(root, skipped, "Skipped.SemanticModel"), { recursive: true });
+    expect(() => resolveProject(root)).toThrow(
+      new Error(noTmdlRefusal([`${root}/Models/Old.SemanticModel`])),
+    );
+    const two = folder();
+    mkdirSync(join(two, "Sales", "Sales.SemanticModel"), { recursive: true });
+    mkdirSync(join(two, "Archive", "Old.SemanticModel"), { recursive: true });
+    expect(() => resolveProject(two)).toThrow(
+      new Error(
+        noTmdlRefusal([`${two}/Archive/Old.SemanticModel`, `${two}/Sales/Sales.SemanticModel`]),
+      ),
+    );
+    // The order is the whole path's, as the browser sorts them, not the order the walk meets
+    // them: the walk is through Archive before it reaches Archive 2024, but "Archive 2024/" sorts
+    // before "Archive/".
+    mkdirSync(join(two, "Archive 2024", "Older.SemanticModel"), { recursive: true });
+    expect(() => resolveProject(two)).toThrow(
+      new Error(
+        noTmdlRefusal([
+          `${two}/Archive 2024/Older.SemanticModel`,
+          `${two}/Archive/Old.SemanticModel`,
+          `${two}/Sales/Sales.SemanticModel`,
+        ]),
+      ),
+    );
+  });
+  it("lints what it linted beside one, as before, and still refuses two model folders side by side", () => {
+    // Beside a report it lints: the report alone, with nothing to say about the folder, where the
+    // browser notes it.
+    const root = folder();
+    mkdirSync(join(root, "Old.SemanticModel"));
+    reportAt(join(root, "Demo.Report"), { byPath: { path: "../Old.SemanticModel" } });
+    const report = resolveProject(root);
+    expect(report.report!.root).toBe(join(root, "Demo.Report"));
+    expect(report.model).toBeUndefined();
+    expect(report.absent).toEqual({});
+    expect(report.diagnostics).toEqual([]);
+    // Below a folder that holds a model it lints: that model.
+    const nested = folder();
+    modelAt(join(nested, "Demo.SemanticModel"), "T");
+    mkdirSync(join(nested, "Archive", "Old.SemanticModel"), { recursive: true });
+    const model = resolveProject(nested);
+    expect(model.model!.root).toBe(join(nested, "Demo.SemanticModel"));
+    expect(model.diagnostics).toEqual([]);
+    // Beside that model: two semantic models, as before (spec section 12), where the browser
+    // lints the one and notes the other.
+    mkdirSync(join(nested, "Old.SemanticModel"));
+    expect(() => resolveProject(nested)).toThrow(
+      new Error(
+        `${nested} contains 2 semantic models; point at one of them: Demo.SemanticModel, Old.SemanticModel`,
+      ),
+    );
+  });
+  it("gives a legacy model folder its notice, as before, and names one further down, as the browser does", () => {
+    const root = folder();
+    mkdirSync(join(root, "Old.SemanticModel"));
+    writeFileSync(join(root, "Old.SemanticModel", "model.bim"), "{}");
+    for (const input of [join(root, "Old.SemanticModel"), root]) {
+      const p = resolveProject(input);
+      expect(p.model).toBeUndefined();
+      expect(p.absent).toEqual({ model: "the model is saved in the legacy model.bim format" });
+      expect(p.diagnostics.map((d) => [d.kind, d.path])).toEqual([
+        ["legacy-model-format", "Old.SemanticModel"],
+      ]);
+    }
+    // Further down, no read looks for its model.bim, so no notice explains it, in either surface:
+    // it is named as a folder that holds no .tmdl files, whose words offer the model.bim cause.
+    const deep = folder();
+    mkdirSync(join(deep, "Models", "Old.SemanticModel"), { recursive: true });
+    writeFileSync(join(deep, "Models", "Old.SemanticModel", "model.bim"), "{}");
+    expect(() => resolveProject(deep)).toThrow(
+      new Error(noTmdlRefusal([`${deep}/Models/Old.SemanticModel`])),
+    );
+  });
+  it.skipIf(noModes)(
+    "refuses a run of which nothing could be read naming what refused, as before",
+    () => {
+      const root = folder();
+      mkdirSync(join(root, "Old.SemanticModel"));
+      const locked = join(root, "Locked");
+      mkdirSync(locked);
+      chmodSync(locked, 0o000);
+      try {
+        expect(() => resolveProject(root)).toThrow(
+          new Error(`Could not read ${root}/Locked: EACCES: permission denied`),
+        );
+      } finally {
+        chmodSync(locked, 0o755);
+      }
     },
   );
 });

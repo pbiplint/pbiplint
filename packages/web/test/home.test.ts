@@ -2,6 +2,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { pbixRefusal } from "@pbiplint/core";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 // happy-dom resolves a relative URL against the page's http base, so the file path is built
@@ -54,9 +55,9 @@ describe("home page", () => {
     await tick();
     const results = document.getElementById("results")!;
     expect(results.hidden).toBe(false);
-    expect(results.querySelector(".summary")!.textContent).toContain("256 findings");
+    expect(results.querySelector(".summary")!.textContent).toContain("257 findings");
     expect(results.querySelector("h2")!.textContent).toBe(
-      "Results for the sample project (model, 14 files · report, 77 files)",
+      "Results for the sample project (model, 14 files · report, 78 files)",
     );
     // The sample runs under its own config, so the policy rules it plants fire.
     expect(results.querySelector("#rule-filters-pane-state")).not.toBeNull();
@@ -74,7 +75,7 @@ describe("home page", () => {
     document.getElementById("try-sample")!.click();
     await tick();
     expect(announcer.textContent).toBe(
-      "Results for the sample project (model, 14 files · report, 77 files): 256 findings (19 errors, 77 warnings, 160 info) in 91 files.",
+      "Results for the sample project (model, 14 files · report, 78 files): 257 findings (19 errors, 78 warnings, 160 info) in 92 files.",
     );
     expect(document.getElementById("results")!.hasAttribute("aria-live")).toBe(false);
     expect(document.querySelectorAll("#results [aria-live]").length).toBe(0);
@@ -137,7 +138,7 @@ describe("home page", () => {
     // The same rule the status line follows: a hidden block is out of the accessibility tree, so
     // content rendered into one arrives where nothing can reach it.
     expect(order).toEqual(["hidden=false", "render"]);
-    expect(results.querySelector(".summary")!.textContent).toContain("256 findings");
+    expect(results.querySelector(".summary")!.textContent).toContain("257 findings");
   });
   it("scrolls a problem message only as far as needed, so the textarea stays in view", () => {
     const status = document.getElementById("status")!;
@@ -242,8 +243,8 @@ describe("home page", () => {
     // what that drop reads, relative to the project folder: the model's files as they are, the
     // report's marked "(report)", the project file among them, and the config it applied.
     const sample = listed();
-    expect(sample).toHaveLength(93);
-    expect(sample.filter((p) => p.endsWith(" (report)"))).toHaveLength(77);
+    expect(sample).toHaveLength(94);
+    expect(sample.filter((p) => p.endsWith(" (report)"))).toHaveLength(78);
     expect(sample.filter((p) => p.endsWith(".tmdl"))).toHaveLength(14);
     expect(sample).toContain("Messy Sales Demo.SemanticModel/definition/model.tmdl");
     expect(sample).toContain("Messy Sales Demo.Report/definition.pbir (report)");
@@ -517,4 +518,74 @@ describe("home page", () => {
     );
     expect(document.getElementById("status")!.hidden).toBe(true);
   });
+  it("shows a control character in a refused .pbix's name as an escape, as the CLI does", async () => {
+    const status = document.getElementById("status")!;
+    // A right-to-left override, U+202E, between "Annual" and "xcod.pbix" would show the name as
+    // "Annualxibp.docx" and reorder the rest of the refusal after it.
+    dropFile("Annual\u202excod.pbix");
+    await tick();
+    await tick();
+    expect(status.textContent).toBe(pbixRefusal("Annual\\u202excod.pbix"));
+    expect(status.textContent).not.toMatch(RAW_CONTROL);
+    // An ordinary name with accents and CJK is shown as it is.
+    dropFile("Ventes café 売上.pbix");
+    await tick();
+    await tick();
+    expect(status.textContent).toBe(pbixRefusal("Ventes café 売上.pbix"));
+  });
+  it("shows a control character in a config error as an escape", async () => {
+    // Core refuses a key it does not know in its own words, quoting the key as the file has it.
+    feedFolder([
+      at("Proj/Demo.SemanticModel/definition/tables/T.tmdl", "table T\n"),
+      at("Proj/pbiplint.config.json", '{ "rules": {}, "x\u202e": true }'),
+    ]);
+    await tick();
+    await tick();
+    const status = document.getElementById("status")!;
+    expect(status.textContent).toBe('pbiplint.config.json: unknown key "x\\u202e"');
+    expect(status.textContent).not.toMatch(RAW_CONTROL);
+  });
+  it("shows a control character in the folder's name as an escape in the heading and the announcement", async () => {
+    feedFolder([at("Proj\u202e/Demo.SemanticModel/definition/tables/T.tmdl", "table T\n")]);
+    await tick();
+    await tick();
+    expect(document.querySelector("#results h2")!.textContent).toBe(
+      "Results for Proj\\u202e (model, 1 file)",
+    );
+    expect(document.getElementById("announce")!.textContent).toMatch(
+      /^Results for Proj\\u202e \(model, 1 file\): /,
+    );
+    expect(document.getElementById("results")!.textContent).not.toMatch(RAW_CONTROL);
+  });
 });
+
+// eslint-disable-next-line no-control-regex -- the characters showControls writes as escapes
+const RAW_CONTROL = /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/;
+
+/** A file as the directory input reports it, at its path relative to the chosen folder. */
+const at = (path: string, text: string): File =>
+  Object.assign(new File([text], path.slice(path.lastIndexOf("/") + 1)), {
+    webkitRelativePath: path,
+  });
+
+/** Hands files to the directory input, as choosing a folder does. */
+function feedFolder(files: File[]): void {
+  const input = document.getElementById("folder-input") as HTMLInputElement;
+  Object.defineProperty(input, "files", { configurable: true, value: files });
+  try {
+    input.dispatchEvent(new Event("change"));
+  } finally {
+    Reflect.deleteProperty(input, "files");
+  }
+}
+
+/** Drops one file on the drop zone, as a browser with the entries API hands it over. */
+function dropFile(name: string): void {
+  const file = new File([""], name);
+  const entry = { isFile: true, isDirectory: false, name, fullPath: `/${name}` };
+  const drop = new Event("drop", { bubbles: true, cancelable: true });
+  Object.defineProperty(drop, "dataTransfer", {
+    value: { items: [{ webkitGetAsEntry: () => entry, getAsFile: () => file }], files: [file] },
+  });
+  document.getElementById("drop")!.dispatchEvent(drop);
+}

@@ -2,6 +2,7 @@ import {
   ConfigError,
   lint,
   resolveConfig,
+  showControls,
   summaryLine,
   type Diagnostic,
   type LayerName,
@@ -45,10 +46,12 @@ function say(text: string, kind: "info" | "error" = "info"): void {
  * An input that went nowhere: say why, drop the results of the last one so nothing stale is read
  * as the answer, and scroll the message into view, since a previous run may have pushed it above
  * the fold. "nearest" scrolls only as far as it must, so an empty paste keeps the textarea on
- * screen instead of pinning the message to the top.
+ * screen instead of pinning the message to the top. Every refusal and error passes through here,
+ * and one can name a file or quote a config, so the message is shown through `showControls`, as
+ * the CLI shows it on stderr: a right-to-left override in a .pbix's name cannot reorder the rest.
  */
 function problem(message: string): void {
-  say(message, "error");
+  say(showControls(message), "error");
   announcer.textContent = "";
   results.hidden = true;
   results.replaceChildren();

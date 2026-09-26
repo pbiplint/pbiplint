@@ -374,7 +374,13 @@ folder any file of its kind, and `definition/` anything. The page or
 visual such a folder names is recorded as its own file would record it.
 An unread definition.pbir, `.platform`, or `.pbip` changes nothing,
 since none names a field. No unread path is a `PARSE_ISSUE` finding:
-the `unread-file` notice names it, and the notice is unchanged.
+the `unread-file` notice names it, and the notice is unchanged. Amended
+2026-09-25 with Michael (release triage, batch F): a path written
+without its trailing `/` is read as a folder when it is not a file the
+layer reads (a `.tmdl` file for the model, a report file for the
+report), so the model's `.platform` given to the model layer counts as
+a folder there. A caller passes only such files and folders, as the CLI
+and the browser do.
 
 Amended 2026-09-25 with Michael (pull request 7, #86): a `.pbip` given
 to the CLI resolves to the one report its `artifacts` entry names,
@@ -422,6 +428,60 @@ whose `artifacts` holds no report entry) is read as its folder, as
 before, and core still reports one that is not valid JSON. Folder
 input, and a `.pbip` found inside a folder given as input, are
 unchanged, refusals included.
+
+Amended 2026-09-25 with Michael (release triage, batch F): a `.pbix` is
+recognised by its name alone, compared without regard to case
+(`Sales.PBIX` too), and never opened, on either surface. When nothing
+can be linted and nothing else explains why, the refusal names it and
+says how to save the report as a Power BI project, in place of saying
+that no model or report was found (or, for a `.pbix` given to the CLI,
+that the file is not an input it takes). It names the first `.pbix` the
+walk meets, in the CLI's walk order, and says how many more there are;
+the path is joined to the input, as the refusal of a run of which
+nothing could be read joins it, and the browser gives the same path
+relative to the drop. The CLI's walk is its walk for loose `.tmdl`
+files, the whole folder but the folders it skips; the browser's is its
+walk of the drop, a `.pbix` dropped on its own included. Core builds
+the words, which name the menu path, the file type, and the option as
+Learn's Power BI Desktop projects page (projects-overview) labels them,
+the preview option as a condition since Microsoft has announced the
+format generally available (in Microsoft 365 Message Center post
+MC1465770, September 2, 2026, not on Learn): `Demo/Sales.pbix is a
+Power BI Desktop file (.pbix), which pbiplint cannot read. pbiplint
+reads a report saved as a Power BI project (PBIP). In Power BI Desktop,
+choose File > Save as and pick Power BI project files (*.pbip) as the
+file type (if it isn't offered, first turn on Power BI Project (.pbip)
+save option under File > Options and settings > Options > Preview
+features).` A `.pbix` beside anything else changes nothing: a run
+that lints anything, a legacy part's notice, a refused read, the
+refusals of two reports or two models, the `.pbip` route's own
+refusals, and the refusal of a model folder that holds no `.tmdl`
+files stand as they were, with no notice for the `.pbix`, which is
+never among the files read. Both surfaces give that last refusal
+(below), so beside such a folder both name the folder.
+
+Amended 2026-09-25 with Michael (release triage, batch F): when
+nothing can be linted, no read refused, and no notice explains why,
+while one or more `.SemanticModel` folders the walk met hold no
+`.tmdl` files, the CLI and the browser both refuse the input naming
+them, ahead of the `.pbix` refusal and the general one:
+`Demo/Old.SemanticModel holds no .tmdl files. Only a model stored as
+TMDL can be linted; if it is in the older model.bim format, save it
+in the TMDL format from Power BI Desktop first.` Several are listed
+in name order by their whole paths (`A and B hold`, `A, B, and C
+hold`). Core builds the words, as it builds the `.pbix` refusal's.
+The CLI names each folder joined to its input, the input alone when
+it is the folder, and the browser names it relative to the drop. The
+CLI's folders are the input when it is a `.SemanticModel` folder and
+each one its walk for loose `.tmdl` files passes, the folders it
+skips left out; the browser's are each one its walk of the drop saw.
+A legacy model folder keeps its notice where a read looks for its
+`model.bim` (the input, or the one model folder at its top); one
+further down has no notice on either surface and is named with the
+rest. Two `.SemanticModel` folders at the top of the input are still
+the CLI's refusal of two semantic models (section 12), and the
+browser's note naming such a folder beside something it lints is
+unchanged.
 
 ## 5. PBIR parser and report object model
 
@@ -604,13 +664,13 @@ aggregation table when it covers the query.
 |---|---|---|
 | Opens on | landing page display name, or the active page with "the page open when it was saved; no landing page set" | `LANDING_PAGE_NOT_SET` |
 | Filters pane | open / closed / hidden from readers | `FILTERS_PANE_STATE` |
-| Pages | count; hidden; tooltip; drillthrough | `HIDE_TOOLTIP_DRILLTROUGH_PAGES` |
-| Visuals | count; hidden; custom visual types registered and used (the used count unknown while a visual.json could not be read and a registered type is used by no visual that was read, amended 2026-09-24 with Michael) | `HIDDEN_VISUAL_WITH_FIELDS`, `REMOVE_UNUSED_CUSTOM_VISUALS` |
+| Pages | count; hidden; tooltip; drillthrough; unknown in place of 0 while a page.json or a visual.json, or a folder that could hold one, could not be read (amended 2026-09-25 with Michael) | `HIDE_TOOLTIP_DRILLTROUGH_PAGES` |
+| Visuals | count; hidden; custom visual types registered and used (the used count unknown while a visual.json could not be read and a registered type is used by no visual that was read, amended 2026-09-24 with Michael); unknown in place of 0 while a visual.json, or a folder that could hold one, could not be read (amended 2026-09-25 with Michael) | `HIDDEN_VISUAL_WITH_FIELDS`, `REMOVE_UNUSED_CUSTOM_VISUALS` |
 | Report measures | count | `REPORT_LEVEL_MEASURES` |
-| Slicers | count of the catalog slicers; saved selections, those on custom slicers named; unknown in place of none while a visual.json could not be read (amended 2026-09-24 with Michael) | `SLICER_SELECTION_SAVED` |
+| Slicers | count of the catalog slicers; saved selections, those on custom slicers named; saved search terms (amended 2026-09-25 with Michael); unknown in place of none while a visual.json could not be read (amended 2026-09-24 with Michael) | `SLICER_SELECTION_SAVED`, `SLICER_SEARCH_SAVED` |
 | Mobile layouts | pages with one, counted by the mobile.json files read in their folders, of total; unknown in place of none while a mobile.json, or the page of one, could not be read (amended 2026-09-24 with Michael) | |
 | Schema versions | report, page, visual (highest seen) | |
-| Model | tables, columns, measures, leaving out Desktop's hidden auto date/time tables (amended 2026-09-25 with Michael); with both parts, columns and measures not reached from this report | `NOT_REACHED_FROM_REPORT` |
+| Model | tables, columns, measures, leaving out Desktop's hidden auto date/time tables (amended 2026-09-25 with Michael), each unknown in place of 0 while a model file could not be fully read (amended 2026-09-25 with Michael); with both parts, columns and measures not reached from this report | `NOT_REACHED_FROM_REPORT` |
 
 Amended 2026-09-20: the facts are built only when the report layer is
 present, so a model-only run produces none and no surface shows the
@@ -791,6 +851,67 @@ detail, and the unknown case are unchanged, and the sample sets a
 policy, so its facts do not move. This supersedes the mockup's Filters
 pane, which linked the rule page with a hint to set a policy: without
 one the fact links nothing and adds no detail.
+
+Amended 2026-09-25 with Michael (release triage, batch F): a count of
+0 states that nothing is there, which pbiplint must not say about what
+it did not read, so three counts read unknown in place of 0 while what
+they count could not be read. Pages reads `unknown` while a page.json
+could not be read or a folder that could hold one (definition/, the
+pages folder, or a page's folder) could not be read, with `a page.json
+could not be read`, and while a visual.json, or a folder that could
+hold one, could not be read, with `a visual.json could not be read`,
+since a visual.json names its page by its folder and that page counts
+when its page.json is not there. When both hold, the detail gives the
+page.json reason alone. So a report whose pages folder could not be
+listed no longer reads 0 pages beside an Opens on that names a page.
+Visuals reads `unknown` while a visual.json, or a folder that could
+hold one, could not be read, the condition the Slicers fact reads, and
+its detail names the reason once: `a visual.json could not be read`,
+or, with a custom visual type registered, the custom visual clause,
+which already ends with it (`1 custom visual type registered, used:
+unknown, a visual.json could not be read`). Each of the Model fact's
+table, column, and measure counts that would read 0 reads `tables:
+unknown`, `columns: unknown`, or `measures: unknown` while the model
+could not be fully read, the condition of the #81 note above; its
+not-reached clause gives that reason, and when the clause gives the
+report file's reason instead, the detail adds the model's after it:
+`not reached from this report: unknown, a report file could not be
+read; a model file could not be fully read`. A report file that could
+not be read makes no model count unknown, since it declares no model
+object. A count above 0 stays as it is, a lower bound (ruling H71),
+and the hidden counts, shown only above 0, are unchanged. This narrows
+two earlier readings to counts above 0: the H71 note's, which kept
+Pages and the Visuals count as they were, and the #81 note's, which
+kept the Model fact's table, column, and measure counts.
+
+Amended 2026-09-25 with Michael (release triage, batch F): the Slicers
+fact counts saved search terms beside saved selections: every visual
+whose saved term `SLICER_SEARCH_SAVED`'s condition finds (section 8.4),
+on any visual type, whether or not the rule ran and whatever an ignore
+annotation says, as the fact reads saved selections. Its value, the
+count of the catalog slicers, does not change. The detail gives the
+terms after the selections, as `1 saved selection, 1 saved search term`
+or `2 saved selections, 1 on a custom slicer, 2 saved search terms`,
+reads `1 saved search term` alone when no selection is saved, and reads
+as before with neither: `no saved selection` beside catalog slicers,
+and no detail without one. The fact links `SLICER_SELECTION_SAVED` when
+a selection is saved, else `SLICER_SEARCH_SAVED` when a term is, of the
+two that ran, so the sample's link does not move. Now that the detail
+counts terms, a count it leaves out reads as none, so while a
+visual.json could not be read that count reads unknown, and the reason
+is given once. With neither counted the detail reads `saved selections
+and search terms: unknown, a visual.json could not be read`, in place
+of `saved selections: unknown, a visual.json could not be read`. With
+selections counted and no term it reads `1 saved selection; saved
+search terms: unknown, a visual.json could not be read`, or `2 saved
+selections, 1 on a custom slicer; saved search terms: unknown, a
+visual.json could not be read`, in place of the selections alone and,
+when the value is unknown too, in place of their ending `; a
+visual.json could not be read`. With a term counted and no selection it
+reads `1 saved search term; saved selections: unknown, a visual.json
+could not be read`. With both counted, both counts are lower bounds and
+stay, `1 saved selection, 1 saved search term`, ending `; a visual.json
+could not be read` only when the value is unknown.
 
 **Cost.** Linear in the JSON. The demo report's largest visual is
 61 KB, most under 5 KB; a 300-visual report is a few megabytes and
@@ -1127,6 +1248,7 @@ list.
 | BROKEN_BOOKMARK_REFERENCE | Bookmark | Error Prevention | warning | A bookmark's active page, or a page or visual it captures, does not exist |
 | TAB_ORDER_FOLLOWS_LAYOUT | Page | Accessibility | warning | Tab order disagrees with reading order (top to bottom, left to right, with a row tolerance of half the median visual height). Desktop always writes `tabOrder`, so "not set" is not detectable; disagreement with the layout is. The page documents the heuristic; policy `expect: layout`, silent without it |
 | SLICER_SELECTION_SAVED | Visual | Report Design | info | A slicer carries a saved selection (any visual that saves one, amended 2026-09-24 with Michael); policy `expect: none` raises it to warning |
+| SLICER_SEARCH_SAVED | Visual | Report Design | warning | A slicer carries a saved search term (any visual that saves one, added 2026-09-25 with Michael); no policy |
 
 Amended 2026-09-23 with pull request 5, reading the conditions rather
 than changing them, against Microsoft's schemas and capability data,
@@ -1210,6 +1332,37 @@ page was already one named by its folder, and a page with none read is
 now covered too. Amended 2026-09-25 with Michael (pull request 7, #81):
 a folder under the definition folder that could not be listed quiets a
 target or a capture it could hold, as an unread file does (section 4).
+
+Amended 2026-09-25 with Michael (release triage, batch F):
+`SLICER_SEARCH_SAVED` reports a visual whose
+`visual.objects.general[].properties.selfFilter` holds a `filter` with
+a non-empty `Where`, where Power BI Desktop's saved files keep the text
+typed in a slicer's search box; `selfFilterEnabled`, beside it, holds
+no term and alone is not reported. It reads any visual type, by where
+the term sits, as `SLICER_SELECTION_SAVED` reads a selection, and a
+hidden slicer counts: the pull request 5 corpus shows the term on
+`slicer` only, and Microsoft's slicer template for custom visuals
+declares the same `selfFilter`. In that corpus 41 slicers in 9
+repositories carry a term, each a single `Contains` on a string
+literal; 30 have no selection saved beside it, and in 9 the term sits
+on a column the slicer does not show. Michael's check in Power BI
+Desktop on September 25, 2026 showed the saved term coming back when
+the report is reopened, with the slicer's list showing only the values
+that match it.
+The finding sits at the `selfFilter`'s line, and its detail names no
+column: it quotes the term, `opens with the search term "spring"
+saved`, when the `Where` is one `Contains` whose right side is a
+non-empty string literal (the enclosing single quotes stripped and a
+doubled `''` read as one `'`), and reads `opens with a search term
+saved` otherwise. The rule is a warning with no policy and no options.
+Amended 2026-09-25 with Michael (release triage, batch F): Michael
+checked the Power BI service, where a reader sees whatever was in the
+search box when the report was saved, with the slicer's list narrowed
+to the values that match it; the search narrows only that list, and
+whether other visuals are filtered depends on what is selected in the
+slicer. He checked the fix too: deleting the term and saving leaves
+the box empty when the report is reopened in Power BI Desktop, and the
+slicer's eraser clears the search box.
 
 Mobile layouts and themes are facts only in v2.
 
@@ -1362,6 +1515,19 @@ report rule. Amended 2026-09-23 with Michael:
 `TAB_ORDER_FOLLOWS_LAYOUT`'s policy so that rule fires. Everything else
 is clean.
 
+Amended 2026-09-25 with Michael (release triage, batch F): a slicer
+with a leftover search term and no selection is planted too, a City
+slicer on the Stores page saved with the term spring in its search box,
+so the sample fires `SLICER_SEARCH_SAVED` (section 8.4). It is written
+in the form Power BI Desktop saves, and it stays in that form: the
+authoring toolchain's `validate` (section 3.5) flags Desktop's own
+`selfFilter` form as `PBIR_FORMATTING_PROP_NESTED`, reading its
+`filter` as a property nested out of place, as it did for every
+`selfFilter` in three Desktop-saved corpus reports, 14 of 14. So the
+sample's validation carries that error on the plant, beside the planted
+empty card's `PBIR_QUERY_STATE_MISSING` and the two past-the-edge
+warnings.
+
 **Sanitising.** No registered resources, the stock Fluent theme, no
 `.pbi`, no `cache.abf`. `scripts/sanitize-fixture.mjs` gains a report
 mode that enforces this on every fixture copied in.
@@ -1389,17 +1555,44 @@ CLI reads the report, that file included, from the parent. And the
 `.pbip` input, resolving to its report and that report's model, is the
 CLI's alone (section 4's #86 note), since the browser takes folders.
 Beyond those three, `selectProject` gives `lint` the files and the
-unread paths the CLI would, with the same notices, except in four
+unread paths the CLI would, with the same notices, except in three
 smaller ways. The notices come in another order, the walk's in walk
 order and then the browser's own, where the CLI gives them in its read
-order; and when two paths inside one read refuse and nothing else was
-read, the refusal names the first the walk met, where the CLI's walk
-goes through each folder's entries in name order, so the two can name
-different paths. Only the browser has a depth cap (`depth-cap`, 64
-folders), since the CLI's walk has none, and a folder whose listing
-fails partway is linted as far as it was listed, with a notice, in the
+order. Only the browser has a depth cap (`depth-cap`, 64 folders),
+since the CLI's walk has none, and a folder whose listing fails
+partway is linted as far as it was listed, with a notice, in the
 browser, where the CLI reads none of it, its listing of a folder being
 all or nothing.
+
+Amended 2026-09-25 with Michael (release triage, batch F): when two
+paths inside one read refuse and nothing else was read, the refusal
+the browser gives now names the path the CLI's walk meets first,
+whatever order the drop listed them in: each folder's entries in name
+order, a folder's contents before its next sibling, and a report's
+`definition.pbir`, then its `.platform`, before its `definition`
+folder, as the CLI's `reportPart` reads them. So the two name the
+same path where both use the same collation data (the name order is
+`localeCompare` in English, whose data Node's ICU and the browser each
+supply, in versions that can differ), unless two different names in
+one folder compare equal in that name order, where the CLI keeps the
+order its listing gave and the browser the order of the drop. The
+two refuse a model folder holding no `.tmdl` files in the same words,
+naming the same folders in that name order (section 4's batch F note),
+where the browser's walk saw those folders and stopped at no depth
+cap, except where two model folders sit at the top of the input, which
+the CLI refuses as two semantic models, as in the first of the three
+places above. When, below the browser's cap as above it, nothing in
+the input can be linted, no read refused, and nothing but such folders
+explains why, a browser walk stopped at its depth cap anywhere in the
+drop gives no refusal, whether or not it saw such a folder: it goes on
+with its `depth-cap` notice, and with the note naming any such folder
+it saw, where the CLI, which has no cap, refuses naming the folders it
+met. On the directory-input route (Firefox and Safari) the browser
+cannot see a model folder holding no files outside the folders the
+walk skips (one whose only files are under `.pbi`, say), and refuses
+as though it were not there, where the CLI names it. A model folder
+Power BI Desktop saved holds its `definition.pbism`, so this second
+case does not arise from one.
 
 ## 13. CLI changes
 

@@ -1,5 +1,6 @@
+import { pbixRefusal } from "@pbiplint/core";
 import { describe, expect, it } from "vitest";
-import { emptyTree } from "../src/input/project-files.js";
+import { emptyTree, selectProject } from "../src/input/project-files.js";
 import { readDirectoryInput, readPickedDirectory } from "../src/input/pick-folder.js";
 import { MAX_DEPTH } from "../src/input/read-drop.js";
 
@@ -198,6 +199,28 @@ describe("readPickedDirectory", () => {
       "Proj/New.Report/definition/pages/p/page.json",
     ]);
     expect(out?.diagnostics).toEqual([]);
+  });
+  it("records a .pbix by name, in any case, without opening it, and none in a folder it skips", async () => {
+    const opened: string[] = [];
+    const picked = dirHandle("Demo", [
+      neverOpened("Sales.pbix", opened),
+      dirHandle("Archive", [neverOpened("Old.PBIX", opened)]),
+      dirHandle(".pbi", [neverOpened("x.pbix", opened)]),
+      dirHandle("StaticResources", [neverOpened("y.pbix", opened)]),
+      // A folder is not a file, whatever its name.
+      dirHandle("Folder.pbix", []),
+    ]);
+    const out = await readPickedDirectory(async () => picked as never);
+    expect(opened).toEqual([]);
+    expect(out).toEqual({
+      ...emptyTree(),
+      markers: [
+        { path: "Demo/Sales.pbix", kind: "pbix" },
+        { path: "Demo/Archive/Old.PBIX", kind: "pbix" },
+      ],
+    });
+    // Nothing else in the folder, so the page names the first the CLI's walk would meet.
+    expect(() => selectProject(out!)).toThrow(pbixRefusal("Demo/Archive/Old.PBIX", 1));
   });
   it("stops a chain past the cap with a diagnostic naming the folder it stopped in", async () => {
     const out = await readPickedDirectory(
@@ -398,6 +421,30 @@ describe("readDirectoryInput", () => {
         { path: "Proj/Old.SemanticModel/model.bim", kind: "legacy-model" },
       ],
     });
+  });
+  it("records a .pbix by name, in any case, without opening it, and none in a folder it skips", async () => {
+    const unopened = (path: string) =>
+      Object.assign(new File([""], path.slice(path.lastIndexOf("/") + 1)), {
+        webkitRelativePath: path,
+        text: () => Promise.reject(new Error("opened")),
+      });
+    const input = {
+      files: [
+        unopened("Demo/Sales.pbix"),
+        unopened("Demo/Archive/Old.PBIX"),
+        unopened("Demo/.git/x.pbix"),
+        unopened("Demo/CustomVisuals/y.pbix"),
+      ],
+    } as unknown as HTMLInputElement;
+    const out = await readDirectoryInput(input);
+    expect(out).toEqual({
+      ...emptyTree(),
+      markers: [
+        { path: "Demo/Sales.pbix", kind: "pbix" },
+        { path: "Demo/Archive/Old.PBIX", kind: "pbix" },
+      ],
+    });
+    expect(() => selectProject(out)).toThrow(pbixRefusal("Demo/Archive/Old.PBIX", 1));
   });
   it("skips a file past the depth cap with one diagnostic per capped folder, naming the folder at the cap", async () => {
     const at = (path: string, text: string) =>

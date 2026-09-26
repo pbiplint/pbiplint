@@ -80,7 +80,7 @@ async function walkHandle(
       await walkHandle(handle, path, tree, depth + 1);
       continue;
     }
-    // A legacy part is known by its marker's name; the marker itself is never opened.
+    // A legacy part is known by its marker's name, and a .pbix by its own; neither is opened.
     const marker = markerOf(path);
     if (marker) tree.markers.push(marker);
     else if (wanted(path)) {

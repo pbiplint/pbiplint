@@ -7,6 +7,7 @@ import {
   lint,
   resolveConfig,
   SEVERITY_LABEL,
+  showControls,
   summaryLine,
 } from "@pbiplint/core";
 import { HELP, parseArgs, UsageError } from "./args.js";
@@ -36,6 +37,9 @@ function listRules(): string {
 }
 
 export async function main(argv: string[], io: Io): Promise<number> {
+  // Every line on stderr can carry a name or a path from the repository, so its control
+  // characters are shown, not sent to the terminal; the line's own newline is kept.
+  const stderrLine = (line: string): void => io.stderr(`${showControls(line)}\n`);
   try {
     const opts = parseArgs(argv);
     if (opts.command === "help") {
@@ -87,28 +91,46 @@ export async function main(argv: string[], io: Io): Promise<number> {
       mkdirSync(dirname(out), { recursive: true });
       writeFileSync(out, report);
       // The report left stdout, so say what it holds and where it went.
-      io.stderr(`pbiplint: ${summaryLine(result)}, wrote ${opts.output}\n`);
+      stderrLine(`pbiplint: ${summaryLine(result)}, wrote ${opts.output}`);
     } else {
       io.stdout(report);
     }
-    for (const e of result.summary.ruleErrors) io.stderr(`rule ${e.id} failed: ${e.message}\n`);
+    for (const e of result.summary.ruleErrors) stderrLine(`rule ${e.id} failed: ${e.message}`);
     // A misspelled id would otherwise switch nothing off and say nothing, so name each one.
     const configName = basename(found.path ?? CONFIG_FILE);
     for (const id of result.summary.unknownRules)
-      io.stderr(
-        `pbiplint: ${configName}: no rule named "${id}" (run pbiplint rules for the list)\n`,
+      stderrLine(
+        `pbiplint: ${configName}: no rule named "${id}" (run pbiplint rules for the list)`,
       );
-    for (const d of result.diagnostics) io.stderr(`pbiplint: notice: ${d.message}\n`);
+    for (const d of result.diagnostics) stderrLine(`pbiplint: notice: ${d.message}`);
     return result.failed ? 1 : 0;
   } catch (e) {
     if (e instanceof UsageError || e instanceof ConfigError) {
-      io.stderr(`pbiplint: ${e.message}\n`);
-      if (e instanceof UsageError) io.stderr(`Run pbiplint --help for usage.\n`);
+      stderrLine(`pbiplint: ${e.message}`);
+      if (e instanceof UsageError) stderrLine(`Run pbiplint --help for usage.`);
       return 2;
     }
-    io.stderr(
-      `pbiplint: unexpected error: ${e instanceof Error ? (e.stack ?? e.message) : String(e)}\n`,
-    );
+    for (const [i, line] of unexpectedLines(e).entries())
+      stderrLine(i === 0 ? `pbiplint: unexpected error: ${line}` : line);
     return 2;
   }
+}
+
+/**
+ * An unexpected error as lines for stderr: its name and message, then each frame of its stack. The
+ * message can hold a line break of its own, so the stack is split only after the message, and the
+ * name and message stay one line, where `showControls` shows the break as `\u000a` and no message
+ * can write a line that reads as the CLI's. The stack starts with what `String(e)` gives, or with
+ * the name and message where a stack formatter writes those alone (as the test runner's does); a
+ * stack that starts with neither is shown whole on the one line.
+ */
+function unexpectedLines(e: unknown): string[] {
+  const head = String(e);
+  if (!(e instanceof Error) || typeof e.stack !== "string") return [head];
+  const stack = e.stack;
+  const header = [head, `${e.name}: ${e.message}`].find(
+    (h) => stack === h || stack.startsWith(`${h}\n`),
+  );
+  if (header === undefined) return [stack];
+  return stack === header ? [header] : [header, ...stack.slice(header.length + 1).split("\n")];
 }

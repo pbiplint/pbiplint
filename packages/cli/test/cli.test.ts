@@ -14,6 +14,9 @@ import { describe, expect, it } from "vitest";
 import { main } from "../src/main.js";
 
 const repo = new URL("../../../", import.meta.url).pathname;
+// A control character a terminal would act on, as the CLI must never write one raw.
+// eslint-disable-next-line no-control-regex -- finding control characters is what this is for
+const RAW_CONTROL = /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/;
 const sample = join(repo, "examples/messy-sales");
 
 async function run(argv: string[], cwd = repo) {
@@ -84,7 +87,7 @@ describe("pbiplint CLI", () => {
     const r = await run([sample]);
     expect(r.code).toBe(1);
     expect(r.out).toMatch(
-      /^pbiplint: 256 findings \(19 errors, 77 warnings, 160 info\) in 91 files/,
+      /^pbiplint: 257 findings \(19 errors, 78 warnings, 160 info\) in 92 files/,
     );
     expect(r.out).toContain("https://pbiplint.com/rules/provide-format-string-for-measures");
     expect(r.err).toBe("");
@@ -115,12 +118,12 @@ describe("pbiplint CLI", () => {
         detail: "1 hidden, 1 tooltip",
         ruleId: "HIDE_TOOLTIP_DRILLTROUGH_PAGES",
       },
-      // 57 visual.json files, two of them groups; two visuals hidden on Overview and two inside
+      // 58 visual.json files, two of them groups; two visuals hidden on Overview and two inside
       // the hidden group on Employees; report.json registers ChicletSlicer and no visual is one.
       {
         layer: "report",
         label: "Visuals",
-        value: "55",
+        value: "56",
         detail: "4 hidden; 1 custom visual type registered, 0 used",
         ruleId: "HIDDEN_VISUAL_WITH_FIELDS",
       },
@@ -132,12 +135,13 @@ describe("pbiplint CLI", () => {
         detail: "defined in the report, not the model",
         ruleId: "REPORT_LEVEL_MEASURES",
       },
-      // One catalog slicer, Category on Overview, which saves a selection.
+      // Two catalog slicers: Category on Overview, which saves a selection, and City on Stores,
+      // which saves a search term. The selection's rule is linked first.
       {
         layer: "report",
         label: "Slicers",
-        value: "1",
-        detail: "1 saved selection",
+        value: "2",
+        detail: "1 saved selection, 1 saved search term",
         ruleId: "SLICER_SELECTION_SAVED",
       },
       // No mobile.json anywhere in the report.
@@ -161,12 +165,12 @@ describe("pbiplint CLI", () => {
   it("--sample is the same as pointing at the bundled sample", async () => {
     const r = await run(["--sample", "--format", "json"]);
     expect(r.code).toBe(1);
-    expect(JSON.parse(r.out).summary.findings).toBe(256);
+    expect(JSON.parse(r.out).summary.findings).toBe(257);
   });
   it("--sample reads the bundled project, its model and its report, and prints no notice", async () => {
     const r = await run(["--sample", "--fail-on", "none"]);
     expect(r.code).toBe(0);
-    expect(r.out).toMatch(/^Model: 14 files\. Report: 77 files\. /m);
+    expect(r.out).toMatch(/^Model: 14 files\. Report: 78 files\. /m);
     expect(r.err).toBe("");
   });
   it("respects --fail-on and exits 0 when nothing reaches the threshold", async () => {
@@ -201,7 +205,7 @@ describe("pbiplint CLI", () => {
     expect(r.code).toBe(1);
     expect(r.out).toBe("");
     expect(r.err).toBe(
-      "pbiplint: 256 findings (19 errors, 77 warnings, 160 info) in 91 files, wrote out/report.sarif\n",
+      "pbiplint: 257 findings (19 errors, 78 warnings, 160 info) in 92 files, wrote out/report.sarif\n",
     );
   });
   it("prefixes SARIF artifact URIs with the model root's path from the cwd", async () => {
@@ -295,6 +299,56 @@ describe("pbiplint CLI", () => {
     const missing = await run([join(repo, "nope")]);
     expect(missing.code).toBe(2);
     expect(missing.err).toContain("does not exist");
+  });
+  it("names a .pbix, says how to save it as a Power BI project, and exits 2 (tracked in #88)", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "pbiplint-pbix-"));
+    const how =
+      "is a Power BI Desktop file (.pbix), which pbiplint cannot read. pbiplint reads a report saved as a Power BI project (PBIP). In Power BI Desktop, choose File > Save as and pick Power BI project files (*.pbip) as the file type (if it isn't offered, first turn on Power BI Project (.pbip) save option under File > Options and settings > Options > Preview features).";
+    try {
+      const file = join(dir, "Sales.pbix");
+      writeFileSync(file, "");
+      const lone = await run([file]);
+      expect(lone.code).toBe(2);
+      expect(lone.out).toBe("");
+      expect(lone.err).toBe(`pbiplint: ${file} ${how}\nRun pbiplint --help for usage.\n`);
+      const folder = await run([dir]);
+      expect(folder.code).toBe(2);
+      expect(folder.out).toBe("");
+      expect(folder.err).toBe(
+        `pbiplint: ${dir}/Sales.pbix ${how}\nRun pbiplint --help for usage.\n`,
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+  it("names a model folder that holds no .tmdl files, says only TMDL can be linted, and exits 2 (tracked in #88)", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "pbiplint-notmdl-"));
+    const why =
+      "holds no .tmdl files. Only a model stored as TMDL can be linted; if it is in the older model.bim format, save it in the TMDL format from Power BI Desktop first.";
+    try {
+      mkdirSync(join(dir, "Old.SemanticModel"));
+      // Given by a path relative to the working folder, the folder is named as main resolves it.
+      for (const [argv, cwd] of [
+        [[join(dir, "Old.SemanticModel")], repo],
+        [["Old.SemanticModel"], dir],
+      ] as const) {
+        const r = await run([...argv], cwd);
+        expect(r.code).toBe(2);
+        expect(r.out).toBe("");
+        expect(r.err).toBe(
+          `pbiplint: ${dir}/Old.SemanticModel ${why}\nRun pbiplint --help for usage.\n`,
+        );
+      }
+      // Ahead of a .pbix beside it, in the folder that holds both.
+      writeFileSync(join(dir, "Sales.pbix"), "");
+      const folder = await run([dir]);
+      expect(folder.code).toBe(2);
+      expect(folder.err).toBe(
+        `pbiplint: ${dir}/Old.SemanticModel ${why}\nRun pbiplint --help for usage.\n`,
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
   it("lints a whole project, prints layers in JSON, and puts notices on stderr", async () => {
     const root = mkdtempSync(join(tmpdir(), "pbiplint-proj-"));
@@ -601,7 +655,7 @@ describe("pbiplint CLI", () => {
           layer: "report",
           label: "Slicers",
           value: "unknown",
-          detail: "saved selections: unknown, a visual.json could not be read",
+          detail: "saved selections and search terms: unknown, a visual.json could not be read",
         });
         expect(doc.facts.find((f: { label: string }) => f.label === "Model").detail).toBe(
           "not reached from this report: unknown, a report file could not be read",
@@ -620,6 +674,24 @@ describe("pbiplint CLI", () => {
     expect(r.err).toMatch(/^pbiplint: unexpected error: TypeError: .* without null bytes/);
     expect(r.err).toMatch(/\n\s+at resolveProject /);
     expect(r.err).not.toContain("Could not read");
+    // A line break in the error's own message is shown, not written, so it cannot forge a line of
+    // its own; the stack's frames follow it, one to a line.
+    let err = "";
+    const code = await main(["."], {
+      stdout: () => {},
+      stderr: (s) => (err += s),
+      cwd: () => {
+        throw new Error("boom\npbiplint: 0 findings\n    at forged (x.js:1:1)");
+      },
+    });
+    expect(code).toBe(2);
+    const [first, ...rest] = err.split("\n");
+    expect(first).toBe(
+      "pbiplint: unexpected error: Error: boom\\u000apbiplint: 0 findings\\u000a    at forged (x.js:1:1)",
+    );
+    expect(rest.at(-1)).toBe("");
+    expect(rest.length).toBeGreaterThan(1);
+    for (const line of rest.slice(0, -1)) expect(line).toMatch(/^ {4}at (?!forged)/);
   });
   it.skipIf(noModes)("refuses an input folder it cannot read at all, naming it", async () => {
     const root = pbipProject("pbiplint-locked-input-");
@@ -669,6 +741,62 @@ describe("pbiplint CLI", () => {
       }
     },
   );
+  it.skipIf(onWindows)(
+    "shows the control characters in a name instead of sending them to the terminal",
+    async () => {
+      // Windows refuses a control character in a file name, so the notice's folder cannot exist
+      // there. The measure's name holds the escape sequence that clears the screen, DEL, the C1
+      // control that starts a sequence on its own (CSI), and a right-to-left override.
+      const root = mkdtempSync(join(tmpdir(), "pbiplint-controls-"));
+      const name = "Evil\u001b[2J\u007f\u009b\u202eX";
+      try {
+        const tables = join(root, "Demo.SemanticModel", "definition", "tables");
+        mkdirSync(tables, { recursive: true });
+        writeFileSync(
+          join(root, "Demo.SemanticModel", "definition", "model.tmdl"),
+          "model Model\n",
+        );
+        writeFileSync(join(tables, "T.tmdl"), `table T\n\tmeasure '${name}' = 1\n`);
+        mkdirSync(join(root, "Bad\u001b[2J.Report"));
+        writeFileSync(join(root, "Bad\u001b[2J.Report", "report.json"), "{}");
+        const notice =
+          "pbiplint: notice: Bad\\u001b[2J.Report is stored as a single report.json, which pbiplint cannot read; save it in the PBIR format from Power BI Desktop\n";
+
+        const text = await run([root, "--fail-on", "none"]);
+        expect(text.out).toContain("[Evil\\u001b[2J\\u007f\\u009b\\u202eX]");
+        expect(RAW_CONTROL.test(text.out.replace(/\n/g, ""))).toBe(false);
+        expect(text.err).toBe(notice);
+
+        const json = await run([root, "--format", "json", "--fail-on", "none"]);
+        const names = JSON.parse(json.out).groups.flatMap(
+          (g: { findings: { objectName: string }[] }) => g.findings.map((f) => f.objectName),
+        );
+        expect(names).toContain(`[${name}]`);
+        expect(RAW_CONTROL.test(json.out.replace(/\n/g, ""))).toBe(false);
+        expect(json.err).toBe(notice);
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+  );
+  it("shows the control characters in a usage error and a config's rule id on stderr", async () => {
+    const missing = await run([join(repo, "nope\u001b[2J")]);
+    expect(missing.code).toBe(2);
+    expect(missing.err).toBe(
+      `pbiplint: ${join(repo, "nope")}\\u001b[2J does not exist\nRun pbiplint --help for usage.\n`,
+    );
+    const dir = mkdtempSync(join(tmpdir(), "pbiplint-cfg-controls-"));
+    try {
+      const cfg = join(dir, "pbiplint.config.json");
+      writeFileSync(cfg, JSON.stringify({ rules: { "NOPE\u202e\u009b": "off" } }));
+      const r = await run([sample, "--config", cfg, "--format", "json", "--fail-on", "none"]);
+      expect(r.err).toBe(
+        'pbiplint: pbiplint.config.json: no rule named "NOPE\\u202e\\u009b" (run pbiplint rules for the list)\n',
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
   it("lists the layer of every rule", async () => {
     const r = await run(["rules"]);
     expect(r.out).toMatch(/^PARSE_ISSUE\s+project\s+builtin/m);

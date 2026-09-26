@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   datasetReference,
+  isPbix,
   isReportFile,
+  noTmdlNote,
+  noTmdlRefusal,
   pairingDecision,
+  pbixRefusal,
   routeFiles,
 } from "../src/project/route.js";
 
@@ -107,5 +111,59 @@ describe("pairingDecision", () => {
     ).toEqual({ kind: "byPath", path: "../M.SemanticModel" });
     expect(datasetReference("not json")).toEqual({ kind: "none" });
     expect(datasetReference("[]")).toEqual({ kind: "none" });
+  });
+});
+
+describe("a .pbix (tracked in #88)", () => {
+  // From Learn's Power BI Desktop projects page: the menu path, the file type, and the preview
+  // option, as Learn labels them.
+  const HOW =
+    "pbiplint reads a report saved as a Power BI project (PBIP). In Power BI Desktop, choose File > Save as and pick Power BI project files (*.pbip) as the file type (if it isn't offered, first turn on Power BI Project (.pbip) save option under File > Options and settings > Options > Preview features).";
+  it("is known by its name alone, in any case", () => {
+    for (const path of ["Sales.pbix", "Sales.PBIX", "Demo/old/Sales.Pbix", "a b.pbix"])
+      expect(isPbix(path), path).toBe(true);
+    for (const path of ["Sales.pbip", "Sales.pbit", "Sales.pbix.txt", "Sales.pbix/x.tmdl", "pbix"])
+      expect(isPbix(path), path).toBe(false);
+  });
+  it("names one .pbix and says how to save the report as a Power BI project", () => {
+    expect(pbixRefusal("Demo/Sales.pbix")).toBe(
+      `Demo/Sales.pbix is a Power BI Desktop file (.pbix), which pbiplint cannot read. ${HOW}`,
+    );
+    expect(pbixRefusal("Sales.PBIX", 0)).toBe(
+      `Sales.PBIX is a Power BI Desktop file (.pbix), which pbiplint cannot read. ${HOW}`,
+    );
+  });
+  it("names the first of several and counts the others", () => {
+    expect(pbixRefusal("Demo/A.pbix", 1)).toBe(
+      `Demo/A.pbix and 1 other .pbix file are Power BI Desktop files, which pbiplint cannot read. ${HOW}`,
+    );
+    expect(pbixRefusal("Demo/A.pbix", 2)).toBe(
+      `Demo/A.pbix and 2 other .pbix files are Power BI Desktop files, which pbiplint cannot read. ${HOW}`,
+    );
+  });
+});
+
+describe("a model folder that holds no .tmdl files (tracked in #88)", () => {
+  // The cause is offered, not asserted: such a folder may as well be empty or half copied.
+  const TMDL_ONLY =
+    "Only a model stored as TMDL can be linted; if it is in the older model.bim format, save it in the TMDL format from Power BI Desktop first.";
+  it("names one folder, or several in the order given, and says only TMDL can be linted", () => {
+    expect(noTmdlRefusal(["Demo/Old.SemanticModel"])).toBe(
+      `Demo/Old.SemanticModel holds no .tmdl files. ${TMDL_ONLY}`,
+    );
+    expect(noTmdlRefusal(["a/B.SemanticModel", "a/A.SemanticModel"])).toBe(
+      `a/B.SemanticModel and a/A.SemanticModel hold no .tmdl files. ${TMDL_ONLY}`,
+    );
+    expect(noTmdlRefusal(["A.SemanticModel", "B.SemanticModel", "C.SemanticModel"])).toBe(
+      `A.SemanticModel, B.SemanticModel, and C.SemanticModel hold no .tmdl files. ${TMDL_ONLY}`,
+    );
+  });
+  it("says the same beside something linted, where the browser notes the folders were not", () => {
+    expect(noTmdlNote(["Proj/Old.SemanticModel"])).toBe(
+      `Proj/Old.SemanticModel holds no .tmdl files and was not linted. ${TMDL_ONLY}`,
+    );
+    expect(noTmdlNote(["Proj/A.SemanticModel", "Proj/B.SemanticModel"])).toBe(
+      `Proj/A.SemanticModel and Proj/B.SemanticModel hold no .tmdl files and were not linted. ${TMDL_ONLY}`,
+    );
   });
 });

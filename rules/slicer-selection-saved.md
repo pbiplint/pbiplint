@@ -152,6 +152,10 @@ A default selection readers are meant to start from, which Microsoft endorses fo
 - A selection is read by where it sits, not by the visual's type, so custom slicers from AppSource, such as the Chiclet Slicer, the Hierarchy Slicer, and the Text Filter, are reported the same way as the slicers built into Power BI. Microsoft's guidance for building Power BI visuals says a visual that filters through the Visual Filters API declares a `filter` in the `general` section of its capabilities and applies its filter there. Separately, Power BI Desktop's saved files keep these slicers' selections in that `filter` under `objects.general`, and in those files every kind of visual that carries that `filter` is one that filters the report.
 - Only the slicer as saved in visual.json is read. A bookmark that captures a different selection is not.
 
+## Related rules
+
+- `SLICER_SEARCH_SAVED` reports a term saved in the slicer's search box, which visual.json keeps apart from the selection, so a slicer saved with both is reported by both rules.
+
 ## Links
 
 - [Slicers overview in Power BI, including Select all and synced slicers](https://learn.microsoft.com/power-bi/visuals/power-bi-visualization-slicers)

@@ -1163,10 +1163,18 @@ describe("lint over a project", () => {
         expect(modelRuleFindings(r), path).toEqual(modelRuleFindings(lint(files)));
         expect(modelRuleFindings(r).length, path).toBeGreaterThan(0);
       }
-      // A model path that could hold no declaration, such as the model's .platform, changes nothing.
+      // A model path that is not a .tmdl file is read as a folder, the model's .platform passed
+      // without a slash included, so the model counts as one pbiplint could not fully read. The
+      // CLI and the browser pass only .tmdl files and folders on the model side.
       const platform = lint(files, { unreadPaths: { model: [".platform"] } });
-      expect(details(platform, "BROKEN_FIELD_REFERENCE")).toHaveLength(3);
-      expect(platform.summary.rulesSkipped.map((s) => s.reason)).not.toContain("modelFileUnread");
+      expect(platform.project.model?.unreadPaths).toEqual([".platform/"]);
+      expect(platform.summary.rulesSkipped).toContainEqual({
+        id: "NOT_REACHED_FROM_REPORT",
+        reason: "modelFileUnread",
+      });
+      expect(details(platform, "BROKEN_FIELD_REFERENCE")).toEqual([
+        `[Total]: [Total] is on "Sales", not "Product"`,
+      ]);
     });
 
     it("reads a report file it could not read as one that failed to parse, with no PARSE_ISSUE", () => {
@@ -1195,7 +1203,7 @@ describe("lint over a project", () => {
         layer: "report",
         label: "Slicers",
         value: "unknown",
-        detail: "saved selections: unknown, a visual.json could not be read",
+        detail: "saved selections and search terms: unknown, a visual.json could not be read",
       });
       // A broken reference in a file that was read is broken whatever the unread file says.
       expect(details(unread, "BROKEN_FIELD_REFERENCE")).toHaveLength(3);
@@ -1288,6 +1296,119 @@ describe("lint over a project", () => {
         reason: "reportFileUnread",
       });
       expect(details(r, "PARSE_ISSUE")).toEqual([]);
+    });
+
+    it("says unknown for a count that would read 0 while a report folder that could hold what it counts could not be listed", () => {
+      // Page p's folder could not be listed, so nothing under it was read; pages.json names p.
+      const noPage = files.filter((f) => !f.path.startsWith("definition/pages/p/"));
+      const r = lint(noPage, { unreadPaths: { report: ["definition/pages/p/"] } });
+      expect(r.facts).toEqual([
+        {
+          layer: "report",
+          label: "Opens on",
+          value: "p",
+          detail: "the page open when it was saved; no landing page set",
+        },
+        {
+          layer: "report",
+          label: "Filters pane",
+          value: "open",
+          detail: "read as open; report.json does not record it",
+        },
+        {
+          layer: "report",
+          label: "Pages",
+          value: "unknown",
+          detail: "a page.json could not be read",
+        },
+        {
+          layer: "report",
+          label: "Visuals",
+          value: "unknown",
+          detail: "a visual.json could not be read",
+        },
+        { layer: "report", label: "Report measures", value: "none" },
+        {
+          layer: "report",
+          label: "Slicers",
+          value: "unknown",
+          detail: "saved selections and search terms: unknown, a visual.json could not be read",
+        },
+        {
+          layer: "report",
+          label: "Mobile layouts",
+          value: "unknown",
+          detail: "a mobile.json could not be read",
+        },
+        {
+          layer: "model",
+          label: "Model",
+          value: "2 tables, 2 columns, 1 measure",
+          detail: "not reached from this report: unknown, a report file could not be read",
+        },
+      ]);
+    });
+
+    it("says unknown for a model count that would read 0 while a model folder could not be listed", () => {
+      // The tables folder could not be listed, so model.tmdl is the model's only file.
+      const model = { path: "definition/model.tmdl", text: "model Model\n\tculture: en-US\n" };
+      const r = lint([model, ...reportFiles, broken], {
+        unreadPaths: { model: ["definition/tables/"] },
+      });
+      expect(fact(r, "Model")).toEqual({
+        layer: "model",
+        label: "Model",
+        value: "tables: unknown, columns: unknown, measures: unknown",
+        detail: "not reached from this report: unknown, a model file could not be fully read",
+      });
+      // The report was read whole, so its counts are as they were.
+      expect([fact(r, "Pages")?.value, fact(r, "Visuals")?.value]).toEqual(["1", "1"]);
+    });
+
+    it("reads a model path written without its trailing / as a folder when it is not a .tmdl file", () => {
+      const r = lint(files, { unreadPaths: { model: ["definition/tables"] } });
+      expect(r.project.model?.unreadPaths).toEqual(["definition/tables/"]);
+      expect(r.summary.rulesSkipped).toContainEqual({
+        id: "NOT_REACHED_FROM_REPORT",
+        reason: "modelFileUnread",
+      });
+      expect(fact(r, "Model")?.detail).toBe(
+        "not reached from this report: unknown, a model file could not be fully read",
+      );
+      expect(r).toEqual(lint(files, { unreadPaths: { model: ["definition/tables/"] } }));
+    });
+
+    it("reads a report path written without its trailing / as a folder when it is not a report file", () => {
+      const visuals = "definition/pages/p/visuals";
+      const bare = lint(files, { unreadPaths: { report: [visuals] } });
+      expect(bare.project.report?.unreadDefinitionFolders).toEqual([`${visuals}/`]);
+      expect(bare.summary.rulesSkipped).toContainEqual({
+        id: "NOT_REACHED_FROM_REPORT",
+        reason: "reportFileUnread",
+      });
+      expect(fact(bare, "Model")?.detail).toBe(
+        "not reached from this report: unknown, a report file could not be read",
+      );
+      expect(bare).toEqual(lint(files, { unreadPaths: { report: [`${visuals}/`] } }));
+      // A folder that then holds nothing the report layer reads changes nothing, as with its /.
+      expect(lint(files, { unreadPaths: { report: ["StaticResources"] } })).toEqual(lint(files));
+    });
+
+    it("leaves a folder written with its trailing /, and a file each layer reads, as written", () => {
+      const r = lint(files, {
+        unreadPaths: {
+          model: ["definition/tables/", "definition/tables/Store.tmdl"],
+          report: ["definition/pages/q/", "definition/pages/p/visuals/v/visual.json"],
+        },
+      });
+      expect(r.project.model?.unreadPaths).toEqual([
+        "definition/tables/",
+        "definition/tables/Store.tmdl",
+      ]);
+      expect(r.project.report?.unreadDefinitionFolders).toEqual(["definition/pages/q/"]);
+      expect(r.project.report?.unreadDefinitionFiles).toEqual([
+        "definition/pages/p/visuals/v/visual.json",
+      ]);
     });
   });
   it("keeps an invalid-JSON detail on one line, whatever the engine's message spans", () => {

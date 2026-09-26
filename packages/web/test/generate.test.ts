@@ -618,11 +618,11 @@ describe("generateSite", () => {
   it("writes every rule page, the index, the about page, and the sitemap", () => {
     const out = mkdtempSync(join(tmpdir(), "pbiplint-site-"));
     const metas = generateSite({ outDir: out });
-    expect(metas.length).toBe(98);
-    expect(readdirSync(join(out, "rules")).filter((d) => d !== "index.html").length).toBe(98);
+    expect(metas.length).toBe(99);
+    expect(readdirSync(join(out, "rules")).filter((d) => d !== "index.html").length).toBe(99);
     // Every report page publishes, each one on the site's rule-id link map with the rest.
     const reportPages = metas.filter((m) => m.layer === "report").map((m) => m.slug);
-    expect(reportPages).toHaveLength(24);
+    expect(reportPages).toHaveLength(25);
     for (const slug of reportPages)
       expect(existsSync(join(out, `rules/${slug}/index.html`)), slug).toBe(true);
     expect(readFileSync(join(out, "rules/landing-page-not-set/index.html"), "utf8")).toContain(
@@ -634,17 +634,17 @@ describe("generateSite", () => {
     );
     const index = readFileSync(join(out, "rules/index.html"), "utf8");
     expect(index).toContain(
-      "98 rules: 66 model rules ported from Microsoft's Best Practice Analyzer ruleset so the results match Tabular Editor, 5 listed but not run because they need statistics only a live model has, 11 report rules ported from PBI Inspector's base rules by Nat Van Gulck, and 16 built into pbiplint.",
+      "99 rules: 66 model rules ported from Microsoft's Best Practice Analyzer ruleset so the results match Tabular Editor, 5 listed but not run because they need statistics only a live model has, 11 report rules ported from PBI Inspector's base rules by Nat Van Gulck, and 17 built into pbiplint.",
     );
     expect(index).toContain('<h2 id="error-prevention">Error Prevention</h2>');
     expect((index.match(/needs a live model/g) ?? []).length).toBe(5);
     // The layer column is on: every row names its layer.
-    expect((index.match(/<span class="layer (model|report|project)">/g) ?? []).length).toBe(98);
+    expect((index.match(/<span class="layer (model|report|project)">/g) ?? []).length).toBe(99);
     for (const m of metas) expect(index).toContain(`href="/rules/${m.slug}/"`);
     const summaries = [...index.matchAll(/<span class="summary">([\s\S]*?)<\/span>/g)].map(
       (m) => m[1]!,
     );
-    expect(summaries.length).toBe(98);
+    expect(summaries.length).toBe(99);
     expect(summaries.some((s) => s.includes("<code>///</code>"))).toBe(true);
     expect(summaries.filter((s) => s.includes("`"))).toEqual([]);
     const parseIssue = readFileSync(join(out, "rules/parse-issue/index.html"), "utf8");
@@ -659,7 +659,7 @@ describe("generateSite", () => {
     expect(sitemap).toContain("<loc>https://pbiplint.com/rules/hide-foreign-keys/</loc>");
     expect(sitemap).toContain("<loc>https://pbiplint.com/rules/filters-pane-state/</loc>");
     // The home page, the About page, the rules index, and one entry per rule page.
-    expect((sitemap.match(/<loc>/g) ?? []).length).toBe(3 + 98);
+    expect((sitemap.match(/<loc>/g) ?? []).length).toBe(3 + 99);
     expect(Object.keys(pageEntries(out)).sort()).toEqual(
       ["about", "rules", ...metas.map((m) => `rules/${m.slug}`)].sort(),
     );
@@ -841,7 +841,7 @@ describe("rulesIndex", () => {
     );
     // The count takes the added page into the clause for its source.
     expect(index).toContain(
-      "99 rules: 66 model rules ported from Microsoft's Best Practice Analyzer ruleset so the results match Tabular Editor, 5 listed but not run because they need statistics only a live model has, 12 report rules ported from PBI Inspector's base rules by Nat Van Gulck, and 16 built into pbiplint.",
+      "100 rules: 66 model rules ported from Microsoft's Best Practice Analyzer ruleset so the results match Tabular Editor, 5 listed but not run because they need statistics only a live model has, 12 report rules ported from PBI Inspector's base rules by Nat Van Gulck, and 17 built into pbiplint.",
     );
     // With no report page published, the report clause is left out rather than read as zero.
     expect(

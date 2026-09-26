@@ -3,6 +3,7 @@ import type { RankedGroup } from "../engine/rank.js";
 import type { SkippedRule } from "../engine/run.js";
 import type { LayerStatus } from "../project/types.js";
 import { SEVERITY_LABEL, type Finding, type Layer } from "../rules/types.js";
+import { showControls } from "./controls.js";
 
 /** Guidance for one rule in the two forms SARIF carries: plain text and Markdown. */
 export interface RuleHelp {
@@ -91,12 +92,15 @@ export function layersLine(result: LintResult): string {
 
 export const layerTag = (layer: Layer): string => `[${layer}]`;
 
-/** The facts as aligned lines under a heading, with rule ids in the right margin; nothing when there are no facts. */
+/**
+ * The facts as aligned lines under a heading, with rule ids in the right margin; nothing when there
+ * are no facts. A value can hold a name from the input, so it is shown before it is measured.
+ */
 export function factsLines(result: LintResult): string[] {
   if (result.facts.length === 0) return [];
   const rows = result.facts.map((f) => ({
-    label: f.label,
-    value: f.detail ? `${f.value} (${f.detail})` : f.value,
+    label: showControls(f.label),
+    value: showControls(f.detail ? `${f.value} (${f.detail})` : f.value),
     rule: f.ruleId ?? "",
   }));
   const labelWidth = Math.max(...rows.map((r) => r.label.length));
@@ -111,14 +115,19 @@ export function factsLines(result: LintResult): string[] {
 }
 
 export const noticeLines = (result: LintResult): string[] =>
-  result.diagnostics.map((d) => `Notice: ${d.message}`);
+  result.diagnostics.map((d) => `Notice: ${showControls(d.message)}`);
 
 export const topGroups = (result: LintResult, n = 5): RankedGroup[] => result.groups.slice(0, n);
 
+/**
+ * The text format, for a terminal. Every string from the input (a name, a path, a detail, a
+ * message, an absent layer's reason) is shown through `showControls`, and a column is measured
+ * on the shown text, so no control character reaches the terminal and the columns line up.
+ */
 export function formatText(result: LintResult, _options: FormatOptions = {}): string {
   const out: string[] = [
     `pbiplint: ${summaryLine(result)}`,
-    [layersLine(result), skippedLine(result)].filter(Boolean).join(" "),
+    showControls([layersLine(result), skippedLine(result)].filter(Boolean).join(" ")),
     ...noticeLines(result),
     "",
     ...factsLines(result),
@@ -140,10 +149,15 @@ export function formatText(result: LintResult, _options: FormatOptions = {}): st
       out.push(`       ${g.rule.url}`);
       // The location column is always emitted, empty or not, so a finding without a location never
       // shifts its detail into the location column. Widths align within the group only.
-      const width = Math.max(...g.findings.map((f) => f.objectName.length));
-      const locWidth = Math.max(...g.findings.map((f) => locationOf(f).length));
-      for (const f of g.findings) {
-        const cols = [f.objectName.padEnd(width), locationOf(f).padEnd(locWidth), f.detail ?? ""];
+      const rows = g.findings.map((f) => ({
+        name: showControls(f.objectName),
+        location: showControls(locationOf(f)),
+        detail: showControls(f.detail ?? ""),
+      }));
+      const width = Math.max(...rows.map((r) => r.name.length));
+      const locWidth = Math.max(...rows.map((r) => r.location.length));
+      for (const r of rows) {
+        const cols = [r.name.padEnd(width), r.location.padEnd(locWidth), r.detail];
         out.push(`       ${cols.join("  ")}`.trimEnd());
       }
       out.push("");
@@ -152,7 +166,7 @@ export function formatText(result: LintResult, _options: FormatOptions = {}): st
   // Rule crashes are always reported, including on a run where nothing else fired.
   if (result.summary.ruleErrors.length) {
     out.push("Rule errors (please report these):");
-    for (const e of result.summary.ruleErrors) out.push(`  ${e.id}: ${e.message}`);
+    for (const e of result.summary.ruleErrors) out.push(`  ${e.id}: ${showControls(e.message)}`);
     out.push("");
   }
   return out.join("\n");

@@ -1,3 +1,4 @@
+import { showControls } from "@pbiplint/core";
 import { main } from "./main.js";
 
 // `pbiplint model | head` closes stdout early; exit quietly instead of dumping an EPIPE stack.
@@ -15,6 +16,9 @@ main(process.argv.slice(2), {
     process.exitCode = code;
   })
   .catch((e: unknown) => {
-    process.stderr.write(`pbiplint: ${e instanceof Error ? e.message : String(e)}\n`);
+    // As main does for every line it writes to stderr, the message's control characters are shown.
+    process.stderr.write(
+      `${showControls(`pbiplint: ${e instanceof Error ? e.message : String(e)}`)}\n`,
+    );
     process.exitCode = 2;
   });

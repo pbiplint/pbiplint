@@ -2,6 +2,7 @@ import type { LintResult } from "../engine/lint.js";
 import { defaultRules } from "../rules/index.js";
 import type { Severity } from "../rules/types.js";
 import { VERSION } from "../version.js";
+import { escapeJsonControls } from "./controls.js";
 import type { FormatOptions, RuleHelp } from "./text.js";
 
 const LEVEL: Record<Severity, "error" | "warning" | "note"> = {
@@ -118,5 +119,6 @@ export function formatSarif(result: LintResult, options: FormatOptions = {}): st
     version: "2.1.0",
     runs: [run],
   };
-  return JSON.stringify(doc, null, 2) + "\n";
+  // No control character reaches a terminal the document is printed to, as in the text format.
+  return escapeJsonControls(JSON.stringify(doc, null, 2)) + "\n";
 }

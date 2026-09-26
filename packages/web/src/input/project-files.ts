@@ -1,6 +1,9 @@
 import {
   datasetReference,
+  noTmdlNote,
+  noTmdlRefusal,
   pairingDecision,
+  pbixRefusal,
   type Diagnostic,
   type LayerName,
   type LintFile,
@@ -12,15 +15,15 @@ export interface InputEntry {
   text: string;
 }
 
-/** A legacy part's marker file, seen by name and never opened. */
+/** A legacy part's marker file, or a .pbix, seen by name and never opened. */
 export interface InputMarker {
   path: string;
-  kind: "legacy-report" | "legacy-model";
+  kind: "legacy-report" | "legacy-model" | "pbix";
 }
 
 /**
  * What a reader saw: the files it read, every .SemanticModel and .Report folder it passed, read or
- * not, the legacy markers it saw by name, and what it could not read.
+ * not, the legacy markers and .pbix files it saw by name, and what it could not read.
  */
 export interface InputTree {
   entries: InputEntry[];
@@ -31,7 +34,10 @@ export interface InputTree {
   modelFolders: string[];
   /** Drop-relative paths of the .Report folders seen, read or not. */
   reportFolders: string[];
-  /** A report.json directly under a .Report, or a model.bim directly under a .SemanticModel: seen by name, never opened. */
+  /**
+   * A report.json directly under a .Report, a model.bim directly under a .SemanticModel, and any
+   * .pbix: seen by name, never opened.
+   */
   markers: InputMarker[];
   /** What the walk could not do: a folder past the depth cap, a file or folder that failed to read. */
   diagnostics: Diagnostic[];
@@ -113,9 +119,6 @@ export const CONFIG_FILE = "pbiplint.config.json";
 const MODEL_SUFFIX = ".SemanticModel";
 export const isModelFolder = (name: string): boolean => name.endsWith(MODEL_SUFFIX);
 
-// The cause is offered, not asserted: the folder may as well be empty or half copied.
-const TMDL_ONLY =
-  "Only a model stored as TMDL can be linted; if it is in the older model.bim format, save it in the TMDL format from Power BI Desktop first.";
 const NOTHING_FOUND =
   "No model or report found. Drop a PBIP folder, a .SemanticModel or .Report folder, or a .tmdl file.";
 
@@ -136,10 +139,6 @@ const UNREAD_PART: Record<LayerName, string> = {
   model: "the model folder could not be read",
   report: "the report folder could not be read",
 };
-
-/** "A", "A and B", "A, B, and C". */
-const listOf = (items: string[]): string =>
-  items.length <= 2 ? items.join(" and ") : `${items.slice(0, -1).join(", ")}, and ${items.at(-1)}`;
 
 const parent = (p: string): string => (p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "");
 const nameOf = (p: string): string => p.slice(p.lastIndexOf("/") + 1);
@@ -182,6 +181,8 @@ interface Part {
 interface Read {
   covers: (path: string, folder: boolean) => boolean;
   part?: Part;
+  /** The order the CLI meets the paths this read covers, where it is not `walkOrder`. */
+  order?: (a: string, b: string) => number;
 }
 
 /** An `unread-file` notice of the tree, with whether its path is a folder. */
@@ -237,10 +238,13 @@ function reportRead(s: Selection, folder: string): Part | undefined {
   const def = join(folder, "definition");
   if (!s.dirs.has(def)) return undefined;
   const part: Part = { root: folder, files: [], sources: new Set(), unread: [] };
-  const own = new Set([join(folder, "definition.pbir"), join(folder, ".platform")]);
+  const own = [join(folder, "definition.pbir"), join(folder, ".platform")];
   const covers = (p: string, folder = false): boolean =>
-    folder ? atOrWithin(p, def) : own.has(p) || (within(p, def) && p.endsWith(".json"));
-  s.reads.push({ part, covers });
+    folder ? atOrWithin(p, def) : own.includes(p) || (within(p, def) && p.endsWith(".json"));
+  // The CLI reads definition.pbir, then .platform, and then walks the definition folder, so a
+  // path's place in that list comes before its place in the walk.
+  const rank = (p: string): number => (own.includes(p) ? own.indexOf(p) : own.length);
+  s.reads.push({ part, covers, order: (a, b) => rank(a) - rank(b) || walkOrder(a, b) });
   for (const e of s.tree.entries)
     if (covers(e.path)) {
       part.files.push({ path: relativeTo(e.path, folder), text: e.text });
@@ -259,15 +263,34 @@ const covered = (s: Selection, u: Unread): boolean =>
   s.reads.some((r) => r.covers(u.path, u.folder));
 
 /**
+ * The order the CLI's walk meets two paths in within one read. Its readTree
+ * (packages/cli/src/walk.ts) lists each folder's entries sorted by its byName, the same
+ * localeCompare(…, "en") as `byName` here, and walks into a folder where its name sorts, so a
+ * folder comes before everything in it. Comparing segment by segment gives that order where
+ * comparing whole paths would not: the walk is through `tables` and has met `tables/Sales.tmdl`
+ * before it reaches `tables.old`, though "tables.old" sorts before "tables/Sales.tmdl".
+ */
+function walkOrder(a: string, b: string): number {
+  const as = a.split("/");
+  const bs = b.split("/");
+  for (let i = 0; i < Math.min(as.length, bs.length); i++)
+    if (as[i] !== bs[i]) return byName(as[i]!, bs[i]!);
+  return as.length - bs.length;
+}
+
+/**
  * The notice a run of which nothing could be read is refused naming: the first path that refused
  * in the order the CLI's reads meet them (a folder as it is entered or listed, the model's reads
- * before the report's), since the CLI names the first refusal it met. Within one read, the walk's
- * order.
+ * before the report's), since the CLI names the first refusal it met. Within one read, the path
+ * the CLI meets first there, whatever order the drop listed them in.
  */
 function firstRefused(s: Selection): Unread | undefined {
   for (const r of s.reads) {
-    const u = s.unread.find((x) => r.covers(x.path, x.folder));
-    if (u) return u;
+    const order = r.order ?? walkOrder;
+    const [first] = s.unread
+      .filter((x) => r.covers(x.path, x.folder))
+      .sort((a, b) => order(a.path, b.path));
+    if (first) return first;
   }
   return undefined;
 }
@@ -486,13 +509,16 @@ function findConfig(s: Selection, root: string): SelectedProject["config"] {
 
 /**
  * Every folder the walk shows exists: the folders above each path it saw, and each folder it
- * passed or could not list, with the folders above those.
+ * passed or could not list, with the folders above those. A .pbix is left out, as any other file
+ * the walk does not read is: it is seen only to be named when nothing else can be, so it says
+ * nothing about where the project is, and a .pbix dropped beside a folder leaves that folder the
+ * root.
  */
 function foldersOf(tree: InputTree): { dirs: Set<string>; files: string[]; folders: string[] } {
   const unreadFolders = new Set(tree.unreadFolders);
   const files = [
     ...tree.entries.map((e) => e.path),
-    ...tree.markers.map((m) => m.path),
+    ...tree.markers.filter((m) => m.kind !== "pbix").map((m) => m.path),
     ...tree.diagnostics
       .filter((d) => d.kind === "unread-file" && d.path !== undefined && !unreadFolders.has(d.path))
       .map((d) => d.path!),
@@ -560,7 +586,7 @@ function rebased(d: Diagnostic, root: string): Diagnostic {
  * Where the browser has always differed, it still does: a .SemanticModel folder holding no .tmdl
  * file (an older model.bim model, or an empty one) never triggers the two-model refusal the CLI
  * gives; the one lintable model is linted and the other is named in a note. When nothing can be
- * linted, the error names it instead.
+ * linted, the refusal names it instead, in the words the CLI gives.
  *
  * The walkers read more than the CLI opens, since a drop is read before anything is decided. A
  * notice about a file this run would not have read, or a folder it would not have entered or
@@ -617,13 +643,12 @@ export function selectProject(tree: InputTree): SelectedProject {
     ...s.said,
   ];
 
-  // Model folders no one lints, and that nothing else here explains, are named in a note.
+  // Model folders no one lints, and that nothing else here explains, are named in a note, or in
+  // the refusal when nothing is linted, in name order by their drop-relative paths, as the CLI
+  // lists them.
   const unlintable = [...dirs]
     .filter((d) => isModelFolder(nameOf(d)) && !s.legacy.has(d) && !holdsModel(s, d))
     .sort(byName);
-  // "X holds no .tmdl files", built only when there is such a folder to name.
-  const holdsNoTmdl = (): string =>
-    `${listOf(unlintable)} hold${unlintable.length === 1 ? "s" : ""} no .tmdl files`;
 
   if (!model && !report) {
     // A drop of which nothing could be read, while something this run read refused, is refused
@@ -635,12 +660,22 @@ export function selectProject(tree: InputTree): SelectedProject {
     if (refused) throw new InputError(`Could not read ${refused.path}: ${reasonOf(tree, refused)}`);
     // Nothing to lint but something to say, a legacy part alone or a walk stopped at the cap: the
     // run goes on, and its notices say why nothing was linted.
-    if (diagnostics.length === 0)
-      throw new InputError(unlintable.length ? `${holdsNoTmdl()}. ${TMDL_ONLY}` : NOTHING_FOUND);
+    if (diagnostics.length === 0) {
+      // Nothing else explains it, so a model folder holding no .tmdl files is named first, in
+      // core's words, as the CLI names it.
+      if (unlintable.length) throw new InputError(noTmdlRefusal(unlintable));
+      // Else a .pbix the walk met is named for what it is, as the CLI names it: the first its
+      // walk would meet, by its path in the drop, which is the CLI's path joined to its input,
+      // and how many more.
+      const pbix = [
+        ...new Set(tree.markers.filter((m) => m.kind === "pbix").map((m) => m.path)),
+      ].sort(walkOrder);
+      throw new InputError(
+        pbix[0] !== undefined ? pbixRefusal(pbix[0], pbix.length - 1) : NOTHING_FOUND,
+      );
+    }
   }
-  const notes = unlintable.length
-    ? [`${holdsNoTmdl()} and ${unlintable.length === 1 ? "was" : "were"} not linted. ${TMDL_ONLY}`]
-    : [];
+  const notes = unlintable.length ? [noTmdlNote(unlintable)] : [];
   // The config after the parts, as the CLI finds it after resolveProject: a drop that is refused
   // for what it holds is refused for that first.
   const config = findConfig(s, root);

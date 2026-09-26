@@ -1,4 +1,4 @@
-import { lint, type Diagnostic } from "@pbiplint/core";
+import { lint, noTmdlNote, noTmdlRefusal, pbixRefusal, type Diagnostic } from "@pbiplint/core";
 import { describe, expect, it } from "vitest";
 import {
   emptyTree,
@@ -6,6 +6,7 @@ import {
   relativeToRoot,
   selectProject,
   type InputEntry,
+  type InputMarker,
   type InputTree,
 } from "../src/input/project-files.js";
 
@@ -528,6 +529,88 @@ describe("selectProject", () => {
       selectProject(both("Proj/Demo.Report", "Proj/Demo.SemanticModel/definition")),
     ).toThrow(new InputError("Could not read Proj/Demo.SemanticModel/definition: model locked"));
   });
+  /**
+   * A drop of which nothing could be read: each of `refused` failed, in the order the walk met
+   * them, a path written with a trailing "/" being a folder. Each reason names the path's last
+   * segment, so the error shows which notice it came from.
+   */
+  const nothingRead = (parts: Partial<InputTree>, ...refused: string[]): InputTree => {
+    const paths = refused.map((p) => p.replace(/\/$/, ""));
+    const reason = (p: string): string => `${p.slice(p.lastIndexOf("/") + 1)} locked`;
+    return {
+      ...emptyTree(),
+      ...parts,
+      diagnostics: paths.map((p) => unreadAt(p, reason(p))),
+      unreadFolders: refused.filter((p) => p.endsWith("/")).map((p) => p.slice(0, -1)),
+      refusal: { path: paths[0]!, reason: reason(paths[0]!) },
+    };
+  };
+  it("names the path the CLI's walk meets first within one read: each folder's entries by name, depth first", () => {
+    // The walk met each pair in the reverse of the CLI's order, as a drop may list a folder's
+    // entries in any order; the CLI lists each folder sorted by name.
+    const model = { modelFolders: ["Proj/Demo.SemanticModel"] };
+    const def = "Proj/Demo.SemanticModel/definition";
+    expect(() =>
+      selectProject(nothingRead(model, `${def}/tables/b.tmdl`, `${def}/model.tmdl`)),
+    ).toThrow(new InputError(`Could not read ${def}/model.tmdl: model.tmdl locked`));
+    expect(() => selectProject(nothingRead(model, `${def}/tables/`, `${def}/cultures/`))).toThrow(
+      new InputError(`Could not read ${def}/cultures: cultures locked`),
+    );
+    // By name as localeCompare(…, "en") has it, which puts budget before Sales, where comparing
+    // code units would put Sales first.
+    expect(() =>
+      selectProject(nothingRead(model, `${def}/tables/Sales.tmdl`, `${def}/tables/budget.tmdl`)),
+    ).toThrow(new InputError(`Could not read ${def}/tables/budget.tmdl: budget.tmdl locked`));
+    // A plain folder's loose .tmdl files are one read, walked the same way.
+    expect(() => selectProject(nothingRead({}, "stuff/deeper/b.tmdl", "stuff/a.tmdl"))).toThrow(
+      new InputError("Could not read stuff/a.tmdl: a.tmdl locked"),
+    );
+  });
+  it("names a report's definition.pbir, then its .platform, then its definition folder's paths, as the CLI's reportPart reads them", () => {
+    const report = { reportFolders: ["Proj/Demo.Report"] };
+    const at = "Proj/Demo.Report";
+    // By name, the definition folder sorts before definition.pbir, and .platform before both.
+    expect(() =>
+      selectProject(nothingRead(report, `${at}/definition/report.json`, `${at}/definition.pbir`)),
+    ).toThrow(new InputError(`Could not read ${at}/definition.pbir: definition.pbir locked`));
+    expect(() =>
+      selectProject(
+        nothingRead(
+          report,
+          `${at}/definition/report.json`,
+          `${at}/.platform`,
+          `${at}/definition.pbir`,
+        ),
+      ),
+    ).toThrow(new InputError(`Could not read ${at}/definition.pbir: definition.pbir locked`));
+    expect(() =>
+      selectProject(nothingRead(report, `${at}/definition/pages/`, `${at}/.platform`)),
+    ).toThrow(new InputError(`Could not read ${at}/.platform: .platform locked`));
+    // A report dropped alone, as the CLI's test locks one.
+    expect(() =>
+      selectProject(
+        nothingRead(
+          { reportFolders: ["Demo.Report"] },
+          "Demo.Report/definition/report.json",
+          "Demo.Report/.platform",
+          "Demo.Report/definition.pbir",
+        ),
+      ),
+    ).toThrow(new InputError("Could not read Demo.Report/definition.pbir: definition.pbir locked"));
+  });
+  it("names a folder, or a file under a sibling folder, where its folder's name sorts", () => {
+    const model = { modelFolders: ["Demo.SemanticModel"] };
+    const def = "Demo.SemanticModel/definition";
+    // tables sorts before tables.old, so the CLI's walk has been through tables, and met
+    // Sales.tmdl, before it reaches tables.old. Comparing the whole paths as strings would name
+    // tables.old, since "." sorts before "/".
+    expect(() =>
+      selectProject(nothingRead(model, `${def}/tables.old/`, `${def}/tables/Sales.tmdl`)),
+    ).toThrow(new InputError(`Could not read ${def}/tables/Sales.tmdl: Sales.tmdl locked`));
+    expect(() =>
+      selectProject(nothingRead(model, `${def}/tables/Sales.tmdl`, `${def}/cultures/`)),
+    ).toThrow(new InputError(`Could not read ${def}/cultures: cultures locked`));
+  });
   it("names each notice relative to the project root, as the CLI names it relative to its input", () => {
     const cap = (path: string): Diagnostic => ({
       kind: "depth-cap",
@@ -801,6 +884,213 @@ describe("selectProject", () => {
         "Demo.Report/pbiplint.config.json (config, not used)",
       ]),
     );
+  });
+});
+
+describe("selectProject and a .pbix (tracked in #88)", () => {
+  // The words for a .pbix are core's, written out in route.test.ts; these hold the path and the
+  // count. The CLI's tests hold the same trees to the same words.
+  const pbix = (path: string): InputMarker => ({ path, kind: "pbix" });
+  /** A tree holding these .pbix files, as the walkers record them, and `extra` besides. */
+  const withPbix = (paths: string[], extra: Partial<InputTree> = {}): InputTree => ({
+    ...emptyTree(),
+    ...extra,
+    markers: [...(extra.markers ?? []), ...paths.map(pbix)],
+  });
+  it("names a lone .pbix, the one a folder holds, and one in a folder below, in any case", () => {
+    expect(() => selectProject(withPbix(["Sales.pbix"]))).toThrow(
+      new InputError(pbixRefusal("Sales.pbix")),
+    );
+    expect(() => selectProject(withPbix(["Sales.pbix"]))).toThrow(InputError);
+    expect(() => selectProject(withPbix(["Demo/Sales.pbix"]))).toThrow(
+      new InputError(pbixRefusal("Demo/Sales.pbix")),
+    );
+    expect(() => selectProject(withPbix(["Demo/Archive/Sales.PBIX"]))).toThrow(
+      new InputError(pbixRefusal("Demo/Archive/Sales.PBIX")),
+    );
+  });
+  it("names the first .pbix the CLI's walk meets and counts the others, whatever order the drop listed them in", () => {
+    expect(() => selectProject(withPbix(["Demo/Sales.pbix", "Demo/Archive/Old.pbix"]))).toThrow(
+      new InputError(pbixRefusal("Demo/Archive/Old.pbix", 1)),
+    );
+    expect(() =>
+      selectProject(
+        withPbix(["Demo/Sales.pbix", "Demo/Archive/Old.pbix", "Demo/Archive/2024.pbix"]),
+      ),
+    ).toThrow(new InputError(pbixRefusal("Demo/Archive/2024.pbix", 2)));
+  });
+  it("changes nothing beside a project it lints, dropped inside it or beside it, and never reads one", () => {
+    const model = {
+      entries: [e("Demo/Demo.SemanticModel/definition/model.tmdl", "model Model\n")],
+      modelFolders: ["Demo/Demo.SemanticModel"],
+    };
+    const before = selectProject({ ...emptyTree(), ...model });
+    expect(before.root).toBe("Demo");
+    // Inside the dropped folder, and dropped beside it: the folder is still the project, and the
+    // .pbix is neither in what was read nor in what lint is given.
+    for (const paths of [["Demo/Demo.pbix", "Demo/Archive/Demo.PBIX"], ["Demo.pbix"]])
+      expect(selectProject(withPbix(paths, model))).toEqual(before);
+  });
+  it("gives a legacy part's notice, and every other refusal, as it does without one", () => {
+    const legacy: Partial<InputTree> = {
+      reportFolders: ["Demo/Demo.Report"],
+      markers: [{ path: "Demo/Demo.Report/report.json", kind: "legacy-report" }],
+    };
+    const notice = selectProject({ ...emptyTree(), ...legacy });
+    expect(notice.diagnostics.map((d) => d.kind)).toEqual(["legacy-report-format"]);
+    expect(selectProject(withPbix(["Demo/Demo.pbix"], legacy))).toEqual(notice);
+    // The nothing-read refusal.
+    expect(() =>
+      selectProject(
+        withPbix(["Demo/Sales.pbix"], {
+          diagnostics: [unreadAt("Demo/tables")],
+          unreadFolders: ["Demo/tables"],
+          refusal: { path: "Demo/tables", reason: "locked" },
+        }),
+      ),
+    ).toThrow(new InputError("Could not read Demo/tables: locked"));
+    // A model folder that holds no .tmdl files.
+    expect(() =>
+      selectProject(withPbix(["Demo/Sales.pbix"], { modelFolders: ["Demo/Old.SemanticModel"] })),
+    ).toThrow(
+      new InputError(
+        "Demo/Old.SemanticModel holds no .tmdl files. Only a model stored as TMDL can be linted; if it is in the older model.bim format, save it in the TMDL format from Power BI Desktop first.",
+      ),
+    );
+    // Two reports.
+    expect(() =>
+      selectProject(
+        withPbix(["Demo/Sales.pbix"], {
+          entries: [
+            e("Demo/A.Report/definition/report.json"),
+            e("Demo/B.Report/definition/report.json"),
+          ],
+          reportFolders: ["Demo/A.Report", "Demo/B.Report"],
+        }),
+      ),
+    ).toThrow(/contains 2 reports; drop one of them: A\.Report, B\.Report/);
+    // A walk stopped at the depth cap goes on with its notice, as it does without one.
+    const cap: Diagnostic = {
+      kind: "depth-cap",
+      path: "Demo/d0",
+      message: "the walk stopped 64 folders deep at Demo/d0, so files below it were not read",
+    };
+    const capped = selectProject({ ...emptyTree(), diagnostics: [cap] });
+    expect(selectProject(withPbix(["Demo/Sales.pbix"], { diagnostics: [cap] }))).toEqual(capped);
+  });
+});
+
+describe("selectProject and a model folder that holds no .tmdl files (tracked in #88)", () => {
+  // The words are core's, written out in route.test.ts; these hold which folders are named, and in
+  // what order. walk.test.ts holds the CLI to the same trees, joining each folder to its input
+  // where these name it relative to the drop.
+  /** A tree holding these .SemanticModel folders, as the walkers record them, and `extra` besides. */
+  const withModels = (modelFolders: string[], extra: Partial<InputTree> = {}): InputTree => ({
+    ...emptyTree(),
+    ...extra,
+    modelFolders,
+  });
+  const refusal = (folders: string[]): InputError => new InputError(noTmdlRefusal(folders));
+  it("names a lone model folder dropped alone, and the one a dropped folder holds", () => {
+    // Empty (or holding an empty definition folder, which no walker records), or holding only its
+    // .platform, which the walkers read.
+    for (const extra of [{}, { entries: [e("Old.SemanticModel/.platform")] }])
+      expect(() => selectProject(withModels(["Old.SemanticModel"], extra))).toThrow(
+        refusal(["Old.SemanticModel"]),
+      );
+    for (const extra of [{}, { entries: [e("Proj/Old.SemanticModel/.platform")] }])
+      expect(() => selectProject(withModels(["Proj/Old.SemanticModel"], extra))).toThrow(
+        refusal(["Proj/Old.SemanticModel"]),
+      );
+  });
+  it("names one below that, and several in name order", () => {
+    expect(() => selectProject(withModels(["Proj/Models/Old.SemanticModel"]))).toThrow(
+      refusal(["Proj/Models/Old.SemanticModel"]),
+    );
+    expect(() =>
+      selectProject(
+        withModels(["Proj/Sales/Sales.SemanticModel", "Proj/Archive/Old.SemanticModel"]),
+      ),
+    ).toThrow(refusal(["Proj/Archive/Old.SemanticModel", "Proj/Sales/Sales.SemanticModel"]));
+    // The whole path's name order, whatever order the walk recorded them in: "Archive 2024/"
+    // sorts before "Archive/".
+    expect(() =>
+      selectProject(
+        withModels([
+          "Proj/Archive/Old.SemanticModel",
+          "Proj/Archive 2024/Older.SemanticModel",
+          "Proj/Sales/Sales.SemanticModel",
+        ]),
+      ),
+    ).toThrow(
+      refusal([
+        "Proj/Archive 2024/Older.SemanticModel",
+        "Proj/Archive/Old.SemanticModel",
+        "Proj/Sales/Sales.SemanticModel",
+      ]),
+    );
+  });
+  it("lints what it lints beside one and notes the folder, as before", () => {
+    // Beside a report it lints.
+    const report = selectProject({
+      ...emptyTree(),
+      entries: [
+        e(
+          "Proj/Demo.Report/definition.pbir",
+          JSON.stringify({ datasetReference: { byPath: { path: "../Old.SemanticModel" } } }),
+        ),
+        e("Proj/Demo.Report/definition/report.json"),
+      ],
+      modelFolders: ["Proj/Old.SemanticModel"],
+      reportFolders: ["Proj/Demo.Report"],
+    });
+    expect(report.files.map((f) => f.path)).toEqual(["definition.pbir", "definition/report.json"]);
+    expect(report.absent).toEqual({});
+    expect(report.diagnostics).toEqual([]);
+    expect(report.notes).toEqual([noTmdlNote(["Proj/Old.SemanticModel"])]);
+    // Below a folder that holds a model it lints.
+    const model = { entries: [e("Proj/Demo.SemanticModel/definition/model.tmdl")] };
+    const nested = selectProject(
+      withModels(["Proj/Demo.SemanticModel", "Proj/Archive/Old.SemanticModel"], model),
+    );
+    expect(nested.files.map((f) => f.path)).toEqual(["definition/model.tmdl"]);
+    expect(nested.notes).toEqual([noTmdlNote(["Proj/Archive/Old.SemanticModel"])]);
+    // Beside that model, where the CLI refuses two semantic models (spec section 12).
+    const beside = selectProject(
+      withModels(["Proj/Demo.SemanticModel", "Proj/Old.SemanticModel"], model),
+    );
+    expect(beside.files.map((f) => f.path)).toEqual(["definition/model.tmdl"]);
+    expect(beside.notes).toEqual([noTmdlNote(["Proj/Old.SemanticModel"])]);
+  });
+  it("gives a legacy model folder its notice, as before, and names one further down", () => {
+    for (const at of ["Old.SemanticModel", "Proj/Old.SemanticModel"]) {
+      const p = selectProject(
+        withModels([at], { markers: [{ path: `${at}/model.bim`, kind: "legacy-model" }] }),
+      );
+      expect(p.files).toEqual([]);
+      expect(p.absent).toEqual({ model: "the model is saved in the legacy model.bim format" });
+      expect(p.diagnostics.map((d) => [d.kind, d.path])).toEqual([
+        ["legacy-model-format", "Old.SemanticModel"],
+      ]);
+    }
+    // Further down, no read looks for its model.bim, so no notice explains it, in either surface.
+    const deep = "Proj/Models/Old.SemanticModel";
+    expect(() =>
+      selectProject(
+        withModels([deep], { markers: [{ path: `${deep}/model.bim`, kind: "legacy-model" }] }),
+      ),
+    ).toThrow(refusal([deep]));
+  });
+  it("refuses a drop of which nothing could be read naming what refused, as before", () => {
+    expect(() =>
+      selectProject(
+        withModels(["Proj/Old.SemanticModel"], {
+          diagnostics: [unreadAt("Proj/Locked")],
+          unreadFolders: ["Proj/Locked"],
+          refusal: { path: "Proj/Locked", reason: "locked" },
+        }),
+      ),
+    ).toThrow(new InputError("Could not read Proj/Locked: locked"));
   });
 });
 

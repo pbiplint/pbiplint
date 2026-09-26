@@ -42,10 +42,10 @@ describe("renderResults", () => {
     renderResults(container, result, { source: "the sample project" });
     expect(container.querySelector(".privacy")!.textContent).toContain("Nothing was uploaded");
     expect(container.querySelector("h2")!.textContent).toBe(
-      "Results for the sample project (model, 14 files · report, 77 files)",
+      "Results for the sample project (model, 14 files · report, 78 files)",
     );
     expect(container.querySelector(".summary")!.textContent).toContain(
-      "256 findings (19 errors, 77 warnings, 160 info) in 91 files",
+      "257 findings (19 errors, 78 warnings, 160 info) in 92 files",
     );
     const first = [...container.querySelectorAll(".fix-first li")];
     expect(first.length).toBe(5);
@@ -339,7 +339,7 @@ describe("renderResults", () => {
     expect(container.querySelector("h2")!.textContent).toBe("Results for x (model, 14 files)");
     const reportOnly = lint(SAMPLE_FILES.filter((f) => !f.path.endsWith(".tmdl")));
     renderResults(container, reportOnly, { source: "x" });
-    expect(container.querySelector("h2")!.textContent).toBe("Results for x (report, 77 files)");
+    expect(container.querySelector("h2")!.textContent).toBe("Results for x (report, 78 files)");
     // One file takes no s, and a run that read neither part has no counts to give.
     expect(heading(lint([{ path: "pasted.tmdl", text: "table T\n" }]), "pasted TMDL")).toBe(
       "Results for pasted TMDL (model, 1 file)",
@@ -429,7 +429,7 @@ describe("renderResults", () => {
       },
       {
         label: "Visuals",
-        value: "55",
+        value: "56",
         detail: "4 hidden; 1 custom visual type registered, 0 used",
         link: "fact flag #rule-hidden-visual-with-fields",
       },
@@ -441,8 +441,8 @@ describe("renderResults", () => {
       },
       {
         label: "Slicers",
-        value: "1",
-        detail: "1 saved selection",
+        value: "2",
+        detail: "1 saved selection, 1 saved search term",
         link: "fact flag #rule-slicer-selection-saved",
       },
       { label: "Mobile layouts", value: "none", detail: undefined, link: undefined },
@@ -625,6 +625,126 @@ describe("renderResults", () => {
     renderResults(container, hostile, { source: "x" });
     expect(container.querySelector("img")).toBeNull();
     expect(container.textContent).toContain("<img src=x onerror=alert(1)>");
+  });
+});
+
+// eslint-disable-next-line no-control-regex -- the characters showControls writes as escapes
+const RAW_CONTROL = /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/;
+/**
+ * A name as a hostile repository might write it: a right-to-left override, which reorders the
+ * text after it on the page, and the escape sequence that clears a terminal. SHOWN is what the
+ * CLI prints for it, and what the page shows.
+ */
+const EVIL = "Evil\u202e\u001b[2JName";
+const SHOWN = "Evil\\u202e\\u001b[2JName";
+
+describe("control characters from the input", () => {
+  it("shows them in a finding's name, location, and detail, the heading, and the files read as escapes", () => {
+    const run = lint([
+      { path: `${EVIL}.tmdl`, text: `table '${EVIL}'\n\tcolumn A\n\t\tdataType: string\n` },
+    ]);
+    // A detail that quotes the input, as SLICER_SEARCH_SAVED's quotes a saved term.
+    const hostile: LintResult = {
+      ...run,
+      groups: run.groups.map((g) =>
+        g.rule.id === "AVOID_INVALID_NAME_CHARACTERS"
+          ? { ...g, findings: g.findings.map((f) => ({ ...f, detail: `the term "${EVIL}"` })) }
+          : g,
+      ),
+    };
+    renderResults(container, hostile, { source: EVIL, files: [`${EVIL}.tmdl`] });
+    const row = [...container.querySelectorAll("#rule-avoid-invalid-name-characters tbody td")];
+    expect(row.map((td) => td.textContent)).toEqual([
+      `'${SHOWN}'`,
+      "Table",
+      `${SHOWN}.tmdl:1`,
+      `the term "${SHOWN}"`,
+    ]);
+    expect(container.querySelector("h2")!.textContent).toBe(`Results for ${SHOWN} (model, 1 file)`);
+    // The page announces the same heading, so the escape is made where the heading is.
+    expect(heading(run, EVIL)).toBe(`Results for ${SHOWN} (model, 1 file)`);
+    expect(container.querySelector("details.files li")!.textContent).toBe(`${SHOWN}.tmdl`);
+    expect(container.textContent).not.toMatch(RAW_CONTROL);
+  });
+  it("shows them in a notice, a note, a skip reason, an unknown rule id, and a rule error as escapes", () => {
+    const throwing: Rule = {
+      ...boom,
+      needs: [],
+      check: () => {
+        throw new Error(`kaboom at ${EVIL}`);
+      },
+    };
+    const run = lint(bare, {
+      rules: [...defaultRules, throwing],
+      config: { rules: { [`NOPE${EVIL}`]: "off" } },
+      diagnostics: [
+        {
+          kind: "unread-file",
+          path: `M/${EVIL}.tmdl`,
+          message: `M/${EVIL}.tmdl could not be read (locked), so it was not linted`,
+        },
+      ],
+      absent: { report: `the report sits at ${EVIL}` },
+    });
+    renderResults(container, run, {
+      source: "x",
+      notes: [`${EVIL}.SemanticModel holds no .tmdl files and was not linted.`],
+    });
+    expect([...container.querySelectorAll(".notice")].map((n) => n.textContent)).toEqual([
+      `${SHOWN}.SemanticModel holds no .tmdl files and was not linted.`,
+      `M/${SHOWN}.tmdl could not be read (locked), so it was not linted`,
+      `pbiplint.config.json names no rule called "NOPE${SHOWN}".`,
+      `Rule errors (please report these): BOOM: kaboom at ${SHOWN}`,
+    ]);
+    expect(container.querySelector(".summary")!.textContent).toContain(
+      `skipped (the report sits at ${SHOWN})`,
+    );
+    expect(container.textContent).not.toMatch(RAW_CONTROL);
+  });
+  it("shows them in a fact's label, value, and detail as escapes, linked or not", () => {
+    const hostile: LintResult = {
+      ...result,
+      facts: result.facts.map((f) => ({
+        ...f,
+        label: `${f.label} ${EVIL}`,
+        value: `${f.value} ${EVIL}`,
+        detail: EVIL,
+      })),
+    };
+    renderResults(container, hostile, { source: "x" });
+    const facts = container.querySelector("section.facts")!;
+    const dts = [...facts.querySelectorAll("dt")];
+    expect(dts.map((dt) => dt.textContent)).toEqual(result.facts.map((f) => `${f.label} ${SHOWN}`));
+    expect([...facts.querySelectorAll("dd")].map((dd) => dd.textContent)).toEqual(
+      result.facts.map((f) => `${f.value} ${SHOWN} · ${SHOWN}`),
+    );
+    // A linked value and a plain one are both shown through it.
+    expect(facts.querySelector("dd a.fact.flag")!.textContent).toMatch(
+      / Evil\\u202e\\u001b\[2JName$/,
+    );
+    expect([...facts.querySelectorAll("dd")].some((dd) => dd.querySelector("a") === null)).toBe(
+      true,
+    );
+    expect(container.textContent).not.toMatch(RAW_CONTROL);
+  });
+  it("leaves an ordinary name with accents and CJK as it is", () => {
+    const name = "Ventes café Überblick 売上 数据";
+    const run = lint([
+      { path: `${name}.tmdl`, text: `table '${name}'\n\tcolumn A\n\t\tdataType: string\n` },
+    ]);
+    renderResults(container, run, {
+      source: name,
+      files: [`${name}.tmdl`],
+      notes: [`${name}.SemanticModel holds no .tmdl files and was not linted.`],
+    });
+    expect(container.querySelector("h2")!.textContent).toBe(`Results for ${name} (model, 1 file)`);
+    expect(container.querySelector("details.files li")!.textContent).toBe(`${name}.tmdl`);
+    expect(container.querySelector(".notice")!.textContent).toBe(
+      `${name}.SemanticModel holds no .tmdl files and was not linted.`,
+    );
+    const row = [...container.querySelectorAll("#rule-objects-with-no-description tbody td")];
+    expect(row[0]!.textContent).toBe(`'${name}'`);
+    expect(row[2]!.textContent).toBe(`${name}.tmdl:1`);
   });
 });
 

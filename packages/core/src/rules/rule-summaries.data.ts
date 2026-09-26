@@ -166,6 +166,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Measures defined in the report's reportExtensions.json rather than in the model, reported when the model the report reads is in the input, so that each can move into it.",
   SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS:
     "Columns with IsAvailableInMdx set to false that are used to sort another column, appear in a hierarchy or a variation, or sort by another column.",
+  SLICER_SEARCH_SAVED:
+    "Slicers saved with a term in their search box: any visual whose visual.json holds a `selfFilter` with a condition under `objects.general`, which is where Power BI Desktop's saved files keep the text typed in a slicer's search box.",
   SLICER_SELECTION_SAVED:
     "Slicers saved with a selection, so that the report opens with it applied: any visual whose visual.json holds a `filter` with a condition under `objects.general`, which is where Power BI Desktop saves the selection of a slicer, button slicer, list slicer, input slicer, or `filterSlicer`, and of a custom slicer from AppSource that filters through the Visual Filters API. It is info without a policy, and a warning when the project's policy expects no saved selections.",
   SNOWFLAKE_SCHEMA_ARCHITECTURE:

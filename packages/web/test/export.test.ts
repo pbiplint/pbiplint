@@ -31,10 +31,10 @@ describe("export", () => {
     const json = exportJson(result);
     expect(json.name).toBe("pbiplint-report.json");
     const doc = JSON.parse(json.text);
-    expect(doc.summary.findings).toBe(256);
+    expect(doc.summary.findings).toBe(257);
     expect(doc.layers).toEqual({
       model: { present: true, files: 14 },
-      report: { present: true, files: 77 },
+      report: { present: true, files: 78 },
     });
     expect(md.text).toContain("Report at a glance");
     expect(doc.tool.version).toBe(VERSION);

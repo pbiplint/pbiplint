@@ -13,6 +13,72 @@ export const isReportFile = (path: string): boolean =>
   path.endsWith(".pbip") ||
   /(^|\/)definition\/.*\.json$/.test(path);
 
+/**
+ * Whether a file is a Power BI Desktop file, known by its name alone: one ending in `.pbix`,
+ * compared without regard to case, as a folder's name is compared (spec section 4). pbiplint
+ * never opens one.
+ */
+export const isPbix = (path: string): boolean => /\.pbix$/i.test(path);
+
+/**
+ * How to save a report as a Power BI project, in the labels Learn gives the menu path, the file
+ * type, and the option.
+ */
+const SAVE_AS_PROJECT =
+  "pbiplint reads a report saved as a Power BI project (PBIP). In Power BI Desktop, choose File > Save as and pick Power BI project files (*.pbip) as the file type (if it isn't offered, first turn on Power BI Project (.pbip) save option under File > Options and settings > Options > Preview features).";
+
+/**
+ * The refusal of an input of which nothing can be linted, and which nothing else explains, when
+ * the walk met a .pbix (spec section 4): it names `path`, the first .pbix the walk met, counts the
+ * `others` it met besides, and says how to save the report as a Power BI project. The CLI and the
+ * browser both give it, so the words cannot drift. The steps and their labels are Learn's, from
+ * the Power BI Desktop projects page,
+ * https://learn.microsoft.com/en-us/power-bi/developer/projects/projects-overview ("Save as a
+ * project" and "Enable preview features"). The preview option is a condition rather than a step:
+ * Learn still calls the format a preview, while Microsoft has since announced it generally
+ * available (Microsoft 365 Message Center post MC1465770, September 2, 2026), so a newer Desktop
+ * may not show the option.
+ */
+export function pbixRefusal(path: string, others = 0): string {
+  const what =
+    others === 0
+      ? `${path} is a Power BI Desktop file (.pbix)`
+      : `${path} and ${others} other .pbix ${others === 1 ? "file" : "files"} are Power BI Desktop files`;
+  return `${what}, which pbiplint cannot read. ${SAVE_AS_PROJECT}`;
+}
+
+/** "A", "A and B", "A, B, and C". */
+const listOf = (items: string[]): string =>
+  items.length <= 2 ? items.join(" and ") : `${items.slice(0, -1).join(", ")}, and ${items.at(-1)}`;
+
+// The cause is offered, not asserted: the folder may as well be empty or half copied.
+const TMDL_ONLY =
+  "Only a model stored as TMDL can be linted; if it is in the older model.bim format, save it in the TMDL format from Power BI Desktop first.";
+
+/** "<folders> hold(s) no .tmdl files", the folders listed in the order given. */
+const holdNoTmdl = (folders: string[]): string =>
+  `${listOf(folders)} hold${folders.length === 1 ? "s" : ""} no .tmdl files`;
+
+/**
+ * The refusal of an input of which nothing can be linted, no read refused, and no notice explains
+ * why, when one or more `.SemanticModel` folders the walk met hold no .tmdl files (spec section
+ * 4): it names each of `folders`, in the order given, and says only a model stored as TMDL can be
+ * linted. It comes ahead of pbixRefusal. The CLI and the browser both give it, so the words cannot
+ * drift: the CLI names each folder joined to its input, the browser relative to the drop, and each
+ * gives them in name order.
+ */
+export function noTmdlRefusal(folders: string[]): string {
+  return `${holdNoTmdl(folders)}. ${TMDL_ONLY}`;
+}
+
+/**
+ * The browser's note for the same folders when something else in the drop is linted: they were
+ * not, and why. The CLI has no notes; built here beside the refusal so the two say the same.
+ */
+export function noTmdlNote(folders: string[]): string {
+  return `${holdNoTmdl(folders)} and ${folders.length === 1 ? "was" : "were"} not linted. ${TMDL_ONLY}`;
+}
+
 /** Files route by path: TMDL to the model, report JSON to the report, anything else nowhere. */
 export function routeFiles(files: LintFile[]): { model: LintFile[]; report: LintFile[] } {
   return {

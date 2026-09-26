@@ -99,6 +99,8 @@ export {
   isModelFile,
   isPbix,
   isReportFile,
+  noTmdlNote,
+  noTmdlRefusal,
   pairingDecision,
   pbixRefusal,
   routeFiles,

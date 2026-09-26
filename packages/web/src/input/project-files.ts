@@ -1,5 +1,7 @@
 import {
   datasetReference,
+  noTmdlNote,
+  noTmdlRefusal,
   pairingDecision,
   pbixRefusal,
   type Diagnostic,
@@ -117,9 +119,6 @@ export const CONFIG_FILE = "pbiplint.config.json";
 const MODEL_SUFFIX = ".SemanticModel";
 export const isModelFolder = (name: string): boolean => name.endsWith(MODEL_SUFFIX);
 
-// The cause is offered, not asserted: the folder may as well be empty or half copied.
-const TMDL_ONLY =
-  "Only a model stored as TMDL can be linted; if it is in the older model.bim format, save it in the TMDL format from Power BI Desktop first.";
 const NOTHING_FOUND =
   "No model or report found. Drop a PBIP folder, a .SemanticModel or .Report folder, or a .tmdl file.";
 
@@ -140,10 +139,6 @@ const UNREAD_PART: Record<LayerName, string> = {
   model: "the model folder could not be read",
   report: "the report folder could not be read",
 };
-
-/** "A", "A and B", "A, B, and C". */
-const listOf = (items: string[]): string =>
-  items.length <= 2 ? items.join(" and ") : `${items.slice(0, -1).join(", ")}, and ${items.at(-1)}`;
 
 const parent = (p: string): string => (p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "");
 const nameOf = (p: string): string => p.slice(p.lastIndexOf("/") + 1);
@@ -591,7 +586,7 @@ function rebased(d: Diagnostic, root: string): Diagnostic {
  * Where the browser has always differed, it still does: a .SemanticModel folder holding no .tmdl
  * file (an older model.bim model, or an empty one) never triggers the two-model refusal the CLI
  * gives; the one lintable model is linted and the other is named in a note. When nothing can be
- * linted, the error names it instead.
+ * linted, the refusal names it instead, in the words the CLI gives.
  *
  * The walkers read more than the CLI opens, since a drop is read before anything is decided. A
  * notice about a file this run would not have read, or a folder it would not have entered or
@@ -648,13 +643,12 @@ export function selectProject(tree: InputTree): SelectedProject {
     ...s.said,
   ];
 
-  // Model folders no one lints, and that nothing else here explains, are named in a note.
+  // Model folders no one lints, and that nothing else here explains, are named in a note, or in
+  // the refusal when nothing is linted, in name order by their drop-relative paths, as the CLI
+  // lists them.
   const unlintable = [...dirs]
     .filter((d) => isModelFolder(nameOf(d)) && !s.legacy.has(d) && !holdsModel(s, d))
     .sort(byName);
-  // "X holds no .tmdl files", built only when there is such a folder to name.
-  const holdsNoTmdl = (): string =>
-    `${listOf(unlintable)} hold${unlintable.length === 1 ? "s" : ""} no .tmdl files`;
 
   if (!model && !report) {
     // A drop of which nothing could be read, while something this run read refused, is refused
@@ -667,10 +661,12 @@ export function selectProject(tree: InputTree): SelectedProject {
     // Nothing to lint but something to say, a legacy part alone or a walk stopped at the cap: the
     // run goes on, and its notices say why nothing was linted.
     if (diagnostics.length === 0) {
-      if (unlintable.length) throw new InputError(`${holdsNoTmdl()}. ${TMDL_ONLY}`);
-      // Nothing else explains it, so a .pbix the walk met is named for what it is, as the CLI
-      // names it: the first its walk would meet, by its path in the drop, which is the CLI's
-      // path joined to its input, and how many more.
+      // Nothing else explains it, so a model folder holding no .tmdl files is named first, in
+      // core's words, as the CLI names it.
+      if (unlintable.length) throw new InputError(noTmdlRefusal(unlintable));
+      // Else a .pbix the walk met is named for what it is, as the CLI names it: the first its
+      // walk would meet, by its path in the drop, which is the CLI's path joined to its input,
+      // and how many more.
       const pbix = [
         ...new Set(tree.markers.filter((m) => m.kind === "pbix").map((m) => m.path)),
       ].sort(walkOrder);
@@ -679,9 +675,7 @@ export function selectProject(tree: InputTree): SelectedProject {
       );
     }
   }
-  const notes = unlintable.length
-    ? [`${holdsNoTmdl()} and ${unlintable.length === 1 ? "was" : "were"} not linted. ${TMDL_ONLY}`]
-    : [];
+  const notes = unlintable.length ? [noTmdlNote(unlintable)] : [];
   // The config after the parts, as the CLI finds it after resolveProject: a drop that is refused
   // for what it holds is refused for that first.
   const config = findConfig(s, root);

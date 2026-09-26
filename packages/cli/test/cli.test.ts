@@ -321,6 +321,35 @@ describe("pbiplint CLI", () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+  it("names a model folder that holds no .tmdl files, says only TMDL can be linted, and exits 2 (tracked in #88)", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "pbiplint-notmdl-"));
+    const why =
+      "holds no .tmdl files. Only a model stored as TMDL can be linted; if it is in the older model.bim format, save it in the TMDL format from Power BI Desktop first.";
+    try {
+      mkdirSync(join(dir, "Old.SemanticModel"));
+      // Given by a path relative to the working folder, the folder is named as main resolves it.
+      for (const [argv, cwd] of [
+        [[join(dir, "Old.SemanticModel")], repo],
+        [["Old.SemanticModel"], dir],
+      ] as const) {
+        const r = await run([...argv], cwd);
+        expect(r.code).toBe(2);
+        expect(r.out).toBe("");
+        expect(r.err).toBe(
+          `pbiplint: ${dir}/Old.SemanticModel ${why}\nRun pbiplint --help for usage.\n`,
+        );
+      }
+      // Ahead of a .pbix beside it, in the folder that holds both.
+      writeFileSync(join(dir, "Sales.pbix"), "");
+      const folder = await run([dir]);
+      expect(folder.code).toBe(2);
+      expect(folder.err).toBe(
+        `pbiplint: ${dir}/Old.SemanticModel ${why}\nRun pbiplint --help for usage.\n`,
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
   it("lints a whole project, prints layers in JSON, and puts notices on stderr", async () => {
     const root = mkdtempSync(join(tmpdir(), "pbiplint-proj-"));
     mkdirSync(join(root, "Demo.SemanticModel", "definition"), { recursive: true });

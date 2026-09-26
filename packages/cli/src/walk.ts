@@ -3,6 +3,7 @@ import { basename, dirname, join, relative, resolve } from "node:path";
 import {
   datasetReference,
   isPbix,
+  noTmdlRefusal,
   pairingDecision,
   pbixRefusal,
   readJson,
@@ -137,30 +138,42 @@ function attempt<T>(
 const emptyPart = (root: string): ResolvedPart => ({ root, files: [], unread: [] });
 
 /**
+ * What a walk noted by name as it passed, for the refusals of a folder that holds nothing to
+ * lint: each path relative to the walk's base, in the order the walk met it.
+ */
+interface Passed {
+  /** Each .pbix file, never opened. */
+  pbix: string[];
+  /** Each .SemanticModel folder, as it is entered. */
+  models: string[];
+}
+
+/**
  * Every file under `dir` that `keep` accepts, into `part`, with each path relative to its root.
  * Listing `dir` itself is the caller's to answer for; a folder or file below it that cannot be
- * read is a notice and one of the part's unread paths, and the rest is still read. Given `pbix`,
- * the walk also notes there each .pbix it passes, in the order it meets them, relative to the
- * walk's base: by name alone, since none is ever opened.
+ * read is a notice and one of the part's unread paths, and the rest is still read. Given
+ * `passed`, the walk also notes there each .pbix and each .SemanticModel folder it passes.
  */
 function readTree(
   w: Walk,
   part: ResolvedPart,
   dir: string,
   keep: (name: string) => boolean,
-  pbix?: string[],
+  passed?: Passed,
 ): void {
   for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) =>
     byName(a.name, b.name),
   )) {
     const p = join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (!SKIP_DIRS.has(entry.name))
-        attempt(w, p, () => readTree(w, part, p, keep, pbix), part, true);
+      if (SKIP_DIRS.has(entry.name)) continue;
+      if (passed && entry.name.endsWith(".SemanticModel"))
+        passed.models.push(toPosix(relative(w.base, p)));
+      attempt(w, p, () => readTree(w, part, p, keep, passed), part, true);
     } else if (keep(entry.name)) {
       const text = attempt(w, p, () => readFileSync(p, "utf8"), part);
       if (text !== undefined) part.files.push({ path: toPosix(relative(part.root, p)), text });
-    } else if (pbix && isPbix(entry.name)) pbix.push(toPosix(relative(w.base, p)));
+    } else if (passed && isPbix(entry.name)) passed.pbix.push(toPosix(relative(w.base, p)));
   }
 }
 
@@ -576,16 +589,29 @@ function readFolder(w: Walk, input: string, path: string, preferred?: string): R
   if (model || report) return out;
 
   // Loose .tmdl files anywhere under a plain folder, as v1 accepted. The same walk, the whole
-  // folder but the skipped folders, notes each .pbix it passes, for the refusal below.
+  // folder but the skipped folders, notes each .pbix and model folder it passes, for the refusals
+  // below.
   const direct = emptyPart(path);
-  const pbix: string[] = [];
-  readTree(w, direct, path, (n) => n.endsWith(".tmdl"), pbix);
+  const passed: Passed = { pbix: [], models: [] };
+  readTree(w, direct, path, (n) => n.endsWith(".tmdl"), passed);
   if (direct.files.length) return { ...out, model: direct };
   // Nothing to lint but something to say: a legacy part alone, or a part that could not be read,
   // which resolveFolder turns into a refused run naming the path that refused.
   if (out.diagnostics.length) return out;
-  // Nothing else explains it, so a .pbix the walk met is named for what it is: the first it met,
-  // joined to `input` as the nothing-read refusal joins its path, and how many more.
+  // Nothing else explains it, so a model folder the walk met is named first, in core's words, as
+  // the browser names it: the input when it is one, and each below it. Each holds no .tmdl files,
+  // or the walk would have read one, and none has a notice, legacy or unread, or the run would
+  // have returned above. Each is joined to `input` as the nothing-read refusal joins its path,
+  // the input itself named by `input` alone, and they are listed in name order by their whole
+  // path, as the browser sorts its drop-relative paths, not in the order the walk met them.
+  const noTmdl = [...(name.endsWith(".SemanticModel") ? [""] : []), ...passed.models].sort(byName);
+  if (noTmdl.length)
+    throw new UsageError(
+      noTmdlRefusal(noTmdl.map((m) => (m === "" ? input : toPosix(join(input, m))))),
+    );
+  // Else a .pbix the walk met is named for what it is: the first it met, joined to `input` as the
+  // nothing-read refusal joins its path, and how many more.
+  const { pbix } = passed;
   if (pbix[0] !== undefined)
     throw new UsageError(pbixRefusal(toPosix(join(input, pbix[0])), pbix.length - 1));
   throw new UsageError(

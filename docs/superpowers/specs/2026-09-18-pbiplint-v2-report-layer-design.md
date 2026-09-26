@@ -455,11 +455,33 @@ save option under File > Options and settings > Options > Preview
 features).` A `.pbix` beside anything else changes nothing: a run
 that lints anything, a legacy part's notice, a refused read, the
 refusals of two reports or two models, the `.pbip` route's own
-refusals, and the browser's refusal of a model folder that holds no
-`.tmdl` files stand as they were, with no notice for the `.pbix`, which
-is never among the files read. The CLI has no refusal of its own for a
-model folder holding no `.tmdl` files, so beside one it names the
-`.pbix` where the browser names the folder.
+refusals, and the refusal of a model folder that holds no `.tmdl`
+files stand as they were, with no notice for the `.pbix`, which is
+never among the files read. Both surfaces give that last refusal
+(below), so beside such a folder both name the folder.
+
+Amended 2026-09-25 with Michael (release triage, batch F): when
+nothing can be linted, no read refused, and no notice explains why,
+while one or more `.SemanticModel` folders the walk met hold no
+`.tmdl` files, the CLI and the browser both refuse the input naming
+them, ahead of the `.pbix` refusal and the general one:
+`Demo/Old.SemanticModel holds no .tmdl files. Only a model stored as
+TMDL can be linted; if it is in the older model.bim format, save it
+in the TMDL format from Power BI Desktop first.` Several are listed
+in name order by their whole paths (`A and B hold`, `A, B, and C
+hold`). Core builds the words, as it builds the `.pbix` refusal's.
+The CLI names each folder joined to its input, the input alone when
+it is the folder, and the browser names it relative to the drop. The
+CLI's folders are the input when it is a `.SemanticModel` folder and
+each one its walk for loose `.tmdl` files passes, the folders it
+skips left out; the browser's are each one its walk of the drop saw.
+A legacy model folder keeps its notice where a read looks for its
+`model.bim` (the input, or the one model folder at its top); one
+further down has no notice on either surface and is named with the
+rest. Two `.SemanticModel` folders at the top of the input are still
+the CLI's refusal of two semantic models (section 12), and the
+browser's note naming such a folder beside something it lints is
+unchanged.
 
 ## 5. PBIR parser and report object model
 
@@ -1554,10 +1576,11 @@ same path where both use the same collation data (the name order is
 supply, in versions that can differ), unless two different names in
 one folder compare equal in that name order, where the CLI keeps the
 order its listing gave and the browser the order of the drop. The
-refusals' words differ for a model folder holding no `.tmdl` files:
-the browser names the folder, and the CLI gives its general refusal,
-or, with a `.pbix` beside it, names the `.pbix` (section 4's batch F
-note).
+two refuse a model folder holding no `.tmdl` files in the same words,
+naming the same folders in that name order (section 4's batch F
+note), except where two model folders sit at the top of the input,
+which the CLI refuses as two semantic models, as in the first of the
+three places above.
 
 ## 13. CLI changes
 

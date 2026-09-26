@@ -3,6 +3,8 @@ import {
   datasetReference,
   isPbix,
   isReportFile,
+  noTmdlNote,
+  noTmdlRefusal,
   pairingDecision,
   pbixRefusal,
   routeFiles,
@@ -137,6 +139,31 @@ describe("a .pbix (tracked in #88)", () => {
     );
     expect(pbixRefusal("Demo/A.pbix", 2)).toBe(
       `Demo/A.pbix and 2 other .pbix files are Power BI Desktop files, which pbiplint cannot read. ${HOW}`,
+    );
+  });
+});
+
+describe("a model folder that holds no .tmdl files (tracked in #88)", () => {
+  // The cause is offered, not asserted: such a folder may as well be empty or half copied.
+  const TMDL_ONLY =
+    "Only a model stored as TMDL can be linted; if it is in the older model.bim format, save it in the TMDL format from Power BI Desktop first.";
+  it("names one folder, or several in the order given, and says only TMDL can be linted", () => {
+    expect(noTmdlRefusal(["Demo/Old.SemanticModel"])).toBe(
+      `Demo/Old.SemanticModel holds no .tmdl files. ${TMDL_ONLY}`,
+    );
+    expect(noTmdlRefusal(["a/B.SemanticModel", "a/A.SemanticModel"])).toBe(
+      `a/B.SemanticModel and a/A.SemanticModel hold no .tmdl files. ${TMDL_ONLY}`,
+    );
+    expect(noTmdlRefusal(["A.SemanticModel", "B.SemanticModel", "C.SemanticModel"])).toBe(
+      `A.SemanticModel, B.SemanticModel, and C.SemanticModel hold no .tmdl files. ${TMDL_ONLY}`,
+    );
+  });
+  it("says the same beside something linted, where the browser notes the folders were not", () => {
+    expect(noTmdlNote(["Proj/Old.SemanticModel"])).toBe(
+      `Proj/Old.SemanticModel holds no .tmdl files and was not linted. ${TMDL_ONLY}`,
+    );
+    expect(noTmdlNote(["Proj/A.SemanticModel", "Proj/B.SemanticModel"])).toBe(
+      `Proj/A.SemanticModel and Proj/B.SemanticModel hold no .tmdl files and were not linted. ${TMDL_ONLY}`,
     );
   });
 });

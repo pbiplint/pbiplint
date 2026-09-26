@@ -1577,10 +1577,16 @@ supply, in versions that can differ), unless two different names in
 one folder compare equal in that name order, where the CLI keeps the
 order its listing gave and the browser the order of the drop. The
 two refuse a model folder holding no `.tmdl` files in the same words,
-naming the same folders in that name order (section 4's batch F
-note), except where two model folders sit at the top of the input,
-which the CLI refuses as two semantic models, as in the first of the
-three places above.
+naming the same folders in that name order where the browser's walk
+saw them (section 4's batch F note), except where two model folders
+sit at the top of the input, which the CLI refuses as two semantic
+models, as in the first of the three places above. The browser's walk
+does not see such a folder below its depth cap, where it goes on with
+its `depth-cap` notice, nor, on the directory-input route (Firefox and
+Safari), one holding no files at all, where it refuses as though the
+folder were not there; the CLI names the folder in both. A model
+folder Power BI Desktop saved always holds its `.platform` and
+`definition.pbism`, so the second does not arise from one.
 
 ## 13. CLI changes
 

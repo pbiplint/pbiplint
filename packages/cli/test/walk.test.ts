@@ -796,6 +796,13 @@ describe("resolveProject and a model folder that holds no .tmdl files (tracked i
     expect(() => resolveProject(root)).toThrow(
       new Error(noTmdlRefusal([`${root}/Models/Old.SemanticModel`])),
     );
+    // One under a folder the walk skips is never met, so never named, as the browser's walkers
+    // skip the same folders.
+    for (const skipped of ["node_modules", "StaticResources"])
+      mkdirSync(join(root, skipped, "Skipped.SemanticModel"), { recursive: true });
+    expect(() => resolveProject(root)).toThrow(
+      new Error(noTmdlRefusal([`${root}/Models/Old.SemanticModel`])),
+    );
     const two = folder();
     mkdirSync(join(two, "Sales", "Sales.SemanticModel"), { recursive: true });
     mkdirSync(join(two, "Archive", "Old.SemanticModel"), { recursive: true });

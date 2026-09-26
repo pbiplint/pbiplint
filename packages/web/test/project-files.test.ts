@@ -1,4 +1,4 @@
-import { lint, type Diagnostic } from "@pbiplint/core";
+import { lint, pbixRefusal, type Diagnostic } from "@pbiplint/core";
 import { describe, expect, it } from "vitest";
 import {
   emptyTree,
@@ -888,14 +888,8 @@ describe("selectProject", () => {
 });
 
 describe("selectProject and a .pbix (tracked in #88)", () => {
-  // The words for a .pbix, written out here so a change to them is seen: Learn's labels, from the
-  // Power BI Desktop projects page. The CLI's tests hold the same trees to the same words.
-  const HOW =
-    "pbiplint reads a report saved as a Power BI project (PBIP). In Power BI Desktop, choose File > Save as and pick Power BI project files (*.pbip) as the file type (if it isn't offered, first turn on Power BI Project (.pbip) save option under File > Options and settings > Options > Preview features).";
-  const one = (path: string): string =>
-    `${path} is a Power BI Desktop file (.pbix), which pbiplint cannot read. ${HOW}`;
-  const many = (path: string, others: string): string =>
-    `${path} and ${others} are Power BI Desktop files, which pbiplint cannot read. ${HOW}`;
+  // The words for a .pbix are core's, written out in route.test.ts; these hold the path and the
+  // count. The CLI's tests hold the same trees to the same words.
   const pbix = (path: string): InputMarker => ({ path, kind: "pbix" });
   /** A tree holding these .pbix files, as the walkers record them, and `extra` besides. */
   const withPbix = (paths: string[], extra: Partial<InputTree> = {}): InputTree => ({
@@ -905,25 +899,25 @@ describe("selectProject and a .pbix (tracked in #88)", () => {
   });
   it("names a lone .pbix, the one a folder holds, and one in a folder below, in any case", () => {
     expect(() => selectProject(withPbix(["Sales.pbix"]))).toThrow(
-      new InputError(one("Sales.pbix")),
+      new InputError(pbixRefusal("Sales.pbix")),
     );
     expect(() => selectProject(withPbix(["Sales.pbix"]))).toThrow(InputError);
     expect(() => selectProject(withPbix(["Demo/Sales.pbix"]))).toThrow(
-      new InputError(one("Demo/Sales.pbix")),
+      new InputError(pbixRefusal("Demo/Sales.pbix")),
     );
     expect(() => selectProject(withPbix(["Demo/Archive/Sales.PBIX"]))).toThrow(
-      new InputError(one("Demo/Archive/Sales.PBIX")),
+      new InputError(pbixRefusal("Demo/Archive/Sales.PBIX")),
     );
   });
   it("names the first .pbix the CLI's walk meets and counts the others, whatever order the drop listed them in", () => {
     expect(() => selectProject(withPbix(["Demo/Sales.pbix", "Demo/Archive/Old.pbix"]))).toThrow(
-      new InputError(many("Demo/Archive/Old.pbix", "1 other .pbix file")),
+      new InputError(pbixRefusal("Demo/Archive/Old.pbix", 1)),
     );
     expect(() =>
       selectProject(
         withPbix(["Demo/Sales.pbix", "Demo/Archive/Old.pbix", "Demo/Archive/2024.pbix"]),
       ),
-    ).toThrow(new InputError(many("Demo/Archive/2024.pbix", "2 other .pbix files")));
+    ).toThrow(new InputError(pbixRefusal("Demo/Archive/2024.pbix", 2)));
   });
   it("changes nothing beside a project it lints, dropped inside it or beside it, and never reads one", () => {
     const model = {

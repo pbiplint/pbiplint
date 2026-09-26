@@ -20,7 +20,10 @@ export const isReportFile = (path: string): boolean =>
  */
 export const isPbix = (path: string): boolean => /\.pbix$/i.test(path);
 
-/** How to save a report as a Power BI project, in the labels Learn gives the dialog and option. */
+/**
+ * How to save a report as a Power BI project, in the labels Learn gives the menu path, the file
+ * type, and the option.
+ */
 const SAVE_AS_PROJECT =
   "pbiplint reads a report saved as a Power BI project (PBIP). In Power BI Desktop, choose File > Save as and pick Power BI project files (*.pbip) as the file type (if it isn't offered, first turn on Power BI Project (.pbip) save option under File > Options and settings > Options > Preview features).";
 
@@ -33,7 +36,8 @@ const SAVE_AS_PROJECT =
  * https://learn.microsoft.com/en-us/power-bi/developer/projects/projects-overview ("Save as a
  * project" and "Enable preview features"). The preview option is a condition rather than a step:
  * Learn still calls the format a preview, while Microsoft has since announced it generally
- * available, so a newer Desktop may not show the option.
+ * available (Microsoft 365 Message Center post MC1465770, September 2, 2026), so a newer Desktop
+ * may not show the option.
  */
 export function pbixRefusal(path: string, others = 0): string {
   const what =

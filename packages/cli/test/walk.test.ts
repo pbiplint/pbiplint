@@ -1,21 +1,12 @@
 import { chmodSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { lint } from "@pbiplint/core";
+import { lint, pbixRefusal } from "@pbiplint/core";
 import { describe, expect, it } from "vitest";
 import { EXPECTED_INPUT, resolveProject } from "../src/walk.js";
 
 const repo = new URL("../../../", import.meta.url).pathname;
 const j = (v: unknown) => JSON.stringify(v);
-
-// The words for a .pbix (tracked in #88), written out here so a change to them is seen: Learn's
-// labels, from the Power BI Desktop projects page.
-const HOW =
-  "pbiplint reads a report saved as a Power BI project (PBIP). In Power BI Desktop, choose File > Save as and pick Power BI project files (*.pbip) as the file type (if it isn't offered, first turn on Power BI Project (.pbip) save option under File > Options and settings > Options > Preview features).";
-const onePbix = (path: string): string =>
-  `${path} is a Power BI Desktop file (.pbix), which pbiplint cannot read. ${HOW}`;
-const manyPbix = (path: string, others: string): string =>
-  `${path} and ${others} are Power BI Desktop files, which pbiplint cannot read. ${HOW}`;
 
 /** A PBIP folder in a temp dir with the parts asked for. */
 function pbip(parts: {
@@ -460,7 +451,7 @@ describe("resolveProject and a .pbix (tracked in #88)", () => {
     for (const name of ["Sales.pbix", "Sales.PBIX"]) {
       const file = join(root, name);
       writeFileSync(file, "");
-      expect(() => resolveProject(file)).toThrow(new Error(onePbix(file)));
+      expect(() => resolveProject(file)).toThrow(new Error(pbixRefusal(file)));
     }
     // One that is not there is still named as not there.
     const gone = join(root, "Gone.pbix");
@@ -469,12 +460,14 @@ describe("resolveProject and a .pbix (tracked in #88)", () => {
   it("names the .pbix a folder holds when it holds nothing to lint, joined to the input", () => {
     const root = folder();
     writeFileSync(join(root, "Sales.pbix"), "");
-    expect(() => resolveProject(root)).toThrow(new Error(onePbix(`${root}/Sales.pbix`)));
+    expect(() => resolveProject(root)).toThrow(new Error(pbixRefusal(`${root}/Sales.pbix`)));
     // In a folder below the input, and in capitals.
     const deep = folder();
     mkdirSync(join(deep, "Archive"));
     writeFileSync(join(deep, "Archive", "Sales.PBIX"), "");
-    expect(() => resolveProject(deep)).toThrow(new Error(onePbix(`${deep}/Archive/Sales.PBIX`)));
+    expect(() => resolveProject(deep)).toThrow(
+      new Error(pbixRefusal(`${deep}/Archive/Sales.PBIX`)),
+    );
   });
   it("names the first .pbix its walk meets and counts the others", () => {
     // Each folder's entries in name order, a folder's contents where its name sorts: Archive is
@@ -484,11 +477,11 @@ describe("resolveProject and a .pbix (tracked in #88)", () => {
     mkdirSync(join(root, "Archive"));
     writeFileSync(join(root, "Archive", "Old.pbix"), "");
     expect(() => resolveProject(root)).toThrow(
-      new Error(manyPbix(`${root}/Archive/Old.pbix`, "1 other .pbix file")),
+      new Error(pbixRefusal(`${root}/Archive/Old.pbix`, 1)),
     );
     writeFileSync(join(root, "Archive", "2024.pbix"), "");
     expect(() => resolveProject(root)).toThrow(
-      new Error(manyPbix(`${root}/Archive/2024.pbix`, "2 other .pbix files")),
+      new Error(pbixRefusal(`${root}/Archive/2024.pbix`, 2)),
     );
   });
   it("changes nothing beside a project it lints, a legacy part, or another refusal", () => {
@@ -521,12 +514,24 @@ describe("resolveProject and a .pbix (tracked in #88)", () => {
       ),
     );
   });
+  it("names the .pbix beside a model folder that holds no .tmdl files, where the browser names the folder", () => {
+    // The CLI has no refusal of its own for such a folder (spec section 4); the browser's is
+    // pinned in project-files.test.ts. Empty, and holding an empty definition folder.
+    for (const inside of ["", "definition"]) {
+      const root = folder();
+      mkdirSync(join(root, "Old.SemanticModel", inside), { recursive: true });
+      writeFileSync(join(root, "Sales.pbix"), "");
+      expect(() => resolveProject(root), inside).toThrow(
+        new Error(pbixRefusal(`${root}/Sales.pbix`)),
+      );
+    }
+  });
   it("names a .pbix in the folder a .pbip that names no report is read as", () => {
     const root = folder();
     pbipAt(join(root, "Demo.pbip"), []);
     writeFileSync(join(root, "Demo.pbix"), "");
     expect(() => resolveProject(join(root, "Demo.pbip"))).toThrow(
-      new Error(onePbix(`${root}/Demo.pbix`)),
+      new Error(pbixRefusal(`${root}/Demo.pbix`)),
     );
   });
   it("never meets a .pbix in a folder it skips, nor takes a folder named like one for one", () => {
@@ -718,9 +723,11 @@ describe("resolveProject and what it could not read", () => {
       const root = mkdtempSync(join(tmpdir(), "pbiplint-pbix-locked-"));
       const file = join(root, "Sales.pbix");
       writeFileSync(file, "");
-      expect(() => locked([file], () => resolveProject(file))).toThrow(new Error(onePbix(file)));
+      expect(() => locked([file], () => resolveProject(file))).toThrow(
+        new Error(pbixRefusal(file)),
+      );
       expect(() => locked([file], () => resolveProject(root))).toThrow(
-        new Error(onePbix(`${root}/Sales.pbix`)),
+        new Error(pbixRefusal(`${root}/Sales.pbix`)),
       );
       // A read that failed is what the run is refused for, as it is today.
       mkdirSync(join(root, "tables"));

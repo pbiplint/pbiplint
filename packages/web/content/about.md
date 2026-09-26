@@ -34,6 +34,8 @@ pbiplint reads one semantic model and one report per run. A folder that holds tw
 
 The "Choose a folder" button uses the browser's folder picker. In Chrome and Edge that picker does not list files whose names begin or end with a space, so a table file named that way is skipped without a message and its findings are missing. Dragging the folder onto the page, or running the command line, reads every file. The rule that flags such names, `OBJECTS_SHOULD_NOT_START_OR_END_WITH_A_SPACE`, says the same on its page.
 
+In Firefox and Safari the button opens the browser's folder chooser instead, which cannot tell the page about a folder inside the one you choose that the operating system will not let the browser open, such as one without read permission. Safari leaves that inner folder out without a message, so its findings are missing. Firefox hands the page none of the files in the folder you choose, so nothing is linted and the page says it found no model or report. Dragging the folder onto the page in Chrome, Edge, or Firefox, choosing it in Chrome or Edge, or running the command line reads the rest and names the inner folder in a notice; dragging the folder onto the page in Safari leaves the inner folder out in the same way.
+
 ## What it does not do
 
 pbiplint does not document models, apply fixes, or analyze query performance. For documentation there is PBIP Documenter; for query plans there is DAX Studio. The model rules pbiplint ports are the Best Practice Analyzer rules, so a model that is clean here is clean there too.

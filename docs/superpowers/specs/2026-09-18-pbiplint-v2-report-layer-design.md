@@ -1617,6 +1617,19 @@ as though it were not there, where the CLI names it. A model folder
 Power BI Desktop saved holds its `definition.pbism`, so this second
 case does not arise from one.
 
+Amended 2026-09-26 with Michael (pull request 8): one more place the
+browser differs from the CLI, as checked in real browsers that day. On
+the directory-input route (Firefox and Safari) the browser hands the
+page a flat list of the files it listed, with no word of a folder it
+could not list, so the page cannot give the `unread-file` notice the
+CLI gives for such a folder (section 4's A7 note). Safari leaves that
+folder out and lints the rest; Firefox hands over no files at all, so
+the input is refused as holding no model or report. A drop in Safari
+likewise leaves such a folder out without an error. The File System
+Access picker (Chrome and Edge) and a drop in Chrome or Firefox raise
+an error for the listing and give the notice. About's "Known limits in
+the browser" says so.
+
 ## 13. CLI changes
 
 `resolveProject(path)` handles every input shape in section 4,

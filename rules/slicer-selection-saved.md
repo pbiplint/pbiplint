@@ -154,7 +154,7 @@ A default selection readers are meant to start from, which Microsoft endorses fo
 
 ## Related rules
 
-- `SLICER_SEARCH_SAVED` reports a term saved in the slicer's search box, which clearing the selection can leave behind.
+- `SLICER_SEARCH_SAVED` reports a term saved in the slicer's search box, which visual.json keeps apart from the selection, so a slicer saved with both is reported by both rules.
 
 ## Links
 

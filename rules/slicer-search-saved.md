@@ -137,7 +137,7 @@ A report meant to open with a long list already narrowed to a starting term, whe
 
 ## Related rules
 
-- `SLICER_SELECTION_SAVED` reports the selection saved beside a term and fires on the same slicer when both are saved; clearing a selection can leave the search behind, and then this rule is the one that fires.
+- `SLICER_SELECTION_SAVED` reports a selection saved on the slicer. A slicer saved with both is reported by both rules, and one saved with a term alone by this rule only.
 
 ## Links
 

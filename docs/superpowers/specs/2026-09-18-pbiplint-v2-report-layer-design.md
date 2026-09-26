@@ -1581,8 +1581,10 @@ naming the same folders in that name order (section 4's batch F note),
 where the browser's walk saw those folders and stopped at no depth
 cap, except where two model folders sit at the top of the input, which
 the CLI refuses as two semantic models, as in the first of the three
-places above. A browser walk stopped at its depth cap anywhere in the
-drop refuses nothing, whether or not it saw such a folder: it goes on
+places above. When, below the browser's cap as above it, nothing in
+the input can be linted, no read refused, and nothing but such folders
+explains why, a browser walk stopped at its depth cap anywhere in the
+drop gives no refusal, whether or not it saw such a folder: it goes on
 with its `depth-cap` notice, and with the note naming any such folder
 it saw, where the CLI, which has no cap, refuses naming the folders it
 met. On the directory-input route (Firefox and Safari) the browser

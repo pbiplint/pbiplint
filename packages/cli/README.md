@@ -38,12 +38,22 @@ picks one explicitly):
 }
 ```
 
+A rule that takes options is set with an object, such as
+`"REDUCE_VISUALS_ON_PAGE": { "severity": "error", "max": 15 }`; each rule's page lists its options.
+
 To ignore a rule on one object, annotate it in TMDL (Power BI Desktop keeps the annotation):
 
 ```
 	column 'Product ID'
 		dataType: int64
 		annotation pbiplint.ignore = HIDE_FOREIGN_KEYS, MARK_PRIMARY_KEYS
+```
+
+To ignore a report rule on one page or visual, add the annotation to the `annotations` array of its
+page.json or visual.json (Power BI Desktop keeps it there too):
+
+```json
+"annotations": [{ "name": "pbiplint.ignore", "value": "ENSURE_ALTTEXT" }]
 ```
 
 ## What it checks
@@ -53,9 +63,14 @@ Tabular Editor. Five rules need statistics only a live model has; they are liste
 rule has a page at https://pbiplint.com/rules with what it checks, why, how to fix it, and quirks.
 
 The report layer (PBIR) is read beside the model: a `.Report` folder alone is valid input, and with
-the model beside it the two are paired through `definition.pbir` and checked together. This version
-reports what it reads (the layers line, parse issues in report files, and, when the input has a
-report, the "Report at a glance" block); the report rules arrive in 0.2.0.
+the model beside it the two are paired through `definition.pbir` and checked together. The report
+rules are the 11 base rules of PBI Inspector by Nat Van Gulck, ported so the results match its
+command line on the same report, with six documented deviations, and pbiplint's own rules for a
+report's correctness and readiness and for the model objects the report never reaches. When the
+input has a report, the "Report at a glance" block states what the report will do when someone
+opens it, whether or not anything fired. A notice names anything about the input a reader must
+know, such as a file that could not be read or a `definition.pbir` that points at a model other
+than the one beside it.
 
 The same linter runs in the browser at https://pbiplint.com. Source, issues, and contributing:
 https://github.com/pbiplint/pbiplint.
@@ -63,5 +78,5 @@ https://github.com/pbiplint/pbiplint.
 ## License
 
 Copyright (C) 2026 McKinley Consulting. GNU Affero General Public License, version 3 or later; see
-LICENSE. The vendored Microsoft ruleset is MIT-licensed; see NOTICE. The name pbiplint and its
-logo are trademarks of McKinley Consulting.
+LICENSE. The vendored Microsoft ruleset and PBI Inspector rule metadata are MIT-licensed; see
+NOTICE. The name pbiplint and its logo are trademarks of McKinley Consulting.

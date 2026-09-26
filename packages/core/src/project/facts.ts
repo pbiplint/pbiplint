@@ -21,6 +21,7 @@ import {
   openingPageInvalid,
   pageFileUnread,
   reportMeasuresToMove,
+  slicerSearch,
   slicerSelection,
   visualFileUnread,
 } from "../rules/report-helpers.js";
@@ -221,31 +222,55 @@ function reportFacts(
   // by the selection it carries, so the detail counts every saved selection, as
   // SLICER_SELECTION_SAVED reads them, and names those on a visual that is not a built-in slicer.
   // With no built-in slicer the value is none, and a custom slicer's selection still shows in the
-  // detail beside it. While a visual.json could not be read, that visual could be a slicer or carry
-  // a selection, so what would read none, the value or "no saved selection", reads unknown; a count
-  // above none is a lower bound and stays.
+  // detail beside it. Saved search terms, as SLICER_SEARCH_SAVED reads them on any visual type,
+  // are counted after the selections. While a visual.json could not be read, that visual could be
+  // a slicer or carry a selection or a term, so what would read none, the value, "no saved
+  // selection", or a count left out of the detail, reads unknown, with the reason given once; a
+  // count above none is a lower bound and stays.
   const slicers = visuals.filter(isSlicer).length;
   const selected = visuals.filter((v) => slicerSelection(v) !== undefined);
   const custom = selected.filter((v) => !isSlicer(v)).length;
+  const searched = visuals.filter((v) => slicerSearch(v) !== undefined).length;
   const slicerValue = slicers ? String(slicers) : visualUnread ? "unknown" : "none";
-  const selections = selected.length
-    ? n(selected.length, "saved selection") +
-      (custom ? `, ${custom} on ${custom === 1 ? "a custom slicer" : "custom slicers"}` : "") +
-      (slicerValue === "unknown" ? `; ${unreadVisual}` : "")
-    : visualUnread
-      ? `saved selections: unknown, ${unreadVisual}`
-      : slicers
-        ? "no saved selection"
-        : undefined;
+  const counted = [
+    selected.length
+      ? n(selected.length, "saved selection") +
+        (custom ? `, ${custom} on ${custom === 1 ? "a custom slicer" : "custom slicers"}` : "")
+      : "",
+    searched ? n(searched, "saved search term") : "",
+  ]
+    .filter(Boolean)
+    .join(", ");
+  const unknownCounts =
+    selected.length === 0 && searched === 0
+      ? "saved selections and search terms"
+      : selected.length === 0
+        ? "saved selections"
+        : searched === 0
+          ? "saved search terms"
+          : undefined;
+  const slicerDetail = !visualUnread
+    ? counted || (slicers ? "no saved selection" : undefined)
+    : [
+        counted,
+        unknownCounts
+          ? `${unknownCounts}: unknown, ${unreadVisual}`
+          : slicerValue === "unknown"
+            ? unreadVisual
+            : "",
+      ]
+        .filter(Boolean)
+        .join("; ");
   facts.push(
     withRule(
       {
         layer: "report",
         label: "Slicers",
         value: slicerValue,
-        ...(selections === undefined ? {} : { detail: selections }),
+        ...(slicerDetail ? { detail: slicerDetail } : {}),
       },
       selected.length > 0 ? "SLICER_SELECTION_SAVED" : undefined,
+      searched > 0 ? "SLICER_SEARCH_SAVED" : undefined,
     ),
   );
 

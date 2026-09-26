@@ -46,6 +46,52 @@ const visual = (
     },
   }),
 });
+/** The column the Slicers tests bind, as a saved selection or a saved search names it by alias. */
+const regionOf = { Column: { Expression: { SourceRef: { Source: "s" } }, Property: "Region" } };
+/** A saved selection of West on Sales' Region, as Desktop writes it in a general entry's `filter`. */
+const west = {
+  filter: {
+    Version: 2,
+    From: [{ Name: "s", Entity: "Sales", Type: 0 }],
+    Where: [
+      {
+        Condition: {
+          In: { Expressions: [regionOf], Values: [[{ Literal: { Value: "'West'" } }]] },
+        },
+      },
+    ],
+  },
+};
+/**
+ * A visual bound to Sales' Region, saved with "spring" in its search box: a general entry whose
+ * `selfFilter` holds one Contains, as Desktop writes it, beside the other properties given.
+ */
+const searching = (name: string, type: string, props: Record<string, unknown> = {}) =>
+  visual("p1", name, type, {}, [column("Sales", "Region")], {
+    objects: {
+      general: [
+        {
+          properties: {
+            ...props,
+            selfFilterEnabled: lit("true"),
+            selfFilter: {
+              filter: {
+                Version: 2,
+                From: [{ Name: "s", Entity: "Sales", Type: 0 }],
+                Where: [
+                  {
+                    Condition: {
+                      Contains: { Left: regionOf, Right: { Literal: { Value: "'spring'" } } },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      ],
+    },
+  });
 const ALL = new Set(defaultRules.map((r) => r.id));
 /** FILTERS_PANE_STATE's options under an `expect` policy, as lint passes a rule's options. */
 const policy = (expect: "open" | "closed") => new Map([["FILTERS_PANE_STATE", { expect }]]);
@@ -602,37 +648,7 @@ describe("buildFacts", () => {
     /** A visual of the given type whose general entry holds a saved selection of West. */
     const selecting = (name: string, type: string) =>
       visual("p1", name, type, {}, region, {
-        objects: {
-          general: [
-            {
-              properties: {
-                filter: {
-                  filter: {
-                    Version: 2,
-                    From: [{ Name: "s", Entity: "Sales", Type: 0 }],
-                    Where: [
-                      {
-                        Condition: {
-                          In: {
-                            Expressions: [
-                              {
-                                Column: {
-                                  Expression: { SourceRef: { Source: "s" } },
-                                  Property: "Region",
-                                },
-                              },
-                            ],
-                            Values: [[{ Literal: { Value: "'West'" } }]],
-                          },
-                        },
-                      },
-                    ],
-                  },
-                },
-              },
-            },
-          ],
-        },
+        objects: { general: [{ properties: { filter: west } }] },
       });
     const clearSlicer = visual("p1", "clear", "slicer", {}, region);
     const savedSlicer = selecting("saved", "slicer");
@@ -726,6 +742,62 @@ describe("buildFacts", () => {
         const names = selected!.map((v) => v.path).join(", ");
         expect(slicers(...clear!)!.value, names).toBe(slicers(...selected!)!.value);
       }
+    });
+    it("counts saved search terms after the saved selections, and alone when no selection is saved", () => {
+      const row = (value: string, detail: string, ruleId: string) => ({
+        layer: "report",
+        label: "Slicers",
+        value,
+        detail,
+        ruleId,
+      });
+      expect(slicers(savedSlicer, searching("searched", "slicer"))).toEqual(
+        row("2", "1 saved selection, 1 saved search term", "SLICER_SELECTION_SAVED"),
+      );
+      // A slicer saved with both counts once as a slicer, and in each count.
+      expect(slicers(searching("both", "slicer", { filter: west }))).toEqual(
+        row("1", "1 saved selection, 1 saved search term", "SLICER_SELECTION_SAVED"),
+      );
+      expect(
+        slicers(savedSlicer, chiclet, searching("a", "slicer"), searching("b", "listSlicer")),
+      ).toEqual(
+        row(
+          "3",
+          "2 saved selections, 1 on a custom slicer, 2 saved search terms",
+          "SLICER_SELECTION_SAVED",
+        ),
+      );
+      // With no selection saved, the terms stand alone and the fact links the search rule.
+      expect(slicers(searching("searched", "slicer"), clearSlicer)).toEqual(
+        row("2", "1 saved search term", "SLICER_SEARCH_SAVED"),
+      );
+      // A term on a custom visual counts; the value still counts catalog slicers only.
+      expect(slicers(searching("chicletSearch", "ChicletSlicer1448559807354"), table)).toEqual(
+        row("none", "1 saved search term", "SLICER_SEARCH_SAVED"),
+      );
+      // The search box turned on with nothing typed saves no term, so the fact reads as before.
+      expect(slicers(clearSlicer, plainChiclet)).toEqual({
+        layer: "report",
+        label: "Slicers",
+        value: "1",
+        detail: "no saved selection",
+      });
+    });
+    it("links whichever of the two slicer rules ran, the selection's first", () => {
+      const { report } = buildReport([
+        page("p1", "Overview"),
+        savedSlicer,
+        searching("searched", "slicer"),
+      ]);
+      const ruleOf = (...off: string[]) =>
+        buildFacts(
+          { report },
+          buildIndexes({ report }),
+          new Set([...ALL].filter((id) => !off.includes(id))),
+        ).find((f) => f.label === "Slicers")?.ruleId;
+      expect(ruleOf()).toBe("SLICER_SELECTION_SAVED");
+      expect(ruleOf("SLICER_SELECTION_SAVED")).toBe("SLICER_SEARCH_SAVED");
+      expect(ruleOf("SLICER_SELECTION_SAVED", "SLICER_SEARCH_SAVED")).toBeUndefined();
     });
   });
   it("says the not-reached clause of Model is unknown when a report file could not be read, and links no rule", () => {
@@ -864,7 +936,7 @@ describe("buildFacts", () => {
     const visualFolder = "definition/pages/p1/visuals/v9/";
     expect(fact("Slicers", visualFolder)).toMatchObject({
       value: "2",
-      detail: "1 saved selection",
+      detail: "1 saved selection; saved search terms: unknown, a visual.json could not be read",
     });
     expect(fact("Visuals", visualFolder)?.detail).toBe(
       "1 hidden; 2 custom visual types registered, used: unknown, a visual.json could not be read",
@@ -877,7 +949,7 @@ describe("buildFacts", () => {
       layer: "report",
       label: "Slicers",
       value: "unknown",
-      detail: "saved selections: unknown, a visual.json could not be read",
+      detail: "saved selections and search terms: unknown, a visual.json could not be read",
     });
     expect(fact("Mobile layouts", "definition/pages/p1/visuals/")).toEqual({
       layer: "report",
@@ -1270,44 +1342,14 @@ describe("buildFacts", () => {
       detail: "1 custom visual type registered, 1 used",
     });
   });
-  it("says unknown for slicers or saved selections only where a visual.json that could not be read could change it", () => {
+  it("says unknown for slicers, saved selections, or saved search terms only where a visual.json that could not be read could change it", () => {
     const region = [column("Sales", "Region")];
-    const selection = {
-      objects: {
-        general: [
-          {
-            properties: {
-              filter: {
-                filter: {
-                  Version: 2,
-                  From: [{ Name: "s", Entity: "Sales", Type: 0 }],
-                  Where: [
-                    {
-                      Condition: {
-                        In: {
-                          Expressions: [
-                            {
-                              Column: {
-                                Expression: { SourceRef: { Source: "s" } },
-                                Property: "Region",
-                              },
-                            },
-                          ],
-                          Values: [[{ Literal: { Value: "'West'" } }]],
-                        },
-                      },
-                    },
-                  ],
-                },
-              },
-            },
-          },
-        ],
-      },
-    };
+    const selection = { objects: { general: [{ properties: { filter: west } }] } };
     const clearSlicer = visual("p1", "clear", "slicer", {}, region);
     const savedSlicer = visual("p1", "saved", "slicer", {}, region, selection);
     const chiclet = visual("p1", "chiclet", "ChicletSlicer1448559807354", {}, region, selection);
+    const searched = searching("searched", "slicer");
+    const chicletSearch = searching("chicletSearch", "ChicletSlicer1448559807354");
     const table = visual("p1", "table", "tableEx", {}, region);
     const unread = { path: "definition/pages/p1/visuals/v9/visual.json", text: '{ "name": "v9", ' };
     const slicers = (...visuals: { path: string; text: string }[]) => {
@@ -1323,21 +1365,46 @@ describe("buildFacts", () => {
       detail,
       ...(ruleId ? { ruleId } : {}),
     });
-    const unknownSelections = "saved selections: unknown, a visual.json could not be read";
-    // The unread visual could be a slicer, or carry a selection: neither "none" nor "no saved
-    // selection" can be said.
-    expect(slicers(table, unread)).toEqual(row("unknown", unknownSelections));
-    expect(slicers(clearSlicer, unread)).toEqual(row("1", unknownSelections));
+    const reason = "a visual.json could not be read";
+    // The unread visual could be a slicer, or carry a selection or a search term: neither "none"
+    // nor "no saved selection" can be said.
+    const unknownBoth = `saved selections and search terms: unknown, ${reason}`;
+    expect(slicers(table, unread)).toEqual(row("unknown", unknownBoth));
+    expect(slicers(clearSlicer, unread)).toEqual(row("1", unknownBoth));
+    // What was counted keeps its number; the count that would be none reads unknown, and the
+    // reason is given once, even when the value is unknown too.
+    const unknownTerms = `saved search terms: unknown, ${reason}`;
+    const unknownSelections = `saved selections: unknown, ${reason}`;
     expect(slicers(chiclet, unread)).toEqual(
       row(
         "unknown",
-        "1 saved selection, 1 on a custom slicer; a visual.json could not be read",
+        `1 saved selection, 1 on a custom slicer; ${unknownTerms}`,
         "SLICER_SELECTION_SAVED",
       ),
     );
-    // Counts that never read none are lower bounds and stay as they are.
     expect(slicers(savedSlicer, chiclet, unread)).toEqual(
-      row("1", "2 saved selections, 1 on a custom slicer", "SLICER_SELECTION_SAVED"),
+      row(
+        "1",
+        `2 saved selections, 1 on a custom slicer; ${unknownTerms}`,
+        "SLICER_SELECTION_SAVED",
+      ),
+    );
+    expect(slicers(searched, unread)).toEqual(
+      row("1", `1 saved search term; ${unknownSelections}`, "SLICER_SEARCH_SAVED"),
+    );
+    expect(slicers(chicletSearch, unread)).toEqual(
+      row("unknown", `1 saved search term; ${unknownSelections}`, "SLICER_SEARCH_SAVED"),
+    );
+    // Counts that never read none are lower bounds and stay as they are.
+    expect(slicers(savedSlicer, searched, unread)).toEqual(
+      row("2", "1 saved selection, 1 saved search term", "SLICER_SELECTION_SAVED"),
+    );
+    expect(slicers(chiclet, chicletSearch, unread)).toEqual(
+      row(
+        "unknown",
+        `1 saved selection, 1 on a custom slicer, 1 saved search term; ${reason}`,
+        "SLICER_SELECTION_SAVED",
+      ),
     );
     // A page.json or a mobile.json that could not be read holds no visual.
     for (const file of [
@@ -1350,6 +1417,9 @@ describe("buildFacts", () => {
         value: "none",
       });
       expect(slicers(clearSlicer, file), file.path).toEqual(row("1", "no saved selection"));
+      expect(slicers(searched, file), file.path).toEqual(
+        row("1", "1 saved search term", "SLICER_SEARCH_SAVED"),
+      );
     }
   });
   it("says unknown for mobile layouts only when a mobile.json that could not be read could add one", () => {

@@ -1203,7 +1203,7 @@ describe("lint over a project", () => {
         layer: "report",
         label: "Slicers",
         value: "unknown",
-        detail: "saved selections: unknown, a visual.json could not be read",
+        detail: "saved selections and search terms: unknown, a visual.json could not be read",
       });
       // A broken reference in a file that was read is broken whatever the unread file says.
       expect(details(unread, "BROKEN_FIELD_REFERENCE")).toHaveLength(3);
@@ -1332,7 +1332,7 @@ describe("lint over a project", () => {
           layer: "report",
           label: "Slicers",
           value: "unknown",
-          detail: "saved selections: unknown, a visual.json could not be read",
+          detail: "saved selections and search terms: unknown, a visual.json could not be read",
         },
         {
           layer: "report",

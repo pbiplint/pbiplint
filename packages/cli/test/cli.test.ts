@@ -625,7 +625,7 @@ describe("pbiplint CLI", () => {
           layer: "report",
           label: "Slicers",
           value: "unknown",
-          detail: "saved selections: unknown, a visual.json could not be read",
+          detail: "saved selections and search terms: unknown, a visual.json could not be read",
         });
         expect(doc.facts.find((f: { label: string }) => f.label === "Model").detail).toBe(
           "not reached from this report: unknown, a report file could not be read",

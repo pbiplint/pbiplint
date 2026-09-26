@@ -154,10 +154,10 @@ export const pageFileUnread = (r: Report): boolean =>
 
 /**
  * Whether a visual.json could not be read, or a folder that could hold one. The visual it holds
- * could be of any type, a slicer included, and could carry a saved selection, so the Slicers fact
- * says unknown where it would otherwise say none, and the Visuals fact where it would say 0. Its
- * page folder holds a page, counted by that folder when its page.json is not there, so the Pages
- * fact says unknown where it would say 0 too.
+ * could be of any type, a slicer included, and could carry a saved selection or a saved search
+ * term, so the Slicers fact says unknown where it would otherwise say none, and the Visuals fact
+ * where it would say 0. Its page folder holds a page, counted by that folder when its page.json is
+ * not there, so the Pages fact says unknown where it would say 0 too.
  */
 export const visualFileUnread = (r: Report): boolean =>
   r.unreadDefinitionFiles.some(isVisualFile) ||
@@ -334,16 +334,61 @@ export const isSlicer = (v: Visual): boolean => SLICER_TYPES.has(v.type);
  * writes no filter, even in inverted selection mode.
  */
 export function slicerSelection(v: Visual): string | undefined {
+  return generalFilter(v, "filter")?.pointer;
+}
+
+/**
+ * The first `general` entry whose `key` property holds a `filter` with a condition in its
+ * `Where`: the pointer of that property and the conditions. Undefined when no entry holds one.
+ */
+function generalFilter(
+  v: Visual,
+  key: "filter" | "selfFilter",
+): { pointer: string; where: unknown[] } | undefined {
   if (!isRecord(v.json) || !isRecord(v.json.visual)) return undefined;
   const objects = v.json.visual.objects;
   const general = isRecord(objects) && Array.isArray(objects.general) ? objects.general : [];
-  const i = general.findIndex((entry) => {
+  for (const [i, entry] of general.entries()) {
     const props = isRecord(entry) && isRecord(entry.properties) ? entry.properties : {};
-    const filter =
-      isRecord(props.filter) && isRecord(props.filter.filter) ? props.filter.filter : {};
-    return Array.isArray(filter.Where) && filter.Where.length > 0;
-  });
-  return i === -1 ? undefined : `/visual/objects/general/${i}/properties/filter`;
+    const held = props[key];
+    const filter = isRecord(held) && isRecord(held.filter) ? held.filter : {};
+    if (Array.isArray(filter.Where) && filter.Where.length > 0)
+      return { pointer: `/visual/objects/general/${i}/properties/${key}`, where: filter.Where };
+  }
+  return undefined;
+}
+
+/** A search term saved on a visual: where it sits, and the text when pbiplint can read it. */
+export interface SlicerSearch {
+  /** The pointer of the `selfFilter` that holds the term. */
+  pointer: string;
+  /** The text searched for, when the filter is one `Contains` on a non-empty string literal. */
+  term?: string;
+}
+
+/**
+ * SLICER_SEARCH_SAVED's condition, which the Slicers fact shares: the search term a visual was
+ * saved with, the first `general` entry whose `selfFilter` holds a `Where` with a condition in
+ * it, or undefined when the visual opens with no term in its search box. Desktop-saved files keep
+ * a slicer's search there as a `Contains` on the searched column, beside `selfFilterEnabled`,
+ * which only turns the search box on and holds no term. It is read on any visual type, by where
+ * the term sits, as `slicerSelection` reads a selection: Microsoft's slicer template for custom
+ * visuals declares the same `selfFilter`. The term is read only from a `Where` that is one
+ * `Contains` whose right side is a string literal, which Power BI writes in single quotes with an
+ * apostrophe inside doubled; any other condition leaves it unread.
+ */
+export function slicerSearch(v: Visual): SlicerSearch | undefined {
+  const found = generalFilter(v, "selfFilter");
+  if (found === undefined) return undefined;
+  const [only, ...more] = found.where;
+  const condition = isRecord(only) && isRecord(only.Condition) ? only.Condition : {};
+  const contains = isRecord(condition.Contains) ? condition.Contains : {};
+  const right = isRecord(contains.Right) ? contains.Right : {};
+  const value = isRecord(right.Literal) ? right.Literal.Value : undefined;
+  const quoted = typeof value === "string" ? /^'(.+)'$/s.exec(value) : null;
+  return quoted === null || more.length > 0
+    ? { pointer: found.pointer }
+    : { pointer: found.pointer, term: quoted[1]!.replaceAll("''", "'") };
 }
 
 /**

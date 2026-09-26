@@ -5,6 +5,7 @@ import {
   hiddenVisualWithFields,
   hidingGroup,
   reportFinding,
+  slicerSearch,
   slicerSelection,
 } from "../report-helpers.js";
 import { pbiplintRule } from "./define.js";
@@ -130,9 +131,34 @@ export const SLICER_SELECTION_SAVED = pbiplintRule({
       : [],
 });
 
+export const SLICER_SEARCH_SAVED = pbiplintRule({
+  id: "SLICER_SEARCH_SAVED",
+  name: "Slicer saved with a search term",
+  category: "Report Design",
+  severity: 2,
+  scope: ["Visual"],
+  layer: "report",
+  // Read on any visual type and hidden or not, as a saved selection is. The detail names no
+  // column: Desktop keeps the term when the slicer's field is swapped, so it can sit on a column
+  // the slicer no longer shows.
+  check: ({ report }) =>
+    report
+      ? allVisuals(report).flatMap((v) => {
+          const search = slicerSearch(v);
+          if (search === undefined) return [];
+          const detail =
+            search.term === undefined
+              ? "opens with a search term saved"
+              : `opens with the search term "${search.term}" saved`;
+          return [reportFinding.visual(v, search.pointer, detail)];
+        })
+      : [],
+});
+
 export const visualRules = [
   HIDDEN_VISUAL_WITH_FIELDS,
   VISUAL_WITHOUT_FIELDS,
   VISUAL_OUTSIDE_PAGE,
   SLICER_SELECTION_SAVED,
+  SLICER_SEARCH_SAVED,
 ];

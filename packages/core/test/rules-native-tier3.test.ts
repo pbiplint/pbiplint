@@ -6,7 +6,11 @@ import {
   BROKEN_BOOKMARK_REFERENCE,
 } from "../src/rules/pbiplint/actions.js";
 import { TAB_ORDER_FOLLOWS_LAYOUT } from "../src/rules/pbiplint/tab-order.js";
-import { SLICER_SELECTION_SAVED } from "../src/rules/pbiplint/visuals.js";
+import {
+  SLICER_SEARCH_SAVED,
+  SLICER_SELECTION_SAVED,
+  visualRules,
+} from "../src/rules/pbiplint/visuals.js";
 import {
   column,
   j,
@@ -1019,5 +1023,148 @@ describe("SLICER_SELECTION_SAVED", () => {
       scope: ["Visual"],
       options: [{ name: "expect", type: "string", values: ["none"] }],
     });
+  });
+});
+
+describe("SLICER_SEARCH_SAVED", () => {
+  const city = column("Store", "City");
+  const cityOf = { Column: { Expression: { SourceRef: { Source: "s" } }, Property: "City" } };
+  /** A saved search as Desktop writes it: a selfFilter whose Where holds one Contains. */
+  const searching = (where: unknown[]) => ({
+    filter: { Version: 2, From: [{ Name: "s", Entity: "Store", Type: 0 }], Where: where },
+  });
+  const contains = (right: unknown) => ({
+    Condition: { Contains: { Left: cityOf, Right: right } },
+    Annotations: { "PowerBI.MParameterBehavior": 1 },
+  });
+  /** A search for the literal `value`, written as the JSON holds it, quotes and all. */
+  const term = (value: string) => searching([contains({ Literal: { Value: value } })]);
+  const selection = {
+    filter: {
+      Version: 2,
+      From: [{ Name: "s", Entity: "Store", Type: 0 }],
+      Where: [{ Condition: { In: { Expressions: [cityOf], Values: [[lit("'Leeds'").expr]] } } }],
+    },
+  };
+  const enabled = { selfFilterEnabled: lit("true") };
+  /** A visual bound to Store's City, with each of `general`'s entries as the properties given. */
+  const slicer = (
+    name: string,
+    general: Record<string, unknown>[] | undefined,
+    type = "slicer",
+    container: Record<string, unknown> = {},
+  ) =>
+    visual("p", name, type, container, {
+      query: { queryState: { Values: { projections: [{ field: city }] } } },
+      objects:
+        general === undefined ? {} : { general: general.map((properties) => ({ properties })) },
+    });
+  const detailOf = (search: unknown): string | undefined =>
+    reportFindings(SLICER_SEARCH_SAVED, [
+      page("p"),
+      slicer("s", [{ ...enabled, selfFilter: search }]),
+    ])[0]?.detail;
+
+  it("fires on a slicer saved with a search term and no selection, as a warning", () => {
+    expect(
+      reportObjectIds(SLICER_SEARCH_SAVED, [
+        page("p"),
+        slicer("searched", [{ ...enabled, selfFilter: term("'spring'") }]),
+        slicer("clear", undefined),
+      ]),
+    ).toEqual(["searched"]);
+    expect(SLICER_SEARCH_SAVED.severity).toBe(2);
+    expect(SLICER_SEARCH_SAVED.policySeverity).toBeUndefined();
+  });
+  it("fires beside SLICER_SELECTION_SAVED on a slicer saved with a search term and a selection", () => {
+    const files = [
+      page("p"),
+      slicer("both", [{ ...enabled, filter: selection, selfFilter: term("'spring'") }]),
+    ];
+    expect(reportObjectIds(SLICER_SEARCH_SAVED, files)).toEqual(["both"]);
+    expect(reportObjectIds(SLICER_SELECTION_SAVED, files)).toEqual(["both"]);
+  });
+  it("is quiet on a search box with no term, an empty Where, and no selfFilter", () => {
+    const files = [
+      page("p"),
+      // The search box turned on and nothing typed, as ShelfMart's two slicers are saved.
+      slicer("enabledOnly", [enabled]),
+      slicer("emptyWhere", [{ ...enabled, selfFilter: searching([]) }]),
+      // A selfFilter with no filter under it, or no Where, holds no term.
+      slicer("noFilter", [{ ...enabled, selfFilter: {} }]),
+      slicer("noWhere", [{ ...enabled, selfFilter: { filter: { Version: 2 } } }]),
+      slicer("selectionOnly", [{ ...enabled, filter: selection }]),
+      slicer("noGeneral", undefined),
+    ];
+    expect(reportObjectIds(SLICER_SEARCH_SAVED, files)).toEqual([]);
+  });
+  it("reads a term by where it sits: on any visual type, hidden or not, in any general entry", () => {
+    const files = [
+      page("p"),
+      // Microsoft's slicer template for custom visuals declares the same selfFilter.
+      slicer(
+        "chiclet",
+        [{ ...enabled, selfFilter: term("'spring'") }],
+        "ChicletSlicer1448559807354",
+      ),
+      slicer("hidden", [{ ...enabled, selfFilter: term("'spring'") }], "slicer", {
+        isHidden: true,
+      }),
+      slicer("second", [enabled, { selfFilter: term("'spring'") }]),
+      slicer("zChicletClear", [enabled], "ChicletSlicer1448559807354"),
+    ];
+    expect(reportObjectIds(SLICER_SEARCH_SAVED, files)).toEqual(["chiclet", "hidden", "second"]);
+  });
+  it("quotes the term when the Where is one Contains on a string literal, and names no column", () => {
+    expect(detailOf(term("'spring'"))).toBe('opens with the search term "spring" saved');
+    // Power BI writes a string literal in single quotes, an apostrophe inside it doubled.
+    expect(detailOf(term("'o''neill'"))).toBe(`opens with the search term "o'neill" saved`);
+    expect(detailOf(term("'north park'"))).toBe('opens with the search term "north park" saved');
+    const unquoted = "opens with a search term saved";
+    // A right side that is not a string literal: a column, a number, an empty string.
+    expect(detailOf(searching([contains(cityOf)]))).toBe(unquoted);
+    expect(detailOf(term("12L"))).toBe(unquoted);
+    expect(detailOf(term("''"))).toBe(unquoted);
+    // A condition other than one Contains.
+    expect(
+      detailOf(
+        searching([
+          contains({ Literal: { Value: "'a'" } }),
+          contains({ Literal: { Value: "'b'" } }),
+        ]),
+      ),
+    ).toBe(unquoted);
+    expect(detailOf(selection)).toBe(unquoted);
+  });
+  it("sits on the line of the selfFilter, on a catalog slicer and an AppSource slicer alike", () => {
+    for (const type of ["slicer", "ChicletSlicer1448559807354"]) {
+      const file = slicer(
+        "searched",
+        [{ ...enabled, filter: selection, selfFilter: term("'spring'") }],
+        type,
+      );
+      const text = pretty(JSON.parse(file.text));
+      const line = lineOf(text, '"selfFilter"');
+      expect(line).toBeGreaterThan(lineOf(text, '"filter"'));
+      const [f] = reportFindings(SLICER_SEARCH_SAVED, [page("p"), { ...file, text }]);
+      expect(f, type).toMatchObject({
+        objectType: "Visual",
+        objectId: "searched",
+        detail: 'opens with the search term "spring" saved',
+        location: { file: "definition/pages/p/visuals/searched/visual.json", line },
+      });
+      expect(f, type).toHaveProperty("object");
+    }
+    expect(SLICER_SEARCH_SAVED).toMatchObject({
+      ...tier3,
+      name: "Slicer saved with a search term",
+      category: "Report Design",
+      severity: 2,
+      scope: ["Visual"],
+    });
+    expect(SLICER_SEARCH_SAVED.options ?? []).toEqual([]);
+    expect(visualRules.indexOf(SLICER_SEARCH_SAVED)).toBe(
+      visualRules.indexOf(SLICER_SELECTION_SAVED) + 1,
+    );
   });
 });

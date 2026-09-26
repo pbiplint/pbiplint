@@ -16,7 +16,7 @@ sources:
 
 Slicers saved with a term in their search box: any visual whose visual.json holds a `selfFilter` with a condition under `objects.general`, which is where Power BI Desktop's saved files keep the text typed in a slicer's search box.
 
-Each finding names the slicer, as `slicer (5d2e8c) on "Overview"`, or as `"City" on "Overview"` when it has a title, at the line of the `selfFilter` in its visual.json. Its detail quotes the term, as `opens with the search term "spring" saved`, when the search is one piece of text pbiplint can read, and reads `opens with a search term saved` otherwise. It names no column, since the term can sit on a column the slicer no longer shows.
+Each finding names the slicer, as `slicer (5d2e8c) on "Overview"`, or as `"City" on "Overview"` when it has a title, at the line of the `selfFilter` in its visual.json. Its detail quotes the term, as `opens with the search term "spring" saved`, when the search is one piece of text pbiplint can read, and reads `opens with a search term saved` otherwise. It names no column, since the term can sit on a column the slicer does not show.
 
 ## Example
 
@@ -117,7 +117,7 @@ The City slicer was saved with spring typed in its search box, and the finding r
 
 A slicer's search is there to find values in a long list. You open it with the ellipsis (...) at the slicer's top right and then Search, or by selecting the slicer and pressing Ctrl+F, and as you type, the slicer "instantly filters to show only matching entries," in Microsoft's words. Saved with the report, the term stays: checked in Power BI Desktop, it comes back when the report is reopened, and the slicer's list shows only the values that match it. Anyone who opens the report next in Power BI Desktop sees a slicer listing only some of its values, under a term they did not type, and can take that list for all there is.
 
-A saved term is usually one left behind. Of the 41 slicers found saved with a search term in public Power BI projects saved by Power BI Desktop, 30 had nothing selected, only the term.
+Most saved terms stand alone. Of the 41 slicers found saved with a search term in public Power BI projects saved by Power BI Desktop, 30 had nothing selected, only the term.
 
 ## How to fix it
 
@@ -131,7 +131,7 @@ A report meant to open with a long list already narrowed to a starting term, whe
 
 ## Quirks
 
-- The term can sit on a column the slicer no longer shows. Power BI Desktop keeps it when the slicer's field is swapped for another: 9 of the 41 slicers found saved with a term had it on a column other than the one they show. The finding is the same either way, which is why its detail names no column.
+- The term can sit on a column the slicer does not show: 9 of the 41 slicers found saved with a term had it on a column other than the one they show. The finding is the same either way, which is why its detail names no column.
 - A term is read by where it sits, not by the visual's type, as a selection is for `SLICER_SELECTION_SAVED`, so a custom slicer from AppSource that keeps a search term in the same `selfFilter` is reported the same way as the slicers built into Power BI.
 - A hidden slicer is reported like a visible one.
 

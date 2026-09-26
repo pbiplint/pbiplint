@@ -19,6 +19,7 @@ import {
   mobilePageUnread,
   openingPage,
   openingPageInvalid,
+  pageFileUnread,
   reportMeasuresToMove,
   slicerSelection,
   visualFileUnread,
@@ -114,21 +115,26 @@ function reportFacts(
   // Pages. A tooltip page counts by either marking Microsoft's page schema gives it, page.json's
   // own `type` or its `pageBinding.type` (Desktop-saved reports mark most tooltip pages by `type`
   // alone); a drillthrough page by its `pageBinding.type` alone, which every drillthrough target in
-  // Desktop-saved reports carries. HIDE_TOOLTIP_DRILLTROUGH_PAGES shares both readings.
+  // Desktop-saved reports carries. HIDE_TOOLTIP_DRILLTROUGH_PAGES shares both readings. While a
+  // page.json, or a folder that could hold one, could not be read (`pageFileUnread`), 0 would say
+  // the report has no page, so the count reads unknown in its place; a count above 0 is a lower
+  // bound and stays.
   const hidden = pages.filter(isHiddenPage).length;
   const tooltip = pages.filter(isTooltipPage).length;
   const drill = pages.filter(isDrillthroughPage).length;
+  const pagesUnknown = pages.length === 0 && pageFileUnread(report);
   const pageParts = [
     hidden && `${hidden} hidden`,
     tooltip && `${tooltip} tooltip`,
     drill && `${drill} drillthrough`,
+    pagesUnknown && "a page.json could not be read",
   ].filter(Boolean) as string[];
   facts.push(
     withRule(
       {
         layer: "report",
         label: "Pages",
-        value: String(pages.length),
+        value: pagesUnknown ? "unknown" : String(pages.length),
         ...(pageParts.length ? { detail: pageParts.join(", ") } : {}),
       },
       tooltip + drill > 0 ? "HIDE_TOOLTIP_DRILLTROUGH_PAGES" : undefined,
@@ -139,8 +145,13 @@ function reportFacts(
   // HIDDEN_VISUAL_WITH_FIELDS shares. While a visual.json could not be read and a registered
   // custom visual type is used by no visual that was read, how many are used is unknown, since the
   // unread visual could be of that type; REMOVE_UNUSED_CUSTOM_VISUALS is skipped on the same
-  // condition, so the fact links it only when it can fire. The count and the hidden count are
-  // lower bounds, and never read none.
+  // condition, so the fact links it only when it can fire. While a visual.json, or a folder that
+  // could hold one, could not be read (`visualFileUnread`), 0 would say the report has no visual,
+  // so the count reads unknown in its place, and the detail gives the reason once: with no visual
+  // read, a registered type is used by none, so the custom visual clause already ends with it. A
+  // count above 0, and the hidden count, are lower bounds and stay.
+  const visualUnread = visualFileUnread(report);
+  const unreadVisual = "a visual.json could not be read";
   const visuals = allVisuals(report).filter((v) => !v.isGroup);
   const hiddenVisuals = visuals.filter(isHiddenVisual);
   const hiddenWithFields = visuals.filter(hiddenVisualWithFields).length;
@@ -148,20 +159,22 @@ function reportFacts(
   const usedTypes = new Set(visuals.map((v) => v.type));
   const used = registered.filter((t) => usedTypes.has(t)).length;
   const usedUnknown = customVisualUseUnknown(report);
+  const visualsUnknown = visuals.length === 0 && visualUnread;
   const visualParts = [
     hiddenVisuals.length ? `${hiddenVisuals.length} hidden` : "",
     registered.length
       ? `${n(registered.length, "custom visual type")} registered, ${
-          usedUnknown ? "used: unknown, a visual.json could not be read" : `${used} used`
+          usedUnknown ? `used: unknown, ${unreadVisual}` : `${used} used`
         }`
       : "",
+    visualsUnknown && !usedUnknown ? unreadVisual : "",
   ].filter(Boolean);
   facts.push(
     withRule(
       {
         layer: "report",
         label: "Visuals",
-        value: String(visuals.length),
+        value: visualsUnknown ? "unknown" : String(visuals.length),
         ...(visualParts.length ? { detail: visualParts.join("; ") } : {}),
       },
       hiddenWithFields > 0 ? "HIDDEN_VISUAL_WITH_FIELDS" : undefined,
@@ -206,8 +219,6 @@ function reportFacts(
   const slicers = visuals.filter(isSlicer).length;
   const selected = visuals.filter((v) => slicerSelection(v) !== undefined);
   const custom = selected.filter((v) => !isSlicer(v)).length;
-  const visualUnread = visualFileUnread(report);
-  const unreadVisual = "a visual.json could not be read";
   const slicerValue = slicers ? String(slicers) : visualUnread ? "unknown" : "none";
   const selections = selected.length
     ? n(selected.length, "saved selection") +
@@ -288,21 +299,33 @@ export function buildFacts(
     const shown = model.tables.filter((t) => !isAutoDateTable(t));
     const columns = shown.reduce((s, t) => s + t.columns.length, 0);
     const measures = shown.reduce((s, t) => s + t.measures.length, 0);
+    // While the model may lack an object its files declare (`modelPartlyRead`), 0 would say the
+    // model has none, so each count that would read 0 reads `<noun>s: unknown` in its place; a
+    // count above 0 is a lower bound and stays. A report file holds no model object, so only the
+    // model's reading makes a count unknown.
+    const partly = modelPartlyRead(model);
+    const count = (k: number, noun: string) =>
+      k === 0 && partly ? `${noun}s: unknown` : n(k, noun);
+    const countUnknown = partly && [shown.length, columns, measures].includes(0);
     const fact: Fact = {
       layer: "model",
       label: "Model",
-      value: `${n(shown.length, "table")}, ${n(columns, "column")}, ${n(measures, "measure")}`,
+      value: `${count(shown.length, "table")}, ${count(columns, "column")}, ${count(measures, "measure")}`,
     };
     const reach = indexes.reachability;
+    const unreadModel = "a model file could not be fully read";
     // Unknown when a file the report's field references are read from could not be read, or while
     // the model may lack an object its files declare, the cases NOT_REACHED_FROM_REPORT is skipped
     // in, the report's first as the rule's skipped line gives it: what that file would have
     // reached, or what only the missing object reaches, is not known, so the fact gives no count
-    // and links no rule. The table, column, and measure counts stay, a lower bound.
+    // and links no rule. When the clause gives the report file's reason and a count reads unknown,
+    // the model's reason follows it, so the detail says why the count is unknown too.
     if (reach && fieldFileUnread(project.report)) {
-      fact.detail = "not reached from this report: unknown, a report file could not be read";
-    } else if (reach && modelPartlyRead(model)) {
-      fact.detail = "not reached from this report: unknown, a model file could not be fully read";
+      fact.detail = `not reached from this report: unknown, a report file could not be read${
+        countUnknown ? `; ${unreadModel}` : ""
+      }`;
+    } else if (reach && partly) {
+      fact.detail = `not reached from this report: unknown, ${unreadModel}`;
     } else if (reach) {
       const u = reach.unreached();
       fact.detail = `${n(u.columns.length, "column")} and ${n(u.measures.length, "measure")} not reached from this report`;

@@ -145,9 +145,17 @@ export const fieldFileUnread = (r: Report): boolean =>
   r.unreadDefinitionFolders.some(folderHoldsFieldReferences);
 
 /**
+ * Whether a page.json could not be read, its own file or its page's folder (`Report.unreadPages`),
+ * or a folder that could hold one: definition/ or the pages folder. The page it defines is not
+ * counted, so the Pages fact says unknown where it would otherwise say 0.
+ */
+export const pageFileUnread = (r: Report): boolean =>
+  r.unreadPages.length > 0 || r.unreadDefinitionFolders.some((f) => folderHolds(f, "page"));
+
+/**
  * Whether a visual.json could not be read, or a folder that could hold one. The visual it holds
  * could be of any type, a slicer included, and could carry a saved selection, so the Slicers fact
- * says unknown where it would otherwise say none.
+ * says unknown where it would otherwise say none, and the Visuals fact where it would say 0.
  */
 export const visualFileUnread = (r: Report): boolean =>
   r.unreadDefinitionFiles.some(isVisualFile) ||

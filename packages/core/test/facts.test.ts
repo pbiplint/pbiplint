@@ -909,6 +909,209 @@ describe("buildFacts", () => {
       detail: "reportExtensions.json was not read",
     });
   });
+  describe("a count that would read 0 while what it counts could not be read", () => {
+    type Files = { path: string; text: string }[];
+    const pagesJson = {
+      path: "definition/pages/pages.json",
+      text: j({ pageOrder: ["p1"], activePageName: "p1" }),
+    };
+    /** The report fact labelled `label`, the report built from `given` beside `unreadPaths`. */
+    const reportFact = (label: string, given: Files, unreadPaths: string[] = []) => {
+      const { report } = buildReport(given, unreadPaths);
+      return buildFacts({ report }, buildIndexes({ report }), ALL).find((f) => f.label === label);
+    };
+    it("reads Pages unknown while a page.json, or a folder that could hold one, could not be read", () => {
+      const unknown = {
+        layer: "report",
+        label: "Pages",
+        value: "unknown",
+        detail: "a page.json could not be read",
+      };
+      // The review's case: the pages folder could not be listed, pages.json names the page open
+      // when the report was saved, and Opens on names it; 0 pages beside it would say it is not
+      // there.
+      expect(reportFact("Opens on", [pagesJson], ["definition/pages/"])).toMatchObject({
+        value: "p1",
+      });
+      expect(reportFact("Pages", [pagesJson], ["definition/pages/"])).toEqual(unknown);
+      // A page.json that failed to parse, or that the reader could not read, or the page's
+      // folder, or definition/ above it.
+      expect(
+        reportFact("Pages", [pagesJson, { path: "definition/pages/p1/page.json", text: "{" }]),
+      ).toEqual(unknown);
+      for (const path of ["definition/pages/p1/page.json", "definition/pages/p1/", "definition/"])
+        expect(reportFact("Pages", [pagesJson], [path]), path).toEqual(unknown);
+      // A count above 0 is a lower bound and stays.
+      const one = [pagesJson, page("p1", "Overview")];
+      expect(
+        reportFact("Pages", [...one, { path: "definition/pages/p2/page.json", text: "{" }]),
+      ).toEqual({ layer: "report", label: "Pages", value: "1" });
+      expect(reportFact("Pages", one, ["definition/pages/p2/"])).toEqual({
+        layer: "report",
+        label: "Pages",
+        value: "1",
+      });
+      // With nothing unread that could hold a page, 0 is true: pages.json lists the order, and
+      // the bookmarks folder holds no page.
+      const zero = { layer: "report", label: "Pages", value: "0" };
+      expect(reportFact("Pages", [pagesJson])).toEqual(zero);
+      expect(reportFact("Pages", [pagesJson], ["definition/bookmarks/"])).toEqual(zero);
+      expect(
+        reportFact("Pages", [{ path: "definition/pages/pages.json", text: "<<<<<<< HEAD\n{}\n" }]),
+      ).toEqual(zero);
+    });
+    it("reads Visuals unknown while a visual.json, or a folder that could hold one, could not be read, naming the reason once", () => {
+      const onP1 = [page("p1", "Overview")];
+      const unreadVisual = { path: "definition/pages/p1/visuals/v9/visual.json", text: "{" };
+      const unknown = {
+        layer: "report",
+        label: "Visuals",
+        value: "unknown",
+        detail: "a visual.json could not be read",
+      };
+      expect(reportFact("Visuals", [...onP1, unreadVisual])).toEqual(unknown);
+      for (const path of [
+        "definition/pages/p1/visuals/v9/visual.json",
+        "definition/pages/p1/visuals/",
+        "definition/pages/p1/",
+        "definition/pages/",
+      ])
+        expect(reportFact("Visuals", onP1, [path]), path).toEqual(unknown);
+      // A registered custom visual type's used count is unknown for the same reason, and the
+      // detail gives the reason once, at its end, as the Slicers fact does.
+      const registered = {
+        path: "definition/report.json",
+        text: j({ publicCustomVisuals: ["Used123"] }),
+      };
+      expect(reportFact("Visuals", [registered, ...onP1, unreadVisual])).toEqual({
+        ...unknown,
+        detail: "1 custom visual type registered, used: unknown, a visual.json could not be read",
+      });
+      // A count above 0 is a lower bound and stays.
+      expect(reportFact("Visuals", [...onP1, visual("p1", "v1", "card"), unreadVisual])).toEqual({
+        layer: "report",
+        label: "Visuals",
+        value: "1",
+      });
+      // With nothing unread that could hold a visual, 0 is true, and REMOVE_UNUSED_CUSTOM_VISUALS
+      // can fire on a registered type no visual uses.
+      const zero = { layer: "report", label: "Visuals", value: "0" };
+      expect(reportFact("Visuals", onP1)).toEqual(zero);
+      for (const file of [
+        { path: "definition/pages/p9/page.json", text: "{" },
+        { path: "definition/pages/p1/visuals/v9/mobile.json", text: "{" },
+      ])
+        expect(reportFact("Visuals", [...onP1, file]), file.path).toEqual(zero);
+      expect(reportFact("Visuals", [registered, ...onP1])).toEqual({
+        ...zero,
+        detail: "1 custom visual type registered, 0 used",
+        ruleId: "REMOVE_UNUSED_CUSTOM_VISUALS",
+      });
+    });
+    describe("the Model counts", () => {
+      const MODEL = { path: "definition/model.tmdl", text: "model Model\n\tculture: en-US\n" };
+      const SALES = "definition/tables/Sales.tmdl";
+      const columnsOnly =
+        "table Sales\n\tcolumn Amount\n\t\tdataType: decimal\n\tcolumn Region\n\t\tdataType: string\n";
+      /** The Model fact for the model's files and unread paths, beside every report file in `files`. */
+      const modelFact = (tmdl: Files, unreadPaths: string[] = [], ...extra: Files) => {
+        const m = buildModel(
+          tmdl.map((f) => parseTmdl(f.path, f.text)),
+          unreadPaths,
+        );
+        const { report } = buildReport([...files, ...extra]);
+        const project = { model: m, report };
+        return buildFacts(project, buildIndexes(project), ALL).find((f) => f.label === "Model");
+      };
+      const modelUnread =
+        "not reached from this report: unknown, a model file could not be fully read";
+      const reportUnread = "not reached from this report: unknown, a report file could not be read";
+      const unreadVisual = { path: "definition/pages/p1/visuals/v9/visual.json", text: "[]" };
+      it("reads each count that would be 0 as unknown while the model could not be fully read", () => {
+        // The tables folder could not be listed: every count would read 0.
+        expect(modelFact([MODEL], ["definition/tables/"])).toEqual({
+          layer: "model",
+          label: "Model",
+          value: "tables: unknown, columns: unknown, measures: unknown",
+          detail: modelUnread,
+        });
+        // Only the counts that would read 0; a count above 0 is a lower bound and stays.
+        expect(
+          modelFact([MODEL, { path: SALES, text: columnsOnly }], ["definition/tables/Store.tmdl"]),
+        ).toEqual({
+          layer: "model",
+          label: "Model",
+          value: "1 table, 2 columns, measures: unknown",
+          detail: modelUnread,
+        });
+        expect(
+          modelFact(
+            [MODEL, { path: SALES, text: "table Sales\n\tmeasure Total = 1\n" }],
+            ["definition/tables/"],
+          ),
+        ).toEqual({
+          layer: "model",
+          label: "Model",
+          value: "1 table, columns: unknown, 1 measure",
+          detail: modelUnread,
+        });
+        // A parse issue that can drop an object: a line indented with spaces, which the parser
+        // skips, so the measure it declares is not read.
+        expect(
+          modelFact([MODEL, { path: SALES, text: `${columnsOnly}    measure Lost = 1\n` }]),
+        ).toEqual({
+          layer: "model",
+          label: "Model",
+          value: "1 table, 2 columns, measures: unknown",
+          detail: modelUnread,
+        });
+        expect(modelFact([MODEL, { path: SALES, text: sales }], ["definition/tables/"])).toEqual({
+          layer: "model",
+          label: "Model",
+          value: "1 table, 2 columns, 2 measures",
+          detail: modelUnread,
+        });
+      });
+      it("adds the model's reason when the not-reached clause gives the report file's", () => {
+        expect(
+          modelFact(
+            [MODEL, { path: SALES, text: columnsOnly }],
+            ["definition/tables/Store.tmdl"],
+            unreadVisual,
+          ),
+        ).toEqual({
+          layer: "model",
+          label: "Model",
+          value: "1 table, 2 columns, measures: unknown",
+          detail: `${reportUnread}; a model file could not be fully read`,
+        });
+        // With no count unknown, the report file's reason is the only one given, as before.
+        expect(
+          modelFact([MODEL, { path: SALES, text: sales }], ["definition/tables/"], unreadVisual),
+        ).toEqual({
+          layer: "model",
+          label: "Model",
+          value: "1 table, 2 columns, 2 measures",
+          detail: reportUnread,
+        });
+      });
+      it("keeps a true 0, and a 0 a report file that could not be read cannot change", () => {
+        expect(modelFact([MODEL])).toEqual({
+          layer: "model",
+          label: "Model",
+          value: "0 tables, 0 columns, 0 measures",
+          detail: "0 columns and 0 measures not reached from this report",
+        });
+        // A report file holds no model object, so the counts come from the model's reading alone.
+        expect(modelFact([MODEL, { path: SALES, text: columnsOnly }], [], unreadVisual)).toEqual({
+          layer: "model",
+          label: "Model",
+          value: "1 table, 2 columns, 0 measures",
+          detail: reportUnread,
+        });
+      });
+    });
+  });
   describe("Model and Desktop's auto date/time tables", () => {
     // With Auto date/time on, Power BI Desktop adds a calculated LocalDateTable_<guid> per date
     // column and a calculated DateTableTemplate_<guid>, and keeps both hidden even from modelers,

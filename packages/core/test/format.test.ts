@@ -848,9 +848,9 @@ describe("the Markdown export and what the input holds", () => {
     expect(summary.children).toHaveLength(0);
     expect(summary.textContent).toMatch(/ \(~~a~~ _b_\)\.$/);
   });
-  it("writes a URL, a www address, an email address, and a format string as text, not as a link or math", () => {
-    // GitHub-flavoured Markdown links a bare URL, a www address, and an email address from the
-    // source, where an escape inside one would land in the link, and GitHub reads $...$ as math.
+  it("writes a URL, a www address, an email address, and a format string as text in marked, not as a link", () => {
+    // marked's rendering: no cell holds a link, and each shows the input as written. GitHub's
+    // renderer is not asserted here, and it still links an email address, escaped or not.
     for (const input of [
       "https://contoso.sharepoint.com/sites/Finance_Team/Shared",
       "www.example.com/a_b_c",
@@ -863,7 +863,8 @@ describe("the Markdown export and what the input holds", () => {
       expect(doc.querySelectorAll("td a"), input).toHaveLength(0);
       expect(rows(doc), input).toEqual([["M", "Measure", "", input]]);
     }
-    // marked reads no math, so the escape GitHub needs is asserted in the source.
+    // marked does no math, so this asserts only that the source carries `\$`, which GitHub's math
+    // does not honour.
     expect(exported({ detail: "$#,0.00;($#,0.00)" })).toContain("\\$#,0.00;(\\$#,0.00)");
   });
   it("keeps a name holding | in its cell, and in its code span, a backslash before it included", () => {

@@ -30,11 +30,14 @@ const oneLine = (s: string): string => s.replace(/\r\n?|\n/g, " ");
  * `|` are escaped with a backslash (CommonMark lets any ASCII punctuation be escaped, and shows the
  * character), so none of them opens a code span (inside which the entities would show as written),
  * a link, an image, emphasis, or strikethrough, and a table cell holds its text whole.
- * GitHub-flavoured Markdown also links a bare URL, a `www.` address, and an email address as the
- * source spells them, so a backslash written inside one would land in the link, and GitHub reads
- * text between two `$` as math; so the colon of `://`, the dot after `www` (in any case), `@`,
- * and `$` are escaped as well. Input text makes no link of any kind and no math, and every URL, address, and
- * format string shows exactly as written.
+ * GitHub-flavoured Markdown also links a bare URL and a `www.` address as the source spells them,
+ * so a backslash inside one would land in the link; the colon of `://` and the dot after `www` (in
+ * any case) are escaped, so neither is a link and each shows as written. `@` and `$` are escaped
+ * too. The `@` escape keeps marked from linking part of an email address (`last@example.com` out
+ * of `first_last@example.com`); marked does no math, so the `$` escape changes nothing there.
+ * GitHub ignores both escapes: it still links an email address (the link's text and target are the
+ * address as written), links an @mention or #reference in an issue or comment, and can render the
+ * text between two `$` on one line as math.
  */
 const text = (s: string): string =>
   showControls(s.replace(/\\/g, "\\\\"))

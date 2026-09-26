@@ -1545,7 +1545,11 @@ same path where both use the same collation data (the name order is
 `localeCompare` in English, whose data Node's ICU and the browser each
 supply, in versions that can differ), unless two different names in
 one folder compare equal in that name order, where the CLI keeps the
-order its listing gave and the browser the order of the drop.
+order its listing gave and the browser the order of the drop. The
+refusals' words differ for a model folder holding no `.tmdl` files:
+the browser names the folder, and the CLI gives its general refusal,
+or, with a `.pbix` beside it, names the `.pbix` (section 4's batch F
+note).
 
 ## 13. CLI changes
 

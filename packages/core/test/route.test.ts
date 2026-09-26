@@ -113,8 +113,8 @@ describe("pairingDecision", () => {
 });
 
 describe("a .pbix (tracked in #88)", () => {
-  // Learn's labels, from the Power BI Desktop projects page: the Save As dialog's file type and
-  // the preview option's checkbox, in the words Desktop shows them.
+  // From Learn's Power BI Desktop projects page: the menu path, the file type, and the preview
+  // option, as Learn labels them.
   const HOW =
     "pbiplint reads a report saved as a Power BI project (PBIP). In Power BI Desktop, choose File > Save as and pick Power BI project files (*.pbip) as the file type (if it isn't offered, first turn on Power BI Project (.pbip) save option under File > Options and settings > Options > Preview features).";
   it("is known by its name alone, in any case", () => {

@@ -116,18 +116,28 @@ function reportFacts(
   // own `type` or its `pageBinding.type` (Desktop-saved reports mark most tooltip pages by `type`
   // alone); a drillthrough page by its `pageBinding.type` alone, which every drillthrough target in
   // Desktop-saved reports carries. HIDE_TOOLTIP_DRILLTROUGH_PAGES shares both readings. While a
-  // page.json, or a folder that could hold one, could not be read (`pageFileUnread`), 0 would say
-  // the report has no page, so the count reads unknown in its place; a count above 0 is a lower
-  // bound and stays.
+  // page.json, or a folder that could hold one, could not be read (`pageFileUnread`), or a
+  // visual.json, or a folder that could hold one (`visualFileUnread`), 0 would say the report has
+  // no page, so the count reads unknown in its place: a visual.json names its page by its folder,
+  // and that page counts when its page.json is not there. The detail gives one reason, the
+  // page.json one when both hold. A count above 0 is a lower bound and stays.
+  const visualUnread = visualFileUnread(report);
+  const unreadVisual = "a visual.json could not be read";
   const hidden = pages.filter(isHiddenPage).length;
   const tooltip = pages.filter(isTooltipPage).length;
   const drill = pages.filter(isDrillthroughPage).length;
-  const pagesUnknown = pages.length === 0 && pageFileUnread(report);
+  const pagesUnknown = pages.length
+    ? undefined
+    : pageFileUnread(report)
+      ? "a page.json could not be read"
+      : visualUnread
+        ? unreadVisual
+        : undefined;
   const pageParts = [
     hidden && `${hidden} hidden`,
     tooltip && `${tooltip} tooltip`,
     drill && `${drill} drillthrough`,
-    pagesUnknown && "a page.json could not be read",
+    pagesUnknown,
   ].filter(Boolean) as string[];
   facts.push(
     withRule(
@@ -150,8 +160,6 @@ function reportFacts(
   // so the count reads unknown in its place, and the detail gives the reason once: with no visual
   // read, a registered type is used by none, so the custom visual clause already ends with it. A
   // count above 0, and the hidden count, are lower bounds and stay.
-  const visualUnread = visualFileUnread(report);
-  const unreadVisual = "a visual.json could not be read";
   const visuals = allVisuals(report).filter((v) => !v.isGroup);
   const hiddenVisuals = visuals.filter(isHiddenVisual);
   const hiddenWithFields = visuals.filter(hiddenVisualWithFields).length;

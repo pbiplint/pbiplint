@@ -960,6 +960,44 @@ describe("buildFacts", () => {
         reportFact("Pages", [{ path: "definition/pages/pages.json", text: "<<<<<<< HEAD\n{}\n" }]),
       ).toEqual(zero);
     });
+    it("reads Pages unknown while a visual.json, or a folder that could hold one, could not be read, since its page folder holds a page", () => {
+      // A visual.json that was read names its page by its folder, and the page counts when its
+      // page.json is not there; one that could not be read would have too.
+      const unknown = {
+        layer: "report",
+        label: "Pages",
+        value: "unknown",
+        detail: "a visual.json could not be read",
+      };
+      // A page folder with no page.json whose visuals folder could not be listed.
+      expect(reportFact("Pages", [pagesJson], ["definition/pages/p1/visuals/"])).toEqual(unknown);
+      // A lone visual.json that could not be read, with no page read: failed to parse, or the
+      // reader could not read it or its folder.
+      expect(
+        reportFact("Pages", [{ path: "definition/pages/p1/visuals/v9/visual.json", text: "{" }]),
+      ).toEqual(unknown);
+      for (const path of [
+        "definition/pages/p1/visuals/v9/visual.json",
+        "definition/pages/p1/visuals/v9/",
+      ])
+        expect(reportFact("Pages", [], [path]), path).toEqual(unknown);
+      // With a page.json unread as well, one reason is given, the page.json one.
+      expect(
+        reportFact("Pages", [
+          { path: "definition/pages/p1/page.json", text: "{" },
+          { path: "definition/pages/p2/visuals/v9/visual.json", text: "{" },
+        ]),
+      ).toEqual({ ...unknown, detail: "a page.json could not be read" });
+      // A count above 0 is a lower bound and stays.
+      expect(
+        reportFact("Pages", [pagesJson, page("p1", "Overview")], ["definition/pages/p2/visuals/"]),
+      ).toEqual({ layer: "report", label: "Pages", value: "1" });
+      // A mobile.json names no page: read, it marks a page already counted, so one that could not
+      // be read leaves 0 true.
+      expect(
+        reportFact("Pages", [{ path: "definition/pages/p1/visuals/v9/mobile.json", text: "{" }]),
+      ).toEqual({ layer: "report", label: "Pages", value: "0" });
+    });
     it("reads Visuals unknown while a visual.json, or a folder that could hold one, could not be read, naming the reason once", () => {
       const onP1 = [page("p1", "Overview")];
       const unreadVisual = { path: "definition/pages/p1/visuals/v9/visual.json", text: "{" };

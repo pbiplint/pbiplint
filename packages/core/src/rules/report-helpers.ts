@@ -155,7 +155,9 @@ export const pageFileUnread = (r: Report): boolean =>
 /**
  * Whether a visual.json could not be read, or a folder that could hold one. The visual it holds
  * could be of any type, a slicer included, and could carry a saved selection, so the Slicers fact
- * says unknown where it would otherwise say none, and the Visuals fact where it would say 0.
+ * says unknown where it would otherwise say none, and the Visuals fact where it would say 0. Its
+ * page folder holds a page, counted by that folder when its page.json is not there, so the Pages
+ * fact says unknown where it would say 0 too.
  */
 export const visualFileUnread = (r: Report): boolean =>
   r.unreadDefinitionFiles.some(isVisualFile) ||

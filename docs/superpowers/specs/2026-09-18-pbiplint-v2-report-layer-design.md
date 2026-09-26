@@ -1623,12 +1623,14 @@ the directory-input route (Firefox and Safari) the browser hands the
 page a flat list of the files it listed, with no word of a folder it
 could not list, so the page cannot give the `unread-file` notice the
 CLI gives for such a folder (section 4's A7 note). Safari leaves that
-folder out and lints the rest; Firefox hands over no files at all, so
-the input is refused as holding no model or report. A drop in Safari
-likewise leaves such a folder out without an error. The File System
-Access picker (Chrome and Edge) and a drop in Chrome or Firefox raise
-an error for the listing and give the notice. About's "Known limits in
-the browser" says so.
+folder out and lints the rest. In Firefox the page refuses the input
+as holding no model or report, which is what Michael saw; in a
+Playwright probe, Gecko's listing of the chosen folder was rejected,
+so no files came through. A drop in Safari leaves such a folder out
+without an error, as its chooser does. The File System Access picker
+(Chrome and Edge) and a drop in Chrome or Firefox raise an error for
+the listing and give the notice. About's "Known limits in the browser"
+says so.
 
 ## 13. CLI changes
 

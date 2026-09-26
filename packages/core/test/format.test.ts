@@ -825,10 +825,9 @@ describe("the Markdown export and what the input holds", () => {
       expect(location.textContent, input).toBe(`${file}:1`);
       expect(detail.textContent, input).toBe(input);
     }
-    // GitHub-flavoured Markdown links a bare https URL, as GitHub does, so the URL may be a link;
-    // it is never an image the viewer loads.
+    // The URL inside is neither an image the viewer loads nor a link.
     const image = cellsOf("![](https://example.com/t.png)");
-    expect(image.doc.querySelectorAll("img")).toHaveLength(0);
+    expect(image.doc.querySelectorAll("img, td a")).toHaveLength(0);
     expect(image.detail.textContent).toBe("![](https://example.com/t.png)");
     // A notice and the skipped line's reason are written the same way.
     const doc = rendered(
@@ -848,6 +847,24 @@ describe("the Markdown export and what the input holds", () => {
     const summary = doc.querySelector("p")!;
     expect(summary.children).toHaveLength(0);
     expect(summary.textContent).toMatch(/ \(~~a~~ _b_\)\.$/);
+  });
+  it("writes a URL, a www address, an email address, and a format string as text, not as a link or math", () => {
+    // GitHub-flavoured Markdown links a bare URL, a www address, and an email address from the
+    // source, where an escape inside one would land in the link, and GitHub reads $...$ as math.
+    for (const input of [
+      "https://contoso.sharepoint.com/sites/Finance_Team/Shared",
+      "www.example.com/a_b_c",
+      "first_last@example.com",
+      "mailto:first_last@example.com",
+      "$#,0.00;($#,0.00)",
+    ]) {
+      const md = exported({ detail: input });
+      const doc = rendered(md);
+      expect(doc.querySelectorAll("td a"), input).toHaveLength(0);
+      expect(rows(doc), input).toEqual([["M", "Measure", "", input]]);
+    }
+    // marked reads no math, so the escape GitHub needs is asserted in the source.
+    expect(exported({ detail: "$#,0.00;($#,0.00)" })).toContain("\\$#,0.00;(\\$#,0.00)");
   });
   it("keeps a name holding | in its cell, and in its code span, a backslash before it included", () => {
     for (const name of ["a|b", "a\\\\|b|"]) {

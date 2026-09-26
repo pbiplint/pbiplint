@@ -29,15 +29,21 @@ const oneLine = (s: string): string => s.replace(/\r\n?|\n/g, " ");
  * as HTML entities, so no tag or entity is read as HTML; and `` ` ``, `[`, `]`, `*`, `_`, `~`, and
  * `|` are escaped with a backslash (CommonMark lets any ASCII punctuation be escaped, and shows the
  * character), so none of them opens a code span (inside which the entities would show as written),
- * a link, an image, emphasis, or strikethrough, and a table cell holds its text whole. A bare URL
- * is still a link where the viewer links one, as GitHub does.
+ * a link, an image, emphasis, or strikethrough, and a table cell holds its text whole.
+ * GitHub-flavoured Markdown also links a bare URL, a `www.` address, and an email address as the
+ * source spells them, so a backslash written inside one would land in the link, and GitHub reads
+ * text between two `$` as math; so the colon of `://`, the dot after `www` (in any case), `@`,
+ * and `$` are escaped as well. Input text makes no link of any kind and no math, and every URL, address, and
+ * format string shows exactly as written.
  */
 const text = (s: string): string =>
   showControls(s.replace(/\\/g, "\\\\"))
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/[`[\]*_~|]/g, "\\$&");
+    .replace(/[`[\]*_~|@$]/g, "\\$&")
+    .replace(/:(?=\/\/)/g, "\\:")
+    .replace(/(www)\./gi, "$1\\.");
 
 /** Input text in a table cell, a line break shown as a space. */
 const cell = (s: string): string => text(oneLine(s));

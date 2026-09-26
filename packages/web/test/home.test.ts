@@ -520,9 +520,9 @@ describe("home page", () => {
   });
   it("shows a control character in a refused .pbix's name as an escape, as the CLI does", async () => {
     const status = document.getElementById("status")!;
-    // A right-to-left override would show "Annual‮xcod.pbix" as "Annualxibp.docx" and
-    // reorder the rest of the refusal after it.
-    dropFile("Annual‮xcod.pbix");
+    // A right-to-left override, U+202E, between "Annual" and "xcod.pbix" would show the name as
+    // "Annualxibp.docx" and reorder the rest of the refusal after it.
+    dropFile("Annual\u202excod.pbix");
     await tick();
     await tick();
     expect(status.textContent).toBe(pbixRefusal("Annual\\u202excod.pbix"));
@@ -534,20 +534,19 @@ describe("home page", () => {
     expect(status.textContent).toBe(pbixRefusal("Ventes café 売上.pbix"));
   });
   it("shows a control character in a config error as an escape", async () => {
-    // V8's message for JSON that does not parse quotes the text, control characters and all.
+    // Core refuses a key it does not know in its own words, quoting the key as the file has it.
     feedFolder([
       at("Proj/Demo.SemanticModel/definition/tables/T.tmdl", "table T\n"),
-      at("Proj/pbiplint.config.json", "x‮"),
+      at("Proj/pbiplint.config.json", '{ "rules": {}, "x\u202e": true }'),
     ]);
     await tick();
     await tick();
     const status = document.getElementById("status")!;
-    expect(status.textContent).toMatch(/^pbiplint\.config\.json is not valid JSON: /);
-    expect(status.textContent).toContain("x\\u202e");
+    expect(status.textContent).toBe('pbiplint.config.json: unknown key "x\\u202e"');
     expect(status.textContent).not.toMatch(RAW_CONTROL);
   });
   it("shows a control character in the folder's name as an escape in the heading and the announcement", async () => {
-    feedFolder([at("Proj‮/Demo.SemanticModel/definition/tables/T.tmdl", "table T\n")]);
+    feedFolder([at("Proj\u202e/Demo.SemanticModel/definition/tables/T.tmdl", "table T\n")]);
     await tick();
     await tick();
     expect(document.querySelector("#results h2")!.textContent).toBe(
@@ -561,7 +560,7 @@ describe("home page", () => {
 });
 
 // eslint-disable-next-line no-control-regex -- the characters showControls writes as escapes
-const RAW_CONTROL = /[\u0000-\u001f\u007f-\u009f‪-‮⁦-⁩]/;
+const RAW_CONTROL = /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/;
 
 /** A file as the directory input reports it, at its path relative to the chosen folder. */
 const at = (path: string, text: string): File =>

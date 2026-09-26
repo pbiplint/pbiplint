@@ -629,13 +629,13 @@ describe("renderResults", () => {
 });
 
 // eslint-disable-next-line no-control-regex -- the characters showControls writes as escapes
-const RAW_CONTROL = /[\u0000-\u001f\u007f-\u009f‪-‮⁦-⁩]/;
+const RAW_CONTROL = /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/;
 /**
  * A name as a hostile repository might write it: a right-to-left override, which reorders the
  * text after it on the page, and the escape sequence that clears a terminal. SHOWN is what the
  * CLI prints for it, and what the page shows.
  */
-const EVIL = "Evil‮\u001b[2JName";
+const EVIL = "Evil\u202e\u001b[2JName";
 const SHOWN = "Evil\\u202e\\u001b[2JName";
 
 describe("control characters from the input", () => {

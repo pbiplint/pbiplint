@@ -22,7 +22,7 @@ import {
   reportObjectIds,
   visual,
 } from "./report-helpers.js";
-import { fixturesDir, parseModelDir } from "./helpers.js";
+import { fixturesDir, parseModelDir, readProjectFiles } from "./helpers.js";
 
 const tmdl = `table Sales
 	column Amount
@@ -273,6 +273,26 @@ describe("BROKEN_FIELD_REFERENCE", () => {
       "definition/tables/Returns.tmdl",
       "definition/tables/Stock.tmdl",
     ]);
+  });
+  it("says nothing about a field a model file the input reader could not read could declare, on shelfmart", () => {
+    // The files the CLI reads from the fixture with Store.tmdl refused: the model has no Store.
+    const files = readProjectFiles(`${fixturesDir}shelfmart`);
+    const STORE = "definition/tables/Store.tmdl";
+    const model = files.model.filter((f) => f.path !== STORE);
+    expect(model).toHaveLength(files.model.length - 1);
+    const broken = (r: ReturnType<typeof lint>) =>
+      r.findings.filter((f) => f.ruleId === "BROKEN_FIELD_REFERENCE").map((f) => f.detail);
+    // Not told the file is there, lint takes Store for a table the model does not have.
+    const unaware = broken(lint([...model, ...files.report]));
+    expect(unaware).toHaveLength(13);
+    expect(unaware.every((d) => d!.endsWith(`: no table named "Store"`))).toBe(true);
+    const r = lint([...model, ...files.report], { unreadPaths: { model: [STORE] } });
+    expect(broken(r)).toEqual([]);
+    expect(r.findings.filter((f) => f.ruleId === "PARSE_ISSUE")).toEqual([]);
+    expect(r.summary.rulesSkipped).toContainEqual({
+      id: "NOT_REACHED_FROM_REPORT",
+      reason: "modelFileUnread",
+    });
   });
   it("reports a missing table while the model's only parse issue is an orphaned description", () => {
     const r = lint([

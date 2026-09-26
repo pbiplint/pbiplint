@@ -16,7 +16,7 @@ import {
   type ResolvedConfig,
 } from "./config.js";
 import { rank, type RankedGroup } from "./rank.js";
-import { runRules, type RuleError, type SkippedRule } from "./run.js";
+import { optionsFor, runRules, type RuleError, type SkippedRule } from "./run.js";
 
 export interface LintFile {
   /** Path relative to the part's root, forward slashes: `definition/tables/Sales.tmdl`, `definition/pages/<id>/page.json`. */
@@ -31,6 +31,21 @@ export interface LintOptions {
   diagnostics?: Diagnostic[];
   /** Why the reader left a layer out, per layer, for the skipped line. */
   absent?: Partial<Record<LayerName, string>>;
+  /**
+   * What the input reader could not read, per layer, like `absent`: each path relative to that
+   * part's root in forward slashes, as every `LintFile.path` is (`definition/tables/Store.tmdl`),
+   * and a folder written with a trailing `/` (`definition/tables/`). Per layer because a folder's
+   * name cannot route it the way a file's does: both parts have a `definition` folder. The reader
+   * names each path in its own `unread-file` diagnostic; this tells the layers what they lack, so
+   * no finding or fact states what pbiplint did not read. A model path, a `.tmdl` file or a
+   * folder, makes the model one pbiplint could not fully read (`Model.unreadPaths`). A report file
+   * the PBIR format defines under the definition folder counts as one that failed to parse, and a
+   * folder there as every such file it could hold (`Report.unreadDefinitionFiles` and
+   * `Report.unreadDefinitionFolders`); definition.pbir, the .platform, and the .pbip name no field,
+   * so passing one changes nothing. No path is a PARSE_ISSUE finding. A path is ignored when its
+   * layer is absent, since nothing of that layer was read.
+   */
+  unreadPaths?: Partial<Record<LayerName, string[]>>;
 }
 
 export interface LintSummary {
@@ -70,10 +85,14 @@ export function lint(files: LintFile[], options: LintOptions = {}): LintResult {
     rules,
   );
   const routed = routeFiles(files);
+  const unread = options.unreadPaths ?? {};
   const model = routed.model.length
-    ? buildModel(routed.model.map((f) => parseTmdl(f.path, f.text)))
+    ? buildModel(
+        routed.model.map((f) => parseTmdl(f.path, f.text)),
+        unread.model,
+      )
     : undefined;
-  const built = routed.report.length ? buildReport(routed.report) : undefined;
+  const built = routed.report.length ? buildReport(routed.report, unread.report) : undefined;
   const project: Project = {
     ...(model ? { model } : {}),
     ...(built ? { report: built.report } : {}),
@@ -90,8 +109,14 @@ export function lint(files: LintFile[], options: LintOptions = {}): LintResult {
   const indexes = buildIndexes(project);
   const run = runRules(project, indexes, rules, config);
   const groups = rank(run.findings, rules, config);
-  // Only the rules that ran: a fact never links the page of a rule turned off or skipped.
-  const facts = buildFacts(project, indexes, new Set(run.rulesRun));
+  // Only the rules that ran: a fact never links the page of a rule turned off or skipped. Their
+  // options are the ones each was checked with, so a fact that links a rule only under a policy,
+  // as Filters pane does, reads the policy the rule read.
+  const ran = new Set(run.rulesRun);
+  const ranOptions = new Map(
+    rules.filter((r) => ran.has(r.id)).map((r) => [r.id, optionsFor(r, config)] as const),
+  );
+  const facts = buildFacts(project, indexes, ran, ranOptions);
   const count = (severity: number) =>
     groups.filter((g) => g.rule.severity === severity).reduce((n, g) => n + g.findings.length, 0);
   const summary: LintSummary = {

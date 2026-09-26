@@ -168,13 +168,15 @@ describe("rulePage", () => {
     expect(html).toContain('<h2 id="example">Example</h2>');
   });
   it("renders a pbir fence as a captioned JSON figure that names its file, bare for a tree", () => {
+    // The file name is code in the caption, so it keeps its case under the caption's small
+    // capitals: styles.css sets .example figcaption in upper case and its code back to none.
     const page = read("hide-foreign-keys").replace(
       "## Why it matters",
       '## Example\n\n```pbir fires visual.json\n{ "name": "v" }\n```\n\n```pbir fixed tree.json\n{ "definition/pages/p/page.json": {} }\n```\n\n## Why it matters',
     );
     const { html } = rulePage(page, "hide-foreign-keys");
     expect(html).toContain(
-      '<figure class="example fires">\n<figcaption id="code_3">Fires the rule in visual.json</figcaption>\n<pre tabindex="0" role="region" aria-labelledby="code_3"><code class="language-json">{ &quot;name&quot;: &quot;v&quot; }\n</code></pre>\n</figure>',
+      '<figure class="example fires">\n<figcaption id="code_3">Fires the rule in <code>visual.json</code></figcaption>\n<pre tabindex="0" role="region" aria-labelledby="code_3"><code class="language-json">{ &quot;name&quot;: &quot;v&quot; }\n</code></pre>\n</figure>',
     );
     expect(html).toContain(
       '<figure class="example fixed">\n<figcaption id="code_4">After the fix</figcaption>\n<pre tabindex="0" role="region" aria-labelledby="code_4"><code class="language-json">',
@@ -183,13 +185,15 @@ describe("rulePage", () => {
       page.replace("pbir fires visual.json", "pbir fires a<b.json"),
       "hide-foreign-keys",
     ).html;
-    expect(escaped).toContain('<figcaption id="code_3">Fires the rule in a&lt;b.json</figcaption>');
+    expect(escaped).toContain(
+      '<figcaption id="code_3">Fires the rule in <code>a&lt;b.json</code></figcaption>',
+    );
   });
   it("renders a pbiplint.config.json fence as a JSON figure captioned with the file, with no fires or fixed class", () => {
     // A policy rule fires only under a policy, so its page shows the config beside the documents.
     const { html } = rulePage(read("filters-pane-state"), "filters-pane-state");
     expect(html).toContain(
-      '<figure class="example">\n<figcaption id="code_1">pbiplint.config.json</figcaption>\n<pre tabindex="0" role="region" aria-labelledby="code_1"><code class="language-json">{\n  &quot;rules&quot;: {\n    &quot;FILTERS_PANE_STATE&quot;: { &quot;expect&quot;: &quot;closed&quot; }\n  }\n}\n</code></pre>\n</figure>',
+      '<figure class="example">\n<figcaption id="code_1"><code>pbiplint.config.json</code></figcaption>\n<pre tabindex="0" role="region" aria-labelledby="code_1"><code class="language-json">{\n  &quot;rules&quot;: {\n    &quot;FILTERS_PANE_STATE&quot;: { &quot;expect&quot;: &quot;closed&quot; }\n  }\n}\n</code></pre>\n</figure>',
     );
     expect(html).not.toContain("language-json pbiplint.config.json");
     // Only that exact info string: another file name is a plain fence, as marked writes it.
@@ -201,7 +205,7 @@ describe("rulePage", () => {
     expect(plain).toContain(
       '<pre tabindex="0" role="region" aria-label="Code block 1"><code class="language-json">{}\n</code></pre>',
     );
-    expect(plain).not.toContain(">other.json</figcaption>");
+    expect(plain).not.toContain("other.json</code></figcaption>");
   });
   it("makes every code block a named region and a tab stop, so it can be scrolled from the keyboard and a screen reader says what it is", () => {
     // A long line scrolls inside its block (pre has overflow-x: auto); without a tab stop, a
@@ -270,7 +274,7 @@ describe("rulePage", () => {
     // Each block is named by its own figure's caption, the one just above it.
     for (const id of captions)
       expect(html).toMatch(
-        new RegExp(`<figcaption id="${id}">[^<]*</figcaption>\\n<pre [^>]*aria-labelledby="${id}"`),
+        new RegExp(`<figcaption id="${id}">.*?</figcaption>\\n<pre [^>]*aria-labelledby="${id}"`),
       );
   });
   it("numbers the caption ids per page, so every page's start again", () => {
@@ -358,14 +362,27 @@ describe("rulePage", () => {
   it("names the page's layer in its meta line only when the site publishes more than one family", () => {
     // One family published: every published page would name the same layer, so none does.
     const meta = (html: string): string => /<p class="meta">.*<\/p>/.exec(html)?.[0] ?? "";
-    const single = meta(rulePage(read("hide-foreign-keys"), "hide-foreign-keys").html);
+    const single = meta(
+      rulePage(read("hide-foreign-keys"), "hide-foreign-keys", new Map(), ["model"]).html,
+    );
     expect(single).toContain("· ported · scope: ");
     expect(single).not.toContain(" layer");
-    // Both families published, as from pull request 7: the item follows the status.
-    const both = (slug: string): string =>
-      meta(rulePage(read(slug), slug, new Map(), ["model", "report"]).html);
+    // Both families published, as the site does from pull request 7: the item follows the status.
+    const both = (slug: string): string => meta(rulePage(read(slug), slug).html);
     expect(both("hide-foreign-keys")).toContain("· ported · model layer · scope: ");
+    expect(both("filters-pane-state")).toContain("· built in · report layer · scope: ");
     expect(both("parse-issue")).toContain("· built in · project layer · scope: ");
+  });
+  it("offers to check the part of a project the rule reads", () => {
+    // The button under every page opens the home page; it names what a reader would drop there
+    // to have the rule checked.
+    const cta = (slug: string): string =>
+      /<p class="cta"><a class="button" href="\/">([^<]*)<\/a>/.exec(
+        rulePage(read(slug), slug).html,
+      )?.[1] ?? "";
+    expect(cta("hide-foreign-keys")).toBe("Check a model for this");
+    expect(cta("filters-pane-state")).toBe("Check a report for this");
+    expect(cta("parse-issue")).toBe("Check a project for this");
   });
   it("links a code span that names another rule, and only another rule", () => {
     const page = read("hide-foreign-keys").replace(
@@ -457,10 +474,12 @@ describe("code region names", () => {
    * caption on the page reads as a problem rather than a name.
    */
   const regionNames = (html: string): string[] => {
+    // A caption's text, as a browser computes the name from it: the file name's code element
+    // contributes its text.
     const captions = new Map(
-      [...html.matchAll(/<figcaption id="([^"]+)">([^<]*)<\/figcaption>/g)].map((m) => [
+      [...html.matchAll(/<figcaption id="([^"]+)">(.*?)<\/figcaption>/g)].map((m) => [
         m[1]!,
-        m[2]!,
+        m[2]!.replace(/<[^>]+>/g, ""),
       ]),
     );
     return [...html.matchAll(/<pre [^>]*?(aria-labelledby|aria-label)="([^"]+)"/g)].map((m) =>
@@ -579,13 +598,19 @@ describe("pageLayer and SITE_LAYERS", () => {
       'rules/made-up.md: unknown layer "" (expected one of model, report, project, or no layer key at all)',
     );
   });
-  it("publishes the model family only, until the browser can lint a report", () => {
-    expect([...SITE_LAYERS]).toEqual(["model"]);
+  it("publishes both families, now that the browser lints a report", () => {
+    expect([...SITE_LAYERS]).toEqual(["model", "report"]);
     expect(publishesLayer("model")).toBe(true);
-    expect(publishesLayer("report")).toBe(false);
+    expect(publishesLayer("report")).toBe(true);
     // A project rule fires on any input the site can lint, so its page publishes either way, and
     // project is never a member of SITE_LAYERS.
     expect(publishesLayer("project")).toBe(true);
+    // The gate still reads the list it is given: with the model alone published, as before pull
+    // request 7, a report page is held back and a project page is not.
+    expect(publishesLayer("report", ["model"])).toBe(false);
+    expect(publishesLayer("model", ["model"])).toBe(true);
+    expect(publishesLayer("project", ["model"])).toBe(true);
+    expect(publishesLayer("project", [])).toBe(false);
   });
 });
 
@@ -593,23 +618,33 @@ describe("generateSite", () => {
   it("writes every rule page, the index, the about page, and the sitemap", () => {
     const out = mkdtempSync(join(tmpdir(), "pbiplint-site-"));
     const metas = generateSite({ outDir: out });
-    expect(metas.length).toBe(74);
-    expect(readdirSync(join(out, "rules")).filter((d) => d !== "index.html").length).toBe(74);
+    expect(metas.length).toBe(98);
+    expect(readdirSync(join(out, "rules")).filter((d) => d !== "index.html").length).toBe(98);
+    // Every report page publishes, each one on the site's rule-id link map with the rest.
+    const reportPages = metas.filter((m) => m.layer === "report").map((m) => m.slug);
+    expect(reportPages).toHaveLength(24);
+    for (const slug of reportPages)
+      expect(existsSync(join(out, `rules/${slug}/index.html`)), slug).toBe(true);
+    expect(readFileSync(join(out, "rules/landing-page-not-set/index.html"), "utf8")).toContain(
+      '<a href="/rules/opening-page-invalid/"><code>OPENING_PAGE_INVALID</code></a>',
+    );
     expect(existsSync(join(out, "rules/hide-foreign-keys/index.html"))).toBe(true);
     expect(readFileSync(join(out, "rules/hide-foreign-keys/index.html"), "utf8")).toContain(
       '<a href="/rules/mark-primary-keys/"><code>MARK_PRIMARY_KEYS</code></a>',
     );
     const index = readFileSync(join(out, "rules/index.html"), "utf8");
     expect(index).toContain(
-      "74 rules: 66 model rules ported from Microsoft's Best Practice Analyzer ruleset so the results match Tabular Editor, 5 listed but not run because they need statistics only a live model has, and 3 built into pbiplint.",
+      "98 rules: 66 model rules ported from Microsoft's Best Practice Analyzer ruleset so the results match Tabular Editor, 5 listed but not run because they need statistics only a live model has, 11 report rules ported from PBI Inspector's base rules by Nat Van Gulck, and 16 built into pbiplint.",
     );
     expect(index).toContain('<h2 id="error-prevention">Error Prevention</h2>');
     expect((index.match(/needs a live model/g) ?? []).length).toBe(5);
+    // The layer column is on: every row names its layer.
+    expect((index.match(/<span class="layer (model|report|project)">/g) ?? []).length).toBe(98);
     for (const m of metas) expect(index).toContain(`href="/rules/${m.slug}/"`);
     const summaries = [...index.matchAll(/<span class="summary">([\s\S]*?)<\/span>/g)].map(
       (m) => m[1]!,
     );
-    expect(summaries.length).toBe(74);
+    expect(summaries.length).toBe(98);
     expect(summaries.some((s) => s.includes("<code>///</code>"))).toBe(true);
     expect(summaries.filter((s) => s.includes("`"))).toEqual([]);
     const parseIssue = readFileSync(join(out, "rules/parse-issue/index.html"), "utf8");
@@ -622,6 +657,9 @@ describe("generateSite", () => {
     expect(about).toContain("<title>About pbiplint");
     const sitemap = readFileSync(join(out, "public/sitemap.xml"), "utf8");
     expect(sitemap).toContain("<loc>https://pbiplint.com/rules/hide-foreign-keys/</loc>");
+    expect(sitemap).toContain("<loc>https://pbiplint.com/rules/filters-pane-state/</loc>");
+    // The home page, the About page, the rules index, and one entry per rule page.
+    expect((sitemap.match(/<loc>/g) ?? []).length).toBe(3 + 98);
     expect(Object.keys(pageEntries(out)).sort()).toEqual(
       ["about", "rules", ...metas.map((m) => `rules/${m.slug}`)].sort(),
     );
@@ -675,7 +713,9 @@ describe("generateSite", () => {
     // read in place of the first. A missed anchor would leave the page on the model layer.
     expect(report).toContain("layer: report\n");
     writeFileSync(join(rules, "mark-primary-keys.md"), report);
-    const metas = generateSite({ outDir: out, rulesDir: rules });
+    // The site publishes both families, so the gate is driven with the list it had before pull
+    // request 7, the model alone.
+    const metas = generateSite({ outDir: out, rulesDir: rules, published: ["model"] });
     // Not rendered, and not among the metas the caller gets back.
     expect(metas.map((m) => m.slug)).toEqual(["hide-foreign-keys"]);
     expect(existsSync(join(out, "rules/hide-foreign-keys/index.html"))).toBe(true);
@@ -711,7 +751,7 @@ describe("generateSite", () => {
     // below would pass while proving nothing about the project layer.
     expect(fixture).toContain("\nlayer: project\n");
     writeFileSync(join(rules, "parse-issue.md"), fixture);
-    const metas = generateSite({ outDir: out, rulesDir: rules });
+    const metas = generateSite({ outDir: out, rulesDir: rules, published: ["model"] });
     expect(metas.map((m) => m.slug)).toEqual(["hide-foreign-keys", "parse-issue"]);
     expect(existsSync(join(out, "rules/parse-issue/index.html"))).toBe(true);
     const index = readFileSync(join(out, "rules/index.html"), "utf8");
@@ -777,8 +817,14 @@ describe("rulesIndex", () => {
   it("badges each rule with its layer only when the site publishes more than one family", () => {
     // One family published: a badge would read model on every row, a column that tells no row
     // from another, so there is none.
-    expect(rulesIndex(metas)).not.toContain('class="layer');
-    // Both families published, as from pull request 7: the badge follows the severity badge.
+    expect(
+      rulesIndex(
+        metas.filter((m) => m.layer !== "report"),
+        ["model"],
+      ),
+    ).not.toContain('class="layer');
+    // Both families published, as the site does from pull request 7: the badge follows the
+    // severity badge.
     const report: RuleMeta = {
       ...metas[0]!,
       slug: "a-report-rule",
@@ -787,16 +833,44 @@ describe("rulesIndex", () => {
       status: "ported",
       layer: "report",
     };
-    const index = rulesIndex([...metas, report], ["model", "report"]);
+    const index = rulesIndex([...metas, report]);
     expect(index).toContain('<span class="layer report">report</span>');
     expect(index).toContain('<span class="layer model">model</span>');
     expect(index).toContain(
       '<a href="/rules/a-report-rule/">A report rule</a> <span class="badge warning">warning</span> <span class="layer report">report</span><br />',
     );
-    // With a report rule published, the count names its source in the clause the gate holds back.
+    // The count takes the added page into the clause for its source.
     expect(index).toContain(
-      "75 rules: 66 model rules ported from Microsoft's Best Practice Analyzer ruleset so the results match Tabular Editor, 5 listed but not run because they need statistics only a live model has, 1 report rules ported from PBI Inspector's base rules, and 3 built into pbiplint.",
+      "99 rules: 66 model rules ported from Microsoft's Best Practice Analyzer ruleset so the results match Tabular Editor, 5 listed but not run because they need statistics only a live model has, 12 report rules ported from PBI Inspector's base rules by Nat Van Gulck, and 16 built into pbiplint.",
     );
+    // With no report page published, the report clause is left out rather than read as zero.
+    expect(
+      rulesIndex(
+        metas.filter((m) => m.layer !== "report"),
+        ["model"],
+      ),
+    ).toContain(
+      "74 rules: 66 model rules ported from Microsoft's Best Practice Analyzer ruleset so the results match Tabular Editor, 5 listed but not run because they need statistics only a live model has, and 3 built into pbiplint.",
+    );
+  });
+  it("refuses a rule no clause of the count names, rather than printing a count its clauses do not sum to", () => {
+    // Each clause counts one status and source; a page that falls in none would be in the total at
+    // the top of the index and in no clause after it (tracked in #66).
+    const project: RuleMeta = {
+      ...metas[0]!,
+      slug: "a-ported-project-rule",
+      status: "ported",
+      layer: "project",
+    };
+    expect(() => rulesIndex([...metas, project])).toThrow(
+      'a-ported-project-rule: status "ported" on the project layer is in no clause of the rules count (add a clause for it in rulesIndex in packages/web/src/build/pages.ts)',
+    );
+    const drafted: RuleMeta = { ...metas[0]!, slug: "a-draft", status: "draft", layer: "model" };
+    expect(() => rulesIndex([drafted])).toThrow(
+      'a-draft: status "draft" on the model layer is in no clause of the rules count',
+    );
+    // Every real rule is counted.
+    expect(() => rulesIndex(metas)).not.toThrow();
   });
 });
 

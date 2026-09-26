@@ -3,8 +3,11 @@ import {
   plural,
   SEVERITY_LABEL,
   skippedLine,
+  slug,
   summaryLine,
   topGroups,
+  type Fact,
+  type LayerName,
   type LintResult,
   type RankedGroup,
   type Severity,
@@ -12,11 +15,15 @@ import {
 import { copy, download, exportJson, exportMarkdown } from "./export.js";
 
 export interface RenderOptions {
-  /** What was linted, for the heading: "the sample project (11 files)", "pasted TMDL". */
+  /**
+   * What was linted, without counts: "the sample project", "pasted TMDL", or a dropped folder's
+   * name. The heading adds each layer's file count from the result (see heading).
+   */
   source: string;
   /**
-   * The files that were read, as paths relative to the model root, listed under the results so a
-   * file the browser skipped is visible by its absence. Omitted for a paste, where nothing was read.
+   * The files that were read, as paths relative to the project root, listed under the results so
+   * a file the browser skipped is visible by its absence. Omitted for a paste, where nothing was
+   * read.
    */
   files?: string[];
   /** Sentences about the input worth a notice under the summary, such as a model folder that was not linted. */
@@ -46,6 +53,7 @@ export function h<K extends keyof HTMLElementTagNameMap>(
 }
 
 const SEVERITIES: readonly Severity[] = [3, 2, 1];
+const LAYERS: readonly LayerName[] = ["model", "report"];
 const pagePath = (slug: string): string => `/rules/${slug}/`;
 
 /** "1 error", "3 warnings", "106 info": the severity nouns as the text format writes them. */
@@ -55,6 +63,20 @@ const count = (n: number, severity: Severity): string => {
   // to its caller.
   return noun === "info" ? `${n} ${noun}` : plural(n, noun);
 };
+
+/**
+ * "Results for the sample project (model, 14 files · report, 77 files)": the source, then each
+ * layer the run read with its file count. Present layers only, so a run given one part says nothing
+ * about the part it was not given (decision 14), and a run that read neither part names no count.
+ * The page announces the same words ahead of the summary sentence.
+ */
+export function heading(result: LintResult, source: string): string {
+  const layers = LAYERS.flatMap((name) => {
+    const layer = result.layers[name];
+    return layer.present ? [`${name}, ${plural(layer.files, "file")}`] : [];
+  });
+  return layers.length ? `Results for ${source} (${layers.join(" · ")})` : `Results for ${source}`;
+}
 
 export function renderResults(
   container: HTMLElement,
@@ -68,11 +90,14 @@ export function renderResults(
       "Nothing was uploaded. The analysis ran in this browser tab. ",
       h("a", { href: "/about/#verify" }, "How to check that"),
     ),
-    h("h2", {}, `Results for ${options.source}`),
+    h("h2", {}, heading(result, options.source)),
     // The summary is not a live region: everything is rebuilt on each run, and a region inserted
     // with its text already set may not be announced. The page announces it through #announce.
     h("p", { class: "summary" }, `${summaryLine(result)}. ${skippedLine(result)}.`),
     ...(options.notes ?? []).map((note) => h("p", { class: "notice" }, note)),
+    // What the reader could not read, or read as a legacy part, follows the input's notes, so no
+    // read failure is silent.
+    ...result.diagnostics.map((d) => h("p", { class: "notice" }, d.message)),
     ...result.summary.unknownRules.map((id) =>
       h("p", { class: "notice" }, `pbiplint.config.json names no rule called "${id}".`),
     ),
@@ -88,12 +113,17 @@ export function renderResults(
           ),
         ]
       : []),
-    // Right under the sentence that counts the files, so "in 11 files" expands into which ones.
+    // Right under the sentence that counts the files, so the heading's "(model, 14 files ·
+    // report, 77 files)" expands into which ones.
     ...renderFilesRead(options.files),
+    // What the report will do, whether or not anything fired: after everything that says what
+    // was read, before what to fix. A run with no report has no facts and no panel.
+    ...renderFacts(result),
   );
-  // Cleared on every render and set again below only when there are filters to change, so a run
-  // with no findings cannot leave the previous run's handler on the container.
+  // Cleared on every render and set again below only when there are filters to change and groups
+  // to link to, so a run with no findings cannot leave the previous run's handlers on the container.
   container.onchange = null;
+  container.onclick = null;
   if (result.groups.length === 0) {
     container.append(h("p", { class: "clean" }, "No findings."));
     return;
@@ -104,13 +134,16 @@ export function renderResults(
       "ol",
       { class: "fix-first" },
       // The name jumps to the group; the second link opens the rule page, which is otherwise only
-      // reachable from inside the group once it is expanded.
+      // reachable from inside the group once it is expanded. The tag sits between the count and
+      // that link, where the approved mockup puts it.
       ...topGroups(result).map((g) =>
         h(
           "li",
           {},
           h("a", { href: `#rule-${g.rule.slug}` }, g.rule.name),
-          ` (${count(g.findings.length, g.rule.severity)}) · `,
+          ` (${count(g.findings.length, g.rule.severity)}) `,
+          layerTag(g),
+          " · ",
           h(
             "a",
             {
@@ -127,11 +160,111 @@ export function renderResults(
     renderFilters(result),
     h("div", { class: "groups" }, ...result.groups.map(renderGroup)),
   );
-  // One handler for the whole container, assigned rather than added, so re-rendering replaces it
-  // instead of stacking a second one.
+  // One handler of each kind for the whole container, assigned rather than added, so re-rendering
+  // replaces them instead of stacking a second one.
   container.onchange = (event) => {
     if ((event.target as HTMLElement).matches("input[data-filter]")) applyFilters(container);
   };
+  // A link to a group lands on its findings: a fact flag or a fix-first name whose group a filter
+  // hid would otherwise do nothing visible. The handler runs before the browser follows the link
+  // and never cancels it, so the browser scrolls to the group once it is shown, as it does for a
+  // shown one. Enter on a focused link fires the same click. A click with a modifier held opens
+  // the link somewhere else, so this page is left as it is.
+  container.onclick = (event) => {
+    if (event.defaultPrevented || event.button !== 0) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const link = event.target instanceof Element ? event.target.closest("a[href^='#rule-']") : null;
+    const id = link?.getAttribute("href")?.slice(1);
+    const group = [...container.querySelectorAll<HTMLDetailsElement>("details.group")].find(
+      (g) => g.id === id,
+    );
+    if (!group) return;
+    reveal(container, group);
+    // Following the link, the browser runs its focusing steps on the group. A group cannot take
+    // focus, so every engine gives it to the page itself, and WebKit's next Tab then skips the
+    // whole group. Focusable for that one moment, the group takes the focus instead, whenever the
+    // engine gets there (Firefox does in a later task), and hands it straight to its summary,
+    // where the view already is.
+    group.tabIndex = -1;
+    group.addEventListener(
+      "focus",
+      () => {
+        group.removeAttribute("tabindex");
+        group.querySelector("summary")?.focus({ preventScroll: true });
+      },
+      { once: true },
+    );
+  };
+}
+
+/**
+ * Shows a group a filter hid and opens it. Only the boxes that hide it are checked again (its
+ * severity, its category, and its layer when there are layer boxes) and every other box stays as
+ * the reader set it. A project group shows while either layer is checked, so both layer boxes are
+ * checked only when neither is.
+ */
+function reveal(container: HTMLElement, group: HTMLDetailsElement): void {
+  if (group.hidden) {
+    const { severity = "", category = "", layer = "" } = group.dataset;
+    const check = (box: HTMLInputElement | undefined): void => {
+      if (box) box.checked = true;
+    };
+    check(filterBoxes(container, "severity").find((b) => b.value === severity));
+    check(filterBoxes(container, "category").find((b) => b.value === category));
+    const layers = filterBoxes(container, "layer");
+    if (layer === "project") {
+      if (!layers.some((b) => b.checked)) layers.forEach(check);
+    } else check(layers.find((b) => b.value === layer));
+    applyFilters(container);
+  }
+  group.open = true;
+}
+
+/** The Show filter's boxes of one kind: severity, category, or layer. */
+function filterBoxes(container: HTMLElement, kind: string): HTMLInputElement[] {
+  return [...container.querySelectorAll<HTMLInputElement>(`input[data-filter="${kind}"]`)];
+}
+
+/** A group's layer, as the tag on its row and on its fix-first item: model, report, or project. */
+const layerTag = (g: RankedGroup): HTMLElement =>
+  h("span", { class: `layer ${g.rule.layer}` }, g.rule.layer);
+
+/**
+ * "Report at a glance": what the report will do, one row per fact core gives, and nothing when it
+ * gives none (a run with no report). A fact whose rule ran links its value: to the rule's group on
+ * this page when the run has one, flagged, since there is something to fix, and to the rule's page
+ * when the rule found nothing. Every href is built from the rule id, never from report text.
+ */
+function renderFacts(result: LintResult): HTMLElement[] {
+  if (result.facts.length === 0) return [];
+  const onPage = new Map(result.groups.map((g) => [g.rule.id, g.rule.slug]));
+  const value = (f: Fact): Node | string => {
+    if (f.ruleId === undefined) return f.value;
+    const here = onPage.get(f.ruleId);
+    return here === undefined
+      ? h("a", { class: "fact", href: pagePath(slug(f.ruleId)) }, f.value)
+      : h("a", { class: "fact flag", href: `#rule-${here}` }, f.value);
+  };
+  return [
+    h(
+      "section",
+      { class: "facts" },
+      h("h3", {}, "Report at a glance"),
+      h(
+        "dl",
+        {},
+        ...result.facts.flatMap((f) => [
+          h("dt", {}, f.label),
+          h(
+            "dd",
+            {},
+            value(f),
+            ...(f.detail === undefined ? [] : [" · ", h("span", { class: "detail" }, f.detail)]),
+          ),
+        ]),
+      ),
+    ),
+  ];
 }
 
 /** The files that were read, collapsed: the count is enough until a file seems to be missing. */
@@ -194,29 +327,45 @@ function renderFilters(result: LintResult): HTMLElement {
   const categories = CATEGORY_ORDER.filter((c) => result.groups.some((g) => g.rule.category === c));
   // "Error", not "error": the category labels beside them are title case.
   const titleCase = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
+  // A Model and Report pair only when both layers have groups: with one, unchecking it would only
+  // hide everything, which the severity boxes already do.
+  const layers = LAYERS.filter((l) => result.groups.some((g) => g.rule.layer === l));
   return h(
     "fieldset",
     { class: "filters" },
     h("legend", {}, "Show"),
     ...severities.map((s) => box("severity", String(s), titleCase(SEVERITY_LABEL[s]))),
+    ...(layers.length === LAYERS.length
+      ? [h("span", { class: "gap" }), ...layers.map((l) => box("layer", l, titleCase(l)))]
+      : []),
     h("span", { class: "gap" }),
     ...categories.map((c) => box("category", c, c)),
   );
 }
 
-/** Hides every group whose severity or category is unchecked. */
+/**
+ * Hides every group whose severity, category, or layer is unchecked. A project group, whose
+ * findings fall on both layers, stays shown while either layer is checked. With no layer boxes,
+ * a run with groups on one layer, the layer hides nothing.
+ */
 export function applyFilters(container: HTMLElement): void {
   const checked = (kind: string): Set<string> =>
     new Set(
-      [...container.querySelectorAll<HTMLInputElement>(`input[data-filter="${kind}"]`)]
+      filterBoxes(container, kind)
         .filter((i) => i.checked)
         .map((i) => i.value),
     );
   const severities = checked("severity");
   const categories = checked("category");
+  const byLayer = filterBoxes(container, "layer").length > 0;
+  const layers = checked("layer");
+  const layerShown = (layer: string): boolean =>
+    !byLayer || (layer === "project" ? layers.size > 0 : layers.has(layer));
   for (const group of container.querySelectorAll<HTMLElement>(".group"))
     group.hidden = !(
-      severities.has(group.dataset.severity ?? "") && categories.has(group.dataset.category ?? "")
+      severities.has(group.dataset.severity ?? "") &&
+      categories.has(group.dataset.category ?? "") &&
+      layerShown(group.dataset.layer ?? "")
     );
 }
 
@@ -239,13 +388,16 @@ function renderGroup(g: RankedGroup): HTMLElement {
       id: `rule-${g.rule.slug}`,
       "data-severity": String(g.rule.severity),
       "data-category": g.rule.category,
+      "data-layer": g.rule.layer,
     },
     // The summary is the disclosure control itself, so it holds no focusable child: the rule link
-    // sits in the panel below, where activating it can only mean "open the page".
+    // sits in the panel below, where activating it can only mean "open the page". The layer tag
+    // sits between the badge and the name, where the approved mockup puts it.
     h(
       "summary",
       {},
       h("span", { class: `badge ${label}` }, label),
+      layerTag(g),
       h("span", { class: "name" }, g.rule.name),
       // The digits are for the eye, the phrase for a screen reader: "2" beside a rule name is a
       // number with no noun, and both in the open would read the count out twice.

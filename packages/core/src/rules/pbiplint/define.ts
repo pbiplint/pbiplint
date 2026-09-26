@@ -1,3 +1,4 @@
+import type { Model } from "../../model/types.js";
 import type { Report } from "../../pbir/types.js";
 import type { Project } from "../../project/types.js";
 import { RULE_SUMMARIES } from "../rule-summaries.data.js";
@@ -25,6 +26,8 @@ export interface PbiplintRuleSpec {
   needs?: readonly LayerName[];
   /** The unread report files that stop the rule (Rule.skipWhenUnread). */
   skipWhenUnread?: (report: Report) => boolean;
+  /** The partly read model that stops the rule (Rule.skipWhenModelUnread). */
+  skipWhenModelUnread?: (model: Model) => boolean;
   options?: readonly RuleOption[];
   references?: string[];
   policySeverity?(options: RuleOptions): Severity | undefined;

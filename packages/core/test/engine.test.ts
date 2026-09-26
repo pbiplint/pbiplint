@@ -1,13 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { buildIndexes } from "../src/index/build.js";
-import { bindConfig, ConfigError, resolveConfig } from "../src/engine/config.js";
+import {
+  bindConfig,
+  ConfigError,
+  resolveConfig,
+  type PbiplintConfig,
+} from "../src/engine/config.js";
 import { ignoreHelp, isIgnored } from "../src/engine/ignore.js";
 import { lint } from "../src/engine/lint.js";
 import { rank } from "../src/engine/rank.js";
 import { optionsFor, runRules } from "../src/engine/run.js";
 import { buildReport } from "../src/pbir/build.js";
 import { skippedLine } from "../src/format/text.js";
-import { finding, namedObjects } from "../src/rules/helpers.js";
+import { finding, modelPartlyRead, namedObjects } from "../src/rules/helpers.js";
 import { PARSE_ISSUE } from "../src/rules/parse-issue.js";
 import { ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY } from "../src/rules/pbi-inspector/pages.js";
 import { REMOVE_UNUSED_CUSTOM_VISUALS } from "../src/rules/pbi-inspector/report.js";
@@ -368,6 +373,44 @@ describe("runRules", () => {
         { id: "ANY_REPORT", reason: "noModel" },
       ],
     );
+  });
+  it("skips a rule when its skipWhenModelUnread holds, after the report's reason and a missing layer's", () => {
+    const both = { ...base, layer: "project" as const, needs: ["model", "report"] as const };
+    const wholeProject: Rule = {
+      ...both,
+      id: "WHOLE_PROJECT",
+      name: "Whole project",
+      category: "Maintenance",
+      severity: 1,
+      skipWhenUnread: fieldFileUnread,
+      skipWhenModelUnread: modelPartlyRead,
+      check: ({ model }) => [finding.model(model!)],
+    };
+    const wholeModel: Rule = { ...wholeProject, id: "WHOLE_MODEL", skipWhenUnread: undefined };
+    const page = { path: "definition/pages/p/page.json", text: '{ "name": "p" }' };
+    const run = (tmdl: string, reportFiles = [page], withReport = true) => {
+      const model = modelFrom(tmdl);
+      const project = { model, ...(withReport ? { report: buildReport(reportFiles).report } : {}) };
+      return runRules(project, buildIndexes(project), [wholeProject, wholeModel], resolveConfig());
+    };
+    const read = "table A\n\tcolumn X\n\t\tdataType: string\n";
+    // A line indented with spaces takes what it declares out of the model.
+    const partly = `${read}    column Y\n`;
+    expect(run(read).rulesRun).toEqual(["WHOLE_PROJECT", "WHOLE_MODEL"]);
+    expect(run(partly).rulesSkipped).toEqual([
+      { id: "WHOLE_PROJECT", reason: "modelFileUnread" },
+      { id: "WHOLE_MODEL", reason: "modelFileUnread" },
+    ]);
+    // Both conditions: the report's reason, checked first, is the one given.
+    const unreadVisual = { path: "definition/pages/p/visuals/v/visual.json", text: "{" };
+    expect(run(partly, [page, unreadVisual]).rulesSkipped).toEqual([
+      { id: "WHOLE_PROJECT", reason: "reportFileUnread" },
+      { id: "WHOLE_MODEL", reason: "modelFileUnread" },
+    ]);
+    expect(run(partly, [page], false).rulesSkipped).toEqual([
+      { id: "WHOLE_PROJECT", reason: "noReport" },
+      { id: "WHOLE_MODEL", reason: "noReport" },
+    ]);
   });
 });
 
@@ -809,6 +852,64 @@ describe("lint over a project", () => {
       ruleId: "REPORT_LEVEL_MEASURES",
     });
   });
+  it("links the Filters pane to FILTERS_PANE_STATE only when the rule ran under an expect policy", () => {
+    // report.json saves the pane expanded, so pbiplint reads it as open.
+    const expanded = {
+      path: "definition/report.json",
+      text: j({
+        objects: {
+          outspacePane: [{ properties: { expanded: { expr: { Literal: { Value: "true" } } } } }],
+        },
+      }),
+    };
+    const files = [expanded, ...reportFiles.filter((f) => f.path !== "definition/report.json")];
+    const pane = (r: ReturnType<typeof lint>) => ({
+      fact: r.facts.find((f) => f.label === "Filters pane"),
+      findings: r.findings.filter((f) => f.ruleId === "FILTERS_PANE_STATE").map((f) => f.detail),
+      skipped: r.summary.rulesSkipped.find((s) => s.id === "FILTERS_PANE_STATE"),
+    });
+    const open = { layer: "report", label: "Filters pane", value: "open" };
+    const linked = { ...open, ruleId: "FILTERS_PANE_STATE" };
+    // No policy: the rule runs and can never fire, so the fact links nothing.
+    expect(pane(lint(files))).toEqual({ fact: open, findings: [], skipped: undefined });
+    // A policy the saved state meets: the rule ran and found nothing, and the fact links it.
+    const meets = { rules: { FILTERS_PANE_STATE: { expect: "open" } } };
+    expect(pane(lint(files, { config: meets }))).toEqual({
+      fact: linked,
+      findings: [],
+      skipped: undefined,
+    });
+    // A policy the saved state breaks, however the config writes it: with a severity, or under an
+    // id in another case, which binds to the rule as its options do.
+    const breaks: PbiplintConfig["rules"][] = [
+      { FILTERS_PANE_STATE: { expect: "closed" } },
+      { FILTERS_PANE_STATE: { severity: "error", expect: "closed" } },
+      { filters_pane_state: { expect: "closed" } },
+    ];
+    for (const rules of breaks)
+      expect(pane(lint(files, { config: { rules } })), JSON.stringify(rules)).toEqual({
+        fact: linked,
+        findings: ["saved open; the policy expects closed"],
+        skipped: undefined,
+      });
+    // Turned off with a policy in hand: the rule did not run, so the fact links nothing.
+    const off = resolveConfig({ rules: { FILTERS_PANE_STATE: { expect: "closed" } } });
+    off.disabled.add("FILTERS_PANE_STATE");
+    expect(pane(lint(files, { config: off }))).toEqual({
+      fact: open,
+      findings: [],
+      skipped: { id: "FILTERS_PANE_STATE", reason: "disabled" },
+    });
+    // report.json not read: the pane is unknown and links no rule, under a policy as without one.
+    const unread = [...files.filter((f) => f !== expanded), { path: expanded.path, text: "[]" }];
+    for (const config of [undefined, { rules: { FILTERS_PANE_STATE: { expect: "closed" } } }])
+      expect(pane(lint(unread, config ? { config } : {})).fact).toEqual({
+        layer: "report",
+        label: "Filters pane",
+        value: "unknown",
+        detail: "report.json was not read",
+      });
+  });
   describe("NOT_REACHED_FROM_REPORT with a report file that could not be read", () => {
     // A readable visual naming Sales[Region], which the model does not have, beside the files each
     // case adds. Amount is bound nowhere, so with every file read the rule reports it.
@@ -930,6 +1031,263 @@ describe("lint over a project", () => {
         ["REMOVE_UNUSED_CUSTOM_VISUALS", customVisualUseUnknown],
         ["NOT_REACHED_FROM_REPORT", fieldFileUnread],
       ]);
+    });
+  });
+  describe("NOT_REACHED_FROM_REPORT on a model pbiplint could not fully read", () => {
+    // Base is used only by Doubled's DAX, and nothing in the report binds either. Doubled's line
+    // lost its tabs, so the parser skips it and the model has no Doubled to reach Base through.
+    const withBase = (doubled: string) => [
+      {
+        path: "definition/tables/Sales.tmdl",
+        text: `table Sales\n\tcolumn Amount\n\t\tdataType: decimal\n\tmeasure Base = SUM('Sales'[Amount])\n${doubled}`,
+      },
+      ...reportFiles,
+    ];
+    const skipped = { id: "NOT_REACHED_FROM_REPORT", reason: "modelFileUnread" };
+    const modelFact = (r: ReturnType<typeof lint>) => r.facts.find((f) => f.label === "Model");
+    it("reports what is not reached while every model file was read", () => {
+      const r = lint(withBase("\tmeasure Doubled = [Base] * 2\n"));
+      expect(
+        r.findings.filter((f) => f.ruleId === "NOT_REACHED_FROM_REPORT").map((f) => f.objectName),
+      ).toEqual(["[Base]", "[Doubled]", "'Sales'[Amount]"]);
+      expect(r.summary.rulesSkipped).not.toContainEqual(skipped);
+    });
+    it("is skipped with the reason while a parse issue can have dropped a model object", () => {
+      const r = lint(withBase("    measure Doubled = [Base] * 2\n"));
+      expect(r.findings.filter((f) => f.ruleId === "PARSE_ISSUE").map((f) => f.objectName)).toEqual(
+        ["definition/tables/Sales.tmdl"],
+      );
+      // Without the skip, Base would read as reached by nothing, which is false.
+      expect(r.findings.filter((f) => f.ruleId === "NOT_REACHED_FROM_REPORT")).toEqual([]);
+      expect(r.summary.rulesSkipped).toContainEqual(skipped);
+      expect(skippedLine(r)).toContain("1 rule skipped (a model file could not be fully read)");
+      expect(modelFact(r)).toEqual({
+        layer: "model",
+        label: "Model",
+        value: "1 table, 1 column, 1 measure",
+        detail: "not reached from this report: unknown, a model file could not be fully read",
+      });
+    });
+    it("runs while the only parse issue is an orphaned description, which drops no declaration", () => {
+      const r = lint(withBase("\t/// Twice the base\n\n\tmeasure Doubled = [Base] * 2\n"));
+      expect(r.findings.filter((f) => f.ruleId === "PARSE_ISSUE")).toHaveLength(1);
+      expect(r.summary.rulesSkipped).not.toContainEqual(skipped);
+      expect(modelFact(r)?.ruleId).toBe("NOT_REACHED_FROM_REPORT");
+    });
+    it("gives the report file's reason when a report file could not be read as well", () => {
+      const r = lint([
+        ...withBase("    measure Doubled = [Base] * 2\n"),
+        { path: "definition/pages/p/visuals/v/visual.json", text: "[]" },
+      ]);
+      expect(r.summary.rulesSkipped).toContainEqual({
+        id: "NOT_REACHED_FROM_REPORT",
+        reason: "reportFileUnread",
+      });
+      expect(r.summary.rulesSkipped).not.toContainEqual(skipped);
+      expect(skippedLine(r)).not.toContain("a model file could not be fully read");
+      expect(modelFact(r)?.detail).toBe(
+        "not reached from this report: unknown, a report file could not be read",
+      );
+    });
+    it("is the only rule a partly read model stops", () => {
+      expect(
+        defaultRules.filter((r) => r.skipWhenModelUnread).map((r) => [r.id, r.skipWhenModelUnread]),
+      ).toEqual([["NOT_REACHED_FROM_REPORT", modelPartlyRead]]);
+    });
+  });
+  describe("what the input reader could not read (the unreadPaths option)", () => {
+    const card = (name: string, fields: unknown[]) => ({
+      path: `definition/pages/p/visuals/${name}/visual.json`,
+      text: j({
+        name,
+        position: {},
+        visual: {
+          visualType: "card",
+          query: {
+            queryState: { Values: { projections: fields.map((field) => ({ field })) } },
+          },
+        },
+      }),
+    });
+    const ref = (kind: "Column" | "Measure", entity: string, property: string) => ({
+      [kind]: { Expression: { SourceRef: { Entity: entity } }, Property: property },
+    });
+    const productFile = {
+      path: "definition/tables/Product.tmdl",
+      text: "table Product\n\tcolumn Category\n\t\tdataType: string\n",
+    };
+    const salesFile = {
+      path: "definition/tables/Sales.tmdl",
+      text: "table Sales\n\tcolumn Amount\n\t\tdataType: decimal\n\tmeasure Total = SUM('Sales'[Amount])\n",
+    };
+    // A table the model lacks, a column missing from a table, and a measure on another table.
+    const broken = card("c", [
+      ref("Column", "Store", "City"),
+      ref("Column", "Sales", "Nope"),
+      ref("Measure", "Product", "Total"),
+    ]);
+    const files = [salesFile, productFile, ...reportFiles, broken];
+    const details = (r: ReturnType<typeof lint>, id: string) =>
+      r.findings.filter((f) => f.ruleId === id).map((f) => f.detail);
+    const fact = (r: ReturnType<typeof lint>, label: string) =>
+      r.facts.find((f) => f.label === label);
+    const modelRules = new Set(defaultRules.filter((r) => r.layer === "model").map((r) => r.id));
+    const modelRuleFindings = (r: ReturnType<typeof lint>) =>
+      r.findings.filter((f) => modelRules.has(f.ruleId));
+
+    it("reads a model file it could not read as one it could not fully read, with no PARSE_ISSUE", () => {
+      expect(details(lint(files), "BROKEN_FIELD_REFERENCE")).toEqual([
+        `'Store'[City]: no table named "Store"`,
+        `'Sales'[Nope]: no column named "Nope" on "Sales"`,
+        `[Total]: [Total] is on "Sales", not "Product"`,
+      ]);
+      for (const path of ["definition/tables/Store.tmdl", "definition/tables/"]) {
+        const r = lint(files, { unreadPaths: { model: [path] } });
+        expect(r.project.model?.unreadPaths, path).toEqual([path]);
+        // The Store.tmdl the model lacks could declare Store, and could declare Sales again with
+        // Nope under it; a measure's name is unique in the model, so Total is still on Sales.
+        expect(details(r, "BROKEN_FIELD_REFERENCE"), path).toEqual([
+          `[Total]: [Total] is on "Sales", not "Product"`,
+        ]);
+        expect(details(r, "PARSE_ISSUE"), path).toEqual([]);
+        // The input reader's own notice names the path; lint adds none.
+        expect(r.diagnostics, path).toEqual([]);
+        expect(r.summary.rulesSkipped, path).toContainEqual({
+          id: "NOT_REACHED_FROM_REPORT",
+          reason: "modelFileUnread",
+        });
+        expect(fact(r, "Model")?.detail, path).toBe(
+          "not reached from this report: unknown, a model file could not be fully read",
+        );
+        // The model rules read the model as they would with a parse issue in it: as it was read.
+        expect(modelRuleFindings(r), path).toEqual(modelRuleFindings(lint(files)));
+        expect(modelRuleFindings(r).length, path).toBeGreaterThan(0);
+      }
+      // A model path that could hold no declaration, such as the model's .platform, changes nothing.
+      const platform = lint(files, { unreadPaths: { model: [".platform"] } });
+      expect(details(platform, "BROKEN_FIELD_REFERENCE")).toHaveLength(3);
+      expect(platform.summary.rulesSkipped.map((s) => s.reason)).not.toContain("modelFileUnread");
+    });
+
+    it("reads a report file it could not read as one that failed to parse, with no PARSE_ISSUE", () => {
+      const v = "definition/pages/p/visuals/v/visual.json";
+      const unread = lint(files, { unreadPaths: { report: [v] } });
+      const parsed = lint([...files, { path: v, text: '{ "name": "v", ' }]);
+      expect(details(parsed, "PARSE_ISSUE")).toHaveLength(1);
+      expect(details(unread, "PARSE_ISSUE")).toEqual([]);
+      const rest = (r: ReturnType<typeof lint>) => ({
+        findings: r.findings.filter((f) => f.ruleId !== "PARSE_ISSUE"),
+        facts: r.facts,
+        skipped: r.summary.rulesSkipped,
+      });
+      expect(rest(unread)).toEqual(rest(parsed));
+      expect(unread.summary.rulesSkipped).toContainEqual({
+        id: "NOT_REACHED_FROM_REPORT",
+        reason: "reportFileUnread",
+      });
+      expect(skippedLine(unread)).toContain("1 rule skipped (a report file could not be read)");
+      // The unread visual is known by its folder, on the page whose folder holds it.
+      expect(unread.project.report?.unreadDefinitionFiles).toEqual([v]);
+      expect(unread.project.report?.pages.map((p) => [p.id, p.unreadVisuals])).toEqual([
+        ["p", ["v"]],
+      ]);
+      expect(fact(unread, "Slicers")).toEqual({
+        layer: "report",
+        label: "Slicers",
+        value: "unknown",
+        detail: "saved selections: unknown, a visual.json could not be read",
+      });
+      // A broken reference in a file that was read is broken whatever the unread file says.
+      expect(details(unread, "BROKEN_FIELD_REFERENCE")).toHaveLength(3);
+      // An unread definition.pbir, .platform, or .pbip names no field, and changes nothing.
+      const outside = lint(files, {
+        unreadPaths: { report: ["definition.pbir", ".platform", "../Demo.pbip"] },
+      });
+      expect(rest(outside)).toEqual(rest(lint(files)));
+    });
+
+    it("reads an unread report folder as every file it could hold, and the page or visual it names", () => {
+      const bookmark = (name: string, sections: Record<string, unknown>) => ({
+        path: `definition/bookmarks/${name}.bookmark.json`,
+        text: j({ name, explorationState: { activeSection: "p", sections } }),
+      });
+      const button = {
+        path: "definition/pages/p/visuals/go/visual.json",
+        text: j({
+          name: "go",
+          position: {},
+          visual: {
+            visualType: "actionButton",
+            visualContainerObjects: {
+              visualLink: [
+                {
+                  properties: {
+                    type: { expr: { Literal: { Value: "'Bookmark'" } } },
+                    bookmark: { expr: { Literal: { Value: "'b9'" } } },
+                  },
+                },
+              ],
+            },
+          },
+        }),
+      };
+      const withBookmarks = [
+        ...files,
+        button,
+        // Captures a visual on p that was not read and a page q that was not.
+        bookmark("b1", { p: { visualContainers: { x: {} } }, q: {} }),
+      ];
+      const reported = (unreadPaths: string[], id: string) =>
+        details(lint(withBookmarks, { unreadPaths: { report: unreadPaths } }), id);
+      expect(reported([], "BROKEN_BOOKMARK_REFERENCE")).toEqual([
+        'captured page "q" does not exist',
+        'captured visual "x" is not on page "P"',
+      ]);
+      expect(reported([], "BROKEN_ACTION_TARGET")).toEqual([
+        'Bookmark action points at bookmark "b9", which does not exist',
+      ]);
+      // A page's folder names the page; a page's visuals folder holds any visual on it.
+      expect(
+        reported(
+          ["definition/pages/q/", "definition/pages/p/visuals/x/"],
+          "BROKEN_BOOKMARK_REFERENCE",
+        ),
+      ).toEqual([]);
+      expect(reported(["definition/pages/q/"], "BROKEN_BOOKMARK_REFERENCE")).toEqual([
+        'captured visual "x" is not on page "P"',
+      ]);
+      // The visuals folder could not be listed, so the button and the card were not read either.
+      const noVisuals = withBookmarks.filter(
+        (f) => !f.path.startsWith("definition/pages/p/visuals/"),
+      );
+      expect(
+        details(
+          lint(noVisuals, { unreadPaths: { report: ["definition/pages/p/visuals/"] } }),
+          "BROKEN_BOOKMARK_REFERENCE",
+        ),
+      ).toEqual(['captured page "q" does not exist']);
+      // The pages folder could hold a page of any name.
+      const noPages = withBookmarks.filter((f) => !f.path.startsWith("definition/pages/"));
+      expect(
+        details(
+          lint(noPages, { unreadPaths: { report: ["definition/pages/"] } }),
+          "BROKEN_BOOKMARK_REFERENCE",
+        ),
+      ).toEqual([]);
+      expect(details(lint(noPages), "BROKEN_BOOKMARK_REFERENCE")).toEqual([
+        'active page "p" does not exist',
+        'captured page "q" does not exist',
+      ]);
+      // The bookmarks folder could hold a bookmark of any name.
+      const noBookmarks = withBookmarks.filter((f) => !f.path.startsWith("definition/bookmarks/"));
+      const r = lint(noBookmarks, { unreadPaths: { report: ["definition/bookmarks/"] } });
+      expect(details(r, "BROKEN_ACTION_TARGET")).toEqual([]);
+      // Bookmark files name fields, so what the report reaches is not known.
+      expect(r.summary.rulesSkipped).toContainEqual({
+        id: "NOT_REACHED_FROM_REPORT",
+        reason: "reportFileUnread",
+      });
+      expect(details(r, "PARSE_ISSUE")).toEqual([]);
     });
   });
   it("keeps an invalid-JSON detail on one line, whatever the engine's message spans", () => {

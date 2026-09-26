@@ -3,7 +3,6 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { SAMPLE_FILES } from "../src/sample.js";
 
 // happy-dom resolves a relative URL against the page's http base, so the file path is built
 // from import.meta.url instead of new URL(..., import.meta.url).
@@ -55,7 +54,13 @@ describe("home page", () => {
     await tick();
     const results = document.getElementById("results")!;
     expect(results.hidden).toBe(false);
-    expect(results.querySelector(".summary")!.textContent).toContain("185 findings");
+    expect(results.querySelector(".summary")!.textContent).toContain("256 findings");
+    expect(results.querySelector("h2")!.textContent).toBe(
+      "Results for the sample project (model, 14 files · report, 77 files)",
+    );
+    // The sample runs under its own config, so the policy rules it plants fire.
+    expect(results.querySelector("#rule-filters-pane-state")).not.toBeNull();
+    expect(results.querySelector("section.facts h3")!.textContent).toBe("Report at a glance");
     expect(document.getElementById("status")!.hidden).toBe(true);
   });
   it("announces a run as one sentence through a live region that exists before the run", async () => {
@@ -69,7 +74,7 @@ describe("home page", () => {
     document.getElementById("try-sample")!.click();
     await tick();
     expect(announcer.textContent).toBe(
-      "Results for the sample project (14 files): 185 findings (16 errors, 54 warnings, 115 info) in 14 files.",
+      "Results for the sample project (model, 14 files · report, 77 files): 256 findings (19 errors, 77 warnings, 160 info) in 91 files.",
     );
     expect(document.getElementById("results")!.hasAttribute("aria-live")).toBe(false);
     expect(document.querySelectorAll("#results [aria-live]").length).toBe(0);
@@ -88,7 +93,9 @@ describe("home page", () => {
     document.getElementById("lint-paste")!.click();
     await tick();
     expect(status.hidden).toBe(true);
-    expect(document.querySelector("#results h2")!.textContent).toBe("Results for pasted TMDL");
+    expect(document.querySelector("#results h2")!.textContent).toBe(
+      "Results for pasted TMDL (model, 1 file)",
+    );
     expect(document.querySelector("#results .summary")!.textContent).toContain("in 1 file");
   });
   it("unhides the status line before it writes the message", () => {
@@ -130,7 +137,7 @@ describe("home page", () => {
     // The same rule the status line follows: a hidden block is out of the accessibility tree, so
     // content rendered into one arrives where nothing can reach it.
     expect(order).toEqual(["hidden=false", "render"]);
-    expect(results.querySelector(".summary")!.textContent).toContain("185 findings");
+    expect(results.querySelector(".summary")!.textContent).toContain("256 findings");
   });
   it("scrolls a problem message only as far as needed, so the textarea stays in view", () => {
     const status = document.getElementById("status")!;
@@ -223,7 +230,7 @@ describe("home page", () => {
     await tick();
     expect(status.hidden).toBe(true);
     expect(document.querySelector("#results h2")!.textContent).toBe(
-      "Results for Demo.SemanticModel (1 file)",
+      "Results for Demo.SemanticModel (model, 1 file)",
     );
   });
   it("lists the files it read for the sample and a folder, and none for a paste", async () => {
@@ -231,7 +238,21 @@ describe("home page", () => {
       [...document.querySelectorAll("#results details.files li")].map((li) => li.textContent!);
     document.getElementById("try-sample")!.click();
     await tick();
-    expect(listed()).toEqual(SAMPLE_FILES.map((f) => f.path));
+    // The sample runs through selectProject as a drop of examples/messy-sales runs, so it lists
+    // what that drop reads, relative to the project folder: the model's files as they are, the
+    // report's marked "(report)", the project file among them, and the config it applied.
+    const sample = listed();
+    expect(sample).toHaveLength(93);
+    expect(sample.filter((p) => p.endsWith(" (report)"))).toHaveLength(77);
+    expect(sample.filter((p) => p.endsWith(".tmdl"))).toHaveLength(14);
+    expect(sample).toContain("Messy Sales Demo.SemanticModel/definition/model.tmdl");
+    expect(sample).toContain("Messy Sales Demo.Report/definition.pbir (report)");
+    expect(sample).toContain("Messy Sales Demo.Report/definition/report.json (report)");
+    expect(sample).toContain("Messy Sales Demo.pbip (report)");
+    expect(sample).toContain("pbiplint.config.json (config)");
+    // A drop reads the model's .platform too, and lint never sees it.
+    expect(sample).toContain("Messy Sales Demo.SemanticModel/.platform (not linted)");
+    expect(sample).toEqual([...sample].sort((a, b) => a.localeCompare(b, "en")));
     const input = document.getElementById("folder-input") as HTMLInputElement;
     const at = (path: string, text: string): File =>
       Object.assign(new File([text], path.slice(path.lastIndexOf("/") + 1)), {
@@ -251,7 +272,11 @@ describe("home page", () => {
     }
     await tick();
     await tick();
-    expect(listed()).toEqual(["../pbiplint.config.json (config)", "definition/tables/T.tmdl"]);
+    // Relative to the dropped PBIP folder, the project root, as the CLI takes it.
+    expect(listed()).toEqual([
+      "Demo.SemanticModel/definition/tables/T.tmdl",
+      "pbiplint.config.json (config)",
+    ]);
     (document.getElementById("paste") as HTMLTextAreaElement).value = "table T\n";
     document.getElementById("lint-paste")!.click();
     await tick();
@@ -277,19 +302,146 @@ describe("home page", () => {
     ]);
     await tick();
     await tick();
+    // The dropped PBIP folder is the project root, as the CLI takes it.
     expect(document.querySelector("#results h2")!.textContent).toBe(
-      "Results for Proj/New.SemanticModel (1 file)",
+      "Results for Proj (model, 1 file)",
     );
     expect(document.querySelector("#results .notice")!.textContent).toMatch(
       /^Proj\/Old\.SemanticModel holds no \.tmdl files/,
     );
+    // A legacy model alone refuses nothing: the run goes on and its notice says why nothing was
+    // linted, as the CLI's does.
     feed([at("Proj/Old.SemanticModel/model.bim", "{}")]);
     await tick();
     await tick();
-    const status = document.getElementById("status")!;
-    expect(status.hidden).toBe(false);
-    expect(status.textContent).toMatch(/^Proj\/Old\.SemanticModel holds no \.tmdl files\./);
-    expect(document.getElementById("results")!.hidden).toBe(true);
+    expect(document.getElementById("status")!.hidden).toBe(true);
+    expect(document.getElementById("results")!.hidden).toBe(false);
+    expect([...document.querySelectorAll("#results .notice")].map((n) => n.textContent)).toEqual([
+      "Old.SemanticModel is stored as model.bim, which pbiplint cannot read; save it in the TMDL format from Power BI Desktop",
+    ]);
+  });
+  it("passes the reason a layer was left out to lint, so the skipped line gives it", async () => {
+    const input = document.getElementById("folder-input") as HTMLInputElement;
+    const at = (path: string, text: string): File =>
+      Object.assign(new File([text], path.slice(path.lastIndexOf("/") + 1)), {
+        webkitRelativePath: path,
+      });
+    Object.defineProperty(input, "files", {
+      configurable: true,
+      value: [
+        at("Proj/Old.SemanticModel/model.bim", "{}"),
+        at("Proj/Demo.Report/definition/report.json", "{}"),
+      ],
+    });
+    try {
+      input.dispatchEvent(new Event("change"));
+    } finally {
+      Reflect.deleteProperty(input, "files");
+    }
+    await tick();
+    await tick();
+    // Without `absent` reaching lint, the model rules would say "no model in the input".
+    const summary = document.querySelector("#results .summary")!.textContent!;
+    expect(summary).toMatch(/skipped \(the model is saved in the legacy model\.bim format\)/);
+    expect(summary).not.toMatch(/no model in the input/);
+    expect([...document.querySelectorAll("#results .notice")].map((n) => n.textContent)).toEqual([
+      "Old.SemanticModel is stored as model.bim, which pbiplint cannot read; save it in the TMDL format from Power BI Desktop",
+    ]);
+  });
+  it("shows a notice for a file it could not read, and times the lint", async () => {
+    const input = document.getElementById("folder-input") as HTMLInputElement;
+    const at = (path: string, text: string): File =>
+      Object.assign(new File([text], path.slice(path.lastIndexOf("/") + 1)), {
+        webkitRelativePath: path,
+      });
+    const locked = Object.assign(at("Proj/Demo.SemanticModel/definition/tables/Store.tmdl", ""), {
+      text: () => Promise.reject(new Error("locked")),
+    });
+    Object.defineProperty(input, "files", {
+      configurable: true,
+      value: [at("Proj/Demo.SemanticModel/definition/model.tmdl", "model Model\n"), locked],
+    });
+    try {
+      input.dispatchEvent(new Event("change"));
+    } finally {
+      Reflect.deleteProperty(input, "files");
+    }
+    await tick();
+    await tick();
+    const results = document.getElementById("results")!;
+    expect(results.hidden).toBe(false);
+    expect([...results.querySelectorAll(".notice")].map((n) => n.textContent)).toEqual([
+      "Demo.SemanticModel/definition/tables/Store.tmdl could not be read (locked), so it was not linted",
+    ]);
+    expect(results.dataset.lintMs).toMatch(/^\d+$/);
+  });
+  it("tells lint what it could not read, so a model file that failed stops what it could change", async () => {
+    const input = document.getElementById("folder-input") as HTMLInputElement;
+    const at = (path: string, text: string): File =>
+      Object.assign(new File([text], path.slice(path.lastIndexOf("/") + 1)), {
+        webkitRelativePath: path,
+      });
+    // The report's visual binds Store[City], and Store.tmdl, which would declare the table, could
+    // not be read.
+    const locked = Object.assign(at("Proj/Demo.SemanticModel/definition/tables/Store.tmdl", ""), {
+      text: () => Promise.reject(new Error("locked")),
+    });
+    const visual = {
+      name: "v",
+      position: { x: 0, y: 0, z: 0, height: 100, width: 100, tabOrder: 0 },
+      visual: {
+        visualType: "tableEx",
+        query: {
+          queryState: {
+            Values: {
+              projections: [
+                {
+                  field: {
+                    Column: { Expression: { SourceRef: { Entity: "Store" } }, Property: "City" },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+    };
+    Object.defineProperty(input, "files", {
+      configurable: true,
+      value: [
+        at("Proj/Demo.SemanticModel/definition/model.tmdl", "model Model\n"),
+        at(
+          "Proj/Demo.SemanticModel/definition/tables/Sales.tmdl",
+          "table Sales\n\tcolumn Amount\n\t\tdataType: decimal\n\t\tsourceColumn: Amount\n",
+        ),
+        locked,
+        at(
+          "Proj/Demo.Report/definition.pbir",
+          JSON.stringify({ datasetReference: { byPath: { path: "../Demo.SemanticModel" } } }),
+        ),
+        at("Proj/Demo.Report/definition/report.json", "{}"),
+        at(
+          "Proj/Demo.Report/definition/pages/p/page.json",
+          JSON.stringify({ name: "p", displayName: "P", height: 720, width: 1280 }),
+        ),
+        at("Proj/Demo.Report/definition/pages/p/visuals/v/visual.json", JSON.stringify(visual)),
+      ],
+    });
+    try {
+      input.dispatchEvent(new Event("change"));
+    } finally {
+      Reflect.deleteProperty(input, "files");
+    }
+    await tick();
+    await tick();
+    const results = document.getElementById("results")!;
+    expect(results.querySelector("h2")!.textContent).toMatch(/^Results for Proj \(model, 2 files/);
+    // Without `unreadPaths` reaching lint, the model would read as whole: the reference would be
+    // reported broken, and NOT_REACHED_FROM_REPORT would run.
+    expect(results.querySelector(".summary")!.textContent).toMatch(
+      /1 rule skipped \(a model file could not be fully read\)/,
+    );
+    expect(results.querySelector("#rule-broken-field-reference")).toBeNull();
   });
   it("clears the last results when the next input fails", async () => {
     document.getElementById("try-sample")!.click();
@@ -304,6 +456,35 @@ describe("home page", () => {
     expect(status.textContent).toBe("Paste some TMDL first.");
     expect(results.hidden).toBe(true);
     expect(results.children.length).toBe(0);
+  });
+  it("says the page reads a whole project, and names no command that reads the sample's report", () => {
+    const text = (selector: string): string =>
+      document.querySelector(selector)!.textContent!.replace(/\s+/g, " ").trim();
+    expect(text("h1")).toBe("Lint your Power BI project in the browser");
+    expect(text(".lede")).toBe(
+      "Paste TMDL, or drop a PBIP folder, a .SemanticModel folder, or a .Report folder. pbiplint checks the semantic model against the Microsoft best-practice rules and the report against PBI Inspector's rules and its own, ranks what it finds, and tells you how to fix each one. Nothing is uploaded: the analysis runs in this tab.",
+    );
+    expect(text("#drop p")).toBe(
+      "Drop a PBIP folder, a .SemanticModel or .Report folder, or a single .tmdl file here.",
+    );
+    expect(text(".panel .hint")).toMatch(
+      /^Only \.tmdl files, the report's JSON under its definition folder, \.platform, definition\.pbir, the \.pbip file, and pbiplint\.config\.json are read\. Nothing else in the folder is opened\. /,
+    );
+    expect(text(".actions .hint")).toBe(
+      "A small sales project, a model and its report, with planted violations.",
+    );
+    // The command-line tool on npm (0.1.2) lints the model alone, so the page points at no
+    // command that would read the sample's report.
+    expect(body).not.toContain("--sample");
+    expect(html).not.toMatch(/drop a \.SemanticModel folder and get/);
+    // The 404 page carries the home page's description, so the two say the same.
+    const notFound = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "../404.html"),
+      "utf8",
+    );
+    const description = (page: string): string =>
+      /<meta\s+name="description"\s+content="([^"]*)"/.exec(page)?.[1] ?? "";
+    expect(description(notFound)).toBe(description(html));
   });
   it("lets the newest input win when two reads finish out of order", async () => {
     const input = document.getElementById("folder-input") as HTMLInputElement;
@@ -324,12 +505,16 @@ describe("home page", () => {
     (document.getElementById("paste") as HTMLTextAreaElement).value = "table Pasted\n";
     document.getElementById("lint-paste")!.click();
     await tick();
-    expect(document.querySelector("#results h2")!.textContent).toBe("Results for pasted TMDL");
+    expect(document.querySelector("#results h2")!.textContent).toBe(
+      "Results for pasted TMDL (model, 1 file)",
+    );
     release!();
     await tick();
     await tick();
     // The superseded read comes back last and is dropped rather than replacing the paste.
-    expect(document.querySelector("#results h2")!.textContent).toBe("Results for pasted TMDL");
+    expect(document.querySelector("#results h2")!.textContent).toBe(
+      "Results for pasted TMDL (model, 1 file)",
+    );
     expect(document.getElementById("status")!.hidden).toBe(true);
   });
 });

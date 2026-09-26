@@ -351,6 +351,78 @@ for the input `Demo`. A notice does not change the exit code, which
 follows the findings as it does for the legacy formats. The browser's
 resolver in pull request 7 makes the same decisions.
 
+Amended 2026-09-25 with Michael (pull request 7, #81): what the input
+reader could not read reaches the engine, not only the notices, so no
+finding or fact states what pbiplint did not read. `lint` takes
+`unreadPaths`, per layer like `absent`: the paths the reader could not
+read, each relative to that part's root in forward slashes as every
+file path is, a folder written with a trailing `/`
+(`definition/tables/`). It is per layer because a folder's name cannot
+route it: both parts have a `definition` folder. The CLI's walk
+collects each part's list as it reads that part, from that read rather
+than from the notices, which name a path once however many reads meet
+it; the browser's resolver in pull request 7 fills the same option. A
+model path, a `.tmdl` file or a folder, is recorded on the model and
+makes it one pbiplint could not fully read (sections 6 and 8.2). A
+report file the PBIR format defines under the definition folder joins
+the report's unread definition files as one that failed to parse does,
+through the same code, and a folder there counts, for every question a
+rule or fact asks about unread files, as every definition file it could
+hold: a visual's folder its visual.json and mobile.json, a page's
+folder its page.json and everything under it, the pages or bookmarks
+folder any file of its kind, and `definition/` anything. The page or
+visual such a folder names is recorded as its own file would record it.
+An unread definition.pbir, `.platform`, or `.pbip` changes nothing,
+since none names a field. No unread path is a `PARSE_ISSUE` finding:
+the `unread-file` notice names it, and the notice is unchanged.
+
+Amended 2026-09-25 with Michael (pull request 7, #86): a `.pbip` given
+to the CLI resolves to the one report its `artifacts` entry names,
+that `path` taken relative to the `.pbip`'s folder, and to the model
+that report's `definition.pbir` names by path, taken relative to the
+report folder, wherever each sits, instead of to its whole folder.
+Nothing else in the `.pbip`'s folder is read or refused, so a project
+that sits beside others in one folder lints with both parts
+(`PBIWorkspace/Cost.pbip` in mewancegeka/PBIWorkspace was refused as a
+folder holding two semantic models). The `.pbip`'s folder stays the
+project root: the config search starts there, notices name paths
+relative to it, and a run of which nothing could be read is refused
+naming the path joined to it, as above. Microsoft's pbipProperties
+1.0.0 schema gives `artifacts` as an array of report entries only,
+`{ "report": { "path" } }`, with no limit on their number and no model
+entry, so a `.pbip` reaches its model only through the report's
+`definition.pbir`; all 71 of the 71 `.pbip` files in the local corpora
+name exactly one report. A `.pbip` naming more than one report (each
+report folder counted once by the path it resolves to, however often
+it is named) is refused with the names and "point at one of them", as a
+folder holding more than one is (`Both.pbip names 2 reports; point at
+one of them: Cost.Report, Sales.Report`), and one naming a report
+folder that is not there is refused as an input that does not exist is
+(`Cost.pbip names Cost.Report, which does not exist`, the path as the
+`.pbip` writes it). Two refusals go beyond the rulings, so that no run
+reads as clean with nothing linted: a report path that is a file is
+refused as `Cost.pbip names Cost.Report, which is not a folder`, and a
+named report folder holding nothing to lint as `No semantic model or
+report found in Cost.Report, which Cost.pbip names`. On this route
+`byConnection` leaves the model out with the reason "this report reads
+a published model"; a `byPath` naming a folder that is not there
+leaves it out with the reason "this report reads a model that is not
+there (<path>)"; a `definition.pbir` that could not be read (when the
+report was read) leaves it out with the reason "the report's
+definition.pbir could not be read" (ruling L27), beside the
+`unread-file` notice naming the file, since which model the report
+reads is then not known; a report with no `definition.pbir`, or one
+naming no model, is read alone. The two
+legacy formats give their notices and reasons as the folder route
+does, and a legacy report's `definition.pbir` still names its model.
+`model-reference-mismatch` does not arise, since the path is followed
+rather than compared with a folder beside the report. A `.pbip` that
+names no report (one that is not valid JSON, is not an object, or
+whose `artifacts` holds no report entry) is read as its folder, as
+before, and core still reports one that is not valid JSON. Folder
+input, and a `.pbip` found inside a folder given as input, are
+unchanged, refusals included.
+
 ## 5. PBIR parser and report object model
 
 **Parser.** Plain JSON, read tolerantly: unknown properties ignored;
@@ -682,6 +754,44 @@ keeps those tables hidden, even from modelers, so the fact counts the
 tables Desktop shows, and its not-reached clause already left them
 out.
 
+Amended 2026-09-25 with Michael (pull request 7, #81): the reachability
+walk reads the model as parsed, so while a model file has a parse issue
+that can take an object out of the model (any issue but an orphaned
+`///` description, section 8.2) or the model has a path the input
+reader could not read (section 4), anything reached only through a
+missing object would read as not reached. On that condition the Model
+fact's not-reached clause reads `not reached from this report: unknown,
+a model file could not be fully read` and links no rule; when a report
+file the walk reads field references from could not be read as well,
+the report file's unknown is the one given. The table, column, and
+measure counts stay as they are, a lower bound. A report file the input
+reader could not read counts for every fact as a file that failed to
+parse does, and a folder as every file it could hold (section 4). While
+the model has an unread path, the report reference index resolves a
+reference to a table the model does not have, or to a field missing
+from any table, to `unread`, since that path could declare any table
+and anything under one, and the reason names the first unread path, as
+`no table named "Store", and definition/tables/Store.tmdl could not be
+read`, except that for a field missing from a table, a model file that
+declares the table and has a parse issue that can drop an object is
+named ahead of it.
+
+Amended 2026-09-25 with Michael (pull request 7, #86): Filters pane
+links `FILTERS_PANE_STATE` only when that rule ran and its resolved
+options carry an `expect` policy, however the config writes it, whether
+the saved state meets the policy or breaks it. The fact reads the
+options the rule is checked with, so the two cannot disagree. Under a
+policy the rule checks the pane, so the fact links it, and on the web
+results page the link leads to the rule's page when the state meets
+the policy and to its finding group when it does not (section 9).
+Without a policy the rule runs but can never fire, so the fact links
+no rule, for the reason the unknown Filters pane fact links none: a
+fact links its rule only when that rule can fire. The value, the
+detail, and the unknown case are unchanged, and the sample sets a
+policy, so its facts do not move. This supersedes the mockup's Filters
+pane, which linked the rule page with a hint to set a policy: without
+one the fact links nothing and adds no detail.
+
 **Cost.** Linear in the JSON. The demo report's largest visual is
 61 KB, most under 5 KB; a 300-visual report is a few megabytes and
 lints well under a second in the browser. No new dependency.
@@ -718,6 +828,20 @@ visual type is used by no visual that was read (section 8.1, narrowed
 by ruling H74); no other rule sets one. run.ts stays the one place that
 skips, with the same reason and the same words, and the facts call the
 same predicates.
+
+Amended 2026-09-25 with Michael (pull request 7, #81): the skip widens
+to the model. A rule may declare `skipWhenModelUnread`, a predicate
+over the model beside `skipWhenUnread`; only `NOT_REACHED_FROM_REPORT`
+does, with `modelPartlyRead` in rules/helpers.ts, which holds while a
+model file has a parse issue that can take an object out of the model
+or the model has a path the input reader could not read (section 4).
+The rule is then skipped with the reason `modelFileUnread`, and the
+skipped line says "1 rule skipped (a model file could not be fully
+read)". The report's predicate is checked first, so a rule both stop is
+skipped with `reportFileUnread`. run.ts stays the one place that skips,
+and the Model fact calls the same predicate (section 6). The JSON
+document carries the reason in `summary.rulesSkipped`; SARIF gains
+nothing.
 
 **Object types.** `Report`, `Page`, `Visual`, `Bookmark`,
 `ReportMeasure` join `ObjectType`.
@@ -938,6 +1062,26 @@ on another table, and a column name a measure on the table holds, are
 still reported, since a measure's name is unique in the model and a
 column cannot share a name with a measure on its table.
 
+Amended 2026-09-25 with Michael (pull request 7, #81):
+`NOT_REACHED_FROM_REPORT` is skipped, with "a model file could not be
+fully read" on the skipped line (section 7), while a model file has a
+parse issue that can take an object out of the model or a model path
+could not be read at all (section 4): a measure used only by a dropped
+measure's DAX would otherwise be reported as not reached. The Model
+fact's not-reached clause then says unknown (section 6). A report file
+the input reader could not read stops the rule as one that failed to
+parse does, and a notice, not a `PARSE_ISSUE` finding, names it.
+`BROKEN_FIELD_REFERENCE` reads a model path the input reader could not
+read, a `.tmdl` file or a folder, as a file whose parse issue can take
+an object and a `table` line out of the model, the strongest reading
+above: a reference to a table the model does not have, or to a field
+missing from any table, resolves to `unread` and is not reported. A
+measure found on another table, and a column name a measure on the
+table holds, are still reported, as ruling H82 keeps them. With the
+shelfmart fixture's Store.tmdl unreadable, the CLI's notice names the
+file and no `BROKEN_FIELD_REFERENCE` finding is reported, where 13
+findings of `no table named "Store"` were reported before.
+
 ### 8.3 Native, tier 2
 
 | Id | Scope | Category | Severity | What it catches |
@@ -1063,7 +1207,9 @@ be read. `BROKEN_ACTION_TARGET` does not report a bookmark target whose
 `<name>.bookmark.json` exists but could not be read, nor a page target
 whose page.json could not be read; with a visual of that page read, the
 page was already one named by its folder, and a page with none read is
-now covered too.
+now covered too. Amended 2026-09-25 with Michael (pull request 7, #81):
+a folder under the definition folder that could not be listed quiets a
+target or a capture it could hold, as an unread file does (section 4).
 
 Mobile layouts and themes are facts only in v2.
 
@@ -1232,6 +1378,28 @@ pick the report the same way, pair them through `definition.pbir`,
 and produce `files`, `config`, `notes`, `read`, and `diagnostics`. The
 home page copy, the drop hint, and the About page say a PBIP folder
 now lints both parts and that a report alone is valid input.
+
+Amended 2026-09-25 with pull request 7: the browser still differs from
+the CLI in three places. A `.SemanticModel` folder holding no TMDL
+beside one that does is linted around with a note in the browser, as
+it has been since v1, where the CLI refuses a folder with two semantic
+models. A report's `definition` folder dropped alone reads nothing in
+the browser, which cannot see the parent's `definition.pbir`, where the
+CLI reads the report, that file included, from the parent. And the
+`.pbip` input, resolving to its report and that report's model, is the
+CLI's alone (section 4's #86 note), since the browser takes folders.
+Beyond those three, `selectProject` gives `lint` the files and the
+unread paths the CLI would, with the same notices, except in four
+smaller ways. The notices come in another order, the walk's in walk
+order and then the browser's own, where the CLI gives them in its read
+order; and when two paths inside one read refuse and nothing else was
+read, the refusal names the first the walk met, where the CLI's walk
+goes through each folder's entries in name order, so the two can name
+different paths. Only the browser has a depth cap (`depth-cap`, 64
+folders), since the CLI's walk has none, and a folder whose listing
+fails partway is linted as far as it was listed, with a notice, in the
+browser, where the CLI reads none of it, its listing of a folder being
+all or nothing.
 
 ## 13. CLI changes
 

@@ -19,12 +19,13 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   webServer: {
-    command: `npm run build -w @pbiplint/web && npm run preview -w @pbiplint/web -- --port ${port} --strictPort`,
+    command: `node scripts/make-big-report.mjs tests/generated/big-report && npm run build -w @pbiplint/web && npm run preview -w @pbiplint/web -- --port ${port} --strictPort`,
     cwd: repo,
     url: `http://localhost:${port}/`,
-    // The command builds first, so a server left over from an earlier session would serve a stale
-    // build; never reuse one. The build's output is piped through so a failed build is readable
-    // instead of a silent timeout.
+    // The command first writes the 300-visual report the two-second budget test reads (generated
+    // rather than committed; see scripts/make-big-report.mjs), then builds. Because it builds, a
+    // server left over from an earlier session would serve a stale build; never reuse one. The
+    // output is piped through so a failed step is readable instead of a silent timeout.
     reuseExistingServer: false,
     stdout: "pipe",
     timeout: 180_000,

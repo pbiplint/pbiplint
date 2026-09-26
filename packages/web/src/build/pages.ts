@@ -35,6 +35,12 @@ const SOURCE_NAMES: Record<string, string> = {
   "https://github.com/NatVanG/fab-inspector/blob/main/Rules/Base-rules.json":
     "PBI Inspector's base rules by Nat Van Gulck",
 };
+/** What the rule page's button offers to check, by the layer the rule reads. */
+const CHECK_LABEL: Record<RuleLayer, string> = {
+  model: "Check a model for this",
+  report: "Check a report for this",
+  project: "Check a project for this",
+};
 /** The caption a fenced example carries, by the word after `tmdl` or `pbir` in its info string. */
 const EXAMPLE_CAPTION: Record<string, string> = {
   fires: "Fires the rule",
@@ -248,18 +254,18 @@ const RULE_LAYERS: readonly RuleLayer[] = ["model", "report", "project"];
  * families, which is what the layer column below turns on.
  *
  * The gate is here because the site deploys from main on every push while the ported report rules
- * land on main several pull requests before the browser can lint a report: without it, pbiplint.com
- * would carry pages for rules no published tool runs, for weeks. Pull request 7, where the browser
- * reads a report, sets this to both families and moves the value pinned in generate.test.ts and
- * the site's pinned counts with it.
+ * landed on main several pull requests before the browser could lint a report: without it,
+ * pbiplint.com would have carried pages for rules no published tool ran, for weeks. Pull request 7,
+ * where the browser reads a report, set this to both families, which turned on the index's layer
+ * badge and the rule page's layer item (showsLayers below) and moved the value pinned in
+ * generate.test.ts and the site's pinned counts with it.
  *
- * While this list names one family, no report page is published, so the attribution the ported
- * report set adds has no page to sit on: that one holds by construction and needs no flag. A layer
- * column does not. A badge on every row would read `model` on all of them, a column that
- * distinguishes nothing, so the index's badge and the rule page's layer item both wait on
- * showsLayers below.
+ * With one family published, a badge on every row would read the same word on all of them, a
+ * column that distinguishes nothing, which is why both wait on showsLayers rather than rendering
+ * always. The gate's functions take the list as an argument defaulting to this one, so a test can
+ * still render the one-family site.
  */
-export const SITE_LAYERS: readonly SiteLayer[] = ["model"];
+export const SITE_LAYERS: readonly SiteLayer[] = ["model", "report"];
 
 /**
  * Whether the site names a rule's layer: the badge on each row of the rules index and the item in
@@ -294,10 +300,12 @@ export function pageLayer(data: Frontmatter, source: string): RuleLayer {
 /**
  * Whether the site publishes a page on a layer, and so whether it is generated at all. A `project`
  * page publishes as soon as either family does, because a project rule can fire on any input the
- * site can lint.
+ * site can lint. `published` is SITE_LAYERS unless a test renders another site.
  */
-export const publishesLayer = (layer: RuleLayer): boolean =>
-  layer === "project" ? SITE_LAYERS.length > 0 : SITE_LAYERS.includes(layer);
+export const publishesLayer = (
+  layer: RuleLayer,
+  published: readonly SiteLayer[] = SITE_LAYERS,
+): boolean => (layer === "project" ? published.length > 0 : published.includes(layer));
 
 const section = (body: string, heading: string): string =>
   body.split(`## ${heading}`)[1]?.split(/\n## /)[0] ?? "";
@@ -393,7 +401,8 @@ function siteMarkdown(links: RuleLinks = new Map(), self = ""): Marked {
           const id = captionId(++figures);
           return `<figure class="${classes}">\n<figcaption id="${id}">${caption}</figcaption>\n${figurePre(id)}<code class="language-${language}">${code}\n</code></pre>\n</figure>\n`;
         };
-        if (lang === CONFIG_FENCE) return figure("example", "pbiplint.config.json", "json");
+        if (lang === CONFIG_FENCE)
+          return figure("example", "<code>pbiplint.config.json</code>", "json");
         const example = /^(tmdl|pbir) (fires|fixed)(?: (\S+))?$/.exec(lang ?? "");
         if (!example)
           return characterReferences(plainFence.code(token)).replace(
@@ -403,9 +412,10 @@ function siteMarkdown(links: RuleLinks = new Map(), self = ""): Marked {
         const language = example[1] === "pbir" ? "json" : "tmdl";
         const kind = example[2]!;
         const file = example[3];
+        // The file name is code, so it keeps its case under the caption's capitals.
         const caption =
           file !== undefined && file !== "tree.json"
-            ? `${EXAMPLE_CAPTION[kind]} in ${escapeHtml(file)}`
+            ? `${EXAMPLE_CAPTION[kind]} in <code>${escapeHtml(file)}</code>`
             : EXAMPLE_CAPTION[kind]!;
         return figure(`example ${kind}`, caption, language);
       },
@@ -529,7 +539,7 @@ export function rulePage(
   <p class="meta"><span class="badge ${escapeHtml(meta.severity)}">${escapeHtml(meta.severity)}</span> <code>${escapeHtml(meta.id)}</code> · ${escapeHtml(STATUS_LABEL[meta.status] ?? meta.status)}${layerItem} · scope: ${escapeHtml(list(data.scope).join(", "))}</p>
   ${video ? `<p class="video"><a href="${escapeHtml(video)}">Watch the video for this rule</a></p>` : ""}
   ${render(withIgnoreHelp(body.replace(/^# .+\n/m, ""), meta.id, list(data.scope)), links, meta.id)}
-  ${attribution(list(data.sources))}<p class="cta"><a class="button" href="/">Check a model for this</a> <a href="https://github.com/pbiplint/pbiplint/edit/main/rules/${escapeHtml(slug)}.md">Improve this page</a></p>
+  ${attribution(list(data.sources))}<p class="cta"><a class="button" href="/">${CHECK_LABEL[meta.layer]}</a> <a href="https://github.com/pbiplint/pbiplint/edit/main/rules/${escapeHtml(slug)}.md">Improve this page</a></p>
 </article>`;
   return {
     html: page({
@@ -555,26 +565,43 @@ export function rulesIndex(
       throw new Error(
         `${m.slug}: unknown category "${m.category}" (add it to CATEGORY_ORDER in packages/web/src/build/pages.ts)`,
       );
-  const count = (status: string, layer?: RuleLayer): number =>
-    metas.filter((m) => m.status === status && (layer === undefined || m.layer === layer)).length;
-  // A clause whose count is zero is left out. Until pull request 7 the site publishes no report
-  // page (decision 15), and "0 report rules ported from PBI Inspector's base rules" on the live
-  // index advertises a source the page below lists nothing from, which is the promise this gate
-  // exists to avoid making. Written as a rule rather than a fixed string, so it stays right as the
-  // counts move and when the gate opens.
-  const clauses: [number, string][] = [
+  // Each clause of the count at the top names the pages of one status, and for a ported rule one
+  // source. A page no clause names would be in the total and in no clause after it, so the build
+  // fails on one, as it fails on an unknown category, rather than print a count whose clauses do
+  // not sum to the pages listed (tracked in #66).
+  const is =
+    (status: string, layer?: RuleLayer) =>
+    (m: RuleMeta): boolean =>
+      m.status === status && (layer === undefined || m.layer === layer);
+  const clauses: [(m: RuleMeta) => boolean, string][] = [
     [
-      count("ported", "model"),
+      is("ported", "model"),
       "model rules ported from Microsoft's Best Practice Analyzer ruleset so the results match Tabular Editor",
     ],
+    [is("needsLiveModel"), "listed but not run because they need statistics only a live model has"],
     [
-      count("needsLiveModel"),
-      "listed but not run because they need statistics only a live model has",
+      is("ported", "report"),
+      "report rules ported from PBI Inspector's base rules by Nat Van Gulck",
     ],
-    [count("ported", "report"), "report rules ported from PBI Inspector's base rules"],
-    [count("builtin"), "built into pbiplint"],
+    [is("builtin"), "built into pbiplint"],
   ];
-  const parts = clauses.filter(([n]) => n > 0).map(([n, text]) => `${n} ${text}`);
+  for (const m of metas)
+    if (!clauses.some(([counts]) => counts(m)))
+      throw new Error(
+        `${m.slug}: status "${m.status}" on the ${m.layer} layer is in no clause of the rules count (add a clause for it in rulesIndex in packages/web/src/build/pages.ts)`,
+      );
+  // A clause whose count is zero is left out: a site that published no report page would
+  // otherwise advertise "0 report rules ported from PBI Inspector's base rules", a source the page
+  // below lists nothing from. Written as a rule rather than a fixed string, so it stays right as
+  // the counts move.
+  const counted = clauses.map(([counts, text]) => [metas.filter(counts).length, text] as const);
+  // Two clauses that both counted one page would sum past the total just as surely.
+  const sum = counted.reduce((n, [c]) => n + c, 0);
+  if (sum !== metas.length)
+    throw new Error(
+      `rules index: the clauses of the rules count sum to ${sum}, not the ${metas.length} pages listed (see rulesIndex in packages/web/src/build/pages.ts)`,
+    );
+  const parts = counted.filter(([n]) => n > 0).map(([n, text]) => `${n} ${text}`);
   // Two clauses read "A and B"; three or more take a serial comma, "A, B, and C".
   const sources =
     parts.length > 2

@@ -38,6 +38,17 @@ export const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]
 export const isDirectQueryTable = (t: Table): boolean =>
   t.kind === "table" && t.partitions[0]?.mode === "directquery";
 
+/**
+ * Whether the model may lack something its files declare: a model file has a parse issue that can
+ * take an object out of the model (`TmdlParseIssue.canDropObjects`, any issue but an orphaned `///`
+ * description), or a path under the model's root could not be read at all (`Model.unreadPaths`).
+ * Anything reached only through a missing object then reads as not reached, so
+ * NOT_REACHED_FROM_REPORT sets this as its `skipWhenModelUnread` and the Model fact's not-reached
+ * clause says unknown on the same condition.
+ */
+export const modelPartlyRead = (m: Model): boolean =>
+  m.unreadPaths.length > 0 || m.files.some((f) => f.issues.some((i) => i.canDropObjects));
+
 /** Tables that satisfy the Table or CalculatedTable scope. Calculation group tables are only in the CalculationGroup scope. */
 export const tablesInScope = (m: Model): Table[] =>
   m.tables.filter((t) => t.kind !== "calculationGroup");

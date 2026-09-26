@@ -665,6 +665,80 @@ describe("a reference into a model file pbiplint could not fully read", () => {
     ]);
   });
 
+  describe("a path the input reader could not read at all", () => {
+    const STORE = "definition/tables/Store.tmdl";
+    const never = (what: string, path = STORE) => `${what}, and ${path} could not be read`;
+    /** The model of the files given, read beside the paths the input reader could not read. */
+    const modelBeside = (files: Record<string, string>, unreadPaths: string[]): Model =>
+      buildModel(
+        Object.entries(files).map(([path, text]) => parseTmdl(path, text)),
+        unreadPaths,
+      );
+
+    it("could declare any table, and anything under any table, so a missing one is unread", () => {
+      const m = modelBeside({ [SALES]: sales, [PRODUCT]: product }, [STORE]);
+      expect(m.unreadPaths).toEqual([STORE]);
+      // No parse issue: the input reader's notice names the path.
+      expect(m.files.flatMap((f) => f.issues)).toEqual([]);
+      expect(
+        resolutions(
+          m,
+          column("Store", "City"),
+          column("Sales", "Nope"),
+          level("Sales", "Geography", "Country"),
+          measure("Product", "Profit"),
+        ),
+      ).toEqual([
+        unread(never('no table named "Store"')),
+        unread(never('no column named "Nope" on "Sales"')),
+        unread(never('no level named "Country" in hierarchy "Geography" on "Sales"')),
+        unread(never('no measure named "Profit" on "Product"')),
+      ]);
+      // A folder stands for every file it could hold.
+      expect(
+        resolutions(
+          modelBeside({ [SALES]: sales }, ["definition/tables/"]),
+          column("Store", "City"),
+        ),
+      ).toEqual([unread(never('no table named "Store"', "definition/tables/"))]);
+    });
+
+    it("still says a measure is not a column, and names the table a measure is on", () => {
+      const m = modelBeside({ [SALES]: sales, [PRODUCT]: product }, [STORE]);
+      expect(
+        resolutions(m, column("Sales", "Total Sales"), measure("Product", "Total Sales")),
+      ).toEqual([
+        unresolved('"Total Sales" is a measure on "Sales", not a column'),
+        unresolved('[Total Sales] is on "Sales", not "Product"'),
+      ]);
+    });
+
+    it("names a file that declares the table and could not be fully read first", () => {
+      const m = modelBeside({ [SALES]: sales + spaced, [PRODUCT]: product }, [STORE]);
+      expect(resolutions(m, column("Sales", "Nope"), column("Product", "Gone"))).toEqual([
+        unread(partly('no column named "Nope" on "Sales"', SALES)),
+        unread(never('no column named "Gone" on "Product"')),
+      ]);
+    });
+
+    it("reads a report measure's bare name as unread, since the path could declare it on any table", () => {
+      const m = modelBeside({ [SALES]: sales }, [STORE]);
+      expect(
+        indexOf(m, [], { "Net Margin": "[Missing]" })
+          .refs.filter((r) => r.owner.kind === "reportMeasure")
+          .map((r) => r.resolution),
+      ).toEqual([unread(never('no measure or column named "Missing"'))]);
+    });
+
+    it("counts only a .tmdl file or a folder, the paths that could hold a declaration", () => {
+      const m = modelBeside({ [SALES]: sales }, [".platform", "definition.pbism", "notes.txt"]);
+      expect(m.unreadPaths).toEqual([]);
+      expect(resolutions(m, column("Store", "City"))).toEqual([
+        unresolved('no table named "Store"'),
+      ]);
+    });
+  });
+
   it("reads a report measure's DAX by the same conditions, a bare name against every model file", () => {
     const dax = { "Net Margin": "[Total Sales] - [Missing] + 'Sales'[Gone]" };
     const refsOf = (m: Model) =>

@@ -1,5 +1,6 @@
 import {
   chmodSync,
+  cpSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -45,6 +46,39 @@ function pbipProject(prefix: string): string {
   return root;
 }
 
+/**
+ * Two projects in one folder, as mewancegeka/PBIWorkspace holds them (#86): Cost, whose model
+ * has one table, and Sales, whose model has two, each with a .pbip naming its report and a report
+ * of one page that reads its model.
+ */
+function workspace(): string {
+  const root = mkdtempSync(join(tmpdir(), "pbiplint-workspace-"));
+  const j = (v: unknown) => JSON.stringify(v);
+  for (const [name, tables] of [
+    ["Cost", ["Cost"]],
+    ["Sales", ["Sales", "Region"]],
+  ] as const) {
+    const model = join(root, `${name}.SemanticModel`, "definition");
+    const def = join(root, `${name}.Report`, "definition");
+    mkdirSync(model, { recursive: true });
+    mkdirSync(join(def, "pages", "p"), { recursive: true });
+    writeFileSync(
+      join(root, `${name}.pbip`),
+      j({ version: "1.0", artifacts: [{ report: { path: `${name}.Report` } }] }),
+    );
+    writeFileSync(join(model, "model.tmdl"), "model Model\n");
+    for (const t of tables) writeFileSync(join(model, `${t}.tmdl`), `table ${t}\n`);
+    writeFileSync(
+      join(root, `${name}.Report`, "definition.pbir"),
+      j({ datasetReference: { byPath: { path: `../${name}.SemanticModel` } } }),
+    );
+    writeFileSync(join(def, "report.json"), "{}");
+    writeFileSync(join(def, "pages", "pages.json"), j({ pageOrder: ["p"] }));
+    writeFileSync(join(def, "pages", "p", "page.json"), j({ name: "p", displayName: "P" }));
+  }
+  return root;
+}
+
 describe("pbiplint CLI", () => {
   it("lints the sample project and exits 1 because it has errors", async () => {
     const r = await run([sample]);
@@ -70,7 +104,8 @@ describe("pbiplint CLI", () => {
         detail: "the page open when it was saved; no landing page set",
         ruleId: "OPENING_PAGE_INVALID",
       },
-      // report.json saves the pane expanded; the config's policy expects it closed.
+      // report.json saves the pane expanded. The rule is linked because pbiplint.config.json sets
+      // FILTERS_PANE_STATE's policy (it expects the pane closed); without one the fact links none.
       { layer: "report", label: "Filters pane", value: "open", ruleId: "FILTERS_PANE_STATE" },
       // Scratch is hidden, and Product tooltip is a tooltip page by its type and its binding.
       {
@@ -121,6 +156,7 @@ describe("pbiplint CLI", () => {
         ruleId: "NOT_REACHED_FROM_REPORT",
       },
     ]);
+    expect(r.err).toBe("");
   });
   it("--sample is the same as pointing at the bundled sample", async () => {
     const r = await run(["--sample", "--format", "json"]);
@@ -277,6 +313,32 @@ describe("pbiplint CLI", () => {
     expect(r.err).toBe(
       "pbiplint: notice: Demo.Report is stored as a single report.json, which pbiplint cannot read; save it in the PBIR format from Power BI Desktop\n",
     );
+  });
+  it("lints each project of a folder that holds two by its .pbip, and refuses the folder", async () => {
+    const root = workspace();
+    try {
+      // The model's files are model.tmdl and one per table; the report's are definition.pbir,
+      // report.json, pages.json, page.json, and the project's .pbip.
+      for (const [name, modelFiles] of [
+        ["Cost", 2],
+        ["Sales", 3],
+      ] as const) {
+        const r = await run([join(root, `${name}.pbip`), "--format", "json", "--fail-on", "none"]);
+        expect(r.code).toBe(0);
+        expect(r.err).toBe("");
+        const doc = JSON.parse(r.out);
+        expect(doc.layers.model).toEqual({ present: true, files: modelFiles });
+        expect(doc.layers.report).toEqual({ present: true, files: 5 });
+        expect(doc.diagnostics).toEqual([]);
+      }
+      const folder = await run([root]);
+      expect(folder.code).toBe(2);
+      expect(folder.err).toBe(
+        `pbiplint: ${root} contains 2 semantic models; point at one of them: Cost.SemanticModel, Sales.SemanticModel\nRun pbiplint --help for usage.\n`,
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
   // These tests have the operating system refuse a read, as a POSIX system does for a user (CI
   // runs them on Ubuntu). Root reads a folder whatever its mode, and Windows ignores a mode of 000
@@ -436,6 +498,116 @@ describe("pbiplint CLI", () => {
         );
       } finally {
         chmodSync(pbip, 0o644);
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+  );
+  it.skipIf(noModes)(
+    "says why the model is left out when the report a .pbip names has a definition.pbir it cannot read",
+    async () => {
+      const root = workspace();
+      const pbir = join(root, "Cost.Report", "definition.pbir");
+      chmodSync(pbir, 0o000);
+      try {
+        const input = join(root, "Cost.pbip");
+        const r = await run([input, "--format", "json", "--fail-on", "none"]);
+        const notice = unread("Cost.Report/definition.pbir", "EACCES: permission denied");
+        expect(r.code).toBe(0);
+        expect(r.err).toBe(`pbiplint: notice: ${notice.message}\n`);
+        const doc = JSON.parse(r.out);
+        expect(doc.layers.model).toEqual({
+          present: false,
+          reason: "the report's definition.pbir could not be read",
+        });
+        expect(doc.layers.report.present).toBe(true);
+        expect(doc.diagnostics).toEqual([notice]);
+        expect((await run([input, "--fail-on", "none"])).out).toContain(
+          "rules skipped (the report's definition.pbir could not be read)",
+        );
+      } finally {
+        chmodSync(pbir, 0o644);
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+  );
+  it.skipIf(noModes)(
+    "names a model file it cannot read in the notice and reports no field that file could declare",
+    async () => {
+      // Store.tmdl declares the Store table, which the shelfmart report's visuals bind.
+      const root = mkdtempSync(join(tmpdir(), "pbiplint-locked-store-"));
+      cpSync(join(repo, "tests/fixtures/shelfmart"), root, { recursive: true });
+      const model = "ShelfMart Foot Traffic and Weather.SemanticModel";
+      const store = join(root, model, "definition", "tables", "Store.tmdl");
+      chmodSync(store, 0o000);
+      try {
+        const r = await run([root, "--format", "json", "--fail-on", "none"]);
+        const notice = unread(`${model}/definition/tables/Store.tmdl`, "EACCES: permission denied");
+        expect(r.err).toBe(`pbiplint: notice: ${notice.message}\n`);
+        expect(r.code).toBe(0);
+        const doc = JSON.parse(r.out);
+        expect(doc.diagnostics).toEqual([notice]);
+        const ids = doc.groups.map((g: { rule: { id: string } }) => g.rule.id);
+        expect(ids).not.toContain("BROKEN_FIELD_REFERENCE");
+        // The notice names the file; no parse issue does.
+        expect(ids).not.toContain("PARSE_ISSUE");
+        // What the report reaches in a model it could not fully read is not known.
+        expect(ids).not.toContain("NOT_REACHED_FROM_REPORT");
+        expect(doc.summary.rulesSkipped).toContainEqual({
+          id: "NOT_REACHED_FROM_REPORT",
+          reason: "modelFileUnread",
+        });
+        // Store and its columns are not counted, so the counts are a lower bound, as they are
+        // for a model file with a parse issue.
+        expect(doc.facts.find((f: { label: string }) => f.label === "Model")).toEqual({
+          layer: "model",
+          label: "Model",
+          value: "9 tables, 80 columns, 37 measures",
+          detail: "not reached from this report: unknown, a model file could not be fully read",
+        });
+        expect((await run([root, "--fail-on", "none"])).out).toContain(
+          "1 rule skipped (a model file could not be fully read)",
+        );
+      } finally {
+        chmodSync(store, 0o644);
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+  );
+  it.skipIf(noModes)(
+    "reads a report file it cannot read as one that could not be parsed, with a notice and no PARSE_ISSUE",
+    async () => {
+      const root = pbipProject("pbiplint-locked-visual-");
+      const folder = join(root, "Demo.Report", "definition", "pages", "p", "visuals", "v");
+      mkdirSync(folder, { recursive: true });
+      const visual = join(folder, "visual.json");
+      writeFileSync(visual, JSON.stringify({ name: "v", visual: { visualType: "slicer" } }));
+      chmodSync(visual, 0o000);
+      try {
+        const r = await run([root, "--format", "json", "--fail-on", "none"]);
+        const notice = unread(
+          "Demo.Report/definition/pages/p/visuals/v/visual.json",
+          "EACCES: permission denied",
+        );
+        expect(r.err).toBe(`pbiplint: notice: ${notice.message}\n`);
+        const doc = JSON.parse(r.out);
+        expect(doc.groups.map((g: { rule: { id: string } }) => g.rule.id)).not.toContain(
+          "PARSE_ISSUE",
+        );
+        expect(doc.summary.rulesSkipped).toContainEqual({
+          id: "NOT_REACHED_FROM_REPORT",
+          reason: "reportFileUnread",
+        });
+        expect(doc.facts.find((f: { label: string }) => f.label === "Slicers")).toEqual({
+          layer: "report",
+          label: "Slicers",
+          value: "unknown",
+          detail: "saved selections: unknown, a visual.json could not be read",
+        });
+        expect(doc.facts.find((f: { label: string }) => f.label === "Model").detail).toBe(
+          "not reached from this report: unknown, a report file could not be read",
+        );
+      } finally {
+        chmodSync(visual, 0o644);
         rmSync(root, { recursive: true, force: true });
       }
     },

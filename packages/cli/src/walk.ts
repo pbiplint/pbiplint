@@ -3,6 +3,8 @@ import { basename, dirname, join, relative, resolve } from "node:path";
 import {
   datasetReference,
   pairingDecision,
+  readJson,
+  type DatasetReference,
   type Diagnostic,
   type LayerName,
   type LintFile,
@@ -13,6 +15,13 @@ export interface ResolvedPart {
   /** Absolute path the part's finding locations are relative to. */
   root: string;
   files: LintFile[];
+  /**
+   * The paths below `root` this part's own read could not read, relative to `root` with forward
+   * slashes as `files` are, a folder written with a trailing `/`: what `lint` takes as this
+   * part's layer's `unreadPaths`. Each is also an `unread-file` notice, but the notices name a
+   * path once however many reads meet it, so this list is the part's own.
+   */
+  unread: string[];
 }
 
 export interface ResolvedProject {
@@ -55,6 +64,22 @@ const statOf = (p: string): Stats | undefined => statSync(p, { throwIfNoEntry: f
 const isDir = (p: string): boolean => statOf(p)?.isDirectory() ?? false;
 const isFile = (p: string): boolean => statOf(p)?.isFile() ?? false;
 const byName = (a: string, b: string): number => a.localeCompare(b, "en");
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v);
+
+/**
+ * Whether the path a file names is a folder: undefined when nothing is there, and true when the
+ * operating system will not say, so the read that follows meets the refusal and names it.
+ */
+function folderAt(p: string): boolean | undefined {
+  try {
+    const stat = statOf(p);
+    return stat === undefined ? undefined : stat.isDirectory();
+  } catch (e) {
+    if (isSystemError(e)) return true;
+    throw e;
+  }
+}
 
 /** One walk under the input: where a notice's path starts, and the project it adds to. */
 interface Walk {
@@ -84,37 +109,46 @@ function unread(w: Walk, p: string, e: SystemError): void {
   });
 }
 
-/** `call` on `p`, below the input: what the operating system refuses is a notice, and the walk goes on. */
-function attempt<T>(w: Walk, p: string, call: () => T): T | undefined {
+/**
+ * `call` on `p`, below the input: what the operating system refuses is a notice, and the walk goes
+ * on. The path is also recorded on `part`, the part being read, as `p` relative to its root, a
+ * folder (`folder`) with a trailing `/`.
+ */
+function attempt<T>(
+  w: Walk,
+  p: string,
+  call: () => T,
+  part?: ResolvedPart,
+  folder = false,
+): T | undefined {
   try {
     return call();
   } catch (e) {
     if (!isSystemError(e)) throw e;
     unread(w, p, e);
+    part?.unread.push(toPosix(relative(part.root, p)) + (folder ? "/" : ""));
     return undefined;
   }
 }
 
+/** A part at `root` with nothing read yet, for a read to fill. */
+const emptyPart = (root: string): ResolvedPart => ({ root, files: [], unread: [] });
+
 /**
- * Every file under `dir` that `keep` accepts. Listing `dir` itself is the caller's to answer for;
- * a folder or file below it that cannot be read is a notice, and the rest is still read.
+ * Every file under `dir` that `keep` accepts, into `part`, with each path relative to its root.
+ * Listing `dir` itself is the caller's to answer for; a folder or file below it that cannot be
+ * read is a notice and one of the part's unread paths, and the rest is still read.
  */
-function readTree(
-  w: Walk,
-  root: string,
-  dir: string,
-  keep: (name: string) => boolean,
-  out: LintFile[],
-): void {
+function readTree(w: Walk, part: ResolvedPart, dir: string, keep: (name: string) => boolean): void {
   for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) =>
     byName(a.name, b.name),
   )) {
     const p = join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (!SKIP_DIRS.has(entry.name)) attempt(w, p, () => readTree(w, root, p, keep, out));
+      if (!SKIP_DIRS.has(entry.name)) attempt(w, p, () => readTree(w, part, p, keep), part, true);
     } else if (keep(entry.name)) {
-      const text = attempt(w, p, () => readFileSync(p, "utf8"));
-      if (text !== undefined) out.push({ path: toPosix(relative(root, p)), text });
+      const text = attempt(w, p, () => readFileSync(p, "utf8"), part);
+      if (text !== undefined) part.files.push({ path: toPosix(relative(part.root, p)), text });
     }
   }
 }
@@ -123,23 +157,23 @@ function readTree(
 function modelPart(w: Walk, folder: string): ResolvedPart | undefined {
   const def = join(folder, "definition");
   if (!isDir(def)) return undefined;
-  const files: LintFile[] = [];
-  readTree(w, folder, def, (n) => n.endsWith(".tmdl"), files);
-  return files.length ? { root: folder, files } : undefined;
+  const part = emptyPart(folder);
+  readTree(w, part, def, (n) => n.endsWith(".tmdl"));
+  return part.files.length ? part : undefined;
 }
 
 /** The report part at `folder`: definition.pbir, .platform, and every JSON under definition, or nothing. */
 function reportPart(w: Walk, folder: string): ResolvedPart | undefined {
   const def = join(folder, "definition");
   if (!isDir(def)) return undefined;
-  const files: LintFile[] = [];
+  const part = emptyPart(folder);
   for (const name of ["definition.pbir", ".platform"]) {
     const p = join(folder, name);
-    const text = attempt(w, p, () => (isFile(p) ? readFileSync(p, "utf8") : undefined));
-    if (text !== undefined) files.push({ path: name, text });
+    const text = attempt(w, p, () => (isFile(p) ? readFileSync(p, "utf8") : undefined), part);
+    if (text !== undefined) part.files.push({ path: name, text });
   }
-  readTree(w, folder, def, (n) => n.endsWith(".json"), files);
-  return files.some((f) => f.path.startsWith("definition/")) ? { root: folder, files } : undefined;
+  readTree(w, part, def, (n) => n.endsWith(".json"));
+  return part.files.some((f) => f.path.startsWith("definition/")) ? part : undefined;
 }
 
 const UNREAD_PART: Record<LayerName, string> = {
@@ -243,13 +277,12 @@ export function resolveProject(input: string): ResolvedProject {
           model: {
             root: dirname(path),
             files: [{ path: basename(path), text: readFileSync(path, "utf8") }],
+            unread: [],
           },
           absent: {},
           diagnostics: [],
         };
-      // The project is the .pbip's own folder, and the file named is the one read there.
-      if (path.endsWith(".pbip"))
-        return resolveFolder(dirname(path), dirname(path), basename(path));
+      if (path.endsWith(".pbip")) return resolvePbip(input, path);
       throw new UsageError(`${input} is not a .tmdl file, a .pbip file, or a folder`);
     }
     return resolveFolder(input, path);
@@ -257,33 +290,168 @@ export function resolveProject(input: string): ResolvedProject {
     // What cannot be read below the input is a notice (attempt and readPart), so what reaches
     // here is the input itself: its stat, its listing, or the one file it names. It is refused as
     // "does not exist" is; anything that is not the operating system's is a bug and says so. An
-    // input none of whose files could be read is refused in resolveFolder.
+    // input none of whose files could be read is refused in walked, on both routes.
     if (isSystemError(e)) throw new UsageError(`Could not read ${input}: ${reasonOf(e)}`);
     throw e;
   }
 }
 
 /**
- * A folder, either given directly or named by a .pbip. `preferred` is that .pbip's file name, so
- * a project holding more than one is read as the user asked instead of refused.
+ * A folder, either given directly or named by a .pbip that names no report. `preferred` is that
+ * .pbip's file name, so a project holding more than one is read as the user asked instead of
+ * refused.
+ */
+function resolveFolder(input: string, path: string, preferred?: string): ResolvedProject {
+  return walked(input, path, (w) => readFolder(w, input, path, preferred));
+}
+
+/**
+ * One walk from the folder `base`, which is the project root, by `read`. `input` names that folder
+ * in a refusal.
  *
- * A folder of which nothing could be read, while something in it was refused, is an input that
+ * A walk of which nothing could be read, while something in it was refused, is an input that
  * could not be read: a run over it would report no findings in 0 files and read as clean with
  * nothing linted. It is refused naming the first path that refused, with that refusal's reason:
  * the folder itself was read, so what refused is below it, and a refused run prints none of the
  * notices that name it. A legacy part on its own refuses nothing, so it stays a notice.
  */
-function resolveFolder(input: string, path: string, preferred?: string): ResolvedProject {
-  const w: Walk = { base: path, project: { root: path, absent: {}, diagnostics: [] } };
-  const project = readFolder(w, input, path, preferred);
+function walked(input: string, base: string, read: (w: Walk) => ResolvedProject): ResolvedProject {
+  const w: Walk = { base, project: { root: base, absent: {}, diagnostics: [] } };
+  const project = read(w);
   if (!project.model && !project.report && w.refusal) {
     const { path: below, error } = w.refusal;
-    // Joined to `input`, as readFolder's messages name the folder, in the notices' forward
+    // Joined to `input`, as the readers' messages name the folder, in the notices' forward
     // slashes. The folder itself, were it to refuse once read, is named by `input` alone.
     const named = below === "" ? input : toPosix(join(input, below));
     throw new UsageError(`Could not read ${named}: ${reasonOf(error)}`);
   }
   return project;
+}
+
+/**
+ * The report paths a .pbip's `artifacts` name, as it writes them. Microsoft's pbipProperties
+ * schema gives `artifacts` as `{ "report": { "path" } }` entries only: a .pbip reaches its model
+ * through the report's definition.pbir. A .pbip that is not a JSON object names none.
+ */
+function reportsNamed(name: string, text: string): string[] {
+  const json = readJson(name, text).json;
+  if (!isRecord(json) || !Array.isArray(json.artifacts)) return [];
+  return json.artifacts.flatMap((a: unknown) =>
+    isRecord(a) && isRecord(a.report) && typeof a.report.path === "string" ? [a.report.path] : [],
+  );
+}
+
+/**
+ * A .pbip the user named (#86): the one report its `artifacts` name, its path relative to the
+ * .pbip's folder, and the model that report's definition.pbir names, wherever each sits, so a
+ * project beside others in one folder lints with both parts. Nothing else in the .pbip's folder
+ * is read or refused, and that folder stays the project root: the config search's start and the
+ * base of every notice's path. A .pbip naming more than one report is refused as a folder holding
+ * more than one is; one naming none is read as its folder, as every .pbip was before.
+ */
+function resolvePbip(input: string, path: string): ResolvedProject {
+  const folder = dirname(path);
+  // The input itself, refused by resolveProject when it cannot be read.
+  const text = readFileSync(path, "utf8");
+  // Each report folder once, as first written, counted by the path it resolves to: a report
+  // named twice as `Cost.Report`, `./Cost.Report`, or `Cost.Report/` is one report.
+  const named = new Map<string, string>();
+  for (const written of reportsNamed(basename(path), text)) {
+    const at = resolve(folder, toPosix(written));
+    if (!named.has(at)) named.set(at, written);
+  }
+  if (named.size === 0) return resolveFolder(folder, folder, basename(path));
+  if (named.size > 1) {
+    const names = [...named.values()].map((p) => basename(toPosix(p))).sort(byName);
+    throw new UsageError(
+      `${input} names ${named.size} reports; point at one of them: ${names.join(", ")}`,
+    );
+  }
+  const [reportFolder, written] = [...named][0]!;
+  const kind = folderAt(reportFolder);
+  if (kind === undefined) throw new UsageError(`${input} names ${written}, which does not exist`);
+  if (!kind) throw new UsageError(`${input} names ${written}, which is not a folder`);
+  return walked(folder, folder, (w) => readNamed(w, input, path, text, reportFolder, written));
+}
+
+/**
+ * The text of the report's definition.pbir, which names its model: the report part's copy when
+ * the part was read, else the file read on its own, since a legacy report, or one whose definition
+ * folder could not be read, still names its model. A report folder that could not be entered has
+ * its notice already, and nothing in it is looked up.
+ */
+function pbirOf(w: Walk, report: ResolvedPart | undefined, folder: string): string | undefined {
+  if (report) return report.files.find((f) => f.path === "definition.pbir")?.text;
+  const at = toPosix(relative(w.base, folder));
+  if (w.project.diagnostics.some((d) => d.kind === "unread-file" && d.path === at))
+    return undefined;
+  const p = join(folder, "definition.pbir");
+  return attempt(w, p, () => (isFile(p) ? readFileSync(p, "utf8") : undefined));
+}
+
+const PBIR_UNREAD_REASON = "the report's definition.pbir could not be read";
+
+/**
+ * The report at `reportFolder`, which the .pbip at `pbip` names as `written`, and the model its
+ * definition.pbir names by path, relative to the report folder. The path is followed rather than
+ * compared with a folder beside the report, so model-reference-mismatch does not arise here.
+ */
+function readNamed(
+  w: Walk,
+  input: string,
+  pbip: string,
+  text: string,
+  reportFolder: string,
+  written: string,
+): ResolvedProject {
+  const out = w.project;
+  const at = (p: string): string => toPosix(relative(w.base, p));
+  const report = readPart(w, "report", reportFolder, reportPart);
+  // A part folder that could not be read has said so already, and cannot be looked in.
+  if (!report && !out.absent.report && isFile(join(reportFolder, "report.json"))) {
+    out.diagnostics.push(legacyReport(reportFolder, at(reportFolder)));
+    out.absent.report = LEGACY_REPORT_REASON;
+  }
+  // The .pbip rides with the report at its path from the report root, as it does from a folder,
+  // so a finding on it points at the real file.
+  if (report) report.files.push({ path: toPosix(relative(report.root, pbip)), text });
+
+  const pbir = pbirOf(w, report, reportFolder);
+  const ref: DatasetReference = pbir === undefined ? { kind: "none" } : datasetReference(pbir);
+  // Refused rather than missing: on the part's own unread list, or, for a report not read, in the
+  // notice its read on its own gave.
+  const pbirPath = at(join(reportFolder, "definition.pbir"));
+  const pbirRefused =
+    report?.unread.includes("definition.pbir") === true ||
+    out.diagnostics.some((d) => d.kind === "unread-file" && d.path === pbirPath);
+  let model: ResolvedPart | undefined;
+  if (ref.kind === "byPath") {
+    const modelFolder = resolve(reportFolder, toPosix(ref.path));
+    if (folderAt(modelFolder)) {
+      model = readPart(w, "model", modelFolder, modelPart);
+      if (!model && !out.absent.model && isFile(join(modelFolder, "model.bim"))) {
+        out.diagnostics.push(legacyModel(modelFolder, at(modelFolder)));
+        out.absent.model = LEGACY_MODEL_REASON;
+      }
+    } else {
+      out.absent.model = `this report reads a model that is not there (${ref.path})`;
+    }
+  } else if (pbirRefused) {
+    // Which model the report reads is not known, and the skipped line says so rather than
+    // reading as a report that names none; the notice names the file.
+    out.absent.model = PBIR_UNREAD_REASON;
+  } else {
+    // A report bound to a published model says so on the skipped line, as it does from a folder;
+    // one that names no model is read alone.
+    const decision = pairingDecision(ref, undefined, basename(reportFolder));
+    if (decision.reason) out.absent.model = decision.reason;
+  }
+  if (model) out.model = model;
+  if (report) out.report = report;
+  if (model || report || out.diagnostics.length) return out;
+  // The input is a .pbip, so the kinds of input a folder could have held do not apply: what held
+  // nothing is the report folder it names.
+  throw new UsageError(`No semantic model or report found in ${written}, which ${input} names`);
 }
 
 /** The parts of the folder `w` walks, or what it has to say about them. */
@@ -305,11 +473,12 @@ function readFolder(w: Walk, input: string, path: string, preferred?: string): R
     const report = readPart(w, name.endsWith(".Report") ? "report" : undefined, path, reportPart);
     if (report) return { ...out, report, absent: loneReportAbsent(report, path) };
   }
-  // A definition folder given directly: a model's is read as v1 did, a report's from its parent.
+  // A definition folder given directly: a model's is read as v1 did, with the folder as its root,
+  // a report's from its parent.
   if (name === "definition") {
-    const tmdl: LintFile[] = [];
-    readTree(w, path, path, (n) => n.endsWith(".tmdl"), tmdl);
-    if (tmdl.length) return { ...out, model: { root: path, files: tmdl } };
+    const tmdl = emptyPart(path);
+    readTree(w, tmdl, path, (n) => n.endsWith(".tmdl"));
+    if (tmdl.files.length) return { ...out, model: tmdl };
     const report = reportPart(w, dirname(path));
     if (report)
       return {
@@ -372,7 +541,7 @@ function readFolder(w: Walk, input: string, path: string, preferred?: string): R
       const text =
         preferred !== undefined
           ? readFileSync(p, "utf8")
-          : attempt(w, p, () => readFileSync(p, "utf8"));
+          : attempt(w, p, () => readFileSync(p, "utf8"), report);
       if (text !== undefined) report.files.push({ path: toPosix(relative(report.root, p)), text });
     }
     const pbir = report.files.find((f) => f.path === "definition.pbir");
@@ -394,9 +563,9 @@ function readFolder(w: Walk, input: string, path: string, preferred?: string): R
   if (model || report) return out;
 
   // Loose .tmdl files anywhere under a plain folder, as v1 accepted.
-  const direct: LintFile[] = [];
-  readTree(w, path, path, (n) => n.endsWith(".tmdl"), direct);
-  if (direct.length) return { ...out, model: { root: path, files: direct } };
+  const direct = emptyPart(path);
+  readTree(w, direct, path, (n) => n.endsWith(".tmdl"));
+  if (direct.files.length) return { ...out, model: direct };
   // Nothing to lint but something to say: a legacy part alone, or a part that could not be read,
   // which resolveFolder turns into a refused run naming the path that refused.
   if (out.diagnostics.length) return out;

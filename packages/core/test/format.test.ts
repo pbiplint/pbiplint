@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { lint } from "../src/engine/lint.js";
-import { finding } from "../src/rules/helpers.js";
+import { finding, modelPartlyRead } from "../src/rules/helpers.js";
 import { fieldFileUnread } from "../src/rules/report-helpers.js";
 import type { Rule } from "../src/rules/types.js";
 import {
@@ -125,6 +125,42 @@ describe("summary wording", () => {
     expect(JSON.parse(formatSarif(one)).runs[0].invocations).toBeUndefined();
     expect(formatText(run([wholeReport("A"), wholeReport("B")])).split("\n")[1]).toBe(
       "Model: 1 file. Report: 2 files. 1 rule run, 2 rules skipped (a report file could not be read)",
+    );
+  });
+  it("says a rule was skipped because a model file could not be fully read, in text, Markdown, and JSON", () => {
+    const wholeModel = (id: string): Rule => ({
+      ...base,
+      id,
+      name: id,
+      category: "Maintenance",
+      severity: 1,
+      layer: "project",
+      needs: ["model", "report"],
+      skipWhenModelUnread: modelPartlyRead,
+      check: () => [],
+    });
+    const run = (rules: Rule[]) =>
+      lint(
+        [
+          { path: "a.tmdl", text: "table A\n\tcolumn X\n\t\tdataType: string\n" },
+          { path: "definition/pages/p/page.json", text: '{ "name": "p" }' },
+        ],
+        { rules: [oneColumn, ...rules], unreadPaths: { model: ["b.tmdl"] } },
+      );
+    const one = run([wholeModel("WHOLE_MODEL")]);
+    expect(formatText(one).split("\n")[1]).toBe(
+      "Model: 1 file. Report: 1 file. 1 rule run, 1 rule skipped (a model file could not be fully read)",
+    );
+    expect(formatMarkdown(one).split("\n")[2]).toBe(
+      "1 finding (0 errors, 1 warning, 0 info) in 2 files. Model: 1 file. Report: 1 file. 1 rule run, 1 rule skipped (a model file could not be fully read).",
+    );
+    expect(JSON.parse(formatJson(one)).summary.rulesSkipped).toEqual([
+      { id: "WHOLE_MODEL", reason: "modelFileUnread" },
+    ]);
+    // SARIF lists no skipped rule for any reason, so it gains nothing here either.
+    expect(JSON.parse(formatSarif(one)).runs[0].invocations).toBeUndefined();
+    expect(formatText(run([wholeModel("A"), wholeModel("B")])).split("\n")[1]).toBe(
+      "Model: 1 file. Report: 1 file. 1 rule run, 2 rules skipped (a model file could not be fully read)",
     );
   });
 });

@@ -67,6 +67,10 @@ export function skippedLine(result: LintResult): string {
     parts.push(
       `${plural(by("reportFileUnread"), "rule")} skipped (a report file could not be read)`,
     );
+  if (by("modelFileUnread"))
+    parts.push(
+      `${plural(by("modelFileUnread"), "rule")} skipped (a model file could not be fully read)`,
+    );
   if (by("disabled")) parts.push(`${plural(by("disabled"), "rule")} disabled by config`);
   if (s.ignored) parts.push(`${plural(s.ignored, "finding")} ignored by annotation`);
   return parts.join(", ");

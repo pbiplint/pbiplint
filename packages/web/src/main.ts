@@ -1,17 +1,17 @@
 import {
   ConfigError,
   lint,
-  plural,
   resolveConfig,
   summaryLine,
+  type Diagnostic,
+  type LayerName,
   type LintFile,
 } from "@pbiplint/core";
-import { BROWSER_RULES, browserConfig } from "./browser-rules.js";
-import { InputError, selectModel, type InputTree } from "./input/model-files.js";
+import { InputError, selectProject, type InputTree } from "./input/project-files.js";
 import { directoryPicker, readDirectoryInput, readPickedDirectory } from "./input/pick-folder.js";
 import { readDataTransfer } from "./input/read-drop.js";
-import { renderResults } from "./results/render.js";
-import { SAMPLE_CONFIG, SAMPLE_FILES, SAMPLE_NAME } from "./sample.js";
+import { heading, renderResults } from "./results/render.js";
+import { SAMPLE_NAME, SAMPLE_TREE } from "./sample.js";
 
 /**
  * The page's own element, checked rather than cast: a #paste that stopped being a textarea would
@@ -73,17 +73,23 @@ const superseded = (token: number): boolean => token !== latestRun;
 
 interface Run {
   files: LintFile[];
-  /** What was linted, for the results heading. */
+  /** What was linted, for the results heading, which adds each layer's file count. */
   source: string;
   config?: { path: string; text: string };
-  /** What to list as read under the results: the model files and the config. None for a paste. */
+  /** What to list as read under the results: every file read, the config among them. None for a paste. */
   read?: string[];
   /** Sentences about the input for under the summary. */
   notes?: string[];
+  /** What the reader found that the results must say, such as a file it could not read: lint's `diagnostics`. */
+  diagnostics?: Diagnostic[];
+  /** Why the reader left a layer out: lint's `absent`. */
+  absent?: Partial<Record<LayerName, string>>;
+  /** What the reader could not read under each part: lint's `unreadPaths`. */
+  unreadPaths?: Partial<Record<LayerName, string[]>>;
 }
 
 /** Every input ends up here: read the config if there is one, lint, render. Nothing touches the network. */
-function run({ files, source, config, read, notes }: Run): void {
+function run({ files, source, config, read, notes, diagnostics, absent, unreadPaths }: Run): void {
   try {
     let raw: unknown;
     if (config) {
@@ -95,10 +101,11 @@ function run({ files, source, config, read, notes }: Run): void {
         );
       }
     }
-    const result = lint(files, {
-      config: browserConfig(resolveConfig(raw)),
-      rules: BROWSER_RULES,
-    });
+    // The browser reads reports, so it lints with every default rule, as the CLI does. The time
+    // is kept on the results for the performance test to read.
+    const started = performance.now();
+    const result = lint(files, { config: resolveConfig(raw), diagnostics, absent, unreadPaths });
+    results.dataset.lintMs = String(Math.round(performance.now() - started));
     // Unhidden before it is filled, as the status line is: a hidden block is out of the
     // accessibility tree, so anything rendered into one arrives where nothing can reach it. The
     // live region that first made the order matter has since moved out to #announce; the order
@@ -107,8 +114,9 @@ function run({ files, source, config, read, notes }: Run): void {
     renderResults(results, result, { source, files: read, notes });
     say("");
     // The results are rebuilt on every run, so the live region is this one paragraph that never
-    // leaves the page: a screen reader hears the summary sentence, not every finding row.
-    announcer.textContent = `Results for ${source}: ${summaryLine(result)}.`;
+    // leaves the page: a screen reader hears the heading and the summary sentence, not every
+    // finding row.
+    announcer.textContent = `${heading(result, source)}: ${summaryLine(result)}.`;
     if (typeof results.scrollIntoView === "function")
       results.scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (e) {
@@ -116,15 +124,23 @@ function run({ files, source, config, read, notes }: Run): void {
   }
 }
 
-function runEntries(tree: InputTree): void {
+/**
+ * A tree of files, from a drop, a folder pick, the directory input, or the bundled sample, linted
+ * as the CLI would lint the folder. `name` is what the heading calls it; a drop is named by its
+ * project folder.
+ */
+function runEntries(tree: InputTree, name?: string): void {
   try {
-    const model = selectModel(tree.entries, tree.modelFolders);
+    const project = selectProject(tree);
     run({
-      files: model.files,
-      source: `${model.root || "the dropped file"} (${plural(model.files.length, "file")})`,
-      config: model.config,
-      read: model.read,
-      notes: model.notes,
+      files: project.files,
+      source: name ?? (project.root || "the dropped file"),
+      config: project.config,
+      read: project.read,
+      notes: project.notes,
+      diagnostics: project.diagnostics,
+      absent: project.absent,
+      unreadPaths: project.unreadPaths,
     });
   } catch (e) {
     fail(e);
@@ -142,17 +158,11 @@ byId("lint-paste", HTMLButtonElement).addEventListener("click", () => {
   run({ files: [{ path: "pasted.tmdl", text }], source: "pasted TMDL" });
 });
 
+// The sample runs as a drop of examples/messy-sales runs, through selectProject, so its results
+// and its list of files read cannot drift from what a drop of the same folder shows.
 byId("try-sample", HTMLButtonElement).addEventListener("click", () => {
   startRun();
-  run({
-    files: SAMPLE_FILES,
-    source: `${SAMPLE_NAME} (${plural(SAMPLE_FILES.length, "file")})`,
-    config:
-      SAMPLE_CONFIG === undefined
-        ? undefined
-        : { path: "pbiplint.config.json", text: SAMPLE_CONFIG },
-    read: SAMPLE_FILES.map((f) => f.path),
-  });
+  runEntries(SAMPLE_TREE, SAMPLE_NAME);
 });
 
 // Every folder route says "Reading files..." once there is a folder to read: the drop as it lands,

@@ -6,7 +6,8 @@ import { isIgnored } from "./ignore.js";
 
 export interface SkippedRule {
   id: string;
-  reason: "disabled" | "needsLiveModel" | "noModel" | "noReport" | "reportFileUnread";
+  reason:
+    "disabled" | "needsLiveModel" | "noModel" | "noReport" | "reportFileUnread" | "modelFileUnread";
 }
 
 export interface RuleError {
@@ -61,8 +62,13 @@ export function runRules(
       });
       continue;
     }
+    // The report's condition is checked first, so a rule that both stop is skipped with its reason.
     if (rule.skipWhenUnread && project.report && rule.skipWhenUnread(project.report)) {
       result.rulesSkipped.push({ id: rule.id, reason: "reportFileUnread" });
+      continue;
+    }
+    if (rule.skipWhenModelUnread && project.model && rule.skipWhenModelUnread(project.model)) {
+      result.rulesSkipped.push({ id: rule.id, reason: "modelFileUnread" });
       continue;
     }
     result.rulesRun.push(rule.id);

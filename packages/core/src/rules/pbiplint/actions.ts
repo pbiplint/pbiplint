@@ -1,5 +1,11 @@
 import { escapePointer } from "../../pbir/refs.js";
-import { allVisuals, reportFinding } from "../report-helpers.js";
+import {
+  allVisuals,
+  bookmarkUnread,
+  pageUnread,
+  reportFinding,
+  visualUnread,
+} from "../report-helpers.js";
 import type { RuleFinding } from "../types.js";
 import { pbiplintRule } from "./define.js";
 
@@ -23,10 +29,13 @@ export const BROKEN_ACTION_TARGET = pbiplintRule({
   check: ({ report }) => {
     if (!report) return [];
     // A page or a bookmark whose own file could not be read is there, under the folder or file
-    // name Desktop gives it, so a destination naming it is not reported.
-    const names = {
-      page: new Set([...report.pages.map((p) => p.id), ...report.unreadPages]),
-      bookmark: new Set([...report.bookmarks.map((b) => b.id), ...report.unreadBookmarks]),
+    // name Desktop gives it, so a destination naming it is not reported; nor is one a folder that
+    // could not be read could hold.
+    const pages = new Set(report.pages.map((p) => p.id));
+    const bookmarks = new Set(report.bookmarks.map((b) => b.id));
+    const exists = {
+      page: (name: string) => pages.has(name) || pageUnread(report, name),
+      bookmark: (name: string) => bookmarks.has(name) || bookmarkUnread(report, name),
     };
     // Every visual that carries an action is read, hidden or not: buttons, shapes, and images.
     return allVisuals(report).flatMap((v) =>
@@ -35,7 +44,7 @@ export const BROKEN_ACTION_TARGET = pbiplintRule({
         const checked = CHECKED.get(a.type.toLowerCase());
         // Off or conditional: nothing to resolve. An empty destination is ACTION_WITHOUT_DESTINATION's.
         if (!checked || !a.on || a.target === undefined) return [];
-        if (names[checked.object].has(a.target)) return [];
+        if (exists[checked.object](a.target)) return [];
         return [
           reportFinding.visual(
             v,
@@ -82,11 +91,12 @@ export const BROKEN_BOOKMARK_REFERENCE = pbiplintRule({
   layer: "report",
   // Groups are captured apart from visuals and are not read, nor is the list of target visuals.
   // A page or a visual whose own file could not be read is there, under the folder name Desktop
-  // gives it, so it is never reported missing.
+  // gives it, so it is never reported missing, and neither is one a folder that could not be read
+  // could hold.
   check: ({ report }) => {
     if (!report) return [];
     const pages = new Map(report.pages.map((p) => [p.id, p]));
-    const missing = (id: string): boolean => !pages.has(id) && !report.unreadPages.includes(id);
+    const missing = (id: string): boolean => !pages.has(id) && !pageUnread(report, id);
     return report.bookmarks.flatMap((b): RuleFinding[] => {
       const out: RuleFinding[] = [];
       if (b.activePage !== undefined && missing(b.activePage))
@@ -109,7 +119,7 @@ export const BROKEN_BOOKMARK_REFERENCE = pbiplintRule({
           );
       for (const { page, visual, pointer } of b.visuals) {
         const p = pages.get(page);
-        if (p && !p.visuals.some((v) => v.id === visual) && !p.unreadVisuals.includes(visual))
+        if (p && !p.visuals.some((v) => v.id === visual) && !visualUnread(report, p, visual))
           out.push(
             reportFinding.bookmark(
               b,

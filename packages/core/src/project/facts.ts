@@ -2,6 +2,7 @@ import { plural } from "../format/text.js";
 import type { Indexes } from "../index/build.js";
 import { isAutoDateTable } from "../model/names.js";
 import type { Report } from "../pbir/types.js";
+import { modelPartlyRead } from "../rules/helpers.js";
 import {
   allVisuals,
   customVisualUseUnknown,
@@ -22,13 +23,19 @@ import {
   slicerSelection,
   visualFileUnread,
 } from "../rules/report-helpers.js";
+import type { RuleOptions } from "../rules/types.js";
 import type { Fact, Project } from "./types.js";
 
 /** `n info`-style nouns are the caller's business; these take an s. */
 const n = plural;
 
 /** The report's facts; the project is there for a fact whose rule reads the model beside it. */
-function reportFacts(project: Project, report: Report, known: ReadonlySet<string>): Fact[] {
+function reportFacts(
+  project: Project,
+  report: Report,
+  known: ReadonlySet<string>,
+  ruleOptions: ReadonlyMap<string, RuleOptions>,
+): Fact[] {
   const facts: Fact[] = [];
   // The candidates are ordered from the most specific rule to the broadest, and the fact links to
   // the first the run actually carries, so leaving the specific rule out of a run does not cost
@@ -77,7 +84,9 @@ function reportFacts(project: Project, report: Report, known: ReadonlySet<string
   );
 
   // Filters pane. Unknown, like Opens on, when the file that records it was not read; the rule is
-  // silent then, so the fact links no rule.
+  // silent then, so the fact links no rule. Known, it links FILTERS_PANE_STATE only under an
+  // `expect` policy, the option the rule reads, whether the saved state meets the policy or breaks
+  // it: without one the rule runs but can never fire.
   const pane = filtersPaneState(report);
   facts.push(
     pane === undefined
@@ -96,7 +105,9 @@ function reportFacts(project: Project, report: Report, known: ReadonlySet<string
               ? { detail: "read as open; report.json does not record it" }
               : {}),
           },
-          "FILTERS_PANE_STATE",
+          ruleOptions.get("FILTERS_PANE_STATE")?.expect !== undefined
+            ? "FILTERS_PANE_STATE"
+            : undefined,
         ),
   );
 
@@ -258,15 +269,18 @@ function reportFacts(project: Project, report: Report, known: ReadonlySet<string
  * The "Report at a glance" block: structured, in the order the spec's table lists, and built only
  * when the report layer is present, so a run without a report produces none and no surface shows
  * the block. A fact links to a rule only when that rule ran in the run, so a rule turned off in
- * config, or skipped for want of a layer or a live model, links nothing.
+ * config, or skipped for want of a layer or a live model, links nothing. `ruleOptions` holds the
+ * options each rule that ran was given (`optionsFor`), so a fact that depends on a rule's policy
+ * reads the value the rule read; a rule missing from it has no options set.
  */
 export function buildFacts(
   project: Project,
   indexes: Indexes,
   knownRules: ReadonlySet<string>,
+  ruleOptions: ReadonlyMap<string, RuleOptions> = new Map(),
 ): Fact[] {
   if (!project.report) return [];
-  const facts: Fact[] = reportFacts(project, project.report, knownRules);
+  const facts: Fact[] = reportFacts(project, project.report, knownRules, ruleOptions);
   const model = project.model;
   if (model) {
     // The tables Desktop shows: its auto date/time tables are hidden even from modelers, and the
@@ -280,11 +294,15 @@ export function buildFacts(
       value: `${n(shown.length, "table")}, ${n(columns, "column")}, ${n(measures, "measure")}`,
     };
     const reach = indexes.reachability;
-    // Unknown when a file the report's field references are read from could not be read, the case
-    // NOT_REACHED_FROM_REPORT is skipped in: what that file would have reached is not known, so the
-    // fact gives no count and links no rule.
+    // Unknown when a file the report's field references are read from could not be read, or while
+    // the model may lack an object its files declare, the cases NOT_REACHED_FROM_REPORT is skipped
+    // in, the report's first as the rule's skipped line gives it: what that file would have
+    // reached, or what only the missing object reaches, is not known, so the fact gives no count
+    // and links no rule. The table, column, and measure counts stay, a lower bound.
     if (reach && fieldFileUnread(project.report)) {
       fact.detail = "not reached from this report: unknown, a report file could not be read";
+    } else if (reach && modelPartlyRead(model)) {
+      fact.detail = "not reached from this report: unknown, a model file could not be fully read";
     } else if (reach) {
       const u = reach.unreached();
       fact.detail = `${n(u.columns.length, "column")} and ${n(u.measures.length, "measure")} not reached from this report`;

@@ -65,6 +65,12 @@ export async function main(argv: string[], io: Io): Promise<number> {
       config,
       diagnostics: project.diagnostics,
       absent: project.absent,
+      // Each part's own list, relative to its root, so what the walk could not read reaches the
+      // layer it belongs to.
+      unreadPaths: {
+        ...(project.model ? { model: project.model.unread } : {}),
+        ...(project.report ? { report: project.report.unread } : {}),
+      },
     });
     // SARIF artifact URIs are resolved from where the tool ran, so each part's root, relative to
     // the cwd, goes in front of that part's finding paths.

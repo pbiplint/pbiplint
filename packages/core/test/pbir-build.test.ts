@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { buildReport, holdsFieldReferences, KNOWN_SCHEMAS, literal } from "../src/pbir/build.js";
-import { fieldFileUnread, visualFileUnread } from "../src/rules/report-helpers.js";
+import {
+  fieldFileUnread,
+  mobilePageUnread,
+  visualFileUnread,
+} from "../src/rules/report-helpers.js";
 
 const schema = (family: string, version: string) =>
   `https://developer.microsoft.com/json-schemas/fabric/item/report/definition/${family}/${version}/schema.json`;
@@ -989,5 +993,123 @@ describe("buildReport tolerance", () => {
     expect(literal(lit("18D"))).toBe("18D");
     expect(literal({ expr: { Measure: {} } })).toBeUndefined();
     expect(literal(undefined)).toBeUndefined();
+  });
+});
+
+describe("buildReport with the paths the input reader could not read", () => {
+  it("records a definition file it could not read as one that failed to parse, with no issue of its own", () => {
+    const { report } = buildReport(
+      [
+        { path: "definition/report.json", text: j({}) },
+        { path: "definition/pages/a/page.json", text: page("a") },
+        { path: "definition/pages/a/visuals/v/visual.json", text: visual("v") },
+        { path: "definition/pages/q/page.json", text: "{" },
+      ],
+      [
+        "definition/pages/a/visuals/w/visual.json",
+        "definition/pages/a/visuals/v/mobile.json",
+        "definition/pages/r/page.json",
+        "definition/bookmarks/b1.bookmark.json",
+        "definition/reportExtensions.json",
+        // Files outside the definition folder, and a JSON file of the author's own, name no field
+        // and are not part of the report: nothing in core changes for them.
+        "definition.pbir",
+        ".platform",
+        "../Demo.pbip",
+        "definition/notes/owners.json",
+      ],
+    );
+    // In path order, beside the file that failed to parse.
+    expect(report.unreadDefinitionFiles).toEqual([
+      "definition/bookmarks/b1.bookmark.json",
+      "definition/pages/a/visuals/v/mobile.json",
+      "definition/pages/a/visuals/w/visual.json",
+      "definition/pages/q/page.json",
+      "definition/pages/r/page.json",
+      "definition/reportExtensions.json",
+    ]);
+    expect(report.unreadPages).toEqual(["q", "r"]);
+    expect(report.unreadBookmarks).toEqual(["b1"]);
+    expect(report.pages.map((p) => [p.id, p.unreadVisuals])).toEqual([["a", ["w"]]]);
+    expect(report.extensions).toBe("unread");
+    expect(report.unreadDefinitionFolders).toEqual([]);
+    // The notice the input reader gives names each of them, so none is a parse issue, and none is
+    // among the files the report was read from.
+    expect(report.issues.map((i) => i.file)).toEqual(["definition/pages/q/page.json"]);
+    expect(report.files).toEqual([
+      "definition/pages/a/page.json",
+      "definition/pages/a/visuals/v/visual.json",
+      "definition/pages/q/page.json",
+      "definition/report.json",
+    ]);
+    expect([fieldFileUnread(report), visualFileUnread(report)]).toEqual([true, true]);
+  });
+  it("records a folder it could not read that could hold a definition file, and the page or visual it names", () => {
+    const { report } = buildReport(
+      [
+        { path: "definition/pages/a/page.json", text: page("a") },
+        { path: "definition/pages/b/page.json", text: page("b") },
+      ],
+      [
+        "definition/pages/a/visuals/w/",
+        "definition/pages/b/visuals/",
+        "definition/pages/q/",
+        "definition/bookmarks/",
+        // Neither of these could hold a file the PBIR format defines.
+        "definition/pages/a/visuals/w/extra/",
+        "definition/notes/",
+        "StaticResources/",
+      ],
+    );
+    expect(report.unreadDefinitionFolders).toEqual([
+      "definition/bookmarks/",
+      "definition/pages/a/visuals/w/",
+      "definition/pages/b/visuals/",
+      "definition/pages/q/",
+    ]);
+    // A page's folder and a visual's folder name the page and the visual, as their own files do.
+    expect(report.unreadPages).toEqual(["q"]);
+    expect(report.pages.map((p) => [p.id, p.unreadVisuals])).toEqual([
+      ["a", ["w"]],
+      ["b", []],
+    ]);
+    expect(report.unreadDefinitionFiles).toEqual([]);
+    expect(report.issues).toEqual([]);
+    // Only definition/ itself holds reportExtensions.json.
+    expect(report.extensions).toBe("absent");
+    expect(buildReport([], ["definition/"]).report.extensions).toBe("unread");
+    expect(buildReport([], ["definition/"]).report.unreadDefinitionFolders).toEqual([
+      "definition/",
+    ]);
+  });
+  it("counts an unread folder as the files it could hold when asking what could not be read", () => {
+    const unread = (...paths: string[]) =>
+      buildReport([{ path: "definition/pages/a/page.json", text: page("a") }], paths).report;
+    // Every folder that could hold a definition file could hold one the field references are read
+    // from, and those down to a visual's own folder could hold its visual.json.
+    for (const folder of [
+      "definition/",
+      "definition/pages/",
+      "definition/pages/a/",
+      "definition/pages/a/visuals/",
+      "definition/pages/a/visuals/v/",
+    ]) {
+      expect(fieldFileUnread(unread(folder)), folder).toBe(true);
+      expect(visualFileUnread(unread(folder)), folder).toBe(true);
+    }
+    expect(fieldFileUnread(unread("definition/bookmarks/"))).toBe(true);
+    expect(visualFileUnread(unread("definition/bookmarks/"))).toBe(false);
+    expect(fieldFileUnread(unread("definition/notes/"))).toBe(false);
+    // A mobile.json read in a page folder no page stands for, beside a visual's folder there that
+    // could not be read: that folder's visual.json may be what defines the page.
+    const stray = (...paths: string[]) =>
+      mobilePageUnread(
+        buildReport([{ path: "definition/pages/s/visuals/w/mobile.json", text: j({}) }], paths)
+          .report,
+      );
+    expect(stray()).toBe(false);
+    expect(stray("definition/pages/s/visuals/v/")).toBe(true);
+    expect(stray("definition/pages/t/visuals/v/")).toBe(false);
+    expect(stray("definition/bookmarks/")).toBe(false);
   });
 });

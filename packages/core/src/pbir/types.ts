@@ -137,12 +137,14 @@ export interface Page {
   filters: ReportFilter[];
   visuals: Visual[];
   /**
-   * The folder names of the visuals in this page's folder whose visual.json could not be read.
-   * Power BI Desktop names a visual's folder after the visual's `name` (Learn's PBIR naming
-   * convention; every one of 13,026 visuals in Desktop-saved files), so these are the names of
-   * visuals the page has that pbiplint could not read. Kept on the page, not the report, because a
-   * visual.json is joined to its page by folder here, and a page's `name` can differ from its
-   * folder after a rename.
+   * The folder names of the visuals in this page's folder whose visual.json could not be read, or
+   * whose own folder could not be. Power BI Desktop names a visual's folder after the visual's
+   * `name` (Learn's PBIR naming convention; every one of 13,026 visuals in Desktop-saved files), so
+   * these are the names of visuals the page has that pbiplint could not read. Kept on the page, not
+   * the report, because a visual.json is joined to its page by folder here, and a page's `name` can
+   * differ from its folder after a rename. A folder above the visual's that could not be read, such
+   * as the page's visuals folder, names no visual; `visualUnread` in rules/report-helpers.ts reads
+   * it beside this.
    */
   unreadVisuals: string[];
   /**
@@ -226,32 +228,51 @@ export interface Report {
   /**
    * What became of definition/reportExtensions.json: `absent` when the input holds none, `read`
    * when it parsed to an object and its measures are in `measures`, `unread` when it did not (a
-   * merge conflict, invalid JSON, or a document that is not an object, which PARSE_ISSUE reports),
-   * so `measures` says nothing of what the file defines.
+   * merge conflict, invalid JSON, or a document that is not an object, which PARSE_ISSUE reports)
+   * or the input reader could not read it, or definition/ itself, at all, so `measures` says
+   * nothing of what the file defines.
    */
   extensions: "absent" | "read" | "unread";
   datasetReference: DatasetReference;
+  /** The files the report was read from, as given; a path the input reader could not read is not one. */
   files: string[];
   issues: ParseIssue[];
   /**
-   * The files under definition/ that the PBIR format defines and that could not be read (a merge
-   * conflict, invalid JSON, or a document that is not an object, each a PARSE_ISSUE), in path
-   * order. Whatever such a file says is missing from this report, so a rule whose findings depend
-   * on one is skipped while it is listed, through the predicate its `skipWhenUnread` names.
-   * definition.pbir, the .platform, and the .pbip are not part of the definition folder, and a
-   * JSON file of the author's own is not part of the report, so none of them is listed.
+   * The files under definition/ that the PBIR format defines and that could not be read, in path
+   * order: a merge conflict, invalid JSON, or a document that is not an object, each a
+   * PARSE_ISSUE, or a file the input reader could not read at all (`LintOptions.unreadPaths`),
+   * which its notice names instead. Whatever such a file says is missing from this report, so a
+   * rule whose findings depend on one is skipped while it is listed, through the predicate its
+   * `skipWhenUnread` names. definition.pbir, the .platform, and the .pbip are not part of the
+   * definition folder, and a JSON file of the author's own is not part of the report, so none of
+   * them is listed.
    */
   unreadDefinitionFiles: string[];
   /**
-   * The folder names of the pages whose page.json could not be read. Desktop names a page's folder
-   * after its `name` (713 of 714 pages in Desktop-saved files; a rename by hand keeps the folder),
-   * so a rule that looks a page up by name reads this before it says no such page exists. A page
-   * of these with a visual that was read is also in `pages`, as a stub named by its folder.
+   * The folders under definition/ that the input reader could not read, each written with a
+   * trailing `/`, in path order: definition/ itself or a folder below it that could hold a file
+   * the PBIR format defines (`folderHolds` in pbir/build.ts). Each counts as every such file it
+   * could hold: a visual's folder its visual.json and its mobile.json, a page's folder its
+   * page.json and everything under it, the pages or bookmarks folder any file of theirs, and
+   * definition/ anything. The predicates in rules/report-helpers.ts read these beside
+   * `unreadDefinitionFiles`, and the page or visual a folder names is in `unreadPages` or
+   * `Page.unreadVisuals`, as its own file would put it.
+   */
+  unreadDefinitionFolders: string[];
+  /**
+   * The folder names of the pages whose page.json could not be read, or whose own folder could not
+   * be. Desktop names a page's folder after its `name` (713 of 714 pages in Desktop-saved files; a
+   * rename by hand keeps the folder), so a rule that looks a page up by name reads this before it
+   * says no such page exists (`pageUnread` in rules/report-helpers.ts, which also reads a folder
+   * above the page's). A page of these with a visual that was read is also in `pages`, as a stub
+   * named by its folder.
    */
   unreadPages: string[];
   /**
    * The names of the bookmarks whose bookmark file could not be read, from the file name
    * `<name>.bookmark.json`, which Desktop gives every bookmark (576 of 576 in Desktop-saved files).
+   * A bookmarks folder that could not be read names no bookmark; `bookmarkUnread` in
+   * rules/report-helpers.ts reads it beside this.
    */
   unreadBookmarks: string[];
   schemaVersions: { report?: string; page?: string; visual?: string };

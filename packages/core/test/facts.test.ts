@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { buildIndexes } from "../src/index/build.js";
+import { buildModel } from "../src/model/build.js";
+import type { Model } from "../src/model/types.js";
 import { buildReport } from "../src/pbir/build.js";
 import { buildFacts } from "../src/project/facts.js";
 import { defaultRules } from "../src/rules/index.js";
+import type { RuleOptions } from "../src/rules/types.js";
+import { parseTmdl } from "../src/tmdl/parse.js";
 import { modelFrom } from "./helpers.js";
 
 const j = (v: unknown) => JSON.stringify(v);
@@ -43,6 +47,8 @@ const visual = (
   }),
 });
 const ALL = new Set(defaultRules.map((r) => r.id));
+/** FILTERS_PANE_STATE's options under an `expect` policy, as lint passes a rule's options. */
+const policy = (expect: "open" | "closed") => new Map([["FILTERS_PANE_STATE", { expect }]]);
 const sales =
   "table Sales\n\tcolumn Amount\n\t\tdataType: decimal\n\tcolumn Region\n\t\tdataType: string\n\tmeasure Total = SUM('Sales'[Amount])\n\tmeasure Other = 1\n";
 const model = modelFrom(sales);
@@ -135,7 +141,8 @@ describe("buildFacts", () => {
   it("states what the report will do, with a rule id where a known rule checks the fact", () => {
     const { report } = buildReport(files);
     const project = { model, report };
-    expect(buildFacts(project, buildIndexes(project), ALL)).toEqual([
+    // The pane is saved open under a policy that expects it closed, so the Filters pane links too.
+    expect(buildFacts(project, buildIndexes(project), ALL, policy("closed"))).toEqual([
       {
         layer: "report",
         label: "Opens on",
@@ -279,12 +286,8 @@ describe("buildFacts", () => {
       detail: "the page open when it was saved; no landing page set",
       ruleId: "OPENING_PAGE_INVALID",
     });
-    expect(f2[1]).toEqual({
-      layer: "report",
-      label: "Filters pane",
-      value: "closed",
-      ruleId: "FILTERS_PANE_STATE",
-    });
+    // No policy is given, so FILTERS_PANE_STATE cannot fire and the pane links no rule.
+    expect(f2[1]).toEqual({ layer: "report", label: "Filters pane", value: "closed" });
     expect(f2.find((f) => f.label === "Slicers")).toEqual({
       layer: "report",
       label: "Slicers",
@@ -311,12 +314,12 @@ describe("buildFacts", () => {
       detail: "the first page; no landing page set",
       ruleId: "LANDING_PAGE_NOT_SET",
     });
+    // No policy is given, so the pane links no rule.
     expect(f[1]).toEqual({
       layer: "report",
       label: "Filters pane",
       value: "open",
       detail: "read as open; report.json does not record it",
-      ruleId: "FILTERS_PANE_STATE",
     });
     // With no report.json read, absent or unreadable, nothing says what state the pane is in.
     const pagesOnly = [
@@ -378,6 +381,57 @@ describe("buildFacts", () => {
       label: "Opens on",
       value: "unknown",
       detail: "no landing page set",
+    });
+  });
+  it("links FILTERS_PANE_STATE from the Filters pane only under an expect policy, and only when the rule ran", () => {
+    const pages = [
+      { path: "definition/pages/pages.json", text: j({ pageOrder: ["p1"], activePageName: "p1" }) },
+      page("p1", "Overview"),
+    ];
+    const pane = (
+      files: { path: string; text: string }[],
+      known: ReadonlySet<string>,
+      options?: ReadonlyMap<string, RuleOptions>,
+    ) => {
+      const { report } = buildReport([...pages, ...files]);
+      return buildFacts({ report }, buildIndexes({ report }), known, options).find(
+        (f) => f.label === "Filters pane",
+      );
+    };
+    const saved = [
+      {
+        path: "definition/report.json",
+        text: j({ objects: { outspacePane: [{ properties: { expanded: lit("false") } }] } }),
+      },
+    ];
+    const closed = { layer: "report", label: "Filters pane", value: "closed" };
+    const linked = { ...closed, ruleId: "FILTERS_PANE_STATE" };
+    // Without a policy the rule runs and can never fire, so the fact links nothing; another
+    // rule's options are not the pane's policy.
+    expect(pane(saved, ALL)).toEqual(closed);
+    expect(pane(saved, ALL, new Map())).toEqual(closed);
+    expect(pane(saved, ALL, new Map([["TAB_ORDER_FOLLOWS_LAYOUT", { expect: "layout" }]]))).toEqual(
+      closed,
+    );
+    // Under a policy the fact links the rule whether the saved state meets it or breaks it.
+    expect(pane(saved, ALL, policy("closed"))).toEqual(linked);
+    expect(pane(saved, ALL, policy("open"))).toEqual(linked);
+    // A pane report.json does not record is read as open, and links under a policy the same way.
+    expect(pane([{ path: "definition/report.json", text: j({}) }], ALL, policy("closed"))).toEqual({
+      layer: "report",
+      label: "Filters pane",
+      value: "open",
+      detail: "read as open; report.json does not record it",
+      ruleId: "FILTERS_PANE_STATE",
+    });
+    // A policy for a rule that did not run links nothing.
+    expect(pane(saved, new Set(), policy("closed"))).toEqual(closed);
+    // With report.json not read the pane is unknown and links no rule under any policy.
+    expect(pane([], ALL, policy("closed"))).toEqual({
+      layer: "report",
+      label: "Filters pane",
+      value: "unknown",
+      detail: "report.json was not read",
     });
   });
   it("says unknown when pages.json was not read, whether it is absent or unreadable", () => {
@@ -743,6 +797,117 @@ describe("buildFacts", () => {
       "definition/bookmarks/b1.bookmark.json",
     ])
       expect(modelFact({ path, text: conflicted }), path).toEqual(unknown);
+  });
+  describe("the not-reached clause of Model on a model pbiplint could not fully read", () => {
+    const SALES = "definition/tables/Sales.tmdl";
+    /** The Model fact for the model given, beside every report file in `files`. */
+    const modelFact = (m: Model, ...extra: { path: string; text: string }[]) => {
+      const { report } = buildReport([...files, ...extra]);
+      const project = { model: m, report };
+      return buildFacts(project, buildIndexes(project), ALL).find((f) => f.label === "Model");
+    };
+    // The counts stay, a lower bound, as they do for a report file that could not be read.
+    const counted = { layer: "model", label: "Model", value: "1 table, 2 columns, 2 measures" };
+    const unknown = {
+      ...counted,
+      detail: "not reached from this report: unknown, a model file could not be fully read",
+    };
+    it("says unknown and links no rule while a model file has a parse issue that can drop an object", () => {
+      // A line indented with spaces, which the parser skips, so what it declares is not read.
+      const partly = buildModel([parseTmdl(SALES, `${sales}    measure Lost = [Other]\n`)]);
+      expect(partly.files[0]!.issues.map((i) => i.canDropObjects)).toEqual([true]);
+      expect(modelFact(partly)).toEqual(unknown);
+    });
+    it("says unknown and links no rule while a model path could not be read at all", () => {
+      expect(
+        modelFact(buildModel([parseTmdl(SALES, sales)], ["definition/tables/Store.tmdl"])),
+      ).toEqual(unknown);
+      expect(modelFact(buildModel([parseTmdl(SALES, sales)], ["definition/tables/"]))).toEqual(
+        unknown,
+      );
+    });
+    it("counts while the only parse issue is an orphaned description, which drops no declaration", () => {
+      const described = buildModel([
+        parseTmdl(
+          SALES,
+          sales.replace("\tcolumn Region\n", "\t/// Described\n\n\tcolumn Region\n"),
+        ),
+      ]);
+      expect(described.files[0]!.issues.map((i) => i.canDropObjects)).toEqual([false]);
+      expect(modelFact(described)).toEqual({
+        ...counted,
+        detail: "0 columns and 1 measure not reached from this report",
+        ruleId: "NOT_REACHED_FROM_REPORT",
+      });
+    });
+    it("gives the report file's reason when a report file could not be read as well", () => {
+      const both = buildModel([parseTmdl(SALES, sales)], ["definition/tables/Store.tmdl"]);
+      expect(
+        modelFact(both, { path: "definition/pages/p1/visuals/v9/visual.json", text: "[]" }),
+      ).toEqual({
+        ...counted,
+        detail: "not reached from this report: unknown, a report file could not be read",
+      });
+    });
+  });
+  it("counts an unread report folder as every file it could hold, for each fact that asks", () => {
+    /** The facts with the files under each unread folder left out, as a reader that could not list it. */
+    const factsBeside = (...folders: string[]) => {
+      const kept = files.filter((f) => !folders.some((d) => f.path.startsWith(d)));
+      const { report } = buildReport(kept, folders);
+      const project = { model, report };
+      return buildFacts(project, buildIndexes(project), ALL);
+    };
+    const fact = (label: string, ...folders: string[]) =>
+      factsBeside(...folders).find((f) => f.label === label);
+    // A visual's own folder could hold its visual.json and its mobile.json.
+    const visualFolder = "definition/pages/p1/visuals/v9/";
+    expect(fact("Slicers", visualFolder)).toMatchObject({
+      value: "2",
+      detail: "1 saved selection",
+    });
+    expect(fact("Visuals", visualFolder)?.detail).toBe(
+      "1 hidden; 2 custom visual types registered, used: unknown, a visual.json could not be read",
+    );
+    expect(fact("Model", visualFolder)?.detail).toBe(
+      "not reached from this report: unknown, a report file could not be read",
+    );
+    // With every visual of the only page with visuals unread, none of them is counted.
+    expect(fact("Slicers", "definition/pages/p1/visuals/")).toEqual({
+      layer: "report",
+      label: "Slicers",
+      value: "unknown",
+      detail: "saved selections: unknown, a visual.json could not be read",
+    });
+    expect(fact("Mobile layouts", "definition/pages/p1/visuals/")).toEqual({
+      layer: "report",
+      label: "Mobile layouts",
+      value: "unknown",
+      detail: "a mobile.json could not be read",
+    });
+    // The bookmarks folder holds bookmark files, which name fields, and no visual.
+    expect(fact("Model", "definition/bookmarks/")?.detail).toBe(
+      "not reached from this report: unknown, a report file could not be read",
+    );
+    expect(fact("Visuals", "definition/bookmarks/")?.detail).toBe(
+      "1 hidden; 2 custom visual types registered, 1 used",
+    );
+    // A page's folder names the page, as its page.json does.
+    const opensOn = factsBeside("definition/pages/p1/").find((f) => f.label === "Opens on");
+    expect(opensOn).toEqual({
+      layer: "report",
+      label: "Opens on",
+      value: "p1",
+      detail: "the page open when it was saved; no landing page set",
+      ruleId: "LANDING_PAGE_NOT_SET",
+    });
+    // definition/ itself holds reportExtensions.json.
+    expect(fact("Report measures", "definition/")).toEqual({
+      layer: "report",
+      label: "Report measures",
+      value: "unknown",
+      detail: "reportExtensions.json was not read",
+    });
   });
   describe("Model and Desktop's auto date/time tables", () => {
     // With Auto date/time on, Power BI Desktop adds a calculated LocalDateTable_<guid> per date

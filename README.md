@@ -110,9 +110,10 @@ documented deviations where the source is noisier, or quieter, than it means to 
 own rules for a report's correctness and readiness: fields the model does not have, model objects
 the report never reaches, a landing page not set, the opening page, the Filters pane, hidden
 visuals left with fields bound, default page names, empty visuals, visuals past the page edge,
-report-level measures, broken button and bookmark targets, actions with no destination, tab order
-against layout, and saved slicer selections and search terms. "Report at a glance" states what the
-report will do whether or not anything fired.
+report-level measures, actions that point at a missing page or bookmark, bookmarks that refer to a
+missing page or visual, actions with no destination, tab order against layout, and saved slicer
+selections and search terms. "Report at a glance" states what the report will do whether or not
+anything fired.
 
 ## Links
 

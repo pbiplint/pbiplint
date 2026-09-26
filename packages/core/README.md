@@ -28,8 +28,9 @@ for (const group of result.groups) console.log(group.rule.id, group.findings.len
 the website show it. Every rule has a page at `https://pbiplint.com/rules/<slug>`; `group.rule.url`
 points at it.
 
-The optional second argument, `lint(files, options)`, takes the config and what the caller's
-input reader found besides the files. `config` is a `pbiplint.config.json` object. `diagnostics`
+The optional second argument, `lint(files, options)`, takes the config, the rules to run, and
+what the caller's input reader found besides the files. `config` is a `pbiplint.config.json`
+object. `rules` lists the rules to run in place of the default set, `defaultRules`. `diagnostics`
 are the reader's notices, such as a file it could not read, carried onto the result. `absent`
 gives, per layer, why the reader left that layer out, for the skipped line. `unreadPaths` lists,
 per layer, the files and folders the reader could not read, each relative to its part's root in

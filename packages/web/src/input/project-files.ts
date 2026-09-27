@@ -139,7 +139,7 @@ const NOTHING_FOUND =
  * Firefox may hand over some of the files.
  */
 const DRAG_INSTEAD =
-  "If the folder you chose holds a model or report, your browser may have left out a folder inside it that it could not open; drag the folder onto the page instead.";
+  "If the folder you chose holds a model or report, your browser may not have been able to open a folder inside it; drag the folder onto the page instead.";
 
 // The CLI's words (packages/cli/src/walk.ts), so both surfaces say the same about a legacy part.
 const legacyReport = (name: string): Diagnostic => ({

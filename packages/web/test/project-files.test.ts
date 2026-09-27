@@ -1102,7 +1102,7 @@ describe("selectProject on the directory-input route (Firefox and Safari)", () =
   const NOTHING =
     "No model or report found. Drop a PBIP folder, a .SemanticModel or .Report folder, or a .tmdl file.";
   const DRAG =
-    "If the folder you chose holds a model or report, your browser may have left out a folder inside it that it could not open; drag the folder onto the page instead.";
+    "If the folder you chose holds a model or report, your browser may not have been able to open a folder inside it; drag the folder onto the page instead.";
   /** A tree as the directory input's reader leaves it, holding `extra`. */
   const chosen = (extra: Partial<InputTree> = {}): InputTree => ({
     ...emptyTree(),

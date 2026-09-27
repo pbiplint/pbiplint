@@ -51,7 +51,7 @@ A hidden measure that no other measure uses can only be reached by a report that
 
 ## How to fix it
 
-In Power BI Desktop, right-click the measure in the Data pane and choose Delete from model, or, if reports still use it, clear Is hidden in the Properties pane so the dependency is visible to the next person. In the TMDL file, remove the `measure` block from its table, or remove `isHidden` from under it. Search the project for the measure's name before you delete it: this rule has already read every expression in the model, so what a search adds is the report files, which this rule does not read.
+In Power BI Desktop, right-click the measure in the Data pane and choose Delete from model, or, if reports still use it, clear Is hidden in the Properties pane so the dependency is visible to the next person. In the TMDL file, remove the `measure` block from its table, or remove `isHidden` from under it. Search the project for the measure's name before you delete it: this rule has already searched the model's DAX (measures and their format strings, calculated columns and tables, calculation items, and row-level security filters), so what a search adds is the report files, which this rule does not read, and anything else in the model that names the measure.
 
 ## When to ignore it
 

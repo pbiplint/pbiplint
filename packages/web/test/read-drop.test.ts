@@ -366,9 +366,11 @@ describe("walkEntry", () => {
     await walkEntry(dir("M", "/M", [file("C.tmdl", "/M/C.tmdl", "table C\n")]), clean);
     expect(clean).not.toHaveProperty("refusal");
   });
-  it("names a folder it cannot list once, keeps the batches it had, and goes on with its siblings", async () => {
+  it("names a folder it cannot list once, with a plain reason, keeps the batches it had, and goes on with its siblings", async () => {
     // Chrome hands out a folder's entries in batches; a later batch can fail after an earlier one
-    // was walked, and what that earlier batch held is still read.
+    // was walked, and what that earlier batch held is still read. Whatever the browser's error
+    // says, the reason is the plain one: Firefox's message for a folder without read permission
+    // (Michael's check, September 26, 2026) says nothing the reader can act on.
     let listed = 0;
     const failing = {
       ...dir("M", "/P/M", []),
@@ -378,7 +380,10 @@ describe("walkEntry", () => {
           if (listed === 1) ok([file("A.tmdl", "/P/M/A.tmdl", "table A\n")]);
           else
             fail(
-              new DOMException("A requested file or directory could not be found", "NotFoundError"),
+              new DOMException(
+                "An attempt was made to use an object that is not, or is no longer, usable",
+                "InvalidStateError",
+              ),
             );
         },
       }),
@@ -393,19 +398,34 @@ describe("walkEntry", () => {
       {
         kind: "unread-file",
         path: "P/M",
-        message:
-          "P/M could not be read (A requested file or directory could not be found), so it was not linted",
+        message: "P/M could not be read (the browser could not open it), so it was not linted",
       },
     ]);
-    expect(tree.refusal).toEqual({
-      path: "P/M",
-      reason: "A requested file or directory could not be found",
-    });
+    expect(tree.refusal).toEqual({ path: "P/M", reason: "the browser could not open it" });
     // The notice does not say its path is a folder, and lint takes a folder with a trailing /, so
     // the tree says so.
     expect(tree.unreadFolders).toEqual(["P/M"]);
     // The walk asked for the second batch once and stopped there, rather than asking again.
     expect(listed).toBe(2);
+  });
+  it("refuses a dropped folder it could not list in the plain reason", async () => {
+    const locked = {
+      ...dir("P", "/P", []),
+      createReader: () => ({
+        readEntries: (_ok: unknown, fail: (e: Error) => void) =>
+          fail(
+            new DOMException(
+              "An attempt was made to write to a file or directory which could not be modified due to the state of the underlying filesystem.",
+              "NoModificationAllowedError",
+            ),
+          ),
+      }),
+    } as unknown as FileSystemDirectoryEntry;
+    const tree = emptyTree();
+    await walkEntry(locked, tree);
+    expect(() => selectProject(tree)).toThrow(
+      new InputError("Could not read P: the browser could not open it"),
+    );
   });
   it("never walks a report's StaticResources or CustomVisuals, and says nothing about them at the cap", async () => {
     expect(SKIP_DIRS.has("StaticResources")).toBe(true);

@@ -284,15 +284,31 @@ describe("readPickedDirectory", () => {
     expect(out?.refusal).toEqual({ path: "M/Sales.tmdl", reason: "The file is locked" });
     expect(out?.unreadFolders).toEqual([]);
   });
-  it("names a folder whose listing fails, at the start or partway, once, and goes on with its siblings", async () => {
+  it("names a folder whose listing fails, at the start or partway, once, with a plain reason, and goes on with its siblings", async () => {
+    // Whatever the browser's error says, the reason is the plain one: Chrome's message for a
+    // folder without read permission speaks of writing to one (Michael's check, September 26,
+    // 2026), which says nothing the reader can act on.
     const picked = dirHandle("P", [
       failingDir(
         "A",
         [],
-        new DOMException("A requested file or directory could not be found", "NotFoundError"),
+        new DOMException(
+          "An attempt was made to write to a file or directory which could not be modified due to the state of the underlying filesystem.",
+          "NoModificationAllowedError",
+        ),
       ),
       failingDir("B", [fileHandle("x.tmdl", "table X\n")], "permission revoked"),
-      dirHandle("C", [fileHandle("y.tmdl", "table Y\n")]),
+      dirHandle("C", [
+        fileHandle("y.tmdl", "table Y\n"),
+        // A file whose read fails keeps the browser's message.
+        {
+          kind: "file",
+          name: "z.tmdl",
+          getFile: async () => {
+            throw new DOMException("The file is locked", "NotReadableError");
+          },
+        },
+      ]),
     ]);
     const out = await readPickedDirectory(async () => picked as never);
     expect(out?.entries.map((e) => e.path)).toEqual(["P/B/x.tmdl", "P/C/y.tmdl"]);
@@ -300,22 +316,32 @@ describe("readPickedDirectory", () => {
       {
         kind: "unread-file",
         path: "P/A",
-        message:
-          "P/A could not be read (A requested file or directory could not be found), so it was not linted",
+        message: "P/A could not be read (the browser could not open it), so it was not linted",
       },
       {
         kind: "unread-file",
         path: "P/B",
-        message: "P/B could not be read (permission revoked), so it was not linted",
+        message: "P/B could not be read (the browser could not open it), so it was not linted",
+      },
+      {
+        kind: "unread-file",
+        path: "P/C/z.tmdl",
+        message: "P/C/z.tmdl could not be read (The file is locked), so it was not linted",
       },
     ]);
-    expect(out?.refusal).toEqual({
-      path: "P/A",
-      reason: "A requested file or directory could not be found",
-    });
+    expect(out?.refusal).toEqual({ path: "P/A", reason: "the browser could not open it" });
     // The notices do not say their paths are folders, and lint takes a folder with a trailing /,
     // so the tree says so.
     expect(out?.unreadFolders).toEqual(["P/A", "P/B"]);
+  });
+  it("refuses a picked folder it could not list in the plain reason", async () => {
+    const out = await readPickedDirectory(
+      async () =>
+        failingDir("P", [], new DOMException("permission revoked", "NotAllowedError")) as never,
+    );
+    expect(() => selectProject(out!)).toThrow(
+      new InputError("Could not read P: the browser could not open it"),
+    );
   });
   it("returns null when the person cancels the dialog", async () => {
     const abort = async () => {

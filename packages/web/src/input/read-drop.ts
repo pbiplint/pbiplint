@@ -61,13 +61,21 @@ export const depthCap = (folder: string): Diagnostic => ({
 });
 
 /**
+ * The reason given for a folder the browser would not list, whatever its error says. The browsers'
+ * messages for a folder without read permission name nothing the reader can act on, and Chrome's
+ * speaks of writing to one (Michael's check, September 26, 2026; spec section 12).
+ */
+const UNLISTED_FOLDER_REASON = "the browser could not open it";
+
+/**
  * The `unread-file` notice (spec section 4) for a file the browser would not hand over, or a folder
  * it would not list, in the CLI's words. The first one is also the tree's refusal. A path is named
- * once, as the CLI names it. The reason is the error's message: a DOMException is an Error. A
- * folder (`folder`) is recorded as one, since the notice cannot say so and lint needs to know.
+ * once, as the CLI names it. A file's reason is the error's message (a DOMException is an Error);
+ * a folder's is UNLISTED_FOLDER_REASON. A folder (`folder`) is recorded as one, since the notice
+ * cannot say so and lint needs to know.
  */
 export function unread(tree: InputTree, path: string, e: unknown, folder = false): void {
-  const reason = e instanceof Error ? e.message : String(e);
+  const reason = folder ? UNLISTED_FOLDER_REASON : e instanceof Error ? e.message : String(e);
   tree.refusal ??= { path, reason };
   if (folder && !tree.unreadFolders.includes(path)) tree.unreadFolders.push(path);
   if (tree.diagnostics.some((d) => d.kind === "unread-file" && d.path === path)) return;

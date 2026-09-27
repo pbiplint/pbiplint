@@ -101,7 +101,7 @@ Where nothing needs the relationship, delete it instead: open the model view, ri
 
 ## When to ignore it
 
-pbiplint reads the semantic model, not the reports built on it. A report-level measure in a live-connected report can call USERELATIONSHIP, and this rule cannot see it, so check the reports before deleting a relationship that looks unused. The same goes for a relationship activated from a calculated column, a calculated table, or a row-level security filter: none of those is scanned here, and a finding on one of them is noise. A relationship added this week for measures that are still being written is a fair thing to leave alone for a sprint.
+This rule reads the semantic model, not the reports built on it. A report-level measure in a live-connected report can call USERELATIONSHIP, and the rule cannot see it, so check the reports before deleting a relationship that looks unused. The same goes for a relationship activated from a calculated column, a calculated table, or a row-level security filter: none of those is scanned here, and a finding on one of them is noise. A relationship added this week for measures that are still being written is a fair thing to leave alone for a sprint.
 
 ## Quirks
 

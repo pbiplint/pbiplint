@@ -51,11 +51,11 @@ A hidden measure that no other measure uses can only be reached by a report that
 
 ## How to fix it
 
-In Power BI Desktop, right-click the measure in the Data pane and choose Delete from model, or, if reports still use it, clear Is hidden in the Properties pane so the dependency is visible to the next person. In the TMDL file, remove the `measure` block from its table, or remove `isHidden` from under it. Search the project for the measure's name before you delete it: pbiplint has already read every expression in the model, so what a search adds is the report files, which it does not read.
+In Power BI Desktop, right-click the measure in the Data pane and choose Delete from model, or, if reports still use it, clear Is hidden in the Properties pane so the dependency is visible to the next person. In the TMDL file, remove the `measure` block from its table, or remove `isHidden` from under it. Search the project for the measure's name before you delete it: this rule has already read every expression in the model, so what a search adds is the report files, which this rule does not read.
 
 ## When to ignore it
 
-Report usage is the case to check first. A hidden measure that a visual or a report-level filter binds to directly is in use, and pbiplint reads the model, not the report, so open the reports before you delete one. A measure you have written for a calculation item or a measure you have not finished is a fair thing to leave for as long as that lasts. A hidden measure nobody can name a caller for is what the rule is for.
+Report usage is the case to check first. A hidden measure that a visual or a report-level filter binds to directly is in use, but this rule reads the model only, as the source rule does, so it reports that measure all the same. When the report is in the input, `NOT_REACHED_FROM_REPORT` says which fields that report never reaches; other reports on the same model are still yours to open before you delete a measure. A measure you have written for a calculation item or a measure you have not finished is a fair thing to leave for as long as that lasts. A hidden measure nobody can name a caller for is what the rule is for.
 
 ## Quirks
 

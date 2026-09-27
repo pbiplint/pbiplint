@@ -370,7 +370,8 @@ describe("walkEntry", () => {
     // Chrome hands out a folder's entries in batches; a later batch can fail after an earlier one
     // was walked, and what that earlier batch held is still read. Whatever the browser's error
     // says, the reason is the plain one: Firefox's message for a folder without read permission
-    // (Michael's check, September 26, 2026) says nothing the reader can act on.
+    // (Michael's check, September 26, 2026) says nothing the reader can act on. It says the
+    // browser could not list all of the folder, which holds here, where the first batch was read.
     let listed = 0;
     const failing = {
       ...dir("M", "/P/M", []),
@@ -398,10 +399,14 @@ describe("walkEntry", () => {
       {
         kind: "unread-file",
         path: "P/M",
-        message: "P/M could not be read (the browser could not open it), so it was not linted",
+        message:
+          "P/M could not be read (the browser could not list all of its contents), so it was not linted",
       },
     ]);
-    expect(tree.refusal).toEqual({ path: "P/M", reason: "the browser could not open it" });
+    expect(tree.refusal).toEqual({
+      path: "P/M",
+      reason: "the browser could not list all of its contents",
+    });
     // The notice does not say its path is a folder, and lint takes a folder with a trailing /, so
     // the tree says so.
     expect(tree.unreadFolders).toEqual(["P/M"]);
@@ -424,7 +429,7 @@ describe("walkEntry", () => {
     const tree = emptyTree();
     await walkEntry(locked, tree);
     expect(() => selectProject(tree)).toThrow(
-      new InputError("Could not read P: the browser could not open it"),
+      new InputError("Could not read P: the browser could not list all of its contents"),
     );
   });
   it("never walks a report's StaticResources or CustomVisuals, and says nothing about them at the cap", async () => {

@@ -316,12 +316,14 @@ describe("readPickedDirectory", () => {
       {
         kind: "unread-file",
         path: "P/A",
-        message: "P/A could not be read (the browser could not open it), so it was not linted",
+        message:
+          "P/A could not be read (the browser could not list all of its contents), so it was not linted",
       },
       {
         kind: "unread-file",
         path: "P/B",
-        message: "P/B could not be read (the browser could not open it), so it was not linted",
+        message:
+          "P/B could not be read (the browser could not list all of its contents), so it was not linted",
       },
       {
         kind: "unread-file",
@@ -329,7 +331,10 @@ describe("readPickedDirectory", () => {
         message: "P/C/z.tmdl could not be read (The file is locked), so it was not linted",
       },
     ]);
-    expect(out?.refusal).toEqual({ path: "P/A", reason: "the browser could not open it" });
+    expect(out?.refusal).toEqual({
+      path: "P/A",
+      reason: "the browser could not list all of its contents",
+    });
     // The notices do not say their paths are folders, and lint takes a folder with a trailing /,
     // so the tree says so.
     expect(out?.unreadFolders).toEqual(["P/A", "P/B"]);
@@ -340,7 +345,7 @@ describe("readPickedDirectory", () => {
         failingDir("P", [], new DOMException("permission revoked", "NotAllowedError")) as never,
     );
     expect(() => selectProject(out!)).toThrow(
-      new InputError("Could not read P: the browser could not open it"),
+      new InputError("Could not read P: the browser could not list all of its contents"),
     );
   });
   it("returns null when the person cancels the dialog", async () => {

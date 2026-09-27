@@ -1652,18 +1652,21 @@ files, since whether Firefox handed the page no files or only some is
 not known. The drop and the picker keep the refusal's words, since
 they name such a folder in a notice, and the `.pbix` refusal and every
 other refusal are unchanged. A folder the picker or the drop could not
-list is now named, in its `unread-file` notice and in a refusal that
-names it (`Could not read <path>: <reason>`), with the reason "the
-browser could not open it" in place of the browser's message, whatever
-the error, since the messages Michael saw for a folder without read
-permission name nothing the reader can act on: Chrome's "An attempt
-was made to write to a file or directory which could not be modified
-due to the state of the underlying filesystem." and Firefox's "An
-attempt was made to use an object that is not, or is no longer,
-usable". A file whose read fails keeps the browser's message, and the
-CLI keeps the reason its system gives, as in section 4's A7 note.
-About's "Known limits in the browser" says that the Firefox refusal
-suggests dragging the folder.
+list, at the start or partway, is now named, in its `unread-file`
+notice and in a refusal that names it (`Could not read <path>:
+<reason>`), with the reason "the browser could not list all of its
+contents" in place of the browser's message, whatever the error, since
+the messages Michael saw for a folder without read permission name
+nothing the reader can act on: Chrome's "An attempt was made to write
+to a file or directory which could not be modified due to the state of
+the underlying filesystem." and Firefox's "An attempt was made to use
+an object that is not, or is no longer, usable". The reason says the
+listing fell short rather than that the folder could not be opened,
+since a listing that fails partway has already handed out entries, and
+those were read. A file whose read fails keeps the browser's message,
+and the CLI keeps the reason its system gives, as in section 4's A7
+note. About's "Known limits in the browser" says that the Firefox
+refusal suggests dragging the folder.
 
 ## 13. CLI changes
 

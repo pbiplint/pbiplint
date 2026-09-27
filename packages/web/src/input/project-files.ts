@@ -49,9 +49,9 @@ export interface InputTree {
   unreadFolders: string[];
   /**
    * The first path the walk could not read, with the reason its notice gives (the browser's message
-   * for a file, "the browser could not open it" for a folder), as the CLI's Walk.refusal holds it:
-   * set beside the first `unread-file` diagnostic and never overwritten, so a drop of which nothing
-   * could be read is refused naming it. Absent when every read succeeded.
+   * for a file, "the browser could not list all of its contents" for a folder), as the CLI's
+   * Walk.refusal holds it: set beside the first `unread-file` diagnostic and never overwritten, so
+   * a drop of which nothing could be read is refused naming it. Absent when every read succeeded.
    */
   refusal?: { path: string; reason: string };
   /**

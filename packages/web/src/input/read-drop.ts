@@ -61,11 +61,13 @@ export const depthCap = (folder: string): Diagnostic => ({
 });
 
 /**
- * The reason given for a folder the browser would not list, whatever its error says. The browsers'
- * messages for a folder without read permission name nothing the reader can act on, and Chrome's
- * speaks of writing to one (Michael's check, September 26, 2026; spec section 12).
+ * The reason given for a folder the browser would not list, at the start or partway, whatever its
+ * error says. The browsers' messages for a folder without read permission name nothing the reader
+ * can act on, and Chrome's speaks of writing to one (Michael's check, September 26, 2026; spec
+ * section 12). It says the listing fell short rather than that the folder could not be opened,
+ * since a listing that fails partway has already handed out entries, and those were read.
  */
-const UNLISTED_FOLDER_REASON = "the browser could not open it";
+const UNLISTED_FOLDER_REASON = "the browser could not list all of its contents";
 
 /**
  * The `unread-file` notice (spec section 4) for a file the browser would not hand over, or a folder

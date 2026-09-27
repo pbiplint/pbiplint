@@ -61,7 +61,7 @@ There is no case for the bare form. The rule is worth reading as a warning rathe
 
 - Calculation items are in the rule's scope but never fire, because Tabular Editor does not resolve bare column references inside calculation items and pbiplint matches that.
 - A bare name that matches any measure in the model is treated as a measure reference, so a column that shares its name with a measure is never flagged.
-- A bare name that matches no measure is looked for on the expression's own table first, then on every other table in model order, so a finding can be raised by a column that lives on a table the expression never mentions.
+- A bare name that matches no measure is looked for on the expression's own table first, then on every other table in the order pbiplint reads the model's files, so a finding can be raised by a column that lives on a table the expression never mentions.
 - References are found by pattern matching, so a bare `[Column]` inside a string literal or a comment counts.
 - A measure's dynamic format string is read together with its expression, so a bare column reference written inside `formatStringDefinition` reports the measure that carries it.
 - Calculated columns and calculated tables are out of scope, so a bare column reference in either is not reported.

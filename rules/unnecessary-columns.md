@@ -64,7 +64,7 @@ For a data column, stop loading it: in Power BI Desktop, Transform data, select 
 
 ## When to ignore it
 
-Report usage is the case to check first. A hidden column that a visual, a slicer, or a report-level filter binds to is in use, and pbiplint reads the model, not the report, so open the reports before you delete anything. A column named as the default column of a variation is in the same position: the rule does not read variations, so it reports one that Power BI Desktop is quietly relying on. A staging column you are about to reference is a fair thing to leave for a week. A hidden key that no relationship uses is not: that one is what the rule is for.
+Report usage is the case to check first. A hidden column that a visual, a slicer, or a report-level filter binds to is in use, but this rule reads the model only, as the source rule does, so it reports that column all the same. When the report is in the input, `NOT_REACHED_FROM_REPORT` says which fields that report never reaches; other reports on the same model are still yours to open before you delete anything. A column named as the default column of a variation is in the same position: the rule does not read variations, so it reports one that Power BI Desktop is quietly relying on. A staging column you are about to reference is a fair thing to leave for a week. A hidden key that no relationship uses is not: that one is what the rule is for.
 
 ## Quirks
 

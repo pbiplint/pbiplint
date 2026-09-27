@@ -1,6 +1,11 @@
 import { pbixRefusal } from "@pbiplint/core";
 import { describe, expect, it } from "vitest";
-import { emptyTree, selectProject, type InputTree } from "../src/input/project-files.js";
+import {
+  emptyTree,
+  InputError,
+  selectProject,
+  type InputTree,
+} from "../src/input/project-files.js";
 import {
   MAX_DEPTH,
   SKIP_DIRS,
@@ -361,9 +366,12 @@ describe("walkEntry", () => {
     await walkEntry(dir("M", "/M", [file("C.tmdl", "/M/C.tmdl", "table C\n")]), clean);
     expect(clean).not.toHaveProperty("refusal");
   });
-  it("names a folder it cannot list once, keeps the batches it had, and goes on with its siblings", async () => {
+  it("names a folder it cannot list once, with a plain reason, keeps the batches it had, and goes on with its siblings", async () => {
     // Chrome hands out a folder's entries in batches; a later batch can fail after an earlier one
-    // was walked, and what that earlier batch held is still read.
+    // was walked, and what that earlier batch held is still read. Whatever the browser's error
+    // says, the reason is the plain one: Firefox's message for a folder without read permission
+    // (Michael's check, September 26, 2026) says nothing the reader can act on. It says the
+    // browser could not list all of the folder, which holds here, where the first batch was read.
     let listed = 0;
     const failing = {
       ...dir("M", "/P/M", []),
@@ -373,7 +381,10 @@ describe("walkEntry", () => {
           if (listed === 1) ok([file("A.tmdl", "/P/M/A.tmdl", "table A\n")]);
           else
             fail(
-              new DOMException("A requested file or directory could not be found", "NotFoundError"),
+              new DOMException(
+                "An attempt was made to use an object that is not, or is no longer, usable",
+                "InvalidStateError",
+              ),
             );
         },
       }),
@@ -389,18 +400,37 @@ describe("walkEntry", () => {
         kind: "unread-file",
         path: "P/M",
         message:
-          "P/M could not be read (A requested file or directory could not be found), so it was not linted",
+          "P/M could not be read (the browser could not list all of its contents), so it was not linted",
       },
     ]);
     expect(tree.refusal).toEqual({
       path: "P/M",
-      reason: "A requested file or directory could not be found",
+      reason: "the browser could not list all of its contents",
     });
     // The notice does not say its path is a folder, and lint takes a folder with a trailing /, so
     // the tree says so.
     expect(tree.unreadFolders).toEqual(["P/M"]);
     // The walk asked for the second batch once and stopped there, rather than asking again.
     expect(listed).toBe(2);
+  });
+  it("refuses a dropped folder it could not list in the plain reason", async () => {
+    const locked = {
+      ...dir("P", "/P", []),
+      createReader: () => ({
+        readEntries: (_ok: unknown, fail: (e: Error) => void) =>
+          fail(
+            new DOMException(
+              "An attempt was made to write to a file or directory which could not be modified due to the state of the underlying filesystem.",
+              "NoModificationAllowedError",
+            ),
+          ),
+      }),
+    } as unknown as FileSystemDirectoryEntry;
+    const tree = emptyTree();
+    await walkEntry(locked, tree);
+    expect(() => selectProject(tree)).toThrow(
+      new InputError("Could not read P: the browser could not list all of its contents"),
+    );
   });
   it("never walks a report's StaticResources or CustomVisuals, and says nothing about them at the cap", async () => {
     expect(SKIP_DIRS.has("StaticResources")).toBe(true);
@@ -448,6 +478,26 @@ describe("walkEntry", () => {
 });
 
 describe("readDataTransfer", () => {
+  it("leaves its tree unmarked, so a folder with nothing to lint is refused in today's words", async () => {
+    // A drop in Chrome, Edge, or Firefox names a folder it could not list in a notice, and a drop in
+    // Safari, which leaves such a folder out without a message, is already the drag the directory
+    // input's refusal suggests, so the drop's refusal suggests nothing.
+    const dt = {
+      items: [
+        {
+          webkitGetAsEntry: () => dir("Proj", "/Proj", [file("notes.txt", "/Proj/notes.txt", "")]),
+        },
+      ],
+      files: [],
+    } as unknown as DataTransfer;
+    const tree = await readDataTransfer(dt);
+    expect(tree).toEqual(emptyTree());
+    expect(() => selectProject(tree)).toThrow(
+      new InputError(
+        "No model or report found. Drop a PBIP folder, a .SemanticModel or .Report folder, or a .tmdl file.",
+      ),
+    );
+  });
   it("uses the entries API when the browser has it", async () => {
     const entry = file("T.tmdl", "/T.tmdl", "table T\n");
     const dt = { items: [{ webkitGetAsEntry: () => entry }], files: [] } as unknown as DataTransfer;

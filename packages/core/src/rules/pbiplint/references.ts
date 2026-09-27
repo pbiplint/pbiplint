@@ -95,7 +95,8 @@ export const NOT_REACHED_FROM_REPORT = pbiplintRule({
   check: (_project, ctx) => {
     const reach = ctx.indexes.reachability!;
     const { columns, measures } = reach.unreached();
-    // Measures first, so a dead chain reads top-down: the measure nothing uses, then what only it used.
+    // Measures before columns, so a column that only an unreached measure used is listed after that
+    // measure; within each list, fields keep the order pbiplint read them from the model's files.
     return [
       ...measures.map((m) => ({ ...finding.measure(m), detail: reach.reasonFor(m) })),
       ...columns.map((c) => ({ ...finding.column(c), detail: reach.reasonFor(c) })),

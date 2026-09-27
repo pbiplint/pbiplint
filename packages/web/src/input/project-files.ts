@@ -48,11 +48,21 @@ export interface InputTree {
    */
   unreadFolders: string[];
   /**
-   * The first path the walk could not read, with the browser's reason, as the CLI's Walk.refusal
-   * holds it: set beside the first `unread-file` diagnostic and never overwritten, so a drop of
-   * which nothing could be read is refused naming it. Absent when every read succeeded.
+   * The first path the walk could not read, with the reason its notice gives (the browser's message
+   * for a file, "the browser could not list all of its contents" for a folder), as the CLI's
+   * Walk.refusal holds it: set beside the first `unread-file` diagnostic and never overwritten, so
+   * a drop of which nothing could be read is refused naming it. Absent when every read succeeded.
    */
   refusal?: { path: string; reason: string };
+  /**
+   * Set by the directory input's reader (Firefox and Safari). That browser hands the page a flat
+   * list of the files it listed and says nothing of a folder inside the chosen one that it could
+   * not open, so no notice can name such a folder, as a drop in Chrome, Edge, or Firefox and the
+   * picker in Chrome and Edge do; the refusal of a folder with nothing to lint says so instead
+   * (spec section 12). A drop in Safari leaves such a folder out without a message too, but is
+   * left unmarked: it is already the drag that refusal suggests.
+   */
+  directoryInput?: true;
 }
 
 export const isReportFolder = (name: string): boolean => name.endsWith(".Report");
@@ -121,6 +131,15 @@ export const isModelFolder = (name: string): boolean => name.endsWith(MODEL_SUFF
 
 const NOTHING_FOUND =
   "No model or report found. Drop a PBIP folder, a .SemanticModel or .Report folder, or a .tmdl file.";
+/**
+ * What the directory input's NOTHING_FOUND adds. That route cannot tell a folder the browser could
+ * not open from a folder that is not there: in Michael's check (September 26, 2026), Firefox's
+ * chooser found no model or report in a project with one page folder it could not open, where a
+ * drag in Firefox named that folder in a notice. It follows the route, not an empty list, since
+ * Firefox may hand over some of the files.
+ */
+const DRAG_INSTEAD =
+  "If the folder you chose holds a model or report, your browser may not have been able to open a folder inside it; drag the folder onto the page instead.";
 
 // The CLI's words (packages/cli/src/walk.ts), so both surfaces say the same about a legacy part.
 const legacyReport = (name: string): Diagnostic => ({
@@ -670,8 +689,11 @@ export function selectProject(tree: InputTree): SelectedProject {
       const pbix = [
         ...new Set(tree.markers.filter((m) => m.kind === "pbix").map((m) => m.path)),
       ].sort(walkOrder);
+      if (pbix[0] !== undefined) throw new InputError(pbixRefusal(pbix[0], pbix.length - 1));
+      // Else nothing was found, which the directory input cannot tell from a folder it could not
+      // open, so its refusal suggests the drag that names one.
       throw new InputError(
-        pbix[0] !== undefined ? pbixRefusal(pbix[0], pbix.length - 1) : NOTHING_FOUND,
+        tree.directoryInput ? `${NOTHING_FOUND} ${DRAG_INSTEAD}` : NOTHING_FOUND,
       );
     }
   }

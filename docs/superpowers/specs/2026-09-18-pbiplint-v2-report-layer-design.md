@@ -1637,6 +1637,40 @@ without an error, as its chooser does. The File System Access picker
 the listing and give the notice. About's "Known limits in the browser"
 says so.
 
+Amended 2026-09-27 with Michael (site-copy follow-up): on the
+directory-input route (Firefox and Safari) the refusal of a folder
+with nothing to lint, `No model or report found. Drop a PBIP folder, a
+.SemanticModel or .Report folder, or a .tmdl file.`, now adds `If the
+folder you chose holds a model or report, your browser may not have
+been able to open a folder inside it; drag the folder onto the page
+instead.` That route cannot tell a folder the browser could not open
+from one that is not there: in Michael's check of September 26, 2026,
+Firefox's chooser gave only that refusal for the sample project with
+one page folder at mode 000, where a drag in Firefox named the folder
+in a notice. The sentence follows the route rather than an empty list
+of files, since whether Firefox handed the page no files or only some
+is not known. The drop and the picker keep the refusal's words: a drop
+in Chrome, Edge, or Firefox and the picker in Chrome and Edge name
+such a folder in a notice, and a drop in Safari, which leaves it out
+without a message as the note above records, is already the drag the
+sentence suggests. The `.pbix` refusal and every other refusal are
+unchanged. A folder the picker or the drop could not list, at the
+start or partway, is now named, in its `unread-file` notice and in a
+refusal that names it (`Could not read <path>: <reason>`), with the
+reason "the browser could not list all of its contents" in place of
+the browser's message, whatever the error, since the messages Michael
+saw for a folder without read permission name nothing the reader can
+act on: Chrome's "An attempt was made to write to a file or directory
+which could not be modified due to the state of the underlying
+filesystem." and Firefox's "An attempt was made to use an object that
+is not, or is no longer, usable". The reason says the listing fell
+short rather than that the folder could not be opened, since a listing
+that fails partway has already handed out entries, and those were
+read. A file whose read fails keeps the browser's message, and the CLI
+keeps the reason its system gives, as in section 4's A7 note. About's
+"Known limits in the browser" says that the Firefox refusal suggests
+dragging the folder.
+
 ## 13. CLI changes
 
 `resolveProject(path)` handles every input shape in section 4,

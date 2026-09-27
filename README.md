@@ -37,9 +37,10 @@ Exit codes: 0 no findings at or above --fail-on (default error), 1 findings, 2 u
 
 ### In GitHub Actions
 
-One step lints the model on every pull request: the check fails on findings, each finding is
-annotated on its line in the Files changed tab, the full report is in the job summary, and the
-findings reach code scanning. See https://github.com/pbiplint/action for the inputs and outputs.
+One step lints the project, its semantic model and its report, on every pull request: the check
+fails on findings, each finding is annotated on its line in the Files changed tab, the full report
+is in the job summary, and the findings reach code scanning. See https://github.com/pbiplint/action
+for the inputs and outputs.
 
 ```yaml
 permissions:
@@ -49,7 +50,7 @@ steps:
   - uses: actions/checkout@v7
   - uses: pbiplint/action@v1
     with:
-      path: Sales.SemanticModel
+      path: Sales.pbip
 ```
 
 ## Configure it

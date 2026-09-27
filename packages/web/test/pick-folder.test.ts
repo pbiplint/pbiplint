@@ -1,6 +1,6 @@
 import { pbixRefusal } from "@pbiplint/core";
 import { describe, expect, it } from "vitest";
-import { emptyTree, selectProject } from "../src/input/project-files.js";
+import { emptyTree, InputError, selectProject } from "../src/input/project-files.js";
 import { readDirectoryInput, readPickedDirectory } from "../src/input/pick-folder.js";
 import { MAX_DEPTH } from "../src/input/read-drop.js";
 
@@ -59,6 +59,12 @@ const capAt = (folder: string) => ({
   path: folder,
   message: `the walk stopped ${MAX_DEPTH} folders deep at ${folder}, so files below it were not read`,
 });
+/** The refusal of a folder with nothing to lint, as the drop and the picker give it. */
+const NOTHING =
+  "No model or report found. Drop a PBIP folder, a .SemanticModel or .Report folder, or a .tmdl file.";
+/** What the directory input's refusal adds (spec section 12). */
+const DRAG =
+  "If the folder you chose holds a model or report, your browser may not have been able to open a folder inside it; drag the folder onto the page instead.";
 
 /**
  * Counts the folders a walk opens for iteration, and throws once it has opened more than `limit`.
@@ -132,6 +138,15 @@ describe("readPickedDirectory", () => {
     const calls: string[] = [];
     await readPickedDirectory(abort as never, () => calls.push("picked"));
     expect(calls).toEqual([]);
+  });
+  it("leaves its tree unmarked, so a folder with nothing to lint is refused in the drop's words", async () => {
+    // The picker (Chrome and Edge) names a folder it could not list in a notice, so its refusal
+    // suggests nothing.
+    const out = await readPickedDirectory(
+      async () => dirHandle("Proj", [fileHandle("notes.txt", "")]) as never,
+    );
+    expect(out).toEqual(emptyTree());
+    expect(() => selectProject(out!)).toThrow(new InputError(NOTHING));
   });
   it("reads nothing when the picked folder is itself one of the skipped folders", async () => {
     const picked = dirHandle("node_modules", [
@@ -270,15 +285,31 @@ describe("readPickedDirectory", () => {
     expect(out?.refusal).toEqual({ path: "M/Sales.tmdl", reason: "The file is locked" });
     expect(out?.unreadFolders).toEqual([]);
   });
-  it("names a folder whose listing fails, at the start or partway, once, and goes on with its siblings", async () => {
+  it("names a folder whose listing fails, at the start or partway, once, with a plain reason, and goes on with its siblings", async () => {
+    // Whatever the browser's error says, the reason is the plain one: Chrome's message for a
+    // folder without read permission speaks of writing to one (Michael's check, September 26,
+    // 2026), which says nothing the reader can act on.
     const picked = dirHandle("P", [
       failingDir(
         "A",
         [],
-        new DOMException("A requested file or directory could not be found", "NotFoundError"),
+        new DOMException(
+          "An attempt was made to write to a file or directory which could not be modified due to the state of the underlying filesystem.",
+          "NoModificationAllowedError",
+        ),
       ),
       failingDir("B", [fileHandle("x.tmdl", "table X\n")], "permission revoked"),
-      dirHandle("C", [fileHandle("y.tmdl", "table Y\n")]),
+      dirHandle("C", [
+        fileHandle("y.tmdl", "table Y\n"),
+        // A file whose read fails keeps the browser's message.
+        {
+          kind: "file",
+          name: "z.tmdl",
+          getFile: async () => {
+            throw new DOMException("The file is locked", "NotReadableError");
+          },
+        },
+      ]),
     ]);
     const out = await readPickedDirectory(async () => picked as never);
     expect(out?.entries.map((e) => e.path)).toEqual(["P/B/x.tmdl", "P/C/y.tmdl"]);
@@ -287,21 +318,36 @@ describe("readPickedDirectory", () => {
         kind: "unread-file",
         path: "P/A",
         message:
-          "P/A could not be read (A requested file or directory could not be found), so it was not linted",
+          "P/A could not be read (the browser could not list all of its contents), so it was not linted",
       },
       {
         kind: "unread-file",
         path: "P/B",
-        message: "P/B could not be read (permission revoked), so it was not linted",
+        message:
+          "P/B could not be read (the browser could not list all of its contents), so it was not linted",
+      },
+      {
+        kind: "unread-file",
+        path: "P/C/z.tmdl",
+        message: "P/C/z.tmdl could not be read (The file is locked), so it was not linted",
       },
     ]);
     expect(out?.refusal).toEqual({
       path: "P/A",
-      reason: "A requested file or directory could not be found",
+      reason: "the browser could not list all of its contents",
     });
     // The notices do not say their paths are folders, and lint takes a folder with a trailing /,
     // so the tree says so.
     expect(out?.unreadFolders).toEqual(["P/A", "P/B"]);
+  });
+  it("refuses a picked folder it could not list in the plain reason", async () => {
+    const out = await readPickedDirectory(
+      async () =>
+        failingDir("P", [], new DOMException("permission revoked", "NotAllowedError")) as never,
+    );
+    expect(() => selectProject(out!)).toThrow(
+      new InputError("Could not read P: the browser could not list all of its contents"),
+    );
   });
   it("returns null when the person cancels the dialog", async () => {
     const abort = async () => {
@@ -330,6 +376,19 @@ describe("readPickedDirectory", () => {
 });
 
 describe("readDirectoryInput", () => {
+  it("marks its tree as this route's, so a folder with nothing to lint is refused suggesting a drag", async () => {
+    // Firefox may hand over no files for a folder holding one it could not open, or only some, so
+    // the refusal follows the route rather than an empty list.
+    const none = { files: [] } as unknown as HTMLInputElement;
+    const some = {
+      files: [Object.assign(new File([""], "notes.txt"), { webkitRelativePath: "Proj/notes.txt" })],
+    } as unknown as HTMLInputElement;
+    for (const input of [none, some]) {
+      const out = await readDirectoryInput(input);
+      expect(out).toEqual({ ...emptyTree(), directoryInput: true });
+      expect(() => selectProject(out)).toThrow(new InputError(`${NOTHING} ${DRAG}`));
+    }
+  });
   it("uses the relative path the browser reports for each file", async () => {
     const f = Object.assign(new File(["table T\n"], "T.tmdl"), {
       webkitRelativePath: "Demo.SemanticModel/definition/tables/T.tmdl",
@@ -340,6 +399,7 @@ describe("readDirectoryInput", () => {
     const input = { files: [f, junk] } as unknown as HTMLInputElement;
     expect(await readDirectoryInput(input)).toEqual({
       ...emptyTree(),
+      directoryInput: true,
       entries: [{ path: "Demo.SemanticModel/definition/tables/T.tmdl", text: "table T\n" }],
       modelFolders: ["Demo.SemanticModel"],
       reportFolders: ["Demo.Report"],
@@ -406,6 +466,7 @@ describe("readDirectoryInput", () => {
     } as unknown as HTMLInputElement;
     expect(await readDirectoryInput(input)).toEqual({
       ...emptyTree(),
+      directoryInput: true,
       entries: [
         { path: "Proj/New.Report/definition.pbir", text: "{}" },
         { path: "Proj/New.Report/.platform", text: "{}" },
@@ -439,6 +500,7 @@ describe("readDirectoryInput", () => {
     const out = await readDirectoryInput(input);
     expect(out).toEqual({
       ...emptyTree(),
+      directoryInput: true,
       markers: [
         { path: "Demo/Sales.pbix", kind: "pbix" },
         { path: "Demo/Archive/Old.PBIX", kind: "pbix" },

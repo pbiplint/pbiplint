@@ -115,9 +115,13 @@ const addNew = (list: string[], folders: string[]): void => {
   for (const folder of folders) if (!list.includes(folder)) list.push(folder);
 };
 
-/** Firefox and Safari: the files of an <input type="file" webkitdirectory>, with the paths the browser reports. */
+/**
+ * Firefox and Safari: the files of an <input type="file" webkitdirectory>, with the paths the
+ * browser reports. The tree is marked as this route's, since the list holds no word of a folder
+ * the browser could not open, and a refusal of nothing found says so (`InputTree.directoryInput`).
+ */
 export async function readDirectoryInput(input: HTMLInputElement): Promise<InputTree> {
-  const tree = emptyTree();
+  const tree: InputTree = { ...emptyTree(), directoryInput: true };
   for (const file of [...(input.files ?? [])]) {
     const path = file.webkitRelativePath || file.name;
     if (skipped(path)) continue;

@@ -461,27 +461,32 @@ never among the files read. Both surfaces give that last refusal
 (below), so beside such a folder both name the folder.
 
 Amended 2026-09-26 with Michael (pull request 8): the message's second
-half also names the PBIR and TMDL preview options. Learn makes the
-PBIR report format and the TMDL model format preview options of their
-own, and a PBIP saved without them holds a `report.json` report and a
-`model.bim` model, which pbiplint reads as legacy parts and lints not
-at all. The second half now reads, in full: `pbiplint reads a report
-saved as a Power BI project (PBIP). In Power BI Desktop, open File >
-Options and settings > Options > Preview features and turn on each of
-these it lists: Power BI Project (.pbip) save option, Store reports
-using enhanced metadata format (PBIR), and Store semantic model using
-TMDL format. Then choose File > Save as and pick Power BI project
-files (*.pbip) as the file type.` The labels are Learn's: the menu
-paths, the file type, and the PBIP option from the Power BI Desktop
-projects page (projects-overview), the PBIR option from the report
-folder page (projects-report, "Enable the PBIR format preview
-feature"), and the TMDL option from the semantic model folder page
-(projects-dataset, "Enable TMDL format Preview feature"). All three
-are a condition ("each of these it lists"), as the PBIP option was,
-since Learn still calls each a preview while MC1465770 announces
-general availability, so a newer Desktop may list fewer of them. The
-first half, which names the `.pbix` and counts the others, and the
-legacy parts' notices are unchanged.
+half is shorter and leaves the preview options to Learn. It reads, in
+full: `pbiplint reads a report saved as a Power BI project (PBIP). In
+Power BI Desktop, choose File > Save as and pick Power BI project files
+(*.pbip) as the file type. Depending on your version of Power BI
+Desktop, you may need to enable certain preview features first.
+Microsoft Learn explains them:` and then the URLs of three Learn
+sections, each under
+`https://learn.microsoft.com/power-bi/developer/projects/`, separated
+by single spaces with nothing after the last, since a terminal's link
+detection can take a trailing period into a link:
+`projects-overview#enable-preview-features` ("Enable preview
+features"), `projects-report#enable-the-pbir-format-preview-feature`
+("Enable the PBIR format preview feature"), and
+`projects-dataset#enable-tmdl-format-preview-feature` ("Enable TMDL
+format Preview feature"). The preview sentence is a condition, and
+names no option, because the options are leaving preview and Microsoft
+may remove their switches from Power BI Desktop, which would make a
+list of them wrong, while older versions of Desktop still need them
+turned on. The menu path and the file type are Learn's labels
+(projects-overview, "Save as a project"). Core exports the three URLs
+and builds the sentence from them, so the words and the links cannot
+drift. The CLI prints the message as text; the site's status line
+shows the same text with exactly those three URLs as links, and
+nothing else in a message it shows becomes a link. The first half,
+which names the `.pbix` and counts the others, and the legacy parts'
+notices are unchanged.
 
 Amended 2026-09-25 with Michael (release triage, batch F): when
 nothing can be linted, no read refused, and no notice explains why,

@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { pbixRefusal } from "@pbiplint/core";
+import { PBIP_PREVIEW_HELP_URLS, pbixRefusal } from "@pbiplint/core";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 // happy-dom resolves a relative URL against the page's http base, so the file path is built
@@ -532,6 +532,27 @@ describe("home page", () => {
     await tick();
     await tick();
     expect(status.textContent).toBe(pbixRefusal("Ventes café 売上.pbix"));
+  });
+  it("links the Learn pages a refused .pbix's message names, and nothing else", async () => {
+    const status = document.getElementById("status")!;
+    dropFile("Sales.pbix");
+    await tick();
+    await tick();
+    expect(status.textContent).toBe(pbixRefusal("Sales.pbix"));
+    const links = [...status.querySelectorAll("a")];
+    expect(links.map((a) => a.getAttribute("href"))).toEqual(PBIP_PREVIEW_HELP_URLS);
+    expect(links.map((a) => a.textContent)).toEqual(PBIP_PREVIEW_HELP_URLS);
+    // Written as the site's other outbound Learn links are: an href and nothing else.
+    for (const a of links) expect(a.getAttributeNames()).toEqual(["href"]);
+    // Only core's own URLs are linked, so a URL in the input stays text.
+    feedFolder([
+      at("Proj/Demo.SemanticModel/definition/tables/T.tmdl", "table T\n"),
+      at("Proj/pbiplint.config.json", '{ "rules": {}, "https://example.com/": true }'),
+    ]);
+    await tick();
+    await tick();
+    expect(status.textContent).toBe('pbiplint.config.json: unknown key "https://example.com/"');
+    expect(status.querySelector("a")).toBeNull();
   });
   it("shows a control character in a config error as an escape", async () => {
     // Core refuses a key it does not know in its own words, quoting the key as the file has it.

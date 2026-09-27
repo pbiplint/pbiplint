@@ -311,11 +311,15 @@ button.secondary:hover,
   font-size: 14px;
   margin: 0;
 }
+/* The .pbix refusal ends in Learn URLs, and a run of one, https://learn.microsoft.com/power-, is
+   wider than the status line on a 320 pixel screen, so the line breaks anywhere rather than run
+   past its box. */
 .status {
   margin: 16px 0 0;
   padding: 10px 14px;
   border-radius: 8px;
   background: var(--surface-2);
+  overflow-wrap: anywhere;
 }
 .status[data-kind="error"] {
   border-left: 3px solid var(--danger);

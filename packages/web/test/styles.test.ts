@@ -74,5 +74,7 @@ describe("styles.css", () => {
     expect(rule(":not(pre) > code")).toMatch(/overflow-wrap: anywhere/);
     // A report's paths in the files read list run long with nothing to break at, too.
     expect(rule(".files li")).toMatch(/overflow-wrap: anywhere/);
+    // So do the Learn URLs that end the .pbix refusal in the status line.
+    expect(rule(".status")).toMatch(/overflow-wrap: anywhere/);
   });
 });

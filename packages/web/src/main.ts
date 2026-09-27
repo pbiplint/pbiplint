@@ -1,6 +1,7 @@
 import {
   ConfigError,
   lint,
+  PBIP_PREVIEW_HELP_URLS,
   resolveConfig,
   showControls,
   summaryLine,
@@ -11,7 +12,7 @@ import {
 import { InputError, selectProject, type InputTree } from "./input/project-files.js";
 import { directoryPicker, readDirectoryInput, readPickedDirectory } from "./input/pick-folder.js";
 import { readDataTransfer } from "./input/read-drop.js";
-import { heading, renderResults } from "./results/render.js";
+import { h, heading, renderResults } from "./results/render.js";
 import { SAMPLE_NAME, SAMPLE_TREE } from "./sample.js";
 
 /**
@@ -34,10 +35,26 @@ const results = byId("results", HTMLElement);
 const dropZone = byId("drop", HTMLElement);
 const folderInput = byId("folder-input", HTMLInputElement);
 
+/**
+ * Core's Learn URLs, the only text a status message links, as a pattern whose one group keeps
+ * each URL when a message is split on it. Each is matched literally, so a link's href is always
+ * one of core's constants and no text from the input, a file's name or a config's key, can become
+ * a link, whatever URL it holds.
+ */
+const literal = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const LINKED = new RegExp(`(${PBIP_PREVIEW_HELP_URLS.map(literal).join("|")})`);
+
 function say(text: string, kind: "info" | "error" = "info"): void {
   // Unhidden before the text is written: a screen reader can miss text set on a hidden live region.
   if (text !== "") status.hidden = false;
-  status.textContent = text;
+  // Split on core's URLs, a message gives those URLs as its odd parts, which become links; a
+  // message with none is one part and stays plain text.
+  const parts = text.split(LINKED);
+  if (parts.length === 1) status.textContent = text;
+  else
+    status.replaceChildren(
+      ...parts.map((part, i) => (i % 2 ? h("a", { href: part }, part) : part)),
+    );
   status.dataset.kind = kind;
   if (text === "") status.hidden = true;
 }

@@ -479,8 +479,9 @@ describe("walkEntry", () => {
 
 describe("readDataTransfer", () => {
   it("leaves its tree unmarked, so a folder with nothing to lint is refused in today's words", async () => {
-    // A folder the drop could not list is named in a notice, so its refusal suggests nothing; the
-    // directory input's refusal is the one that suggests dragging the folder instead.
+    // A drop in Chrome, Edge, or Firefox names a folder it could not list in a notice, and a drop in
+    // Safari, which leaves such a folder out without a message, is already the drag the directory
+    // input's refusal suggests, so the drop's refusal suggests nothing.
     const dt = {
       items: [
         {

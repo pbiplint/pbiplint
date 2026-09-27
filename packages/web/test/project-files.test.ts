@@ -1096,9 +1096,9 @@ describe("selectProject and a model folder that holds no .tmdl files (tracked in
 
 describe("selectProject on the directory-input route (Firefox and Safari)", () => {
   // That route's browser hands the page a flat list of the files it listed and says nothing of a
-  // folder inside the chosen one that it could not open, so no notice can name such a folder, as
-  // the drop's and the picker's do. Firefox then refuses the folder as holding nothing, which is
-  // what Michael saw on September 26, 2026 (spec section 12).
+  // folder inside the chosen one that it could not open, so no notice can name such a folder, as a
+  // drop in Chrome, Edge, or Firefox and the picker in Chrome and Edge do. Firefox then refuses the
+  // folder as holding nothing, which is what Michael saw on September 26, 2026 (spec section 12).
   const NOTHING =
     "No model or report found. Drop a PBIP folder, a .SemanticModel or .Report folder, or a .tmdl file.";
   const DRAG =
@@ -1115,7 +1115,9 @@ describe("selectProject on the directory-input route (Firefox and Safari)", () =
     for (const extra of [{}, { entries: [e("Proj/Demo.pbip")] }])
       expect(() => selectProject(chosen(extra))).toThrow(new InputError(`${NOTHING} ${DRAG}`));
   });
-  it("keeps the words the drop and the picker give, since they name such a folder in a notice", () => {
+  it("keeps the words the drop and the picker give, which need no suggestion to drag", () => {
+    // A drop in Chrome, Edge, or Firefox and the picker in Chrome and Edge name such a folder in a
+    // notice, and a drop in Safari, which leaves it out without a message, is already the drag.
     for (const extra of [{}, { entries: [e("Proj/Demo.pbip")] }])
       expect(() => selectProject({ ...emptyTree(), ...extra })).toThrow(new InputError(NOTHING));
   });

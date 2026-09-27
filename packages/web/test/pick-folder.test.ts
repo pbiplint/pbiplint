@@ -140,7 +140,8 @@ describe("readPickedDirectory", () => {
     expect(calls).toEqual([]);
   });
   it("leaves its tree unmarked, so a folder with nothing to lint is refused in the drop's words", async () => {
-    // A folder this route could not list is named in a notice, so its refusal suggests nothing.
+    // The picker (Chrome and Edge) names a folder it could not list in a notice, so its refusal
+    // suggests nothing.
     const out = await readPickedDirectory(
       async () => dirHandle("Proj", [fileHandle("notes.txt", "")]) as never,
     );

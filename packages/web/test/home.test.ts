@@ -558,7 +558,7 @@ describe("home page", () => {
   });
   it("suggests dragging the folder when the folder chooser finds nothing, and only then", async () => {
     // Firefox's chooser hands over no word of a folder it could not open inside the chosen one, so
-    // the page cannot name it; a drag can (spec section 12).
+    // the page cannot name it; a drag in Firefox can (spec section 12).
     const status = document.getElementById("status")!;
     const nothing =
       "No model or report found. Drop a PBIP folder, a .SemanticModel or .Report folder, or a .tmdl file.";

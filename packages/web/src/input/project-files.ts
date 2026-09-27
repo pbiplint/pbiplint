@@ -57,8 +57,10 @@ export interface InputTree {
   /**
    * Set by the directory input's reader (Firefox and Safari). That browser hands the page a flat
    * list of the files it listed and says nothing of a folder inside the chosen one that it could
-   * not open, so no notice can name such a folder, as the drop's and the picker's do; the refusal
-   * of a folder with nothing to lint says so instead (spec section 12).
+   * not open, so no notice can name such a folder, as a drop in Chrome, Edge, or Firefox and the
+   * picker in Chrome and Edge do; the refusal of a folder with nothing to lint says so instead
+   * (spec section 12). A drop in Safari leaves such a folder out without a message too, but is
+   * left unmarked: it is already the drag that refusal suggests.
    */
   directoryInput?: true;
 }
@@ -133,8 +135,8 @@ const NOTHING_FOUND =
  * What the directory input's NOTHING_FOUND adds. That route cannot tell a folder the browser could
  * not open from a folder that is not there: in Michael's check (September 26, 2026), Firefox's
  * chooser found no model or report in a project with one page folder it could not open, where a
- * drag named that folder in a notice. It follows the route, not an empty list, since Firefox may
- * hand over some of the files.
+ * drag in Firefox named that folder in a notice. It follows the route, not an empty list, since
+ * Firefox may hand over some of the files.
  */
 const DRAG_INSTEAD =
   "If the folder you chose holds one, your browser may have left out a folder inside it that it could not open; drag the folder onto the page instead.";

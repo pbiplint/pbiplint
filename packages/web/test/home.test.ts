@@ -458,7 +458,7 @@ describe("home page", () => {
     expect(results.hidden).toBe(true);
     expect(results.children.length).toBe(0);
   });
-  it("says the page reads a whole project, and names no command that reads the sample's report", () => {
+  it("says the page reads a whole project, and names the command that lints the same sample", () => {
     const text = (selector: string): string =>
       document.querySelector(selector)!.textContent!.replace(/\s+/g, " ").trim();
     expect(text("h1")).toBe("Lint your Power BI project in the browser");
@@ -472,11 +472,13 @@ describe("home page", () => {
       /^Only \.tmdl files, the report's JSON under its definition folder, \.platform, definition\.pbir, the \.pbip file, and pbiplint\.config\.json are read\. Nothing else in the folder is opened\. /,
     );
     expect(text(".actions .hint")).toBe(
-      "A small sales project, a model and its report, with planted violations.",
+      "A small sales project, a model and its report, with planted violations, the same one npx pbiplint --sample lints.",
     );
-    // The command-line tool on npm (0.1.2) lints the model alone, so the page points at no
-    // command that would read the sample's report.
-    expect(body).not.toContain("--sample");
+    // The command-line tool on npm (0.2.0 and later) lints the model and the report, so the hint
+    // names the command that lints the same sample project.
+    expect(document.querySelector(".actions .hint code")!.textContent).toBe(
+      "npx pbiplint --sample",
+    );
     expect(html).not.toMatch(/drop a \.SemanticModel folder and get/);
     // The 404 page carries the home page's description, so the two say the same.
     const notFound = readFileSync(

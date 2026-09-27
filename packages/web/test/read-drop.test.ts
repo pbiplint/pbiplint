@@ -1,6 +1,11 @@
 import { pbixRefusal } from "@pbiplint/core";
 import { describe, expect, it } from "vitest";
-import { emptyTree, selectProject, type InputTree } from "../src/input/project-files.js";
+import {
+  emptyTree,
+  InputError,
+  selectProject,
+  type InputTree,
+} from "../src/input/project-files.js";
 import {
   MAX_DEPTH,
   SKIP_DIRS,
@@ -448,6 +453,25 @@ describe("walkEntry", () => {
 });
 
 describe("readDataTransfer", () => {
+  it("leaves its tree unmarked, so a folder with nothing to lint is refused in today's words", async () => {
+    // A folder the drop could not list is named in a notice, so its refusal suggests nothing; the
+    // directory input's refusal is the one that suggests dragging the folder instead.
+    const dt = {
+      items: [
+        {
+          webkitGetAsEntry: () => dir("Proj", "/Proj", [file("notes.txt", "/Proj/notes.txt", "")]),
+        },
+      ],
+      files: [],
+    } as unknown as DataTransfer;
+    const tree = await readDataTransfer(dt);
+    expect(tree).toEqual(emptyTree());
+    expect(() => selectProject(tree)).toThrow(
+      new InputError(
+        "No model or report found. Drop a PBIP folder, a .SemanticModel or .Report folder, or a .tmdl file.",
+      ),
+    );
+  });
   it("uses the entries API when the browser has it", async () => {
     const entry = file("T.tmdl", "/T.tmdl", "table T\n");
     const dt = { items: [{ webkitGetAsEntry: () => entry }], files: [] } as unknown as DataTransfer;

@@ -556,6 +556,22 @@ describe("home page", () => {
     expect(status.textContent).toBe('pbiplint.config.json: unknown key "https://example.com/"');
     expect(status.querySelector("a")).toBeNull();
   });
+  it("suggests dragging the folder when the folder chooser finds nothing, and only then", async () => {
+    // Firefox's chooser hands over no word of a folder it could not open inside the chosen one, so
+    // the page cannot name it; a drag can (spec section 12).
+    const status = document.getElementById("status")!;
+    const nothing =
+      "No model or report found. Drop a PBIP folder, a .SemanticModel or .Report folder, or a .tmdl file.";
+    feedFolder([]);
+    await tick();
+    expect(status.textContent).toBe(
+      `${nothing} If the folder you chose holds one, your browser may have left out a folder inside it that it could not open; drag the folder onto the page instead.`,
+    );
+    dropFile("notes.txt");
+    await tick();
+    await tick();
+    expect(status.textContent).toBe(nothing);
+  });
   it("shows a control character in a config error as an escape", async () => {
     // Core refuses a key it does not know in its own words, quoting the key as the file has it.
     feedFolder([

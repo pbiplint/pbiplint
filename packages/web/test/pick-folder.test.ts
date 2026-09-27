@@ -1,6 +1,6 @@
 import { pbixRefusal } from "@pbiplint/core";
 import { describe, expect, it } from "vitest";
-import { emptyTree, selectProject } from "../src/input/project-files.js";
+import { emptyTree, InputError, selectProject } from "../src/input/project-files.js";
 import { readDirectoryInput, readPickedDirectory } from "../src/input/pick-folder.js";
 import { MAX_DEPTH } from "../src/input/read-drop.js";
 
@@ -59,6 +59,12 @@ const capAt = (folder: string) => ({
   path: folder,
   message: `the walk stopped ${MAX_DEPTH} folders deep at ${folder}, so files below it were not read`,
 });
+/** The refusal of a folder with nothing to lint, as the drop and the picker give it. */
+const NOTHING =
+  "No model or report found. Drop a PBIP folder, a .SemanticModel or .Report folder, or a .tmdl file.";
+/** What the directory input's refusal adds (spec section 12). */
+const DRAG =
+  "If the folder you chose holds one, your browser may have left out a folder inside it that it could not open; drag the folder onto the page instead.";
 
 /**
  * Counts the folders a walk opens for iteration, and throws once it has opened more than `limit`.
@@ -132,6 +138,14 @@ describe("readPickedDirectory", () => {
     const calls: string[] = [];
     await readPickedDirectory(abort as never, () => calls.push("picked"));
     expect(calls).toEqual([]);
+  });
+  it("leaves its tree unmarked, so a folder with nothing to lint is refused in the drop's words", async () => {
+    // A folder this route could not list is named in a notice, so its refusal suggests nothing.
+    const out = await readPickedDirectory(
+      async () => dirHandle("Proj", [fileHandle("notes.txt", "")]) as never,
+    );
+    expect(out).toEqual(emptyTree());
+    expect(() => selectProject(out!)).toThrow(new InputError(NOTHING));
   });
   it("reads nothing when the picked folder is itself one of the skipped folders", async () => {
     const picked = dirHandle("node_modules", [
@@ -330,6 +344,19 @@ describe("readPickedDirectory", () => {
 });
 
 describe("readDirectoryInput", () => {
+  it("marks its tree as this route's, so a folder with nothing to lint is refused suggesting a drag", async () => {
+    // Firefox may hand over no files for a folder holding one it could not open, or only some, so
+    // the refusal follows the route rather than an empty list.
+    const none = { files: [] } as unknown as HTMLInputElement;
+    const some = {
+      files: [Object.assign(new File([""], "notes.txt"), { webkitRelativePath: "Proj/notes.txt" })],
+    } as unknown as HTMLInputElement;
+    for (const input of [none, some]) {
+      const out = await readDirectoryInput(input);
+      expect(out).toEqual({ ...emptyTree(), directoryInput: true });
+      expect(() => selectProject(out)).toThrow(new InputError(`${NOTHING} ${DRAG}`));
+    }
+  });
   it("uses the relative path the browser reports for each file", async () => {
     const f = Object.assign(new File(["table T\n"], "T.tmdl"), {
       webkitRelativePath: "Demo.SemanticModel/definition/tables/T.tmdl",
@@ -340,6 +367,7 @@ describe("readDirectoryInput", () => {
     const input = { files: [f, junk] } as unknown as HTMLInputElement;
     expect(await readDirectoryInput(input)).toEqual({
       ...emptyTree(),
+      directoryInput: true,
       entries: [{ path: "Demo.SemanticModel/definition/tables/T.tmdl", text: "table T\n" }],
       modelFolders: ["Demo.SemanticModel"],
       reportFolders: ["Demo.Report"],
@@ -406,6 +434,7 @@ describe("readDirectoryInput", () => {
     } as unknown as HTMLInputElement;
     expect(await readDirectoryInput(input)).toEqual({
       ...emptyTree(),
+      directoryInput: true,
       entries: [
         { path: "Proj/New.Report/definition.pbir", text: "{}" },
         { path: "Proj/New.Report/.platform", text: "{}" },
@@ -439,6 +468,7 @@ describe("readDirectoryInput", () => {
     const out = await readDirectoryInput(input);
     expect(out).toEqual({
       ...emptyTree(),
+      directoryInput: true,
       markers: [
         { path: "Demo/Sales.pbix", kind: "pbix" },
         { path: "Demo/Archive/Old.PBIX", kind: "pbix" },

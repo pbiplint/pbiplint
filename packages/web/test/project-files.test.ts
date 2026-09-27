@@ -1094,6 +1094,60 @@ describe("selectProject and a model folder that holds no .tmdl files (tracked in
   });
 });
 
+describe("selectProject on the directory-input route (Firefox and Safari)", () => {
+  // That route's browser hands the page a flat list of the files it listed and says nothing of a
+  // folder inside the chosen one that it could not open, so no notice can name such a folder, as
+  // the drop's and the picker's do. Firefox then refuses the folder as holding nothing, which is
+  // what Michael saw on September 26, 2026 (spec section 12).
+  const NOTHING =
+    "No model or report found. Drop a PBIP folder, a .SemanticModel or .Report folder, or a .tmdl file.";
+  const DRAG =
+    "If the folder you chose holds one, your browser may have left out a folder inside it that it could not open; drag the folder onto the page instead.";
+  /** A tree as the directory input's reader leaves it, holding `extra`. */
+  const chosen = (extra: Partial<InputTree> = {}): InputTree => ({
+    ...emptyTree(),
+    ...extra,
+    directoryInput: true,
+  });
+  it("suggests dragging the folder when it finds no model or report, whether or not files came", () => {
+    // No files at all, as Gecko handed over in a probe, and files with nothing to lint, as a
+    // browser that left out only the folder it could not open would hand over.
+    for (const extra of [{}, { entries: [e("Proj/Demo.pbip")] }])
+      expect(() => selectProject(chosen(extra))).toThrow(new InputError(`${NOTHING} ${DRAG}`));
+  });
+  it("keeps the words the drop and the picker give, since they name such a folder in a notice", () => {
+    for (const extra of [{}, { entries: [e("Proj/Demo.pbip")] }])
+      expect(() => selectProject({ ...emptyTree(), ...extra })).toThrow(new InputError(NOTHING));
+  });
+  it("leaves the .pbix refusal and every other refusal as they are", () => {
+    expect(() =>
+      selectProject(chosen({ markers: [{ path: "Demo/Sales.pbix", kind: "pbix" }] })),
+    ).toThrow(new InputError(pbixRefusal("Demo/Sales.pbix")));
+    expect(() => selectProject(chosen({ modelFolders: ["Demo/Old.SemanticModel"] }))).toThrow(
+      new InputError(noTmdlRefusal(["Demo/Old.SemanticModel"])),
+    );
+    expect(() =>
+      selectProject(
+        chosen({
+          diagnostics: [unreadAt("Demo/Sales.tmdl")],
+          refusal: { path: "Demo/Sales.tmdl", reason: "locked" },
+        }),
+      ),
+    ).toThrow(new InputError("Could not read Demo/Sales.tmdl: locked"));
+    expect(() =>
+      selectProject(
+        chosen({
+          entries: [
+            e("Demo/A.Report/definition/report.json"),
+            e("Demo/B.Report/definition/report.json"),
+          ],
+          reportFolders: ["Demo/A.Report", "Demo/B.Report"],
+        }),
+      ),
+    ).toThrow(/contains 2 reports; drop one of them: A\.Report, B\.Report$/);
+  });
+});
+
 describe("relativeToRoot", () => {
   it("writes a path at or above the model root the way a shell would", () => {
     expect(relativeToRoot("Proj/Demo.SemanticModel", "Proj/pbiplint.config.json")).toBe(

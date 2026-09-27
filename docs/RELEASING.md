@@ -87,6 +87,14 @@ Do these once, at the first release, not before.
 A rerun of the workflow, or a tag pushed after a manual publish, is safe: `scripts/publish.mjs`
 skips a version that is already on the registry.
 
+The site and the command line each carry their own copy of the sample. The site builds
+`examples/messy-sales` into the home page on every push to main, while the command line copies it
+into its package at build time, so `npx pbiplint --sample` lints the copy the latest npm release
+bundled. The home page's sample hint says the site's sample is "the same one `npx pbiplint
+--sample` lints", which holds only while the two copies match. A change to `examples/messy-sales`
+merged between releases makes the hint untrue until the next release, so release soon after such a
+change, or say in its pull request that the hint is untrue until then.
+
 ## First release (v0.1.0, by hand)
 
 Do this once, at the first release, not before. Michael runs it from a clean checkout of the

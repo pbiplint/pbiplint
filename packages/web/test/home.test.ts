@@ -565,7 +565,7 @@ describe("home page", () => {
     feedFolder([]);
     await tick();
     expect(status.textContent).toBe(
-      `${nothing} If the folder you chose holds one, your browser may have left out a folder inside it that it could not open; drag the folder onto the page instead.`,
+      `${nothing} If the folder you chose holds a model or report, your browser may have left out a folder inside it that it could not open; drag the folder onto the page instead.`,
     );
     dropFile("notes.txt");
     await tick();

@@ -64,7 +64,7 @@ const NOTHING =
   "No model or report found. Drop a PBIP folder, a .SemanticModel or .Report folder, or a .tmdl file.";
 /** What the directory input's refusal adds (spec section 12). */
 const DRAG =
-  "If the folder you chose holds one, your browser may have left out a folder inside it that it could not open; drag the folder onto the page instead.";
+  "If the folder you chose holds a model or report, your browser may have left out a folder inside it that it could not open; drag the folder onto the page instead.";
 
 /**
  * Counts the folders a walk opens for iteration, and throws once it has opened more than `limit`.

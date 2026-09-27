@@ -94,7 +94,7 @@ The chart asks the Sales table for a Profit measure it does not have, so the fin
 
 ## Why it matters
 
-In Power BI Desktop, a visual that names a missing field shows an error where its data should be. A text box whose field value names one shows "Something's wrong with one or more fields." in place of its text, with a See details link and a Fix this button. If conditional formatting names a missing field, a warning icon appears in the visual's header and in the Format pane while you edit the visual. The break can come from a field deleted or renamed in the model after the report was built. It can also come from a visual copied from a report on another model, which adds a warning about which fields do not exist. Nothing points at the break until someone looks at that visual, so catching it before you publish spares your readers the error.
+In Power BI Desktop, a visual that names a missing field shows an error where its data should be. A text box whose field value names one shows "Something's wrong with one or more fields." in place of its text, with a See details link and a Fix this button. If conditional formatting names a missing field, a warning icon appears in the visual's header and in the Format pane while you edit the visual. The break can come from a field deleted or renamed in the model after the report was built. It can also come from a visual copied from a report on another model, which adds a warning about which fields do not exist. Nothing points at the break until someone looks at the broken visual, so catching it before you publish spares your readers the error.
 
 ## How to fix it
 
@@ -105,8 +105,6 @@ In Power BI Desktop, select the visual the finding names, remove the broken fiel
 - For a bookmark, fix the page it shows first. Then select the bookmark and choose Update from its More options menu, so it captures the page again.
 - For a text box's field value, delete the text box and add it again with the field you meant.
 - When the model is what changed, put the field back in the model under the name the report uses. If the field was renamed, renaming it back fixes every reference to it at once.
-
-In the report's JSON, a field reference names its table in `Entity` and its column or measure in `Property`, as in the example. Correct the name (or, for a measure that moved, the table), then make the `queryRef` and `nativeQueryRef` beside it match. A reference to a measure defined in the report also carries `"Schema": "extension"`. If that measure has moved into the model, remove the key, as `REPORT_LEVEL_MEASURES`'s page describes.
 
 ## When to ignore it
 

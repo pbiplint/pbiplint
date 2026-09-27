@@ -17,7 +17,7 @@ it("is released in lockstep with the CLI", () => {
 });
 
 it("is the version the README's Status section names (update it in the release commit)", () => {
-  // The README front page says which version is out. Nothing regenerates that line, and two
+  // The README front page names the version on main. Nothing regenerates that line, and two
   // patch releases went by with it still naming 0.1.0, so the release checks pin it here.
   const readme = readFileSync(new URL("../../../README.md", import.meta.url), "utf8");
   const status = readme.split("\n").find((line) => line.startsWith("Version "));

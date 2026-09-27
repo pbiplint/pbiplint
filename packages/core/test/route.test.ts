@@ -6,6 +6,7 @@ import {
   noTmdlNote,
   noTmdlRefusal,
   pairingDecision,
+  PBIP_PREVIEW_HELP_URLS,
   pbixRefusal,
   routeFiles,
 } from "../src/project/route.js";
@@ -115,10 +116,11 @@ describe("pairingDecision", () => {
 });
 
 describe("a .pbix (tracked in #88)", () => {
-  // From Learn's Power BI Desktop projects page: the menu path, the file type, and the preview
-  // option, as Learn labels them.
+  // The menu path and the file type as Learn's Power BI Desktop projects page labels them, then
+  // the preview options as a condition, left to Learn's three sections on them, linked in order
+  // with nothing after the last.
   const HOW =
-    "pbiplint reads a report saved as a Power BI project (PBIP). In Power BI Desktop, choose File > Save as and pick Power BI project files (*.pbip) as the file type (if it isn't offered, first turn on Power BI Project (.pbip) save option under File > Options and settings > Options > Preview features).";
+    "pbiplint reads a report saved as a Power BI project (PBIP). In Power BI Desktop, choose File > Save as and pick Power BI project files (*.pbip) as the file type. Depending on your version of Power BI Desktop, you may need to enable certain preview features first. Microsoft Learn explains them: https://learn.microsoft.com/power-bi/developer/projects/projects-overview#enable-preview-features https://learn.microsoft.com/power-bi/developer/projects/projects-report#enable-the-pbir-format-preview-feature https://learn.microsoft.com/power-bi/developer/projects/projects-dataset#enable-tmdl-format-preview-feature";
   it("is known by its name alone, in any case", () => {
     for (const path of ["Sales.pbix", "Sales.PBIX", "Demo/old/Sales.Pbix", "a b.pbix"])
       expect(isPbix(path), path).toBe(true);
@@ -140,6 +142,12 @@ describe("a .pbix (tracked in #88)", () => {
     expect(pbixRefusal("Demo/A.pbix", 2)).toBe(
       `Demo/A.pbix and 2 other .pbix files are Power BI Desktop files, which pbiplint cannot read. ${HOW}`,
     );
+  });
+  it("ends with the three Learn pages core exports, in order, so the site links the same ones", () => {
+    expect(PBIP_PREVIEW_HELP_URLS).toHaveLength(3);
+    const tail = `Microsoft Learn explains them: ${PBIP_PREVIEW_HELP_URLS.join(" ")}`;
+    for (const message of [pbixRefusal("Sales.pbix"), pbixRefusal("Demo/A.pbix", 2)])
+      expect(message.slice(-tail.length)).toBe(tail);
   });
 });
 

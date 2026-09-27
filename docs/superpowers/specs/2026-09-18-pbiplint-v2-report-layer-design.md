@@ -460,6 +460,34 @@ files stand as they were, with no notice for the `.pbix`, which is
 never among the files read. Both surfaces give that last refusal
 (below), so beside such a folder both name the folder.
 
+Amended 2026-09-26 with Michael (pull request 8): the message's second
+half is shorter and leaves the preview options to Learn. It reads, in
+full: `pbiplint reads a report saved as a Power BI project (PBIP). In
+Power BI Desktop, choose File > Save as and pick Power BI project files
+(*.pbip) as the file type. Depending on your version of Power BI
+Desktop, you may need to enable certain preview features first.
+Microsoft Learn explains them:` and then the URLs of three Learn
+sections, each under
+`https://learn.microsoft.com/power-bi/developer/projects/`, separated
+by single spaces with nothing after the last, since a terminal's link
+detection can take a trailing period into a link:
+`projects-overview#enable-preview-features` ("Enable preview
+features"), `projects-report#enable-the-pbir-format-preview-feature`
+("Enable the PBIR format preview feature"), and
+`projects-dataset#enable-tmdl-format-preview-feature` ("Enable TMDL
+format Preview feature"). The preview sentence is a condition, and
+names no option, because the options are leaving preview and Microsoft
+may remove their switches from Power BI Desktop, which would make a
+list of them wrong, while older versions of Desktop still need them
+turned on. The menu path and the file type are Learn's labels
+(projects-overview, "Save as a project"). Core exports the three URLs
+and builds the sentence from them, so the words and the links cannot
+drift. The CLI prints the message as text; the site's status line
+shows the same text with exactly those three URLs as links, and
+nothing else in a message it shows becomes a link. The first half,
+which names the `.pbix` and counts the others, and the legacy parts'
+notices are unchanged.
+
 Amended 2026-09-25 with Michael (release triage, batch F): when
 nothing can be linted, no read refused, and no notice explains why,
 while one or more `.SemanticModel` folders the walk met hold no
@@ -1593,6 +1621,21 @@ walk skips (one whose only files are under `.pbi`, say), and refuses
 as though it were not there, where the CLI names it. A model folder
 Power BI Desktop saved holds its `definition.pbism`, so this second
 case does not arise from one.
+
+Amended 2026-09-26 with Michael (pull request 8): one more place the
+browser differs from the CLI, as checked in real browsers that day. On
+the directory-input route (Firefox and Safari) the browser hands the
+page a flat list of the files it listed, with no word of a folder it
+could not list, so the page cannot give the `unread-file` notice the
+CLI gives for such a folder (section 4's A7 note). Safari leaves that
+folder out and lints the rest. In Firefox the page refuses the input
+as holding no model or report, which is what Michael saw; in a
+Playwright probe, Gecko's listing of the chosen folder was rejected,
+so no files came through. A drop in Safari leaves such a folder out
+without an error, as its chooser does. The File System Access picker
+(Chrome and Edge) and a drop in Chrome or Firefox raise an error for
+the listing and give the notice. About's "Known limits in the browser"
+says so.
 
 ## 13. CLI changes
 

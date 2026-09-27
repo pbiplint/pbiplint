@@ -21,23 +21,35 @@ export const isReportFile = (path: string): boolean =>
 export const isPbix = (path: string): boolean => /\.pbix$/i.test(path);
 
 /**
- * How to save a report as a Power BI project, in the labels Learn gives the menu path, the file
- * type, and the option.
+ * Learn's three sections on the preview options a Power BI project save can need, in the order the
+ * .pbix message gives them: "Enable preview features" on the Power BI Desktop projects page, "Enable
+ * the PBIR format preview feature" on the report folder page, and "Enable TMDL format Preview
+ * feature" on the semantic model folder page. Exported so the site links exactly these and nothing
+ * else in a message it shows.
  */
-const SAVE_AS_PROJECT =
-  "pbiplint reads a report saved as a Power BI project (PBIP). In Power BI Desktop, choose File > Save as and pick Power BI project files (*.pbip) as the file type (if it isn't offered, first turn on Power BI Project (.pbip) save option under File > Options and settings > Options > Preview features).";
+export const PBIP_PREVIEW_HELP_URLS: readonly string[] = Object.freeze([
+  "https://learn.microsoft.com/power-bi/developer/projects/projects-overview#enable-preview-features",
+  "https://learn.microsoft.com/power-bi/developer/projects/projects-report#enable-the-pbir-format-preview-feature",
+  "https://learn.microsoft.com/power-bi/developer/projects/projects-dataset#enable-tmdl-format-preview-feature",
+]);
+
+/**
+ * How to save a report as a Power BI project pbiplint can read. The menu path and the file type
+ * are Learn's labels ("Save as a project" on the projects page). The preview options are a
+ * condition ("may need") left to Learn's sections, and the sentence is built from
+ * PBIP_PREVIEW_HELP_URLS so the words and the links cannot drift. They are a condition because the
+ * options are leaving preview (Microsoft 365 Message Center post MC1465770 announces PBIP generally
+ * available) and may be removed from Desktop, while older builds still need them. Nothing follows
+ * the last URL, since a terminal's link detection can take a trailing period into the link.
+ */
+const SAVE_AS_PROJECT = `pbiplint reads a report saved as a Power BI project (PBIP). In Power BI Desktop, choose File > Save as and pick Power BI project files (*.pbip) as the file type. Depending on your version of Power BI Desktop, you may need to enable certain preview features first. Microsoft Learn explains them: ${PBIP_PREVIEW_HELP_URLS.join(" ")}`;
 
 /**
  * The refusal of an input of which nothing can be linted, and which nothing else explains, when
  * the walk met a .pbix (spec section 4): it names `path`, the first .pbix the walk met, counts the
- * `others` it met besides, and says how to save the report as a Power BI project. The CLI and the
- * browser both give it, so the words cannot drift. The steps and their labels are Learn's, from
- * the Power BI Desktop projects page,
- * https://learn.microsoft.com/en-us/power-bi/developer/projects/projects-overview ("Save as a
- * project" and "Enable preview features"). The preview option is a condition rather than a step:
- * Learn still calls the format a preview, while Microsoft has since announced it generally
- * available (Microsoft 365 Message Center post MC1465770, September 2, 2026), so a newer Desktop
- * may not show the option.
+ * `others` it met besides, and says how to save the report as a Power BI project
+ * (SAVE_AS_PROJECT). The CLI and the browser both give it, so the words cannot drift: the CLI
+ * prints it as text, and the site links the URLs it ends with, PBIP_PREVIEW_HELP_URLS.
  */
 export function pbixRefusal(path: string, others = 0): string {
   const what =

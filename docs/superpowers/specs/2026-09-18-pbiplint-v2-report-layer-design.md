@@ -1235,6 +1235,25 @@ property or an expression with no name is a finding whatever its word;
 and an annotation or an extended property is one when lines sit under
 it, since TMDL gives neither a child line.
 
+Amended 2026-09-28 (issue #121): a code fence left open is a
+`PARSE_ISSUE` on the line that opens it, as at the end of a file, when
+a line inside it opens another fence (a declaration, or an expression
+with no name, whose `=` is followed by three backticks). Before, the
+later fence's closing line closed it, and the lines between became
+expression text with no finding. None of the 11,458 fences in the
+23,457 TMDL files surveyed that day holds such a line. Fenced text may
+sit at any depth, so indentation never says a fence is open; once one
+is known to be, the parser ends it where the text under the
+declaration stops being indented deeper than its first line, as it
+reads an indented expression, and otherwise at the other fence's
+declaration (less a `///` run directly above it) or the end of the
+file. Deleting each of 9,249 closing lines in turn, in 1,925 distinct
+files from that survey, the model then read every other declaration
+as in the intact file 9,200 times, where the old reading did so 23
+times. A root annotation with lines under it no longer lands in the
+model's annotations, so a lost-tab `pbiplint.ignore` there turns no
+rule off.
+
 Amended 2026-09-24 with Michael (release triage, batch D, ruling H82):
 while a TMDL file has a parse issue that can take an object out of the
 model, which is any but an orphaned `///` description, a reference to a

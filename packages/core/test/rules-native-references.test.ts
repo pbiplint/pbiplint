@@ -759,6 +759,45 @@ describe("NOT_REACHED_FROM_REPORT", () => {
   });
 });
 
+describe("NOT_REACHED_FROM_REPORT and a report measure's bare names (#59)", () => {
+  it("counts a column a report measure names bare, on another table, as reached", () => {
+    // SUMX(Sales, [Qty]) on the Measures table: before #59 the report measure looked for Qty on
+    // its own table only, and reported 'Sales'[Qty] as reached by nothing, while the same DAX in a
+    // model measure reached it.
+    const model = `table Sales
+	column Qty
+		dataType: int64
+	column Price
+		dataType: decimal
+
+table Measures
+	measure Placeholder = 0
+`;
+    const units = {
+      Measure: {
+        Expression: { SourceRef: { Schema: "extension", Entity: "Measures" } },
+        Property: "Units",
+      },
+    };
+    const files = [
+      page("p"),
+      bound("p", "v", "cardVisual", [units]),
+      {
+        path: "definition/reportExtensions.json",
+        text: j({
+          entities: [
+            { name: "Measures", measures: [{ name: "Units", expression: "SUMX(Sales, [Qty])" }] },
+          ],
+        }),
+      },
+    ];
+    expect(reportFindings(NOT_REACHED_FROM_REPORT, files, model).map((f) => f.objectName)).toEqual([
+      "[Placeholder]",
+      "'Sales'[Price]",
+    ]);
+  });
+});
+
 describe("a text box's field value, read through its subquery", () => {
   // Power BI Desktop writes a text box's field value as a Column over a Subquery, wrapped in `Min`
   // or in an `Aggregation`; the Column's Property names a column of the subquery's result.

@@ -9,7 +9,12 @@ import type {
   Table,
 } from "../model/types.js";
 import type { Bookmark, FieldRef, Page, Report, ReportMeasure, Visual } from "../pbir/types.js";
-import { extractRefs, functionCallReader } from "./references.js";
+import {
+  extractRefs,
+  functionCallReader,
+  resolveBareName,
+  type BareNameLookup,
+} from "./references.js";
 
 /**
  * What holds a report reference: a visual's role binding, a visual's filter, any other property of
@@ -309,8 +314,19 @@ export function buildReportReferenceIndex(
     }
   }
   for (const b of report.bookmarks) add({ kind: "bookmark", object: b }, b.file, b.refs);
-  // A report measure's DAX is read the way a model measure's is: a bare [X] is a measure anywhere
-  // in the model or the report, else a column on the measure's own table.
+  // A report measure's DAX is read the way a model measure's is, by the same resolver: a bare [X]
+  // is a measure anywhere in the model or the report, else a column on the measure's own table,
+  // else on the first other table that has one.
+  const bareLookup: BareNameLookup<{ table: string; name: string }> = {
+    tables: model?.tables ?? [],
+    columnOf,
+    measureNamed: (name) => {
+      const inModel = measuresByName.get(lower(name));
+      return inModel
+        ? { table: inModel.table.name, name: inModel.name }
+        : reportMeasuresByName.get(lower(name));
+    },
+  };
   for (const m of report.measures) {
     const owner: ReportRefOwner = { kind: "reportMeasure", object: m };
     for (const raw of extractRefs(m.expression)) {
@@ -326,30 +342,35 @@ export function buildReportReferenceIndex(
         add(owner, m.file, [{ kind, table: raw.table!, name: raw.name, pointer: "" }]);
         continue;
       }
-      const modelMeasure = measuresByName.get(lower(raw.name));
-      const extension = reportMeasuresByName.get(lower(raw.name));
-      if (modelMeasure)
+      const bare = resolveBareName(
+        raw.name,
+        { kind: "reportMeasure", table: tables.get(lower(m.table)) },
+        bareLookup,
+      );
+      if (bare.kind === "measure")
         add(owner, m.file, [
-          { kind: "measure", table: modelMeasure.table.name, name: modelMeasure.name, pointer: "" },
+          { kind: "measure", table: bare.measure.table, name: bare.measure.name, pointer: "" },
         ]);
-      else if (extension)
-        add(owner, m.file, [
-          { kind: "measure", table: extension.table, name: extension.name, pointer: "" },
-        ]);
-      else {
-        const own = tables.get(lower(m.table));
-        if (own && columnOf(own, raw.name))
-          add(owner, m.file, [{ kind: "column", table: own.name, name: raw.name, pointer: "" }]);
-        else
-          // Not a measure anywhere nor a column on its own table: it could be a measure on any
-          // table, so any model file could declare it.
-          refs.push({
-            ref: { kind: "measure", table: m.table, name: raw.name, pointer: "" },
-            owner,
-            file: m.file,
-            resolution: missing(`no measure or column named ${q(raw.name)}`),
-          });
-      }
+      else if (bare.kind === "columns")
+        add(
+          owner,
+          m.file,
+          bare.columns.map((c) => ({
+            kind: "column",
+            table: c.table.name,
+            name: c.name,
+            pointer: "",
+          })),
+        );
+      else
+        // No measure anywhere nor a column on any table: it could be a measure on any table, so
+        // any model file could declare it.
+        refs.push({
+          ref: { kind: "measure", table: m.table, name: raw.name, pointer: "" },
+          owner,
+          file: m.file,
+          resolution: missing(`no measure or column named ${q(raw.name)}`),
+        });
     }
   }
 

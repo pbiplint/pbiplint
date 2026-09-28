@@ -112,6 +112,46 @@ export function functionCallReader(
   };
 }
 
+/** What a bare `[Name]` reads: a measure, the model columns it may name, or nothing. */
+export type BareName<M> =
+  { kind: "measure"; measure: M } | { kind: "columns"; columns: Column[] } | { kind: "none" };
+
+/** Where resolveBareName looks: the model's tables, a column by name on one, a measure by name. */
+export interface BareNameLookup<M> {
+  tables: readonly Table[];
+  columnOf(table: Table, name: string): Column | undefined;
+  measureNamed(name: string): M | undefined;
+}
+
+/**
+ * What a bare `[Name]` in DAX reads, by one rule for every kind of DAX, so a model measure and a
+ * report measure never read the same text two ways (#59). A measure of that name anywhere comes
+ * first. Otherwise a column: on the owner's own table, else on the first other table that has one,
+ * in model order, since a regex reader cannot tell which table a row context iterates (#108 reads
+ * that with a tokenizer). A function has no table of its own, and its caller can hand it any, so
+ * its bare name is every model column so called; Tabular Editor reports some of those columns as
+ * unused, a recorded deviation of UNNECESSARY_COLUMNS in tests/expectations/udf-sales.json. A
+ * calculation item's bare name is a measure or nothing (ground-truth item 3).
+ */
+export function resolveBareName<M>(
+  name: string,
+  owner: { kind: RefOwnerKind | "reportMeasure"; table?: Table | undefined },
+  lookup: BareNameLookup<M>,
+): BareName<M> {
+  const measure = lookup.measureNamed(name);
+  if (measure !== undefined) return { kind: "measure", measure };
+  if (owner.kind === "calculationItem") return { kind: "none" };
+  if (owner.kind === "function") {
+    const columns = lookup.tables.flatMap((t) => lookup.columnOf(t, name) ?? []);
+    return columns.length > 0 ? { kind: "columns", columns } : { kind: "none" };
+  }
+  for (const t of owner.table ? [owner.table, ...lookup.tables] : lookup.tables) {
+    const column = lookup.columnOf(t, name);
+    if (column) return { kind: "columns", columns: [column] };
+  }
+  return { kind: "none" };
+}
+
 export function buildReferenceIndex(model: Model): ReferenceIndex {
   const tables = new Map<string, Table>(model.tables.map((t) => [lower(t.name), t]));
   const columns = new Map<string, Column>();
@@ -121,6 +161,11 @@ export function buildReferenceIndex(model: Model): ReferenceIndex {
     for (const m of t.measures) measures.set(lower(m.name), m);
   }
   const columnOf = (t: Table, name: string): Column | undefined => columns.get(key(t.name, name));
+  const lookup: BareNameLookup<Measure> = {
+    tables: model.tables,
+    columnOf,
+    measureNamed: (name) => measures.get(lower(name)),
+  };
 
   const resolve = (
     raw: RawRef,
@@ -136,29 +181,21 @@ export function buildReferenceIndex(model: Model): ReferenceIndex {
       if (meas) return { kind: "measure", table: t.name, name: meas.name, qualified: true };
       return { kind: "unresolved", table: raw.table, name: raw.name, qualified: true };
     }
-    const meas = measures.get(lower(raw.name));
-    if (meas) return { kind: "measure", table: meas.table.name, name: meas.name, qualified: false };
-    if (ownerKind === "calculationItem")
-      return { kind: "unresolved", name: raw.name, qualified: false };
-    // A function has no table of its own, and its caller can hand it any table, so a bare name
-    // that is no measure is a use of every model column with that name. Tabular Editor reports some
-    // of those columns as unused: a recorded deviation of UNNECESSARY_COLUMNS, in
-    // tests/expectations/udf-sales.json.
-    if (ownerKind === "function") {
-      const all = model.tables.flatMap((t): DaxRef[] => {
-        const col = columnOf(t, raw.name);
-        return col ? [{ kind: "column", table: t.name, name: col.name, qualified: false }] : [];
-      });
-      return all.length > 0 ? all : { kind: "unresolved", name: raw.name, qualified: false };
-    }
-    if (ownerTable) {
-      const col = columnOf(ownerTable, raw.name);
-      if (col) return { kind: "column", table: ownerTable.name, name: col.name, qualified: false };
-    }
-    for (const t of model.tables) {
-      const col = columnOf(t, raw.name);
-      if (col) return { kind: "column", table: t.name, name: col.name, qualified: false };
-    }
+    const bare = resolveBareName(raw.name, { kind: ownerKind, table: ownerTable }, lookup);
+    if (bare.kind === "measure")
+      return {
+        kind: "measure",
+        table: bare.measure.table.name,
+        name: bare.measure.name,
+        qualified: false,
+      };
+    if (bare.kind === "columns")
+      return bare.columns.map((c) => ({
+        kind: "column",
+        table: c.table.name,
+        name: c.name,
+        qualified: false,
+      }));
     return { kind: "unresolved", name: raw.name, qualified: false };
   };
 

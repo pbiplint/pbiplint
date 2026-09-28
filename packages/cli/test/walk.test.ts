@@ -1096,3 +1096,42 @@ describe("resolveProject and symbolic links (#59)", () => {
     expect(resolveProject(linkTo(tmdl)).root).toBe(realpathSync(dirname(tmdl)));
   });
 });
+
+describe("resolveProject and the layouts nothing else pins", () => {
+  it("reads a PBIP folder that holds a model and no report as the model alone", () => {
+    const p = resolveProject(pbip({ model: true }));
+    expect(p.model!.files.map((f) => f.path).sort()).toEqual([
+      "definition/model.tmdl",
+      "definition/tables/T.tmdl",
+    ]);
+    expect(p.report).toBeUndefined();
+    expect(p.absent).toEqual({});
+    expect(p.diagnostics).toEqual([]);
+  });
+  it("reads loose .tmdl files anywhere under a plain folder as v1 did, relative to that folder", () => {
+    const root = tempDir("loose");
+    mkdirSync(join(root, "a", "b"), { recursive: true });
+    mkdirSync(join(root, "node_modules"));
+    writeFileSync(join(root, "model.tmdl"), "model Model\n");
+    writeFileSync(join(root, "a", "b", "T.tmdl"), "table T\n");
+    writeFileSync(join(root, "a", "notes.md"), "");
+    writeFileSync(join(root, "node_modules", "X.tmdl"), "table X\n");
+    const p = resolveProject(root);
+    expect(p.model!.root).toBe(root);
+    expect(p.model!.files).toEqual([
+      { path: "a/b/T.tmdl", text: "table T\n" },
+      { path: "model.tmdl", text: "model Model\n" },
+    ]);
+    expect(p.report).toBeUndefined();
+  });
+  it("gives a report's published model as the reason over a legacy model beside it, keeping the legacy notice", () => {
+    // What the report itself says comes first (pairingDecision), so the skipped line says the
+    // report reads a published model, and the notice still says the model folder is model.bim.
+    const p = resolveProject(
+      pbip({ legacyModel: true, report: true, pbir: { byConnection: { connectionString: "x" } } }),
+    );
+    expect(p.model).toBeUndefined();
+    expect(p.absent).toEqual({ model: "this report reads a published model" });
+    expect(p.diagnostics.map((d) => d.kind)).toEqual(["legacy-model-format"]);
+  });
+});

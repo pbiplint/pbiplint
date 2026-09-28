@@ -336,12 +336,12 @@ function loneReportAbsent(
   return !decision.useModel && decision.reason ? { model: decision.reason } : {};
 }
 
-const legacyReport = (folder: string, name: string): Diagnostic => ({
+const legacyReport = (name: string): Diagnostic => ({
   kind: "legacy-report-format",
   path: name,
   message: `${name} is stored as a single report.json, which pbiplint cannot read; save it in the PBIR format from Power BI Desktop`,
 });
-const legacyModel = (folder: string, name: string): Diagnostic => ({
+const legacyModel = (name: string): Diagnostic => ({
   kind: "legacy-model-format",
   path: name,
   message: `${name} is stored as model.bim, which pbiplint cannot read; save it in the TMDL format from Power BI Desktop`,
@@ -500,7 +500,7 @@ function readNamed(
   const report = readPart(w, "report", reportFolder, reportPart);
   // A part folder that could not be read has said so already, and cannot be looked in.
   if (!report && !out.absent.report && isFile(join(reportFolder, "report.json"))) {
-    out.diagnostics.push(legacyReport(reportFolder, at(reportFolder)));
+    out.diagnostics.push(legacyReport(at(reportFolder)));
     out.absent.report = LEGACY_REPORT_REASON;
   }
   // The .pbip rides with the report at its path from the report root, as it does from a folder,
@@ -521,7 +521,7 @@ function readNamed(
     if (folderAt(modelFolder)) {
       model = readPart(w, "model", modelFolder, modelPart);
       if (!model && !out.absent.model && isFile(join(modelFolder, "model.bim"))) {
-        out.diagnostics.push(legacyModel(modelFolder, at(modelFolder)));
+        out.diagnostics.push(legacyModel(at(modelFolder)));
         out.absent.model = LEGACY_MODEL_REASON;
       }
     } else {
@@ -581,12 +581,12 @@ function readFolder(w: Walk, input: string, path: string, preferred?: string): R
   }
   // A part folder in the legacy format.
   if (name.endsWith(".Report") && isFile(join(path, "report.json"))) {
-    out.diagnostics.push(legacyReport(path, name));
+    out.diagnostics.push(legacyReport(name));
     out.absent.report = LEGACY_REPORT_REASON;
     return out;
   }
   if (name.endsWith(".SemanticModel") && isFile(join(path, "model.bim"))) {
-    out.diagnostics.push(legacyModel(path, name));
+    out.diagnostics.push(legacyModel(name));
     out.absent.model = LEGACY_MODEL_REASON;
     return out;
   }
@@ -611,7 +611,7 @@ function readFolder(w: Walk, input: string, path: string, preferred?: string): R
   let model = models[0] ? readPart(w, "model", join(path, models[0]), modelPart) : undefined;
   // A part folder that could not be read has said so already, and cannot be looked in.
   if (models[0] && !model && !out.absent.model && isFile(join(path, models[0], "model.bim"))) {
-    out.diagnostics.push(legacyModel(path, models[0]));
+    out.diagnostics.push(legacyModel(models[0]));
     out.absent.model = LEGACY_MODEL_REASON;
   }
   const report = reports[0] ? readPart(w, "report", join(path, reports[0]), reportPart) : undefined;
@@ -621,7 +621,7 @@ function readFolder(w: Walk, input: string, path: string, preferred?: string): R
     !out.absent.report &&
     isFile(join(path, reports[0], "report.json"))
   ) {
-    out.diagnostics.push(legacyReport(path, reports[0]));
+    out.diagnostics.push(legacyReport(reports[0]));
     out.absent.report = LEGACY_REPORT_REASON;
   }
   if (report) {

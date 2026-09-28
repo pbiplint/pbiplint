@@ -15,7 +15,7 @@ sources:
 
 ## What it checks
 
-Inactive relationships that no measure or calculation item activates with USERELATIONSHIP.
+Inactive relationships that no measure, calculation item, or user-defined function activates with USERELATIONSHIP.
 
 Each finding names the relationship the way the rest of the tool does, from column to column with the cardinality between them: `'Sales'[Ship Date] ∞←1 'Date'[Date]`.
 
@@ -106,7 +106,8 @@ This rule reads the semantic model, not the reports built on it. A report-level 
 ## Quirks
 
 - Only `USERELATIONSHIP(from column, to column)` counts as activation; the reversed argument order does not, even though DAX accepts it.
-- Only measures and calculation items are scanned. A USERELATIONSHIP call in a calculated column, a calculated table, or a row-level security filter does not count as activation.
+- Only measures, calculation items, and user-defined functions are scanned. A USERELATIONSHIP call in a calculated column, a calculated table, or a row-level security filter does not count as activation.
+- A USERELATIONSHIP inside a user-defined function counts as activating the relationship, which Tabular Editor does not count, since the source rule reads measures and calculation items only. It counts even when nothing calls the function. When the function receives the two columns as parameters, as in `USERELATIONSHIP ( fromColumn, toColumn )`, the call names neither column, so the relationship is still reported.
 - The call is matched as text, in any letter case, so a USERELATIONSHIP written inside a string literal or a comment counts as activating the relationship.
 - Either table name may be written bare or in single quotes, and any spacing around the comma is accepted.
 - pbiplint escapes table and column names before building the pattern, which the source rule does not, so names with parentheses cannot break the check.

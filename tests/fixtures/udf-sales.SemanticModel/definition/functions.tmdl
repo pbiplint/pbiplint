@@ -1,0 +1,43 @@
+/// Adds tax to an amount.
+function 'Sales.ApplyTax' = (amount: NUMERIC, rate: DOUBLE) => amount * ( 1 + rate )
+	lineageTag: 0b6a5c1e-1111-4a1a-9a1a-000000000001
+
+/// Net sales after the hidden returns reserve, taxed at the hidden tax rate.
+/// @param {EXPR} salesExpr - The sales amount, evaluated lazily
+/// @param {COLUMNREF} qtyColumn - The quantity column
+function 'Sales.NetAfterReserve' =
+		(
+			salesExpr: SCALAR NUMERIC EXPR,
+			qtyColumn: COLUMNREF
+		) =>
+			VAR _gross = salesExpr
+			VAR _reserve = [Returns Reserve]
+			VAR _rate = MAX ( [Tax Rate] )
+			VAR _perUnit = IFERROR ( SUM ( 'Sales'[Net Amount] ) / SUM ( qtyColumn ), 0 )
+			RETURN
+				EVALUATEANDLOG ( Sales.ApplyTax ( _gross - _reserve, _rate ) + 0 * _perUnit )
+	lineageTag: 0b6a5c1e-1111-4a1a-9a1a-000000000002
+
+	annotation Owner = Finance
+
+/// Year to date of any measure over any date column. Nothing calls it.
+function 'Time.YTD' = ```
+		(
+			measureExpr: EXPR,
+			dateColumn: COLUMNREF
+		) =>
+			CALCULATE ( measureExpr, DATESYTD ( dateColumn ) )
+		```
+	lineageTag: 0b6a5c1e-1111-4a1a-9a1a-000000000003
+
+/// Rows of the first table that are also in the second.
+function 'Set.Intersect' = (a: TABLE, b: TABLE) => FILTER ( a, CONTAINSROW ( b, [Customer ID] ) )
+	lineageTag: 0b6a5c1e-1111-4a1a-9a1a-000000000004
+
+/// A measure evaluated over promotion start dates.
+function 'Promo.ByStartDate' = (m: MEASUREREF) => CALCULATE ( m, USERELATIONSHIP ( 'Promotion'[Start Date], 'Date'[Date] ) )
+	lineageTag: 0b6a5c1e-1111-4a1a-9a1a-000000000005
+
+/// Freight and handling against the hidden freight budget. Nothing calls it.
+function 'Plan.FreightVsBudget' = () => DIVIDE ( SUM ( 'Sales'[Freight] ) + SUMX ( 'Sales', [Handling Fee] ), [Freight Budget] )
+	lineageTag: 0b6a5c1e-1111-4a1a-9a1a-000000000006

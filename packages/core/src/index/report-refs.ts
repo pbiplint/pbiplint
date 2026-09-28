@@ -1,7 +1,15 @@
 import { splitQualifiedName } from "../model/build.js";
-import type { Column, Hierarchy, Level, Measure, Model, Table } from "../model/types.js";
+import type {
+  Column,
+  DaxFunction,
+  Hierarchy,
+  Level,
+  Measure,
+  Model,
+  Table,
+} from "../model/types.js";
 import type { Bookmark, FieldRef, Page, Report, ReportMeasure, Visual } from "../pbir/types.js";
-import { extractRefs } from "./references.js";
+import { extractRefs, functionCallReader } from "./references.js";
 
 /**
  * What holds a report reference: a visual's role binding, a visual's filter, any other property of
@@ -61,6 +69,11 @@ export interface ReportReferenceIndex {
   unresolved(): ReportRef[];
   /** The references a visual's roles bind, in role order. */
   fieldsOf(v: Visual): ReportRef[];
+  /**
+   * Each of the report's own measures that calls a user-defined function of the model, in the
+   * report's order, with the functions it calls, each once, in model order.
+   */
+  functionCalls: { measure: ReportMeasure; calls: DaxFunction[] }[];
 }
 
 const lower = (s: string): string => s.toLowerCase();
@@ -340,6 +353,11 @@ export function buildReportReferenceIndex(
     }
   }
 
+  const callsIn = functionCallReader(model?.functions ?? []);
+  const functionCalls = report.measures
+    .map((measure) => ({ measure, calls: callsIn(measure.expression) }))
+    .filter((c) => c.calls.length > 0);
+
   const byTarget = new Map<object, ReportRef[]>();
   for (const r of refs) {
     const target =
@@ -358,5 +376,6 @@ export function buildReportReferenceIndex(
     referencedBy: (target) => byTarget.get(target) ?? [],
     unresolved: () => refs.filter((r) => r.resolution.kind === "unresolved"),
     fieldsOf: (v) => refs.filter((r) => r.owner.kind === "visualField" && r.owner.object === v),
+    functionCalls,
   };
 }

@@ -85,7 +85,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Visible columns whose name matches the from column of a relationship whose from side is many. Only the from cardinality is tested, so a many-to-many relationship counts here too, not just many-to-one.",
   HIDE_TOOLTIP_DRILLTROUGH_PAGES: "Tooltip pages and drillthrough pages that are not hidden.",
   INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED:
-    "Inactive relationships that no measure or calculation item activates with USERELATIONSHIP.",
+    "Inactive relationships that no measure, calculation item, or user-defined function activates with USERELATIONSHIP.",
   INTEGER_FORMATTING:
     "Measures whose static format string is not a recognized whole-number, currency, or percentage format. The only format strings the rule accepts are `#,0`, `#,0.0`, and any string containing `$` or `%`. A measure with no format string at all fires too, and that is the common case: the rule reads only the format string, so it cannot tell an unformatted currency or ratio from an unformatted count.",
   ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS:
@@ -115,7 +115,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   MONTHCOLUMN_FORMATSTRING:
     "DateTime columns with month in the name whose format string is not exactly `MMMM yyyy`.",
   NOT_REACHED_FROM_REPORT:
-    "Columns and measures that nothing in the report reaches, directly or through the model. The walk starts from every field the report names, both columns of every relationship except one to an auto date/time table, the columns that row-level and object-level security name, the default column of every variation, the columns of an aggregation table (the ones with an `alternateOf` mapping), and the fields the report's own measures reference, and it follows DAX references, sort-by and group-by columns, the detail column or table each mapping names, and calculated tables until nothing new is reached.",
+    "Columns and measures that nothing in the report reaches, directly or through the model. The walk starts from every field the report names, both columns of every relationship except one to an auto date/time table, the columns that row-level and object-level security name, the default column of every variation, the columns of an aggregation table (the ones with an `alternateOf` mapping), the fields the report's own measures reference, and the user-defined functions those measures and the security filters call, and it follows DAX references, calls to user-defined functions, sort-by and group-by columns, the detail column or table each mapping names, and calculated tables until nothing new is reached.",
   NUMERIC_COLUMN_SUMMARIZE_BY:
     "Visible whole number, decimal, or double columns whose default summarization is anything other than None.",
   OBJECTS_SHOULD_NOT_START_OR_END_WITH_A_SPACE:

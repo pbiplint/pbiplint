@@ -121,6 +121,27 @@ role R
 `;
     expect(objectNames(rules.UNNECESSARY_COLUMNS, m)).toEqual(["'T'[Unused]"]);
   });
+  it("UNNECESSARY_COLUMNS counts a column a user-defined function names, bare on any table or qualified", () => {
+    const m = `table T
+	column Unused
+		dataType: int64
+		isHidden
+	column Qualified
+		dataType: int64
+		isHidden
+	column Shared
+		dataType: int64
+		isHidden
+
+table U
+	column Shared
+		dataType: int64
+		isHidden
+
+function 'T.Uncalled' = () => MAX ( [Shared] ) + SUM ( 'T'[Qualified] )
+`;
+    expect(objectNames(rules.UNNECESSARY_COLUMNS, m)).toEqual(["'T'[Unused]"]);
+  });
   it("HIDE_FACT_TABLE_COLUMNS matches aggregations over qualified references only", () => {
     const m = col(
       "\tcolumn Amount\n\t\tdataType: decimal\n\tcolumn Qty\n\t\tdataType: int64\n\tcolumn Name\n\t\tdataType: string\n\tmeasure A = SUM ( 'T'[Amount] )\n\tmeasure B = sum(T[Qty]) + COUNTA('T'[Name])\n\tmeasure C = SUMX(T, [Amount])",

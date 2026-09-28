@@ -478,6 +478,108 @@ ${extra}`);
       );
     });
   });
+  describe("user-defined functions", () => {
+    const fnModel = modelFrom(`table Sales
+	column Amount
+		dataType: decimal
+	column Freight
+		dataType: decimal
+	column 'Tax Rate'
+		dataType: decimal
+	column Secure
+		dataType: string
+	column Lonely
+		dataType: string
+	column Taxed = Tax.Apply ( 'Sales'[Amount] )
+		dataType: decimal
+	measure Total = SUM('Sales'[Amount])
+	measure Reserve = 1
+	measure Net = sales.netafter ( [Total] )
+	measure Dead = Sales.Dead ( 1 )
+	measure Orphan = 2
+
+role Readers
+	tablePermission Sales = Sec.Allow ()
+
+function 'Sales.NetAfter' = (x: EXPR) => Sales.ApplyTax ( x - [Reserve], 1 )
+
+function 'Sales.ApplyTax' = (a: NUMERIC, r: NUMERIC) => a * r + SUM ( 'Sales'[Freight] )
+
+function 'Sales.Dead' = (v: NUMERIC) => v + [Orphan]
+
+function 'Rep.Only' = () => MAX ( [Tax Rate] )
+
+function 'Sec.Allow' = () => 'Sales'[Secure] = "Y"
+
+function 'Tax.Apply' = (a: NUMERIC) => a * 1.1
+`);
+    const { report: fnReport } = buildReport([
+      ...visualBinding(measure("Sales", "Net")),
+      {
+        path: "definition/reportExtensions.json",
+        text: j({
+          name: "extension",
+          entities: [
+            { name: "Sales", measures: [{ name: "Report Tax", expression: "Rep.Only ( )" }] },
+          ],
+        }),
+      },
+    ]);
+    const indexes = buildIndexes({ model: fnModel, report: fnReport });
+    const reach = indexes.reachability!;
+    const c = (name: string) => fnModel.tables[0]!.columns.find((x) => x.name === name)!;
+    const m = (name: string) => fnModel.tables[0]!.measures.find((x) => x.name === name)!;
+    const f = (name: string) => fnModel.functions.find((x) => x.name === name)!;
+
+    it("follows a measure's call into the function's body, and a function's calls into theirs", () => {
+      expect(reach.pathTo(m("Reserve"))).toEqual(["[Net]", "Sales.NetAfter", "[Reserve]"]);
+      expect(reach.pathTo(c("Freight"))).toEqual([
+        "[Net]",
+        "Sales.NetAfter",
+        "Sales.ApplyTax",
+        "'Sales'[Freight]",
+      ]);
+    });
+    it("roots the functions the report's own measures and the RLS filters call", () => {
+      expect(indexes.reportRefs!.functionCalls.map((x) => [x.measure.name, x.calls])).toEqual([
+        ["Report Tax", [f("Rep.Only")]],
+      ]);
+      expect(reach.pathTo(c("Tax Rate"))).toEqual(["Rep.Only", "'Sales'[Tax Rate]"]);
+      expect(reach.pathTo(c("Secure"))).toEqual(["Sec.Allow", "'Sales'[Secure]"]);
+    });
+    it("walks functions that call each other to a fixed point", () => {
+      const loop = modelFrom(`table T
+	column A
+		dataType: int64
+	column B
+		dataType: int64
+	measure M = Loop.Ping ( 1 )
+
+function 'Loop.Ping' = (n: NUMERIC) => Loop.Pong ( n ) + SUM ( 'T'[A] )
+
+function 'Loop.Pong' = (n: NUMERIC) => Loop.Ping ( n ) + SUM ( 'T'[B] )
+`);
+      const { report } = buildReport(visualBinding(measure("T", "M")));
+      const r = buildIndexes({ model: loop, report }).reachability!;
+      expect(r.pathTo(loop.tables[0]!.columns[1]!)).toEqual([
+        "[M]",
+        "Loop.Ping",
+        "Loop.Pong",
+        "'T'[B]",
+      ]);
+      expect(r.unreached().columns).toEqual([]);
+    });
+    it("names a function among the referrers of what only an unreached function uses", () => {
+      const u = reach.unreached();
+      expect(u.measures.map((x) => x.name)).toEqual(["Dead", "Orphan"]);
+      expect(u.columns.map((x) => x.name)).toEqual(["Lonely", "Taxed"]);
+      expect(reach.reached(f("Sales.Dead"))).toBe(false);
+      expect(reach.reached(f("Tax.Apply"))).toBe(false);
+      expect(reach.reasonFor(m("Orphan"))).toBe(
+        "referenced only by Sales.Dead, which nothing reaches either",
+      );
+    });
+  });
   it("is absent in a report-only or model-only project", () => {
     const { report } = buildReport(visualBinding(column("Sales", "Amount")));
     expect(buildIndexes({ report }).reachability).toBeUndefined();

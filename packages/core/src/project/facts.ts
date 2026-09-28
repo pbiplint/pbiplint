@@ -340,10 +340,14 @@ export function buildFacts(
     const count = (k: number, noun: string) =>
       k === 0 && partly ? `${noun}s: unknown` : n(k, noun);
     const countUnknown = partly && [shown.length, columns, measures].includes(0);
+    // Most models have no user-defined functions, so the count shows only when there is one: a
+    // count that is not there says nothing, where `0 functions` on every model would be noise.
+    const functions =
+      model.functions.length > 0 ? `, ${n(model.functions.length, "function")}` : "";
     const fact: Fact = {
       layer: "model",
       label: "Model",
-      value: `${count(shown.length, "table")}, ${count(columns, "column")}, ${count(measures, "measure")}`,
+      value: `${count(shown.length, "table")}, ${count(columns, "column")}, ${count(measures, "measure")}${functions}`,
     };
     const reach = indexes.reachability;
     const unreadModel = "a model file could not be fully read";

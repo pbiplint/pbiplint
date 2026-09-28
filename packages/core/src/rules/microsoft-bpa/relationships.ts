@@ -127,12 +127,15 @@ export const RELATIONSHIP_COLUMNS_SAME_DATA_TYPE = bpaRule(
 
 // The source builds its regex from raw names; names are escaped here so a table called "Date (Order)"
 // cannot break the pattern. Argument order matters: USERELATIONSHIP(to, from) does not count, as in the source.
+// A user-defined function's body is read too, which the source does not do: a documented deviation,
+// the fix microsoft/Analysis-Services#359 proposes.
 export const INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED = bpaRule(
   "INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED",
   (m) => {
     const expressions = [
       ...allMeasures(m).map((x) => x.expression),
       ...allCalculationItems(m).map((i) => i.expression),
+      ...m.functions.map((f) => f.expression),
     ];
     return m.relationships
       .filter((r) => {

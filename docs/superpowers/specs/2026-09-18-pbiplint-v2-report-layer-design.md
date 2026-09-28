@@ -686,6 +686,32 @@ names; no report names an aggregation column, since report queries
 refer to the detail table and Power BI redirects them to the
 aggregation table when it covers the query.
 
+Amended 2026-09-28 (issue #114): DAX user-defined functions, which a
+PBIP keeps in `definition/functions.tmdl`, join the model's reference
+index as a `function` owner, read over the whole expression, parameter
+list and body, since a parameter's default value such as `(p = [m])`
+is a real reference. A bare name in a body resolves to a measure
+first, then to every model column with that name, since the caller can
+hand the function any table. Every owner records the functions its
+expression calls: a function's name, in any letter case, followed by
+an opening parenthesis, with no letter, digit, underscore, or dot just
+before it. The report reference index records the calls the report's
+own measures make. The reachability walk follows the calls: every DAX
+expression it reads reaches the functions it calls, a reached function
+reaches what its body references and the functions it calls, and the
+functions the report's own measures and the RLS filters call are
+roots. A function nothing reaches has no finding of its own, and the
+detail of a field only it uses names it bare, as DAX calls it
+(`referenced only by Sales.NetAfterReserve, which nothing reaches
+either`). The ported rules read the new owner through the index, so
+`UNNECESSARY_MEASURES` and `UNNECESSARY_COLUMNS` count what a function
+names, called or not, as Tabular Editor does, apart from the bare
+column name recorded as a deviation (section 10);
+`INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED` reads function bodies
+too, the second deviation; `DAX_COLUMNS_FULLY_QUALIFIED` and
+`DAX_MEASURES_UNQUALIFIED` stay on their v1 owners until #115 can tell
+a model column from a column of a table the caller passes in.
+
 **Facts.** Structured list, `{ layer, label, value, detail?, ruleId? }`:
 
 | Label | Value | Rule id when it applies |
@@ -698,7 +724,7 @@ aggregation table when it covers the query.
 | Slicers | count of the catalog slicers; saved selections, those on custom slicers named; saved search terms (amended 2026-09-25 with Michael); unknown in place of none while a visual.json could not be read (amended 2026-09-24 with Michael) | `SLICER_SELECTION_SAVED`, `SLICER_SEARCH_SAVED` |
 | Mobile layouts | pages with one, counted by the mobile.json files read in their folders, of total; unknown in place of none while a mobile.json, or the page of one, could not be read (amended 2026-09-24 with Michael) | |
 | Schema versions | report, page, visual (highest seen) | |
-| Model | tables, columns, measures, leaving out Desktop's hidden auto date/time tables (amended 2026-09-25 with Michael), each unknown in place of 0 while a model file could not be fully read (amended 2026-09-25 with Michael); with both parts, columns and measures not reached from this report | `NOT_REACHED_FROM_REPORT` |
+| Model | tables, columns, measures, leaving out Desktop's hidden auto date/time tables (amended 2026-09-25 with Michael), each unknown in place of 0 while a model file could not be fully read (amended 2026-09-25 with Michael); user-defined functions, shown only when the model has one (amended 2026-09-28, issue #114); with both parts, columns and measures not reached from this report | `NOT_REACHED_FROM_REPORT` |
 
 Amended 2026-09-20: the facts are built only when the report layer is
 present, so a model-only run produces none and no surface shows the
@@ -1489,6 +1515,17 @@ it, since the parity test rejects a deviation with no visible
 difference; the sentence is on the rule's page under Quirks and in the
 rule's doc comment; and unit tests pin pbiplint's behaviour. A fixture
 that shows it later records it there.
+
+Amended 2026-09-28 (issue #114): a model expectation file, the
+`<fixture>.json` captured from Tabular Editor, takes `deviations` and
+`ours` the same way, the parity test holds a deviating rule to `ours`,
+the rule-page test holds the sentence to the page's Quirks, and
+`scripts/te-expectations.mjs` keeps both maps on a re-capture. The UDF
+fixture, `tests/fixtures/udf-sales.SemanticModel` (the sample's model
+with six functions, the hidden objects they use, and an inactive
+relationship one activates), records the first two, on
+`UNNECESSARY_COLUMNS` and
+`INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED` (section 6).
 
 **Native rules** have no oracle. Each is pinned two ways: a
 hand-written expectation on a fixture that fires it (the sample report

@@ -1,9 +1,9 @@
 import { columnRef, isAutoDateTable, measureRef, tableRef } from "../model/names.js";
-import type { Column, Level, Measure, Model, Table } from "../model/types.js";
+import type { Column, DaxFunction, Level, Measure, Model, Table } from "../model/types.js";
 import type { ReferenceIndex, RefOwner, RefOwnerKind } from "./references.js";
 import type { ReportReferenceIndex } from "./report-refs.js";
 
-type Node = Table | Column | Measure;
+type Node = Table | Column | Measure | DaxFunction;
 
 export interface ReachabilityIndex {
   reached(object: Node): boolean;
@@ -25,13 +25,8 @@ export interface ReachabilityIndex {
 }
 
 const isTable = (n: Node): n is Table => "columns" in n;
-const isMeasure = (n: Node): n is Measure => "expression" in n && !("kind" in n);
-const nameOf = (n: Node): string =>
-  isTable(n)
-    ? tableRef(n.name)
-    : isMeasure(n)
-      ? measureRef(n.name)
-      : columnRef(n.table.name, n.name);
+/** A measure carries its table and no `kind`, where a column carries both and a function neither. */
+const isMeasure = (n: Node): n is Measure => "table" in n && !("kind" in n);
 /** "A", "A and B", "A, B, and C", the list style the site's index and the browser app use. */
 const listOf = (items: string[]): string =>
   items.length <= 2 ? items.join(" and ") : `${items.slice(0, -1).join(", ")}, and ${items.at(-1)}`;
@@ -45,15 +40,28 @@ const listOf = (items: string[]): string =>
  * measure reaches what its DAX references; a calculated column likewise; a column reaches its
  * table, its sort-by column, the columns it groups by (a field parameter's hidden Fields column),
  * the base column or table its `alternateOf` mapping names, and, on a calculated table, the
- * table's expression references; a calculation group table reaches its items' references. The
- * path kept for each object is the shortest, so a finding's detail can say what reached it or why
- * nothing did.
+ * table's expression references; a calculation group table reaches its items' references. Every
+ * DAX expression the walk reads, a user-defined function's too, also reaches the functions it
+ * calls, and a function reaches what its body references; the functions the report's own measures
+ * and the RLS filters call are roots. The path kept for each object is the shortest, so a
+ * finding's detail can say what reached it or why nothing did.
  */
 export function buildReachabilityIndex(
   model: Model,
   references: ReferenceIndex,
   reportRefs: ReportReferenceIndex,
 ): ReachabilityIndex {
+  const functions = new Set<Node>(model.functions);
+  const isFunction = (n: Node): n is DaxFunction => functions.has(n);
+  /** A function goes by its bare name, as DAX calls it and Tabular Editor names it. */
+  const nameOf = (n: Node): string =>
+    isTable(n)
+      ? tableRef(n.name)
+      : isFunction(n)
+        ? n.name
+        : isMeasure(n)
+          ? measureRef(n.name)
+          : columnRef(n.table.name, n.name);
   const tables = new Map(model.tables.map((t) => [t.name.toLowerCase(), t]));
   const columnOf = (table: string, name: string): Column | undefined =>
     tables
@@ -75,6 +83,7 @@ export function buildReachabilityIndex(
       if (r.kind === "column") reach(columnOf(r.table!, r.name), from);
       else if (r.kind === "measure") reach(measureOf(r.table!, r.name), from);
     }
+    for (const f of references.callsOf(owner)) reach(f, from);
   };
 
   for (const r of reportRefs.refs) {
@@ -88,6 +97,7 @@ export function buildReachabilityIndex(
     // A field read through a date column's variation uses that column too.
     if ("variationOf" in res) reach(res.variationOf, null);
   }
+  for (const c of reportRefs.functionCalls) for (const f of c.calls) reach(f, null);
   // A relationship to one of Desktop's auto date/time tables is Desktop's, added for the date
   // column's hierarchy, not a use of the date column, so it roots neither end.
   const autoDate = (table: string): boolean => {
@@ -103,6 +113,7 @@ export function buildReachabilityIndex(
     for (const tp of role.tablePermissions) {
       for (const r of references.refsOf(tp))
         if (r.kind === "column") reach(columnOf(r.table!, r.name), null);
+      for (const f of references.callsOf(tp)) reach(f, null);
       for (const cp of tp.columnPermissions) reach(columnOf(tp.table, cp.column), null);
     }
   for (const t of model.tables)
@@ -119,6 +130,10 @@ export function buildReachabilityIndex(
 
   while (queue.length) {
     const n = queue.shift()!;
+    if (isFunction(n)) {
+      reachDax(n, n);
+      continue;
+    }
     if (isTable(n)) {
       if (n.kind === "calculated") reachDax(n, n);
       for (const item of n.calculationGroup?.items ?? []) reachDax(item, n);
@@ -141,11 +156,14 @@ export function buildReachabilityIndex(
 
   // A reference owner is not always something a reason can name: a table permission's object is a
   // TablePermission and a calculation item's is a CalculationItem, neither of which carries a table
-  // object, and a calculated table's is the table rather than a column or a measure. Only these two
-  // owner kinds hold one, so the reason names those and passes over the rest.
-  const NAMEABLE: ReadonlySet<RefOwnerKind> = new Set(["measure", "calculatedColumn"]);
+  // object, and a calculated table's is the table rather than a column or a measure. A measure, a
+  // calculated column, and a user-defined function each have a name the reader can find, so the
+  // reason names those and passes over the rest.
+  const NAMEABLE: ReadonlySet<RefOwnerKind> = new Set(["measure", "calculatedColumn", "function"]);
   const daxReferrers = (owners: readonly RefOwner[]): Node[] =>
-    owners.filter((o) => NAMEABLE.has(o.kind)).map((o) => o.object as Column | Measure);
+    owners
+      .filter((o) => NAMEABLE.has(o.kind))
+      .map((o) => o.object as Column | Measure | DaxFunction);
   // The v1 reference index records DAX references only, so a column a sibling sorts or groups by
   // has no DAX referrer at all. The walk follows those edges, so the reason has to read them too.
   const referrersOf = (n: Column | Measure): Node[] => {

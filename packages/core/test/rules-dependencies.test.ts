@@ -48,6 +48,19 @@ role R
 	tablePermission Calc = 'Calc'[Amount] > 0
 `;
 
+/** A user-defined function that nothing calls, naming a hidden measure and a column bare and a measure qualified. */
+const withFunction = `table Sales
+	column Amount
+		dataType: decimal
+	measure Total = SUM('Sales'[Amount])
+	measure 'Used In Function' = 1
+		isHidden
+	measure 'Unused' = 2
+		isHidden
+
+function 'Sales.Uncalled' = () => [Used In Function] + SUM ( [Amount] ) + 'Sales'[Total]
+`;
+
 describe("dependency rules", () => {
   it("DAX_COLUMNS_FULLY_QUALIFIED flags measures and table permissions with bare column refs, never calculation items", () => {
     expect(objectNames(rules.DAX_COLUMNS_FULLY_QUALIFIED, model)).toEqual([
@@ -70,6 +83,13 @@ describe("dependency rules", () => {
     expect(
       objectNames(rules.MEASURES_SHOULD_NOT_BE_DIRECT_REFERENCES_OF_OTHER_MEASURES, model),
     ).toEqual(["[Alias]", "[Hidden Used By Hidden]"]);
+  });
+  it("DAX_COLUMNS_FULLY_QUALIFIED and DAX_MEASURES_UNQUALIFIED leave a user-defined function's body alone", () => {
+    expect(objectNames(rules.DAX_COLUMNS_FULLY_QUALIFIED, withFunction)).toEqual([]);
+    expect(objectNames(rules.DAX_MEASURES_UNQUALIFIED, withFunction)).toEqual([]);
+  });
+  it("UNNECESSARY_MEASURES counts a measure named in a user-defined function, even one nothing calls", () => {
+    expect(objectNames(rules.UNNECESSARY_MEASURES, withFunction)).toEqual(["[Unused]"]);
   });
   it("UNNECESSARY_MEASURES counts references from calculation items and other hidden measures", () => {
     expect(objectNames(rules.UNNECESSARY_MEASURES, model)).toEqual([

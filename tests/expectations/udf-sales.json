@@ -1,0 +1,262 @@
+{
+  "fixture": "tests/fixtures/udf-sales.SemanticModel",
+  "oracle": "Tabular Editor CLI 0.5.2.11639 with BPARules.json sha256 ddb9cff4c2a0611a6467e2559d38319d9867381998066473ffa1e11c2d360392",
+  "captured": "2026-09-28",
+  "skipRules": {},
+  "deviations": {
+    "INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED": "A USERELATIONSHIP inside a user-defined function counts as activating the relationship, which Tabular Editor does not count, since the source rule reads measures and calculation items only.",
+    "UNNECESSARY_COLUMNS": "A column that a user-defined function names without its table counts as used, on every table with a column of that name, since the caller can hand the function any table. In pbiplint's parity check, Tabular Editor counted such a name inside `SUMX ( 'Sales', [Handling Fee] )` but reported the column a function names in `MAX ( [Tax Rate] )`, though deleting it would break the function."
+  },
+  "ours": {
+    "INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED": [],
+    "UNNECESSARY_COLUMNS": [
+      "'Employee Grouping'[Employee Grouping Fields]"
+    ]
+  },
+  "findings": {
+    "ADD_DATA_CATEGORY_FOR_COLUMNS": [
+      "'Customer'[City]",
+      "'Customer'[Country]",
+      "'Store'[City]",
+      "'Store'[Country]",
+      "'Store'[Latitude]",
+      "'Store'[Longitude]"
+    ],
+    "AVOID_FLOATING_POINT_DATA_TYPES": [
+      "'Promotion'[Discount Pct]",
+      "'Store'[Latitude]",
+      "'Store'[Longitude]"
+    ],
+    "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+      "'Date'",
+      "'DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92'",
+      "'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'"
+    ],
+    "DATECOLUMN_FORMATSTRING": [
+      "'Customer'[Join Date]",
+      "'Date'[Date]",
+      "'DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92'[Date]",
+      "'Employee'[Hire Date]",
+      "'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'[Date]",
+      "'Promotion'[End Date]",
+      "'Promotion'[Start Date]",
+      "'Sales'[Sale Date]",
+      "'Store'[Open Date]"
+    ],
+    "DAX_COLUMNS_FULLY_QUALIFIED": [
+      "[Distinct Customers]",
+      "[Total Quantity]"
+    ],
+    "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+      "'DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92'",
+      "'Employee Grouping'"
+    ],
+    "HIDE_FACT_TABLE_COLUMNS": [
+      "'Customer'[Customer ID]",
+      "'Sales'[Customer ID]",
+      "'Sales'[Discount Amount]",
+      "'Sales'[Sale ID]",
+      "'Sales'[Total Amount]",
+      "'Sales'[Unit Cost]",
+      "'Sales'[Unit Price]"
+    ],
+    "HIDE_FOREIGN_KEYS": [
+      "'Customer'[Customer ID]",
+      "'Customer'[Join Date]",
+      "'Employee'[Employee ID]",
+      "'Product'[Product ID]",
+      "'Promotion'[Promotion ID]",
+      "'Promotion'[Start Date]",
+      "'Sales'[Customer ID]",
+      "'Sales'[Employee ID]",
+      "'Sales'[Product ID]",
+      "'Sales'[Promotion ID]",
+      "'Sales'[Sale Date]",
+      "'Sales'[Store ID]",
+      "'Store'[Store ID]"
+    ],
+    "INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED": [
+      "'Promotion'[Start Date] ∞←1 'Date'[Date]"
+    ],
+    "INTEGER_FORMATTING": [
+      "[Average Order Value]",
+      "[Average Unit Price]",
+      "[Distinct Customers]",
+      "[Margin %]",
+      "[Net Sales]",
+      "[Order Count]",
+      "[Sales LY]",
+      "[Sales YTD]",
+      "[Sales YoY %]",
+      "[Total Cost]",
+      "[Total Discount]",
+      "[Total Margin]",
+      "[Total Quantity]",
+      "[Total Sales]"
+    ],
+    "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+      "'DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92'[Date]",
+      "'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'[Date]",
+      "'Sales'[Freight]",
+      "'Sales'[Handling Fee]",
+      "'Sales'[Tax Rate]"
+    ],
+    "MARK_PRIMARY_KEYS": [
+      "'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'[Date]"
+    ],
+    "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+      "Model"
+    ],
+    "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+      "'Date'[Month]"
+    ],
+    "OBJECTS_WITH_NO_DESCRIPTION": [
+      "'Customer'",
+      "'Customer'[City]",
+      "'Customer'[Country]",
+      "'Customer'[Customer ID]",
+      "'Customer'[Customer Name]",
+      "'Customer'[Email]",
+      "'Customer'[Join Date]",
+      "'Customer'[Loyalty Tier]",
+      "'Customer'[Postal Code]",
+      "'Customer'[Region]",
+      "'Customer'[Segment]",
+      "'Customer'[State]",
+      "'Date'",
+      "'Date'[Date]",
+      "'Date'[Day Number]",
+      "'Date'[Day of Week]",
+      "'Date'[Is Weekend]",
+      "'Date'[Month Number]",
+      "'Date'[Month]",
+      "'Date'[Quarter Number]",
+      "'Date'[Quarter]",
+      "'Date'[Week of Year]",
+      "'Date'[Year]",
+      "'Employee Grouping'",
+      "'Employee Grouping'[Employee Grouping]",
+      "'Employee'",
+      "'Employee'[Department]",
+      "'Employee'[Email]",
+      "'Employee'[Employee ID]",
+      "'Employee'[Employee Name]",
+      "'Employee'[Hire Date]",
+      "'Employee'[Manager ID]",
+      "'Employee'[Region]",
+      "'Employee'[Title]",
+      "'Product'",
+      "'Product'[Brand]",
+      "'Product'[Category]",
+      "'Product'[Color]",
+      "'Product'[Discontinued]",
+      "'Product'[List Price]",
+      "'Product'[Product ID]",
+      "'Product'[Product Name]",
+      "'Product'[Size]",
+      "'Product'[Standard Cost]",
+      "'Product'[Subcategory]",
+      "'Product'[Supplier Name]",
+      "'Promotion'",
+      "'Promotion'[Discount Pct]",
+      "'Promotion'[End Date]",
+      "'Promotion'[Promotion ID]",
+      "'Promotion'[Promotion Name]",
+      "'Promotion'[Promotion Type]",
+      "'Promotion'[Start Date]",
+      "'Sales'",
+      "'Sales'[Customer ID]",
+      "'Sales'[Discount Amount]",
+      "'Sales'[Employee ID]",
+      "'Sales'[Net Amount]",
+      "'Sales'[Product ID]",
+      "'Sales'[Promotion ID]",
+      "'Sales'[Quantity]",
+      "'Sales'[Sale Date]",
+      "'Sales'[Sale ID]",
+      "'Sales'[Store ID]",
+      "'Sales'[Total Amount]",
+      "'Sales'[Unit Cost]",
+      "'Sales'[Unit Price]",
+      "'Store'",
+      "'Store'[City]",
+      "'Store'[Country]",
+      "'Store'[Latitude]",
+      "'Store'[Longitude]",
+      "'Store'[Open Date]",
+      "'Store'[Region]",
+      "'Store'[Square Feet]",
+      "'Store'[State]",
+      "'Store'[Store ID]",
+      "'Store'[Store Name]",
+      "'Store'[Store Type]",
+      "[Average Order Value]",
+      "[Average Unit Price]",
+      "[Distinct Customers]",
+      "[Margin %]",
+      "[Net Sales]",
+      "[Order Count]",
+      "[Sales LY]",
+      "[Sales YTD]",
+      "[Sales YoY %]",
+      "[Total Cost]",
+      "[Total Discount]",
+      "[Total Margin]",
+      "[Total Quantity]",
+      "[Total Sales]"
+    ],
+    "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+      "[Average Order Value]",
+      "[Average Unit Price]",
+      "[Distinct Customers]",
+      "[Margin %]",
+      "[Net Sales]",
+      "[Order Count]",
+      "[Sales LY]",
+      "[Sales YTD]",
+      "[Sales YoY %]",
+      "[Total Cost]",
+      "[Total Discount]",
+      "[Total Margin]",
+      "[Total Quantity]",
+      "[Total Sales]"
+    ],
+    "REDUCE_NUMBER_OF_CALCULATED_COLUMNS": [
+      "Model"
+    ],
+    "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+      "'DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92'",
+      "'Employee Grouping'",
+      "'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'"
+    ],
+    "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+      "'Customer'[Join Date]",
+      "'Date'[Date]",
+      "'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'[Date]",
+      "'Promotion'[Start Date]",
+      "'Sales'[Sale Date]"
+    ],
+    "REMOVE_AUTO-DATE_TABLE": [
+      "'DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92'",
+      "'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'"
+    ],
+    "SNOWFLAKE_SCHEMA_ARCHITECTURE": [
+      "'Customer'",
+      "'Promotion'"
+    ],
+    "UNNECESSARY_COLUMNS": [
+      "'Employee Grouping'[Employee Grouping Fields]",
+      "'Sales'[Tax Rate]"
+    ],
+    "USE_THE_DIVIDE_FUNCTION_FOR_DIVISION": [
+      "'DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92'[QuarterNo]",
+      "'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'[QuarterNo]",
+      "[Average Order Value]",
+      "[Margin %]",
+      "[Sales YoY %]"
+    ],
+    "USE_THE_TREATAS_FUNCTION_INSTEAD_OF_INTERSECT": [
+      "[Shared Customers]"
+    ]
+  }
+}

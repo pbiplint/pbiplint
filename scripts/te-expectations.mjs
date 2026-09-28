@@ -4,7 +4,8 @@
 //   node scripts/te-expectations.mjs <fixtureDir> <out.json> --from <te-output.json>
 //   node scripts/te-expectations.mjs <fixtureDir> <out.json> --rules <BPARules.json>   (runs `te`)
 //
-// Keeps any existing skipRules in <out.json>. Tabular Editor is a development-time oracle only.
+// Keeps any existing skipRules, and any recorded deviations with pbiplint's side of each (`ours`), in
+// <out.json>. Tabular Editor is a development-time oracle only.
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -71,6 +72,7 @@ const out = {
     "Tabular Editor CLI 0.5.2.11639 with BPARules.json sha256 ddb9cff4c2a0611a6467e2559d38319d9867381998066473ffa1e11c2d360392",
   captured: new Date().toISOString().slice(0, 10),
   skipRules: previous.skipRules ?? {},
+  ...(previous.deviations && { deviations: previous.deviations, ours: previous.ours ?? {} }),
   findings: sorted,
 };
 writeFileSync(outPath, JSON.stringify(out, null, 2) + "\n");

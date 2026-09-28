@@ -34,17 +34,18 @@ const listOf = (items: string[]): string =>
 /**
  * What the report reaches in the model, to a fixed point (spec section 6). Roots: every resolved
  * report reference (a hierarchy's level columns, and the date column a variation reference goes
- * through), both columns of every relationship except one to an auto date/time table, columns
- * named in RLS and OLS, variation default columns, every column with an `alternateOf` mapping (an
- * aggregation table's), and the references of the report's own measures. From a reached object: a
- * measure reaches what its DAX references; a calculated column likewise; a column reaches its
- * table, its sort-by column, the columns it groups by (a field parameter's hidden Fields column),
- * the base column or table its `alternateOf` mapping names, and, on a calculated table, the
- * table's expression references; a calculation group table reaches its items' references. Every
- * DAX expression the walk reads, a user-defined function's too, also reaches the functions it
- * calls, and a function reaches what its body references; the functions the report's own measures
- * and the RLS filters call are roots. The path kept for each object is the shortest, so a
- * finding's detail can say what reached it or why nothing did.
+ * through), both columns of every relationship except one to an auto date/time table, the columns
+ * and measures RLS filters reference, the columns OLS names, variation default columns, every
+ * column with an `alternateOf` mapping (an aggregation table's), and the references of the
+ * report's own measures. From a reached object: a measure reaches what its DAX references; a
+ * calculated column likewise; a column reaches its table, its sort-by column, the columns it
+ * groups by (a field parameter's hidden Fields column), the base column or table its `alternateOf`
+ * mapping names, and, on a calculated table, the table's expression references; a calculation
+ * group table reaches its items' references. Every DAX expression the walk reads, a user-defined
+ * function's too, also reaches the functions it calls, and a function reaches what its body
+ * references; the functions the report's own measures and the RLS filters call are roots. The path
+ * kept for each object is the shortest, so a finding's detail can say what reached it or why
+ * nothing did.
  */
 export function buildReachabilityIndex(
   model: Model,
@@ -78,7 +79,7 @@ export function buildReachabilityIndex(
     parent.set(n, from);
     queue.push(n);
   };
-  const reachDax = (owner: object, from: Node): void => {
+  const reachDax = (owner: object, from: Node | null): void => {
     for (const r of references.refsOf(owner)) {
       if (r.kind === "column") reach(columnOf(r.table!, r.name), from);
       else if (r.kind === "measure") reach(measureOf(r.table!, r.name), from);
@@ -111,9 +112,8 @@ export function buildReachabilityIndex(
   }
   for (const role of model.roles)
     for (const tp of role.tablePermissions) {
-      for (const r of references.refsOf(tp))
-        if (r.kind === "column") reach(columnOf(r.table!, r.name), null);
-      for (const f of references.callsOf(tp)) reach(f, null);
+      // A measure the filter names is needed as surely as a column: the role fails without it.
+      reachDax(tp, null);
       for (const cp of tp.columnPermissions) reach(columnOf(tp.table, cp.column), null);
     }
   for (const t of model.tables)

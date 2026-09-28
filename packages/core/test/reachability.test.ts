@@ -64,9 +64,6 @@ relationship Sales-Product
 
 role Readers
 	tablePermission Region = Region[Name] = "West"
-
-role Filtered
-	tablePermission Sales = [Sales YoY %] > 0
 `;
 const model = modelFrom(tmdl);
 const col = (table: string, name: string): Column =>
@@ -121,13 +118,44 @@ describe("buildReachabilityIndex", () => {
       "referenced only by 'Sales'[Month Name], which nothing reaches either",
     );
   });
-  it("names no referrer that is not a column or a measure, such as an RLS filter", () => {
+  it("names no referrer that is not a column or a measure, such as a calculation item", () => {
+    const m = modelFrom(`table Sales
+	column Amount
+		dataType: decimal
+	measure Target = 100
+
+table Scenario
+	calculationGroup
+		calculationItem 'Against Target' = SELECTEDMEASURE() - [Target]
+	column Name
+		dataType: string
+`);
     const { report } = buildReport(visualBinding(column("Sales", "Amount")));
-    const reach = buildIndexes({ model, report }).reachability!;
-    expect(reach.reached(meas("Sales YoY %"))).toBe(false);
-    expect(reach.reasonFor(meas("Sales YoY %"))).toBe(
+    const reach = buildIndexes({ model: m, report }).reachability!;
+    const target = m.tables[0]!.measures[0]!;
+    expect(reach.reached(target)).toBe(false);
+    expect(reach.reasonFor(target)).toBe(
       "nothing in the report reaches it, and no measure or column references it",
     );
+  });
+  it("roots the measures an RLS filter names, as it roots the columns, and reaches what they reference", () => {
+    const m = modelFrom(`table Sales
+	column Amount
+		dataType: decimal
+	column Region
+		dataType: string
+	measure Total = SUM('Sales'[Amount])
+	measure Unused = 1
+
+role Filtered
+	tablePermission Sales = [Total] > 0 && 'Sales'[Region] <> "None"
+`);
+    const reach = buildIndexes({ model: m, report: buildReport([]).report }).reachability!;
+    const [total, unused] = m.tables[0]!.measures;
+    expect(reach.pathTo(total!)).toEqual(["[Total]"]);
+    expect(reach.pathTo(m.tables[0]!.columns[0]!)).toEqual(["[Total]", "'Sales'[Amount]"]);
+    expect(reach.pathTo(m.tables[0]!.columns[1]!)).toEqual(["'Sales'[Region]"]);
+    expect(reach.reached(unused!)).toBe(false);
   });
   it("reaches a measure bound only in a visual's conditional formatting, and what its DAX references", () => {
     const [pageFile, visualFile] = visualBinding(column("Sales", "Amount"));

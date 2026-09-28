@@ -178,6 +178,22 @@ const files = [
   },
 ];
 
+describe("buildReport and the report's own definition.pbir and .platform", () => {
+  it("reads each at the report root only, so a file elsewhere with a name ending in either is not it", () => {
+    const { report } = buildReport([
+      ...files,
+      // Sorted after the real ones, so each would win were it read as theirs.
+      {
+        path: "definition/.platform",
+        text: j({ metadata: { type: "Report", displayName: "Stray" } }),
+      },
+      { path: "old.definition.pbir", text: j({ datasetReference: { byConnection: {} } }) },
+    ]);
+    expect(report.displayName).toBe("Demo");
+    expect(report.datasetReference).toEqual({ kind: "byPath", path: "../Demo.SemanticModel" });
+  });
+});
+
 describe("buildReport", () => {
   const { report, diagnostics } = buildReport(files);
   it("reads the report file, the pane state, custom visuals, filters, and the dataset reference", () => {

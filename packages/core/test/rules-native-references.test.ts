@@ -22,7 +22,7 @@ import {
   reportObjectIds,
   visual,
 } from "./report-helpers.js";
-import { fixturesDir, parseModelDir, readProjectFiles } from "./helpers.js";
+import { fixturesDir, parseModelDir, readModelFiles, readProjectFiles } from "./helpers.js";
 
 const tmdl = `table Sales
 	column Amount
@@ -1145,5 +1145,50 @@ relationship r1
     const reach = buildIndexes(project).reachability!;
     const ldt = project.model!.tables.find((t) => t.name === LDT)!;
     expect(reach.reached(ldt.columns.find((c) => c.name === "Year")!)).toBe(true);
+  });
+});
+
+describe("NOT_REACHED_FROM_REPORT and user-defined functions, on the sample's report", () => {
+  // The UDF fixture is the sample's model with functions, the objects they use, and an inactive
+  // relationship added, so the sample's own report runs against it unchanged.
+  const report = readProjectFiles(
+    new URL("../../../examples/messy-sales", import.meta.url).pathname,
+  ).report;
+  const sampleModel = readProjectFiles(
+    new URL("../../../examples/messy-sales", import.meta.url).pathname,
+  ).model;
+  const udfModel = readModelFiles(`${fixturesDir}udf-sales.SemanticModel`);
+  const notReached = (model: typeof udfModel) =>
+    lint([...model, ...report], { config: { failOn: "none" } }).findings.filter(
+      (f) => f.ruleId === "NOT_REACHED_FROM_REPORT",
+    );
+  const onSample = notReached(sampleModel).map((f) => f.objectName);
+  const onUdf = notReached(udfModel);
+  const names = onUdf.map((f) => f.objectName);
+
+  it("reaches what [Net Sales] uses through Sales.NetAfterReserve and Sales.ApplyTax", () => {
+    expect(onSample.filter((n) => !names.includes(n))).toEqual([
+      "'Promotion'[Start Date]",
+      "'Sales'[Net Amount]",
+    ]);
+    expect(names).not.toContain("[Returns Reserve]");
+    expect(names).not.toContain("'Sales'[Tax Rate]");
+  });
+  it("reports the added fields no report path reaches, naming the uncalled function that uses them", () => {
+    expect(names.filter((n) => !onSample.includes(n))).toEqual([
+      "[Sales With Tax]",
+      "[Shared Customers]",
+      "[Sales by Promo Start]",
+      "[Freight Budget]",
+      "'Sales'[Freight]",
+      "'Sales'[Handling Fee]",
+    ]);
+    const detail = (name: string) => onUdf.find((f) => f.objectName === name)?.detail;
+    expect(detail("[Freight Budget]")).toBe(
+      "referenced only by Plan.FreightVsBudget, which nothing reaches either",
+    );
+    expect(detail("'Sales'[Freight]")).toBe(
+      "referenced only by Plan.FreightVsBudget, which nothing reaches either",
+    );
   });
 });

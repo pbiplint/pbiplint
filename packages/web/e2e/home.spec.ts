@@ -10,9 +10,10 @@ import { expect, test } from "./fixtures.js";
 //
 // Not covered here, and only checked by hand: the "Choose a folder" button in Chromium, which
 // takes the File System Access picker and its native dialog; a screen reader actually speaking
-// the live region (the test checks its text); and a drop of real files from the desktop in
+// the live region (the test checks its text); a drop of real files from the desktop in
 // Chromium, where a synthetic File has no directory entry, so the drop test below takes the flat
-// file fallback there while Firefox and WebKit take the entries branch.
+// file fallback there while Firefox and WebKit take the entries branch; and a folder the browser
+// cannot open inside one the folder input is given (see the refusal test that suggests dragging).
 
 const zoo = fileURLToPath(
   new URL("../../../tests/fixtures/rule-zoo.SemanticModel", import.meta.url),
@@ -158,6 +159,26 @@ test("refuses a folder with two reports and names them", async ({ page }) => {
       await page.locator("#folder-input").setInputFiles(dir);
       await expect(page.locator("#status")).toHaveText(
         /contains 2 reports; drop one of them: A\.Report, B\.Report/,
+      );
+      await expect(page.locator("#results")).toBeHidden();
+    },
+  );
+});
+
+test("refuses a folder with nothing to lint from the folder input and suggests dragging it", async ({
+  page,
+}) => {
+  // The sentence is for a folder the browser could not open inside the chosen one, which this
+  // route cannot tell from nothing there. Such a folder is no test input: in Playwright, Firefox's
+  // listing fails with no change event and WebKit leaves the folder out, so that case stays a
+  // manual check (CONTRIBUTING). A folder with nothing to lint reaches the same refusal.
+  await withTempFolder(
+    "nothing-",
+    (dir) => writeFileSync(join(dir, "notes.txt"), "Not a model or a report.\n"),
+    async (dir) => {
+      await page.locator("#folder-input").setInputFiles(dir);
+      await expect(page.locator("#status")).toHaveText(
+        "No model or report found. Drop a PBIP folder, a .SemanticModel or .Report folder, or a .tmdl file. If the folder you chose holds a model or report, your browser may not have been able to open a folder inside it; drag the folder onto the page instead.",
       );
       await expect(page.locator("#results")).toBeHidden();
     },

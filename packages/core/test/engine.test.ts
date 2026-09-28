@@ -178,6 +178,37 @@ describe("bindConfig with options", () => {
         .unknownRules,
     ).toEqual(["NOPE"]);
   });
+  it("checks the id of a rule given an empty object, as it checks every other", () => {
+    const bound = bindConfig(
+      resolveConfig({ rules: { NOPE: {}, every_table: {}, with_max: {} } }),
+      [everyTable, withMax],
+    );
+    expect(bound.unknownRules).toEqual(["NOPE"]);
+    // An empty object changes nothing, even for a rule that takes no options.
+    expect(optionsFor(withMax, bound.config)).toEqual({ max: 20 });
+    expect(optionsFor(everyTable, bound.config)).toEqual({});
+  });
+  it("keeps its own copy of the options it is given, so a later change to the caller's does not reach it", () => {
+    const given = { max: 5 };
+    const { config } = bindConfig(
+      {
+        disabled: new Set(),
+        severity: new Map(),
+        options: new Map([["WITH_MAX", given]]),
+        failOn: 3,
+      },
+      [withMax],
+    );
+    given.max = 99;
+    expect(optionsFor(withMax, config)).toEqual({ max: 5 });
+  });
+  it("leaves the name severity to the severity, so no rule declares an option by that name", () => {
+    // A rule's object in pbiplint.config.json reads `severity` as the rule's severity, so an
+    // option of that name could never be set.
+    expect(
+      defaultRules.flatMap((r) => (r.options ?? []).filter((o) => o.name === "severity")),
+    ).toEqual([]);
+  });
   it("checks a values list on string options only", () => {
     const counted: Rule = {
       ...base,

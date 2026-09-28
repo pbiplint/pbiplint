@@ -585,6 +585,19 @@ other JSON file under `definition/` is the author's own, with no schema,
 and keeps the reading above: invalid JSON or a conflict marker there is
 a `PARSE_ISSUE` finding, and a document that is not an object is not.
 
+Amended 2026-09-28 (#59, ruled with Michael on September 27, 2026): a
+report JSON file nested more than 256 levels deep, its root counted,
+is a `PARSE_ISSUE` finding, "nested more than 256 levels deep", on the
+line where the document passes that depth, and nothing in it is read,
+so it counts as unread as any other file that fails to parse does. The
+walks that read a document recurse: a visual.json nested past about
+3,000 levels overflowed the stack and ended the run. The deepest of
+26,654 Desktop-saved report files nests 34 levels. The depth is counted
+over brackets outside strings, after the document parses, and holds for
+every JSON file the report layer reads, whether or not the format sets
+its root. A JSON parse issue quotes at most 120 characters of its line
+(the first 119 and an ellipsis), since a minified document is one line.
+
 **Object model.**
 
 - `Report`: file, schema version, theme name, `publicCustomVisuals`,

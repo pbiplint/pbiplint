@@ -45,6 +45,42 @@ const CONFLICT_MARKER = /^(?:<{7}|={7}|>{7})(?:\s|$)/;
 const LINE_BREAK = /\r\n?|\n/;
 
 /**
+ * The text of the line a parse issue is on, as the issue quotes it: the line, or past 120
+ * characters its first 119 and an ellipsis. A minified document is one line, and a finding quotes
+ * the text whole.
+ */
+const quoted = (line: string | undefined): string =>
+  line === undefined ? "" : line.length > 120 ? `${line.slice(0, 119)}…` : line;
+
+/** The 1-based line of the character at `offset` in `body`. */
+const lineAt = (body: string, offset: number): number =>
+  body.slice(0, offset).split(LINE_BREAK).length;
+
+/**
+ * How deep a document may nest, its root counted. The deepest of 26,654 Desktop-saved report files
+ * nests 34 levels, and the walks that read a document recurse, so one nested far deeper (the
+ * field-reference walk overflowed the stack somewhere past 3,000) is not read at all.
+ */
+const MAX_DEPTH = 256;
+
+/**
+ * The offset of the bracket that takes a document past `MAX_DEPTH` levels, or -1. Only brackets
+ * outside strings count. The document has parsed, so each string is closed and its escapes whole.
+ */
+function tooDeepAt(body: string): number {
+  let depth = 0;
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i];
+    if (ch === '"') {
+      for (i++; body[i] !== '"'; i++) if (body[i] === "\\") i++;
+    } else if (ch === "{" || ch === "[") {
+      if (++depth > MAX_DEPTH) return i;
+    } else if (ch === "}" || ch === "]") depth--;
+  }
+  return -1;
+}
+
+/**
  * An offset an engine names in a parse error message. Anchored to the engine's own phrasing, as in
  * V8's `in JSON at position 14` and `after JSON at position 9`, because the message also quotes a
  * slice of the document, and a document is free to say `position 400` itself.
@@ -74,7 +110,7 @@ const QUOTED_RUN = /^Unexpected token '(.)', (?:\.\.\.)?"([\s\S]*)"(?:\.\.\.)? i
  */
 function lineOfParseError(body: string, message: string): number {
   const lineCount = body.split(LINE_BREAK).length;
-  const lineOf = (offset: number): number => body.slice(0, offset).split(LINE_BREAK).length;
+  const lineOf = (offset: number): number => lineAt(body, offset);
   const at = AT_POSITION.exec(message);
   if (at && Number(at[1]) <= body.length) return lineOf(Number(at[1]));
   const named = AT_LINE.exec(message);
@@ -94,9 +130,9 @@ function lineOfParseError(body: string, message: string): number {
 }
 
 /**
- * Reads one PBIR JSON file tolerantly. Conflict markers, invalid JSON, and, unless the options say
- * the file's format sets no root, a document that parses to something other than an object become
- * parse issues with a line, in the same shape the TMDL parser reports, so PARSE_ISSUE lists them
+ * Reads one PBIR JSON file tolerantly. Conflict markers, invalid JSON, a document nested deeper
+ * than `MAX_DEPTH`, and, unless the options say the file's format sets no root, a document that
+ * parses to something other than an object become parse issues with a line, in the same shape the TMDL parser reports, so PARSE_ISSUE lists them
  * beside everything else; the document is then undefined and the caller reads nothing from it.
  */
 export function readJson(file: string, text: string, options: ReadJsonOptions = {}): JsonRead {
@@ -105,7 +141,7 @@ export function readJson(file: string, text: string, options: ReadJsonOptions = 
   const lines = body.split(LINE_BREAK);
   const issues: ParseIssue[] = lines.flatMap((line, i) =>
     CONFLICT_MARKER.test(line)
-      ? [{ file, line: i + 1, text: line, reason: "merge conflict marker" }]
+      ? [{ file, line: i + 1, text: quoted(line), reason: "merge conflict marker" }]
       : [],
   );
   if (issues.length > 0) return { json: undefined, issues };
@@ -120,7 +156,22 @@ export function readJson(file: string, text: string, options: ReadJsonOptions = 
     const flat = message.replace(/\s+/g, " ");
     return {
       json: undefined,
-      issues: [{ file, line, text: lines[line - 1] ?? "", reason: `not valid JSON (${flat})` }],
+      issues: [{ file, line, text: quoted(lines[line - 1]), reason: `not valid JSON (${flat})` }],
+    };
+  }
+  const deep = tooDeepAt(body);
+  if (deep >= 0) {
+    const line = lineAt(body, deep);
+    return {
+      json: undefined,
+      issues: [
+        {
+          file,
+          line,
+          text: quoted(lines[line - 1]),
+          reason: `nested more than ${MAX_DEPTH} levels deep`,
+        },
+      ],
     };
   }
   if (!isRecord(json)) {
@@ -134,7 +185,7 @@ export function readJson(file: string, text: string, options: ReadJsonOptions = 
         {
           file,
           line: start + 1,
-          text: lines[start] ?? "",
+          text: quoted(lines[start]),
           reason: `not a JSON object (the file holds ${kindOf(json)})`,
         },
       ],

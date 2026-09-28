@@ -110,6 +110,12 @@ describe("readJson", () => {
     expect(r.issues).toEqual([]);
     expect(r.json).toEqual({ a: 1 });
   });
+  it("quotes at most 120 characters of the line a parse issue is on, as a minified file is one line", () => {
+    const long = `{"a": ${"1,".repeat(100)}}`;
+    const r = readJson("x.json", long);
+    expect(r.issues[0]!.text).toBe(`${long.slice(0, 119)}…`);
+    expect(readJson("x.json", '{\n  "b": }\n').issues[0]!.text).toBe('  "b": }');
+  });
   it("does not read the document's own text as the engine's line or offset", () => {
     // V8 quotes a slice of the broken document in its message, so a document that says "line 5"
     // or "position 400" of its own is quoted back and must not be mistaken for the engine saying
@@ -120,6 +126,49 @@ describe("readJson", () => {
     const offset = readJson("x.json", '{\n  "a": 1,\n  "b": position 400\n}');
     expect(offset.issues[0]!.line).toBe(3);
     expect(offset.issues[0]!.text).toBe('  "b": position 400');
+  });
+});
+
+describe("readJson and how deep a document nests", () => {
+  // The deepest of 26,654 Desktop-saved report files nests 34 levels. The field-reference walk
+  // overflowed the stack somewhere past 3,000, so a file deeper than the cap is not read at all.
+  const deep = (n: number): string =>
+    `{\n  "ok": 1,\n  "deep": ${"[".repeat(n)}${"]".repeat(n)}\n}`;
+  it("reads a document that nests 256 levels, the root counted", () => {
+    const r = readJson("x.json", deep(255));
+    expect(r.issues).toEqual([]);
+    expect(r.json).toMatchObject({ ok: 1 });
+  });
+  it("reports one that nests deeper on the line where it passes 256, and reads nothing from it", () => {
+    const file = "definition/pages/p/visuals/v/visual.json";
+    const r = readJson(file, deep(256));
+    expect(r.json).toBeUndefined();
+    expect(r.issues).toEqual([
+      {
+        file,
+        line: 3,
+        // A line longer than 120 characters is quoted to its first 119 and an ellipsis.
+        text: `  "deep": ${"[".repeat(109)}…`,
+        reason: "nested more than 256 levels deep",
+      },
+    ]);
+  });
+  it("counts only the brackets outside strings", () => {
+    const r = readJson("x.json", JSON.stringify({ a: "[".repeat(300), b: '{\\"['.repeat(300) }));
+    expect(r.issues).toEqual([]);
+  });
+  it("reports a document too deep for any walk as a parse issue rather than failing", () => {
+    const n = 100_000;
+    const r = readJson("x.json", `{"a":${"[".repeat(n)}${"]".repeat(n)}}`);
+    expect(r.json).toBeUndefined();
+    expect(r.issues.map((i) => [i.line, i.reason])).toEqual([
+      [1, "nested more than 256 levels deep"],
+    ]);
+  });
+  it("holds a file whose format sets no root to the same depth", () => {
+    const r = readJson("x.json", `${"[".repeat(257)}${"]".repeat(257)}`, { objectRoot: false });
+    expect(r.json).toBeUndefined();
+    expect(r.issues.map((i) => i.reason)).toEqual(["nested more than 256 levels deep"]);
   });
 });
 

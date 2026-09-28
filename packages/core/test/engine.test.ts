@@ -517,6 +517,52 @@ describe("lint", () => {
   });
 });
 
+describe("lint and a report file nested too deep to read (#59)", () => {
+  const j = (v: unknown) => JSON.stringify(v);
+  /** A visual whose query nests `levels` objects and arrays around one field, which the walk reaches. */
+  const nested = (levels: number): string => {
+    let node: unknown = {
+      Column: { Expression: { SourceRef: { Entity: "Sales" } }, Property: "Amount" },
+    };
+    // Each round is an object holding an array: two levels.
+    for (let i = 0; i < levels / 2; i++) node = { Or: [node] };
+    return j({ name: "v", visual: { visualType: "card", query: node } });
+  };
+  const files = (visual: string) => [
+    { path: "definition/report.json", text: j({}) },
+    { path: "definition/pages/pages.json", text: j({ pageOrder: ["p"] }) },
+    { path: "definition/pages/p/page.json", text: j({ name: "p", displayName: "P" }) },
+    { path: "definition/pages/p/visuals/v/visual.json", text: visual },
+  ];
+  const visuals = (result: ReturnType<typeof lint>) =>
+    result.facts.find((f) => f.label === "Visuals");
+  it("lints a visual that nests as deep as the cap allows, through every rule", () => {
+    // The root and visual add two levels, and the field at the bottom four: 2 + 250 + 4 is 256.
+    const result = lint(files(nested(250)));
+    expect(result.findings.filter((f) => f.ruleId === "PARSE_ISSUE")).toEqual([]);
+    expect(result.summary.ruleErrors).toEqual([]);
+    expect(visuals(result)?.value).toBe("1");
+  });
+  it("reports one nested past it as a parse issue, and treats the visual as unread", () => {
+    for (const levels of [300, 200_000]) {
+      const result = lint(files(nested(levels)));
+      expect(
+        result.findings
+          .filter((f) => f.ruleId === "PARSE_ISSUE")
+          .map((f) => [f.location?.file, f.detail]),
+      ).toEqual([
+        [
+          "definition/pages/p/visuals/v/visual.json",
+          // The line is the whole minified file; the detail quotes its start.
+          expect.stringMatching(/^nested more than 256 levels deep: \{"name":"v",.{80,110}…$/),
+        ],
+      ]);
+      expect(result.summary.ruleErrors).toEqual([]);
+      expect(visuals(result)?.value).toBe("unknown");
+    }
+  });
+});
+
 describe("namedObjects", () => {
   it("enumerates objects by scope with their finding shells", () => {
     const m = modelFrom(

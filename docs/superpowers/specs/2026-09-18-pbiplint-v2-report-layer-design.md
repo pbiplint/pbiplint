@@ -716,11 +716,13 @@ Amended 2026-09-28 (issue #123): the measures a row-level security
 filter references are roots too, as its columns are, with what they
 reference. A role whose filter names a measure fails once the measure
 is deleted, and `UNNECESSARY_MEASURES` already counts a measure named
-in a filter as used. Microsoft's CALCULATE reference supports a
-measure there outside DirectQuery: it says CALCULATE "is not supported
-for use in DirectQuery mode when used in calculated columns or
-row-level security (RLS) rules", and that "when you use a model
-measure in row context, context transition is automatic". Before, a
+in a filter as used. A role's filter is evaluated in row context, and
+Microsoft's CALCULATE reference says that "when you use a model
+measure in row context, context transition is automatic", so a measure
+there is an implicit CALCULATE, which the same reference rules out in
+RLS rules only in DirectQuery mode: CALCULATE "is not supported for
+use in DirectQuery mode when used in calculated columns or row-level
+security (RLS) rules". Before, a
 measure named directly in a filter was unreached while one named in a
 function the filter calls was reached. Object-level security names
 columns and tables only, so its roots are unchanged.

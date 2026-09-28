@@ -138,7 +138,7 @@ table Scenario
       "nothing in the report reaches it, and no measure or column references it",
     );
   });
-  it("roots the measures an RLS filter names, as it roots the columns, and reaches what they reference", () => {
+  it("roots the measures an RLS filter names, on any table, as it roots the columns, and reaches what they reference", () => {
     const m = modelFrom(`table Sales
 	column Amount
 		dataType: decimal
@@ -147,8 +147,12 @@ table Scenario
 	measure Total = SUM('Sales'[Amount])
 	measure Unused = 1
 
+table Store
+	column Name
+		dataType: string
+
 role Filtered
-	tablePermission Sales = [Total] > 0 && 'Sales'[Region] <> "None"
+	tablePermission Store = [Total] > 0 && 'Sales'[Region] <> "None"
 `);
     const reach = buildIndexes({ model: m, report: buildReport([]).report }).reachability!;
     const [total, unused] = m.tables[0]!.measures;

@@ -1,5 +1,14 @@
-import { chmodSync, mkdirSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import {
+  chmodSync,
+  mkdirSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { basename, dirname, join } from "node:path";
 import { lint, noTmdlRefusal, pbixRefusal } from "@pbiplint/core";
 import { describe, expect, it } from "vitest";
 import { tempDir } from "../../../tests/support/temp-dir.js";
@@ -914,4 +923,176 @@ describe("resolveProject and a model folder that holds no .tmdl files (tracked i
       }
     },
   );
+});
+
+describe("resolveProject and symbolic links (#59)", () => {
+  // Windows makes a symbolic link only in Developer Mode or as an administrator, so these skip
+  // there (CI runs them on Ubuntu).
+  const noLinks = process.platform === "win32";
+  const linkNotice = (path: string) => ({
+    kind: "unread-file",
+    path,
+    message: `${path} is a symbolic link, which pbiplint does not follow, so it was not linted`,
+  });
+  /** Moves `p` into `outside` and puts a link to it where it was. */
+  const moveBehindLink = (p: string, outside: string): void => {
+    const moved = join(outside, basename(p));
+    renameSync(p, moved);
+    symlinkSync(moved, p);
+  };
+
+  it.skipIf(noLinks)(
+    "names a linked folder or file below the input, reads nothing through it, and lints the rest",
+    () => {
+      const root = pbip({ model: true, report: true });
+      const outside = tempDir("outside");
+      moveBehindLink(join(root, "Demo.Report", "definition", "pages"), outside);
+      moveBehindLink(join(root, "Demo.SemanticModel", "definition", "tables", "T.tmdl"), outside);
+      const p = resolveProject(root);
+      expect(p.report!.files.map((f) => f.path).sort()).toEqual([
+        "../Demo.pbip",
+        ".platform",
+        "definition.pbir",
+        "definition/report.json",
+      ]);
+      expect(p.report!.unread).toEqual(["definition/pages/"]);
+      expect(p.model!.files.map((f) => f.path)).toEqual(["definition/model.tmdl"]);
+      expect(p.model!.unread).toEqual(["definition/tables/T.tmdl"]);
+      expect(p.diagnostics).toEqual([
+        linkNotice("Demo.SemanticModel/definition/tables/T.tmdl"),
+        linkNotice("Demo.Report/definition/pages"),
+      ]);
+      expect(p.absent).toEqual({});
+    },
+  );
+  it.skipIf(noLinks)(
+    "names a link that points nowhere, or at itself, where the walk would have read or entered it",
+    () => {
+      const root = pbip({ report: true });
+      const def = join(root, "Demo.Report", "definition");
+      symlinkSync(join(root, "gone.json"), join(def, "gone.json"));
+      symlinkSync(join(def, "loop"), join(def, "loop"));
+      const p = resolveProject(root);
+      expect(p.report!.unread).toEqual(["definition/gone.json", "definition/loop/"]);
+      expect(p.diagnostics).toEqual([
+        linkNotice("Demo.Report/definition/gone.json"),
+        linkNotice("Demo.Report/definition/loop"),
+      ]);
+    },
+  );
+  it.skipIf(noLinks)("says nothing of a link the walk would neither read nor enter", () => {
+    const root = pbip({ model: true, report: true });
+    const outside = tempDir("outside");
+    writeFileSync(join(outside, "notes.txt"), "");
+    mkdirSync(join(outside, "resources"));
+    symlinkSync(join(outside, "notes.txt"), join(root, "Demo.Report", "definition", "notes.txt"));
+    symlinkSync(
+      join(outside, "resources"),
+      join(root, "Demo.Report", "definition", "StaticResources"),
+    );
+    symlinkSync(join(outside, "resources"), join(root, ".git"));
+    const p = resolveProject(root);
+    expect(p.diagnostics).toEqual([]);
+    expect(p.report!.unread).toEqual([]);
+  });
+  it.skipIf(noLinks)(
+    "names a linked part folder beside the other part and leaves its layer out, as a folder it cannot read",
+    () => {
+      const model = pbip({ model: true, report: true });
+      moveBehindLink(join(model, "Demo.SemanticModel"), tempDir("outside"));
+      const noModel = resolveProject(model);
+      expect(noModel.model).toBeUndefined();
+      expect(noModel.report).toBeDefined();
+      expect(noModel.absent).toEqual({ model: "the model folder could not be read" });
+      expect(noModel.diagnostics).toEqual([linkNotice("Demo.SemanticModel")]);
+      const report = pbip({ model: true, report: true });
+      moveBehindLink(join(report, "Demo.Report"), tempDir("outside"));
+      const noReport = resolveProject(report);
+      expect(noReport.report).toBeUndefined();
+      expect(noReport.model).toBeDefined();
+      expect(noReport.absent).toEqual({ report: "the report folder could not be read" });
+      expect(noReport.diagnostics).toEqual([linkNotice("Demo.Report")]);
+    },
+  );
+  it.skipIf(noLinks)(
+    "names a part's linked definition folder, definition.pbir, or .platform, and the .pbip beside the parts",
+    () => {
+      const root = pbip({ model: true, report: true });
+      const outside = tempDir("outside");
+      moveBehindLink(join(root, "Demo.SemanticModel", "definition"), outside);
+      moveBehindLink(join(root, "Demo.Report", "definition.pbir"), outside);
+      moveBehindLink(join(root, "Demo.Report", ".platform"), outside);
+      moveBehindLink(join(root, "Demo.pbip"), outside);
+      const p = resolveProject(root);
+      expect(p.model).toBeUndefined();
+      expect(p.report!.files.map((f) => f.path)).not.toContain("definition.pbir");
+      expect(p.report!.unread).toEqual(["definition.pbir", ".platform", "../Demo.pbip"]);
+      expect(p.diagnostics).toEqual([
+        linkNotice("Demo.SemanticModel/definition"),
+        linkNotice("Demo.Report/definition.pbir"),
+        linkNotice("Demo.Report/.platform"),
+        linkNotice("Demo.pbip"),
+      ]);
+      expect(p.absent).toEqual({ model: "the model folder could not be read" });
+    },
+  );
+  it.skipIf(noLinks)(
+    "names a report folder a .pbip names, or the model its definition.pbir names, when it is a link",
+    () => {
+      const noModel = workspace();
+      moveBehindLink(join(noModel, "Cost.SemanticModel"), tempDir("outside"));
+      const p = resolveProject(join(noModel, "Cost.pbip"));
+      expect(p.model).toBeUndefined();
+      expect(p.report!.root).toBe(join(noModel, "Cost.Report"));
+      expect(p.absent).toEqual({ model: "the model folder could not be read" });
+      expect(p.diagnostics).toEqual([linkNotice("Cost.SemanticModel")]);
+      // The report is how the model is reached, so a linked report leaves nothing read, and the
+      // run is refused naming it, as a report folder that cannot be entered is.
+      const noReport = workspace();
+      moveBehindLink(join(noReport, "Cost.Report"), tempDir("outside"));
+      expect(() => resolveProject(join(noReport, "Cost.pbip"))).toThrow(
+        new Error(
+          `Could not read ${noReport}/Cost.Report: it is a symbolic link, which pbiplint does not follow`,
+        ),
+      );
+    },
+  );
+  it.skipIf(noLinks)("refuses a run that could read nothing but a link, naming the link", () => {
+    const root = tempDir("only-link");
+    const outside = tempDir("outside");
+    modelAt(join(outside, "Demo.SemanticModel"), "T");
+    symlinkSync(join(outside, "Demo.SemanticModel"), join(root, "Demo.SemanticModel"));
+    expect(() => resolveProject(root)).toThrow(
+      new Error(
+        `Could not read ${root}/Demo.SemanticModel: it is a symbolic link, which pbiplint does not follow`,
+      ),
+    );
+  });
+  it.skipIf(noLinks)("follows the input itself when it is a link, as the user named it", () => {
+    const root = pbip({ model: true, report: true });
+    /** A link to `target` in a folder of its own, so no other link sits beside it. */
+    const linkTo = (target: string): string => {
+      const link = join(tempDir("link"), basename(target));
+      symlinkSync(target, link);
+      return link;
+    };
+    const whole = resolveProject(linkTo(root));
+    expect(whole.model!.files).toHaveLength(2);
+    expect(whole.report!.files).toHaveLength(7);
+    expect(whole.diagnostics).toEqual([]);
+    for (const part of [join(root, "Demo.Report"), join(root, "Demo.Report", "definition")]) {
+      const lone = resolveProject(linkTo(part));
+      expect(lone.report!.files.map((f) => f.path)).toContain("definition/report.json");
+      expect(lone.diagnostics).toEqual([]);
+    }
+    // A file is followed to where it sits, so the report a .pbip names is found beside the real
+    // .pbip, and that folder is the project root.
+    const named = resolveProject(linkTo(join(root, "Demo.pbip")));
+    expect(named.root).toBe(realpathSync(root));
+    expect(named.model!.files).toHaveLength(2);
+    expect(named.report!.files.map((f) => f.path)).toContain("../Demo.pbip");
+    expect(named.diagnostics).toEqual([]);
+    const tmdl = join(root, "Demo.SemanticModel", "definition", "tables", "T.tmdl");
+    expect(resolveProject(linkTo(tmdl)).root).toBe(realpathSync(dirname(tmdl)));
+  });
 });

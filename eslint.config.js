@@ -12,6 +12,8 @@ export default tseslint.config(
       "packages/web/about/**",
       "**/test-results/**",
       "**/playwright-report/**",
+      // Git-ignored working notes and research scratch, never part of a commit.
+      ".superpowers/**",
     ],
   },
   js.configs.recommended,

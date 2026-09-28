@@ -2,7 +2,13 @@
 // so name them here to keep import.meta.glob typed everywhere this file is checked.
 /// <reference types="vite/client" />
 import type { LintFile } from "@pbiplint/core";
-import { emptyTree, isModelFolder, isReportFolder, type InputTree } from "./input/project-files.js";
+import {
+  emptyTree,
+  isModelFolder,
+  isReportFolder,
+  walkOrder,
+  type InputTree,
+} from "./input/project-files.js";
 
 // Vite inlines the sample into the bundle at build time; the page never fetches it. The globs are
 // what a drop of examples/messy-sales reads: the model's .tmdl files and its .platform, the
@@ -71,10 +77,10 @@ function underSample(key: string): string {
  * The globbed files as the page lints them: each part's files by their path relative to that part
  * (`definition/...`, `definition.pbir`), and the project file as `../<name>.pbip`, one level above
  * the report root. That is the path the CLI gives lint, so a finding on the project file reads the
- * same on both surfaces. The model's files come first and then the report's, as the CLI and
- * selectProject hand them to lint, each part sorted with an explicit locale so the list reads the
- * same whatever machine built the bundle. A file beside the parts belongs to neither and is
- * refused.
+ * same on both surfaces. The model's files come first, in the CLI's walk order, and then the
+ * report's by path, as selectProject hands them to lint and core reads them, each part sorted with
+ * an explicit locale so the list reads the same whatever machine built the bundle. A file beside
+ * the parts belongs to neither and is refused.
  */
 export function sampleFiles(raw: Record<string, string>): LintFile[] {
   const byPath = (a: LintFile, b: LintFile): number => a.path.localeCompare(b.path, "en");
@@ -88,7 +94,7 @@ export function sampleFiles(raw: Record<string, string>): LintFile[] {
       parts.report.push({ path: `../${rel}`, text });
     else throw new Error(`Sample file outside the sample project: ${key}`);
   }
-  return [...parts.model.sort(byPath), ...parts.report.sort(byPath)];
+  return [...parts.model.sort((a, b) => walkOrder(a.path, b.path)), ...parts.report.sort(byPath)];
 }
 
 /**

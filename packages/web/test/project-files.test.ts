@@ -35,6 +35,29 @@ describe("selectProject on a model", () => {
     ]);
     expect(m.config).toBeUndefined();
   });
+  it("hands over the model's files in the CLI's walk order when a folder's name begins with a sibling's (tracked in #101)", () => {
+    // A backup kept beside the tables folder, which walk.test.ts gives the CLI too. As whole
+    // paths, tables.old sorts first; the CLI's walk goes through tables first. Core reads the
+    // files in the walk's order whatever order it is given, so the results agree either way.
+    const m = select([
+      e(
+        "Demo.SemanticModel/definition/tables.old/Sales.tmdl",
+        "table Sales\n\tcolumn 'Old Amount'\n\t\tdataType: double\n",
+      ),
+      e(
+        "Demo.SemanticModel/definition/tables/Sales.tmdl",
+        "table Sales\n\tcolumn Amount\n\t\tdataType: double\n",
+      ),
+    ]);
+    expect(m.files.map((f) => f.path)).toEqual([
+      "definition/tables/Sales.tmdl",
+      "definition/tables.old/Sales.tmdl",
+    ]);
+    expect(lint(m.files).model.tables[0]!.columns.map((c) => c.name)).toEqual([
+      "Amount",
+      "Old Amount",
+    ]);
+  });
   it("finds the one semantic model and the one report inside a dropped PBIP folder, rooted at it", () => {
     const m = select([
       e("Proj/Demo.SemanticModel/definition/model.tmdl"),

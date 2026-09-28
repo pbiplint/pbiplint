@@ -289,7 +289,7 @@ const covered = (s: Selection, u: Unread): boolean =>
  * comparing whole paths would not: the walk is through `tables` and has met `tables/Sales.tmdl`
  * before it reaches `tables.old`, though "tables.old" sorts before "tables/Sales.tmdl".
  */
-function walkOrder(a: string, b: string): number {
+export function walkOrder(a: string, b: string): number {
   const as = a.split("/");
   const bs = b.split("/");
   for (let i = 0; i < Math.min(as.length, bs.length); i++)
@@ -702,7 +702,12 @@ export function selectProject(tree: InputTree): SelectedProject {
   // for what it holds is refused for that first.
   const config = findConfig(s, root);
 
-  const files = [...(model?.files ?? []).sort(byPath), ...(report?.files ?? []).sort(byPath)];
+  // The model's files in the CLI's walk order, and the report's by path, the orders core reads
+  // each part's files in (buildModel and buildReport sort them whatever order they are given in).
+  const files = [
+    ...(model?.files ?? []).sort((a, b) => walkOrder(a.path, b.path)),
+    ...(report?.files ?? []).sort(byPath),
+  ];
   const read = tree.entries
     .map((e) => {
       const rel = relativeToRoot(root, e.path);

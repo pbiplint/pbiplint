@@ -1,6 +1,9 @@
-import { chmodSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { join } from "node:path";
 import { inject, onTestFinished } from "vitest";
+import { removeTempDir } from "./remove-dir.js";
+
+export { removeTempDir };
 
 declare module "vitest" {
   export interface ProvidedContext {
@@ -26,22 +29,4 @@ export function tempDir(name: string): string {
  */
 export function makeTempDir(name: string): string {
   return mkdtempSync(join(inject("tempRoot"), `${name}-`));
-}
-
-export function removeTempDir(dir: string): void {
-  try {
-    rmSync(dir, { recursive: true, force: true });
-  } catch {
-    // A folder at mode 000 cannot be emptied, which is how a test that timed out, or forgot its
-    // finally, leaves one. Opening every folder first lets the removal through.
-    unlock(dir);
-    rmSync(dir, { recursive: true, force: true });
-  }
-}
-
-/** Gives `dir` and every folder under it the mode a new folder has, never following a link. */
-function unlock(dir: string): void {
-  chmodSync(dir, 0o755);
-  for (const entry of readdirSync(dir, { withFileTypes: true }))
-    if (entry.isDirectory()) unlock(join(dir, entry.name));
 }

@@ -2,7 +2,7 @@ import { mkdtempSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { TestProject } from "vitest/node";
-import { removeTempDir } from "./temp-dir.js";
+import { removeTempDir } from "./remove-dir.js";
 
 /** Every run's folder is named this, then the process id of the run, then random characters. */
 const RUN = /^pbiplint-test-run-(\d+)-/;
@@ -23,9 +23,9 @@ export default function setup(project: TestProject): () => void {
     // the module copies they hand the test workers, named with 21 random characters and nothing
     // else (vitest-dev/vitest#11224). The fix, vitest-dev/vitest#11248, removes it when the run
     // closes; until a release that carries it is installed, it goes here. Teardown runs once the
-    // last test has settled, so no worker reads from it again. Delete these lines with that bump.
+    // last test has settled, so no worker reads from it again. Drop it here and in the loop below
+    // with that bump.
     const vitestTmp = (project.vitest as unknown as { _tmpDir?: string })._tmpDir;
-    if (vitestTmp) removeTempDir(vitestTmp);
 
     const left = readdirSync(root).sort();
     const problems: string[] = [];
@@ -33,10 +33,12 @@ export default function setup(project: TestProject): () => void {
       problems.push(
         `${left.length} temp folder${left.length === 1 ? "" : "s"} left behind by a test: ${left.join(", ")}. Make them with tempDir from tests/support/temp-dir.ts, which removes each one when its test ends.`,
       );
-    try {
-      removeTempDir(root);
-    } catch (e) {
-      problems.push(`The run's temp folder ${root} could not be removed: ${(e as Error).message}`);
+    for (const dir of vitestTmp ? [root, vitestTmp] : [root]) {
+      try {
+        removeTempDir(dir);
+      } catch (e) {
+        problems.push(`The temp folder ${dir} could not be removed: ${(e as Error).message}`);
+      }
     }
     if (problems.length > 0) throw new Error(problems.join(" "));
   };
@@ -48,11 +50,12 @@ export default function setup(project: TestProject): () => void {
  * its folder. A folder that will not go is left for the next run to try again.
  */
 function sweepDeadRuns(): void {
-  for (const name of readdirSync(tmpdir())) {
-    const pid = Number(RUN.exec(name)?.[1]);
+  for (const entry of readdirSync(tmpdir(), { withFileTypes: true })) {
+    // Only a folder: anything else under the name is not a run's, and a link would lead away.
+    const pid = entry.isDirectory() ? Number(RUN.exec(entry.name)?.[1]) : 0;
     if (!pid || running(pid)) continue;
     try {
-      removeTempDir(join(tmpdir(), name));
+      removeTempDir(join(tmpdir(), entry.name));
     } catch {
       // Not this run's to fail over.
     }

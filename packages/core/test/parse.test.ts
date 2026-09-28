@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { parseTmdl } from "../src/tmdl/parse.js";
 import { unquoteName, unquoteValue } from "../src/tmdl/quote.js";
+import type { TmdlNode } from "../src/tmdl/types.js";
 
 const specSample = readFileSync(
   new URL("../../../tests/fixtures/spec-sample.tmdl", import.meta.url),
@@ -585,8 +586,10 @@ describe("whether a parse issue can take a line at the root of a file with it", 
       [1, true],
       [2, false],
     ]);
-    // The fence reads every line below it into its expression, a table's declaration included.
-    expect(marks("table Sales\n\tmeasure M = ```\n\t\tx\n\ntable Product\n")).toEqual([[2, true]]);
+    // A fence left open whose text is no deeper than its declaration reads every line below it
+    // into its expression, a table's declaration included. Deeper text ends at a shallower line.
+    expect(marks("table Sales\n\tmeasure M = ```\nx\n\ntable Product\n")).toEqual([[2, true]]);
+    expect(marks("table Sales\n\tmeasure M = ```\n\t\tx\n\ntable Product\n")).toEqual([[2, false]]);
     expect(marks("table Sales\n\tmeasure M = ```\n\t\tx\n\tmeasure N = 1\n")).toEqual([[2, false]]);
   });
 
@@ -619,5 +622,238 @@ describe("whether a parse issue can take a line at the root of a file with it", 
       [3, false],
       [4, false],
     ]);
+  });
+});
+
+describe("a code fence left open", () => {
+  const OPEN = "unterminated code fence";
+  const issues = (text: string) =>
+    parseTmdl("t.tmdl", text).issues.map((i) => [
+      i.line,
+      i.text,
+      i.reason,
+      i.canDropObjects,
+      i.canDropTableLine,
+    ]);
+  const read = (nodes: TmdlNode[]): unknown[] =>
+    nodes.map((n) => [n.type, n.name, n.value, n.props, n.description]);
+
+  it("is reported where it opens when a later expression's fence would close it, and each declaration after it is read", () => {
+    // The UDF research's probe: every function in a model shares definition/functions.tmdl. The
+    // fence read B's header and body as A's expression, and A took B's lineageTag.
+    const text = [
+      "function A = ```",
+      "\t\t() => 1",
+      "\tlineageTag: a",
+      "",
+      "function B = ```",
+      "\t\t() => 2",
+      "\t\t```",
+      "\tlineageTag: b",
+      "",
+      "function C = () => 3",
+      "",
+    ].join("\n");
+    const pf = parseTmdl("definition/functions.tmdl", text);
+    expect(pf.issues.map((i) => [i.line, i.text, i.reason, i.canDropObjects])).toEqual([
+      [1, "function A = ```", OPEN, true],
+    ]);
+    expect(read(pf.roots)).toEqual([
+      ["function", "A", "() => 1", { lineagetag: "a" }, undefined],
+      ["function", "B", "() => 2", { lineagetag: "b" }, undefined],
+      ["function", "C", "() => 3", {}, undefined],
+    ]);
+  });
+
+  it("ends where the text under it stops being indented, so a declaration with no fence after it is read", () => {
+    // No later fence: the end of the file tells the parser the fence was never closed.
+    const text = [
+      "function A = ```",
+      "\t\t() =>",
+      "",
+      "\t\t\t1",
+      "",
+      "/// Doubles",
+      "function B = (x: INT64) => x * 2",
+      "",
+      "function C =",
+      "\t\t() => 3",
+      "",
+    ].join("\n");
+    const pf = parseTmdl("definition/functions.tmdl", text);
+    expect(pf.issues.map((i) => [i.line, i.reason, i.canDropTableLine])).toEqual([
+      [1, OPEN, false],
+    ]);
+    expect(read(pf.roots)).toEqual([
+      ["function", "A", "() =>\n\n\t1", {}, undefined],
+      ["function", "B", "(x: INT64) => x * 2", {}, "Doubles"],
+      ["function", "C", "() => 3", {}, undefined],
+    ]);
+  });
+
+  it("gives a table's columns and measures after it back to their table, and a table after it its own", () => {
+    const text = [
+      "table Sales",
+      "\tmeasure Total = ```",
+      "\t\t\tSUM(Sales[Amount])",
+      "\tcolumn Amount",
+      "\t\tdataType: decimal",
+      "",
+      "\tmeasure Profit = ```",
+      "\t\t\t[Total] * 0.1",
+      "\t\t\t```",
+      "\t\tformatString: 0.00",
+      "",
+      "table Product",
+      "\tmeasure Count = ```",
+      "\t\t\tCOUNTROWS(Product)",
+      "\t\t\t```",
+      "",
+    ].join("\n");
+    expect(issues(text)).toEqual([[2, "\tmeasure Total = ```", OPEN, true, false]]);
+    const [sales, product] = parseTmdl("t.tmdl", text).roots;
+    expect(read(sales!.children)).toEqual([
+      ["measure", "Total", "SUM(Sales[Amount])", {}, undefined],
+      ["column", "Amount", undefined, { datatype: "decimal" }, undefined],
+      ["measure", "Profit", "[Total] * 0.1", { formatstring: "0.00" }, undefined],
+    ]);
+    expect(read(product!.children)).toEqual([
+      ["measure", "Count", "COUNTROWS(Product)", {}, undefined],
+    ]);
+  });
+
+  it("gives a fenced property after it, such as a format string's, to the object it opened on", () => {
+    // The format string definition opens a fence of its own, one tab under the measure, so the
+    // measure's fence never closed.
+    const text = [
+      "table Sales",
+      "\tmeasure Total = ```",
+      "\t\t\tSUM(Sales[Amount])",
+      "\t\tformatStringDefinition = ```",
+      '\t\t\t\t"#,0"',
+      "\t\t\t\t```",
+      "",
+    ].join("\n");
+    expect(issues(text)).toEqual([[2, "\tmeasure Total = ```", OPEN, true, false]]);
+    const total = parseTmdl("t.tmdl", text).roots[0]!.children[0]!;
+    expect([total.value, total.props]).toEqual([
+      "SUM(Sales[Amount])",
+      { formatstringdefinition: '"#,0"' },
+    ]);
+  });
+
+  it("runs to the next fence, or the end of the file, when the text under it is no deeper than its declaration", () => {
+    // Fenced text may sit at any depth, even the root of the file, so nothing then says where the
+    // expression ended. A `///` run directly above the next fence's declaration stays its own.
+    const text = [
+      "function A = ```",
+      "() => 1",
+      "function B = () => 2",
+      "",
+      "/// Triples",
+      "function C = ```",
+      "\t\t(x: INT64) => x * 3",
+      "\t\t```",
+      "",
+    ].join("\n");
+    expect(issues(text)).toEqual([[1, "function A = ```", OPEN, true, true]]);
+    expect(read(parseTmdl("t.tmdl", text).roots)).toEqual([
+      ["function", "A", "() => 1\nfunction B = () => 2", {}, undefined],
+      ["function", "C", "(x: INT64) => x * 3", {}, "Triples"],
+    ]);
+    expect(issues("table Sales\n\tmeasure M = ```\nx\n\ntable Product\n")).toEqual([
+      [2, "\tmeasure M = ```", OPEN, true, true],
+    ]);
+  });
+
+  it("leaves a `///` run directly above the other fence's declaration to it when the indented text runs that far", () => {
+    const text = [
+      "function A = ```",
+      "\t() => 1",
+      "\t/// Note",
+      "\textendedProperty X = ```",
+      "\t\t{}",
+      "\t\t```",
+      "",
+    ].join("\n");
+    const [a] = parseTmdl("t.tmdl", text).roots;
+    expect(a!.value).toBe("() => 1");
+    expect(read(a!.children)).toEqual([["extendedproperty", "X", "{}", {}, "Note"]]);
+  });
+
+  it("is one issue for each fence left open, in line order, and an empty expression when nothing sits under it", () => {
+    const pf = parseTmdl(
+      "t.tmdl",
+      "function A = ```\nfunction B = ```\n\t\t() => 2\n\nfunction C = ```",
+    );
+    expect(pf.issues.map((i) => [i.line, i.reason])).toEqual([
+      [1, OPEN],
+      [2, OPEN],
+      [5, OPEN],
+    ]);
+    expect(read(pf.roots)).toEqual([
+      ["function", "A", "", {}, undefined],
+      ["function", "B", "() => 2", {}, undefined],
+      ["function", "C", "", {}, undefined],
+    ]);
+  });
+
+  it("gives what follows back on a partition's source and on a calculation item", () => {
+    const text = [
+      "table 'Time Intelligence'",
+      "\tcalculationGroup",
+      "\t\tcalculationItem YTD = ```",
+      "\t\t\t\tCALCULATE(SELECTEDMEASURE(), DATESYTD('Date'[Date]))",
+      "\t\tcalculationItem PY = ```",
+      "\t\t\t\tCALCULATE(SELECTEDMEASURE(), SAMEPERIODLASTYEAR('Date'[Date]))",
+      "\t\t\t\t```",
+      "",
+      "\tpartition 'Time Intelligence' = m",
+      "\t\tmode: import",
+      "\t\tsource = ```",
+      "\t\t\t\tlet",
+      "\t\t\t\t    Source = 1",
+      "\t\t\t\tin",
+      "\t\t\t\t    Source",
+      "",
+      "\tannotation PBI_ResultType = Table",
+      "",
+    ].join("\n");
+    expect(issues(text).map((i) => i.slice(0, 3))).toEqual([
+      [3, "\t\tcalculationItem YTD = ```", OPEN],
+      [11, "\t\tsource = ```", OPEN],
+    ]);
+    const [table] = parseTmdl("t.tmdl", text).roots;
+    const [group, partition, annotation] = table!.children;
+    expect(group!.children.map((c) => [c.name, c.value])).toEqual([
+      ["YTD", "CALCULATE(SELECTEDMEASURE(), DATESYTD('Date'[Date]))"],
+      ["PY", "CALCULATE(SELECTEDMEASURE(), SAMEPERIODLASTYEAR('Date'[Date]))"],
+    ]);
+    expect(partition!.props).toEqual({
+      mode: "import",
+      source: "let\n    Source = 1\nin\n    Source",
+    });
+    expect([annotation!.name, annotation!.value]).toEqual(["PBI_ResultType", "Table"]);
+  });
+
+  it("reads a closed fence verbatim, a line at the root of the file or one holding three backticks included", () => {
+    // Only a line that opens a fence, a declaration whose `=` is followed by three backticks, says
+    // an earlier fence was never closed. None of the 11,458 fences in the 23,457 TMDL files surveyed
+    // on September 28, 2026 holds one, or any line with three backticks in it.
+    const text = [
+      "table Sales",
+      "\tmeasure Fence = ```",
+      '\t\t\tVAR tick = "```"',
+      "table Product",
+      '\t\t\tRETURN tick & "= ```"',
+      "\t\t\t```",
+      "",
+    ].join("\n");
+    const pf = parseTmdl("t.tmdl", text);
+    expect(pf.issues).toEqual([]);
+    expect(pf.roots).toHaveLength(1);
+    expect(pf.roots[0]!.children[0]!.value).toBe(
+      'VAR tick = "```"\ntable Product\nRETURN tick & "= ```"',
+    );
   });
 });

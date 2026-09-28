@@ -50,6 +50,37 @@ function splitHeader(
 }
 
 /**
+ * Whether a line opens a code fence: a declaration, or an expression with no name, whose `=` is
+ * followed by three backticks, as `parseTmdl` reads a line. DAX and M give backticks no meaning
+ * outside a string or a comment, and none of the 11,458 fences in 23,457 TMDL files surveyed on
+ * September 28, 2026 holds such a line, so one inside a fence means that fence was never closed.
+ */
+const opensFence = (line: string): boolean => {
+  const content = line.slice(tabIndent(line));
+  if (/^\s/.test(content) || REF.test(content) || PROP.test(content)) return false;
+  const h = splitHeader(content);
+  return h !== null && h.hasEq && h.inline === "```";
+};
+/** Whether a line is a `///` description line, as `parseTmdl` reads one. */
+const isDescription = (line: string): boolean => line.slice(tabIndent(line)).startsWith("///");
+/**
+ * Where an indented block from line `from` ends: at the first line before `limit` that is not
+ * blank and is indented less than `depth`, or at `limit`. An indented expression and a code fence
+ * left open both read their text with it, so the two stay one reading.
+ */
+const blockEnd = (lines: readonly string[], from: number, limit: number, depth: number): number => {
+  let k = from;
+  while (k < limit && (lines[k]!.trim() === "" || leadingWs(lines[k]!) >= depth)) k++;
+  return k;
+};
+/** Lines `from` up to `end`, each less `depth` characters of indentation, with no blank line last. */
+const blockText = (lines: readonly string[], from: number, end: number, depth: number): string => {
+  const out = lines.slice(from, end).map((l) => (l.trim() === "" ? "" : l.slice(depth)));
+  while (out.at(-1) === "") out.pop();
+  return out.join("\n");
+};
+
+/**
  * Generic TMDL tree parser. Unknown object types and properties parse as generic nodes,
  * so a construct this code has never seen never aborts a run. A line at the root of a file that
  * TMDL does not allow there is also a parse issue: an object or a flag whose type TMDL does not
@@ -129,45 +160,50 @@ export function parseTmdl(file: string, text: string): ParsedFile {
       if (j >= lines.length) return "";
       const blockIndent = leadingWs(lines[j]!);
       if (blockIndent <= indent) return "";
-      const out: string[] = [];
-      let lastNonBlank = -1;
-      for (; j < lines.length; j++) {
-        const l = lines[j]!;
-        if (l.trim() === "") {
-          out.push("");
-          continue;
-        }
-        if (leadingWs(l) < blockIndent) break;
-        out.push(l.slice(blockIndent));
-        lastNonBlank = out.length - 1;
-      }
-      i = j - 1;
-      return out.slice(0, lastNonBlank + 1).join("\n");
+      const end = blockEnd(lines, j, lines.length, blockIndent);
+      i = end - 1;
+      return blockText(lines, j, end, blockIndent);
     };
 
     // Fenced expression: header ends with ```; closed by a line that is only ```; that closing
     // line's leading whitespace is the left boundary stripped from every line.
     const collectFenced = (): string => {
-      const out: string[] = [];
       let j = i + 1;
-      while (j < lines.length && lines[j]!.trim() !== "```") {
-        out.push(lines[j]!);
-        j++;
+      while (j < lines.length && lines[j]!.trim() !== "```" && !opensFence(lines[j]!)) j++;
+      if (j < lines.length && lines[j]!.trim() === "```") {
+        const boundary = leadingWs(lines[j]!);
+        const out = lines.slice(i + 1, j).map((l) => l.slice(Math.min(boundary, leadingWs(l))));
+        i = j;
+        return out.join("\n");
       }
-      if (j >= lines.length)
-        // "code fence", the words rules/parse-issue.md uses, so the finding and the page agree.
-        // The rest of the file is read as this expression, so every declaration below is lost.
-        issues.push({
-          file,
-          line: lineNo,
-          text: raw,
-          reason: "unterminated code fence",
-          canDropObjects: true,
-          canDropTableLine: out.some(mayBeRootLine),
-        });
-      const boundary = j < lines.length ? leadingWs(lines[j]!) : 0;
-      i = j;
-      return out.map((l) => l.slice(Math.min(boundary, leadingWs(l)))).join("\n");
+      // The fence was never closed: the file ended, or a line opened another fence, first. Fenced
+      // text may sit at any depth, so nothing says where the expression should have ended. Text
+      // indented deeper than the header is read as an indented expression is, up to the first line
+      // indented less than its first line, which is where Power BI Desktop writes the object's
+      // properties and the next declaration. Text that is not runs to the other fence's
+      // declaration, or to the end of the file. Either way a `///` run directly above that
+      // declaration is its description.
+      let first = i + 1;
+      while (first < j && lines[first]!.trim() === "") first++;
+      const blockIndent = first < j ? leadingWs(lines[first]!) : 0;
+      // Zero for text no deeper than the header, which is not read as a block.
+      const depth = blockIndent > indent ? blockIndent : 0;
+      let end = depth > 0 ? blockEnd(lines, first, j, depth) : j;
+      if (end === j && j < lines.length)
+        while (end > i + 1 && isDescription(lines[end - 1]!)) end--;
+      const read = lines.slice(i + 1, end);
+      // "code fence", the words rules/parse-issue.md uses, so the finding and the page agree.
+      issues.push({
+        file,
+        line: lineNo,
+        text: raw,
+        reason: "unterminated code fence",
+        canDropObjects: true,
+        canDropTableLine: read.some(mayBeRootLine),
+      });
+      const value = blockText(lines, i + 1, end, depth);
+      i = end - 1;
+      return value;
     };
 
     const base = {

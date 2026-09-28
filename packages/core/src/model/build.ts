@@ -315,7 +315,9 @@ export function buildModel(given: ParsedFile[], unreadPaths: readonly string[] =
           });
           break;
         case "annotation":
-          if (r.name) model.annotations[r.name] = r.value ?? "";
+          // One with lines under it lost its tabs, as a column's annotation does, and is a parse
+          // issue: its value is not the model's, and a `pbiplint.ignore` there must not quiet a rule.
+          if (r.name && r.children.length === 0) model.annotations[r.name] = r.value ?? "";
           break;
         case "table":
           buildTable(r, model);

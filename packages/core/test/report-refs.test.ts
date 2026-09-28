@@ -585,6 +585,20 @@ describe("a reference into a model file pbiplint could not fully read", () => {
   });
 
   it("is unread when an unterminated code fence swallows a measure in its table's file", () => {
+    // Text no deeper than the fence's declaration runs to the end of the file, Profit included.
+    const m = modelOf({
+      [SALES]: sales.replace(
+        "\tmeasure 'Total Sales' = SUM('Sales'[Amount])\n",
+        "\tmeasure 'Total Sales' = ```\n\tSUM('Sales'[Amount])\n\tmeasure Profit = [Total Sales] * 0.1\n",
+      ),
+    });
+    expect(m.files[0]!.issues.map((i) => i.reason)).toEqual(["unterminated code fence"]);
+    expect(resolutions(m, measure("Sales", "Profit"))).toEqual([
+      unread(partly('no measure named "Profit" on "Sales"', SALES)),
+    ]);
+  });
+
+  it("resolves a measure after an unterminated code fence whose indented text ends above it", () => {
     const m = modelOf({
       [SALES]: sales.replace(
         "\tmeasure 'Total Sales' = SUM('Sales'[Amount])\n",
@@ -593,8 +607,9 @@ describe("a reference into a model file pbiplint could not fully read", () => {
     });
     expect(m.files[0]!.issues.map((i) => i.reason)).toEqual(["unterminated code fence"]);
     expect(resolutions(m, measure("Sales", "Profit"))).toEqual([
-      unread(partly('no measure named "Profit" on "Sales"', SALES)),
+      { kind: "measure", measure: m.tables[0]!.measures[1] },
     ]);
+    expect(m.tables[0]!.measures.map((x) => x.name)).toEqual(["Total Sales", "Profit"]);
   });
 
   it("is unread when a line the parser does not recognize stands in its table's file", () => {

@@ -360,6 +360,27 @@ describe("buildModel on root object types", () => {
   });
 });
 
+describe("buildModel and a root annotation with lines under it", () => {
+  it("leaves the annotation out of the model's annotations, and keeps one with nothing under it", () => {
+    // A column's annotation that lost its tabs, with the columns after it attached to it. The line
+    // is a parse issue; its value belongs to the column, not the model.
+    const pf = parseTmdl(
+      "tables/Sales.tmdl",
+      [
+        "annotation PBI_QueryOrder = 1",
+        "",
+        "table Sales",
+        "\tcolumn Amount",
+        "annotation pbiplint.ignore = MODEL_RULE",
+        "\tcolumn Region",
+        "",
+      ].join("\n"),
+    );
+    expect(pf.issues.map((i) => i.line)).toEqual([5]);
+    expect(buildModel([pf]).annotations).toEqual({ PBI_QueryOrder: "1" });
+  });
+});
+
 describe("buildModel and the order of its files (tracked in #101)", () => {
   // A backup kept beside the tables folder. As whole paths, "definition/tables.old/Sales.tmdl"
   // sorts before "definition/tables/Sales.tmdl"; the CLI's walk goes through tables first.

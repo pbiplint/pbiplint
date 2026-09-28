@@ -51,7 +51,7 @@ te bpa run tests/fixtures/rule-zoo.SemanticModel/definition -r /path/to/BPARules
 node scripts/te-expectations.mjs tests/fixtures/rule-zoo.SemanticModel tests/expectations/rule-zoo.json --from /tmp/zoo.json
 ```
 
-`te` is the Tabular Editor 3 command line (Windows, macOS, Linux). The free Tabular Editor 2 CLI on Windows works too with its own flags. Without either, submit hand-verified expectations and say so in the pull request. Keep the `skipRules` entries and their reasons.
+`te` is the Tabular Editor 3 command line (Windows, macOS, Linux). The free Tabular Editor 2 CLI on Windows works too with its own flags. Without either, submit hand-verified expectations and say so in the pull request. Keep the `skipRules` entries and their reasons; the script keeps them from the existing file, and any `deviations` with their `ours` too.
 
 The report rules are pinned to fab-inspector the same way; the steps are in docs/RELEASING.md under Report parity expectations. What Tabular Editor CLI 0.7.0 changes for these commands, and what a re-capture after September 30, 2026 needs first, is in the same file under Model parity expectations.
 

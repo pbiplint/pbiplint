@@ -4,10 +4,17 @@ import { lint } from "../src/engine/lint.js";
 import { defaultRules } from "../src/rules/index.js";
 import { readModelFiles } from "./helpers.js";
 
+/**
+ * A fixture's model findings: `findings` is Tabular Editor's output, the oracle for the ported
+ * rules, and `ours` holds pbiplint's side of each deviation, a difference `deviations` says is on
+ * purpose.
+ */
 interface Expectation {
   name: string;
   fixture: string;
   skipRules?: Record<string, string>;
+  deviations?: Record<string, string>;
+  ours?: Record<string, string[]>;
   findings: Record<string, string[]>;
 }
 
@@ -22,6 +29,13 @@ const expectations: Expectation[] = readdirSync(expectationsDir)
 
 const ported = defaultRules.filter((r) => r.status === "ported" && r.layer === "model");
 const expectedCounts = new Map<string, number>(ported.map((r) => [r.id, 0]));
+
+/** The names a ported rule must report on a fixture: `ours` for a deviating rule, else the oracle's. */
+function expectedNames(exp: Expectation, id: string): string[] {
+  return exp.deviations?.[id] !== undefined
+    ? [...(exp.ours?.[id] ?? [])].sort()
+    : [...(exp.findings[id] ?? [])].sort();
+}
 
 describe.each(expectations)("parity with Tabular Editor: $name", (exp) => {
   const files = readModelFiles(repoRoot + exp.fixture);
@@ -40,7 +54,7 @@ describe.each(expectations)("parity with Tabular Editor: $name", (exp) => {
   });
   it.each(ported.map((r) => [r.id] as const))("%s", (id) => {
     if (exp.skipRules?.[id]) return;
-    const expected = [...(exp.findings[id] ?? [])].sort();
+    const expected = expectedNames(exp, id);
     const actual = [...(ours[id] ?? [])].sort();
     expectedCounts.set(id, (expectedCounts.get(id) ?? 0) + expected.length);
     expect(actual).toEqual(expected);
@@ -50,6 +64,23 @@ describe.each(expectations)("parity with Tabular Editor: $name", (exp) => {
       (id) => !ported.some((r) => r.id === id) && !exp.skipRules?.[id],
     );
     expect(missing).toEqual([]);
+  });
+  it("shows the difference each deviation names, and names only ported rules", () => {
+    for (const id of Object.keys(exp.deviations ?? {})) {
+      expect(
+        ported.some((r) => r.id === id),
+        id,
+      ).toBe(true);
+      expect(exp.ours?.[id], `${id}: ours`).toBeDefined();
+      // A deviation with no visible difference on this fixture is either unneeded here or wrong.
+      expect(
+        [...exp.ours![id]!].sort(),
+        `${id}: ours must differ from the oracle on ${exp.name}`,
+      ).not.toEqual([...(exp.findings[id] ?? [])].sort());
+    }
+    expect(Object.keys(exp.ours ?? {}).filter((id) => exp.deviations?.[id] === undefined)).toEqual(
+      [],
+    );
   });
 });
 

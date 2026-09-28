@@ -289,6 +289,19 @@ describe("runRules", () => {
     ]);
     expect(r.ruleErrors).toEqual([{ id: "BOOM", message: "kaboom" }]);
   });
+  it("takes no ignore from a root annotation with lines under it, which lost its tabs", () => {
+    const lost = modelFrom(
+      "table A\n\tcolumn X\nannotation pbiplint.ignore = MODEL_RULE\n\tcolumn Y\n\t\tdataType: string\n",
+    );
+    const r = runRules(
+      { model: lost },
+      buildIndexes({ model: lost }),
+      [modelRule],
+      resolveConfig(),
+    );
+    expect(r.findings.map((f) => f.ruleId)).toEqual(["MODEL_RULE"]);
+    expect(r.ignored).toBe(0);
+  });
   it("stamps ruleId and drops the object reference", () => {
     const r = runRules({ model: m }, idx, [everyColumn], resolveConfig());
     expect(r.findings[0]).toEqual({

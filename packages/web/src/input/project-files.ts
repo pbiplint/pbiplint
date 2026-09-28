@@ -287,9 +287,12 @@ const covered = (s: Selection, u: Unread): boolean =>
  * localeCompare(…, "en") as `byName` here, and walks into a folder where its name sorts, so a
  * folder comes before everything in it. Comparing segment by segment gives that order where
  * comparing whole paths would not: the walk is through `tables` and has met `tables/Sales.tmdl`
- * before it reaches `tables.old`, though "tables.old" sorts before "tables/Sales.tmdl".
+ * before it reaches `tables.old`, though "tables.old" sorts before "tables/Sales.tmdl". Keep in
+ * step with core's walkOrder (packages/core/src/model/build.ts), which also breaks a tie between
+ * names that compare equal by their code units, where this keeps the drop's order, as the CLI
+ * keeps its listing's (spec section 12).
  */
-function walkOrder(a: string, b: string): number {
+export function walkOrder(a: string, b: string): number {
   const as = a.split("/");
   const bs = b.split("/");
   for (let i = 0; i < Math.min(as.length, bs.length); i++)
@@ -702,7 +705,12 @@ export function selectProject(tree: InputTree): SelectedProject {
   // for what it holds is refused for that first.
   const config = findConfig(s, root);
 
-  const files = [...(model?.files ?? []).sort(byPath), ...(report?.files ?? []).sort(byPath)];
+  // The model's files in the CLI's walk order, and the report's by path, the orders core reads
+  // each part's files in (buildModel and buildReport sort them whatever order they are given in).
+  const files = [
+    ...(model?.files ?? []).sort((a, b) => walkOrder(a.path, b.path)),
+    ...(report?.files ?? []).sort(byPath),
+  ];
   const read = tree.entries
     .map((e) => {
       const rel = relativeToRoot(root, e.path);

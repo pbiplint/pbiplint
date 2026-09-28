@@ -259,11 +259,34 @@ function finalizeKinds(model: Model): void {
 }
 
 /**
- * The model the parsed files declare. `unreadPaths` are the paths under the model's root the input
- * reader could not read (`LintOptions.unreadPaths`, relative to the root as a file's own path is);
- * the model keeps each `.tmdl` file and folder among them as `Model.unreadPaths`.
+ * The order the CLI's walk meets two files in (packages/cli/src/walk.ts): each folder's entries by
+ * localeCompare(…, "en"), and a folder's files where its name sorts. So paths compare segment by
+ * segment: "tables/Sales.tmdl" comes before "tables.old/Sales.tmdl", though "tables.old" sorts
+ * before "tables/Sales.tmdl" as a whole path. Two names that comparison calls equal ("Café" with
+ * é, and with e and a combining accent) fall back to their code units, so the order never depends
+ * on the order the files came in. Keep in step with the browser's walkOrder
+ * (packages/web/src/input/project-files.ts), which has no such fallback.
  */
-export function buildModel(files: ParsedFile[], unreadPaths: readonly string[] = []): Model {
+function walkOrder(a: string, b: string): number {
+  const as = a.split("/");
+  const bs = b.split("/");
+  for (let i = 0; i < Math.min(as.length, bs.length); i++) {
+    const [x, y] = [as[i]!, bs[i]!];
+    if (x !== y) return x.localeCompare(y, "en") || (x < y ? -1 : 1);
+  }
+  return as.length - bs.length;
+}
+
+/**
+ * The model the parsed files declare, read in the order the CLI's walk meets them whatever order
+ * they are given in, since that order reaches the results: a table declared in two files takes
+ * the first one's place, and a bare column name resolves on the first other table that has it.
+ * `unreadPaths` are the paths under the model's root the input reader could not read
+ * (`LintOptions.unreadPaths`, relative to the root as a file's own path is); the model keeps each
+ * `.tmdl` file and folder among them as `Model.unreadPaths`.
+ */
+export function buildModel(given: ParsedFile[], unreadPaths: readonly string[] = []): Model {
+  const files = [...given].sort((a, b) => walkOrder(a.file, b.file));
   const model: Model = {
     name: "Model",
     annotations: {},

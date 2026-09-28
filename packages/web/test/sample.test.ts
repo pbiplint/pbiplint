@@ -150,6 +150,20 @@ describe("bundled sample", () => {
     // the default sort compares "B" (0x42) against "a" (0x61) and puts the capital first.
     expect([...paths].sort()).toEqual(["definition/tables/B.tmdl", "definition/tables/a.tmdl"]);
   });
+  it("orders the model's files as selectProject does when a folder's name begins with a sibling's", () => {
+    // The CLI's walk order (tracked in #101): tables before tables.old, though tables.old sorts
+    // first as a whole path.
+    const files = sampleFiles({
+      "/x/examples/messy-sales/Messy Sales Demo.SemanticModel/definition/tables.old/A.tmdl":
+        "table A\n",
+      "/x/examples/messy-sales/Messy Sales Demo.SemanticModel/definition/tables/B.tmdl":
+        "table B\n",
+    });
+    expect(files.map((f) => f.path)).toEqual([
+      "definition/tables/B.tmdl",
+      "definition/tables.old/A.tmdl",
+    ]);
+  });
   it("gives each part its own relative paths, the model's first, and refuses a file outside both parts", () => {
     const files = sampleFiles({
       "/x/examples/messy-sales/Messy Sales Demo.Report/definition/report.json": "{}",

@@ -359,3 +359,46 @@ describe("buildModel on root object types", () => {
     expect(m.dataSources.map((d) => [d.name, d.kind])).toEqual([["Legacy SQL", "provider"]]);
   });
 });
+
+describe("buildModel and the order of its files (tracked in #101)", () => {
+  // A backup kept beside the tables folder. As whole paths, "definition/tables.old/Sales.tmdl"
+  // sorts before "definition/tables/Sales.tmdl"; the CLI's walk goes through tables first.
+  const current = () =>
+    parseTmdl(
+      "definition/tables/Sales.tmdl",
+      "table Sales\n\tcolumn Amount\n\t\tdataType: double\n",
+    );
+  const backup = () =>
+    parseTmdl(
+      "definition/tables.old/Sales.tmdl",
+      "table Sales\n\tcolumn 'Old Amount'\n\t\tdataType: double\n",
+    );
+  it("reads its files in the order the CLI's walk meets them, whatever order they are given in", () => {
+    for (const files of [
+      [current(), backup()],
+      [backup(), current()],
+    ]) {
+      const m = buildModel(files);
+      expect(m.files.map((f) => f.file)).toEqual([
+        "definition/tables/Sales.tmdl",
+        "definition/tables.old/Sales.tmdl",
+      ]);
+      // A table declared twice keeps its first declaration's place, so the order is the model's.
+      expect(m.tables[0]!.location.file).toBe("definition/tables/Sales.tmdl");
+      expect(m.tables[0]!.columns.map((c) => c.name)).toEqual(["Amount", "Old Amount"]);
+    }
+  });
+  it("orders two names the CLI's comparison calls equal the same way whichever comes first", () => {
+    // "Café" written with é, and with e and a combining accent: localeCompare(…, "en") returns 0,
+    // and a file system that does not normalize names can hold both. Written as escapes, so an
+    // editor that normalizes the file cannot make the two one name.
+    const composed = () => parseTmdl("tables/Caf\u00e9.tmdl", "table A\n");
+    const decomposed = () => parseTmdl("tables/Cafe\u0301.tmdl", "table B\n");
+    // By code units, e (0x65) before é (0xE9).
+    for (const files of [
+      [composed(), decomposed()],
+      [decomposed(), composed()],
+    ])
+      expect(buildModel(files).tables.map((t) => t.name)).toEqual(["B", "A"]);
+  });
+});

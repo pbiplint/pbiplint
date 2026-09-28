@@ -137,6 +137,30 @@ describe("resolveProject", () => {
     expect(p.report).toBeUndefined();
     expect(p.absent).toEqual({});
   });
+  it("walks a model's folders in name order, tables before a tables.old beside it (tracked in #101)", () => {
+    // project-files.test.ts gives the browser the same backup. As whole paths, tables.old sorts
+    // first; the walk goes through tables first, and core reads the files in that order.
+    const root = pbip({ model: true });
+    const definition = join(root, "Demo.SemanticModel", "definition");
+    mkdirSync(join(definition, "tables.old"));
+    writeFileSync(
+      join(definition, "tables", "Sales.tmdl"),
+      "table Sales\n\tcolumn Amount\n\t\tdataType: double\n",
+    );
+    writeFileSync(
+      join(definition, "tables.old", "Sales.tmdl"),
+      "table Sales\n\tcolumn 'Old Amount'\n\t\tdataType: double\n",
+    );
+    const p = resolveProject(root);
+    expect(p.model!.files.map((f) => f.path)).toEqual([
+      "definition/model.tmdl",
+      "definition/tables/Sales.tmdl",
+      "definition/tables/T.tmdl",
+      "definition/tables.old/Sales.tmdl",
+    ]);
+    const sales = lint(p.model!.files).model.tables.find((t) => t.name === "Sales")!;
+    expect(sales.columns.map((c) => c.name)).toEqual(["Amount", "Old Amount"]);
+  });
   it("reads a whole PBIP folder, its .pbip file, and both parts with part-relative paths, never StaticResources or .pbi", () => {
     const root = pbip({ model: true, report: true });
     for (const input of [root, join(root, "Demo.pbip")]) {

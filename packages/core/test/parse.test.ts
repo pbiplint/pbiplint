@@ -766,6 +766,76 @@ describe("a code fence left open", () => {
     ]);
   });
 
+  it("leaves a `///` run directly above the other fence's declaration to it when the indented text runs that far", () => {
+    const text = [
+      "function A = ```",
+      "\t() => 1",
+      "\t/// Note",
+      "\textendedProperty X = ```",
+      "\t\t{}",
+      "\t\t```",
+      "",
+    ].join("\n");
+    const [a] = parseTmdl("t.tmdl", text).roots;
+    expect(a!.value).toBe("() => 1");
+    expect(read(a!.children)).toEqual([["extendedproperty", "X", "{}", {}, "Note"]]);
+  });
+
+  it("is one issue for each fence left open, in line order, and an empty expression when nothing sits under it", () => {
+    const pf = parseTmdl(
+      "t.tmdl",
+      "function A = ```\nfunction B = ```\n\t\t() => 2\n\nfunction C = ```",
+    );
+    expect(pf.issues.map((i) => [i.line, i.reason])).toEqual([
+      [1, OPEN],
+      [2, OPEN],
+      [5, OPEN],
+    ]);
+    expect(read(pf.roots)).toEqual([
+      ["function", "A", "", {}, undefined],
+      ["function", "B", "() => 2", {}, undefined],
+      ["function", "C", "", {}, undefined],
+    ]);
+  });
+
+  it("gives what follows back on a partition's source and on a calculation item", () => {
+    const text = [
+      "table 'Time Intelligence'",
+      "\tcalculationGroup",
+      "\t\tcalculationItem YTD = ```",
+      "\t\t\t\tCALCULATE(SELECTEDMEASURE(), DATESYTD('Date'[Date]))",
+      "\t\tcalculationItem PY = ```",
+      "\t\t\t\tCALCULATE(SELECTEDMEASURE(), SAMEPERIODLASTYEAR('Date'[Date]))",
+      "\t\t\t\t```",
+      "",
+      "\tpartition 'Time Intelligence' = m",
+      "\t\tmode: import",
+      "\t\tsource = ```",
+      "\t\t\t\tlet",
+      "\t\t\t\t    Source = 1",
+      "\t\t\t\tin",
+      "\t\t\t\t    Source",
+      "",
+      "\tannotation PBI_ResultType = Table",
+      "",
+    ].join("\n");
+    expect(issues(text).map((i) => i.slice(0, 3))).toEqual([
+      [3, "\t\tcalculationItem YTD = ```", OPEN],
+      [11, "\t\tsource = ```", OPEN],
+    ]);
+    const [table] = parseTmdl("t.tmdl", text).roots;
+    const [group, partition, annotation] = table!.children;
+    expect(group!.children.map((c) => [c.name, c.value])).toEqual([
+      ["YTD", "CALCULATE(SELECTEDMEASURE(), DATESYTD('Date'[Date]))"],
+      ["PY", "CALCULATE(SELECTEDMEASURE(), SAMEPERIODLASTYEAR('Date'[Date]))"],
+    ]);
+    expect(partition!.props).toEqual({
+      mode: "import",
+      source: "let\n    Source = 1\nin\n    Source",
+    });
+    expect([annotation!.name, annotation!.value]).toEqual(["PBI_ResultType", "Table"]);
+  });
+
   it("reads a closed fence verbatim, a line at the root of the file or one holding three backticks included", () => {
     // Only a line that opens a fence, a declaration whose `=` is followed by three backticks, says
     // an earlier fence was never closed. None of the 11,458 fences in the 23,457 TMDL files surveyed

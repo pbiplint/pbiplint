@@ -63,6 +63,22 @@ const opensFence = (line: string): boolean => {
 };
 /** Whether a line is a `///` description line, as `parseTmdl` reads one. */
 const isDescription = (line: string): boolean => line.slice(tabIndent(line)).startsWith("///");
+/**
+ * Where an indented block from line `from` ends: at the first line before `limit` that is not
+ * blank and is indented less than `depth`, or at `limit`. An indented expression and a code fence
+ * left open both read their text with it, so the two stay one reading.
+ */
+const blockEnd = (lines: readonly string[], from: number, limit: number, depth: number): number => {
+  let k = from;
+  while (k < limit && (lines[k]!.trim() === "" || leadingWs(lines[k]!) >= depth)) k++;
+  return k;
+};
+/** Lines `from` up to `end`, each less `depth` characters of indentation, with no blank line last. */
+const blockText = (lines: readonly string[], from: number, end: number, depth: number): string => {
+  const out = lines.slice(from, end).map((l) => (l.trim() === "" ? "" : l.slice(depth)));
+  while (out.at(-1) === "") out.pop();
+  return out.join("\n");
+};
 
 /**
  * Generic TMDL tree parser. Unknown object types and properties parse as generic nodes,
@@ -144,20 +160,9 @@ export function parseTmdl(file: string, text: string): ParsedFile {
       if (j >= lines.length) return "";
       const blockIndent = leadingWs(lines[j]!);
       if (blockIndent <= indent) return "";
-      const out: string[] = [];
-      let lastNonBlank = -1;
-      for (; j < lines.length; j++) {
-        const l = lines[j]!;
-        if (l.trim() === "") {
-          out.push("");
-          continue;
-        }
-        if (leadingWs(l) < blockIndent) break;
-        out.push(l.slice(blockIndent));
-        lastNonBlank = out.length - 1;
-      }
-      i = j - 1;
-      return out.slice(0, lastNonBlank + 1).join("\n");
+      const end = blockEnd(lines, j, lines.length, blockIndent);
+      i = end - 1;
+      return blockText(lines, j, end, blockIndent);
     };
 
     // Fenced expression: header ends with ```; closed by a line that is only ```; that closing
@@ -176,20 +181,16 @@ export function parseTmdl(file: string, text: string): ParsedFile {
       // indented deeper than the header is read as an indented expression is, up to the first line
       // indented less than its first line, which is where Power BI Desktop writes the object's
       // properties and the next declaration. Text that is not runs to the other fence's
-      // declaration, less a `///` run directly above it, which is that declaration's description,
-      // or to the end of the file.
+      // declaration, or to the end of the file. Either way a `///` run directly above that
+      // declaration is its description.
       let first = i + 1;
       while (first < j && lines[first]!.trim() === "") first++;
       const blockIndent = first < j ? leadingWs(lines[first]!) : 0;
-      const indented = blockIndent > indent;
-      let end = j;
-      if (indented) {
-        end = first + 1;
-        while (end < j && (lines[end]!.trim() === "" || leadingWs(lines[end]!) >= blockIndent))
-          end++;
-      } else if (j < lines.length) {
+      // Zero for text no deeper than the header, which is not read as a block.
+      const depth = blockIndent > indent ? blockIndent : 0;
+      let end = depth > 0 ? blockEnd(lines, first, j, depth) : j;
+      if (end === j && j < lines.length)
         while (end > i + 1 && isDescription(lines[end - 1]!)) end--;
-      }
       const read = lines.slice(i + 1, end);
       // "code fence", the words rules/parse-issue.md uses, so the finding and the page agree.
       issues.push({
@@ -200,10 +201,9 @@ export function parseTmdl(file: string, text: string): ParsedFile {
         canDropObjects: true,
         canDropTableLine: read.some(mayBeRootLine),
       });
-      const out = read.map((l) => (l.trim() === "" ? "" : indented ? l.slice(blockIndent) : l));
-      while (out.at(-1) === "") out.pop();
+      const value = blockText(lines, i + 1, end, depth);
       i = end - 1;
-      return out.join("\n");
+      return value;
     };
 
     const base = {

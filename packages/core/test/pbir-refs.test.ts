@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { lineOfPointer } from "../src/pbir/json.js";
 import { collectFieldRefs } from "../src/pbir/refs.js";
 
 const column = (entity: string, property: string) => ({
@@ -99,6 +100,13 @@ describe("collectFieldRefs", () => {
   it("escapes a key with a slash in the pointer and ignores nodes that only look like references", () => {
     const refs = collectFieldRefs({ "a/b": [column("T", "C")], Column: "not a ref" }, "");
     expect(refs).toEqual([{ kind: "column", table: "T", name: "C", pointer: "/a~1b/0" }]);
+  });
+  it("escapes a tilde as ~0 and a slash as ~1, and lineOfPointer finds the key again", () => {
+    const node = { "a~b": { "c/d": column("T", "C") } };
+    const [ref] = collectFieldRefs(node);
+    expect(ref!.pointer).toBe("/a~0b/c~1d");
+    const text = JSON.stringify(node, null, 2);
+    expect(lineOfPointer(text, ref!.pointer)).toBe(3);
   });
   it("reads Desktop's auto date/time hierarchy through its PropertyVariationSource", () => {
     // The shape Power BI Desktop writes when Auto date/time is on and a chart shows a date

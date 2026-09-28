@@ -32,6 +32,17 @@ describe("routeFiles", () => {
     expect(isReportFile("definition/report.json")).toBe(true);
     expect(isReportFile("definition/tables/x.tmdl")).toBe(false);
   });
+  it("knows definition.pbir and .platform by their whole names, not a name ending in either", () => {
+    for (const path of ["definition.pbir", ".platform", "Sub/definition.pbir", "Sub/.platform"])
+      expect([path, isReportFile(path)]).toEqual([path, true]);
+    for (const path of [
+      "mydefinition.pbir",
+      "old.definition.pbir",
+      "x.platform",
+      "Sub/my.platform",
+    ])
+      expect([path, isReportFile(path)]).toEqual([path, false]);
+  });
 });
 
 describe("pairingDecision", () => {

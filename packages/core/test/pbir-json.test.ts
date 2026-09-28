@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  escapePointer,
   lineOfPointer,
   newerMajor,
   newerThan,
@@ -110,6 +111,29 @@ describe("readJson", () => {
     expect(r.issues).toEqual([]);
     expect(r.json).toEqual({ a: 1 });
   });
+  it("quotes at most 120 characters of the line a parse issue is on, as a minified file is one line", () => {
+    const long = `{"a": ${"1,".repeat(100)}}`;
+    const r = readJson("x.json", long);
+    expect(r.issues[0]!.text).toBe(`${long.slice(0, 119)}…`);
+    expect(readJson("x.json", '{\n  "b": }\n').issues[0]!.text).toBe('  "b": }');
+    // Every parse issue readJson reports quotes its line the same way.
+    const marker = `<<<<<<< ${"x".repeat(200)}`;
+    expect(readJson("x.json", `{\n${marker}\n}`).issues[0]!.text).toBe(`${marker.slice(0, 119)}…`);
+    const array = `[${"1,".repeat(100)}1]`;
+    expect(readJson("x.json", array).issues[0]!.text).toBe(`${array.slice(0, 119)}…`);
+  });
+  it("quotes a deep line of a pretty-printed file from its first bracket, not its indentation", () => {
+    let deep: unknown = 1;
+    for (let i = 0; i < 300; i++) deep = [deep];
+    const [issue] = readJson("x.json", JSON.stringify({ deep }, null, 2)).issues;
+    expect(issue!.reason).toBe("nested more than 256 levels deep");
+    expect(issue!.text).toBe("[");
+  });
+  it("never cuts a character that takes two UTF-16 units in half", () => {
+    const line = `${"x".repeat(118)}😀${"y".repeat(10)}`;
+    const text = readJson("x.json", `{\n${line}\n}`).issues[0]!.text;
+    expect(text).toBe(`${"x".repeat(118)}…`);
+  });
   it("does not read the document's own text as the engine's line or offset", () => {
     // V8 quotes a slice of the broken document in its message, so a document that says "line 5"
     // or "position 400" of its own is quoted back and must not be mistaken for the engine saying
@@ -120,6 +144,50 @@ describe("readJson", () => {
     const offset = readJson("x.json", '{\n  "a": 1,\n  "b": position 400\n}');
     expect(offset.issues[0]!.line).toBe(3);
     expect(offset.issues[0]!.text).toBe('  "b": position 400');
+  });
+});
+
+describe("readJson and how deep a document nests", () => {
+  // The deepest of 26,654 Desktop-saved report files nests 34 levels. The field-reference walk
+  // overflowed the stack somewhere past 3,000, so a file deeper than the cap is not read at all.
+  const deep = (n: number): string =>
+    `{\n  "ok": 1,\n  "deep": ${"[".repeat(n)}${"]".repeat(n)}\n}`;
+  it("reads a document that nests 256 levels, the root counted", () => {
+    const r = readJson("x.json", deep(255));
+    expect(r.issues).toEqual([]);
+    expect(r.json).toMatchObject({ ok: 1 });
+  });
+  it("reports one that nests deeper on the line where it passes 256, and reads nothing from it", () => {
+    const file = "definition/pages/p/visuals/v/visual.json";
+    const r = readJson(file, deep(256));
+    expect(r.json).toBeUndefined();
+    expect(r.issues).toEqual([
+      {
+        file,
+        line: 3,
+        // A line longer than 120 characters is quoted from its first character that is not
+        // whitespace, to 119 characters and an ellipsis.
+        text: `"deep": ${"[".repeat(111)}…`,
+        reason: "nested more than 256 levels deep",
+      },
+    ]);
+  });
+  it("counts only the brackets outside strings", () => {
+    const r = readJson("x.json", JSON.stringify({ a: "[".repeat(300), b: '{\\"['.repeat(300) }));
+    expect(r.issues).toEqual([]);
+  });
+  it("reports a document too deep for any walk as a parse issue rather than failing", () => {
+    const n = 100_000;
+    const r = readJson("x.json", `{"a":${"[".repeat(n)}${"]".repeat(n)}}`);
+    expect(r.json).toBeUndefined();
+    expect(r.issues.map((i) => [i.line, i.reason])).toEqual([
+      [1, "nested more than 256 levels deep"],
+    ]);
+  });
+  it("holds a file whose format sets no root to the same depth", () => {
+    const r = readJson("x.json", `${"[".repeat(257)}${"]".repeat(257)}`, { objectRoot: false });
+    expect(r.json).toBeUndefined();
+    expect(r.issues.map((i) => i.reason)).toEqual(["nested more than 256 levels deep"]);
   });
 });
 
@@ -168,6 +236,46 @@ describe("lineOfPointer", () => {
     // Neither is JSON whitespace, but a regex `\s` matches both, which once stalled the scalar skip.
     expect(lineOfPointer('{\n  "a":\u00a0 1,\n  "b": 2\n}', "/b")).toBe(3);
     expect(lineOfPointer('{\n  "a": [\u2028 1, 2],\n  "b": 3\n}', "/b")).toBe(3);
+  });
+  it("counts a CRLF or a lone CR as one line break, as readJson does", () => {
+    for (const eol of ["\r\n", "\r"]) {
+      const text = doc.replace(/\n/g, eol);
+      expect(lineOfPointer(text, "/position/height")).toBe(5);
+      expect(lineOfPointer(text, "/items/1/k")).toBe(9);
+    }
+  });
+  it("steps past empty containers, and finds number, true, false, and null elements", () => {
+    const text = [
+      "{",
+      '  "a": {},',
+      '  "b": [],',
+      '  "n": [',
+      "    1,",
+      "    -2.5e3,",
+      "    true,",
+      "    false,",
+      "    null",
+      "  ],",
+      '  "c": 1',
+      "}",
+    ].join("\n");
+    expect(lineOfPointer(text, "/a")).toBe(2);
+    expect(lineOfPointer(text, "/b")).toBe(3);
+    expect(lineOfPointer(text, "/b/0")).toBe(1);
+    expect([0, 1, 2, 3, 4].map((i) => lineOfPointer(text, `/n/${i}`))).toEqual([5, 6, 7, 8, 9]);
+    expect(lineOfPointer(text, "/c")).toBe(11);
+  });
+  it("does not throw on text that is not JSON", () => {
+    // Every caller passes text readJson parsed, but the promise is the function's own.
+    expect(lineOfPointer('{\n  "a": "open', "/b")).toBe(1);
+    expect(lineOfPointer('{\n  "a\u0001": 1,\n  "b": 2\n}', "/b")).toBe(3);
+  });
+  it("finds a key escapePointer wrote, whatever tildes and slashes it holds", () => {
+    const keys = ["a/b", "c~d", "~1", "~0", "/~", "~/", "plain"];
+    const text = `{\n${keys.map((k, i) => `  ${JSON.stringify(k)}: ${i}`).join(",\n")}\n}`;
+    expect(keys.map((k) => lineOfPointer(text, `/${escapePointer(k)}`))).toEqual([
+      2, 3, 4, 5, 6, 7, 8,
+    ]);
   });
   it("reads past a BOM, which the finding factories' file text keeps", () => {
     expect(lineOfPointer(`\ufeff${doc}`, "/position/height")).toBe(5);

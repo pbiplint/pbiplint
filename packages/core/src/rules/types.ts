@@ -81,6 +81,7 @@ export type RuleStatus = "ported" | "needsLiveModel" | "builtin";
 
 /** An option a rule accepts from pbiplint.config.json, with its default. */
 export interface RuleOption {
+  /** Never `severity`, which a rule's object in pbiplint.config.json reads as the rule's severity. */
   name: string;
   type: "number" | "string";
   default?: number | string;

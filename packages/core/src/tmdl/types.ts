@@ -22,6 +22,10 @@ export interface TmdlNode {
 export interface ParseIssue {
   file: string;
   line: number;
+  /**
+   * The line the issue is on, as PARSE_ISSUE quotes it. A TMDL issue quotes its whole line; a
+   * JSON issue at most 120 characters of it, since a minified document is one line (readJson).
+   */
   text: string;
   reason: string;
 }

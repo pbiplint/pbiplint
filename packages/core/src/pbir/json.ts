@@ -45,6 +45,50 @@ const CONFLICT_MARKER = /^(?:<{7}|={7}|>{7})(?:\s|$)/;
 const LINE_BREAK = /\r\n?|\n/;
 
 /**
+ * The text of the line a parse issue is on, as the issue quotes it: the line, or past 120
+ * characters the line from its first character that is not whitespace, cut to 119 and an ellipsis
+ * when it is still longer. A minified document is one line, and a finding quotes the text whole;
+ * a deep line of a pretty-printed one is mostly indentation. The cut never splits a character that
+ * takes two UTF-16 units, which would reach the output as half a character.
+ */
+function quoted(line: string | undefined): string {
+  if (line === undefined || line.length <= 120) return line ?? "";
+  const text = line.trimStart();
+  if (text.length <= 120) return text;
+  const high = text.charCodeAt(118);
+  const end = high >= 0xd800 && high <= 0xdbff ? 118 : 119;
+  return `${text.slice(0, end)}…`;
+}
+
+/** The 1-based line of the character at `offset` in `body`. */
+const lineAt = (body: string, offset: number): number =>
+  body.slice(0, offset).split(LINE_BREAK).length;
+
+/**
+ * How deep a document may nest, its root counted. The deepest of 26,654 Desktop-saved report files
+ * nests 34 levels, and the walks that read a document recurse, so one nested far deeper (the
+ * field-reference walk overflowed the stack somewhere past 3,000) is not read at all.
+ */
+const MAX_DEPTH = 256;
+
+/**
+ * The offset of the bracket that takes a document past `MAX_DEPTH` levels, or -1. Only brackets
+ * outside strings count. The document has parsed, so each string is closed and its escapes whole.
+ */
+function tooDeepAt(body: string): number {
+  let depth = 0;
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i];
+    if (ch === '"') {
+      for (i++; body[i] !== '"'; i++) if (body[i] === "\\") i++;
+    } else if (ch === "{" || ch === "[") {
+      if (++depth > MAX_DEPTH) return i;
+    } else if (ch === "}" || ch === "]") depth--;
+  }
+  return -1;
+}
+
+/**
  * An offset an engine names in a parse error message. Anchored to the engine's own phrasing, as in
  * V8's `in JSON at position 14` and `after JSON at position 9`, because the message also quotes a
  * slice of the document, and a document is free to say `position 400` itself.
@@ -74,15 +118,15 @@ const QUOTED_RUN = /^Unexpected token '(.)', (?:\.\.\.)?"([\s\S]*)"(?:\.\.\.)? i
  */
 function lineOfParseError(body: string, message: string): number {
   const lineCount = body.split(LINE_BREAK).length;
-  const lineOf = (offset: number): number => body.slice(0, offset).split(LINE_BREAK).length;
+  const lineOf = (offset: number): number => lineAt(body, offset);
   const at = AT_POSITION.exec(message);
   if (at && Number(at[1]) <= body.length) return lineOf(Number(at[1]));
   const named = AT_LINE.exec(message);
   if (named && Number(named[1]) >= 1 && Number(named[1]) <= lineCount) return Number(named[1]);
-  const quoted = QUOTED_RUN.exec(message);
-  if (!quoted) return 1;
-  const char = quoted[1]!;
-  const run = quoted[2]!;
+  const around = QUOTED_RUN.exec(message);
+  if (!around) return 1;
+  const char = around[1]!;
+  const run = around[2]!;
   const start = body.indexOf(run);
   if (start < 0) return 1;
   const middle = run.length / 2;
@@ -94,10 +138,11 @@ function lineOfParseError(body: string, message: string): number {
 }
 
 /**
- * Reads one PBIR JSON file tolerantly. Conflict markers, invalid JSON, and, unless the options say
- * the file's format sets no root, a document that parses to something other than an object become
- * parse issues with a line, in the same shape the TMDL parser reports, so PARSE_ISSUE lists them
- * beside everything else; the document is then undefined and the caller reads nothing from it.
+ * Reads one PBIR JSON file tolerantly. Conflict markers, invalid JSON, a document nested deeper
+ * than `MAX_DEPTH`, and, unless the options say the file's format sets no root, a document that
+ * parses to something other than an object become parse issues with a line, in the same shape
+ * the TMDL parser reports, so PARSE_ISSUE lists them beside everything else; the document is then
+ * undefined and the caller reads nothing from it.
  */
 export function readJson(file: string, text: string, options: ReadJsonOptions = {}): JsonRead {
   // Desktop writes JSON with a BOM at times; it is not part of the document.
@@ -105,7 +150,7 @@ export function readJson(file: string, text: string, options: ReadJsonOptions = 
   const lines = body.split(LINE_BREAK);
   const issues: ParseIssue[] = lines.flatMap((line, i) =>
     CONFLICT_MARKER.test(line)
-      ? [{ file, line: i + 1, text: line, reason: "merge conflict marker" }]
+      ? [{ file, line: i + 1, text: quoted(line), reason: "merge conflict marker" }]
       : [],
   );
   if (issues.length > 0) return { json: undefined, issues };
@@ -120,7 +165,22 @@ export function readJson(file: string, text: string, options: ReadJsonOptions = 
     const flat = message.replace(/\s+/g, " ");
     return {
       json: undefined,
-      issues: [{ file, line, text: lines[line - 1] ?? "", reason: `not valid JSON (${flat})` }],
+      issues: [{ file, line, text: quoted(lines[line - 1]), reason: `not valid JSON (${flat})` }],
+    };
+  }
+  const deep = tooDeepAt(body);
+  if (deep >= 0) {
+    const line = lineAt(body, deep);
+    return {
+      json: undefined,
+      issues: [
+        {
+          file,
+          line,
+          text: quoted(lines[line - 1]),
+          reason: `nested more than ${MAX_DEPTH} levels deep`,
+        },
+      ],
     };
   }
   if (!isRecord(json)) {
@@ -134,7 +194,7 @@ export function readJson(file: string, text: string, options: ReadJsonOptions = 
         {
           file,
           line: start + 1,
-          text: lines[start] ?? "",
+          text: quoted(lines[start]),
           reason: `not a JSON object (the file holds ${kindOf(json)})`,
         },
       ],
@@ -172,18 +232,26 @@ export function newerThan(a: string, b: string): boolean {
 export const newerMajor = (a: string, b: string): boolean =>
   Number(a.split(".")[0]) > Number(b.split(".")[0]);
 
+/** A JSON pointer segment, with `~` and `/` escaped as RFC 6901 says. */
+export const escapePointer = (s: string): string => s.replace(/~/g, "~0").replace(/\//g, "~1");
+
+/** A JSON pointer segment read back: `~1` before `~0`, as RFC 6901 says, so `~01` is `~1`. */
+const unescapePointer = (s: string): string => s.replace(/~1/g, "/").replace(/~0/g, "~");
+
+/** Whether the character at `i` ends a line, counted as LINE_BREAK counts: a CRLF once, at its LF. */
+const endsLine = (text: string, i: number): boolean =>
+  text[i] === "\n" || (text[i] === "\r" && text[i + 1] !== "\n");
+
 /**
  * The 1-based line of what a JSON pointer names, for a finding's location: the line of the key
  * for an object member, the line the value starts on for an array element. 1 for the root or for
  * a pointer that names nothing. A token scanner rather than a parse, because JSON.parse keeps no
- * positions; it tracks the path as it walks and stops at the first match.
+ * positions; it tracks the path as it walks and stops at the first match. Lines are counted as
+ * readJson counts them.
  */
 export function lineOfPointer(text: string, pointer: string): number {
   if (pointer === "") return 1;
-  const want = pointer
-    .split("/")
-    .slice(1)
-    .map((s) => s.replace(/~1/g, "/").replace(/~0/g, "~"));
+  const want = pointer.split("/").slice(1).map(unescapePointer);
   const path: string[] = [];
   const kinds: ("object" | "array")[] = [];
   const parent = (): "object" | "array" | undefined => kinds[kinds.length - 1];
@@ -194,7 +262,7 @@ export function lineOfPointer(text: string, pointer: string): number {
   // read as a scalar, it would swallow the opening brace with it, and the scan would lose the root.
   for (let i = text.charCodeAt(0) === 0xfeff ? 1 : 0; i < text.length; i++) {
     const ch = text[i]!;
-    if (ch === "\n") {
+    if (endsLine(text, i)) {
       line++;
       continue;
     }
@@ -205,13 +273,20 @@ export function lineOfPointer(text: string, pointer: string): number {
         if (text[j] === "\\") j++;
         j++;
       }
-      const value = JSON.parse(text.slice(i, j + 1)) as string;
+      // A string JSON cannot decode (one with a raw control character, or one the text ends inside)
+      // is compared as written, so the scan goes on past it rather than failing.
+      let value: string;
+      try {
+        value = JSON.parse(text.slice(i, j + 1)) as string;
+      } catch {
+        value = text.slice(i + 1, j);
+      }
       if (parent() === "object" && expectKey) {
         path[path.length - 1] = value;
         expectKey = false;
         if (matches()) return line;
       } else if (parent() === "array" && matches()) return line;
-      for (let k = i; k <= j; k++) if (text[k] === "\n") line++;
+      for (let k = i; k <= j; k++) if (endsLine(text, k)) line++;
       i = j;
       continue;
     }

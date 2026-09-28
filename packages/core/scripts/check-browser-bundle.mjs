@@ -16,6 +16,10 @@ const result = await build({
   logLevel: "silent",
 });
 const code = result.outputFiles[0].text;
+// The bundle's size in bytes, as the site serves it. The text's length counts UTF-16 code units;
+// the two agree while esbuild writes each character outside ASCII as an escape, as it does by
+// default, and the bytes stay right if that changes.
+const size = result.outputFiles[0].contents.byteLength;
 // Each entry is a label and the strings that prove the bundle reaches for that API. A Node
 // builtin import always survives as a quoted module specifier (`from"node:fs"`), so the
 // quotes are part of the token: a bare "node:" also matches an object property named `node`,
@@ -34,13 +38,13 @@ const hits = FORBIDDEN.filter(([, tokens]) => tokens.some((t) => code.includes(t
 );
 const kb = (n) => (n / 1024).toFixed(1);
 console.log(
-  `core browser bundle: ${kb(code.length)} KB minified, ${kb(gzipSync(code).length)} KB gzipped`,
+  `core browser bundle: ${kb(size)} KB minified, ${kb(gzipSync(code).length)} KB gzipped`,
 );
 
 // The site loads the core on every visit; 200 KB minified is the budget the v2 spec sets.
 const LIMIT_KB = 200;
-if (code.length > LIMIT_KB * 1024) {
-  console.error(`core bundle is ${kb(code.length)} KB minified, over the ${LIMIT_KB} KB budget`);
+if (size > LIMIT_KB * 1024) {
+  console.error(`core bundle is ${kb(size)} KB minified, over the ${LIMIT_KB} KB budget`);
   process.exit(1);
 }
 if (hits.length) {

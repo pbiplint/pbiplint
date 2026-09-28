@@ -1,10 +1,8 @@
+import { escapePointer } from "./json.js";
 import type { FieldRef } from "./types.js";
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
-
-/** A JSON pointer segment, with `~` and `/` escaped as RFC 6901 says. */
-export const escapePointer = (s: string): string => s.replace(/~/g, "~0").replace(/\//g, "~1");
 
 /**
  * Where a field's source leads: the table, the schema it names if any, and, through a variation,

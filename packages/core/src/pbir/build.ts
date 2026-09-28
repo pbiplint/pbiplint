@@ -1,7 +1,14 @@
 import type { LintFile } from "../engine/lint.js";
 import type { Diagnostic } from "../project/types.js";
-import { lineOfPointer, newerMajor, newerThan, readJson, schemaFamilyOf } from "./json.js";
-import { collectFieldRefs, escapePointer } from "./refs.js";
+import {
+  escapePointer,
+  lineOfPointer,
+  newerMajor,
+  newerThan,
+  readJson,
+  schemaFamilyOf,
+} from "./json.js";
+import { collectFieldRefs } from "./refs.js";
 import type {
   Bookmark,
   DatasetReference,
@@ -460,13 +467,13 @@ const PAGE_FOLDER = /^definition\/pages\/([^/]+)\/$/;
 const VISUAL_FOLDER = /^definition\/pages\/([^/]+)\/visuals\/([^/]+)\/$/;
 
 /**
- * Whether the PBIR format defines the file: definition.pbir, the report's .platform, the project's
- * .pbip, and the definition files. Microsoft publishes a schema for each, with an object root; any
- * other JSON under definition/ is the author's own.
+ * Whether the PBIR format defines the file: definition.pbir and the report's .platform, at the
+ * report root, the project's .pbip, and the definition files. Microsoft publishes a schema for
+ * each, with an object root; any other JSON under definition/ is the author's own.
  */
 const definedByPbir = (path: string): boolean =>
-  path.endsWith("definition.pbir") ||
-  path.endsWith(".platform") ||
+  path === "definition.pbir" ||
+  path === ".platform" ||
   path.endsWith(".pbip") ||
   definitionFile(path);
 
@@ -592,7 +599,8 @@ export function buildReport(
       });
     }
     const json = read.json;
-    if (f.path.endsWith("definition.pbir")) {
+    // The report's own, at its root, as every definition file below is matched by its whole path.
+    if (f.path === "definition.pbir") {
       report.datasetReference = datasetReferenceOf(json);
       continue;
     }
@@ -600,7 +608,7 @@ export function buildReport(
     // and nothing below reads one.
     if (!isRecord(json)) continue;
     let m: RegExpExecArray | null;
-    if (f.path.endsWith(".platform")) {
+    if (f.path === ".platform") {
       if (isRecord(json.metadata) && json.metadata.type === "Report")
         report.displayName = str(json.metadata.displayName);
     } else if (f.path === "definition/report.json") {

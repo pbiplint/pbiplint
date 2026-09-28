@@ -178,6 +178,37 @@ describe("bindConfig with options", () => {
         .unknownRules,
     ).toEqual(["NOPE"]);
   });
+  it("checks the id of a rule given an empty object, as it checks every other", () => {
+    const bound = bindConfig(
+      resolveConfig({ rules: { NOPE: {}, every_table: {}, with_max: {} } }),
+      [everyTable, withMax],
+    );
+    expect(bound.unknownRules).toEqual(["NOPE"]);
+    // An empty object changes nothing, even for a rule that takes no options.
+    expect(optionsFor(withMax, bound.config)).toEqual({ max: 20 });
+    expect(optionsFor(everyTable, bound.config)).toEqual({});
+  });
+  it("keeps its own copy of the options it is given, so a later change to the caller's does not reach it", () => {
+    const given = { max: 5 };
+    const { config } = bindConfig(
+      {
+        disabled: new Set(),
+        severity: new Map(),
+        options: new Map([["WITH_MAX", given]]),
+        failOn: 3,
+      },
+      [withMax],
+    );
+    given.max = 99;
+    expect(optionsFor(withMax, config)).toEqual({ max: 5 });
+  });
+  it("leaves the name severity to the severity, so no rule declares an option by that name", () => {
+    // A rule's object in pbiplint.config.json reads `severity` as the rule's severity, so an
+    // option of that name could never be set.
+    expect(
+      defaultRules.flatMap((r) => (r.options ?? []).filter((o) => o.name === "severity")),
+    ).toEqual([]);
+  });
   it("checks a values list on string options only", () => {
     const counted: Rule = {
       ...base,
@@ -514,6 +545,56 @@ describe("lint", () => {
   it("uses the default rule set when none is given", () => {
     const result = lint([{ path: "a.tmdl", text: "table A\n" }]);
     expect(result.summary.rulesRun).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("lint and a report file nested too deep to read (#59)", () => {
+  const j = (v: unknown) => JSON.stringify(v);
+  /**
+   * A visual whose query nests `levels` objects and arrays around one field, which the walk
+   * reaches. Built as text: JSON.stringify recurses, and overflows on Node 20 and 22 long before
+   * JSON.parse does.
+   */
+  const nested = (levels: number): string => {
+    const field = j({
+      Column: { Expression: { SourceRef: { Entity: "Sales" } }, Property: "Amount" },
+    });
+    // Each round is an object holding an array: two levels.
+    const query = `${'{"Or":['.repeat(levels / 2)}${field}${"]}".repeat(levels / 2)}`;
+    return `{"name":"v","visual":{"visualType":"card","query":${query}}}`;
+  };
+  const files = (visual: string) => [
+    { path: "definition/report.json", text: j({}) },
+    { path: "definition/pages/pages.json", text: j({ pageOrder: ["p"] }) },
+    { path: "definition/pages/p/page.json", text: j({ name: "p", displayName: "P" }) },
+    { path: "definition/pages/p/visuals/v/visual.json", text: visual },
+  ];
+  const visuals = (result: ReturnType<typeof lint>) =>
+    result.facts.find((f) => f.label === "Visuals");
+  it("lints a visual that nests as deep as the cap allows, through every rule", () => {
+    // The root and visual add two levels, and the field at the bottom four: 2 + 250 + 4 is 256.
+    const result = lint(files(nested(250)));
+    expect(result.findings.filter((f) => f.ruleId === "PARSE_ISSUE")).toEqual([]);
+    expect(result.summary.ruleErrors).toEqual([]);
+    expect(visuals(result)?.value).toBe("1");
+  });
+  it("reports one nested past it as a parse issue, and treats the visual as unread", () => {
+    for (const levels of [300, 200_000]) {
+      const result = lint(files(nested(levels)));
+      expect(
+        result.findings
+          .filter((f) => f.ruleId === "PARSE_ISSUE")
+          .map((f) => [f.location?.file, f.detail]),
+      ).toEqual([
+        [
+          "definition/pages/p/visuals/v/visual.json",
+          // The line is the whole minified file; the detail quotes its start.
+          expect.stringMatching(/^nested more than 256 levels deep: \{"name":"v",.{80,110}…$/),
+        ],
+      ]);
+      expect(result.summary.ruleErrors).toEqual([]);
+      expect(visuals(result)?.value).toBe("unknown");
+    }
   });
 });
 

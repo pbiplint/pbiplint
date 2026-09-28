@@ -41,7 +41,7 @@ export interface BoundConfig {
  * Options are checked against the rule's own declaration here, where the rules are in hand.
  */
 export function bindConfig(config: ResolvedConfig, rules: Rule[]): BoundConfig {
-  const idByUpper = new Map(rules.map((r) => [r.id.toUpperCase(), r.id]));
+  const ruleByUpper = new Map(rules.map((r) => [r.id.toUpperCase(), r]));
   const bound: ResolvedConfig = {
     disabled: new Set(),
     severity: new Map(),
@@ -50,22 +50,24 @@ export function bindConfig(config: ResolvedConfig, rules: Rule[]): BoundConfig {
   };
   const unknownRules: string[] = [];
   for (const id of config.disabled) {
-    const real = idByUpper.get(id.toUpperCase());
+    const real = ruleByUpper.get(id.toUpperCase())?.id;
     if (real === undefined) unknownRules.push(id);
     else bound.disabled.add(real);
   }
   for (const [id, severity] of config.severity) {
-    const real = idByUpper.get(id.toUpperCase());
+    const real = ruleByUpper.get(id.toUpperCase())?.id;
     if (real === undefined) unknownRules.push(id);
     else bound.severity.set(real, severity);
   }
   for (const [id, options] of config.options) {
-    const real = idByUpper.get(id.toUpperCase());
-    if (real === undefined) {
+    const rule = ruleByUpper.get(id.toUpperCase());
+    if (rule === undefined) {
       unknownRules.push(id);
       continue;
     }
-    const rule = rules.find((r) => r.id === real)!;
+    const real = rule.id;
+    // An object with no options names the rule, which is why it is here, and changes nothing.
+    if (Object.keys(options).length === 0) continue;
     const declared = rule.options ?? [];
     if (declared.length === 0)
       throw new ConfigError(`pbiplint.config.json: rules["${real}"] takes no options`);
@@ -86,7 +88,8 @@ export function bindConfig(config: ResolvedConfig, rules: Rule[]): BoundConfig {
           `pbiplint.config.json: rules["${real}"].${name} must be one of ${decl.values.join(", ")}`,
         );
     }
-    bound.options.set(real, options);
+    // A copy, so a caller that changes its own object later does not change the run's options.
+    bound.options.set(real, { ...options });
   }
   // One id that carries a severity and options reaches the list twice; it is named once.
   return { config: bound, unknownRules: [...new Set(unknownRules)] };
@@ -139,7 +142,8 @@ export function resolveConfig(raw: unknown = {}): ResolvedConfig {
             );
           out.severity.set(id, SEVERITY_BY_NAME[severity]);
         }
-        if (Object.keys(options).length > 0) out.options.set(id, options);
+        // Kept even when empty, so bindConfig checks the id as it checks every other.
+        out.options.set(id, options);
       } else
         throw new ConfigError(
           `pbiplint.config.json: rules["${id}"] must be "off", "info", "warning", "error", or an object with a severity and options`,

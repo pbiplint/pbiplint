@@ -218,7 +218,11 @@ describe("formatMarkdown", () => {
     const md = formatMarkdown(result);
     expect(md.startsWith("# pbiplint report\n")).toBe(true);
     expect(md).toContain("## Fix these first");
-    expect(md).toMatch(/## WARNING: Do not use floating point data types \(1\)/);
+    // Each rule in the list and each group's heading names the layer it read.
+    expect(md).toContain(
+      "\n1. **Column references should be fully qualified** (1) [DAX_COLUMNS_FULLY_QUALIFIED](https://pbiplint.com/rules/dax-columns-fully-qualified) · model\n",
+    );
+    expect(md).toContain("\n## WARNING: Do not use floating point data types (1) · model\n");
     expect(md).toContain(
       "[AVOID_FLOATING_POINT_DATA_TYPES](https://pbiplint.com/rules/avoid-floating-point-data-types)",
     );

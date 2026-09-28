@@ -6,10 +6,14 @@ import type { Diagnostic } from "./types.js";
 
 export const isModelFile = (path: string): boolean => path.endsWith(".tmdl");
 
-/** definition.pbir, .platform, a .pbip, or any JSON under a definition folder: the files a report is made of. */
+/**
+ * definition.pbir, .platform, a .pbip, or any JSON under a definition folder: the files a report is
+ * made of. definition.pbir and .platform are known by their whole names, so `old.definition.pbir`
+ * is not one. One below the report root is routed to the report too, where buildReport checks
+ * that it parses but reads nothing from it: only the report's own, at its root, says anything.
+ */
 export const isReportFile = (path: string): boolean =>
-  path.endsWith("definition.pbir") ||
-  path.endsWith(".platform") ||
+  /(^|\/)(definition\.pbir|\.platform)$/.test(path) ||
   path.endsWith(".pbip") ||
   /(^|\/)definition\/.*\.json$/.test(path);
 

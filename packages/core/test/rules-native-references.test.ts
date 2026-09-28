@@ -265,12 +265,13 @@ describe("BROKEN_FIELD_REFERENCE", () => {
     expect(
       r.findings.filter((f) => f.ruleId === "BROKEN_FIELD_REFERENCE").map((f) => f.detail),
     ).toEqual([`'Product'[Colour]: no column named "Colour" on "Product"`]);
+    // In the files' name order, which the model reads them in whatever order they were given in.
     expect(
       r.findings.filter((f) => f.ruleId === "PARSE_ISSUE").map((f) => f.location?.file),
     ).toEqual([
-      "definition/tables/Sales.tmdl",
-      "definition/tables/Sales.tmdl",
       "definition/tables/Returns.tmdl",
+      "definition/tables/Sales.tmdl",
+      "definition/tables/Sales.tmdl",
       "definition/tables/Stock.tmdl",
     ]);
   });

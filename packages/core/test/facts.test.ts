@@ -1137,6 +1137,19 @@ describe("buildFacts", () => {
         "not reached from this report: unknown, a model file could not be fully read";
       const reportUnread = "not reached from this report: unknown, a report file could not be read";
       const unreadVisual = { path: "definition/pages/p1/visuals/v9/visual.json", text: "[]" };
+      it("counts the user-defined functions after the measures, only when the model has one", () => {
+        const functions = (...names: string[]) => ({
+          path: "definition/functions.tmdl",
+          text: names.map((n) => `function '${n}' = () => 1\n`).join("\n"),
+        });
+        const value = (...tmdl: Files) =>
+          modelFact([MODEL, { path: SALES, text: columnsOnly }, ...tmdl])?.value;
+        expect(value(functions("Sales.One", "Sales.Two"))).toBe(
+          "1 table, 2 columns, 0 measures, 2 functions",
+        );
+        expect(value(functions("Sales.One"))).toBe("1 table, 2 columns, 0 measures, 1 function");
+        expect(value()).toBe("1 table, 2 columns, 0 measures");
+      });
       it("reads each count that would be 0 as unknown while the model could not be fully read", () => {
         // The tables folder could not be listed: every count would read 0.
         expect(modelFact([MODEL], ["definition/tables/"])).toEqual({

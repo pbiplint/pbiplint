@@ -1,14 +1,14 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { tempDir } from "../../../tests/support/temp-dir.js";
 import { checkSite, scanTags, siteCheckPlugin } from "../src/build/check-site.js";
 import { CSP } from "../src/build/csp.js";
 
 const META = `<meta http-equiv="Content-Security-Policy" content="${CSP}">`;
 
 function site(files: Record<string, string>): string {
-  const dir = mkdtempSync(join(tmpdir(), "pbiplint-dist-"));
+  const dir = tempDir("dist");
   for (const [path, text] of Object.entries(files)) {
     mkdirSync(dirname(join(dir, path)), { recursive: true });
     writeFileSync(join(dir, path), text);

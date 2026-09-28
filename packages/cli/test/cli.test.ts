@@ -2,15 +2,14 @@ import {
   chmodSync,
   cpSync,
   mkdirSync,
-  mkdtempSync,
   readFileSync,
   rmSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { tempDir } from "../../../tests/support/temp-dir.js";
 import { main } from "../src/main.js";
 
 const repo = new URL("../../../", import.meta.url).pathname;
@@ -31,8 +30,8 @@ async function run(argv: string[], cwd = repo) {
 }
 
 /** A PBIP folder in a temp dir: a one-line model and a report of one page that reads it. */
-function pbipProject(prefix: string): string {
-  const root = mkdtempSync(join(tmpdir(), prefix));
+function pbipProject(name: string): string {
+  const root = tempDir(name);
   const j = (v: unknown) => JSON.stringify(v);
   const def = join(root, "Demo.Report", "definition");
   mkdirSync(join(root, "Demo.SemanticModel", "definition"), { recursive: true });
@@ -55,7 +54,7 @@ function pbipProject(prefix: string): string {
  * of one page that reads its model.
  */
 function workspace(): string {
-  const root = mkdtempSync(join(tmpdir(), "pbiplint-workspace-"));
+  const root = tempDir("workspace");
   const j = (v: unknown) => JSON.stringify(v);
   for (const [name, tables] of [
     ["Cost", ["Cost"]],
@@ -188,7 +187,7 @@ describe("pbiplint CLI", () => {
       if (format === "markdown") expect(r.out.startsWith("# pbiplint report")).toBe(true);
       else expect(() => JSON.parse(r.out)).not.toThrow();
     }
-    const dir = mkdtempSync(join(tmpdir(), "pbiplint-out-"));
+    const dir = tempDir("out");
     const r = await run([sample, "--format", "sarif", "--output", "report.sarif"], dir);
     expect(r.out).toBe("");
     const sarif = JSON.parse(readFileSync(join(dir, "report.sarif"), "utf8"));
@@ -200,7 +199,7 @@ describe("pbiplint CLI", () => {
     }
   });
   it("summarizes on stderr when the report goes to --output, naming the file as typed", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "pbiplint-out-"));
+    const dir = tempDir("out");
     const r = await run([sample, "--format", "sarif", "--output", "out/report.sarif"], dir);
     expect(r.code).toBe(1);
     expect(r.out).toBe("");
@@ -225,7 +224,7 @@ describe("pbiplint CLI", () => {
       expect(uri.startsWith("tests/fixtures/kitchen-sink.SemanticModel/definition/")).toBe(true);
   });
   it("discovers pbiplint.config.json above the model and honors --config", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "pbiplint-cfg-"));
+    const dir = tempDir("cfg");
     const cfg = join(dir, "pbiplint.config.json");
     writeFileSync(
       cfg,
@@ -255,7 +254,7 @@ describe("pbiplint CLI", () => {
     expect(b.err).toMatch(/rules\["X"\]/);
   });
   it("warns on stderr about config rule ids that match no rule, and keeps going", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "pbiplint-cfg-unknown-"));
+    const dir = tempDir("cfg-unknown");
     const cfg = join(dir, "pbiplint.config.json");
     writeFileSync(
       cfg,
@@ -274,7 +273,7 @@ describe("pbiplint CLI", () => {
     expect(r.code).toBe(1);
   });
   it("rejects a config file that is not a JSON object", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "pbiplint-cfg-array-"));
+    const dir = tempDir("cfg-array");
     const cfg = join(dir, "array.json");
     writeFileSync(cfg, "[]");
     const r = await run([sample, "--config", cfg]);
@@ -301,57 +300,47 @@ describe("pbiplint CLI", () => {
     expect(missing.err).toContain("does not exist");
   });
   it("names a .pbix, says how to save it as a Power BI project, and exits 2 (tracked in #88)", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "pbiplint-pbix-"));
+    const dir = tempDir("pbix");
     const how =
       "is a Power BI Desktop file (.pbix), which pbiplint cannot read. pbiplint reads a report saved as a Power BI project (PBIP). In Power BI Desktop, choose File > Save as and pick Power BI project files (*.pbip) as the file type. Depending on your version of Power BI Desktop, you may need to enable certain preview features first. Microsoft Learn explains them: https://learn.microsoft.com/power-bi/developer/projects/projects-overview#enable-preview-features https://learn.microsoft.com/power-bi/developer/projects/projects-report#enable-the-pbir-format-preview-feature https://learn.microsoft.com/power-bi/developer/projects/projects-dataset#enable-tmdl-format-preview-feature";
-    try {
-      const file = join(dir, "Sales.pbix");
-      writeFileSync(file, "");
-      const lone = await run([file]);
-      expect(lone.code).toBe(2);
-      expect(lone.out).toBe("");
-      expect(lone.err).toBe(`pbiplint: ${file} ${how}\nRun pbiplint --help for usage.\n`);
-      const folder = await run([dir]);
-      expect(folder.code).toBe(2);
-      expect(folder.out).toBe("");
-      expect(folder.err).toBe(
-        `pbiplint: ${dir}/Sales.pbix ${how}\nRun pbiplint --help for usage.\n`,
-      );
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
+    const file = join(dir, "Sales.pbix");
+    writeFileSync(file, "");
+    const lone = await run([file]);
+    expect(lone.code).toBe(2);
+    expect(lone.out).toBe("");
+    expect(lone.err).toBe(`pbiplint: ${file} ${how}\nRun pbiplint --help for usage.\n`);
+    const folder = await run([dir]);
+    expect(folder.code).toBe(2);
+    expect(folder.out).toBe("");
+    expect(folder.err).toBe(`pbiplint: ${dir}/Sales.pbix ${how}\nRun pbiplint --help for usage.\n`);
   });
   it("names a model folder that holds no .tmdl files, says only TMDL can be linted, and exits 2 (tracked in #88)", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "pbiplint-notmdl-"));
+    const dir = tempDir("notmdl");
     const why =
       "holds no .tmdl files. Only a model stored as TMDL can be linted; if it is in the older model.bim format, save it in the TMDL format from Power BI Desktop first.";
-    try {
-      mkdirSync(join(dir, "Old.SemanticModel"));
-      // Given by a path relative to the working folder, the folder is named as main resolves it.
-      for (const [argv, cwd] of [
-        [[join(dir, "Old.SemanticModel")], repo],
-        [["Old.SemanticModel"], dir],
-      ] as const) {
-        const r = await run([...argv], cwd);
-        expect(r.code).toBe(2);
-        expect(r.out).toBe("");
-        expect(r.err).toBe(
-          `pbiplint: ${dir}/Old.SemanticModel ${why}\nRun pbiplint --help for usage.\n`,
-        );
-      }
-      // Ahead of a .pbix beside it, in the folder that holds both.
-      writeFileSync(join(dir, "Sales.pbix"), "");
-      const folder = await run([dir]);
-      expect(folder.code).toBe(2);
-      expect(folder.err).toBe(
+    mkdirSync(join(dir, "Old.SemanticModel"));
+    // Given by a path relative to the working folder, the folder is named as main resolves it.
+    for (const [argv, cwd] of [
+      [[join(dir, "Old.SemanticModel")], repo],
+      [["Old.SemanticModel"], dir],
+    ] as const) {
+      const r = await run([...argv], cwd);
+      expect(r.code).toBe(2);
+      expect(r.out).toBe("");
+      expect(r.err).toBe(
         `pbiplint: ${dir}/Old.SemanticModel ${why}\nRun pbiplint --help for usage.\n`,
       );
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
     }
+    // Ahead of a .pbix beside it, in the folder that holds both.
+    writeFileSync(join(dir, "Sales.pbix"), "");
+    const folder = await run([dir]);
+    expect(folder.code).toBe(2);
+    expect(folder.err).toBe(
+      `pbiplint: ${dir}/Old.SemanticModel ${why}\nRun pbiplint --help for usage.\n`,
+    );
   });
   it("lints a whole project, prints layers in JSON, and puts notices on stderr", async () => {
-    const root = mkdtempSync(join(tmpdir(), "pbiplint-proj-"));
+    const root = tempDir("proj");
     mkdirSync(join(root, "Demo.SemanticModel", "definition"), { recursive: true });
     writeFileSync(join(root, "Demo.SemanticModel", "definition", "model.tmdl"), "model Model\n");
     mkdirSync(join(root, "Demo.Report"), { recursive: true });
@@ -370,29 +359,25 @@ describe("pbiplint CLI", () => {
   });
   it("lints each project of a folder that holds two by its .pbip, and refuses the folder", async () => {
     const root = workspace();
-    try {
-      // The model's files are model.tmdl and one per table; the report's are definition.pbir,
-      // report.json, pages.json, page.json, and the project's .pbip.
-      for (const [name, modelFiles] of [
-        ["Cost", 2],
-        ["Sales", 3],
-      ] as const) {
-        const r = await run([join(root, `${name}.pbip`), "--format", "json", "--fail-on", "none"]);
-        expect(r.code).toBe(0);
-        expect(r.err).toBe("");
-        const doc = JSON.parse(r.out);
-        expect(doc.layers.model).toEqual({ present: true, files: modelFiles });
-        expect(doc.layers.report).toEqual({ present: true, files: 5 });
-        expect(doc.diagnostics).toEqual([]);
-      }
-      const folder = await run([root]);
-      expect(folder.code).toBe(2);
-      expect(folder.err).toBe(
-        `pbiplint: ${root} contains 2 semantic models; point at one of them: Cost.SemanticModel, Sales.SemanticModel\nRun pbiplint --help for usage.\n`,
-      );
-    } finally {
-      rmSync(root, { recursive: true, force: true });
+    // The model's files are model.tmdl and one per table; the report's are definition.pbir,
+    // report.json, pages.json, page.json, and the project's .pbip.
+    for (const [name, modelFiles] of [
+      ["Cost", 2],
+      ["Sales", 3],
+    ] as const) {
+      const r = await run([join(root, `${name}.pbip`), "--format", "json", "--fail-on", "none"]);
+      expect(r.code).toBe(0);
+      expect(r.err).toBe("");
+      const doc = JSON.parse(r.out);
+      expect(doc.layers.model).toEqual({ present: true, files: modelFiles });
+      expect(doc.layers.report).toEqual({ present: true, files: 5 });
+      expect(doc.diagnostics).toEqual([]);
     }
+    const folder = await run([root]);
+    expect(folder.code).toBe(2);
+    expect(folder.err).toBe(
+      `pbiplint: ${root} contains 2 semantic models; point at one of them: Cost.SemanticModel, Sales.SemanticModel\nRun pbiplint --help for usage.\n`,
+    );
   });
   // These tests have the operating system refuse a read, as a POSIX system does for a user (CI
   // runs them on Ubuntu). Root reads a folder whatever its mode, and Windows ignores a mode of 000
@@ -407,7 +392,7 @@ describe("pbiplint CLI", () => {
   it.skipIf(noModes)(
     "lints the rest of a project around a folder it cannot read, with a notice naming it",
     async () => {
-      const root = pbipProject("pbiplint-locked-");
+      const root = pbipProject("locked");
       const locked = join(root, "Demo.Report", "definition", "pages");
       chmodSync(locked, 0o000);
       try {
@@ -432,14 +417,13 @@ describe("pbiplint CLI", () => {
         ]);
       } finally {
         chmodSync(locked, 0o755);
-        rmSync(root, { recursive: true, force: true });
       }
     },
   );
   it.skipIf(noModes)(
     "leaves out a part folder it cannot read, saying so, and lints the other part",
     async () => {
-      const root = pbipProject("pbiplint-locked-part-");
+      const root = pbipProject("locked-part");
       const locked = join(root, "Demo.Report");
       chmodSync(locked, 0o000);
       try {
@@ -459,7 +443,6 @@ describe("pbiplint CLI", () => {
         );
       } finally {
         chmodSync(locked, 0o755);
-        rmSync(root, { recursive: true, force: true });
       }
     },
   );
@@ -467,30 +450,26 @@ describe("pbiplint CLI", () => {
     "gives a notice for a directory where it reads a file, and lints the rest",
     async () => {
       // A link is how a directory reaches a file read: a real directory is walked into instead.
-      const root = pbipProject("pbiplint-isdir-");
-      try {
-        const def = join(root, "Demo.Report", "definition");
-        rmSync(join(def, "report.json"));
-        symlinkSync(join(def, "pages"), join(def, "report.json"));
-        const r = await run([root, "--format", "json", "--fail-on", "warning"]);
-        const notice = unread(
-          "Demo.Report/definition/report.json",
-          "EISDIR: illegal operation on a directory",
-        );
-        expect(r.err).toBe(`pbiplint: notice: ${notice.message}\n`);
-        expect(r.code).toBe(1);
-        const doc = JSON.parse(r.out);
-        expect(doc.layers.report.present).toBe(true);
-        expect(doc.diagnostics).toEqual([notice]);
-      } finally {
-        rmSync(root, { recursive: true, force: true });
-      }
+      const root = pbipProject("isdir");
+      const def = join(root, "Demo.Report", "definition");
+      rmSync(join(def, "report.json"));
+      symlinkSync(join(def, "pages"), join(def, "report.json"));
+      const r = await run([root, "--format", "json", "--fail-on", "warning"]);
+      const notice = unread(
+        "Demo.Report/definition/report.json",
+        "EISDIR: illegal operation on a directory",
+      );
+      expect(r.err).toBe(`pbiplint: notice: ${notice.message}\n`);
+      expect(r.code).toBe(1);
+      const doc = JSON.parse(r.out);
+      expect(doc.layers.report.present).toBe(true);
+      expect(doc.diagnostics).toEqual([notice]);
     },
   );
   it.skipIf(noModes)(
     "says a part could not be read when its definition lists but none of its files read",
     async () => {
-      const root = pbipProject("pbiplint-locked-files-");
+      const root = pbipProject("locked-files");
       const def = join(root, "Demo.Report", "definition");
       const locked = [join(def, "pages"), join(def, "report.json")];
       for (const p of locked) chmodSync(p, 0o000);
@@ -510,14 +489,13 @@ describe("pbiplint CLI", () => {
         expect(doc.diagnostics).toEqual(notices);
       } finally {
         for (const p of locked) chmodSync(p, 0o755);
-        rmSync(root, { recursive: true, force: true });
       }
     },
   );
   it.skipIf(noModes)(
     "names a folder once though a part given on its own is walked for each layer",
     async () => {
-      const root = pbipProject("pbiplint-locked-once-");
+      const root = pbipProject("locked-once");
       const locked = join(root, "Demo.Report", "definition", "pages");
       chmodSync(locked, 0o000);
       try {
@@ -529,14 +507,13 @@ describe("pbiplint CLI", () => {
         expect(doc.diagnostics).toEqual([notice]);
       } finally {
         chmodSync(locked, 0o755);
-        rmSync(root, { recursive: true, force: true });
       }
     },
   );
   it.skipIf(noModes)(
     "refuses a .pbip it was pointed at and cannot read, and notes one it found",
     async () => {
-      const root = pbipProject("pbiplint-locked-pbip-");
+      const root = pbipProject("locked-pbip");
       const pbip = join(root, "Demo.pbip");
       chmodSync(pbip, 0o000);
       try {
@@ -552,7 +529,6 @@ describe("pbiplint CLI", () => {
         );
       } finally {
         chmodSync(pbip, 0o644);
-        rmSync(root, { recursive: true, force: true });
       }
     },
   );
@@ -580,7 +556,6 @@ describe("pbiplint CLI", () => {
         );
       } finally {
         chmodSync(pbir, 0o644);
-        rmSync(root, { recursive: true, force: true });
       }
     },
   );
@@ -588,7 +563,7 @@ describe("pbiplint CLI", () => {
     "names a model file it cannot read in the notice and reports no field that file could declare",
     async () => {
       // Store.tmdl declares the Store table, which the shelfmart report's visuals bind.
-      const root = mkdtempSync(join(tmpdir(), "pbiplint-locked-store-"));
+      const root = tempDir("locked-store");
       cpSync(join(repo, "tests/fixtures/shelfmart"), root, { recursive: true });
       const model = "ShelfMart Foot Traffic and Weather.SemanticModel";
       const store = join(root, model, "definition", "tables", "Store.tmdl");
@@ -623,14 +598,13 @@ describe("pbiplint CLI", () => {
         );
       } finally {
         chmodSync(store, 0o644);
-        rmSync(root, { recursive: true, force: true });
       }
     },
   );
   it.skipIf(noModes)(
     "reads a report file it cannot read as one that could not be parsed, with a notice and no PARSE_ISSUE",
     async () => {
-      const root = pbipProject("pbiplint-locked-visual-");
+      const root = pbipProject("locked-visual");
       const folder = join(root, "Demo.Report", "definition", "pages", "p", "visuals", "v");
       mkdirSync(folder, { recursive: true });
       const visual = join(folder, "visual.json");
@@ -662,7 +636,6 @@ describe("pbiplint CLI", () => {
         );
       } finally {
         chmodSync(visual, 0o644);
-        rmSync(root, { recursive: true, force: true });
       }
     },
   );
@@ -694,7 +667,7 @@ describe("pbiplint CLI", () => {
     for (const line of rest.slice(0, -1)) expect(line).toMatch(/^ {4}at (?!forged)/);
   });
   it.skipIf(noModes)("refuses an input folder it cannot read at all, naming it", async () => {
-    const root = pbipProject("pbiplint-locked-input-");
+    const root = pbipProject("locked-input");
     chmodSync(root, 0o000);
     try {
       const r = await run([root]);
@@ -704,13 +677,12 @@ describe("pbiplint CLI", () => {
       );
     } finally {
       chmodSync(root, 0o755);
-      rmSync(root, { recursive: true, force: true });
     }
   });
   it.skipIf(noModes)(
     "refuses an input none of whose files could be read, rather than report no findings",
     async () => {
-      const root = pbipProject("pbiplint-locked-all-");
+      const root = pbipProject("locked-all");
       const model = join(root, "Demo.SemanticModel");
       const report = join(root, "Demo.Report");
       const locked = [join(model, "definition"), report];
@@ -737,7 +709,6 @@ describe("pbiplint CLI", () => {
         }
       } finally {
         for (const p of locked) chmodSync(p, 0o755);
-        rmSync(root, { recursive: true, force: true });
       }
     },
   );
@@ -747,36 +718,29 @@ describe("pbiplint CLI", () => {
       // Windows refuses a control character in a file name, so the notice's folder cannot exist
       // there. The measure's name holds the escape sequence that clears the screen, DEL, the C1
       // control that starts a sequence on its own (CSI), and a right-to-left override.
-      const root = mkdtempSync(join(tmpdir(), "pbiplint-controls-"));
+      const root = tempDir("controls");
       const name = "Evil\u001b[2J\u007f\u009b\u202eX";
-      try {
-        const tables = join(root, "Demo.SemanticModel", "definition", "tables");
-        mkdirSync(tables, { recursive: true });
-        writeFileSync(
-          join(root, "Demo.SemanticModel", "definition", "model.tmdl"),
-          "model Model\n",
-        );
-        writeFileSync(join(tables, "T.tmdl"), `table T\n\tmeasure '${name}' = 1\n`);
-        mkdirSync(join(root, "Bad\u001b[2J.Report"));
-        writeFileSync(join(root, "Bad\u001b[2J.Report", "report.json"), "{}");
-        const notice =
-          "pbiplint: notice: Bad\\u001b[2J.Report is stored as a single report.json, which pbiplint cannot read; save it in the PBIR format from Power BI Desktop\n";
+      const tables = join(root, "Demo.SemanticModel", "definition", "tables");
+      mkdirSync(tables, { recursive: true });
+      writeFileSync(join(root, "Demo.SemanticModel", "definition", "model.tmdl"), "model Model\n");
+      writeFileSync(join(tables, "T.tmdl"), `table T\n\tmeasure '${name}' = 1\n`);
+      mkdirSync(join(root, "Bad\u001b[2J.Report"));
+      writeFileSync(join(root, "Bad\u001b[2J.Report", "report.json"), "{}");
+      const notice =
+        "pbiplint: notice: Bad\\u001b[2J.Report is stored as a single report.json, which pbiplint cannot read; save it in the PBIR format from Power BI Desktop\n";
 
-        const text = await run([root, "--fail-on", "none"]);
-        expect(text.out).toContain("[Evil\\u001b[2J\\u007f\\u009b\\u202eX]");
-        expect(RAW_CONTROL.test(text.out.replace(/\n/g, ""))).toBe(false);
-        expect(text.err).toBe(notice);
+      const text = await run([root, "--fail-on", "none"]);
+      expect(text.out).toContain("[Evil\\u001b[2J\\u007f\\u009b\\u202eX]");
+      expect(RAW_CONTROL.test(text.out.replace(/\n/g, ""))).toBe(false);
+      expect(text.err).toBe(notice);
 
-        const json = await run([root, "--format", "json", "--fail-on", "none"]);
-        const names = JSON.parse(json.out).groups.flatMap(
-          (g: { findings: { objectName: string }[] }) => g.findings.map((f) => f.objectName),
-        );
-        expect(names).toContain(`[${name}]`);
-        expect(RAW_CONTROL.test(json.out.replace(/\n/g, ""))).toBe(false);
-        expect(json.err).toBe(notice);
-      } finally {
-        rmSync(root, { recursive: true, force: true });
-      }
+      const json = await run([root, "--format", "json", "--fail-on", "none"]);
+      const names = JSON.parse(json.out).groups.flatMap(
+        (g: { findings: { objectName: string }[] }) => g.findings.map((f) => f.objectName),
+      );
+      expect(names).toContain(`[${name}]`);
+      expect(RAW_CONTROL.test(json.out.replace(/\n/g, ""))).toBe(false);
+      expect(json.err).toBe(notice);
     },
   );
   it("shows the control characters in a usage error and a config's rule id on stderr", async () => {
@@ -785,17 +749,13 @@ describe("pbiplint CLI", () => {
     expect(missing.err).toBe(
       `pbiplint: ${join(repo, "nope")}\\u001b[2J does not exist\nRun pbiplint --help for usage.\n`,
     );
-    const dir = mkdtempSync(join(tmpdir(), "pbiplint-cfg-controls-"));
-    try {
-      const cfg = join(dir, "pbiplint.config.json");
-      writeFileSync(cfg, JSON.stringify({ rules: { "NOPE\u202e\u009b": "off" } }));
-      const r = await run([sample, "--config", cfg, "--format", "json", "--fail-on", "none"]);
-      expect(r.err).toBe(
-        'pbiplint: pbiplint.config.json: no rule named "NOPE\\u202e\\u009b" (run pbiplint rules for the list)\n',
-      );
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
+    const dir = tempDir("cfg-controls");
+    const cfg = join(dir, "pbiplint.config.json");
+    writeFileSync(cfg, JSON.stringify({ rules: { "NOPE\u202e\u009b": "off" } }));
+    const r = await run([sample, "--config", cfg, "--format", "json", "--fail-on", "none"]);
+    expect(r.err).toBe(
+      'pbiplint: pbiplint.config.json: no rule named "NOPE\\u202e\\u009b" (run pbiplint rules for the list)\n',
+    );
   });
   it("lists the layer of every rule", async () => {
     const r = await run(["rules"]);

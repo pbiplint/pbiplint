@@ -1,6 +1,9 @@
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 
+const TEMP_DIR =
+  "Make a test's folder with tempDir from tests/support/temp-dir.ts, which removes it when the test ends.";
+
 export default tseslint.config(
   {
     ignores: [
@@ -46,6 +49,30 @@ export default tseslint.config(
     files: ["**/*.mjs"],
     languageOptions: {
       globals: { console: "readonly", process: "readonly" },
+    },
+  },
+  {
+    // A unit test's folder comes from tempDir, which removes it when the test ends; the run's
+    // guard sees only folders made that way. The browser suite has its own withTempFolder.
+    files: ["packages/*/test/**", "scripts/test/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            ...["fs", "node:fs", "fs/promises", "node:fs/promises"].map((name) => ({
+              name,
+              importNames: ["mkdtemp", "mkdtempSync"],
+              message: TEMP_DIR,
+            })),
+            ...["os", "node:os"].map((name) => ({
+              name,
+              importNames: ["tmpdir"],
+              message: TEMP_DIR,
+            })),
+          ],
+        },
+      ],
     },
   },
 );

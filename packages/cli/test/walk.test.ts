@@ -1,8 +1,8 @@
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { chmodSync, mkdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { lint, noTmdlRefusal, pbixRefusal } from "@pbiplint/core";
 import { describe, expect, it } from "vitest";
+import { tempDir } from "../../../tests/support/temp-dir.js";
 import { EXPECTED_INPUT, resolveProject } from "../src/walk.js";
 
 const repo = new URL("../../../", import.meta.url).pathname;
@@ -17,7 +17,7 @@ function pbip(parts: {
   legacyModel?: boolean;
   secondReport?: boolean;
 }) {
-  const root = mkdtempSync(join(tmpdir(), "pbiplint-"));
+  const root = tempDir("pbip");
   writeFileSync(
     join(root, "Demo.pbip"),
     j({ version: "1.0", artifacts: [{ report: { path: "Demo.Report" } }] }),
@@ -111,7 +111,7 @@ function pbipAt(file: string, reports: string[]): void {
  * as mewancegeka/PBIWorkspace holds them (#86).
  */
 function workspace(): string {
-  const root = mkdtempSync(join(tmpdir(), "pbiplint-workspace-"));
+  const root = tempDir("workspace");
   for (const name of ["Cost", "Sales"]) {
     pbipAt(join(root, `${name}.pbip`), [`${name}.Report`]);
     modelAt(join(root, `${name}.SemanticModel`), name);
@@ -274,7 +274,7 @@ describe("resolveProject", () => {
     expect(() => resolveProject(pbip({ report: true, secondReport: true }))).toThrow(
       /contains 2 reports; point at one of them: Demo\.Report, Other\.Report/,
     );
-    const empty = mkdtempSync(join(tmpdir(), "pbiplint-empty-"));
+    const empty = tempDir("empty");
     expect(() => resolveProject(empty)).toThrow(/No semantic model or report found/);
     expect(() => resolveProject(join(empty, "missing"))).toThrow(/does not exist/);
     writeFileSync(join(empty, "x.txt"), "");
@@ -416,7 +416,7 @@ describe("resolveProject on a .pbip that names its report (#86)", () => {
     expect(p.diagnostics).toEqual([]);
   });
   it("follows definition.pbir to a model outside the .pbip's folder", () => {
-    const top = mkdtempSync(join(tmpdir(), "pbiplint-outside-"));
+    const top = tempDir("outside");
     const root = join(top, "Projects");
     mkdirSync(root);
     pbipAt(join(root, "Cost.pbip"), ["Reports/Cost.Report"]);
@@ -469,7 +469,7 @@ describe("resolveProject on a .pbip that names its report (#86)", () => {
 });
 
 describe("resolveProject and a .pbix (tracked in #88)", () => {
-  const folder = (): string => mkdtempSync(join(tmpdir(), "pbiplint-pbix-"));
+  const folder = (): string => tempDir("pbix");
   it("names a .pbix given as the input, in any case, and says how to save it as a project", () => {
     const root = folder();
     for (const name of ["Sales.pbix", "Sales.PBIX"]) {
@@ -654,7 +654,7 @@ describe("resolveProject and what it could not read", () => {
   it.skipIf(noModes)(
     "fills each part's unread paths on a .pbip's route, with notices relative to the .pbip's folder",
     () => {
-      const top = mkdtempSync(join(tmpdir(), "pbiplint-outside-locked-"));
+      const top = tempDir("outside-locked");
       const root = join(top, "Projects");
       mkdirSync(root);
       pbipAt(join(root, "Cost.pbip"), ["Cost.Report"]);
@@ -709,7 +709,7 @@ describe("resolveProject and what it could not read", () => {
       // The trees packages/web/test/project-files.test.ts drops: a folder is walked into where
       // its name sorts, so tables/Sales.tmdl is met before tables.old, and a report's
       // definition.pbir is read before its .platform and its definition folder.
-      const root = mkdtempSync(join(tmpdir(), "pbiplint-first-refused-"));
+      const root = tempDir("first-refused");
       const def = join(root, "Demo.SemanticModel", "definition");
       const tableIn = (folder: string): void => {
         mkdirSync(join(def, folder), { recursive: true });
@@ -744,7 +744,7 @@ describe("resolveProject and what it could not read", () => {
   it.skipIf(noModes)(
     "names a .pbix it could not open, since it never opens one, and refuses a failed read as before",
     () => {
-      const root = mkdtempSync(join(tmpdir(), "pbiplint-pbix-locked-"));
+      const root = tempDir("pbix-locked");
       const file = join(root, "Sales.pbix");
       writeFileSync(file, "");
       expect(() => locked([file], () => resolveProject(file))).toThrow(
@@ -789,7 +789,7 @@ describe("resolveProject and a model folder that holds no .tmdl files (tracked i
   // The words are core's, written out in route.test.ts; these hold which folders are named, how,
   // and in what order. project-files.test.ts holds the browser to the same trees, naming each
   // folder relative to the drop where these join it to the input.
-  const folder = (): string => mkdtempSync(join(tmpdir(), "pbiplint-notmdl-"));
+  const folder = (): string => tempDir("notmdl");
   /** What a model folder holding no .tmdl files holds instead, for emptyModel. */
   const leftovers = ["", "definition", ".platform"] as const;
   /** A model folder at `at`: empty, holding an empty definition folder, or only its .platform. */

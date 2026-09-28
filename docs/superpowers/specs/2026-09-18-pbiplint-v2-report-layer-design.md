@@ -526,14 +526,19 @@ named as a file it does not read) has no notice. A link to nothing is
 taken as a file, and one whose target the operating system will not
 say about (a link to itself, say) as a folder. The same holds where
 the walk looks a path up by name: a part folder beside the other part,
-a part's `definition` folder, its `definition.pbir` and `.platform`,
-and a `.pbip` found beside the parts, each of which counts toward the
-refusal of two parts or two `.pbip` files as what it is named as when
-it is a link to a folder or a file. The report folder a `.pbip` names
+a part's `definition.pbir` and `.platform`, and a `.pbip` found beside
+the parts. A part folder beside the other part that is a link to a
+folder, and a `.pbip` beside the parts that is a link to a file, count
+toward the refusal of two parts or two `.pbip` files. A part's own
+`definition` folder that is a link is named whatever it points at,
+since the part is read from it; in a folder that is not a part, a
+`definition` link to nothing is passed over as any link to nothing is.
+The report folder a `.pbip` names
 and the model folder a `definition.pbir` names are checked along the
 whole path written, each folder below the one it shares with the
 project folder, so a link partway along the path is named, not only
-one at its end. A part folder reached through a link leaves its layer
+one at its end; on Windows, a folder on another drive or share shares
+none, and only the folder itself is checked. A part folder reached through a link leaves its layer
 absent with the reason "the model folder could not be read" or "the
 report folder could not be read", and a run of which nothing could be
 read is refused naming the link, as it names a refusal: `Could not

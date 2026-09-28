@@ -1138,6 +1138,18 @@ describe("resolveProject and symbolic links (#59)", () => {
           `Could not read ${viaReport}/Sub: it is a symbolic link, which pbiplint does not follow`,
         ),
       );
+      // Above the project folder too: only the folders the two paths share are followed.
+      const top = tempDir("above");
+      const projects = join(top, "Projects");
+      mkdirSync(projects);
+      pbipAt(join(projects, "Cost.pbip"), ["Cost.Report"]);
+      reportAt(join(projects, "Cost.Report"), { byPath: { path: "../../Shared/X.SemanticModel" } });
+      modelAt(join(outside, "X.SemanticModel"), "X");
+      symlinkSync(outside, join(top, "Shared"));
+      const above = resolveProject(join(projects, "Cost.pbip"));
+      expect(above.model).toBeUndefined();
+      expect(above.absent).toEqual({ model: "the model folder could not be read" });
+      expect(above.diagnostics).toEqual([linkNotice("../Shared")]);
     },
   );
   it.skipIf(noLinks)(
@@ -1149,15 +1161,27 @@ describe("resolveProject and symbolic links (#59)", () => {
       const p = resolveProject(root);
       expect(p.model!.root).toBe(join(root, "Demo.SemanticModel"));
       expect(p.diagnostics).toEqual([]);
-      // A part given on its own whose definition folder is such a link is refused naming it.
-      const part = join(tempDir("part"), "Demo.Report");
-      mkdirSync(part);
-      symlinkSync(join(part, "gone"), join(part, "definition"));
-      expect(() => resolveProject(part)).toThrow(
-        new Error(
-          `Could not read ${part}/definition: it is a symbolic link, which pbiplint does not follow`,
-        ),
-      );
+      // A part given on its own whose definition folder is a link, to nothing or to a file, is
+      // refused naming it: the part's definition is what the part is read from.
+      for (const target of ["gone", "file.json"]) {
+        const part = join(tempDir("part"), "Demo.Report");
+        mkdirSync(part);
+        writeFileSync(join(part, "file.json"), "{}");
+        symlinkSync(join(part, target), join(part, "definition"));
+        expect(() => resolveProject(part)).toThrow(
+          new Error(
+            `Could not read ${part}/definition: it is a symbolic link, which pbiplint does not follow`,
+          ),
+        );
+      }
+      // A plain folder is no part, so a definition link to nothing there is passed over as any
+      // link to nothing is.
+      const plain = tempDir("plain");
+      writeFileSync(join(plain, "model.tmdl"), "model Model\n");
+      symlinkSync(join(plain, "gone"), join(plain, "definition"));
+      const loose = resolveProject(plain);
+      expect(loose.model!.files.map((f) => f.path)).toEqual(["model.tmdl"]);
+      expect(loose.diagnostics).toEqual([]);
     },
   );
 });

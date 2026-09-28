@@ -8,7 +8,7 @@ import {
   statSync,
   type Stats,
 } from "node:fs";
-import { basename, dirname, join, relative, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import {
   datasetReference,
   isPbix,
@@ -174,8 +174,12 @@ function linked(w: Walk, p: string, part?: ResolvedPart, folder = false): boolea
  * followed, as the input is.
  */
 function linkOnWay(w: Walk, to: string): string | undefined {
+  const way = relative(w.base, to);
+  // On Windows a folder on another drive or share shares no folder with the base, and `relative`
+  // gives its whole path. The folders above it are not the project's, so only it is checked.
+  if (isAbsolute(way)) return isLink(to) ? to : undefined;
   let at = w.base;
-  for (const segment of relative(w.base, to).split(/[\\/]/)) {
+  for (const segment of way.split(/[\\/]/)) {
     at = join(at, segment);
     if (segment !== "" && segment !== ".." && isLink(at)) return at;
   }
@@ -495,7 +499,7 @@ function resolvePbip(input: string, path: string): ResolvedProject {
 function pbirOf(w: Walk, report: ResolvedPart | undefined, folder: string): string | undefined {
   if (report) return report.files.find((f) => f.path === "definition.pbir")?.text;
   const at = toPosix(relative(w.base, folder));
-  // A notice at the folder, or at a link on the way to it.
+  // A notice at the folder, or at a link on the way to it, means nothing in it may be looked up.
   if (
     w.project.diagnostics.some(
       (d) => d.kind === "unread-file" && (d.path === at || at.startsWith(`${d.path}/`)),
@@ -576,9 +580,12 @@ function readFolder(w: Walk, input: string, path: string, preferred?: string): R
   const out = w.project;
   const name = basename(path);
 
-  // The folder is itself one part. A definition folder that is a link says so in the part's read.
+  // The folder is itself one part. A part's definition folder that is a link, to whatever, says so
+  // in the part's read, as it does inside a PBIP folder; a plain folder is no part, so a link to
+  // nothing there is passed over as any link to nothing is.
   const def = join(path, "definition");
-  if (isDir(def) || isLink(def)) {
+  const namedPart = name.endsWith(".Report") || name.endsWith(".SemanticModel");
+  if (isDir(def) || (namedPart && isLink(def))) {
     // The folder's name says which part it is, and only the reader for that part may record a
     // reason: a .Report is read for .tmdl files first, and finding none is not a refusal.
     const model = readPart(

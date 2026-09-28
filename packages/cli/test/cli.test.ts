@@ -3,7 +3,7 @@ import {
   cpSync,
   mkdirSync,
   readFileSync,
-  rmSync,
+  renameSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -379,9 +379,10 @@ describe("pbiplint CLI", () => {
       `pbiplint: ${root} contains 2 semantic models; point at one of them: Cost.SemanticModel, Sales.SemanticModel\nRun pbiplint --help for usage.\n`,
     );
   });
-  // These tests have the operating system refuse a read, as a POSIX system does for a user (CI
-  // runs them on Ubuntu). Root reads a folder whatever its mode, and Windows ignores a mode of 000
-  // and makes a symbolic link only in Developer Mode or as an administrator, so they skip there.
+  // These tests have the operating system refuse a read, as a POSIX system does for a user, or
+  // put a symbolic link where the walk would read (CI runs them on Ubuntu). Root reads a folder
+  // whatever its mode, and Windows ignores a mode of 000 and makes a symbolic link only in
+  // Developer Mode or as an administrator, so they skip there.
   const onWindows = process.platform === "win32";
   const noModes = onWindows || process.getuid?.() === 0;
   const unread = (path: string, reason: string) => ({
@@ -447,23 +448,31 @@ describe("pbiplint CLI", () => {
     },
   );
   it.skipIf(onWindows)(
-    "gives a notice for a directory where it reads a file, and lints the rest",
+    "names a linked folder rather than reading through it, and says what it could not tell (#59)",
     async () => {
-      // A link is how a directory reaches a file read: a real directory is walked into instead.
-      const root = pbipProject("isdir");
+      // A linked pages folder was once passed over without a word: Pages 0, and a clean report.
+      const root = pbipProject("linked");
       const def = join(root, "Demo.Report", "definition");
-      rmSync(join(def, "report.json"));
-      symlinkSync(join(def, "pages"), join(def, "report.json"));
-      const r = await run([root, "--format", "json", "--fail-on", "warning"]);
-      const notice = unread(
-        "Demo.Report/definition/report.json",
-        "EISDIR: illegal operation on a directory",
-      );
+      const outside = tempDir("outside");
+      renameSync(join(def, "pages"), join(outside, "pages"));
+      symlinkSync(join(outside, "pages"), join(def, "pages"));
+      const r = await run([root, "--format", "json"]);
+      const notice = {
+        kind: "unread-file",
+        path: "Demo.Report/definition/pages",
+        message:
+          "Demo.Report/definition/pages is a symbolic link, which pbiplint does not follow, so it was not linted",
+      };
       expect(r.err).toBe(`pbiplint: notice: ${notice.message}\n`);
-      expect(r.code).toBe(1);
       const doc = JSON.parse(r.out);
       expect(doc.layers.report.present).toBe(true);
       expect(doc.diagnostics).toEqual([notice]);
+      expect(doc.facts.find((f: { label: string }) => f.label === "Pages")).toEqual({
+        layer: "report",
+        label: "Pages",
+        value: "unknown",
+        detail: "a page.json could not be read",
+      });
     },
   );
   it.skipIf(noModes)(

@@ -10,9 +10,10 @@ import { expect, test } from "./fixtures.js";
 //
 // Not covered here, and only checked by hand: the "Choose a folder" button in Chromium, which
 // takes the File System Access picker and its native dialog; a screen reader actually speaking
-// the live region (the test checks its text); and a drop of real files from the desktop in
+// the live region (the test checks its text); a drop of real files from the desktop in
 // Chromium, where a synthetic File has no directory entry, so the drop test below takes the flat
-// file fallback there while Firefox and WebKit take the entries branch.
+// file fallback there while Firefox and WebKit take the entries branch; and a folder the browser
+// cannot open inside one the folder input is given (see the refusal test that suggests dragging).
 
 const zoo = fileURLToPath(
   new URL("../../../tests/fixtures/rule-zoo.SemanticModel", import.meta.url),
@@ -164,7 +165,7 @@ test("refuses a folder with two reports and names them", async ({ page }) => {
   );
 });
 
-test("the folder chooser's refusal of a folder with nothing to lint suggests dragging it", async ({
+test("refuses a folder with nothing to lint from the folder input and suggests dragging it", async ({
   page,
 }) => {
   // The sentence is for a folder the browser could not open inside the chosen one, which this

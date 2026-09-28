@@ -11,8 +11,16 @@ import { allMeasures, finding } from "../helpers.js";
 import type { RuleContext, RuleFinding } from "../types.js";
 import { bpaRule } from "./define.js";
 
+/**
+ * The owners the ported DAX rules read. A user-defined function is left out until pbiplint can
+ * tell a model column from a column of a table the caller passes in (#115), and until then no rule
+ * reports on one.
+ */
+type RuleOwner = RefOwner & { kind: Exclude<RefOwner["kind"], "function"> };
+const isRuleOwner = (o: RefOwner): o is RuleOwner => o.kind !== "function";
+
 /** The finding shell for whichever object owns a DAX expression. */
-export function ownerFinding(o: RefOwner): RuleFinding {
+export function ownerFinding(o: RuleOwner): RuleFinding {
   switch (o.kind) {
     case "measure":
       return finding.measure(o.object as Measure);
@@ -33,6 +41,7 @@ export const DAX_COLUMNS_FULLY_QUALIFIED = bpaRule(
   "DAX_COLUMNS_FULLY_QUALIFIED",
   (_m, { indexes: { references } }: RuleContext) =>
     references.owners
+      .filter(isRuleOwner)
       .filter(
         (o) =>
           (o.kind === "measure" || o.kind === "tablePermission" || o.kind === "calculationItem") &&
@@ -46,6 +55,7 @@ export const DAX_MEASURES_UNQUALIFIED = bpaRule(
   "DAX_MEASURES_UNQUALIFIED",
   (_m, { indexes: { references } }: RuleContext) =>
     references.owners
+      .filter(isRuleOwner)
       .filter(
         (o) =>
           o.kind !== "tablePermission" && o.refs.some((r) => r.kind === "measure" && r.qualified),

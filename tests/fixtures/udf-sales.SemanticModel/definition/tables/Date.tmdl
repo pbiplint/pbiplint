@@ -1,0 +1,99 @@
+table Date
+	lineageTag: d1d4ee17-d5be-573b-bd9a-a8955e86f8b9
+
+	column Date
+		dataType: dateTime
+		isKey
+		formatString: Long Date
+		lineageTag: 91859de7-3b1e-536c-b4f0-8d7558d84c6c
+		summarizeBy: none
+		sourceColumn: Date
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column Year
+		dataType: int64
+		lineageTag: ebf4bc37-2d01-50ce-9dd8-3126580d99eb
+		summarizeBy: none
+		sourceColumn: Year
+
+		annotation SummarizationSetBy = Automatic
+
+	column Quarter
+		dataType: string
+		lineageTag: de4b3788-25f6-5336-bc3b-f5718e100e35
+		summarizeBy: none
+		sourceColumn: Quarter
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Quarter Number'
+		dataType: int64
+		lineageTag: 3059bb2d-71dc-5e6d-a5a6-061a4a90cc40
+		summarizeBy: none
+		sourceColumn: Quarter Number
+
+		annotation SummarizationSetBy = Automatic
+
+	column Month
+		dataType: string
+		lineageTag: 14cf4274-fe64-5adb-999e-51d024685f58
+		summarizeBy: none
+		sourceColumn: Month
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Month Number'
+		dataType: int64
+		lineageTag: ba566318-e37d-5b8a-86dd-63cbdf3d7afb
+		summarizeBy: none
+		sourceColumn: Month Number
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Day of Week'
+		dataType: string
+		lineageTag: 660894b8-5858-5543-8421-0d60318bb14e
+		summarizeBy: none
+		sourceColumn: Day of Week
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Day Number'
+		dataType: int64
+		lineageTag: 6e3a6206-3d86-5585-a685-ec788ddc23cb
+		summarizeBy: none
+		sourceColumn: Day Number
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Week of Year'
+		dataType: int64
+		lineageTag: 15df69fe-9aa3-5fa3-ac12-b3a3de5eef77
+		summarizeBy: none
+		sourceColumn: Week of Year
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Is Weekend'
+		dataType: boolean
+		lineageTag: b4cb04ff-e831-5732-9bd9-379aef6187f7
+		summarizeBy: none
+		sourceColumn: Is Weekend
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Date = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents("C:\Demo\Data\Date.csv"), [Delimiter=",", Columns=10, Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+				    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers", {{"Date", type date}, {"Year", Int64.Type}, {"Quarter", Text.Type}, {"Quarter Number", Int64.Type}, {"Month", Text.Type}, {"Month Number", Int64.Type}, {"Day of Week", Text.Type}, {"Day Number", Int64.Type}, {"Week of Year", Int64.Type}, {"Is Weekend", Logical.Type}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table
+

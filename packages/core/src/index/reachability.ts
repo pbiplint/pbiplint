@@ -1,6 +1,6 @@
 import { columnRef, isAutoDateTable, measureRef, tableRef } from "../model/names.js";
 import type { Column, DaxFunction, Level, Measure, Model, Table } from "../model/types.js";
-import type { ReferenceIndex, RefOwner, RefOwnerKind } from "./references.js";
+import type { ReferenceIndex, RefOwner } from "./references.js";
 import type { ReportReferenceIndex } from "./report-refs.js";
 
 type Node = Table | Column | Measure | DaxFunction;
@@ -159,11 +159,12 @@ export function buildReachabilityIndex(
   // object, and a calculated table's is the table rather than a column or a measure. A measure, a
   // calculated column, and a user-defined function each have a name the reader can find, so the
   // reason names those and passes over the rest.
-  const NAMEABLE: ReadonlySet<RefOwnerKind> = new Set(["measure", "calculatedColumn", "function"]);
+  const nameable = (
+    o: RefOwner,
+  ): o is Extract<RefOwner, { kind: "measure" | "calculatedColumn" | "function" }> =>
+    o.kind === "measure" || o.kind === "calculatedColumn" || o.kind === "function";
   const daxReferrers = (owners: readonly RefOwner[]): Node[] =>
-    owners
-      .filter((o) => NAMEABLE.has(o.kind))
-      .map((o) => o.object as Column | Measure | DaxFunction);
+    owners.filter(nameable).map((o) => o.object);
   // The v1 reference index records DAX references only, so a column a sibling sorts or groups by
   // has no DAX referrer at all. The walk follows those edges, so the reason has to read them too.
   const referrersOf = (n: Column | Measure): Node[] => {

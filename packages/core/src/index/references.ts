@@ -8,13 +8,16 @@ import type {
   TablePermission,
 } from "../model/types.js";
 
-export type RefOwnerKind =
-  | "measure"
-  | "calculatedColumn"
-  | "calculatedTable"
-  | "tablePermission"
-  | "calculationItem"
-  | "function";
+/** An object whose DAX the index reads, with its kind, so `object` narrows with `kind`. */
+export type DaxOwner =
+  | { kind: "measure"; object: Measure }
+  | { kind: "calculatedColumn"; object: Column }
+  | { kind: "calculatedTable"; object: Table }
+  | { kind: "tablePermission"; object: TablePermission }
+  | { kind: "calculationItem"; object: CalculationItem }
+  | { kind: "function"; object: DaxFunction };
+
+export type RefOwnerKind = DaxOwner["kind"];
 
 export interface DaxRef {
   kind: "column" | "measure" | "unresolved";
@@ -25,15 +28,13 @@ export interface DaxRef {
   qualified: boolean;
 }
 
-export interface RefOwner {
-  kind: RefOwnerKind;
-  object: Measure | Column | Table | TablePermission | CalculationItem | DaxFunction;
+export type RefOwner = DaxOwner & {
   ownerTable?: Table;
   expression: string;
   refs: DaxRef[];
   /** The model's user-defined functions the expression calls, each once, in model order. */
   calls: DaxFunction[];
-}
+};
 
 export interface ReferenceIndex {
   owners: RefOwner[];
@@ -203,45 +204,48 @@ export function buildReferenceIndex(model: Model): ReferenceIndex {
   const owners: RefOwner[] = [];
   const byObject = new Map<object, RefOwner>();
   const add = (
-    kind: RefOwnerKind,
-    object: RefOwner["object"],
+    of: DaxOwner,
     ownerTable: Table | undefined,
     ...expressions: (string | undefined)[]
   ) => {
     const expression = expressions.filter((e): e is string => e !== undefined).join("\n");
     const owner: RefOwner = {
-      kind,
-      object,
+      ...of,
       ownerTable,
       expression,
-      refs: extractRefs(expression).flatMap((r) => resolve(r, ownerTable, kind)),
+      refs: extractRefs(expression).flatMap((r) => resolve(r, ownerTable, of.kind)),
       calls: callsIn(expression),
     };
     owners.push(owner);
-    byObject.set(object, owner);
+    byObject.set(of.object, owner);
   };
   for (const t of model.tables) {
-    for (const m of t.measures) add("measure", m, t, m.expression, m.formatStringDefinition);
+    for (const m of t.measures)
+      add({ kind: "measure", object: m }, t, m.expression, m.formatStringDefinition);
     for (const c of t.columns)
-      if (c.kind === "calculated") add("calculatedColumn", c, t, c.expression);
+      if (c.kind === "calculated") add({ kind: "calculatedColumn", object: c }, t, c.expression);
     if (t.kind === "calculated")
       add(
-        "calculatedTable",
-        t,
+        { kind: "calculatedTable", object: t },
         t,
         ...t.partitions.filter((p) => p.sourceType === "calculated").map((p) => p.source),
       );
     for (const item of t.calculationGroup?.items ?? [])
-      add("calculationItem", item, t, item.expression, item.formatStringDefinition);
+      add(
+        { kind: "calculationItem", object: item },
+        t,
+        item.expression,
+        item.formatStringDefinition,
+      );
   }
   for (const role of model.roles) {
     for (const tp of role.tablePermissions)
       if (tp.filter !== undefined)
-        add("tablePermission", tp, tables.get(lower(tp.table)), tp.filter);
+        add({ kind: "tablePermission", object: tp }, tables.get(lower(tp.table)), tp.filter);
   }
   // The whole expression, parameter list and body: a parameter's default value, `(p = [m])`, is a
   // real reference, and the list holds no other brackets.
-  for (const f of model.functions) add("function", f, undefined, f.expression);
+  for (const f of model.functions) add({ kind: "function", object: f }, undefined, f.expression);
 
   const columnRefs = new Map<string, RefOwner[]>();
   const measureRefs = new Map<string, RefOwner[]>();

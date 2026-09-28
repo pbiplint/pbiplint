@@ -25,18 +25,8 @@ export interface ReachabilityIndex {
 }
 
 const isTable = (n: Node): n is Table => "columns" in n;
-/** A function carries no table, where a column and a measure each carry theirs. */
-const isFunction = (n: Node): n is DaxFunction => !isTable(n) && !("table" in n);
+/** A measure carries its table and no `kind`, where a column carries both and a function neither. */
 const isMeasure = (n: Node): n is Measure => "table" in n && !("kind" in n);
-/** A function goes by its bare name, as DAX calls it and Tabular Editor names it. */
-const nameOf = (n: Node): string =>
-  isTable(n)
-    ? tableRef(n.name)
-    : isFunction(n)
-      ? n.name
-      : isMeasure(n)
-        ? measureRef(n.name)
-        : columnRef(n.table.name, n.name);
 /** "A", "A and B", "A, B, and C", the list style the site's index and the browser app use. */
 const listOf = (items: string[]): string =>
   items.length <= 2 ? items.join(" and ") : `${items.slice(0, -1).join(", ")}, and ${items.at(-1)}`;
@@ -61,6 +51,17 @@ export function buildReachabilityIndex(
   references: ReferenceIndex,
   reportRefs: ReportReferenceIndex,
 ): ReachabilityIndex {
+  const functions = new Set<Node>(model.functions);
+  const isFunction = (n: Node): n is DaxFunction => functions.has(n);
+  /** A function goes by its bare name, as DAX calls it and Tabular Editor names it. */
+  const nameOf = (n: Node): string =>
+    isTable(n)
+      ? tableRef(n.name)
+      : isFunction(n)
+        ? n.name
+        : isMeasure(n)
+          ? measureRef(n.name)
+          : columnRef(n.table.name, n.name);
   const tables = new Map(model.tables.map((t) => [t.name.toLowerCase(), t]));
   const columnOf = (table: string, name: string): Column | undefined =>
     tables

@@ -1166,7 +1166,7 @@ describe("NOT_REACHED_FROM_REPORT and user-defined functions, on the sample's re
   const onUdf = notReached(udfModel);
   const names = onUdf.map((f) => f.objectName);
 
-  it("reaches what [Net Sales] uses through Sales.NetAfterReserve and Sales.ApplyTax", () => {
+  it("reaches what [Net Sales] uses through Sales.NetAfterReserve, and the added relationship's columns", () => {
     expect(onSample.filter((n) => !names.includes(n))).toEqual([
       "'Promotion'[Start Date]",
       "'Sales'[Net Amount]",

@@ -185,7 +185,7 @@ describe("reference index: user-defined functions", () => {
 	measure Reserve = [Total] * 0.02
 		isHidden
 	measure Net = sales.netafter ( [Total] )
-	measure 'Not A Call' = MySales.NetAfter(1) + Sales.NetAfterX(1) + x_Sales.NetAfter(1) + Other.Sales.NetAfter(1) + "Sales.NetAfter"
+	measure 'Not A Call' = MySales.NetAfter(1) + Sales.NetAfterX(1) + x_Sales.NetAfter(1) + Other.Sales.NetAfter(1) + SalesXNetAfter(1) + "Sales.NetAfter"
 	measure Fmt = 1
 		formatStringDefinition = Fmt.Pick ( 1 )
 
@@ -269,6 +269,19 @@ function 'Def.Total' = (p: NUMERIC = [Total]) => p
       fn("Sales.NetAfter"),
     ]);
   });
+  it("tells a function from another whose name it begins, and matches a name's characters only as themselves", () => {
+    const p = modelFrom(
+      "function F = () => 1\n\nfunction 'F.G' = () => 2\n\nfunction G = () => 3\n",
+    ).functions;
+    const read = functionCallReader(p);
+    expect(read("F.G(1)")).toEqual([p[1]]);
+    expect(read("F (1)")).toEqual([p[0]]);
+    expect(read("G(F.G())")).toEqual([p[1], p[2]]);
+    // A name DAX refuses can still sit in a file; its characters match only as themselves.
+    const odd = modelFrom("function 'Odd+Name[1]' = () => 1\n").functions;
+    expect(functionCallReader(odd)("Odd+Name[1] (2) + OddName1(3)")).toEqual(odd);
+    expect(functionCallReader(odd)("OddName1(3)")).toEqual([]);
+  });
   it("answers called-by for a function, in model order", () => {
     expect(i.functionCalledBy(fn("Sales.ApplyTax")).map((o) => o.kind)).toEqual([
       "calculatedColumn",
@@ -276,6 +289,13 @@ function 'Def.Total' = (p: NUMERIC = [Total]) => p
       "function",
     ]);
     expect(i.functionCalledBy(fn("Def.Total"))).toEqual([]);
+  });
+  it("records a function that calls itself, which DAX refuses, as its own caller", () => {
+    const loop = modelFrom("function 'Loop.Self' = () => Loop.Self ( ) + 1\n");
+    const r = buildIndexes({ model: loop }).references;
+    const self = loop.functions[0]!;
+    expect(r.callsOf(self)).toEqual([self]);
+    expect(r.functionCalledBy(self).map((o) => o.object)).toEqual([self]);
   });
   it("calls nothing and resolves nothing new in a model without functions", () => {
     expect(idx.references.owners.every((o) => o.calls.length === 0)).toBe(true);

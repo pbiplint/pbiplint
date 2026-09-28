@@ -5,7 +5,7 @@
   "skipRules": {},
   "deviations": {
     "INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED": "A USERELATIONSHIP inside a user-defined function counts as activating the relationship, which Tabular Editor does not count, since the source rule reads measures and calculation items only.",
-    "UNNECESSARY_COLUMNS": "A column that a user-defined function names without its table counts as used, on every table with a column of that name, since the caller can hand the function any table. Tabular Editor counts such a name inside an iterator over a model table, as in `SUMX ( 'Sales', [Handling Fee] )`, but reports a column the function names elsewhere, as in `MAX ( [Tax Rate] )`, though deleting it would break the function."
+    "UNNECESSARY_COLUMNS": "A column that a user-defined function names without its table counts as used, on every table with a column of that name, since the caller can hand the function any table. In pbiplint's parity check, Tabular Editor counted such a name inside `SUMX ( 'Sales', [Handling Fee] )` but reported the column a function names in `MAX ( [Tax Rate] )`, though deleting it would break the function."
   },
   "ours": {
     "INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED": [],

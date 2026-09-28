@@ -84,11 +84,10 @@ const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\
 
 /**
  * A reader of the calls a DAX expression makes to the given user-defined functions, which returns
- * each function called once, in the order given. A call is the
- * function's name, in any letter case as DAX allows, followed by an opening parenthesis, with no
- * letter, digit, underscore, or dot just before the name, so `MySales.Total(` and
- * `Other.Sales.Total(` are not calls to `Sales.Total`. Like the references, a call inside a string
- * or a comment counts.
+ * each function called once, in the order given. A call is the function's name, in any letter case
+ * as DAX allows, followed by an opening parenthesis, with no letter, digit, underscore, or dot just
+ * before the name, so `MySales.Total(` and `Other.Sales.Total(` are not calls to `Sales.Total`.
+ * Like the references, a call inside a string or a comment counts.
  */
 export function functionCallReader(
   functions: readonly DaxFunction[],
@@ -142,7 +141,9 @@ export function buildReferenceIndex(model: Model): ReferenceIndex {
     if (ownerKind === "calculationItem")
       return { kind: "unresolved", name: raw.name, qualified: false };
     // A function has no table of its own, and its caller can hand it any table, so a bare name
-    // that is no measure is a use of every model column with that name.
+    // that is no measure is a use of every model column with that name. Tabular Editor reports some
+    // of those columns as unused: a recorded deviation of UNNECESSARY_COLUMNS, in
+    // tests/expectations/udf-sales.json.
     if (ownerKind === "function") {
       const all = model.tables.flatMap((t): DaxRef[] => {
         const col = columnOf(t, raw.name);

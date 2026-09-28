@@ -547,6 +547,28 @@ function 'Tax.Apply' = (a: NUMERIC) => a * 1.1
       expect(reach.pathTo(c("Tax Rate"))).toEqual(["Rep.Only", "'Sales'[Tax Rate]"]);
       expect(reach.pathTo(c("Secure"))).toEqual(["Sec.Allow", "'Sales'[Secure]"]);
     });
+    it("walks functions that call each other to a fixed point", () => {
+      const loop = modelFrom(`table T
+	column A
+		dataType: int64
+	column B
+		dataType: int64
+	measure M = Loop.Ping ( 1 )
+
+function 'Loop.Ping' = (n: NUMERIC) => Loop.Pong ( n ) + SUM ( 'T'[A] )
+
+function 'Loop.Pong' = (n: NUMERIC) => Loop.Ping ( n ) + SUM ( 'T'[B] )
+`);
+      const { report } = buildReport(visualBinding(measure("T", "M")));
+      const r = buildIndexes({ model: loop, report }).reachability!;
+      expect(r.pathTo(loop.tables[0]!.columns[1]!)).toEqual([
+        "[M]",
+        "Loop.Ping",
+        "Loop.Pong",
+        "'T'[B]",
+      ]);
+      expect(r.unreached().columns).toEqual([]);
+    });
     it("names a function among the referrers of what only an unreached function uses", () => {
       const u = reach.unreached();
       expect(u.measures.map((x) => x.name)).toEqual(["Dead", "Orphan"]);

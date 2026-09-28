@@ -725,7 +725,15 @@ DAX in a model measure reached it. A test reads a table of DAX shapes
 (iterators, `FILTER`, `CALCULATE`, `ADDCOLUMNS`, variables, nested
 iterators, own table and another table, a measure and a column of one
 name) as both and holds them to the same result. Which table a row
-context iterates is read with the DAX tokenizer (#108), not here.
+context iterates is read with the DAX tokenizer (#108), not here. A
+column the resolver finds on another table is resolved while the model
+is partly read, as one on the measure's own table already was: an
+unread file could declare a column of the name on a table earlier in
+model order, but no rule reads a report measure's references then
+(`NOT_REACHED_FROM_REPORT` is skipped while the model is partly read,
+and `BROKEN_FIELD_REFERENCE` leaves report measures out), so the answer
+counts only once the model is whole. A name that is no measure and no
+column anywhere stays `unread` or unresolved as before.
 
 **Reachability index.** Roots: every resolved report reference; both
 columns of every relationship; columns named in RLS and OLS filters;

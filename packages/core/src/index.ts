@@ -47,6 +47,7 @@ export { buildIndexes, type Indexes } from "./index/build.js";
 export { buildReachabilityIndex, type ReachabilityIndex } from "./index/reachability.js";
 export {
   extractRefs,
+  type DaxOwner,
   type DaxRef,
   type RefOwner,
   type RefOwnerKind,

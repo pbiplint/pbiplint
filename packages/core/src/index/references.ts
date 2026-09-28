@@ -146,7 +146,9 @@ export function resolveBareName<M>(
     const columns = lookup.tables.flatMap((t) => lookup.columnOf(t, name) ?? []);
     return columns.length > 0 ? { kind: "columns", columns } : { kind: "none" };
   }
-  for (const t of owner.table ? [owner.table, ...lookup.tables] : lookup.tables) {
+  const own = owner.table && lookup.columnOf(owner.table, name);
+  if (own) return { kind: "columns", columns: [own] };
+  for (const t of lookup.tables) {
     const column = lookup.columnOf(t, name);
     if (column) return { kind: "columns", columns: [column] };
   }

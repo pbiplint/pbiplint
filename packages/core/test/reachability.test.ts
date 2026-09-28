@@ -92,7 +92,7 @@ describe("buildReachabilityIndex", () => {
     expect(reach.reached(meas("Sales LY"))).toBe(false);
     expect(reach.reached(col("Date", "Date"))).toBe(false);
   });
-  it("walks a cycle the report reaches once, reaching each measure in it from the other", () => {
+  it("walks a cycle the report reaches, reaching each measure once and stopping where it began", () => {
     // Loop A and Loop B reference each other; binding one enqueues both, and the walk stops at
     // the measure it has already reached.
     const { report } = buildReport(visualBinding(measure("Sales", "Loop A")));

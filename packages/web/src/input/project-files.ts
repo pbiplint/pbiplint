@@ -287,7 +287,10 @@ const covered = (s: Selection, u: Unread): boolean =>
  * localeCompare(…, "en") as `byName` here, and walks into a folder where its name sorts, so a
  * folder comes before everything in it. Comparing segment by segment gives that order where
  * comparing whole paths would not: the walk is through `tables` and has met `tables/Sales.tmdl`
- * before it reaches `tables.old`, though "tables.old" sorts before "tables/Sales.tmdl".
+ * before it reaches `tables.old`, though "tables.old" sorts before "tables/Sales.tmdl". Keep in
+ * step with core's walkOrder (packages/core/src/model/build.ts), which also breaks a tie between
+ * names that compare equal by their code units, where this keeps the drop's order, as the CLI
+ * keeps its listing's (spec section 12).
  */
 export function walkOrder(a: string, b: string): number {
   const as = a.split("/");

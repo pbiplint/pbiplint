@@ -264,7 +264,8 @@ function finalizeKinds(model: Model): void {
  * segment: "tables/Sales.tmdl" comes before "tables.old/Sales.tmdl", though "tables.old" sorts
  * before "tables/Sales.tmdl" as a whole path. Two names that comparison calls equal ("Café" with
  * é, and with e and a combining accent) fall back to their code units, so the order never depends
- * on the order the files came in.
+ * on the order the files came in. Keep in step with the browser's walkOrder
+ * (packages/web/src/input/project-files.ts), which has no such fallback.
  */
 function walkOrder(a: string, b: string): number {
   const as = a.split("/");

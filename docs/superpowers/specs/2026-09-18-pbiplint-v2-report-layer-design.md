@@ -1677,17 +1677,18 @@ which differs from the CLI's walk where one folder's name is another's
 followed by a character that sorts before `/`: with a
 `definition/tables.old/` kept beside `definition/tables/`, whole paths
 put `tables.old` first, and the walk goes through `tables` first. The
-order reached the results, since a table declared in two files takes
-the first one's place and `DAX_COLUMNS_FULLY_QUALIFIED` resolves a
-bare column name on the first other table that has it. The browser now
-sorts the model's files with `walkOrder`, the order batch F's refusals
-already use, and core's `buildModel` reads a model's files in that
-order whatever order it is given, as `buildReport` already sorted the
-report's by path, so no caller's order can change a result. Where two
-different names in one folder compare equal in the walk's name order,
-core falls back to their code units. A project Power BI Desktop saved
-has one `tables` folder, so no fixture, parity expectation, or pinned count
-moved.
+order reached the findings, since a table declared in two files takes
+the first one's place, and the reference index resolves a bare column
+name on the first other table that has it, which
+`UNNECESSARY_COLUMNS` and `NOT_REACHED_FROM_REPORT` read. The browser
+now sorts the model's files with `walkOrder`, the order batch F's
+refusals already use, and core's `buildModel` reads a model's files in
+that order whatever order it is given, as `buildReport` already sorted
+the report's by path, so no caller's order of the model's files can
+change a finding. Where two different names in one folder compare
+equal in the walk's name order, core falls back to their code units.
+A project Power BI Desktop saved has one `tables` folder, so no
+fixture, parity expectation, or pinned count moved.
 
 ## 13. CLI changes
 

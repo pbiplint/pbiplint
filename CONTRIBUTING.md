@@ -88,7 +88,7 @@ Five things stay manual, because no automation can reach them. Check them on the
 | The change touches | Check by hand |
 |---|---|
 | The folder or drop input (`packages/web/src/main.ts`, `packages/web/src/input`) | "Choose a folder" in Chrome, and again in Firefox and Safari, which take a different route (the browser's folder chooser); and a real folder dragged from the desktop into Chrome |
-| The folder chooser's route or its refusals (`packages/web/src/input/pick-folder.ts`, `packages/web/src/input/project-files.ts`) | In Firefox, "Choose a folder" on a copy of the sample project (`examples/messy-sales`) with one page folder the system will not open (`chmod 000`, then `chmod 755` before deleting the copy): the refusal should end by suggesting a drag |
+| The folder chooser's route or its refusals (`readDirectoryInput` in `packages/web/src/input/pick-folder.ts`, the refusals in `packages/web/src/input/project-files.ts`) | In Firefox, "Choose a folder" on a copy of the sample project (`examples/messy-sales`) with one page folder the system will not open (`chmod 000`, then `chmod 755` before deleting the copy): the refusal should end by suggesting a drag |
 | The live region or the results announcement | Run the sample with a screen reader on and confirm it reads one sentence |
 | The facts panel or the layer filter (`packages/web/src/results/render.ts`) | Drop the sample project folder (`examples/messy-sales`) from the desktop into Chrome, and check that each linked fact in "Report at a glance" jumps to its group or opens its rule page, and that the Model and Report boxes hide and show the right groups |
 | Visual design, layout, or copy | Look at it, on a phone-width window too |

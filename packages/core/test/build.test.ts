@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { buildModel, splitQualifiedName } from "../src/model/build.js";
 import { parseTmdl } from "../src/tmdl/parse.js";
-import type { ParsedFile } from "../src/tmdl/types.js";
 import { fixturesDir, modelFrom } from "./helpers.js";
 
 const specSample = readFileSync(fixturesDir + "spec-sample.tmdl", "utf8");
@@ -391,10 +390,15 @@ describe("buildModel and the order of its files (tracked in #101)", () => {
   });
   it("orders two names the CLI's comparison calls equal the same way whichever comes first", () => {
     // "Café" written with é, and with e and a combining accent: localeCompare(…, "en") returns 0,
-    // and a file system that does not normalize names can hold both.
-    const composed = () => parseTmdl("tables/Café.tmdl", "table A\n");
-    const decomposed = () => parseTmdl("tables/Café.tmdl", "table B\n");
-    const order = (files: ParsedFile[]) => buildModel(files).files.map((f) => f.file);
-    expect(order([composed(), decomposed()])).toEqual(order([decomposed(), composed()]));
+    // and a file system that does not normalize names can hold both. Written as escapes, so an
+    // editor that normalizes the file cannot make the two one name.
+    const composed = () => parseTmdl("tables/Caf\u00e9.tmdl", "table A\n");
+    const decomposed = () => parseTmdl("tables/Cafe\u0301.tmdl", "table B\n");
+    // By code units, e (0x65) before é (0xE9).
+    for (const files of [
+      [composed(), decomposed()],
+      [decomposed(), composed()],
+    ])
+      expect(buildModel(files).tables.map((t) => t.name)).toEqual(["B", "A"]);
   });
 });

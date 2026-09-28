@@ -379,9 +379,10 @@ describe("pbiplint CLI", () => {
       `pbiplint: ${root} contains 2 semantic models; point at one of them: Cost.SemanticModel, Sales.SemanticModel\nRun pbiplint --help for usage.\n`,
     );
   });
-  // These tests have the operating system refuse a read, as a POSIX system does for a user (CI
-  // runs them on Ubuntu). Root reads a folder whatever its mode, and Windows ignores a mode of 000
-  // and makes a symbolic link only in Developer Mode or as an administrator, so they skip there.
+  // These tests have the operating system refuse a read, as a POSIX system does for a user, or
+  // put a symbolic link where the walk would read (CI runs them on Ubuntu). Root reads a folder
+  // whatever its mode, and Windows ignores a mode of 000 and makes a symbolic link only in
+  // Developer Mode or as an administrator, so they skip there.
   const onWindows = process.platform === "win32";
   const noModes = onWindows || process.getuid?.() === 0;
   const unread = (path: string, reason: string) => ({

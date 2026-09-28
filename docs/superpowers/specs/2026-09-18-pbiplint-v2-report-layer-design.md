@@ -522,23 +522,31 @@ and one of its part's unread paths, so every rule and fact treats what
 it stands for as it treats a folder or file that could not be read.
 What a link points at is looked up only to tell a folder from a file,
 so a link the walk would have passed over (to a skipped folder, or
-named as a file it does not read) has no notice. The same holds where
+named as a file it does not read) has no notice. A link to nothing is
+taken as a file, and one whose target the operating system will not
+say about (a link to itself, say) as a folder. The same holds where
 the walk looks a path up by name: a part folder beside the other part,
-the report folder a `.pbip` names, the model folder a `definition.pbir`
-names, a part's `definition` folder, its `definition.pbir` and
-`.platform`, and a `.pbip` found beside the parts. A part folder that
-is a link leaves its layer absent with the reason "the model folder
-could not be read" or "the report folder could not be read", and a run
-of which nothing could be read is refused naming the link, as it names
-a refusal: `Could not read Demo/Demo.SemanticModel: it is a symbolic
-link, which pbiplint does not follow`. The input itself is followed, as
-the user named it: a folder is walked where the link sits, and a file
-(a `.pbip` or a `.tmdl` file) is taken where it really sits, so the
-report path a linked `.pbip` writes is relative to the real file's
-folder. Before, a linked folder was passed over without a word (a
-linked `definition/pages` read as a report with no pages) and a linked
-file was read. The browser is handed what the browser reads, which
-does not say whether an entry is a link, so the site is unchanged.
+a part's `definition` folder, its `definition.pbir` and `.platform`,
+and a `.pbip` found beside the parts, each of which counts toward the
+refusal of two parts or two `.pbip` files as what it is named as when
+it is a link to a folder or a file. The report folder a `.pbip` names
+and the model folder a `definition.pbir` names are checked along the
+whole path written, each folder below the one it shares with the
+project folder, so a link partway along the path is named, not only
+one at its end. A part folder reached through a link leaves its layer
+absent with the reason "the model folder could not be read" or "the
+report folder could not be read", and a run of which nothing could be
+read is refused naming the link, as it names a refusal: `Could not
+read Demo/Demo.SemanticModel: it is a symbolic link, which pbiplint
+does not follow`. The input itself is followed, as the user named it,
+and known by the name the user gave it (a link named `Sales.pbix` is
+refused as a `.pbix`): a folder is walked, and a `.tmdl` file read,
+where the link sits, and a `.pbip` is taken where it really sits, so
+the report path it writes is relative to the real file's folder.
+Before, a linked folder was passed over without a word (a linked
+`definition/pages` read as a report with no pages) and a linked file
+was read. The browser is handed what the browser reads, which does not
+say whether an entry is a link, so the site is unchanged.
 
 ## 5. PBIR parser and report object model
 

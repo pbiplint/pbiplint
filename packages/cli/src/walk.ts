@@ -80,8 +80,9 @@ const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
 
 /**
- * Whether the path a file names is a folder: undefined when nothing is there, and true when the
- * operating system will not say, so the read that follows meets the refusal and names it.
+ * Whether the path a file names, or a link points at, is a folder: undefined when nothing is
+ * there, and true when the operating system will not say, so the read that follows meets the
+ * refusal, or for a link the link's notice, and names it.
  */
 function folderAt(p: string): boolean | undefined {
   try {
@@ -164,6 +165,21 @@ function linked(w: Walk, p: string, part?: ResolvedPart, folder = false): boolea
   if (p === w.base || !isLink(p)) return false;
   unread(w, p, LINK, part, folder);
   return true;
+}
+
+/**
+ * The first link on the way from the walk's base to `to`, a folder a project file names by a path
+ * that may pass through others (`../Shared/Sales.SemanticModel`): each folder below the one the two
+ * share, down to `to` itself. The folders the base sits in are where the project is, and are
+ * followed, as the input is.
+ */
+function linkOnWay(w: Walk, to: string): string | undefined {
+  let at = w.base;
+  for (const segment of relative(w.base, to).split(/[\\/]/)) {
+    at = join(at, segment);
+    if (segment !== "" && segment !== ".." && isLink(at)) return at;
+  }
+  return undefined;
 }
 
 /**
@@ -273,14 +289,19 @@ function readPart(
   folder: string,
   read: (w: Walk, folder: string) => ResolvedPart | undefined,
 ): ResolvedPart | undefined {
+  // A link on the way to the folder, or the folder itself as one, is not entered.
+  const via = linkOnWay(w, folder);
+  if (via !== undefined) {
+    unread(w, via, LINK);
+    if (layer) w.project.absent[layer] = UNREAD_PART[layer];
+    return undefined;
+  }
   let part: ResolvedPart | undefined;
   try {
-    // A link is not entered. Entering the folder is tried next, so a folder that refuses entry is
-    // the one named rather than the first entry looked up inside it.
-    if (!linked(w, folder)) {
-      accessSync(folder, constants.X_OK);
-      part = read(w, folder);
-    }
+    // Entering the folder is tried first, so a folder that refuses entry is the one named rather
+    // than the first entry looked up inside it.
+    accessSync(folder, constants.X_OK);
+    part = read(w, folder);
   } catch (e) {
     if (!isSystemError(e)) throw e;
     unread(w, e.path ?? folder, refusalOf(e));
@@ -351,15 +372,13 @@ const LEGACY_MODEL_REASON = "the model is saved in the legacy model.bim format";
 
 /** Find the project at or under `input` and read its parts (spec section 4). */
 export function resolveProject(input: string): ResolvedProject {
-  let path = resolve(input);
+  const path = resolve(input);
   try {
     const stat = statOf(path);
     if (stat === undefined) throw new UsageError(`${input} does not exist`);
     if (stat.isFile()) {
-      // The input is followed, as the user named it. A folder is walked where the link sits, which
-      // reads what it points at; a file is taken where it really sits, as the paths a .pbip writes
-      // are relative to its own folder.
-      if (isLink(path)) path = realpathSync(path);
+      // The input is followed, as the user named it, and known by the name the user gave it. A
+      // folder is walked, and a .tmdl file read, where the link sits.
       if (path.endsWith(".tmdl"))
         return {
           root: dirname(path),
@@ -371,7 +390,9 @@ export function resolveProject(input: string): ResolvedProject {
           absent: {},
           diagnostics: [],
         };
-      if (path.endsWith(".pbip")) return resolvePbip(input, path);
+      // A .pbip is taken where it really sits, as the paths it writes are relative to its folder.
+      if (path.endsWith(".pbip"))
+        return resolvePbip(input, isLink(path) ? realpathSync(path) : path);
       // Named for what it is, by its name alone: a .pbix is never opened.
       if (isPbix(path)) throw new UsageError(pbixRefusal(input));
       throw new UsageError(`${input} is not a .tmdl file, a .pbip file, or a folder`);
@@ -474,7 +495,12 @@ function resolvePbip(input: string, path: string): ResolvedProject {
 function pbirOf(w: Walk, report: ResolvedPart | undefined, folder: string): string | undefined {
   if (report) return report.files.find((f) => f.path === "definition.pbir")?.text;
   const at = toPosix(relative(w.base, folder));
-  if (w.project.diagnostics.some((d) => d.kind === "unread-file" && d.path === at))
+  // A notice at the folder, or at a link on the way to it.
+  if (
+    w.project.diagnostics.some(
+      (d) => d.kind === "unread-file" && (d.path === at || at.startsWith(`${d.path}/`)),
+    )
+  )
     return undefined;
   const p = join(folder, "definition.pbir");
   return attempt(w, p, () => (isFile(p) ? readFileSync(p, "utf8") : undefined));
@@ -550,8 +576,9 @@ function readFolder(w: Walk, input: string, path: string, preferred?: string): R
   const out = w.project;
   const name = basename(path);
 
-  // The folder is itself one part.
-  if (isDir(join(path, "definition"))) {
+  // The folder is itself one part. A definition folder that is a link says so in the part's read.
+  const def = join(path, "definition");
+  if (isDir(def) || isLink(def)) {
     // The folder's name says which part it is, and only the reader for that part may record a
     // reason: a .Report is read for .tmdl files first, and finding none is not a refusal.
     const model = readPart(
@@ -591,12 +618,10 @@ function readFolder(w: Walk, input: string, path: string, preferred?: string): R
     return out;
   }
 
-  // A PBIP folder: the parts sit beside each other. A link named as a part is one, so that its
-  // read names it.
+  // A PBIP folder: the parts sit beside each other. A link to a folder named as a part is one, so
+  // that its read names it; a link to nothing is no folder, as in readTree.
   const dirs = readdirSync(path, { withFileTypes: true })
-    .filter(
-      (e) => e.isDirectory() || (e.isSymbolicLink() && folderAt(join(path, e.name)) !== false),
-    )
+    .filter((e) => e.isDirectory() || (e.isSymbolicLink() && folderAt(join(path, e.name)) === true))
     .map((e) => e.name);
   const models = dirs.filter((d) => d.endsWith(".SemanticModel")).sort(byName);
   const reports = dirs.filter((d) => d.endsWith(".Report")).sort(byName);

@@ -108,6 +108,21 @@ describe("relationship graph rules", () => {
       objectNames(rules.INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED, reversed).length,
     ).toBe(2);
   });
+  it("INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED counts a USERELATIONSHIP in a user-defined function's body", () => {
+    const activating = star.replace(
+      "CALCULATE(1, USERELATIONSHIP('Sales'[Date Key], 'Date'[Date]))",
+      "Date.ByKey ( 1 )",
+    );
+    const fn =
+      "\nfunction 'Date.ByKey' = (value: EXPR) => CALCULATE ( value, USERELATIONSHIP ( 'Sales'[Date Key], 'Date'[Date] ) )\n";
+    expect(activating).not.toBe(star);
+    expect(
+      objectNames(rules.INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED, activating).length,
+    ).toBe(2);
+    expect(
+      objectNames(rules.INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED, activating + fn),
+    ).toEqual(["'Date'[Product ID] ∞←1 'Product'[Product ID]"]);
+  });
   it("RELATIONSHIP_COLUMNS_SAME_DATA_TYPE skips relationships whose columns are missing", () => {
     expect(objectNames(rules.RELATIONSHIP_COLUMNS_SAME_DATA_TYPE, star)).toEqual([
       "'Date'[Product ID] ∞←1 'Product'[Product ID]",

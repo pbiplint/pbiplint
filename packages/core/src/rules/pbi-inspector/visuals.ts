@@ -1,4 +1,4 @@
-import { escapePointer } from "../../pbir/refs.js";
+import { escapePointer } from "../../pbir/json.js";
 import { literal } from "../../pbir/build.js";
 import { allVisuals, reportFinding } from "../report-helpers.js";
 import { inspectorRule } from "./define.js";

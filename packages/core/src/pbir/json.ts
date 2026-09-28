@@ -223,18 +223,26 @@ export function newerThan(a: string, b: string): boolean {
 export const newerMajor = (a: string, b: string): boolean =>
   Number(a.split(".")[0]) > Number(b.split(".")[0]);
 
+/** A JSON pointer segment, with `~` and `/` escaped as RFC 6901 says. */
+export const escapePointer = (s: string): string => s.replace(/~/g, "~0").replace(/\//g, "~1");
+
+/** A JSON pointer segment read back: `~1` before `~0`, as RFC 6901 says, so `~01` is `~1`. */
+const unescapePointer = (s: string): string => s.replace(/~1/g, "/").replace(/~0/g, "~");
+
+/** Whether the character at `i` ends a line, counted as LINE_BREAK counts: a CRLF once, at its LF. */
+const endsLine = (text: string, i: number): boolean =>
+  text[i] === "\n" || (text[i] === "\r" && text[i + 1] !== "\n");
+
 /**
  * The 1-based line of what a JSON pointer names, for a finding's location: the line of the key
  * for an object member, the line the value starts on for an array element. 1 for the root or for
  * a pointer that names nothing. A token scanner rather than a parse, because JSON.parse keeps no
- * positions; it tracks the path as it walks and stops at the first match.
+ * positions; it tracks the path as it walks and stops at the first match. Lines are counted as
+ * readJson counts them.
  */
 export function lineOfPointer(text: string, pointer: string): number {
   if (pointer === "") return 1;
-  const want = pointer
-    .split("/")
-    .slice(1)
-    .map((s) => s.replace(/~1/g, "/").replace(/~0/g, "~"));
+  const want = pointer.split("/").slice(1).map(unescapePointer);
   const path: string[] = [];
   const kinds: ("object" | "array")[] = [];
   const parent = (): "object" | "array" | undefined => kinds[kinds.length - 1];
@@ -245,7 +253,7 @@ export function lineOfPointer(text: string, pointer: string): number {
   // read as a scalar, it would swallow the opening brace with it, and the scan would lose the root.
   for (let i = text.charCodeAt(0) === 0xfeff ? 1 : 0; i < text.length; i++) {
     const ch = text[i]!;
-    if (ch === "\n") {
+    if (endsLine(text, i)) {
       line++;
       continue;
     }
@@ -256,13 +264,20 @@ export function lineOfPointer(text: string, pointer: string): number {
         if (text[j] === "\\") j++;
         j++;
       }
-      const value = JSON.parse(text.slice(i, j + 1)) as string;
+      // A string JSON cannot decode (one with a raw control character, or one the text ends inside)
+      // is compared as written, so the scan goes on past it rather than failing.
+      let value: string;
+      try {
+        value = JSON.parse(text.slice(i, j + 1)) as string;
+      } catch {
+        value = text.slice(i + 1, j);
+      }
       if (parent() === "object" && expectKey) {
         path[path.length - 1] = value;
         expectKey = false;
         if (matches()) return line;
       } else if (parent() === "array" && matches()) return line;
-      for (let k = i; k <= j; k++) if (text[k] === "\n") line++;
+      for (let k = i; k <= j; k++) if (endsLine(text, k)) line++;
       i = j;
       continue;
     }

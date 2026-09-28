@@ -1,4 +1,4 @@
-import { escapePointer } from "../../pbir/refs.js";
+import { escapePointer } from "../../pbir/json.js";
 import {
   allVisuals,
   bookmarkUnread,

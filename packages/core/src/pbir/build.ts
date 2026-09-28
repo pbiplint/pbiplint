@@ -1,7 +1,14 @@
 import type { LintFile } from "../engine/lint.js";
 import type { Diagnostic } from "../project/types.js";
-import { lineOfPointer, newerMajor, newerThan, readJson, schemaFamilyOf } from "./json.js";
-import { collectFieldRefs, escapePointer } from "./refs.js";
+import {
+  escapePointer,
+  lineOfPointer,
+  newerMajor,
+  newerThan,
+  readJson,
+  schemaFamilyOf,
+} from "./json.js";
+import { collectFieldRefs } from "./refs.js";
 import type {
   Bookmark,
   DatasetReference,

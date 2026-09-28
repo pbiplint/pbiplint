@@ -75,6 +75,7 @@ export {
 export type * from "./model/types.js";
 export { buildReport, KNOWN_SCHEMAS, literal } from "./pbir/build.js";
 export {
+  escapePointer,
   lineOfPointer,
   newerThan,
   readJson,
@@ -91,7 +92,7 @@ export {
   shortId,
   visualLabel,
 } from "./pbir/names.js";
-export { collectFieldRefs, escapePointer } from "./pbir/refs.js";
+export { collectFieldRefs } from "./pbir/refs.js";
 export type * from "./pbir/types.js";
 export { buildFacts } from "./project/facts.js";
 export {

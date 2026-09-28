@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  escapePointer,
   lineOfPointer,
   newerMajor,
   newerThan,
@@ -217,6 +218,46 @@ describe("lineOfPointer", () => {
     // Neither is JSON whitespace, but a regex `\s` matches both, which once stalled the scalar skip.
     expect(lineOfPointer('{\n  "a":\u00a0 1,\n  "b": 2\n}', "/b")).toBe(3);
     expect(lineOfPointer('{\n  "a": [\u2028 1, 2],\n  "b": 3\n}', "/b")).toBe(3);
+  });
+  it("counts a CRLF or a lone CR as one line break, as readJson does", () => {
+    for (const eol of ["\r\n", "\r"]) {
+      const text = doc.replace(/\n/g, eol);
+      expect(lineOfPointer(text, "/position/height")).toBe(5);
+      expect(lineOfPointer(text, "/items/1/k")).toBe(9);
+    }
+  });
+  it("steps past empty containers, and finds number, true, false, and null elements", () => {
+    const text = [
+      "{",
+      '  "a": {},',
+      '  "b": [],',
+      '  "n": [',
+      "    1,",
+      "    -2.5e3,",
+      "    true,",
+      "    false,",
+      "    null",
+      "  ],",
+      '  "c": 1',
+      "}",
+    ].join("\n");
+    expect(lineOfPointer(text, "/a")).toBe(2);
+    expect(lineOfPointer(text, "/b")).toBe(3);
+    expect(lineOfPointer(text, "/b/0")).toBe(1);
+    expect([0, 1, 2, 3, 4].map((i) => lineOfPointer(text, `/n/${i}`))).toEqual([5, 6, 7, 8, 9]);
+    expect(lineOfPointer(text, "/c")).toBe(11);
+  });
+  it("is 1 rather than an error for text that is not JSON", () => {
+    // Every caller passes text readJson parsed, but the promise is the function's own.
+    expect(lineOfPointer('{\n  "a": "open', "/b")).toBe(1);
+    expect(lineOfPointer('{\n  "a\u0001": 1,\n  "b": 2\n}', "/b")).toBe(3);
+  });
+  it("finds a key escapePointer wrote, whatever tildes and slashes it holds", () => {
+    const keys = ["a/b", "c~d", "~1", "~0", "/~", "~/", "plain"];
+    const text = `{\n${keys.map((k, i) => `  ${JSON.stringify(k)}: ${i}`).join(",\n")}\n}`;
+    expect(keys.map((k) => lineOfPointer(text, `/${escapePointer(k)}`))).toEqual([
+      2, 3, 4, 5, 6, 7, 8,
+    ]);
   });
   it("reads past a BOM, which the finding factories' file text keeps", () => {
     expect(lineOfPointer(`\ufeff${doc}`, "/position/height")).toBe(5);

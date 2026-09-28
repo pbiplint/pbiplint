@@ -91,6 +91,31 @@ describe("dependency rules", () => {
   it("UNNECESSARY_MEASURES counts a measure named in a user-defined function, even one nothing calls", () => {
     expect(objectNames(rules.UNNECESSARY_MEASURES, withFunction)).toEqual(["[Unused]"]);
   });
+  it("UNNECESSARY_MEASURES counts a measure named in a function after one whose code fence was left open", () => {
+    // Every function shares functions.tmdl, so an open fence there used to swallow the functions
+    // after it, and what only they named read as unused.
+    const fenceLeftOpen = [
+      "table Sales",
+      "\tmeasure 'Used In B' = 1",
+      "\t\tisHidden",
+      "\tmeasure 'Used In C' = 2",
+      "\t\tisHidden",
+      "\tmeasure Unused = 3",
+      "\t\tisHidden",
+      "",
+      "function A = ```",
+      "\t\t() => 0",
+      "\tlineageTag: a",
+      "",
+      "function B = () => [Used In B]",
+      "",
+      "function C = ```",
+      "\t\t() => [Used In C]",
+      "\t\t```",
+      "",
+    ].join("\n");
+    expect(objectNames(rules.UNNECESSARY_MEASURES, fenceLeftOpen)).toEqual(["[Unused]"]);
+  });
   it("UNNECESSARY_MEASURES counts references from calculation items and other hidden measures", () => {
     expect(objectNames(rules.UNNECESSARY_MEASURES, model)).toEqual([
       "[Hidden Unused]",

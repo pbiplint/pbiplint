@@ -50,6 +50,21 @@ function splitHeader(
 }
 
 /**
+ * Whether a line opens a code fence: a declaration, or an expression with no name, whose `=` is
+ * followed by three backticks, as `parseTmdl` reads a line. DAX and M give backticks no meaning
+ * outside a string or a comment, and none of the 11,458 fences in 23,457 TMDL files surveyed on
+ * September 28, 2026 holds such a line, so one inside a fence means that fence was never closed.
+ */
+const opensFence = (line: string): boolean => {
+  const content = line.slice(tabIndent(line));
+  if (/^\s/.test(content) || REF.test(content) || PROP.test(content)) return false;
+  const h = splitHeader(content);
+  return h !== null && h.hasEq && h.inline === "```";
+};
+/** Whether a line is a `///` description line, as `parseTmdl` reads one. */
+const isDescription = (line: string): boolean => line.slice(tabIndent(line)).startsWith("///");
+
+/**
  * Generic TMDL tree parser. Unknown object types and properties parse as generic nodes,
  * so a construct this code has never seen never aborts a run. A line at the root of a file that
  * TMDL does not allow there is also a parse issue: an object or a flag whose type TMDL does not
@@ -148,26 +163,47 @@ export function parseTmdl(file: string, text: string): ParsedFile {
     // Fenced expression: header ends with ```; closed by a line that is only ```; that closing
     // line's leading whitespace is the left boundary stripped from every line.
     const collectFenced = (): string => {
-      const out: string[] = [];
       let j = i + 1;
-      while (j < lines.length && lines[j]!.trim() !== "```") {
-        out.push(lines[j]!);
-        j++;
+      while (j < lines.length && lines[j]!.trim() !== "```" && !opensFence(lines[j]!)) j++;
+      if (j < lines.length && lines[j]!.trim() === "```") {
+        const boundary = leadingWs(lines[j]!);
+        const out = lines.slice(i + 1, j).map((l) => l.slice(Math.min(boundary, leadingWs(l))));
+        i = j;
+        return out.join("\n");
       }
-      if (j >= lines.length)
-        // "code fence", the words rules/parse-issue.md uses, so the finding and the page agree.
-        // The rest of the file is read as this expression, so every declaration below is lost.
-        issues.push({
-          file,
-          line: lineNo,
-          text: raw,
-          reason: "unterminated code fence",
-          canDropObjects: true,
-          canDropTableLine: out.some(mayBeRootLine),
-        });
-      const boundary = j < lines.length ? leadingWs(lines[j]!) : 0;
-      i = j;
-      return out.map((l) => l.slice(Math.min(boundary, leadingWs(l)))).join("\n");
+      // The fence was never closed: the file ended, or a line opened another fence, first. Fenced
+      // text may sit at any depth, so nothing says where the expression should have ended. Text
+      // indented deeper than the header is read as an indented expression is, up to the first line
+      // indented less than its first line, which is where Power BI Desktop writes the object's
+      // properties and the next declaration. Text that is not runs to the other fence's
+      // declaration, less a `///` run directly above it, which is that declaration's description,
+      // or to the end of the file.
+      let first = i + 1;
+      while (first < j && lines[first]!.trim() === "") first++;
+      const blockIndent = first < j ? leadingWs(lines[first]!) : 0;
+      const indented = blockIndent > indent;
+      let end = j;
+      if (indented) {
+        end = first + 1;
+        while (end < j && (lines[end]!.trim() === "" || leadingWs(lines[end]!) >= blockIndent))
+          end++;
+      } else if (j < lines.length) {
+        while (end > i + 1 && isDescription(lines[end - 1]!)) end--;
+      }
+      const read = lines.slice(i + 1, end);
+      // "code fence", the words rules/parse-issue.md uses, so the finding and the page agree.
+      issues.push({
+        file,
+        line: lineNo,
+        text: raw,
+        reason: "unterminated code fence",
+        canDropObjects: true,
+        canDropTableLine: read.some(mayBeRootLine),
+      });
+      const out = read.map((l) => (l.trim() === "" ? "" : indented ? l.slice(blockIndent) : l));
+      while (out.at(-1) === "") out.pop();
+      i = end - 1;
+      return out.join("\n");
     };
 
     const base = {

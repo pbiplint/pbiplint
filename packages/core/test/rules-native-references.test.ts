@@ -244,7 +244,7 @@ describe("BROKEN_FIELD_REFERENCE", () => {
       },
       {
         path: "definition/tables/Returns.tmdl",
-        text: "table Returns\n\tmeasure Refunds = ```\n\t\t\t1\n\tmeasure 'Return Rate' = 0.1\n",
+        text: "table Returns\n\tmeasure Refunds = ```\n\t1\n\tmeasure 'Return Rate' = 0.1\n",
       },
       {
         path: "definition/tables/Stock.tmdl",

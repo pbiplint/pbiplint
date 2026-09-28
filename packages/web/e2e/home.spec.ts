@@ -164,6 +164,26 @@ test("refuses a folder with two reports and names them", async ({ page }) => {
   );
 });
 
+test("the folder chooser's refusal of a folder with nothing to lint suggests dragging it", async ({
+  page,
+}) => {
+  // The sentence is for a folder the browser could not open inside the chosen one, which this
+  // route cannot tell from nothing there. Such a folder is no test input: in Playwright, Firefox's
+  // listing fails with no change event and WebKit leaves the folder out, so that case stays a
+  // manual check (CONTRIBUTING). A folder with nothing to lint reaches the same refusal.
+  await withTempFolder(
+    "nothing-",
+    (dir) => writeFileSync(join(dir, "notes.txt"), "Not a model or a report.\n"),
+    async (dir) => {
+      await page.locator("#folder-input").setInputFiles(dir);
+      await expect(page.locator("#status")).toHaveText(
+        "No model or report found. Drop a PBIP folder, a .SemanticModel or .Report folder, or a .tmdl file. If the folder you chose holds a model or report, your browser may not have been able to open a folder inside it; drag the folder onto the page instead.",
+      );
+      await expect(page.locator("#results")).toBeHidden();
+    },
+  );
+});
+
 test("a folder deeper than the cap produces a notice, not silence", async ({ page }) => {
   await withTempFolder(
     "deep-",

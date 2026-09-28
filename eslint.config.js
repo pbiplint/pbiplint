@@ -73,6 +73,14 @@ export default tseslint.config(
           ],
         },
       ],
+      // The same functions reached through the module, as in os.tmpdir() or fs.mkdtempSync().
+      "no-restricted-properties": [
+        "error",
+        ...["mkdtemp", "mkdtempSync", "tmpdir"].map((property) => ({
+          property,
+          message: TEMP_DIR,
+        })),
+      ],
     },
   },
 );

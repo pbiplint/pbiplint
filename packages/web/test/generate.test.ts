@@ -782,9 +782,13 @@ describe("rulesIndex", () => {
   // and the work would run even when the file is filtered to an unrelated test.
   let metas: RuleMeta[];
   beforeAll(() => {
+    // Nothing reads the pages afterwards, so the folder goes as soon as they are written.
     const out = makeTempDir("index");
-    metas = generateSite({ outDir: out });
-    return () => removeTempDir(out);
+    try {
+      metas = generateSite({ outDir: out });
+    } finally {
+      removeTempDir(out);
+    }
   });
   it("sorts with an explicit locale, so the order does not depend on the build machine", () => {
     // Intl.LocalesArgument, not string | string[], because ES2020 widened the parameter and the

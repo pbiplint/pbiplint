@@ -550,14 +550,18 @@ describe("lint", () => {
 
 describe("lint and a report file nested too deep to read (#59)", () => {
   const j = (v: unknown) => JSON.stringify(v);
-  /** A visual whose query nests `levels` objects and arrays around one field, which the walk reaches. */
+  /**
+   * A visual whose query nests `levels` objects and arrays around one field, which the walk
+   * reaches. Built as text: JSON.stringify recurses, and overflows on Node 20 and 22 long before
+   * JSON.parse does.
+   */
   const nested = (levels: number): string => {
-    let node: unknown = {
+    const field = j({
       Column: { Expression: { SourceRef: { Entity: "Sales" } }, Property: "Amount" },
-    };
+    });
     // Each round is an object holding an array: two levels.
-    for (let i = 0; i < levels / 2; i++) node = { Or: [node] };
-    return j({ name: "v", visual: { visualType: "card", query: node } });
+    const query = `${'{"Or":['.repeat(levels / 2)}${field}${"]}".repeat(levels / 2)}`;
+    return `{"name":"v","visual":{"visualType":"card","query":${query}}}`;
   };
   const files = (visual: string) => [
     { path: "definition/report.json", text: j({}) },

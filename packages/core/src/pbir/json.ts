@@ -46,11 +46,19 @@ const LINE_BREAK = /\r\n?|\n/;
 
 /**
  * The text of the line a parse issue is on, as the issue quotes it: the line, or past 120
- * characters its first 119 and an ellipsis. A minified document is one line, and a finding quotes
- * the text whole.
+ * characters the line from its first character that is not whitespace, cut to 119 and an ellipsis
+ * when it is still longer. A minified document is one line, and a finding quotes the text whole;
+ * a deep line of a pretty-printed one is mostly indentation. The cut never splits a character that
+ * takes two UTF-16 units, which would reach the output as half a character.
  */
-const quoted = (line: string | undefined): string =>
-  line === undefined ? "" : line.length > 120 ? `${line.slice(0, 119)}…` : line;
+function quoted(line: string | undefined): string {
+  if (line === undefined || line.length <= 120) return line ?? "";
+  const text = line.trimStart();
+  if (text.length <= 120) return text;
+  const high = text.charCodeAt(118);
+  const end = high >= 0xd800 && high <= 0xdbff ? 118 : 119;
+  return `${text.slice(0, end)}…`;
+}
 
 /** The 1-based line of the character at `offset` in `body`. */
 const lineAt = (body: string, offset: number): number =>
@@ -115,10 +123,10 @@ function lineOfParseError(body: string, message: string): number {
   if (at && Number(at[1]) <= body.length) return lineOf(Number(at[1]));
   const named = AT_LINE.exec(message);
   if (named && Number(named[1]) >= 1 && Number(named[1]) <= lineCount) return Number(named[1]);
-  const quoted = QUOTED_RUN.exec(message);
-  if (!quoted) return 1;
-  const char = quoted[1]!;
-  const run = quoted[2]!;
+  const around = QUOTED_RUN.exec(message);
+  if (!around) return 1;
+  const char = around[1]!;
+  const run = around[2]!;
   const start = body.indexOf(run);
   if (start < 0) return 1;
   const middle = run.length / 2;
@@ -132,8 +140,9 @@ function lineOfParseError(body: string, message: string): number {
 /**
  * Reads one PBIR JSON file tolerantly. Conflict markers, invalid JSON, a document nested deeper
  * than `MAX_DEPTH`, and, unless the options say the file's format sets no root, a document that
- * parses to something other than an object become parse issues with a line, in the same shape the TMDL parser reports, so PARSE_ISSUE lists them
- * beside everything else; the document is then undefined and the caller reads nothing from it.
+ * parses to something other than an object become parse issues with a line, in the same shape
+ * the TMDL parser reports, so PARSE_ISSUE lists them beside everything else; the document is then
+ * undefined and the caller reads nothing from it.
  */
 export function readJson(file: string, text: string, options: ReadJsonOptions = {}): JsonRead {
   // Desktop writes JSON with a BOM at times; it is not part of the document.

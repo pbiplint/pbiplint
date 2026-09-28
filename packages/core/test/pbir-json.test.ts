@@ -116,6 +116,23 @@ describe("readJson", () => {
     const r = readJson("x.json", long);
     expect(r.issues[0]!.text).toBe(`${long.slice(0, 119)}…`);
     expect(readJson("x.json", '{\n  "b": }\n').issues[0]!.text).toBe('  "b": }');
+    // Every parse issue readJson reports quotes its line the same way.
+    const marker = `<<<<<<< ${"x".repeat(200)}`;
+    expect(readJson("x.json", `{\n${marker}\n}`).issues[0]!.text).toBe(`${marker.slice(0, 119)}…`);
+    const array = `[${"1,".repeat(100)}1]`;
+    expect(readJson("x.json", array).issues[0]!.text).toBe(`${array.slice(0, 119)}…`);
+  });
+  it("quotes a deep line of a pretty-printed file from its first bracket, not its indentation", () => {
+    let deep: unknown = 1;
+    for (let i = 0; i < 300; i++) deep = [deep];
+    const [issue] = readJson("x.json", JSON.stringify({ deep }, null, 2)).issues;
+    expect(issue!.reason).toBe("nested more than 256 levels deep");
+    expect(issue!.text).toBe("[");
+  });
+  it("never cuts a character that takes two UTF-16 units in half", () => {
+    const line = `${"x".repeat(118)}😀${"y".repeat(10)}`;
+    const text = readJson("x.json", `{\n${line}\n}`).issues[0]!.text;
+    expect(text).toBe(`${"x".repeat(118)}…`);
   });
   it("does not read the document's own text as the engine's line or offset", () => {
     // V8 quotes a slice of the broken document in its message, so a document that says "line 5"
@@ -148,8 +165,9 @@ describe("readJson and how deep a document nests", () => {
       {
         file,
         line: 3,
-        // A line longer than 120 characters is quoted to its first 119 and an ellipsis.
-        text: `  "deep": ${"[".repeat(109)}…`,
+        // A line longer than 120 characters is quoted from its first character that is not
+        // whitespace, to 119 characters and an ellipsis.
+        text: `"deep": ${"[".repeat(111)}…`,
         reason: "nested more than 256 levels deep",
       },
     ]);
@@ -247,7 +265,7 @@ describe("lineOfPointer", () => {
     expect([0, 1, 2, 3, 4].map((i) => lineOfPointer(text, `/n/${i}`))).toEqual([5, 6, 7, 8, 9]);
     expect(lineOfPointer(text, "/c")).toBe(11);
   });
-  it("is 1 rather than an error for text that is not JSON", () => {
+  it("does not throw on text that is not JSON", () => {
     // Every caller passes text readJson parsed, but the promise is the function's own.
     expect(lineOfPointer('{\n  "a": "open', "/b")).toBe(1);
     expect(lineOfPointer('{\n  "a\u0001": 1,\n  "b": 2\n}', "/b")).toBe(3);

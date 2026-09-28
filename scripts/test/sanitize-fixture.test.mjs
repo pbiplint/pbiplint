@@ -1,12 +1,12 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { tempDir } from "../../tests/support/temp-dir.js";
 import { sanitizeProject } from "../sanitize-fixture.mjs";
 
 describe("sanitizeProject", () => {
   it("rewrites data paths in TMDL, drops junk, drops resources, and edits report.json to match", () => {
-    const root = mkdtempSync(join(tmpdir(), "sanitize-"));
+    const root = tempDir("sanitize");
     mkdirSync(join(root, "X.SemanticModel", "definition", "tables"), { recursive: true });
     mkdirSync(join(root, "X.SemanticModel", ".pbi"), { recursive: true });
     mkdirSync(join(root, "X.Report", "StaticResources", "RegisteredResources"), {
@@ -65,7 +65,7 @@ describe("sanitizeProject", () => {
   });
 
   it("rewrites absolute paths in any TMDL string, keeps a folder's trailing separator, and is idempotent", () => {
-    const root = mkdtempSync(join(tmpdir(), "sanitize-"));
+    const root = tempDir("sanitize");
     mkdirSync(join(root, "X.SemanticModel", "definition"), { recursive: true });
     const file = join(root, "X.SemanticModel", "definition", "expressions.tmdl");
     writeFileSync(

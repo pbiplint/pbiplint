@@ -2,12 +2,10 @@ import {
   chmodSync,
   existsSync,
   mkdirSync,
-  mkdtempSync,
   readFileSync,
   readdirSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ConfigEnv, UserConfig } from "vite";
 import {
@@ -15,6 +13,7 @@ import {
   ignoreHelp as coreIgnoreHelp,
 } from "@pbiplint/core";
 import { beforeAll, describe, expect, it, vi } from "vitest";
+import { makeTempDir, removeTempDir, tempDir } from "../../../tests/support/temp-dir.js";
 import { generatePlugin, generateSite, pageEntries, RULES_DIR } from "../src/build/generate.js";
 import {
   attribution,
@@ -616,7 +615,7 @@ describe("pageLayer and SITE_LAYERS", () => {
 
 describe("generateSite", () => {
   it("writes every rule page, the index, the about page, and the sitemap", () => {
-    const out = mkdtempSync(join(tmpdir(), "pbiplint-site-"));
+    const out = tempDir("site");
     const metas = generateSite({ outDir: out });
     expect(metas.length).toBe(99);
     expect(readdirSync(join(out, "rules")).filter((d) => d !== "index.html").length).toBe(99);
@@ -665,7 +664,7 @@ describe("generateSite", () => {
     );
   });
   it("clears the generated rules tree, so a renamed rule leaves no orphan page", () => {
-    const out = mkdtempSync(join(tmpdir(), "pbiplint-stale-"));
+    const out = tempDir("stale");
     mkdirSync(join(out, "rules", "renamed-away"), { recursive: true });
     writeFileSync(join(out, "rules", "renamed-away", "index.html"), "<html>stale</html>");
     generateSite({ outDir: out });
@@ -674,10 +673,10 @@ describe("generateSite", () => {
     expect(existsSync(join(out, "rules", "index.html"))).toBe(true);
   });
   it("leaves the previous build alone when the index refuses a rule", () => {
-    const out = mkdtempSync(join(tmpdir(), "pbiplint-atomic-"));
+    const out = tempDir("atomic");
     mkdirSync(join(out, "rules", "kept"), { recursive: true });
     writeFileSync(join(out, "rules", "kept", "index.html"), "<html>previous</html>");
-    const rules = mkdtempSync(join(tmpdir(), "pbiplint-badrules-"));
+    const rules = tempDir("badrules");
     writeFileSync(
       join(rules, "invented.md"),
       read("hide-foreign-keys").replace("category: Formatting", "category: Invented"),
@@ -692,7 +691,7 @@ describe("generateSite", () => {
   it("refuses an outDir whose rules folder is the rule sources it reads", () => {
     // A temporary tree stands in for the repo root here, so a regression in the guard costs a
     // temp folder rather than the checked-in rules/ the real default would point at.
-    const out = mkdtempSync(join(tmpdir(), "pbiplint-selfdelete-"));
+    const out = tempDir("selfdelete");
     const rules = join(out, "rules");
     mkdirSync(rules, { recursive: true });
     writeFileSync(join(rules, "hide-foreign-keys.md"), read("hide-foreign-keys"));
@@ -705,8 +704,8 @@ describe("generateSite", () => {
     // Two real pages, so a failure here is the gate rather than something rulePage or rulesIndex
     // would have refused anyway. hide-foreign-keys already names MARK_PRIMARY_KEYS in a code span,
     // which is the link the gate has to take away.
-    const out = mkdtempSync(join(tmpdir(), "pbiplint-layer-"));
-    const rules = mkdtempSync(join(tmpdir(), "pbiplint-layerrules-"));
+    const out = tempDir("layer");
+    const rules = tempDir("layerrules");
     writeFileSync(join(rules, "hide-foreign-keys.md"), read("hide-foreign-keys"));
     const report = read("mark-primary-keys").replace("layer: model\n", "layer: report\n");
     // The page's own key is replaced rather than a second one added, which parseFrontmatter would
@@ -743,8 +742,8 @@ describe("generateSite", () => {
     // fires on a model-only run and gating its page would take one off the site that belongs
     // there. The two project rules that do need both layers publish a page early in exchange,
     // which decision 15 records as a known exception.
-    const out = mkdtempSync(join(tmpdir(), "pbiplint-project-"));
-    const rules = mkdtempSync(join(tmpdir(), "pbiplint-projectrules-"));
+    const out = tempDir("project");
+    const rules = tempDir("projectrules");
     writeFileSync(join(rules, "hide-foreign-keys.md"), read("hide-foreign-keys"));
     const fixture = read("parse-issue");
     // A page that lost its key would read as the model layer, publish anyway, and every assertion
@@ -764,8 +763,8 @@ describe("generateSite", () => {
     );
   });
   it("names the page when a rule page's layer is not a layer at all", () => {
-    const out = mkdtempSync(join(tmpdir(), "pbiplint-badlayer-"));
-    const rules = mkdtempSync(join(tmpdir(), "pbiplint-badlayerrules-"));
+    const out = tempDir("badlayer");
+    const rules = tempDir("badlayerrules");
     const typo = read("hide-foreign-keys").replace("layer: model\n", "layer: reprot\n");
     expect(typo).toContain("layer: reprot\n");
     writeFileSync(join(rules, "hide-foreign-keys.md"), typo);
@@ -783,7 +782,13 @@ describe("rulesIndex", () => {
   // and the work would run even when the file is filtered to an unrelated test.
   let metas: RuleMeta[];
   beforeAll(() => {
-    metas = generateSite({ outDir: mkdtempSync(join(tmpdir(), "pbiplint-index-")) });
+    // Nothing reads the pages afterwards, so the folder goes as soon as they are written.
+    const out = makeTempDir("index");
+    try {
+      metas = generateSite({ outDir: out });
+    } finally {
+      removeTempDir(out);
+    }
   });
   it("sorts with an explicit locale, so the order does not depend on the build machine", () => {
     // Intl.LocalesArgument, not string | string[], because ES2020 widened the parameter and the
@@ -884,7 +889,7 @@ describe("CATEGORY_ORDER", () => {
 
 describe("pageEntries", () => {
   it("never takes a Playwright report or result as a site page", () => {
-    const out = mkdtempSync(join(tmpdir(), "pbiplint-entries-"));
+    const out = tempDir("entries");
     for (const dir of ["playwright-report", "test-results/x", "e2e", "rules/a", "test-suite"]) {
       mkdirSync(join(out, dir), { recursive: true });
       writeFileSync(join(out, dir, "index.html"), "<html></html>");
@@ -893,7 +898,7 @@ describe("pageEntries", () => {
     expect(Object.keys(pageEntries(out)).sort()).toEqual(["home", "rules/a", "test-suite"]);
   });
   it("skips the package's own folders by name, and only where they sit", () => {
-    const out = mkdtempSync(join(tmpdir(), "pbiplint-entries-"));
+    const out = tempDir("entries");
     for (const dir of ["node_modules/p", "dist", "public", "src", "test", "content", "rules/src"]) {
       mkdirSync(join(out, dir), { recursive: true });
       writeFileSync(join(out, dir, "index.html"), "<html></html>");
@@ -902,7 +907,7 @@ describe("pageEntries", () => {
     expect(Object.keys(pageEntries(out)).sort()).toEqual(["404", "rules/src"]);
   });
   it("does not read what it skips, so a folder it cannot open is no reason to fail", () => {
-    const out = mkdtempSync(join(tmpdir(), "pbiplint-entries-"));
+    const out = tempDir("entries");
     mkdirSync(join(out, "node_modules/p"), { recursive: true });
     writeFileSync(join(out, "node_modules/p/index.html"), "<html></html>");
     mkdirSync(join(out, "rules/a"), { recursive: true });

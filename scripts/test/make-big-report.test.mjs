@@ -1,8 +1,8 @@
-import { cpSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { cpSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, URL } from "node:url";
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
+import { tempDir } from "../../tests/support/temp-dir.js";
 import { stampVisuals } from "../make-big-report.mjs";
 
 const fixture = fileURLToPath(new URL("../../tests/fixtures/base-rules-fails", import.meta.url));
@@ -24,13 +24,8 @@ function visualFolders(dir) {
 }
 
 describe("stampVisuals", () => {
-  const made = [];
-  afterEach(() => {
-    for (const dir of made.splice(0)) rmSync(dir, { recursive: true, force: true });
-  });
   const copy = () => {
-    const dir = mkdtempSync(join(tmpdir(), "big-report-"));
-    made.push(dir);
+    const dir = tempDir("big-report");
     cpSync(fixture, dir, { recursive: true });
     return dir;
   };

@@ -18,6 +18,7 @@ import {
   readdirSync,
   readFileSync,
   realpathSync,
+  rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -121,19 +122,25 @@ function main() {
   } else {
     const rulesText = readFileSync(opt("--rules"), "utf8");
     const sha = createHash("sha256").update(rulesText).digest("hex");
-    const tmp = mkdtempSync(join(tmpdir(), "fab-"));
-    const enabled = join(tmp, "Base-rules.enabled.json");
-    writeFileSync(enabled, enabledRuleset(rulesText));
-    const run = spawnSync(
-      opt("--cli"),
-      ["-fabricitem", reportDir, "-rules", enabled, "-formats", "JSON", "-output", tmp],
-      { encoding: "utf8" },
-    );
-    if (run.error) throw run.error;
-    const file = readdirSync(tmp).find((n) => /^TestRun_.*\.json$/.test(n));
-    if (!file)
-      throw new Error(`the oracle wrote no TestRun_*.json to ${tmp}\n${run.stdout}\n${run.stderr}`);
-    raw = readFileSync(join(tmp, file), "utf8");
+    // The enabled ruleset and the oracle's output go in a folder of their own, removed however
+    // the run ends: raw is all the rest of the script needs from it.
+    const tmp = mkdtempSync(join(tmpdir(), "pbiplint-fab-"));
+    try {
+      const enabled = join(tmp, "Base-rules.enabled.json");
+      writeFileSync(enabled, enabledRuleset(rulesText));
+      const run = spawnSync(
+        opt("--cli"),
+        ["-fabricitem", reportDir, "-rules", enabled, "-formats", "JSON", "-output", tmp],
+        { encoding: "utf8" },
+      );
+      if (run.error) throw run.error;
+      const file = readdirSync(tmp).find((n) => /^TestRun_.*\.json$/.test(n));
+      if (!file)
+        throw new Error(`the oracle wrote no TestRun_*.json\n${run.stdout}\n${run.stderr}`);
+      raw = readFileSync(join(tmp, file), "utf8");
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
     oracle = `fab-inspector CLI ${opt("--cli-version")} with Base-rules.json sha256 ${sha}, every rule enabled`;
   }
   const json = JSON.parse(raw.replace(/^\ufeff/, ""));

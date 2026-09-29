@@ -1289,3 +1289,44 @@ describe("declarations under a model (#137)", () => {
     ).toEqual([]);
   });
 });
+
+describe("valueLine", () => {
+  it("is the header's own line for an inline value", () => {
+    const pf = parseTmdl("t.tmdl", "table T\n\tmeasure M = 1\n");
+    expect(pf.roots[0]!.children[0]).toMatchObject({ line: 2, valueLine: 2, value: "1" });
+  });
+  it("is the first non-blank line of an indented block, whose lines map one to one", () => {
+    const pf = parseTmdl(
+      "t.tmdl",
+      "table T\n\tmeasure M =\n\n\t\t\tVAR x = 1\n\n\t\t\tRETURN x\n\t\tformatString: 0\n",
+    );
+    const m = pf.roots[0]!.children[0]!;
+    expect(m).toMatchObject({ line: 2, valueLine: 4 });
+    expect(m.value).toBe("VAR x = 1\n\nRETURN x");
+  });
+  it("is the line after the header for a code fence, closed or not", () => {
+    const closed = parseTmdl(
+      "t.tmdl",
+      "table T\n\tmeasure M = ```\n\t\t\t1 +\n\t\t\t2\n\t\t\t```\n",
+    );
+    expect(closed.roots[0]!.children[0]).toMatchObject({ line: 2, valueLine: 3, value: "1 +\n2" });
+    const open = parseTmdl("t.tmdl", "table T\n\tmeasure M = ```\n\t\t\t1\n\tmeasure N = 2\n");
+    expect(open.roots[0]!.children[0]).toMatchObject({ line: 2, valueLine: 3 });
+  });
+  it("is set on an expression with no name, such as a calculated partition's source", () => {
+    const pf = parseTmdl(
+      "t.tmdl",
+      "table T\n\tpartition T = calculated\n\t\tmode: import\n\t\tsource =\n\t\t\t\tCALENDAR(1, 2)\n",
+    );
+    const partition = pf.roots[0]!.children[0]!;
+    expect(partition).toMatchObject({ kind: "object", line: 2, valueLine: 2, value: "calculated" });
+    const source = partition.children.find((c) => c.type === "source")!;
+    expect(source).toMatchObject({ kind: "expr", line: 4, valueLine: 5, value: "CALENDAR(1, 2)" });
+  });
+  it("is absent where no value is read after =", () => {
+    const pf = parseTmdl("t.tmdl", "table T\n\tcolumn C\n\t\tdataType: int64\n");
+    expect(pf.roots[0]!.valueLine).toBeUndefined();
+    expect(pf.roots[0]!.children[0]!.valueLine).toBeUndefined();
+    expect(pf.roots[0]!.children[0]!.children[0]!.valueLine).toBeUndefined();
+  });
+});

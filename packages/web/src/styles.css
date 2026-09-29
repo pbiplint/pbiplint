@@ -18,6 +18,10 @@
   --line-3: rgba(230, 237, 246, 0.22);
   --warning: #f0b429;
   --danger: #e5484d;
+  /* Only the bar beside a rule page's fixed example. Radix Colors' grass 9, the same step as
+     --danger's red 9; their green 9 sits too close to the brand teal
+     (https://www.radix-ui.com/colors). */
+  --success: #46a758;
   --font-sans: "Inter Variable", "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --radius: 10px;
@@ -95,6 +99,16 @@ pre code {
 }
 .example pre {
   margin: 0;
+}
+/* The snippet that fires and the snippet fixed, told apart at a glance by a bar as well as by
+   their captions. The config figure has none: it is what an example runs under. */
+.example.fires {
+  border-left: 3px solid var(--danger);
+  padding-left: 12px;
+}
+.example.fixed {
+  border-left: 3px solid var(--success);
+  padding-left: 12px;
 }
 /* Where a rule was ported from, under the page. */
 .sources {

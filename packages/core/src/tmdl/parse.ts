@@ -23,10 +23,11 @@ const mayBeRootLine = (line: string): boolean =>
   tabIndent(line) === 0 &&
   (!/^\s/.test(line) || splitHeader(line)?.type.toLowerCase() === "table");
 /**
- * Whether a line's word is `table`, however it is indented and whatever follows the word: a
- * stray tab, tabs and spaces, or `table: Sales` or `table = Sales` for `table Sales`. TMDL
- * declares a table nowhere but at the root, so a lost line of that word may be a table's
- * declaration (#132). `tablePermission` and M text such as `Table.AddColumn(` are other words.
+ * Whether a line's word is `table`, however it is indented and whatever follows the word: a stray
+ * tab, tabs and spaces, or `table: Sales` or `table = Sales` for `table Sales`. A model's
+ * definition declares a table nowhere but at the root (a `createOrReplace` script nests one, and
+ * pbiplint reads no script), so a lost line of that word may be a table's declaration (#132).
+ * `tablePermission` and M text such as `Table.AddColumn(` are other words.
  */
 const namesTable = (line: string): boolean => /^table(?:[\s:=]|$)/i.test(line.trim());
 

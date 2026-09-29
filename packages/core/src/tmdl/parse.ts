@@ -134,12 +134,13 @@ const blockText = (lines: readonly string[], from: number, end: number, depth: n
  * issues too (#137): there, a declaration of a type TMDL does not declare under a model, a
  * property whose word is one of the types it does, and an annotation, an extended property, a
  * property, or an expression with no name that has lines under it; and under that `database`, a
- * declaration other than its `model`. A flag there is checked only by a word TMDL declares, since
- * the model's own boolean properties are flags. Other nested lines are not checked, but for a
- * `table` line under anything but a model. A declaration the model reads by name that has none (at
- * the root or under a model, as above), and a name not enclosed in single quotes as TMDL requires
- * wherever it sits, are issues (#135). Each issue says whether it can take an object out of the
- * model (`TmdlParseIssue.canDropObjects`); every one can except a description nothing claims.
+ * declaration other than its `model`. A flag there is checked only by a word TMDL declares, or,
+ * under a model, by a declaration under it, since the model's own properties include flags and
+ * blocks of flags. Other nested lines are not checked, but for a `table` line under anything but a
+ * model. A declaration the model reads by name that has none (at the root or under a model, as
+ * above), and a name not enclosed in single quotes as TMDL requires wherever it sits, are issues
+ * (#135). Each issue says whether it can take an object out of the model
+ * (`TmdlParseIssue.canDropObjects`); every one can except a description nothing claims.
  */
 export function parseTmdl(file: string, text: string): ParsedFile {
   // Power BI Desktop writes TMDL as UTF-8 with a BOM; it is not part of the first line.
@@ -469,8 +470,11 @@ export function parseTmdl(file: string, text: string): ParsedFile {
   // One directly under a model is the model's annotation, as at the root (#137), and a table's
   // lost one lands there in a model.tmdl that nests its tables. So may a property that lost its
   // tabs, which is one of the model's own there and has no issue of its own; TMDL gives it no line
-  // under it either, and an expression with no name only the value block read above. The lines
-  // under any of these sit deeper than the model's own declarations, so none is a `table` line.
+  // under it either, and an expression with no name only the value block read above. A flag there
+  // is one of the model's boolean properties, or a block such as `dataAccessOptions` that holds
+  // flags, so one is reported only when a declaration sits under it, as when a column's `isKey`
+  // loses two tabs and the column after it attaches to it. The lines under any of these sit deeper
+  // than the model's own declarations, so none is a `table` line.
   const modelLevel = [
     ...roots.map((node) => ({ node, root: true })),
     ...[...holders]
@@ -479,16 +483,20 @@ export function parseTmdl(file: string, text: string): ParsedFile {
   ];
   for (const { node: r, root } of modelLevel) {
     if (r.children.length === 0) continue;
+    if (r.kind === "ref") continue;
     const valued = r.kind === "prop" || r.kind === "expr";
     const noted = r.type === "annotation" || r.type === "extendedproperty";
-    if (valued ? root : r.kind === "ref" || !noted) continue;
+    const holdsDeclaration =
+      !root && r.kind === "flag" && !noted && r.children.some((c) => c.kind === "object");
+    if (!(valued ? !root : noted || holdsDeclaration)) continue;
     const text = lines[r.line - 1]!;
     const where = root ? "at the root of a file" : "under a model";
+    const under = holdsDeclaration ? "a declaration" : "lines";
     const issue = {
       file,
       line: r.line,
       text,
-      reason: `"${/^\w+/.exec(text.trimStart())![0]}" ${where} has lines under it, which TMDL does not allow`,
+      reason: `"${/^\w+/.exec(text.trimStart())![0]}" ${where} has ${under} under it, which TMDL does not allow`,
       canDropObjects: true,
       canDropTableLine: false,
     };

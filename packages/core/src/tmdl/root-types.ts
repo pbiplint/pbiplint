@@ -24,11 +24,11 @@
  * overview's list is of the objects that need no indentation, so they may also sit indented under
  * the `model` they belong to, and the `model` under its `database`. There, a declaration of a type
  * TMDL does not declare under a model, and under the database any declaration but the model, is
- * an issue too, and so is a property under the model whose word is one of those types (#137).
- * Otherwise only the root is checked: a misspelt keyword under a
- * known object, such as `columm Amount` under a table, still parses as a generic child. A `table`
- * line is the exception: under anything but a model, as a culture's translations and a TMDL script
- * nest one, it is an issue (#135).
+ * an issue too, and so is a property under the model whose word is a type TMDL does declare there
+ * (#137). Otherwise only the root is checked: a misspelt keyword under a known object, such as
+ * `columm Amount` under a table, still parses as a generic child. A `table` line is the exception:
+ * under anything but a model, as a culture's translations and a TMDL script nest one, it is an
+ * issue (#135).
  */
 /** The types `model/build.ts` reads into the model. Keep in step with its declaration switch. */
 const MODELED = [

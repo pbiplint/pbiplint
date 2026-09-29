@@ -1240,6 +1240,29 @@ describe("declarations under a model (#137)", () => {
     ]);
   });
 
+  it("reports a flag under a model with a declaration under it, and not one with flags under it", () => {
+    // A column's flag that lost two tabs takes the column after it. The model's own block flags,
+    // such as `dataAccessOptions`, hold flags of their own.
+    const text = [
+      "model Model",
+      "\tdataAccessOptions",
+      "\t\tlegacyRedirects",
+      "\ttable Sales",
+      "\t\tcolumn A",
+      "\tisKey",
+      "\t\tcolumn B",
+      "",
+    ].join("\n");
+    expect(issues(text)).toEqual([
+      [
+        6,
+        '"isKey" under a model has a declaration under it, which TMDL does not allow',
+        true,
+        false,
+      ],
+    ]);
+  });
+
   it("marks a line lost directly under a model as one that can take a table line, as at the root", () => {
     expect(issues("model Model\n\ttable-Sales\n")).toEqual([[2, "unrecognized line", true, true]]);
     expect(issues("database\n\tmodel Model\n\t\ttable-Sales\n")).toEqual([

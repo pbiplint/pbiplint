@@ -1513,13 +1513,16 @@ is one of the types it does declare there, such as `table: Sales` for
 and an annotation, an extended property, a property, or an expression
 with no name that has lines under it. Under the `database`: a
 declaration other than its `model`. A flag there is reported only when
-its word is a type TMDL declares, such as a bare `model`, since the
-model's own boolean properties are flags (`discourageImplicitMeasures`).
-So a flag or a property that lost its tabs with nothing under it still
-reads as one of the model's own, which the reader refuses and pbiplint,
-holding no list of a model's properties, cannot tell apart. The two
-checks on a declaration's type, and a line lost directly under the
-model that the parser could not make out or that a code fence left open
+its word is a type TMDL declares, such as a bare `model`, or, under the
+model, when a declaration sits under it, as when a column's `isKey`
+loses two tabs and the column after it attaches to it: the model's own
+properties include flags (`discourageImplicitMeasures`) and blocks of
+flags (`dataAccessOptions`). So a flag or a property that lost its tabs
+with nothing under it still reads as one of the model's own, which the
+reader refuses and pbiplint, holding no list of a model's properties,
+cannot tell apart. The two checks on a declaration's type, and a line
+lost directly under the model, or under the database that holds it,
+that the parser could not make out or that a code fence left open
 read, can take a `table` line (`canDropTableLine`), as at the root. A
 model under a culture's translations or a TMDL script's
 `createOrReplace` is not the model's and is neither read nor checked.

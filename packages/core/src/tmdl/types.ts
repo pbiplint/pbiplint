@@ -36,9 +36,10 @@ export interface TmdlParseIssue extends ParseIssue {
    * Whether the issue can take an object, or a property the model reads, out of the model: a line
    * the parser skipped, which may have declared either, or a line at the root, or directly under
    * the model (#137), that the model does not read the lines under, such as a misspelt `table` or
-   * a property or an annotation that lost its tabs. False only for a `///` description that nothing claims, which loses the description
-   * and no declaration. Set where the parser pushes the issue, so a rule that must not report what
-   * the file may declare (BROKEN_FIELD_REFERENCE) reads this and never the reason's words.
+   * a property or an annotation that lost its tabs. False only for a `///` description that
+   * nothing claims, which loses the description and no declaration. Set where the parser pushes
+   * the issue, so a rule that must not report what the file may declare (BROKEN_FIELD_REFERENCE)
+   * reads this and never the reason's words.
    */
   canDropObjects: boolean;
   /**
@@ -50,8 +51,8 @@ export interface TmdlParseIssue extends ParseIssue {
    * orphan before any root; or it is a code fence left open that read such a line into its
    * expression. Any other property, expression with no name, or annotation with lines under it
    * cannot be a `table` line and is not marked. TMDL lets a table's declaration sit in more than
-   * one file, so a file with such an issue may declare a table its declarations do not show. Set where the parser pushes the issue, as
-   * `canDropObjects` is, and never true where that is false.
+   * one file, so a file with such an issue may declare a table its declarations do not show. Set
+   * where the parser pushes the issue, as `canDropObjects` is, and never true where that is false.
    */
   canDropTableLine: boolean;
 }

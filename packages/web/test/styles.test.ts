@@ -18,6 +18,27 @@ function classesIn(root: ParentNode): Set<string> {
   return out;
 }
 
+/** The declarations of the rule whose selector is exactly this one, at the start of a line. */
+const rule = (selector: string): string =>
+  new RegExp(`(?:^|\\n)${selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} \\{([^}]*)\\}`).exec(
+    css,
+  )?.[1] ?? "";
+
+/** WCAG's contrast ratio between two of the stylesheet's hex colour tokens. */
+function contrast(fg: string, bg: string): number {
+  const luminance = (token: string): number => {
+    const hex = new RegExp(`${token}: #([0-9a-f]{6});`).exec(css)?.[1];
+    if (hex === undefined) throw new Error(`no hex value for ${token}`);
+    const [red, green, blue] = [0, 2, 4].map((i) => {
+      const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+      return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * red! + 0.7152 * green! + 0.0722 * blue!;
+  };
+  const [hi, lo] = [luminance(fg), luminance(bg)].sort((x, y) => y - x);
+  return (hi! + 0.05) / (lo! + 0.05);
+}
+
 describe("styles.css", () => {
   it("has a rule for every class the results and the home page use", () => {
     document.body.innerHTML = indexHtml
@@ -58,14 +79,22 @@ describe("styles.css", () => {
     expect(/\.example figcaption \{[^}]*text-transform: uppercase/.test(css)).toBe(true);
     expect(/\.example figcaption code \{[^}]*text-transform: none/.test(css)).toBe(true);
   });
+  it("marks an example that fires in the danger tone and its fix in the success tone", () => {
+    // A bar beside each figure, so the pair reads as before and after without reading the
+    // captions (pages.ts writes the fires and fixed classes). The config figure has only the
+    // example class, since it is the config an example runs under, and so has no bar.
+    expect(rule(".example.fires")).toMatch(/border-left: 3px solid var\(--danger\)/);
+    expect(rule(".example.fixed")).toMatch(/border-left: 3px solid var\(--success\)/);
+    expect(rule(".example")).toMatch(/margin: 16px 0/);
+    expect(rule(".example")).not.toMatch(/border(-left)?:/);
+    // WCAG 1.4.11 asks 3:1 of a graphic against the colour beside it, here the canvas.
+    expect(contrast("--danger", "--canvas")).toBeGreaterThanOrEqual(3);
+    expect(contrast("--success", "--canvas")).toBeGreaterThanOrEqual(3);
+  });
   it("lets the header's links and a long rule id wrap, so a narrow page does not scroll sideways", () => {
     // At 320 pixels the brand and four links do not fit on one row, and a rule id such as
     // RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE has no hyphen to break at. The e2e suite
     // measures the page itself at that width.
-    const rule = (selector: string): string =>
-      new RegExp(`(?:^|\\n)${selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} \\{([^}]*)\\}`).exec(
-        css,
-      )?.[1] ?? "";
     expect(rule(".site-header .container")).toMatch(/flex-wrap: wrap/);
     expect(rule(".site-header .container")).not.toMatch(/(^|\s)height:/);
     expect(rule(".site-header nav")).toMatch(/flex-wrap: wrap/);

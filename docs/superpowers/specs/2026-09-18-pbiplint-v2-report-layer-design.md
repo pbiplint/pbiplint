@@ -1061,6 +1061,19 @@ could not be read`. With both counted, both counts are lower bounds and
 stay, `1 saved selection, 1 saved search term`, ending `; a visual.json
 could not be read` only when the value is unknown.
 
+Amended 2026-09-29 (#88, ruled with Michael on September 27, 2026):
+a known Filters pane with no `expect` policy says how to have it
+checked, as the approved mockup did, superseding the #86 note's "adds
+no detail": its detail reads `not checked;
+set an expect policy for FILTERS_PANE_STATE in pbiplint.config.json
+to check it`, after `read as open; report.json does not record it`
+when that detail applies, joined by `; `. It is given only when
+`FILTERS_PANE_STATE` ran: a rule turned off in config would not check
+the pane under a policy either. The fact still links no rule without a
+policy (the #86 note above), and an unknown pane gives no hint, since
+no policy would have it checked. The sample sets a policy, so its
+facts do not move. The rule's page says the same under What it checks.
+
 **Cost.** Linear in the JSON. The demo report's largest visual is
 61 KB, most under 5 KB; a 300-visual report is a few megabytes and
 lints well under a second in the browser. No new dependency.
@@ -1762,6 +1775,11 @@ with tags; groups ranked together with `[report]` or `[model]` before
 the rule name. Column alignment as today. Amended 2026-09-20: the
 layer line names present layers only, and an absent layer's reason
 rides on the skipped line that explains why its rules did not run.
+Amended 2026-09-29 (#88): the facts block's rule-id margin sits past
+the widest value on a row that has a rule id, not past the widest of
+all rows, so a long detail on a row with nothing in the margin (the
+Filters pane's no-policy hint, which most runs carry, or an unknown
+Model count) no longer pushes every rule id out past it.
 
 **Markdown.** Mirrors the text format; the facts as a table with the
 same links the page has. Amended 2026-09-20: it mirrors the layer line
@@ -2035,6 +2053,28 @@ change a finding. Where two different names in one folder compare
 equal in the walk's name order, core falls back to their code units.
 A project Power BI Desktop saved has one `tables` folder, so no
 fixture, parity expectation, or pinned count moved.
+
+Amended 2026-09-29 (#88): a folder the browser's walk stopped in at
+its depth cap is as unread as one it could not list, for the model
+folders it names and for the reason a part's layer is absent. So a
+`.SemanticModel` folder the walk stopped in, or whose definition
+folder, or a folder under that, it stopped in, could hold `.tmdl`
+files the walk did not read, and the note no longer names it as
+holding none (batch F's refusal never arises beside a `depth-cap`
+notice, as the note above says). Beside another model folder at the
+top of the drop it counts toward the refusal of two semantic models,
+as a model folder that could not be listed does. A capped folder that
+could hide no `.tmdl` file, such as the model's `DAXQueries`, leaves
+the folder named as before. A part folder the walk stopped in, or
+whose read stopped at the cap with nothing of the part read, leaves
+its layer absent with "the model folder could not be read" or "the
+report folder could not be read", in place of the "no model in the
+input" or "no report in the input" the skipped line gave, which said
+something about files pbiplint did not read. A capped folder is still
+never the path a refusal names, so batch F's note above holds for such
+a run otherwise: it goes on with its `depth-cap` notice, and with the
+note naming any model folder it saw that holds no `.tmdl` files. The
+CLI has no cap, so it is unchanged.
 
 ## 13. CLI changes
 

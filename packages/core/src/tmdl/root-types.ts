@@ -22,8 +22,10 @@
  * lost its tab alike. A property or an expression with no name is one at the root whatever its
  * word, and so is an annotation or an extended property with lines under it (parse.ts). The
  * overview's list is of the objects that need no indentation, so they may also sit indented under
- * the `model` they belong to, and the `model` under its `database`; a named declaration there is
- * checked as at the root (#137). Otherwise only the root is checked: a misspelt keyword under a
+ * the `model` they belong to, and the `model` under its `database`. There, a declaration of a type
+ * TMDL does not declare under a model, and under the database any declaration but the model, is
+ * an issue too, and so is a property under the model whose word is one of those types (#137).
+ * Otherwise only the root is checked: a misspelt keyword under a
  * known object, such as `columm Amount` under a table, still parses as a generic child. A `table`
  * line is the exception: under anything but a model, as a culture's translations and a TMDL script
  * nest one, it is an issue (#135).

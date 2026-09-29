@@ -288,9 +288,35 @@ function walkOrder(a: string, b: string): number {
 }
 
 /**
- * One of the model's own declarations: a line at the root of a file, or one TMDL reads as if it sat
- * there, directly under the model (#137).
+ * The model's own declarations in a parsed file, in line order: each line at its root, and each
+ * line TMDL reads as if it sat there (#137), directly under a `model` at the root or under a
+ * `model` under a `database` at the root, which follow that `model`
+ * (https://learn.microsoft.com/analysis-services/tmdl/tmdl-overview#indentation). A model under
+ * anything else, such as a culture's translations or a TMDL script's `createOrReplace`, is not the
+ * model's. The parser checks each of these lines as it checks the root (tmdl/parse.ts), so a line
+ * among them that the model does not read is a parse issue. Anything that looks for where the
+ * model declares something reads a file through this, as `buildModel` does.
  */
+export function modelDeclarations(f: ParsedFile): TmdlNode[] {
+  const declared = (n: TmdlNode): boolean => n.kind === "object" || n.kind === "flag";
+  const isModel = (n: TmdlNode): boolean => n.type === "model" && declared(n);
+  const out: TmdlNode[] = [];
+  for (const r of f.roots) {
+    out.push(r);
+    const models = isModel(r)
+      ? [r]
+      : r.type === "database" && declared(r)
+        ? r.children.filter(isModel)
+        : [];
+    for (const m of models) {
+      if (m !== r) out.push(m);
+      out.push(...m.children);
+    }
+  }
+  return out;
+}
+
+/** One of the model's own declarations (`modelDeclarations`). */
 function readDeclaration(r: TmdlNode, model: Model): void {
   if (r.kind === "ref" || r.kind === "prop" || r.kind === "expr") return;
   // Keep the cases in step with MODELED in tmdl/root-types.ts.
@@ -337,14 +363,10 @@ function readDeclaration(r: TmdlNode, model: Model): void {
       model.dataSources.push(ds);
       break;
     }
-    case "database":
-      // The database holds the model, which TMDL lets sit under it as a part of the model's
-      // declaration. Any other declaration named there is a parse issue.
-      for (const c of r.children) if (c.type === "model") readModel(c, model);
-      break;
     default:
-      // The other words in NOT_MODELED in tmdl/root-types.ts: kept in files, not modeled. Any other
-      // word at the root, or under the model, is a parse issue.
+      // The other words in NOT_MODELED in tmdl/root-types.ts: kept in files, not modeled. A
+      // database's model is among the declarations after it. Any other declaration of a type TMDL
+      // does not declare where it sits is a parse issue.
       break;
   }
 }
@@ -353,18 +375,14 @@ function readDeclaration(r: TmdlNode, model: Model): void {
  * A declaration of the model. TMDL lets it sit in more than one file, as a table's does, and one
  * under the database is merged with the one at the root of model.tmdl: its properties, annotations,
  * and description join the model's, and the last one read gives the model its name and place. The
- * lines under it are the model's own declarations (#137). A model under anything but a database at
- * the root, such as a culture's translations or a TMDL script's command, is not read.
+ * lines under it follow it among the model's own declarations.
  */
 function readModel(r: TmdlNode, model: Model): void {
-  if (r.kind !== "object" && r.kind !== "flag") return;
   Object.assign(model, named(r, r.name ?? "Model"), {
     description: r.description ?? model.description,
     annotations: model.annotations,
     props: { ...model.props, ...r.props },
   });
-  for (const c of r.children)
-    if (c.type !== "model" && c.type !== "database") readDeclaration(c, model);
 }
 
 /**
@@ -393,7 +411,7 @@ export function buildModel(given: ParsedFile[], unreadPaths: readonly string[] =
     files,
     unreadPaths: unreadPaths.filter((p) => p.endsWith(".tmdl") || p.endsWith("/")),
   };
-  for (const f of files) for (const r of f.roots) readDeclaration(r, model);
+  for (const f of files) for (const r of modelDeclarations(f)) readDeclaration(r, model);
   finalizeKinds(model);
   return model;
 }

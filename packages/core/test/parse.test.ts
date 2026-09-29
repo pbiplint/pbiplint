@@ -1190,6 +1190,70 @@ describe("declarations under a model (#137)", () => {
     ]);
   });
 
+  it("reports a flag under a model or a database whose word is a type TMDL declares elsewhere", () => {
+    // A bare `model` would hold the table under it, which the model never reads.
+    expect(issues("model Model\n\tmodel\n\t\ttable Foo\n\tcreateOrReplace\n\tdatabase\n")).toEqual([
+      [2, underModel("model"), true, true],
+      [4, underModel("createOrReplace"), true, true],
+      [5, underModel("database"), true, true],
+    ]);
+    expect(issues("database\n\trelationship\n\tannotation\n\tmodel\n")).toEqual([
+      [2, underDatabase("relationship"), true, true],
+      [3, underDatabase("annotation"), true, true],
+    ]);
+  });
+
+  it("reports a property under a model whose word is a type TMDL declares there, and keeps nothing of it", () => {
+    // `table: Sales` or `table = Other` for `table Sales`, and an expression's `queryGroup` that
+    // lost its tabs. No property of a model has any of those words.
+    const text =
+      "model Model\n\ttable: Sales\n\t\tcolumn A\n\ttable = Other\n\tqueryGroup: Staging\n";
+    const notProperty = (word: string) => `"${word}" is not a property TMDL allows under a model`;
+    expect(issues(text)).toEqual([
+      [2, notProperty("table"), true, true],
+      [4, notProperty("table"), true, true],
+      [5, notProperty("queryGroup"), true, false],
+    ]);
+    expect(parseTmdl("t.tmdl", text).roots[0]!.props).toEqual({});
+  });
+
+  it("reports a property or an expression under a model with lines under it", () => {
+    // A column's property that lost a tab in a model.tmdl that nests its tables takes the column
+    // and the measure after it. TMDL gives neither a property nor an expression with no name a
+    // line under it.
+    const text = [
+      "model Model",
+      "\tculture: en-US",
+      "\ttable Sales",
+      "\t\tcolumn A",
+      "\tdataType: string",
+      "\t\tcolumn B",
+      "\t\tmeasure M = 1",
+      "\tsource =",
+      "\t\t\tlet x = 1 in x",
+      "\t\tmeasure N = 1",
+      "",
+    ].join("\n");
+    expect(issues(text)).toEqual([
+      [5, '"dataType" under a model has lines under it, which TMDL does not allow', true, false],
+      [8, '"source" under a model has lines under it, which TMDL does not allow', true, false],
+    ]);
+  });
+
+  it("marks a line lost directly under a model as one that can take a table line, as at the root", () => {
+    expect(issues("model Model\n\ttable-Sales\n")).toEqual([[2, "unrecognized line", true, true]]);
+    expect(issues("database\n\tmodel Model\n\t\ttable-Sales\n")).toEqual([
+      [3, "unrecognized line", true, true],
+    ]);
+    // Deeper under the model, a line is a table's own.
+    expect(issues("model Model\n\ttable Sales\n\t\t'Amount'\n")).toEqual([
+      [3, "unrecognized line", true, false],
+    ]);
+    // A code fence left open whose text reads a table's declaration under the model.
+    const fence = "model Model\n\ttable Sales\n\t\tmeasure M = ```\n\t\tSUM(1)\n\ttable Other\n";
+    expect(issues(fence)).toEqual([[3, "unterminated code fence", true, true]]);
+  });
+
   it("leaves a model under a culture's translations or a TMDL script to its own reading", () => {
     // Neither is the model's, so the lines under it are checked as any nested line is.
     expect(

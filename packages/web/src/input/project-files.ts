@@ -204,7 +204,10 @@ interface Read {
   order?: (a: string, b: string) => number;
 }
 
-/** An `unread-file` notice of the tree, with whether its path is a folder. */
+/**
+ * An `unread-file` notice of the tree, with whether its path is a folder, or a `depth-cap` notice,
+ * whose path is always a folder.
+ */
 interface Unread {
   diagnostic: Diagnostic;
   path: string;
@@ -217,6 +220,12 @@ interface Selection {
   /** Every folder the walk shows exists, from the paths it saw and the folders it passed. */
   dirs: Set<string>;
   unread: Unread[];
+  /**
+   * The folders the walk stopped in at the depth cap, each a `depth-cap` notice: as unread as a
+   * folder that could not be listed, though none is ever the path a refusal names, since a cap is
+   * a limit of the browser's walk rather than a read that failed.
+   */
+  capped: Unread[];
   /**
    * The reads the CLI would have made, in the order it makes them; a notice they do not cover is
    * dropped, as the CLI never meets its path.
@@ -331,10 +340,12 @@ function readPart(
   read: () => Part | undefined,
 ): Part | undefined {
   // Entering the folder comes first, as the CLI's readPart tries it before anything in it, so a
-  // notice naming the folder is the run's before one naming anything under it.
+  // notice naming the folder is the run's before one naming anything under it. A folder the walk
+  // stopped in at the depth cap was not read either, so it gives the same reason rather than
+  // leaving the layer to read as not in the input (tracked in #88).
   s.reads.push({ covers: (p) => p === folder });
   const part = read();
-  const refused = s.unread.some(
+  const refused = [...s.unread, ...s.capped].some(
     (u) => u.path === folder || (within(u.path, folder) && covered(s, u)),
   );
   if (!part && layer && refused) s.absent[layer] = UNREAD_PART[layer];
@@ -343,14 +354,15 @@ function readPart(
 
 /**
  * Whether a model folder holds a .tmdl file, or could: one it could not read, or the folder itself
- * or its definition folder could not be listed. One with none of these is linted by no one, so it
- * is named in a note rather than refused beside a lintable model, and it is what the error names
- * when nothing can be linted. Another folder in it that could not be listed (DAXQueries, say)
- * cannot hide the definition folder, which the folder's own listing would have shown.
+ * or its definition folder, or a folder under that, could not be listed, or the walk stopped in it
+ * at the depth cap (tracked in #88). One with none of these is linted by no one, so it is named in
+ * a note rather than refused beside a lintable model, and it is what the error names when nothing
+ * can be linted. Another folder in it that could not be listed (DAXQueries, say) cannot hide the
+ * definition folder, which the folder's own listing would have shown.
  */
 const holdsModel = (s: Selection, dir: string): boolean =>
   s.tree.entries.some((e) => within(e.path, dir) && e.path.endsWith(".tmdl")) ||
-  s.unread.some((u) =>
+  [...s.unread, ...s.capped].some((u) =>
     u.folder
       ? u.path === dir || atOrWithin(u.path, join(dir, "definition"))
       : within(u.path, dir) && u.path.endsWith(".tmdl"),
@@ -628,6 +640,9 @@ export function selectProject(tree: InputTree): SelectedProject {
     unread: tree.diagnostics
       .filter((d) => d.kind === "unread-file" && d.path !== undefined)
       .map((d) => ({ diagnostic: d, path: d.path!, folder: unreadFolders.has(d.path!) })),
+    capped: tree.diagnostics
+      .filter((d) => d.kind === "depth-cap" && d.path !== undefined)
+      .map((d) => ({ diagnostic: d, path: d.path!, folder: true })),
     reads: [],
     absent: {},
     said: [],
@@ -644,10 +659,7 @@ export function selectProject(tree: InputTree): SelectedProject {
   // What each part could not read, relative to its root, from the reads that were its own: the
   // files and folders that refused, and a folder the walk stopped in at the depth cap, which is
   // as unread as one that refused but refuses nothing.
-  const capped = tree.diagnostics
-    .filter((d) => d.kind === "depth-cap" && d.path !== undefined)
-    .map((d) => ({ path: d.path!, folder: true }));
-  for (const u of [...s.unread, ...capped])
+  for (const u of [...s.unread, ...s.capped])
     for (const r of s.reads) {
       if (!r.part || !r.covers(u.path, u.folder) || u.path === r.part.root) continue;
       const rel = relativeToRoot(r.part.root, u.path) + (u.folder ? "/" : "");

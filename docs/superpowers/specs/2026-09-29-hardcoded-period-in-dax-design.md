@@ -96,7 +96,7 @@ A **year operand** is the operand next to the operator: for the left side, the o
 
 Both sides are read the same way. (The prototype read `FORMAT` on the left side only; section 10 accounts for any finding this adds.)
 
-A name is split into **words**: at a lowercase letter followed by an uppercase one, at a letter followed by a digit, and at every character that is neither a letter nor a digit; then lowercased. Its class, as the research's `name_class` gives it:
+A name is split into **words**: it is first normalized to NFC, so a decomposed `Año` matches the word lists; then it is split at a lowercase letter followed by an uppercase one, at a letter followed by a digit, and at every character that is neither a letter, a combining mark, nor a digit, so a combining mark stays in its word (`वर्ष`); then lowercased. (Amended September 29, 2026, in Task 5's review, to match the code: this sentence first split at every character that is neither a letter nor a digit, with no normalization.) Its class, as the research's `name_class` gives it:
 
 - **Year words:** year, years, yr, yrs, año, años, ano, anos, anio, jahr, année, annee, anno, jaar, år, rok, vuosi, ejercicio, exercice, fy, ay, cy, ly, py, yyyy, y; and any word that starts with `year`, or ends with `year` and is longer than four letters (`fiscalyear`).
 - **Month words:** month, months, mes, mês, meses, monat, mois, mese, maand, mm, mon, mth, period, periodo, período; and any word that starts with `month`.
@@ -147,7 +147,7 @@ The name is the measure's, the column's, the calculation item's, or, for a date 
 - `kind`: `number`, `string`, `date` (a `dt"..."` literal), `table` (a `'quoted'` name), `column` (a `[bracketed]` name), `identifier`, `operator`, or `punctuation`.
 - `text`: for `string`, `table`, and `column`, the content with its doubled quote or bracket undone (`""`, `''`, `]]`); for `date`, the text between the quotes; for the rest, the source text.
 - `start` and `end`: offsets into the expression.
-- Structure, filled after the scan: for an opening `(` or `{`, the index of its closing token (`close`), and the upper-cased name of the function it calls when an identifier precedes a `(` (`call`); for every token, the index of the innermost enclosing `(` or `{` (`parent`) and its argument index within it (`arg`), counted by the commas directly inside.
+- Structure, filled after the scan: for an opening `(` or `{`, the index of its closing token (`close`), and, when an identifier precedes a `(`, that identifier upper-cased (`call`), which names the function called when the identifier is a function's name (a keyword before a `(`, such as `RETURN` or `IN`, gets it too); for every token, the index of the innermost enclosing `(` or `{` (`parent`) and its argument index within it (`arg`), counted by the commas directly inside. (Amended September 29, 2026, in Task 5's review, to match the code: `call` was first described as the name of the function a `(` calls.)
 
 It reads:
 
@@ -191,7 +191,7 @@ Every value line maps one to one to a file line (blank lines inside a value are 
 `rules/hardcoded-period-in-dax.md`, in the template every page follows (the rule pages spec, `2026-09-19-rule-pages-template-design.md`), pbiplint's own prose, `sources:` empty as a `builtin` rule's are.
 
 - **What it checks**: the three forms, the scope, the year range, and what each finding names and where it points (the line of the period, not the object's first line, which is new among the model rules and worth a sentence).
-- **Example**: a `tmdl fires` table with a `Current Year Sales` measure filtering `'Date'[Year] = 2025`, and a `tmdl fixed` one that takes the year from the data. The date table form is shown in How to fix it.
+- **Example**: a `tmdl fires` Sales table (no date table) with a `Current Year Sales` measure filtering `YEAR(Sales[Order Date]) = 2025`, and a `tmdl fixed` one that filters on `YEAR(TODAY())`, which is what a measure named Current Year Sales means. The fix from the data, and the date table form, are shown in How to fix it. (Amended September 29, 2026, in Task 5's review: this bullet first described a `'Date'[Year] = 2025` filter fixed with the year from the data.)
 - **Why it matters**: a measure right this year is quietly wrong next year, and a date table built to `DATE(2026, 12, 31)` stops time intelligence at the year's end with no error.
 - **How to fix it**, in Power BI Desktop with no third-party tool: edit the measure or column in the formula bar (or the TMDL), replacing the year with `YEAR(TODAY())`, with the latest year in the data (`YEAR(MAX('Sales'[Order Date]))`), or with a what-if parameter's value; for a date table, end `CALENDAR` at `MAX` of the fact table's date column, at a date built from `TODAY()`, or use `CALENDARAUTO()`.
 - **When to ignore it**: a baseline, a known event, a cohort, a historic rule change, or sample data; renaming the object to carry its year also stops the finding, since that is what the rule reads as deliberate.

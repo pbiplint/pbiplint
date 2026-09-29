@@ -159,9 +159,26 @@ function isYearFreeFormat(tokens: readonly DaxToken[], open: number): boolean {
 const isRealDay = (year: number, month: number, day: number): boolean =>
   month >= 1 && month <= 12 && day >= 1 && day <= new Date(Date.UTC(year, month, 0)).getUTCDate();
 
-/** The day DATE(year, month, day) gives: a month past 12, or a day past its month's end, rolls into the next, as Date.UTC rolls it. */
-function daxDate(year: number, month: number, day: number): NonNullable<Period["date"]> {
-  const d = new Date(Date.UTC(year, month - 1, day));
+/**
+ * The day DATE(year, month, day) gives, or undefined where it gives none. The year is read as
+ * Microsoft Learn's DATE page says (https://learn.microsoft.com/dax/date-function-dax#parameters):
+ * "If the `year` value is between 0 and 49, the value is added to 2000 to produce the final value.
+ * If it is between 50 and 99, the value is added to 1900 to produce the final value." A year from
+ * 100 to 9999 is used as written
+ * (https://learn.microsoft.com/dax/date-function-dax#years-after-100), and a greater one is an
+ * error, as the same parameters section says. A month past 12, or a day past its month's end, rolls
+ * into the next, as Date.UTC rolls it; a month or day so large that no Date holds the result gives
+ * none.
+ */
+function daxDate(
+  year: number,
+  month: number,
+  day: number,
+): NonNullable<Period["date"]> | undefined {
+  if (year > 9999) return undefined;
+  const full = year < 50 ? year + 2000 : year < 100 ? year + 1900 : year;
+  const d = new Date(Date.UTC(full, month - 1, day));
+  if (Number.isNaN(d.getTime())) return undefined;
   return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
 }
 
@@ -225,8 +242,8 @@ export function expressionPeriods(expression: string): Period[] {
           const [month, day] = [Number(m.text), Number(d.text)];
           const epoch =
             fixed === UNIX_EPOCH.year && month === UNIX_EPOCH.month && day === UNIX_EPOCH.day;
-          if (!epoch)
-            found.push({ at: tokens[k - 1]!.start, year: fixed, date: daxDate(fixed, month, day) });
+          const date = daxDate(fixed, month, day);
+          if (!epoch && date) found.push({ at: tokens[k - 1]!.start, year: fixed, date });
         } else year(y!, fixed);
       }
     }
@@ -297,8 +314,9 @@ function fixedDay(
   const args = argumentsOf(tokens, open);
   if (call === "DATE" && args.length === 3) {
     const [y, m, d] = args.map((a) => wholeNumber(tokens, vars, a));
-    if (y !== undefined && m !== undefined && d !== undefined)
-      return { at: first.start, year: y, date: daxDate(y, m, d) };
+    if (y === undefined || m === undefined || d === undefined) return undefined;
+    const date = daxDate(y, m, d);
+    return date && { at: first.start, year: y, date };
   }
   const text = args.length === 1 ? only(tokens, args[0]) : undefined;
   if (STRING_DATES.has(call) && text?.kind === "string") return dateString(text);

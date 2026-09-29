@@ -151,6 +151,7 @@ describe("expressionPeriods", () => {
       "'Date'[Year] = 2025.5",
       "DATE(1900, 1, 1)",
       "DATE(9999, 12, 31)",
+      "DATE(2025, 99999999999999, 1)",
       "DATE(1970, 1, 1) + 'Log'[UnixTime] / 86400",
       `FORMAT(DATE(2000, 1, 1), "oooo")`,
       `FORMAT(DATE(2025, 'Date'[MonthNum], 1), "mmmm")`,
@@ -199,6 +200,23 @@ describe("calendarEnds", () => {
     }
   });
 
+  it("reads DATE()'s year as DAX does, and keeps the year as written", () => {
+    // 0 to 49 is added to 2000, 50 to 99 to 1900, and 100 to 9999 is used as is, as the examples
+    // on Learn's DATE page say (https://learn.microsoft.com/dax/date-function-dax#examples).
+    expect(calendarEnds("CALENDAR(DATE(2020, 1, 1), DATE(25, 12, 31))")[0]).toMatchObject({
+      year: 25,
+      date: { year: 2025, month: 12, day: 31 },
+    });
+    expect(ends("CALENDAR(DATE(2020, 1, 1), DATE(0, 12, 31))")).toEqual(["2000-12-31"]);
+    expect(ends("CALENDAR(DATE(2020, 1, 1), DATE(49, 13, 1))")).toEqual(["2050-1-1"]);
+    expect(ends("CALENDAR(DATE(2020, 1, 1), DATE(50, 12, 31))")).toEqual(["1950-12-31"]);
+    expect(ends("CALENDAR(DATE(2020, 1, 1), DATE(99, 12, 31))")).toEqual(["1999-12-31"]);
+    expect(calendarEnds("CALENDAR(DATE(2020, 1, 1), DATE(125, 12, 31))")[0]).toMatchObject({
+      year: 125,
+      date: { year: 125, month: 12, day: 31 },
+    });
+  });
+
   it("quotes a date string whose day and month read either way", () => {
     const ambiguous = `CALENDAR(DATE(2020, 1, 1), "01/02/2026")`;
     expect(ends(ambiguous)).toEqual([`"01/02/2026"`]);
@@ -216,6 +234,8 @@ describe("calendarEnds", () => {
       "CALENDAR(DATE(2020, 1, 1), EOMONTH(TODAY(), 0))",
       "CALENDAR(DATE(2020, 1, 1), DATE(YEAR(MAX('Sales'[Date])), 12, 31))",
       "CALENDAR(DATE(2020, 1, 1), DATE(2026, 12, 31) + 1)",
+      "CALENDAR(DATE(2020, 1, 1), DATE(10000, 1, 1))",
+      "CALENDAR(DATE(2020, 1, 1), DATE(2026, 99999999999999, 1))",
       "CALENDAR(DATE(2020, 1, 1), [End Date])",
       `CALENDAR(DATE(2020, 1, 1), "2026.9.11")`,
       `CALENDAR(DATE(2020, 1, 1), "31/02/2026")`,

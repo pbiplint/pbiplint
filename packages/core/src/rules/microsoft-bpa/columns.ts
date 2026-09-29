@@ -10,6 +10,7 @@ import {
   isBlank,
   isNumericType,
   modelPartlyRead,
+  tablesPartlyRead,
 } from "../helpers.js";
 import type { RuleContext, RuleFinding } from "../types.js";
 import { bpaRule } from "./define.js";
@@ -63,18 +64,24 @@ export const MONTH_AS_A_STRING_MUST_BE_SORTED = bpaRule("MONTH_(AS_A_STRING)_MUS
 );
 
 // TOM's default SummarizeBy is Default, which is not None, so a column without the property is flagged.
-export const NUMERIC_COLUMN_SUMMARIZE_BY = bpaRule("NUMERIC_COLUMN_SUMMARIZE_BY", (m) =>
-  columns(
-    m,
-    (c) =>
-      isNumericType(c) &&
-      (c.summarizeBy ?? "default").toLowerCase() !== "none" &&
-      !hiddenOrTableHidden(c),
-  ),
+// A part of the table pbiplint could not read may hide it.
+export const NUMERIC_COLUMN_SUMMARIZE_BY = bpaRule(
+  "NUMERIC_COLUMN_SUMMARIZE_BY",
+  { skipWhenModelUnread: tablesPartlyRead },
+  (m) =>
+    columns(
+      m,
+      (c) =>
+        isNumericType(c) &&
+        (c.summarizeBy ?? "default").toLowerCase() !== "none" &&
+        !hiddenOrTableHidden(c),
+    ),
 );
 
+// A part of the table pbiplint could not read may hide it.
 export const FORMAT_FLAG_COLUMNS_AS_YES_NO_VALUE_STRINGS = bpaRule(
   "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS",
+  { skipWhenModelUnread: tablesPartlyRead },
   (m) =>
     columns(
       m,
@@ -85,8 +92,11 @@ export const FORMAT_FLAG_COLUMNS_AS_YES_NO_VALUE_STRINGS = bpaRule(
     ),
 );
 
+// A part of the table pbiplint could not read may hold a calculated partition, which makes the
+// column a calculated table's, with no source column.
 export const DATA_COLUMNS_MUST_HAVE_A_SOURCE_COLUMN = bpaRule(
   "DATA_COLUMNS_MUST_HAVE_A_SOURCE_COLUMN",
+  { skipWhenModelUnread: tablesPartlyRead },
   (m) => columns(m, (c) => c.kind === "data" && isBlank(c.sourceColumn)),
 );
 

@@ -51,6 +51,21 @@ export const isDirectQueryTable = (t: Table): boolean =>
 export const modelPartlyRead = (m: Model): boolean =>
   m.unreadPaths.length > 0 || m.files.some((f) => f.issues.some((i) => i.canDropObjects));
 
+/**
+ * Whether a table may lack a part of its declaration. TMDL lets a table's declaration sit in more
+ * than one file, and pbiplint merges the parts (buildTable in model/build.ts): a later part adds its
+ * columns, measures, partitions, and hierarchies, can hide the table, fills a blank data category
+ * or description, and a calculated partition or a calculation group in any part decides the
+ * table's kind. A path the input reader could not read (`Model.unreadPaths`), or a line lost to a
+ * parse issue that can take a `table` line (`TmdlParseIssue.canDropTableLine`), may hold a part of
+ * any table. The rules that report a table, or something under it, for what any part of it can
+ * say set this as their `skipWhenModelUnread` (#132). A parse issue that cannot take a `table`
+ * line, such as a property indented with spaces, does not stop them: the file's own PARSE_ISSUE
+ * finding names the line it lost. Implies `modelPartlyRead`.
+ */
+export const tablesPartlyRead = (m: Model): boolean =>
+  m.unreadPaths.length > 0 || m.files.some((f) => f.issues.some((i) => i.canDropTableLine));
+
 /** Tables that satisfy the Table or CalculatedTable scope. Calculation group tables are only in the CalculationGroup scope. */
 export const tablesInScope = (m: Model): Table[] =>
   m.tables.filter((t) => t.kind !== "calculationGroup");

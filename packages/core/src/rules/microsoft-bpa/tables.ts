@@ -14,6 +14,7 @@ import {
   isNumericType,
   modelPartlyRead,
   tablesInScope,
+  tablesPartlyRead,
 } from "../helpers.js";
 import { bpaRule } from "./define.js";
 
@@ -28,8 +29,11 @@ export const MODEL_SHOULD_HAVE_A_DATE_TABLE = bpaRule(
     m.tables.some((t) => t.dataCategory === "Time" && hasDateTimeKey(t)) ? [] : [finding.model(m)],
 );
 
+// A part of the table pbiplint could not read may mark it, hold its key, or make it a calculation
+// group, which the rule leaves out.
 export const DATE_CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE = bpaRule(
   "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE",
+  { skipWhenModelUnread: tablesPartlyRead },
   (m) =>
     tablesInScope(m)
       .filter((t) => {
@@ -68,9 +72,11 @@ export const UNPIVOT_PIVOTED_MONTH_DATA = bpaRule("UNPIVOT_PIVOTED_(MONTH)_DATA"
     .map(finding.table),
 );
 
-// Scope is Table only: calculated tables and calculation groups are not checked.
+// Scope is Table only: calculated tables and calculation groups are not checked. A part of the
+// table pbiplint could not read may hold another partition, or a calculated one.
 export const PARTITION_NAME_SHOULD_MATCH_TABLE_NAME_FOR_SINGLE_PARTITION_TABLES = bpaRule(
   "PARTITION_NAME_SHOULD_MATCH_TABLE_NAME_FOR_SINGLE_PARTITION_TABLES",
+  { skipWhenModelUnread: tablesPartlyRead },
   (m) =>
     m.tables
       .filter(
@@ -161,8 +167,11 @@ const TIME_INTELLIGENCE_FUNCTIONS = [
 // The source patterns have no (?i), so this one is case-sensitive.
 const TIME_INTELLIGENCE = new RegExp(`(?:${TIME_INTELLIGENCE_FUNCTIONS.join("|")})\\s*\\(`);
 
+// A table is DirectQuery by its first partition, which a part of the table pbiplint could not read
+// may hold.
 export const MEASURES_USING_TIME_INTELLIGENCE_AND_MODEL_IS_USING_DIRECT_QUERY = bpaRule(
   "MEASURES_USING_TIME_INTELLIGENCE_AND_MODEL_IS_USING_DIRECT_QUERY",
+  { skipWhenModelUnread: tablesPartlyRead },
   (m) =>
     m.tables.some(isDirectQueryTable)
       ? expressionObjects(m, ["measure", "calculationItem"])
@@ -224,13 +233,17 @@ export const AVOID_THE_USERELATIONSHIP_FUNCTION_AND_RLS_AGAINST_THE_SAME_TABLE =
 
 // Scope: Table, Measure, DataColumn, CalculatedColumn, CalculatedTable, CalculatedTableColumn, CalculationGroup.
 // Visibility is the object's own IsHidden (a visible column in a hidden table is still reported).
-// Findings follow model order: each table, then its columns, then its measures.
-export const OBJECTS_WITH_NO_DESCRIPTION = bpaRule("OBJECTS_WITH_NO_DESCRIPTION", (m) =>
-  m.tables.flatMap((t) => [
-    ...(isBlank(t.description) && !t.isHidden ? [finding.table(t)] : []),
-    ...t.columns.filter((c) => isBlank(c.description) && !c.isHidden).map(finding.column),
-    ...t.measures.filter((x) => isBlank(x.description) && !x.isHidden).map(finding.measure),
-  ]),
+// Findings follow model order: each table, then its columns, then its measures. A part of a table
+// pbiplint could not read may describe or hide the table.
+export const OBJECTS_WITH_NO_DESCRIPTION = bpaRule(
+  "OBJECTS_WITH_NO_DESCRIPTION",
+  { skipWhenModelUnread: tablesPartlyRead },
+  (m) =>
+    m.tables.flatMap((t) => [
+      ...(isBlank(t.description) && !t.isHidden ? [finding.table(t)] : []),
+      ...t.columns.filter((c) => isBlank(c.description) && !c.isHidden).map(finding.column),
+      ...t.measures.filter((x) => isBlank(x.description) && !x.isHidden).map(finding.measure),
+    ]),
 );
 
 export const tableRules = [

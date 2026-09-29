@@ -1,13 +1,20 @@
-import { allPartitions, finding, modelPartlyRead, namedObjects } from "../helpers.js";
+import {
+  allPartitions,
+  finding,
+  modelPartlyRead,
+  namedObjects,
+  tablesPartlyRead,
+} from "../helpers.js";
 import type { Rule } from "../types.js";
-import { bpaRule, mapScope, metaOf } from "./define.js";
+import { bpaRule, mapScope, metaOf, type BpaRuleSpec } from "./define.js";
 
 /** A rule over every object in the rule's own scope, testing name and description. */
 const namedObjectRule = (
   id: string,
   test: (name: string, description: string | undefined) => boolean,
+  spec: BpaRuleSpec = {},
 ): Rule =>
-  bpaRule(id, (m) =>
+  bpaRule(id, spec, (m) =>
     namedObjects(m, mapScope(metaOf(id).scope))
       .filter((o) => test(o.name, o.description))
       .map((o) => o.finding),
@@ -17,9 +24,12 @@ const startsOrEndsWithSpace = (name: string): boolean => name.startsWith(" ") ||
 
 export const TRIM_OBJECT_NAMES = namedObjectRule("TRIM_OBJECT_NAMES", startsOrEndsWithSpace);
 
+// Its scope leaves out calculated tables and their columns, and a part of a table pbiplint could
+// not read may hold a calculated partition.
 export const OBJECTS_SHOULD_NOT_START_OR_END_WITH_A_SPACE = namedObjectRule(
   "OBJECTS_SHOULD_NOT_START_OR_END_WITH_A_SPACE",
   startsOrEndsWithSpace,
+  { skipWhenModelUnread: tablesPartlyRead },
 );
 
 export const SPECIAL_CHARS_IN_OBJECT_NAMES = namedObjectRule(

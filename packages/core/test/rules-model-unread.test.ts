@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { lint } from "../src/engine/lint.js";
 import { buildIndexes } from "../src/index/build.js";
+import { modelPartlyRead, tablesPartlyRead } from "../src/rules/helpers.js";
 import { defaultRules } from "../src/rules/index.js";
 
 type File = { path: string; text: string };
@@ -197,32 +198,213 @@ const cases: Case[] = [
   },
 ];
 
+const ruleNamed = (id: string) => defaultRules.find((r) => r.id === id)!;
+const reported = (r: ReturnType<typeof lint>, id: string) =>
+  r.findings.filter((f) => f.ruleId === id).map((f) => f.objectName);
+
+/** The two runs every case makes: the whole model, and the model pbiplint could not fully read. */
+function itSkipsWhilePartlyRead({ rule, whole, partly, wouldReport }: Case): void {
+  it("runs and reports nothing while every model file was read", () => {
+    const r = lint(whole);
+    expect(r.findings.filter((f) => f.ruleId === "PARSE_ISSUE")).toEqual([]);
+    expect(r.summary.rulesSkipped.map((s) => s.id)).not.toContain(rule);
+    expect(reported(r, rule)).toEqual([]);
+  });
+
+  it("is skipped with the reason while a model file could not be fully read", () => {
+    const r = lint(partly.files, { unreadPaths: { model: partly.unreadPaths } });
+    const model = r.project.model!;
+    // Run on that model, the rule would state what is missing, and each finding would be false.
+    expect(
+      ruleNamed(rule)
+        .check({ model }, { indexes: buildIndexes({ model }), options: {} })
+        .map((f) => f.objectName),
+    ).toEqual(wouldReport);
+    expect(reported(r, rule)).toEqual([]);
+    expect(r.summary.rulesSkipped).toContainEqual({ id: rule, reason: "modelFileUnread" });
+  });
+}
+
 describe("a rule whose finding rests on the whole model (#128)", () => {
-  const ruleNamed = (id: string) => defaultRules.find((r) => r.id === id)!;
-  const reported = (r: ReturnType<typeof lint>, id: string) =>
-    r.findings.filter((f) => f.ruleId === id).map((f) => f.objectName);
+  describe.each(cases)("$rule", itSkipsWhilePartlyRead);
+});
 
-  describe.each(cases)("$rule", ({ rule, whole, partly, wouldReport }) => {
-    const skipped = { id: rule, reason: "modelFileUnread" };
+/** One part of a table whose declaration TMDL lets sit in more than one file. */
+const part = (file: string, name: string, body: string): File => ({
+  path: `definition/tables/${file}.tmdl`,
+  text: `table '${name}'\n${body}`,
+});
+const withPart = (first: File, second: File) => ({
+  whole: [first, second],
+  partly: unread([first, second], second.path),
+});
+const calculated = (name: string) =>
+  `\tpartition '${name}' = calculated\n\t\tmode: import\n\t\tsource = ROW("Value", 1)\n`;
+const salesHidden = part("Sales.hidden", "Sales", "\tisHidden\n");
+const dateMarked = part("Date.marked", "Date", "\tdataCategory: Time\n");
+const dateKey = part("Date", "Date", "\tcolumn Date\n\t\tdataType: dateTime\n\t\tisKey\n");
+const twoPartitions = [
+  part("Sales", "Sales", "\tpartition 'Sales 2024' = m\n\t\tmode: import\n\t\tsource = 1\n"),
+  part("Sales.2025", "Sales", "\tpartition 'Sales 2025' = m\n\t\tmode: import\n\t\tsource = 2\n"),
+];
+const region = [
+  part("Region", "Region", "\tcolumn Key\n\t\tdataType: int64\n"),
+  part("Region.calc", "Region", calculated("Region")),
+  table("Sales", "\tcolumn Key\n\t\tdataType: int64\n"),
+  relationships(
+    "relationship r1\n\ttoCardinality: many\n\tfromColumn: Sales.Key\n\ttoColumn: Region.Key\n",
+  ),
+  {
+    path: "definition/roles/Reader.tmdl",
+    text: "role Reader\n\tmodelPermission: read\n\ttablePermission Region = [Key] = USERNAME()\n",
+  },
+];
+// Sales.a.tmdl comes first in the walk, so its import partition is the table's first.
+const hybrid = [
+  part("Sales.a", "Sales", "\tpartition 'Sales history' = m\n\t\tmode: import\n\t\tsource = 1\n"),
+  part(
+    "Sales",
+    "Sales",
+    "\tmeasure YTD = TOTALYTD(1, 'Date'[Date])\n\tpartition 'Sales live' = m\n\t\tmode: directQuery\n\t\tsource = 2\n",
+  ),
+];
 
-    it("runs and reports nothing while every model file was read", () => {
-      const r = lint(whole);
-      expect(r.findings.filter((f) => f.ruleId === "PARSE_ISSUE")).toEqual([]);
-      expect(r.summary.rulesSkipped.map((s) => s.id)).not.toContain(rule);
-      expect(reported(r, rule)).toEqual([]);
+const tableCases: Case[] = [
+  {
+    rule: "NUMERIC_COLUMN_SUMMARIZE_BY",
+    ...withPart(part("Sales", "Sales", "\tcolumn Amount\n\t\tdataType: decimal\n"), salesHidden),
+    wouldReport: ["'Sales'[Amount]"],
+  },
+  {
+    rule: "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS",
+    ...withPart(part("Sales", "Sales", "\tcolumn IsActive\n\t\tdataType: int64\n"), salesHidden),
+    wouldReport: ["'Sales'[IsActive]"],
+  },
+  {
+    rule: "PROVIDE_FORMAT_STRING_FOR_MEASURES",
+    ...withPart(part("Sales", "Sales", "\tmeasure Total = 1\n"), salesHidden),
+    wouldReport: ["[Total]"],
+  },
+  {
+    rule: "DATA_COLUMNS_MUST_HAVE_A_SOURCE_COLUMN",
+    // With its calculated partition, Value is a calculated table's column, which has no source.
+    ...withPart(
+      part("Calc", "Calc", "\tcolumn Value\n\t\tdataType: int64\n"),
+      part("Calc.partition", "Calc", calculated("Calc")),
+    ),
+    wouldReport: ["'Calc'[Value]"],
+  },
+  {
+    rule: "MARK_PRIMARY_KEYS",
+    whole: [
+      part("Date", "Date", "\tcolumn DateKey\n\t\tdataType: int64\n"),
+      dateMarked,
+      table("Sales", "\tcolumn DateKey\n\t\tdataType: int64\n"),
+      relationships("relationship r1\n\tfromColumn: Sales.DateKey\n\ttoColumn: Date.DateKey\n"),
+    ],
+    partly: unread(
+      [
+        part("Date", "Date", "\tcolumn DateKey\n\t\tdataType: int64\n"),
+        dateMarked,
+        table("Sales", "\tcolumn DateKey\n\t\tdataType: int64\n"),
+        relationships("relationship r1\n\tfromColumn: Sales.DateKey\n\ttoColumn: Date.DateKey\n"),
+      ],
+      dateMarked.path,
+    ),
+    wouldReport: ["'Date'[DateKey]"],
+  },
+  {
+    rule: "AVOID_USING_MANY-TO-MANY_RELATIONSHIPS_ON_TABLES_USED_FOR_DYNAMIC_ROW_LEVEL_SECURITY",
+    // With its calculated partition, Region is a calculated table, which the rule leaves out.
+    whole: region,
+    partly: unread(region, "definition/tables/Region.calc.tmdl"),
+    wouldReport: ["'Region'"],
+  },
+  {
+    rule: "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE",
+    ...withPart(dateKey, dateMarked),
+    wouldReport: ["'Date'"],
+  },
+  {
+    rule: "PARTITION_NAME_SHOULD_MATCH_TABLE_NAME_FOR_SINGLE_PARTITION_TABLES",
+    whole: twoPartitions,
+    // The second part's `table` line is misspelt, so the parser keeps nothing under it.
+    partly: damaged(
+      twoPartitions,
+      twoPartitions[1]!.path,
+      twoPartitions[1]!.text.replace("table ", "tabel "),
+    ),
+    wouldReport: ["'Sales'"],
+  },
+  {
+    rule: "MEASURES_USING_TIME_INTELLIGENCE_AND_MODEL_IS_USING_DIRECT_QUERY",
+    // Tabular Editor calls a table DirectQuery by its first partition, which the unread part holds.
+    whole: hybrid,
+    partly: unread(hybrid, hybrid[0]!.path),
+    wouldReport: ["[YTD]"],
+  },
+  {
+    rule: "OBJECTS_WITH_NO_DESCRIPTION",
+    ...withPart(part("Sales", "Sales", "\tcolumn Amount\n\t\tisHidden\n"), {
+      path: "definition/tables/Sales.about.tmdl",
+      text: "/// Sales lines\ntable Sales\n",
+    }),
+    wouldReport: ["'Sales'"],
+  },
+  {
+    rule: "OBJECTS_SHOULD_NOT_START_OR_END_WITH_A_SPACE",
+    // A calculated table is out of the rule's scope.
+    ...withPart(
+      part("Calc", "Calc ", "\tcolumn Value\n\t\tdataType: int64\n"),
+      part("Calc.partition", "Calc ", calculated("Calc 1")),
+    ),
+    wouldReport: ["'Calc '"],
+  },
+];
+
+describe("a rule that reads what any part of a table's declaration can hold (#132)", () => {
+  describe.each(tableCases)("$rule", (c) => {
+    itSkipsWhilePartlyRead(c);
+
+    it("runs while the only parse issue sits inside a table, where it cannot take a part", () => {
+      // The property line is indented with spaces, so the parser skips it: a PARSE_ISSUE that can
+      // drop a property of Other, and no table line.
+      const other = table("Other", "\tcolumn X\n        dataType: int64\n");
+      const r = lint([...c.whole, other]);
+      expect(r.findings.filter((f) => f.ruleId === "PARSE_ISSUE")).toHaveLength(1);
+      expect(r.summary.rulesSkipped).toContainEqual({
+        id: "UNNECESSARY_COLUMNS",
+        reason: "modelFileUnread",
+      });
+      expect(r.summary.rulesSkipped.map((s) => s.id)).not.toContain(c.rule);
     });
+  });
+});
 
-    it("is skipped with the reason while a model file could not be fully read", () => {
-      const r = lint(partly.files, { unreadPaths: { model: partly.unreadPaths } });
-      const model = r.project.model!;
-      // Run on that model, the rule would state what is missing, and each finding would be false.
-      expect(
-        ruleNamed(rule)
-          .check({ model }, { indexes: buildIndexes({ model }), options: {} })
-          .map((f) => f.objectName),
-      ).toEqual(wouldReport);
-      expect(reported(r, rule)).toEqual([]);
-      expect(r.summary.rulesSkipped).toContainEqual(skipped);
-    });
+describe("tablesPartlyRead", () => {
+  const model = (files: File[], unreadPaths: string[] = []) =>
+    lint(files, { unreadPaths: { model: unreadPaths } }).project.model!;
+  const sales = table("Sales", "\tcolumn Amount\n\t\tdataType: decimal\n");
+  it("holds while a model path could not be read, since it could hold a part of any table", () => {
+    expect(tablesPartlyRead(model([sales], ["definition/tables/Other.tmdl"]))).toBe(true);
+  });
+  it("holds while a parse issue can take a table line", () => {
+    expect(
+      tablesPartlyRead(
+        model(
+          [sales, table("Date", "")].map((f) =>
+            f.path.endsWith("Date.tmdl") ? { ...f, text: "tabel Date\n" } : f,
+          ),
+        ),
+      ),
+    ).toBe(true);
+  });
+  it("does not hold while every parse issue sits inside a declaration", () => {
+    const m = model([sales, table("Other", "\tcolumn X\n        dataType: int64\n")]);
+    expect(modelPartlyRead(m)).toBe(true);
+    expect(tablesPartlyRead(m)).toBe(false);
+  });
+  it("does not hold while every model file was read", () => {
+    expect(tablesPartlyRead(model([sales]))).toBe(false);
   });
 });

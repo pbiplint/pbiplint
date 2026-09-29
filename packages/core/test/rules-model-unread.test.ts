@@ -331,6 +331,21 @@ const tableCases: Case[] = [
     partly: damaged([dateKey, dateMarked], dateMarked.path, `\t${dateMarked.text}`),
     wouldReport: ["'Date'"],
   },
+  ...[
+    // The marking part's `table` line sits under another table's declaration (#135).
+    "table Other\n\tcolumn X\n\t\tdataType: int64\n\ttable 'Date'\n\t\tdataCategory: Time\n",
+    // It has lost its name (#135).
+    "table\n\tdataCategory: Time\n",
+    // Its name's quote is not closed (#135).
+    "table 'Date\n\tdataCategory: Time\n",
+    // It is indented with spaces under an expression indented with tabs, which read it as text (#135).
+    "expression E =\n\t\tlet x = 1 in x\n    table 'Date'\n\tdataCategory: Time\n",
+  ].map((text): Case => ({
+    rule: "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE",
+    whole: [dateKey, dateMarked],
+    partly: damaged([dateKey, dateMarked], dateMarked.path, text),
+    wouldReport: ["'Date'"],
+  })),
   {
     rule: "PARTITION_NAME_SHOULD_MATCH_TABLE_NAME_FOR_SINGLE_PARTITION_TABLES",
     whole: twoPartitions,

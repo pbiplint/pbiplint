@@ -104,6 +104,7 @@ The question is whether there is a summary worth precomputing. A DirectQuery tab
 - The data source version has to be present and read as powerBI_V3, compared without regard to letter case. A model file that does not carry `defaultPowerBIDataSourceVersion` at all is never reported, whatever its tables say.
 - One column with an `alternateOf` block anywhere in the model clears the finding, whatever it maps to. A single half-finished aggregation table counts as much as a complete set.
 - A table counts as DirectQuery when its first partition says `mode: directQuery`, letter case aside. No other mode counts, so a table set to Dual storage mode is not a DirectQuery table here.
+- While a model file has a parse issue that can take a declaration out of the model, such as a line indented with spaces, or pbiplint could not open a model file or folder at all, the rule reports nothing, because an aggregation table could be in what pbiplint missed, and pbiplint does not guess what a file it could not read says. The skipped line gives the reason, `a model file could not be fully read`, and the file's own `PARSE_ISSUE` finding names it, or a notice does for a file or folder pbiplint could not open.
 
 ## Related rules
 

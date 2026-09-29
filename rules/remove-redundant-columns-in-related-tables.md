@@ -99,6 +99,7 @@ Coincidence is the common false alarm. The test is the column's name and nothing
 - Any column on the related table counts as the duplicate, the relationship key and hidden columns included.
 - Cardinality is not tested, only the from and to sides of the relationship, so a one-to-one relationship counts the same as a many-to-one.
 - All three column kinds are in scope, so a loaded column, a DAX calculated column, and a calculated table's column are read alike.
+- While a model file has a parse issue that can take a declaration out of the model, such as a line indented with spaces, or pbiplint could not open a model file or folder at all, the rule reports nothing, because the column's own relationship could be in what pbiplint missed, and pbiplint does not guess what a file it could not read says. The skipped line gives the reason, `a model file could not be fully read`, and the file's own `PARSE_ISSUE` finding names it, or a notice does for a file or folder pbiplint could not open.
 
 ## Related rules
 

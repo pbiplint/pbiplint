@@ -27,7 +27,7 @@ Node 20.19 or later (or 22.12 or later), which Vite needs for the site build. No
 
 1. Find the rule in `packages/core/src/rules/microsoft-bpa/bpa-rules.data.ts` (generated from Microsoft's `BPARules.json`; do not edit by hand).
 2. Write a failing unit test in the matching `packages/core/test/rules-*.test.ts` using `objectNames(rule, tmdl)`.
-3. Port the rule literally with `bpaRule(id, check)` in the matching file under `packages/core/src/rules/microsoft-bpa/`. Keep Microsoft's quirks; document them on the rule page under `## Quirks`.
+3. Port the rule literally with `bpaRule(id, check)` in the matching file under `packages/core/src/rules/microsoft-bpa/`. Keep Microsoft's quirks; document them on the rule page under `## Quirks`. A rule whose finding says something is missing from the whole model, such as no date table, no reference to a column, or no relationship on a table, is written `bpaRule(id, { skipWhenModelUnread: modelPartlyRead }, check)`, since a model file pbiplint could not fully read may hold what it looks for; the engine then skips it with the reason on the skipped line. Add it to the cases in `packages/core/test/rules-model-unread.test.ts` and say so on its page under `## Quirks`. A rule that reports an object it read for something about that object, such as a column's data type or a role's members, needs neither.
 4. Run `npm test -- parity`. Every ported model rule is compared against Tabular Editor's object list on every fixture.
 5. If no fixture exercises the rule, add the construct to `tests/fixtures/rule-zoo.SemanticModel` and refresh its expectations (below).
 6. Scaffold the rule page with `node scripts/generate-rule-pages.mjs` and write it (see Rule pages below).

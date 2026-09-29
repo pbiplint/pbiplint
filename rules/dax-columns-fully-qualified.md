@@ -65,6 +65,7 @@ There is no case for the bare form. The rule is worth reading as a warning rathe
 - References are found by pattern matching, so a bare `[Column]` inside a string literal or a comment counts.
 - A measure's dynamic format string is read together with its expression, so a bare column reference written inside `formatStringDefinition` reports the measure that carries it.
 - Calculated columns and calculated tables are out of scope, so a bare column reference in either is not reported.
+- While a model file has a parse issue that can take a declaration out of the model, such as a line indented with spaces, or pbiplint could not open a model file or folder at all, the rule reports nothing, because a bare name reads as a column only when the model has no measure of that name, and a measure of that name could be in what pbiplint missed; pbiplint does not guess what a file it could not read says. The skipped line gives the reason, `a model file could not be fully read`, and the file's own `PARSE_ISSUE` finding names it, or a notice does for a file or folder pbiplint could not open.
 
 ## Related rules
 

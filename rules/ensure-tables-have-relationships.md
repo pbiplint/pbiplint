@@ -80,6 +80,7 @@ A table that is meant to stand alone is the case to ignore: a what-if parameter 
 - The rule reads relationships by the table names written in them, matched exactly. A relationship that spells the table differently, in letter case or after a rename, counts for the name it carries and not for the table, so the table is still reported.
 - Visibility is not read. A hidden measures table with a single hidden column is reported like any other table.
 - A table with no partitions, such as one whose file was only partly written, is a table to this rule and is reported when nothing relates to it.
+- While a model file has a parse issue that can take a declaration out of the model, such as a line indented with spaces, or pbiplint could not open a model file or folder at all, the rule reports nothing, because the table's relationships could be in what pbiplint missed, and pbiplint does not guess what a file it could not read says. The skipped line gives the reason, `a model file could not be fully read`, and the file's own `PARSE_ISSUE` finding names it, or a notice does for a file or folder pbiplint could not open.
 
 ## Related rules
 

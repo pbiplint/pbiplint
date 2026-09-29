@@ -79,6 +79,7 @@ A model with no dates in it is the clean exception: a reference list, a product 
 - The data category comparison is exact and case-sensitive, so `dataCategory: time` leaves the model reported.
 - Nothing else about the table is tested. It is not checked for contiguity, for covering the model's date range, or for being related to anything, so a one-row table marked as a date table clears the finding without helping any measure.
 - Any table can satisfy it, of any kind. A calculated calendar counts the same as a loaded one.
+- While a model file has a parse issue that can take a declaration out of the model, such as a line indented with spaces, or pbiplint could not open a model file or folder at all, the rule reports nothing, because the date table could be in what pbiplint missed, and pbiplint does not guess what a file it could not read says. The skipped line gives the reason, `a model file could not be fully read`, and the file's own `PARSE_ISSUE` finding names it, or a notice does for a file or folder pbiplint could not open.
 
 ## Related rules
 

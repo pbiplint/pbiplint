@@ -1112,6 +1112,33 @@ and the Model fact calls the same predicate (section 6). The JSON
 document carries the reason in `summary.rulesSkipped`; SARIF gains
 nothing.
 
+Amended 2026-09-28 (issue #128): `NOT_REACHED_FROM_REPORT` is no longer
+the only rule that declares it. Every Microsoft rule whose finding says
+something is missing from the whole model sets `modelPartlyRead` too,
+since what it looks for may be declared in the file pbiplint could not
+fully read: `ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS` (a variation
+naming the column), `MODEL_SHOULD_HAVE_A_DATE_TABLE` (the date table),
+`AVOID_EXCESSIVE_BI-DIRECTIONAL_OR_MANY-TO-MANY_RELATIONSHIPS` (a share
+of every relationship), `MODEL_USING_DIRECT_QUERY_AND_NO_AGGREGATIONS`
+(an aggregation table), `REMOVE_REDUNDANT_COLUMNS_IN_RELATED_TABLES`
+and `ENSURE_TABLES_HAVE_RELATIONSHIPS` (a relationship),
+`DAX_COLUMNS_FULLY_QUALIFIED` (a measure a bare name would read, which
+otherwise reads as a column), `INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED`
+(a USERELATIONSHIP call), `UNNECESSARY_COLUMNS` and
+`UNNECESSARY_MEASURES` (a reference), and
+`REMOVE_DATA_SOURCES_NOT_REFERENCED_BY_ANY_PARTITIONS` (a partition).
+`bpaRule` takes the option before the body, as `bpaRule(id, {
+skipWhenModelUnread: modelPartlyRead }, check)`. A rule that reports an
+object it read for something about that object, such as a column's
+data type, a role's members, or a table's partitions, keeps running on
+what was read: pbiplint takes a table from the first file that declares
+it, so an object and what sits under it come from one file, and a parse
+issue in that file is that file's own `PARSE_ISSUE` finding. The
+skipped line counts every rule the condition stops: "12 rules skipped
+(a model file could not be fully read)" with both parts, 11 on a
+model-only run, where `NOT_REACHED_FROM_REPORT` is skipped for the
+absent report.
+
 **Object types.** `Report`, `Page`, `Visual`, `Bookmark`,
 `ReportMeasure` join `ObjectType`.
 

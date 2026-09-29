@@ -775,10 +775,11 @@ describe("a reference into a model file pbiplint could not fully read", () => {
   });
 
   it("resolves a bare name to another table's column while the model is partly read", () => {
-    // As a column on the measure's own table is: an unread file could declare another column of
-    // the name on a table earlier in model order, but no rule reads a report measure's references
-    // while the model is partly read (NOT_REACHED_FROM_REPORT is skipped), so the answer counts
-    // only once the model is whole.
+    // It resolves as a column on the measure's own table does. An unread file could declare a
+    // column of the name on the measure's own table or on a table earlier in model order, which
+    // the resolver would choose first, but no rule reads a report measure's references while the
+    // model is partly read (NOT_REACHED_FROM_REPORT is skipped), so the answer counts only once
+    // the model is whole.
     const refs = indexOf(modelOf({ [SALES]: sales + spaced, [PRODUCT]: product }), [], {
       Categories: "COUNTROWS(VALUES([Category]))",
     }).refs.filter((r) => r.owner.kind === "reportMeasure");
@@ -1008,7 +1009,8 @@ ${tmdl("Measures")}`);
   for (const [i, c] of cases.entries())
     it(`reads ${c.dax} on ${c.on} the same way in both`, () => {
       // In order: qualified references first in both indexes, then bare ones, each in text order.
-      // The reachability walk keeps the first path it finds, so the order reaches its reasons.
+      // The reachability walk keeps the first path it finds, so the order can change which path a
+      // finding's reason names.
       expect(modelReads(i)).toEqual(c.reads);
       expect(reportReads(i)).toEqual(c.reads);
     });

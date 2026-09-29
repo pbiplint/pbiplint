@@ -69,6 +69,7 @@ Size is the first judgment. The saving is roughly proportional to the column's d
 - Both ends of a sort-by pair are out of scope: the column another column sorts by, and the column that names one in `sortByColumn`.
 - Variations are matched on the default column alone, so a column a variation reaches only through its default hierarchy is not protected here.
 - Relationships are not read. A hidden foreign key, which is exactly what `HIDE_FOREIGN_KEYS` asks you to create, is reported here.
+- While a model file has a parse issue that can take a declaration out of the model, such as a line indented with spaces, or pbiplint could not open a model file or folder at all, the rule reports nothing, because a variation on another table's column that names the column could be in what pbiplint missed, and pbiplint does not guess what a file it could not read says. The skipped line gives the reason, `a model file could not be fully read`, and the file's own `PARSE_ISSUE` finding names it, or a notice does for a file or folder pbiplint could not open.
 
 ## Related rules
 

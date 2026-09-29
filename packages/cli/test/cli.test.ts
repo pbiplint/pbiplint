@@ -603,10 +603,37 @@ describe("pbiplint CLI", () => {
           detail: "not reached from this report: unknown, a model file could not be fully read",
         });
         expect((await run([root, "--fail-on", "none"])).out).toContain(
-          "1 rule skipped (a model file could not be fully read)",
+          "12 rules skipped (a model file could not be fully read)",
         );
       } finally {
         chmodSync(store, 0o644);
+      }
+    },
+  );
+  it.skipIf(noModes)(
+    "says nothing is missing from a model while it cannot read the folder that could hold it (#128)",
+    async () => {
+      // The sample's model has a date table, in the tables folder the walk cannot list.
+      const root = tempDir("locked-tables");
+      const model = join(root, "Messy Sales Demo.SemanticModel");
+      cpSync(join(repo, "examples/messy-sales/Messy Sales Demo.SemanticModel"), model, {
+        recursive: true,
+      });
+      const tables = join(model, "definition", "tables");
+      chmodSync(tables, 0o000);
+      try {
+        const r = await run([model, "--format", "json", "--fail-on", "none"]);
+        const doc = JSON.parse(r.out);
+        expect(doc.groups).toEqual([]);
+        expect(doc.summary.rulesSkipped).toContainEqual({
+          id: "MODEL_SHOULD_HAVE_A_DATE_TABLE",
+          reason: "modelFileUnread",
+        });
+        expect((await run([model, "--fail-on", "none"])).out).toContain(
+          "11 rules skipped (a model file could not be fully read)",
+        );
+      } finally {
+        chmodSync(tables, 0o755);
       }
     },
   );

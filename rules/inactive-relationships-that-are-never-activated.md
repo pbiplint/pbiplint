@@ -111,6 +111,7 @@ This rule reads the semantic model, not the reports built on it. A report-level 
 - The call is matched as text, in any letter case, so a USERELATIONSHIP written inside a string literal or a comment counts as activating the relationship.
 - Either table name may be written bare or in single quotes, and any spacing around the comma is accepted.
 - pbiplint escapes table and column names before building the pattern, which the source rule does not, so names with parentheses cannot break the check.
+- While a model file has a parse issue that can take a declaration out of the model, such as a line indented with spaces, or pbiplint could not open a model file or folder at all, the rule reports nothing, because the DAX that activates the relationship with USERELATIONSHIP could be in what pbiplint missed, and pbiplint does not guess what a file it could not read says. The skipped line gives the reason, `a model file could not be fully read`, and the file's own `PARSE_ISSUE` finding names it, or a notice does for a file or folder pbiplint could not open.
 
 ## Related rules
 

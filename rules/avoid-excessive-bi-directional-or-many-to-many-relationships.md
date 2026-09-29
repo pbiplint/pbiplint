@@ -103,6 +103,7 @@ A small model is the usual false alarm. Three relationships with one deliberate 
 - A relationship that is both bi-directional and many-to-many counts twice, once in each tally, so the ratio can exceed 1. A model of nothing but such relationships scores 2.0.
 - The denominator is every relationship in the model, and a model with no relationships at all is never reported.
 - Inactive relationships are counted on both sides of the ratio. A bi-directional relationship that no measure ever activates still pushes the model over the threshold.
+- While a model file has a parse issue that can take a declaration out of the model, such as a line indented with spaces, or pbiplint could not open a model file or folder at all, the rule reports nothing, because the share is of every relationship in the model, and the relationships pbiplint missed could change it; pbiplint does not guess what a file it could not read says. The skipped line gives the reason, `a model file could not be fully read`, and the file's own `PARSE_ISSUE` finding names it, or a notice does for a file or folder pbiplint could not open.
 
 ## Related rules
 

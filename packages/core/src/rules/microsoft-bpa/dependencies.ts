@@ -1,6 +1,6 @@
 import type { RefOwner } from "../../index/references.js";
 import { measureRef } from "../../model/names.js";
-import { allMeasures, finding } from "../helpers.js";
+import { allMeasures, finding, modelPartlyRead } from "../helpers.js";
 import type { RuleContext, RuleFinding } from "../types.js";
 import { bpaRule } from "./define.js";
 
@@ -29,9 +29,12 @@ export function ownerFinding(o: RuleOwner): RuleFinding {
 }
 
 // Scope: Measure, KPI, TablePermission, CalculationItem. KPIs are not modeled in v1. Calculation items
-// never resolve bare references to columns (ground-truth item 3), so they never fire here.
+// never resolve bare references to columns (ground-truth item 3), so they never fire here. A bare
+// name reads as a column only when the model has no measure of that name, and a model file pbiplint
+// could not fully read may hold one.
 export const DAX_COLUMNS_FULLY_QUALIFIED = bpaRule(
   "DAX_COLUMNS_FULLY_QUALIFIED",
+  { skipWhenModelUnread: modelPartlyRead },
   (_m, { indexes: { references } }: RuleContext) =>
     references.owners
       .filter(isRuleOwner)
@@ -79,8 +82,10 @@ export const MEASURES_SHOULD_NOT_BE_DIRECT_REFERENCES_OF_OTHER_MEASURES = bpaRul
   },
 );
 
+// A model file pbiplint could not fully read may hold what references the measure.
 export const UNNECESSARY_MEASURES = bpaRule(
   "UNNECESSARY_MEASURES",
+  { skipWhenModelUnread: modelPartlyRead },
   (m, { indexes: { references } }: RuleContext) =>
     allMeasures(m)
       .filter(

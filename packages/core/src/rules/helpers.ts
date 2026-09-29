@@ -44,7 +44,9 @@ export const isDirectQueryTable = (t: Table): boolean =>
  * description), or a path under the model's root could not be read at all (`Model.unreadPaths`).
  * Anything reached only through a missing object then reads as not reached, so
  * NOT_REACHED_FROM_REPORT sets this as its `skipWhenModelUnread` and the Model fact's not-reached
- * clause says unknown on the same condition.
+ * clause says unknown on the same condition. Every Microsoft rule whose finding rests on the whole
+ * model, something missing from it, such as a date table or a reference to a column, or a share of
+ * all of it, sets it too, since the missing object may be what the rule looks for (#128).
  */
 export const modelPartlyRead = (m: Model): boolean =>
   m.unreadPaths.length > 0 || m.files.some((f) => f.issues.some((i) => i.canDropObjects));

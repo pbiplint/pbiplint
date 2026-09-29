@@ -74,6 +74,7 @@ Report usage is the case to check first. A hidden column that a visual, a slicer
 - Report usage is not visible to this rule. A hidden column used only by a visual, a slicer, or a report-level filter is still flagged.
 - Variations are not tested, here or in the source rule, so a hidden column that a variation names as its default column is reported. `SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS` does read variations.
 - Row-level security is matched as text, ignoring letter case, the way the source rule matches it. A bare `[Column]` in any role's filter already counts as a DAX reference (see above), so the text test only adds the qualified forms `Table[Column]` and `'Table'[Column]`.
+- While a model file has a parse issue that can take a declaration out of the model, such as a line indented with spaces, or pbiplint could not open a model file or folder at all, the rule reports nothing, because a measure, a relationship, or a security filter that uses the column could be in what pbiplint missed, and pbiplint does not guess what a file it could not read says. The skipped line gives the reason, `a model file could not be fully read`, and the file's own `PARSE_ISSUE` finding names it, or a notice does for a file or folder pbiplint could not open.
 
 ## Related rules
 

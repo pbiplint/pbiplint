@@ -1,5 +1,5 @@
 import { unquoteName, unquoteValue } from "./quote.js";
-import { isRootType } from "./root-types.js";
+import { isNamedRootType, isRootType } from "./root-types.js";
 import type { ParsedFile, TmdlNode, TmdlParseIssue } from "./types.js";
 
 const HEADER = /^([A-Za-z_]\w*)(?:\s+(.+))?$/;
@@ -25,16 +25,30 @@ const mayBeRootLine = (line: string): boolean =>
 /**
  * Whether a line's word is `table`, however it is indented and whatever follows the word: a stray
  * tab, tabs and spaces, or `table: Sales` or `table = Sales` for `table Sales`. A model's
- * definition declares a table nowhere but at the root (a `createOrReplace` script nests one, and
- * pbiplint reads no script), so a lost line of that word may be a table's declaration (#132).
- * `tablePermission` and M text such as `Table.AddColumn(` are other words.
+ * definition declares a table at the root of a file, and a culture's translations name one under a
+ * model, so a lost line of that word may be a table's declaration (#132). `tablePermission` and M
+ * text such as `Table.AddColumn(` are other words.
  */
 const namesTable = (line: string): boolean => /^table(?:[\s:=]|$)/i.test(line.trim());
+/**
+ * What a `table` line may sit under: a model, as a culture's translations and a TMDL script write
+ * one, or a script's `createOrReplace`. A database holds the model, not a table.
+ */
+const HOLDS_TABLE = new Set(["model", "createorreplace"]);
+
+/**
+ * Whether a declaration's name, as written, is one TMDL can read: a name with a single quote in it
+ * is enclosed in single quotes, with each quote inside doubled and nothing after the closing one
+ * (https://learn.microsoft.com/analysis-services/tmdl/tmdl-overview#object-declaration). One whose
+ * quote is left open also swallows the `=` after it, so the expression reads as part of the name.
+ */
+const nameReadable = (name: string): boolean =>
+  !name.includes("'") || /^'(?:[^']|'')*'$/.test(name);
 
 /** Split `<type> <name> [= expr]` on the first `=` outside single quotes. */
 function splitHeader(
   content: string,
-): { type: string; name?: string; hasEq: boolean; inline: string } | null {
+): { type: string; name?: string; nameReadable: boolean; hasEq: boolean; inline: string } | null {
   let inQuote = false;
   let eqAt = -1;
   for (let i = 0; i < content.length; i++) {
@@ -52,6 +66,7 @@ function splitHeader(
   return {
     type: m[1]!,
     name: m[2] === undefined ? undefined : unquoteName(m[2]),
+    nameReadable: m[2] === undefined || nameReadable(m[2].trim()),
     hasEq: eqAt >= 0,
     inline,
   };
@@ -72,13 +87,32 @@ const opensFence = (line: string): boolean => {
 /** Whether a line is a `///` description line, as `parseTmdl` reads one. */
 const isDescription = (line: string): boolean => line.slice(tabIndent(line)).startsWith("///");
 /**
- * Where an indented block from line `from` ends: at the first line before `limit` that is not
- * blank and is indented less than `depth`, or at `limit`. An indented expression and a code fence
- * left open both read their text with it, so the two stay one reading.
+ * Where an indented block from line `from` ends: at the first line before `limit` that is not blank
+ * and is indented less than `depth`, or at `limit`. An indented expression and a code fence left
+ * open both read their text with it, so the two stay one reading. A `table` line whose indentation
+ * does not begin as the block's first line's does, and whose tabs go no deeper than the
+ * declaration's properties, one deeper than the declaration (`head`), such as one indented with
+ * spaces under an expression indented with tabs, ends it too: it is a table's declaration that lost
+ * its place, not the expression's text (#135). TMDL puts every line of an expression deeper than
+ * the declaration's properties
+ * (https://learn.microsoft.com/analysis-services/tmdl/tmdl-overview#expressions), and Desktop
+ * writes each two tabs deeper than the declaration and then the language's own indentation, tabs or
+ * spaces, so a line of M or DAX that starts with `table`, such as a step named Table, stays.
  */
-const blockEnd = (lines: readonly string[], from: number, limit: number, depth: number): number => {
+const blockEnd = (
+  lines: readonly string[],
+  from: number,
+  limit: number,
+  depth: number,
+  head: number,
+): number => {
+  const lead = lines[from]?.slice(0, leadingWs(lines[from]!)) ?? "";
+  const inBlock = (line: string): boolean =>
+    line.trim() === "" ||
+    (leadingWs(line) >= depth &&
+      (line.startsWith(lead) || tabIndent(line) > head + 1 || !namesTable(line)));
   let k = from;
-  while (k < limit && (lines[k]!.trim() === "" || leadingWs(lines[k]!) >= depth)) k++;
+  while (k < limit && inBlock(lines[k]!)) k++;
   return k;
 };
 /** Lines `from` up to `end`, each less `depth` characters of indentation, with no blank line last. */
@@ -89,13 +123,15 @@ const blockText = (lines: readonly string[], from: number, end: number, depth: n
 };
 
 /**
- * Generic TMDL tree parser. Unknown object types and properties parse as generic nodes,
- * so a construct this code has never seen never aborts a run. A line at the root of a file that
- * TMDL does not allow there is also a parse issue: an object or a flag whose type TMDL does not
- * declare there (root-types.ts), a property or an expression with no name, and an annotation or
- * an extended property with lines under it. Nested lines are not checked. Each issue says whether
- * it can take an object out of the model (`TmdlParseIssue.canDropObjects`); every one can except
- * a description nothing claims.
+ * Generic TMDL tree parser. Unknown object types and properties parse as generic nodes, so a
+ * construct this code has never seen never aborts a run. A line at the root of a file that TMDL
+ * does not allow there is also a parse issue: an object or a flag whose type TMDL does not declare
+ * there (root-types.ts), a property or an expression with no name, and an annotation or an extended
+ * property with lines under it. Nested lines are not checked, but for a `table` line under anything
+ * but a model. A declaration the model reads by name that has none, and a name not enclosed in
+ * single quotes as TMDL requires, are issues wherever they sit (#135). Each issue says whether it
+ * can take an object out of the model (`TmdlParseIssue.canDropObjects`); every one can except a
+ * description nothing claims.
  */
 export function parseTmdl(file: string, text: string): ParsedFile {
   // Power BI Desktop writes TMDL as UTF-8 with a BOM; it is not part of the first line.
@@ -168,7 +204,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
       if (j >= lines.length) return "";
       const blockIndent = leadingWs(lines[j]!);
       if (blockIndent <= indent) return "";
-      const end = blockEnd(lines, j, lines.length, blockIndent);
+      const end = blockEnd(lines, j, lines.length, blockIndent, indent);
       i = end - 1;
       return blockText(lines, j, end, blockIndent);
     };
@@ -196,7 +232,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
       const blockIndent = first < j ? leadingWs(lines[first]!) : 0;
       // Zero for text no deeper than the header, which is not read as a block.
       const depth = blockIndent > indent ? blockIndent : 0;
-      let end = depth > 0 ? blockEnd(lines, first, j, depth) : j;
+      let end = depth > 0 ? blockEnd(lines, first, j, depth, indent) : j;
       if (end === j && j < lines.length)
         while (end > i + 1 && isDescription(lines[end - 1]!)) end--;
       const read = lines.slice(i + 1, end);
@@ -225,6 +261,8 @@ export function parseTmdl(file: string, text: string): ParsedFile {
     let m: RegExpExecArray | null;
     /** The line's keyword as written, for a reason that names it; a `ref` line has none. */
     let word: string | undefined;
+    /** Whether a declaration's name, if it has one, is written as TMDL can read it. */
+    let readableName = true;
     if ((m = REF.exec(content))) {
       node = { ...base, kind: "ref", type: m[1]!.toLowerCase(), name: unquoteName(m[2]!) };
     } else if ((m = PROP.exec(content))) {
@@ -246,6 +284,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
         continue;
       }
       word = h.type;
+      readableName = h.nameReadable;
       if (h.hasEq) {
         const value =
           h.inline === "```" ? collectFenced() : h.inline === "" ? collectBlock() : h.inline;
@@ -266,6 +305,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
     // on the first line of database.tmdl. Either way the line stays a generic root, which the model
     // does not read, so nothing under it reaches a rule. Only the header line is reported: an
     // expression's value block was read above as its value.
+    let rootIssue: string | undefined;
     if (indent === 0 && word !== undefined) {
       const reason =
         node.kind === "prop" || node.kind === "expr"
@@ -276,6 +316,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
       // A misspelt word or a flag (`tableSales`, a lost space) may be a `table` line, as may a
       // property or an expression with no name whose word is `table`; no other property or
       // expression can be one, and the lines under it are indented.
+      rootIssue = reason;
       if (reason !== undefined)
         issues.push({
           file,
@@ -306,6 +347,36 @@ export function parseTmdl(file: string, text: string): ParsedFile {
         canDropTableLine:
           namesTable(raw) || (roots.length === 0 && !issues.some((x) => x.canDropObjects)),
       });
+      i++;
+      continue;
+    }
+    // A declaration the model cannot read as written (#135): a table under anything but a model, a
+    // declaration the model reads by name that has none, or a name not quoted as TMDL requires.
+    // Kept out of the model with everything under it, which goes under it: one issue, on its line.
+    // A culture's translations name a table under a model, and a TMDL script nests one under its
+    // `createOrReplace` or a model; neither reaches the model as a table. A declaration with an
+    // empty quoted name, `table ''`, has no name either.
+    const declaration = node.kind === "object" || node.kind === "flag";
+    const malformed =
+      rootIssue !== undefined || !declaration || word === undefined
+        ? undefined
+        : indent > 0 && word.toLowerCase() === "table" && !HOLDS_TABLE.has(parent?.type ?? "")
+          ? `"${word}" is a type TMDL declares only at the root of a file or under a model`
+          : indent === 0 && (node.kind === "flag" || node.name === "") && isNamedRootType(word)
+            ? `"${word}" is declared with no name`
+            : !readableName
+              ? "the name is not enclosed in single quotes as TMDL requires"
+              : undefined;
+    if (malformed !== undefined) {
+      issues.push({
+        file,
+        line: lineNo,
+        text: raw,
+        reason: malformed,
+        canDropObjects: true,
+        canDropTableLine: namesTable(raw),
+      });
+      stack[indent] = node;
       i++;
       continue;
     }

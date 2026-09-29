@@ -887,3 +887,145 @@ describe("a code fence left open", () => {
     );
   });
 });
+
+describe("a malformed table line (#135)", () => {
+  const issues = (text: string) =>
+    parseTmdl("t.tmdl", text).issues.map((i) => [
+      i.line,
+      i.reason,
+      i.canDropObjects,
+      i.canDropTableLine,
+    ]);
+  const outline = (nodes: TmdlNode[]): unknown[] =>
+    nodes.map((n) => [n.type, n.name, outline(n.children)]);
+  const ROOT_ONLY = '"table" is a type TMDL declares only at the root of a file or under a model';
+  const QUOTES = "the name is not enclosed in single quotes as TMDL requires";
+
+  it("reports a table under another object, and keeps nothing of it", () => {
+    const text = "table Other\n\tcolumn X\n\ttable Date\n\t\tdataCategory: Time\n\t\tcolumn D\n";
+    expect(issues(text)).toEqual([[3, ROOT_ONLY, true, true]]);
+    expect(outline(parseTmdl("t.tmdl", text).roots)).toEqual([
+      ["table", "Other", [["column", "X", []]]],
+    ]);
+    // A bare `table` flag under an object is the same line with its name lost.
+    expect(issues("table Other\n\ttable\n")).toEqual([[2, ROOT_ONLY, true, true]]);
+    // A database holds the model, not a table, so a stray tab under a bare `database` is one too.
+    expect(issues("database\n\tcompatibilityLevel: 1567\n\ttable Date\n")).toEqual([
+      [3, ROOT_ONLY, true, true],
+    ]);
+  });
+
+  it("reads a table under a model, as a culture's translations and a TMDL script nest one, and a ref line", () => {
+    const culture =
+      "cultureInfo pt-PT\n\ttranslations\n\t\tmodel Model\n\t\t\ttable Sales\n\t\t\t\tcaption: Vendas\n";
+    expect(issues(culture)).toEqual([]);
+    expect(
+      issues(
+        "createOrReplace\n\n\tmodel Model\n\t\tculture: en-US\n\n\t\ttable Date\n\t\t\tcolumn D\n",
+      ),
+    ).toEqual([]);
+    expect(issues("createOrReplace\n\n\ttable Date\n\t\tcolumn D\n")).toEqual([]);
+    expect(issues("model Model\n\tref table Date\n")).toEqual([]);
+  });
+
+  it("reports a declaration the model reads by name that has none, and keeps nothing of it", () => {
+    for (const word of [
+      "table",
+      "relationship",
+      "role",
+      "perspective",
+      "cultureInfo",
+      "expression",
+      "function",
+      "dataSource",
+      "annotation",
+    ]) {
+      const pf = parseTmdl("t.tmdl", `${word}\n\tdataCategory: Time\n`);
+      expect(issues(`${word}\n\tdataCategory: Time\n`), word).toEqual([
+        [1, `"${word}" is declared with no name`, true, word === "table"],
+      ]);
+      expect(pf.roots, word).toEqual([]);
+    }
+    // A name written as two quotes is no name either.
+    expect(issues("table ''\n\trole ''\n")).toEqual([
+      [1, '"table" is declared with no name', true, true],
+    ]);
+    expect(parseTmdl("t.tmdl", "role ''\n").roots).toEqual([]);
+    // Desktop writes a bare `database`, and the model reads a bare `model` as the model.
+    expect(issues("database\n\tcompatibilityLevel: 1567\n\nmodel\n\tculture: en-US\n")).toEqual([]);
+  });
+
+  it("reports a name not enclosed in single quotes as TMDL requires, on any declaration, and keeps nothing of it", () => {
+    expect(issues("table 'Date\n\tdataCategory: Time\n")).toEqual([[1, QUOTES, true, true]]);
+    expect(parseTmdl("t.tmdl", "table 'Date\n\tdataCategory: Time\n").roots).toEqual([]);
+    // TMDL encloses a name holding a quote in single quotes, so an unquoted one cannot hold one.
+    expect(issues("table O'Brien\n")).toEqual([[1, QUOTES, true, true]]);
+    // Nor can text follow the quote that closes one.
+    expect(issues("table 'Date' extra\n")).toEqual([[1, QUOTES, true, true]]);
+    // The quote left open swallowed the `=`, so the measure's expression went into its name.
+    const measure = "table Sales\n\tmeasure 'Total = 1\n\t\tformatString: 0\n\tcolumn A\n";
+    expect(issues(measure)).toEqual([[2, QUOTES, true, false]]);
+    expect(outline(parseTmdl("t.tmdl", measure).roots)).toEqual([
+      ["table", "Sales", [["column", "A", []]]],
+    ]);
+  });
+
+  it("reads a quoted name with its quotes doubled, and a name with none", () => {
+    expect(
+      issues("table 'O''Brien'\n\tmeasure 'It''s' = 1\n\tcolumn 'Net Price'\n\tcolumn Qty\n"),
+    ).toEqual([]);
+  });
+
+  it("ends an indented expression at a table line indented unlike its first line", () => {
+    const text = "expression E =\n\t\tlet x = 1 in x\n    table Date\n\tdataCategory: Time\n";
+    expect(issues(text)).toEqual([[3, "space indentation (TMDL requires tabs)", true, true]]);
+    expect(parseTmdl("t.tmdl", text).roots[0]!.value).toBe("let x = 1 in x");
+    // And one at the level of the declaration's properties, one tab deeper than the declaration,
+    // where no line of its expression sits.
+    const measure =
+      "table S\n\tmeasure M =\n\t\t\tVAR x = 1\n\t\t\tRETURN x\n\t\t    table 'Date'\n";
+    expect(issues(measure)).toEqual([[5, "space indentation (TMDL requires tabs)", true, true]]);
+    expect(parseTmdl("t.tmdl", measure).roots[0]!.children[0]!.value).toBe("VAR x = 1\nRETURN x");
+    // So does a code fence left open, whose text is read as an indented expression's.
+    expect(
+      issues("table S\n\tmeasure M = ```\n\t\t\tx\n    table Date\n\t\tdataCategory: Time\n"),
+    ).toEqual([
+      [2, "unterminated code fence", true, false],
+      [4, "space indentation (TMDL requires tabs)", true, true],
+    ]);
+  });
+
+  it("keeps a line of M or DAX that starts with `table` when it is indented as the block is", () => {
+    // Desktop writes each line of an expression two tabs deeper than its declaration, then the
+    // language's own indentation, which may be tabs or spaces.
+    const m =
+      "table S\n\tpartition P = m\n\t\tsource =\n\t\t\t\tlet\n\t\t\t\t    x = type\n\t\t\t\t        table [A = number]\n\t\t\t\tin x\n";
+    expect(issues(m)).toEqual([]);
+    expect(parseTmdl("t.tmdl", m).roots[0]!.children[0]!.children[0]!.value).toBe(
+      "let\n    x = type\n        table [A = number]\nin x",
+    );
+    // A block indented with spaces throughout reads one as the block's too.
+    expect(issues("expression E =\n    let\n    table x\n")).toEqual([]);
+  });
+
+  it("keeps an M step named Table deeper than the declaration, whatever the first line's indentation", () => {
+    // The M's own indentation is tabs on `let` and spaces on the steps, as in a model on GitHub;
+    // every line still sits deeper than `source =`, so each is the expression's.
+    const source = [
+      "table Reviews",
+      "\tpartition Reviews = m",
+      "\t\tmode: import",
+      "\t\tsource =",
+      "\t\t\t\t\t\t\t\tlet",
+      "\t\t\t\t                    Source = Sql.Database(server, database),",
+      '\t\t\t\t                    Table = Source{[Schema="dbo",Item="Reviews"]}[Data]',
+      "\t\t\t\t\t\t\t\tin",
+      "\t\t\t\t\t\t\t\t    Table",
+      "",
+    ].join("\n");
+    expect(issues(source)).toEqual([]);
+    expect(parseTmdl("t.tmdl", source).roots[0]!.children[0]!.children[1]!.value).toMatch(
+      /Table = Source[^\n]*\n\t*in\n\t*\s*Table$/,
+    );
+  });
+});

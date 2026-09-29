@@ -22,7 +22,8 @@
  * lost its tab alike. A property or an expression with no name is one at the root whatever its
  * word, and so is an annotation or an extended property with lines under it (parse.ts). Only the
  * root is checked: a misspelt keyword under a known object, such as `columm Amount` under a table,
- * still parses as a generic child.
+ * still parses as a generic child. A `table` line is the exception: under anything but a model, as
+ * a culture's translations and a TMDL script nest one, it is an issue (#135).
  */
 /** The types `model/build.ts` reads into the model. Keep in step with its root switch. */
 const MODELED = [
@@ -55,3 +56,12 @@ const KNOWN = new Set([...MODELED, ...NOT_MODELED]);
 
 /** Whether TMDL allows `type` at the root of a file. TMDL reads keywords without regard to case. */
 export const isRootType = (type: string): boolean => KNOWN.has(type.toLowerCase());
+/**
+ * Whether the model reads a root declaration of `type` by its name, so one written with no name
+ * declares nothing it can read (#135): every modeled type but `model`, which the model reads as
+ * the model whatever it is called.
+ */
+export const isNamedRootType = (type: string): boolean => {
+  const t = type.toLowerCase();
+  return t !== "model" && MODELED.includes(t);
+};

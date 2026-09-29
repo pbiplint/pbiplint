@@ -197,7 +197,7 @@ const cases: Case[] = [
   },
 ];
 
-describe("a rule whose finding says something is missing from the whole model (#128)", () => {
+describe("a rule whose finding rests on the whole model (#128)", () => {
   const ruleNamed = (id: string) => defaultRules.find((r) => r.id === id)!;
   const reported = (r: ReturnType<typeof lint>, id: string) =>
     r.findings.filter((f) => f.ruleId === id).map((f) => f.objectName);

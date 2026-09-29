@@ -1179,7 +1179,7 @@ describe("lint over a project", () => {
       });
       expect(r.summary.rulesSkipped).not.toContainEqual(skipped);
       // The rule is counted once, under the report's reason; the model's stops only the rules whose
-      // finding says something is missing from the whole model (#128).
+      // finding rests on the whole model (#128).
       expect(skippedLine(r)).toContain(
         "1 rule skipped (a report file could not be read), 11 rules skipped (a model file could not be fully read)",
       );
@@ -1187,7 +1187,7 @@ describe("lint over a project", () => {
         "not reached from this report: unknown, a report file could not be read",
       );
     });
-    it("is stopped by a partly read model, as is every rule whose finding says something is missing from the whole model (#128)", () => {
+    it("is stopped by a partly read model, as is every rule whose finding rests on the whole model (#128)", () => {
       expect(
         defaultRules.filter((r) => r.skipWhenModelUnread).map((r) => [r.id, r.skipWhenModelUnread]),
       ).toEqual(
@@ -1276,7 +1276,7 @@ describe("lint over a project", () => {
           "not reached from this report: unknown, a model file could not be fully read",
         );
         // The model rules read the model as they would with a parse issue in it: as it was read,
-        // but for those whose finding says something is missing from the whole model (#128).
+        // but for those whose finding rests on the whole model (#128).
         expect(modelRuleFindings(r), path).toEqual(
           modelRuleFindings(lint(files)).filter((f) => !stoppedByModel.has(f.ruleId)),
         );

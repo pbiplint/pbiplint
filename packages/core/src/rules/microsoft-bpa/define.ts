@@ -57,8 +57,8 @@ const extractUrls = (text: string): string[] => [
 export interface BpaRuleSpec {
   /**
    * The partly read model that stops the rule (Rule.skipWhenModelUnread), `modelPartlyRead` for a
-   * rule whose finding says something is missing from the whole model, which a model file pbiplint
-   * could not fully read may hold.
+   * rule whose finding rests on the whole model, something missing from it or a share of all of it,
+   * since a model file pbiplint could not fully read may hold what it looks for.
    */
   skipWhenModelUnread?: (model: Model) => boolean;
 }

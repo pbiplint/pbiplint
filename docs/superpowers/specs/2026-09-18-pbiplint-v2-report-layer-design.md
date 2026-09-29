@@ -1113,10 +1113,10 @@ document carries the reason in `summary.rulesSkipped`; SARIF gains
 nothing.
 
 Amended 2026-09-28 (issue #128): `NOT_REACHED_FROM_REPORT` is no longer
-the only rule that declares it. Every Microsoft rule whose finding says
-something is missing from the whole model sets `modelPartlyRead` too,
-since what it looks for may be declared in the file pbiplint could not
-fully read: `ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS` (a variation
+the only rule that declares it. Every Microsoft rule whose finding rests
+on the whole model, something missing from it or a share of all of it,
+sets `modelPartlyRead` too, since what it looks for may be declared in
+the file pbiplint could not fully read: `ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS` (a variation
 naming the column), `MODEL_SHOULD_HAVE_A_DATE_TABLE` (the date table),
 `AVOID_EXCESSIVE_BI-DIRECTIONAL_OR_MANY-TO-MANY_RELATIONSHIPS` (a share
 of every relationship), `MODEL_USING_DIRECT_QUERY_AND_NO_AGGREGATIONS`
@@ -1131,9 +1131,19 @@ otherwise reads as a column), `INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED`
 skipWhenModelUnread: modelPartlyRead }, check)`. A rule that reports an
 object it read for something about that object, such as a column's
 data type, a role's members, or a table's partitions, keeps running on
-what was read: pbiplint takes a table from the first file that declares
-it, so an object and what sits under it come from one file, and a parse
-issue in that file is that file's own `PARSE_ISSUE` finding. The
+what was read. Power BI Desktop writes each table, role, and
+perspective in one file, so an object and what sits under it come from
+one file, and a parse issue in that file is that file's own
+`PARSE_ISSUE` finding. TMDL also lets a table's declaration sit in more
+than one file, which pbiplint merges (a later part adds its columns,
+measures, and partitions and fills a blank data category or
+description), and while one part could not be read these rules report
+on the part that was: `'Date'` split into a key column in one file and
+`dataCategory: Time` in another, the second unread, is reported by
+`DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE`. That gap is
+issue #132, not closed here: which rules it touches, and how to stop
+them without costing their true findings on every partly read model,
+is that issue's question. The
 skipped line counts every rule the condition stops: "12 rules skipped
 (a model file could not be fully read)" with both parts, 11 on a
 model-only run, where `NOT_REACHED_FROM_REPORT` is skipped for the

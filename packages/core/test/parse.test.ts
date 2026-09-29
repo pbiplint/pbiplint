@@ -1029,3 +1029,176 @@ describe("a malformed table line (#135)", () => {
     );
   });
 });
+
+describe("declarations under a model (#137)", () => {
+  const issues = (text: string) =>
+    parseTmdl("t.tmdl", text).issues.map((i) => [
+      i.line,
+      i.reason,
+      i.canDropObjects,
+      i.canDropTableLine,
+    ]);
+  const outline = (nodes: TmdlNode[]): unknown[] =>
+    nodes.map((n) => [n.type, n.name, outline(n.children)]);
+  const underModel = (word: string) => `"${word}" is not a type TMDL declares under a model`;
+  const underDatabase = (word: string) => `"${word}" is not a type TMDL declares under a database`;
+
+  it("reads what TMDL allows under a root model, and under a model under a root database", () => {
+    // The model's properties and flags, its ref lines, and each type TMDL declares at the root but
+    // a model, a database, and a script's createOrReplace.
+    const children = [
+      "culture: en-US",
+      "discourageImplicitMeasures",
+      "dataAccessOptions",
+      "\tlegacyRedirects",
+      "ref table Sales",
+      "table Sales",
+      "\tcolumn Amount",
+      "relationship r1",
+      "\tfromColumn: Sales.Key",
+      "role Readers",
+      "perspective Finance",
+      "cultureInfo en-US",
+      'expression Server = "localhost"',
+      "function Double = (x: INT64) => x * 2",
+      "dataSource 'Legacy SQL' = provider",
+      "queryGroup 'Fact Queries'",
+      'annotation PBI_QueryOrder = ["Sales"]',
+      "extendedProperty ParameterMetadata = 1",
+      "bindingInfo Hint",
+    ];
+    const nest = (tabs: string) => children.map((l) => `${tabs}${l}\n`).join("");
+    expect(issues(`model Model\n${nest("\t")}`)).toEqual([]);
+    expect(
+      issues(`database Sales\n\tcompatibilityLevel: 1567\n\tmodel Model\n${nest("\t\t")}`),
+    ).toEqual([]);
+    // Desktop writes a bare `database`, and the model reads a bare `model` as the model.
+    expect(issues(`database\n\tmodel\n${nest("\t\t")}`)).toEqual([]);
+  });
+
+  it("reports a declaration TMDL does not allow under a model, and keeps nothing of it", () => {
+    const text = [
+      "model Model",
+      "\tculture: en-US",
+      "\tcolumn Stray",
+      "\t\tdataType: string",
+      "\ttabel Typo",
+      "\tmeasure M = 1",
+      "\tmodel Inner",
+      "\t\ttable X",
+      "\tdatabase Inner",
+      "\ttable Kept",
+      "",
+    ].join("\n");
+    expect(issues(text)).toEqual([
+      [3, underModel("column"), true, true],
+      [5, underModel("tabel"), true, true],
+      [6, underModel("measure"), true, true],
+      [7, underModel("model"), true, true],
+      [9, underModel("database"), true, true],
+    ]);
+    expect(outline(parseTmdl("t.tmdl", text).roots)).toEqual([
+      [
+        "model",
+        "Model",
+        [
+          ["culture", undefined, []],
+          ["table", "Kept", []],
+        ],
+      ],
+    ]);
+    // The same under a model under a root database.
+    expect(issues("database\n\tmodel Model\n\t\tcolumn Stray\n")).toEqual([
+      [3, underModel("column"), true, true],
+    ]);
+  });
+
+  it("reports a declaration under a root database other than the model, and keeps nothing of it", () => {
+    const text = [
+      "database",
+      "\tcompatibilityLevel: 1567",
+      "\trelationship r9",
+      "\t\tfromColumn: Sales.Key",
+      "\trole Readers",
+      "\texpression Server = 1",
+      "\tannotation Note = 1",
+      "\tmodel Model",
+      "",
+    ].join("\n");
+    expect(issues(text)).toEqual([
+      [3, underDatabase("relationship"), true, true],
+      [5, underDatabase("role"), true, true],
+      [6, underDatabase("expression"), true, true],
+      [7, underDatabase("annotation"), true, true],
+    ]);
+    expect(outline(parseTmdl("t.tmdl", text).roots)).toEqual([
+      [
+        "database",
+        undefined,
+        [
+          ["compatibilitylevel", undefined, []],
+          ["model", "Model", []],
+        ],
+      ],
+    ]);
+  });
+
+  it("reports a declaration the model reads by name that has none under a model, as at the root", () => {
+    for (const word of [
+      "table",
+      "relationship",
+      "role",
+      "perspective",
+      "cultureInfo",
+      "expression",
+      "function",
+      "dataSource",
+      "annotation",
+    ]) {
+      const text = `model Model\n\t${word}\n\t\tdataCategory: Time\n`;
+      expect(issues(text), word).toEqual([
+        [2, `"${word}" is declared with no name`, true, word === "table"],
+      ]);
+      expect(outline(parseTmdl("t.tmdl", text).roots), word).toEqual([["model", "Model", []]]);
+    }
+    expect(issues("database\n\tmodel Model\n\t\ttable ''\n")).toEqual([
+      [3, '"table" is declared with no name', true, true],
+    ]);
+  });
+
+  it("reports an annotation or an extended property under a model with lines under it, as at the root", () => {
+    // A column's annotation that lost two tabs, with the column after it attached to it.
+    const text = [
+      "model Model",
+      "\ttable Sales",
+      "\t\tcolumn Amount",
+      "\tannotation SummarizationSetBy = Automatic",
+      "\t\tcolumn Region",
+      "\textendedProperty Meta = 1",
+      "\t\tmeasure Total = 1",
+      "\tannotation PBI_QueryOrder = 1",
+      "",
+    ].join("\n");
+    expect(issues(text)).toEqual([
+      [4, '"annotation" under a model has lines under it, which TMDL does not allow', true, false],
+      [
+        6,
+        '"extendedProperty" under a model has lines under it, which TMDL does not allow',
+        true,
+        false,
+      ],
+    ]);
+  });
+
+  it("leaves a model under a culture's translations or a TMDL script to its own reading", () => {
+    // Neither is the model's, so the lines under it are checked as any nested line is.
+    expect(
+      issues(
+        "cultureInfo pt-PT\n\ttranslations\n\t\tmodel Model\n\t\t\ttable Sales\n\t\t\t\tcaption: Vendas\n\t\t\tcolumn X\n",
+      ),
+    ).toEqual([]);
+    expect(
+      issues("createOrReplace\n\n\tmodel Model\n\t\tculture: en-US\n\n\t\tmeasure M = 1\n"),
+    ).toEqual([]);
+  });
+});

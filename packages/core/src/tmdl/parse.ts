@@ -1,5 +1,5 @@
 import { unquoteName, unquoteValue } from "./quote.js";
-import { isNamedRootType, isRootType } from "./root-types.js";
+import { isModelChildType, isNamedRootType, isRootType } from "./root-types.js";
 import type { ParsedFile, TmdlNode, TmdlParseIssue } from "./types.js";
 
 const HEADER = /^([A-Za-z_]\w*)(?:\s+(.+))?$/;
@@ -127,11 +127,16 @@ const blockText = (lines: readonly string[], from: number, end: number, depth: n
  * construct this code has never seen never aborts a run. A line at the root of a file that TMDL
  * does not allow there is also a parse issue: an object or a flag whose type TMDL does not declare
  * there (root-types.ts), a property or an expression with no name, and an annotation or an extended
- * property with lines under it. Nested lines are not checked, but for a `table` line under anything
- * but a model. A declaration the model reads by name that has none, and a name not enclosed in
- * single quotes as TMDL requires, are issues wherever they sit (#135). Each issue says whether it
- * can take an object out of the model (`TmdlParseIssue.canDropObjects`); every one can except a
- * description nothing claims.
+ * property with lines under it. TMDL also reads the lines directly under a `model` at the root, or
+ * under a `model` under a `database` at the root, as the model's own declarations
+ * (https://learn.microsoft.com/analysis-services/tmdl/tmdl-overview#indentation), so a named
+ * declaration there of a type TMDL does not declare under a model, and an annotation or an extended
+ * property there with lines under it, are issues too, and so is a named declaration under that
+ * `database` other than its `model` (#137). Other nested lines are not checked, but for a `table`
+ * line under anything but a model. A declaration the model reads by name that has none (at the root
+ * or under a model, as above), and a name not enclosed in single quotes as TMDL requires wherever
+ * it sits, are issues (#135). Each issue says whether it can take an object out of the model
+ * (`TmdlParseIssue.canDropObjects`); every one can except a description nothing claims.
  */
 export function parseTmdl(file: string, text: string): ParsedFile {
   // Power BI Desktop writes TMDL as UTF-8 with a BOM; it is not part of the first line.
@@ -140,6 +145,13 @@ export function parseTmdl(file: string, text: string): ParsedFile {
   const roots: TmdlNode[] = [];
   const issues: TmdlParseIssue[] = [];
   const stack: TmdlNode[] = [];
+  /**
+   * The declarations whose direct lines TMDL reads as if they sat at the root (#137): a `model` at
+   * the root, whose lines are the model's own declarations, a `database` at the root, which holds
+   * the model, and a `model` under that `database`. A culture's translations and a TMDL script nest
+   * a model too, and it is not the model's.
+   */
+  const holders = new Map<TmdlNode, "model" | "database">();
   /**
    * The `///` lines seen since the last declaration, and the line and raw text of the first of
    * them, for the issue reported when the run leads nowhere. One object rather than three
@@ -350,23 +362,42 @@ export function parseTmdl(file: string, text: string): ParsedFile {
       i++;
       continue;
     }
-    // A declaration the model cannot read as written (#135): a table under anything but a model, a
-    // declaration the model reads by name that has none, or a name not quoted as TMDL requires.
-    // Kept out of the model with everything under it, which goes under it: one issue, on its line.
-    // A culture's translations name a table under a model, and a TMDL script nests one under its
-    // `createOrReplace` or a model; neither reaches the model as a table. A declaration with an
-    // empty quoted name, `table ''`, has no name either.
+    // A declaration the model cannot read as written (#135, #137): a table under anything but a
+    // model; under a model or the database that holds it, a named declaration of a type TMDL does
+    // not declare there; a declaration the model reads by name that has none; or a name not quoted
+    // as TMDL requires. Kept out of the model with everything under it, which goes under it: one
+    // issue, on its line. A culture's translations name a table under a model, and a TMDL script
+    // nests one under its `createOrReplace` or a model; neither reaches the model as a table. A
+    // declaration with an empty quoted name, `table ''`, has no name either. A flag under a model is
+    // one of its properties, such as `discourageImplicitMeasures`, so one there is reported only
+    // when its word is a type the model reads by name, such as a bare `table`.
+    const level = parent && holders.get(parent);
     const declaration = node.kind === "object" || node.kind === "flag";
-    const malformed =
-      rootIssue !== undefined || !declaration || word === undefined
-        ? undefined
-        : indent > 0 && word.toLowerCase() === "table" && !HOLDS_TABLE.has(parent?.type ?? "")
-          ? `"${word}" is a type TMDL declares only at the root of a file or under a model`
-          : indent === 0 && (node.kind === "flag" || node.name === "") && isNamedRootType(word)
-            ? `"${word}" is declared with no name`
-            : !readableName
-              ? "the name is not enclosed in single quotes as TMDL requires"
-              : undefined;
+    const keyword = word?.toLowerCase();
+    let malformed: string | undefined;
+    // Whether the line may be a table's declaration: its word is `table`, or it is of a type TMDL
+    // does not declare where it sits, which may be a misspelt `table`, as at the root.
+    let mayBeTable = namesTable(raw);
+    if (rootIssue === undefined && declaration && keyword !== undefined) {
+      if (indent > 0 && keyword === "table" && !HOLDS_TABLE.has(parent?.type ?? "")) {
+        malformed = `"${word}" is a type TMDL declares only at the root of a file or under a model`;
+      } else if (
+        node.kind === "object" &&
+        level !== undefined &&
+        !(level === "model" ? isModelChildType(keyword) : keyword === "model")
+      ) {
+        malformed = `"${word}" is not a type TMDL declares under a ${level}`;
+        mayBeTable = true;
+      } else if (
+        (indent === 0 || level === "model") &&
+        (node.kind === "flag" || node.name === "") &&
+        isNamedRootType(keyword)
+      ) {
+        malformed = `"${word}" is declared with no name`;
+      } else if (!readableName) {
+        malformed = "the name is not enclosed in single quotes as TMDL requires";
+      }
+    }
     if (malformed !== undefined) {
       issues.push({
         file,
@@ -374,7 +405,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
         text: raw,
         reason: malformed,
         canDropObjects: true,
-        canDropTableLine: namesTable(raw),
+        canDropTableLine: mayBeTable,
       });
       stack[indent] = node;
       i++;
@@ -387,6 +418,12 @@ export function parseTmdl(file: string, text: string): ParsedFile {
     } else {
       roots.push(node);
     }
+    if (
+      declaration &&
+      ((!parent && (node.type === "model" || node.type === "database")) ||
+        (level === "database" && node.type === "model"))
+    )
+      holders.set(node, node.type as "model" | "database");
     stack[indent] = node;
     i++;
   }
@@ -401,7 +438,16 @@ export function parseTmdl(file: string, text: string): ParsedFile {
   // column and measure after it attaches to it. The model never reads those children. One issue,
   // on the annotation's own line, placed in line order. A property or an expression with no name
   // of that word already has its issue. The lines under it are indented, so none is a `table` line.
-  for (const r of roots) {
+  // One directly under a model is the model's annotation, as at the root (#137), and a table's
+  // lost one lands there in a model.tmdl that nests its tables; the lines under it sit deeper than
+  // the model's own declarations, so none is a `table` line either.
+  const modelLevel = [
+    ...roots.map((node) => ({ node, where: "at the root of a file" })),
+    ...[...holders]
+      .filter(([, holds]) => holds === "model")
+      .flatMap(([m]) => m.children.map((node) => ({ node, where: "under a model" }))),
+  ];
+  for (const { node: r, where } of modelLevel) {
     if ((r.kind !== "object" && r.kind !== "flag") || r.children.length === 0) continue;
     if (r.type !== "annotation" && r.type !== "extendedproperty") continue;
     const text = lines[r.line - 1]!;
@@ -409,7 +455,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
       file,
       line: r.line,
       text,
-      reason: `"${/^\w+/.exec(text)![0]}" at the root of a file has lines under it, which TMDL does not allow`,
+      reason: `"${/^\w+/.exec(text.trimStart())![0]}" ${where} has lines under it, which TMDL does not allow`,
       canDropObjects: true,
       canDropTableLine: false,
     };

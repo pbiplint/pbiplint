@@ -288,6 +288,86 @@ function walkOrder(a: string, b: string): number {
 }
 
 /**
+ * One of the model's own declarations: a line at the root of a file, or one TMDL reads as if it sat
+ * there, directly under the model (#137).
+ */
+function readDeclaration(r: TmdlNode, model: Model): void {
+  if (r.kind === "ref" || r.kind === "prop" || r.kind === "expr") return;
+  // Keep the cases in step with MODELED in tmdl/root-types.ts.
+  switch (r.type) {
+    case "model":
+      readModel(r, model);
+      break;
+    case "annotation":
+      // One with lines under it lost its tabs, as a column's annotation does, and is a parse
+      // issue: its value is not the model's, and a `pbiplint.ignore` there must not quiet a rule.
+      if (r.name && r.children.length === 0) model.annotations[r.name] = r.value ?? "";
+      break;
+    case "table":
+      buildTable(r, model);
+      break;
+    case "relationship":
+      model.relationships.push(buildRelationship(r));
+      break;
+    case "role":
+      model.roles.push(buildRole(r));
+      break;
+    case "perspective": {
+      const p: Perspective = {
+        ...named(r),
+        tables: objects(r, "perspectivetable").map((t) => t.name!),
+      };
+      model.perspectives.push(p);
+      break;
+    }
+    case "cultureinfo":
+      model.cultures.push(named(r));
+      break;
+    case "expression":
+      model.expressions.push({ ...named(r), expression: r.value ?? "" });
+      break;
+    case "function":
+      model.functions.push({ ...named(r), expression: r.value ?? "" });
+      break;
+    case "datasource": {
+      const ds: DataSource = {
+        ...named(r),
+        kind: (r.value ?? "").trim().toLowerCase() === "provider" ? "provider" : "structured",
+      };
+      model.dataSources.push(ds);
+      break;
+    }
+    case "database":
+      // The database holds the model, which TMDL lets sit under it as a part of the model's
+      // declaration. Any other declaration named there is a parse issue.
+      for (const c of r.children) if (c.type === "model") readModel(c, model);
+      break;
+    default:
+      // The other words in NOT_MODELED in tmdl/root-types.ts: kept in files, not modeled. Any other
+      // word at the root, or under the model, is a parse issue.
+      break;
+  }
+}
+
+/**
+ * A declaration of the model. TMDL lets it sit in more than one file, as a table's does, and one
+ * under the database is merged with the one at the root of model.tmdl: its properties, annotations,
+ * and description join the model's, and the last one read gives the model its name and place. The
+ * lines under it are the model's own declarations (#137). A model under anything but a database at
+ * the root, such as a culture's translations or a TMDL script's command, is not read.
+ */
+function readModel(r: TmdlNode, model: Model): void {
+  if (r.kind !== "object" && r.kind !== "flag") return;
+  Object.assign(model, named(r, r.name ?? "Model"), {
+    description: r.description ?? model.description,
+    annotations: model.annotations,
+    props: { ...model.props, ...r.props },
+  });
+  for (const c of r.children)
+    if (c.type !== "model" && c.type !== "database") readDeclaration(c, model);
+}
+
+/**
  * The model the parsed files declare, read in the order the CLI's walk meets them whatever order
  * they are given in, since that order reaches the results: a table declared in two files takes
  * the first one's place, and a bare column name resolves on the first other table that has it.
@@ -313,63 +393,7 @@ export function buildModel(given: ParsedFile[], unreadPaths: readonly string[] =
     files,
     unreadPaths: unreadPaths.filter((p) => p.endsWith(".tmdl") || p.endsWith("/")),
   };
-  for (const f of files) {
-    for (const r of f.roots) {
-      if (r.kind === "ref" || r.kind === "prop" || r.kind === "expr") continue;
-      // Keep the cases in step with MODELED in tmdl/root-types.ts.
-      switch (r.type) {
-        case "model":
-          Object.assign(model, named(r, r.name ?? "Model"), {
-            annotations: { ...model.annotations, ...annotationsOf(r) },
-            props: r.props,
-          });
-          break;
-        case "annotation":
-          // One with lines under it lost its tabs, as a column's annotation does, and is a parse
-          // issue: its value is not the model's, and a `pbiplint.ignore` there must not quiet a rule.
-          if (r.name && r.children.length === 0) model.annotations[r.name] = r.value ?? "";
-          break;
-        case "table":
-          buildTable(r, model);
-          break;
-        case "relationship":
-          model.relationships.push(buildRelationship(r));
-          break;
-        case "role":
-          model.roles.push(buildRole(r));
-          break;
-        case "perspective": {
-          const p: Perspective = {
-            ...named(r),
-            tables: objects(r, "perspectivetable").map((t) => t.name!),
-          };
-          model.perspectives.push(p);
-          break;
-        }
-        case "cultureinfo":
-          model.cultures.push(named(r));
-          break;
-        case "expression":
-          model.expressions.push({ ...named(r), expression: r.value ?? "" });
-          break;
-        case "function":
-          model.functions.push({ ...named(r), expression: r.value ?? "" });
-          break;
-        case "datasource": {
-          const ds: DataSource = {
-            ...named(r),
-            kind: (r.value ?? "").trim().toLowerCase() === "provider" ? "provider" : "structured",
-          };
-          model.dataSources.push(ds);
-          break;
-        }
-        default:
-          // The words in NOT_MODELED in tmdl/root-types.ts: kept in files, not modeled. Any other
-          // word at the root is a parse issue.
-          break;
-      }
-    }
-  }
+  for (const f of files) for (const r of f.roots) readDeclaration(r, model);
   finalizeKinds(model);
   return model;
 }

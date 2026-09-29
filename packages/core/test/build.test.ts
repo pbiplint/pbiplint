@@ -398,6 +398,138 @@ describe("buildModel and a root annotation with lines under it", () => {
   });
 });
 
+describe("buildModel and the declarations under a model (#137)", () => {
+  it("reads each type it models declared under a root model, as at the root of a file", () => {
+    const pf = parseTmdl(
+      "definition/model.tmdl",
+      [
+        "model Model",
+        "\tculture: en-US",
+        "",
+        '\tannotation PBI_QueryOrder = ["Date"]',
+        "",
+        "\ttable Date",
+        "\t\tdataCategory: Time",
+        "\t\tcolumn Date",
+        "\t\t\tdataType: dateTime",
+        "\t\t\tisKey",
+        "",
+        "\trelationship r1",
+        "\t\tfromColumn: Sales.Date",
+        "\t\ttoColumn: Date.Date",
+        "",
+        "\trole Readers",
+        "\t\tmodelPermission: read",
+        "",
+        "\tperspective Finance",
+        "\t\tperspectiveTable Date",
+        "",
+        "\tcultureInfo en-US",
+        "",
+        '\texpression Server = "localhost"',
+        "",
+        "\tfunction Double = (x: INT64) => x * 2",
+        "",
+        "\tdataSource 'Legacy SQL' = provider",
+        "",
+      ].join("\n"),
+    );
+    expect(pf.issues).toEqual([]);
+    const m = buildModel([pf]);
+    expect(m.props.culture).toBe("en-US");
+    expect(m.annotations).toEqual({ PBI_QueryOrder: '["Date"]' });
+    expect(m.tables.map((t) => [t.name, t.dataCategory, t.columns.map((c) => c.name)])).toEqual([
+      ["Date", "Time", ["Date"]],
+    ]);
+    expect(m.tables[0]!.location).toEqual({ file: "definition/model.tmdl", line: 6 });
+    expect(m.relationships.map((r) => [r.name, r.fromTable, r.toTable])).toEqual([
+      ["r1", "Sales", "Date"],
+    ]);
+    expect(m.roles.map((r) => r.name)).toEqual(["Readers"]);
+    expect(m.perspectives.map((p) => [p.name, p.tables])).toEqual([["Finance", ["Date"]]]);
+    expect(m.cultures.map((c) => c.name)).toEqual(["en-US"]);
+    expect(m.expressions.map((e) => e.name)).toEqual(["Server"]);
+    expect(m.functions.map((f) => f.name)).toEqual(["Double"]);
+    expect(m.dataSources.map((d) => [d.name, d.kind])).toEqual([["Legacy SQL", "provider"]]);
+  });
+
+  it("merges a table declared under the model with its part at the root of another file", () => {
+    const m = buildModel([
+      parseTmdl(
+        "definition/model.tmdl",
+        "model Model\n\ttable Sales\n\t\tmeasure Total = SUM(Sales[Amount])\n",
+      ),
+      parseTmdl(
+        "definition/tables/Sales.tmdl",
+        "table Sales\n\tcolumn Amount\n\t\tdataType: decimal\n",
+      ),
+    ]);
+    expect(
+      m.tables.map((t) => [t.name, t.columns.map((c) => c.name), t.measures.map((x) => x.name)]),
+    ).toEqual([["Sales", ["Amount"], ["Total"]]]);
+  });
+
+  it("reads a model under a root database as a part of the model, with what is declared under it", () => {
+    // TMDL merges it with the model at the root of model.tmdl, as a table declared in two files.
+    const m = buildModel([
+      parseTmdl(
+        "definition/database.tmdl",
+        "database Sales\n\tcompatibilityLevel: 1567\n\tmodel Model\n\n\t\ttable T\n\t\t\tcolumn C\n\t\t\t\tdataType: string\n",
+      ),
+      parseTmdl(
+        "definition/model.tmdl",
+        "model Model\n\tculture: en-US\n\tdefaultPowerBIDataSourceVersion: powerBI_V3\n",
+      ),
+    ]);
+    expect(m.tables.map((t) => [t.name, t.columns.map((c) => c.name)])).toEqual([["T", ["C"]]]);
+    expect(m.props).toEqual({ culture: "en-US", defaultpowerbidatasourceversion: "powerBI_V3" });
+    expect(m.location).toEqual({ file: "definition/model.tmdl", line: 1 });
+  });
+
+  it("keeps what each declaration of the model sets, whichever file comes last", () => {
+    const m = buildModel([
+      parseTmdl("definition/a.tmdl", "/// The sales model\nmodel Model\n\tculture: en-US\n"),
+      parseTmdl("definition/b.tmdl", "model Model\n\tdiscourageImplicitMeasures\n"),
+    ]);
+    expect(m.props).toEqual({ culture: "en-US", discourageimplicitmeasures: true });
+    expect(m.description).toBe("The sales model");
+  });
+
+  it("leaves out an annotation under the model with lines under it, as at the root", () => {
+    // A column's annotation that lost two tabs, with the column after it attached to it.
+    const pf = parseTmdl(
+      "definition/model.tmdl",
+      [
+        "model Model",
+        "\tannotation PBI_QueryOrder = 1",
+        "",
+        "\ttable Sales",
+        "\t\tcolumn Amount",
+        "\tannotation pbiplint.ignore = MODEL_RULE",
+        "\t\tcolumn Region",
+        "",
+      ].join("\n"),
+    );
+    expect(pf.issues.map((i) => i.line)).toEqual([6]);
+    expect(buildModel([pf]).annotations).toEqual({ PBI_QueryOrder: "1" });
+  });
+
+  it("reads no model under a culture's translations or a TMDL script", () => {
+    const m = buildModel([
+      parseTmdl(
+        "definition/cultures/pt-PT.tmdl",
+        "cultureInfo pt-PT\n\ttranslations\n\t\tmodel Model\n\t\t\ttable Sales\n\t\t\t\tcaption: Vendas\n",
+      ),
+      parseTmdl(
+        "TMDLScripts/Script 1.tmdl",
+        "createOrReplace\n\n\tmodel Model\n\t\tculture: pt-PT\n\n\t\ttable Date\n\t\t\tcolumn D\n",
+      ),
+    ]);
+    expect(m.tables).toEqual([]);
+    expect(m.props).toEqual({});
+  });
+});
+
 describe("buildModel and the order of its files (tracked in #101)", () => {
   // A backup kept beside the tables folder. As whole paths, "definition/tables.old/Sales.tmdl"
   // sorts before "definition/tables/Sales.tmdl"; the CLI's walk goes through tables first.

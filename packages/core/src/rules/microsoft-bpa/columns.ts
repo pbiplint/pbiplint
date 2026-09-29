@@ -131,7 +131,10 @@ export const SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS = bpaRule(
     ),
 );
 
-// A model file pbiplint could not fully read may hold what uses the column.
+// A column that a user-defined function names without its table counts as used, on every table
+// with a column of that name, where Tabular Editor reports some such columns: a documented
+// deviation, made where resolveBareName (index/references.ts) builds the reference index. A model
+// file pbiplint could not fully read may hold what uses the column.
 export const UNNECESSARY_COLUMNS = bpaRule(
   "UNNECESSARY_COLUMNS",
   { skipWhenModelUnread: modelPartlyRead },

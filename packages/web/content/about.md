@@ -11,7 +11,7 @@ pbiplint is a free, open-source best-practice linter for Power BI projects. Past
 
 The site and the command-line tool read both parts of a Power BI project: the semantic model, saved as TMDL, and the report, saved in the PBIR format. Drop a PBIP folder on the site, or point `npx pbiplint` at one, and both are checked together, as long as the report reads the model beside it; a report bound to a published model is checked on its own, and the results say why. A `.SemanticModel` or `.Report` folder given alone is checked by itself, so a report without its model is valid input too. When both parts are checked together, the model is also judged by what the report uses: a field the report names that the model does not have is an error, and a column or measure the report never reaches is listed.
 
-The model rules are every rule from the Microsoft Best Practice Analyzer ruleset, ported so the results match Tabular Editor on the same model. Five of them need statistics only a live model has; they are listed but not run. The report rules are rules ported from PBI Inspector's base rules, by Nat Van Gulck, plus rules of pbiplint's own. Power Query rules come later. The [rules index](/rules/) has the full list.
+The model rules include every rule from the Microsoft Best Practice Analyzer ruleset, ported so the results match Tabular Editor on the same model apart from five documented deviations, and a rule of pbiplint's own for a year or a date fixed in DAX. Of the Microsoft rules, the five that need statistics only a live model has are listed but not run. The report rules are rules ported from PBI Inspector's base rules, by Nat Van Gulck, plus rules of pbiplint's own. Power Query rules come later. The [rules index](/rules/) has the full list.
 
 ## Who makes it
 
@@ -38,4 +38,4 @@ In Firefox and Safari the button opens the browser's folder chooser instead, whi
 
 ## What it does not do
 
-pbiplint does not document models, apply fixes, or analyze query performance. For documentation there is PBIP Documenter; for query plans there is DAX Studio. The model rules pbiplint ports are the Best Practice Analyzer rules, so a model that is clean here is clean there too.
+pbiplint does not document models, apply fixes, or analyze query performance. For documentation there is PBIP Documenter; for query plans there is DAX Studio. The model rules pbiplint ports are the Best Practice Analyzer rules, so apart from the five rules that need a live model and the deviations each rule's page documents, a model that is clean here is clean there too.

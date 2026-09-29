@@ -123,6 +123,36 @@ describe("relationship graph rules", () => {
       objectNames(rules.INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED, activating + fn),
     ).toEqual(["'Date'[Product ID] ∞←1 'Product'[Product ID]"]);
   });
+  it("INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED matches a table name with parentheses literally (a deviation)", () => {
+    // The source builds its pattern from the raw name, so "(Order)" reads as a group there and
+    // Tabular Editor reports this relationship, while a call naming 'Date Order' would activate it.
+    const roles = `table Sales
+	column 'Order Date'
+		dataType: dateTime
+	measure M = CALCULATE(1, USERELATIONSHIP('Sales'[Order Date], 'Date (Order)'[Date]))
+	partition Sales = m
+		mode: import
+		source = 1
+
+table 'Date (Order)'
+	column Date
+		dataType: dateTime
+	partition 'Date (Order)' = m
+		mode: import
+		source = 1
+
+relationship r
+	isActive: false
+	fromColumn: Sales.'Order Date'
+	toColumn: 'Date (Order)'.Date
+`;
+    expect(objectNames(rules.INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED, roles)).toEqual([]);
+    const unescaped = roles.replace("'Date (Order)'[Date]))", "'Date Order'[Date]))");
+    expect(unescaped).not.toBe(roles);
+    expect(
+      objectNames(rules.INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED, unescaped).length,
+    ).toBe(1);
+  });
   it("RELATIONSHIP_COLUMNS_SAME_DATA_TYPE skips relationships whose columns are missing", () => {
     expect(objectNames(rules.RELATIONSHIP_COLUMNS_SAME_DATA_TYPE, star)).toEqual([
       "'Date'[Product ID] ∞←1 'Product'[Product ID]",

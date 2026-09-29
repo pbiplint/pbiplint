@@ -213,6 +213,10 @@ export const CHECK_IF_DYNAMIC_ROW_LEVEL_SECURITY_IS_NECESSARY = bpaRule(
       .map(finding.tablePermission),
 );
 
+// Deviation: pbiplint escapes the table name before it builds the pattern, so a table called
+// `Date (Order)` is matched literally. The source rule builds its pattern from the raw name, where
+// the parentheses would be read as a group. No oracle fixture shows it, so rules-tables.test.ts
+// pins it.
 export const AVOID_THE_USERELATIONSHIP_FUNCTION_AND_RLS_AGAINST_THE_SAME_TABLE = bpaRule(
   "AVOID_THE_USERELATIONSHIP_FUNCTION_AND_RLS_AGAINST_THE_SAME_TABLE",
   (m) => {

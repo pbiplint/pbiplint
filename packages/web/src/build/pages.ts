@@ -576,7 +576,7 @@ export function rulesIndex(
   const clauses: [(m: RuleMeta) => boolean, string][] = [
     [
       is("ported", "model"),
-      "model rules ported from Microsoft's Best Practice Analyzer ruleset so the results match Tabular Editor",
+      "model rules ported from Microsoft's Best Practice Analyzer ruleset and verified against Tabular Editor",
     ],
     [is("needsLiveModel"), "listed but not run because they need statistics only a live model has"],
     [

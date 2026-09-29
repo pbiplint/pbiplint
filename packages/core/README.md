@@ -38,11 +38,12 @@ forward slashes and a folder with a trailing `/`; a path that is not a file the 
 `.tmdl` file for the model, a file `isReportFile` accepts for the report) is read as a folder. The
 layer then knows what it lacks, so no finding or fact states what was not read.
 
-The model rules are literal ports of the Microsoft Best Practice Analyzer ruleset, verified against
-Tabular Editor. The report rules are the 11 base rules of PBI Inspector by Nat Van Gulck, ported and
-verified against fab-inspector's command line, and pbiplint's own rules for the report and for the
-model and report together. A port keeps its source's quirks on purpose, apart from six documented
-deviations from PBI Inspector, and each rule's page documents them.
+The model rules are ports of the Microsoft Best Practice Analyzer ruleset, verified against Tabular
+Editor, and pbiplint's own rule for a year or a date fixed in DAX. The report rules are the 11 base
+rules of PBI Inspector by Nat Van Gulck, ported and verified against fab-inspector's command line,
+and pbiplint's own rules for the report and for the model and report together. A port keeps its
+source's quirks on purpose, apart from five documented deviations from the Microsoft ruleset and six
+from PBI Inspector, and each rule's page documents them.
 
 For the command line, install [`pbiplint`](https://www.npmjs.com/package/pbiplint). Source, issues,
 and contributing: https://github.com/pbiplint/pbiplint.

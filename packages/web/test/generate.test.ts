@@ -633,7 +633,7 @@ describe("generateSite", () => {
     );
     const index = readFileSync(join(out, "rules/index.html"), "utf8");
     expect(index).toContain(
-      "100 rules: 66 model rules ported from Microsoft's Best Practice Analyzer ruleset so the results match Tabular Editor, 5 listed but not run because they need statistics only a live model has, 11 report rules ported from PBI Inspector's base rules by Nat Van Gulck, and 18 built into pbiplint.",
+      "100 rules: 66 model rules ported from Microsoft's Best Practice Analyzer ruleset and verified against Tabular Editor, 5 listed but not run because they need statistics only a live model has, 11 report rules ported from PBI Inspector's base rules by Nat Van Gulck, and 18 built into pbiplint.",
     );
     expect(index).toContain('<h2 id="error-prevention">Error Prevention</h2>');
     expect((index.match(/needs a live model/g) ?? []).length).toBe(5);
@@ -722,7 +722,7 @@ describe("generateSite", () => {
     // Not in the index: neither in the count at the top nor in a list below it.
     const index = readFileSync(join(out, "rules/index.html"), "utf8");
     expect(index).toContain(
-      "1 rules: 1 model rules ported from Microsoft's Best Practice Analyzer ruleset so the results match Tabular Editor.",
+      "1 rules: 1 model rules ported from Microsoft's Best Practice Analyzer ruleset and verified against Tabular Editor.",
     );
     expect(index).toContain('href="/rules/hide-foreign-keys/"');
     expect(index).not.toContain("mark-primary-keys");
@@ -755,7 +755,7 @@ describe("generateSite", () => {
     expect(existsSync(join(out, "rules/parse-issue/index.html"))).toBe(true);
     const index = readFileSync(join(out, "rules/index.html"), "utf8");
     expect(index).toContain(
-      "2 rules: 1 model rules ported from Microsoft's Best Practice Analyzer ruleset so the results match Tabular Editor and 1 built into pbiplint.",
+      "2 rules: 1 model rules ported from Microsoft's Best Practice Analyzer ruleset and verified against Tabular Editor and 1 built into pbiplint.",
     );
     expect(index).toContain('href="/rules/parse-issue/"');
     expect(readFileSync(join(out, "public/sitemap.xml"), "utf8")).toContain(
@@ -846,7 +846,7 @@ describe("rulesIndex", () => {
     );
     // The count takes the added page into the clause for its source.
     expect(index).toContain(
-      "101 rules: 66 model rules ported from Microsoft's Best Practice Analyzer ruleset so the results match Tabular Editor, 5 listed but not run because they need statistics only a live model has, 12 report rules ported from PBI Inspector's base rules by Nat Van Gulck, and 18 built into pbiplint.",
+      "101 rules: 66 model rules ported from Microsoft's Best Practice Analyzer ruleset and verified against Tabular Editor, 5 listed but not run because they need statistics only a live model has, 12 report rules ported from PBI Inspector's base rules by Nat Van Gulck, and 18 built into pbiplint.",
     );
     // With no report page published, the report clause is left out rather than read as zero.
     expect(
@@ -855,7 +855,7 @@ describe("rulesIndex", () => {
         ["model"],
       ),
     ).toContain(
-      "75 rules: 66 model rules ported from Microsoft's Best Practice Analyzer ruleset so the results match Tabular Editor, 5 listed but not run because they need statistics only a live model has, and 4 built into pbiplint.",
+      "75 rules: 66 model rules ported from Microsoft's Best Practice Analyzer ruleset and verified against Tabular Editor, 5 listed but not run because they need statistics only a live model has, and 4 built into pbiplint.",
     );
   });
   it("refuses a rule no clause of the count names, rather than printing a count its clauses do not sum to", () => {

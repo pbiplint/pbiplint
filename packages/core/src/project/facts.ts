@@ -88,30 +88,37 @@ function reportFacts(
   // Filters pane. Unknown, like Opens on, when the file that records it was not read; the rule is
   // silent then, so the fact links no rule. Known, it links FILTERS_PANE_STATE only under an
   // `expect` policy, the option the rule reads, whether the saved state meets the policy or breaks
-  // it: without one the rule runs but can never fire.
+  // it: without one the rule runs but can never fire, so the detail says how to have it checked.
+  // A rule that did not run (turned off in config) would not check the pane under a policy either,
+  // so it gets no hint.
   const pane = filtersPaneState(report);
-  facts.push(
-    pane === undefined
-      ? {
+  if (pane === undefined) {
+    facts.push({
+      layer: "report",
+      label: "Filters pane",
+      value: "unknown",
+      detail: "report.json was not read",
+    });
+  } else {
+    const policySet = ruleOptions.get("FILTERS_PANE_STATE")?.expect !== undefined;
+    const detail = [
+      pane.recordedAt === undefined && "read as open; report.json does not record it",
+      !policySet &&
+        known.has("FILTERS_PANE_STATE") &&
+        "not checked; set an expect policy for FILTERS_PANE_STATE in pbiplint.config.json to check it",
+    ].filter(Boolean);
+    facts.push(
+      withRule(
+        {
           layer: "report",
           label: "Filters pane",
-          value: "unknown",
-          detail: "report.json was not read",
-        }
-      : withRule(
-          {
-            layer: "report",
-            label: "Filters pane",
-            value: pane.state,
-            ...(pane.recordedAt === undefined
-              ? { detail: "read as open; report.json does not record it" }
-              : {}),
-          },
-          ruleOptions.get("FILTERS_PANE_STATE")?.expect !== undefined
-            ? "FILTERS_PANE_STATE"
-            : undefined,
-        ),
-  );
+          value: pane.state,
+          ...(detail.length ? { detail: detail.join("; ") } : {}),
+        },
+        policySet ? "FILTERS_PANE_STATE" : undefined,
+      ),
+    );
+  }
 
   // Pages. A tooltip page counts by either marking Microsoft's page schema gives it, page.json's
   // own `type` or its `pageBinding.type` (Desktop-saved reports mark most tooltip pages by `type`

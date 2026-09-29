@@ -979,8 +979,17 @@ describe("lint over a project", () => {
     });
     const open = { layer: "report", label: "Filters pane", value: "open" };
     const linked = { ...open, ruleId: "FILTERS_PANE_STATE" };
-    // No policy: the rule runs and can never fire, so the fact links nothing.
-    expect(pane(lint(files))).toEqual({ fact: open, findings: [], skipped: undefined });
+    // No policy: the rule runs and can never fire, so the fact links nothing and says how to have
+    // the pane checked (tracked in #88).
+    expect(pane(lint(files))).toEqual({
+      fact: {
+        ...open,
+        detail:
+          "not checked; set an expect policy for FILTERS_PANE_STATE in pbiplint.config.json to check it",
+      },
+      findings: [],
+      skipped: undefined,
+    });
     // A policy the saved state meets: the rule ran and found nothing, and the fact links it.
     const meets = { rules: { FILTERS_PANE_STATE: { expect: "open" } } };
     expect(pane(lint(files, { config: meets }))).toEqual({
@@ -1001,7 +1010,8 @@ describe("lint over a project", () => {
         findings: ["saved open; the policy expects closed"],
         skipped: undefined,
       });
-    // Turned off with a policy in hand: the rule did not run, so the fact links nothing.
+    // Turned off with a policy in hand: the rule did not run, so the fact links nothing, and gives
+    // no hint, since a policy would not have it checked.
     const off = resolveConfig({ rules: { FILTERS_PANE_STATE: { expect: "closed" } } });
     off.disabled.add("FILTERS_PANE_STATE");
     expect(pane(lint(files, { config: off }))).toEqual({
@@ -1459,7 +1469,8 @@ describe("lint over a project", () => {
           layer: "report",
           label: "Filters pane",
           value: "open",
-          detail: "read as open; report.json does not record it",
+          detail:
+            "read as open; report.json does not record it; not checked; set an expect policy for FILTERS_PANE_STATE in pbiplint.config.json to check it",
         },
         {
           layer: "report",

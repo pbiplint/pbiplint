@@ -18,6 +18,8 @@ A report whose Filters pane, as saved in report.json, is not in the state the pr
 
 The finding is on the report, as `Report`, at the report.json property that decides the pane's state, and its detail gives the saved state beside the expected one, as `saved open; the policy expects closed` or `saved hidden from readers; the policy expects open`. When report.json does not record the state, the finding sits on line 1 of report.json and its detail says the pane is read as open: `not recorded, read as open; the policy expects closed`.
 
+Without a policy, the Filters pane line in Report at a glance says the pane was not checked and how to set one.
+
 ## Example
 
 The policy is set in `pbiplint.config.json`, and the config below applies to both documents: it asks for every report to open with the Filters pane closed.

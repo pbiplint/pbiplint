@@ -6,6 +6,7 @@ import { finding, modelPartlyRead } from "../src/rules/helpers.js";
 import { fieldFileUnread } from "../src/rules/report-helpers.js";
 import type { Rule, RuleFinding } from "../src/rules/types.js";
 import {
+  factsLines,
   formatJson,
   formatMarkdown,
   formatResult,
@@ -438,8 +439,10 @@ describe("a whole-project report", () => {
     );
     expect(lines[2]).toBe("Notice: the walk stopped 64 folders deep inside Deep");
     expect(text).toContain("\nReport at a glance\n");
+    // Opens on is the one row with a rule id, so the margin sits just past it; the longer rows
+    // without one do not push it out.
     expect(text).toMatch(
-      /\n {2}Opens on {9}Overview \(the page open when it was saved; no landing page set\) {41}LANDING_PAGE_NOT_SET\n/,
+      /\n {2}Opens on {9}Overview \(the page open when it was saved; no landing page set\) {3}LANDING_PAGE_NOT_SET\n/,
     );
     expect(text).toMatch(
       /\n {2}Model {12}1 table, 1 column, 1 measure \(not reached from this report: unknown, a report file could not be read\)\n/,
@@ -459,6 +462,22 @@ describe("a whole-project report", () => {
     );
     expect(text).toMatch(
       /\n {2}Model {12}1 table, 1 column, 1 measure \(1 column and 1 measure not reached from this report\) {3}NOT_REACHED_FROM_REPORT\n/,
+    );
+  });
+  it("sets the rule margin by the rows that have a rule id, so a long row without one does not push it out (tracked in #88)", () => {
+    // Without a policy the Filters pane says how to have it checked, a detail most runs carry, and
+    // links no rule; the margin stays where the rows with a rule id put it.
+    const lines = factsLines(lint([...files, ...readable]));
+    const opens = lines.find((l) => l.startsWith("  Opens on "))!;
+    const model = lines.find((l) => l.startsWith("  Model "))!;
+    const pane = lines.find((l) => l.startsWith("  Filters pane "))!;
+    expect(pane).toMatch(
+      / \(read as open; .+; not checked; set an expect policy .+ to check it\)$/,
+    );
+    expect(pane.length).toBeGreaterThan(model.length);
+    expect(opens.indexOf("LANDING_PAGE_NOT_SET")).toBe(model.indexOf("NOT_REACHED_FROM_REPORT"));
+    expect(model).toMatch(
+      / \(1 column and 1 measure not reached from this report\) {3}NOT_REACHED/,
     );
   });
   it("tags a parse-issue group spanning both layers as project in the text header", () => {

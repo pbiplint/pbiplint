@@ -1104,6 +1104,72 @@ describe("selectProject and a model folder that holds no .tmdl files (tracked in
       ),
     ).toThrow(refusal([deep]));
   });
+  it("names no model folder the walk stopped in at the depth cap, which could hold .tmdl files", () => {
+    const capAt = (path: string): Diagnostic => ({
+      kind: "depth-cap",
+      path,
+      message: `the walk stopped 64 folders deep at ${path}, so files below it were not read`,
+    });
+    // The folder the walk stopped in is the model folder, which the walkers then record by the
+    // notice alone, its definition folder, or a folder under that.
+    for (const [cap, modelFolders] of [
+      ["Proj/Deep.SemanticModel", []],
+      ["Proj/Deep.SemanticModel/definition", ["Proj/Deep.SemanticModel"]],
+      ["Proj/Deep.SemanticModel/definition/tables", ["Proj/Deep.SemanticModel"]],
+    ] as const) {
+      const p = selectProject(withModels([...modelFolders], { diagnostics: [capAt(cap)] }));
+      expect(p.notes, cap).toEqual([]);
+      // The notice names it relative to the root, Proj, as every notice does.
+      expect(p.diagnostics, cap).toEqual([capAt(cap.slice("Proj/".length))]);
+      // Nothing of the model was read, and the skipped line says so rather than that the input
+      // holds no model.
+      expect(p.absent, cap).toEqual({ model: "the model folder could not be read" });
+      // Beside a model it lints, it is a second model, as a folder that could not be listed is.
+      const beside = withModels([...modelFolders, "Proj/Demo.SemanticModel"], {
+        entries: [e("Proj/Demo.SemanticModel/definition/model.tmdl")],
+        diagnostics: [capAt(cap)],
+      });
+      expect(() => selectProject(beside), cap).toThrow(
+        new InputError(
+          "Proj contains 2 semantic models; drop one of them: Deep.SemanticModel, Demo.SemanticModel",
+        ),
+      );
+    }
+    // Further down, below a model it lints, it is left out of the note too.
+    const nested = selectProject(
+      withModels(["Proj/Demo.SemanticModel"], {
+        entries: [e("Proj/Demo.SemanticModel/definition/model.tmdl")],
+        diagnostics: [capAt("Proj/Archive/Deep.SemanticModel")],
+      }),
+    );
+    expect(nested.files.map((f) => f.path)).toEqual(["definition/model.tmdl"]);
+    expect(nested.notes).toEqual([]);
+    // A folder the walk stopped in that could hide no .tmdl file (the model's DAXQueries, below
+    // its definition folder's listing) leaves the folder named, as one that could not be listed.
+    const daxQueries = selectProject(
+      withModels(["Proj/Old.SemanticModel"], {
+        diagnostics: [capAt("Proj/Old.SemanticModel/DAXQueries")],
+      }),
+    );
+    expect(daxQueries.notes).toEqual([noTmdlNote(["Proj/Old.SemanticModel"])]);
+    expect(daxQueries.absent).toEqual({});
+  });
+  it("says a report folder the walk stopped in could not be read, rather than that the input holds no report", () => {
+    const cap: Diagnostic = {
+      kind: "depth-cap",
+      path: "Proj/Demo.Report",
+      message:
+        "the walk stopped 64 folders deep at Proj/Demo.Report, so files below it were not read",
+    };
+    const p = selectProject(
+      withModels(["Proj/Demo.SemanticModel"], {
+        entries: [e("Proj/Demo.SemanticModel/definition/model.tmdl")],
+        diagnostics: [cap],
+      }),
+    );
+    expect(p.files.map((f) => f.path)).toEqual(["definition/model.tmdl"]);
+    expect(p.absent).toEqual({ report: "the report folder could not be read" });
+  });
   it("refuses a drop of which nothing could be read naming what refused, as before", () => {
     expect(() =>
       selectProject(

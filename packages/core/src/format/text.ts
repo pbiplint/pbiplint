@@ -94,7 +94,10 @@ export const layerTag = (layer: Layer): string => `[${layer}]`;
 
 /**
  * The facts as aligned lines under a heading, with rule ids in the right margin; nothing when there
- * are no facts. A value can hold a name from the input, so it is shown before it is measured.
+ * are no facts. A value can hold a name from the input, so it is shown before it is measured. The
+ * margin sits past the widest value on a row that has a rule id: a row without one has nothing to
+ * put there, so a long detail on it (the Filters pane's hint to set a policy, which most runs
+ * carry) does not push every rule id out past it.
  */
 export function factsLines(result: LintResult): string[] {
   if (result.facts.length === 0) return [];
@@ -104,7 +107,7 @@ export function factsLines(result: LintResult): string[] {
     rule: f.ruleId ?? "",
   }));
   const labelWidth = Math.max(...rows.map((r) => r.label.length));
-  const valueWidth = Math.max(...rows.map((r) => r.value.length));
+  const valueWidth = Math.max(0, ...rows.filter((r) => r.rule).map((r) => r.value.length));
   return [
     "Report at a glance",
     ...rows.map((r) =>

@@ -1477,6 +1477,58 @@ same object twice across documents is an error
 (https://learn.microsoft.com/analysis-services/tmdl/tmdl-overview#partial-declaration),
 so Power BI does not load such a model.
 
+Amended 2026-09-29 (issue #137): the TMDL overview says the database
+and the model's direct children "don't need to be indented because
+they are implicitly assumed nested under the root Model or Database"
+(https://learn.microsoft.com/analysis-services/tmdl/tmdl-overview#indentation),
+so they may also sit indented under the `model` they belong to. The
+model now reads the lines directly under a `model` at the root of a
+file as its own declarations, as it reads a file's root: a table, a
+relationship, a role, and each other type it models. It used to read
+only the root and drop them with no parse issue. Of the same 23,457
+TMDL files, compared on September 29, 2026, one model.tmdl nests seven
+relationships under its model, which that model now has; none of the
+other 1,377 models among them reads differently. A `model` under a
+`database` at the root is read the same way, as a part of the model's
+declaration. Microsoft's TMDL reader, run through Tabular Editor 3's
+CLI on September 29, 2026, merges it with the model at the root of
+model.tmdl, which Desktop always writes, reads a table under it, and
+refuses it when no model of that name sits at the root; pbiplint reads
+it either way. A second declaration of the model now adds its
+properties to the model's, where it used to replace them, and keeps
+the description when it has none. Whatever looks for the file that
+declares a table reads those lines too (`modelDeclarations` in
+model/build.ts), so `BROKEN_FIELD_REFERENCE` counts a partly read
+model.tmdl that declares the table under its model (the ruling H82
+amendment below).
+
+The parser checks those lines much as it checks the root, each check a
+`PARSE_ISSUE` that keeps its line out of the model with the lines under
+it, and the same reader refuses each shape. Directly under the model:
+a declaration of a type TMDL does not declare there (any type it
+allows at the root but `model`, `database`, and `createOrReplace`, so
+also `column`, `measure`, and a misspelt word); a property whose word
+is one of the types it does declare there, such as `table: Sales` for
+`table Sales`; a declaration the model reads by name that has none;
+and an annotation, an extended property, a property, or an expression
+with no name that has lines under it. Under the `database`: a
+declaration other than its `model`. A flag there is reported only when
+its word is a type TMDL declares, such as a bare `model`, or, under the
+model, when a declaration sits under it, as when a column's `isKey`
+loses two tabs and the column after it attaches to it: the model's own
+properties include flags (`discourageImplicitMeasures`) and blocks of
+flags (`dataAccessOptions`). So a flag or a property that lost its tabs
+with nothing under it still reads as one of the model's own, which the
+reader refuses and pbiplint, holding no list of a model's properties,
+cannot tell apart. The two checks on a declaration's type, and a line
+lost directly under the model, or under the database that holds it,
+that the parser could not make out or that a code fence left open
+read, can take a `table` line (`canDropTableLine`), as at the root. A
+model under a culture's translations or a TMDL script's
+`createOrReplace` is not the model's and is neither read nor checked.
+Over the 23,457 files, the parser gives every file the same issues and
+the same tree as before.
+
 Amended 2026-09-24 with Michael (release triage, batch D, ruling H82):
 while a TMDL file has a parse issue that can take an object out of the
 model, which is any but an orphaned `///` description, a reference to a

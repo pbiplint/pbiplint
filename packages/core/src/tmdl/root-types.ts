@@ -20,12 +20,17 @@
  *
  * Any other word declared at the root is a parse issue, a misspelt `table` and a `column` that
  * lost its tab alike. A property or an expression with no name is one at the root whatever its
- * word, and so is an annotation or an extended property with lines under it (parse.ts). Only the
- * root is checked: a misspelt keyword under a known object, such as `columm Amount` under a table,
- * still parses as a generic child. A `table` line is the exception: under anything but a model, as
- * a culture's translations and a TMDL script nest one, it is an issue (#135).
+ * word, and so is an annotation or an extended property with lines under it (parse.ts). The
+ * overview's list is of the objects that need no indentation, so they may also sit indented under
+ * the `model` they belong to, and the `model` under its `database`. There, a declaration of a type
+ * TMDL does not declare under a model, and under the database any declaration but the model, is
+ * an issue too, and so is a property under the model whose word is a type TMDL does declare there
+ * (#137). Otherwise only the root is checked: a misspelt keyword under a known object, such as
+ * `columm Amount` under a table, still parses as a generic child. A `table` line is the exception:
+ * under anything but a model, as a culture's translations and a TMDL script nest one, it is an
+ * issue (#135).
  */
-/** The types `model/build.ts` reads into the model. Keep in step with its root switch. */
+/** The types `model/build.ts` reads into the model. Keep in step with its declaration switch. */
 const MODELED = [
   "model",
   "annotation",
@@ -56,6 +61,17 @@ const KNOWN = new Set([...MODELED, ...NOT_MODELED]);
 
 /** Whether TMDL allows `type` at the root of a file. TMDL reads keywords without regard to case. */
 export const isRootType = (type: string): boolean => KNOWN.has(type.toLowerCase());
+/**
+ * Whether TMDL declares an object of `type` directly under a model, as it reads one at the root
+ * (#137): each type it allows at the root but the model itself, the database that holds it, and a
+ * script's command. Microsoft's TMDL reader, run through Tabular Editor 3's CLI on September 29,
+ * 2026, reads each of them under a model and refuses those three, `column`, `measure`, and a
+ * misspelt word there.
+ */
+export const isModelChildType = (type: string): boolean => {
+  const t = type.toLowerCase();
+  return KNOWN.has(t) && t !== "model" && t !== "database" && t !== "createorreplace";
+};
 /**
  * Whether the model reads a root declaration of `type` by its name, so one written with no name
  * declares nothing it can read (#135): every modeled type but `model`, which the model reads as

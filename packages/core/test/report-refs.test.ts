@@ -640,6 +640,24 @@ describe("a reference into a model file pbiplint could not fully read", () => {
     ]);
   });
 
+  it("counts a file that declares the table under its model, as the model reads it (#137)", () => {
+    const MODEL = "definition/model.tmdl";
+    const nested =
+      "\ttable Sales\n\t\t    column Amount\n\t\tcolumn Region\n\t\t\tdataType: string\n";
+    expect(
+      resolutions(modelOf({ [MODEL]: `model Model\n${nested}` }), column("Sales", "Amount")),
+    ).toEqual([unread(partly('no column named "Amount" on "Sales"', MODEL))]);
+    // The same under a model under a database, which TMDL reads as a part of the model's.
+    const DATABASE = "definition/database.tmdl";
+    const underDatabase = `database\n\tmodel Model\n${nested.replace(/^/gm, "\t").slice(0, -1)}`;
+    expect(
+      resolutions(
+        modelOf({ [DATABASE]: underDatabase, [MODEL]: "model Model\n" }),
+        column("Sales", "Amount"),
+      ),
+    ).toEqual([unread(partly('no column named "Amount" on "Sales"', DATABASE))]);
+  });
+
   it("counts a file whose issue can take a line at the root with it for every table, since that line could declare one", () => {
     const MEASURES = "definition/tables/measures.tmdl";
     const lost = "tabel Sales\n\tmeasure Profit = 1\n";

@@ -19,6 +19,12 @@ describe("date table rules", () => {
     expect(objectNames(rules.MODEL_SHOULD_HAVE_A_DATE_TABLE, unmarked)).toEqual(["Model"]);
     expect(objectNames(rules.MODEL_SHOULD_HAVE_A_DATE_TABLE, "table X\n")).toEqual(["Model"]);
   });
+  it("MODEL_SHOULD_HAVE_A_DATE_TABLE reads a date table declared under the model (#137)", () => {
+    // TMDL lets a model's tables sit indented under its declaration, as in one model.tmdl.
+    const nested =
+      "model Model\n\tculture: en-US\n\n\ttable Date\n\t\tdataCategory: Time\n\t\tcolumn Date\n\t\t\tdataType: dateTime\n\t\t\tisKey\n";
+    expect(objectNames(rules.MODEL_SHOULD_HAVE_A_DATE_TABLE, nested)).toEqual([]);
+  });
   it("DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE goes by name and ignores calculation groups", () => {
     const cg =
       "table 'Date Intelligence'\n\tcalculationGroup\n\t\tcalculationItem I = 1\n\tcolumn Name\n\t\tdataType: string\n\tpartition 'Date Intelligence' = calculationGroup\n\t\tmode: import\n";

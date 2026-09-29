@@ -1,4 +1,4 @@
-import { splitQualifiedName } from "../model/build.js";
+import { modelDeclarations, splitQualifiedName } from "../model/build.js";
 import type {
   Column,
   DaxFunction,
@@ -154,19 +154,21 @@ export function buildReportReferenceIndex(
   /**
    * Something missing from table `t`: its columns, measures, hierarchies, and their variations and
    * levels sit under its declaration, so only a file that declares it could hold the missing
-   * thing. The model merges a table declared in several files, so each of them counts. So does a
-   * file whose issue can take a `table` line with it (`TmdlParseIssue.canDropTableLine`), since
-   * that line could be the table's declaration in a second file, such as a misspelt
-   * `table Sales` over the measures a file holds for Sales, and so does a path never read, which
-   * could declare the table again. A file that declares the table is named first, then a path
-   * never read.
+   * thing. The model merges a table declared in several files, so each of them counts, one that
+   * declares it under its model included (`modelDeclarations`, #137). So does a file whose issue
+   * can take a `table` line with it (`TmdlParseIssue.canDropTableLine`), since that line could be
+   * the table's declaration in a second file, such as a misspelt `table Sales` over the measures a
+   * file holds for Sales, and so does a path never read, which could declare the table again. A
+   * file that declares the table is named first, then a path never read.
    */
   const missingOn = (t: Table, reason: string): Resolution => {
     const files = model?.files ?? [];
     const declaring = files.find(
       (f) =>
         partlyRead.has(f.file) &&
-        f.roots.some((r) => r.kind === "object" && r.type === "table" && r.name === t.name),
+        modelDeclarations(f).some(
+          (r) => r.kind === "object" && r.type === "table" && r.name === t.name,
+        ),
     );
     if (declaring) return unread(reason, declaring.file);
     if (neverRead !== undefined) return notRead(reason, neverRead);

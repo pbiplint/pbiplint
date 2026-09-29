@@ -333,6 +333,21 @@ describe("runRules", () => {
     expect(r.findings.map((f) => f.ruleId)).toEqual(["MODEL_RULE"]);
     expect(r.ignored).toBe(0);
   });
+  it("takes an ignore from an annotation under the model, and none from one there with lines under it (#137)", () => {
+    const run = (text: string) => {
+      const model = modelFrom(text);
+      return runRules({ model }, buildIndexes({ model }), [modelRule], resolveConfig());
+    };
+    const quiet = run("model Model\n\tannotation pbiplint.ignore = MODEL_RULE\n\n\ttable A\n");
+    expect(quiet.findings).toEqual([]);
+    expect(quiet.ignored).toBe(1);
+    // A column's annotation that lost two tabs in a model.tmdl that nests its tables.
+    const lost = run(
+      "model Model\n\ttable A\n\t\tcolumn X\n\tannotation pbiplint.ignore = MODEL_RULE\n\t\tcolumn Y\n",
+    );
+    expect(lost.findings.map((f) => f.ruleId)).toEqual(["MODEL_RULE"]);
+    expect(lost.ignored).toBe(0);
+  });
   it("stamps ruleId and drops the object reference", () => {
     const r = runRules({ model: m }, idx, [everyColumn], resolveConfig());
     expect(r.findings[0]).toEqual({

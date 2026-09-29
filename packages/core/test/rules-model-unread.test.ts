@@ -340,6 +340,10 @@ const tableCases: Case[] = [
     "table 'Date\n\tdataCategory: Time\n",
     // It is indented with spaces under an expression indented with tabs, which read it as text (#135).
     "expression E =\n\t\tlet x = 1 in x\n    table 'Date'\n\tdataCategory: Time\n",
+    // Declared under a model, it has lost its name (#137).
+    "model Model\n\ttable\n\t\tdataCategory: Time\n",
+    // Declared under a model, its word is misspelt (#137).
+    "model Model\n\ttabel 'Date'\n\t\tdataCategory: Time\n",
   ].map((text): Case => ({
     rule: "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE",
     whole: [dateKey, dateMarked],

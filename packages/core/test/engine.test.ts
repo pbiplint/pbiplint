@@ -1154,7 +1154,7 @@ describe("lint over a project", () => {
       // Without the skip, Base would read as reached by nothing, which is false.
       expect(r.findings.filter((f) => f.ruleId === "NOT_REACHED_FROM_REPORT")).toEqual([]);
       expect(r.summary.rulesSkipped).toContainEqual(skipped);
-      expect(skippedLine(r)).toContain("12 rules skipped (a model file could not be fully read)");
+      expect(skippedLine(r)).toContain("13 rules skipped (a model file could not be fully read)");
       expect(modelFact(r)).toEqual({
         layer: "model",
         label: "Model",
@@ -1181,7 +1181,7 @@ describe("lint over a project", () => {
       // The rule is counted once, under the report's reason; the model's stops only the rules whose
       // finding rests on the whole model (#128).
       expect(skippedLine(r)).toContain(
-        "1 rule skipped (a report file could not be read), 11 rules skipped (a model file could not be fully read)",
+        "1 rule skipped (a report file could not be read), 12 rules skipped (a model file could not be fully read)",
       );
       expect(modelFact(r)?.detail).toBe(
         "not reached from this report: unknown, a report file could not be read",
@@ -1200,7 +1200,7 @@ describe("lint over a project", () => {
         ["MODEL_USING_DIRECT_QUERY_AND_NO_AGGREGATIONS", M],
         ["AVOID_USING_MANY-TO-MANY_RELATIONSHIPS_ON_TABLES_USED_FOR_DYNAMIC_ROW_LEVEL_SECURITY", T],
         ["REMOVE_REDUNDANT_COLUMNS_IN_RELATED_TABLES", M],
-        ["MEASURES_USING_TIME_INTELLIGENCE_AND_MODEL_IS_USING_DIRECT_QUERY", T],
+        ["MEASURES_USING_TIME_INTELLIGENCE_AND_MODEL_IS_USING_DIRECT_QUERY", M],
         ["DAX_COLUMNS_FULLY_QUALIFIED", M],
         ["INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED", M],
         ["DATA_COLUMNS_MUST_HAVE_A_SOURCE_COLUMN", T],
@@ -1209,6 +1209,7 @@ describe("lint over a project", () => {
         ["REMOVE_DATA_SOURCES_NOT_REFERENCED_BY_ANY_PARTITIONS", M],
         ["ENSURE_TABLES_HAVE_RELATIONSHIPS", M],
         ["OBJECTS_WITH_NO_DESCRIPTION", T],
+        ["CALCULATION_GROUPS_WITH_NO_CALCULATION_ITEMS", T],
         ["PARTITION_NAME_SHOULD_MATCH_TABLE_NAME_FOR_SINGLE_PARTITION_TABLES", T],
         ["FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS", T],
         ["OBJECTS_SHOULD_NOT_START_OR_END_WITH_A_SPACE", T],

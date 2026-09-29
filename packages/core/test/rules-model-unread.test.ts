@@ -107,6 +107,13 @@ const margin = [
   table("Sales", "\tcolumn Margin\n\t\tdataType: decimal\n\tmeasure Check = [Margin] * 2\n"),
   table("Measures", "\tmeasure Margin = 1\n"),
 ];
+const hybrid = (indent: string) =>
+  table(
+    "Sales",
+    `${indent}partition 'Sales history' = m\n\t\tmode: import\n\t\tsource = 1\n` +
+      "\tpartition 'Sales live' = m\n\t\tmode: directQuery\n\t\tsource = 2\n" +
+      "\tmeasure YTD = TOTALYTD(1, 'Date'[Date])\n",
+  );
 const legacy = [
   {
     path: "definition/dataSources.tmdl",
@@ -191,6 +198,15 @@ const cases: Case[] = [
     wouldReport: ["[Check]"],
   },
   {
+    rule: "MEASURES_USING_TIME_INTELLIGENCE_AND_MODEL_IS_USING_DIRECT_QUERY",
+    // A table is DirectQuery by its first partition. The import one lost its tab, so the parser
+    // skips it and the DirectQuery one reads as first: a parse issue inside the table, which
+    // takes no part of it, and a finding on a measure that can sit anywhere.
+    whole: [hybrid("\t")],
+    partly: damaged([hybrid("\t")], hybrid("\t").path, hybrid("    ").text),
+    wouldReport: ["[YTD]"],
+  },
+  {
     rule: "REMOVE_DATA_SOURCES_NOT_REFERENCED_BY_ANY_PARTITIONS",
     whole: legacy,
     partly: unread(legacy, "definition/tables/Legacy.tmdl"),
@@ -243,6 +259,12 @@ const calculated = (name: string) =>
 const salesHidden = part("Sales.hidden", "Sales", "\tisHidden\n");
 const dateMarked = part("Date.marked", "Date", "\tdataCategory: Time\n");
 const dateKey = part("Date", "Date", "\tcolumn Date\n\t\tdataType: dateTime\n\t\tisKey\n");
+const dateKeyed = [
+  part("Date", "Date", "\tcolumn DateKey\n\t\tdataType: int64\n"),
+  dateMarked,
+  table("Sales", "\tcolumn DateKey\n\t\tdataType: int64\n"),
+  relationships("relationship r1\n\tfromColumn: Sales.DateKey\n\ttoColumn: Date.DateKey\n"),
+];
 const twoPartitions = [
   part("Sales", "Sales", "\tpartition 'Sales 2024' = m\n\t\tmode: import\n\t\tsource = 1\n"),
   part("Sales.2025", "Sales", "\tpartition 'Sales 2025' = m\n\t\tmode: import\n\t\tsource = 2\n"),
@@ -259,16 +281,6 @@ const region = [
     text: "role Reader\n\tmodelPermission: read\n\ttablePermission Region = [Key] = USERNAME()\n",
   },
 ];
-// Sales.a.tmdl comes first in the walk, so its import partition is the table's first.
-const hybrid = [
-  part("Sales.a", "Sales", "\tpartition 'Sales history' = m\n\t\tmode: import\n\t\tsource = 1\n"),
-  part(
-    "Sales",
-    "Sales",
-    "\tmeasure YTD = TOTALYTD(1, 'Date'[Date])\n\tpartition 'Sales live' = m\n\t\tmode: directQuery\n\t\tsource = 2\n",
-  ),
-];
-
 const tableCases: Case[] = [
   {
     rule: "NUMERIC_COLUMN_SUMMARIZE_BY",
@@ -296,21 +308,8 @@ const tableCases: Case[] = [
   },
   {
     rule: "MARK_PRIMARY_KEYS",
-    whole: [
-      part("Date", "Date", "\tcolumn DateKey\n\t\tdataType: int64\n"),
-      dateMarked,
-      table("Sales", "\tcolumn DateKey\n\t\tdataType: int64\n"),
-      relationships("relationship r1\n\tfromColumn: Sales.DateKey\n\ttoColumn: Date.DateKey\n"),
-    ],
-    partly: unread(
-      [
-        part("Date", "Date", "\tcolumn DateKey\n\t\tdataType: int64\n"),
-        dateMarked,
-        table("Sales", "\tcolumn DateKey\n\t\tdataType: int64\n"),
-        relationships("relationship r1\n\tfromColumn: Sales.DateKey\n\ttoColumn: Date.DateKey\n"),
-      ],
-      dateMarked.path,
-    ),
+    whole: dateKeyed,
+    partly: unread(dateKeyed, dateMarked.path),
     wouldReport: ["'Date'[DateKey]"],
   },
   {
@@ -326,6 +325,13 @@ const tableCases: Case[] = [
     wouldReport: ["'Date'"],
   },
   {
+    rule: "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE",
+    // The marking part's `table` line has a stray tab, so the parser keeps nothing of that part.
+    whole: [dateKey, dateMarked],
+    partly: damaged([dateKey, dateMarked], dateMarked.path, `\t${dateMarked.text}`),
+    wouldReport: ["'Date'"],
+  },
+  {
     rule: "PARTITION_NAME_SHOULD_MATCH_TABLE_NAME_FOR_SINGLE_PARTITION_TABLES",
     whole: twoPartitions,
     // The second part's `table` line is misspelt, so the parser keeps nothing under it.
@@ -337,11 +343,12 @@ const tableCases: Case[] = [
     wouldReport: ["'Sales'"],
   },
   {
-    rule: "MEASURES_USING_TIME_INTELLIGENCE_AND_MODEL_IS_USING_DIRECT_QUERY",
-    // Tabular Editor calls a table DirectQuery by its first partition, which the unread part holds.
-    whole: hybrid,
-    partly: unread(hybrid, hybrid[0]!.path),
-    wouldReport: ["[YTD]"],
+    rule: "CALCULATION_GROUPS_WITH_NO_CALCULATION_ITEMS",
+    ...withPart(
+      part("CG.a", "CG", "\tcalculationGroup\n\t\tprecedence: 1\n"),
+      part("CG", "CG", "\tcalculationGroup\n\n\t\tcalculationItem YTD = 1\n"),
+    ),
+    wouldReport: ["'CG'"],
   },
   {
     rule: "OBJECTS_WITH_NO_DESCRIPTION",

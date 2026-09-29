@@ -60,8 +60,10 @@ export const PERSPECTIVES_WITH_NO_OBJECTS = bpaRule("PERSPECTIVES_WITH_NO_OBJECT
   m.perspectives.filter((p) => p.tables.length === 0).map(finding.perspective),
 );
 
+// A part of the table pbiplint could not read may hold the items.
 export const CALCULATION_GROUPS_WITH_NO_CALCULATION_ITEMS = bpaRule(
   "CALCULATION_GROUPS_WITH_NO_CALCULATION_ITEMS",
+  { skipWhenModelUnread: tablesPartlyRead },
   (m) =>
     m.tables
       .filter((t) => t.calculationGroup !== undefined && t.calculationGroup.items.length === 0)

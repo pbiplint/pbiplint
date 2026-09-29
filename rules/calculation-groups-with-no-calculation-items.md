@@ -77,6 +77,7 @@ The one moment the finding is noise is while you are building the group, between
 
 - The rule counts items, not what they do. A group with one item whose expression is empty leaves this rule's condition, and `EXPRESSION_RELIANT_OBJECTS_MUST_HAVE_AN_EXPRESSION` picks it up instead.
 - pbiplint reads a table as a calculation group when the table carries a `calculationGroup` block, whatever its partition says, and rules scoped to tables or calculated tables then pass over it.
+- The rule also needs every part of a table's declaration, which TMDL lets sit in more than one file (Power BI Desktop writes each table in one). While pbiplint could not open a model file or folder, or a parse issue took a line that could be a `table` line, such as a misspelt `table`, the rule reports nothing, because a part of the table in what pbiplint missed could hold its calculation items, and pbiplint does not guess what a file it could not read says. A parse issue inside a declaration, such as a property indented with spaces, does not stop the rule. The skipped line gives the reason, `a model file could not be fully read`, and a notice names what pbiplint could not open, or the file's own `PARSE_ISSUE` finding names the line.
 
 ## Related rules
 

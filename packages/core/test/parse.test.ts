@@ -616,6 +616,36 @@ describe("whether a parse issue can take a line at the root of a file with it", 
     ]);
   });
 
+  it("marks a lost line whose word is `table` at any indentation, and in any form (#132)", () => {
+    // A stray tab, tabs and spaces, or a colon or an equals sign in place of the space: each may be
+    // a table's declaration the parser could not read. The lines under it are not marked again.
+    expect(marks("\ttable Date\n\t\tdataCategory: Time\n")).toEqual([
+      [1, true],
+      [2, false],
+    ]);
+    expect(marks("\t  table Date\n")).toEqual([[1, true]]);
+    expect(marks("table: Date\n")).toEqual([[1, true]]);
+    expect(marks("table = Date\n")).toEqual([[1, true]]);
+    // A word that only starts with `table`, and M text, are not a `table` line.
+    expect(marks("table Sales\n    tablePermission X\n    Table.AddColumn(x)\n")).toEqual([
+      [2, false],
+      [3, false],
+    ]);
+  });
+
+  it("marks the first line of a file that has lost its declaration's own line (#132)", () => {
+    // The file's first lines sit under a declaration it does not have, which may be a table's.
+    expect(marks("\tdataCategory: Time\n\tcolumn Date\n")).toEqual([
+      [1, true],
+      [2, false],
+    ]);
+    // An orphan after a line the parser skipped belongs to that line, whose own issue decides.
+    expect(marks("  relationship r1\n\tfromColumn: A.K\n")).toEqual([
+      [1, false],
+      [2, false],
+    ]);
+  });
+
   it("does not mark a line nested under an object, or a description nothing claims", () => {
     expect(marks("table Sales\n\t'Unit Price'\n\t\t\tisHidden\n\t/// Described\n\n")).toEqual([
       [2, false],

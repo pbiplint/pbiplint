@@ -167,11 +167,11 @@ const TIME_INTELLIGENCE_FUNCTIONS = [
 // The source patterns have no (?i), so this one is case-sensitive.
 const TIME_INTELLIGENCE = new RegExp(`(?:${TIME_INTELLIGENCE_FUNCTIONS.join("|")})\\s*\\(`);
 
-// A table is DirectQuery by its first partition, which a part of the table pbiplint could not read
-// may hold.
+// A table is DirectQuery by its first partition, and a model file pbiplint could not fully read may
+// hold the one that comes first. The finding is on a measure, which can sit in any table and file.
 export const MEASURES_USING_TIME_INTELLIGENCE_AND_MODEL_IS_USING_DIRECT_QUERY = bpaRule(
   "MEASURES_USING_TIME_INTELLIGENCE_AND_MODEL_IS_USING_DIRECT_QUERY",
-  { skipWhenModelUnread: tablesPartlyRead },
+  { skipWhenModelUnread: modelPartlyRead },
   (m) =>
     m.tables.some(isDirectQueryTable)
       ? expressionObjects(m, ["measure", "calculationItem"])

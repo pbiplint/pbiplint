@@ -9,6 +9,7 @@ import {
   hiddenOrTableHidden,
   isBlank,
   isNumericType,
+  modelPartlyRead,
 } from "../helpers.js";
 import type { RuleContext, RuleFinding } from "../types.js";
 import { bpaRule } from "./define.js";
@@ -89,8 +90,10 @@ export const DATA_COLUMNS_MUST_HAVE_A_SOURCE_COLUMN = bpaRule(
   (m) => columns(m, (c) => c.kind === "data" && isBlank(c.sourceColumn)),
 );
 
+// A model file pbiplint could not fully read may hold a variation that names the column.
 export const ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS = bpaRule(
   "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS",
+  { skipWhenModelUnread: modelPartlyRead },
   (m, { indexes: { usage } }: RuleContext) =>
     columns(
       m,
@@ -118,35 +121,40 @@ export const SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS = bpaRule(
     ),
 );
 
-export const UNNECESSARY_COLUMNS = bpaRule("UNNECESSARY_COLUMNS", (m, { indexes }: RuleContext) => {
-  const permissions = allTablePermissions(m);
-  return columns(m, (c) => {
-    if (!hiddenOrTableHidden(c)) return false;
-    if (indexes.references.columnReferencedBy(c).length > 0) return false;
-    if (indexes.relationships.forColumn(c.table.name, c.name).length > 0) return false;
-    if (indexes.usage.usedInSortBy(c) || indexes.usage.usedInHierarchies(c)) return false;
-    // The source rule also does plain substring checks on RLS filters (case-insensitive).
-    const bare = `[${c.name}]`.toLowerCase();
-    const qualified = [
-      `${c.table.name}[${c.name}]`.toLowerCase(),
-      `'${c.table.name}'[${c.name}]`.toLowerCase(),
-    ];
-    for (const tp of permissions) {
-      const f = tp.filter?.toLowerCase();
-      if (f === undefined) continue;
-      if (tp.table === c.table.name && f.includes(bare)) return false;
-      if (qualified.some((q) => f.includes(q))) return false;
-    }
-    // Object-level security on the column or its table.
-    for (const tp of permissions) {
-      if (tp.table !== c.table.name) continue;
-      if (tp.metadataPermission === "none") return false;
-      if (tp.columnPermissions.some((cp) => cp.column === c.name && cp.permission === "none"))
-        return false;
-    }
-    return true;
-  });
-});
+// A model file pbiplint could not fully read may hold what uses the column.
+export const UNNECESSARY_COLUMNS = bpaRule(
+  "UNNECESSARY_COLUMNS",
+  { skipWhenModelUnread: modelPartlyRead },
+  (m, { indexes }: RuleContext) => {
+    const permissions = allTablePermissions(m);
+    return columns(m, (c) => {
+      if (!hiddenOrTableHidden(c)) return false;
+      if (indexes.references.columnReferencedBy(c).length > 0) return false;
+      if (indexes.relationships.forColumn(c.table.name, c.name).length > 0) return false;
+      if (indexes.usage.usedInSortBy(c) || indexes.usage.usedInHierarchies(c)) return false;
+      // The source rule also does plain substring checks on RLS filters (case-insensitive).
+      const bare = `[${c.name}]`.toLowerCase();
+      const qualified = [
+        `${c.table.name}[${c.name}]`.toLowerCase(),
+        `'${c.table.name}'[${c.name}]`.toLowerCase(),
+      ];
+      for (const tp of permissions) {
+        const f = tp.filter?.toLowerCase();
+        if (f === undefined) continue;
+        if (tp.table === c.table.name && f.includes(bare)) return false;
+        if (qualified.some((q) => f.includes(q))) return false;
+      }
+      // Object-level security on the column or its table.
+      for (const tp of permissions) {
+        if (tp.table !== c.table.name) continue;
+        if (tp.metadataPermission === "none") return false;
+        if (tp.columnPermissions.some((cp) => cp.column === c.name && cp.permission === "none"))
+          return false;
+      }
+      return true;
+    });
+  },
+);
 
 const AGGREGATIONS = [
   "COUNT",

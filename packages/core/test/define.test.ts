@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildIndexes } from "../src/index/build.js";
+import type { Model } from "../src/model/types.js";
 import { BPA_RULES } from "../src/rules/microsoft-bpa/bpa-rules.data.js";
 import { bpaRule, liveModelRule, mapScope } from "../src/rules/microsoft-bpa/define.js";
 import { modelFrom } from "./helpers.js";
@@ -61,6 +62,18 @@ describe("bpaRule", () => {
       { objectType: "Model", objectName: "Demo" },
     ]);
     expect(r.check({}, { indexes: buildIndexes({}), options: {} })).toEqual([]);
+  });
+  it("declares the partly read model that stops a rule, given before the body", () => {
+    const stop = (m: Model) => m.tables.length === 0;
+    const r = bpaRule("MODEL_SHOULD_HAVE_A_DATE_TABLE", { skipWhenModelUnread: stop }, (m) => [
+      { objectType: "Model", objectName: m.name },
+    ]);
+    expect(r.skipWhenModelUnread).toBe(stop);
+    const model = modelFrom("model Demo\n");
+    expect(r.check({ model }, { indexes: buildIndexes({ model }), options: {} })).toEqual([
+      { objectType: "Model", objectName: "Demo" },
+    ]);
+    expect(bpaRule("HIDE_FOREIGN_KEYS", () => [])).not.toHaveProperty("skipWhenModelUnread");
   });
   it("rejects unknown ids", () => {
     expect(() => bpaRule("NOPE", () => [])).toThrow(/NOPE/);

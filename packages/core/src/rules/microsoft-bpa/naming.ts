@@ -1,4 +1,4 @@
-import { allPartitions, finding, namedObjects } from "../helpers.js";
+import { allPartitions, finding, modelPartlyRead, namedObjects } from "../helpers.js";
 import type { Rule } from "../types.js";
 import { bpaRule, mapScope, metaOf } from "./define.js";
 
@@ -62,9 +62,11 @@ export const REMOVE_ROLES_WITH_NO_MEMBERS = bpaRule("REMOVE_ROLES_WITH_NO_MEMBER
   m.roles.filter((r) => r.members.length === 0).map(finding.role),
 );
 
-// Table.SourceExpression in the source is approximated by every partition's query or M text.
+// Table.SourceExpression in the source is approximated by every partition's query or M text. A
+// model file pbiplint could not fully read may hold the partition that uses the data source.
 export const REMOVE_DATA_SOURCES_NOT_REFERENCED_BY_ANY_PARTITIONS = bpaRule(
   "REMOVE_DATA_SOURCES_NOT_REFERENCED_BY_ANY_PARTITIONS",
+  { skipWhenModelUnread: modelPartlyRead },
   (m) => {
     const partitions = allPartitions(m);
     return m.dataSources

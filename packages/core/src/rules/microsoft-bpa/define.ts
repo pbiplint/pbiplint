@@ -54,15 +54,27 @@ const extractUrls = (text: string): string[] => [
   ...new Set((text.match(/https?:\/\/[^\s)"]+/g) ?? []).map((u) => u.replace(/[.,]$/, ""))),
 ];
 
+export interface BpaRuleSpec {
+  /**
+   * The partly read model that stops the rule (Rule.skipWhenModelUnread), `modelPartlyRead` for a
+   * rule whose finding says something is missing from the whole model, which a model file pbiplint
+   * could not fully read may hold.
+   */
+  skipWhenModelUnread?: (model: Model) => boolean;
+}
+
+type ModelCheck = (model: Model, ctx: RuleContext) => RuleFinding[];
+
 /**
- * A literal port of one Microsoft BPA rule: metadata from the ruleset, behavior from `check`.
+ * A literal port of one Microsoft BPA rule: metadata from the ruleset, behavior from `check`,
+ * and what stops it, when anything does, from the spec given before `check`.
  * The description is pbiplint's own summary from the rule page, never the ruleset's text; the
  * ruleset description is read only for the reference URLs it carries.
  */
-export function bpaRule(
-  id: string,
-  check: (model: Model, ctx: RuleContext) => RuleFinding[],
-): Rule {
+export function bpaRule(id: string, check: ModelCheck): Rule;
+export function bpaRule(id: string, spec: BpaRuleSpec, check: ModelCheck): Rule;
+export function bpaRule(id: string, ...args: [ModelCheck] | [BpaRuleSpec, ModelCheck]): Rule {
+  const [{ skipWhenModelUnread }, check] = args.length === 1 ? [{}, args[0]] : args;
   const meta = metaOf(id);
   return {
     id,
@@ -72,6 +84,7 @@ export function bpaRule(
     scope: mapScope(meta.scope),
     layer: "model",
     needs: ["model"],
+    ...(skipWhenModelUnread ? { skipWhenModelUnread } : {}),
     description: RULE_SUMMARIES[id] ?? stripCategory(meta.name),
     fixExpression: meta.fixExpression,
     references: extractUrls(meta.description),

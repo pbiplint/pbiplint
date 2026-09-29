@@ -12,6 +12,7 @@ import {
   isBlank,
   isDirectQueryTable,
   isNumericType,
+  modelPartlyRead,
   tablesInScope,
 } from "../helpers.js";
 import { bpaRule } from "./define.js";
@@ -19,8 +20,12 @@ import { bpaRule } from "./define.js";
 const hasDateTimeKey = (t: Table): boolean =>
   t.columns.some((c) => c.isKey && dataType(c) === "datetime");
 
-export const MODEL_SHOULD_HAVE_A_DATE_TABLE = bpaRule("MODEL_SHOULD_HAVE_A_DATE_TABLE", (m) =>
-  m.tables.some((t) => t.dataCategory === "Time" && hasDateTimeKey(t)) ? [] : [finding.model(m)],
+// A model file pbiplint could not fully read may hold the date table.
+export const MODEL_SHOULD_HAVE_A_DATE_TABLE = bpaRule(
+  "MODEL_SHOULD_HAVE_A_DATE_TABLE",
+  { skipWhenModelUnread: modelPartlyRead },
+  (m) =>
+    m.tables.some((t) => t.dataCategory === "Time" && hasDateTimeKey(t)) ? [] : [finding.model(m)],
 );
 
 export const DATE_CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE = bpaRule(
@@ -102,8 +107,10 @@ export const MINIMIZE_POWER_QUERY_TRANSFORMATIONS = bpaRule(
       .map(finding.partition),
 );
 
+// A model file pbiplint could not fully read may hold the aggregation table.
 export const MODEL_USING_DIRECT_QUERY_AND_NO_AGGREGATIONS = bpaRule(
   "MODEL_USING_DIRECT_QUERY_AND_NO_AGGREGATIONS",
+  { skipWhenModelUnread: modelPartlyRead },
   (m) =>
     m.tables.some(isDirectQueryTable) &&
     !allColumns(m).some((c) => c.hasAlternateOf) &&

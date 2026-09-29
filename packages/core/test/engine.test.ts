@@ -1154,7 +1154,7 @@ describe("lint over a project", () => {
       // Without the skip, Base would read as reached by nothing, which is false.
       expect(r.findings.filter((f) => f.ruleId === "NOT_REACHED_FROM_REPORT")).toEqual([]);
       expect(r.summary.rulesSkipped).toContainEqual(skipped);
-      expect(skippedLine(r)).toContain("1 rule skipped (a model file could not be fully read)");
+      expect(skippedLine(r)).toContain("12 rules skipped (a model file could not be fully read)");
       expect(modelFact(r)).toEqual({
         layer: "model",
         label: "Model",
@@ -1178,15 +1178,34 @@ describe("lint over a project", () => {
         reason: "reportFileUnread",
       });
       expect(r.summary.rulesSkipped).not.toContainEqual(skipped);
-      expect(skippedLine(r)).not.toContain("a model file could not be fully read");
+      // The rule is counted once, under the report's reason; the model's stops only the rules whose
+      // finding says something is missing from the whole model (#128).
+      expect(skippedLine(r)).toContain(
+        "1 rule skipped (a report file could not be read), 11 rules skipped (a model file could not be fully read)",
+      );
       expect(modelFact(r)?.detail).toBe(
         "not reached from this report: unknown, a report file could not be read",
       );
     });
-    it("is the only rule a partly read model stops", () => {
+    it("is stopped by a partly read model, as is every rule whose finding says something is missing from the whole model (#128)", () => {
       expect(
         defaultRules.filter((r) => r.skipWhenModelUnread).map((r) => [r.id, r.skipWhenModelUnread]),
-      ).toEqual([["NOT_REACHED_FROM_REPORT", modelPartlyRead]]);
+      ).toEqual(
+        [
+          "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS",
+          "MODEL_SHOULD_HAVE_A_DATE_TABLE",
+          "AVOID_EXCESSIVE_BI-DIRECTIONAL_OR_MANY-TO-MANY_RELATIONSHIPS",
+          "MODEL_USING_DIRECT_QUERY_AND_NO_AGGREGATIONS",
+          "REMOVE_REDUNDANT_COLUMNS_IN_RELATED_TABLES",
+          "DAX_COLUMNS_FULLY_QUALIFIED",
+          "INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED",
+          "UNNECESSARY_COLUMNS",
+          "UNNECESSARY_MEASURES",
+          "REMOVE_DATA_SOURCES_NOT_REFERENCED_BY_ANY_PARTITIONS",
+          "ENSURE_TABLES_HAVE_RELATIONSHIPS",
+          "NOT_REACHED_FROM_REPORT",
+        ].map((id) => [id, modelPartlyRead]),
+      );
     });
   });
   describe("what the input reader could not read (the unreadPaths option)", () => {
@@ -1228,6 +1247,9 @@ describe("lint over a project", () => {
     const modelRules = new Set(defaultRules.filter((r) => r.layer === "model").map((r) => r.id));
     const modelRuleFindings = (r: ReturnType<typeof lint>) =>
       r.findings.filter((f) => modelRules.has(f.ruleId));
+    const stoppedByModel = new Set(
+      defaultRules.filter((r) => r.skipWhenModelUnread).map((r) => r.id),
+    );
 
     it("reads a model file it could not read as one it could not fully read, with no PARSE_ISSUE", () => {
       expect(details(lint(files), "BROKEN_FIELD_REFERENCE")).toEqual([
@@ -1253,8 +1275,11 @@ describe("lint over a project", () => {
         expect(fact(r, "Model")?.detail, path).toBe(
           "not reached from this report: unknown, a model file could not be fully read",
         );
-        // The model rules read the model as they would with a parse issue in it: as it was read.
-        expect(modelRuleFindings(r), path).toEqual(modelRuleFindings(lint(files)));
+        // The model rules read the model as they would with a parse issue in it: as it was read,
+        // but for those whose finding says something is missing from the whole model (#128).
+        expect(modelRuleFindings(r), path).toEqual(
+          modelRuleFindings(lint(files)).filter((f) => !stoppedByModel.has(f.ruleId)),
+        );
         expect(modelRuleFindings(r).length, path).toBeGreaterThan(0);
       }
       // A model path that is not a .tmdl file is read as a folder, the model's .platform passed

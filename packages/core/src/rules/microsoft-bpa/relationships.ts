@@ -7,6 +7,7 @@ import {
   dataType,
   escapeRegExp,
   finding,
+  modelPartlyRead,
   tablesInScope,
 } from "../helpers.js";
 import type { RuleContext } from "../types.js";
@@ -60,8 +61,10 @@ export const MARK_PRIMARY_KEYS = bpaRule(
       .map(finding.column),
 );
 
+// A model file pbiplint could not fully read may hold the column's relationship.
 export const REMOVE_REDUNDANT_COLUMNS_IN_RELATED_TABLES = bpaRule(
   "REMOVE_REDUNDANT_COLUMNS_IN_RELATED_TABLES",
+  { skipWhenModelUnread: modelPartlyRead },
   (m, { indexes: { relationships } }: RuleContext) => {
     const all = allColumns(m);
     return all
@@ -90,8 +93,10 @@ export const SNOWFLAKE_SCHEMA_ARCHITECTURE = bpaRule(
       .map(finding.table),
 );
 
+// A model file pbiplint could not fully read may hold the table's relationship.
 export const ENSURE_TABLES_HAVE_RELATIONSHIPS = bpaRule(
   "ENSURE_TABLES_HAVE_RELATIONSHIPS",
+  { skipWhenModelUnread: modelPartlyRead },
   (m, { indexes: { relationships } }: RuleContext) =>
     tablesInScope(m)
       .filter((t) => relationships.forTable(t.name).length === 0)
@@ -128,9 +133,11 @@ export const RELATIONSHIP_COLUMNS_SAME_DATA_TYPE = bpaRule(
 // The source builds its regex from raw names; names are escaped here so a table called "Date (Order)"
 // cannot break the pattern. Argument order matters: USERELATIONSHIP(to, from) does not count, as in the source.
 // A user-defined function's body is read too, which the source does not do: a documented deviation,
-// the fix microsoft/Analysis-Services#359 proposes.
+// the fix microsoft/Analysis-Services#359 proposes. A model file pbiplint could not fully read may
+// hold the USERELATIONSHIP call.
 export const INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED = bpaRule(
   "INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED",
+  { skipWhenModelUnread: modelPartlyRead },
   (m) => {
     const expressions = [
       ...allMeasures(m).map((x) => x.expression),
@@ -150,9 +157,12 @@ export const INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED = bpaRule(
   },
 );
 
-// A relationship that is both bi-directional and many-to-many counts twice, as in the source.
+// A relationship that is both bi-directional and many-to-many counts twice, as in the source. The
+// share is of every relationship in the model, and a model file pbiplint could not fully read may
+// hold some.
 export const AVOID_EXCESSIVE_BIDIRECTIONAL_OR_MANY_TO_MANY_RELATIONSHIPS = bpaRule(
   "AVOID_EXCESSIVE_BI-DIRECTIONAL_OR_MANY-TO-MANY_RELATIONSHIPS",
+  { skipWhenModelUnread: modelPartlyRead },
   (m) => {
     const rels = m.relationships;
     const count = rels.filter(isBidirectional).length + rels.filter(isManyToMany).length;

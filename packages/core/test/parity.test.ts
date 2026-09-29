@@ -7,13 +7,13 @@ import { readModelFiles } from "./helpers.js";
 /**
  * A fixture's model findings: `findings` is Tabular Editor's output, the oracle for the ported
  * rules, and `ours` holds pbiplint's side of each deviation, a difference `deviations` says is on
- * purpose.
+ * purpose. A rule whose fixture shows two deviations at once names each in a sentence of its own.
  */
 interface Expectation {
   name: string;
   fixture: string;
   skipRules?: Record<string, string>;
-  deviations?: Record<string, string>;
+  deviations?: Record<string, string | string[]>;
   ours?: Record<string, string[]>;
   findings: Record<string, string[]>;
 }

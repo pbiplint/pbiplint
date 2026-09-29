@@ -374,6 +374,61 @@ relationship r1
     expect(u.columns.map((c) => `${c.table.name}.${c.name}`)).toEqual(["Sales.OrderDate"]);
     expect(u.tables).toEqual([]);
   });
+  it("treats a composite model's copy of an auto date/time table as it treats Desktop's own", () => {
+    // A composite model reads the auto date/time tables of the model it extends through
+    // DirectQuery, as a LocalDateTable_ table with an entity partition, and keeps the relationship
+    // from the date column: the shape Desktop saves, trimmed.
+    const COPY = "LocalDateTable_63ede8f2-687c-4f56-ba1b-5283d456d7f9";
+    const composite = modelFrom(`table Sales
+	column Amount
+		dataType: decimal
+	column OrderDate
+		dataType: dateTime
+
+		variation Variation
+			isDefault
+			relationship: r1
+			defaultHierarchy: ${COPY}.'Date Hierarchy'
+
+table ${COPY}
+	showAsVariationsOnly
+
+	column Date
+		dataType: dateTime
+		isHidden
+		sourceColumn: Date
+
+	column Year
+		dataType: int64
+		isHidden
+		sourceColumn: Year
+
+	hierarchy 'Date Hierarchy'
+
+		level Year
+			column: Year
+
+	partition ${COPY} = entity
+		mode: directQuery
+		source
+			entityName: ${COPY}
+			expressionSource: 'DirectQuery to AS - Sales'
+
+relationship r1
+	joinOnDateBehavior: datePartOnly
+	fromColumn: Sales.OrderDate
+	toColumn: ${COPY}.Date
+`);
+    const { report } = buildReport(visualBinding(column("Sales", "Amount")));
+    const reach = buildIndexes({ model: composite, report }).reachability!;
+    const at = (t: string, c: string) =>
+      composite.tables.find((x) => x.name === t)!.columns.find((x) => x.name === c)!;
+    expect(reach.reached(at("Sales", "OrderDate"))).toBe(false);
+    expect(reach.reached(at(COPY, "Date"))).toBe(false);
+    const u = reach.unreached();
+    expect(u.columns.map((c) => `${c.table.name}.${c.name}`)).toEqual(["Sales.OrderDate"]);
+    expect(u.tables).toEqual([]);
+  });
   it("roots nothing through a reference to the report's extension while reportExtensions.json cannot be read", () => {
     const inExtension = {
       Measure: {

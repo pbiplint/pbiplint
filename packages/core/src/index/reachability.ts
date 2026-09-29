@@ -1,4 +1,4 @@
-import { columnRef, isAutoDateTable, measureRef, tableRef } from "../model/names.js";
+import { columnRef, isHiddenAutoDateTable, measureRef, tableRef } from "../model/names.js";
 import type { Column, DaxFunction, Level, Measure, Model, Table } from "../model/types.js";
 import type { ReferenceIndex, RefOwner } from "./references.js";
 import type { ReportReferenceIndex } from "./report-refs.js";
@@ -11,8 +11,9 @@ export interface ReachabilityIndex {
   pathTo(object: Node): string[];
   /**
    * Unreached objects in model order; a table is listed when every column and measure on it is
-   * unreached. Desktop's auto date/time tables are left out whether reached or not: Desktop
-   * manages them, so there is nothing to delete, and REMOVE_AUTO-DATE_TABLE reports them.
+   * unreached. Desktop's auto date/time tables, and a composite model's copies of them, are left
+   * out whether reached or not: Desktop manages them, so there is nothing to delete, and
+   * REMOVE_AUTO-DATE_TABLE reports the calculated ones in the model that holds them.
    * `reached` and `pathTo` still answer truthfully for their columns.
    */
   unreached(): { tables: Table[]; columns: Column[]; measures: Measure[] };
@@ -99,11 +100,12 @@ export function buildReachabilityIndex(
     if ("variationOf" in res) reach(res.variationOf, null);
   }
   for (const c of reportRefs.functionCalls) for (const f of c.calls) reach(f, null);
-  // A relationship to one of Desktop's auto date/time tables is Desktop's, added for the date
-  // column's hierarchy, not a use of the date column, so it roots neither end.
+  // A relationship to one of Desktop's auto date/time tables, or a composite model's copy of one,
+  // is Desktop's, added for the date column's hierarchy, not a use of the date column, so it roots
+  // neither end.
   const autoDate = (table: string): boolean => {
     const t = tables.get(table.toLowerCase());
-    return t !== undefined && isAutoDateTable(t);
+    return t !== undefined && isHiddenAutoDateTable(t);
   };
   for (const rel of model.relationships) {
     if (autoDate(rel.fromTable) || autoDate(rel.toTable)) continue;
@@ -192,7 +194,7 @@ export function buildReachabilityIndex(
       return path;
     },
     unreached: () => {
-      const listed = model.tables.filter((t) => !isAutoDateTable(t));
+      const listed = model.tables.filter((t) => !isHiddenAutoDateTable(t));
       const columns = listed.flatMap((t) => t.columns.filter((c) => !parent.has(c)));
       const measures = listed.flatMap((t) => t.measures.filter((m) => !parent.has(m)));
       const tables = listed.filter(

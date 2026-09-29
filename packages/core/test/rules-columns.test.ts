@@ -142,6 +142,32 @@ function 'T.Uncalled' = () => MAX ( [Shared] ) + SUM ( 'T'[Qualified] )
 `;
     expect(objectNames(rules.UNNECESSARY_COLUMNS, m)).toEqual(["'T'[Unused]"]);
   });
+  it("UNNECESSARY_COLUMNS counts a field parameter's Fields column, which its display column groups by", () => {
+    const m = `table Param
+	column Param
+		dataType: string
+		sourceColumn: [Value1]
+		sortByColumn: 'Param Order'
+		relatedColumnDetails
+			groupByColumn: 'Param Fields'
+	column 'Param Fields'
+		dataType: string
+		isHidden
+		sourceColumn: [Value2]
+		sortByColumn: 'Param Order'
+	column 'Param Order'
+		dataType: int64
+		isHidden
+		sourceColumn: [Value3]
+	column Unused
+		dataType: int64
+		isHidden
+	partition Param = calculated
+		mode: import
+		source = {("A", NAMEOF('Other'[A]), 0)}
+`;
+    expect(objectNames(rules.UNNECESSARY_COLUMNS, m)).toEqual(["'Param'[Unused]"]);
+  });
   it("HIDE_FACT_TABLE_COLUMNS matches aggregations over qualified references only", () => {
     const m = col(
       "\tcolumn Amount\n\t\tdataType: decimal\n\tcolumn Qty\n\t\tdataType: int64\n\tcolumn Name\n\t\tdataType: string\n\tmeasure A = SUM ( 'T'[Amount] )\n\tmeasure B = sum(T[Qty]) + COUNTA('T'[Name])\n\tmeasure C = SUMX(T, [Amount])",

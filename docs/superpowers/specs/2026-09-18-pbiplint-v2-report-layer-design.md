@@ -870,6 +870,12 @@ measure named directly in a filter was unreached while one named in a
 function the filter calls was reached. Object-level security names
 columns and tables only, so its roots are unchanged.
 
+Amended 2026-09-29 (issue #84, ruled with Michael on September 27,
+2026): a relationship to a composite model's copy of an auto date/time
+table roots neither of its columns either, as one to Desktop's own
+table does, and the walk's unreached list leaves the copies out
+(section 8.2 describes the copy).
+
 **Facts.** Structured list, `{ layer, label, value, detail?, ruleId? }`:
 
 | Label | Value | Rule id when it applies |
@@ -882,7 +888,7 @@ columns and tables only, so its roots are unchanged.
 | Slicers | count of the catalog slicers; saved selections, those on custom slicers named; saved search terms (amended 2026-09-25 with Michael); unknown in place of none while a visual.json could not be read (amended 2026-09-24 with Michael) | `SLICER_SELECTION_SAVED`, `SLICER_SEARCH_SAVED` |
 | Mobile layouts | pages with one, counted by the mobile.json files read in their folders, of total; unknown in place of none while a mobile.json, or the page of one, could not be read (amended 2026-09-24 with Michael) | |
 | Schema versions | report, page, visual (highest seen) | |
-| Model | tables, columns, measures, leaving out Desktop's hidden auto date/time tables (amended 2026-09-25 with Michael), each unknown in place of 0 while a model file could not be fully read (amended 2026-09-25 with Michael); user-defined functions, shown only when the model has one (amended 2026-09-28, issue #114); with both parts, columns and measures not reached from this report | `NOT_REACHED_FROM_REPORT` |
+| Model | tables, columns, measures, leaving out Desktop's hidden auto date/time tables (amended 2026-09-25 with Michael) and a composite model's copies of them (amended 2026-09-29, issue #84), each unknown in place of 0 while a model file could not be fully read (amended 2026-09-25 with Michael); user-defined functions, shown only when the model has one (amended 2026-09-28, issue #114); with both parts, columns and measures not reached from this report | `NOT_REACHED_FROM_REPORT` |
 
 Amended 2026-09-20: the facts are built only when the report layer is
 present, so a model-only run produces none and no surface shows the
@@ -1021,8 +1027,8 @@ fact's table, column, and measure counts leave out Power BI Desktop's
 auto date/time tables (calculated tables whose names start with
 `LocalDateTable_` or `DateTableTemplate_`, as `NOT_REACHED_FROM_REPORT`
 and `REMOVE_AUTO-DATE_TABLE` recognise them) and their columns.
-Microsoft Learn's "Auto date/time in Power BI Desktop" says Desktop
-keeps those tables hidden, even from modelers, so the fact counts the
+Microsoft Learn's ["Auto date/time in Power BI Desktop"](https://learn.microsoft.com/power-bi/transform-model/desktop-auto-date-time#how-it-works)
+says Desktop keeps those tables hidden, even from modelers, so the fact counts the
 tables Desktop shows, and its not-reached clause already left them
 out.
 
@@ -1137,6 +1143,15 @@ the pane under a policy either. The fact still links no rule without a
 policy (the #86 note above), and an unknown pane gives no hint, since
 no policy would have it checked. The sample sets a policy, so its
 facts do not move. The rule's page says the same under What it checks.
+
+Amended 2026-09-29 (issue #84, ruled with Michael on September 27,
+2026): the Model fact's counts also leave out a composite model's
+copies of auto date/time tables and their columns (section 8.2), which
+Desktop saves with `showAsVariationsOnly`, so a copy is shown only
+through a date column's variation. On
+NewRay99/fabric-csv-bronze-ingestion at 70ee01d, a Desktop-saved
+composite project with 25 copies, the fact read 50 tables and 460
+columns; it now reads 25 and 285, the copies left out.
 
 **Cost.** Linear in the JSON. The demo report's largest visual is
 61 KB, most under 5 KB; a 300-visual report is a few megabytes and
@@ -1437,6 +1452,42 @@ with `LocalDateTable_` or `DateTableTemplate_`, as
 relationship to one of them roots neither of its columns, which narrows
 section 6's relationship roots, so a date column the report never uses
 is reported; `REMOVE_AUTO-DATE_TABLE` covers the tables themselves.
+
+Amended 2026-09-29 (issue #84, ruled with Michael on September 27,
+2026): `NOT_REACHED_FROM_REPORT` and the Model fact also leave out a
+composite model's copies of auto date/time tables. A composite model
+on a Power BI semantic model or Analysis Services reads the auto
+date/time tables of the model it extends as `LocalDateTable_` tables
+whose `entity` partition, in DirectQuery mode, names that model's table
+of the same name. In the #104 corpus, all 123 such tables, in 9
+composite models across 5 repositories, have this shape, with
+`showAsVariationsOnly` on the table, which the
+[Tabular Object Model reference](https://learn.microsoft.com/dotnet/api/microsoft.analysisservices.tabular.table.showasvariationsonly)
+says means the table "is only shown when referenced as Variation",
+and an `expressionSource` naming the model's DirectQuery expression
+(`DirectQuery to AS - <model>`, or a localized form such as
+`DirectQuery 到 AS - <model>`); no `DateTableTemplate_` table is
+copied. Where the extended model is saved beside the composite one
+(Crux-MS/datareporting at 5d84254), 35 of the 36 copies share their
+names with its calculated auto date/time tables. A copy is not a calculated
+table, so `isAutoDateTable`, which follows `REMOVE_AUTO-DATE_TABLE`'s
+source rule, missed it. `isAutoDateTableCopy` recognizes one by its
+name and its partition, and `isHiddenAutoDateTable`, either kind,
+drives the Model fact and the reachability walk: the unreached list
+leaves a copy's columns out, and a relationship to a copy roots
+neither end. `REMOVE_AUTO-DATE_TABLE` keeps matching Tabular Editor and
+does not report a copy; the table a copy reads is calculated in the
+extended model, and a run on that model reports it. Microsoft Learn's
+["Auto date/time in Power BI Desktop"](https://learn.microsoft.com/power-bi/transform-model/desktop-auto-date-time#how-it-works)
+says Desktop's own auto date/time tables "are permanently hidden, even
+from modelers". Two
+Desktop-saved composite projects with PBIR reports show the change.
+Ajandaghian/superstore-powerbi-pbip-dashboard at ff9f43f has one copy:
+the Model fact reads 4 tables where it read 5, and the copy's one
+unreached column is no longer reported. NewRay99/fabric-csv-bronze-ingestion
+at 70ee01d has 25: 150 findings on the copies' columns go, and 24 date
+columns the report never uses are now reported, since Desktop's
+relationships to the copies no longer reach them.
 
 Amended 2026-09-24 with Michael (release triage, DQ4):
 `HIDDEN_VISUAL_WITH_FIELDS` counts a visual hidden through an ancestor
@@ -1917,6 +1968,29 @@ with six functions, the hidden objects they use, and an inactive
 relationship one activates), records the first two, on
 `UNNECESSARY_COLUMNS` and
 `INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED` (section 6).
+
+Amended 2026-09-29 (issue #84, ruled with Michael on September 27,
+2026): the third model deviation. `UNNECESSARY_COLUMNS` counts a
+column that another column in its table groups by as used, through
+the usage index's `usedInGroupBy`. A field parameter's display column
+names its hidden Fields column as its `groupByColumn` under
+`relatedColumnDetails`, and Microsoft Learn's
+[field parameters page](https://learn.microsoft.com/power-bi/create-reports/power-bi-field-parameters#edit-a-field-parameter)
+says that in a parameter's DAX, "for each field, three columns are
+provided: a name, column reference, and the order number", so deleting
+the Fields column, as the source rule's finding advises, breaks the
+parameter. The source rule does not test `groupByColumn`, so Tabular
+Editor reports the column. The sample's model shows the difference
+(`'Employee Grouping'[Employee Grouping Fields]`), so
+`messy-sales.json` records its first deviation. The UDF
+fixture, built from the same model, shows it beside its UDF deviation
+on the same rule, so a `deviations` entry may be a list, one sentence
+for each difference its fixture shows; the parity test holds the rule
+to `ours` as before, and the rule-page test holds every sentence to the
+page's Quirks. Compared with main at 5618c31, the change removes 205
+findings, all on a field parameter's Fields column, in 89 of the #104
+corpus's 109 models with a `relatedColumnDetails` block, across 46 of
+their 57 repositories, and adds none.
 
 **Native rules** have no oracle. Each is pinned two ways: a
 hand-written expectation on a fixture that fires it (the sample report

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   columnRef,
+  isAutoDateTable,
+  isAutoDateTableCopy,
+  isHiddenAutoDateTable,
   measureRef,
   relationshipName,
   ruleUrl,
@@ -43,5 +46,45 @@ describe("rule slugs", () => {
   });
   it("builds rule page URLs", () => {
     expect(ruleUrl("HIDE_FOREIGN_KEYS")).toBe("https://pbiplint.com/rules/hide-foreign-keys");
+  });
+});
+
+describe("Desktop's auto date/time tables", () => {
+  const COPY = "LocalDateTable_6d3e2a1b-4c5f-4e7a-9b8c-0d1e2f3a4b5c";
+  const table = (name: string, partition: string) =>
+    modelFrom(
+      `table ${name}\n\tshowAsVariationsOnly\n\n\tcolumn Date\n\t\tdataType: dateTime\n\t\tisHidden\n\n\tpartition ${name} = ${partition}\n`,
+    ).tables[0]!;
+  /** The partition a composite model writes for a table it reads from the model it extends. */
+  const entity = (mode: string) =>
+    `entity\n\t\tmode: ${mode}\n\t\tsource\n\t\t\tentityName: ${COPY}\n\t\t\texpressionSource: 'DirectQuery to AS - Sales'\n`;
+  const calculated = "calculated\n\t\tmode: import\n\t\tsource = CALENDARAUTO()\n";
+  it("reads a composite model's copy, a LocalDateTable_ read through DirectQuery, as one of Desktop's hidden tables", () => {
+    const copy = table(COPY, entity("directQuery"));
+    expect(isAutoDateTableCopy(copy)).toBe(true);
+    expect(isHiddenAutoDateTable(copy)).toBe(true);
+    // REMOVE_AUTO-DATE_TABLE keeps the source rule's test, which requires a calculated table.
+    expect(isAutoDateTable(copy)).toBe(false);
+  });
+  it("reads the model's own calculated tables as hidden too, and neither as a copy", () => {
+    for (const name of [COPY, "DateTableTemplate_f2afc5fc-2d0d-478c-92e8-dc0f26f32175"]) {
+      const own = table(name, calculated);
+      expect(isAutoDateTable(own)).toBe(true);
+      expect(isHiddenAutoDateTable(own)).toBe(true);
+      expect(isAutoDateTableCopy(own)).toBe(false);
+    }
+  });
+  it("reads no other table as a copy", () => {
+    // Another storage mode, another table read from a published model, and a table of Desktop's
+    // name that reads a query of its own.
+    const others = [
+      table(COPY, entity("directLake")),
+      table("Sales", entity("directQuery")),
+      table(COPY, 'm\n\t\tmode: directQuery\n\t\tsource = Sql.Database("s", "d")\n'),
+    ];
+    for (const t of others) {
+      expect(isAutoDateTableCopy(t)).toBe(false);
+      expect(isHiddenAutoDateTable(t)).toBe(false);
+    }
   });
 });

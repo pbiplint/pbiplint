@@ -42,7 +42,14 @@ describe("date table rules", () => {
       "\tpartition LocalDateTable_1 = calculated\n\t\tmode: import\n\t\tsource = CALENDARAUTO()\n",
     );
     const notCalc = t("DateTableTemplate_2", "\tcolumn Date\n\t\tdataType: dateTime\n");
-    expect(objectNames(rules.REMOVE_AUTO_DATE_TABLE, calc + notCalc)).toEqual([
+    // A composite model's copy of an extended model's auto date/time table is not calculated, so
+    // it is not reported, as the source rule does not report it.
+    const copy = t(
+      "LocalDateTable_3",
+      "\tcolumn Date\n\t\tdataType: dateTime\n",
+      "\tpartition LocalDateTable_3 = entity\n\t\tmode: directQuery\n\t\tsource\n\t\t\tentityName: LocalDateTable_3\n\t\t\texpressionSource: 'DirectQuery to AS - Sales'\n",
+    );
+    expect(objectNames(rules.REMOVE_AUTO_DATE_TABLE, calc + notCalc + copy)).toEqual([
       "'LocalDateTable_1'",
     ]);
     expect(objectNames(rules.REDUCE_USAGE_OF_CALCULATED_TABLES, calc + notCalc)).toEqual([

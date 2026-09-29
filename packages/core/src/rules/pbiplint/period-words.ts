@@ -60,13 +60,15 @@ export type NameClass = "year" | "yearKey" | "yearCount" | "month" | "quarter";
 
 /**
  * A name's words, lowercased: split at a lowercase letter followed by an uppercase one, at a
- * letter followed by a digit, and at every character that is neither a letter nor a digit.
+ * letter followed by a digit, and at every character that is neither a letter, a combining mark,
+ * nor a digit. The name is composed first (NFC), so a decomposed `Año` matches the word lists.
  */
 export function nameWords(name: string): string[] {
   return name
+    .normalize("NFC")
     .replace(/(\p{Ll})(\p{Lu})/gu, "$1 $2")
     .replace(/(\p{L})(\p{N})/gu, "$1 $2")
-    .split(/[^\p{L}\p{N}]+/u)
+    .split(/[^\p{L}\p{M}\p{N}]+/u)
     .filter((w) => w !== "")
     .map((w) => w.toLowerCase());
 }

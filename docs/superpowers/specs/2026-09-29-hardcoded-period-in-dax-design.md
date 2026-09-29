@@ -47,14 +47,14 @@ Not read: other calculated tables' DAX beyond `CALENDAR`, DAX functions, row-lev
 
 Each form below finds **periods** in one expression. A period is a year (from a whole number or a string of four digits) or a date (from `DATE()` of three whole numbers, a date string, or `dt"..."`). Every form works on tokens from the tokenizer (section 6), so text inside a string, a comment, a `'table'` name, or a `[column]` name is never read as a number.
 
-**A year** below means a four-digit whole-number token, or a string token whose trimmed text is four digits, whose value is from 1950 to 2049. Outside that range a literal is left alone: the research found `DATE(9999, 12, 31)` as an open-end sentinel, 1900 as a missing-date default, and 1899 as the serial-date epoch, and no stale period outside it. The range does not apply to a date table's end (section 4.1).
+**A year** below means a four-digit whole-number token, or a string token whose trimmed text is four digits, whose value is from 1950 to 2049. Outside that range a literal is left alone: the research found `DATE(9999, 12, 31)` as an open-end sentinel, 1900 as a missing-date default, and 1899 as the serial-date epoch, and no stale period outside it. The range does not apply to a date table's end (section 4.1). Inside the range, the `DATE()` form (section 4.2) also leaves alone the Unix epoch, `DATE(1970, 1, 1)` with all three arguments whole-number tokens: it is the base of a Unix time conversion such as `DATE(1970, 1, 1) + 'Log'[UnixTime] / 86400`, a sentinel like 9999, 1900, and 1899, and never a stale period. A date table's end is read in full even when it is that day. (Amended September 29, 2026, in Task 3's review.)
 
 ### 4.1 A date table whose `CALENDAR` ends on a fixed date
 
 For each `CALENDAR(` call in a calculated table's DAX, its second argument (the end) is resolved:
 
 - **`DATE(a, b, c)`** filling the whole argument, where each of `a`, `b`, and `c` is a whole-number token, or an identifier naming a variable whose definition is one whole-number token (so `DATE(__LastYear, 12, 31)` with `VAR __LastYear = 2023` resolves). The date is what DAX makes of it: `DATE(2025, 13, 1)` is January 1, 2026, as JavaScript's `Date.UTC` rolls a month or day over.
-- **`dt"yyyy-mm-dd"`** filling the whole argument.
+- **`dt"yyyy-mm-dd"`** filling the whole argument, naming a real day: an impossible one such as `dt"2026-02-30"` is not rolled over but left out, as a date string's is. (Amended September 29, 2026, in Task 3's review.)
 - **`DATEVALUE("...")`, `DATETIMEVALUE("...")`, or `VALUE("...")`** filling the whole argument, with one string argument that reads as a date (below).
 - **A string** filling the whole argument that reads as a date.
 - **An identifier naming a variable**: its definition is resolved by these same steps, with a guard against a variable that refers back to itself.
@@ -75,7 +75,7 @@ In measures, calculated columns, and calculation items: each `DATE(` call whose 
 Left alone:
 
 - **A date table bound**: a `DATE(` call inside an argument of `CALENDAR` or `GENERATESERIES`, directly or at any depth, as the research left them.
-- **A year that does not matter**: a `DATE(` call that is the first argument of `FORMAT`, when `FORMAT`'s second argument is one string token with no `y` or `Y` in it. This covers the locale probe `FORMAT(DATE(2000, 1, 1), "oooo")` and the month-name trick `FORMAT(DATE(2025, 'Date'[MonthNum], 1), "mmmm")`.
+- **A year that does not matter**: a `DATE(` call that is the first argument of `FORMAT`, when `FORMAT`'s second argument is one string token with no `y` or `Y` in it. This covers the locale probe `FORMAT(DATE(2000, 1, 1), "oooo")` and the month-name trick `FORMAT(DATE(2025, 'Date'[MonthNum], 1), "mmmm")`. The named date formats `General Date`, `Long Date`, `Medium Date`, and `Short Date`, compared without regard to case, show the year though their names hold no `y`, so `FORMAT(DATE(2024, 12, 31), "Long Date")` still fixes December 31, 2024. (Amended September 29, 2026, in Task 3's review.)
 
 ### 4.3 A year compared or listed with a year
 
@@ -91,7 +91,7 @@ A **year operand** is the operand next to the operator: for the left side, the o
 
 - **A column or measure name** (`[Year]`, `'Date'[Año]`, `Date[FiscalYear]`) whose name is a year name.
 - **A call to `YEAR(...)`.**
-- **A call to an aggregate or wrapper** whose parentheses hold a call to `YEAR(`, or else in which the first column or measure name that has any class below is a year name: `SELECTEDVALUE('Date'[Year])`. The functions are the research's: `SELECTEDVALUE`, `MAX`, `MIN`, `VALUES`, `DISTINCT`, `FIRSTNONBLANK`, `LASTNONBLANK`, `MAXX`, `MINX`, `LOOKUPVALUE`, `RELATED`, `CALCULATE`, `HASONEVALUE`, `SUM`, `AVERAGE`, `CONVERT`, `INT`, `VALUE`, and `FORMAT` (for `FORMAT`, a string argument of `yyyy` or `yy` also makes it a year operand).
+- **A call to an aggregate or wrapper** whose parentheses hold a call to `YEAR(`, or else in which the first column or measure name that has any class below is a year name: `SELECTEDVALUE('Date'[Year])`. The functions are the research's: `SELECTEDVALUE`, `MAX`, `MIN`, `VALUES`, `DISTINCT`, `FIRSTNONBLANK`, `LASTNONBLANK`, `MAXX`, `MINX`, `LOOKUPVALUE`, `RELATED`, `CALCULATE`, `HASONEVALUE`, `SUM`, `AVERAGE`, `CONVERT`, `INT`, `VALUE`, and `FORMAT` (for `FORMAT`, a string argument of `yyyy` or `yy` also makes it a year operand, but only when no column or measure name inside it has a class, as the research's prototype read it: `FORMAT('Date'[MonthStart], "yyyy")` is not a year operand, since its month name decides first; amended September 29, 2026, in Task 3's review).
 - **A variable**: an identifier not followed by `(` whose name is a year name (`SelectedYear`, `_anio`).
 
 Both sides are read the same way. (The prototype read `FORMAT` on the left side only; section 10 accounts for any finding this adds.)

@@ -58,6 +58,10 @@ const WRAPPERS = new Set([
 ]);
 /** The calls whose arguments are a date table's bounds, which the DATE() form leaves to 4.1. */
 const BOUNDS = new Set(["CALENDAR", "GENERATESERIES"]);
+/** Power BI's named date formats that show the year, lowercased; none has a `y` in its name. */
+const YEAR_FORMATS = new Set(["general date", "long date", "medium date", "short date"]);
+/** The Unix epoch, which `DATE(1970, 1, 1) + 'Log'[UnixTime] / 86400` builds on: never stale. */
+const UNIX_EPOCH = { year: 1970, month: 1, day: 1 };
 /** The calls that read a date from one string argument. */
 const STRING_DATES = new Set(["DATEVALUE", "DATETIMEVALUE", "VALUE"]);
 const YEAR_FIRST = /^(\d{4})([-/])(\d{1,2})\2(\d{1,2})(?:[ T]\d{1,2}:\d{2}.*)?$/;
@@ -100,8 +104,10 @@ function callGivesYear(tokens: readonly DaxToken[], open: number): boolean {
   if (o.call === undefined || !WRAPPERS.has(o.call) || o.close === undefined) return false;
   const inside = tokens.slice(open + 1, o.close);
   if (inside.some((x) => x.call === "YEAR")) return true;
-  const named = inside.find((x) => x.kind === "column" && nameClass(x.text) !== undefined);
-  if (named) return nameClass(named.text) === "year";
+  for (const x of inside) {
+    const named = x.kind === "column" ? nameClass(x.text) : undefined;
+    if (named !== undefined) return named === "year";
+  }
   return (
     o.call === "FORMAT" && inside.some((x) => x.kind === "string" && /^(?:yy|yyyy)$/i.test(x.text))
   );
@@ -133,13 +139,20 @@ function isBound(tokens: readonly DaxToken[], open: number): boolean {
   return false;
 }
 
-/** Whether the `DATE(` at `open` is FORMAT's first argument, with a format that shows no year. */
+/**
+ * Whether the `DATE(` at `open` is FORMAT's first argument, with a format that shows no year: one
+ * with no `y` in it that is not one of the named date formats, which show the year.
+ */
 function isYearFreeFormat(tokens: readonly DaxToken[], open: number): boolean {
   const date = tokens[open - 1]!;
   const p = date.parent;
   if (p === undefined || tokens[p]!.call !== "FORMAT" || date.arg !== 0) return false;
   const format = only(tokens, argumentsOf(tokens, p)[1]);
-  return format?.kind === "string" && !/y/i.test(format.text);
+  return (
+    format?.kind === "string" &&
+    !/y/i.test(format.text) &&
+    !YEAR_FORMATS.has(format.text.toLowerCase())
+  );
 }
 
 /** Whether year, month, and day name a real day, with no rolling over. */
@@ -202,18 +215,20 @@ export function expressionPeriods(expression: string): Period[] {
         const y = yearIn(x, true);
         if (y !== undefined) year(x, y);
       }
-    // DATE() with a fixed year, outside a date table's bounds and a FORMAT that shows no year.
+    // DATE() with a fixed year, outside a date table's bounds and a FORMAT that shows no year,
+    // and not the Unix epoch.
     if (t.call === "DATE" && !isBound(tokens, k) && !isYearFreeFormat(tokens, k)) {
       const [y, m, d] = argumentsOf(tokens, k).map((span) => only(tokens, span));
       const fixed = yearIn(y, false);
-      if (fixed === undefined) return;
-      if (isWhole(m) && isWhole(d))
-        found.push({
-          at: tokens[k - 1]!.start,
-          year: fixed,
-          date: daxDate(fixed, Number(m.text), Number(d.text)),
-        });
-      else year(y!, fixed);
+      if (fixed !== undefined) {
+        if (isWhole(m) && isWhole(d)) {
+          const [month, day] = [Number(m.text), Number(d.text)];
+          const epoch =
+            fixed === UNIX_EPOCH.year && month === UNIX_EPOCH.month && day === UNIX_EPOCH.day;
+          if (!epoch)
+            found.push({ at: tokens[k - 1]!.start, year: fixed, date: daxDate(fixed, month, day) });
+        } else year(y!, fixed);
+      }
     }
   });
   // Assigned: `VAR <year name> = <year>`, the year alone.
@@ -247,8 +262,9 @@ function wholeNumber(
 
 /**
  * The day a CALENDAR end fixes (spec section 4.1): DATE() of whole numbers or of variables holding
- * one, a `dt"..."` literal, DATEVALUE, DATETIMEVALUE, or VALUE of a date string, or a bare date
- * string, filling the whole argument, directly or through a variable. Anything else is not fixed.
+ * one, a `dt"..."` literal of a real day, DATEVALUE, DATETIMEVALUE, or VALUE of a date string, or
+ * a bare date string, filling the whole argument, directly or through a variable. Anything else is
+ * not fixed.
  */
 function fixedDay(
   tokens: readonly DaxToken[],
@@ -263,8 +279,10 @@ function fixedDay(
     if (first.kind === "date") {
       const m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(first.text.trim());
       if (!m) return undefined;
-      const year = Number(m[1]);
-      return { at: first.start, year, date: daxDate(year, Number(m[2]), Number(m[3])) };
+      const [year, month, day] = [Number(m[1]), Number(m[2]), Number(m[3])];
+      return isRealDay(year, month, day)
+        ? { at: first.start, year, date: { year, month, day } }
+        : undefined;
     }
     if (first.kind !== "identifier") return undefined;
     const v = variableAt(vars, first.text, span.from);

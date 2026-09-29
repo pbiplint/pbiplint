@@ -58,6 +58,10 @@ describe("year names", () => {
     for (const name of ["Amount", "Acao", "Sales", "Payment"])
       expect(nameClass(name), name).toBeUndefined();
   });
+
+  it("keeps a combining mark in its word, so a decomposed Año is still a year", () => {
+    expect(nameClass("Año")).toBe("year");
+  });
 });
 
 describe("expressionPeriods", () => {
@@ -99,6 +103,21 @@ describe("expressionPeriods", () => {
         "CALCULATE([Total], 'Date'[Date] >= DATE(2024, 1, 1), 'Date'[Date] <= DATE(2024, 12, 31))",
       ),
     ).toEqual(["2024-1-1", "2024-12-31"]);
+    expect(found("date(2024, 1, 1)")).toEqual(["2024-1-1"]);
+    expect(found("DATE(1970, 1, 2)")).toEqual(["1970-1-2"]);
+  });
+
+  it("keeps the year a rolled-over DATE() is written with", () => {
+    expect(expressionPeriods("DATE(2025, 13, 1)")[0]).toEqual({
+      at: 0,
+      year: 2025,
+      date: { year: 2026, month: 1, day: 1 },
+    });
+  });
+
+  it("reads a named date format as showing the year", () => {
+    expect(found(`FORMAT(DATE(2024, 12, 31), "Long Date")`)).toEqual(["2024-12-31"]);
+    expect(found(`FORMAT(DATE(2024, 12, 31), "short date")`)).toEqual(["2024-12-31"]);
   });
 
   it("gives each period once, where it is written, in order", () => {
@@ -132,11 +151,13 @@ describe("expressionPeriods", () => {
       "'Date'[Year] = 2025.5",
       "DATE(1900, 1, 1)",
       "DATE(9999, 12, 31)",
+      "DATE(1970, 1, 1) + 'Log'[UnixTime] / 86400",
       `FORMAT(DATE(2000, 1, 1), "oooo")`,
       `FORMAT(DATE(2025, 'Date'[MonthNum], 1), "mmmm")`,
       "DATE(Yr, 1, 1)",
       "CALENDAR(DATE(2020, 1, 1), DATE(2026, 12, 31))",
       "GENERATESERIES(DATE(2020, 1, 1), DATE(2020, 12, 31), 1)",
+      "CALENDAR(DATE(2020, 1, 1), EOMONTH(DATE(2026, 12, 1), 0))",
       `ADDCOLUMNS(CALENDAR(DATE(2020, 1, 1), TODAY()), "Year", YEAR([Date]))`,
     ])
       expect(found(dax), dax).toEqual([]);
@@ -158,6 +179,7 @@ describe("calendarEnds", () => {
     expect(
       ends(`ADDCOLUMNS(CALENDAR(DATE(2020, 1, 1), DATE(2024, 12, 31)), "Year", YEAR([Date]))`),
     ).toEqual(["2024-12-31"]);
+    expect(ends("calendar(date(2020, 1, 1), Date(2026, 12, 31))")).toEqual(["2026-12-31"]);
   });
 
   it("reads an end through variables, and says where the day is written", () => {
@@ -171,10 +193,19 @@ describe("calendarEnds", () => {
     expect(calendarEnds(viaYear).map((p) => [p.at, p.year, show(p)])).toEqual([
       [viaYear.lastIndexOf("DATE"), 2023, "2023-12-31"],
     ]);
+    for (const end of [`"2026-12-31"`, `dt"2026-12-31"`]) {
+      const dax = `VAR e = ${end} RETURN CALENDAR(DATE(2020, 1, 1), e)`;
+      expect(ends(dax), dax).toEqual(["2026-12-31"]);
+    }
   });
 
   it("quotes a date string whose day and month read either way", () => {
-    expect(ends(`CALENDAR(DATE(2020, 1, 1), "01/02/2026")`)).toEqual([`"01/02/2026"`]);
+    const ambiguous = `CALENDAR(DATE(2020, 1, 1), "01/02/2026")`;
+    expect(ends(ambiguous)).toEqual([`"01/02/2026"`]);
+    expect(calendarEnds(ambiguous)[0]).toMatchObject({
+      at: ambiguous.indexOf(`"01/02`),
+      year: 2026,
+    });
     expect(ends(`CALENDAR(DATE(2020, 1, 1), "05/05/2026")`)).toEqual(["2026-5-5"]);
   });
 
@@ -188,6 +219,7 @@ describe("calendarEnds", () => {
       "CALENDAR(DATE(2020, 1, 1), [End Date])",
       `CALENDAR(DATE(2020, 1, 1), "2026.9.11")`,
       `CALENDAR(DATE(2020, 1, 1), "31/02/2026")`,
+      `CALENDAR(DATE(2020, 1, 1), dt"2026-02-30")`,
       "CALENDARAUTO()",
       "VAR a = a RETURN CALENDAR(DATE(2020, 1, 1), a)",
       "CALENDAR(DATE(2020, 1, 1)",

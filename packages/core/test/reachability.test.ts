@@ -92,6 +92,15 @@ describe("buildReachabilityIndex", () => {
     expect(reach.reached(meas("Sales LY"))).toBe(false);
     expect(reach.reached(col("Date", "Date"))).toBe(false);
   });
+  it("walks a cycle the report reaches, reaching each measure once and stopping where it began", () => {
+    // Loop A and Loop B reference each other; binding one enqueues both, and the walk stops at
+    // the measure it has already reached.
+    const { report } = buildReport(visualBinding(measure("Sales", "Loop A")));
+    const reach = buildIndexes({ model, report }).reachability!;
+    expect([reach.reached(meas("Loop A")), reach.reached(meas("Loop B"))]).toEqual([true, true]);
+    expect(reach.pathTo(meas("Loop B"))).toEqual(["[Loop A]", "[Loop B]"]);
+    expect(reach.pathTo(meas("Loop A"))).toEqual(["[Loop A]"]);
+  });
   it("lists the unreached set with a reason that reads the dead chain top-down, and survives a cycle", () => {
     const { report } = buildReport(visualBinding(measure("Sales", "Total Sales")));
     const reach = buildIndexes({ model, report }).reachability!;

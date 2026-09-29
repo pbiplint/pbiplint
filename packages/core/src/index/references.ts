@@ -8,13 +8,16 @@ import type {
   TablePermission,
 } from "../model/types.js";
 
-export type RefOwnerKind =
-  | "measure"
-  | "calculatedColumn"
-  | "calculatedTable"
-  | "tablePermission"
-  | "calculationItem"
-  | "function";
+/** An object whose DAX the index reads, with its kind, so `object` narrows with `kind`. */
+export type DaxOwner =
+  | { kind: "measure"; object: Measure }
+  | { kind: "calculatedColumn"; object: Column }
+  | { kind: "calculatedTable"; object: Table }
+  | { kind: "tablePermission"; object: TablePermission }
+  | { kind: "calculationItem"; object: CalculationItem }
+  | { kind: "function"; object: DaxFunction };
+
+export type RefOwnerKind = DaxOwner["kind"];
 
 export interface DaxRef {
   kind: "column" | "measure" | "unresolved";
@@ -25,15 +28,13 @@ export interface DaxRef {
   qualified: boolean;
 }
 
-export interface RefOwner {
-  kind: RefOwnerKind;
-  object: Measure | Column | Table | TablePermission | CalculationItem | DaxFunction;
+export type RefOwner = DaxOwner & {
   ownerTable?: Table;
   expression: string;
   refs: DaxRef[];
   /** The model's user-defined functions the expression calls, each once, in model order. */
   calls: DaxFunction[];
-}
+};
 
 export interface ReferenceIndex {
   owners: RefOwner[];
@@ -112,6 +113,48 @@ export function functionCallReader(
   };
 }
 
+/** What a bare `[Name]` reads: a measure, the model columns it may name, or nothing. */
+export type BareName<M> =
+  { kind: "measure"; measure: M } | { kind: "columns"; columns: Column[] } | { kind: "none" };
+
+/** Where resolveBareName looks: the model's tables, a column by name on one, a measure by name. */
+export interface BareNameLookup<M> {
+  tables: readonly Table[];
+  columnOf(table: Table, name: string): Column | undefined;
+  measureNamed(name: string): M | undefined;
+}
+
+/**
+ * What a bare `[Name]` in DAX reads, by one rule for every kind of DAX, so a model measure and a
+ * report measure never read the same text two ways (#59). A measure of that name anywhere comes
+ * first. Otherwise a column: on the owner's own table, else on the first other table that has one,
+ * in model order, since a regex reader cannot tell which table a row context iterates (#108 reads
+ * that with a tokenizer). A function has no table of its own, and its caller can hand it any, so
+ * its bare name is every model column so called; Tabular Editor reports some of those columns as
+ * unused, a recorded deviation of UNNECESSARY_COLUMNS in tests/expectations/udf-sales.json. A
+ * calculation item's bare name is a measure or nothing (ground-truth item 3).
+ */
+export function resolveBareName<M>(
+  name: string,
+  owner: { kind: RefOwnerKind | "reportMeasure"; table?: Table | undefined },
+  lookup: BareNameLookup<M>,
+): BareName<M> {
+  const measure = lookup.measureNamed(name);
+  if (measure !== undefined) return { kind: "measure", measure };
+  if (owner.kind === "calculationItem") return { kind: "none" };
+  if (owner.kind === "function") {
+    const columns = lookup.tables.flatMap((t) => lookup.columnOf(t, name) ?? []);
+    return columns.length > 0 ? { kind: "columns", columns } : { kind: "none" };
+  }
+  const own = owner.table && lookup.columnOf(owner.table, name);
+  if (own) return { kind: "columns", columns: [own] };
+  for (const t of lookup.tables) {
+    const column = lookup.columnOf(t, name);
+    if (column) return { kind: "columns", columns: [column] };
+  }
+  return { kind: "none" };
+}
+
 export function buildReferenceIndex(model: Model): ReferenceIndex {
   const tables = new Map<string, Table>(model.tables.map((t) => [lower(t.name), t]));
   const columns = new Map<string, Column>();
@@ -121,6 +164,11 @@ export function buildReferenceIndex(model: Model): ReferenceIndex {
     for (const m of t.measures) measures.set(lower(m.name), m);
   }
   const columnOf = (t: Table, name: string): Column | undefined => columns.get(key(t.name, name));
+  const lookup: BareNameLookup<Measure> = {
+    tables: model.tables,
+    columnOf,
+    measureNamed: (name) => measures.get(lower(name)),
+  };
 
   const resolve = (
     raw: RawRef,
@@ -136,29 +184,21 @@ export function buildReferenceIndex(model: Model): ReferenceIndex {
       if (meas) return { kind: "measure", table: t.name, name: meas.name, qualified: true };
       return { kind: "unresolved", table: raw.table, name: raw.name, qualified: true };
     }
-    const meas = measures.get(lower(raw.name));
-    if (meas) return { kind: "measure", table: meas.table.name, name: meas.name, qualified: false };
-    if (ownerKind === "calculationItem")
-      return { kind: "unresolved", name: raw.name, qualified: false };
-    // A function has no table of its own, and its caller can hand it any table, so a bare name
-    // that is no measure is a use of every model column with that name. Tabular Editor reports some
-    // of those columns as unused: a recorded deviation of UNNECESSARY_COLUMNS, in
-    // tests/expectations/udf-sales.json.
-    if (ownerKind === "function") {
-      const all = model.tables.flatMap((t): DaxRef[] => {
-        const col = columnOf(t, raw.name);
-        return col ? [{ kind: "column", table: t.name, name: col.name, qualified: false }] : [];
-      });
-      return all.length > 0 ? all : { kind: "unresolved", name: raw.name, qualified: false };
-    }
-    if (ownerTable) {
-      const col = columnOf(ownerTable, raw.name);
-      if (col) return { kind: "column", table: ownerTable.name, name: col.name, qualified: false };
-    }
-    for (const t of model.tables) {
-      const col = columnOf(t, raw.name);
-      if (col) return { kind: "column", table: t.name, name: col.name, qualified: false };
-    }
+    const bare = resolveBareName(raw.name, { kind: ownerKind, table: ownerTable }, lookup);
+    if (bare.kind === "measure")
+      return {
+        kind: "measure",
+        table: bare.measure.table.name,
+        name: bare.measure.name,
+        qualified: false,
+      };
+    if (bare.kind === "columns")
+      return bare.columns.map((c) => ({
+        kind: "column",
+        table: c.table.name,
+        name: c.name,
+        qualified: false,
+      }));
     return { kind: "unresolved", name: raw.name, qualified: false };
   };
 
@@ -166,45 +206,48 @@ export function buildReferenceIndex(model: Model): ReferenceIndex {
   const owners: RefOwner[] = [];
   const byObject = new Map<object, RefOwner>();
   const add = (
-    kind: RefOwnerKind,
-    object: RefOwner["object"],
+    of: DaxOwner,
     ownerTable: Table | undefined,
     ...expressions: (string | undefined)[]
   ) => {
     const expression = expressions.filter((e): e is string => e !== undefined).join("\n");
     const owner: RefOwner = {
-      kind,
-      object,
+      ...of,
       ownerTable,
       expression,
-      refs: extractRefs(expression).flatMap((r) => resolve(r, ownerTable, kind)),
+      refs: extractRefs(expression).flatMap((r) => resolve(r, ownerTable, of.kind)),
       calls: callsIn(expression),
     };
     owners.push(owner);
-    byObject.set(object, owner);
+    byObject.set(of.object, owner);
   };
   for (const t of model.tables) {
-    for (const m of t.measures) add("measure", m, t, m.expression, m.formatStringDefinition);
+    for (const m of t.measures)
+      add({ kind: "measure", object: m }, t, m.expression, m.formatStringDefinition);
     for (const c of t.columns)
-      if (c.kind === "calculated") add("calculatedColumn", c, t, c.expression);
+      if (c.kind === "calculated") add({ kind: "calculatedColumn", object: c }, t, c.expression);
     if (t.kind === "calculated")
       add(
-        "calculatedTable",
-        t,
+        { kind: "calculatedTable", object: t },
         t,
         ...t.partitions.filter((p) => p.sourceType === "calculated").map((p) => p.source),
       );
     for (const item of t.calculationGroup?.items ?? [])
-      add("calculationItem", item, t, item.expression, item.formatStringDefinition);
+      add(
+        { kind: "calculationItem", object: item },
+        t,
+        item.expression,
+        item.formatStringDefinition,
+      );
   }
   for (const role of model.roles) {
     for (const tp of role.tablePermissions)
       if (tp.filter !== undefined)
-        add("tablePermission", tp, tables.get(lower(tp.table)), tp.filter);
+        add({ kind: "tablePermission", object: tp }, tables.get(lower(tp.table)), tp.filter);
   }
   // The whole expression, parameter list and body: a parameter's default value, `(p = [m])`, is a
   // real reference, and the list holds no other brackets.
-  for (const f of model.functions) add("function", f, undefined, f.expression);
+  for (const f of model.functions) add({ kind: "function", object: f }, undefined, f.expression);
 
   const columnRefs = new Map<string, RefOwner[]>();
   const measureRefs = new Map<string, RefOwner[]>();

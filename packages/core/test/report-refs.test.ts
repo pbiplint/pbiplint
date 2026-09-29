@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { buildReferenceIndex } from "../src/index/references.js";
 import { buildReportReferenceIndex, type Resolution } from "../src/index/report-refs.js";
 import { buildModel } from "../src/model/build.js";
 import type { Model } from "../src/model/types.js";
@@ -773,6 +774,23 @@ describe("a reference into a model file pbiplint could not fully read", () => {
     ]);
   });
 
+  it("resolves a bare name to another table's column while the model is partly read", () => {
+    // It resolves as a column on the measure's own table does. An unread file could declare a
+    // column of the name on the measure's own table or on a table earlier in model order, which
+    // the resolver would choose first, but no rule reads a report measure's references while the
+    // model is partly read (NOT_REACHED_FROM_REPORT is skipped), so the answer counts only once
+    // the model is whole.
+    const refs = indexOf(modelOf({ [SALES]: sales + spaced, [PRODUCT]: product }), [], {
+      Categories: "COUNTROWS(VALUES([Category]))",
+    }).refs.filter((r) => r.owner.kind === "reportMeasure");
+    expect(
+      refs.map((r) => [
+        r.ref.name,
+        r.resolution.kind === "column" ? r.resolution.column.table.name : r.resolution,
+      ]),
+    ).toEqual([["Category", "Product"]]);
+  });
+
   describe("through a date column's variation", () => {
     const LDT_FILE = `definition/tables/${LDT}.tmdl`;
     const datedSales = `table Sales
@@ -834,4 +852,166 @@ describe("a reference into a model file pbiplint could not fully read", () => {
       ]);
     });
   });
+});
+
+describe("a bare name in a report measure, read as a model measure reads it (#59)", () => {
+  // Each expression is written once as a model measure and once as a report measure on the same
+  // table. Both indexes resolve a bare name through one resolver, so the two lists agree, and
+  // each list is written out here by hand rather than taken from either index.
+  const cases: { on: string; dax: string; reads: string[] }[] = [
+    // An iterator over another table: the name is that table's column.
+    {
+      on: "Measures",
+      dax: "SUMX(Sales, [Qty] * [Discount])",
+      reads: ["Sales[Qty]", "Sales[Discount]"],
+    },
+    { on: "Measures", dax: "AVERAGEX(Sales, [Qty])", reads: ["Sales[Qty]"] },
+    // Row context from FILTER inside CALCULATE, and a measure beside it.
+    {
+      on: "Measures",
+      dax: 'CALCULATE([Total Qty], FILTER(Sales, [Region] = "West"))',
+      reads: ["[Total Qty]", "Sales[Region]"],
+    },
+    // A column ADDCOLUMNS names is no model column, in either.
+    {
+      on: "Measures",
+      dax: 'SUMX(ADDCOLUMNS(Sales, "Value", [Qty] * [Discount]), [Value])',
+      reads: ["Sales[Qty]", "Sales[Discount]", "?Value"],
+    },
+    {
+      on: "Measures",
+      dax: "AVERAGEX(VALUES(Product[Category]), [Total Qty])",
+      reads: ["Product[Category]", "[Total Qty]"],
+    },
+    {
+      on: "Measures",
+      dax: "VAR t = FILTER(Sales, [Qty] > 1) RETURN COUNTROWS(t)",
+      reads: ["Sales[Qty]"],
+    },
+    // Nested iterators.
+    {
+      on: "Measures",
+      dax: "SUMX(Product, SUMX(RELATEDTABLE(Sales), [Qty]))",
+      reads: ["Sales[Qty]"],
+    },
+    // The measure's own table first, then the first other table in model order: a regex reader
+    // cannot tell which table a row context iterates, which #108's tokenizer is to read.
+    { on: "Product", dax: "SUMX(Product, [Price])", reads: ["Product[Price]"] },
+    { on: "Measures", dax: "SUMX(Product, [Price])", reads: ["Sales[Price]"] },
+    // A measure of the name wins over a column of it.
+    { on: "Measures", dax: "[Category] + 0", reads: ["[Category]"] },
+    { on: "Measures", dax: "[Nowhere] + 1", reads: ["?Nowhere"] },
+  ];
+  const tmdl = (on: string) =>
+    cases.map((c, i) => (c.on === on ? `\tmeasure 'Case ${i}' = ${c.dax}\n` : "")).join("");
+  const model = modelFrom(`table Sales
+	column Qty
+		dataType: int64
+	column Price
+		dataType: decimal
+	column Discount
+		dataType: decimal
+	column Region
+		dataType: string
+	measure 'Total Qty' = SUM(Sales[Qty])
+${tmdl("Sales")}
+table Product
+	column Category
+		dataType: string
+	column Price
+		dataType: decimal
+${tmdl("Product")}
+table Measures
+	measure Category = 1
+${tmdl("Measures")}`);
+  const { report } = buildReport([
+    {
+      path: "definition/reportExtensions.json",
+      text: j({
+        entities: ["Sales", "Product", "Measures"].map((name) => ({
+          name,
+          measures: cases.flatMap((c, i) =>
+            c.on === name ? [{ name: `Report ${i}`, expression: c.dax }] : [],
+          ),
+        })),
+      }),
+    },
+  ]);
+  const modelIndex = buildReferenceIndex(model);
+  const reportIndex = buildReportReferenceIndex(report, model);
+  const modelReads = (i: number): string[] => {
+    const m = model.tables.flatMap((t) => t.measures).find((x) => x.name === `Case ${i}`)!;
+    return modelIndex
+      .refsOf(m)
+      .map((r) =>
+        r.kind === "column"
+          ? `${r.table}[${r.name}]`
+          : r.kind === "measure"
+            ? `[${r.name}]`
+            : `?${r.name}`,
+      );
+  };
+  const reportReads = (i: number): string[] =>
+    reportIndex.refs
+      .filter((r) => r.owner.kind === "reportMeasure" && r.owner.object.name === `Report ${i}`)
+      .map(({ ref, resolution: res }) =>
+        res.kind === "column"
+          ? `${res.column.table.name}[${res.column.name}]`
+          : res.kind === "measure" || res.kind === "reportMeasure"
+            ? `[${res.measure.name}]`
+            : `?${ref.name}`,
+      );
+  // What only a report measure can read: another report measure, and a table the model lacks.
+  it("reads a bare name that is another report measure as that measure", () => {
+    const { report: r } = buildReport([
+      {
+        path: "definition/reportExtensions.json",
+        text: j({
+          entities: [
+            {
+              name: "Measures",
+              measures: [
+                { name: "Units", expression: "SUMX(Sales, [Qty])" },
+                { name: "Doubled", expression: "[Units] * 2" },
+              ],
+            },
+          ],
+        }),
+      },
+    ]);
+    const doubled = buildReportReferenceIndex(r, model).refs.filter(
+      (x) => x.owner.kind === "reportMeasure" && x.owner.object.name === "Doubled",
+    );
+    expect(doubled.map((x) => [x.resolution.kind, x.ref.name])).toEqual([
+      ["reportMeasure", "Units"],
+    ]);
+  });
+  it("looks on every table for a report measure on a table the model does not have", () => {
+    const { report: r } = buildReport([
+      {
+        path: "definition/reportExtensions.json",
+        text: j({
+          entities: [
+            { name: "Elsewhere", measures: [{ name: "Units", expression: "SUMX(Sales, [Qty])" }] },
+          ],
+        }),
+      },
+    ]);
+    const refs = buildReportReferenceIndex(r, model).refs;
+    expect(
+      refs.map((x) =>
+        x.resolution.kind === "column"
+          ? `${x.resolution.column.table.name}[${x.resolution.column.name}]`
+          : x.resolution.kind,
+      ),
+    ).toEqual(["Sales[Qty]"]);
+  });
+  for (const [i, c] of cases.entries())
+    it(`reads ${c.dax} on ${c.on} the same way in both`, () => {
+      // In order: qualified references first in both indexes, then bare ones, each in text order.
+      // The reachability walk keeps the first path it finds, so the order can change which path a
+      // finding's reason names.
+      expect(modelReads(i)).toEqual(c.reads);
+      expect(reportReads(i)).toEqual(c.reads);
+    });
 });

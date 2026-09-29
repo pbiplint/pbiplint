@@ -1,12 +1,5 @@
 import type { RefOwner } from "../../index/references.js";
 import { measureRef } from "../../model/names.js";
-import type {
-  CalculationItem,
-  Column,
-  Measure,
-  Table,
-  TablePermission,
-} from "../../model/types.js";
 import { allMeasures, finding } from "../helpers.js";
 import type { RuleContext, RuleFinding } from "../types.js";
 import { bpaRule } from "./define.js";
@@ -16,22 +9,22 @@ import { bpaRule } from "./define.js";
  * tell a model column from a column of a table the caller passes in (#115), and until then no rule
  * reports on one.
  */
-type RuleOwner = RefOwner & { kind: Exclude<RefOwner["kind"], "function"> };
+type RuleOwner = Exclude<RefOwner, { kind: "function" }>;
 const isRuleOwner = (o: RefOwner): o is RuleOwner => o.kind !== "function";
 
 /** The finding shell for whichever object owns a DAX expression. */
 export function ownerFinding(o: RuleOwner): RuleFinding {
   switch (o.kind) {
     case "measure":
-      return finding.measure(o.object as Measure);
+      return finding.measure(o.object);
     case "calculatedColumn":
-      return finding.column(o.object as Column);
+      return finding.column(o.object);
     case "calculatedTable":
-      return finding.table(o.object as Table);
+      return finding.table(o.object);
     case "tablePermission":
-      return finding.tablePermission(o.object as TablePermission);
+      return finding.tablePermission(o.object);
     case "calculationItem":
-      return finding.calculationItem(o.object as CalculationItem);
+      return finding.calculationItem(o.object);
   }
 }
 

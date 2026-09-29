@@ -91,7 +91,7 @@ A **year operand** is the operand next to the operator: for the left side, the o
 
 - **A column or measure name** (`[Year]`, `'Date'[Año]`, `Date[FiscalYear]`) whose name is a year name.
 - **A call to `YEAR(...)`.**
-- **A call to an aggregate or wrapper** whose parentheses hold a call to `YEAR(`, or else in which the first column or measure name that has any class below (year, month, quarter, or key) is a year name: `SELECTEDVALUE('Date'[Year])`. The functions are the research's: `SELECTEDVALUE`, `MAX`, `MIN`, `VALUES`, `DISTINCT`, `FIRSTNONBLANK`, `LASTNONBLANK`, `MAXX`, `MINX`, `LOOKUPVALUE`, `RELATED`, `CALCULATE`, `HASONEVALUE`, `SUM`, `AVERAGE`, `CONVERT`, `INT`, `VALUE`, and `FORMAT` (for `FORMAT`, a string argument of `yyyy` or `yy` also makes it a year operand).
+- **A call to an aggregate or wrapper** whose parentheses hold a call to `YEAR(`, or else in which the first column or measure name that has any class below is a year name: `SELECTEDVALUE('Date'[Year])`. The functions are the research's: `SELECTEDVALUE`, `MAX`, `MIN`, `VALUES`, `DISTINCT`, `FIRSTNONBLANK`, `LASTNONBLANK`, `MAXX`, `MINX`, `LOOKUPVALUE`, `RELATED`, `CALCULATE`, `HASONEVALUE`, `SUM`, `AVERAGE`, `CONVERT`, `INT`, `VALUE`, and `FORMAT` (for `FORMAT`, a string argument of `yyyy` or `yy` also makes it a year operand).
 - **A variable**: an identifier not followed by `(` whose name is a year name (`SelectedYear`, `_anio`).
 
 Both sides are read the same way. (The prototype read `FORMAT` on the left side only; section 10 accounts for any finding this adds.)
@@ -101,12 +101,17 @@ A name is split into **words**: at a lowercase letter followed by an uppercase o
 - **Year words:** year, years, yr, yrs, año, años, ano, anos, anio, jahr, année, annee, anno, jaar, år, rok, vuosi, ejercicio, exercice, fy, ay, cy, ly, py, yyyy, y; and any word that starts with `year`, or ends with `year` and is longer than four letters (`fiscalyear`).
 - **Month words:** month, months, mes, mês, meses, monat, mois, mese, maand, mm, mon, mth, period, periodo, período; and any word that starts with `month`.
 - **Quarter words:** quarter, qtr, q, trimestre, quartal, kwartaal; and any word that starts with `quarter`.
-- **Key words:** key, id, yyyymm, yearmonth, ym, monthkey, datekey, periodkey, yyyymmdd, sk.
 
-A name is a **year name** when it has a year word and none of these apply:
+A name's class, in this order:
 
-- It also has a month or quarter word, or its lowercased text without spaces contains `yearmonth` or `yearqtr`: it is a key (`YearMonth`, `Year Quarter`), and year-month keys were never stale.
-- It has the word `years` and one of the words of, service, experience, at, in, since, tenure, or old: it counts years (`Years of Service`), and is not a year.
+- **A year key** when it has a year word and also a month or quarter word, or its lowercased text without spaces contains `yearmonth` or `yearqtr` (`YearMonth`, `Year Quarter`): year-month keys were never stale.
+- **A count of years** when it has a year word, the word `years`, and one of the words of, service, experience, at, in, since, tenure, or old (`Years of Service`).
+- **A year** when it has a year word. This is a **year name**, the only class that makes a year operand.
+- **A year key** when its lowercased text contains `yyyymm` or `periodkey` or `monthkey`, or, without spaces, `yearmonth`.
+- **A month** when it has a month word, and **a quarter** when it has a quarter word.
+- Otherwise none.
+
+(Amended September 29, 2026, while planning: the research's `name_class` also built a list of key words, but no class depended on it, so the list is left out.)
 
 Every word list is multilingual by default, as decided on the issue; #97's language setting is for the ported rules.
 
@@ -129,6 +134,7 @@ The name is the measure's, the column's, the calculation item's, or, for a date 
   - Joined as English lists are: `2024 and 2025`; `2024, 2025, and 2026`; with semicolons when an item holds a comma (`January 1, 2024; June 30, 2024; and December 31, 2024`).
   - At most three named; more become `and N more` (`2020, 2021, 2022, and 3 more`).
   - Examples: `fixed year 2025`, `fixed years 2024, 2025, and 2026`, `fixed dates January 1, 2024 and December 31, 2024`, `fixed periods 2025 and December 31, 2024`.
+  - A calculation item's finding already names its group in its detail, as every rule's does (`calculation group 'Time Calc'`), so the rule's detail keeps it after its own: `fixed year 2025 in calculation group 'Time Calc'` (amended September 29, 2026, while planning).
 - **Detail**, for a date table: `ends on a fixed date, December 31, 2026`. An ambiguous string is quoted as written: `ends on a fixed date, "01/02/2026"`. A table with more than one fixed end (rare) names each: `ends on fixed dates December 31, 2025 and December 31, 2026`.
 - **The rule page** carries the rest: that a fixed period can be deliberate (a baseline, a known event, a named year), and what to change to when it is not (`TODAY()`, the latest date in the data, or a parameter). A finding's detail stays short, as every other rule's does.
 
@@ -154,7 +160,7 @@ It reads:
 - **Operators**: `==`, `<>`, `<=`, `>=`, `&&`, `||`, `=`, `<`, `>`, `+`, `-`, `*`, `/`, `^`, `&`. Anything else is one character of punctuation.
 - **Unbalanced brackets** do not throw: an unmatched close has no `close` and pops nothing.
 
-**`daxVariables(tokens)`** returns each `VAR name = ...` definition: the name, lowercased, and the token range of its definition, which runs from after `=` to the next `VAR` or `RETURN` at the same depth, or to the first token at a shallower depth. A name used later resolves to the nearest definition before the use. (The prototype kept one definition per name, the last; the nearest earlier one is right for DAX's nested `VAR` blocks, and section 10 accounts for any difference.)
+**`daxVariables(tokens)`** returns each `VAR name = ...` definition: the name as written, the token range of its definition, which runs from after `=` to the next `VAR` or `RETURN` at the same depth, or to the first token at a shallower depth, and the end of its block, which is the first token after it at a shallower depth or a comma at its own depth. A name used later resolves, without regard to case, to the nearest definition before the use whose block the use is still in, as DAX scopes a variable: in `VAR y = 2024 VAR z = CALCULATE(VAR y = 2025 RETURN y) RETURN y`, the inner `y` is 2025 and the outer one 2024. (The prototype kept one definition per name, the last, and lowercased it; section 10 accounts for any difference. Amended September 29, 2026, while planning: the first version of this paragraph said the nearest earlier definition, which is wrong once a nested block has closed.)
 
 ## 7. Where an expression's text starts
 
@@ -178,6 +184,7 @@ Every value line maps one to one to a file line (blank lines inside a value are 
   - Findings: one per object; the location line in each value layout of section 7 and in a split table; each detail shape of section 5, the ambiguous string, and `and N more`; an ignore annotation.
 - **The rule page's example** runs through `rule-pages.test.ts` as every page's does.
 - **Pinned lists**: wherever tests pin the rule set or the sample's findings (`engine.test.ts`, `cli.test.ts`, the expectations under `tests/expectations/`, the site's sample counts), updated for the new rule. The sample project's only `CALENDAR` is its auto date table, so the sample should gain no finding; the plan confirms it.
+- **The sample check** (amended September 29, 2026, while planning): `report-parity.test.ts` holds that the sample fires every native rule, which assumed every native rule was a report rule; its own comment says the sample plants every report rule (the v2 spec, section 11). It narrows to native rules outside the model layer. Its quiet check, which holds every native rule on each project fixture to that fixture's `native` map, keeps covering this rule, so the rule stays silent on every project fixture unless a map lists a finding. The rule's own tests hold it silent on the model fixtures too.
 
 ## 9. The rule page
 

@@ -46,7 +46,7 @@ export const LEARN_HELP_URLS: readonly string[] = Object.freeze([
  * The name 0.2.0 exported the .pbix message's Learn URLs under, kept until 0.3.0. Learn dropped
  * the preview sections it listed on September 23, 2026, so it now gives LEARN_HELP_URLS.
  *
- * @deprecated Use LEARN_HELP_URLS.
+ * @deprecated Use LEARN_HELP_URLS. PBIP_PREVIEW_HELP_URLS will be removed in 0.3.0.
  */
 export const PBIP_PREVIEW_HELP_URLS: readonly string[] = LEARN_HELP_URLS;
 

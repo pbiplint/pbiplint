@@ -108,7 +108,7 @@ page.json or visual.json. Desktop keeps it, and its value is a list of ids or `*
 
 ## What it checks
 
-Every rule from Microsoft's Best Practice Analyzer ruleset, ported literally so the numbers match Tabular Editor. Five rules need VertiPaq statistics and are listed but not run. Each rule has a page at https://pbiplint.com/rules (source under `rules/`) with what it checks, an example that fires it and the same example fixed, why it matters, how to fix it, when ignoring it is legitimate, known quirks, and related rules.
+Every rule from Microsoft's Best Practice Analyzer ruleset, ported so the results match Tabular Editor on the same model, with five documented deviations where the source is noisier, or quieter, than it means to be; and pbiplint's own rule for a year or a date fixed in DAX, such as a measure filtered to 2025 or a date table that ends in 2026. Five of the Microsoft rules need VertiPaq statistics and are listed but not run. Each rule has a page at https://pbiplint.com/rules (source under `rules/`) with what it checks, an example that fires it and the same example fixed, why it matters, how to fix it, when ignoring it is legitimate, known quirks, and related rules.
 
 The report layer: the 11 base rules of [PBI Inspector](https://github.com/NatVanG/fab-inspector)
 by Nat Van Gulck, ported so the results match its command line on the same report, with six

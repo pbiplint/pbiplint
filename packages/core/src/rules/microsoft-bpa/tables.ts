@@ -213,6 +213,8 @@ export const CHECK_IF_DYNAMIC_ROW_LEVEL_SECURITY_IS_NECESSARY = bpaRule(
       .map(finding.tablePermission),
 );
 
+// The source builds its regex from the raw table name; the name is escaped here so a table called
+// "Date (Order)" cannot break the pattern, a documented deviation.
 export const AVOID_THE_USERELATIONSHIP_FUNCTION_AND_RLS_AGAINST_THE_SAME_TABLE = bpaRule(
   "AVOID_THE_USERELATIONSHIP_FUNCTION_AND_RLS_AGAINST_THE_SAME_TABLE",
   (m) => {

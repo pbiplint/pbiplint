@@ -193,6 +193,17 @@ describe("row-level security rules", () => {
       objectNames(rules.AVOID_THE_USERELATIONSHIP_FUNCTION_AND_RLS_AGAINST_THE_SAME_TABLE, rls),
     ).toEqual(["'Date'", "'Other'"]);
   });
+  it("AVOID_THE_USERELATIONSHIP_FUNCTION_AND_RLS_AGAINST_THE_SAME_TABLE matches a table name with parentheses literally (a deviation)", () => {
+    // The source builds its pattern from the raw name, so "(Order)" reads as a group there and
+    // Tabular Editor misses this table, while it would report one for a call naming 'Date Order'.
+    const secured = (called: string) =>
+      t("'Date (Order)'", "\tcolumn Date\n\t\tdataType: dateTime\n") +
+      t("Sales", `\tmeasure M = CALCULATE(1, USERELATIONSHIP('Sales'[D], ${called}[Date]))\n`) +
+      "role R\n\tmodelPermission: read\n\ttablePermission 'Date (Order)' = TRUE()\n";
+    const rule = rules.AVOID_THE_USERELATIONSHIP_FUNCTION_AND_RLS_AGAINST_THE_SAME_TABLE;
+    expect(objectNames(rule, secured("'Date (Order)'"))).toEqual(["'Date (Order)'"]);
+    expect(objectNames(rule, secured("'Date Order'"))).toEqual([]);
+  });
 });
 
 describe("OBJECTS_WITH_NO_DESCRIPTION", () => {

@@ -601,7 +601,7 @@ the reader knows what to lint with it: `this report reads
 the file writes it. `pairingDecision` gives it when no model beside
 the report was read, so it covers a `.Report` folder given alone, a
 report's `definition` folder given to the CLI, and a PBIP folder with
-no model folder beside the report. The wording says only that the run
+no model read beside the report. The wording says only that the run
 did not include the model: the folder the path names may be outside
 the input, not there at all, beside the report and holding no `.tmdl`
 files, or deeper in the input than the walk looks for a part. A reason
@@ -610,9 +610,12 @@ could not be read) is kept, since it says more and the path may name
 that very folder; only a published model's reason still replaces it.
 A blank path names nothing and gives no reason, as before. The path
 reaches the terminal and the page through the control-character
-display, as every absent layer's reason does. The `.pbip` route is
-unchanged: it follows the path, and says "this report reads a model
-that is not there" when nothing is.
+display, as every absent layer's reason does. The `.pbip` route
+follows the path, and says "this report reads a model that is not
+there" when nothing is, as before; a folder that is there and yields no
+model and no other reason (one holding no `.tmdl` files) now gets the
+same reason as the folder route, where it gave "no model in the
+input".
 
 ## 5. PBIR parser and report object model
 

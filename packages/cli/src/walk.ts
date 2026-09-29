@@ -350,7 +350,8 @@ function pbipIn(input: string, folder: string, preferred: string | undefined): s
 
 /**
  * Why the model layer is absent for a report read on its own: the report's own definition.pbir
- * still says whether it reads a published model, which the skipped line reports as the reason.
+ * still says whether it reads a published model, or which model it reads by path, which the
+ * skipped line reports as the reason.
  */
 function loneReportAbsent(
   report: ResolvedPart,
@@ -544,6 +545,12 @@ function readNamed(
       if (!model && !out.absent.model && isFile(join(modelFolder, "model.bim"))) {
         out.diagnostics.push(legacyModel(at(modelFolder)));
         out.absent.model = LEGACY_MODEL_REASON;
+      }
+      // A folder that is there and yields nothing else to say (one holding no .tmdl files) is
+      // named as the folder route names it: the run did not include the model the report reads.
+      if (!model && !out.absent.model) {
+        const { reason } = pairingDecision(ref, undefined, basename(reportFolder));
+        if (reason) out.absent.model = reason;
       }
     } else {
       out.absent.model = `this report reads a model that is not there (${ref.path})`;

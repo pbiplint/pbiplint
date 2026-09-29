@@ -429,6 +429,19 @@ describe("resolveProject on a .pbip that names its report (#86)", () => {
     });
     // Following the path, there is no sibling to compare with, so no mismatch.
     expect(p.diagnostics).toEqual([]);
+    // A folder that is there and holds no .tmdl files is named as the folder route names it
+    // (tracked in #88), where the skipped line said there was no model in the input.
+    mkdirSync(join(root, "Empty.SemanticModel"));
+    writeFileSync(
+      join(root, "Cost.Report", "definition.pbir"),
+      j({ datasetReference: { byPath: { path: "../Empty.SemanticModel" } } }),
+    );
+    const empty = resolveProject(join(root, "Cost.pbip"));
+    expect(empty.model).toBeUndefined();
+    expect(empty.absent).toEqual({
+      model: "this report reads ../Empty.SemanticModel, which this run did not include",
+    });
+    expect(empty.diagnostics).toEqual([]);
   });
   it("follows definition.pbir to a model outside the .pbip's folder", () => {
     const top = tempDir("outside");

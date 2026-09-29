@@ -365,7 +365,8 @@ const hasMarker = (s: Selection, path: string, kind: InputMarker["kind"]): boole
 
 /**
  * Why the model layer is absent for a report read on its own, as the CLI's loneReportAbsent: its
- * own definition.pbir still says whether it reads a published model.
+ * own definition.pbir still says whether it reads a published model, or which model it reads by
+ * path.
  */
 function loneReportAbsent(report: Part): Partial<Record<LayerName, string>> {
   const pbir = report.files.find((f) => f.path === "definition.pbir");

@@ -330,6 +330,20 @@ describe("selectProject", () => {
       }),
     );
     expect(unlistedBeside.absent).toEqual({ model: "the model folder could not be read" });
+    const cappedBeside = selectProject(
+      tree(reportOnly, {
+        modelFolders: [],
+        diagnostics: [
+          {
+            kind: "depth-cap",
+            path: "Proj/Demo.SemanticModel",
+            message:
+              "the walk stopped 64 folders deep at Proj/Demo.SemanticModel, so files below it were not read",
+          },
+        ],
+      }),
+    );
+    expect(cappedBeside.absent).toEqual({ model: "the model folder could not be read" });
     // A definition.pbir that names no model says nothing more.
     const unnamed = selectProject(
       tree(

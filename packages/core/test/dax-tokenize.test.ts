@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { daxVariables, tokenizeDax, variableAt } from "../src/dax/tokenize.js";
+import { daxVariables, isWord, tokenizeDax, variableAt } from "../src/dax/tokenize.js";
 
 const kinds = (dax: string): string[] => tokenizeDax(dax).map((t) => `${t.kind}:${t.text}`);
 
@@ -36,6 +36,7 @@ describe("tokenizeDax", () => {
       "operator:+",
       "number:3",
     ]);
+    expect(kinds("5--3\n+1")).toEqual(["number:5", "operator:+", "number:1"]);
   });
 
   it("undoes a doubled quote in a table name and a doubled bracket in a column name", () => {
@@ -64,6 +65,16 @@ describe("tokenizeDax", () => {
       "identifier:_x1",
       "punctuation:)",
     ]);
+  });
+
+  it("keeps a name with combining marks as one identifier", () => {
+    expect(kinds("VAR वर्ष = 1")).toEqual([
+      "identifier:VAR",
+      "identifier:वर्ष",
+      "operator:=",
+      "number:1",
+    ]);
+    expect(kinds("Año")).toEqual(["identifier:Año"]);
   });
 
   it("reads each operator, the longest first", () => {
@@ -161,5 +172,57 @@ describe("daxVariables", () => {
     const vars = daxVariables(tokens);
     expect(variableAt(vars, "a", 3)).toBeUndefined();
     expect(variableAt(vars, "a", 5)?.at).toBe(0);
+  });
+
+  /**
+   * For each use of `name` (one not followed by `=`), the first token of the definition it
+   * resolves to.
+   */
+  const resolved = (dax: string, name: string) => {
+    const tokens = tokenizeDax(dax);
+    const vars = daxVariables(tokens);
+    return tokens.flatMap((t, k) => {
+      if (!isWord(t, name.toUpperCase()) || tokens[k + 1]?.text === "=") return [];
+      const v = variableAt(vars, t.text, k);
+      return [v === undefined ? undefined : tokens[v.from]!.text];
+    });
+  };
+
+  it("reads a definition that is itself a VAR block without parentheses as one", () => {
+    expect(source("VAR a =\n    VAR b = 1\n    RETURN b + 1\nRETURN a")).toEqual([
+      ["a", "VAR b = 1 RETURN b + 1"],
+      ["b", "1"],
+    ]);
+    expect(source("VAR a = VAR b = 1 VAR c = 2 RETURN b + c RETURN a")).toEqual([
+      ["a", "VAR b = 1 VAR c = 2 RETURN b + c"],
+      ["b", "1"],
+      ["c", "2"],
+    ]);
+  });
+
+  it("reads VAR blocks nested three deep without parentheses", () => {
+    expect(source("VAR a = VAR b = VAR c = 1 RETURN c RETURN b RETURN a")).toEqual([
+      ["a", "VAR b = VAR c = 1 RETURN c RETURN b"],
+      ["b", "VAR c = 1 RETURN c"],
+      ["c", "1"],
+    ]);
+  });
+
+  it("ends a nested block's variables where the definition holding them ends", () => {
+    expect(resolved("VAR a = VAR b = 1 RETURN b RETURN a + b", "b")).toEqual(["1", undefined]);
+  });
+
+  it("resolves a name shadowed in a nested block without parentheses only inside that block", () => {
+    const dax =
+      "VAR EndDate = TODAY() VAR Start = VAR EndDate = DATE(2020, 1, 1) RETURN EndDate " +
+      "RETURN CALENDAR(Start, EndDate)";
+    expect(resolved(dax, "EndDate")).toEqual(["DATE", "TODAY"]);
+  });
+
+  it("ends a nested block at the comma that ends its argument", () => {
+    expect(resolved("VAR y = 1 RETURN IF(c, VAR y = 2025 RETURN y, y)", "y")).toEqual([
+      "2025",
+      "1",
+    ]);
   });
 });

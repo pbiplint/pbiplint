@@ -2,8 +2,8 @@
  * A small DAX tokenizer: enough of DAX's lexical rules to tell a number from a string, a comment,
  * or a name, and to say which call and argument each token sits in. It is a port of the one the
  * research for #104 used (`daxlex.py`), browser-pure like the rest of core, and it never throws:
- * text it cannot make out becomes punctuation, one character at a time, and a string, name, or
- * comment left open runs to the end of the text. #108 moves the reference reader onto it.
+ * text it cannot make out becomes punctuation, one UTF-16 code unit at a time, and a string, name,
+ * or comment left open runs to the end of the text. #108 moves the reference reader onto it.
  */
 
 export type DaxTokenKind =
@@ -30,7 +30,11 @@ export interface DaxToken {
   close?: number;
   /** On a closing `)` or `}`, the index of the token it closes, if it closes one. */
   open?: number;
-  /** On a `(` right after an identifier, the identifier upper-cased: the function it calls. */
+  /**
+   * On a `(` right after an identifier, that identifier upper-cased. It names the function called
+   * when the identifier is a function's name; a keyword before a `(`, such as `RETURN` or `IN`, is
+   * recorded the same way.
+   */
   call?: string;
 }
 
@@ -45,15 +49,17 @@ export interface DaxVariable {
   to: number;
   /**
    * The index of the first token outside the variable's block: the first token after the `VAR`
-   * that is shallower than it, or a comma at its own depth, which ends the argument it sits in.
+   * that is shallower than it, or a comma at its own depth, which ends the argument it sits in,
+   * and never past the end of a definition that holds the `VAR`. In
+   * `VAR a = VAR b = 1 RETURN b RETURN a`, the block of `b` ends at the second `RETURN`.
    */
   blockEnd: number;
 }
 
 const OPERATORS = ["==", "<>", "<=", ">=", "&&", "||", "=", "<", ">", "+", "-", "*", "/", "^", "&"];
 const NUMBER = /(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?/y;
-const IDENTIFIER = /[\p{L}_][\p{L}\p{N}_.]*/uy;
-const WORD_CHAR = /[\p{L}\p{N}_]/u;
+const IDENTIFIER = /[\p{L}_][\p{L}\p{M}\p{N}_.]*/uy;
+const WORD_CHAR = /[\p{L}\p{M}\p{N}_]/u;
 const DIGIT = /[0-9]/;
 
 /** Whether a token is the identifier or keyword `word`, given upper-case, in any case. */
@@ -171,8 +177,29 @@ function annotate(tokens: DaxToken[]): void {
 }
 
 /**
+ * Whether the `VAR` at `k` opens a block of its own: it directly follows a `VAR name =`, so it
+ * starts that variable's definition, or it directly follows a `RETURN`, so it starts that block's
+ * result.
+ */
+function opensBlock(tokens: readonly DaxToken[], k: number): boolean {
+  if (isWord(tokens[k - 1], "RETURN")) return true;
+  const eq = tokens[k - 1];
+  return (
+    isWord(tokens[k - 3], "VAR") &&
+    tokens[k - 2]?.kind === "identifier" &&
+    eq?.kind === "operator" &&
+    eq.text === "="
+  );
+}
+
+/**
  * Each `VAR name = definition` in the tokens. A definition runs to the next `VAR` or `RETURN` at
- * its own depth, or to the first token shallower than it.
+ * its own depth, or to the first token shallower than it. A definition can itself be a `VAR`
+ * block without parentheses (`VAR a = VAR b = 1 RETURN b + 1 RETURN a`), so the scan counts the
+ * blocks nested at the definition's depth: a `VAR` there opens one when it is the definition's
+ * first token or directly follows a nested `VAR name =` or a `RETURN`, a `RETURN` there closes
+ * one, and only a `VAR` or `RETURN` there outside every nested block ends the definition. A `VAR`
+ * inside a nested block that opens nothing is a sibling in that block.
  */
 export function daxVariables(tokens: readonly DaxToken[]): DaxVariable[] {
   const out: DaxVariable[] = [];
@@ -183,10 +210,18 @@ export function daxVariables(tokens: readonly DaxToken[]): DaxVariable[] {
     if (eq.text !== "=") return;
     const from = k + 3;
     let to = from;
+    let nested = 0;
     for (; to < tokens.length; to++) {
       const x = tokens[to]!;
       if (x.depth < t.depth) break;
-      if (x.depth === t.depth && to > from && (isWord(x, "VAR") || isWord(x, "RETURN"))) break;
+      if (x.depth !== t.depth) continue;
+      if (isWord(x, "VAR")) {
+        if (opensBlock(tokens, to)) nested++;
+        else if (nested === 0) break;
+      } else if (isWord(x, "RETURN")) {
+        if (nested === 0) break;
+        nested--;
+      }
     }
     let blockEnd = to;
     for (; blockEnd < tokens.length; blockEnd++) {
@@ -195,6 +230,10 @@ export function daxVariables(tokens: readonly DaxToken[]): DaxVariable[] {
     }
     out.push({ name: name.text, at: k, from, to, blockEnd });
   });
+  // A block nested in a definition ends where the definition does. Definitions nest, so the
+  // smallest end among those holding the `VAR` is the innermost one's.
+  for (const v of out)
+    for (const d of out) if (d.from <= v.at && v.at < d.to && d.to < v.blockEnd) v.blockEnd = d.to;
   return out;
 }
 

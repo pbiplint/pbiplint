@@ -332,8 +332,15 @@ describe("buildFacts", () => {
       detail: "the page open when it was saved; no landing page set",
       ruleId: "OPENING_PAGE_INVALID",
     });
-    // No policy is given, so FILTERS_PANE_STATE cannot fire and the pane links no rule.
-    expect(f2[1]).toEqual({ layer: "report", label: "Filters pane", value: "closed" });
+    // No policy is given, so FILTERS_PANE_STATE cannot fire: the pane links no rule and says how
+    // to have it checked.
+    expect(f2[1]).toEqual({
+      layer: "report",
+      label: "Filters pane",
+      value: "closed",
+      detail:
+        "not checked; set an expect policy for FILTERS_PANE_STATE in pbiplint.config.json to check it",
+    });
     expect(f2.find((f) => f.label === "Slicers")).toEqual({
       layer: "report",
       label: "Slicers",
@@ -360,12 +367,13 @@ describe("buildFacts", () => {
       detail: "the first page; no landing page set",
       ruleId: "LANDING_PAGE_NOT_SET",
     });
-    // No policy is given, so the pane links no rule.
+    // No policy is given, so the pane links no rule, and the hint follows the detail.
     expect(f[1]).toEqual({
       layer: "report",
       label: "Filters pane",
       value: "open",
-      detail: "read as open; report.json does not record it",
+      detail:
+        "read as open; report.json does not record it; not checked; set an expect policy for FILTERS_PANE_STATE in pbiplint.config.json to check it",
     });
     // With no report.json read, absent or unreadable, nothing says what state the pane is in.
     const pagesOnly = [
@@ -452,13 +460,26 @@ describe("buildFacts", () => {
     ];
     const closed = { layer: "report", label: "Filters pane", value: "closed" };
     const linked = { ...closed, ruleId: "FILTERS_PANE_STATE" };
-    // Without a policy the rule runs and can never fire, so the fact links nothing; another
-    // rule's options are not the pane's policy.
-    expect(pane(saved, ALL)).toEqual(closed);
-    expect(pane(saved, ALL, new Map())).toEqual(closed);
+    const hint =
+      "not checked; set an expect policy for FILTERS_PANE_STATE in pbiplint.config.json to check it";
+    const unchecked = { ...closed, detail: hint };
+    // Without a policy the rule runs and can never fire, so the fact links nothing and says how to
+    // have the pane checked (tracked in #88); another rule's options are not the pane's policy.
+    expect(pane(saved, ALL)).toEqual(unchecked);
+    expect(pane(saved, ALL, new Map())).toEqual(unchecked);
     expect(pane(saved, ALL, new Map([["TAB_ORDER_FOLLOWS_LAYOUT", { expect: "layout" }]]))).toEqual(
-      closed,
+      unchecked,
     );
+    // A pane report.json does not record keeps that detail, and the hint follows it.
+    expect(pane([{ path: "definition/report.json", text: j({}) }], ALL)).toEqual({
+      layer: "report",
+      label: "Filters pane",
+      value: "open",
+      detail: `read as open; report.json does not record it; ${hint}`,
+    });
+    // A rule that did not run, turned off in config, say, would not check the pane under a policy
+    // either, so it gives no hint.
+    expect(pane(saved, new Set())).toEqual(closed);
     // Under a policy the fact links the rule whether the saved state meets it or breaks it.
     expect(pane(saved, ALL, policy("closed"))).toEqual(linked);
     expect(pane(saved, ALL, policy("open"))).toEqual(linked);

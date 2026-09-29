@@ -1200,8 +1200,10 @@ guarding it would stop every rule that reports a table. And the table's
 description when two parts each give one: pbiplint keeps the first
 part's, so `AVOID_INVALID_DESCRIPTION_CHARACTERS` can report a
 description, as written in the file, that the missed first part would
-have put aside. The #128 note's idea of narrowing `modelPartlyRead` for
-its three relationship rules is not taken: a parse issue inside a
+have put aside. Four malformed `table` lines lose a part of a table, or
+invent one, with no parse issue at all, so neither predicate sees them;
+that is issue #135. The #128 note's idea of narrowing `modelPartlyRead`
+for its three relationship rules is not taken: a parse issue inside a
 relationship, such as its `fromColumn` indented with spaces, takes a
 property those rules read, so a narrower flag would have to count those
 issues too, for the gain of three rules on a model the user will fix

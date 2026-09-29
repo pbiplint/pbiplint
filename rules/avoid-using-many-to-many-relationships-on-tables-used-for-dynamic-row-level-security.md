@@ -113,6 +113,7 @@ The filter is the thing to look at first. This rule counts any row-level securit
 - Calculated tables are out of scope, and so are calculation groups. Only a plain table is reported, even where a calculated table carries the filter.
 - The relationship only has to touch the table. Direction is not tested, so a many-to-many relationship the security filter never travels through is reported the same as one it does.
 - A table permission with no filter expression does not count. An entry that only sets `metadataPermission` or a column permission, which is object-level security rather than row-level, leaves the table out of this rule.
+- The rule also needs every part of a table's declaration, which TMDL lets sit in more than one file (Power BI Desktop writes each table in one). While pbiplint could not open a model file or folder, or a parse issue took a line that could be a `table` line, such as a misspelt `table`, the rule reports nothing, because a part of the table in what pbiplint missed could hold a calculated partition, which makes it a calculated table, out of the rule's scope, and pbiplint does not guess what a file it could not read says. A parse issue inside a declaration, such as a property indented with spaces, does not stop the rule. The skipped line gives the reason, `a model file could not be fully read`, and a notice names what pbiplint could not open, or the file's own `PARSE_ISSUE` finding names the line.
 
 ## Related rules
 

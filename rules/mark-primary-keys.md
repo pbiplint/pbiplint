@@ -78,6 +78,7 @@ A dimension you cannot yet guarantee is unique is the case to leave alone. If th
 - A relationship that names no cardinality counts as many-to-one, which is Power BI's default, so an ordinary relationship block with only `fromColumn` and `toColumn` puts its to column in scope.
 - Inactive relationships count. A column that is only ever the one side of a relationship no measure activates is still reported.
 - The column is reported once however many relationships point at it.
+- The rule also needs every part of a table's declaration, which TMDL lets sit in more than one file (Power BI Desktop writes each table in one). While pbiplint could not open a model file or folder, or a parse issue took a line that could be a `table` line, such as a misspelt `table`, the rule reports nothing, because a part of the table in what pbiplint missed could mark the table as a date table, and pbiplint does not guess what a file it could not read says. A parse issue inside a declaration, such as a property indented with spaces, does not stop the rule. The skipped line gives the reason, `a model file could not be fully read`, and a notice names what pbiplint could not open, or the file's own `PARSE_ISSUE` finding names the line.
 
 ## Related rules
 

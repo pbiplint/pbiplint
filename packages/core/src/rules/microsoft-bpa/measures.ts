@@ -1,9 +1,10 @@
 import {
   allMeasures,
+  type ExpressionKind,
   expressionObjects,
   finding,
   isBlank,
-  type ExpressionKind,
+  tablesPartlyRead,
 } from "../helpers.js";
 import type { Measure } from "../../model/types.js";
 import type { Rule } from "../types.js";
@@ -21,8 +22,10 @@ const patternRule = (id: string, kinds: ExpressionKind[], patterns: RegExp[]): R
       .map((o) => o.finding),
   );
 
+// A part of the measure's table pbiplint could not read may hide the table.
 export const PROVIDE_FORMAT_STRING_FOR_MEASURES = bpaRule(
   "PROVIDE_FORMAT_STRING_FOR_MEASURES",
+  { skipWhenModelUnread: tablesPartlyRead },
   (m) =>
     allMeasures(m)
       .filter(

@@ -1150,6 +1150,67 @@ stops: "12 rules skipped (a model file could not be fully read)" with
 both parts, 11 on a model-only run, where `NOT_REACHED_FROM_REPORT` is
 skipped for the absent report.
 
+Amended 2026-09-29 (issue #132): the gap the #128 note leaves is
+closed. `tablesPartlyRead` in rules/helpers.ts holds while a model path
+could not be read or a parse issue can take a `table` line
+(`canDropTableLine`), since either may hold a part of any table; it
+implies `modelPartlyRead`. The parser now marks a lost line whose word
+is `table` however it is indented or written (a stray tab, tabs and
+spaces, `table: Sales`, `table = Sales`), and the first line of a file
+that has lost its own declaration's line, as well as the lines it
+marked before. The rules that report a table, or something under it,
+for what any part of the table's declaration can say declare it as
+their `skipWhenModelUnread`: whether the table is hidden
+(`NUMERIC_COLUMN_SUMMARIZE_BY`,
+`FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS`,
+`PROVIDE_FORMAT_STRING_FOR_MEASURES`), its data category
+(`MARK_PRIMARY_KEYS`), its data category, key column, or kind
+(`DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE`), its
+description or whether it is hidden (`OBJECTS_WITH_NO_DESCRIPTION`),
+its partitions
+(`PARTITION_NAME_SHOULD_MATCH_TABLE_NAME_FOR_SINGLE_PARTITION_TABLES`),
+its calculation items (`CALCULATION_GROUPS_WITH_NO_CALCULATION_ITEMS`),
+and its kind where the rule's scope leaves out calculated tables
+(`DATA_COLUMNS_MUST_HAVE_A_SOURCE_COLUMN`,
+`AVOID_USING_MANY-TO-MANY_RELATIONSHIPS_ON_TABLES_USED_FOR_DYNAMIC_ROW_LEVEL_SECURITY`,
+`OBJECTS_SHOULD_NOT_START_OR_END_WITH_A_SPACE`). A parse issue that
+cannot take a `table` line, such as a property indented with spaces,
+stops none of them.
+`MEASURES_USING_TIME_INTELLIGENCE_AND_MODEL_IS_USING_DIRECT_QUERY`
+joins the #128 list instead: a table is DirectQuery by its first
+partition, which a parse issue inside the table can take, and the
+finding is on a measure that can sit in any table and file. A later
+part's `calculationGroup` block now adds its items and fills a blank
+precedence or description, as a later part of the table does, where it
+used to replace the first part's block. `UNPIVOT_PIVOTED_(MONTH)_DATA`,
+`LIMIT_ROW_LEVEL_SECURITY_(RLS)_LOGIC`,
+`AVOID_THE_USERELATIONSHIP_FUNCTION_AND_RLS_AGAINST_THE_SAME_TABLE`,
+and `SNOWFLAKE_SCHEMA_ARCHITECTURE` also leave calculation groups out
+and keep running: each reports a calculation group read as a plain
+table only when it carries month columns, a row-level security filter
+(which Microsoft's calculation group documentation says is not
+supported), or relationships, none of which a calculation group Power
+BI Desktop builds has. Three things a missed part could change are left
+as they are. The object type on a finding: a calculated table's column
+reads as `Column` while the part holding its calculated partition is
+missed, and guarding it would stop every rule that reports a column. A
+`pbiplint.ignore` annotation on a table in the missed part, so a
+finding on that table can show though the annotation turns it off, and
+guarding it would stop every rule that reports a table. And the table's
+description when two parts each give one: pbiplint keeps the first
+part's, so `AVOID_INVALID_DESCRIPTION_CHARACTERS` can report a
+description, as written in the file, that the missed first part would
+have put aside. Four malformed `table` lines lose a part of a table, or
+invent one, with no parse issue at all, so neither predicate sees them;
+that is issue #135. The #128 note's idea of narrowing `modelPartlyRead`
+for its three relationship rules is not taken: a parse issue inside a
+relationship, such as its `fromColumn` indented with spaces, takes a
+property those rules read, so a narrower flag would have to count those
+issues too, for the gain of three rules on a model the user will fix
+and lint again. The skipped line counts both conditions' rules
+together: 24 with both parts while a model path could not be read, 23
+on a model-only run.
+
 **Object types.** `Report`, `Page`, `Visual`, `Bookmark`,
 `ReportMeasure` join `ObjectType`.
 

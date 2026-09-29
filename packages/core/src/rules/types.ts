@@ -142,10 +142,11 @@ export interface Rule {
    */
   skipWhenUnread?: (report: Report) => boolean;
   /**
-   * The model side of `skipWhenUnread`: a predicate over the model, `modelPartlyRead` in
-   * helpers.ts, that holds when the model may lack something its files declare. The engine then
-   * skips the rule with the reason `modelFileUnread`, after it has checked `skipWhenUnread`, so a
-   * rule both stop gives the report's reason.
+   * The model side of `skipWhenUnread`: a predicate over the model, `modelPartlyRead` or
+   * `tablesPartlyRead` in helpers.ts, that holds when the model may lack something its files
+   * declare, or a part of a table's declaration. The engine then skips the rule with the reason
+   * `modelFileUnread`, after it has checked `skipWhenUnread`, so a rule both stop gives the
+   * report's reason.
    */
   skipWhenModelUnread?: (model: Model) => boolean;
   /** Options the config may set for this rule; an option the rule does not declare is a ConfigError. */

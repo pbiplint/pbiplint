@@ -12,7 +12,7 @@ import { rank } from "../src/engine/rank.js";
 import { optionsFor, runRules } from "../src/engine/run.js";
 import { buildReport } from "../src/pbir/build.js";
 import { skippedLine } from "../src/format/text.js";
-import { finding, modelPartlyRead, namedObjects } from "../src/rules/helpers.js";
+import { finding, modelPartlyRead, namedObjects, tablesPartlyRead } from "../src/rules/helpers.js";
 import { PARSE_ISSUE } from "../src/rules/parse-issue.js";
 import { ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY } from "../src/rules/pbi-inspector/pages.js";
 import { REMOVE_UNUSED_CUSTOM_VISUALS } from "../src/rules/pbi-inspector/report.js";
@@ -1154,7 +1154,7 @@ describe("lint over a project", () => {
       // Without the skip, Base would read as reached by nothing, which is false.
       expect(r.findings.filter((f) => f.ruleId === "NOT_REACHED_FROM_REPORT")).toEqual([]);
       expect(r.summary.rulesSkipped).toContainEqual(skipped);
-      expect(skippedLine(r)).toContain("12 rules skipped (a model file could not be fully read)");
+      expect(skippedLine(r)).toContain("13 rules skipped (a model file could not be fully read)");
       expect(modelFact(r)).toEqual({
         layer: "model",
         label: "Model",
@@ -1181,31 +1181,43 @@ describe("lint over a project", () => {
       // The rule is counted once, under the report's reason; the model's stops only the rules whose
       // finding rests on the whole model (#128).
       expect(skippedLine(r)).toContain(
-        "1 rule skipped (a report file could not be read), 11 rules skipped (a model file could not be fully read)",
+        "1 rule skipped (a report file could not be read), 12 rules skipped (a model file could not be fully read)",
       );
       expect(modelFact(r)?.detail).toBe(
         "not reached from this report: unknown, a report file could not be read",
       );
     });
-    it("is stopped by a partly read model, as is every rule whose finding rests on the whole model (#128)", () => {
+    it("is stopped by a partly read model, as is every rule whose finding rests on the whole model (#128) or on a table's whole declaration (#132)", () => {
+      const M = modelPartlyRead;
+      const T = tablesPartlyRead;
       expect(
         defaultRules.filter((r) => r.skipWhenModelUnread).map((r) => [r.id, r.skipWhenModelUnread]),
-      ).toEqual(
-        [
-          "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS",
-          "MODEL_SHOULD_HAVE_A_DATE_TABLE",
-          "AVOID_EXCESSIVE_BI-DIRECTIONAL_OR_MANY-TO-MANY_RELATIONSHIPS",
-          "MODEL_USING_DIRECT_QUERY_AND_NO_AGGREGATIONS",
-          "REMOVE_REDUNDANT_COLUMNS_IN_RELATED_TABLES",
-          "DAX_COLUMNS_FULLY_QUALIFIED",
-          "INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED",
-          "UNNECESSARY_COLUMNS",
-          "UNNECESSARY_MEASURES",
-          "REMOVE_DATA_SOURCES_NOT_REFERENCED_BY_ANY_PARTITIONS",
-          "ENSURE_TABLES_HAVE_RELATIONSHIPS",
-          "NOT_REACHED_FROM_REPORT",
-        ].map((id) => [id, modelPartlyRead]),
-      );
+      ).toEqual([
+        ["ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS", M],
+        ["MODEL_SHOULD_HAVE_A_DATE_TABLE", M],
+        ["DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE", T],
+        ["AVOID_EXCESSIVE_BI-DIRECTIONAL_OR_MANY-TO-MANY_RELATIONSHIPS", M],
+        ["MODEL_USING_DIRECT_QUERY_AND_NO_AGGREGATIONS", M],
+        ["AVOID_USING_MANY-TO-MANY_RELATIONSHIPS_ON_TABLES_USED_FOR_DYNAMIC_ROW_LEVEL_SECURITY", T],
+        ["REMOVE_REDUNDANT_COLUMNS_IN_RELATED_TABLES", M],
+        ["MEASURES_USING_TIME_INTELLIGENCE_AND_MODEL_IS_USING_DIRECT_QUERY", M],
+        ["DAX_COLUMNS_FULLY_QUALIFIED", M],
+        ["INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED", M],
+        ["DATA_COLUMNS_MUST_HAVE_A_SOURCE_COLUMN", T],
+        ["UNNECESSARY_COLUMNS", M],
+        ["UNNECESSARY_MEASURES", M],
+        ["REMOVE_DATA_SOURCES_NOT_REFERENCED_BY_ANY_PARTITIONS", M],
+        ["ENSURE_TABLES_HAVE_RELATIONSHIPS", M],
+        ["OBJECTS_WITH_NO_DESCRIPTION", T],
+        ["CALCULATION_GROUPS_WITH_NO_CALCULATION_ITEMS", T],
+        ["PARTITION_NAME_SHOULD_MATCH_TABLE_NAME_FOR_SINGLE_PARTITION_TABLES", T],
+        ["FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS", T],
+        ["OBJECTS_SHOULD_NOT_START_OR_END_WITH_A_SPACE", T],
+        ["PROVIDE_FORMAT_STRING_FOR_MEASURES", T],
+        ["NUMERIC_COLUMN_SUMMARIZE_BY", T],
+        ["MARK_PRIMARY_KEYS", T],
+        ["NOT_REACHED_FROM_REPORT", M],
+      ]);
     });
   });
   describe("what the input reader could not read (the unreadPaths option)", () => {

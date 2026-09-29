@@ -77,6 +77,7 @@ There is none. A data column with no source column stops the whole table from lo
 - Only data columns are read. pbiplint treats a column as calculated when its declaration carries an expression, and as a calculated table column when the table's partition is a calculated one, so neither is reported here.
 - Only the presence of the property is tested, never what it names. A `sourceColumn` that names a column the query does not produce passes the rule and fails the refresh.
 - A `sourceColumn:` line with nothing after it counts as missing, the same as no line at all.
+- The rule also needs every part of a table's declaration, which TMDL lets sit in more than one file (Power BI Desktop writes each table in one). While pbiplint could not open a model file or folder, or a parse issue took a line that could be a `table` line, such as a misspelt `table`, the rule reports nothing, because a part of the table in what pbiplint missed could hold a calculated partition, which makes the column a calculated table's, with no source column of its own, and pbiplint does not guess what a file it could not read says. A parse issue inside a declaration, such as a property indented with spaces, does not stop the rule. The skipped line gives the reason, `a model file could not be fully read`, and a notice names what pbiplint could not open, or the file's own `PARSE_ISSUE` finding names the line.
 
 ## Related rules
 

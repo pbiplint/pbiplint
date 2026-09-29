@@ -68,6 +68,7 @@ The name test is a plain substring, so Updates, Candidates, and Mandates are all
 - The data category comparison is exact and case-sensitive. A file that says `dataCategory: time` does not count as marked.
 - The key has to be a DateTime column. A calendar keyed on an integer date key is reported however it is categorized.
 - Calculated tables are in scope and calculation groups are not, so a calendar built with CALENDAR is checked and a calculation group called Date Intelligence is left alone.
+- The rule also needs every part of a table's declaration, which TMDL lets sit in more than one file (Power BI Desktop writes each table in one). While pbiplint could not open a model file or folder, or a parse issue took a line that could be a `table` line, such as a misspelt `table`, the rule reports nothing, because a part of the table in what pbiplint missed could mark the table, hold its key column, or make it a calculation group, which the rule leaves out, and pbiplint does not guess what a file it could not read says. A parse issue inside a declaration, such as a property indented with spaces, does not stop the rule. The skipped line gives the reason, `a model file could not be fully read`, and a notice names what pbiplint could not open, or the file's own `PARSE_ISSUE` finding names the line.
 
 ## Related rules
 

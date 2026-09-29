@@ -62,6 +62,7 @@ A partition that the people who run the refresh already know by another name can
 ## Quirks
 
 - The condition tests tables with exactly one partition. A table with none, and a table with several, is never reported, whatever its partitions are called.
+- The rule also needs every part of a table's declaration, which TMDL lets sit in more than one file (Power BI Desktop writes each table in one). While pbiplint could not open a model file or folder, or a parse issue took a line that could be a `table` line, such as a misspelt `table`, the rule reports nothing, because a part of the table in what pbiplint missed could hold another partition, or a calculated one, and pbiplint does not guess what a file it could not read says. A parse issue inside a declaration, such as a property indented with spaces, does not stop the rule. The skipped line gives the reason, `a model file could not be fully read`, and a notice names what pbiplint could not open, or the file's own `PARSE_ISSUE` finding names the line.
 
 ## Related rules
 

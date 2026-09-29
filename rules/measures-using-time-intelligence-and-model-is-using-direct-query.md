@@ -102,6 +102,7 @@ The common false alarm is a measure that has nothing to do with the DirectQuery 
 - The names are matched anywhere in the expression, with no word boundary in front, so a measure or function whose name ends in one of them, such as `MYDATEADD(`, counts as a match. Whitespace between the name and the parenthesis is allowed.
 - The list is the source's thirty-seven functions, and it includes FIRSTNONBLANK, LASTNONBLANK, FIRSTNONBLANKVALUE, and LASTNONBLANKVALUE, which are regularly used over columns that hold no dates, so a measure with no date in it anywhere can be reported.
 - A table counts as DirectQuery when its first partition says `mode: directQuery`, letter case aside. No other mode counts, so a table set to Dual storage mode is not a DirectQuery table here, and a calculated table or a calculation group never is.
+- While a model file has a parse issue that can take a declaration out of the model, such as a line indented with spaces, or pbiplint could not open a model file or folder at all, the rule reports nothing, because a table is DirectQuery by its first partition and the partition that comes first could be in what pbiplint missed, and pbiplint does not guess what a file it could not read says. The skipped line gives the reason, `a model file could not be fully read`, and the file's own `PARSE_ISSUE` finding names it, or a notice does for a file or folder pbiplint could not open.
 
 ## Related rules
 

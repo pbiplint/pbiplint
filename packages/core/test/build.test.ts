@@ -136,6 +136,23 @@ describe("buildModel on hand-written constructs", () => {
     expect(m.tables[0]!.calculationGroup!.items).toEqual([]);
   });
 
+  it("merges a calculation group's block from each part of a table's declaration (#132)", () => {
+    // Whichever part the walk meets first, each part's items stay and the first precedence holds.
+    const block = (items: string, precedence = "") =>
+      `table CG\n\tcalculationGroup\n${precedence}\n${items}`;
+    const m = buildModel([
+      parseTmdl("tables/CG.tmdl", block("\t\tcalculationItem B = 2\n", "\t\tprecedence: 3\n")),
+      parseTmdl("tables/CG.a.tmdl", block("\t\tcalculationItem A = 1\n", "\t\tprecedence: 1\n")),
+    ]);
+    const cg = m.tables[0]!.calculationGroup!;
+    expect(cg.precedence).toBe(1);
+    expect(cg.items.map((i) => [i.name, i.table])).toEqual([
+      ["A", m.tables[0]],
+      ["B", m.tables[0]],
+    ]);
+    expect(m.tables[0]!.kind).toBe("calculationGroup");
+  });
+
   it("reads query partitions with a data source, and data sources with kinds", () => {
     const m = modelFrom(
       "model Model\n\ndataSource 'Legacy SQL' = provider\n\tconnectionString: x\n\ndataSource SQL/localhost;Sales\n\tconnectionDetails =\n\t\t\t{}\n\ntable Legacy\n\tpartition Legacy = query\n\t\tdataView: full\n\t\tsource\n\t\t\tquery = SELECT * FROM dbo.Legacy\n\t\t\tdataSource: 'Legacy SQL'\n",

@@ -22,6 +22,14 @@ const mayBeRootLine = (line: string): boolean =>
   line.trim() !== "" &&
   tabIndent(line) === 0 &&
   (!/^\s/.test(line) || splitHeader(line)?.type.toLowerCase() === "table");
+/**
+ * Whether a line's word is `table`, however it is indented and whatever follows the word: a stray
+ * tab, tabs and spaces, or `table: Sales` or `table = Sales` for `table Sales`. A model's
+ * definition declares a table nowhere but at the root (a `createOrReplace` script nests one, and
+ * pbiplint reads no script), so a lost line of that word may be a table's declaration (#132).
+ * `tablePermission` and M text such as `Table.AddColumn(` are other words.
+ */
+const namesTable = (line: string): boolean => /^table(?:[\s:=]|$)/i.test(line.trim());
 
 /** Split `<type> <name> [= expr]` on the first `=` outside single quotes. */
 function splitHeader(
@@ -146,7 +154,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
         text: raw,
         reason: "space indentation (TMDL requires tabs)",
         canDropObjects: true,
-        canDropTableLine: mayBeRootLine(raw),
+        canDropTableLine: mayBeRootLine(raw) || namesTable(raw),
       });
       i++;
       continue;
@@ -265,8 +273,9 @@ export function parseTmdl(file: string, text: string): ParsedFile {
           : isRootType(word)
             ? undefined
             : `"${word}" is not a type TMDL declares at the root of a file`;
-      // A misspelt word or a flag (`tableSales`, a lost space) may be a `table` line; a property
-      // or an expression with no name cannot be one, and the lines under it are indented.
+      // A misspelt word or a flag (`tableSales`, a lost space) may be a `table` line, as may a
+      // property or an expression with no name whose word is `table`; no other property or
+      // expression can be one, and the lines under it are indented.
       if (reason !== undefined)
         issues.push({
           file,
@@ -274,7 +283,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
           text: raw,
           reason,
           canDropObjects: true,
-          canDropTableLine: node.kind === "object" || node.kind === "flag",
+          canDropTableLine: node.kind === "object" || node.kind === "flag" || namesTable(raw),
         });
     }
 
@@ -284,7 +293,9 @@ export function parseTmdl(file: string, text: string): ParsedFile {
     }
     stack.length = indent;
     const parent = indent > 0 ? stack[indent - 1] : undefined;
-    // Skipped with everything under it, which has no parent either.
+    // Skipped with everything under it, which has no parent either. It may be a `table` line with
+    // a stray tab, or the first line of a file whose own declaration line is missing, which may be
+    // a table's; an orphan after a line the parser skipped belongs to that line, whose issue says.
     if (indent > 0 && !parent) {
       issues.push({
         file,
@@ -292,7 +303,8 @@ export function parseTmdl(file: string, text: string): ParsedFile {
         text: raw,
         reason: "orphan indentation",
         canDropObjects: true,
-        canDropTableLine: false,
+        canDropTableLine:
+          namesTable(raw) || (roots.length === 0 && !issues.some((x) => x.canDropObjects)),
       });
       i++;
       continue;

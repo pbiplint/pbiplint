@@ -196,7 +196,17 @@ function buildTable(r: TmdlNode, model: Model): void {
     else if (c.kind === "object" && c.type === "partition") t.partitions.push(buildPartition(c, t));
     else if (c.kind === "object" && c.type === "hierarchy")
       t.hierarchies.push(buildHierarchy(c, t));
-    else if (c.type === "calculationgroup") t.calculationGroup = buildCalculationGroup(c, t);
+    else if (c.type === "calculationgroup") {
+      const group = buildCalculationGroup(c, t);
+      const first = t.calculationGroup;
+      // A later part's block adds its items and fills blanks, as a later part of the table does.
+      if (first) {
+        first.precedence ??= group.precedence;
+        first.description ??= group.description;
+        Object.assign(first.annotations, group.annotations);
+        first.items.push(...group.items);
+      } else t.calculationGroup = group;
+    }
   }
 }
 

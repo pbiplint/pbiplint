@@ -63,6 +63,7 @@ A name that already says the whole thing needs nothing added: `'Date'[Year]` gai
 - A calculation group table is reported once, as a calculation group.
 - A description of only spaces or tabs counts as none, so padding a description to quiet the rule does not work.
 - Hierarchies, hierarchy levels, calculation items, partitions, roles, perspectives, data sources, and named expressions are outside the scope, so an undescribed hierarchy is never reported here.
+- The rule also needs every part of a table's declaration, which TMDL lets sit in more than one file (Power BI Desktop writes each table in one). While pbiplint could not open a model file or folder, or a parse issue took a line that could be a `table` line, such as a misspelt `table`, the rule reports nothing, because a part of the table in what pbiplint missed could describe or hide the table, and pbiplint does not guess what a file it could not read says. A parse issue inside a declaration, such as a property indented with spaces, does not stop the rule. The skipped line gives the reason, `a model file could not be fully read`, and a notice names what pbiplint could not open, or the file's own `PARSE_ISSUE` finding names the line.
 
 ## Related rules
 

@@ -9,6 +9,7 @@ import {
   finding,
   modelPartlyRead,
   tablesInScope,
+  tablesPartlyRead,
 } from "../helpers.js";
 import type { RuleContext } from "../types.js";
 import { bpaRule } from "./define.js";
@@ -43,8 +44,10 @@ export const HIDE_FOREIGN_KEYS = bpaRule(
       .map(finding.column),
 );
 
+// A part of the table pbiplint could not read may mark it as a date table.
 export const MARK_PRIMARY_KEYS = bpaRule(
   "MARK_PRIMARY_KEYS",
+  { skipWhenModelUnread: tablesPartlyRead },
   (m, { indexes: { relationships } }: RuleContext) =>
     allColumns(m)
       .filter(
@@ -170,9 +173,12 @@ export const AVOID_EXCESSIVE_BIDIRECTIONAL_OR_MANY_TO_MANY_RELATIONSHIPS = bpaRu
   },
 );
 
+// Scope is Table only, and a part of the table pbiplint could not read may hold a calculated
+// partition, which makes it a calculated table.
 export const AVOID_USING_MANY_TO_MANY_RELATIONSHIPS_ON_TABLES_USED_FOR_DYNAMIC_ROW_LEVEL_SECURITY =
   bpaRule(
     "AVOID_USING_MANY-TO-MANY_RELATIONSHIPS_ON_TABLES_USED_FOR_DYNAMIC_ROW_LEVEL_SECURITY",
+    { skipWhenModelUnread: tablesPartlyRead },
     (m, { indexes: { relationships } }: RuleContext) => {
       const permissions = allTablePermissions(m);
       return m.tables

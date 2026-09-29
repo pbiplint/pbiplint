@@ -1,4 +1,4 @@
-import { readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { lint } from "../src/engine/lint.js";
@@ -7,7 +7,7 @@ import { buildModel } from "../src/model/build.js";
 import type { Model } from "../src/model/types.js";
 import { englishList, HARDCODED_PERIOD_IN_DAX, namesYear } from "../src/rules/pbiplint/periods.js";
 import { parseTmdl } from "../src/tmdl/parse.js";
-import { modelFrom, parseModelDir } from "./helpers.js";
+import { examplesDir, fixturesDir, modelFrom, parseModelDir } from "./helpers.js";
 
 const check = (model: Model) =>
   HARDCODED_PERIOD_IN_DAX.check({ model }, { indexes: buildIndexes({ model }), options: {} });
@@ -84,6 +84,33 @@ describe("HARDCODED_PERIOD_IN_DAX", () => {
     expect(check(split).map((f) => f.location)).toEqual([
       { file: "tables/Sales more.tmdl", line: 3 },
     ]);
+  });
+
+  it("points a date table's finding at the file and line of its partition's source when the partition sits in another file", () => {
+    const model = buildModel([
+      parseTmdl(
+        "tables/Date.tmdl",
+        "table Date\n\tcolumn Date\n\t\tdataType: dateTime\n\t\tsourceColumn: [Date]\n",
+      ),
+      parseTmdl(
+        "tables/Date partition.tmdl",
+        "table Date\n\n\tpartition Date = calculated\n\t\tmode: import\n\t\tsource =\n\t\t\t\tCALENDAR(\n\t\t\t\t\tDATE(2020, 1, 1),\n\t\t\t\t\tDATE(2026, 12, 31)\n\t\t\t\t)\n",
+      ),
+    ]);
+    expect(check(model).map((f) => [f.objectName, f.location])).toEqual([
+      ["'Date'", { file: "tables/Date partition.tmdl", line: 8 }],
+    ]);
+  });
+
+  it("falls back to the object's own location when its node records no value line", () => {
+    const model = modelFrom(
+      sales("\tmeasure Stale =\n\t\t\tCALCULATE([Total],\n\t\t\t\t'Sales'[Year] = 2025)\n"),
+    );
+    const measure = model.tables[0]!.measures[0]!;
+    expect(check(model).map((f) => f.location)).toEqual([{ file: "inline.tmdl", line: 7 }]);
+    delete measure.node!.valueLine;
+    expect(check(model).map((f) => f.location)).toEqual([measure.location]);
+    expect(measure.location.line).toBe(5);
   });
 
   it("names years, days, or both in the detail", () => {
@@ -171,16 +198,17 @@ describe("HARDCODED_PERIOD_IN_DAX", () => {
   });
 
   it("finds nothing in the sample's and the fixtures' models", () => {
-    const root = new URL("../../../", import.meta.url).pathname;
     const modelDirs = (dir: string): string[] =>
       readdirSync(dir, { withFileTypes: true })
         .filter((e) => e.isDirectory())
         .flatMap((e) =>
           e.name.endsWith(".SemanticModel") ? [join(dir, e.name)] : modelDirs(join(dir, e.name)),
         );
-    const dirs = [...modelDirs(join(root, "tests/fixtures")), ...modelDirs(join(root, "examples"))];
+    const dirs = [...modelDirs(fixturesDir), ...modelDirs(examplesDir)];
     expect(dirs.length).toBeGreaterThan(5);
     for (const dir of dirs) expect(check(buildModel(parseModelDir(dir))), dir).toEqual([]);
+    const specSample = readFileSync(join(fixturesDir, "spec-sample.tmdl"), "utf8");
+    expect(check(buildModel([parseTmdl("spec-sample.tmdl", specSample)]))).toEqual([]);
   });
 });
 

@@ -111,8 +111,9 @@ const inNode = (node: TmdlNode | undefined, expression: string): Found[] =>
   expressionPeriods(expression).map((period) => ({ period, node }));
 
 /**
- * A calculated table's fixed CALENDAR ends, from each calculated partition's `source`. Desktop's
- * auto date/time tables are left out: their template ends on a fixed day by design, and
+ * A calculated table's fixed CALENDAR ends, from each calculated partition's `source`. The DAX is
+ * read from the node its line is taken from, so an offset always lies in that node's value.
+ * Desktop's auto date/time tables are left out: their template ends on a fixed day by design, and
  * REMOVE_AUTO-DATE_TABLE reports them.
  */
 function dateTableEnds(t: Table): Found[] {
@@ -121,7 +122,7 @@ function dateTableEnds(t: Table): Found[] {
     .filter((p) => p.sourceType === "calculated")
     .flatMap((p) => {
       const node = p.node?.children.find((c) => c.kind === "expr" && c.type === "source");
-      return calendarEnds(p.source ?? "").map((period) => ({ period, node }));
+      return calendarEnds(node?.value ?? p.source ?? "").map((period) => ({ period, node }));
     });
 }
 

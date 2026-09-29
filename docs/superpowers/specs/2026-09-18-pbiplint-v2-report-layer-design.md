@@ -1433,6 +1433,38 @@ fence's declaration alone, as the issue first proposed, 225 times. A
 root annotation with lines under it no longer lands in the model's
 annotations, so a lost-tab `pbiplint.ignore` there turns no rule off.
 
+Amended 2026-09-29 (issue #135): four malformed `table` lines used to
+lose a part of a table, or build a table the file does not declare,
+with no parse issue, so neither `modelPartlyRead` nor
+`tablesPartlyRead` (section 7) saw them. Each is now a `PARSE_ISSUE`
+that can take a declaration, and a `table` line (`canDropTableLine`)
+when its word is `table`. A `table` declaration under anything but a
+model is one: only the root was checked before, so a stray tab put a
+table's part under the declaration above it. A culture's translations
+nest a table under a model, and a TMDL script under `createOrReplace`,
+a model, or a database, and neither is reported. A declaration of a
+type the model reads by name (`table`, `relationship`, `role`,
+`perspective`, `cultureInfo`, `expression`, `function`, `dataSource`,
+`annotation`) written at the root with no name is one; it used to build
+an object whose name was empty. A name whose single quotes do not pair
+up, on any declaration, is one: TMDL encloses a name that holds a quote
+in single quotes, with each quote inside doubled, and a quote left open
+also swallowed the `=` after it, so a measure's expression went into
+its name. Each of the three keeps its line out of the model with the
+lines under it, in one issue on its line. An indented expression, and a
+code fence left open, end at a `table` line whose indentation does not
+begin as the block's first line's does, such as one indented with
+spaces under an expression indented with tabs, which is then a space
+indentation issue. Desktop indents an expression with the file's tabs
+and then the language's own spaces, so a line of M or DAX that starts
+with `table` stays in it. Over the 23,457 TMDL files surveyed on
+September 28, 2026, the parser gives every file the same issues and the
+same tree as before. A table declared under a root `model`, which TMDL
+allows, is still not read; that is issue #137. A column declared in two
+parts of one table stays two columns: the TMDL overview says declaring
+the same object twice across documents is an error, so Power BI does
+not load such a model.
+
 Amended 2026-09-24 with Michael (release triage, batch D, ruling H82):
 while a TMDL file has a parse issue that can take an object out of the
 model, which is any but an orphaned `///` description, a reference to a

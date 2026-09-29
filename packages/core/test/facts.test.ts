@@ -1298,9 +1298,10 @@ describe("buildFacts", () => {
         detail: "not reached from this report: unknown, a report file could not be read",
       });
     });
-    it("counts a LocalDateTable_ table that is not calculated, such as a composite model's copy with an entity partition", () => {
-      // The copy a composite model makes of a published model's auto table reads from that model,
-      // so it is not one of the tables Desktop adds to this one; the calculated pair beside it is.
+    it("counts neither a composite model's copy of an auto date/time table nor its columns", () => {
+      // A composite model reads the auto date/time tables of the model it extends as
+      // LocalDateTable_ tables with an entity partition in DirectQuery mode, which Desktop keeps
+      // hidden as it keeps its own.
       const copy = dateTable(
         "LocalDateTable_6d3e2a1b-4c5f-4e7a-9b8c-0d1e2f3a4b5c",
         "entity\n\t\tmode: directQuery\n\t\tsource\n\t\t\tentityName: LocalDateTable_6d3e2a1b-4c5f-4e7a-9b8c-0d1e2f3a4b5c\n\t\t\texpressionSource: 'DirectQuery to AS - Sales'\n",
@@ -1308,8 +1309,8 @@ describe("buildFacts", () => {
       expect(modelFact(sales + store + copy + autoPair)).toEqual({
         layer: "model",
         label: "Model",
-        value: "3 tables, 6 columns, 2 measures",
-        detail: "4 columns and 1 measure not reached from this report",
+        value: "2 tables, 4 columns, 2 measures",
+        detail: "2 columns and 1 measure not reached from this report",
         ruleId: "NOT_REACHED_FROM_REPORT",
       });
     });

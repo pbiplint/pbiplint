@@ -93,6 +93,7 @@ There is no lasting exception. These tables are not something a modeler chose, t
 ## Quirks
 
 - The table has to be a calculated table as well as carry the name. A loaded table someone called DateTableTemplate_Old is not reported.
+- A composite model's copy of an auto date/time table is not reported either: a `LocalDateTable_` table whose `entity` partition reads, in DirectQuery mode, the table of that name in the Power BI semantic model or Analysis Services model the composite model extends. The copy is not a calculated table, so the source rule leaves it out too. The table it reads is calculated in the model it extends, where this rule reports it and where Auto date/time is turned off.
 - The name test is case-sensitive and is a prefix, not a substring, so `localdatetable_1` is not reported and neither is a table whose name merely contains the prefix further in.
 - Only these two names are known. A hidden calendar built by hand, or by another tool under another name, is invisible to this rule.
 - DateTableTemplate_ is the template table Desktop keeps; LocalDateTable_ is one table per date column. Both prefixes are reported, so a model with many date columns collects a finding for each of its hidden calendars.

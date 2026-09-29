@@ -3,11 +3,29 @@ import type { Relationship, Table } from "./types.js";
 /**
  * A table Power BI Desktop manages for Auto date/time, by the names it gives them: a calculated
  * table named `LocalDateTable_<id>` (behind a date column's variation) or `DateTableTemplate_<id>`.
- * REMOVE_AUTO-DATE_TABLE reports them, and NOT_REACHED_FROM_REPORT leaves them out.
+ * REMOVE_AUTO-DATE_TABLE reports them, as its source rule does.
  */
 export const isAutoDateTable = (t: Table): boolean =>
   t.kind === "calculated" &&
   (t.name.startsWith("DateTableTemplate_") || t.name.startsWith("LocalDateTable_"));
+
+/**
+ * A composite model's copy of an auto date/time table in the model it extends through DirectQuery
+ * (a Power BI semantic model or Analysis Services): a table named `LocalDateTable_<id>` whose
+ * `entity` partition reads that model's table of the same name in DirectQuery mode. Desktop copies
+ * no `DateTableTemplate_` table. The calculated table lives in the model it extends, where
+ * REMOVE_AUTO-DATE_TABLE reports it.
+ */
+export const isAutoDateTableCopy = (t: Table): boolean =>
+  t.name.startsWith("LocalDateTable_") &&
+  t.partitions.some((p) => p.sourceType === "entity" && p.mode === "directquery");
+
+/**
+ * An auto date/time table Desktop keeps hidden, the model's own or a composite model's copy: the
+ * Model fact and NOT_REACHED_FROM_REPORT leave them out.
+ */
+export const isHiddenAutoDateTable = (t: Table): boolean =>
+  isAutoDateTable(t) || isAutoDateTableCopy(t);
 
 /** `'Name'` with embedded single quotes doubled, as DAX and Tabular Editor write table names. */
 export const tableRef = (name: string): string => `'${name.replace(/'/g, "''")}'`;

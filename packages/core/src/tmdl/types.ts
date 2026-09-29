@@ -9,6 +9,15 @@ export interface TmdlNode {
   name?: string;
   /** Property value (unquoted) for `prop`; expression text for `expr` and for `object` nodes declared with `=`. */
   value?: string;
+  /**
+   * The file line of the value's first line, on a node whose value is read after `=` (an `expr`
+   * node, or an `object` node declared with `=`): the header's own line for an inline value, the
+   * first non-blank line of an indented block, the line after the header for a code fence, closed
+   * or not. Every line of the value is a line of the file, in order (a blank line inside it is
+   * kept as an empty line), so an offset into `value` lies on this line plus the line breaks
+   * before it.
+   */
+  valueLine?: number;
   /** Child properties, flags, and expressions by lowercased key. Flags are `true`. */
   props: Record<string, string | true>;
   children: TmdlNode[];

@@ -229,6 +229,8 @@ export function parseTmdl(file: string, text: string): ParsedFile {
       continue;
     }
 
+    /** Where the value read after `=` starts; `collectBlock` and `collectFenced` move it. */
+    let valueLine = lineNo;
     // Indented multi-line expression. The first non-blank line after the header sets the block
     // indentation; the block continues while lines are blank or indented at least that much.
     const collectBlock = (): string => {
@@ -237,6 +239,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
       if (j >= lines.length) return "";
       const blockIndent = leadingWs(lines[j]!);
       if (blockIndent <= indent) return "";
+      valueLine = j + 1;
       const end = blockEnd(lines, j, lines.length, blockIndent, indent);
       i = end - 1;
       return blockText(lines, j, end, blockIndent);
@@ -245,6 +248,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
     // Fenced expression: header ends with ```; closed by a line that is only ```; that closing
     // line's leading whitespace is the left boundary stripped from every line.
     const collectFenced = (): string => {
+      valueLine = lineNo + 1;
       let j = i + 1;
       while (j < lines.length && lines[j]!.trim() !== "```" && !opensFence(lines[j]!)) j++;
       if (j < lines.length && lines[j]!.trim() === "```") {
@@ -323,8 +327,15 @@ export function parseTmdl(file: string, text: string): ParsedFile {
           h.inline === "```" ? collectFenced() : h.inline === "" ? collectBlock() : h.inline;
         node =
           h.name === undefined
-            ? { ...base, kind: "expr", type: h.type.toLowerCase(), value }
-            : { ...base, kind: "object", type: h.type.toLowerCase(), name: h.name, value };
+            ? { ...base, kind: "expr", type: h.type.toLowerCase(), value, valueLine }
+            : {
+                ...base,
+                kind: "object",
+                type: h.type.toLowerCase(),
+                name: h.name,
+                value,
+                valueLine,
+              };
       } else if (h.name !== undefined) {
         node = { ...base, kind: "object", type: h.type.toLowerCase(), name: h.name };
       } else {

@@ -91,11 +91,12 @@ const isDescription = (line: string): boolean => line.slice(tabIndent(line)).sta
  * and is indented less than `depth`, or at `limit`. An indented expression and a code fence left
  * open both read their text with it, so the two stay one reading. A `table` line whose indentation
  * does not begin as the block's first line's does, and whose tabs go no deeper than the
- * declaration's (`head`), such as one indented with spaces under an expression indented with tabs,
- * ends it too: it is a table's declaration that lost its place, not the expression's text (#135).
- * TMDL puts every line of an expression deeper than the declaration's properties, and Desktop
- * writes each two tabs deeper than the declaration and then the language's own indentation, tabs or
- * spaces, so a line of M or DAX that starts with `table`, such as a step named Table, stays.
+ * declaration's properties, one deeper than the declaration (`head`), such as one indented with
+ * spaces under an expression indented with tabs, ends it too: it is a table's declaration that lost
+ * its place, not the expression's text (#135). TMDL puts every line of an expression deeper than
+ * the declaration's properties, and Desktop writes each two tabs deeper than the declaration and
+ * then the language's own indentation, tabs or spaces, so a line of M or DAX that starts with
+ * `table`, such as a step named Table, stays.
  */
 const blockEnd = (
   lines: readonly string[],
@@ -108,7 +109,7 @@ const blockEnd = (
   const inBlock = (line: string): boolean =>
     line.trim() === "" ||
     (leadingWs(line) >= depth &&
-      (line.startsWith(lead) || tabIndent(line) > head || !namesTable(line)));
+      (line.startsWith(lead) || tabIndent(line) > head + 1 || !namesTable(line)));
   let k = from;
   while (k < limit && inBlock(lines[k]!)) k++;
   return k;

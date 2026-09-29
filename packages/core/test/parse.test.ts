@@ -980,6 +980,12 @@ describe("a malformed table line (#135)", () => {
     const text = "expression E =\n\t\tlet x = 1 in x\n    table Date\n\tdataCategory: Time\n";
     expect(issues(text)).toEqual([[3, "space indentation (TMDL requires tabs)", true, true]]);
     expect(parseTmdl("t.tmdl", text).roots[0]!.value).toBe("let x = 1 in x");
+    // And one at the level of the declaration's properties, one tab deeper than the declaration,
+    // where no line of its expression sits.
+    const measure =
+      "table S\n\tmeasure M =\n\t\t\tVAR x = 1\n\t\t\tRETURN x\n\t\t    table 'Date'\n";
+    expect(issues(measure)).toEqual([[5, "space indentation (TMDL requires tabs)", true, true]]);
+    expect(parseTmdl("t.tmdl", measure).roots[0]!.children[0]!.value).toBe("VAR x = 1\nRETURN x");
     // So does a code fence left open, whose text is read as an indented expression's.
     expect(
       issues("table S\n\tmeasure M = ```\n\t\t\tx\n    table Date\n\t\tdataCategory: Time\n"),

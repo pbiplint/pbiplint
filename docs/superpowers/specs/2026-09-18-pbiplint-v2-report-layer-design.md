@@ -1456,18 +1456,19 @@ name. Each of the three keeps its line out of the model with the lines
 under it, in one issue on its line. An indented expression, and a code
 fence left open, end at a `table` line whose indentation does not begin
 as the block's first line's does and whose tabs go no deeper than the
-declaration's, such as one indented with spaces under an expression
-indented with tabs, which is then a space indentation issue. TMDL puts
-every line of an expression deeper than the declaration's properties,
-and Desktop writes each two tabs deeper than the declaration and then
-the language's own indentation, tabs or spaces, so a line of M or DAX
-that starts with `table`, such as a step named Table, stays in it. Over
-the 23,457 TMDL files surveyed on September 28, 2026, the parser gives
-every file the same issues and the same tree as before. A table
-declared under a root `model`, which TMDL allows, is still not read;
-that is issue #137. A column declared in two parts of one table stays
-two columns: the TMDL overview says declaring the same object twice
-across documents is an error, so Power BI does not load such a model.
+declaration's properties, such as one indented with spaces under an
+expression indented with tabs, which is then a space indentation issue.
+TMDL puts every line of an expression deeper than the declaration's
+properties, and Desktop writes each two tabs deeper than the
+declaration and then the language's own indentation, tabs or spaces, so
+a line of M or DAX that starts with `table`, such as a step named
+Table, stays in it. Over the 23,457 TMDL files surveyed on September
+28, 2026, the parser gives every file the same issues and the same tree
+as before. A table declared under a root `model`, which TMDL allows, is
+still not read; that is issue #137. A column declared in two parts of
+one table stays two columns: the TMDL overview says declaring the same
+object twice across documents is an error, so Power BI does not load
+such a model.
 
 Amended 2026-09-24 with Michael (release triage, batch D, ruling H82):
 while a TMDL file has a parse issue that can take an object out of the

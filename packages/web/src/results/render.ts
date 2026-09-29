@@ -1,5 +1,6 @@
 import {
   CATEGORY_ORDER,
+  LEARN_HELP_URLS,
   plural,
   SEVERITY_LABEL,
   showControls,
@@ -51,6 +52,26 @@ export function h<K extends keyof HTMLElementTagNameMap>(
   }
   for (const child of children) if (child != null) el.append(child);
   return el;
+}
+
+/**
+ * Core's Learn URLs, the only text in a message the page links, as a pattern whose one group keeps
+ * each URL when a message is split on it. Each is matched literally, so every link's href is one
+ * of core's constants: text from the input, a file's name or a config's key, can at most repeat one
+ * of those links, never add a destination.
+ */
+const literal = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const LINKED = new RegExp(`(${LEARN_HELP_URLS.map(literal).join("|")})`);
+
+/**
+ * A message as children for `h`, each of core's Learn URLs in it a link, written as the site's
+ * other outbound Learn links are: an href and nothing else. The status line's refusals and the
+ * results' notices both use it, so a .pbix's refusal and a legacy report's notice link alike.
+ */
+export function withLearnLinks(text: string): (string | HTMLAnchorElement)[] {
+  // Once a message is split on core's URLs, its odd parts are those URLs, which become links; a
+  // message with none is one part and stays plain text.
+  return text.split(LINKED).map((part, i) => (i % 2 ? h("a", { href: part }, part) : part));
 }
 
 const SEVERITIES: readonly Severity[] = [3, 2, 1];
@@ -108,7 +129,9 @@ export function renderResults(
     ...(options.notes ?? []).map((note) => h("p", { class: "notice" }, showControls(note))),
     // What the reader could not read, or read as a legacy part, follows the input's notes, so no
     // read failure is silent.
-    ...result.diagnostics.map((d) => h("p", { class: "notice" }, showControls(d.message))),
+    ...result.diagnostics.map((d) =>
+      h("p", { class: "notice" }, ...withLearnLinks(showControls(d.message))),
+    ),
     ...result.summary.unknownRules.map((id) =>
       h(
         "p",

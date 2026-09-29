@@ -199,10 +199,16 @@ describe("resolveProject", () => {
     expect(lone.model).toBeUndefined();
     expect(lone.report!.files.map((f) => f.path)).toContain("definition/pages/p/page.json");
     expect(lone.report!.files.map((f) => f.path)).not.toContain("../Demo.pbip");
-    expect(lone.absent).toEqual({});
+    // Its definition.pbir names the model beside it, which the skipped line names in turn, so the
+    // reader knows what to lint with it (tracked in #88).
+    const notIncluded = {
+      model: "this report reads ../Demo.SemanticModel, which this run did not include",
+    };
+    expect(lone.absent).toEqual(notIncluded);
     const def = resolveProject(join(root, "Demo.Report", "definition"));
     expect(def.report!.root).toBe(join(root, "Demo.Report"));
     expect(def.report!.files.map((f) => f.path)).toContain("definition/report.json");
+    expect(def.absent).toEqual(notIncluded);
     const modelRoot = pbip({ model: true });
     expect(
       resolveProject(join(modelRoot, "Demo.SemanticModel", "definition"))
@@ -268,7 +274,7 @@ describe("resolveProject", () => {
         kind: "legacy-report-format",
         path: "Demo.Report",
         message:
-          "Demo.Report is stored as a single report.json, which pbiplint cannot read; save it in the PBIR format from Power BI Desktop",
+          "Demo.Report is stored as a single report.json (PBIR-Legacy), which pbiplint cannot read. Power BI Desktop converts it to PBIR when you edit and save it, in releases from September 2026 on. See Microsoft Learn: https://learn.microsoft.com/power-bi/developer/projects/projects-report#convert-existing-report-to-pbir",
       },
     ]);
     const bim = resolveProject(pbip({ legacyModel: true, report: true }));
@@ -423,6 +429,19 @@ describe("resolveProject on a .pbip that names its report (#86)", () => {
     });
     // Following the path, there is no sibling to compare with, so no mismatch.
     expect(p.diagnostics).toEqual([]);
+    // A folder that is there and holds no .tmdl files is named as the folder route names it
+    // (tracked in #88), where the skipped line said there was no model in the input.
+    mkdirSync(join(root, "Empty.SemanticModel"));
+    writeFileSync(
+      join(root, "Cost.Report", "definition.pbir"),
+      j({ datasetReference: { byPath: { path: "../Empty.SemanticModel" } } }),
+    );
+    const empty = resolveProject(join(root, "Cost.pbip"));
+    expect(empty.model).toBeUndefined();
+    expect(empty.absent).toEqual({
+      model: "this report reads ../Empty.SemanticModel, which this run did not include",
+    });
+    expect(empty.diagnostics).toEqual([]);
   });
   it("follows definition.pbir to a model outside the .pbip's folder", () => {
     const top = tempDir("outside");
@@ -462,7 +481,7 @@ describe("resolveProject on a .pbip that names its report (#86)", () => {
         kind: "legacy-report-format",
         path: "Cost.Report",
         message:
-          "Cost.Report is stored as a single report.json, which pbiplint cannot read; save it in the PBIR format from Power BI Desktop",
+          "Cost.Report is stored as a single report.json (PBIR-Legacy), which pbiplint cannot read. Power BI Desktop converts it to PBIR when you edit and save it, in releases from September 2026 on. See Microsoft Learn: https://learn.microsoft.com/power-bi/developer/projects/projects-report#convert-existing-report-to-pbir",
       },
     ]);
     rmSync(join(root, "Sales.SemanticModel", "definition"), { recursive: true });
@@ -859,15 +878,18 @@ describe("resolveProject and a model folder that holds no .tmdl files (tracked i
     );
   });
   it("lints what it linted beside one, as before, and still refuses two model folders side by side", () => {
-    // Beside a report it lints: the report alone, with nothing to say about the folder, where the
-    // browser notes it.
+    // Beside a report it lints: the report alone, where the browser notes the folder. The skipped
+    // line names the model the report reads, which this run did not include, and says no more,
+    // since the folder is in the input (tracked in #88).
     const root = folder();
     mkdirSync(join(root, "Old.SemanticModel"));
     reportAt(join(root, "Demo.Report"), { byPath: { path: "../Old.SemanticModel" } });
     const report = resolveProject(root);
     expect(report.report!.root).toBe(join(root, "Demo.Report"));
     expect(report.model).toBeUndefined();
-    expect(report.absent).toEqual({});
+    expect(report.absent).toEqual({
+      model: "this report reads ../Old.SemanticModel, which this run did not include",
+    });
     expect(report.diagnostics).toEqual([]);
     // Below a folder that holds a model it lints: that model.
     const nested = folder();

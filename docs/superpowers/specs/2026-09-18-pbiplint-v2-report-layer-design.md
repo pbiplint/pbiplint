@@ -553,6 +553,70 @@ Before, a linked folder was passed over without a word (a linked
 was read. The browser is handed what the browser reads, which does not
 say whether an entry is a link, so the site is unchanged.
 
+Amended 2026-09-29 (#88): Microsoft Learn's three Power BI project
+pages were revised on September 23, 2026. The report folder page now
+says, under [Convert existing report to
+PBIR](https://learn.microsoft.com/power-bi/developer/projects/projects-report#convert-existing-report-to-pbir),
+"PBIR is generally available and is the default report format", and
+"When you edit and save a PBIR-Legacy report, Power BI silently and
+automatically converts it to PBIR"; a Desktop "released before
+September 2026" keeps the old format. The three preview sections the
+`.pbix` message linked (pull request 8's note above) are gone from the
+pages, with their checkbox labels and the "Keep current format"
+warning, and the [semantic model folder
+page](https://learn.microsoft.com/power-bi/developer/projects/projects-dataset#tmdl-format)
+no longer says how to move a model from `model.bim` to TMDL. So:
+
+- The `.pbix` message's second half drops the preview sentence and its
+  three links, which pointed at sections that no longer exist, and ends
+  on Learn's [Save as a
+  project](https://learn.microsoft.com/power-bi/developer/projects/projects-overview#save-as-a-project)
+  section: `pbiplint reads a report saved as a Power BI project
+  (PBIP). In Power BI Desktop, choose File > Save as and pick Power BI
+  project files (*.pbip) as the file type. See Microsoft Learn:
+  https://learn.microsoft.com/power-bi/developer/projects/projects-overview#save-as-a-project`.
+  The first half is unchanged.
+- The legacy parts' notices move into core
+  (`legacyReportNotice`, `legacyModelNotice`, and the two reasons),
+  so the CLI and the browser, which each held a copy, give the same
+  words. The report's now says what Learn does: `Demo.Report is stored
+  as a single report.json (PBIR-Legacy), which pbiplint cannot read.
+  Power BI Desktop converts it to PBIR when you edit and save it, in
+  releases from September 2026 on. See Microsoft Learn:
+  https://learn.microsoft.com/power-bi/developer/projects/projects-report#convert-existing-report-to-pbir`.
+  The model's keeps its words, since Learn gives no route to cite.
+  #88 had asked for the notices to name Learn's checkbox labels and
+  the "Keep current format" warning; both are gone from Learn.
+- Core exports the URLs its messages link as `LEARN_HELP_URLS`, the
+  Save as a project section and then the Convert existing report
+  section, and each message ends with its URL. `PBIP_PREVIEW_HELP_URLS`
+  stays as a deprecated name for the same list until 0.3.0. The site
+  links exactly those URLs, in the status line as before and now in the
+  results' notices too, and nothing else in a message becomes a link.
+
+Amended 2026-09-29 (#88): a report read with no model beside it whose
+`definition.pbir` names one by path says which on the skipped line, so
+the reader knows what to lint with it: `this report reads
+../Demo.SemanticModel, which this run did not include`, the path as
+the file writes it. `pairingDecision` gives it when no model beside
+the report was read, so it covers a `.Report` folder given alone, a
+report's `definition` folder given to the CLI, and a PBIP folder with
+no model read beside the report. The wording says only that the run
+did not include the model: the folder the path names may be outside
+the input, not there at all, beside the report and holding no `.tmdl`
+files, or deeper in the input than the walk looks for a part. A reason
+the model folder's own read gave (a legacy `model.bim`, a folder that
+could not be read) is kept, since it says more and the path may name
+that very folder; only a published model's reason still replaces it.
+A blank path names nothing and gives no reason, as before. The path
+reaches the terminal and the page through the control-character
+display, as every absent layer's reason does. The `.pbip` route
+follows the path, and says "this report reads a model that is not
+there" when nothing is, as before; a folder that is there and yields no
+model and no other reason (one holding no `.tmdl` files) now gets the
+same reason as the folder route, where it gave "no model in the
+input".
+
 ## 5. PBIR parser and report object model
 
 **Parser.** Plain JSON, read tolerantly: unknown properties ignored;

@@ -138,12 +138,15 @@ test("lints a whole PBIP from the folder input: both layers, the facts panel, an
   await expect(results.locator('.group[data-layer="model"]:not([hidden])')).toHaveCount(0);
 });
 
-test("lints a report alone and says the model is absent", async ({ page }) => {
+test("lints a report alone and names the model it reads", async ({ page }) => {
   await page.locator("#folder-input").setInputFiles(join(demo, "PBIP and GitHub Demo.Report"));
   await expect(page.locator("#results h2")).toHaveText(
     /^Results for PBIP and GitHub Demo\.Report \(report, \d+ files\)$/,
   );
-  await expect(page.locator("#results .summary")).toContainText("skipped (no model in the input)");
+  // Its definition.pbir names the model beside it, so the reader knows what to lint with it.
+  await expect(page.locator("#results .summary")).toContainText(
+    "skipped (this report reads ../PBIP and GitHub Demo.SemanticModel, which this run did not include)",
+  );
 });
 
 test("refuses a folder with two reports and names them", async ({ page }) => {

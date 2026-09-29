@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { PBIP_PREVIEW_HELP_URLS, pbixRefusal } from "@pbiplint/core";
+import { LEARN_HELP_URLS, legacyReportNotice, pbixRefusal } from "@pbiplint/core";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 // happy-dom resolves a relative URL against the page's http base, so the file path is built
@@ -321,6 +321,19 @@ describe("home page", () => {
       "Old.SemanticModel is stored as model.bim, which pbiplint cannot read; save it in the TMDL format from Power BI Desktop",
     ]);
   });
+  it("links the Learn page a legacy report's notice names (tracked in #88)", async () => {
+    feedFolder([
+      at("Proj/Demo.SemanticModel/definition/model.tmdl", "model Model\n"),
+      at("Proj/Demo.Report/report.json", "{}"),
+    ]);
+    await tick();
+    await tick();
+    const notice = document.querySelector("#results .notice")!;
+    expect(notice.textContent).toBe(legacyReportNotice("Demo.Report").message);
+    const links = [...notice.querySelectorAll("a")];
+    expect(links.map((a) => a.getAttribute("href"))).toEqual([LEARN_HELP_URLS[1]]);
+    for (const a of links) expect(a.getAttributeNames()).toEqual(["href"]);
+  });
   it("passes the reason a layer was left out to lint, so the skipped line gives it", async () => {
     const input = document.getElementById("folder-input") as HTMLInputElement;
     const at = (path: string, text: string): File =>
@@ -535,15 +548,15 @@ describe("home page", () => {
     await tick();
     expect(status.textContent).toBe(pbixRefusal("Ventes café 売上.pbix"));
   });
-  it("links the Learn pages a refused .pbix's message names, and nothing else", async () => {
+  it("links the Learn page a refused .pbix's message names, and nothing else", async () => {
     const status = document.getElementById("status")!;
     dropFile("Sales.pbix");
     await tick();
     await tick();
     expect(status.textContent).toBe(pbixRefusal("Sales.pbix"));
     const links = [...status.querySelectorAll("a")];
-    expect(links.map((a) => a.getAttribute("href"))).toEqual(PBIP_PREVIEW_HELP_URLS);
-    expect(links.map((a) => a.textContent)).toEqual(PBIP_PREVIEW_HELP_URLS);
+    expect(links.map((a) => a.getAttribute("href"))).toEqual([LEARN_HELP_URLS[0]]);
+    expect(links.map((a) => a.textContent)).toEqual([LEARN_HELP_URLS[0]]);
     // Written as the site's other outbound Learn links are: an href and nothing else.
     for (const a of links) expect(a.getAttributeNames()).toEqual(["href"]);
     // Only core's own URLs are linked, so a URL in the input stays text.

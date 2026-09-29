@@ -295,7 +295,63 @@ describe("selectProject", () => {
         { modelFolders: [] },
       ),
     );
-    expect(lone.absent).toEqual({});
+    // Its definition.pbir names the model it reads, which the skipped line names in turn, so the
+    // reader knows what to lint with it (tracked in #88), as the CLI's does.
+    const notIncluded = {
+      model: "this report reads ../Demo.SemanticModel, which this run did not include",
+    };
+    expect(lone.absent).toEqual(notIncluded);
+    // The report folder dropped alone, whose root is the report, says the same.
+    const alone = selectProject({
+      ...emptyTree(),
+      entries: proj
+        .filter((x) => x.path.startsWith("Proj/Demo.Report/"))
+        .map((x) => e(x.path.slice("Proj/".length), x.text)),
+      reportFolders: ["Demo.Report"],
+    });
+    expect(alone.root).toBe("Demo.Report");
+    expect(alone.absent).toEqual(notIncluded);
+    // A model folder beside it that was not read keeps its own reason, which says more than the
+    // path: a legacy model.bim, or a folder the browser could not list.
+    const reportOnly = proj.filter((x) => x.path.includes(".Report"));
+    const legacyBeside = selectProject(
+      tree(reportOnly, {
+        markers: [{ path: "Proj/Demo.SemanticModel/model.bim", kind: "legacy-model" }],
+      }),
+    );
+    expect(legacyBeside.absent).toEqual({
+      model: "the model is saved in the legacy model.bim format",
+    });
+    const unlistedBeside = selectProject(
+      tree(reportOnly, {
+        diagnostics: [unreadAt("Proj/Demo.SemanticModel")],
+        unreadFolders: ["Proj/Demo.SemanticModel"],
+        refusal: { path: "Proj/Demo.SemanticModel", reason: "locked" },
+      }),
+    );
+    expect(unlistedBeside.absent).toEqual({ model: "the model folder could not be read" });
+    const cappedBeside = selectProject(
+      tree(reportOnly, {
+        modelFolders: [],
+        diagnostics: [
+          {
+            kind: "depth-cap",
+            path: "Proj/Demo.SemanticModel",
+            message:
+              "the walk stopped 64 folders deep at Proj/Demo.SemanticModel, so files below it were not read",
+          },
+        ],
+      }),
+    );
+    expect(cappedBeside.absent).toEqual({ model: "the model folder could not be read" });
+    // A definition.pbir that names no model says nothing more.
+    const unnamed = selectProject(
+      tree(
+        withPbir(pbir({})).filter((x) => x.path.includes(".Report")),
+        { modelFolders: [] },
+      ),
+    );
+    expect(unnamed.absent).toEqual({});
     expect(lone.files.every((f) => !f.path.endsWith(".tmdl"))).toBe(true);
     const published = selectProject(tree(withPbir(pbir({ byConnection: {} }))));
     expect(published.files.some((f) => f.path.endsWith(".tmdl"))).toBe(false);
@@ -1068,7 +1124,11 @@ describe("selectProject and a model folder that holds no .tmdl files (tracked in
       reportFolders: ["Proj/Demo.Report"],
     });
     expect(report.files.map((f) => f.path)).toEqual(["definition.pbir", "definition/report.json"]);
-    expect(report.absent).toEqual({});
+    // The skipped line names the model the report reads, which this run did not include, and says
+    // no more, since the folder is in the drop; the note says why (tracked in #88).
+    expect(report.absent).toEqual({
+      model: "this report reads ../Old.SemanticModel, which this run did not include",
+    });
     expect(report.diagnostics).toEqual([]);
     expect(report.notes).toEqual([noTmdlNote(["Proj/Old.SemanticModel"])]);
     // Below a folder that holds a model it lints.

@@ -5,13 +5,14 @@
   "skipRules": {},
   "deviations": {
     "INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED": "A USERELATIONSHIP inside a user-defined function counts as activating the relationship, which Tabular Editor does not count, since the source rule reads measures and calculation items only.",
-    "UNNECESSARY_COLUMNS": "A column that a user-defined function names without its table counts as used, on every table with a column of that name, since the caller can hand the function any table. In pbiplint's parity check, Tabular Editor counted such a name inside `SUMX ( 'Sales', [Handling Fee] )` but reported the column a function names in `MAX ( [Tax Rate] )`, though deleting it would break the function."
+    "UNNECESSARY_COLUMNS": [
+      "A column that a user-defined function names without its table counts as used, on every table with a column of that name, since the caller can hand the function any table. In pbiplint's parity check, Tabular Editor counted such a name inside `SUMX ( 'Sales', [Handling Fee] )` but reported the column a function names in `MAX ( [Tax Rate] )`, though deleting it would break the function.",
+      "A column that another column in its table groups by counts as used, as a field parameter's hidden Fields column is: the parameter's display column names it as its `groupByColumn` under `relatedColumnDetails`, and the parameter stops working without it. Tabular Editor does not read `groupByColumn`, so it reports that column."
+    ]
   },
   "ours": {
     "INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED": [],
-    "UNNECESSARY_COLUMNS": [
-      "'Employee Grouping'[Employee Grouping Fields]"
-    ]
+    "UNNECESSARY_COLUMNS": []
   },
   "findings": {
     "ADD_DATA_CATEGORY_FOR_COLUMNS": [

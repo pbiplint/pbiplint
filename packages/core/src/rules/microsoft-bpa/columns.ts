@@ -142,6 +142,10 @@ export const UNNECESSARY_COLUMNS = bpaRule(
       if (indexes.references.columnReferencedBy(c).length > 0) return false;
       if (indexes.relationships.forColumn(c.table.name, c.name).length > 0) return false;
       if (indexes.usage.usedInSortBy(c) || indexes.usage.usedInHierarchies(c)) return false;
+      // A column a sibling groups by counts as used, which the source does not do: a documented
+      // deviation. A field parameter's display column groups by its hidden Fields column, and the
+      // parameter breaks without it.
+      if (indexes.usage.usedInGroupBy(c)) return false;
       // The source rule also does plain substring checks on RLS filters (case-insensitive).
       const bare = `[${c.name}]`.toLowerCase();
       const qualified = [

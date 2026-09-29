@@ -356,16 +356,17 @@ describe.each(defaultRules.map((r) => [r.id, r] as const))("rule page for %s", (
 describe("documented deviations", () => {
   const expectationsDir = new URL("../../../tests/expectations/", import.meta.url).pathname;
   // Every expectation file, Tabular Editor's for a model fixture and fab-inspector's for a report.
+  // A rule with two deviations on one fixture lists a sentence for each.
   const deviations = readdirSync(expectationsDir)
     .filter((f) => f.endsWith(".json"))
     .flatMap((f) =>
       Object.entries(
         (
           JSON.parse(readFileSync(expectationsDir + f, "utf8")) as {
-            deviations?: Record<string, string>;
+            deviations?: Record<string, string | string[]>;
           }
         ).deviations ?? {},
-      ),
+      ).flatMap(([id, sentences]) => [sentences].flat().map((sentence) => [id, sentence] as const)),
     );
   it.each(deviations)(
     "%s is named, in the same words, in the page's Quirks section",

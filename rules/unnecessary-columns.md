@@ -15,7 +15,7 @@ sources:
 
 ## What it checks
 
-Hidden columns, or columns in hidden tables, that nothing references: no DAX expression, relationship, hierarchy, sort-by column, row-level security filter, or object-level security rule.
+Hidden columns, or columns in hidden tables, that nothing references: no DAX expression, relationship, hierarchy, sort-by column, group-by column, row-level security filter, or object-level security rule.
 
 Each finding names the column, as `'Sales'[Legacy Region Code]`.
 
@@ -71,6 +71,7 @@ Report usage is the case to check first. A hidden column that a visual, a slicer
 - DAX references are approximated by pattern matching: references inside strings or comments count, and a bare `[Column]` reference resolves measure-first, then the expression's own table, then the first table with that column.
 - A column that a user-defined function names with its table counts as used, even when nothing calls the function, as Tabular Editor counts it.
 - A column that a user-defined function names without its table counts as used, on every table with a column of that name, since the caller can hand the function any table. In pbiplint's parity check, Tabular Editor counted such a name inside `SUMX ( 'Sales', [Handling Fee] )` but reported the column a function names in `MAX ( [Tax Rate] )`, though deleting it would break the function.
+- A column that another column in its table groups by counts as used, as a field parameter's hidden Fields column is: the parameter's display column names it as its `groupByColumn` under `relatedColumnDetails`, and the parameter stops working without it. Tabular Editor does not read `groupByColumn`, so it reports that column.
 - Report usage is not visible to this rule. A hidden column used only by a visual, a slicer, or a report-level filter is still flagged.
 - Variations are not tested, here or in the source rule, so a hidden column that a variation names as its default column is reported. `SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS` does read variations.
 - Row-level security is matched as text, ignoring letter case, the way the source rule matches it. A bare `[Column]` in any role's filter already counts as a DAX reference (see above), so the text test only adds the qualified forms `Table[Column]` and `'Table'[Column]`.

@@ -99,6 +99,25 @@ describe("usage index", () => {
     expect(idx.usage.usedInVariations(column("Sales", "Year"))).toBe(true);
     expect(idx.usage.usedInVariations(column("Sales", "Amount"))).toBe(false);
   });
+  it("knows the columns a sibling groups by, as a field parameter's display column groups by its Fields column", () => {
+    const m = modelFrom(`table P
+	column P
+		dataType: string
+		relatedColumnDetails
+			groupByColumn: 'P Fields'
+	column 'P Fields'
+		dataType: string
+		isHidden
+	column 'P Order'
+		dataType: int64
+		isHidden
+`);
+    const { usage } = buildIndexes({ model: m });
+    const col = (name: string) => m.tables[0]!.columns.find((c) => c.name === name)!;
+    expect(usage.usedInGroupBy(col("P Fields"))).toBe(true);
+    expect(usage.usedInGroupBy(col("P Order"))).toBe(false);
+    expect(usage.usedInGroupBy(col("P"))).toBe(false);
+  });
 });
 
 describe("reference index", () => {

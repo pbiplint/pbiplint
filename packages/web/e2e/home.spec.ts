@@ -48,10 +48,10 @@ test("lints the sample project and announces the result", async ({ page }) => {
     "Results for the sample project (model, 14 files · report, 78 files)",
   );
   await expect(results.locator(".summary")).toContainText(
-    "257 findings (19 errors, 78 warnings, 160 info) in 92 files",
+    "256 findings (19 errors, 77 warnings, 160 info) in 92 files",
   );
   await expect(page.locator("#announce")).toHaveText(
-    /^Results for the sample project \(model, 14 files · report, 78 files\): 257 findings/,
+    /^Results for the sample project \(model, 14 files · report, 78 files\): 256 findings/,
   );
   await expect(results.locator("section.facts h3")).toHaveText("Report at a glance");
   await expect(results.locator(".fix-first li")).toHaveCount(5);
@@ -285,7 +285,7 @@ test("downloads the Markdown report", async ({ page }) => {
   ]);
   expect(download.suggestedFilename()).toMatch(/\.md$/);
   const text = readFileSync((await download.path())!, "utf8");
-  expect(text).toContain("257 findings");
+  expect(text).toContain("256 findings");
 });
 
 test("copies the Markdown report from the button beside the downloads", async ({

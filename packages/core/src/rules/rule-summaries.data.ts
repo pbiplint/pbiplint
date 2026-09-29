@@ -180,7 +180,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   TRIM_OBJECT_NAMES:
     "Names that start or end with a space, across every named object type in the model.",
   UNNECESSARY_COLUMNS:
-    "Hidden columns, or columns in hidden tables, that nothing references: no DAX expression, relationship, hierarchy, sort-by column, row-level security filter, or object-level security rule.",
+    "Hidden columns, or columns in hidden tables, that nothing references: no DAX expression, relationship, hierarchy, sort-by column, group-by column, row-level security filter, or object-level security rule.",
   UNNECESSARY_MEASURES:
     "Hidden measures, or measures on hidden tables, that no DAX expression references.",
   "UNPIVOT_PIVOTED_(MONTH)_DATA":

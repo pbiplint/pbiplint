@@ -77,6 +77,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Relationships where the many side holds key values that do not exist on the one side. The count of offending rows is a statistic of the loaded data, not of the model files, so pbiplint lists this rule but does not run it: it needs statistics that only a live model carries.",
   "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS":
     "Visible columns whose name starts with Is and whose type is whole number, and visible columns whose name ends with the word Flag after a space and whose type is not text.",
+  HARDCODED_PERIOD_IN_DAX:
+    "Measures, calculated columns, and calculation items whose DAX fixes a year or a date, and date tables whose CALENDAR ends on a fixed date.",
   HIDDEN_VISUAL_WITH_FIELDS:
     "Visuals hidden in the Selection pane, with their own eye icon or with that of a group they sit in, that still have fields in their wells.",
   HIDE_FACT_TABLE_COLUMNS:

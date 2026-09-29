@@ -3,13 +3,14 @@ import { actionRules } from "./actions.js";
 import { measureRules } from "./measures.js";
 import { openingRules } from "./opening.js";
 import { pageRules } from "./pages.js";
+import { periodRules } from "./periods.js";
 import { referenceRules } from "./references.js";
 import { tabOrderRules } from "./tab-order.js";
 import { visualRules } from "./visuals.js";
 
 /**
  * pbiplint's own rules, in the spec's order: references, opening, visuals, pages, measures,
- * actions and bookmarks, tab order.
+ * periods in DAX, actions and bookmarks, tab order.
  */
 export const pbiplintRules: Rule[] = [
   ...referenceRules,
@@ -17,6 +18,7 @@ export const pbiplintRules: Rule[] = [
   ...visualRules,
   ...pageRules,
   ...measureRules,
+  ...periodRules,
   ...actionRules,
   ...tabOrderRules,
 ];

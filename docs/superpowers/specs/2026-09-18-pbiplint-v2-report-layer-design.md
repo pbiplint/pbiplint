@@ -1188,17 +1188,19 @@ used to replace the first part's block. `UNPIVOT_PIVOTED_(MONTH)_DATA`,
 and `SNOWFLAKE_SCHEMA_ARCHITECTURE` also leave calculation groups out
 and keep running: each reports a calculation group read as a plain
 table only when it carries month columns, a row-level security filter
-(which Microsoft's calculation group documentation says is not
-supported), or relationships, none of which a calculation group Power
-BI Desktop builds has. Three things a missed part could change are left
-as they are. The object type on a finding: a calculated table's column
-reads as `Column` while the part holding its calculated partition is
-missed, and guarding it would stop every rule that reports a column. A
-`pbiplint.ignore` annotation on a table in the missed part, so a
-finding on that table can show though the annotation turns it off, and
-guarding it would stop every rule that reports a table. And the table's
-description when two parts each give one: pbiplint keeps the first
-part's, so `AVOID_INVALID_DESCRIPTION_CHARACTERS` can report a
+(which the Limitations section of Microsoft's calculation group
+documentation,
+https://learn.microsoft.com/analysis-services/tabular-models/calculation-groups#limitations,
+says is not supported), or relationships, none of which a calculation
+group Power BI Desktop builds has. Three things a missed part could
+change are left as they are. The object type on a finding: a calculated
+table's column reads as `Column` while the part holding its calculated
+partition is missed, and guarding it would stop every rule that reports
+a column. A `pbiplint.ignore` annotation on a table in the missed part,
+so a finding on that table can show though the annotation turns it off,
+and guarding it would stop every rule that reports a table. And the
+table's description when two parts each give one: pbiplint keeps the
+first part's, so `AVOID_INVALID_DESCRIPTION_CHARACTERS` can report a
 description, as written in the file, that the missed first part would
 have put aside. Four malformed `table` lines lose a part of a table, or
 invent one, with no parse issue at all, so neither predicate sees them;
@@ -1450,25 +1452,30 @@ name, or with an empty quoted one (`table ''`), is one; it used to
 build an object whose name was empty. A name not enclosed in single
 quotes as TMDL requires, on any declaration, is one: TMDL encloses a
 name that holds a quote in single quotes, with each quote inside
-doubled and nothing after the closing one, and a quote left open also
-swallowed the `=` after it, so a measure's expression went into its
-name. Each of the three keeps its line out of the model with the lines
-under it, in one issue on its line. An indented expression, and a code
-fence left open, end at a `table` line whose indentation does not begin
-as the block's first line's does and whose tabs go no deeper than the
-declaration's properties, such as one indented with spaces under an
-expression indented with tabs, which is then a space indentation issue.
-TMDL puts every line of an expression deeper than the declaration's
-properties, and Desktop writes each two tabs deeper than the
-declaration and then the language's own indentation, tabs or spaces, so
-a line of M or DAX that starts with `table`, such as a step named
-Table, stays in it. Over the 23,457 TMDL files surveyed on September
-28, 2026, the parser gives every file the same issues and the same tree
-as before. A table declared under a root `model`, which TMDL allows, is
-still not read; that is issue #137. A column declared in two parts of
-one table stays two columns: the TMDL overview says declaring the same
-object twice across documents is an error, so Power BI does not load
-such a model.
+doubled
+(https://learn.microsoft.com/analysis-services/tmdl/tmdl-overview#object-declaration)
+and nothing after the closing one; a quote left open also swallowed the
+`=` after it, so a measure's expression went into its name. Each of the
+three keeps its line out of the model with the lines under it, in one
+issue on its line. An indented expression, and a code fence left open,
+end at a `table` line whose indentation does not begin as the block's
+first line's does and whose tabs go no deeper than the declaration's
+properties, such as one indented with spaces under an expression
+indented with tabs, which is then a space indentation issue. TMDL puts
+every line of an expression deeper than the declaration's properties
+(https://learn.microsoft.com/analysis-services/tmdl/tmdl-overview#expressions),
+and Desktop writes each two tabs deeper than the declaration and then
+the language's own indentation, tabs or spaces, so a line of M or DAX
+that starts with `table`, such as a step named Table, stays in it. Over
+the 23,457 TMDL files surveyed on September 28, 2026, the parser gives
+every file the same issues and the same tree as before. A table
+declared under a root `model`, which TMDL allows
+(https://learn.microsoft.com/analysis-services/tmdl/tmdl-overview#indentation),
+is still not read; that is issue #137. A column declared in two parts
+of one table stays two columns: the TMDL overview says declaring the
+same object twice across documents is an error
+(https://learn.microsoft.com/analysis-services/tmdl/tmdl-overview#partial-declaration),
+so Power BI does not load such a model.
 
 Amended 2026-09-24 with Michael (release triage, batch D, ruling H82):
 while a TMDL file has a parse issue that can take an object out of the

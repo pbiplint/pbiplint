@@ -38,9 +38,9 @@ const HOLDS_TABLE = new Set(["model", "createorreplace"]);
 
 /**
  * Whether a declaration's name, as written, is one TMDL can read: a name with a single quote in it
- * is enclosed in single quotes, with each quote inside doubled and nothing after the closing one.
- * One whose quote is left open also swallows the `=` after it, so the expression reads as part of
- * the name.
+ * is enclosed in single quotes, with each quote inside doubled and nothing after the closing one
+ * (https://learn.microsoft.com/analysis-services/tmdl/tmdl-overview#object-declaration). One whose
+ * quote is left open also swallows the `=` after it, so the expression reads as part of the name.
  */
 const nameReadable = (name: string): boolean =>
   !name.includes("'") || /^'(?:[^']|'')*'$/.test(name);
@@ -94,9 +94,10 @@ const isDescription = (line: string): boolean => line.slice(tabIndent(line)).sta
  * declaration's properties, one deeper than the declaration (`head`), such as one indented with
  * spaces under an expression indented with tabs, ends it too: it is a table's declaration that lost
  * its place, not the expression's text (#135). TMDL puts every line of an expression deeper than
- * the declaration's properties, and Desktop writes each two tabs deeper than the declaration and
- * then the language's own indentation, tabs or spaces, so a line of M or DAX that starts with
- * `table`, such as a step named Table, stays.
+ * the declaration's properties
+ * (https://learn.microsoft.com/analysis-services/tmdl/tmdl-overview#expressions), and Desktop
+ * writes each two tabs deeper than the declaration and then the language's own indentation, tabs or
+ * spaces, so a line of M or DAX that starts with `table`, such as a step named Table, stays.
  */
 const blockEnd = (
   lines: readonly string[],

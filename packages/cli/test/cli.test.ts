@@ -302,7 +302,7 @@ describe("pbiplint CLI", () => {
   it("names a .pbix, says how to save it as a Power BI project, and exits 2 (tracked in #88)", async () => {
     const dir = tempDir("pbix");
     const how =
-      "is a Power BI Desktop file (.pbix), which pbiplint cannot read. pbiplint reads a report saved as a Power BI project (PBIP). In Power BI Desktop, choose File > Save as and pick Power BI project files (*.pbip) as the file type. Depending on your version of Power BI Desktop, you may need to enable certain preview features first. Microsoft Learn explains them: https://learn.microsoft.com/power-bi/developer/projects/projects-overview#enable-preview-features https://learn.microsoft.com/power-bi/developer/projects/projects-report#enable-the-pbir-format-preview-feature https://learn.microsoft.com/power-bi/developer/projects/projects-dataset#enable-tmdl-format-preview-feature";
+      "is a Power BI Desktop file (.pbix), which pbiplint cannot read. pbiplint reads a report saved as a Power BI project (PBIP). In Power BI Desktop, choose File > Save as and pick Power BI project files (*.pbip) as the file type. See Microsoft Learn: https://learn.microsoft.com/power-bi/developer/projects/projects-overview#save-as-a-project";
     const file = join(dir, "Sales.pbix");
     writeFileSync(file, "");
     const lone = await run([file]);
@@ -339,6 +339,23 @@ describe("pbiplint CLI", () => {
       `pbiplint: ${dir}/Old.SemanticModel ${why}\nRun pbiplint --help for usage.\n`,
     );
   });
+  it("names the model a report given alone reads, its control characters shown (tracked in #88)", async () => {
+    // The path is the report's own text, not a file name, so it can hold the escape sequence that
+    // clears the screen on any system.
+    const report = join(tempDir("lone"), "Demo.Report");
+    mkdirSync(join(report, "definition"), { recursive: true });
+    writeFileSync(
+      join(report, "definition.pbir"),
+      JSON.stringify({ datasetReference: { byPath: { path: "../Evil\u001b[2J.SemanticModel" } } }),
+    );
+    writeFileSync(join(report, "definition", "report.json"), "{}");
+    const r = await run([report, "--fail-on", "none"]);
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(
+      / rules? skipped \(this report reads \.\.\/Evil\\u001b\[2J\.SemanticModel, which this run did not include\)/,
+    );
+    expect(RAW_CONTROL.test(r.out.replace(/\n/g, ""))).toBe(false);
+  });
   it("lints a whole project, prints layers in JSON, and puts notices on stderr", async () => {
     const root = tempDir("proj");
     mkdirSync(join(root, "Demo.SemanticModel", "definition"), { recursive: true });
@@ -354,7 +371,7 @@ describe("pbiplint CLI", () => {
       reason: "the report is saved in the legacy report.json format",
     });
     expect(r.err).toBe(
-      "pbiplint: notice: Demo.Report is stored as a single report.json, which pbiplint cannot read; save it in the PBIR format from Power BI Desktop\n",
+      "pbiplint: notice: Demo.Report is stored as a single report.json (PBIR-Legacy), which pbiplint cannot read. Power BI Desktop converts it to PBIR when you edit and save it, in releases from September 2026 on. See Microsoft Learn: https://learn.microsoft.com/power-bi/developer/projects/projects-report#convert-existing-report-to-pbir\n",
     );
   });
   it("lints each project of a folder that holds two by its .pbip, and refuses the folder", async () => {
@@ -763,7 +780,7 @@ describe("pbiplint CLI", () => {
       mkdirSync(join(root, "Bad\u001b[2J.Report"));
       writeFileSync(join(root, "Bad\u001b[2J.Report", "report.json"), "{}");
       const notice =
-        "pbiplint: notice: Bad\\u001b[2J.Report is stored as a single report.json, which pbiplint cannot read; save it in the PBIR format from Power BI Desktop\n";
+        "pbiplint: notice: Bad\\u001b[2J.Report is stored as a single report.json (PBIR-Legacy), which pbiplint cannot read. Power BI Desktop converts it to PBIR when you edit and save it, in releases from September 2026 on. See Microsoft Learn: https://learn.microsoft.com/power-bi/developer/projects/projects-report#convert-existing-report-to-pbir\n";
 
       const text = await run([root, "--fail-on", "none"]);
       expect(text.out).toContain("[Evil\\u001b[2J\\u007f\\u009b\\u202eX]");

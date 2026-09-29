@@ -1,5 +1,13 @@
 // @vitest-environment happy-dom
-import { defaultRules, lint, resolveConfig, type LintResult, type Rule } from "@pbiplint/core";
+import {
+  defaultRules,
+  LEARN_HELP_URLS,
+  legacyReportNotice,
+  lint,
+  resolveConfig,
+  type LintResult,
+  type Rule,
+} from "@pbiplint/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { applyFilters, h, heading, renderResults } from "../src/results/render.js";
 import { SAMPLE_CONFIG, SAMPLE_FILES } from "../src/sample.js";
@@ -613,6 +621,17 @@ describe("renderResults", () => {
     expect([...container.querySelectorAll(".notice")].map((n) => n.textContent)).toEqual([
       "Old.SemanticModel holds no .tmdl files.",
       "the walk stopped 64 folders deep at Deep, so files below it were not read",
+    ]);
+  });
+  it("links core's Learn URLs in a notice, and no other URL (tracked in #88)", () => {
+    // A path is the input's, so a URL in it stays text, even beside one of core's.
+    const legacy = legacyReportNotice("https://example.com/Demo.Report");
+    const run = lint(bare, { diagnostics: [legacy] });
+    renderResults(container, run, { source: "x" });
+    const notice = container.querySelector(".notice")!;
+    expect(notice.textContent).toBe(legacy.message);
+    expect([...notice.querySelectorAll("a")].map((a) => a.getAttribute("href"))).toEqual([
+      LEARN_HELP_URLS[1],
     ]);
   });
   it("never parses model text as HTML", () => {

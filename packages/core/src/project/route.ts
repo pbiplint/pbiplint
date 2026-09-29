@@ -24,36 +24,46 @@ export const isReportFile = (path: string): boolean =>
  */
 export const isPbix = (path: string): boolean => /\.pbix$/i.test(path);
 
+/** "Save as a project" on Learn's Power BI Desktop projects page. */
+const SAVE_AS_PROJECT_URL =
+  "https://learn.microsoft.com/power-bi/developer/projects/projects-overview#save-as-a-project";
+/** "Convert existing report to PBIR" on Learn's report folder page. */
+const CONVERT_TO_PBIR_URL =
+  "https://learn.microsoft.com/power-bi/developer/projects/projects-report#convert-existing-report-to-pbir";
+
 /**
- * Learn's three sections on the preview options a Power BI project save can need, in the order the
- * .pbix message gives them: "Enable preview features" on the Power BI Desktop projects page, "Enable
- * the PBIR format preview feature" on the report folder page, and "Enable TMDL format Preview
- * feature" on the semantic model folder page. Exported so the site links exactly these and nothing
- * else in a message it shows.
+ * The Learn sections pbiplint's messages link, in the order the .pbix message and the legacy
+ * report notice give them. Exported so the site links exactly these and nothing else in a message
+ * it shows. Each message ends with its URL, since a terminal's link detection can take a trailing
+ * period into the link.
  */
-export const PBIP_PREVIEW_HELP_URLS: readonly string[] = Object.freeze([
-  "https://learn.microsoft.com/power-bi/developer/projects/projects-overview#enable-preview-features",
-  "https://learn.microsoft.com/power-bi/developer/projects/projects-report#enable-the-pbir-format-preview-feature",
-  "https://learn.microsoft.com/power-bi/developer/projects/projects-dataset#enable-tmdl-format-preview-feature",
+export const LEARN_HELP_URLS: readonly string[] = Object.freeze([
+  SAVE_AS_PROJECT_URL,
+  CONVERT_TO_PBIR_URL,
 ]);
 
 /**
- * How to save a report as a Power BI project pbiplint can read. The menu path and the file type
- * are Learn's labels ("Save as a project" on the projects page). The preview options are a
- * condition ("may need") left to Learn's sections, and the sentence is built from
- * PBIP_PREVIEW_HELP_URLS so the words and the links cannot drift. They are a condition because the
- * options are leaving preview (Microsoft 365 Message Center post MC1465770 announces PBIP generally
- * available) and may be removed from Desktop, while older builds still need them. Nothing follows
- * the last URL, since a terminal's link detection can take a trailing period into the link.
+ * The name 0.2.0 exported the .pbix message's Learn URLs under, kept until 0.3.0. Learn dropped
+ * the preview sections it listed on September 23, 2026, so it now gives LEARN_HELP_URLS.
+ *
+ * @deprecated Use LEARN_HELP_URLS.
  */
-const SAVE_AS_PROJECT = `pbiplint reads a report saved as a Power BI project (PBIP). In Power BI Desktop, choose File > Save as and pick Power BI project files (*.pbip) as the file type. Depending on your version of Power BI Desktop, you may need to enable certain preview features first. Microsoft Learn explains them: ${PBIP_PREVIEW_HELP_URLS.join(" ")}`;
+export const PBIP_PREVIEW_HELP_URLS: readonly string[] = LEARN_HELP_URLS;
+
+/**
+ * How to save a report as a Power BI project pbiplint can read. The menu path and the file type
+ * are Learn's labels ("Save as a project" on the projects page), and that section follows. The
+ * message used to add a condition on preview options and link Learn's three sections on them;
+ * Learn dropped those sections on September 23, 2026, when PBIR became Desktop's default.
+ */
+const SAVE_AS_PROJECT = `pbiplint reads a report saved as a Power BI project (PBIP). In Power BI Desktop, choose File > Save as and pick Power BI project files (*.pbip) as the file type. See Microsoft Learn: ${SAVE_AS_PROJECT_URL}`;
 
 /**
  * The refusal of an input of which nothing can be linted, and which nothing else explains, when
  * the walk met a .pbix (spec section 4): it names `path`, the first .pbix the walk met, counts the
  * `others` it met besides, and says how to save the report as a Power BI project
  * (SAVE_AS_PROJECT). The CLI and the browser both give it, so the words cannot drift: the CLI
- * prints it as text, and the site links the URLs it ends with, PBIP_PREVIEW_HELP_URLS.
+ * prints it as text, and the site links the URL it ends with, one of LEARN_HELP_URLS.
  */
 export function pbixRefusal(path: string, others = 0): string {
   const what =
@@ -62,6 +72,39 @@ export function pbixRefusal(path: string, others = 0): string {
       : `${path} and ${others} other .pbix ${others === 1 ? "file" : "files"} are Power BI Desktop files`;
   return `${what}, which pbiplint cannot read. ${SAVE_AS_PROJECT}`;
 }
+
+/**
+ * The notice for a `.Report` folder saved in the legacy format, a single report.json, which the
+ * CLI and the browser both give, so the words cannot drift. Learn's report folder page says PBIR
+ * is Desktop's default and that editing and saving a PBIR-Legacy report converts it, which Desktop
+ * released before September 2026 does not do; its section on that ends the notice, and the site
+ * links it.
+ */
+export function legacyReportNotice(name: string): Diagnostic {
+  return {
+    kind: "legacy-report-format",
+    path: name,
+    message: `${name} is stored as a single report.json (PBIR-Legacy), which pbiplint cannot read. Power BI Desktop converts it to PBIR when you edit and save it, in releases from September 2026 on. See Microsoft Learn: ${CONVERT_TO_PBIR_URL}`,
+  };
+}
+
+/**
+ * The notice for a `.SemanticModel` folder saved in the legacy format, model.bim, as the CLI and
+ * the browser both give it. Learn's semantic model folder page no longer says how to move a model
+ * from model.bim to TMDL, so the notice links nothing.
+ */
+export function legacyModelNotice(name: string): Diagnostic {
+  return {
+    kind: "legacy-model-format",
+    path: name,
+    message: `${name} is stored as model.bim, which pbiplint cannot read; save it in the TMDL format from Power BI Desktop`,
+  };
+}
+
+/** Why the report layer is absent when the report is saved as report.json. */
+export const LEGACY_REPORT_REASON = "the report is saved in the legacy report.json format";
+/** Why the model layer is absent when the model is saved as model.bim. */
+export const LEGACY_MODEL_REASON = "the model is saved in the legacy model.bim format";
 
 /** "A", "A and B", "A, B, and C". */
 const listOf = (items: string[]): string =>
@@ -119,7 +162,11 @@ export interface PairingDecision {
  * Whether the model beside a report is the one the report reads (spec section 4). The CLI and
  * the browser both call this, so the two surfaces decide alike: byPath naming the sibling pairs
  * them; byConnection, or byPath naming something else, makes it a report-only run with the reason
- * on the skipped line, and the mismatch is a diagnostic besides.
+ * on the skipped line, and the mismatch is a diagnostic besides. With no model beside the report
+ * read, byPath still gives the reason, naming the path, so the reader knows what to lint with it.
+ * It says only that this run did not include that model: the folder may be outside the input, not
+ * there at all, beside the report and holding no .tmdl files, or deeper in the input than the walk
+ * looks for a part.
  */
 export function pairingDecision(
   ref: DatasetReference,
@@ -130,7 +177,10 @@ export function pairingDecision(
   // or not a model sits beside it, and the skipped line has a reason to give either way.
   if (ref.kind === "byConnection")
     return { useModel: false, reason: "this report reads a published model" };
-  if (siblingModelFolder === undefined) return { useModel: false };
+  if (siblingModelFolder === undefined)
+    return ref.kind === "byPath" && ref.path.trim() !== ""
+      ? { useModel: false, reason: `this report reads ${ref.path}, which this run did not include` }
+      : { useModel: false };
   if (ref.kind === "none") return { useModel: true };
   const named = ref.path.replace(/\\/g, "/").replace(/\/+$/, "").split("/").pop() ?? "";
   // Windows and macOS file systems compare names without regard to case by default, so a path

@@ -1,7 +1,6 @@
 import {
   ConfigError,
   lint,
-  PBIP_PREVIEW_HELP_URLS,
   resolveConfig,
   showControls,
   summaryLine,
@@ -12,7 +11,7 @@ import {
 import { InputError, selectProject, type InputTree } from "./input/project-files.js";
 import { directoryPicker, readDirectoryInput, readPickedDirectory } from "./input/pick-folder.js";
 import { readDataTransfer } from "./input/read-drop.js";
-import { h, heading, renderResults } from "./results/render.js";
+import { heading, renderResults, withLearnLinks } from "./results/render.js";
 import { SAMPLE_NAME, SAMPLE_TREE } from "./sample.js";
 
 /**
@@ -35,26 +34,14 @@ const results = byId("results", HTMLElement);
 const dropZone = byId("drop", HTMLElement);
 const folderInput = byId("folder-input", HTMLInputElement);
 
-/**
- * Core's Learn URLs, the only text a status message links, as a pattern whose one group keeps
- * each URL when a message is split on it. Each is matched literally, so every link's href is one
- * of core's three constants: text from the input, a file's name or a config's key, can at most
- * repeat one of those links, never add a destination.
- */
-const literal = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-const LINKED = new RegExp(`(${PBIP_PREVIEW_HELP_URLS.map(literal).join("|")})`);
-
 function say(text: string, kind: "info" | "error" = "info"): void {
   // Unhidden before the text is written: a screen reader can miss text set on a hidden live region.
   if (text !== "") status.hidden = false;
-  // Once a message is split on core's URLs, its odd parts are those URLs, which become links; a
-  // message with none is one part and stays plain text.
-  const parts = text.split(LINKED);
+  // Core's Learn URLs in the message become links, and nothing else in it does; a message with
+  // none is plain text.
+  const parts = withLearnLinks(text);
   if (parts.length === 1) status.textContent = text;
-  else
-    status.replaceChildren(
-      ...parts.map((part, i) => (i % 2 ? h("a", { href: part }, part) : part)),
-    );
+  else status.replaceChildren(...parts);
   status.dataset.kind = kind;
   if (text === "") status.hidden = true;
 }

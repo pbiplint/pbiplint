@@ -12,6 +12,10 @@ import { basename, dirname, isAbsolute, join, relative, resolve } from "node:pat
 import {
   datasetReference,
   isPbix,
+  LEGACY_MODEL_REASON,
+  LEGACY_REPORT_REASON,
+  legacyModelNotice as legacyModel,
+  legacyReportNotice as legacyReport,
   noTmdlRefusal,
   pairingDecision,
   pbixRefusal,
@@ -361,19 +365,6 @@ function loneReportAbsent(
   return !decision.useModel && decision.reason ? { model: decision.reason } : {};
 }
 
-const legacyReport = (name: string): Diagnostic => ({
-  kind: "legacy-report-format",
-  path: name,
-  message: `${name} is stored as a single report.json, which pbiplint cannot read; save it in the PBIR format from Power BI Desktop`,
-});
-const legacyModel = (name: string): Diagnostic => ({
-  kind: "legacy-model-format",
-  path: name,
-  message: `${name} is stored as model.bim, which pbiplint cannot read; save it in the TMDL format from Power BI Desktop`,
-});
-const LEGACY_REPORT_REASON = "the report is saved in the legacy report.json format";
-const LEGACY_MODEL_REASON = "the model is saved in the legacy model.bim format";
-
 /** Find the project at or under `input` and read its parts (spec section 4). */
 export function resolveProject(input: string): ResolvedProject {
   const path = resolve(input);
@@ -671,16 +662,16 @@ function readFolder(w: Walk, input: string, path: string, preferred?: string): R
       if (text !== undefined) report.files.push({ path: toPosix(relative(report.root, p)), text });
     }
     const pbir = report.files.find((f) => f.path === "definition.pbir");
-    const decision = pairingDecision(
-      pbir ? datasetReference(pbir.text) : { kind: "none" },
-      model ? models[0] : undefined,
-      reports[0]!,
-    );
+    const ref: DatasetReference = pbir ? datasetReference(pbir.text) : { kind: "none" };
+    const decision = pairingDecision(ref, model ? models[0] : undefined, reports[0]!);
     // The reason is recorded whether or not a model sat beside the report: a thin report says it
-    // reads a published model on the skipped line either way.
+    // reads a published model on the skipped line either way. A reason the model folder's own read
+    // gave (a legacy model.bim, a folder that could not be read) says more than the path the report
+    // names, which may be that very folder, so only a published model's replaces it.
     if (!decision.useModel) {
       model = undefined;
-      if (decision.reason) out.absent.model = decision.reason;
+      if (decision.reason && (ref.kind === "byConnection" || !out.absent.model))
+        out.absent.model = decision.reason;
     }
     if (decision.diagnostic) out.diagnostics.push(decision.diagnostic);
   }

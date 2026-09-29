@@ -3,6 +3,11 @@ import {
   datasetReference,
   isPbix,
   isReportFile,
+  LEARN_HELP_URLS,
+  LEGACY_MODEL_REASON,
+  LEGACY_REPORT_REASON,
+  legacyModelNotice,
+  legacyReportNotice,
   noTmdlNote,
   noTmdlRefusal,
   pairingDecision,
@@ -61,9 +66,21 @@ describe("pairingDecision", () => {
       useModel: false,
       reason: "this report reads a published model",
     });
+    // With no model beside it, a report that names one by path says which, so the reader knows
+    // what to lint beside it (tracked in #88); a blank path names nothing.
     expect(
       pairingDecision({ kind: "byPath", path: "../Demo.SemanticModel" }, undefined, "Demo.Report"),
-    ).toEqual({ useModel: false });
+    ).toEqual({
+      useModel: false,
+      reason: "this report reads ../Demo.SemanticModel, which this run did not include",
+    });
+    for (const path of ["", "  "])
+      expect(pairingDecision({ kind: "byPath", path }, undefined, "Demo.Report")).toEqual({
+        useModel: false,
+      });
+    expect(pairingDecision({ kind: "none" }, undefined, "Demo.Report")).toEqual({
+      useModel: false,
+    });
     expect(pairingDecision({ kind: "byConnection" }, undefined, "Demo.Report")).toEqual({
       useModel: false,
       reason: "this report reads a published model",
@@ -128,10 +145,10 @@ describe("pairingDecision", () => {
 
 describe("a .pbix (tracked in #88)", () => {
   // The menu path and the file type as Learn's Power BI Desktop projects page labels them, then
-  // the preview options as a condition, left to Learn's three sections on them, linked in order
-  // with nothing after the last.
+  // that page's "Save as a project" section, with nothing after it. Learn dropped the preview
+  // sections the message used to link on September 23, 2026.
   const HOW =
-    "pbiplint reads a report saved as a Power BI project (PBIP). In Power BI Desktop, choose File > Save as and pick Power BI project files (*.pbip) as the file type. Depending on your version of Power BI Desktop, you may need to enable certain preview features first. Microsoft Learn explains them: https://learn.microsoft.com/power-bi/developer/projects/projects-overview#enable-preview-features https://learn.microsoft.com/power-bi/developer/projects/projects-report#enable-the-pbir-format-preview-feature https://learn.microsoft.com/power-bi/developer/projects/projects-dataset#enable-tmdl-format-preview-feature";
+    "pbiplint reads a report saved as a Power BI project (PBIP). In Power BI Desktop, choose File > Save as and pick Power BI project files (*.pbip) as the file type. See Microsoft Learn: https://learn.microsoft.com/power-bi/developer/projects/projects-overview#save-as-a-project";
   it("is known by its name alone, in any case", () => {
     for (const path of ["Sales.pbix", "Sales.PBIX", "Demo/old/Sales.Pbix", "a b.pbix"])
       expect(isPbix(path), path).toBe(true);
@@ -154,11 +171,41 @@ describe("a .pbix (tracked in #88)", () => {
       `Demo/A.pbix and 2 other .pbix files are Power BI Desktop files, which pbiplint cannot read. ${HOW}`,
     );
   });
-  it("ends with the three Learn pages core exports, in order, so the site links the same ones", () => {
-    expect(PBIP_PREVIEW_HELP_URLS).toHaveLength(3);
-    const tail = `Microsoft Learn explains them: ${PBIP_PREVIEW_HELP_URLS.join(" ")}`;
+  it("ends with a Learn page core exports, so the site links the same one", () => {
+    const tail = `See Microsoft Learn: ${LEARN_HELP_URLS[0]}`;
     for (const message of [pbixRefusal("Sales.pbix"), pbixRefusal("Demo/A.pbix", 2)])
       expect(message.slice(-tail.length)).toBe(tail);
+    // The name 0.2.0 exported, kept until 0.3.0, gives the same list.
+    expect(PBIP_PREVIEW_HELP_URLS).toBe(LEARN_HELP_URLS);
+  });
+});
+
+describe("a part saved in a legacy format (tracked in #88)", () => {
+  it("names a legacy report and says Power BI Desktop converts it when it is saved, as Learn says", () => {
+    expect(legacyReportNotice("Demo.Report")).toEqual({
+      kind: "legacy-report-format",
+      path: "Demo.Report",
+      message:
+        "Demo.Report is stored as a single report.json (PBIR-Legacy), which pbiplint cannot read. Power BI Desktop converts it to PBIR when you edit and save it, in releases from September 2026 on. See Microsoft Learn: https://learn.microsoft.com/power-bi/developer/projects/projects-report#convert-existing-report-to-pbir",
+    });
+    expect(legacyReportNotice("Demo.Report").message.endsWith(LEARN_HELP_URLS[1]!)).toBe(true);
+    expect(LEGACY_REPORT_REASON).toBe("the report is saved in the legacy report.json format");
+  });
+  it("names a legacy model in the words both surfaces gave", () => {
+    expect(legacyModelNotice("Demo/Old.SemanticModel")).toEqual({
+      kind: "legacy-model-format",
+      path: "Demo/Old.SemanticModel",
+      message:
+        "Demo/Old.SemanticModel is stored as model.bim, which pbiplint cannot read; save it in the TMDL format from Power BI Desktop",
+    });
+    expect(LEGACY_MODEL_REASON).toBe("the model is saved in the legacy model.bim format");
+  });
+  it("links only the Learn pages core exports", () => {
+    expect(LEARN_HELP_URLS).toEqual([
+      "https://learn.microsoft.com/power-bi/developer/projects/projects-overview#save-as-a-project",
+      "https://learn.microsoft.com/power-bi/developer/projects/projects-report#convert-existing-report-to-pbir",
+    ]);
+    expect(Object.isFrozen(LEARN_HELP_URLS)).toBe(true);
   });
 });
 

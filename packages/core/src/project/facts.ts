@@ -334,8 +334,9 @@ export function buildFacts(
   const facts: Fact[] = reportFacts(project, project.report, knownRules, ruleOptions);
   const model = project.model;
   if (model) {
-    // The tables Desktop shows: its auto date/time tables, and a composite model's copies of them,
-    // are hidden even from modelers, and the not-reached clause below leaves them out too.
+    // The tables Desktop shows: its auto date/time tables are hidden even from modelers, and a
+    // composite model's copies of them are saved with `showAsVariationsOnly`, shown only through a
+    // date column's variation. The not-reached clause below leaves them out too.
     const shown = model.tables.filter((t) => !isHiddenAutoDateTable(t));
     const columns = shown.reduce((s, t) => s + t.columns.length, 0);
     const measures = shown.reduce((s, t) => s + t.measures.length, 0);

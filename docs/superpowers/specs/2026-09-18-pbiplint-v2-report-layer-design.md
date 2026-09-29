@@ -1147,10 +1147,11 @@ facts do not move. The rule's page says the same under What it checks.
 Amended 2026-09-29 (issue #84, ruled with Michael on September 27,
 2026): the Model fact's counts also leave out a composite model's
 copies of auto date/time tables and their columns (section 8.2), which
-Desktop keeps hidden as it keeps its own. On
+Desktop saves with `showAsVariationsOnly`, so a copy is shown only
+through a date column's variation. On
 NewRay99/fabric-csv-bronze-ingestion at 70ee01d, a Desktop-saved
 composite project with 25 copies, the fact read 50 tables and 460
-columns; it now reads 25 and 285, the tables Desktop shows.
+columns; it now reads 25 and 285, the copies left out.
 
 **Cost.** Linear in the JSON. The demo report's largest visual is
 61 KB, most under 5 KB; a 300-visual report is a few megabytes and
@@ -1460,11 +1461,15 @@ date/time tables of the model it extends as `LocalDateTable_` tables
 whose `entity` partition, in DirectQuery mode, names that model's table
 of the same name. In the #104 corpus, all 123 such tables, in 9
 composite models across 5 repositories, have this shape, with
-`showAsVariationsOnly` on the table and an `expressionSource` naming
-the model's `DirectQuery to AS` expression, and no `DateTableTemplate_`
-table is copied. Where the extended model is saved beside the
-composite one (Crux-MS/datareporting at 5d84254), its calculated auto
-date/time tables carry the copies' names. A copy is not a calculated
+`showAsVariationsOnly` on the table, which the
+[Tabular Object Model reference](https://learn.microsoft.com/dotnet/api/microsoft.analysisservices.tabular.table.showasvariationsonly)
+says means the table "is only shown when referenced as Variation",
+and an `expressionSource` naming the model's DirectQuery expression
+(`DirectQuery to AS - <model>`, or a localized form such as
+`DirectQuery 到 AS - <model>`); no `DateTableTemplate_` table is
+copied. Where the extended model is saved beside the composite one
+(Crux-MS/datareporting at 5d84254), 35 of the 36 copies share their
+names with its calculated auto date/time tables. A copy is not a calculated
 table, so `isAutoDateTable`, which follows `REMOVE_AUTO-DATE_TABLE`'s
 source rule, missed it. `isAutoDateTableCopy` recognizes one by its
 name and its partition, and `isHiddenAutoDateTable`, either kind,
@@ -1474,7 +1479,8 @@ neither end. `REMOVE_AUTO-DATE_TABLE` keeps matching Tabular Editor and
 does not report a copy; the table a copy reads is calculated in the
 extended model, and a run on that model reports it. Microsoft Learn's
 ["Auto date/time in Power BI Desktop"](https://learn.microsoft.com/power-bi/transform-model/desktop-auto-date-time#how-it-works)
-says these tables "are permanently hidden, even from modelers". Two
+says Desktop's own auto date/time tables "are permanently hidden, even
+from modelers". Two
 Desktop-saved composite projects with PBIR reports show the change.
 Ajandaghian/superstore-powerbi-pbip-dashboard at ff9f43f has one copy:
 the Model fact reads 4 tables where it read 5, and the copy's one
@@ -1973,17 +1979,18 @@ names its hidden Fields column as its `groupByColumn` under
 says that in a parameter's DAX, "for each field, three columns are
 provided: a name, column reference, and the order number", so deleting
 the Fields column, as the source rule's finding advises, breaks the
-parameter. Tabular Editor does not read `groupByColumn`. The sample's
-model shows the difference (`'Employee Grouping'[Employee Grouping
-Fields]`), so `messy-sales.json` records its first deviation. The UDF
+parameter. The source rule does not test `groupByColumn`, so Tabular
+Editor reports the column. The sample's model shows the difference
+(`'Employee Grouping'[Employee Grouping Fields]`), so
+`messy-sales.json` records its first deviation. The UDF
 fixture, built from the same model, shows it beside its UDF deviation
 on the same rule, so a `deviations` entry may be a list, one sentence
 for each difference its fixture shows; the parity test holds the rule
 to `ours` as before, and the rule-page test holds every sentence to the
 page's Quirks. Compared with main at 5618c31, the change removes 205
-findings, all on a field parameter's Fields column, in 89 of the #104 corpus's 113 models
-with a `relatedColumnDetails` block, across 46 repositories, and adds
-none.
+findings, all on a field parameter's Fields column, in 89 of the #104
+corpus's 109 models with a `relatedColumnDetails` block, across 46 of
+their 57 repositories, and adds none.
 
 **Native rules** have no oracle. Each is pinned two ways: a
 hand-written expectation on a fixture that fires it (the sample report

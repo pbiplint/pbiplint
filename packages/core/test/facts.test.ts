@@ -1300,12 +1300,10 @@ describe("buildFacts", () => {
     });
     it("counts neither a composite model's copy of an auto date/time table nor its columns", () => {
       // A composite model reads the auto date/time tables of the model it extends as
-      // LocalDateTable_ tables with an entity partition in DirectQuery mode, which Desktop keeps
-      // hidden as it keeps its own.
-      const copy = dateTable(
-        "LocalDateTable_6d3e2a1b-4c5f-4e7a-9b8c-0d1e2f3a4b5c",
-        "entity\n\t\tmode: directQuery\n\t\tsource\n\t\t\tentityName: LocalDateTable_6d3e2a1b-4c5f-4e7a-9b8c-0d1e2f3a4b5c\n\t\t\texpressionSource: 'DirectQuery to AS - Sales'\n",
-      );
+      // LocalDateTable_ tables with an entity partition in DirectQuery mode, saved with
+      // showAsVariationsOnly rather than isHidden, so shown only through a date column's variation.
+      const COPY = "LocalDateTable_6d3e2a1b-4c5f-4e7a-9b8c-0d1e2f3a4b5c";
+      const copy = `table ${COPY}\n\tshowAsVariationsOnly\n\n\tcolumn Date\n\t\tdataType: dateTime\n\t\tisHidden\n\n\tcolumn Year\n\t\tdataType: int64\n\t\tisHidden\n\n\tpartition ${COPY} = entity\n\t\tmode: directQuery\n\t\tsource\n\t\t\tentityName: ${COPY}\n\t\t\texpressionSource: 'DirectQuery to AS - Sales'\n`;
       expect(modelFact(sales + store + copy + autoPair)).toEqual({
         layer: "model",
         label: "Model",

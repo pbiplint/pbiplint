@@ -4,7 +4,7 @@
   "captured": "2026-09-25",
   "skipRules": {},
   "deviations": {
-    "UNNECESSARY_COLUMNS": "A column that another column in its table groups by counts as used, as a field parameter's hidden Fields column is: the parameter's display column names it as its `groupByColumn` under `relatedColumnDetails`, and the parameter stops working without it. Tabular Editor does not read `groupByColumn`, so it reports that column."
+    "UNNECESSARY_COLUMNS": "A column that another column in its table groups by counts as used, as a field parameter's hidden Fields column is: the parameter's display column names it as its `groupByColumn` under `relatedColumnDetails`, and the parameter stops working without it. The source rule does not test `groupByColumn`, so Tabular Editor reports that column."
   },
   "ours": {
     "UNNECESSARY_COLUMNS": []

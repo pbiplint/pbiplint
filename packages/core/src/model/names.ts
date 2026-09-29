@@ -21,8 +21,9 @@ export const isAutoDateTableCopy = (t: Table): boolean =>
   t.partitions.some((p) => p.sourceType === "entity" && p.mode === "directquery");
 
 /**
- * An auto date/time table Desktop keeps hidden, the model's own or a composite model's copy: the
- * Model fact and NOT_REACHED_FROM_REPORT leave them out.
+ * An auto date/time table Desktop keeps out of view: the model's own, which is hidden, or a
+ * composite model's copy, saved with `showAsVariationsOnly` and so shown only through a date
+ * column's variation. The Model fact and NOT_REACHED_FROM_REPORT leave them out.
  */
 export const isHiddenAutoDateTable = (t: Table): boolean =>
   isAutoDateTable(t) || isAutoDateTableCopy(t);

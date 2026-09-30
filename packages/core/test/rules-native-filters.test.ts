@@ -241,4 +241,57 @@ describe("HARDCODED_YEAR_IN_FILTER", () => {
     expect(r.findings.map((f) => f.objectId)).toEqual(["v2"]);
     expect(r.summary.ignored).toBe(2);
   });
+
+  describe("upper bounds and ranges", () => {
+    const and = (left: unknown, right: unknown) => ({ And: { Left: left, Right: right } });
+    const year = (kind: number, value: string) => compare(kind, col("Year"), literal(value));
+
+    it("fires on a year column kept up to a year, or between two, naming the whole years kept", () => {
+      for (const [condition, detail] of [
+        [year(4, "2025L"), "years up to 2025"],
+        [year(3, "2026L"), "years up to 2025"],
+        [year(4, "'2025'"), "years up to 2025"],
+        [and(year(2, "2018L"), year(4, "2025L")), "years 2018 to 2025"],
+        [and(year(4, "2025L"), year(2, "2018L")), "years 2018 to 2025"],
+        [and(year(1, "2017L"), year(3, "2026L")), "years 2018 to 2025"],
+      ] as const)
+        expect(details([onPage(condition)]), detail).toEqual([`${detail} on 'Date'[Year]`]);
+    });
+
+    it("points at the line of the upper bound", () => {
+      const text = pretty(filtered(entry(and(year(2, "2018L"), year(4, "2025L")))));
+      const [f] = reportFindings(rule, [{ path: "definition/report.json", text }]);
+      expect(f!.location!.line).toBe(lineOf(text, '"2025L"'));
+    });
+
+    it("stays silent on an upper bound beside anything but a lower bound, and off a year column", () => {
+      const blank = { Not: { Expression: compare(0, col("Year"), literal("null")) } };
+      const day = {
+        DateSpan: { Expression: literal("datetime'2025-12-31T00:00:00'"), TimeUnit: 5 },
+      };
+      for (const condition of [
+        and(blank, year(4, "2025L")),
+        and(year(2, "2018L"), year(1, "2019L")),
+        { Or: { Left: year(2, "2018L"), Right: year(4, "2025L") } },
+        compare(4, col("Region"), literal("'2025'")),
+        compare(4, col("Date"), day),
+        year(4, "2050L"),
+      ])
+        expect(details([onPage(condition)]), j(condition)).toEqual([]);
+    });
+
+    it("leaves a range alone when its page's name carries one of its years", () => {
+      const files = [
+        {
+          path: "definition/pages/p/page.json",
+          text: j({
+            name: "p",
+            displayName: "Since 2018",
+            ...filtered(entry(and(year(2, "2018L"), year(4, "2025L")))),
+          }),
+        },
+      ];
+      expect(details(files)).toEqual([]);
+    });
+  });
 });

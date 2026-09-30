@@ -79,10 +79,63 @@ function keptYears(condition: unknown, at: string): Kept | undefined {
   return undefined;
 }
 
+/** A bound a comparison sets on a year column: which side, and the whole year it keeps at that end. */
+interface Bound {
+  side: "lower" | "upper";
+  year: number;
+  at: string;
+  column: string;
+}
+
+function bound(condition: unknown, at: string): Bound | undefined {
+  const compared = isRecord(condition) ? condition.Comparison : undefined;
+  if (!isRecord(compared) || !isYearColumn(compared.Left)) return undefined;
+  const year = yearOf(compared.Right);
+  if (year === undefined) return undefined;
+  const where = { at: `${at}/Comparison/Right/Literal/Value`, column: `${at}/Comparison/Left` };
+  // ComparisonKind 1 is greater than, 2 greater than or equal, 3 less than, 4 less than or equal.
+  switch (compared.ComparisonKind) {
+    case 1:
+      return { side: "lower", year: year + 1, ...where };
+    case 2:
+      return { side: "lower", year, ...where };
+    case 3:
+      return { side: "upper", year: year - 1, ...where };
+    case 4:
+      return { side: "upper", year, ...where };
+    default:
+      return undefined;
+  }
+}
+
 /**
- * One finding for a filter that keeps fixed years, unless drilling set it or a name it sits under
- * carries one of its years. Desktop writes one condition per filter; the first that keeps years
- * is the one reported.
+ * The years a condition keeps up to a fixed year: an upper bound alone, or an `And` of a lower and
+ * an upper bound, as Advanced filtering writes them. Each new year's data falls outside it.
+ */
+function yearsUpTo(condition: unknown, at: string): Kept | undefined {
+  const alone = bound(condition, at);
+  if (alone?.side === "upper") {
+    const { year, at: literal, column } = alone;
+    return { years: [year], detail: `years up to ${year}`, at: literal, column };
+  }
+  const both = isRecord(condition) ? condition.And : undefined;
+  if (!isRecord(both)) return undefined;
+  const sides = [bound(both.Left, `${at}/And/Left`), bound(both.Right, `${at}/And/Right`)];
+  const lower = sides.find((b) => b?.side === "lower");
+  const upper = sides.find((b) => b?.side === "upper");
+  if (!lower || !upper) return undefined;
+  return {
+    years: [lower.year, upper.year],
+    detail: `years ${lower.year} to ${upper.year}`,
+    at: upper.at,
+    column: upper.column,
+  };
+}
+
+/**
+ * One finding for a filter that keeps fixed years, or years up to a fixed one, unless drilling set
+ * it or a name it sits under carries one of its years. Desktop writes one condition per filter;
+ * the first that keeps years is the one reported.
  */
 function yearFinding(
   f: ReportFilter,
@@ -92,9 +145,11 @@ function yearFinding(
   // Drillthrough and drill-down save the last value passed or drilled into; the author set neither.
   if (f.howCreated === "Drillthrough" || f.howCreated === "Drill") return [];
   const kept = (f.where ?? [])
-    .map((w, i) =>
-      isRecord(w) ? keptYears(w.Condition, `${f.pointer}/filter/Where/${i}/Condition`) : undefined,
-    )
+    .map((w, i) => {
+      if (!isRecord(w)) return undefined;
+      const at = `${f.pointer}/filter/Where/${i}/Condition`;
+      return keptYears(w.Condition, at) ?? yearsUpTo(w.Condition, at);
+    })
     .find((k) => k !== undefined);
   if (!kept || kept.years.some((y) => names.some((n) => n !== undefined && namesYear(n, y))))
     return [];

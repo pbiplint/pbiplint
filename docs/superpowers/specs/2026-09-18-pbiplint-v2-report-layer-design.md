@@ -1875,7 +1875,10 @@ which names three at most and counts the rest
 save removes a stale one, so they do not pile up, while it keeps a
 stale target name, and one Update with the right visuals selected
 replaces the whole list (the coordinator's ruling of the same day,
-parked for Michael). The list is checked against the active page only,
+which Michael confirmed the same day; he also checked in Power BI
+Desktop that Ctrl-click selects several visuals on the canvas and in
+the Selection pane, and that Update leaves only the selected visuals
+in `targetVisualNames`). The list is checked against the active page only,
 and only when that page exists; a name whose visual.json could not be
 read, or which a folder that could not be listed could hold, is not
 reported (ruling H71). With the option off the list is not read, since

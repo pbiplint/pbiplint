@@ -183,3 +183,5 @@ Each is also in the ledger as "Ruling: ... Why: ... Cost if wrong: ...".
 - **Pull requests** as section 2 has them, each on its own branch from main, neither stacked on the other.
 
 Michael approved four of the parked decisions the same day: the DAX rules inside function bodies are dropped, the HIDE_FACT_TABLE_COLUMNS trim with them; UDF_INVALID_DEFINITION is dropped; UDF_NOT_CALLED reads direct calls, with the package roll-up and without the report's own measures; and the names and the package detail are as drafted. He runs the Desktop Rename test later; until then the work assumes yes.
+
+September 30, 2026, later: Michael ran section 8's question 1 in Power BI Desktop. After Rename in Model explorer turned `AddTax` into `Local.AddTax` and the file was saved, both callers read `Local.AddTax (`: the function `Wrap` in `functions.tmdl` and the measure `Taxed`. So Desktop's Rename updates the measures and functions that call a function, and UDF_USE_COMPOUND_NAMES's Rename route stands as published.

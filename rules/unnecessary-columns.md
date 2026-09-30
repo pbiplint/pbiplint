@@ -83,3 +83,4 @@ Report usage is the case to check first. A hidden column that a visual, a slicer
 - `UNNECESSARY_MEASURES` makes the same test on hidden measures that no expression references.
 - `ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS` reads the same hidden columns and reports the ones that still have IsAvailableInMdx set to true and are not used to sort, in a hierarchy, or in a variation, whether or not any expression references them. Deleting the column clears both; setting `isAvailableInMdx: false` clears only that one.
 - `HIDE_FOREIGN_KEYS` asks you to hide a column on the many side of a relationship. A column in a relationship is never reported here, so taking that advice does not bring the column into this rule.
+- `UDF_NOT_CALLED` reports a user-defined function nothing calls. A column that such a function names counts as used here, so deleting the function can bring the column into this rule.

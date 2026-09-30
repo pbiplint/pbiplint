@@ -71,3 +71,4 @@ Report usage is the case to check first. A hidden measure that a visual or a rep
 - `UNNECESSARY_COLUMNS` makes the same test on hidden columns, and reads relationships, hierarchies, and security rules as well as expressions.
 - `MEASURES_SHOULD_NOT_BE_DIRECT_REFERENCES_OF_OTHER_MEASURES` reports a measure whose whole expression is a reference to another measure. That reference counts as usage here, so deleting the alias can bring the measure it named into this rule.
 - `PROVIDE_FORMAT_STRING_FOR_MEASURES` reads only visible measures, which this rule never reports, so unhiding a measure to keep it moves it into that rule's scope, provided its table is visible too.
+- `UDF_NOT_CALLED` reports a user-defined function nothing calls. A measure that such a function names counts as used here, so deleting the function can bring the measure into this rule.

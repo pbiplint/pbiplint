@@ -112,6 +112,7 @@ A measure kept for another report on the same model, or for people who analyze t
 - `UNNECESSARY_MEASURES` reports hidden measures that no DAX expression references, without reading the report, so it can flag a measure a visual uses, which this rule counts as reached.
 - `UNNECESSARY_COLUMNS` makes the same one-hop test on hidden columns, and it too flags a hidden column that only a visual or a report filter uses.
 - `BROKEN_FIELD_REFERENCE` looks the other way, at fields the report names that the model does not have.
+- `UDF_NOT_CALLED` reports a user-defined function that nothing in the model calls, which this rule, reporting only columns and measures, never names on its own.
 
 ## Links
 

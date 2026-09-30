@@ -70,6 +70,7 @@ A name that already says the whole thing needs nothing added: `'Date'[Year]` gai
 - `AVOID_INVALID_DESCRIPTION_CHARACTERS` reads the description you add and reports control characters in it.
 - `PARSE_ISSUE` reports a `///` description with a blank line between it and its declaration. The object is then read as having none, so the same edit produces a finding from both rules.
 - `UNNECESSARY_COLUMNS` reports hidden columns that nothing references, which are exactly the columns this rule passes over.
+- `UDF_WITHOUT_DESCRIPTION` asks the same of user-defined functions, which are outside this rule's scope.
 
 ## Links
 

@@ -68,3 +68,14 @@ Each task writes its tests first and ends green on `npm test`, `npm run lint`, a
 4. **One rule test per moved rule**, on inline TMDL, each a shape the corpus moves (UNNECESSARY_MEASURES moves on no corpus model, so it gets none): UNNECESSARY_COLUMNS reports a hidden column named only in a comment; DAX_COLUMNS_FULLY_QUALIFIED is silent on `ALL('Calendar'[Date].[Month])`; DAX_MEASURES_UNQUALIFIED is silent on a qualified measure inside a string; NOT_REACHED_FROM_REPORT reports a column that a reached measure names only in a comment.
 5. **Rule pages.** The six Quirks bullets reworded, then `node scripts/sync-rule-pages.mjs`, and the rule-page tests.
 6. **Verification.** `npm run check:browser`, `npm run build`, the sample's first line unchanged, and the corpus diff rerun against the built branch, whose counts must match section 4 before the pull request, which carries them.
+
+## 7. Amendment, September 30, 2026: the orchestrator's rulings on Phase 1
+
+- **A column the expression creates** stays out of #108 and is parked for Michael, with the recommendation that #115 builds it once, for every kind of DAX. `resolveBareName`'s comment promises nothing to #108 and may say #115 handles columns a body creates.
+- **KPI expressions are read** (task 7, the last task and its own commit, so it can be dropped): a measure's KPI target, status, and trend expressions join that measure's references, as its format string does. No KPI object kind, no KPI-scoped rule, and no change to `define.ts`'s KPI mapping. The parser already keeps the three expressions as properties of the measure's `kpi` block, so the model reads them in a few lines. Task 7 tests the Store Sales shape: a hidden measure named only by a KPI's target is not reported by UNNECESSARY_MEASURES. Any page or code comment that says KPI expressions are not read is corrected, and the corpus delta is reported with the pull request.
+- **The six Quirks bullets** are rewritten in task 5 and checked by the reviewer. A commented-out field parameter row gets no bullet: dropping it is correct, and it goes in the release summary instead.
+- **Release notes:** both API items in section 3 go under the third heading, `extractRefs` as a behaviour change with an unchanged type.
+
+Task 7 joins section 6:
+
+7. **KPI expressions.** A test that a hidden measure named only by a KPI's `targetExpression` is not reported by UNNECESSARY_MEASURES and that the KPI's references count as the measure's. Then `Measure.kpiExpressions` (target, status, and trend, when present) in `model/build.ts`, read with the measure's expression and format string in `buildReferenceIndex`, and any wording that says KPIs are not read corrected. The corpus rerun reports its delta.

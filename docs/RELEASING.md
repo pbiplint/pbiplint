@@ -31,6 +31,11 @@ Do these once, at the first release, not before.
 
 ## Every release
 
+Each release has a milestone, and its last issue is opened from the Release issue template
+(`.github/ISSUE_TEMPLATE/release.md`), which lists the steps below and the Action's, to be ticked
+as they happen. While the milestone is open, an issue that changes what users see leaves a comment
+headed "For the 0.x.y release summary", and the release notes are drafted from those comments.
+
 1. On a branch from main, set the version in both packages and regenerate the core's version file:
 
    ```bash

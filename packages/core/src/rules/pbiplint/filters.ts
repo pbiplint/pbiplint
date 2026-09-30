@@ -17,8 +17,6 @@ interface Kept {
   detail: string;
   /** The pointer of the literal a reader edits, where the finding points. */
   at: string;
-  /** The pointer of the condition's column, which finds its reference among the filter's refs. */
-  column: string;
 }
 
 /** The year a literal holds: a whole number (`2025L`) or text (`'2025'`) of four digits, from 1950 to 2049. */
@@ -64,17 +62,12 @@ function keptYears(condition: unknown, at: string): Kept | undefined {
     });
     if (found.length === 0) return undefined;
     const years = [...new Set(found.map((f) => f.year))];
-    return { years, detail: fixed(years), at: found[0]!.at, column: `${at}/In/Expressions/0` };
+    return { years, detail: fixed(years), at: found[0]!.at };
   }
   if (isRecord(compared) && compared.ComparisonKind === 0 && isYearColumn(compared.Left)) {
     const year = yearOf(compared.Right);
     if (year === undefined) return undefined;
-    return {
-      years: [year],
-      detail: fixed([year]),
-      at: `${at}/Comparison/Right/Literal/Value`,
-      column: `${at}/Comparison/Left`,
-    };
+    return { years: [year], detail: fixed([year]), at: `${at}/Comparison/Right/Literal/Value` };
   }
   return undefined;
 }
@@ -84,7 +77,6 @@ interface Bound {
   side: "lower" | "upper";
   year: number;
   at: string;
-  column: string;
 }
 
 function bound(condition: unknown, at: string): Bound | undefined {
@@ -92,17 +84,17 @@ function bound(condition: unknown, at: string): Bound | undefined {
   if (!isRecord(compared) || !isYearColumn(compared.Left)) return undefined;
   const year = yearOf(compared.Right);
   if (year === undefined) return undefined;
-  const where = { at: `${at}/Comparison/Right/Literal/Value`, column: `${at}/Comparison/Left` };
+  const literal = `${at}/Comparison/Right/Literal/Value`;
   // ComparisonKind 1 is greater than, 2 greater than or equal, 3 less than, 4 less than or equal.
   switch (compared.ComparisonKind) {
     case 1:
-      return { side: "lower", year: year + 1, ...where };
+      return { side: "lower", year: year + 1, at: literal };
     case 2:
-      return { side: "lower", year, ...where };
+      return { side: "lower", year, at: literal };
     case 3:
-      return { side: "upper", year: year - 1, ...where };
+      return { side: "upper", year: year - 1, at: literal };
     case 4:
-      return { side: "upper", year, ...where };
+      return { side: "upper", year, at: literal };
     default:
       return undefined;
   }
@@ -114,10 +106,8 @@ function bound(condition: unknown, at: string): Bound | undefined {
  */
 function yearsUpTo(condition: unknown, at: string): Kept | undefined {
   const alone = bound(condition, at);
-  if (alone?.side === "upper") {
-    const { year, at: literal, column } = alone;
-    return { years: [year], detail: `years up to ${year}`, at: literal, column };
-  }
+  if (alone?.side === "upper")
+    return { years: [alone.year], detail: `years up to ${alone.year}`, at: alone.at };
   const both = isRecord(condition) ? condition.And : undefined;
   if (!isRecord(both)) return undefined;
   const sides = [bound(both.Left, `${at}/And/Left`), bound(both.Right, `${at}/And/Right`)];
@@ -128,7 +118,6 @@ function yearsUpTo(condition: unknown, at: string): Kept | undefined {
     years: [lower.year, upper.year],
     detail: `years ${lower.year} to ${upper.year}`,
     at: upper.at,
-    column: upper.column,
   };
 }
 
@@ -153,8 +142,10 @@ function yearFinding(
     .find((k) => k !== undefined);
   if (!kept || kept.years.some((y) => names.some((n) => n !== undefined && namesYear(n, y))))
     return [];
-  const ref = f.refs.find((r) => r.pointer === kept.column) ?? f.field;
-  return [make(kept.at, ref ? `${kept.detail} on ${fieldLabel(ref)}` : kept.detail)];
+  // The column is named as the filter's card names it, by the entry's field: for Desktop's auto
+  // date/time hierarchy that is the date column's Year level, where the condition reads the hidden
+  // LocalDateTable_ table behind it.
+  return [make(kept.at, f.field ? `${kept.detail} on ${fieldLabel(f.field)}` : kept.detail)];
 }
 
 function yearFindings(report: Report): RuleFinding[] {

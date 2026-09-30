@@ -95,7 +95,7 @@ Each finding names what the filter is on: a visual as `"Sales LY" on "Overview"`
 }
 ```
 
-The Overview page was saved with 2025 picked for 'Date'[Year] under Filters on this page, so the finding reads `Page filter on "Overview"` with `fixed year 2025 on 'Date'[Year]`. The fix filters 'Date'[Date] instead, with a relative date filter that keeps the dates in this year. page.json records it as a comparison with `Now` in years: `TimeUnit` 3 is a year in [Microsoft's semantic query schema](https://github.com/microsoft/json-schemas/blob/main/fabric/item/report/definition/semanticQuery/1.4.0/schema.json). Nothing in it names a year, so on January 1 the page moves to the new one by itself.
+The Overview page was saved with 2025 picked for 'Date'[Year] under Filters on this page, so the finding reads `Page filter on "Overview"` with `fixed year 2025 on 'Date'[Year]`. The fix filters 'Date'[Date] instead, with a relative date filter that keeps the dates in this year. Nothing in it names a year, so on January 1 the page moves to the new one by itself.
 
 ## Why it matters
 
@@ -107,14 +107,14 @@ A filter that keeps years up to one, or years picked one by one, goes wrong more
 
 Filter the date, not the year, with a filter that moves with the calendar. In Power BI Desktop:
 
-1. Drag the date column, such as 'Date'[Date], from the Data pane into the section of the Filters pane that holds the year filter.
+1. Drag the date column, such as 'Date'[Date], from the Data pane into the section of the Filters pane that holds the year filter: Filters on this visual, Filters on this page, or Filters on all pages ([Add a filter to a visual](https://learn.microsoft.com/power-bi/create-reports/power-bi-report-add-filter#add-a-filter-to-a-visual)).
 2. On the date column's filter card, select Relative date from the Filter type drop-down ([Create the relative date range filter](https://learn.microsoft.com/power-bi/visuals/desktop-slicer-filter-date-range#create-the-relative-date-range-filter)).
 3. Under Show items when the value, choose is in this, then year.
-4. Remove the year filter. A filter you added can be deleted from the pane; a year that is one of the visual's own fields cannot be deleted, since the visual refers to it, so clear it instead ([Types of filters](https://learn.microsoft.com/power-bi/create-reports/power-bi-report-filter-types#automatic-filters)).
+4. Remove the year filter. A filter you added can be deleted from the pane; a year that is one of the visual's own fields cannot be deleted, since the visual refers to it, so clear it instead ([Types of filters](https://learn.microsoft.com/power-bi/create-reports/power-bi-report-filter-types#compare-filter-types)).
 
 A relative date filter needs a column whose data type is a date, and it cannot use the auto date/time hierarchy, so for a filter on a date column's Year level, filter that date column itself ([Considerations and limitations](https://learn.microsoft.com/power-bi/visuals/desktop-slicer-filter-date-range#considerations-and-limitations)).
 
-A filter that keeps years from one year up to another often means to keep every year from the first on. Then the fix is smaller: on the year filter's card, under Show items when the value, keep is greater than or equal to the first year, empty the second condition, and select Apply filter ([Add a filter to a visual](https://learn.microsoft.com/power-bi/create-reports/power-bi-report-add-filter#add-a-filter-to-a-visual)), so each new year is kept as it arrives.
+When the filter keeps every year up to the latest one, as a range, an upper bound, or years picked one by one, it usually means every year from the first on. On its card, choose Advanced filtering, set the first condition to is greater than or equal to the first year, leave the second empty, and select Apply filter ([Add a filter to a visual](https://learn.microsoft.com/power-bi/create-reports/power-bi-report-add-filter#add-a-filter-to-a-visual)), so each new year is kept as it arrives.
 
 When the page should follow the latest year in the data rather than the calendar, as when data for a year lands weeks after it starts, or when the model has no date column, mark the year in the model instead. Right-click the date table in the Data pane, select New column, and enter the column's DAX in the formula bar ([Using calculated columns](https://learn.microsoft.com/power-bi/transform-model/desktop-calculated-columns#lets-look-at-an-example)):
 
@@ -122,7 +122,7 @@ When the page should follow the latest year in the data rather than the calendar
 Is Latest Year = 'Date'[Year] = YEAR ( MAX ( Sales[Order Date] ) )
 ```
 
-Then drag Is Latest Year into the Filters pane in place of the year filter and keep True. For the calendar's current year, write `YEAR ( TODAY () )` in place of the MAX. Either way the flag is worked out when the model refreshes, so it moves at the first refresh of the new year, and if TODAY does not update when you expect, Microsoft points to "the settings that control when the report or semantic model is refreshed" ([TODAY](https://learn.microsoft.com/dax/today-function-dax#remarks)).
+Then drag Is Latest Year into the Filters pane in place of the year filter and keep True. For the calendar's current year, write `YEAR ( TODAY () )` in place of the MAX. Either way the flag moves at the first refresh of the new year, since, as Microsoft puts it for calculated columns, "Column values are recalculated as necessary, like when the underlying data is refreshed and values have changed" ([Using calculated columns](https://learn.microsoft.com/power-bi/transform-model/desktop-calculated-columns)).
 
 In the report's files, the filter is an entry in `filterConfig` in report.json for all pages, the page.json for a page, or the visual.json for a visual: replace the year's entry with one on the date column, as the example does.
 
@@ -134,14 +134,14 @@ Often the better move is a name that says so. A page whose name, or a visual who
 
 ## Quirks
 
-- A filter is reported when it keeps only the years it names, or years up to one: years picked in Basic filtering, with a blank beside them or not, or by an Include; and Advanced filtering's is, is less than, or is less than or equal to, alone or joined by And to is greater than or is greater than or equal to. A filter that leaves years out, with is not or with Select all and years cleared, and one that only starts from a year, with is greater than or is greater than or equal to, are not reported, since each new year still shows.
+- A filter that leaves years out, with is not or with Select all and years cleared, or only starts from a year, with is greater than or is greater than or equal to, is not reported, since each new year still shows.
 - Years are counted whole, so `is less than 2026` reads as `years up to 2025`, and a range from `is greater than 2017` reads as starting in 2018.
 - An upper bound joined by And to anything but a lower bound, such as is not blank, and conditions joined by Or are not read.
 - A filter kept to one day, such as a date column set to December 31, 2025, is not read, and neither is a year written as a label, such as FY2025 or 2024/25, or stored as a decimal number.
 - Filters that drilling sets are left alone: a drillthrough page's field keeps the last value passed to it, and a visual saved drilled down keeps the value drilled into, and the author picked neither.
 - A filter hidden from readers or locked is reported like any other, since it still filters.
 - Only the Filters pane is read. A year saved as a slicer's selection is `SLICER_SELECTION_SAVED`'s to report, and bookmarks are not read.
-- Year names are read in several languages (year, año, ano, anio, jahr, année, anno, jaar, år, and more), whatever the model's culture. A name that pairs a year with a month or a quarter, such as YearMonth, is not a year column, and neither is a count of years, such as Years of Service.
+- A name that pairs a year with a month or a quarter, such as YearMonth, is not a year column, and neither is a count of years, such as Years of Service.
 - In the Power BI service, Microsoft says "slicer and filter relative options are always based on the time in UTC" ([Considerations and limitations](https://learn.microsoft.com/power-bi/visuals/desktop-slicer-filter-date-range#considerations-and-limitations)), so a relative date filter moves to the new year at midnight UTC, not at local midnight.
 
 ## Related rules
@@ -158,4 +158,3 @@ Often the better move is a name that says so. A page whose name, or a visual who
 - [Types of filters in Power BI reports, on which filters can be deleted or cleared](https://learn.microsoft.com/power-bi/create-reports/power-bi-report-filter-types#compare-filter-types)
 - [Using calculated columns in Power BI Desktop](https://learn.microsoft.com/power-bi/transform-model/desktop-calculated-columns#lets-look-at-an-example)
 - [TODAY function (DAX), and when its value updates](https://learn.microsoft.com/dax/today-function-dax#remarks)
-- [Microsoft's semantic query schema, where a TimeUnit of 3 is a year](https://github.com/microsoft/json-schemas/blob/main/fabric/item/report/definition/semanticQuery/1.4.0/schema.json)

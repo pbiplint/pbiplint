@@ -2,7 +2,7 @@
   "fixture": "examples/messy-sales",
   "report": "Messy Sales Demo.Report",
   "oracle": "fab-inspector CLI 3.4.0 with Base-rules.json sha256 22868be9acd696c96e62f214dbe0efc72fd1bfffda1736b3b9a4d7fba21f883c, every rule enabled",
-  "captured": "2026-09-26",
+  "captured": "2026-09-30",
   "deviations": {
     "AVOID_SHOW_ITEMS_WITH_NO_DATA": "Every well is checked, where the source checks the Category well only, so pbiplint also reports the option on a matrix's Rows or Columns and on any other well a visual has.",
     "ENSURE_ALTTEXT": "A visual group's own alt text counts: pbiplint reads it under `visualGroup`, where a group keeps it, and reports a group only when that alt text is missing or empty. PBI Inspector looks for a group's alt text where a visual keeps it, so it reports every group, with or without alt text of its own."

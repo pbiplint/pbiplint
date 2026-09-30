@@ -144,7 +144,7 @@ A default selection readers are meant to start from, which Microsoft endorses fo
 
 ## Quirks
 
-- A filter on the slicer in the Filters pane, which visual.json keeps in the slicer's `filterConfig`, is a visual-level filter, not the slicer's selection, and is not reported.
+- A filter on the slicer in the Filters pane, which visual.json keeps in the slicer's `filterConfig`, is a visual-level filter, not the slicer's selection, and this rule does not report it. `HARDCODED_YEAR_IN_FILTER` reports one that holds a year column to fixed years.
 - Select all saves no selection. Microsoft says it produces the same filtering result as clearing the slicer, and that Power BI does not store each item as a selection. Clearing items after Select all is a selection, though: Power BI applies an is not filter holding the cleared items, and that is reported.
 - In Power BI Desktop's saved files, a range or relative date slicer saves its value the same way as a list of picked items, so it is reported the same way.
 - Each synced copy of a slicer is reported on its own page, since Power BI Desktop's saved files write the selection into every copy.
@@ -155,6 +155,7 @@ A default selection readers are meant to start from, which Microsoft endorses fo
 ## Related rules
 
 - `SLICER_SEARCH_SAVED` reports a term saved in the slicer's search box, which visual.json keeps apart from the selection, so a slicer saved with both is reported by both rules.
+- `HARDCODED_YEAR_IN_FILTER` reports a filter in the Filters pane, a slicer's own included, that holds a year column to fixed years.
 
 ## Links
 

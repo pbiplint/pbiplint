@@ -15,10 +15,26 @@ const kept = (property: string, ...values: string[]) => ({
 const compare = (kind: number, left: unknown, right: unknown) => ({
   Comparison: { ComparisonKind: kind, Left: left, Right: right },
 });
-/** One Filters pane entry on Date, with its condition, as Desktop writes it. */
+/** The first column or hierarchy level in a condition, on `entity` rather than the alias. */
+const fieldOf = (condition: unknown, entity: string): unknown => {
+  const walk = (o: unknown): unknown => {
+    if (typeof o !== "object" || o === null) return undefined;
+    if ("Column" in o || "HierarchyLevel" in o) return o;
+    for (const v of Object.values(o)) {
+      const found = walk(v);
+      if (found !== undefined) return found;
+    }
+    return undefined;
+  };
+  const found = walk(condition);
+  return found === undefined
+    ? undefined
+    : JSON.parse(JSON.stringify(found).replaceAll('{"Source":"d"}', j({ Entity: entity })));
+};
+/** One Filters pane entry, with its condition and the field Desktop names for it. */
 const entry = (condition: unknown, extra: Record<string, unknown> = {}, entity = "Date") => ({
   name: "f1",
-  field: { Column: { Expression: { SourceRef: { Entity: entity } }, Property: "Year" } },
+  field: fieldOf(condition, entity),
   type: "Categorical",
   filter: {
     Version: 2,
@@ -102,33 +118,53 @@ describe("HARDCODED_YEAR_IN_FILTER", () => {
       In: { Expressions: [level({ SourceRef: { Source: "d" } })], Values: [[literal("2025L")]] },
     };
     expect(details([onPage(userLevel)])).toEqual(["fixed year 2025 on 'Date'[Calendar].[Year]"]);
-    const autoLevel = {
-      In: {
-        Expressions: [
-          {
-            HierarchyLevel: {
+    // Desktop's auto date/time hierarchy: the card's field is the date column's Year level, and the
+    // condition reads the Year column of the hidden LocalDateTable_ table behind it.
+    const localTable = "LocalDateTable_7f3c9a52-8e1d-4b6a-9c2f-0d5e8a1b3c4d";
+    const autoDateTime = {
+      name: "f1",
+      field: {
+        HierarchyLevel: {
+          Expression: {
+            Hierarchy: {
               Expression: {
-                Hierarchy: {
-                  Expression: {
-                    PropertyVariationSource: {
-                      Expression: { SourceRef: { Source: "d" } },
-                      Name: "Variation",
-                      Property: "Order Date",
-                    },
-                  },
-                  Hierarchy: "Date Hierarchy",
+                PropertyVariationSource: {
+                  Expression: { SourceRef: { Entity: "Sales" } },
+                  Name: "Variation",
+                  Property: "Order Date",
                 },
               },
-              Level: "Year",
+              Hierarchy: "Date Hierarchy",
+            },
+          },
+          Level: "Year",
+        },
+      },
+      type: "Categorical",
+      filter: {
+        Version: 2,
+        From: [{ Name: "l", Entity: localTable, Type: 0 }],
+        Where: [
+          {
+            Condition: {
+              In: {
+                Expressions: [
+                  { Column: { Expression: { SourceRef: { Source: "l" } }, Property: "Year" } },
+                ],
+                Values: [[literal("2025L")]],
+              },
             },
           },
         ],
-        Values: [[literal("2025L")]],
       },
+      howCreated: "User",
     };
-    expect(details([page("p", filtered(entry(autoLevel, {}, "Sales")))])).toEqual([
+    expect(details([page("p", filtered(autoDateTime))])).toEqual([
       "fixed year 2025 on 'Sales'[Order Date].[Date Hierarchy].[Year]",
     ]);
+    // A card with no field is named by what it keeps alone.
+    const { field: _, ...noField } = entry(kept("Year", "2025L"));
+    expect(details([page("p", filtered(noField))])).toEqual(["fixed year 2025"]);
   });
 
   it("fires on a filter hidden from readers or locked, and on one an Include made", () => {

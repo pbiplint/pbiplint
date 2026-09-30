@@ -612,6 +612,24 @@ describe("buildReport", () => {
     // A report measure carries no annotations: pbiplint reads no ignore on one.
     expect(report.measures[0]).not.toHaveProperty("annotations");
   });
+  it("reads a bookmark's target visual names only when it applies to its target visuals alone", () => {
+    const targets = (options: Record<string, unknown>) =>
+      buildReport([
+        {
+          path: "definition/bookmarks/b.bookmark.json",
+          text: j({ name: "b", options, explorationState: { activeSection: "p1" } }),
+        },
+      ]).report.bookmarks[0]!.targetVisuals;
+    // Desktop writes the list in every bookmark, with the option on or absent.
+    expect(targets({ targetVisualNames: ["v1"] })).toBeUndefined();
+    expect(targets({ applyOnlyToTargetVisuals: true, targetVisualNames: ["v1", 7, "g1"] })).toEqual(
+      [
+        { visual: "v1", pointer: "/options/targetVisualNames/0" },
+        { visual: "g1", pointer: "/options/targetVisualNames/2" },
+      ],
+    );
+    expect(targets({ applyOnlyToTargetVisuals: true })).toEqual([]);
+  });
 });
 
 describe("the schema notice", () => {

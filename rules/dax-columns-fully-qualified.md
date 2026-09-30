@@ -51,7 +51,7 @@ Put the table name in front of every column reference:
 Total Sales = SUM ( 'Sales'[Amount] )
 ```
 
-In Power BI Desktop, select the measure in the Data pane and edit it in the formula bar, which completes the qualified form as soon as you start typing the table name. A row-level security filter is edited under Modeling, Manage roles. In the TMDL file, edit the expression after `measure 'Total Sales' =`, or the filter after `tablePermission Sales =` inside the role.
+In Power BI Desktop, select the measure in the Data pane and edit it in the formula bar, which completes the qualified form as soon as you start typing the table name. A row-level security filter is edited under Modeling, Manage roles. In the TMDL file, edit the expression after `measure 'Total Sales' =`, or the filter after `tablePermission Sales =` inside the role. A finding that only the measure's KPI raises is fixed in the TMDL file, after `targetExpression =`, `statusExpression =`, or `trendExpression =` in the measure's `kpi` block, an edit Power BI Desktop keeps.
 
 ## When to ignore it
 
@@ -62,8 +62,8 @@ There is no case for the bare form. The rule is worth reading as a warning rathe
 - Calculation items are in the rule's scope but never fire, because Tabular Editor does not resolve bare column references inside calculation items and pbiplint matches that.
 - A bare name that matches any measure in the model is treated as a measure reference, so a column that shares its name with a measure is never flagged.
 - A bare name that matches no measure is looked for on the expression's own table first, then on every other table in the order pbiplint reads the model's files, so a finding can be raised by a column that lives on a table the expression never mentions.
-- References are found by pattern matching, so a bare `[Column]` inside a string literal or a comment counts.
-- A measure's dynamic format string is read together with its expression, so a bare column reference written inside `formatStringDefinition` reports the measure that carries it.
+- DAX is read token by token, so a bare `[Column]` inside a string literal or a comment is not reported, nor is the name after the dot in extended column syntax such as `'Date'[Date].[Year]`.
+- A measure's dynamic format string and its KPI's target, status, and trend expressions are read together with its expression, so a bare column reference written in any of them reports the measure that carries it, once however many of them hold one. Tabular Editor reports a reference in a KPI's expression on the KPI, named like `[Total Sales].KPI`, so a measure whose own expression and KPI both hold one gets two findings there and one here: pbiplint has no KPI object, so it names the measure.
 - Calculated columns and calculated tables are out of scope, so a bare column reference in either is not reported.
 - While a model file has a parse issue that can take a declaration out of the model, such as a line indented with spaces, or pbiplint could not open a model file or folder at all, the rule reports nothing, because a bare name reads as a column only when the model has no measure of that name, and a measure of that name could be in what pbiplint missed; pbiplint does not guess what a file it could not read says. The skipped line gives the reason, `a model file could not be fully read`, and the file's own `PARSE_ISSUE` finding names it, or a notice does for a file or folder pbiplint could not open.
 

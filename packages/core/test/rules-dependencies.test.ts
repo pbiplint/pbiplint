@@ -76,6 +76,29 @@ describe("dependency rules", () => {
       "Qualified",
     ]);
   });
+  it("DAX_COLUMNS_FULLY_QUALIFIED reads extended column syntax as the qualified column before the dot", () => {
+    const m = `table Calendar
+	column Date
+		dataType: dateTime
+	column Month
+		dataType: string
+	measure 'All Months' = CALCULATE ( COUNTROWS ( 'Calendar' ), ALL ( 'Calendar'[Date].[Month] ) )
+`;
+    expect(objectNames(rules.DAX_COLUMNS_FULLY_QUALIFIED, m)).toEqual([]);
+  });
+  it("DAX_MEASURES_UNQUALIFIED leaves a qualified measure named inside a string alone, as a field parameter's name is", () => {
+    const m = `table Sales
+	column Amount
+		dataType: decimal
+	measure Total = SUM ( 'Sales'[Amount] )
+	measure Pick = IF ( SELECTEDVALUE ( 'Parameter'[Parameter Fields] ) = "'Sales'[Total]", [Total] )
+
+table Parameter
+	column 'Parameter Fields'
+		dataType: string
+`;
+    expect(objectNames(rules.DAX_MEASURES_UNQUALIFIED, m)).toEqual([]);
+  });
   it("AVOID_DUPLICATE_MEASURES ignores whitespace differences and flags both copies", () => {
     expect(objectNames(rules.AVOID_DUPLICATE_MEASURES, model)).toEqual(["[Total]", "[Total Copy]"]);
   });
@@ -87,6 +110,22 @@ describe("dependency rules", () => {
   it("DAX_COLUMNS_FULLY_QUALIFIED and DAX_MEASURES_UNQUALIFIED leave a user-defined function's body alone", () => {
     expect(objectNames(rules.DAX_COLUMNS_FULLY_QUALIFIED, withFunction)).toEqual([]);
     expect(objectNames(rules.DAX_MEASURES_UNQUALIFIED, withFunction)).toEqual([]);
+  });
+  it("UNNECESSARY_MEASURES counts a measure that only a KPI's target names", () => {
+    // The shape of Microsoft's Store Sales sample, whose KPIs compare this year with last year.
+    const m = `table Sales
+	column Amount
+		dataType: decimal
+	measure 'This Year Sales' = SUM ( 'Sales'[Amount] )
+		kpi
+			targetExpression = 'Sales'[Last Year Sales]
+			statusExpression = IF ( [This Year Sales] >= 0, 1, -1 )
+	measure 'Last Year Sales' = SUM ( 'Sales'[Amount] ) * 0.9
+		isHidden
+	measure Unused = 1
+		isHidden
+`;
+    expect(objectNames(rules.UNNECESSARY_MEASURES, m)).toEqual(["[Unused]"]);
   });
   it("UNNECESSARY_MEASURES counts a measure named in a user-defined function, even one nothing calls", () => {
     expect(objectNames(rules.UNNECESSARY_MEASURES, withFunction)).toEqual(["[Unused]"]);

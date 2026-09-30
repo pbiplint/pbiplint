@@ -111,12 +111,18 @@ function buildColumn(c: TmdlNode, table: Table): Column {
 
 function buildMeasure(x: TmdlNode, table: Table): Measure {
   const p = x.props;
+  const kpi = x.children.find((c) => c.type === "kpi")?.props;
   return {
     ...named(x),
     table,
     expression: x.value ?? "",
     formatString: str(p.formatstring),
     formatStringDefinition: str(p.formatstringdefinition),
+    kpiExpressions:
+      kpi &&
+      [kpi.targetexpression, kpi.statusexpression, kpi.trendexpression]
+        .map(str)
+        .filter((e): e is string => e !== undefined),
     isHidden: flag(p.ishidden),
     displayFolder: str(p.displayfolder),
   };

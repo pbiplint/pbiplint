@@ -759,6 +759,29 @@ describe("NOT_REACHED_FROM_REPORT", () => {
   });
 });
 
+describe("NOT_REACHED_FROM_REPORT and DAX that names a field only in a comment", () => {
+  it("reports a column that a reached measure names only in a comment", () => {
+    const model = `table Sales
+	column Amount
+		dataType: decimal
+	column Price
+		dataType: decimal
+	measure Total =
+			SUM ( 'Sales'[Amount] )
+			// + SUM ( 'Sales'[Price] )
+`;
+    const files = [page("p"), bound("p", "v", "cardVisual", [measure("Sales", "Total")])];
+    expect(
+      reportFindings(NOT_REACHED_FROM_REPORT, files, model).map((f) => [f.objectName, f.detail]),
+    ).toEqual([
+      [
+        "'Sales'[Price]",
+        "nothing in the report reaches it, and no measure or column references it",
+      ],
+    ]);
+  });
+});
+
 describe("NOT_REACHED_FROM_REPORT and a report measure's bare names (#59)", () => {
   it("counts a column a report measure names bare, on another table, as reached", () => {
     // SUMX(Sales, [Qty]) on the Measures table: before #59 the report measure looked for Qty on

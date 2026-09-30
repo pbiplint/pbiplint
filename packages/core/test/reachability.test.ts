@@ -616,7 +616,14 @@ function 'Tax.Apply' = (a: NUMERIC) => a * 1.1
         text: j({
           name: "extension",
           entities: [
-            { name: "Sales", measures: [{ name: "Report Tax", expression: "Rep.Only ( )" }] },
+            {
+              name: "Sales",
+              measures: [
+                { name: "Report Tax", expression: "Rep.Only ( )" },
+                // A call written only in a comment is not a call.
+                { name: "Report Note", expression: "1 // Tax.Apply ( 2 )" },
+              ],
+            },
           ],
         }),
       },

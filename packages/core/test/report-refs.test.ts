@@ -142,16 +142,17 @@ describe("buildReportReferenceIndex", () => {
       ["Y", "unresolved"],
       ["Y", "unresolved"],
     ]);
-    const amount = model.tables[0]!.columns[0]!;
-    expect(index.referencedBy(amount).map((r) => r.owner.kind)).toEqual([
-      "bookmark",
-      "reportMeasure",
-    ]);
-    const total = model.tables[0]!.measures[0]!;
-    expect(index.referencedBy(total).map((r) => r.owner.kind)).toEqual([
-      "visualField",
-      "reportMeasure",
-    ]);
+    // What holds a reference to a model column or measure, in the report's order.
+    const holders = (target: object) =>
+      index.refs
+        .filter(
+          (r) =>
+            (r.resolution.kind === "column" && r.resolution.column === target) ||
+            (r.resolution.kind === "measure" && r.resolution.measure === target),
+        )
+        .map((r) => r.owner.kind);
+    expect(holders(model.tables[0]!.columns[0]!)).toEqual(["bookmark", "reportMeasure"]);
+    expect(holders(model.tables[0]!.measures[0]!)).toEqual(["visualField", "reportMeasure"]);
   });
   it("says why each unresolved reference is unresolved", () => {
     expect(
@@ -781,14 +782,14 @@ describe("a reference into a model file pbiplint could not fully read", () => {
         .map((r) => [r.ref.name, r.resolution.kind === "measure" ? "measure" : r.resolution]);
     // A bare [Missing] could be a measure on any table, so another table's file is enough.
     expect(refsOf(modelOf({ [SALES]: sales, [PRODUCT]: product + spaced }))).toEqual([
-      ["Gone", unresolved('no column named "Gone" on "Sales"')],
       ["Total Sales", "measure"],
       ["Missing", unread(partly('no measure or column named "Missing"'))],
+      ["Gone", unresolved('no column named "Gone" on "Sales"')],
     ]);
     expect(refsOf(modelOf({ [SALES]: sales + spaced, [PRODUCT]: product }))).toEqual([
-      ["Gone", unread(partly('no column named "Gone" on "Sales"', SALES))],
       ["Total Sales", "measure"],
       ["Missing", unread(partly('no measure or column named "Missing"'))],
+      ["Gone", unread(partly('no column named "Gone" on "Sales"', SALES))],
     ]);
   });
 

@@ -68,13 +68,13 @@ Report usage is the case to check first. A hidden column that a visual, a slicer
 
 ## Quirks
 
-- DAX references are approximated by pattern matching: references inside strings or comments count, and a bare `[Column]` reference resolves measure-first, then the expression's own table, then the first table with that column.
+- DAX is read token by token, so a column named only inside a string or a comment of a DAX expression is not a use (a row-level security filter's text test, below, still counts it), and in extended column syntax, `'Date'[Date].[Year]`, only `'Date'[Date]` is. A bare `[Column]` reference resolves measure-first, then the expression's own table, then the first table with that column.
 - A column that a user-defined function names with its table counts as used, even when nothing calls the function, as Tabular Editor counts it.
 - A column that a user-defined function names without its table counts as used, on every table with a column of that name, since the caller can hand the function any table. In pbiplint's parity check, Tabular Editor counted such a name inside `SUMX ( 'Sales', [Handling Fee] )` but reported the column a function names in `MAX ( [Tax Rate] )`, though deleting it would break the function.
 - A column that another column in its table groups by counts as used, as a field parameter's hidden Fields column is: the parameter's display column names it as its `groupByColumn` under `relatedColumnDetails`, and the parameter stops working without it. The source rule does not test `groupByColumn`, so Tabular Editor reports that column.
 - Report usage is not visible to this rule. A hidden column used only by a visual, a slicer, or a report-level filter is still flagged.
 - Variations are not tested, here or in the source rule, so a hidden column that a variation names as its default column is reported. `SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS` does read variations.
-- Row-level security is matched as text, ignoring letter case, the way the source rule matches it. A bare `[Column]` in any role's filter already counts as a DAX reference (see above), so the text test only adds the qualified forms `Table[Column]` and `'Table'[Column]`.
+- Row-level security filters are also matched as text, ignoring letter case, the way the source rule matches them: `Table[Column]` or `'Table'[Column]` in any role's filter, or `[Column]` in a filter on the column's own table, counts as a use even inside a comment or a string there.
 - While a model file has a parse issue that can take a declaration out of the model, such as a line indented with spaces, or pbiplint could not open a model file or folder at all, the rule reports nothing, because a measure, a relationship, or a security filter that uses the column could be in what pbiplint missed, and pbiplint does not guess what a file it could not read says. The skipped line gives the reason, `a model file could not be fully read`, and the file's own `PARSE_ISSUE` finding names it, or a notice does for a file or folder pbiplint could not open.
 
 ## Related rules

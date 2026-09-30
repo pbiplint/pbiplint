@@ -7,6 +7,7 @@ import type {
   Table,
   TablePermission,
 } from "../model/types.js";
+import { isPunctuation, tokenizeDax, type DaxToken } from "../dax/tokenize.js";
 
 /** An object whose DAX the index reads, with its kind, so `object` narrows with `kind`. */
 export type DaxOwner =
@@ -53,62 +54,56 @@ interface RawRef {
   qualified: boolean;
 }
 
-// Qualified: 'Table Name'[Column] or TableName[Column]. Bare: [Name]. An unquoted table name may
-// contain Unicode letters and digits (Año, Größe), so the identifier branch matches \p{L} and
-// \p{N} rather than ASCII word characters.
-const QUALIFIED = /(?:'((?:[^']|'')+)'\s*|([\p{L}_][\p{L}\p{N}_]*))\[([^\]]+)\]/gu;
-const BARE = /\[([^\]]+)\]/g;
-
 /**
- * Regex approximation of DAX dependencies: qualified refs first, then bare refs whose `[` was not
- * part of a qualified match. Strings and comments are not skipped; that is the upgrade path if a
- * fixture ever breaks parity because of it.
+ * The column and measure references among a DAX expression's tokens, in the order they appear. A
+ * `[name]` right after a `'table'` name, or right after an unquoted name with nothing between them
+ * (`Sales[Amount]`), is qualified; any other `[name]` is bare. A string is one token and a comment
+ * none, so a name written inside either is not a reference. In extended column syntax,
+ * `'Date'[Date].[Year]`, the name after the dot is a column of the date column's variation, which
+ * nothing here resolves, so only `'Date'[Date]` is read.
  */
-export function extractRefs(expression: string): RawRef[] {
+export function refsInTokens(tokens: readonly DaxToken[]): RawRef[] {
   const out: RawRef[] = [];
-  const consumed = new Set<number>();
-  for (const m of expression.matchAll(QUALIFIED)) {
-    const table = m[1] !== undefined ? m[1].replace(/''/g, "'") : m[2]!;
-    out.push({ table, name: m[3]!, qualified: true });
-    consumed.add(m.index! + m[0].length - m[3]!.length - 2);
-  }
-  for (const m of expression.matchAll(BARE)) {
-    if (consumed.has(m.index!)) continue;
-    out.push({ name: m[1]!, qualified: false });
-  }
+  tokens.forEach((t, k) => {
+    if (t.kind !== "column") return;
+    const before = tokens[k - 1];
+    if (isPunctuation(before, ".") && tokens[k - 2]?.kind === "column") return;
+    if (before?.kind === "table" || (before?.kind === "identifier" && before.end === t.start))
+      out.push({ table: before.text, name: t.text, qualified: true });
+    else out.push({ name: t.text, qualified: false });
+  });
   return out;
+}
+
+/** The column and measure references in a DAX expression, read from its tokens (`refsInTokens`). */
+export function extractRefs(expression: string): RawRef[] {
+  return refsInTokens(tokenizeDax(expression));
 }
 
 const lower = (s: string): string => s.toLowerCase();
 const key = (table: string, name: string): string => `${lower(table)} ${lower(name)}`;
-const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /**
- * A reader of the calls a DAX expression makes to the given user-defined functions, which returns
- * each function called once, in the order given. A call is the function's name, in any letter case
- * as DAX allows, followed by an opening parenthesis, with no letter, digit, underscore, or dot just
- * before the name, so `MySales.Total(` and `Other.Sales.Total(` are not calls to `Sales.Total`.
- * Like the references, a call inside a string or a comment counts.
+ * A reader of the calls among a DAX expression's tokens to the given user-defined functions, which
+ * returns each function called once, in the order given. A call is a name followed by an opening
+ * parenthesis, compared without regard to letter case as DAX compares it. The tokenizer reads a
+ * name whole, dots included, so `MySales.Total(` and `Other.Sales.Total(` are not calls to
+ * `Sales.Total`, and a call written inside a string or a comment is not a call.
  */
 export function functionCallReader(
   functions: readonly DaxFunction[],
-): (expression: string) => DaxFunction[] {
+): (tokens: readonly DaxToken[]) => DaxFunction[] {
   if (functions.length === 0) return () => [];
   const byName = new Map<string, DaxFunction>();
   for (const f of functions) if (!byName.has(lower(f.name))) byName.set(lower(f.name), f);
-  // The character before the name is matched rather than looked behind, and the parenthesis is
-  // looked ahead, so a call in another call's arguments, `F(G(`, is found too.
-  const call = new RegExp(
-    `(^|[^\\p{L}\\p{N}_.])(${[...byName.keys()].map(escapeRegExp).join("|")})(?=\\s*\\()`,
-    "giu",
-  );
   const order = new Map(functions.map((f, i) => [f, i]));
-  return (expression) => {
+  return (tokens) => {
     const found = new Set<DaxFunction>();
-    for (const m of expression.matchAll(call)) {
-      const f = byName.get(lower(m[2]!));
+    tokens.forEach((t, k) => {
+      // `call` is set on a `(` right after a name; the name's own text keeps its letter case.
+      const f = t.call === undefined ? undefined : byName.get(lower(tokens[k - 1]!.text));
       if (f) found.add(f);
-    }
+    });
     return [...found].sort((a, b) => order.get(a)! - order.get(b)!);
   };
 }
@@ -128,8 +123,9 @@ export interface BareNameLookup<M> {
  * What a bare `[Name]` in DAX reads, by one rule for every kind of DAX, so a model measure and a
  * report measure never read the same text two ways (#59). A measure of that name anywhere comes
  * first. Otherwise a column: on the owner's own table, else on the first other table that has one,
- * in model order, since a regex reader cannot tell which table a row context iterates (#108 reads
- * that with a tokenizer). A function has no table of its own, and its caller can hand it any, so
+ * in model order, as Tabular Editor resolves it (ground-truth item 3). Neither the table a row
+ * context iterates nor a column the expression creates itself (`ADDCOLUMNS(..., "X", ...)`, then
+ * `[X]`) is worked out. A function has no table of its own, and its caller can hand it any, so
  * its bare name is every model column so called; Tabular Editor reports some of those columns as
  * unused, a recorded deviation of UNNECESSARY_COLUMNS in tests/expectations/udf-sales.json. A
  * calculation item's bare name is a measure or nothing (ground-truth item 3).
@@ -211,19 +207,26 @@ export function buildReferenceIndex(model: Model): ReferenceIndex {
     ...expressions: (string | undefined)[]
   ) => {
     const expression = expressions.filter((e): e is string => e !== undefined).join("\n");
+    const tokens = tokenizeDax(expression);
     const owner: RefOwner = {
       ...of,
       ownerTable,
       expression,
-      refs: extractRefs(expression).flatMap((r) => resolve(r, ownerTable, of.kind)),
-      calls: callsIn(expression),
+      refs: refsInTokens(tokens).flatMap((r) => resolve(r, ownerTable, of.kind)),
+      calls: callsIn(tokens),
     };
     owners.push(owner);
     byObject.set(of.object, owner);
   };
   for (const t of model.tables) {
     for (const m of t.measures)
-      add({ kind: "measure", object: m }, t, m.expression, m.formatStringDefinition);
+      add(
+        { kind: "measure", object: m },
+        t,
+        m.expression,
+        m.formatStringDefinition,
+        ...(m.kpiExpressions ?? []),
+      );
     for (const c of t.columns)
       if (c.kind === "calculated") add({ kind: "calculatedColumn", object: c }, t, c.expression);
     if (t.kind === "calculated")

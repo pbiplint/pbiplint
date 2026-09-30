@@ -9,9 +9,10 @@ import type {
   Table,
 } from "../model/types.js";
 import type { Bookmark, FieldRef, Page, Report, ReportMeasure, Visual } from "../pbir/types.js";
+import { tokenizeDax } from "../dax/tokenize.js";
 import {
-  extractRefs,
   functionCallReader,
+  refsInTokens,
   resolveBareName,
   type BareNameLookup,
 } from "./references.js";
@@ -68,8 +69,6 @@ export interface ReportRef {
 
 export interface ReportReferenceIndex {
   refs: ReportRef[];
-  /** Report references that resolve to this model column or measure. */
-  referencedBy(target: Column | Measure): ReportRef[];
   /** The references that resolve to nothing; an `unread` one is not among them. */
   unresolved(): ReportRef[];
   /** The references a visual's roles bind, in role order. */
@@ -329,9 +328,14 @@ export function buildReportReferenceIndex(
         : reportMeasuresByName.get(lower(name));
     },
   };
+  const callsIn = functionCallReader(model?.functions ?? []);
+  const functionCalls: ReportReferenceIndex["functionCalls"] = [];
   for (const m of report.measures) {
     const owner: ReportRefOwner = { kind: "reportMeasure", object: m };
-    for (const raw of extractRefs(m.expression)) {
+    const tokens = tokenizeDax(m.expression);
+    const calls = callsIn(tokens);
+    if (calls.length > 0) functionCalls.push({ measure: m, calls });
+    for (const raw of refsInTokens(tokens)) {
       if (raw.qualified) {
         const t = tables.get(lower(raw.table!));
         // A qualified name is a measure when the model table carries it or the report's own
@@ -376,27 +380,8 @@ export function buildReportReferenceIndex(
     }
   }
 
-  const callsIn = functionCallReader(model?.functions ?? []);
-  const functionCalls = report.measures
-    .map((measure) => ({ measure, calls: callsIn(measure.expression) }))
-    .filter((c) => c.calls.length > 0);
-
-  const byTarget = new Map<object, ReportRef[]>();
-  for (const r of refs) {
-    const target =
-      r.resolution.kind === "column"
-        ? r.resolution.column
-        : r.resolution.kind === "measure"
-          ? r.resolution.measure
-          : undefined;
-    if (!target) continue;
-    const arr = byTarget.get(target) ?? [];
-    arr.push(r);
-    byTarget.set(target, arr);
-  }
   return {
     refs,
-    referencedBy: (target) => byTarget.get(target) ?? [],
     unresolved: () => refs.filter((r) => r.resolution.kind === "unresolved"),
     fieldsOf: (v) => refs.filter((r) => r.owner.kind === "visualField" && r.owner.object === v),
     functionCalls,

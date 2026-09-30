@@ -2,12 +2,11 @@
 name: Release
 about: The last issue in a release's milestone, with each step ticked as it happens
 title: "Release 0.x.y: "
-labels: []
 ---
 
 The last issue in the 0.x.y milestone. Once everything else in the milestone is closed: publish 0.x.y to npm, release the GitHub Action with it, and update the roadmap (#103). This issue closes last.
 
-The steps follow `docs/RELEASING.md` here and `RELEASING.md` in pbiplint/action. This issue adds what 0.x.y needs beyond them and records each step as it happens, with the run, commit, or pull request that shows it. Replace every `0.x.y` with the version, and `0.p.q` with the version before it.
+The steps follow `docs/RELEASING.md` here and `RELEASING.md` in pbiplint/action. This issue adds what 0.x.y needs beyond them and records each step as it happens, with the run, commit, or pull request that shows it. Replace every `0.x.y` with the version, and `0.p.q` with the version before it, and set this issue's milestone to 0.x.y by hand, since a template cannot.
 
 ## Particular to this release
 
@@ -38,14 +37,14 @@ Following `docs/RELEASING.md`, "Every release".
 
 Following pbiplint/action's `RELEASING.md`, "After a pbiplint CLI release".
 
-- [ ] **Action pull request.** The `pbiplint-version` default in `action.yml` and the README's inputs table set to 0.x.y. The messy-sales checkout's `ref` in `ci.yml` and `smoke.yml` moved to the commit v0.x.y points at. CONTRIBUTING's fixture command moved to 0.x.y, `test/fixtures/messy-sales.sarif` regenerated with it, and the tests' pins moved to what the new file holds. The README's rules paragraph still true of what 0.x.y checks. `npm test`, pull request, CI green, merge.
-- [ ] **Version it by what 0.x.y does, not by its number:** a minor if it adds rules or changes the findings an unchanged project gets, otherwise a patch.
-- [ ] **Tag.** The maintainer tags the merge commit and pushes it; the Release workflow moves `v1` and creates the release.
+- [ ] **Action pull request.** The `pbiplint-version` default in `action.yml` and the README's inputs table set to 0.x.y. The messy-sales checkout's `ref` in `ci.yml` and `smoke.yml` moved to the commit v0.x.y points at. CONTRIBUTING's fixture command moved to 0.x.y, `test/fixtures/messy-sales.sarif` regenerated with it from a checkout of this repository at that commit, and the tests' pins moved to what the new file holds. The README's rules paragraph still true of what 0.x.y checks. `npm test`, pull request, CI green, merge.
+- [ ] **Version it in the Action's `package.json`, in the same pull request,** since the tag must match it. Number it by what 0.x.y does, not by its number: a minor if it adds rules or changes the findings an unchanged project gets, otherwise a patch.
+- [ ] **Tag.** The maintainer tags v1.x.y on the merge commit and pushes it; the Release workflow moves `v1` and creates the release.
 - [ ] **Smoke.** Once the tag is out, run the Smoke workflow and confirm it passes on the released `v1`. If the sample changed and needs the new CLI, do not run it between the merge and the tag.
 
 ## Close out
 
 - [ ] **The milestone** closed on GitHub, with this issue the last one closed in it.
-- [ ] **The roadmap (#103):** 0.x.y under Shipped with its date, the "Now:" line moved to what comes next, and a comment noting the change.
+- [ ] **The roadmap (#103):** 0.x.y under Shipped, named for what it shipped as the entries above it are, with its date and this issue; the "Now:" line moved to what comes next; and a comment noting the change.
 - [ ] **Tidy.** Merged release branches deleted in both repositories.
 - [ ] **Close this issue** with a summary comment: what was published, the Action release, and anything that left the milestone and where it went.

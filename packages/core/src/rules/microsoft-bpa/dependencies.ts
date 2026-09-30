@@ -28,9 +28,10 @@ export function ownerFinding(o: RuleOwner): RuleFinding {
   }
 }
 
-// Scope: Measure, KPI, TablePermission, CalculationItem. KPIs are not modeled in v1. Calculation items
-// never resolve bare references to columns (ground-truth item 3), so they never fire here. A bare
-// name reads as a column only when the model has no measure of that name, and a model file pbiplint
+// Scope: Measure, KPI, TablePermission, CalculationItem. A KPI has no object of its own: its
+// expressions are read with its measure's, so the measure is reported. Calculation items never
+// resolve bare references to columns (ground-truth item 3), so they never fire here. A bare name
+// reads as a column only when the model has no measure of that name, and a model file pbiplint
 // could not fully read may hold one.
 export const DAX_COLUMNS_FULLY_QUALIFIED = bpaRule(
   "DAX_COLUMNS_FULLY_QUALIFIED",

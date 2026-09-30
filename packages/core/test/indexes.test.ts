@@ -186,6 +186,35 @@ describe("reference index", () => {
       { kind: "measure", table: "Sales", name: "Total Amount", qualified: false },
     ]);
   });
+  it("reads a measure's KPI target, status, and trend expressions as the measure's own", () => {
+    const m = modelFrom(`table Sales
+	column Amount
+		dataType: decimal
+	measure Actual = SUM ( 'Sales'[Amount] )
+		kpi
+			targetExpression = 'Sales'[Goal]
+			targetFormatString: #,0
+			statusExpression = IF ( [Actual] >= [Goal], 1, -1 )
+			trendExpression = [Trend]
+	measure Goal = 1
+	measure Trend = 1
+`);
+    const measures = m.tables[0]!.measures;
+    expect(measures[0]!.kpiExpressions).toEqual([
+      "'Sales'[Goal]",
+      "IF ( [Actual] >= [Goal], 1, -1 )",
+      "[Trend]",
+    ]);
+    expect(measures[1]!.kpiExpressions).toBeUndefined();
+    const refs = buildIndexes({ model: m }).references;
+    expect(refs.refsOf(measures[0]!).map((r) => [r.kind, r.name, r.qualified])).toEqual([
+      ["column", "Amount", true],
+      ["measure", "Goal", true],
+      ["measure", "Actual", false],
+      ["measure", "Goal", false],
+      ["measure", "Trend", false],
+    ]);
+  });
   it("scans calculated table sources, table permissions, and format string definitions", () => {
     expect(idx.references.refsOf(table("Date"))).toEqual([
       { kind: "measure", table: "Sales", name: "Total Amount", qualified: false },

@@ -105,6 +105,12 @@ export interface Measure extends Named {
   formatString?: string;
   /** Raw DAX of `formatStringDefinition = ...`, quotes included. */
   formatStringDefinition?: string;
+  /**
+   * The DAX of the measure's `kpi` block, when it has one: its `targetExpression`,
+   * `statusExpression`, and `trendExpression`, those it declares, in that order. pbiplint has no
+   * KPI object; the reference index reads these with the measure's own expression.
+   */
+  kpiExpressions?: string[];
   isHidden: boolean;
   displayFolder?: string;
 }

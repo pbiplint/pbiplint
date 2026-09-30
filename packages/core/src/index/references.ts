@@ -220,7 +220,13 @@ export function buildReferenceIndex(model: Model): ReferenceIndex {
   };
   for (const t of model.tables) {
     for (const m of t.measures)
-      add({ kind: "measure", object: m }, t, m.expression, m.formatStringDefinition);
+      add(
+        { kind: "measure", object: m },
+        t,
+        m.expression,
+        m.formatStringDefinition,
+        ...(m.kpiExpressions ?? []),
+      );
     for (const c of t.columns)
       if (c.kind === "calculated") add({ kind: "calculatedColumn", object: c }, t, c.expression);
     if (t.kind === "calculated")

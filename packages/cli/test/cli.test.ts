@@ -620,7 +620,7 @@ describe("pbiplint CLI", () => {
           detail: "not reached from this report: unknown, a model file could not be fully read",
         });
         expect((await run([root, "--fail-on", "none"])).out).toContain(
-          "24 rules skipped (a model file could not be fully read)",
+          "25 rules skipped (a model file could not be fully read)",
         );
       } finally {
         chmodSync(store, 0o644);
@@ -647,7 +647,7 @@ describe("pbiplint CLI", () => {
           reason: "modelFileUnread",
         });
         expect((await run([model, "--fail-on", "none"])).out).toContain(
-          "23 rules skipped (a model file could not be fully read)",
+          "24 rules skipped (a model file could not be fully read)",
         );
       } finally {
         chmodSync(tables, 0o755);

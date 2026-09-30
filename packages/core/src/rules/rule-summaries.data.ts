@@ -181,6 +181,12 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Pages whose tab order, the order keyboard users move through the visuals in, disagrees with the order the layout reads in: rows from top to bottom, and left to right within a row. The rule checks this only when the project's policy asks for tab order to follow the layout, and reports nothing without it.",
   TRIM_OBJECT_NAMES:
     "Names that start or end with a space, across every named object type in the model.",
+  UDF_NOT_CALLED:
+    "User-defined functions that no measure, calculated column, calculated table, calculation item, row-level security filter, format string expression, KPI, or other function in the model calls. The functions of a DAX Lib package, which share one `DAXLIB_PackageId` annotation, count as one: the package is reported once, on its first function, when nothing outside it calls any of them.",
+  UDF_USE_COMPOUND_NAMES:
+    "User-defined functions whose name holds neither a dot nor an underscore, such as `AddTax`. Tabular Editor 3 has a built-in rule with the same test.",
+  UDF_WITHOUT_DESCRIPTION:
+    "User-defined functions with no description, or one of only spaces, other than functions installed from a DAX Lib package. Tabular Editor 3 has a built-in rule with the same test, which also reports package functions.",
   UNNECESSARY_COLUMNS:
     "Hidden columns, or columns in hidden tables, that nothing references: no DAX expression, relationship, hierarchy, sort-by column, group-by column, row-level security filter, or object-level security rule.",
   UNNECESSARY_MEASURES:

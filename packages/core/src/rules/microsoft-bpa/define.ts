@@ -5,7 +5,11 @@ import { BPA_RULES, type BpaRuleMeta } from "./bpa-rules.data.js";
 
 const byId = new Map(BPA_RULES.map((r) => [r.id, r]));
 
-/** Microsoft scope name to pbiplint object type. KPI is not modeled in v1 and maps to nothing. */
+/**
+ * Microsoft scope name to pbiplint object type. KPI is not modeled in v1 and maps to nothing.
+ * `UserDefinedFunction` is Tabular Editor's token for a function, which Microsoft's ruleset does
+ * not use yet.
+ */
 const SCOPE_MAP: Record<string, ObjectType | null> = {
   Model: "Model",
   Table: "Table",
@@ -26,6 +30,7 @@ const SCOPE_MAP: Record<string, ObjectType | null> = {
   NamedExpression: "NamedExpression",
   ProviderDataSource: "DataSource",
   StructuredDataSource: "DataSource",
+  UserDefinedFunction: "Function",
   KPI: null,
 };
 

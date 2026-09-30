@@ -52,6 +52,7 @@ export type ObjectType =
   | "Level"
   | "CalculationItem"
   | "NamedExpression"
+  | "Function"
   | "DataSource"
   | "File"
   | "Report"

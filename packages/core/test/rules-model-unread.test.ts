@@ -125,6 +125,15 @@ const legacy = [
   ),
 ];
 
+/** A function and the measure that calls it, in another file. */
+const taxed: File[] = [
+  {
+    path: "definition/functions.tmdl",
+    text: "function 'Local.AddTax' = (x: NUMERIC) => x * 1.1\n",
+  },
+  table("Measures", "\tmeasure Taxed = Local.AddTax ( 10 )\n"),
+];
+
 const cases: Case[] = [
   {
     rule: "MODEL_SHOULD_HAVE_A_DATE_TABLE",
@@ -211,6 +220,12 @@ const cases: Case[] = [
     whole: legacy,
     partly: unread(legacy, "definition/tables/Legacy.tmdl"),
     wouldReport: ["Legacy SQL"],
+  },
+  {
+    rule: "UDF_NOT_CALLED",
+    whole: taxed,
+    partly: unread(taxed, "definition/tables/Measures.tmdl"),
+    wouldReport: ["Local.AddTax"],
   },
 ];
 

@@ -3,6 +3,7 @@ import type {
   CalculationItem,
   Column,
   DataSource,
+  DaxFunction,
   Hierarchy,
   Level,
   Measure,
@@ -169,6 +170,13 @@ export const finding = {
     objectName: e.name,
     location: e.location,
     object: e,
+  }),
+  /** A user-defined function, named bare (`Local.AddTax`) as Tabular Editor names it. */
+  function: (f: DaxFunction): RuleFinding => ({
+    objectType: "Function",
+    objectName: f.name,
+    location: f.location,
+    object: f,
   }),
   dataSource: (d: DataSource): RuleFinding => ({
     objectType: "DataSource",

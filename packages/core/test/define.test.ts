@@ -27,6 +27,8 @@ describe("mapScope", () => {
     ]);
     expect(mapScope("ProviderDataSource, StructuredDataSource")).toEqual(["DataSource"]);
     expect(mapScope("CalculationGroup, ModelRole")).toEqual(["CalculationGroupTable", "Role"]);
+    // Tabular Editor's scope token for a user-defined function.
+    expect(mapScope("UserDefinedFunction")).toEqual(["Function"]);
     expect(() => mapScope("Widget")).toThrow(/Widget/);
   });
 });

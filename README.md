@@ -145,4 +145,4 @@ The vendored Microsoft ruleset and PBI Inspector rule metadata have their own no
 [NOTICE](NOTICE).
 
 The name pbiplint and its logo are trademarks of McKinley Consulting.
-The code license does not cover them.
+The code license does not cover them. The logo files are in [brand](brand/).

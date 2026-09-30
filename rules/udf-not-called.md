@@ -51,7 +51,7 @@ function 'Local.AddTax' = (amount: NUMERIC) => amount * 1.1
 
 A function nothing calls is dead code that looks alive. It sits under Functions in Model explorer beside the ones in use, and anyone writing DAX in the model can find it and call it, with nothing to say whether it still does what its name promises or was left behind by a rewrite.
 
-It also keeps other dead code alive. A hidden measure or column that a function names counts as used, in pbiplint and in Tabular Editor alike, whether or not anything calls the function, so `UNNECESSARY_MEASURES` and `UNNECESSARY_COLUMNS` pass over everything the dead function names. Deleting the function brings those to light.
+It also keeps other dead code alive. A hidden measure or column that a function names counts as used, whether or not anything calls the function, so `UNNECESSARY_MEASURES` and `UNNECESSARY_COLUMNS` pass over everything the dead function names. Deleting the function brings those to light.
 
 A DAX Lib package installs all of its functions at once, so a model that calls one of them carries the rest unused as a matter of course. The rule reports a package only when none of it is called: the whole library was installed and never used.
 
@@ -59,14 +59,14 @@ A DAX Lib package installs all of its functions at once, so a model that calls o
 
 Delete the function, after checking the callers pbiplint cannot see, listed under When to ignore it.
 
-In Power BI Desktop, select Model at the top of the Data pane to open [Model explorer](https://learn.microsoft.com/power-bi/transform-model/model-explorer#find-model-explorer), right-click the function under Functions, and choose Delete from model ([Using Model explorer](https://learn.microsoft.com/dax/best-practices/dax-user-defined-functions#using-model-explorer)). In TMDL, remove the function's block from `definition/functions.tmdl`: its `///` description lines, its `function` line, and the lines indented under it. For a package, delete each function that carries its `DAXLIB_PackageId` annotation.
+In Power BI Desktop's Model view, select Model at the top of the Data pane to open [Model explorer](https://learn.microsoft.com/power-bi/transform-model/model-explorer#find-model-explorer), right-click the function under Functions, and choose Delete from model ([Using Model explorer](https://learn.microsoft.com/dax/best-practices/dax-user-defined-functions#using-model-explorer)). In TMDL, remove the function's block from `definition/functions.tmdl`: its `///` description lines, its `function` line, and the lines indented under it. For a package, delete each function that carries its `DAXLIB_PackageId` annotation.
 
 ## When to ignore it
 
 When something outside the model's own DAX calls the function:
 
 - A DAX query, such as a test harness that runs a model's test functions from outside it.
-- A report's own measures, which pbiplint does not read for calls, including a live-connected report's, which can call the functions of the model they connect to ([Considerations and limitations](https://learn.microsoft.com/dax/best-practices/dax-user-defined-functions#considerations-and-limitations)).
+- A report's own measures, which this rule does not read, including a live-connected report's, which can call the functions of the model it connects to ([Considerations and limitations](https://learn.microsoft.com/dax/best-practices/dax-user-defined-functions#considerations-and-limitations)).
 - A visual calculation, which pbiplint does not read.
 
 Or when the function is kept on purpose, such as one written ahead of the measures that will call it.
@@ -80,9 +80,9 @@ Or when the function is kept on purpose, such as one written ahead of the measur
 
 ## Related rules
 
-- `UNNECESSARY_MEASURES` counts a measure that a function names as used, even when nothing calls the function, so a measure only this rule's function uses is reported there once the function is deleted.
+- `UNNECESSARY_MEASURES` counts a measure that a function names as used, even when nothing calls the function, so a hidden measure that only this rule's function uses is reported there once the function is deleted.
 - `UNNECESSARY_COLUMNS` does the same for a hidden column.
-- `NOT_REACHED_FROM_REPORT` follows calls from the report through functions, so it reports the columns and measures only an uncalled function uses, though not the function itself.
+- `NOT_REACHED_FROM_REPORT`, when the report is in the input, follows calls from the report through functions, so it reports the columns and measures only an uncalled function uses, though not the function itself.
 - `UDF_USE_COMPOUND_NAMES` and `UDF_WITHOUT_DESCRIPTION` report on functions too; a function this rule reports is cheaper to delete than to rename or describe.
 
 ## Links

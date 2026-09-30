@@ -46,7 +46,7 @@ function 'Local.AddTax' = (amount: NUMERIC) => amount * 1.1
 
 ## Why it matters
 
-DAX's built-in functions have one-word names, and new ones arrive with Power BI releases. Microsoft's naming rules say a function's name "Must not conflict with built-in DAX functions" ([Define and manage user-defined functions](https://learn.microsoft.com/dax/best-practices/dax-user-defined-functions#define-and-manage-user-defined-functions)), but a one-word name that is free today can be taken by a built-in tomorrow. Microsoft does not say what happens to the model's function then. Tabular Editor's guidance says that "the built-in function takes precedence and your UDF will stop working" ([Use compound names for user-defined functions](https://docs.tabulareditor.com/en/kb/bpa-udf-use-compound-names.html#why-this-matters)), so every call to it would reach the built-in instead.
+Most of DAX's built-in functions have one-word names, and new ones arrive with Power BI releases. Microsoft's naming rules say a function's name "Must not conflict with built-in DAX functions" ([Define and manage user-defined functions](https://learn.microsoft.com/dax/best-practices/dax-user-defined-functions#define-and-manage-user-defined-functions)), but a one-word name that is free today can be taken by a built-in tomorrow. Microsoft does not say what happens to the model's function then. Tabular Editor's guidance says that "the built-in function takes precedence and your UDF will stop working" ([Use compound names for user-defined functions](https://docs.tabulareditor.com/en/kb/bpa-udf-use-compound-names.html#why-this-matters)), so every call to it would reach the built-in instead.
 
 A dot or an underscore marks the name as the model's own. SQLBI's naming conventions recommend a `Local.` prefix for a model's own functions "to avoid conflicts with future DAX function names" ([Function names](https://docs.sqlbi.com/dax-style/dax-naming-conventions#function-names)), and a library's functions start with the library's name.
 
@@ -54,7 +54,7 @@ A dot or an underscore marks the name as the model's own. SQLBI's naming convent
 
 Rename the function to a compound name, such as `Local.AddTax` for a function of the model's own, or a prefix for your organization or library.
 
-In Power BI Desktop, select Model at the top of the Data pane to open [Model explorer](https://learn.microsoft.com/power-bi/transform-model/model-explorer#find-model-explorer), right-click the function under Functions, choose Rename, and enter the new name; Desktop updates the measures and functions that call it.
+In Power BI Desktop's Model view, select Model at the top of the Data pane to open [Model explorer](https://learn.microsoft.com/power-bi/transform-model/model-explorer#find-model-explorer), right-click the function under Functions, choose Rename, and enter the new name; Desktop updates the measures and functions that call it.
 
 In TMDL, change the name on the function's line in `definition/functions.tmdl`, in single quotes when it holds a dot (`function 'Local.AddTax' =`), and at every call in the files under `definition/`, where it is written without quotes (`Local.AddTax(`). Searching those files for the old name followed by an opening parenthesis finds the calls.
 

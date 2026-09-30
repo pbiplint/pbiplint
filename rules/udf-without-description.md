@@ -51,7 +51,7 @@ A function is written once and called from many places, often by someone other t
 
 Write a sentence or two on what the function returns and what each parameter expects.
 
-In Power BI Desktop, write the function in DAX query view with `///` lines directly above its `FUNCTION` line, and select Update model with changes ([Saving to the model](https://learn.microsoft.com/dax/best-practices/dax-user-defined-functions#saving-to-the-model)); the `///` syntax serves "both measure and function descriptions" ([Add measure descriptions](https://learn.microsoft.com/power-bi/transform-model/dax-query-view#add-measure-descriptions)). In TMDL, add the `///` lines directly above the function's `function` line in `definition/functions.tmdl`, with no blank line between the last of them and the declaration.
+In Power BI Desktop, open the function in DAX query view: in Model view, select Model at the top of the Data pane to open Model explorer, right-click the function under Functions, and choose Quick queries, then Define and evaluate ([Using Model explorer](https://learn.microsoft.com/dax/best-practices/dax-user-defined-functions#using-model-explorer)). Write `///` lines directly above its `FUNCTION` line and select Update model with changes ([Saving to the model](https://learn.microsoft.com/dax/best-practices/dax-user-defined-functions#saving-to-the-model)); the `///` syntax serves "both measure and function descriptions" ([Add measure descriptions](https://learn.microsoft.com/power-bi/transform-model/dax-query-view#add-measure-descriptions)). In TMDL, add the `///` lines directly above the function's `function` line in `definition/functions.tmdl`, with no blank line between the last of them and the declaration.
 
 Microsoft says parameter descriptions are not supported ([Considerations and limitations](https://learn.microsoft.com/dax/best-practices/dax-user-defined-functions#considerations-and-limitations)), so say what the parameters expect in the description itself; `@param` and `@returns` tags are optional.
 
@@ -61,13 +61,13 @@ A function whose name and parameters already say everything, such as `Local.Doub
 
 ## Quirks
 
-- Functions with a `DAXLIB_PackageId` annotation, which Power BI Desktop keeps when it installs a package from DAX Lib, are skipped, since a published package version cannot be edited, only replaced by a new version ([Submitting a library to DAX Lib](https://docs.daxlib.org/contribute/fork-daxlib#submitting-library-to-dax-lib)). Tabular Editor's rule reports them.
+- Functions with a `DAXLIB_PackageId` annotation, which Power BI Desktop keeps when it installs a package from DAX Lib, are skipped, since a published package version cannot be edited, only replaced by a new version ([Submitting a library to DAX Lib](https://docs.daxlib.org/contribute/fork-daxlib#submitting-library-to-dax-lib)). Tabular Editor's rule reports them. Functions installed without that annotation, such as through semantic-link-labs, which writes its own ([`_functions.py`](https://github.com/microsoft/semantic-link-labs/blob/main/src/sempy_labs/daxlib/_functions.py)), are checked as the model's own.
 - A description of only spaces or tabs counts as none.
 - Whether a function is hidden makes no difference, as in Tabular Editor's rule, whose name speaks of visible functions but which reports a hidden one too.
 
 ## Related rules
 
-- `OBJECTS_WITH_NO_DESCRIPTION` asks the same of tables, columns, and measures.
+- `OBJECTS_WITH_NO_DESCRIPTION` asks the same of visible tables, columns, measures, and calculation groups.
 - `PARSE_ISSUE` reports a `///` description with a blank line between it and its declaration. The function is then read as having none, so the same edit produces a finding from both rules.
 - `UDF_NOT_CALLED` reports a function nothing calls, which is better deleted than described.
 

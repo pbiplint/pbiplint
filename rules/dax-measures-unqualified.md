@@ -69,7 +69,7 @@ There is no case for the table prefix on a measure. If a finding surprises you, 
 
 ## Quirks
 
-- References are found by pattern matching, so a qualified measure reference inside a string literal or a comment counts.
+- DAX is read token by token, so a qualified measure reference inside a comment or a string literal, such as a field parameter's `"'Sales'[Total Sales]"`, is not reported.
 - A measure's dynamic format string is read together with its expression, so `'Sales'[Total Sales]` written inside `formatStringDefinition` reports the measure that carries it.
 - The reference has to resolve. `'Sales'[Total Sales]` written where the model has no table called Sales, or where Sales has no measure of that name, is not reported by this rule at all.
 - Row-level security filters are out of scope, so a qualified measure reference inside a role's table filter is never reported.

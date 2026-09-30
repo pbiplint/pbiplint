@@ -63,7 +63,7 @@ Report usage is the case to check first. A hidden measure that a visual or a rep
 - Report usage is not visible to this rule. A hidden measure used only by a visual is still flagged.
 - A row-level security filter counts as a DAX expression, so a measure named in one is used.
 - A measure named in a user-defined function counts as referenced, even when nothing calls the function, as Tabular Editor counts it. When the report is in the input, `NOT_REACHED_FROM_REPORT` follows the calls, so it reports a measure that only an uncalled function uses.
-- A bare `[Measure]` reference resolves by name across the whole model, ignoring letter case, so it counts wherever the measure lives. References are found by pattern, not by parsing, so a measure named inside a string or a comment counts as used too.
+- A bare `[Measure]` reference resolves by name across the whole model, ignoring letter case, so it counts wherever the measure lives. DAX is read token by token, so a measure named only inside a string or a comment is not a use.
 - While a model file has a parse issue that can take a declaration out of the model, such as a line indented with spaces, or pbiplint could not open a model file or folder at all, the rule reports nothing, because the DAX that references the measure could be in what pbiplint missed, and pbiplint does not guess what a file it could not read says. The skipped line gives the reason, `a model file could not be fully read`, and the file's own `PARSE_ISSUE` finding names it, or a notice does for a file or folder pbiplint could not open.
 
 ## Related rules

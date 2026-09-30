@@ -1736,7 +1736,7 @@ list.
 |---|---|---|---|---|
 | BROKEN_ACTION_TARGET | Visual | Error Prevention | error | A button's `navigationSection`, `bookmark`, or `drillthroughSection` names nothing that exists |
 | ACTION_WITHOUT_DESTINATION | Visual | Report Design | warning | A button's page navigation, drillthrough, or bookmark action is on but names no destination |
-| BROKEN_BOOKMARK_REFERENCE | Bookmark | Error Prevention | warning | A bookmark's active page, or a page or visual it captures, does not exist |
+| BROKEN_BOOKMARK_REFERENCE | Bookmark | Error Prevention | warning | A bookmark's active page, or a page or visual it captures, does not exist, or, with Selected visuals on, a visual it applies to is not on its active page (added September 30, 2026, #112) |
 | TAB_ORDER_FOLLOWS_LAYOUT | Page | Accessibility | warning | Tab order disagrees with reading order (top to bottom, left to right, with a row tolerance of half the median visual height). Desktop always writes `tabOrder`, so "not set" is not detectable; disagreement with the layout is. The page documents the heuristic; policy `expect: layout`, silent without it |
 | SLICER_SELECTION_SAVED | Visual | Report Design | info | A slicer carries a saved selection (any visual that saves one, amended 2026-09-24 with Michael); policy `expect: none` raises it to warning |
 | SLICER_SEARCH_SAVED | Visual | Report Design | warning | A slicer carries a saved search term (any visual that saves one, added 2026-09-25 with Michael); no policy |
@@ -1854,6 +1854,66 @@ whether other visuals are filtered depends on what is selected in the
 slicer. He checked the fix too: deleting the term and saving leaves
 the box empty when the report is reopened in Power BI Desktop, and the
 slicer's eraser clears the search box.
+
+Amended September 30, 2026 (issue #112, scoped by Michael on
+September 27, 2026, when it moved out of #74):
+`BROKEN_BOOKMARK_REFERENCE` reads `options.targetVisualNames` when
+`options.applyOnlyToTargetVisuals` beside it is `true`, the file's
+record of the Selected visuals option, which Learn says "Applies the
+bookmark settings only to the visuals you select before creating or
+updating the bookmark"
+([Create report bookmarks](https://learn.microsoft.com/power-bi/create-reports/desktop-bookmarks#create-report-bookmarks)).
+The names that are no visual or group on the bookmark's active page
+are one finding for the bookmark, at the line of the first of them,
+with the detail
+`target visual "<name>" is not on page "<display name>"`, or for more
+than one
+`target visuals "a", "b", and "c" are not on page "<display name>"`,
+which names three at most and counts the rest
+(`"a", "b", "c", and 4 more`, through the `englishList` that
+`HARDCODED_YEAR_IN_FILTER` uses). A captured visual stays a finding of its own: Desktop's
+save removes a stale one, so they do not pile up, while it keeps a
+stale target name, and one Update with the right visuals selected
+replaces the whole list (the coordinator's ruling of the same day,
+parked for Michael). The list is checked against the active page only,
+and only when that page exists; a name whose visual.json could not be
+read, or which a folder that could not be listed could hold, is not
+reported (ruling H71). With the option off the list is not read, since
+Desktop writes it in every bookmark (1,155 of 1,159 in the fetched
+corpus, the 4 without it in one agent-written repository), and
+`applyOnlyToTargetVisuals` is `true` or absent, never `false`.
+`visualContainerGroups` keys and their `children` stay unread (stale in
+3 repositories, with no known effect). The report model's `Bookmark`
+gains the optional `targetVisuals`, present only with the option on.
+
+The page the list refers to was settled from real files: in both
+corpora every name in every list is a visual or a group on the
+bookmark's active page, or on no page of the report at all; none names
+a visual on another page, with Current page on or off. Lists name
+groups (692 group names in applying bookmarks of the fetched corpus),
+and a group is one of its page's visuals in the report model, so a
+group on the page is found. Power BI Desktop does not clean the list:
+in the history of one Desktop-saved repository, a single commit
+deleted four slicers and removed them from three bookmarks'
+`visualContainers`, as Learn's save-time cleanup does, and left all
+four in each bookmark's `targetVisualNames` (17 such entries in the
+histories of 2 repositories, 12 of them this commit's). The pull request 5 corpus reproduces the issue's count
+(Desktop repositories, active page present: 149 bookmarks with 1,902
+stale names, 24 of them applying, with 134 names in 6 reports and 5
+repositories). The built rule, run with main's build and this one over
+both corpora, moves only its own findings, one per bookmark: 32
+findings for 147 names (9 reports, 8 repositories, 3 of them
+agent-written) in the pull request 5 corpus, and 120 findings for 363
+names (24 reports, 13 repositories; Desktop-saved 112 findings for 350
+names, 21 reports, 10 repositories) in the fetched corpus, 76 of the
+findings and 159 of the names in one repository. Of the fetched
+corpus's 120, 56 name one visual and 64 name more; one finding per name
+would have been 363.
+No false findings: every name reported is no visual or group on any
+page of its report. No stale name is also a `visualContainers` key of
+its bookmark, so no visual is reported twice; 6 are groups deleted
+from the page and still under `visualContainerGroups`. The sample does
+not move: its one bookmark writes an empty list with the option off.
 
 Mobile layouts and themes are facts only in v2.
 

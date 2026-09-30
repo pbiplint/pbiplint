@@ -33,7 +33,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   BROKEN_ACTION_TARGET:
     "Buttons, shapes, and images whose page navigation, drillthrough, or bookmark action names a page or a bookmark the report does not have, matched against the `name` in each page.json and bookmark file.",
   BROKEN_BOOKMARK_REFERENCE:
-    "Bookmarks whose active page, or another page they capture, is not in the report, or which capture a visual that is not on its page, matched against the `name` in each page.json and visual.json.",
+    "Bookmarks whose active page, or another page they capture, is not in the report, which capture a visual that is not on its page, or which apply only to selected visuals and name one that is not on their active page, matched against the `name` in each page.json and visual.json.",
   BROKEN_FIELD_REFERENCE:
     "References in the report to a table, column, measure, hierarchy, or hierarchy level that the model does not have, wherever the report names a field: a visual's wells, formatting, and sort, a filter on a visual, a page, or the whole report, a drillthrough or tooltip page's fields, and a bookmark.",
   CALCULATION_GROUPS_WITH_NO_CALCULATION_ITEMS:

@@ -194,6 +194,13 @@ export interface Bookmark {
   pages: string[];
   /** Each `visualContainers` key of each section, with its pointer; groups are captured apart. */
   visuals: { page: string; visual: string; pointer: string }[];
+  /**
+   * Each name in `options.targetVisualNames`, with its pointer, when `applyOnlyToTargetVisuals`
+   * beside it is true: the visuals and groups of the active page that the bookmark applies to with
+   * its Selected visuals option on. Absent with that option off, since Desktop writes the list in
+   * every bookmark either way.
+   */
+  targetVisuals?: { visual: string; pointer: string }[];
   refs: FieldRef[];
 }
 

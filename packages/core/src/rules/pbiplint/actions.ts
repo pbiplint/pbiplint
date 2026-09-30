@@ -6,8 +6,10 @@ import {
   reportFinding,
   visualUnread,
 } from "../report-helpers.js";
+import type { Page } from "../../pbir/types.js";
 import type { RuleFinding } from "../types.js";
 import { pbiplintRule } from "./define.js";
+import { englishList } from "./periods.js";
 
 /**
  * The action types whose destination names a page or a bookmark, keyed by the type in lower case,
@@ -89,14 +91,15 @@ export const BROKEN_BOOKMARK_REFERENCE = pbiplintRule({
   severity: 2,
   scope: ["Bookmark"],
   layer: "report",
-  // Groups are captured apart from visuals and are not read, nor is the list of target visuals.
-  // A page or a visual whose own file could not be read is there, under the folder name Desktop
-  // gives it, so it is never reported missing, and neither is one a folder that could not be read
-  // could hold.
+  // Groups, captured apart from visuals under `visualContainerGroups`, are not read. A page or a
+  // visual whose own file could not be read is there, under the folder name Desktop gives it, so
+  // it is never reported missing, and neither is one a folder that could not be read could hold.
   check: ({ report }) => {
     if (!report) return [];
     const pages = new Map(report.pages.map((p) => [p.id, p]));
     const missing = (id: string): boolean => !pages.has(id) && !pageUnread(report, id);
+    const notOn = (p: Page, id: string): boolean =>
+      !p.visuals.some((v) => v.id === id) && !visualUnread(report, p, id);
     return report.bookmarks.flatMap((b): RuleFinding[] => {
       const out: RuleFinding[] = [];
       if (b.activePage !== undefined && missing(b.activePage))
@@ -119,7 +122,7 @@ export const BROKEN_BOOKMARK_REFERENCE = pbiplintRule({
           );
       for (const { page, visual, pointer } of b.visuals) {
         const p = pages.get(page);
-        if (p && !p.visuals.some((v) => v.id === visual) && !visualUnread(report, p, visual))
+        if (p && notOn(p, visual))
           out.push(
             reportFinding.bookmark(
               b,
@@ -127,6 +130,23 @@ export const BROKEN_BOOKMARK_REFERENCE = pbiplintRule({
               pointer,
             ),
           );
+      }
+      // Read only with Selected visuals on. The list names visuals and groups of the active page,
+      // and a group is one of the page's visuals here. Desktop leaves a deleted visual's name in
+      // the list, and one Update replaces the whole list, so its stale names are one finding, at
+      // the first of them.
+      const active = b.activePage === undefined ? undefined : pages.get(b.activePage);
+      const stale = active ? (b.targetVisuals ?? []).filter((t) => notOn(active, t.visual)) : [];
+      if (active && stale.length > 0) {
+        const many = stale.length > 1;
+        const names = englishList(stale.map((t) => `"${t.visual}"`));
+        out.push(
+          reportFinding.bookmark(
+            b,
+            `target visual${many ? "s" : ""} ${names} ${many ? "are" : "is"} not on page "${active.displayName}"`,
+            stale[0]!.pointer,
+          ),
+        );
       }
       return out;
     });

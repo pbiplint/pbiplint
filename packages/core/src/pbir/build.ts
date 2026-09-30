@@ -340,6 +340,10 @@ function buildBookmark(
           visual,
           pointer: `/explorationState/sections/${escapePointer(page)}/visualContainers/${escapePointer(visual)}`,
         });
+  const options = isRecord(json.options) ? json.options : {};
+  const names: unknown[] = Array.isArray(options.targetVisualNames)
+    ? options.targetVisualNames
+    : [];
   return {
     id: str(json.name) ?? id,
     displayName: str(json.displayName) ?? id,
@@ -348,6 +352,15 @@ function buildBookmark(
     ...(str(state.activeSection) !== undefined ? { activePage: str(state.activeSection) } : {}),
     pages: Object.keys(sections),
     visuals,
+    ...(options.applyOnlyToTargetVisuals === true
+      ? {
+          targetVisuals: names.flatMap((visual, i) =>
+            typeof visual === "string"
+              ? [{ visual, pointer: `/options/targetVisualNames/${i}` }]
+              : [],
+          ),
+        }
+      : {}),
     refs: collectFieldRefs(state, "/explorationState"),
   };
 }

@@ -52,6 +52,34 @@ interface RawRef {
   table?: string;
   name: string;
   qualified: boolean;
+  /** Set on a bare name that reads a column the same expression creates (`refsInTokens`). */
+  created?: true;
+}
+
+/** Functions whose string arguments name columns of the table they return. */
+const CREATES_COLUMNS = new Set([
+  "ADDCOLUMNS",
+  "SELECTCOLUMNS",
+  "SUMMARIZE",
+  "SUMMARIZECOLUMNS",
+  "ROW",
+  "DATATABLE",
+]);
+
+/**
+ * The columns an expression creates, by name in lower case, each with the token range of every
+ * call that creates it: the call's opening parenthesis to its closing one.
+ */
+function createdColumns(tokens: readonly DaxToken[]): Map<string, [number, number][]> {
+  const out = new Map<string, [number, number][]>();
+  for (const t of tokens) {
+    if (t.kind !== "string" || t.parent === undefined) continue;
+    const open = tokens[t.parent]!;
+    if (open.call === undefined || !CREATES_COLUMNS.has(open.call)) continue;
+    const name = t.text.toLowerCase();
+    out.set(name, [...(out.get(name) ?? []), [t.parent, open.close ?? tokens.length]]);
+  }
+  return out;
 }
 
 /**
@@ -61,15 +89,27 @@ interface RawRef {
  * none, so a name written inside either is not a reference. In extended column syntax,
  * `'Date'[Date].[Year]`, the name after the dot is a column of the date column's variation, which
  * nothing here resolves, so only `'Date'[Date]` is read.
+ *
+ * A bare name is `created` when a string argument of ADDCOLUMNS, SELECTCOLUMNS, SUMMARIZE,
+ * SUMMARIZECOLUMNS, ROW, or DATATABLE names that column, compared without regard to case, and the
+ * name sits outside every call that creates it: `[Margin]` in
+ * `MAXX(ADDCOLUMNS(T, "Margin", ...), [Margin])`. Inside such a call the name cannot be the column
+ * the call is creating, as in `SELECTCOLUMNS(T, "Id", [Id])`, so it is left as any other bare name.
  */
 export function refsInTokens(tokens: readonly DaxToken[]): RawRef[] {
+  const created = createdColumns(tokens);
   const out: RawRef[] = [];
   tokens.forEach((t, k) => {
     if (t.kind !== "column") return;
     const before = tokens[k - 1];
     if (isPunctuation(before, ".") && tokens[k - 2]?.kind === "column") return;
-    if (before?.kind === "table" || (before?.kind === "identifier" && before.end === t.start))
+    if (before?.kind === "table" || (before?.kind === "identifier" && before.end === t.start)) {
       out.push({ table: before.text, name: t.text, qualified: true });
+      return;
+    }
+    const calls = created.get(t.text.toLowerCase());
+    if (calls?.every(([open, close]) => k < open || k > close))
+      out.push({ name: t.text, qualified: false, created: true });
     else out.push({ name: t.text, qualified: false });
   });
   return out;
@@ -122,22 +162,24 @@ export interface BareNameLookup<M> {
 /**
  * What a bare `[Name]` in DAX reads, by one rule for every kind of DAX, so a model measure and a
  * report measure never read the same text two ways (#59). A measure of that name anywhere comes
- * first. Otherwise a column: on the owner's own table, else on the first other table that has one,
- * in model order, as Tabular Editor resolves it (ground-truth item 3). Neither the table a row
- * context iterates nor a column the expression creates itself (`ADDCOLUMNS(..., "X", ...)`, then
- * `[X]`) is worked out. A function has no table of its own, and its caller can hand it any, so
- * its bare name is every model column so called; Tabular Editor reports some of those columns as
- * unused, a recorded deviation of UNNECESSARY_COLUMNS in tests/expectations/udf-sales.json. A
- * calculation item's bare name is a measure or nothing (ground-truth item 3).
+ * first. Then a column the expression creates itself (`created`, from `refsInTokens`), which is no
+ * model column, so nothing. Otherwise a column: on the owner's own table, else on the first other
+ * table that has one, in model order, as Tabular Editor resolves it (ground-truth item 3). The
+ * table a row context iterates is not worked out. A function has no table of its own, and its
+ * caller can hand it any, so its bare name is every model column so called; Tabular Editor
+ * reports some of those columns as unused, a recorded deviation of UNNECESSARY_COLUMNS in
+ * tests/expectations/udf-sales.json. A calculation item's bare name is a measure or nothing
+ * (ground-truth item 3).
  */
 export function resolveBareName<M>(
-  name: string,
+  ref: { name: string; created?: true },
   owner: { kind: RefOwnerKind | "reportMeasure"; table?: Table | undefined },
   lookup: BareNameLookup<M>,
 ): BareName<M> {
+  const { name } = ref;
   const measure = lookup.measureNamed(name);
   if (measure !== undefined) return { kind: "measure", measure };
-  if (owner.kind === "calculationItem") return { kind: "none" };
+  if (ref.created || owner.kind === "calculationItem") return { kind: "none" };
   if (owner.kind === "function") {
     const columns = lookup.tables.flatMap((t) => lookup.columnOf(t, name) ?? []);
     return columns.length > 0 ? { kind: "columns", columns } : { kind: "none" };
@@ -180,7 +222,7 @@ export function buildReferenceIndex(model: Model): ReferenceIndex {
       if (meas) return { kind: "measure", table: t.name, name: meas.name, qualified: true };
       return { kind: "unresolved", table: raw.table, name: raw.name, qualified: true };
     }
-    const bare = resolveBareName(raw.name, { kind: ownerKind, table: ownerTable }, lookup);
+    const bare = resolveBareName(raw, { kind: ownerKind, table: ownerTable }, lookup);
     if (bare.kind === "measure")
       return {
         kind: "measure",

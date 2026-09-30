@@ -316,8 +316,9 @@ export function buildReportReferenceIndex(
   }
   for (const b of report.bookmarks) add({ kind: "bookmark", object: b }, b.file, b.refs);
   // A report measure's DAX is read the way a model measure's is, by the same resolver: a bare [X]
-  // is a measure anywhere in the model or the report, else a column on the measure's own table,
-  // else on the first other table that has one.
+  // is a measure anywhere in the model or the report, else nothing when it is a column the DAX
+  // creates (`created`), else a column on the measure's own table, else on the first other table
+  // that has one.
   const bareLookup: BareNameLookup<{ table: string; name: string }> = {
     tables: model?.tables ?? [],
     columnOf,
@@ -349,7 +350,7 @@ export function buildReportReferenceIndex(
         continue;
       }
       const bare = resolveBareName(
-        raw.name,
+        raw,
         { kind: "reportMeasure", table: tables.get(lower(m.table)) },
         bareLookup,
       );

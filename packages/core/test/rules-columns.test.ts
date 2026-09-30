@@ -135,6 +135,27 @@ role R
 `;
     expect(objectNames(rules.UNNECESSARY_COLUMNS, m)).toEqual(["'T'[Commented]"]);
   });
+  it("UNNECESSARY_COLUMNS reports a hidden column that DAX names only as a column it creates", () => {
+    // A shape from a real model: SUMMARIZE creates DueDate, and [DueDate] outside it read the
+    // first table's hidden DueDate column, which nothing else uses.
+    const m = `table Archive
+	column DueDate
+		dataType: dateTime
+		isHidden
+
+table Invoices
+	column Key
+		dataType: int64
+	column DueDate
+		dataType: dateTime
+	column Amount
+		dataType: decimal
+
+table Measures
+	measure Overdue = SUMX ( FILTER ( SUMMARIZE ( 'Invoices', 'Invoices'[Key], "DueDate", MAX ( 'Invoices'[DueDate] ), "Rem", MAX ( 'Invoices'[Amount] ) ), [DueDate] < TODAY () ), [Rem] )
+`;
+    expect(objectNames(rules.UNNECESSARY_COLUMNS, m)).toEqual(["'Archive'[DueDate]"]);
+  });
   it("UNNECESSARY_COLUMNS counts a column a user-defined function names, bare on any table or qualified", () => {
     const m = `table T
 	column Unused

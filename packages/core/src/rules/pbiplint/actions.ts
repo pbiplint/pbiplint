@@ -9,6 +9,7 @@ import {
 import type { Page } from "../../pbir/types.js";
 import type { RuleFinding } from "../types.js";
 import { pbiplintRule } from "./define.js";
+import { englishList } from "./periods.js";
 
 /**
  * The action types whose destination names a page or a bookmark, keyed by the type in lower case,
@@ -131,18 +132,22 @@ export const BROKEN_BOOKMARK_REFERENCE = pbiplintRule({
           );
       }
       // Read only with Selected visuals on. The list names visuals and groups of the active page,
-      // and a group is one of the page's visuals here.
+      // and a group is one of the page's visuals here. Desktop leaves a deleted visual's name in
+      // the list, and one Update replaces the whole list, so its stale names are one finding, at
+      // the first of them.
       const active = b.activePage === undefined ? undefined : pages.get(b.activePage);
-      if (active)
-        for (const { visual, pointer } of b.targetVisuals ?? [])
-          if (notOn(active, visual))
-            out.push(
-              reportFinding.bookmark(
-                b,
-                `target visual "${visual}" is not on page "${active.displayName}"`,
-                pointer,
-              ),
-            );
+      const stale = active ? (b.targetVisuals ?? []).filter((t) => notOn(active, t.visual)) : [];
+      if (active && stale.length > 0) {
+        const many = stale.length > 1;
+        const names = englishList(stale.map((t) => `"${t.visual}"`));
+        out.push(
+          reportFinding.bookmark(
+            b,
+            `target visual${many ? "s" : ""} ${names} ${many ? "are" : "is"} not on page "${active.displayName}"`,
+            stale[0]!.pointer,
+          ),
+        );
+      }
       return out;
     });
   },

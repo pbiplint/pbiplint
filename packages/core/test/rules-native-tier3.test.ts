@@ -442,11 +442,32 @@ describe("BROKEN_BOOKMARK_REFERENCE", () => {
       b,
     ]);
     expect(findings.map((f) => [f.detail, f.location!.line])).toEqual([
-      ['target visual "gone" is not on page "Page p"', lineOf(b.text, '"gone"')],
-      ['target visual "w" is not on page "Page p"', lineOf(b.text, '"w"')],
+      ['target visuals "gone" and "w" are not on page "Page p"', lineOf(b.text, '"gone"')],
     ]);
     // With All visuals, Desktop still writes the list, and the bookmark does not read it.
     expect(reportObjectIds(BROKEN_BOOKMARK_REFERENCE, [...pages, on(["gone"])])).toEqual([]);
+  });
+  it("reports a bookmark's stale target visuals as one finding, at the first, naming three at most", () => {
+    const pages = [page("p"), visual("p", "v", "cardVisual")];
+    const detail = (targetVisualNames: string[]) => {
+      const b = bookmark(
+        "b12",
+        { activeSection: "p", sections: { p: { visualContainers: {} } } },
+        { options: { applyOnlyToTargetVisuals: true, targetVisualNames } },
+      );
+      // Each case's first stale name is "a", wherever it sits in the list.
+      return reportFindings(BROKEN_BOOKMARK_REFERENCE, [...pages, b]).map((f) => [
+        f.detail,
+        f.location!.line === lineOf(b.text, '"a"'),
+      ]);
+    };
+    expect(detail(["v", "a"])).toEqual([['target visual "a" is not on page "Page p"', true]]);
+    expect(detail(["v", "a", "b", "c"])).toEqual([
+      ['target visuals "a", "b", and "c" are not on page "Page p"', true],
+    ]);
+    expect(detail(["a", "v", "b", "c", "d", "e"])).toEqual([
+      ['target visuals "a", "b", "c", and 2 more are not on page "Page p"', true],
+    ]);
   });
   it("says nothing of a page or a visual whose own file could not be read, found by its folder name", () => {
     const details = (files: { path: string; text: string }[]) =>

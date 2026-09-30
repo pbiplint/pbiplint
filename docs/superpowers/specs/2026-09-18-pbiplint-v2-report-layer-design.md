@@ -1863,10 +1863,19 @@ record of the Selected visuals option, which Learn says "Applies the
 bookmark settings only to the visuals you select before creating or
 updating the bookmark"
 ([Create report bookmarks](https://learn.microsoft.com/power-bi/create-reports/desktop-bookmarks#create-report-bookmarks)).
-Each name that is no visual or group on the bookmark's active page is
-a finding of its own, at the name's line in the list, with the detail
-`target visual "<name>" is not on page "<display name>"`, as a captured
-visual is reported. The list is checked against the active page only,
+The names that are no visual or group on the bookmark's active page
+are one finding for the bookmark, at the line of the first of them,
+with the detail
+`target visual "<name>" is not on page "<display name>"`, or for more
+than one
+`target visuals "a", "b", and "c" are not on page "<display name>"`,
+which names three at most and counts the rest
+(`"a", "b", "c", and 4 more`, through the `englishList` that
+`HARDCODED_YEAR_IN_FILTER` uses). A captured visual stays a finding of its own: Desktop's
+save removes a stale one, so they do not pile up, while it keeps a
+stale target name, and one Update with the right visuals selected
+replaces the whole list (the coordinator's ruling of the same day,
+parked for Michael). The list is checked against the active page only,
 and only when that page exists; a name whose visual.json could not be
 read, or which a folder that could not be listed could hold, is not
 reported (ruling H71). With the option off the list is not read, since
@@ -1892,11 +1901,14 @@ histories of 2 repositories, 12 of them this commit's). The pull request 5 corpu
 (Desktop repositories, active page present: 149 bookmarks with 1,902
 stale names, 24 of them applying, with 134 names in 6 reports and 5
 repositories). The built rule, run with main's build and this one over
-both corpora, moves only its own findings: 147 names in 32 bookmarks
-(9 reports, 8 repositories, 3 of them agent-written) in the pull
-request 5 corpus, and 363 names in 120 bookmarks (24 reports, 13
-repositories; Desktop-saved 350 names in 112 bookmarks, 21 reports,
-10 repositories) in the fetched corpus, 159 of them in one repository.
+both corpora, moves only its own findings, one per bookmark: 32
+findings for 147 names (9 reports, 8 repositories, 3 of them
+agent-written) in the pull request 5 corpus, and 120 findings for 363
+names (24 reports, 13 repositories; Desktop-saved 112 findings for 350
+names, 21 reports, 10 repositories) in the fetched corpus, 76 of the
+findings and 159 of the names in one repository. Of the fetched
+corpus's 120, 56 name one visual and 64 name more; one finding per name
+would have been 363.
 No false findings: every name reported is no visual or group on any
 page of its report. No stale name is also a `visualContainers` key of
 its bookmark, so no visual is reported twice; 6 are groups deleted

@@ -99,7 +99,7 @@ describe("extractRefs", () => {
       { name: "Availability [%]", qualified: false },
       { table: "[Flag]", name: "[Flag]", qualified: true },
     ]);
-    // Desktop's date table template reads the one column of `{ ... }`, which DAX names Value.
+    // Bravo's date table template (SQLBI) reads the one column of `{ ... }`, which DAX names Value.
     expect(extractRefs("MINX({ MIN('Sales'[Date]) }, ''[Value])")).toEqual([
       { table: "Sales", name: "Date", qualified: true },
       { table: "", name: "Value", qualified: true },

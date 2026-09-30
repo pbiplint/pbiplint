@@ -61,7 +61,7 @@ Delete the table name from the reference and leave the brackets:
 Average Price = DIVIDE ( [Total Sales], SUM ( Sales[Quantity] ) )
 ```
 
-In Power BI Desktop, select the measure in the Data pane and edit it in the formula bar; the same goes for a calculated column, a calculated table, and a calculation item, each selected in the model view or the Data pane. In the TMDL file, edit the expression after `measure 'Average Price' =`, after `column Name =` for a calculated column, after `source =` in a calculated table's partition, or after `calculationItem Name =` in the calculation group.
+In Power BI Desktop, select the measure in the Data pane and edit it in the formula bar; the same goes for a calculated column, a calculated table, and a calculation item, each selected in the model view or the Data pane. In the TMDL file, edit the expression after `measure 'Average Price' =`, after `column Name =` for a calculated column, after `source =` in a calculated table's partition, or after `calculationItem Name =` in the calculation group. A finding that only the measure's KPI raises is fixed in the TMDL file, after `targetExpression =`, `statusExpression =`, or `trendExpression =` in the measure's `kpi` block, an edit Power BI Desktop keeps.
 
 ## When to ignore it
 
@@ -70,7 +70,7 @@ There is no case for the table prefix on a measure. If a finding surprises you, 
 ## Quirks
 
 - DAX is read token by token, so a qualified measure reference inside a comment or a string literal, such as a field parameter's `"'Sales'[Total Sales]"`, is not reported.
-- A measure's dynamic format string and its KPI's target, status, and trend expressions are read together with its expression, so `'Sales'[Total Sales]` written in any of them reports the measure that carries it. Tabular Editor reports a reference in a KPI's expression on the KPI, named like `[Total Sales].KPI`; pbiplint has no KPI object, so it names the measure.
+- A measure's dynamic format string and its KPI's target, status, and trend expressions are read together with its expression, so `'Sales'[Total Sales]` written in any of them reports the measure that carries it, once however many of them hold one. Tabular Editor reports a reference in a KPI's expression on the KPI, named like `[Total Sales].KPI`, so a measure whose own expression and KPI both hold one gets two findings there and one here: pbiplint has no KPI object, so it names the measure.
 - The reference has to resolve. `'Sales'[Total Sales]` written where the model has no table called Sales, or where Sales has no measure of that name, is not reported by this rule at all.
 - Row-level security filters are out of scope, so a qualified measure reference inside a role's table filter is never reported.
 - The table name may be written bare or in single quotes; both forms are matched.

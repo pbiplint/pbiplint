@@ -119,7 +119,7 @@ table Parameter
 	measure 'This Year Sales' = SUM ( 'Sales'[Amount] )
 		kpi
 			targetExpression = 'Sales'[Last Year Sales]
-			statusExpression = IF ( [This Year Sales] >= [Last Year Sales], 1, -1 )
+			statusExpression = IF ( [This Year Sales] >= 0, 1, -1 )
 	measure 'Last Year Sales' = SUM ( 'Sales'[Amount] ) * 0.9
 		isHidden
 	measure Unused = 1

@@ -37,7 +37,7 @@ About 20 lines in `references.ts` and one in `report-refs.ts`. `resolveBareName`
 
 ### 3.2 What moves
 
-No fixture, committed expectation, report parity pin, or sample pin moves; the only unit tests that move are the four that pin `extractRefs`'s element shape exactly, which gains the optional `created` field. So no Tabular Editor recapture.
+No fixture, committed expectation, report parity pin, or sample pin moves; no existing unit test moves, since `extractRefs`'s elements gain the optional `created` field only when it is true. So no Tabular Editor recapture.
 
 On the corpus:
 
@@ -93,7 +93,7 @@ The chosen reading leaves 8 findings that Tabular Editor does not report, each a
 - **How to fix**, with no third-party tool: in Power BI Desktop, Model view, Model explorer, Functions, right-click the function and choose Delete from model (Learn lists the command on the function's menu: [Using Model explorer](https://learn.microsoft.com/dax/best-practices/dax-user-defined-functions#using-model-explorer)); or remove its `function` block from `definition/functions.tmdl`. For a package, remove each of its functions.
 - **When to ignore it**: a function called from where the rule does not look: a DAX query (a test harness such as PQL.Assert runs its tests this way), a report's own measures, a live-connected report's measures ([Considerations and limitations](https://learn.microsoft.com/dax/best-practices/dax-user-defined-functions#considerations-and-limitations)), or a visual calculation; or a function kept as a library on purpose.
 - **Quirks**: calls are matched by the whole name, dots included, in any letter case; a call inside a string or a comment is not a call; chains; the package test reads only the `DAXLIB_PackageId` annotation that Desktop keeps when it installs a DAX Lib package, so a package installed another way is reported function by function (semantic-link-labs writes its own annotation, the package name as the key: [`_functions.py`](https://github.com/microsoft/semantic-link-labs/blob/main/src/sempy_labs/daxlib/_functions.py)).
-- **Evidence.** 28 findings in 8 models, 4 repositories: 27 functions (FHSQLMonitor 1, czech_crime 8, Business-Accelerators P&L 7 across three copies and 1 more in the basic model, PQL.Assert's own test functions 10) and 1 package (DaxPatterns.AbcClassification). Without the package roll-up, package members with no caller would add 171 findings in 4 models (82 and 78 in PQL.Assert's two test models, 10 in the DAX Lib SVG sample, 1 more for DaxPatterns.AbcClassification), every one from a package the model installed whole.
+- **Evidence.** 28 findings in 9 models, 4 repositories: 27 functions (FHSQLMonitor 1, czech_crime 8, Business-Accelerators P&L 7 across three copies and 1 more in the basic model, PQL.Assert's own test functions 10) and 1 package (DaxPatterns.AbcClassification). Without the package roll-up, package members with no caller would add 171 findings in 4 models (82 and 78 in PQL.Assert's two test models, 10 in the DAX Lib SVG sample, 1 more for DaxPatterns.AbcClassification), every one from a package the model installed whole.
 - **Related pages.** UNNECESSARY_MEASURES and UNNECESSARY_COLUMNS already say an uncalled function's references count; each gains a Related rules bullet for UDF_NOT_CALLED. NOT_REACHED_FROM_REPORT's page says an unreached function has no finding of its own there; it names this rule.
 
 ## 6. UDF_USE_COMPOUND_NAMES and UDF_WITHOUT_DESCRIPTION (pull request 2)

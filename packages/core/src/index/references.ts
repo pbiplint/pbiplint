@@ -93,8 +93,8 @@ function createdColumns(tokens: readonly DaxToken[]): Map<string, [number, numbe
  * A bare name is `created` when a string argument of ADDCOLUMNS, SELECTCOLUMNS, SUMMARIZE,
  * SUMMARIZECOLUMNS, ROW, or DATATABLE names that column, compared without regard to case, and the
  * name sits outside every call that creates it: `[Margin]` in
- * `MAXX(ADDCOLUMNS(T, "Margin", ...), [Margin])`. Inside such a call the name reads whatever the
- * call walks, as in `SELECTCOLUMNS(T, "Id", [Id])`, so it is left as any other bare name.
+ * `MAXX(ADDCOLUMNS(T, "Margin", ...), [Margin])`. Inside such a call the name cannot be the column
+ * the call is creating, as in `SELECTCOLUMNS(T, "Id", [Id])`, so it is left as any other bare name.
  */
 export function refsInTokens(tokens: readonly DaxToken[]): RawRef[] {
   const created = createdColumns(tokens);

@@ -173,3 +173,11 @@ Each is also in the ledger as "Ruling: ... Why: ... Cost if wrong: ...".
 - A caller in a visual calculation, a report measure, or a DAX query, for UDF_NOT_CALLED.
 - `isHidden` on a function; a function's description or properties split across two declarations (Microsoft's reader merges a property-only second declaration).
 - An unquoted dotted function name (`function Time.YTD = ...`), which Microsoft's reader loads as a function named `YTD`: no corpus or DAX Lib file has one.
+
+## 12. Amendment, September 30, 2026: the orchestrator's rulings on Phase 1
+
+- **The created-column reading** is the one chosen in 3.1: a name counts only outside every call that creates it.
+- **The `created` flag** goes on `extractRefs`'s elements. An added optional field cannot break a build, so the release notes list it under New, as a core addition, as #108 listed `Measure.kpiExpressions`. `ObjectType` gaining `"Function"` can break an exhaustive switch, so it goes under the third heading.
+- **Michael's items are parked** with the recommendations of section 10, and the work proceeds on them: the DAX rules inside function bodies are dropped, the HIDE_FACT_TABLE_COLUMNS trim with them; UDF_INVALID_DEFINITION is dropped; UDF_NOT_CALLED reads direct calls, with the package roll-up and without the report's own measures; the three names and the package detail are as drafted; and the Desktop Rename test is assumed to answer yes. UDF_USE_COMPOUND_NAMES's page gives the Desktop Rename route in a sentence of its own, so a "no" from the test changes that one sentence.
+- **The Model fact counting functions** is not part of #115.
+- **Pull requests** as section 2 has them, each on its own branch from main, neither stacked on the other.

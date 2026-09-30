@@ -76,6 +76,8 @@ Each task writes its tests first and ends green on `npm test`, `npm run lint`, a
 - **The six Quirks bullets** are rewritten in task 5 and checked by the reviewer. A commented-out field parameter row gets no bullet: dropping it is correct, and it goes in the release summary instead.
 - **Release notes:** both API items in section 3 go under the third heading, `extractRefs` as a behaviour change with an unchanged type.
 
+Michael approved all three parked decisions the same day: columns an expression creates stay out of #108 (#115 builds that for all DAX), the KPI task stays in, and the Quirks rewording merges after review.
+
 Task 7 joins section 6:
 
 7. **KPI expressions.** A test that a hidden measure named only by a KPI's `targetExpression` is not reported by UNNECESSARY_MEASURES and that the KPI's references count as the measure's. Then `Measure.kpiExpressions` (target, status, and trend, when present) in `model/build.ts`, read with the measure's expression and format string in `buildReferenceIndex`, and any wording that says KPIs are not read corrected. The corpus rerun reports its delta.

@@ -10,12 +10,13 @@ uploaded, ever.
 
 ## Status
 
-Version 0.2.1. It covers the semantic model layer (TMDL): every rule from the
+Version 0.2.2. It covers the semantic model layer (TMDL): every rule from the
 Microsoft best-practice ruleset, ported and verified against Tabular Editor,
-plus pbiplint's own rule for a year or a date fixed in DAX; and the report
-layer (PBIR): the 11 base rules of PBI Inspector, ported and verified against
-it, plus pbiplint's own rules for what is broken, unfinished, or expensive in a
-report, and for what the model holds that the report never reaches. Power Query
+plus pbiplint's own rules for a year or a date fixed in DAX and for DAX
+user-defined functions; and the report layer (PBIR): the 11 base rules of PBI
+Inspector, ported and verified against it, plus pbiplint's own rules for what
+is broken, unfinished, or expensive in a report, for a filter held to a fixed
+year, and for what the model holds that the report never reaches. Power Query
 rules follow. The site at https://pbiplint.com runs the code on main; the
 command line runs the version npm gives you, and the
 [releases page](https://github.com/pbiplint/pbiplint/releases) lists each

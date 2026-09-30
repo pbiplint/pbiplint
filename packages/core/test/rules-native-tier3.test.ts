@@ -375,10 +375,12 @@ describe("BROKEN_BOOKMARK_REFERENCE", () => {
     ]);
   });
   it("reports a missing page once when it is the active page and the only section, as Desktop writes it", () => {
-    const b = bookmark("b3", {
-      activeSection: "gone",
-      sections: { gone: { visualContainers: { v: {} } } },
-    });
+    // Nor are the visuals its list names, which were on that page.
+    const b = bookmark(
+      "b3",
+      { activeSection: "gone", sections: { gone: { visualContainers: { v: {} } } } },
+      { options: { applyOnlyToTargetVisuals: true, targetVisualNames: ["v"] } },
+    );
     const findings = reportFindings(BROKEN_BOOKMARK_REFERENCE, [page("p"), b]);
     expect(findings.map((f) => [f.objectId, f.detail, f.location!.line])).toEqual([
       ["b3", 'active page "gone" does not exist', lineOf(b.text, '"activeSection"')],
@@ -398,7 +400,7 @@ describe("BROKEN_BOOKMARK_REFERENCE", () => {
       ['captured visual "a/b" is not on page "Page p"', lineOf(b.text, '"a/b"')],
     ]);
   });
-  it("matches pages by name and reads neither captured groups nor target visual names", () => {
+  it("matches pages by name and does not read captured groups", () => {
     const b = bookmark(
       "b5",
       {
@@ -406,23 +408,58 @@ describe("BROKEN_BOOKMARK_REFERENCE", () => {
         sections: {
           page_dashboard: {
             visualContainers: { v: {} },
-            visualContainerGroups: { goneGroup: { isHidden: true } },
+            visualContainerGroups: { goneGroup: { isHidden: true, children: ["goneVisual"] } },
           },
         },
       },
-      { options: { applyOnlyToTargetVisuals: true, targetVisualNames: ["goneVisual"] } },
+      { options: { applyOnlyToTargetVisuals: true, targetVisualNames: ["v"] } },
     );
     const files = [renamed, visual("646039348818b651e02c", "v", "cardVisual"), b];
     expect(reportObjectIds(BROKEN_BOOKMARK_REFERENCE, files)).toEqual([]);
+  });
+  it("fires on a target visual not on the active page when the bookmark applies to its target visuals alone", () => {
+    /** A group's container, as Desktop writes it: no `visual`, a `visualGroup` instead. */
+    const group = {
+      path: "definition/pages/p/visuals/g/visual.json",
+      text: j({
+        name: "g",
+        position: { x: 0, y: 0, z: 0, width: 400, height: 200, tabOrder: 0 },
+        visualGroup: { displayName: "Group", groupMode: "ScaleMode" },
+      }),
+    };
+    const on = (targetVisualNames: string[], apply?: true) =>
+      bookmark(
+        "b11",
+        { activeSection: "p", sections: { p: { visualContainers: { v: {} } } } },
+        { options: { ...(apply ? { applyOnlyToTargetVisuals: apply } : {}), targetVisualNames } },
+      );
+    const pages = [page("p"), visual("p", "v", "cardVisual"), group, page("q")];
+    // A visual on another page is not on the active page, which the list names visuals of.
+    const b = on(["v", "g", "gone", "w"], true);
+    const findings = reportFindings(BROKEN_BOOKMARK_REFERENCE, [
+      ...pages,
+      visual("q", "w", "cardVisual"),
+      b,
+    ]);
+    expect(findings.map((f) => [f.detail, f.location!.line])).toEqual([
+      ['target visual "gone" is not on page "Page p"', lineOf(b.text, '"gone"')],
+      ['target visual "w" is not on page "Page p"', lineOf(b.text, '"w"')],
+    ]);
+    // With All visuals, Desktop still writes the list, and the bookmark does not read it.
+    expect(reportObjectIds(BROKEN_BOOKMARK_REFERENCE, [...pages, on(["gone"])])).toEqual([]);
   });
   it("says nothing of a page or a visual whose own file could not be read, found by its folder name", () => {
     const details = (files: { path: string; text: string }[]) =>
       reportFindings(BROKEN_BOOKMARK_REFERENCE, files).map((f) => f.detail);
     // Desktop names a visual's folder after the visual's name, so the unread one is known by it.
-    const captured = bookmark("b7", {
-      activeSection: "p",
-      sections: { p: { visualContainers: { v: {}, unread: {}, missing: {} } } },
-    });
+    const captured = bookmark(
+      "b7",
+      {
+        activeSection: "p",
+        sections: { p: { visualContainers: { v: {}, unread: {}, missing: {} } } },
+      },
+      { options: { applyOnlyToTargetVisuals: true, targetVisualNames: ["v", "unread"] } },
+    );
     expect(
       details([
         page("p"),

@@ -38,7 +38,6 @@
       "'Date'[Month Number]",
       "'Date'[Quarter Number]",
       "'Date'[Quarter]",
-      "'Date'[Year]",
       "'Employee'[Email]",
       "'Employee'[Hire Date]",
       "'Employee'[Manager ID]",
@@ -108,6 +107,9 @@
     ],
     "SLICER_SEARCH_SAVED": [
       "6c71af13bcdb4c28cce8"
+    ],
+    "HARDCODED_YEAR_IN_FILTER": [
+      "3cea48e58036b1654474"
     ]
   },
   "results": {

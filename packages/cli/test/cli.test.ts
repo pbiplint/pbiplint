@@ -155,7 +155,7 @@ describe("pbiplint CLI", () => {
         layer: "model",
         label: "Model",
         value: "8 tables, 73 columns, 14 measures",
-        detail: "37 columns and 2 measures not reached from this report",
+        detail: "36 columns and 2 measures not reached from this report",
         ruleId: "NOT_REACHED_FROM_REPORT",
       },
     ]);

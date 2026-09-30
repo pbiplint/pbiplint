@@ -1,6 +1,6 @@
 # HARDCODED_YEAR_IN_FILTER: a native report rule for a Filters pane filter on a fixed year
 
-Issue #113, milestone 0.2.2. Written September 30, 2026. The companion to #104's HARDCODED_PERIOD_IN_DAX. Items marked **(Michael)** await his ruling; the rest follow the issue and the orchestrator's brief.
+Issue #113, milestone 0.2.2. Written September 30, 2026. The companion to #104's HARDCODED_PERIOD_IN_DAX. Items marked **(Michael)** were his to rule on; he ruled on September 30, 2026, and section 11 records the rulings and what changed with them. The rest follow the issue and the orchestrator's brief.
 
 ## 1. Sources and decisions
 
@@ -43,7 +43,7 @@ A condition in `Where` counts when it keeps only the years it names:
 - **`In`** with one expression, a year column (4.2), and each row one literal: the years among its values. This is what Basic filtering writes when years are checked, and what an Include filter writes (the only shape real files show: all 54 Desktop filters of this kind are `In`).
 - **`Comparison` with `ComparisonKind` 0** (Advanced filtering, "is"): a year column on the left and a year literal on the right. Desktop writes it; no real file shows it on a year column.
 
-Nothing else counts (section 9): `Not` (is not, or Select all with years cleared), lower bounds, upper bounds and ranges, `Or` and `And`, relative date and Top N filters.
+Nothing else counts (section 9): `Not` (is not, or Select all with years cleared), lower bounds, upper bounds and ranges, `Or` and `And`, relative date and Top N filters. (Amended September 30, 2026: upper bounds and ranges count too; section 11.)
 
 ### 4.2 A year column
 
@@ -118,7 +118,7 @@ The #104 corpus's PBIR reports, fetched at the manifest's commits: 347 Desktop r
 
 - **Exclusions** (`Not`: is not, or Select all with years cleared): 16 filters in 5 repositories, 11 in one, mostly edge years of a calendar. A new year still shows, so the year turning does not break them.
 - **Lower bounds** (is greater than, is on or after a year): 65 in 7 repositories. A new year still shows.
-- **Upper bounds and ranges:** 28 in 3 repositories, 26 in one, which also has filters this rule reports. #104 left range comparisons out too. The first candidate if another corpus shows more **(Michael)**.
+- **Upper bounds and ranges:** 28 in 3 repositories, 26 in one, which also has filters this rule reports. #104 left range comparisons out too. The first candidate if another corpus shows more **(Michael)**. (Amended September 30, 2026: now reported; section 11.)
 - **Fixed full days:** section 4.4.
 - **`Or` of two "is" conditions, double and decimal year literals, multi-column `In`:** no real file has one on a year column.
 - **Drill and drillthrough filters:** section 4.5.
@@ -137,3 +137,20 @@ Each test-first, one commit each, `Part of #113.`
 6. **The sample.** The plant (section 8), its pins, the fab-inspector re-run, and the README's list of pbiplint's own report rules.
 7. **The corpus check.** The built CLI over the fetched reports: the rule gives the 51 Desktop findings of section 6 (and the agent group's apart), no rule errors, nothing else moves; the summary goes in the pull request.
 8. **Gates and pull request.** Prettier, lint, typecheck, tests, `check:browser`, build, `check:pack`; a "For the 0.2.2 release summary" comment on #113 (New: the rule, and `ReportFilter`'s two fields; What can change: the sample's two findings; the rule is info, so it cannot trip `fail-on: error`).
+
+## 11. Amendment, September 30, 2026: the rulings
+
+- **Ruled by Michael.** The id `HARDCODED_YEAR_IN_FILTER`, the name "Hardcoded year in a filter", Report Design, info; the name check (section 4.5) in; the detail wording of section 5. What counts adds **upper bounds and ranges** to the kept years, since a filter that keeps years up to a fixed one leaves each new year's data out, as a kept year does. Lower bounds, exclusions, and fixed days stay out. The relative date filter's labels on the page ("is in this", then "year") stand until Michael confirms them in Desktop; they sit in one step of How to fix it.
+- **Ruled by the orchestrator.** `howCreated` and `where` on `ReportFilter` as optional additions (release notes under New); `fieldLabel` moved to `pbir/names.ts`; #104's range exported from `period-forms.ts` as `inYearRange`.
+- **Upper bounds and ranges, as built.** A `Comparison` of a year column with a year, `ComparisonKind` 3 (is less than) or 4 (is less than or equal to), alone; or an `And` whose two sides are a lower bound (kind 1 or 2) and an upper bound on a year column. The kinds are Microsoft's semantic query schema's (1 greater than, 2 greater than or equal, 3 less than, 4 less than or equal). An upper bound joined by `And` to anything else, such as is not blank (one agent filter), and an `Or` are not read. Years are whole, so the detail names the years kept: `years up to 2025 on 'Date'[Year]` for `<= 2025` or `< 2026`, and `years 2018 to 2025 on 'Date'[Year]` for `>= 2018` and `<= 2025`, or `> 2017` and `< 2026`. The finding sits on the upper bound's literal. The name check reads the years the detail names.
+- **Corpus check with the built rule** (every `.Report` folder of the fetched #104 reports and the pull request 5 corpus, and every `.pbip`, run with main's build and this branch's): the only findings that move are the new rule's; no rule errors.
+
+| Desktop, fetched #104 reports (347 reports, 226 repositories) | Findings | Reports | Repositories |
+|---|---|---|---|
+| Kept years | 51 | 13 | 9 |
+| Upper bounds and ranges | 28 | 3 | 3 |
+| All | 79 | 15 | 11 |
+
+  - Upper bounds and ranges by repository: Rede-DSBR/DocPBI2 26 (`years 2017 to 2022` on 21 slicers and charts, `2018 to 2022` 2, `2017 to 2021` 2, `2013 to 2023` 1), TobiasAnalytica/LIA_Makroekonomi 1 (a page, `years up to 2024`), alcoder06/economic-data-warehouse 1 (a page, `years 2010 to 2024`). Each keeps a series through the last year of its data at the time, so a new year's data is left out. No false finding: every one is a calendar year on a year column.
+  - The pull request 5 corpus (Desktop): 39 findings in 2 reports, 13 kept years and 26 upper bounds and ranges. The agent group, counted apart: 33 kept years in 2 repositories, no upper bounds.
+- **Phase 2 went differently in one place.** Registration, the page, the rule-count pins, the fixtures' native maps, and the sample's plant are one commit: report-parity's sample check fails for a registered report rule the sample does not fire, so any split leaves a red commit.

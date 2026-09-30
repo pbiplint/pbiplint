@@ -66,12 +66,42 @@ const column = (t: string, c: string) => table(t).columns.find((x) => x.name ===
 const measure = (n: string) => zoo.tables.flatMap((t) => t.measures).find((m) => m.name === n)!;
 
 describe("extractRefs", () => {
-  it("finds qualified and bare references", () => {
+  it("finds qualified and bare references, in the order the expression has them", () => {
     expect(extractRefs("SUM('Sales'[Amount]) + Sales[Qty] + [M] + 'O''Brien'[X]")).toEqual([
       { table: "Sales", name: "Amount", qualified: true },
       { table: "Sales", name: "Qty", qualified: true },
-      { table: "O'Brien", name: "X", qualified: true },
       { name: "M", qualified: false },
+      { table: "O'Brien", name: "X", qualified: true },
+    ]);
+  });
+  it("reads no name inside a comment or a string", () => {
+    const dax = `// [Line]
+      -- 'Sales'[Dashes]
+      /* Sales[Block] */
+      SELECTEDVALUE('Parameter'[Fields]) = "'Sales'[Total]" && [Kept] <> "[Quoted]"`;
+    expect(extractRefs(dax)).toEqual([
+      { table: "Parameter", name: "Fields", qualified: true },
+      { name: "Kept", qualified: false },
+    ]);
+  });
+  it("reads extended column syntax as the column before the dot", () => {
+    expect(extractRefs("CALCULATE([Sales], ALL('Calendar'[Date].[Month]))")).toEqual([
+      { name: "Sales", qualified: false },
+      { table: "Calendar", name: "Date", qualified: true },
+    ]);
+    expect(extractRefs("SAMEPERIODLASTYEAR(Orders[OrderDate].[Date])")).toEqual([
+      { table: "Orders", name: "OrderDate", qualified: true },
+    ]);
+  });
+  it("reads a name with a doubled bracket whole, and a table constructor's column as its own", () => {
+    expect(extractRefs("[Availability [%]]] + '[Flag]'[[Flag]]]")).toEqual([
+      { name: "Availability [%]", qualified: false },
+      { table: "[Flag]", name: "[Flag]", qualified: true },
+    ]);
+    // Desktop's date table template reads the one column of `{ ... }`, which DAX names Value.
+    expect(extractRefs("MINX({ MIN('Sales'[Date]) }, ''[Value])")).toEqual([
+      { table: "Sales", name: "Date", qualified: true },
+      { table: "", name: "Value", qualified: true },
     ]);
   });
   it("accepts Unicode letters in unquoted table names", () => {
@@ -161,8 +191,8 @@ describe("reference index", () => {
     ]);
     const tp = zoo.roles[0]!.tablePermissions[0]!;
     expect(idx.references.refsOf(tp)).toEqual([
-      { kind: "column", table: "Sales", name: "Amount", qualified: true },
       { kind: "column", table: "Date", name: "Month Name", qualified: false },
+      { kind: "column", table: "Sales", name: "Amount", qualified: true },
     ]);
     expect(idx.references.refsOf(measure("Fsd"))).toEqual([
       { kind: "measure", table: "Sales", name: "Total Amount", qualified: false },

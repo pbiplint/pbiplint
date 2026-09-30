@@ -7,6 +7,7 @@ import type {
   Table,
   TablePermission,
 } from "../model/types.js";
+import { isPunctuation, tokenizeDax, type DaxToken } from "../dax/tokenize.js";
 
 /** An object whose DAX the index reads, with its kind, so `object` narrows with `kind`. */
 export type DaxOwner =
@@ -53,30 +54,30 @@ interface RawRef {
   qualified: boolean;
 }
 
-// Qualified: 'Table Name'[Column] or TableName[Column]. Bare: [Name]. An unquoted table name may
-// contain Unicode letters and digits (Año, Größe), so the identifier branch matches \p{L} and
-// \p{N} rather than ASCII word characters.
-const QUALIFIED = /(?:'((?:[^']|'')+)'\s*|([\p{L}_][\p{L}\p{N}_]*))\[([^\]]+)\]/gu;
-const BARE = /\[([^\]]+)\]/g;
-
 /**
- * Regex approximation of DAX dependencies: qualified refs first, then bare refs whose `[` was not
- * part of a qualified match. Strings and comments are not skipped; that is the upgrade path if a
- * fixture ever breaks parity because of it.
+ * The column and measure references among a DAX expression's tokens, in the order they appear. A
+ * `[name]` right after a `'table'` name, or right after an unquoted name with nothing between them
+ * (`Sales[Amount]`), is qualified; any other `[name]` is bare. A string is one token and a comment
+ * none, so a name written inside either is not a reference. In extended column syntax,
+ * `'Date'[Date].[Year]`, the name after the dot is a column of the date column's variation, which
+ * nothing here resolves, so only `'Date'[Date]` is read.
  */
-export function extractRefs(expression: string): RawRef[] {
+export function refsInTokens(tokens: readonly DaxToken[]): RawRef[] {
   const out: RawRef[] = [];
-  const consumed = new Set<number>();
-  for (const m of expression.matchAll(QUALIFIED)) {
-    const table = m[1] !== undefined ? m[1].replace(/''/g, "'") : m[2]!;
-    out.push({ table, name: m[3]!, qualified: true });
-    consumed.add(m.index! + m[0].length - m[3]!.length - 2);
-  }
-  for (const m of expression.matchAll(BARE)) {
-    if (consumed.has(m.index!)) continue;
-    out.push({ name: m[1]!, qualified: false });
-  }
+  tokens.forEach((t, k) => {
+    if (t.kind !== "column") return;
+    const before = tokens[k - 1];
+    if (isPunctuation(before, ".") && tokens[k - 2]?.kind === "column") return;
+    if (before?.kind === "table" || (before?.kind === "identifier" && before.end === t.start))
+      out.push({ table: before.text, name: t.text, qualified: true });
+    else out.push({ name: t.text, qualified: false });
+  });
   return out;
+}
+
+/** The column and measure references in a DAX expression, read from its tokens (`refsInTokens`). */
+export function extractRefs(expression: string): RawRef[] {
+  return refsInTokens(tokenizeDax(expression));
 }
 
 const lower = (s: string): string => s.toLowerCase();
@@ -128,8 +129,9 @@ export interface BareNameLookup<M> {
  * What a bare `[Name]` in DAX reads, by one rule for every kind of DAX, so a model measure and a
  * report measure never read the same text two ways (#59). A measure of that name anywhere comes
  * first. Otherwise a column: on the owner's own table, else on the first other table that has one,
- * in model order, since a regex reader cannot tell which table a row context iterates (#108 reads
- * that with a tokenizer). A function has no table of its own, and its caller can hand it any, so
+ * in model order, as Tabular Editor resolves it (ground-truth item 3). Neither the table a row
+ * context iterates nor a column the expression creates itself (`ADDCOLUMNS(..., "X", ...)`, then
+ * `[X]`) is worked out. A function has no table of its own, and its caller can hand it any, so
  * its bare name is every model column so called; Tabular Editor reports some of those columns as
  * unused, a recorded deviation of UNNECESSARY_COLUMNS in tests/expectations/udf-sales.json. A
  * calculation item's bare name is a measure or nothing (ground-truth item 3).
@@ -211,11 +213,12 @@ export function buildReferenceIndex(model: Model): ReferenceIndex {
     ...expressions: (string | undefined)[]
   ) => {
     const expression = expressions.filter((e): e is string => e !== undefined).join("\n");
+    const tokens = tokenizeDax(expression);
     const owner: RefOwner = {
       ...of,
       ownerTable,
       expression,
-      refs: extractRefs(expression).flatMap((r) => resolve(r, ownerTable, of.kind)),
+      refs: refsInTokens(tokens).flatMap((r) => resolve(r, ownerTable, of.kind)),
       calls: callsIn(expression),
     };
     owners.push(owner);

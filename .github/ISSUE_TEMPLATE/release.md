@@ -6,7 +6,7 @@ title: "Release 0.x.y: "
 
 The last issue in the 0.x.y milestone. Once everything else in the milestone is closed: publish 0.x.y to npm, release the GitHub Action with it, and update the roadmap (#103). This issue closes last.
 
-The steps follow `docs/RELEASING.md` here and `RELEASING.md` in pbiplint/action. This issue adds what 0.x.y needs beyond them and records each step as it happens, with the run, commit, or pull request that shows it. Replace every `0.x.y` with the version, and `0.p.q` with the version before it, and set this issue's milestone to 0.x.y by hand, since a template cannot.
+The steps follow `docs/RELEASING.md` here and `RELEASING.md` in pbiplint/action. This issue adds what 0.x.y needs beyond them and records each step as it happens, with the run, commit, or pull request that shows it. Replace every `0.x.y` with the version and `0.p.q` with the version before it, and set this issue's milestone to 0.x.y by hand, since a template cannot.
 
 ## Particular to this release
 

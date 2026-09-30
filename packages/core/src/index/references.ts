@@ -82,34 +82,28 @@ export function extractRefs(expression: string): RawRef[] {
 
 const lower = (s: string): string => s.toLowerCase();
 const key = (table: string, name: string): string => `${lower(table)} ${lower(name)}`;
-const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /**
- * A reader of the calls a DAX expression makes to the given user-defined functions, which returns
- * each function called once, in the order given. A call is the function's name, in any letter case
- * as DAX allows, followed by an opening parenthesis, with no letter, digit, underscore, or dot just
- * before the name, so `MySales.Total(` and `Other.Sales.Total(` are not calls to `Sales.Total`.
- * Like the references, a call inside a string or a comment counts.
+ * A reader of the calls among a DAX expression's tokens to the given user-defined functions, which
+ * returns each function called once, in the order given. A call is a name followed by an opening
+ * parenthesis, compared without regard to letter case as DAX compares it. The tokenizer reads a
+ * name whole, dots included, so `MySales.Total(` and `Other.Sales.Total(` are not calls to
+ * `Sales.Total`, and a call written inside a string or a comment is not a call.
  */
 export function functionCallReader(
   functions: readonly DaxFunction[],
-): (expression: string) => DaxFunction[] {
+): (tokens: readonly DaxToken[]) => DaxFunction[] {
   if (functions.length === 0) return () => [];
   const byName = new Map<string, DaxFunction>();
   for (const f of functions) if (!byName.has(lower(f.name))) byName.set(lower(f.name), f);
-  // The character before the name is matched rather than looked behind, and the parenthesis is
-  // looked ahead, so a call in another call's arguments, `F(G(`, is found too.
-  const call = new RegExp(
-    `(^|[^\\p{L}\\p{N}_.])(${[...byName.keys()].map(escapeRegExp).join("|")})(?=\\s*\\()`,
-    "giu",
-  );
   const order = new Map(functions.map((f, i) => [f, i]));
-  return (expression) => {
+  return (tokens) => {
     const found = new Set<DaxFunction>();
-    for (const m of expression.matchAll(call)) {
-      const f = byName.get(lower(m[2]!));
+    tokens.forEach((t, k) => {
+      // `call` is set on a `(` right after a name; the name's own text keeps its letter case.
+      const f = t.call === undefined ? undefined : byName.get(lower(tokens[k - 1]!.text));
       if (f) found.add(f);
-    }
+    });
     return [...found].sort((a, b) => order.get(a)! - order.get(b)!);
   };
 }
@@ -219,7 +213,7 @@ export function buildReferenceIndex(model: Model): ReferenceIndex {
       ownerTable,
       expression,
       refs: refsInTokens(tokens).flatMap((r) => resolve(r, ownerTable, of.kind)),
-      calls: callsIn(expression),
+      calls: callsIn(tokens),
     };
     owners.push(owner);
     byObject.set(of.object, owner);

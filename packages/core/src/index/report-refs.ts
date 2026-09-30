@@ -9,9 +9,10 @@ import type {
   Table,
 } from "../model/types.js";
 import type { Bookmark, FieldRef, Page, Report, ReportMeasure, Visual } from "../pbir/types.js";
+import { tokenizeDax } from "../dax/tokenize.js";
 import {
-  extractRefs,
   functionCallReader,
+  refsInTokens,
   resolveBareName,
   type BareNameLookup,
 } from "./references.js";
@@ -329,9 +330,14 @@ export function buildReportReferenceIndex(
         : reportMeasuresByName.get(lower(name));
     },
   };
+  const callsIn = functionCallReader(model?.functions ?? []);
+  const functionCalls: ReportReferenceIndex["functionCalls"] = [];
   for (const m of report.measures) {
     const owner: ReportRefOwner = { kind: "reportMeasure", object: m };
-    for (const raw of extractRefs(m.expression)) {
+    const tokens = tokenizeDax(m.expression);
+    const calls = callsIn(tokens);
+    if (calls.length > 0) functionCalls.push({ measure: m, calls });
+    for (const raw of refsInTokens(tokens)) {
       if (raw.qualified) {
         const t = tables.get(lower(raw.table!));
         // A qualified name is a measure when the model table carries it or the report's own
@@ -375,11 +381,6 @@ export function buildReportReferenceIndex(
         });
     }
   }
-
-  const callsIn = functionCallReader(model?.functions ?? []);
-  const functionCalls = report.measures
-    .map((measure) => ({ measure, calls: callsIn(measure.expression) }))
-    .filter((c) => c.calls.length > 0);
 
   const byTarget = new Map<object, ReportRef[]>();
   for (const r of refs) {

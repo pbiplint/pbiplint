@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildIndexes } from "../src/index/build.js";
+import { tokenizeDax } from "../src/dax/tokenize.js";
 import { extractRefs, functionCallReader } from "../src/index/references.js";
 import { modelFrom } from "./helpers.js";
 
@@ -309,27 +310,31 @@ function 'Def.Total' = (p: NUMERIC = [Total]) => p
     expect(i.callsOf(t("CG").calculationGroup!.items[0]!)).toEqual([fn("Sales.ApplyTax")]);
     expect(i.callsOf(m.roles[0]!.tablePermissions[0]!)).toEqual([fn("Sec.Allow")]);
   });
-  it("counts a name as a call only when no letter, digit, underscore, or dot comes before it and a parenthesis follows it", () => {
+  it("counts a name as a call only when the whole name, dots included, is the function's and a parenthesis follows it", () => {
     expect(i.callsOf(meas("Not A Call"))).toEqual([]);
-    const callsIn = functionCallReader(m.functions);
+    const callsIn = (dax: string) => functionCallReader(m.functions)(tokenizeDax(dax));
     expect(callsIn("1 +Sales.ApplyTax(1, 2)")).toEqual([fn("Sales.ApplyTax")]);
     expect(callsIn("Sales.NetAfter(Sales.ApplyTax(1, 2))")).toEqual([
       fn("Sales.ApplyTax"),
       fn("Sales.NetAfter"),
     ]);
   });
-  it("tells a function from another whose name it begins, and matches a name's characters only as themselves", () => {
+  it("counts no call inside a comment or a string", () => {
+    const callsIn = (dax: string) => functionCallReader(m.functions)(tokenizeDax(dax));
+    expect(
+      callsIn(
+        '1 // Sales.ApplyTax(1, 2)\n+ LEN("Sales.NetAfter(1)") /* Fmt.Pick(1) */ -- Tbl.Top(1)',
+      ),
+    ).toEqual([]);
+  });
+  it("tells a function from another whose name it begins", () => {
     const p = modelFrom(
       "function F = () => 1\n\nfunction 'F.G' = () => 2\n\nfunction G = () => 3\n",
     ).functions;
-    const read = functionCallReader(p);
+    const read = (dax: string) => functionCallReader(p)(tokenizeDax(dax));
     expect(read("F.G(1)")).toEqual([p[1]]);
     expect(read("F (1)")).toEqual([p[0]]);
     expect(read("G(F.G())")).toEqual([p[1], p[2]]);
-    // A name DAX refuses can still sit in a file; its characters match only as themselves.
-    const odd = modelFrom("function 'Odd+Name[1]' = () => 1\n").functions;
-    expect(functionCallReader(odd)("Odd+Name[1] (2) + OddName1(3)")).toEqual(odd);
-    expect(functionCallReader(odd)("OddName1(3)")).toEqual([]);
   });
   it("answers called-by for a function, in model order", () => {
     expect(i.functionCalledBy(fn("Sales.ApplyTax")).map((o) => o.kind)).toEqual([
@@ -348,6 +353,6 @@ function 'Def.Total' = (p: NUMERIC = [Total]) => p
   });
   it("calls nothing and resolves nothing new in a model without functions", () => {
     expect(idx.references.owners.every((o) => o.calls.length === 0)).toBe(true);
-    expect(functionCallReader([])("Sales.ApplyTax(1)")).toEqual([]);
+    expect(functionCallReader([])(tokenizeDax("Sales.ApplyTax(1)"))).toEqual([]);
   });
 });

@@ -69,8 +69,6 @@ export interface ReportRef {
 
 export interface ReportReferenceIndex {
   refs: ReportRef[];
-  /** Report references that resolve to this model column or measure. */
-  referencedBy(target: Column | Measure): ReportRef[];
   /** The references that resolve to nothing; an `unread` one is not among them. */
   unresolved(): ReportRef[];
   /** The references a visual's roles bind, in role order. */
@@ -382,22 +380,8 @@ export function buildReportReferenceIndex(
     }
   }
 
-  const byTarget = new Map<object, ReportRef[]>();
-  for (const r of refs) {
-    const target =
-      r.resolution.kind === "column"
-        ? r.resolution.column
-        : r.resolution.kind === "measure"
-          ? r.resolution.measure
-          : undefined;
-    if (!target) continue;
-    const arr = byTarget.get(target) ?? [];
-    arr.push(r);
-    byTarget.set(target, arr);
-  }
   return {
     refs,
-    referencedBy: (target) => byTarget.get(target) ?? [],
     unresolved: () => refs.filter((r) => r.resolution.kind === "unresolved"),
     fieldsOf: (v) => refs.filter((r) => r.owner.kind === "visualField" && r.owner.object === v),
     functionCalls,

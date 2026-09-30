@@ -113,6 +113,56 @@ describe("extractRefs", () => {
   });
 });
 
+describe("extractRefs: a column the expression creates", () => {
+  const created = (dax: string) =>
+    extractRefs(dax)
+      .filter((r) => r.created)
+      .map((r) => r.name);
+  it("marks a bare name for a column a call creates, read outside that call", () => {
+    expect(
+      extractRefs('SUMX(ADDCOLUMNS(Sales, "Margin", [Amount] - [Cost]), [Margin] + Sales[Margin])'),
+    ).toEqual([
+      { name: "Amount", qualified: false },
+      { name: "Cost", qualified: false },
+      { name: "Margin", qualified: false, created: true },
+      { table: "Sales", name: "Margin", qualified: true },
+    ]);
+  });
+  it("reads a column named by any of the six functions that name one with a string", () => {
+    expect(
+      created(`VAR a = ADDCOLUMNS(T, "A", 1)
+        VAR b = SELECTCOLUMNS(T, "B", T[X])
+        VAR c = SUMMARIZE(T, T[K], "C", SUM(T[X]))
+        VAR d = SUMMARIZECOLUMNS(T[K], "D", SUM(T[X]))
+        VAR e = ROW("E", 1)
+        VAR f = DATATABLE("F", INTEGER, {{1}})
+        VAR g = GROUPBY(T, T[K], "G", SUMX(CURRENTGROUP(), T[X]))
+        RETURN MAXX(a, [A]) + MAXX(b, [B]) + MAXX(c, [C]) + MAXX(d, [D]) + MAXX(e, [E]) + MAXX(f, [F]) + MAXX(g, [G])`),
+    ).toEqual(["A", "B", "C", "D", "E", "F"]);
+  });
+  it("compares the name without regard to case", () => {
+    expect(created('MAXX(ROW("margin", 1), [MARGIN])')).toEqual(["MARGIN"]);
+  });
+  it("leaves a name inside the call that creates it as it was, since it reads the table the call walks", () => {
+    // A rename through, as real models write it: [PsStudentId] is the input's column.
+    expect(created('SELECTCOLUMNS(Students, "PsStudentId", [PsStudentId])')).toEqual([]);
+  });
+  it("leaves a name inside any call that creates it as it was, sibling calls included", () => {
+    // Run detection over a date table, as real models write it: [YearMonthIndex] sits inside a
+    // SELECTCOLUMNS that creates YearMonthIndex, and reads the column Seq carried over from the
+    // date table.
+    expect(
+      created(`UNION(
+        SELECTCOLUMNS(ADDCOLUMNS(Seq, "OffsetIndex", [YearMonthIndex] - 1), "YearMonthIndex", [OffsetIndex]),
+        SELECTCOLUMNS(ADDCOLUMNS(Seq, "OffsetIndex", [YearMonthIndex]), "YearMonthIndex", [OffsetIndex])
+      )`),
+    ).toEqual(["OffsetIndex", "OffsetIndex"]);
+  });
+  it("marks nothing for a string that names no column", () => {
+    expect(created('IF([Region] = "Region", 1) + LOOKUPVALUE(T[X], T[K], "Region")')).toEqual([]);
+  });
+});
+
 describe("relationship index", () => {
   it("looks up by column and table from either side", () => {
     expect(idx.relationships.forColumn("Sales", "Year").map((r) => r.name)).toEqual(["r1"]);
@@ -236,6 +286,37 @@ describe("reference index", () => {
     // Bare Measure, Qualified Measure, Fsd, the Date calculated table, and calculation item 'Bare Measure'.
     expect(idx.references.measureReferencedBy(measure("Total Amount")).length).toBe(5);
     expect(idx.references.measureReferencedBy(measure("Unresolved"))).toEqual([]);
+  });
+  it("reads a bare name for a column the expression creates as that column, a measure of the name first", () => {
+    const m = modelFrom(`table Archive
+	column DueDate
+		dataType: dateTime
+		isHidden
+	column Rem
+		dataType: decimal
+		isHidden
+
+table Invoices
+	column Key
+		dataType: int64
+	column DueDate
+		dataType: dateTime
+	column Amount
+		dataType: decimal
+
+table Measures
+	measure Rem = 1
+	measure Overdue = SUMX ( FILTER ( SUMMARIZE ( 'Invoices', 'Invoices'[Key], "DueDate", MAX ( 'Invoices'[DueDate] ), "Rem", MAX ( 'Invoices'[Amount] ) ), [DueDate] < TODAY () ), [Rem] )
+`);
+    const overdue = m.tables[2]!.measures[1]!;
+    expect(
+      buildIndexes({ model: m })
+        .references.refsOf(overdue)
+        .filter((r) => !r.qualified),
+    ).toEqual([
+      { kind: "unresolved", name: "DueDate", qualified: false },
+      { kind: "measure", table: "Measures", name: "Rem", qualified: false },
+    ]);
   });
   it("is case-insensitive on names", () => {
     const m = modelFrom(

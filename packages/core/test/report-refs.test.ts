@@ -897,6 +897,12 @@ describe("a bare name in a report measure, read as a model measure reads it (#59
       dax: 'SUMX(ADDCOLUMNS(Sales, "Value", [Qty] * [Discount]), [Value])',
       reads: ["Sales[Qty]", "Sales[Discount]", "?Value"],
     },
+    // Nor is one that shares its name with a model column, outside the call that creates it.
+    {
+      on: "Measures",
+      dax: 'MAXX(SELECTCOLUMNS(Sales, "Price", [Qty] * 2), [Price])',
+      reads: ["Sales[Qty]", "?Price"],
+    },
     {
       on: "Measures",
       dax: "AVERAGEX(VALUES(Product[Category]), [Total Qty])",

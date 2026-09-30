@@ -782,6 +782,33 @@ describe("NOT_REACHED_FROM_REPORT and DAX that names a field only in a comment",
   });
 });
 
+describe("NOT_REACHED_FROM_REPORT and a column the DAX creates", () => {
+  it("reports a column that a reached measure spells only as a column it creates", () => {
+    const model = `table Sales
+	column Region
+		dataType: string
+	column Amount
+		dataType: decimal
+	column Share
+		dataType: decimal
+	measure 'Top Share' =
+			MAXX (
+				ADDCOLUMNS ( VALUES ( 'Sales'[Region] ), "Share", DIVIDE ( SUM ( 'Sales'[Amount] ), 100 ) ),
+				[Share]
+			)
+`;
+    const files = [page("p"), bound("p", "v", "cardVisual", [measure("Sales", "Top Share")])];
+    expect(
+      reportFindings(NOT_REACHED_FROM_REPORT, files, model).map((f) => [f.objectName, f.detail]),
+    ).toEqual([
+      [
+        "'Sales'[Share]",
+        "nothing in the report reaches it, and no measure or column references it",
+      ],
+    ]);
+  });
+});
+
 describe("NOT_REACHED_FROM_REPORT and a report measure's bare names (#59)", () => {
   it("counts a column a report measure names bare, on another table, as reached", () => {
     // SUMX(Sales, [Qty]) on the Measures table: before #59 the report measure looked for Qty on

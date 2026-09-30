@@ -86,6 +86,17 @@ describe("dependency rules", () => {
 `;
     expect(objectNames(rules.DAX_COLUMNS_FULLY_QUALIFIED, m)).toEqual([]);
   });
+  it("DAX_COLUMNS_FULLY_QUALIFIED leaves a bare name for a column the measure creates alone, though a model column shares it", () => {
+    const m = `table Sales
+	column Amount
+		dataType: decimal
+	column Margin
+		dataType: decimal
+	measure 'Best Margin' = MAXX ( ADDCOLUMNS ( VALUES ( 'Sales'[Amount] ), "Margin", 'Sales'[Amount] * 0.1 ), [Margin] )
+	measure 'Bare Margin' = MAX ( [Margin] )
+`;
+    expect(objectNames(rules.DAX_COLUMNS_FULLY_QUALIFIED, m)).toEqual(["[Bare Margin]"]);
+  });
   it("DAX_MEASURES_UNQUALIFIED leaves a qualified measure named inside a string alone, as a field parameter's name is", () => {
     const m = `table Sales
 	column Amount

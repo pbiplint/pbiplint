@@ -121,6 +121,20 @@ role R
 `;
     expect(objectNames(rules.UNNECESSARY_COLUMNS, m)).toEqual(["'T'[Unused]"]);
   });
+  it("UNNECESSARY_COLUMNS reports a hidden column that DAX names only in a comment", () => {
+    const m = `table T
+	column Used
+		dataType: int64
+		isHidden
+	column Commented
+		dataType: int64
+		isHidden
+	measure M =
+			SUM ( 'T'[Used] )
+			// + SUM ( 'T'[Commented] )
+`;
+    expect(objectNames(rules.UNNECESSARY_COLUMNS, m)).toEqual(["'T'[Commented]"]);
+  });
   it("UNNECESSARY_COLUMNS counts a column a user-defined function names, bare on any table or qualified", () => {
     const m = `table T
 	column Unused

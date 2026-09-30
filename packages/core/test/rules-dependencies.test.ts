@@ -76,6 +76,29 @@ describe("dependency rules", () => {
       "Qualified",
     ]);
   });
+  it("DAX_COLUMNS_FULLY_QUALIFIED reads extended column syntax as the qualified column before the dot", () => {
+    const m = `table Calendar
+	column Date
+		dataType: dateTime
+	column Month
+		dataType: string
+	measure 'All Months' = CALCULATE ( COUNTROWS ( 'Calendar' ), ALL ( 'Calendar'[Date].[Month] ) )
+`;
+    expect(objectNames(rules.DAX_COLUMNS_FULLY_QUALIFIED, m)).toEqual([]);
+  });
+  it("DAX_MEASURES_UNQUALIFIED leaves a qualified measure named inside a string alone, as a field parameter's name is", () => {
+    const m = `table Sales
+	column Amount
+		dataType: decimal
+	measure Total = SUM ( 'Sales'[Amount] )
+	measure Pick = IF ( SELECTEDVALUE ( 'Parameter'[Parameter Fields] ) = "'Sales'[Total]", [Total] )
+
+table Parameter
+	column 'Parameter Fields'
+		dataType: string
+`;
+    expect(objectNames(rules.DAX_MEASURES_UNQUALIFIED, m)).toEqual([]);
+  });
   it("AVOID_DUPLICATE_MEASURES ignores whitespace differences and flags both copies", () => {
     expect(objectNames(rules.AVOID_DUPLICATE_MEASURES, model)).toEqual(["[Total]", "[Total Copy]"]);
   });

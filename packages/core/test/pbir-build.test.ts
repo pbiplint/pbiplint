@@ -237,6 +237,43 @@ describe("buildReport", () => {
     expect(p1.file).toBe("definition/pages/p1/page.json");
     expect(report.schemaVersions).toEqual({ report: "3.2.0", page: "2.1.0", visual: "2.8.0" });
   });
+  it("reads a filter's howCreated and its conditions as written", () => {
+    const where = [
+      {
+        Condition: {
+          In: {
+            Expressions: [
+              { Column: { Expression: { SourceRef: { Source: "d" } }, Property: "Year" } },
+            ],
+            Values: [[{ Literal: { Value: "2025L" } }]],
+          },
+        },
+      },
+    ];
+    const entries = [
+      {
+        name: "kept",
+        field: column("Date", "Year"),
+        type: "Categorical",
+        filter: { Version: 2, From: [{ Name: "d", Entity: "Date", Type: 0 }], Where: where },
+        howCreated: "User",
+      },
+      // A card with no condition, one whose Where is not a list, and a howCreated not a string.
+      { name: "none", field: column("Date", "Year"), type: "Categorical" },
+      { name: "odd", filter: { Where: {} }, howCreated: 1 },
+    ];
+    const { report: r } = buildReport([
+      {
+        path: "definition/pages/p/page.json",
+        text: page("p", { filterConfig: { filters: entries } }),
+      },
+    ]);
+    expect(r.pages[0]!.filters.map((f) => [f.name, f.howCreated, f.where])).toEqual([
+      ["kept", "User", where],
+      ["none", undefined, undefined],
+      ["odd", undefined, undefined],
+    ]);
+  });
   it("orders pages by the name each page.json gives, while a visual joins its page by folder", () => {
     // Learn: renaming a page's `name` is supported, and Desktop keeps the folder; pages.json,
     // bookmarks, and actions follow the name.

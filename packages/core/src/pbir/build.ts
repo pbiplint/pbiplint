@@ -97,13 +97,16 @@ function filtersOf(filterConfig: unknown, file: string, pointer: string): Report
     if (!isRecord(f)) return [];
     const p = `${pointer}/filters/${i}`;
     const field = collectFieldRefs(f.field, `${p}/field`)[0];
+    const where = isRecord(f.filter) && Array.isArray(f.filter.Where) ? f.filter.Where : undefined;
     return [
       {
         name: str(f.name) ?? String(i),
         type: str(f.type),
+        howCreated: str(f.howCreated),
         ...(field ? { field } : {}),
         refs: collectFieldRefs(f, p),
         applied: isRecord(f.filter),
+        ...(where ? { where } : {}),
         file,
         pointer: p,
       },

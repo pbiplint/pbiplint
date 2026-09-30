@@ -33,6 +33,8 @@ interface Span {
 /** The years the forms of spec sections 4.2 to 4.4 report: none outside it went stale in the research. */
 const FIRST_YEAR = 1950;
 const LAST_YEAR = 2049;
+/** Whether a year is one the forms report, from 1950 to 2049; HARDCODED_YEAR_IN_FILTER reads the same. */
+export const inYearRange = (year: number): boolean => year >= FIRST_YEAR && year <= LAST_YEAR;
 const COMPARISONS = new Set(["=", "==", "<>"]);
 /** The research's aggregates and wrappers, whose year column or YEAR() makes a year operand. */
 const WRAPPERS = new Set([
@@ -76,7 +78,7 @@ function yearIn(t: DaxToken | undefined, strings: boolean): number | undefined {
     t?.kind === "number" ? t.text : strings && t?.kind === "string" ? t.text.trim() : undefined;
   if (text === undefined || !/^\d{4}$/.test(text)) return undefined;
   const year = Number(text);
-  return year >= FIRST_YEAR && year <= LAST_YEAR ? year : undefined;
+  return inYearRange(year) ? year : undefined;
 }
 
 /** The arguments of the call or braces opening at `open`, split at the commas directly inside. */

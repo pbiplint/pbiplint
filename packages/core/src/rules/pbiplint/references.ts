@@ -1,25 +1,8 @@
-import { columnRef, measureRef } from "../../model/names.js";
-import type { FieldRef } from "../../pbir/types.js";
+import { fieldLabel } from "../../pbir/names.js";
 import { finding, modelPartlyRead } from "../helpers.js";
 import { fieldFileUnread, reportFinding } from "../report-helpers.js";
 import type { RuleFinding } from "../types.js";
 import { pbiplintRule } from "./define.js";
-
-/**
- * `'Sales'[Region]`, `[Net Margin]`, `'Date'[Calendar].[Year]`, and, through a date column's
- * variation, `'Sales'[OrderDate].[Date Hierarchy].[Year]`. A reference whose source yields no
- * table has its reason say so, so it is labelled by its names alone.
- */
-const fieldLabel = (ref: FieldRef): string => {
-  const inTable = (name: string): string =>
-    ref.table === "" ? measureRef(name) : columnRef(ref.table, name);
-  const field = ref.variation
-    ? `${inTable(ref.variation.column)}.${measureRef(ref.name)}`
-    : ref.kind === "measure"
-      ? measureRef(ref.name)
-      : inTable(ref.name);
-  return ref.kind === "hierarchyLevel" && ref.level ? `${field}.${measureRef(ref.level)}` : field;
-};
 
 /**
  * The first finding for each object and missing field. One field can be named several times on an

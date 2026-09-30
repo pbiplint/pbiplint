@@ -32,6 +32,12 @@ export interface FieldRef {
 export interface ReportFilter {
   name: string;
   type?: string;
+  /**
+   * How Power BI Desktop says the entry came to be, as written: `User` for one an author added,
+   * `Drillthrough` for a drillthrough page's field, `Drill` for a visual saved drilled down, and
+   * others. Absent in many Desktop-saved files.
+   */
+  howCreated?: string;
   field?: FieldRef;
   refs: FieldRef[];
   /**
@@ -39,6 +45,12 @@ export interface ReportFilter {
    * selection is not one of these: Desktop saves it in the slicer's `general` objects.
    */
   applied: boolean;
+  /**
+   * The `Where` list of the entry's `filter`, as written, when it has one: each item's `Condition`
+   * is what the filter keeps. Its column references are in `refs`, with their aliases resolved,
+   * at `<pointer>/filter/Where/<i>/Condition/...`.
+   */
+  where?: unknown[];
   file: string;
   pointer: string;
 }

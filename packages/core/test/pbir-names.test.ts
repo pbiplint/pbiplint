@@ -2,12 +2,14 @@ import { describe, expect, it } from "vitest";
 import { buildReport } from "../src/pbir/build.js";
 import {
   bookmarkLabel,
+  fieldLabel,
   pageFilterLabel,
   pageLabel,
   reportMeasureLabel,
   visualLabel,
   visualName,
 } from "../src/pbir/names.js";
+import type { FieldRef } from "../src/pbir/types.js";
 import { reportFinding } from "../src/rules/report-helpers.js";
 
 const j = (v: unknown) => JSON.stringify(v, null, 2);
@@ -157,5 +159,32 @@ describe("report finding names", () => {
     });
     expect(reportFinding.pagesHeader(report, "/activePageName").location).toBeUndefined();
     expect(reportFinding.report(report, undefined, "report", "/objects").location).toBeUndefined();
+  });
+});
+
+describe("fieldLabel", () => {
+  const ref = (r: Omit<FieldRef, "pointer">): FieldRef => ({ ...r, pointer: "" });
+  it("names a column, a measure, a level, and a level reached through a date column's variation", () => {
+    expect(
+      [
+        ref({ kind: "column", table: "Sales", name: "Region" }),
+        ref({ kind: "measure", table: "Sales", name: "Net Margin" }),
+        ref({ kind: "hierarchyLevel", table: "Date", name: "Calendar", level: "Year" }),
+        ref({
+          kind: "hierarchyLevel",
+          table: "Sales",
+          name: "Date Hierarchy",
+          level: "Year",
+          variation: { column: "Order Date", name: "Variation" },
+        }),
+        ref({ kind: "column", table: "", name: "Year", noTable: "undeclaredAlias" }),
+      ].map(fieldLabel),
+    ).toEqual([
+      "'Sales'[Region]",
+      "[Net Margin]",
+      "'Date'[Calendar].[Year]",
+      "'Sales'[Order Date].[Date Hierarchy].[Year]",
+      "[Year]",
+    ]);
   });
 });

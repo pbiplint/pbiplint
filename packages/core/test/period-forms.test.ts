@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   calendarEnds,
   expressionPeriods,
+  inYearRange,
   type Period,
 } from "../src/rules/pbiplint/period-forms.js";
 import { nameClass, nameWords } from "../src/rules/pbiplint/period-words.js";
@@ -61,6 +62,19 @@ describe("year names", () => {
 
   it("keeps a combining mark in its word, so a decomposed Año is still a year", () => {
     expect(nameClass("Año")).toBe("year");
+  });
+});
+
+describe("inYearRange", () => {
+  it("holds a year from 1950 to 2049, the range the forms report", () => {
+    expect([1949, 1950, 2025, 2049, 2050, 9999].map(inYearRange)).toEqual([
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+    ]);
   });
 });
 

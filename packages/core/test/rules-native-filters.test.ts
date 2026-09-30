@@ -1,0 +1,333 @@
+import { describe, expect, it } from "vitest";
+import { lint } from "../src/engine/lint.js";
+import { HARDCODED_YEAR_IN_FILTER } from "../src/rules/pbiplint/filters.js";
+import { j, lineOf, page, pretty, reportFindings, visual } from "./report-helpers.js";
+
+const rule = HARDCODED_YEAR_IN_FILTER;
+const literal = (value: string) => ({ Literal: { Value: value } });
+/** A column read through the From alias `d`, as Desktop writes a filter's condition. */
+const col = (property: string) => ({
+  Column: { Expression: { SourceRef: { Source: "d" } }, Property: property },
+});
+const kept = (property: string, ...values: string[]) => ({
+  In: { Expressions: [col(property)], Values: values.map((v) => [literal(v)]) },
+});
+const compare = (kind: number, left: unknown, right: unknown) => ({
+  Comparison: { ComparisonKind: kind, Left: left, Right: right },
+});
+/** The first column or hierarchy level in a condition, on `entity` rather than the alias. */
+const fieldOf = (condition: unknown, entity: string): unknown => {
+  const walk = (o: unknown): unknown => {
+    if (typeof o !== "object" || o === null) return undefined;
+    if ("Column" in o || "HierarchyLevel" in o) return o;
+    for (const v of Object.values(o)) {
+      const found = walk(v);
+      if (found !== undefined) return found;
+    }
+    return undefined;
+  };
+  const found = walk(condition);
+  return found === undefined
+    ? undefined
+    : JSON.parse(JSON.stringify(found).replaceAll('{"Source":"d"}', j({ Entity: entity })));
+};
+/** One Filters pane entry, with its condition and the field Desktop names for it. */
+const entry = (condition: unknown, extra: Record<string, unknown> = {}, entity = "Date") => ({
+  name: "f1",
+  field: fieldOf(condition, entity),
+  type: "Categorical",
+  filter: {
+    Version: 2,
+    From: [{ Name: "d", Entity: entity, Type: 0 }],
+    Where: [{ Condition: condition }],
+  },
+  howCreated: "User",
+  ...extra,
+});
+const filtered = (...entries: unknown[]) => ({ filterConfig: { filters: entries } });
+const onPage = (condition: unknown, extra: Record<string, unknown> = {}) =>
+  page("p", filtered(entry(condition, extra)));
+const details = (files: Parameters<typeof reportFindings>[1]) =>
+  reportFindings(rule, files).map((f) => f.detail);
+
+describe("HARDCODED_YEAR_IN_FILTER", () => {
+  it("is an info rule of pbiplint's own on the report layer", () => {
+    expect(rule).toMatchObject({
+      id: "HARDCODED_YEAR_IN_FILTER",
+      name: "Hardcoded year in a filter",
+      category: "Report Design",
+      severity: 1,
+      scope: ["Visual", "Page", "Report"],
+      layer: "report",
+      needs: ["report"],
+      status: "builtin",
+    });
+  });
+
+  it("fires on a filter on a visual, a page, and all pages that keeps one year", () => {
+    const files = [
+      { path: "definition/report.json", text: j(filtered(entry(kept("Year", "2024L")))) },
+      page("p", filtered(entry(kept("Year", "2025L")))),
+      visual("p", "v1", "card", filtered(entry(kept("Year", "2026L"))), {
+        visualContainerObjects: { title: [{ properties: { text: { expr: literal("'Sales'") } } }] },
+      }),
+    ];
+    expect(
+      reportFindings(rule, files).map((f) => [f.objectType, f.objectName, f.objectId, f.detail]),
+    ).toEqual([
+      ["Report", "Report filter", "report", "fixed year 2024 on 'Date'[Year]"],
+      ["Page", 'Page filter on "Page p"', "p", "fixed year 2025 on 'Date'[Year]"],
+      ["Visual", '"Sales" on "Page p"', "v1", "fixed year 2026 on 'Date'[Year]"],
+    ]);
+  });
+
+  it("names every year kept, once each, in the order written, as a list", () => {
+    expect(details([onPage(kept("Year", "2024L", "2025L"))])).toEqual([
+      "fixed years 2024 and 2025 on 'Date'[Year]",
+    ]);
+    expect(details([onPage(kept("Year", "2025L", "2025L", "2023L", "2024L"))])).toEqual([
+      "fixed years 2025, 2023, and 2024 on 'Date'[Year]",
+    ]);
+    expect(details([onPage(kept("Year", "2021L", "2022L", "2023L", "2024L", "2025L"))])).toEqual([
+      "fixed years 2021, 2022, 2023, and 2 more on 'Date'[Year]",
+    ]);
+  });
+
+  it("reads a year written as text, Advanced filtering's is, and a blank beside the years", () => {
+    expect(details([onPage(kept("Year", "'2025'"))])).toEqual(["fixed year 2025 on 'Date'[Year]"]);
+    expect(details([onPage(compare(0, col("Year"), literal("2025L")))])).toEqual([
+      "fixed year 2025 on 'Date'[Year]",
+    ]);
+    expect(details([onPage(kept("Year", "null", "2025L"))])).toEqual([
+      "fixed year 2025 on 'Date'[Year]",
+    ]);
+  });
+
+  it("reads year names in other languages, and a level of a hierarchy, the auto date/time one too", () => {
+    expect(details([onPage(kept("Año", "2025L"))])).toEqual(["fixed year 2025 on 'Date'[Año]"]);
+    expect(details([onPage(kept("FiscalYear", "2025L"))])).toEqual([
+      "fixed year 2025 on 'Date'[FiscalYear]",
+    ]);
+    const level = (source: unknown) => ({
+      HierarchyLevel: {
+        Expression: { Hierarchy: { Expression: source, Hierarchy: "Calendar" } },
+        Level: "Year",
+      },
+    });
+    const userLevel = {
+      In: { Expressions: [level({ SourceRef: { Source: "d" } })], Values: [[literal("2025L")]] },
+    };
+    expect(details([onPage(userLevel)])).toEqual(["fixed year 2025 on 'Date'[Calendar].[Year]"]);
+    // Desktop's auto date/time hierarchy: the card's field is the date column's Year level, and the
+    // condition reads the Year column of the hidden LocalDateTable_ table behind it.
+    const localTable = "LocalDateTable_7f3c9a52-8e1d-4b6a-9c2f-0d5e8a1b3c4d";
+    const autoDateTime = {
+      name: "f1",
+      field: {
+        HierarchyLevel: {
+          Expression: {
+            Hierarchy: {
+              Expression: {
+                PropertyVariationSource: {
+                  Expression: { SourceRef: { Entity: "Sales" } },
+                  Name: "Variation",
+                  Property: "Order Date",
+                },
+              },
+              Hierarchy: "Date Hierarchy",
+            },
+          },
+          Level: "Year",
+        },
+      },
+      type: "Categorical",
+      filter: {
+        Version: 2,
+        From: [{ Name: "l", Entity: localTable, Type: 0 }],
+        Where: [
+          {
+            Condition: {
+              In: {
+                Expressions: [
+                  { Column: { Expression: { SourceRef: { Source: "l" } }, Property: "Year" } },
+                ],
+                Values: [[literal("2025L")]],
+              },
+            },
+          },
+        ],
+      },
+      howCreated: "User",
+    };
+    expect(details([page("p", filtered(autoDateTime))])).toEqual([
+      "fixed year 2025 on 'Sales'[Order Date].[Date Hierarchy].[Year]",
+    ]);
+    // A card with no field is named by what it keeps alone.
+    const { field: _, ...noField } = entry(kept("Year", "2025L"));
+    expect(details([page("p", filtered(noField))])).toEqual(["fixed year 2025"]);
+  });
+
+  it("fires on a filter hidden from readers or locked, and on one an Include made", () => {
+    expect(
+      details([
+        page(
+          "p",
+          filtered(
+            entry(kept("Year", "2025L"), { isHiddenInViewMode: true, isLockedInViewMode: true }),
+            entry(kept("Year", "2024L"), { name: "f2", type: "Include", howCreated: "Include" }),
+          ),
+        ),
+      ]),
+    ).toEqual(["fixed year 2025 on 'Date'[Year]", "fixed year 2024 on 'Date'[Year]"]);
+  });
+
+  it("points at the line of the first year kept", () => {
+    const text = pretty(filtered(entry(kept("Year", "2024L", "2025L"))));
+    const [f] = reportFindings(rule, [{ path: "definition/report.json", text }]);
+    expect(f!.location).toEqual({ file: "definition/report.json", line: lineOf(text, '"2024L"') });
+  });
+
+  it("stays silent on a filter that excludes years, starts from one, or moves with today", () => {
+    const now = { DateSpan: { Expression: { Now: {} }, TimeUnit: 3 } };
+    for (const condition of [
+      { Not: { Expression: kept("Year", "2025L") } },
+      { Not: { Expression: compare(0, col("Year"), literal("2025L")) } },
+      compare(1, col("Year"), literal("2021L")),
+      compare(2, col("Year"), literal("2021L")),
+      compare(0, col("Date"), now),
+      {
+        Or: {
+          Left: compare(0, col("Year"), literal("2024L")),
+          Right: compare(0, col("Year"), literal("2025L")),
+        },
+      },
+    ])
+      expect(details([onPage(condition)]), j(condition)).toEqual([]);
+  });
+
+  it("stays silent on a column that holds no year, a year out of range, and a literal of another type", () => {
+    for (const condition of [
+      kept("Region", "'2025'"),
+      kept("YearMonth", "202506L"),
+      kept("Years of Service", "2025L"),
+      kept("Date", "datetime'2025-01-01T00:00:00'"),
+      kept("Year", "9999L"),
+      kept("Year", "1949L"),
+      kept("Year", "2050L"),
+      kept("Year", "2025D"),
+      kept("Year", "'FY2025'"),
+    ])
+      expect(details([onPage(condition)]), j(condition)).toEqual([]);
+  });
+
+  it("stays silent on a Top N filter, a card with no condition, and a filter drilling set", () => {
+    const topN = {
+      In: { Expressions: [col("Year")], Table: { SourceRef: { Source: "subquery" } } },
+    };
+    expect(details([onPage(topN, { type: "TopN" })])).toEqual([]);
+    expect(
+      details([
+        page(
+          "p",
+          filtered({ name: "f", field: entry(kept("Year", "2025L")).field, type: "Categorical" }),
+        ),
+      ]),
+    ).toEqual([]);
+    expect(details([onPage(kept("Year", "2025L"), { howCreated: "Drillthrough" })])).toEqual([]);
+    expect(details([onPage(kept("Year", "2025L"), { howCreated: "Drill" })])).toEqual([]);
+  });
+
+  it("leaves a filter alone when its page's name or its visual's title carries a year it keeps", () => {
+    const titled = (title: string) => ({
+      visualContainerObjects: {
+        title: [{ properties: { text: { expr: literal(`'${title}'`) } } }],
+      },
+    });
+    const files = [
+      {
+        path: "definition/pages/p/page.json",
+        text: j({
+          name: "p",
+          displayName: "Sales 2025",
+          ...filtered(entry(kept("Year", "2025L"))),
+        }),
+      },
+      {
+        path: "definition/pages/q/page.json",
+        text: j({ name: "q", displayName: "Review FY25" }),
+      },
+      visual("q", "onQ", "card", filtered(entry(kept("Year", "2025L")))),
+      { path: "definition/pages/r/page.json", text: j({ name: "r", displayName: "Overview" }) },
+      visual("r", "named", "card", filtered(entry(kept("Year", "2024L"))), titled("Revenue 2024")),
+      visual("r", "other", "card", filtered(entry(kept("Year", "2024L"))), titled("Revenue 2023")),
+    ];
+    expect(reportFindings(rule, files).map((f) => f.objectId)).toEqual(["other"]);
+  });
+
+  it("honours an ignore annotation on the page or the visual", () => {
+    const ignore = { annotations: [{ name: "pbiplint.ignore", value: rule.id }] };
+    const r = lint(
+      [
+        page("p", { ...filtered(entry(kept("Year", "2025L"))), ...ignore }),
+        visual("p", "v1", "card", { ...filtered(entry(kept("Year", "2025L"))), ...ignore }),
+        visual("p", "v2", "card", filtered(entry(kept("Year", "2025L")))),
+      ],
+      { rules: [rule] },
+    );
+    expect(r.findings.map((f) => f.objectId)).toEqual(["v2"]);
+    expect(r.summary.ignored).toBe(2);
+  });
+
+  describe("upper bounds and ranges", () => {
+    const and = (left: unknown, right: unknown) => ({ And: { Left: left, Right: right } });
+    const year = (kind: number, value: string) => compare(kind, col("Year"), literal(value));
+
+    it("fires on a year column kept up to a year, or between two, naming the whole years kept", () => {
+      for (const [condition, detail] of [
+        [year(4, "2025L"), "years up to 2025"],
+        [year(3, "2026L"), "years up to 2025"],
+        [year(4, "'2025'"), "years up to 2025"],
+        [and(year(2, "2018L"), year(4, "2025L")), "years 2018 to 2025"],
+        [and(year(4, "2025L"), year(2, "2018L")), "years 2018 to 2025"],
+        [and(year(1, "2017L"), year(3, "2026L")), "years 2018 to 2025"],
+      ] as const)
+        expect(details([onPage(condition)]), detail).toEqual([`${detail} on 'Date'[Year]`]);
+    });
+
+    it("points at the line of the upper bound", () => {
+      const text = pretty(filtered(entry(and(year(2, "2018L"), year(4, "2025L")))));
+      const [f] = reportFindings(rule, [{ path: "definition/report.json", text }]);
+      expect(f!.location!.line).toBe(lineOf(text, '"2025L"'));
+    });
+
+    it("stays silent on an upper bound beside anything but a lower bound, and off a year column", () => {
+      const blank = { Not: { Expression: compare(0, col("Year"), literal("null")) } };
+      const day = {
+        DateSpan: { Expression: literal("datetime'2025-12-31T00:00:00'"), TimeUnit: 5 },
+      };
+      for (const condition of [
+        and(blank, year(4, "2025L")),
+        and(year(2, "2018L"), year(1, "2019L")),
+        { Or: { Left: year(2, "2018L"), Right: year(4, "2025L") } },
+        compare(4, col("Region"), literal("'2025'")),
+        compare(4, col("Date"), day),
+        year(4, "2050L"),
+      ])
+        expect(details([onPage(condition)]), j(condition)).toEqual([]);
+    });
+
+    it("leaves a range alone when its page's name carries one of its years", () => {
+      const files = [
+        {
+          path: "definition/pages/p/page.json",
+          text: j({
+            name: "p",
+            displayName: "Since 2018",
+            ...filtered(entry(and(year(2, "2018L"), year(4, "2025L")))),
+          }),
+        },
+      ];
+      expect(details(files)).toEqual([]);
+    });
+  });
+});

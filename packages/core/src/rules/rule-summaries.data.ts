@@ -79,6 +79,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Visible columns whose name starts with Is and whose type is whole number, and visible columns whose name ends with the word Flag after a space and whose type is not text.",
   HARDCODED_PERIOD_IN_DAX:
     "Measures, calculated columns, and calculation items whose DAX fixes a year or a date, and date tables whose CALENDAR ends on a fixed date.",
+  HARDCODED_YEAR_IN_FILTER:
+    "Filters in the Filters pane, on a visual, a page, or all pages, that hold a year column to fixed years: years picked in Basic filtering, a year set with Advanced filtering's is, years kept up to one with is less than or is less than or equal to, and a range between two years.",
   HIDDEN_VISUAL_WITH_FIELDS:
     "Visuals hidden in the Selection pane, with their own eye icon or with that of a group they sit in, that still have fields in their wells.",
   HIDE_FACT_TABLE_COLUMNS:

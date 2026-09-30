@@ -118,9 +118,9 @@ own rules for a report's correctness and readiness: fields the model does not ha
 the report never reaches, a landing page not set, the opening page, the Filters pane, hidden
 visuals left with fields bound, default page names, empty visuals, visuals past the page edge,
 report-level measures, actions that point at a missing page or bookmark, bookmarks that refer to a
-missing page or visual, actions with no destination, tab order against layout, and saved slicer
-selections and search terms. "Report at a glance" states what the report will do whether or not
-anything fired.
+missing page or visual, actions with no destination, tab order against layout, saved slicer
+selections and search terms, and Filters pane filters held to a fixed year, such as a page filtered
+to 2025. "Report at a glance" states what the report will do whether or not anything fired.
 
 ## Links
 

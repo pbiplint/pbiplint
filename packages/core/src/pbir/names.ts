@@ -1,4 +1,5 @@
-import type { Bookmark, Page, ReportMeasure, Visual } from "./types.js";
+import { columnRef, measureRef } from "../model/names.js";
+import type { Bookmark, FieldRef, Page, ReportMeasure, Visual } from "./types.js";
 
 /** The first six characters of a report object's id, enough to find its folder. */
 export const shortId = (id: string): string => id.slice(0, 6);
@@ -21,3 +22,20 @@ export const reportMeasureLabel = (m: ReportMeasure): string => `[${m.name}] (re
 export const pageFilterLabel = (p: Page): string => `Page filter on "${p.displayName}"`;
 export const REPORT_LABEL = "Report";
 export const REPORT_FILTER_LABEL = "Report filter";
+
+/**
+ * A field reference as a finding's detail names it: `'Sales'[Region]`, `[Net Margin]`,
+ * `'Date'[Calendar].[Year]`, and, through a date column's variation,
+ * `'Sales'[OrderDate].[Date Hierarchy].[Year]`. A reference whose source yields no table is
+ * labelled by its names alone.
+ */
+export const fieldLabel = (ref: FieldRef): string => {
+  const inTable = (name: string): string =>
+    ref.table === "" ? measureRef(name) : columnRef(ref.table, name);
+  const field = ref.variation
+    ? `${inTable(ref.variation.column)}.${measureRef(ref.name)}`
+    : ref.kind === "measure"
+      ? measureRef(ref.name)
+      : inTable(ref.name);
+  return ref.kind === "hierarchyLevel" && ref.level ? `${field}.${measureRef(ref.level)}` : field;
+};

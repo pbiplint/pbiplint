@@ -203,7 +203,28 @@ export interface Perspective extends Named {
   tables: string[];
 }
 
-export type Culture = Named;
+/**
+ * What a culture's `translations` block captions: each table, column, measure, hierarchy, and level
+ * it gives a `caption` that is not blank, by name. Columns, measures, and hierarchies are named
+ * with their table; levels with their table and hierarchy.
+ */
+export interface CultureTranslations {
+  tables: string[];
+  columns: { table: string; name: string }[];
+  measures: { table: string; name: string }[];
+  hierarchies: { table: string; name: string }[];
+  levels: { table: string; hierarchy: string; name: string }[];
+}
+
+/** A `cultureInfo` declaration: a culture the model carries, by its name, such as `fr-FR`. */
+export interface Culture extends Named {
+  /**
+   * What its `translations` block captions; absent when it has no such block, as the culture of
+   * linguistic metadata Power BI Desktop writes for the model's own language has none. Optional,
+   * so a `Culture` built by hand against an earlier version still type-checks.
+   */
+  translations?: CultureTranslations;
+}
 
 export interface NamedExpression extends Named {
   expression: string;

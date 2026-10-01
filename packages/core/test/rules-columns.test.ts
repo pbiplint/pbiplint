@@ -73,6 +73,51 @@ describe("column property rules", () => {
       "'T'[Off]",
     ]);
   });
+  it("ISAVAILABLEINMDX rules and UNNECESSARY_COLUMNS read the columns a calendar names", () => {
+    // A documented deviation in all three rules: the source rules do not read calendars.
+    const m = [
+      "table Date",
+      "\tcolumn Year",
+      "\t\tdataType: int64",
+      "\t\tisHidden",
+      "\tcolumn 'Quarter Key'",
+      "\t\tdataType: int64",
+      "\t\tisHidden",
+      "\t\tisAvailableInMdx: false",
+      "\tcolumn 'Month Number'",
+      "\t\tdataType: int64",
+      "\t\tisHidden",
+      "\tcolumn 'Month Name'",
+      "\t\tdataType: string",
+      "\t\tisHidden",
+      "\tcolumn Holiday",
+      "\t\tdataType: string",
+      "\t\tisHidden",
+      "\tcolumn Unused",
+      "\t\tdataType: int64",
+      "\t\tisHidden",
+      "\tcalendar Gregorian",
+      "\t\tcalendarColumnGroup = year",
+      "\t\t\tprimaryColumn: Year",
+      "\t\tcalendarColumnGroup = quarter",
+      "\t\t\tprimaryColumn: 'Quarter Key'",
+      "\t\tcalendarColumnGroup = monthOfYear",
+      "\t\t\tprimaryColumn: 'Month Number'",
+      "\t\t\tassociatedColumn: 'Month Name'",
+      "\t\tcalendarColumnGroup",
+      "\t\t\tcolumn: Holiday",
+      "\tpartition Date = m",
+      "\t\tmode: import",
+      "\t\tsource = 1",
+    ].join("\n");
+    expect(objectNames(rules.ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS, m)).toEqual([
+      "'Date'[Unused]",
+    ]);
+    expect(objectNames(rules.SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS, m)).toEqual([
+      "'Date'[Quarter Key]",
+    ]);
+    expect(objectNames(rules.UNNECESSARY_COLUMNS, m)).toEqual(["'Date'[Unused]"]);
+  });
   it("UNNECESSARY_COLUMNS honors references, relationships, sort-by, hierarchies, RLS text, and OLS", () => {
     const m = `table T
 	column Unused

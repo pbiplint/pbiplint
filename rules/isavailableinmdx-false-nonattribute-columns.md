@@ -15,7 +15,7 @@ sources:
 
 ## What it checks
 
-Hidden columns, or columns in hidden tables, that still have IsAvailableInMdx set to true and are not used to sort another column, in a hierarchy, or in a variation, and do not themselves sort by another column.
+Hidden columns, or columns in hidden tables, that still have IsAvailableInMdx set to true and are not used to sort another column, in a hierarchy, in a variation, or in a calendar, and do not themselves sort by another column.
 
 Each finding names the column, as `'Sales'[Product Key]`.
 
@@ -60,20 +60,22 @@ Add `isAvailableInMdx: false` under the column in its table's TMDL file. Power B
 
 ## When to ignore it
 
-Size is the first judgment. The saving is roughly proportional to the column's distinct count, so a hidden flag with two values is not worth an edit and a hidden key with a million is. Work down the list by cardinality and stop where the numbers get small. A variation is the one case where acting on the finding can break something: pbiplint reads a variation's default column only, so a hidden column a variation reaches through its default hierarchy is reported here, and setting the property to false on it takes away the attribute hierarchy the variation needs. Check the date table's hidden columns against its variations before you touch them. A column you are about to unhide is a fair thing to leave, since unhiding it clears the finding anyway, as long as its table is visible.
+Size is the first judgment. The saving is roughly proportional to the column's distinct count, so a hidden flag with two values is not worth an edit and a hidden key with a million is. Work down the list by cardinality and stop where the numbers get small. A variation is the one case where acting on the finding can break something: pbiplint reads a variation's default column only, so a hidden column a variation reaches through its default hierarchy is reported here, and setting the property to false on it takes away the attribute hierarchy the variation needs. Check the date table's hidden columns against its variations before you touch them. A column you are about to unhide is a fair thing to leave, since unhiding it clears the finding anyway, as long as its table is visible. A table in Direct Lake storage mode is a judgment of its own: Direct Lake loads a column's data when a query needs it, and its refresh copies only metadata, so the refresh time this rule is about is not spent the same way (see Quirks).
 
 ## Quirks
 
 - A column with no `isAvailableInMdx` line counts as true, because that is the default pbiplint applies wherever the property is absent. Power BI Desktop never writes the property, so a Desktop-authored model gets a finding for every hidden column the rest of the condition does not excuse, until they are set by hand.
 - Visibility is the column's own `isHidden` or its table's. A visible column in a hidden table is reported.
 - Both ends of a sort-by pair are out of scope: the column another column sorts by, and the column that names one in `sortByColumn`.
+- A column a calendar names, as a primary, associated, or time-related column, is not reported, as Tabular Editor 3's built-in version of the rule does not report it: the calendar uses the column for time intelligence, and a primary column for sorting. The source rule does not read calendars, so Tabular Editor reports such a column when it is hidden.
 - Variations are matched on the default column alone, so a column a variation reaches only through its default hierarchy is not protected here.
 - Relationships are not read. A hidden foreign key, which is exactly what `HIDE_FOREIGN_KEYS` asks you to create, is reported here.
+- Tables in Direct Lake storage mode are read like any other. Tabular Editor 3's built-in version of the rule skips them, and no source says why. What differs is when the work is done: Direct Lake loads into memory only the column data a query needs, and its refresh copies only metadata ([Direct Lake overview](https://learn.microsoft.com/fabric/fundamentals/direct-lake-overview)).
 - While a model file has a parse issue that can take a declaration out of the model, such as a line indented with spaces, or pbiplint could not open a model file or folder at all, the rule reports nothing, because a variation on another table's column that names the column could be in what pbiplint missed, and pbiplint does not guess what a file it could not read says. The skipped line gives the reason, `a model file could not be fully read`, and the file's own `PARSE_ISSUE` finding names it, or a notice does for a file or folder pbiplint could not open.
 
 ## Related rules
 
-- `SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS` is the mirror of this rule: it reads the columns whose property is already false and reports the ones used to sort another column, in a hierarchy or a variation, or sorting by another column. No column can be reported by both.
+- `SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS` is the mirror of this rule: it reads the columns whose property is already false and reports the ones used to sort another column, in a hierarchy, a variation, or a calendar, or sorting by another column. No column can be reported by both.
 - `UNNECESSARY_COLUMNS` reads the same hidden columns and reports the ones no expression, relationship, or security filter references. Deleting the column clears both; setting `isAvailableInMdx: false` clears only this one.
 - `HIDE_FOREIGN_KEYS` asks you to hide a column on the many side of a relationship, and a hidden column with nothing sorting by it lands here, so taking that advice creates a finding on this rule.
 

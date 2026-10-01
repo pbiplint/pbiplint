@@ -100,7 +100,9 @@ export const DATA_COLUMNS_MUST_HAVE_A_SOURCE_COLUMN = bpaRule(
   (m) => columns(m, (c) => c.kind === "data" && isBlank(c.sourceColumn)),
 );
 
-// A model file pbiplint could not fully read may hold a variation that names the column.
+// A column a calendar names is left out, as Tabular Editor 3's built-in version of the rule leaves
+// it out and the source does not: a documented deviation. A model file pbiplint could not fully
+// read may hold a variation that names the column.
 export const ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS = bpaRule(
   "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS",
   { skipWhenModelUnread: modelPartlyRead },
@@ -113,10 +115,13 @@ export const ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS = bpaRule(
         !usage.usedInSortBy(c) &&
         !usage.usedInHierarchies(c) &&
         !usage.usedInVariations(c) &&
+        !usage.usedInCalendars(c) &&
         c.sortByColumn === undefined,
     ),
 );
 
+// A column a calendar names is reported, as Tabular Editor 3's built-in version of the rule reports
+// it and the source does not: a documented deviation, which keeps the two rules mirrors.
 export const SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS = bpaRule(
   "SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS",
   (m, { indexes: { usage } }: RuleContext) =>
@@ -127,6 +132,7 @@ export const SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS = bpaRule(
         (usage.usedInSortBy(c) ||
           usage.usedInHierarchies(c) ||
           usage.usedInVariations(c) ||
+          usage.usedInCalendars(c) ||
           c.sortByColumn !== undefined),
     ),
 );
@@ -149,6 +155,9 @@ export const UNNECESSARY_COLUMNS = bpaRule(
       // deviation. A field parameter's display column groups by its hidden Fields column, and the
       // parameter breaks without it.
       if (indexes.usage.usedInGroupBy(c)) return false;
+      // A column a calendar names counts as used, which the source does not do: a documented
+      // deviation. The calendar needs it for time intelligence.
+      if (indexes.usage.usedInCalendars(c)) return false;
       // The source rule also does plain substring checks on RLS filters (case-insensitive).
       const bare = `[${c.name}]`.toLowerCase();
       const qualified = [

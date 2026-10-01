@@ -15,9 +15,9 @@ sources:
 
 ## What it checks
 
-Columns with IsAvailableInMdx set to false that are used to sort another column, appear in a hierarchy or a variation, or sort by another column.
+Columns with IsAvailableInMdx set to false that are used to sort another column, appear in a hierarchy, a variation, or a calendar, or sort by another column.
 
-Each finding names the column, as `'Date'[Month Number]`. What the column is needed for is not in the line, so look for the column that sorts by it, the hierarchy level that names it, or the variation that makes it a default.
+Each finding names the column, as `'Date'[Month Number]`. What the column is needed for is not in the line, so look for the column that sorts by it, the hierarchy level that names it, the variation that makes it a default, or the calendar that names it.
 
 ## Example
 
@@ -75,9 +75,10 @@ There is no case for leaving it. A column reported here is one the engine needs 
 - A column with no `isAvailableInMdx` line is true, because pbiplint applies that default wherever the property is absent. The line appears only where a tool wrote it, and the only value ever written is `false`, so this rule fires only where something set the property deliberately.
 - Variations are matched on the default column alone. pbiplint reads a variation's `defaultColumn`, so a column a variation reaches only through its default hierarchy is not protected here.
 - Both ends of a sort-by pair are covered. The column that does the sorting is reported, and so is the column that names it in `sortByColumn`, whenever the property is false on either.
+- A column a calendar names, as a primary, associated, or time-related column, is reported when IsAvailableInMdx is false, as Tabular Editor 3's built-in version of the rule reports it, so the two rules stay mirrors. The source rule does not read calendars.
 
 ## Related rules
 
 - `ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS` is the mirror of this rule: it reads hidden columns whose property is still true and that are used in none of these ways, and reports them as candidates for false. No column can be reported by both.
 - `MONTH_(AS_A_STRING)_MUST_BE_SORTED` asks for the `sortByColumn` that brings a column into this rule's reach: the month number a month name sorts by is the column this rule then protects.
-- `UNNECESSARY_COLUMNS` is the rule that reports a hidden column nothing reads. A column this rule lists because another column sorts by it, or because it sits in a hierarchy, is not reported there; one it lists only for a variation, or because it sorts by another column, can be, because that rule reads neither.
+- `UNNECESSARY_COLUMNS` is the rule that reports a hidden column nothing reads. A column this rule lists because another column sorts by it, because it sits in a hierarchy, or because a calendar names it, is not reported there; one it lists only for a variation, or because it sorts by another column, can be, because that rule reads neither.

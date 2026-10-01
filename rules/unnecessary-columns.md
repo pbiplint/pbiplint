@@ -15,7 +15,7 @@ sources:
 
 ## What it checks
 
-Hidden columns, or columns in hidden tables, that nothing references: no DAX expression, relationship, hierarchy, sort-by column, group-by column, row-level security filter, or object-level security rule.
+Hidden columns, or columns in hidden tables, that nothing references: no DAX expression, relationship, hierarchy, sort-by column, group-by column, calendar, row-level security filter, or object-level security rule.
 
 Each finding names the column, as `'Sales'[Legacy Region Code]`.
 
@@ -73,6 +73,7 @@ Report usage is the case to check first. A hidden column that a visual, a slicer
 - A column that a user-defined function names with its table counts as used, even when nothing calls the function, as Tabular Editor counts it.
 - A column that a user-defined function names without its table counts as used, on every table with a column of that name, since the caller can hand the function any table. In pbiplint's parity check, Tabular Editor counted such a name inside `SUMX ( 'Sales', [Handling Fee] )` but reported the column a function names in `MAX ( [Tax Rate] )`, though deleting it would break the function.
 - A column that another column in its table groups by counts as used, as a field parameter's hidden Fields column is: the parameter's display column names it as its `groupByColumn` under `relatedColumnDetails`, and the parameter stops working without it. The source rule does not test `groupByColumn`, so Tabular Editor reports that column.
+- A column a calendar names, as a primary, associated, or time-related column, counts as used: the calendar needs it for time intelligence. The source rule does not read calendars, so Tabular Editor reports such a column when it is hidden and nothing else uses it.
 - Report usage is not visible to this rule. A hidden column used only by a visual, a slicer, or a report-level filter is still flagged.
 - Variations are not tested, here or in the source rule, so a hidden column that a variation names as its default column is reported. `SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS` does read variations.
 - Row-level security filters are also matched as text, ignoring letter case, the way the source rule matches them: `Table[Column]` or `'Table'[Column]` in any role's filter, or `[Column]` in a filter on the column's own table, counts as a use even inside a comment or a string there.
@@ -81,6 +82,6 @@ Report usage is the case to check first. A hidden column that a visual, a slicer
 ## Related rules
 
 - `UNNECESSARY_MEASURES` makes the same test on hidden measures that no expression references.
-- `ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS` reads the same hidden columns and reports the ones that still have IsAvailableInMdx set to true and are not used to sort, in a hierarchy, or in a variation, whether or not any expression references them. Deleting the column clears both; setting `isAvailableInMdx: false` clears only that one.
+- `ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS` reads the same hidden columns and reports the ones that still have IsAvailableInMdx set to true and are not used to sort, in a hierarchy, in a variation, or in a calendar, whether or not any expression references them. Deleting the column clears both; setting `isAvailableInMdx: false` clears only that one.
 - `HIDE_FOREIGN_KEYS` asks you to hide a column on the many side of a relationship. A column in a relationship is never reported here, so taking that advice does not bring the column into this rule.
 - `UDF_NOT_CALLED` reports a user-defined function nothing calls. A column that such a function names counts as used here, so deleting the function can bring the column into this rule.

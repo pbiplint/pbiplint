@@ -23,6 +23,11 @@ const SOURCED: { rule: string; capture: "te3" | "survey"; file?: string; rules: 
     rules: ["TRANSLATE_HIDEABLE_OBJECT_NAMES", "TRANSLATE_HIERARCHY_LEVEL_NAMES"],
   },
   {
+    rule: "DECIMAL_COLUMN_WITHOUT_FORMAT_STRING",
+    capture: "te3",
+    rules: ["TE3_BUILT_IN_FORMAT_STRING_COLUMNS"],
+  },
+  {
     rule: "UDF_USE_COMPOUND_NAMES",
     capture: "te3",
     rules: ["TE3_BUILT_IN_UDF_USE_COMPOUND_NAMES"],

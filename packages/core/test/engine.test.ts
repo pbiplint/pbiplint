@@ -1244,6 +1244,7 @@ describe("lint over a project", () => {
         ["NOT_REACHED_FROM_REPORT", M],
         ["UDF_NOT_CALLED", M],
         ["NAME_WITHOUT_TRANSLATION", M],
+        ["DECIMAL_COLUMN_WITHOUT_FORMAT_STRING", T],
       ]);
     });
   });

@@ -86,7 +86,7 @@ describe("pbiplint CLI", () => {
     const r = await run([sample]);
     expect(r.code).toBe(1);
     expect(r.out).toMatch(
-      /^pbiplint: 256 findings \(19 errors, 77 warnings, 160 info\) in 92 files/,
+      /^pbiplint: 266 findings \(19 errors, 77 warnings, 170 info\) in 92 files/,
     );
     expect(r.out).toContain("https://pbiplint.com/rules/provide-format-string-for-measures");
     expect(r.err).toBe("");
@@ -164,7 +164,7 @@ describe("pbiplint CLI", () => {
   it("--sample is the same as pointing at the bundled sample", async () => {
     const r = await run(["--sample", "--format", "json"]);
     expect(r.code).toBe(1);
-    expect(JSON.parse(r.out).summary.findings).toBe(256);
+    expect(JSON.parse(r.out).summary.findings).toBe(266);
   });
   it("--sample reads the bundled project, its model and its report, and prints no notice", async () => {
     const r = await run(["--sample", "--fail-on", "none"]);
@@ -204,7 +204,7 @@ describe("pbiplint CLI", () => {
     expect(r.code).toBe(1);
     expect(r.out).toBe("");
     expect(r.err).toBe(
-      "pbiplint: 256 findings (19 errors, 77 warnings, 160 info) in 92 files, wrote out/report.sarif\n",
+      "pbiplint: 266 findings (19 errors, 77 warnings, 170 info) in 92 files, wrote out/report.sarif\n",
     );
   });
   it("prefixes SARIF artifact URIs with the model root's path from the cwd", async () => {
@@ -620,7 +620,7 @@ describe("pbiplint CLI", () => {
           detail: "not reached from this report: unknown, a model file could not be fully read",
         });
         expect((await run([root, "--fail-on", "none"])).out).toContain(
-          "26 rules skipped (a model file could not be fully read)",
+          "27 rules skipped (a model file could not be fully read)",
         );
       } finally {
         chmodSync(store, 0o644);
@@ -647,7 +647,7 @@ describe("pbiplint CLI", () => {
           reason: "modelFileUnread",
         });
         expect((await run([model, "--fail-on", "none"])).out).toContain(
-          "25 rules skipped (a model file could not be fully read)",
+          "26 rules skipped (a model file could not be fully read)",
         );
       } finally {
         chmodSync(tables, 0o755);

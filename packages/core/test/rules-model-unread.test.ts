@@ -331,6 +331,11 @@ const tableCases: Case[] = [
     wouldReport: ["[Total]"],
   },
   {
+    rule: "DECIMAL_COLUMN_WITHOUT_FORMAT_STRING",
+    ...withPart(part("Sales", "Sales", "\tcolumn Ratio\n\t\tdataType: double\n"), salesHidden),
+    wouldReport: ["'Sales'[Ratio]"],
+  },
+  {
     rule: "DATA_COLUMNS_MUST_HAVE_A_SOURCE_COLUMN",
     // With its calculated partition, Value is a calculated table's column, which has no source.
     ...withPart(

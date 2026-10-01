@@ -2,8 +2,19 @@
   "fixture": "tests/fixtures/rule-zoo.SemanticModel",
   "oracle": "Tabular Editor CLI 0.7.1.2 built-in rules",
   "captured": "2026-10-01",
-  "deviations": {},
-  "ours": {},
+  "deviations": {
+    "DECIMAL_COLUMN_WITHOUT_FORMAT_STRING": "Whole-number and date columns are left out, since Power BI Desktop gives each of them a format string by default. The source rule, Tabular Editor 3's built-in, reports them as well."
+  },
+  "ours": {
+    "DECIMAL_COLUMN_WITHOUT_FORMAT_STRING": [
+      "'Monthly Budget'[Apr]",
+      "'Monthly Budget'[Feb]",
+      "'Monthly Budget'[Jan]",
+      "'Monthly Budget'[Jun]",
+      "'Monthly Budget'[Mar]",
+      "'Monthly Budget'[May]"
+    ]
+  },
   "findings": {
     "TE3_BUILT_IN_CALCULATION_GROUPS_NO_ITEMS": [
       "'Empty Calc Group'"

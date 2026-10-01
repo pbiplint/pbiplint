@@ -76,6 +76,10 @@
     ],
     "HARDCODED_YEAR_IN_FILTER": [
       "5e6c2d1145718eed516d"
+    ],
+    "DECIMAL_COLUMN_WITHOUT_FORMAT_STRING": [
+      "'Store'[Latitude]",
+      "'Store'[Longitude]"
     ]
   },
   "results": {

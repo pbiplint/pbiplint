@@ -52,6 +52,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Measures and row-level security filters that refer to a column by its bare name, `[Column]`, instead of `'Table'[Column]`.",
   DAX_MEASURES_UNQUALIFIED:
     "Measures, calculated columns, calculated tables, and calculation items that refer to a measure with a table prefix, `'Table'[Measure]`.",
+  DECIMAL_COLUMN_WITHOUT_FORMAT_STRING:
+    "Visible Decimal number and Fixed decimal number columns with no format string.",
   DEFAULT_PAGE_NAME:
     "Pages whose display name in page.json has the shape `Page <n>`, `Duplicate of <name>`, or `<name> (copy)`: the names English Power BI Desktop gives a new page and a duplicated one, and a name marked as a copy. The rule also matches the forms Desktop-saved files show for a new or duplicated page in other languages, such as `Seite <n>` and `Doublon de <name>`.",
   ENSURE_ALTTEXT:

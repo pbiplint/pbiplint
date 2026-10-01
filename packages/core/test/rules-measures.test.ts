@@ -16,7 +16,8 @@ describe("measure format rules", () => {
   it("PROVIDE_FORMAT_STRING_FOR_MEASURES leaves out a measure whose DAX plainly returns text", () => {
     // A documented deviation: the source rule does not read what a measure returns. Text the
     // tokens do not show plainly (F, a MAXX; H, an IF) is still reported, as is text in a comment
-    // (G), in a VAR before RETURN (I), or inside a call (J).
+    // (G), in a VAR before RETURN (I), or inside a call (J), and a text function's name with no
+    // call (M, a variable's name).
     const m = measures(
       [
         '\tmeasure A = "Hello"',
@@ -29,6 +30,9 @@ describe("measure format rules", () => {
         '\tmeasure H = IF(1, "a", "b")',
         '\tmeasure I = VAR s = "x" & 1 RETURN 2',
         '\tmeasure J = CALCULATE(VAR x = 1 RETURN x & "a")',
+        "\tmeasure K = USERPRINCIPALNAME()",
+        "\tmeasure L = SELECTEDMEASURENAME()",
+        "\tmeasure M = VAR Format = 1 RETURN Format",
       ].join("\n"),
     );
     expect(objectNames(rules.PROVIDE_FORMAT_STRING_FOR_MEASURES, m)).toEqual([
@@ -38,6 +42,7 @@ describe("measure format rules", () => {
       "[H]",
       "[I]",
       "[J]",
+      "[M]",
     ]);
   });
   it("INTEGER_FORMATTING flags everything that is not currency, percent, #,0 or #,0.0, including no format string", () => {

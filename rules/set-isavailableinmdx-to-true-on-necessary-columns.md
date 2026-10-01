@@ -60,11 +60,11 @@ table Date
 
 ## Why it matters
 
-A column that sorts another column, or sits in a hierarchy, is used through its attribute hierarchy, and that is exactly what setting IsAvailableInMdx to false removes. The result is a processing error, or a hierarchy that fails in Excel and other MDX clients, usually after someone set the property to false in bulk to save memory.
+A column that sorts another column, or sits in a hierarchy, is used through its attribute hierarchy, and that is exactly what setting IsAvailableInMdx to false removes. The result is a processing error, or a hierarchy that fails in Excel and other MDX clients, usually after someone set the property to false in bulk to save memory. A column a calendar names is read by time intelligence through the calendar, and a primary column also sorts the calendar's periods: "the primary columns are used for sorting" ([Primary versus associated columns](https://learn.microsoft.com/power-bi/transform-model/desktop-time-intelligence#primary-versus-associated-columns)).
 
 ## How to fix it
 
-Power BI Desktop has no setting for this property and never writes it, so the repair is in the TMDL file: delete the `isAvailableInMdx: false` line from under the column and the property goes back to its default of true. The other way to clear the same finding is to remove the need for the attribute hierarchy: take the column out of the hierarchy in Desktop's model view, or clear Sort by column under Column tools on the column that names it, and the rule stops reporting it. Tabular Editor shows the property in its property grid, which is a quicker way to clear it across the batch of columns a single bulk edit set.
+Power BI Desktop has no setting for this property and never writes it, so the repair is in the TMDL file: delete the `isAvailableInMdx: false` line from under the column and the property goes back to its default of true. The other way to clear the same finding is to remove the need for the attribute hierarchy: take the column out of the hierarchy in Desktop's model view, or clear Sort by column under Column tools on the column that names it, and the rule stops reporting it. For a column a calendar names, take it out of the calendar: edit the calendar under Calendar options in Table tools, which Desktop shows only once the Enhanced DAX Time Intelligence preview is turned on ([Enable the enhanced DAX Time Intelligence preview](https://learn.microsoft.com/power-bi/transform-model/desktop-time-intelligence#enable-the-enhanced-dax-time-intelligence-preview)), or delete the column's line under its `calendarColumnGroup` in the TMDL file. Tabular Editor shows the property in its property grid, which is a quicker way to clear it across the batch of columns a single bulk edit set.
 
 ## When to ignore it
 
@@ -75,7 +75,7 @@ There is no case for leaving it. A column reported here is one the engine needs 
 - A column with no `isAvailableInMdx` line is true, because pbiplint applies that default wherever the property is absent. The line appears only where a tool wrote it, and the only value ever written is `false`, so this rule fires only where something set the property deliberately.
 - Variations are matched on the default column alone. pbiplint reads a variation's `defaultColumn`, so a column a variation reaches only through its default hierarchy is not protected here.
 - Both ends of a sort-by pair are covered. The column that does the sorting is reported, and so is the column that names it in `sortByColumn`, whenever the property is false on either.
-- A column a calendar names, as a primary, associated, or time-related column, is reported when IsAvailableInMdx is false, as Tabular Editor 3's built-in version of the rule reports it, so the two rules stay mirrors. The source rule does not read calendars.
+- A column a calendar names, as a primary, associated, or time-related column, is reported when IsAvailableInMdx is false, so the two rules stay mirrors. Tabular Editor 3's built-in version of the rule also reports a primary column a calendar names when its IsAvailableInMdx is false. The source rule does not read calendars.
 
 ## Related rules
 

@@ -47,14 +47,19 @@ A port matches its source unless the source is wrong in a way that would make pb
 
 Tabular Editor is a development-time oracle only. Users, the CLI, and CI never need it.
 
+Each model fixture has three captures from the Tabular Editor 3 command line, `te`, which docs/RELEASING.md describes under Model parity expectations. From the repository root, for one fixture:
+
 ```bash
-te bpa run tests/fixtures/rule-zoo.SemanticModel/definition -r /path/to/BPARules.json --no-defaults --no-model-rules --output-format json > /tmp/zoo.json
-node scripts/te-expectations.mjs tests/fixtures/rule-zoo.SemanticModel tests/expectations/rule-zoo.json --from /tmp/zoo.json
+node scripts/te-expectations.mjs tests/fixtures/rule-zoo.SemanticModel tests/expectations/rule-zoo.json --rules /path/to/BPARules.json
+node scripts/te-expectations.mjs tests/fixtures/rule-zoo.SemanticModel tests/expectations/te3/rule-zoo.json --built-in
+node scripts/te-expectations.mjs tests/fixtures/rule-zoo.SemanticModel tests/expectations/survey/rule-zoo.json --survey tests/expectations/survey/files.json
 ```
 
-`te` is the Tabular Editor 3 command line (Windows, macOS, Linux). The free Tabular Editor 2 CLI on Windows works too with its own flags. Without either, submit hand-verified expectations and say so in the pull request. Keep the `skipRules` entries and their reasons; the script keeps them from the existing file, and any `deviations` with their `ours` too.
+`BPARules.json` is Microsoft's ruleset with the sha256 the files' `oracle` names. The survey capture downloads the 46 rule files from GitHub and runs `te` on each, about two minutes a fixture, and warns for every rule `te` cannot evaluate, which is expected for these files. A saved `te bpa run --output-format json` output converts with `--from <file>` in place of `--rules`.
 
-The report rules are pinned to fab-inspector the same way; the steps are in docs/RELEASING.md under Report parity expectations. What Tabular Editor CLI 0.7.0 changes for these commands, and what a re-capture after September 30, 2026 needs first, is in the same file under Model parity expectations.
+`te` runs on Windows, macOS, and Linux. Without it, submit hand-verified expectations and say so in the pull request. Keep the `skipRules` entries and their reasons; the script keeps them from the existing file, and any `deviations` with their `ours` too.
+
+The report rules are pinned to fab-inspector the same way; the steps are in docs/RELEASING.md under Report parity expectations. What a re-capture needs after October 31, 2026, when Tabular Editor CLI 0.7.1.2 stops working, is in the same file under Model parity expectations.
 
 New fixtures must be sanitized: `node scripts/sanitize-fixture.mjs <modelDir | projectDir>` rewrites every absolute path in the TMDL to `C:\Demo\Data\<name>`, deletes what does not belong in a fixture (Desktop caches and layouts, registered resources, custom visual packages, `.pbix` files), and edits a report's `report.json` so it no longer names the resources it deleted. TMDL carries no data.
 

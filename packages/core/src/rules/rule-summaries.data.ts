@@ -45,7 +45,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   DATA_COLUMNS_MUST_HAVE_A_SOURCE_COLUMN:
     "Data columns with no source column. Calculated columns are not checked.",
   "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE":
-    "Tables with date or calendar in the name that are not marked as a date table, meaning the data category is not Time or no DateTime column is marked as the key.",
+    "Tables with date or calendar in the name that define no calendar and are not marked as a date table, meaning the data category is not Time or no DateTime column is marked as the key.",
   DATECOLUMN_FORMATSTRING:
     "DateTime columns with date in the name whose format string is not exactly `mm/dd/yyyy`.",
   DAX_COLUMNS_FULLY_QUALIFIED:
@@ -111,7 +111,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   MINIMIZE_POWER_QUERY_TRANSFORMATIONS:
     "Power Query partitions whose M text contains Table.Combine, Table.Join, Table.NestedJoin, Table.AddColumn, Table.Group, Table.Sort, Table.Pivot, Table.Unpivot, Table.UnpivotOtherColumns, Table.Distinct, a native SQL query, or an OLE DB or ODBC query.",
   MODEL_SHOULD_HAVE_A_DATE_TABLE:
-    "Models with no table that has the data category Time and a DateTime column marked as the key, which is what Mark as date table sets.",
+    "Models with no table that defines a calendar, and none that has the data category Time and a DateTime column marked as the key, which is what Mark as date table sets.",
   MODEL_USING_DIRECT_QUERY_AND_NO_AGGREGATIONS:
     "Models that have at least one DirectQuery table, no aggregation table (no column has an alternateOf mapping), and the PowerBI_V3 data source version, which is every project Desktop writes today.",
   "MONTH_(AS_A_STRING)_MUST_BE_SORTED":

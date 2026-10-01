@@ -15,7 +15,7 @@ sources:
 
 ## What it checks
 
-Models with no table that has the data category Time and a DateTime column marked as the key, which is what Mark as date table sets.
+Models with no table that defines a calendar, and none that has the data category Time and a DateTime column marked as the key, which is what Mark as date table sets.
 
 Each finding names the model, as `Model`, and there is one per model however many tables hold dates.
 
@@ -67,7 +67,7 @@ Every time intelligence function needs a contiguous date column to work over, an
 
 ## How to fix it
 
-Add a calendar with one row per day covering every date the model holds, then mark it. The first-choice route is the source: load a calendar view or table in Transform data, so the fiscal periods and holidays live where the rest of the business already agrees on them. Failing that, build one in Power Query from a list of dates, or in Power BI Desktop under Modeling, New table with DAX such as `Date = CALENDAR(DATE(2020, 1, 1), DATE(2030, 12, 31))`; New table needs a table in import storage mode, so a model whose tables are all DirectQuery has to take the calendar from the source. Then select the table, open Table tools, choose Mark as date table, and pick the date column, which writes `dataCategory: Time` on the table and `isKey` on that column in the file. Finish by relating each fact table's date column to it in the model view and turning off Auto date/time under File, Options and settings, Options, Data Load, so the hidden per-column calendars stop being built.
+Add a calendar with one row per day covering every date the model holds, then mark it. The first-choice route is the source: load a calendar view or table in Transform data, so the fiscal periods and holidays live where the rest of the business already agrees on them. Failing that, build one in Power Query from a list of dates, or in Power BI Desktop under Modeling, New table with DAX such as `Date = CALENDAR(DATE(2020, 1, 1), DATE(2030, 12, 31))`; New table needs a table in import storage mode, so a model whose tables are all DirectQuery has to take the calendar from the source. Then select the table, open Table tools, choose Mark as date table, and pick the date column, which writes `dataCategory: Time` on the table and `isKey` on that column in the file. Finish by relating each fact table's date column to it in the model view and turning off Auto date/time under File, Options and settings, Options, Data Load, so the hidden per-column calendars stop being built. Where the model uses calendar-based time intelligence, a preview in Power BI Desktop, define a calendar on the table instead, under Calendar options in Table tools, which writes a `calendar` block under the table in its file ([Calendar-based time intelligence](https://learn.microsoft.com/power-bi/transform-model/desktop-time-intelligence#calendar-based-time-intelligence-preview)).
 
 ## When to ignore it
 
@@ -75,7 +75,8 @@ A model with no dates in it is the clean exception: a reference list, a product 
 
 ## Quirks
 
-- Both properties are needed on one table: `dataCategory: Time` and `isKey` on one of its DateTime columns. A table with only one of them does not satisfy the rule.
+- A table that defines a calendar satisfies the rule, as it satisfies Tabular Editor 3's built-in version, since calendar-based time intelligence works without a table marked as a date table. The source rule does not read calendars, so Tabular Editor reports a model whose only calendar table is not marked. Microsoft: "You don't need to identify your own date table with the Mark as Date table option if you use the recommended Calendar-based time intelligence in Power BI unless in specific circumstances" ([Set and use date tables in Power BI Desktop](https://learn.microsoft.com/power-bi/transform-model/desktop-date-tables)). Those circumstances are not read here, so a calendar satisfies the rule even where Microsoft still asks for the marking ([When you must mark your date table](https://learn.microsoft.com/power-bi/transform-model/desktop-date-tables#when-you-must-mark-your-date-table)).
+- Without a calendar, both properties are needed on one table: `dataCategory: Time` and `isKey` on one of its DateTime columns. A table with only one of them does not satisfy the rule.
 - The data category comparison is exact and case-sensitive, so `dataCategory: time` leaves the model reported.
 - Nothing else about the table is tested. It is not checked for contiguity, for covering the model's date range, or for being related to anything, so a one-row table marked as a date table clears the finding without helping any measure.
 - Any table can satisfy it, of any kind. A calculated calendar counts the same as a loaded one.
@@ -83,6 +84,6 @@ A model with no dates in it is the clean exception: a reference list, a product 
 
 ## Related rules
 
-- `DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE` names the table to mark when a calendar is already in the model under a name containing date or calendar. Marking it clears both rules at once.
+- `DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE` names the table to mark when a calendar is already in the model under a name containing date or calendar. Marking it, or defining a calendar on it, clears both rules at once.
 - `REMOVE_AUTO-DATE_TABLE` reports the calculated tables the Auto date/time option generates, whose names start with DateTableTemplate_ or LocalDateTable_, which is what a model without its own calendar falls back to.
 - `REDUCE_USAGE_OF_CALCULATED_TABLES` lists every calculated table, so a calendar built with CALENDAR satisfies this rule once it is marked and creates a finding there.

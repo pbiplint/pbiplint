@@ -1,0 +1,506 @@
+{
+  "about": "Rule files for Tabular Editor's Best Practice Analyzer published on GitHub, from the survey of September 28, 2026: one entry per distinct file by sha256, at the commit the capture fetches it from. The files are not committed, since several carry no license. scripts/te-expectations.mjs --survey fetches each one and checks its sha256.",
+  "files": [
+    {
+      "id": "microsoft/Analysis-Services/BestPracticeRules/BPARules.json",
+      "repository": "microsoft/Analysis-Services",
+      "path": "BestPracticeRules/BPARules.json",
+      "commit": "d3ccb5032c9029b097276b88412f7b61df6e73b8",
+      "sha256": "ddb9cff4c2a0611a6467e2559d38319d9867381998066473ffa1e11c2d360392",
+      "rules": 71,
+      "alsoAt": []
+    },
+    {
+      "id": "microsoft/Analysis-Services/BestPracticeRules/Italian/BPARules.json",
+      "repository": "microsoft/Analysis-Services",
+      "path": "BestPracticeRules/Italian/BPARules.json",
+      "commit": "d3ccb5032c9029b097276b88412f7b61df6e73b8",
+      "sha256": "6515e178587d0d83abff2d3306dd4087ee29cf2ece22971d7cbe64da751952a1",
+      "rules": 71,
+      "alsoAt": []
+    },
+    {
+      "id": "microsoft/Analysis-Services/BestPracticeRules/Spanish/BPARules.json",
+      "repository": "microsoft/Analysis-Services",
+      "path": "BestPracticeRules/Spanish/BPARules.json",
+      "commit": "d3ccb5032c9029b097276b88412f7b61df6e73b8",
+      "sha256": "29bd0fa7707d6a3d52c64faf41cc7035b736d49360c5b457261fa40d95a0a9ff",
+      "rules": 71,
+      "alsoAt": []
+    },
+    {
+      "id": "microsoft/Analysis-Services/BestPracticeRules/Japanese/BPARules.json",
+      "repository": "microsoft/Analysis-Services",
+      "path": "BestPracticeRules/Japanese/BPARules.json",
+      "commit": "d3ccb5032c9029b097276b88412f7b61df6e73b8",
+      "sha256": "04b55f1b8ad05f4e5295b0521e41c9459446c99d1496ef5912448f44926d9ae8",
+      "rules": 71,
+      "alsoAt": []
+    },
+    {
+      "id": "BenniDeJagere/Presentations/2020/20200707_PBIMCR/BPARules.json",
+      "repository": "BenniDeJagere/Presentations",
+      "path": "2020/20200707_PBIMCR/BPARules.json",
+      "commit": "6de17fa4dee5213d75366d6ed4ac7a2593b31e20",
+      "sha256": "7716f2fd208a5815750a174d7a5efe32b3f8ce06177fde31c0b31a6b451aa822",
+      "rules": 19,
+      "alsoAt": [
+        {
+          "repository": "BenniDeJagere/Presentations",
+          "path": "2020/20200625_PBIMCR/BPARules.json"
+        },
+        {
+          "repository": "BenniDeJagere/Presentations",
+          "path": "2020/20200526_PASSBA/BPARules.json"
+        },
+        {
+          "repository": "BenniDeJagere/Presentations",
+          "path": "2019/20191214_SQLSatSlovenia/BPARules.json"
+        },
+        {
+          "repository": "BenniDeJagere/Presentations",
+          "path": "2020/20200307_SQLSaturdayBelgium/BPARules.json"
+        },
+        {
+          "repository": "BenniDeJagere/Presentations",
+          "path": "2020/20200328_SQLSaturdayIceland/BPARules.json"
+        },
+        {
+          "repository": "BenniDeJagere/Presentations",
+          "path": "2020/20200408_PowerBIDaysNetherlands/BPARules.json"
+        },
+        {
+          "repository": "BenniDeJagere/Presentations",
+          "path": "2020/20200215_PowerPlatformBootcamp Belgium/BPARules.json"
+        },
+        {
+          "repository": "BenniDeJagere/Presentations",
+          "path": "2019/20191031_PowerPlatform WorldTour Dublin/BPARules.json"
+        },
+        {
+          "repository": "BenniDeJagere/Presentations",
+          "path": "2019/20191205_PowerPlatform WorldTour Brussels/BPARules.json"
+        }
+      ]
+    },
+    {
+      "id": "BenniDeJagere/Presentations/2020/20201002_SQLBits/BPARules.json",
+      "repository": "BenniDeJagere/Presentations",
+      "path": "2020/20201002_SQLBits/BPARules.json",
+      "commit": "6de17fa4dee5213d75366d6ed4ac7a2593b31e20",
+      "sha256": "1922b327f533ffcb35d5261f39524cd54f43a73a9a32263cca5c2ffd6176af26",
+      "rules": 19,
+      "alsoAt": [
+        {
+          "repository": "BenniDeJagere/Presentations",
+          "path": "2020/20201112_PASSSummit/BPARules.json"
+        }
+      ]
+    },
+    {
+      "id": "gronnerup/FabricOps/automation/resources/BPARules.json",
+      "repository": "gronnerup/FabricOps",
+      "path": "automation/resources/BPARules.json",
+      "commit": "e2d34a23204c0d97746a93f4ca1eaa4615c31d44",
+      "sha256": "683975874ec6d0315134a9211f2e4b557dedb53f9749066c3adbbf056c6e81c9",
+      "rules": 29,
+      "alsoAt": []
+    },
+    {
+      "id": "Reinsight-SE/Tabular/BestPractices/BPARules.json",
+      "repository": "Reinsight-SE/Tabular",
+      "path": "BestPractices/BPARules.json",
+      "commit": "e8ba641843e808042107508a573301bf33598a6e",
+      "sha256": "440251f1a40d407a9efb56807199ffca8c1b6a65061062b40605c8f45e723ac4",
+      "rules": 80,
+      "alsoAt": []
+    },
+    {
+      "id": "filcuk/ssas-best-practice-rules/BPARules.json",
+      "repository": "filcuk/ssas-best-practice-rules",
+      "path": "BPARules.json",
+      "commit": "49dfff3c9ac7d064ca9ea6051e28e8b12feefb88",
+      "sha256": "6841f20d1d29961ed761e0139c51bfdf7485ba7a1486a10540c68ab4931adfa5",
+      "rules": 72,
+      "alsoAt": []
+    },
+    {
+      "id": "rafaelxkr/Power-BI/Tabular_Editor/BPARules.json",
+      "repository": "rafaelxkr/Power-BI",
+      "path": "Tabular_Editor/BPARules.json",
+      "commit": "896988cb795c633cd10111a80c109b547029e1ec",
+      "sha256": "a6bab5718ef28b457f7830cfef0614454d1379bf692917b5293321c43cbf59ed",
+      "rules": 71,
+      "alsoAt": []
+    },
+    {
+      "id": "Adrian1903/BPA-Rules/BPARules.json",
+      "repository": "Adrian1903/BPA-Rules",
+      "path": "BPARules.json",
+      "commit": "2ce4c2eb2b66a73498afa03a136cc6c30353d2ea",
+      "sha256": "ab575cf7a62bd7604d6626683eda299676e127c8d5147ed1163755993b990574",
+      "rules": 52,
+      "alsoAt": []
+    },
+    {
+      "id": "marcelodfelman/PowerBI-BPA-Analyzer/data/BPARules.json",
+      "repository": "marcelodfelman/PowerBI-BPA-Analyzer",
+      "path": "data/BPARules.json",
+      "commit": "732975665c4d6816a28d7abaf06426eae8f44451",
+      "sha256": "b32a2d49b52f2fc2af7a715d3d4ed13bd8cc6e37e0221f4bf575faeb44a1fcdd",
+      "rules": 8,
+      "alsoAt": []
+    },
+    {
+      "id": "punitgiri921/Brightline-Analytics/bpa-rules/BPARules.json",
+      "repository": "punitgiri921/Brightline-Analytics",
+      "path": "bpa-rules/BPARules.json",
+      "commit": "c061682825350eb9d10e8896411fdea60126d92e",
+      "sha256": "2199ffbe28bd1f1d8f4204b81cc137835faec61f1ff055a2496c6421ed6a0504",
+      "rules": 2,
+      "alsoAt": []
+    },
+    {
+      "id": "bonardi/PowerBI-CICD/resources/report/config/bparules.json",
+      "repository": "bonardi/PowerBI-CICD",
+      "path": "resources/report/config/bparules.json",
+      "commit": "bda7d2abc02a2ba17a97b366f2c420d847faf595",
+      "sha256": "516d02b9817761e3761c48c9587a9bc5f5747e27448ad816a3db67dbba395d58",
+      "rules": 9,
+      "alsoAt": []
+    },
+    {
+      "id": "bonardi/PowerBI-CICD/resources/dataset/config/bparules.json",
+      "repository": "bonardi/PowerBI-CICD",
+      "path": "resources/dataset/config/bparules.json",
+      "commit": "bda7d2abc02a2ba17a97b366f2c420d847faf595",
+      "sha256": "288cdabbd333db465708d3922e16d1f6cecef5bb9365cd6b24426a96e8d0b317",
+      "rules": 71,
+      "alsoAt": []
+    },
+    {
+      "id": "gordoncheme/powerbi/BPARules.json",
+      "repository": "gordoncheme/powerbi",
+      "path": "BPARules.json",
+      "commit": "dc57e234ac026a3235ac62d76be0753ccf04001c",
+      "sha256": "9bd3ce56826781becaa1b5a0cd16727106e7cd90b10494706e562268bbd6e309",
+      "rules": 79,
+      "alsoAt": []
+    },
+    {
+      "id": "thijsknaapRob/BPARulesOnline/BPARules.json",
+      "repository": "thijsknaapRob/BPARulesOnline",
+      "path": "BPARules.json",
+      "commit": "a42f2aa9f09b9b85a06ddef8d6af50b413ab0595",
+      "sha256": "f46486cdd6ab70c9d48c95f73c974ffa671f44b1c927c80628429c0315ee8ddb",
+      "rules": 44,
+      "alsoAt": []
+    },
+    {
+      "id": "twelve-baskets-analytics/pbi-bpa/BPARules.json",
+      "repository": "twelve-baskets-analytics/pbi-bpa",
+      "path": "BPARules.json",
+      "commit": "6a9f672e9519f3afd3919bb7c3777be43be3cdc2",
+      "sha256": "6cd32fb0523522a41ee8121846ba1a948407aca80554b640dc908720135619b8",
+      "rules": 62,
+      "alsoAt": []
+    },
+    {
+      "id": "faby31/test/BPARules.json",
+      "repository": "faby31/test",
+      "path": "BPARules.json",
+      "commit": "48597100316e845058d8cf84fc787437c71dbfea",
+      "sha256": "b6b61e5ff4194ecd928c80f3aa6808a5a4430ab88450f98de726f2673fff9f79",
+      "rules": 66,
+      "alsoAt": []
+    },
+    {
+      "id": "Mikd14/BPARules/BPARules.json",
+      "repository": "Mikd14/BPARules",
+      "path": "BPARules.json",
+      "commit": "9a87fd2654067f65ac842b371d17212e3f95a627",
+      "sha256": "29bc9d77283661cff943acde1a0b5987bc62f626b008478cb4e3d934ab3e7bfd",
+      "rules": 61,
+      "alsoAt": []
+    },
+    {
+      "id": "GreyskullAnalytics/by-the-power-of-analyics-engineering/powerbi/bestpracticeanalyser/BPARules.json",
+      "repository": "GreyskullAnalytics/by-the-power-of-analyics-engineering",
+      "path": "powerbi/bestpracticeanalyser/BPARules.json",
+      "commit": "952b1a8feeab14ac1019b7cb377959a7edff823c",
+      "sha256": "5d7280d606755784f47fe9d1227ac44ec279651eef40d8e47af5ed14cd988360",
+      "rules": 62,
+      "alsoAt": []
+    },
+    {
+      "id": "Code-DataFyre/PowerInsighter/PowerInsighter/ModelBestPractices/BPARules.json",
+      "repository": "Code-DataFyre/PowerInsighter",
+      "path": "PowerInsighter/ModelBestPractices/BPARules.json",
+      "commit": "47ee7bbb9c2c656bbf7baa23a895f82da64239fd",
+      "sha256": "2dcd53c82d04104c45dc9a6ee398778b74997cb150190c3e26b807d2df64ef6e",
+      "rules": 71,
+      "alsoAt": [
+        {
+          "repository": "Cnext-eu/kairos-ontology-toolkit",
+          "path": "src/kairos_ontology/core/projections/dbt/bpa_rules/BPARules.json"
+        }
+      ]
+    },
+    {
+      "id": "eugenecp/fabcon2026-ai-ci-cd/Fabric2026-CI-CD-Complete-Package/scripts/.bpaRules.json",
+      "repository": "eugenecp/fabcon2026-ai-ci-cd",
+      "path": "Fabric2026-CI-CD-Complete-Package/scripts/.bpaRules.json",
+      "commit": "7b1dd3e300f6c199ff0eab1c399e4d9f897ac4c5",
+      "sha256": "89b7f58f7e007d3f150bd9321333854a0d0fb75c99e2546eb947f630d19bdabf",
+      "rules": 20,
+      "alsoAt": []
+    },
+    {
+      "id": "TabularEditor/SessionArchive/Webinars/2025-12-10 - CICD and version control for Fabric/src/automation/resources/BPARules.json",
+      "repository": "TabularEditor/SessionArchive",
+      "path": "Webinars/2025-12-10 - CICD and version control for Fabric/src/automation/resources/BPARules.json",
+      "commit": "f5f9153f015392ed953c5419ad6c038331455208",
+      "sha256": "90aa2628449630dae01c02dc04420e8f48bd774db5b78215af5943efe4997999",
+      "rules": 29,
+      "alsoAt": []
+    },
+    {
+      "id": "data-goblin/power-bi-agentic-development/plugins/tabular-editor/skills/bpa-rules/examples/course-3-business-case-bpa-rules.json",
+      "repository": "data-goblin/power-bi-agentic-development",
+      "path": "plugins/tabular-editor/skills/bpa-rules/examples/course-3-business-case-bpa-rules.json",
+      "commit": "ca344d66b826f6ff618310bfb6718b1a93c0460e",
+      "sha256": "ca670cd7f6e2a1b22a24336b2adc69e18ed2fbff45fa9c6ae427e9a6a3de081a",
+      "rules": 10,
+      "alsoAt": [
+        {
+          "repository": "thedixitjain/the-mega-skill-library",
+          "path": "library/mobile-and-platform/bpa-rules/examples/course-3-business-case-bpa-rules.json"
+        },
+        {
+          "repository": "ltbastos/migracaopcnovo",
+          "path": "claude-config/skills/bpa-rules/examples/course-3-business-case-bpa-rules.json"
+        },
+        {
+          "repository": "sahit-sai/saviaa",
+          "path": ".agents/skills/bpa-rules/examples/course-3-business-case-bpa-rules.json"
+        },
+        {
+          "repository": "InsightfulAnalytics/PBI_Agentic_Dev",
+          "path": "plugins/tabular-editor/skills/bpa-rules/examples/course-3-business-case-bpa-rules.json"
+        }
+      ]
+    },
+    {
+      "id": "bgarcevic/fabric-utils/.devops/bpa-rules.json",
+      "repository": "bgarcevic/fabric-utils",
+      "path": ".devops/bpa-rules.json",
+      "commit": "2bc6207b7d8de9b8e366332bdb67bb593dc28842",
+      "sha256": "2874878c3cc7392a6354bce8ed3479bf318aee5edfc41d88e7afcf2c66f5f7f7",
+      "rules": 70,
+      "alsoAt": []
+    },
+    {
+      "id": "luccapinto/agentic-data-kit/.agent/skills/pbi-quality-rules/bpa-rules.json",
+      "repository": "luccapinto/agentic-data-kit",
+      "path": ".agent/skills/pbi-quality-rules/bpa-rules.json",
+      "commit": "93b53bcce95d301575438c83dc4c953095e9c646",
+      "sha256": "e7f4640eda26146bad07972e57362132bbaf99f149107578628d2b23e4ee04aa",
+      "rules": 10,
+      "alsoAt": [
+        {
+          "repository": "luccapinto/agentic-data-kit",
+          "path": ".claude/skills/pbi-quality-rules/bpa-rules.json"
+        },
+        {
+          "repository": "luccapinto/agentic-data-kit",
+          "path": ".opencode/skills/pbi-quality-rules/bpa-rules.json"
+        },
+        {
+          "repository": "luccapinto/agentic-data-kit",
+          "path": ".github/skills/pbi-quality-rules/bpa-rules.json"
+        }
+      ]
+    },
+    {
+      "id": "bgarcevic/tomix-cli/src/Tomix.App/Bpa/Rules/bpa-rules.json",
+      "repository": "bgarcevic/tomix-cli",
+      "path": "src/Tomix.App/Bpa/Rules/bpa-rules.json",
+      "commit": "835f47d2da6e4872b0573d12e021ed5f4f24f4be",
+      "sha256": "579b934a8be46c974234218c53c28ebe7dbf0a96185e2d789e65c364ca654426",
+      "rules": 70,
+      "alsoAt": []
+    },
+    {
+      "id": "AlahmadiQ8/copilot-sdk-challenge/backend/src/data/bpa-rules.json",
+      "repository": "AlahmadiQ8/copilot-sdk-challenge",
+      "path": "backend/src/data/bpa-rules.json",
+      "commit": "e402c8beb9e7cfcb1f1ffb23a524b7d34817c90f",
+      "sha256": "86c237a641763342544762f8321d26adec65c85e88b590c007eec6e9b8dbb08f",
+      "rules": 71,
+      "alsoAt": []
+    },
+    {
+      "id": "petecarlssonw/powerbi-testing/BPARules/bpa-rules.json",
+      "repository": "petecarlssonw/powerbi-testing",
+      "path": "BPARules/bpa-rules.json",
+      "commit": "df2c8037d31486e0a7015fd66ce4c7de1eb4b525",
+      "sha256": "481ed118550e185cf3b0429907f29941b8c95e676a3ebd44872adc7470b42d1b",
+      "rules": 67,
+      "alsoAt": []
+    },
+    {
+      "id": "TabularEditor/BestPracticeRules/BPARules-standard.json",
+      "repository": "TabularEditor/BestPracticeRules",
+      "path": "BPARules-standard.json",
+      "commit": "98e71e15fbd2a53d2e63d2b6bc3e99545461d501",
+      "sha256": "45e5abf9eed78ada85395697e87b0e21df851a9013529aaf3e2c3f515b804ee6",
+      "rules": 29,
+      "alsoAt": []
+    },
+    {
+      "id": "TabularEditor/BestPracticeRules/BPARules-PowerBI.json",
+      "repository": "TabularEditor/BestPracticeRules",
+      "path": "BPARules-PowerBI.json",
+      "commit": "98e71e15fbd2a53d2e63d2b6bc3e99545461d501",
+      "sha256": "789e8a0080192dfdaa8213d419a4fedb669fe672e599ad6415a3cda59f3aa31b",
+      "rules": 26,
+      "alsoAt": []
+    },
+    {
+      "id": "tenfingerseddy/semanticus-vscode/Semanticus.Analysis/Rules/BPARules-PowerBI.json",
+      "repository": "tenfingerseddy/semanticus-vscode",
+      "path": "Semanticus.Analysis/Rules/BPARules-PowerBI.json",
+      "commit": "6b52bada7c6b80b312d6a54e0cfde9b63261d583",
+      "sha256": "c9f20221d35e1b597a094d626c67cd78f9f28eeb21c61dee86916639657f05c1",
+      "rules": 74,
+      "alsoAt": []
+    },
+    {
+      "id": "KavasiMihaly/SelfServiceBIBlog/TabularEditor/BPARules-PowerBI.json",
+      "repository": "KavasiMihaly/SelfServiceBIBlog",
+      "path": "TabularEditor/BPARules-PowerBI.json",
+      "commit": "e2c682fcd3b01c494fd22ac0aee1f43f783bbb6d",
+      "sha256": "1bf0aaa806b4a89471e57f5975bd74f15ccf567803842d2d3c74bddd1132d6f0",
+      "rules": 26,
+      "alsoAt": []
+    },
+    {
+      "id": "bredeespelid/PBIP_SemLin/docs/bpa/semantic model/BPARules-PowerBI.json",
+      "repository": "bredeespelid/PBIP_SemLin",
+      "path": "docs/bpa/semantic model/BPARules-PowerBI.json",
+      "commit": "b426cd5f453a47c747fbe65808725498beabe2f3",
+      "sha256": "c53b286de98488a2c12b88f1147d7710a1af5e66671962f41b7dc368b9f89694",
+      "rules": 26,
+      "alsoAt": [
+        {
+          "repository": "jonathan-pap/blueprints",
+          "path": "tabular-editor/bpa/rules/BPARules-PowerBI.json"
+        }
+      ]
+    },
+    {
+      "id": "vlpatkosdani/powerbi-cicd-with-githubactions-demos/BPA_Rules.json",
+      "repository": "vlpatkosdani/powerbi-cicd-with-githubactions-demos",
+      "path": "BPA_Rules.json",
+      "commit": "203173e6abf4760edf7e226fcec014b5ef7ddc1d",
+      "sha256": "b90cdceaff5ff5d8ae97fac60b2c9465bfd52240737a2fe75955b02edfd7451d",
+      "rules": 10,
+      "alsoAt": []
+    },
+    {
+      "id": "vlpatkosdani/powerbi-cicd-with-githubactions-demos/scripts/BPA_Rules.json",
+      "repository": "vlpatkosdani/powerbi-cicd-with-githubactions-demos",
+      "path": "scripts/BPA_Rules.json",
+      "commit": "203173e6abf4760edf7e226fcec014b5ef7ddc1d",
+      "sha256": "e707bc9afa8ac2b6f8104b8eb41d4943845dd43cc4dad1488fb61bea2e6ed52b",
+      "rules": 75,
+      "alsoAt": [
+        {
+          "repository": "joaopedropeira/fabric-ci-cd",
+          "path": "scripts/bpa/BPA_Rules.json"
+        }
+      ]
+    },
+    {
+      "id": "ianfinkdata/sql-practice/pbip/bpa/bpa_rules.json",
+      "repository": "ianfinkdata/sql-practice",
+      "path": "pbip/bpa/bpa_rules.json",
+      "commit": "9f76fceef185f7f436ee83e9b136eabe505a2375",
+      "sha256": "99b4ed3668f12e0ae6f29948979efa587f564157258943ced3c68afb6c308cd4",
+      "rules": 8,
+      "alsoAt": []
+    },
+    {
+      "id": "omezquita/PowerBI/MDA_BPA_Rules.json",
+      "repository": "omezquita/PowerBI",
+      "path": "MDA_BPA_Rules.json",
+      "commit": "6ecf5438cf97f6ccd426079dbeb2ebb726d123f1",
+      "sha256": "73b5f4ef90d926370ba1e485412cba64bb15ee2e15948c9ba8901a39f5e86b13",
+      "rules": 7,
+      "alsoAt": []
+    },
+    {
+      "id": "aswalsheshant-cell/mt-dashboard/PowerBI/CI/bpa_rules.json",
+      "repository": "aswalsheshant-cell/mt-dashboard",
+      "path": "PowerBI/CI/bpa_rules.json",
+      "commit": "5839efcbb11ad9c1f9e453c7d1a53e4e70e90ea5",
+      "sha256": "89e2f2f13db63cedb29b9e4650ab765c2a84b55dfc4ff4253f8a5d3d38c2f3f3",
+      "rules": 6,
+      "alsoAt": []
+    },
+    {
+      "id": "StuffbyYuki/PBI-BPA-Rules/BPA_Rules.json",
+      "repository": "StuffbyYuki/PBI-BPA-Rules",
+      "path": "BPA_Rules.json",
+      "commit": "fece63fe3e85dd8f3023a447787d9ef4be47906b",
+      "sha256": "96528afda979ffa41efe16914b4a232e16b2001cfe3a2ccb5e3539d1e6094f7e",
+      "rules": 71,
+      "alsoAt": []
+    },
+    {
+      "id": "sautalwar/hearst_cicd_fabric_demo/tests/semantic_model/bpa_rules.json",
+      "repository": "sautalwar/hearst_cicd_fabric_demo",
+      "path": "tests/semantic_model/bpa_rules.json",
+      "commit": "af80f172691de5c68bc79fc0ebbcfa6af5e7eda8",
+      "sha256": "2b0829503be4d8ef29b911865099f17a4d37cc402440b37314cdad83875b97a4",
+      "rules": 11,
+      "alsoAt": []
+    },
+    {
+      "id": "ryanduguid/accounting-review-pipeline/apps/australian-accounting-power-bi/tests/model_bpa_rules.json",
+      "repository": "ryanduguid/accounting-review-pipeline",
+      "path": "apps/australian-accounting-power-bi/tests/model_bpa_rules.json",
+      "commit": "c6e932d2439623ec26f851379620f9fe057020ba",
+      "sha256": "339a2721aef5305abd23626e8f1b959b111fdd32cdd37fafeac438f169008ff1",
+      "rules": 4,
+      "alsoAt": []
+    },
+    {
+      "id": "pranamg/powerbi-hub/Scripts/CSharp/TabularEditor/BestPracticeRules.json",
+      "repository": "pranamg/powerbi-hub",
+      "path": "Scripts/CSharp/TabularEditor/BestPracticeRules.json",
+      "commit": "6dab5d0440345822514a87df834c996ed43a497c",
+      "sha256": "bab43da9cfc3c2d99264b49cf461c4d58ff86753414b3b90f3a310983696731c",
+      "rules": 20,
+      "alsoAt": []
+    },
+    {
+      "id": "TabularEditor/BestPracticeRules/BPARules-contrib.json",
+      "repository": "TabularEditor/BestPracticeRules",
+      "path": "BPARules-contrib.json",
+      "commit": "98e71e15fbd2a53d2e63d2b6bc3e99545461d501",
+      "sha256": "2ba33ca0557f1bb5b7ba88d67f9d0093c7185a36ec51fe2b7bd9372d3e001d6d",
+      "rules": 0,
+      "alsoAt": []
+    },
+    {
+      "id": "TabularEditor/BestPracticeRules/BPARules-standard-lax.json",
+      "repository": "TabularEditor/BestPracticeRules",
+      "path": "BPARules-standard-lax.json",
+      "commit": "98e71e15fbd2a53d2e63d2b6bc3e99545461d501",
+      "sha256": "4ceee8ba09f35ddfcd200b4c976611bdbd3249cb23b9b7b10531886956cd14ed",
+      "rules": 19,
+      "alsoAt": []
+    }
+  ]
+}

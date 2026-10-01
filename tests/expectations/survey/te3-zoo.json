@@ -1,0 +1,3367 @@
+{
+  "fixture": "tests/fixtures/te3-zoo.SemanticModel",
+  "oracle": "Tabular Editor CLI 0.7.1.2, each rule file in tests/expectations/survey/files.json at its commit",
+  "captured": "2026-10-01",
+  "deviations": {},
+  "ours": {},
+  "results": {
+    "microsoft/Analysis-Services/BestPracticeRules/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Date'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]",
+          "'Sales'[Ship Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Budget'"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Amount]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Customer'[Customer ID]",
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Year]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order Date]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Date'[Date]"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Date'[Month Name]",
+          "'Date'[Month Short Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Budget'[Budget Amount]",
+          "'Customer'",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month Name]",
+          "'Sales'",
+          "'Sales'[Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Tax Rate]",
+          "'Sales'[Unit Price]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Amount Text]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "UNNECESSARY_MEASURES": [
+          "[Budget Total]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "microsoft/Analysis-Services/BestPracticeRules/Italian/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Date'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]",
+          "'Sales'[Ship Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Budget'"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Amount]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Customer'[Customer ID]",
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Year]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order Date]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Date'[Date]"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Date'[Month Name]",
+          "'Date'[Month Short Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Budget'[Budget Amount]",
+          "'Customer'",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month Name]",
+          "'Sales'",
+          "'Sales'[Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Tax Rate]",
+          "'Sales'[Unit Price]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Amount Text]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "UNNECESSARY_MEASURES": [
+          "[Budget Total]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "microsoft/Analysis-Services/BestPracticeRules/Spanish/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Date'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]",
+          "'Sales'[Ship Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Budget'"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Amount]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Customer'[Customer ID]",
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Year]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order Date]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Date'[Date]"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Date'[Month Name]",
+          "'Date'[Month Short Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Budget'[Budget Amount]",
+          "'Customer'",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month Name]",
+          "'Sales'",
+          "'Sales'[Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Tax Rate]",
+          "'Sales'[Unit Price]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Amount Text]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "UNNECESSARY_MEASURES": [
+          "[Budget Total]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "microsoft/Analysis-Services/BestPracticeRules/Japanese/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Date'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]",
+          "'Sales'[Ship Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Budget'"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Amount]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Customer'[Customer ID]",
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Year]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order Date]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Date'[Date]"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Date'[Month Name]",
+          "'Date'[Month Short Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Budget'[Budget Amount]",
+          "'Customer'",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month Name]",
+          "'Sales'",
+          "'Sales'[Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Tax Rate]",
+          "'Sales'[Unit Price]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Amount Text]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "UNNECESSARY_MEASURES": [
+          "[Budget Total]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "BenniDeJagere/Presentations/2020/20200707_PBIMCR/BPARules.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_MEASURES": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]"
+        ],
+        "META_AVOID_FLOAT": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "META_SUMMARIZE_NONE": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "PERF_UNUSED_COLUMNS": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "PERF_UNUSED_MEASURES": [
+          "[Budget Total]"
+        ],
+        "RELATIONSHIP_COLUMN_NAMES": [
+          "'Sales'[Order Date] ∞←1 'Date'[Date]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "BenniDeJagere/Presentations/2020/20201002_SQLBits/BPARules.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_MEASURES": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]"
+        ],
+        "META_AVOID_FLOAT": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "META_SUMMARIZE_NONE": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "PERF_UNUSED_COLUMNS": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "PERF_UNUSED_MEASURES": [
+          "[Budget Total]"
+        ],
+        "RELATIONSHIP_COLUMN_NAMES": [
+          "'Sales'[Order Date] ∞←1 'Date'[Date]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "gronnerup/FabricOps/automation/resources/BPARules.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_COLUMNS": [
+          "'Date'[Date]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Unit Price]"
+        ],
+        "APPLY_FORMAT_STRING_MEASURES": [
+          "[Budget Total]",
+          "[Order Count]"
+        ],
+        "AVOID_SINGLE_ATTRIBUTE_DIMENSIONS": [
+          "'Date'"
+        ],
+        "DISABLE_ATTRIBUTE_HIERACHIES": [
+          "'Budget'[Budget Amount]",
+          "'Customer'[Customer ID]",
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Year]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order Date]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "META_AVOID_FLOAT": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "META_SUMMARIZE_NONE": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "PERF_UNUSED_COLUMNS": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "RELATIONSHIP_COLUMN_NAMES": [
+          "'Sales'[Order Date] ∞←1 'Date'[Date]"
+        ],
+        "TRANSLATE_HIDEABLE_OBJECT_NAMES": [
+          "'Budget'",
+          "'Customer'",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month Name]",
+          "'Sales'",
+          "'Sales'[Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Tax Rate]",
+          "'Sales'[Unit Price]",
+          "'Time Intelligence'[Name]",
+          "Geography",
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "TRANSLATE_HIERARCHY_LEVEL_NAMES": [
+          "Customer Name",
+          "Region"
+        ],
+        "TRANSLATE_OTHER_NAMES": [
+          "Model"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "Reinsight-SE/Tabular/BestPractices/BPARules.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_COLUMNS": [
+          "'Date'[Date]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Unit Price]"
+        ],
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "AVOID_SINGLE_ATTRIBUTE_DIMENSIONS": [
+          "'Date'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]",
+          "'Sales'[Ship Date]"
+        ],
+        "DATE_CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Date'"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Budget'"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Amount]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Customer'[Customer ID]",
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Year]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order Date]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Date'[Date]"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Date'[Month Name]",
+          "'Date'[Month Short Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Budget'[Budget Amount]",
+          "'Customer'",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month Name]",
+          "'Sales'",
+          "'Sales'[Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Tax Rate]",
+          "'Sales'[Unit Price]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]"
+        ],
+        "RELATIONSHIP_COLUMN_NAMES": [
+          "'Sales'[Order Date] ∞←1 'Date'[Date]"
+        ],
+        "TRANSLATE_HIDEABLE_OBJECT_NAMES": [
+          "'Budget'",
+          "'Customer'",
+          "'Sales'[Unit Price]",
+          "Geography",
+          "[Budget Total]",
+          "[Order Count]"
+        ],
+        "TRANSLATE_HIERARCHY_LEVEL_NAMES": [
+          "Customer Name"
+        ],
+        "TRANSLATE_OTHER_NAMES": [
+          "Model"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "UNNECESSARY_MEASURES": [
+          "[Budget Total]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "filcuk/ssas-best-practice-rules/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Date'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]",
+          "'Sales'[Ship Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Budget'"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Amount]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Order Count]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Customer'[Customer ID]",
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Year]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order Date]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Date'[Date]"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Date'[Month Name]",
+          "'Date'[Month Short Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Budget'[Budget Amount]",
+          "'Customer'",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month Name]",
+          "'Sales'",
+          "'Sales'[Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Tax Rate]",
+          "'Sales'[Unit Price]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Amount Text]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "UNNECESSARY_MEASURES": [
+          "[Budget Total]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "rafaelxkr/Power-BI/Tabular_Editor/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Date'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]",
+          "'Sales'[Ship Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Budget'"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Amount]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Customer'[Customer ID]",
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Year]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order Date]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Date'[Date]"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Date'[Month Name]",
+          "'Date'[Month Short Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Budget'[Budget Amount]",
+          "'Customer'",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month Name]",
+          "'Sales'",
+          "'Sales'[Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Tax Rate]",
+          "'Sales'[Unit Price]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Amount Text]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "UNNECESSARY_MEASURES": [
+          "[Budget Total]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "Adrian1903/BPA-Rules/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Date'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]",
+          "'Sales'[Ship Date]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Amount]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Customer'[Customer ID]",
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Year]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order Date]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Date'[Date]"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Date'[Month Name]",
+          "'Date'[Month Short Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Time Intelligence'",
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Amount Text]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "UNNECESSARY_MEASURES": [
+          "[Budget Total]"
+        ]
+      },
+      "ruleErrors": {
+        "CHECK_IF_DYNAMIC_ROW_LEVEL_SECURITY_(RLS)_IS_NECESSARY": "Error while evaluating expression on Tables: Value cannot be null. (Parameter 'input')"
+      }
+    },
+    "marcelodfelman/PowerBI-BPA-Analyzer/data/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Customer'[Customer ID]",
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Year]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order Date]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Amount Text]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "punitgiri921/Brightline-Analytics/bpa-rules/BPARules.json": {
+      "findings": {
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "bonardi/PowerBI-CICD/resources/report/config/bparules.json": {
+      "error": "Could not parse BPA rules. Expected JSON array or object with 'rules' array."
+    },
+    "bonardi/PowerBI-CICD/resources/dataset/config/bparules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Date'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]",
+          "'Sales'[Ship Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Budget'"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Amount]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Customer'[Customer ID]",
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Year]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order Date]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Date'[Date]"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Date'[Month Name]",
+          "'Date'[Month Short Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Budget'[Budget Amount]",
+          "'Customer'",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month Name]",
+          "'Sales'",
+          "'Sales'[Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Tax Rate]",
+          "'Sales'[Unit Price]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Amount Text]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "UNNECESSARY_MEASURES": [
+          "[Budget Total]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "gordoncheme/powerbi/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Date'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]",
+          "'Sales'[Ship Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Budget'"
+        ],
+        "FORMATTING_MEASURES_FORMAT_STRING": [
+          "[Budget Total]",
+          "[Order Count]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Amount]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Customer'[Customer ID]",
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Year]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order Date]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Date'[Date]"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Date'[Month Name]",
+          "'Date'[Month Short Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Budget'[Budget Amount]",
+          "'Customer'",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month Name]",
+          "'Sales'",
+          "'Sales'[Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Tax Rate]",
+          "'Sales'[Unit Price]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Amount Text]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "UNNECESSARY_MEASURES": [
+          "[Budget Total]"
+        ],
+        "USABILITY_MEASURE_DISPLAY_FOLDERS": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "thijsknaapRob/BPARulesOnline/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Date'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]",
+          "'Sales'[Ship Date]"
+        ],
+        "DISABLE_ATTRIBUTE_HIERACHIES": [
+          "'Budget'[Budget Amount]",
+          "'Customer'[Customer ID]",
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Year]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order Date]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Budget'"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Order Count]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Customer'[Customer ID]",
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Year]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order Date]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Date'[Date]"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Amount Text]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "twelve-baskets-analytics/pbi-bpa/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Date'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]",
+          "'Sales'[Ship Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Budget'"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Amount]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Customer'[Customer ID]",
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Year]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order Date]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Date'[Date]"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Date'[Month Name]",
+          "'Date'[Month Short Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Budget'[Budget Amount]",
+          "'Customer'",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month Name]",
+          "'Sales'",
+          "'Sales'[Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Tax Rate]",
+          "'Sales'[Unit Price]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Amount Text]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "UNNECESSARY_MEASURES": [
+          "[Budget Total]"
+        ],
+        "UNUSED_COLUMN": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "UNUSED_MEASURE": [
+          "[Budget Total]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "faby31/test/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Date'"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Budget'"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Customer'[Customer ID]",
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Year]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order Date]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Date'[Date]"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Date'[Month Name]",
+          "'Date'[Month Short Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Budget'[Budget Amount]",
+          "'Customer'",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month Name]",
+          "'Sales'",
+          "'Sales'[Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Tax Rate]",
+          "'Sales'[Unit Price]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Amount Text]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "UNNECESSARY_MEASURES": [
+          "[Budget Total]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "Mikd14/BPARules/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Date'"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Date'[Month Name]",
+          "'Date'[Month Short Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "UNNECESSARY_MEASURES": [
+          "[Budget Total]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "GreyskullAnalytics/by-the-power-of-analyics-engineering/powerbi/bestpracticeanalyser/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Date'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]",
+          "'Sales'[Ship Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Budget'"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Amount]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Customer'[Customer ID]",
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Year]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order Date]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Date'[Date]"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Date'[Month Name]",
+          "'Date'[Month Short Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Budget'[Budget Amount]",
+          "'Customer'",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month Name]",
+          "'Sales'",
+          "'Sales'[Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Tax Rate]",
+          "'Sales'[Unit Price]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Amount Text]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "UNNECESSARY_MEASURES": [
+          "[Budget Total]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "Code-DataFyre/PowerInsighter/PowerInsighter/ModelBestPractices/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Date'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]",
+          "'Sales'[Ship Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Budget'"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Amount]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Customer'[Customer ID]",
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Year]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order Date]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Date'[Date]"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Date'[Month Name]",
+          "'Date'[Month Short Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Budget'[Budget Amount]",
+          "'Customer'",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month Name]",
+          "'Sales'",
+          "'Sales'[Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Tax Rate]",
+          "'Sales'[Unit Price]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Amount Text]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "UNNECESSARY_MEASURES": [
+          "[Budget Total]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "eugenecp/fabcon2026-ai-ci-cd/Fabric2026-CI-CD-Complete-Package/scripts/.bpaRules.json": {
+      "findings": {
+        "COL_HIDE_UNUSED": [
+          "'Customer'[Customer Name]",
+          "'Date'[Month Name]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Tax Rate]",
+          "'Sales'[Unit Price]",
+          "'Time Intelligence'[Name]"
+        ],
+        "DOC_MEASURE_DESCRIPTION": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "DOC_TABLE_DESCRIPTION": [
+          "'Budget'",
+          "'Customer'",
+          "'Date'",
+          "'Sales'"
+        ],
+        "MEASURE_FOLDER_RECOMMENDED": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "MEASURE_FORMAT_REQUIRED": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]"
+        ],
+        "MEASURE_ONLY_IN_FACT_TABLES": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "NAME_NO_SPACES_COLUMN": [
+          "'Budget'[Budget Amount]",
+          "'Customer'[Customer ID]",
+          "'Customer'[Customer Name]",
+          "'Date'[Month Key]",
+          "'Date'[Month Name]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order Date]",
+          "'Sales'[Order ID]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Tax Rate]",
+          "'Sales'[Unit Price]"
+        ],
+        "NAME_NO_SPACES_MEASURE": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "NAME_TABLE_PREFIXES": [
+          "'Budget'",
+          "'Customer'",
+          "'Date'",
+          "'Sales'"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "TabularEditor/SessionArchive/Webinars/2025-12-10 - CICD and version control for Fabric/src/automation/resources/BPARules.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_COLUMNS": [
+          "'Date'[Date]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Unit Price]"
+        ],
+        "APPLY_FORMAT_STRING_MEASURES": [
+          "[Budget Total]",
+          "[Order Count]"
+        ],
+        "AVOID_SINGLE_ATTRIBUTE_DIMENSIONS": [
+          "'Date'"
+        ],
+        "DISABLE_ATTRIBUTE_HIERACHIES": [
+          "'Budget'[Budget Amount]",
+          "'Customer'[Customer ID]",
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Year]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order Date]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "META_AVOID_FLOAT": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "META_SUMMARIZE_NONE": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "PERF_UNUSED_COLUMNS": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "RELATIONSHIP_COLUMN_NAMES": [
+          "'Sales'[Order Date] ∞←1 'Date'[Date]"
+        ],
+        "TRANSLATE_HIDEABLE_OBJECT_NAMES": [
+          "'Budget'",
+          "'Customer'",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month Name]",
+          "'Sales'",
+          "'Sales'[Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Tax Rate]",
+          "'Sales'[Unit Price]",
+          "'Time Intelligence'[Name]",
+          "Geography",
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "TRANSLATE_HIERARCHY_LEVEL_NAMES": [
+          "Customer Name",
+          "Region"
+        ],
+        "TRANSLATE_OTHER_NAMES": [
+          "Model"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "data-goblin/power-bi-agentic-development/plugins/tabular-editor/skills/bpa-rules/examples/course-3-business-case-bpa-rules.json": {
+      "findings": {
+        "RULE1": [
+          "'Customer'",
+          "'Date'",
+          "'Sales'"
+        ],
+        "RULE10": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "RULE6": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "RULE9": [
+          "'Budget'[Budget Amount]",
+          "'Customer'[Customer ID]",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'[Date]",
+          "'Date'[Month Key]",
+          "'Date'[Month Name]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Amount]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order Date]",
+          "'Sales'[Order ID]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Tax Rate]",
+          "'Sales'[Unit Price]",
+          "'Time Intelligence'[Name]",
+          "'Time Intelligence'[Ordinal]",
+          "Geography",
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "bgarcevic/fabric-utils/.devops/bpa-rules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Date'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]",
+          "'Sales'[Ship Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Budget'"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Amount]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Customer'[Customer ID]",
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Year]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order Date]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Date'[Date]"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Date'[Month Name]",
+          "'Date'[Month Short Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Budget'[Budget Amount]",
+          "'Customer'",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month Name]",
+          "'Sales'",
+          "'Sales'[Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Tax Rate]",
+          "'Sales'[Unit Price]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Amount Text]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "UNNECESSARY_MEASURES": [
+          "[Budget Total]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "luccapinto/agentic-data-kit/.agent/skills/pbi-quality-rules/bpa-rules.json": {
+      "findings": {
+        "DOC_MEASURE_DESCRIPTION": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "DOC_TABLE_DESCRIPTION": [
+          "'Budget'",
+          "'Customer'",
+          "'Date'",
+          "'Sales'"
+        ],
+        "MODEL_ISLAND_TABLE": [
+          "'Budget'"
+        ],
+        "NAMING_MEASURE_DISPLAYFOLDER": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "bgarcevic/tomix-cli/src/Tomix.App/Bpa/Rules/bpa-rules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Date'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]",
+          "'Sales'[Ship Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Budget'"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Amount]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Customer'[Customer ID]",
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Year]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order Date]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Date'[Date]"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Date'[Month Name]",
+          "'Date'[Month Short Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Budget'[Budget Amount]",
+          "'Customer'",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month Name]",
+          "'Sales'",
+          "'Sales'[Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Tax Rate]",
+          "'Sales'[Unit Price]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Amount Text]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "UNNECESSARY_MEASURES": [
+          "[Budget Total]"
+        ]
+      },
+      "ruleErrors": {
+        "DATA_COLUMNS_MUST_HAVE_A_SOURCE_COLUMN": "No property or field 'CalculationItems' exists in type 'Table'",
+        "RELATIONSHIP_COLUMNS_SAME_DATA_TYPE": "Operator '!=' incompatible with operand types 'DataType' and 'String'"
+      }
+    },
+    "AlahmadiQ8/copilot-sdk-challenge/backend/src/data/bpa-rules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Date'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]",
+          "'Sales'[Ship Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Budget'"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Amount]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Customer'[Customer ID]",
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Year]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order Date]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Date'[Date]"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Date'[Month Name]",
+          "'Date'[Month Short Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Budget'[Budget Amount]",
+          "'Customer'",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month Name]",
+          "'Sales'",
+          "'Sales'[Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Tax Rate]",
+          "'Sales'[Unit Price]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Amount Text]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "UNNECESSARY_MEASURES": [
+          "[Budget Total]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "petecarlssonw/powerbi-testing/BPARules/bpa-rules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "CHECK_TEXT_TYPE_MEASURES": [
+          "[Amount Text]",
+          "[Last Region]",
+          "[Status Note]",
+          "[Top Region Label]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Date'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]",
+          "'Sales'[Ship Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Budget'"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Amount]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Customer'[Customer ID]",
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Year]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order Date]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Date'[Date]"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Date'[Month Name]",
+          "'Date'[Month Short Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Budget'[Budget Amount]",
+          "'Customer'",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month Name]",
+          "'Sales'",
+          "'Sales'[Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Tax Rate]",
+          "'Sales'[Unit Price]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Order Count]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "UNNECESSARY_MEASURES": [
+          "[Budget Total]"
+        ]
+      },
+      "ruleErrors": {
+        "CHECK_IF_DYNAMIC_ROW_LEVEL_SECURITY_(RLS)_IS_NECESSARY": "Error while evaluating expression on Tables: Value cannot be null. (Parameter 'input')"
+      }
+    },
+    "TabularEditor/BestPracticeRules/BPARules-standard.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_COLUMNS": [
+          "'Date'[Date]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Unit Price]"
+        ],
+        "APPLY_FORMAT_STRING_MEASURES": [
+          "[Budget Total]",
+          "[Order Count]"
+        ],
+        "AVOID_SINGLE_ATTRIBUTE_DIMENSIONS": [
+          "'Date'"
+        ],
+        "DISABLE_ATTRIBUTE_HIERACHIES": [
+          "'Budget'[Budget Amount]",
+          "'Customer'[Customer ID]",
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Year]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order Date]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "META_AVOID_FLOAT": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "META_SUMMARIZE_NONE": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "PERF_UNUSED_COLUMNS": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "RELATIONSHIP_COLUMN_NAMES": [
+          "'Sales'[Order Date] ∞←1 'Date'[Date]"
+        ],
+        "TRANSLATE_HIDEABLE_OBJECT_NAMES": [
+          "'Budget'",
+          "'Customer'",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month Name]",
+          "'Sales'",
+          "'Sales'[Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Tax Rate]",
+          "'Sales'[Unit Price]",
+          "'Time Intelligence'[Name]",
+          "Geography",
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "TRANSLATE_HIERARCHY_LEVEL_NAMES": [
+          "Customer Name",
+          "Region"
+        ],
+        "TRANSLATE_OTHER_NAMES": [
+          "Model"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "TabularEditor/BestPracticeRules/BPARules-PowerBI.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_COLUMNS": [
+          "'Date'[Date]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Unit Price]"
+        ],
+        "APPLY_FORMAT_STRING_MEASURES": [
+          "[Budget Total]",
+          "[Order Count]"
+        ],
+        "AVOID_SINGLE_ATTRIBUTE_DIMENSIONS": [
+          "'Date'"
+        ],
+        "META_AVOID_FLOAT": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "META_SUMMARIZE_NONE": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "PERF_UNUSED_COLUMNS": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "RELATIONSHIP_COLUMN_NAMES": [
+          "'Sales'[Order Date] ∞←1 'Date'[Date]"
+        ],
+        "TRANSLATE_HIDEABLE_OBJECT_NAMES": [
+          "'Budget'",
+          "'Customer'",
+          "'Sales'[Unit Price]",
+          "Geography",
+          "[Budget Total]",
+          "[Order Count]"
+        ],
+        "TRANSLATE_HIERARCHY_LEVEL_NAMES": [
+          "Customer Name"
+        ],
+        "TRANSLATE_OTHER_NAMES": [
+          "Model"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "tenfingerseddy/semanticus-vscode/Semanticus.Analysis/Rules/BPARules-PowerBI.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Date'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]",
+          "'Sales'[Ship Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Budget'"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Amount]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Customer'[Customer ID]",
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Year]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order Date]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Date'[Date]"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Date'[Month Name]",
+          "'Date'[Month Short Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Budget'[Budget Amount]",
+          "'Customer'",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month Name]",
+          "'Sales'",
+          "'Sales'[Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Tax Rate]",
+          "'Sales'[Unit Price]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Amount Text]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]"
+        ],
+        "SEM_COLUMN_NEEDS_FORMAT_STRING": [
+          "'Date'[Date]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Unit Price]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "UNNECESSARY_MEASURES": [
+          "[Budget Total]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "KavasiMihaly/SelfServiceBIBlog/TabularEditor/BPARules-PowerBI.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_COLUMNS": [
+          "'Date'[Date]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Unit Price]"
+        ],
+        "APPLY_FORMAT_STRING_MEASURES": [
+          "[Budget Total]",
+          "[Order Count]"
+        ],
+        "AVOID_SINGLE_ATTRIBUTE_DIMENSIONS": [
+          "'Date'"
+        ],
+        "META_AVOID_FLOAT": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "META_SUMMARIZE_NONE": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "PERF_UNUSED_COLUMNS": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "RELATIONSHIP_COLUMN_NAMES": [
+          "'Sales'[Order Date] ∞←1 'Date'[Date]"
+        ],
+        "TRANSLATE_HIDEABLE_OBJECT_NAMES": [
+          "'Budget'",
+          "'Customer'",
+          "'Sales'[Unit Price]",
+          "Geography",
+          "[Budget Total]",
+          "[Order Count]"
+        ],
+        "TRANSLATE_HIERARCHY_LEVEL_NAMES": [
+          "Customer Name"
+        ],
+        "TRANSLATE_OTHER_NAMES": [
+          "Model"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "bredeespelid/PBIP_SemLin/docs/bpa/semantic model/BPARules-PowerBI.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_COLUMNS": [
+          "'Date'[Date]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Unit Price]"
+        ],
+        "APPLY_FORMAT_STRING_MEASURES": [
+          "[Budget Total]",
+          "[Order Count]"
+        ],
+        "AVOID_SINGLE_ATTRIBUTE_DIMENSIONS": [
+          "'Date'"
+        ],
+        "META_AVOID_FLOAT": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "META_SUMMARIZE_NONE": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "PERF_UNUSED_COLUMNS": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "RELATIONSHIP_COLUMN_NAMES": [
+          "'Sales'[Order Date] ∞←1 'Date'[Date]"
+        ],
+        "TRANSLATE_HIDEABLE_OBJECT_NAMES": [
+          "'Budget'",
+          "'Customer'",
+          "'Sales'[Unit Price]",
+          "Geography",
+          "[Budget Total]",
+          "[Order Count]"
+        ],
+        "TRANSLATE_HIERARCHY_LEVEL_NAMES": [
+          "Customer Name"
+        ],
+        "TRANSLATE_OTHER_NAMES": [
+          "Model"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "vlpatkosdani/powerbi-cicd-with-githubactions-demos/BPA_Rules.json": {
+      "findings": {
+        "2_PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Amount Text]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]"
+        ],
+        "7_TRANSLATE_OTHER_NAMES": [
+          "Model"
+        ]
+      },
+      "ruleErrors": {
+        "1_DAX_TODO": "Error while evaluating expression on Partitions: Value cannot be null. (Parameter 'input')"
+      }
+    },
+    "vlpatkosdani/powerbi-cicd-with-githubactions-demos/scripts/BPA_Rules.json": {
+      "findings": {
+        "2": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "7": [
+          "'Budget'[Budget Amount]",
+          "'Customer'[Customer ID]",
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Year]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order Date]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "8": [
+          "'Budget'[Budget Amount]",
+          "'Customer'[Customer ID]",
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Year]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order Date]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "12": [
+          "[Budget Total]"
+        ],
+        "13": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "14": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "17": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "20": [
+          "[Amount Text]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]"
+        ],
+        "23": [
+          "Model"
+        ],
+        "27": [
+          "'Budget'",
+          "'Customer'",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month Name]",
+          "'Sales'",
+          "'Sales'[Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Tax Rate]",
+          "'Sales'[Unit Price]",
+          "'Time Intelligence'[Name]",
+          "Geography",
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "29": [
+          "'Budget'[Budget Amount]",
+          "'Customer'",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month Name]",
+          "'Sales'",
+          "'Sales'[Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Tax Rate]",
+          "'Sales'[Unit Price]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "31": [
+          "'Date'[Date]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Unit Price]"
+        ],
+        "32": [
+          "'Budget'"
+        ],
+        "33": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "49": [
+          "'Date'[Month Name]",
+          "'Date'[Month Short Name]"
+        ],
+        "55": [
+          "Model"
+        ],
+        "58": [
+          "'Date'"
+        ],
+        "72": [
+          "'Date'"
+        ],
+        "73": [
+          "Customer Name",
+          "Region"
+        ]
+      },
+      "ruleErrors": {
+        "5": "Syntax error '\\'",
+        "19": "Error while evaluating expression on Partitions: Value cannot be null. (Parameter 'input')",
+        "62": "Syntax error '\\'",
+        "63": "Expression of type 'Boolean' expected"
+      }
+    },
+    "ianfinkdata/sql-practice/pbip/bpa/bpa_rules.json": {
+      "findings": {
+        "BPA_MEASURE_CENTRALIZE_IN_MEASURES_TABLE": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ]
+      },
+      "ruleErrors": {
+        "BPA_MEASURE_ORGANIZE_DISPLAY_FOLDERS": "No property or field 'Visible' exists in type 'Measure'",
+        "BPA_MEASURE_PROVIDE_DESCRIPTION": "No property or field 'Visible' exists in type 'Measure'",
+        "BPA_MEASURE_SET_FORMAT_STRING": "No property or field 'Visible' exists in type 'Measure'",
+        "BPA_MODEL_HIDE_FOREIGN_KEYS": "No property or field 'r' exists in type 'SingleColumnRelationship'"
+      }
+    },
+    "omezquita/PowerBI/MDA_BPA_Rules.json": {
+      "findings": {
+        "META_AVOID_FLOAT": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "PERF_UNUSED_COLUMNS": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "aswalsheshant-cell/mt-dashboard/PowerBI/CI/bpa_rules.json": {
+      "findings": {},
+      "ruleErrors": {
+        "COLUMN_NAMING_CONVENTION": "Value cannot be null. (Parameter 'expression')",
+        "DAX_NO_UNFORMATTED_DIVIDE": "Value cannot be null. (Parameter 'expression')",
+        "FORMAT_STRING_MISSING": "Value cannot be null. (Parameter 'expression')",
+        "HIERARCHY_VALIDATION": "Value cannot be null. (Parameter 'expression')",
+        "MEASURE_DESCRIPTION_MISSING": "Value cannot be null. (Parameter 'expression')",
+        "RELATIONSHIPS_BOTH_DIRECTIONS": "Value cannot be null. (Parameter 'expression')"
+      }
+    },
+    "StuffbyYuki/PBI-BPA-Rules/BPA_Rules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Date'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]",
+          "'Sales'[Ship Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Budget'"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Amount]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Budget'[Budget Amount]",
+          "'Customer'[Customer ID]",
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Year]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order Date]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Date'[Date]"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Date'[Month Name]",
+          "'Date'[Month Short Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Budget'[Budget Amount]",
+          "'Customer'",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month Name]",
+          "'Sales'",
+          "'Sales'[Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Quantity]",
+          "'Sales'[Ship Date]",
+          "'Sales'[Tax Rate]",
+          "'Sales'[Unit Price]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Amount Text]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Order Date]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "UNNECESSARY_MEASURES": [
+          "[Budget Total]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "sautalwar/hearst_cicd_fabric_demo/tests/semantic_model/bpa_rules.json": {
+      "findings": {},
+      "ruleErrors": {}
+    },
+    "ryanduguid/accounting-review-pipeline/apps/australian-accounting-power-bi/tests/model_bpa_rules.json": {
+      "findings": {
+        "BPA_MEASURE_DESCRIPTION": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "BPA_MEASURE_FORMAT_STRING": [
+          "[Budget Total]",
+          "[Order Count]"
+        ]
+      },
+      "ruleErrors": {
+        "BPA_CALC_GROUP_PRECEDENCE": "No property or field 'Precedence' exists in type 'CalculationGroupTable'"
+      }
+    },
+    "pranamg/powerbi-hub/Scripts/CSharp/TabularEditor/BestPracticeRules.json": {
+      "findings": {
+        "COLUMN_NO_SORT_BY_COLUMN": [
+          "'Date'[Month Name]",
+          "'Date'[Month Short Name]"
+        ],
+        "MEASURE_FORMAT_STRING": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Status Note]",
+          "[Top Region Label]"
+        ],
+        "MEASURE_IN_DISPLAY_FOLDER": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "MEASURE_REQUIRES_DESCRIPTION": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]",
+          "[Total Amount]"
+        ],
+        "MODEL_HAS_DESCRIPTION": [
+          "Model"
+        ]
+      },
+      "ruleErrors": {
+        "DAX_NO_HARDCODED_DATES": "No property or field '@' exists in type 'Measure'",
+        "TABLE_HAS_DATE_TABLE": "No property or field 't' exists in type 'Table'",
+        "TABLE_NO_AUTO_DATE": "No property or field 't' exists in type 'Table'"
+      }
+    },
+    "TabularEditor/BestPracticeRules/BPARules-contrib.json": {
+      "findings": {},
+      "ruleErrors": {}
+    },
+    "TabularEditor/BestPracticeRules/BPARules-standard-lax.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_MEASURES": [
+          "[Amount Text]",
+          "[Budget Total]",
+          "[Last Region]",
+          "[Order Count]",
+          "[Status Note]",
+          "[Top Region Label]"
+        ],
+        "META_AVOID_FLOAT": [
+          "'Budget'[Budget Amount]",
+          "'Sales'[Discount Pct]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Tax Rate]"
+        ],
+        "META_SUMMARIZE_NONE": [
+          "'Sales'[Amount]",
+          "'Sales'[Quantity]"
+        ],
+        "PERF_UNUSED_COLUMNS": [
+          "'Date'[Month Key]",
+          "'Date'[Month Short Name]",
+          "'Date'[Quarter Key]",
+          "'Date'[Year]",
+          "'Sales'[Internal Cost]",
+          "'Sales'[Order ID]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "PERF_UNUSED_MEASURES": [
+          "[Budget Total]"
+        ],
+        "RELATIONSHIP_COLUMN_NAMES": [
+          "'Sales'[Order Date] ∞←1 'Date'[Date]"
+        ]
+      },
+      "ruleErrors": {}
+    }
+  }
+}

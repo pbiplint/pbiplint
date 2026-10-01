@@ -1,0 +1,142 @@
+{
+  "fixture": "tests/fixtures/rule-zoo.SemanticModel",
+  "oracle": "Tabular Editor CLI 0.7.1.2 built-in rules",
+  "captured": "2026-10-01",
+  "deviations": {},
+  "ours": {},
+  "findings": {
+    "TE3_BUILT_IN_CALCULATION_GROUPS_NO_ITEMS": [
+      "'Empty Calc Group'"
+    ],
+    "TE3_BUILT_IN_DATA_COLUMN_SOURCE": [
+      "'Sales'[No Source]"
+    ],
+    "TE3_BUILT_IN_DO_NOT_SUMMARIZE_NUMERIC": [
+      "'Monthly Budget'[Apr]",
+      "'Monthly Budget'[Feb]",
+      "'Monthly Budget'[Jan]",
+      "'Monthly Budget'[Jun]",
+      "'Monthly Budget'[Mar]",
+      "'Monthly Budget'[May]"
+    ],
+    "TE3_BUILT_IN_FORMAT_STRING_COLUMNS": [
+      "'Customer'[Customer ID]",
+      "'Date'[Year]",
+      "'Monthly Budget'[Apr]",
+      "'Monthly Budget'[Feb]",
+      "'Monthly Budget'[Jan]",
+      "'Monthly Budget'[Jun]",
+      "'Monthly Budget'[Mar]",
+      "'Monthly Budget'[May]",
+      "'Product'[Product ID]",
+      "'Sales'[IsReturned]",
+      "'Sales'[Month Start]",
+      "'Sales'[Priority Flag]",
+      "'Sales'[Sale ID]"
+    ],
+    "TE3_BUILT_IN_HIDE_FOREIGN_KEYS": [
+      "'Customer'[Customer ID]",
+      "'Customer'[Region]",
+      "'Product'[Product ID]",
+      "'Region Security'[Region]",
+      "'Sales'[Month Start]",
+      "'Sales'[Order Date]",
+      "'Sales'[Ship Date]"
+    ],
+    "TE3_BUILT_IN_MANY_TO_MANY_SINGLE_DIRECTION": [
+      "'Customer'[Region] ∞↔∞ 'Region Security'[Region]"
+    ],
+    "TE3_BUILT_IN_PERSPECTIVES_NO_OBJECTS": [
+      "Empty View"
+    ],
+    "TE3_BUILT_IN_POWERBI_LATEST_COMPATIBILITY": [
+      "Model"
+    ],
+    "TE3_BUILT_IN_RELATIONSHIP_SAME_DATATYPE": [
+      "'Sales'[Customer ID] ∞←1 'Customer'[Customer ID]"
+    ],
+    "TE3_BUILT_IN_SET_ISAVAILABLEINMDX_FALSE": [
+      "'Sales'[Amount]",
+      "'Sales'[Cost]",
+      "'Sales'[Customer ID]",
+      "'Sales'[Only Calc Item Column]",
+      "'Sales'[Only Hidden Measure Column]",
+      "'Sales'[Only RLS Column]",
+      "'Sales'[Product ID]",
+      "'Time Intelligence'[Ordinal]"
+    ],
+    "TE3_BUILT_IN_SET_ISAVAILABLEINMDX_TRUE_NECESSARY": [
+      "'Date'[Month Number]"
+    ],
+    "TE3_BUILT_IN_TRIM_OBJECT_NAMES": [
+      " Category",
+      " Padded Param ",
+      " Spaced ",
+      "' Spaced '",
+      "' Spaced '[ Padded Col ]"
+    ],
+    "TE3_BUILT_IN_VISIBLE_CALCULATION_GROUPS_NO_DESCRIPTION": [
+      "'Empty Calc Group'",
+      "'Time Intelligence'"
+    ],
+    "TE3_BUILT_IN_VISIBLE_COLUMNS_NO_DESCRIPTION": [
+      "' Spaced '[ Padded Col ]",
+      "'Customer'[Customer ID]",
+      "'Customer'[Customer Name]",
+      "'Customer'[Region]",
+      "'Date'[Date]",
+      "'Date'[Month Name]",
+      "'Date'[Year]",
+      "'Empty Calc Group'[Name]",
+      "'Monthly Budget'[Apr]",
+      "'Monthly Budget'[Department]",
+      "'Monthly Budget'[Feb]",
+      "'Monthly Budget'[Jan]",
+      "'Monthly Budget'[Jun]",
+      "'Monthly Budget'[Mar]",
+      "'Monthly Budget'[May]",
+      "'Product'[Category]",
+      "'Product'[Product ID]",
+      "'Product'[Product Name]",
+      "'Region Security'[Region]",
+      "'Region Security'[UserEmail]",
+      "'Sales'[Category]",
+      "'Sales'[IsReturned]",
+      "'Sales'[Month Start]",
+      "'Sales'[No Source]",
+      "'Sales'[Order Date]",
+      "'Sales'[Priority Flag]",
+      "'Sales'[Product Category]",
+      "'Sales'[Sale ID]",
+      "'Sales'[Ship Date]",
+      "'Time Intelligence'[Name]"
+    ],
+    "TE3_BUILT_IN_VISIBLE_MEASURES_NO_DESCRIPTION": [
+      "[Amount Alias]",
+      "[Bare Other Col]",
+      "[Bare Own Col]",
+      "[Filter Column]",
+      "[Filter Measure]",
+      "[Intersect Demo]",
+      "[Logged Amount]",
+      "[Margin Pct]",
+      "[Qualified Ref]",
+      "[Safe Ratio]",
+      "[Ship Amount]",
+      "[Total Amount Copy]",
+      "[Total Amount]",
+      "[Total Cost]",
+      "[YTD Amount]",
+      "[lowercase]"
+    ],
+    "TE3_BUILT_IN_VISIBLE_TABLES_NO_DESCRIPTION": [
+      "' Spaced '",
+      "'Customer'",
+      "'Date'",
+      "'Monthly Budget'",
+      "'Product'",
+      "'Region Security'",
+      "'Sales'"
+    ]
+  }
+}

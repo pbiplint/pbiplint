@@ -1,0 +1,34 @@
+table Customer
+
+	column 'Customer ID'
+		dataType: int64
+		isHidden
+		isKey
+		summarizeBy: none
+		sourceColumn: Customer ID
+
+	column 'Customer Name'
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Customer Name
+
+	column Region
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Region
+
+	hierarchy Geography
+
+		level Region
+			column: Region
+
+		level 'Customer Name'
+			column: 'Customer Name'
+
+	partition Customer = m
+		mode: import
+		source =
+				let
+					Source = Table.FromRows({})
+				in
+					Source

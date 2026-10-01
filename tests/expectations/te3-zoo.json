@@ -1,0 +1,112 @@
+{
+  "fixture": "tests/fixtures/te3-zoo.SemanticModel",
+  "oracle": "Tabular Editor CLI 0.7.1.2 with BPARules.json sha256 ddb9cff4c2a0611a6467e2559d38319d9867381998066473ffa1e11c2d360392",
+  "captured": "2026-10-01",
+  "skipRules": {},
+  "findings": {
+    "AVOID_FLOATING_POINT_DATA_TYPES": [
+      "'Budget'[Budget Amount]",
+      "'Sales'[Discount Pct]",
+      "'Sales'[Internal Cost]",
+      "'Sales'[Tax Rate]"
+    ],
+    "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+      "'Date'"
+    ],
+    "DATECOLUMN_FORMATSTRING": [
+      "'Date'[Date]",
+      "'Sales'[Order Date]",
+      "'Sales'[Ship Date]"
+    ],
+    "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+      "'Budget'"
+    ],
+    "HIDE_FACT_TABLE_COLUMNS": [
+      "'Budget'[Budget Amount]",
+      "'Sales'[Amount]"
+    ],
+    "INTEGER_FORMATTING": [
+      "[Amount Text]",
+      "[Budget Total]",
+      "[Last Region]",
+      "[Order Count]",
+      "[Status Note]",
+      "[Top Region Label]",
+      "[Total Amount]"
+    ],
+    "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+      "'Budget'[Budget Amount]",
+      "'Customer'[Customer ID]",
+      "'Date'[Month Key]",
+      "'Date'[Month Short Name]",
+      "'Date'[Year]",
+      "'Sales'[Customer ID]",
+      "'Sales'[Internal Cost]",
+      "'Sales'[Order Date]",
+      "'Sales'[Order ID]",
+      "'Time Intelligence'[Ordinal]"
+    ],
+    "MARK_PRIMARY_KEYS": [
+      "'Date'[Date]"
+    ],
+    "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+      "Model"
+    ],
+    "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+      "'Date'[Month Name]",
+      "'Date'[Month Short Name]"
+    ],
+    "NUMERIC_COLUMN_SUMMARIZE_BY": [
+      "'Sales'[Amount]",
+      "'Sales'[Quantity]"
+    ],
+    "OBJECTS_WITH_NO_DESCRIPTION": [
+      "'Budget'[Budget Amount]",
+      "'Customer'",
+      "'Customer'[Customer Name]",
+      "'Customer'[Region]",
+      "'Date'",
+      "'Date'[Date]",
+      "'Date'[Month Name]",
+      "'Sales'",
+      "'Sales'[Amount]",
+      "'Sales'[Discount Pct]",
+      "'Sales'[Quantity]",
+      "'Sales'[Ship Date]",
+      "'Sales'[Tax Rate]",
+      "'Sales'[Unit Price]",
+      "'Time Intelligence'",
+      "'Time Intelligence'[Name]",
+      "[Amount Text]",
+      "[Budget Total]",
+      "[Last Region]",
+      "[Order Count]",
+      "[Status Note]",
+      "[Top Region Label]",
+      "[Total Amount]"
+    ],
+    "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+      "[Amount Text]",
+      "[Last Region]",
+      "[Order Count]",
+      "[Status Note]",
+      "[Top Region Label]"
+    ],
+    "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+      "'Date'[Date]",
+      "'Sales'[Order Date]"
+    ],
+    "UNNECESSARY_COLUMNS": [
+      "'Date'[Month Key]",
+      "'Date'[Month Short Name]",
+      "'Date'[Quarter Key]",
+      "'Date'[Year]",
+      "'Sales'[Internal Cost]",
+      "'Sales'[Order ID]",
+      "'Time Intelligence'[Ordinal]"
+    ],
+    "UNNECESSARY_MEASURES": [
+      "[Budget Total]"
+    ]
+  }
+}

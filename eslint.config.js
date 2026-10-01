@@ -45,10 +45,11 @@ export default tseslint.config(
     },
   },
   {
-    // Plain Node scripts under scripts/ run on Node, not in a browser.
+    // Plain Node scripts under scripts/ run on Node, not in a browser. Node has had a global
+    // fetch since 18; scripts/te-expectations.mjs fetches the survey's rule files with it.
     files: ["**/*.mjs"],
     languageOptions: {
-      globals: { console: "readonly", process: "readonly" },
+      globals: { console: "readonly", process: "readonly", fetch: "readonly" },
     },
   },
   {

@@ -1,0 +1,1486 @@
+{
+  "fixture": "tests/fixtures/kitchen-sink.SemanticModel",
+  "oracle": "Tabular Editor CLI 0.7.1.2, each rule file in tests/expectations/survey/files.json at its commit",
+  "captured": "2026-10-01",
+  "deviations": {},
+  "ours": {},
+  "results": {
+    "microsoft/Analysis-Services/BestPracticeRules/BPARules.json": {
+      "findings": {
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'User Region'"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East Region",
+          "Regional Manager",
+          "Sales Rep"
+        ],
+        "SNOWFLAKE_SCHEMA_ARCHITECTURE": [
+          "'Sales'"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "microsoft/Analysis-Services/BestPracticeRules/Italian/BPARules.json": {
+      "findings": {
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'User Region'"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East Region",
+          "Regional Manager",
+          "Sales Rep"
+        ],
+        "SNOWFLAKE_SCHEMA_ARCHITECTURE": [
+          "'Sales'"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "microsoft/Analysis-Services/BestPracticeRules/Spanish/BPARules.json": {
+      "findings": {
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'User Region'"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East Region",
+          "Regional Manager",
+          "Sales Rep"
+        ],
+        "SNOWFLAKE_SCHEMA_ARCHITECTURE": [
+          "'Sales'"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "microsoft/Analysis-Services/BestPracticeRules/Japanese/BPARules.json": {
+      "findings": {
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'User Region'"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East Region",
+          "Regional Manager",
+          "Sales Rep"
+        ],
+        "SNOWFLAKE_SCHEMA_ARCHITECTURE": [
+          "'Sales'"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "BenniDeJagere/Presentations/2020/20200707_PBIMCR/BPARules.json": {
+      "findings": {
+        "LAYOUT_ADD_TO_PERSPECTIVES": [
+          "'Product'[Cost Price]",
+          "'Product'[Margin %]",
+          "'Sensitive Notes'",
+          "'Sensitive Notes'[Note]",
+          "'User Region'",
+          "'User Region'[Region]",
+          "'User Region'[User Email]",
+          "[Average Unit Price]",
+          "[Margin %]",
+          "[Total Cost]",
+          "[Total Margin]",
+          "[Total Quantity]"
+        ],
+        "LAYOUT_LOCALIZE_DF": [
+          "[Average Order Value]",
+          "[Average Unit Price]",
+          "[Margin %]",
+          "[Order Count]",
+          "[Sales LY]",
+          "[Sales YTD]",
+          "[Sales YoY %]",
+          "[Total Cost]",
+          "[Total Margin]",
+          "[Total Quantity]",
+          "[Total Sales]"
+        ],
+        "RELATIONSHIP_COLUMN_NAMES": [
+          "'Sales'[Sale Date] ∞←1 'Date'[Date]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "BenniDeJagere/Presentations/2020/20201002_SQLBits/BPARules.json": {
+      "findings": {
+        "LAYOUT_ADD_TO_PERSPECTIVES": [
+          "'Product'[Cost Price]",
+          "'Product'[Margin %]",
+          "'Sensitive Notes'",
+          "'Sensitive Notes'[Note]",
+          "'User Region'",
+          "'User Region'[Region]",
+          "'User Region'[User Email]",
+          "[Average Unit Price]",
+          "[Margin %]",
+          "[Total Cost]",
+          "[Total Margin]",
+          "[Total Quantity]"
+        ],
+        "LAYOUT_LOCALIZE_DF": [
+          "[Average Order Value]",
+          "[Average Unit Price]",
+          "[Margin %]",
+          "[Order Count]",
+          "[Sales LY]",
+          "[Sales YTD]",
+          "[Sales YoY %]",
+          "[Total Cost]",
+          "[Total Margin]",
+          "[Total Quantity]",
+          "[Total Sales]"
+        ],
+        "RELATIONSHIP_COLUMN_NAMES": [
+          "'Sales'[Sale Date] ∞←1 'Date'[Date]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "gronnerup/FabricOps/automation/resources/BPARules.json": {
+      "findings": {
+        "AVOID_SINGLE_ATTRIBUTE_DIMENSIONS": [
+          "'Sales'"
+        ],
+        "LAYOUT_ADD_TO_PERSPECTIVES": [
+          "'Product'[Cost Price]",
+          "'Product'[Margin %]",
+          "'Sensitive Notes'",
+          "'Sensitive Notes'[Note]",
+          "'User Region'",
+          "'User Region'[Region]",
+          "'User Region'[User Email]",
+          "[Average Unit Price]",
+          "[Margin %]",
+          "[Total Cost]",
+          "[Total Margin]",
+          "[Total Quantity]"
+        ],
+        "LAYOUT_LOCALIZE_DF": [
+          "[Average Order Value]",
+          "[Average Unit Price]",
+          "[Margin %]",
+          "[Order Count]",
+          "[Sales LY]",
+          "[Sales YTD]",
+          "[Sales YoY %]",
+          "[Total Cost]",
+          "[Total Margin]",
+          "[Total Quantity]",
+          "[Total Sales]"
+        ],
+        "RELATIONSHIP_COLUMN_NAMES": [
+          "'Sales'[Sale Date] ∞←1 'Date'[Date]"
+        ],
+        "TRANSLATE_DESCRIPTIONS": [
+          "'Customer'",
+          "'Customer'[Customer ID]",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month Number]",
+          "'Date'[Month]",
+          "'Date'[Quarter Number]",
+          "'Date'[Quarter]",
+          "'Date'[Year]",
+          "'Product'",
+          "'Product'[Category]",
+          "'Product'[Cost Price]",
+          "'Product'[Margin %]",
+          "'Product'[Product ID]",
+          "'Product'[Product Name]",
+          "'Sales'",
+          "'Sales'[Cost]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Product ID]",
+          "'Sales'[Quantity]",
+          "'Sales'[Sale Date]",
+          "'Sales'[Sale ID]",
+          "'Sales'[Total Amount]",
+          "'Sales'[Unit Price]",
+          "'Sensitive Notes'",
+          "'Sensitive Notes'[Note]",
+          "'Sensitive Notes'[Sale ID]",
+          "'User Region'",
+          "'User Region'[Region]",
+          "'User Region'[User Email]",
+          "Calendar",
+          "Date",
+          "Model",
+          "Month",
+          "Quarter",
+          "Sales Rep View",
+          "Year",
+          "[Average Order Value]",
+          "[Average Unit Price]",
+          "[Margin %]",
+          "[Order Count]",
+          "[Sales LY]",
+          "[Sales YTD]",
+          "[Sales YoY %]",
+          "[Total Cost]",
+          "[Total Margin]",
+          "[Total Quantity]",
+          "[Total Sales]"
+        ],
+        "TRANSLATE_HIDEABLE_OBJECT_NAMES": [
+          "'Customer'",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month]",
+          "'Date'[Quarter]",
+          "'Date'[Year]",
+          "'Product'",
+          "'Product'[Category]",
+          "'Product'[Cost Price]",
+          "'Product'[Margin %]",
+          "'Product'[Product Name]",
+          "'Sales'",
+          "'Sensitive Notes'",
+          "'Sensitive Notes'[Note]",
+          "'User Region'",
+          "'User Region'[Region]",
+          "'User Region'[User Email]",
+          "Calendar",
+          "[Average Order Value]",
+          "[Average Unit Price]",
+          "[Margin %]",
+          "[Order Count]",
+          "[Sales LY]",
+          "[Sales YTD]",
+          "[Sales YoY %]",
+          "[Total Cost]",
+          "[Total Margin]",
+          "[Total Quantity]",
+          "[Total Sales]"
+        ],
+        "TRANSLATE_HIERARCHY_LEVEL_NAMES": [
+          "Date",
+          "Month",
+          "Quarter",
+          "Year"
+        ],
+        "TRANSLATE_OTHER_NAMES": [
+          "Model",
+          "Sales Rep View"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "Reinsight-SE/Tabular/BestPractices/BPARules.json": {
+      "findings": {
+        "AVOID_SINGLE_ATTRIBUTE_DIMENSIONS": [
+          "'Sales'"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'User Region'"
+        ],
+        "LAYOUT_ADD_TO_PERSPECTIVES": [
+          "'Product'[Cost Price]",
+          "'Product'[Margin %]",
+          "'Sensitive Notes'",
+          "'Sensitive Notes'[Note]",
+          "'User Region'",
+          "'User Region'[Region]",
+          "'User Region'[User Email]",
+          "[Average Unit Price]",
+          "[Margin %]",
+          "[Total Cost]",
+          "[Total Margin]",
+          "[Total Quantity]"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "RELATIONSHIP_COLUMN_NAMES": [
+          "'Sales'[Sale Date] ∞←1 'Date'[Date]"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East Region",
+          "Regional Manager",
+          "Sales Rep"
+        ],
+        "SNOWFLAKE_SCHEMA_ARCHITECTURE": [
+          "'Sales'"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "filcuk/ssas-best-practice-rules/BPARules.json": {
+      "findings": {
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'User Region'"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East Region",
+          "Regional Manager",
+          "Sales Rep"
+        ],
+        "SNOWFLAKE_SCHEMA_ARCHITECTURE": [
+          "'Sales'"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "rafaelxkr/Power-BI/Tabular_Editor/BPARules.json": {
+      "findings": {
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'User Region'"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East Region",
+          "Regional Manager",
+          "Sales Rep"
+        ],
+        "SNOWFLAKE_SCHEMA_ARCHITECTURE": [
+          "'Sales'"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "Adrian1903/BPA-Rules/BPARules.json": {
+      "findings": {
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East Region",
+          "Regional Manager",
+          "Sales Rep"
+        ]
+      },
+      "ruleErrors": {
+        "CHECK_IF_DYNAMIC_ROW_LEVEL_SECURITY_(RLS)_IS_NECESSARY": "Error while evaluating expression on Tables: Value cannot be null. (Parameter 'input')"
+      }
+    },
+    "marcelodfelman/PowerBI-BPA-Analyzer/data/BPARules.json": {
+      "findings": {},
+      "ruleErrors": {}
+    },
+    "punitgiri921/Brightline-Analytics/bpa-rules/BPARules.json": {
+      "findings": {},
+      "ruleErrors": {}
+    },
+    "bonardi/PowerBI-CICD/resources/report/config/bparules.json": {
+      "error": "Could not parse BPA rules. Expected JSON array or object with 'rules' array."
+    },
+    "bonardi/PowerBI-CICD/resources/dataset/config/bparules.json": {
+      "findings": {
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'User Region'"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East Region",
+          "Regional Manager",
+          "Sales Rep"
+        ],
+        "SNOWFLAKE_SCHEMA_ARCHITECTURE": [
+          "'Sales'"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "gordoncheme/powerbi/BPARules.json": {
+      "findings": {
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'User Region'"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East Region",
+          "Regional Manager",
+          "Sales Rep"
+        ],
+        "SNOWFLAKE_SCHEMA_ARCHITECTURE": [
+          "'Sales'"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "thijsknaapRob/BPARulesOnline/BPARules.json": {
+      "findings": {
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'User Region'"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Order Count]",
+          "[Total Quantity]"
+        ],
+        "PERCENTAGE_FORMATTING": [
+          "[Margin %]",
+          "[Sales YoY %]"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "twelve-baskets-analytics/pbi-bpa/BPARules.json": {
+      "findings": {
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'User Region'"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East Region",
+          "Regional Manager",
+          "Sales Rep"
+        ],
+        "SNOWFLAKE_SCHEMA_ARCHITECTURE": [
+          "'Sales'"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "faby31/test/BPARules.json": {
+      "findings": {
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'User Region'"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East Region",
+          "Regional Manager",
+          "Sales Rep"
+        ],
+        "SNOWFLAKE_SCHEMA_ARCHITECTURE": [
+          "'Sales'"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "Mikd14/BPARules/BPARules.json": {
+      "findings": {
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East Region",
+          "Regional Manager",
+          "Sales Rep"
+        ],
+        "SNOWFLAKE_SCHEMA_ARCHITECTURE": [
+          "'Sales'"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "GreyskullAnalytics/by-the-power-of-analyics-engineering/powerbi/bestpracticeanalyser/BPARules.json": {
+      "findings": {
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'User Region'"
+        ],
+        "PERCENTAGE_FORMATTING": [
+          "[Margin %]",
+          "[Sales YoY %]"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East Region",
+          "Regional Manager",
+          "Sales Rep"
+        ],
+        "SNOWFLAKE_SCHEMA_ARCHITECTURE": [
+          "'Sales'"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "Code-DataFyre/PowerInsighter/PowerInsighter/ModelBestPractices/BPARules.json": {
+      "findings": {
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'User Region'"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East Region",
+          "Regional Manager",
+          "Sales Rep"
+        ],
+        "SNOWFLAKE_SCHEMA_ARCHITECTURE": [
+          "'Sales'"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "eugenecp/fabcon2026-ai-ci-cd/Fabric2026-CI-CD-Complete-Package/scripts/.bpaRules.json": {
+      "findings": {
+        "COL_HIDE_UNUSED": [
+          "'Customer'[Customer Name]",
+          "'Date'[Month]",
+          "'Date'[Quarter]",
+          "'Product'[Category]",
+          "'Product'[Cost Price]",
+          "'Product'[Margin %]",
+          "'Product'[Product Name]",
+          "'Sensitive Notes'[Note]"
+        ],
+        "MEASURE_ONLY_IN_FACT_TABLES": [
+          "[Average Order Value]",
+          "[Average Unit Price]",
+          "[Margin %]",
+          "[Order Count]",
+          "[Sales LY]",
+          "[Sales YTD]",
+          "[Sales YoY %]",
+          "[Total Cost]",
+          "[Total Margin]",
+          "[Total Quantity]",
+          "[Total Sales]"
+        ],
+        "NAME_NO_SPACES_COLUMN": [
+          "'Customer'[Customer ID]",
+          "'Customer'[Customer Name]",
+          "'Date'[Month Number]",
+          "'Date'[Quarter Number]",
+          "'Product'[Cost Price]",
+          "'Product'[Margin %]",
+          "'Product'[Product ID]",
+          "'Product'[Product Name]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Product ID]",
+          "'Sales'[Sale Date]",
+          "'Sales'[Sale ID]",
+          "'Sales'[Total Amount]",
+          "'Sales'[Unit Price]",
+          "'Sensitive Notes'[Sale ID]",
+          "'User Region'[User Email]"
+        ],
+        "NAME_NO_SPACES_MEASURE": [
+          "[Average Order Value]",
+          "[Average Unit Price]",
+          "[Margin %]",
+          "[Order Count]",
+          "[Sales LY]",
+          "[Sales YTD]",
+          "[Sales YoY %]",
+          "[Total Cost]",
+          "[Total Margin]",
+          "[Total Quantity]",
+          "[Total Sales]"
+        ],
+        "NAME_NO_SPACES_TABLE": [
+          "'Sensitive Notes'",
+          "'User Region'"
+        ],
+        "NAME_TABLE_PREFIXES": [
+          "'Customer'",
+          "'Date'",
+          "'Product'",
+          "'Sales'",
+          "'Sensitive Notes'",
+          "'User Region'"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "TabularEditor/SessionArchive/Webinars/2025-12-10 - CICD and version control for Fabric/src/automation/resources/BPARules.json": {
+      "findings": {
+        "AVOID_SINGLE_ATTRIBUTE_DIMENSIONS": [
+          "'Sales'"
+        ],
+        "LAYOUT_ADD_TO_PERSPECTIVES": [
+          "'Product'[Cost Price]",
+          "'Product'[Margin %]",
+          "'Sensitive Notes'",
+          "'Sensitive Notes'[Note]",
+          "'User Region'",
+          "'User Region'[Region]",
+          "'User Region'[User Email]",
+          "[Average Unit Price]",
+          "[Margin %]",
+          "[Total Cost]",
+          "[Total Margin]",
+          "[Total Quantity]"
+        ],
+        "LAYOUT_LOCALIZE_DF": [
+          "[Average Order Value]",
+          "[Average Unit Price]",
+          "[Margin %]",
+          "[Order Count]",
+          "[Sales LY]",
+          "[Sales YTD]",
+          "[Sales YoY %]",
+          "[Total Cost]",
+          "[Total Margin]",
+          "[Total Quantity]",
+          "[Total Sales]"
+        ],
+        "RELATIONSHIP_COLUMN_NAMES": [
+          "'Sales'[Sale Date] ∞←1 'Date'[Date]"
+        ],
+        "TRANSLATE_DESCRIPTIONS": [
+          "'Customer'",
+          "'Customer'[Customer ID]",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month Number]",
+          "'Date'[Month]",
+          "'Date'[Quarter Number]",
+          "'Date'[Quarter]",
+          "'Date'[Year]",
+          "'Product'",
+          "'Product'[Category]",
+          "'Product'[Cost Price]",
+          "'Product'[Margin %]",
+          "'Product'[Product ID]",
+          "'Product'[Product Name]",
+          "'Sales'",
+          "'Sales'[Cost]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Product ID]",
+          "'Sales'[Quantity]",
+          "'Sales'[Sale Date]",
+          "'Sales'[Sale ID]",
+          "'Sales'[Total Amount]",
+          "'Sales'[Unit Price]",
+          "'Sensitive Notes'",
+          "'Sensitive Notes'[Note]",
+          "'Sensitive Notes'[Sale ID]",
+          "'User Region'",
+          "'User Region'[Region]",
+          "'User Region'[User Email]",
+          "Calendar",
+          "Date",
+          "Model",
+          "Month",
+          "Quarter",
+          "Sales Rep View",
+          "Year",
+          "[Average Order Value]",
+          "[Average Unit Price]",
+          "[Margin %]",
+          "[Order Count]",
+          "[Sales LY]",
+          "[Sales YTD]",
+          "[Sales YoY %]",
+          "[Total Cost]",
+          "[Total Margin]",
+          "[Total Quantity]",
+          "[Total Sales]"
+        ],
+        "TRANSLATE_HIDEABLE_OBJECT_NAMES": [
+          "'Customer'",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month]",
+          "'Date'[Quarter]",
+          "'Date'[Year]",
+          "'Product'",
+          "'Product'[Category]",
+          "'Product'[Cost Price]",
+          "'Product'[Margin %]",
+          "'Product'[Product Name]",
+          "'Sales'",
+          "'Sensitive Notes'",
+          "'Sensitive Notes'[Note]",
+          "'User Region'",
+          "'User Region'[Region]",
+          "'User Region'[User Email]",
+          "Calendar",
+          "[Average Order Value]",
+          "[Average Unit Price]",
+          "[Margin %]",
+          "[Order Count]",
+          "[Sales LY]",
+          "[Sales YTD]",
+          "[Sales YoY %]",
+          "[Total Cost]",
+          "[Total Margin]",
+          "[Total Quantity]",
+          "[Total Sales]"
+        ],
+        "TRANSLATE_HIERARCHY_LEVEL_NAMES": [
+          "Date",
+          "Month",
+          "Quarter",
+          "Year"
+        ],
+        "TRANSLATE_OTHER_NAMES": [
+          "Model",
+          "Sales Rep View"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "data-goblin/power-bi-agentic-development/plugins/tabular-editor/skills/bpa-rules/examples/course-3-business-case-bpa-rules.json": {
+      "findings": {
+        "RULE1": [
+          "'Customer'",
+          "'Date'",
+          "'Product'",
+          "'Sales'",
+          "'Sensitive Notes'",
+          "'User Region'"
+        ],
+        "RULE9": [
+          "'Customer'[Customer ID]",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'[Date]",
+          "'Date'[Month Number]",
+          "'Date'[Month]",
+          "'Date'[Quarter Number]",
+          "'Date'[Quarter]",
+          "'Date'[Year]",
+          "'Product'[Category]",
+          "'Product'[Cost Price]",
+          "'Product'[Margin %]",
+          "'Product'[Product ID]",
+          "'Product'[Product Name]",
+          "'Sales'[Cost]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Product ID]",
+          "'Sales'[Quantity]",
+          "'Sales'[Sale Date]",
+          "'Sales'[Sale ID]",
+          "'Sales'[Total Amount]",
+          "'Sales'[Unit Price]",
+          "'Sensitive Notes'[Note]",
+          "'Sensitive Notes'[Sale ID]",
+          "'User Region'[Region]",
+          "'User Region'[User Email]",
+          "Calendar"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "bgarcevic/fabric-utils/.devops/bpa-rules.json": {
+      "findings": {
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'User Region'"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Order Count]",
+          "[Total Quantity]"
+        ],
+        "PERCENTAGE_FORMATTING": [
+          "[Margin %]",
+          "[Sales YoY %]"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East Region",
+          "Regional Manager",
+          "Sales Rep"
+        ],
+        "SNOWFLAKE_SCHEMA_ARCHITECTURE": [
+          "'Sales'"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "luccapinto/agentic-data-kit/.agent/skills/pbi-quality-rules/bpa-rules.json": {
+      "findings": {
+        "MODEL_ISLAND_TABLE": [
+          "'User Region'"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "bgarcevic/tomix-cli/src/Tomix.App/Bpa/Rules/bpa-rules.json": {
+      "findings": {
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'User Region'"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Order Count]",
+          "[Total Quantity]"
+        ],
+        "PERCENTAGE_FORMATTING": [
+          "[Margin %]",
+          "[Sales YoY %]"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East Region",
+          "Regional Manager",
+          "Sales Rep"
+        ],
+        "SNOWFLAKE_SCHEMA_ARCHITECTURE": [
+          "'Sales'"
+        ]
+      },
+      "ruleErrors": {
+        "DATA_COLUMNS_MUST_HAVE_A_SOURCE_COLUMN": "No property or field 'CalculationItems' exists in type 'Table'",
+        "RELATIONSHIP_COLUMNS_SAME_DATA_TYPE": "Operator '!=' incompatible with operand types 'DataType' and 'String'"
+      }
+    },
+    "AlahmadiQ8/copilot-sdk-challenge/backend/src/data/bpa-rules.json": {
+      "findings": {
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'User Region'"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East Region",
+          "Regional Manager",
+          "Sales Rep"
+        ],
+        "SNOWFLAKE_SCHEMA_ARCHITECTURE": [
+          "'Sales'"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "petecarlssonw/powerbi-testing/BPARules/bpa-rules.json": {
+      "findings": {
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'User Region'"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East Region",
+          "Regional Manager",
+          "Sales Rep"
+        ],
+        "SNOWFLAKE_SCHEMA_ARCHITECTURE": [
+          "'Sales'"
+        ]
+      },
+      "ruleErrors": {
+        "CHECK_IF_DYNAMIC_ROW_LEVEL_SECURITY_(RLS)_IS_NECESSARY": "Error while evaluating expression on Tables: Value cannot be null. (Parameter 'input')"
+      }
+    },
+    "TabularEditor/BestPracticeRules/BPARules-standard.json": {
+      "findings": {
+        "AVOID_SINGLE_ATTRIBUTE_DIMENSIONS": [
+          "'Sales'"
+        ],
+        "LAYOUT_ADD_TO_PERSPECTIVES": [
+          "'Product'[Cost Price]",
+          "'Product'[Margin %]",
+          "'Sensitive Notes'",
+          "'Sensitive Notes'[Note]",
+          "'User Region'",
+          "'User Region'[Region]",
+          "'User Region'[User Email]",
+          "[Average Unit Price]",
+          "[Margin %]",
+          "[Total Cost]",
+          "[Total Margin]",
+          "[Total Quantity]"
+        ],
+        "LAYOUT_LOCALIZE_DF": [
+          "[Average Order Value]",
+          "[Average Unit Price]",
+          "[Margin %]",
+          "[Order Count]",
+          "[Sales LY]",
+          "[Sales YTD]",
+          "[Sales YoY %]",
+          "[Total Cost]",
+          "[Total Margin]",
+          "[Total Quantity]",
+          "[Total Sales]"
+        ],
+        "RELATIONSHIP_COLUMN_NAMES": [
+          "'Sales'[Sale Date] ∞←1 'Date'[Date]"
+        ],
+        "TRANSLATE_DESCRIPTIONS": [
+          "'Customer'",
+          "'Customer'[Customer ID]",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month Number]",
+          "'Date'[Month]",
+          "'Date'[Quarter Number]",
+          "'Date'[Quarter]",
+          "'Date'[Year]",
+          "'Product'",
+          "'Product'[Category]",
+          "'Product'[Cost Price]",
+          "'Product'[Margin %]",
+          "'Product'[Product ID]",
+          "'Product'[Product Name]",
+          "'Sales'",
+          "'Sales'[Cost]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Product ID]",
+          "'Sales'[Quantity]",
+          "'Sales'[Sale Date]",
+          "'Sales'[Sale ID]",
+          "'Sales'[Total Amount]",
+          "'Sales'[Unit Price]",
+          "'Sensitive Notes'",
+          "'Sensitive Notes'[Note]",
+          "'Sensitive Notes'[Sale ID]",
+          "'User Region'",
+          "'User Region'[Region]",
+          "'User Region'[User Email]",
+          "Calendar",
+          "Date",
+          "Model",
+          "Month",
+          "Quarter",
+          "Sales Rep View",
+          "Year",
+          "[Average Order Value]",
+          "[Average Unit Price]",
+          "[Margin %]",
+          "[Order Count]",
+          "[Sales LY]",
+          "[Sales YTD]",
+          "[Sales YoY %]",
+          "[Total Cost]",
+          "[Total Margin]",
+          "[Total Quantity]",
+          "[Total Sales]"
+        ],
+        "TRANSLATE_HIDEABLE_OBJECT_NAMES": [
+          "'Customer'",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month]",
+          "'Date'[Quarter]",
+          "'Date'[Year]",
+          "'Product'",
+          "'Product'[Category]",
+          "'Product'[Cost Price]",
+          "'Product'[Margin %]",
+          "'Product'[Product Name]",
+          "'Sales'",
+          "'Sensitive Notes'",
+          "'Sensitive Notes'[Note]",
+          "'User Region'",
+          "'User Region'[Region]",
+          "'User Region'[User Email]",
+          "Calendar",
+          "[Average Order Value]",
+          "[Average Unit Price]",
+          "[Margin %]",
+          "[Order Count]",
+          "[Sales LY]",
+          "[Sales YTD]",
+          "[Sales YoY %]",
+          "[Total Cost]",
+          "[Total Margin]",
+          "[Total Quantity]",
+          "[Total Sales]"
+        ],
+        "TRANSLATE_HIERARCHY_LEVEL_NAMES": [
+          "Date",
+          "Month",
+          "Quarter",
+          "Year"
+        ],
+        "TRANSLATE_OTHER_NAMES": [
+          "Model",
+          "Sales Rep View"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "TabularEditor/BestPracticeRules/BPARules-PowerBI.json": {
+      "findings": {
+        "AVOID_SINGLE_ATTRIBUTE_DIMENSIONS": [
+          "'Sales'"
+        ],
+        "LAYOUT_ADD_TO_PERSPECTIVES": [
+          "'Product'[Cost Price]",
+          "'Product'[Margin %]",
+          "'Sensitive Notes'",
+          "'Sensitive Notes'[Note]",
+          "'User Region'",
+          "'User Region'[Region]",
+          "'User Region'[User Email]",
+          "[Average Unit Price]",
+          "[Margin %]",
+          "[Total Cost]",
+          "[Total Margin]",
+          "[Total Quantity]"
+        ],
+        "RELATIONSHIP_COLUMN_NAMES": [
+          "'Sales'[Sale Date] ∞←1 'Date'[Date]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "tenfingerseddy/semanticus-vscode/Semanticus.Analysis/Rules/BPARules-PowerBI.json": {
+      "findings": {
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'User Region'"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East Region",
+          "Regional Manager",
+          "Sales Rep"
+        ],
+        "SNOWFLAKE_SCHEMA_ARCHITECTURE": [
+          "'Sales'"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "KavasiMihaly/SelfServiceBIBlog/TabularEditor/BPARules-PowerBI.json": {
+      "findings": {
+        "AVOID_SINGLE_ATTRIBUTE_DIMENSIONS": [
+          "'Sales'"
+        ],
+        "LAYOUT_ADD_TO_PERSPECTIVES": [
+          "'Product'[Cost Price]",
+          "'Product'[Margin %]",
+          "'Sensitive Notes'",
+          "'Sensitive Notes'[Note]",
+          "'User Region'",
+          "'User Region'[Region]",
+          "'User Region'[User Email]",
+          "[Average Unit Price]",
+          "[Margin %]",
+          "[Total Cost]",
+          "[Total Margin]",
+          "[Total Quantity]"
+        ],
+        "RELATIONSHIP_COLUMN_NAMES": [
+          "'Sales'[Sale Date] ∞←1 'Date'[Date]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "bredeespelid/PBIP_SemLin/docs/bpa/semantic model/BPARules-PowerBI.json": {
+      "findings": {
+        "AVOID_SINGLE_ATTRIBUTE_DIMENSIONS": [
+          "'Sales'"
+        ],
+        "LAYOUT_ADD_TO_PERSPECTIVES": [
+          "'Product'[Cost Price]",
+          "'Product'[Margin %]",
+          "'Sensitive Notes'",
+          "'Sensitive Notes'[Note]",
+          "'User Region'",
+          "'User Region'[Region]",
+          "'User Region'[User Email]",
+          "[Average Unit Price]",
+          "[Margin %]",
+          "[Total Cost]",
+          "[Total Margin]",
+          "[Total Quantity]"
+        ],
+        "RELATIONSHIP_COLUMN_NAMES": [
+          "'Sales'[Sale Date] ∞←1 'Date'[Date]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "vlpatkosdani/powerbi-cicd-with-githubactions-demos/BPA_Rules.json": {
+      "findings": {
+        "7_TRANSLATE_OTHER_NAMES": [
+          "Model",
+          "Sales Rep View"
+        ],
+        "8_LAYOUT_ADD_TO_PERSPECTIVES": [
+          "'Product'[Cost Price]",
+          "'Product'[Margin %]",
+          "'Sensitive Notes'",
+          "'Sensitive Notes'[Note]",
+          "'User Region'",
+          "'User Region'[Region]",
+          "'User Region'[User Email]",
+          "[Average Unit Price]",
+          "[Margin %]",
+          "[Total Cost]",
+          "[Total Margin]",
+          "[Total Quantity]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "vlpatkosdani/powerbi-cicd-with-githubactions-demos/scripts/BPA_Rules.json": {
+      "findings": {
+        "1": [
+          "[Average Order Value]",
+          "[Average Unit Price]",
+          "[Margin %]",
+          "[Order Count]",
+          "[Sales LY]",
+          "[Sales YTD]",
+          "[Sales YoY %]",
+          "[Total Cost]",
+          "[Total Margin]",
+          "[Total Quantity]",
+          "[Total Sales]"
+        ],
+        "16": [
+          "East Region",
+          "Regional Manager",
+          "Sales Rep"
+        ],
+        "23": [
+          "Model",
+          "Sales Rep View"
+        ],
+        "24": [
+          "'Product'[Cost Price]",
+          "'Product'[Margin %]",
+          "'Sensitive Notes'",
+          "'Sensitive Notes'[Note]",
+          "'User Region'",
+          "'User Region'[Region]",
+          "'User Region'[User Email]",
+          "[Average Unit Price]",
+          "[Margin %]",
+          "[Total Cost]",
+          "[Total Margin]",
+          "[Total Quantity]"
+        ],
+        "26": [
+          "'Customer'",
+          "'Customer'[Customer ID]",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month Number]",
+          "'Date'[Month]",
+          "'Date'[Quarter Number]",
+          "'Date'[Quarter]",
+          "'Date'[Year]",
+          "'Product'",
+          "'Product'[Category]",
+          "'Product'[Cost Price]",
+          "'Product'[Margin %]",
+          "'Product'[Product ID]",
+          "'Product'[Product Name]",
+          "'Sales'",
+          "'Sales'[Cost]",
+          "'Sales'[Customer ID]",
+          "'Sales'[Product ID]",
+          "'Sales'[Quantity]",
+          "'Sales'[Sale Date]",
+          "'Sales'[Sale ID]",
+          "'Sales'[Total Amount]",
+          "'Sales'[Unit Price]",
+          "'Sensitive Notes'",
+          "'Sensitive Notes'[Note]",
+          "'Sensitive Notes'[Sale ID]",
+          "'User Region'",
+          "'User Region'[Region]",
+          "'User Region'[User Email]",
+          "Calendar",
+          "Date",
+          "Model",
+          "Month",
+          "Quarter",
+          "Sales Rep View",
+          "Year",
+          "[Average Order Value]",
+          "[Average Unit Price]",
+          "[Margin %]",
+          "[Order Count]",
+          "[Sales LY]",
+          "[Sales YTD]",
+          "[Sales YoY %]",
+          "[Total Cost]",
+          "[Total Margin]",
+          "[Total Quantity]",
+          "[Total Sales]"
+        ],
+        "27": [
+          "'Customer'",
+          "'Customer'[Customer Name]",
+          "'Customer'[Region]",
+          "'Date'",
+          "'Date'[Date]",
+          "'Date'[Month]",
+          "'Date'[Quarter]",
+          "'Date'[Year]",
+          "'Product'",
+          "'Product'[Category]",
+          "'Product'[Cost Price]",
+          "'Product'[Margin %]",
+          "'Product'[Product Name]",
+          "'Sales'",
+          "'Sensitive Notes'",
+          "'Sensitive Notes'[Note]",
+          "'User Region'",
+          "'User Region'[Region]",
+          "'User Region'[User Email]",
+          "Calendar",
+          "[Average Order Value]",
+          "[Average Unit Price]",
+          "[Margin %]",
+          "[Order Count]",
+          "[Sales LY]",
+          "[Sales YTD]",
+          "[Sales YoY %]",
+          "[Total Cost]",
+          "[Total Margin]",
+          "[Total Quantity]",
+          "[Total Sales]"
+        ],
+        "32": [
+          "'User Region'"
+        ],
+        "53": [
+          "'Sales'"
+        ],
+        "58": [
+          "'Sales'"
+        ],
+        "73": [
+          "Date",
+          "Month",
+          "Quarter",
+          "Year"
+        ]
+      },
+      "ruleErrors": {
+        "5": "Syntax error '\\'",
+        "62": "Syntax error '\\'",
+        "63": "Expression of type 'Boolean' expected"
+      }
+    },
+    "ianfinkdata/sql-practice/pbip/bpa/bpa_rules.json": {
+      "findings": {
+        "BPA_MEASURE_CENTRALIZE_IN_MEASURES_TABLE": [
+          "[Average Order Value]",
+          "[Average Unit Price]",
+          "[Margin %]",
+          "[Order Count]",
+          "[Sales LY]",
+          "[Sales YTD]",
+          "[Sales YoY %]",
+          "[Total Cost]",
+          "[Total Margin]",
+          "[Total Quantity]",
+          "[Total Sales]"
+        ]
+      },
+      "ruleErrors": {
+        "BPA_MEASURE_ORGANIZE_DISPLAY_FOLDERS": "No property or field 'Visible' exists in type 'Measure'",
+        "BPA_MEASURE_PROVIDE_DESCRIPTION": "No property or field 'Visible' exists in type 'Measure'",
+        "BPA_MEASURE_SET_FORMAT_STRING": "No property or field 'Visible' exists in type 'Measure'",
+        "BPA_MODEL_HIDE_FOREIGN_KEYS": "No property or field 'r' exists in type 'SingleColumnRelationship'"
+      }
+    },
+    "omezquita/PowerBI/MDA_BPA_Rules.json": {
+      "findings": {},
+      "ruleErrors": {}
+    },
+    "aswalsheshant-cell/mt-dashboard/PowerBI/CI/bpa_rules.json": {
+      "findings": {},
+      "ruleErrors": {
+        "COLUMN_NAMING_CONVENTION": "Value cannot be null. (Parameter 'expression')",
+        "DAX_NO_UNFORMATTED_DIVIDE": "Value cannot be null. (Parameter 'expression')",
+        "FORMAT_STRING_MISSING": "Value cannot be null. (Parameter 'expression')",
+        "HIERARCHY_VALIDATION": "Value cannot be null. (Parameter 'expression')",
+        "MEASURE_DESCRIPTION_MISSING": "Value cannot be null. (Parameter 'expression')",
+        "RELATIONSHIPS_BOTH_DIRECTIONS": "Value cannot be null. (Parameter 'expression')"
+      }
+    },
+    "StuffbyYuki/PBI-BPA-Rules/BPA_Rules.json": {
+      "findings": {
+        "DATECOLUMN_FORMATSTRING": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'User Region'"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Date'[Date]",
+          "'Sales'[Sale Date]"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East Region",
+          "Regional Manager",
+          "Sales Rep"
+        ],
+        "SNOWFLAKE_SCHEMA_ARCHITECTURE": [
+          "'Sales'"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "sautalwar/hearst_cicd_fabric_demo/tests/semantic_model/bpa_rules.json": {
+      "findings": {},
+      "ruleErrors": {}
+    },
+    "ryanduguid/accounting-review-pipeline/apps/australian-accounting-power-bi/tests/model_bpa_rules.json": {
+      "findings": {},
+      "ruleErrors": {
+        "BPA_CALC_GROUP_PRECEDENCE": "No property or field 'Precedence' exists in type 'CalculationGroupTable'"
+      }
+    },
+    "pranamg/powerbi-hub/Scripts/CSharp/TabularEditor/BestPracticeRules.json": {
+      "findings": {},
+      "ruleErrors": {
+        "DAX_NO_HARDCODED_DATES": "No property or field '@' exists in type 'Measure'",
+        "TABLE_HAS_DATE_TABLE": "No property or field 't' exists in type 'Table'",
+        "TABLE_NO_AUTO_DATE": "No property or field 't' exists in type 'Table'"
+      }
+    },
+    "TabularEditor/BestPracticeRules/BPARules-contrib.json": {
+      "findings": {},
+      "ruleErrors": {}
+    },
+    "TabularEditor/BestPracticeRules/BPARules-standard-lax.json": {
+      "findings": {
+        "LAYOUT_ADD_TO_PERSPECTIVES": [
+          "'Product'[Cost Price]",
+          "'Product'[Margin %]",
+          "'Sensitive Notes'",
+          "'Sensitive Notes'[Note]",
+          "'User Region'",
+          "'User Region'[Region]",
+          "'User Region'[User Email]",
+          "[Average Unit Price]",
+          "[Margin %]",
+          "[Total Cost]",
+          "[Total Margin]",
+          "[Total Quantity]"
+        ],
+        "LAYOUT_LOCALIZE_DF": [
+          "[Average Order Value]",
+          "[Average Unit Price]",
+          "[Margin %]",
+          "[Order Count]",
+          "[Sales LY]",
+          "[Sales YTD]",
+          "[Sales YoY %]",
+          "[Total Cost]",
+          "[Total Margin]",
+          "[Total Quantity]",
+          "[Total Sales]"
+        ],
+        "RELATIONSHIP_COLUMN_NAMES": [
+          "'Sales'[Sale Date] ∞←1 'Date'[Date]"
+        ]
+      },
+      "ruleErrors": {}
+    }
+  }
+}

@@ -120,28 +120,36 @@ more. The first release that actually publishes is the first real test of it.
 ## Model parity expectations
 
 The model rules are pinned to the Tabular Editor 3 command line, `te`, a development-time oracle
-only. The commands that refresh a model expectation file are in CONTRIBUTING.md under "Refreshing
-parity expectations".
+only. The commands that refresh the captures are in CONTRIBUTING.md under "Refreshing parity
+expectations".
 
-Every model expectation file was captured with the 0.5.2 preview build, which stops working on
-September 30, 2026. Tabular Editor CLI 0.7.0 extends the preview to October 31, 2026, and stops
-working after that date too, so a re-capture after October 31, 2026 needs the build Tabular Editor's
-installation page then offers. The 0.7.0 release post adds, "After the preview period, a license
-will be required." To install 0.7.0, sign in with a Tabular Editor account, download the build for
-your platform, and overwrite the old one. It also changes the JSON output of `te bpa run`, which
-reports a `summary` and a `findings` array in place of the `results` array that
-`scripts/te-expectations.mjs` reads, and it drops the VertiPaq rules and the `--vpa-rules` option.
+Every capture from `te` under `tests/expectations/` was made with Tabular Editor CLI 0.7.1.2 in
+October 2026, as each file's `oracle` and `captured` fields say. Each model fixture captured before
+October 31, 2026 has three; `scripts/test/te-captures.test.mjs` lists those fixtures and pins the
+build in their oracles. A fixture added later has only its Microsoft capture. The three are:
 
-So a re-capture after September 30, 2026 first installs 0.7.0 (or, after October 31, 2026, the build
-the installation page then offers), teaches `scripts/te-expectations.mjs` the new shape, and checks
-every model expectation against that build before committing one that changed. Pass `--oracle`
-naming the new build as well: without it, the script keeps the oracle string already in the file, or
-writes its default, and both name 0.5.2.
+- **Microsoft's ruleset**, `tests/expectations/<fixture>.json`: the parity oracle for the ported
+  rules. The six files first captured with the 0.5.2 build were re-captured with 0.7.1.2, and no
+  finding changed.
+- **Tabular Editor 3's built-in rules**, `tests/expectations/te3/<fixture>.json`: the oracle for
+  the rules pbiplint takes from the built-in set, and a record of what the built-in rules report
+  once `te` is gone.
+- **The survey's rule files**, `tests/expectations/survey/<fixture>.json`: what each of the 46
+  distinct rule files in `tests/expectations/survey/files.json` reports, the files a survey on
+  September 28, 2026 found published on GitHub. They are the expected results for
+  [custom rules](https://github.com/pbiplint/pbiplint/issues/118). The rule files themselves are
+  not committed, since several carry no license: the list pins each one to a commit and a sha256,
+  and the script fetches it from there and checks it.
 
-Sources: Tabular Editor's release post,
-[Tabular Editor CLI 0.7.0](https://tabulareditor.com/blog/tabular-editor-cli-0-7-0-release)
-(September 14, 2026), and its
-[installation page](https://docs.tabulareditor.com/en/features/te-cli/te-cli-install.html).
+Tabular Editor CLI 0.7.1.2 is a preview build that stops working after October 31, 2026, and the
+[0.7.0 release post](https://tabulareditor.com/blog/tabular-editor-cli-0-7-0-release) (September
+14, 2026) says, "After the preview period, a license will be required." So a re-capture after
+October 31, 2026 needs a licensed build from the
+[installation page](https://docs.tabulareditor.com/en/features/te-cli/te-cli-install.html): sign
+in with a Tabular Editor account, download the build for your platform, and overwrite the old one.
+The script writes the build it ran into each file's `oracle`; with `--from`, which converts a saved
+output instead of running `te`, the build comes from `--oracle`. A re-capture with another build
+also updates the oracle constants in `scripts/test/te-captures.test.mjs`.
 
 ## Report parity expectations
 

@@ -1,0 +1,685 @@
+{
+  "fixture": "tests/fixtures/data-sources.SemanticModel",
+  "oracle": "Tabular Editor CLI 0.7.1.2, each rule file in tests/expectations/survey/files.json at its commit",
+  "captured": "2026-10-01",
+  "deviations": {},
+  "ours": {},
+  "results": {
+    "microsoft/Analysis-Services/BestPracticeRules/BPARules.json": {
+      "findings": {
+        "AVOID_STRUCTURED_DATA_SOURCES_WITH_PROVIDER_PARTITIONS": [
+          "Structured"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Legacy'",
+          "'Structured'"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Legacy'",
+          "'Legacy'[Id]",
+          "'Structured'",
+          "'Structured'[Id]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "microsoft/Analysis-Services/BestPracticeRules/Italian/BPARules.json": {
+      "findings": {
+        "AVOID_STRUCTURED_DATA_SOURCES_WITH_PROVIDER_PARTITIONS": [
+          "Structured"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Legacy'",
+          "'Structured'"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Legacy'",
+          "'Legacy'[Id]",
+          "'Structured'",
+          "'Structured'[Id]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "microsoft/Analysis-Services/BestPracticeRules/Spanish/BPARules.json": {
+      "findings": {
+        "AVOID_STRUCTURED_DATA_SOURCES_WITH_PROVIDER_PARTITIONS": [
+          "Structured"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Legacy'",
+          "'Structured'"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Legacy'",
+          "'Legacy'[Id]",
+          "'Structured'",
+          "'Structured'[Id]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "microsoft/Analysis-Services/BestPracticeRules/Japanese/BPARules.json": {
+      "findings": {
+        "AVOID_STRUCTURED_DATA_SOURCES_WITH_PROVIDER_PARTITIONS": [
+          "Structured"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Legacy'",
+          "'Structured'"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Legacy'",
+          "'Legacy'[Id]",
+          "'Structured'",
+          "'Structured'[Id]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "BenniDeJagere/Presentations/2020/20200707_PBIMCR/BPARules.json": {
+      "findings": {},
+      "ruleErrors": {}
+    },
+    "BenniDeJagere/Presentations/2020/20201002_SQLBits/BPARules.json": {
+      "findings": {},
+      "ruleErrors": {}
+    },
+    "gronnerup/FabricOps/automation/resources/BPARules.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_COLUMNS": [
+          "'Legacy'[Id]",
+          "'Structured'[Id]"
+        ],
+        "SPECIFY_APPLICATION_NAME_IN_CONNECTION_STRING": [
+          "Legacy SQL"
+        ],
+        "USE_MSOLEDBSQL_PROVIDER": [
+          "Legacy SQL"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "Reinsight-SE/Tabular/BestPractices/BPARules.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_COLUMNS": [
+          "'Legacy'[Id]",
+          "'Structured'[Id]"
+        ],
+        "AVOID_STRUCTURED_DATA_SOURCES_WITH_PROVIDER_PARTITIONS": [
+          "Structured"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Legacy'",
+          "'Structured'"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Legacy'",
+          "'Legacy'[Id]",
+          "'Structured'",
+          "'Structured'[Id]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "filcuk/ssas-best-practice-rules/BPARules.json": {
+      "findings": {
+        "AVOID_STRUCTURED_DATA_SOURCES_WITH_PROVIDER_PARTITIONS": [
+          "Structured"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Legacy'",
+          "'Structured'"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Legacy'",
+          "'Legacy'[Id]",
+          "'Structured'",
+          "'Structured'[Id]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "rafaelxkr/Power-BI/Tabular_Editor/BPARules.json": {
+      "findings": {
+        "AVOID_STRUCTURED_DATA_SOURCES_WITH_PROVIDER_PARTITIONS": [
+          "Structured"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Legacy'",
+          "'Structured'"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Legacy'",
+          "'Legacy'[Id]",
+          "'Structured'",
+          "'Structured'[Id]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "Adrian1903/BPA-Rules/BPARules.json": {
+      "findings": {
+        "AVOID_STRUCTURED_DATA_SOURCES_WITH_PROVIDER_PARTITIONS": [
+          "Structured"
+        ]
+      },
+      "ruleErrors": {
+        "CHECK_IF_DYNAMIC_ROW_LEVEL_SECURITY_(RLS)_IS_NECESSARY": "Error while evaluating expression on Tables: Value cannot be null. (Parameter 'input')"
+      }
+    },
+    "marcelodfelman/PowerBI-BPA-Analyzer/data/BPARules.json": {
+      "findings": {},
+      "ruleErrors": {}
+    },
+    "punitgiri921/Brightline-Analytics/bpa-rules/BPARules.json": {
+      "findings": {},
+      "ruleErrors": {}
+    },
+    "bonardi/PowerBI-CICD/resources/report/config/bparules.json": {
+      "error": "Could not parse BPA rules. Expected JSON array or object with 'rules' array."
+    },
+    "bonardi/PowerBI-CICD/resources/dataset/config/bparules.json": {
+      "findings": {
+        "AVOID_STRUCTURED_DATA_SOURCES_WITH_PROVIDER_PARTITIONS": [
+          "Structured"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Legacy'",
+          "'Structured'"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Legacy'",
+          "'Legacy'[Id]",
+          "'Structured'",
+          "'Structured'[Id]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "gordoncheme/powerbi/BPARules.json": {
+      "findings": {
+        "AVOID_STRUCTURED_DATA_SOURCES_WITH_PROVIDER_PARTITIONS": [
+          "Structured"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Legacy'",
+          "'Structured'"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Legacy'",
+          "'Legacy'[Id]",
+          "'Structured'",
+          "'Structured'[Id]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "thijsknaapRob/BPARulesOnline/BPARules.json": {
+      "findings": {
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Legacy'",
+          "'Structured'"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "SPECIFY_APPLICATION_NAME_IN_CONNECTION_STRING": [
+          "Legacy SQL"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "twelve-baskets-analytics/pbi-bpa/BPARules.json": {
+      "findings": {
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Legacy'",
+          "'Structured'"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Legacy'",
+          "'Legacy'[Id]",
+          "'Structured'",
+          "'Structured'[Id]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "faby31/test/BPARules.json": {
+      "findings": {
+        "AVOID_STRUCTURED_DATA_SOURCES_WITH_PROVIDER_PARTITIONS": [
+          "Structured"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Legacy'",
+          "'Structured'"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Legacy'",
+          "'Legacy'[Id]",
+          "'Structured'",
+          "'Structured'[Id]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "Mikd14/BPARules/BPARules.json": {
+      "findings": {
+        "AVOID_STRUCTURED_DATA_SOURCES_WITH_PROVIDER_PARTITIONS": [
+          "Structured"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "GreyskullAnalytics/by-the-power-of-analyics-engineering/powerbi/bestpracticeanalyser/BPARules.json": {
+      "findings": {
+        "AVOID_STRUCTURED_DATA_SOURCES_WITH_PROVIDER_PARTITIONS": [
+          "Structured"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Legacy'",
+          "'Structured'"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Legacy'",
+          "'Legacy'[Id]",
+          "'Structured'",
+          "'Structured'[Id]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "Code-DataFyre/PowerInsighter/PowerInsighter/ModelBestPractices/BPARules.json": {
+      "findings": {
+        "AVOID_STRUCTURED_DATA_SOURCES_WITH_PROVIDER_PARTITIONS": [
+          "Structured"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Legacy'",
+          "'Structured'"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Legacy'",
+          "'Legacy'[Id]",
+          "'Structured'",
+          "'Structured'[Id]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "eugenecp/fabcon2026-ai-ci-cd/Fabric2026-CI-CD-Complete-Package/scripts/.bpaRules.json": {
+      "findings": {
+        "COL_HIDE_UNUSED": [
+          "'Legacy'[Id]",
+          "'Structured'[Id]"
+        ],
+        "DOC_TABLE_DESCRIPTION": [
+          "'Legacy'",
+          "'Structured'"
+        ],
+        "NAME_TABLE_PREFIXES": [
+          "'Legacy'",
+          "'Structured'"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "TabularEditor/SessionArchive/Webinars/2025-12-10 - CICD and version control for Fabric/src/automation/resources/BPARules.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_COLUMNS": [
+          "'Legacy'[Id]",
+          "'Structured'[Id]"
+        ],
+        "SPECIFY_APPLICATION_NAME_IN_CONNECTION_STRING": [
+          "Legacy SQL"
+        ],
+        "USE_MSOLEDBSQL_PROVIDER": [
+          "Legacy SQL"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "data-goblin/power-bi-agentic-development/plugins/tabular-editor/skills/bpa-rules/examples/course-3-business-case-bpa-rules.json": {
+      "findings": {
+        "RULE1": [
+          "'Legacy'",
+          "'Structured'"
+        ],
+        "RULE9": [
+          "'Legacy'[Id]",
+          "'Structured'[Id]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "bgarcevic/fabric-utils/.devops/bpa-rules.json": {
+      "findings": {
+        "AVOID_STRUCTURED_DATA_SOURCES_WITH_PROVIDER_PARTITIONS": [
+          "Structured"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Legacy'",
+          "'Structured'"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Legacy'",
+          "'Legacy'[Id]",
+          "'Structured'",
+          "'Structured'[Id]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "luccapinto/agentic-data-kit/.agent/skills/pbi-quality-rules/bpa-rules.json": {
+      "findings": {
+        "DOC_TABLE_DESCRIPTION": [
+          "'Legacy'",
+          "'Structured'"
+        ],
+        "MODEL_ISLAND_TABLE": [
+          "'Legacy'",
+          "'Structured'"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "bgarcevic/tomix-cli/src/Tomix.App/Bpa/Rules/bpa-rules.json": {
+      "findings": {
+        "AVOID_STRUCTURED_DATA_SOURCES_WITH_PROVIDER_PARTITIONS": [
+          "Structured"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Legacy'",
+          "'Structured'"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Legacy'",
+          "'Legacy'[Id]",
+          "'Structured'",
+          "'Structured'[Id]"
+        ]
+      },
+      "ruleErrors": {
+        "DATA_COLUMNS_MUST_HAVE_A_SOURCE_COLUMN": "No property or field 'CalculationItems' exists in type 'Table'",
+        "RELATIONSHIP_COLUMNS_SAME_DATA_TYPE": "Operator '!=' incompatible with operand types 'DataType' and 'String'"
+      }
+    },
+    "AlahmadiQ8/copilot-sdk-challenge/backend/src/data/bpa-rules.json": {
+      "findings": {
+        "AVOID_STRUCTURED_DATA_SOURCES_WITH_PROVIDER_PARTITIONS": [
+          "Structured"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Legacy'",
+          "'Structured'"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Legacy'",
+          "'Legacy'[Id]",
+          "'Structured'",
+          "'Structured'[Id]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "petecarlssonw/powerbi-testing/BPARules/bpa-rules.json": {
+      "findings": {
+        "AVOID_STRUCTURED_DATA_SOURCES_WITH_PROVIDER_PARTITIONS": [
+          "Structured"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Legacy'",
+          "'Structured'"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Legacy'",
+          "'Legacy'[Id]",
+          "'Structured'",
+          "'Structured'[Id]"
+        ]
+      },
+      "ruleErrors": {
+        "CHECK_IF_DYNAMIC_ROW_LEVEL_SECURITY_(RLS)_IS_NECESSARY": "Error while evaluating expression on Tables: Value cannot be null. (Parameter 'input')"
+      }
+    },
+    "TabularEditor/BestPracticeRules/BPARules-standard.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_COLUMNS": [
+          "'Legacy'[Id]",
+          "'Structured'[Id]"
+        ],
+        "SPECIFY_APPLICATION_NAME_IN_CONNECTION_STRING": [
+          "Legacy SQL"
+        ],
+        "USE_MSOLEDBSQL_PROVIDER": [
+          "Legacy SQL"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "TabularEditor/BestPracticeRules/BPARules-PowerBI.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_COLUMNS": [
+          "'Legacy'[Id]",
+          "'Structured'[Id]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "tenfingerseddy/semanticus-vscode/Semanticus.Analysis/Rules/BPARules-PowerBI.json": {
+      "findings": {
+        "AVOID_STRUCTURED_DATA_SOURCES_WITH_PROVIDER_PARTITIONS": [
+          "Structured"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Legacy'",
+          "'Structured'"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Legacy'",
+          "'Legacy'[Id]",
+          "'Structured'",
+          "'Structured'[Id]"
+        ],
+        "SEM_COLUMN_NEEDS_FORMAT_STRING": [
+          "'Legacy'[Id]",
+          "'Structured'[Id]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "KavasiMihaly/SelfServiceBIBlog/TabularEditor/BPARules-PowerBI.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_COLUMNS": [
+          "'Legacy'[Id]",
+          "'Structured'[Id]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "bredeespelid/PBIP_SemLin/docs/bpa/semantic model/BPARules-PowerBI.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_COLUMNS": [
+          "'Legacy'[Id]",
+          "'Structured'[Id]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "vlpatkosdani/powerbi-cicd-with-githubactions-demos/BPA_Rules.json": {
+      "findings": {
+        "4_AVOID_STRUCTURED_DATA_SOURCES_WITH_PROVIDER_PARTITIONS": [
+          "Structured"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "vlpatkosdani/powerbi-cicd-with-githubactions-demos/scripts/BPA_Rules.json": {
+      "findings": {
+        "22": [
+          "Structured"
+        ],
+        "29": [
+          "'Legacy'",
+          "'Legacy'[Id]",
+          "'Structured'",
+          "'Structured'[Id]"
+        ],
+        "31": [
+          "'Legacy'[Id]",
+          "'Structured'[Id]"
+        ],
+        "32": [
+          "'Legacy'",
+          "'Structured'"
+        ],
+        "55": [
+          "Model"
+        ],
+        "64": [
+          "Legacy SQL"
+        ],
+        "71": [
+          "Legacy SQL"
+        ]
+      },
+      "ruleErrors": {
+        "5": "Syntax error '\\'",
+        "62": "Syntax error '\\'",
+        "63": "Expression of type 'Boolean' expected"
+      }
+    },
+    "ianfinkdata/sql-practice/pbip/bpa/bpa_rules.json": {
+      "findings": {},
+      "ruleErrors": {
+        "BPA_MEASURE_ORGANIZE_DISPLAY_FOLDERS": "No property or field 'Visible' exists in type 'Measure'",
+        "BPA_MEASURE_PROVIDE_DESCRIPTION": "No property or field 'Visible' exists in type 'Measure'",
+        "BPA_MEASURE_SET_FORMAT_STRING": "No property or field 'Visible' exists in type 'Measure'",
+        "BPA_MODEL_HIDE_FOREIGN_KEYS": "No property or field 'r' exists in type 'SingleColumnRelationship'"
+      }
+    },
+    "omezquita/PowerBI/MDA_BPA_Rules.json": {
+      "findings": {},
+      "ruleErrors": {}
+    },
+    "aswalsheshant-cell/mt-dashboard/PowerBI/CI/bpa_rules.json": {
+      "findings": {},
+      "ruleErrors": {
+        "COLUMN_NAMING_CONVENTION": "Value cannot be null. (Parameter 'expression')",
+        "DAX_NO_UNFORMATTED_DIVIDE": "Value cannot be null. (Parameter 'expression')",
+        "FORMAT_STRING_MISSING": "Value cannot be null. (Parameter 'expression')",
+        "HIERARCHY_VALIDATION": "Value cannot be null. (Parameter 'expression')",
+        "MEASURE_DESCRIPTION_MISSING": "Value cannot be null. (Parameter 'expression')",
+        "RELATIONSHIPS_BOTH_DIRECTIONS": "Value cannot be null. (Parameter 'expression')"
+      }
+    },
+    "StuffbyYuki/PBI-BPA-Rules/BPA_Rules.json": {
+      "findings": {
+        "AVOID_STRUCTURED_DATA_SOURCES_WITH_PROVIDER_PARTITIONS": [
+          "Structured"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Legacy'",
+          "'Structured'"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Legacy'",
+          "'Legacy'[Id]",
+          "'Structured'",
+          "'Structured'[Id]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "sautalwar/hearst_cicd_fabric_demo/tests/semantic_model/bpa_rules.json": {
+      "findings": {},
+      "ruleErrors": {}
+    },
+    "ryanduguid/accounting-review-pipeline/apps/australian-accounting-power-bi/tests/model_bpa_rules.json": {
+      "findings": {},
+      "ruleErrors": {
+        "BPA_CALC_GROUP_PRECEDENCE": "No property or field 'Precedence' exists in type 'CalculationGroupTable'"
+      }
+    },
+    "pranamg/powerbi-hub/Scripts/CSharp/TabularEditor/BestPracticeRules.json": {
+      "findings": {
+        "MODEL_HAS_DESCRIPTION": [
+          "Model"
+        ]
+      },
+      "ruleErrors": {
+        "DAX_NO_HARDCODED_DATES": "No property or field '@' exists in type 'Measure'",
+        "TABLE_HAS_DATE_TABLE": "No property or field 't' exists in type 'Table'",
+        "TABLE_NO_AUTO_DATE": "No property or field 't' exists in type 'Table'"
+      }
+    },
+    "TabularEditor/BestPracticeRules/BPARules-contrib.json": {
+      "findings": {},
+      "ruleErrors": {}
+    },
+    "TabularEditor/BestPracticeRules/BPARules-standard-lax.json": {
+      "findings": {},
+      "ruleErrors": {}
+    }
+  }
+}

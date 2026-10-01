@@ -1,0 +1,43 @@
+cultureInfo fr-FR
+
+	translations
+		model Model
+			table Sales
+				caption: Ventes
+				measure 'Total Amount'
+					caption: Montant total
+				measure 'Top Region Label'
+					caption: Libellé de la meilleure région
+				measure 'Amount Text'
+					caption: Montant en texte
+				measure 'Status Note'
+					caption: Note de statut
+				measure 'Last Region'
+					caption: Dernière région
+				column Amount
+					caption: Montant
+				column 'Discount Pct'
+					caption: Pourcentage de remise
+				column 'Tax Rate'
+					caption: Taux de taxe
+				column Quantity
+					caption: Quantité
+				column 'Ship Date'
+					caption: Date d'expédition
+			table Customer
+				column 'Customer Name'
+					caption: Nom du client
+				column Region
+					caption: Region
+				hierarchy Geography
+					level Region
+						caption: Région
+			table Date
+				caption: Date
+				column Date
+					caption: Date
+				column 'Month Name'
+					caption: Nom du mois
+			table 'Time Intelligence'
+				column Name
+					caption: Nom

@@ -1,0 +1,27 @@
+{
+  "fixture": "tests/fixtures/data-sources.SemanticModel",
+  "oracle": "Tabular Editor CLI 0.7.1.2 built-in rules",
+  "captured": "2026-10-01",
+  "deviations": {},
+  "ours": {},
+  "findings": {
+    "TE3_BUILT_IN_DATE_TABLE_EXISTS": [
+      "Model"
+    ],
+    "TE3_BUILT_IN_FORMAT_STRING_COLUMNS": [
+      "'Legacy'[Id]",
+      "'Structured'[Id]"
+    ],
+    "TE3_BUILT_IN_SPECIFY_APPLICATION_NAME": [
+      "Legacy SQL"
+    ],
+    "TE3_BUILT_IN_VISIBLE_COLUMNS_NO_DESCRIPTION": [
+      "'Legacy'[Id]",
+      "'Structured'[Id]"
+    ],
+    "TE3_BUILT_IN_VISIBLE_TABLES_NO_DESCRIPTION": [
+      "'Legacy'",
+      "'Structured'"
+    ]
+  }
+}

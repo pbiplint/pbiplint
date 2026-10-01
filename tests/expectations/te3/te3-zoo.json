@@ -1,0 +1,108 @@
+{
+  "fixture": "tests/fixtures/te3-zoo.SemanticModel",
+  "oracle": "Tabular Editor CLI 0.7.1.2 built-in rules",
+  "captured": "2026-10-01",
+  "deviations": {},
+  "ours": {},
+  "findings": {
+    "TE3_BUILT_IN_DO_NOT_SUMMARIZE_NUMERIC": [
+      "'Sales'[Amount]",
+      "'Sales'[Quantity]"
+    ],
+    "TE3_BUILT_IN_FORMAT_STRING_COLUMNS": [
+      "'Date'[Date]",
+      "'Sales'[Discount Pct]",
+      "'Sales'[Quantity]",
+      "'Sales'[Ship Date]",
+      "'Sales'[Unit Price]"
+    ],
+    "TE3_BUILT_IN_FORMAT_STRING_MEASURES": [
+      "[Budget Total]",
+      "[Order Count]"
+    ],
+    "TE3_BUILT_IN_POWERBI_LATEST_COMPATIBILITY": [
+      "Model"
+    ],
+    "TE3_BUILT_IN_SET_ISAVAILABLEINMDX_FALSE": [
+      "'Budget'[Budget Amount]",
+      "'Customer'[Customer ID]",
+      "'Sales'[Customer ID]",
+      "'Sales'[Internal Cost]",
+      "'Sales'[Order Date]",
+      "'Sales'[Order ID]",
+      "'Time Intelligence'[Ordinal]"
+    ],
+    "TE3_BUILT_IN_SET_ISAVAILABLEINMDX_TRUE_NECESSARY": [
+      "'Date'[Quarter Key]"
+    ],
+    "TE3_BUILT_IN_TRANSLATE_HIERARCHY_LEVELS": [
+      "Customer Name",
+      "Region"
+    ],
+    "TE3_BUILT_IN_TRANSLATE_PERSPECTIVES": [
+      "Model"
+    ],
+    "TE3_BUILT_IN_TRANSLATE_VISIBLE_NAMES": [
+      "'Budget'",
+      "'Customer'",
+      "'Customer'[Customer Name]",
+      "'Customer'[Region]",
+      "'Date'",
+      "'Date'[Date]",
+      "'Date'[Month Name]",
+      "'Sales'",
+      "'Sales'[Amount]",
+      "'Sales'[Discount Pct]",
+      "'Sales'[Quantity]",
+      "'Sales'[Ship Date]",
+      "'Sales'[Tax Rate]",
+      "'Sales'[Unit Price]",
+      "'Time Intelligence'[Name]",
+      "Geography",
+      "[Amount Text]",
+      "[Budget Total]",
+      "[Last Region]",
+      "[Order Count]",
+      "[Status Note]",
+      "[Top Region Label]",
+      "[Total Amount]"
+    ],
+    "TE3_BUILT_IN_UDF_USE_COMPOUND_NAMES": [
+      "Discount"
+    ],
+    "TE3_BUILT_IN_VISIBLE_CALCULATION_GROUPS_NO_DESCRIPTION": [
+      "'Time Intelligence'"
+    ],
+    "TE3_BUILT_IN_VISIBLE_COLUMNS_NO_DESCRIPTION": [
+      "'Budget'[Budget Amount]",
+      "'Customer'[Customer Name]",
+      "'Customer'[Region]",
+      "'Date'[Date]",
+      "'Date'[Month Name]",
+      "'Sales'[Amount]",
+      "'Sales'[Discount Pct]",
+      "'Sales'[Quantity]",
+      "'Sales'[Ship Date]",
+      "'Sales'[Tax Rate]",
+      "'Sales'[Unit Price]",
+      "'Time Intelligence'[Name]"
+    ],
+    "TE3_BUILT_IN_VISIBLE_MEASURES_NO_DESCRIPTION": [
+      "[Amount Text]",
+      "[Budget Total]",
+      "[Last Region]",
+      "[Order Count]",
+      "[Status Note]",
+      "[Top Region Label]",
+      "[Total Amount]"
+    ],
+    "TE3_BUILT_IN_VISIBLE_TABLES_NO_DESCRIPTION": [
+      "'Customer'",
+      "'Date'",
+      "'Sales'"
+    ],
+    "TE3_BUILT_IN_VISIBLE_UDF_NO_DESCRIPTION": [
+      "Discount"
+    ]
+  }
+}

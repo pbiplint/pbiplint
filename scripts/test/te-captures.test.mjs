@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, URL } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -7,6 +7,12 @@ import { describe, expect, it } from "vitest";
 // missing or partial capture cannot be made again without a licensed build (docs/RELEASING.md).
 const dir = fileURLToPath(new URL("../../tests/expectations/", import.meta.url));
 const read = (path) => JSON.parse(readFileSync(join(dir, path), "utf8"));
+/** The model fixtures with a capture in `sub`, by name. */
+const names = (sub) =>
+  readdirSync(join(dir, sub))
+    .filter((f) => f.endsWith(".json") && !f.endsWith(".report.json") && f !== "files.json")
+    .map((f) => f.slice(0, -".json".length))
+    .sort();
 
 describe("the survey's rule files", () => {
   const { files } = read("survey/files.json");
@@ -25,5 +31,26 @@ describe("the survey's rule files", () => {
   });
   it("records the 66 places the survey found them", () => {
     expect(files.reduce((n, f) => n + 1 + f.alsoAt.length, 0)).toBe(66);
+  });
+});
+
+describe("the captures", () => {
+  const fixtures = names("");
+  const { files } = read("survey/files.json");
+  it("cover every model fixture with Tabular Editor 3's built-in rules and the survey's files", () => {
+    expect(fixtures).toContain("te3-zoo");
+    expect(names("te3")).toEqual(fixtures);
+    expect(names("survey")).toEqual(fixtures);
+  });
+  it.each(fixtures)("%s: all three come from te 0.7.1.2, on the same fixture", (name) => {
+    const ms = read(`${name}.json`);
+    for (const capture of [ms, read(`te3/${name}.json`), read(`survey/${name}.json`)]) {
+      expect(capture.fixture).toBe(ms.fixture);
+      expect(capture.oracle).toMatch(/^Tabular Editor CLI 0\.7\.1\.2[ ,]/);
+    }
+  });
+  it.each(fixtures)("%s: the survey capture has a result for every listed file", (name) => {
+    const { results } = read(`survey/${name}.json`);
+    expect(Object.keys(results).sort()).toEqual(files.map((f) => f.id).sort());
   });
 });

@@ -1,6 +1,6 @@
 # Rules beyond Microsoft's set: what #117 builds
 
-Issue #117, milestone 0.2.3. Written September 30, 2026, after Michael settled the list and approved this design in outline the same day. Section 8 lists what is still open.
+Issue #117, milestone 0.2.3. Written September 30, 2026, after Michael settled the list and approved this design in outline the same day; approved October 1, 2026. Amended the same day with what the capture plan measured on `te` 0.7.1.2 (sections 3.1, 3.4, 3.5, and 5.1). Section 8 lists what is still open.
 
 ## 1. Sources and decisions
 
@@ -28,10 +28,10 @@ Pull requests 2 and 3 are independent of each other; 2 goes first because it is 
 `scripts/te-expectations.mjs` learns `te` 0.7's interface: the model goes in `-m`, and `bpa run` JSON reports `findings[]`, each with `code` and `object`, plus a `ruleErrors` count. Three modes, each writing one file per fixture:
 
 - **`--rules <BPARules.json>`** (Microsoft's ruleset, as today): `--no-defaults --no-model-rules`, written to `tests/expectations/<fixture>.json`. Keeps `skipRules`, `deviations`, and `ours`, as today.
-- **`--built-in`**: Tabular Editor 3's built-in rules, `--no-model-rules` and no `-r`, written to `tests/expectations/te3/<fixture>.json`. Same shape; `deviations` and `ours` are keyed by the pbiplint rule that follows a built-in rule (section 5.3).
+- **`--built-in`**: Tabular Editor 3's built-in rules, `--no-model-rules` and no `-r`, written to `tests/expectations/te3/<fixture>.json`. Same shape less `skipRules`, which only the Microsoft parity test reads; `deviations` and `ours` are keyed by the pbiplint rule that follows a built-in rule (section 5.3).
 - **`--survey <files.json>`**: every rule file the list names, one `te` run each with `--no-defaults --no-model-rules`, written to `tests/expectations/survey/<fixture>.json` as `results` keyed by file id, each with its `findings` and `ruleErrors`.
 
-`--from` stays for a saved `te` output. The `oracle` default names 0.7.1.2. A rule that `te` cannot evaluate is reported to the console with its id, as today's warning does, and recorded in the survey file; the plan checks what 0.7 gives for a rule error and records the ids when it gives them.
+`--from` stays for a saved `te` output. The `oracle` default names 0.7.1.2. `te` 0.7 reports a rule it cannot evaluate as a finding on the rule itself (`objectType` `BpaRule`, with the error as its message). Every mode prints it with its id and records it under `ruleErrors`, rule id to message, never as a finding. A rule file `te` cannot read at all is recorded in the survey capture as an `error` with `te`'s message (one of the 46 is a report rules file).
 
 ### 3.2 The re-capture
 
@@ -43,7 +43,7 @@ One capture per fixture, all 38 built-in rules as `te` 0.7.1.2 runs them (30 or 
 
 ### 3.4 The survey's rule files
 
-The survey's 68 files (Microsoft's ruleset in four languages, and 64 published files in 44 repositories and Tabular Editor's community repository) come down to 46 distinct files by checksum. `tests/expectations/survey/files.json` lists each distinct file once: an id, the repository, the path, the commit it was read at, its sha256, its rule count, and the other places the same file was found. The commit is resolved when capturing, and the file at that commit must match the survey's checksum.
+The survey's 68 files (Microsoft's ruleset in four languages, and 64 published files in 44 repositories and Tabular Editor's community repository) come down to 46 distinct files by checksum, at 66 places (the survey listed two places twice). `tests/expectations/survey/files.json` lists each distinct file once: an id, the repository, the path, the commit it was read at, its sha256, its rule count, and the other places the same file was found. The commit is the repository's head when the file there still matches the survey's checksum, or else the newest commit whose copy does; the capture fetches the file at that commit and checks the checksum again.
 
 The rule files themselves are not committed: several carry no license, Tabular Editor's community repository among them. #118 fetches them by commit when it needs them; its expected results are the captures here.
 
@@ -51,7 +51,8 @@ The rule files themselves are not committed: several carry no license, Tabular E
 
 A hand-written model, `tests/fixtures/te3-zoo.SemanticModel` (named after `rule-zoo`), at compatibility level 1702, with `culture: en-US`. It holds every shape the new rules and the deviations need, and nothing else that could move an existing rule:
 
-- **Cultures:** `en-US`, the model's own, with linguistic metadata only; `fr-FR`, with a `translations` block that captions some objects and leaves out a visible table, column, measure, hierarchy, hierarchy level, and calculation group table, plus a hidden column; `de-DE`, with no `translations` block.
+- **Cultures:** `en-US`, the model's own, with linguistic metadata only; `fr-FR`, with a `translations` block that captions some objects and leaves out a visible table, column, measure, hierarchy, hierarchy level, and calculation group table, plus a hidden column. No culture without a `translations` block, which this section first planned as `de-DE`: for such a culture Tabular Editor reports every visible object, which hides what `fr-FR` shows (measured on a draft, October 1, 2026). Section 5.1's skip of such a culture gets a unit test instead.
+- **User-defined functions:** one with a one-word name and no description, and one with a compound name and a description, so section 5.3's check of the UDF rules compares findings. No other fixture has a UDF either rule reports.
 - **Columns:** visible Decimal number (`double`) and Fixed decimal number (`decimal`) columns with and without a format string; a hidden one; one in a hidden table; whole-number and date columns with none. Every column declares its `dataType`, so #164's shape stays out of this fixture.
 - **Measures with no format string:** a label built with `&` after `RETURN`, a `FORMAT` call, a lone string, a number (the case that is still reported), and `MAXX` over a text column (text, but not plainly so).
 - **A calendar** on a `Date` table that is not marked as a date table, with hidden primary columns, one of them set to `isAvailableInMdx: false`; no table in the model is marked.
@@ -109,7 +110,7 @@ Each change is a recorded deviation where a fixture shows it: `PROVIDE_FORMAT_ST
 - **Visible:** as pbiplint reads it elsewhere: the object and its table are not hidden; a level, its hierarchy. Where Tabular Editor reads visibility differently (a measure's own flag only), a fixture that shows it records the difference as a deviation.
 - **Left out:** descriptions and display folders (they matter only to authors in the service: [Power BI support for metadata translation](https://learn.microsoft.com/power-bi/guidance/multiple-language-translation#power-bi-support-for-metadata-translation)), and the model's and perspectives' names (not among the objects Microsoft lists as translatable: [Metadata translation](https://learn.microsoft.com/power-bi/guidance/multiple-language-translation#metadata-translation)).
 - **The model:** `Culture` gains what its `translations` block names: whether it has one, and which tables, columns, measures, hierarchies, and levels it captions. Optional, as `calendars` is.
-- **Source:** Tabular Editor's `BPARules-PowerBI.json` (TabularEditor/BestPracticeRules at 98e71e1), `TRANSLATE_HIDEABLE_OBJECT_NAMES` and `TRANSLATE_HIERARCHY_LEVEL_NAMES`, which already skip the model's own culture ("You don't need to supply metadata translations for the default language of the semantic model", [Organize project for metadata translation](https://learn.microsoft.com/power-bi/guidance/multiple-language-locale#organize-project-for-metadata-translation)). Tabular Editor 3's built-in versions do not skip it and fire on nearly every Desktop model (98 findings on the messy-sales sample). Deviations from the source, shown on te3-zoo: a culture with no `translations` block is skipped, and calculation group tables are read.
+- **Source:** Tabular Editor's `BPARules-PowerBI.json` (TabularEditor/BestPracticeRules at 98e71e1), `TRANSLATE_HIDEABLE_OBJECT_NAMES` and `TRANSLATE_HIERARCHY_LEVEL_NAMES`, which already skip the model's own culture ("You don't need to supply metadata translations for the default language of the semantic model", [Organize project for metadata translation](https://learn.microsoft.com/power-bi/guidance/multiple-language-locale#organize-project-for-metadata-translation)). Tabular Editor 3's built-in versions do not skip it and fire on nearly every Desktop model (98 findings on the messy-sales sample). Deviations from the source, shown on te3-zoo: calculation group tables are read, and a hidden table and the measures in it are not reported (the draft capture of October 1, 2026 shows Tabular Editor reporting both). A culture with no `translations` block is also skipped, a difference no fixture shows (section 3.5); a unit test covers it and the page states it.
 - **Fix route:** Desktop's TMDL view, with a `createOrReplace` of the whole `cultureInfo` block from `definition/cultures/<culture>.tmdl` and the missing `caption:` lines added. The whole block, since `createOrReplace` "Creates or replaces the specified semantic model objects and all the descendants" ([CreateOrReplace command](https://learn.microsoft.com/analysis-services/tmdl/tmdl-scripts#createorreplace-command)). Or edit the culture file with Desktop closed. Translations Builder may be named after that route, as an optional tool.
 
 ### 5.2 `DECIMAL_COLUMN_WITHOUT_FORMAT_STRING`

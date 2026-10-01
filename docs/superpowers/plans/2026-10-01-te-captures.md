@@ -751,7 +751,7 @@ mkdir -p tests/expectations/survey
 node "$SCRATCH/survey-files.mjs" .superpowers/research/2026-09-28-bpa-rule-sources/community-files tests/expectations/survey/files.json
 ```
 
-Expected: 46 progress lines ending `46/46 TabularEditor/BestPracticeRules/BPARules-standard-lax.json @ 4fe96f1`, and no error. A repository that has gone or a file that changed since the survey shows as `no commit has sha256 ...`: stop and report it, since the file would then have to leave the list with a note.
+Expected: 46 progress lines ending `46/46 TabularEditor/BestPracticeRules/BPARules-standard-lax.json @ 98e71e1`, and no error. A repository that has gone or a file that changed since the survey shows as `no commit has sha256 ...`: stop and report it, since the file would then have to leave the list with a note.
 
 - [ ] **Step 4: Check the list against what the spec cites**
 
@@ -1196,7 +1196,7 @@ DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE ["'Date'"]
 PROVIDE_FORMAT_STRING_FOR_MEASURES ["[Amount Text]","[Last Region]","[Order Count]","[Status Note]","[Top Region Label]"]
 ```
 
-These four are where pull request 2's deviations will show: the calendar's `Year` and `Month Key` leave the first, `'Date'[Quarter Key]` joins `SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS`, the next two pass, and three of the five measures leave the last. The file has no `deviations` yet, which is right for this pull request.
+These four are four of the five places pull request 2's deviations will show: the calendar's `Year` and `Month Key` leave the first, `'Date'[Quarter Key]` joins `SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS`, the next two pass, and three of the five measures leave the last. The fifth is `UNNECESSARY_COLUMNS`, from which the calendar's columns leave (Michael's ruling of October 1, 2026, spec section 4.2). The file has no `deviations` yet, which is right for this pull request.
 
 - [ ] **Step 5: Run the parity suite on it**
 
@@ -1537,7 +1537,7 @@ Then, still as TheDataPractitioner:
 
 ## Out of scope
 
-- #164's fix, fixture, and captures (both Microsoft's ruleset and the built-in rules) are a pull request of their own, also before October 31, 2026 (spec section 7).
+- #164's fix, fixture, and captures (all three: Microsoft's ruleset, the built-in rules, and the survey's files) are a pull request of their own, also before October 31, 2026 (spec section 7).
 - The rules, the deviations, and the pages: pull requests 2 and 3, from captures this plan commits.
 
 ## Notes for pull requests 2 and 3
@@ -1548,3 +1548,4 @@ Measured on a draft of te3-zoo on October 1, 2026, and checked again by Task 4 S
 - `BPARules-PowerBI.json`'s translation rules on te3-zoo report the hidden `Budget` table and `[Budget Total]` in it. They do not report `Customer[Region]` (captioned with its own name), the `Time Intelligence` calculation group table, or `Budget[Budget Amount]` (a column in the hidden table). Spec section 5.1 records two of these as deviations: the hidden table with its measure, and the calculation group table.
 - Tabular Editor 3's measure format string rule infers DAX types: it skips all four text measures, `MAXX` over a text column included, and reports `[Order Count]` and `[Budget Total]`.
 - Microsoft's `UNNECESSARY_COLUMNS` reports the calendar's three hidden primary columns. Michael ruled on October 1, 2026 that a column the model or a feature needs counts as used, so pull request 2 records this as a deviation too (spec section 4.2).
+- After the final review, te3-zoo gained the hidden associated column `'Date'[Month Short Name]` in the calendar's month group, so the counts in Tasks 3 and 4 predate it: Microsoft's capture now has 72 findings across 16 rules, the column joining `ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS`, `MONTH_(AS_A_STRING)_MUST_BE_SORTED`, and `UNNECESSARY_COLUMNS`, and 37 of the survey's files report it under 87 rules in all, nothing else in them changing. Tabular Editor 3's built-in rules do not report it, so their capture is unchanged: the IsAvailableInMdx rule skips a hidden associated column as it skips a hidden primary one, and does report the column on a copy whose calendar leaves it out (measured October 1, 2026).

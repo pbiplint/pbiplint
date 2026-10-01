@@ -56,7 +56,7 @@ A hand-written model, `tests/fixtures/te3-zoo.SemanticModel` (named after `rule-
 - **User-defined functions:** one with a one-word name and no description, and one with a compound name and a description, so section 5.3's check of the UDF rules compares findings. No other fixture has a UDF either rule reports.
 - **Columns:** visible Decimal number (`double`) and Fixed decimal number (`decimal`) columns with and without a format string; a hidden one; one in a hidden table; whole-number and date columns with none. Every column declares its `dataType`, so #164's shape stays out of this fixture.
 - **Measures with no format string:** a label built with `&` after `RETURN`, a `FORMAT` call, a lone string, a number (the case that is still reported), and `MAXX` over a text column (text, but not plainly so).
-- **A calendar** on a `Date` table that is not marked as a date table, with hidden primary columns, one of them set to `isAvailableInMdx: false`; no table in the model is marked.
+- **A calendar** on a `Date` table that is not marked as a date table, with hidden primary columns, one of them set to `isAvailableInMdx: false`, and a hidden associated column (`Month Short Name`, beside the visible `Month Name`); no table in the model is marked.
 - **A calculation group** and a hierarchy with two levels, for the translation shapes.
 
 Checks before committing: `te` loads it with no error; `pbiplint` reads it with no `PARSE_ISSUE`; and pbiplint's results today match its Microsoft-ruleset capture with no deviation, so parity passes in this pull request and pull request 2 adds the deviations.
@@ -76,9 +76,9 @@ A column a calendar names is, for these rules, a column the calendar needs: "the
 
 ### 4.2 The IsAvailableInMdx rules and UNNECESSARY_COLUMNS
 
-- **`ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS`** skips a column a calendar names, as Tabular Editor 3's built-in rule does (`not UsedInCalendars.Any()`). In the corpus this clears 6 false findings in 2 Desktop models, all hidden primary columns.
+- **`ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS`** skips a column a calendar names, as Tabular Editor 3's built-in rule does (`not UsedInCalendars.Any()`). In the corpus this clears 6 false findings in 2 Desktop models, all hidden primary columns. te3-zoo's capture backs this for both kinds of column: Tabular Editor 3's built-in rule reports neither the calendar's hidden primary columns nor its hidden associated column `'Date'[Month Short Name]`, which it does report on a copy whose calendar leaves that column out (measured October 1, 2026).
 - **`SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS`** reports a column a calendar names that is set to `isAvailableInMdx: false`, as Tabular Editor 3's does, so the two rules stay mirrors. No corpus model has one.
-- **`UNNECESSARY_COLUMNS`** counts a column a calendar names as used. Michael's ruling of October 1, 2026: "not used" is the rule's proxy for a column that takes up space in the model without providing value, and a column the model or one of its features needs to work is providing value. Tabular Editor 3 has no version of this rule, so this goes beyond it, as the rule's existing `groupByColumn` deviation for field parameters already does. te3-zoo shows it: Microsoft's rule reports the calendar's three hidden primary columns.
+- **`UNNECESSARY_COLUMNS`** counts a column a calendar names as used. Michael's ruling of October 1, 2026: "not used" is the rule's proxy for a column that takes up space in the model without providing value, and a column the model or one of its features needs to work is providing value. Tabular Editor 3 has no version of this rule, so this goes beyond it, as the rule's existing `groupByColumn` deviation for field parameters already does. te3-zoo shows it: Microsoft's rule reports the calendar's three hidden primary columns and its hidden associated column.
 - **Direct Lake, a Quirk only:** Tabular Editor 3's versions skip tables with a Direct Lake partition, and no source says why (606 Desktop findings in 31 models). The false rule's page says so, and that Direct Lake loads columns on demand rather than processing them at refresh ([Direct Lake overview](https://learn.microsoft.com/fabric/fundamentals/direct-lake-overview)), in Quirks and in When to ignore it.
 
 ### 4.3 The date table rules
@@ -153,7 +153,7 @@ Recorded in #117's comment of September 30, 2026, in short:
 
 ## 7. #164 and the deadline
 
-#164's fix (a missing `dataType` read as unknown) is its own pull request, with its own fixture of untyped calculated columns, captured with both Microsoft's ruleset and the built-in rules before October 31, 2026. It can run alongside this issue's pull requests; it shares only the date table rule with section 4.3, so whichever lands second rebases. `DECIMAL_COLUMN_WITHOUT_FORMAT_STRING` skips untyped columns either way.
+#164's fix (a missing `dataType` read as unknown) is its own pull request, with its own fixture of untyped calculated columns, captured all three ways before October 31, 2026 (Microsoft's ruleset, the built-in rules, and the survey's files, about two minutes for the survey) and added to the list in `scripts/test/te-captures.test.mjs`. It can run alongside this issue's pull requests; it shares only the date table rule with section 4.3, so whichever lands second rebases. `DECIMAL_COLUMN_WITHOUT_FORMAT_STRING` skips untyped columns either way.
 
 ## 8. Questions for Power BI Desktop
 
@@ -168,6 +168,7 @@ For Michael, before pull request 3's pages:
 - The legacy `culture` keyword a Desktop 24.02 save used for `cultureInfo`, which pbiplint reports as a `PARSE_ISSUE`: one corpus model, already flagged.
 - Type inference for measures and columns: the text-measure skip reads what the tokens show, and #164 reads a missing type as unknown.
 - A Direct Lake deviation, until a source explains Tabular Editor 3's.
+- Time-related calendar columns (a `calendarColumnGroup`'s `column` entries) in te3-zoo: no corpus model has one, so Tabular Editor 3's treatment of them is not captured.
 
 ## 10. Release notes
 

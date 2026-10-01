@@ -124,7 +124,9 @@ only. The commands that refresh the captures are in CONTRIBUTING.md under "Refre
 expectations".
 
 Every capture from `te` under `tests/expectations/` was made with Tabular Editor CLI 0.7.1.2 in
-October 2026, as each file's `oracle` and `captured` fields say. Each model fixture has three:
+October 2026, as each file's `oracle` and `captured` fields say. Each model fixture captured before
+October 31, 2026 has three; `scripts/test/te-captures.test.mjs` lists those fixtures and pins the
+build in their oracles. A fixture added later has only its Microsoft capture. The three are:
 
 - **Microsoft's ruleset**, `tests/expectations/<fixture>.json`: the parity oracle for the ported
   rules. The six files first captured with the 0.5.2 build were re-captured with 0.7.1.2, and no
@@ -145,7 +147,9 @@ Tabular Editor CLI 0.7.1.2 is a preview build that stops working after October 3
 October 31, 2026 needs a licensed build from the
 [installation page](https://docs.tabulareditor.com/en/features/te-cli/te-cli-install.html): sign
 in with a Tabular Editor account, download the build for your platform, and overwrite the old one.
-The script writes the build it ran into each file's `oracle`.
+The script writes the build it ran into each file's `oracle`; with `--from`, which converts a saved
+output instead of running `te`, the build comes from `--oracle`. A re-capture with another build
+also updates the oracle constants in `scripts/test/te-captures.test.mjs`.
 
 ## Report parity expectations
 

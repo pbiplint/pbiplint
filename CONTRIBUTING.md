@@ -47,7 +47,7 @@ A port matches its source unless the source is wrong in a way that would make pb
 
 Tabular Editor is a development-time oracle only. Users, the CLI, and CI never need it.
 
-Each model fixture has three captures from the Tabular Editor 3 command line, `te`, which docs/RELEASING.md describes under Model parity expectations. From the repository root, for one fixture:
+Each model fixture captured before October 31, 2026 has three captures from the Tabular Editor 3 command line, `te`, which docs/RELEASING.md describes under Model parity expectations; `scripts/test/te-captures.test.mjs` lists those fixtures. A fixture added later needs only its Microsoft capture (the first command below), from a licensed build or hand-verified. From the repository root, for one fixture:
 
 ```bash
 node scripts/te-expectations.mjs tests/fixtures/rule-zoo.SemanticModel tests/expectations/rule-zoo.json --rules /path/to/BPARules.json
@@ -55,7 +55,7 @@ node scripts/te-expectations.mjs tests/fixtures/rule-zoo.SemanticModel tests/exp
 node scripts/te-expectations.mjs tests/fixtures/rule-zoo.SemanticModel tests/expectations/survey/rule-zoo.json --survey tests/expectations/survey/files.json
 ```
 
-`BPARules.json` is Microsoft's ruleset with the sha256 the files' `oracle` names. The survey capture downloads the 46 rule files from GitHub and runs `te` on each, about two minutes a fixture, and warns for every rule `te` cannot evaluate, which is expected for these files. A saved `te bpa run --output-format json` output converts with `--from <file>` in place of `--rules`.
+`BPARules.json` is Microsoft's ruleset with the sha256 the files' `oracle` names. The survey capture downloads the 46 rule files from GitHub and runs `te` on each, about two minutes a fixture, and warns for every rule `te` cannot evaluate, which is expected for these files. A saved output converts with `--from <file>` in place of `--rules`. It must come from `te bpa run -m <definition> -r BPARules.json --no-defaults --no-model-rules --output-format json`, and `--oracle <text>` names the build that made it; without `--oracle`, the file keeps the oracle it had.
 
 `te` runs on Windows, macOS, and Linux. Without it, submit hand-verified expectations and say so in the pull request. Keep the `skipRules` entries and their reasons; the script keeps them from the existing file, and any `deviations` with their `ours` too.
 

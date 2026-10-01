@@ -1179,7 +1179,7 @@ describe("lint over a project", () => {
       // Without the skip, Base would read as reached by nothing, which is false.
       expect(r.findings.filter((f) => f.ruleId === "NOT_REACHED_FROM_REPORT")).toEqual([]);
       expect(r.summary.rulesSkipped).toContainEqual(skipped);
-      expect(skippedLine(r)).toContain("14 rules skipped (a model file could not be fully read)");
+      expect(skippedLine(r)).toContain("15 rules skipped (a model file could not be fully read)");
       expect(modelFact(r)).toEqual({
         layer: "model",
         label: "Model",
@@ -1206,7 +1206,7 @@ describe("lint over a project", () => {
       // The rule is counted once, under the report's reason; the model's stops only the rules whose
       // finding rests on the whole model (#128).
       expect(skippedLine(r)).toContain(
-        "1 rule skipped (a report file could not be read), 13 rules skipped (a model file could not be fully read)",
+        "1 rule skipped (a report file could not be read), 14 rules skipped (a model file could not be fully read)",
       );
       expect(modelFact(r)?.detail).toBe(
         "not reached from this report: unknown, a report file could not be read",
@@ -1243,6 +1243,7 @@ describe("lint over a project", () => {
         ["MARK_PRIMARY_KEYS", T],
         ["NOT_REACHED_FROM_REPORT", M],
         ["UDF_NOT_CALLED", M],
+        ["NAME_WITHOUT_TRANSLATION", M],
       ]);
     });
   });

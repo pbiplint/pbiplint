@@ -125,6 +125,17 @@ const legacy = [
   ),
 ];
 
+/** fr-FR, captioning the table and its measure, the measure's caption indented with `indent`. */
+const french = (indent = "\t\t\t\t\t"): File => ({
+  path: "definition/cultures/fr-FR.tmdl",
+  text: `cultureInfo fr-FR\n\ttranslations\n\t\tmodel Model\n\t\t\ttable Sales\n\t\t\t\tcaption: Ventes\n\t\t\t\tmeasure Total\n${indent}caption: Total\n`,
+});
+const translated: File[] = [
+  { path: "definition/model.tmdl", text: "model Model\n\tculture: en-US\n" },
+  table("Sales", "\tmeasure Total = 1\n"),
+  french(),
+];
+
 /** A function and the measure that calls it, in another file. */
 const taxed: File[] = [
   {
@@ -226,6 +237,13 @@ const cases: Case[] = [
     whole: taxed,
     partly: unread(taxed, "definition/tables/Measures.tmdl"),
     wouldReport: ["Local.AddTax"],
+  },
+  {
+    rule: "NAME_WITHOUT_TRANSLATION",
+    // A caption line indented with spaces is a line the parser skips, so the caption is lost.
+    whole: translated,
+    partly: damaged(translated, french().path, french("          ").text),
+    wouldReport: ["[Total]"],
   },
 ];
 

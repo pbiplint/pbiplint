@@ -453,7 +453,7 @@ describe("home page", () => {
     // Without `unreadPaths` reaching lint, the model would read as whole: the reference would be
     // reported broken, and NOT_REACHED_FROM_REPORT would run.
     expect(results.querySelector(".summary")!.textContent).toMatch(
-      /25 rules skipped \(a model file could not be fully read\)/,
+      /26 rules skipped \(a model file could not be fully read\)/,
     );
     expect(results.querySelector("#rule-broken-field-reference")).toBeNull();
   });

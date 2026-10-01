@@ -118,6 +118,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Text columns with month in the name, but not months, that have no sort-by column.",
   MONTHCOLUMN_FORMATSTRING:
     "DateTime columns with month in the name whose format string is not exactly `MMMM yyyy`.",
+  NAME_WITHOUT_TRANSLATION:
+    "Visible tables, columns, measures, and hierarchies, and the levels of visible hierarchies, that a translated culture other than the model's own gives no caption.",
   NOT_REACHED_FROM_REPORT:
     "Columns and measures that nothing in the report reaches, directly or through the model. The walk starts from every field the report names, both columns of every relationship except one to an auto date/time table, the columns and measures that row-level security filters name, the columns that object-level security names, the default column of every variation, the columns a calendar names, the columns of an aggregation table (the ones with an `alternateOf` mapping), the fields the report's own measures reference, and the user-defined functions those measures and the security filters call, and it follows DAX references, calls to user-defined functions, sort-by and group-by columns, the detail column or table each mapping names, and calculated tables until nothing new is reached.",
   NUMERIC_COLUMN_SUMMARIZE_BY:

@@ -38,6 +38,7 @@
       "'Budget'[Budget Amount]",
       "'Customer'[Customer ID]",
       "'Date'[Month Key]",
+      "'Date'[Month Short Name]",
       "'Date'[Year]",
       "'Sales'[Customer ID]",
       "'Sales'[Internal Cost]",
@@ -52,7 +53,8 @@
       "Model"
     ],
     "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
-      "'Date'[Month Name]"
+      "'Date'[Month Name]",
+      "'Date'[Month Short Name]"
     ],
     "NUMERIC_COLUMN_SUMMARIZE_BY": [
       "'Sales'[Amount]",
@@ -96,6 +98,7 @@
     ],
     "UNNECESSARY_COLUMNS": [
       "'Date'[Month Key]",
+      "'Date'[Month Short Name]",
       "'Date'[Quarter Key]",
       "'Date'[Year]",
       "'Sales'[Internal Cost]",

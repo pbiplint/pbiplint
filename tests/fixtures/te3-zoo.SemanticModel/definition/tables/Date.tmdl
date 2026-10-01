@@ -29,6 +29,12 @@ table Date
 		summarizeBy: none
 		sourceColumn: Month Name
 
+	column 'Month Short Name'
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: Month Short Name
+
 	calendar Gregorian
 
 		calendarColumnGroup = year
@@ -40,6 +46,7 @@ table Date
 		calendarColumnGroup = month
 			primaryColumn: 'Month Key'
 			associatedColumn: 'Month Name'
+			associatedColumn: 'Month Short Name'
 
 	partition Date = m
 		mode: import

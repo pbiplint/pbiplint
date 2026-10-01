@@ -88,6 +88,7 @@ export function surveyResult(run) {
   return convertFindings(teJson(run.stdout));
 }
 
+/** Checks that `data` has the sha256 `want`, or throws naming the file (`label`) and both sums. */
 export function checkSha256(data, want, label) {
   const got = sha256(data);
   if (got !== want) throw new Error(`${label}: sha256 ${got}, expected ${want}`);

@@ -39,7 +39,7 @@ table Sales
 
 ## Why it matters
 
-A format string says what a column's numbers are. Without one, a share, an amount, and a plain measurement look alike, or as Tabular Editor's guidance for its version of this rule puts it, "Users can't tell if values are currency, percentages, or plain numbers" ([Provide format string for numeric and date columns](https://docs.tabulareditor.com/en/kb/bpa-format-string-columns.html)). A format set on the column in the model applies wherever the column is used, "unless a visual or element level format string overrides it" ([Use custom format strings in Power BI Desktop](https://learn.microsoft.com/power-bi/create-reports/desktop-custom-format-strings)), so setting it once spares every report author setting it visual by visual.
+A format string says what a column's numbers are. Without one, a share, an amount, and a plain measurement look alike, or as Tabular Editor's guidance for its version of this rule puts it, "Users can't tell if values are currency, percentages, or plain numbers" ([Provide format string for numeric and date columns](https://docs.tabulareditor.com/en/kb/bpa-format-string-columns.html#why-this-matters)). A format set on the column in the model applies wherever the column is used, "unless a visual or element level format string overrides it" ([Use custom format strings in Power BI Desktop](https://learn.microsoft.com/power-bi/create-reports/desktop-custom-format-strings)), so setting it once spares every report author setting it visual by visual.
 
 ## How to fix it
 

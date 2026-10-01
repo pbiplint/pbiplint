@@ -12,8 +12,9 @@ uploaded, ever.
 
 Version 0.2.2. It covers the semantic model layer (TMDL): every rule from the
 Microsoft best-practice ruleset, ported and verified against Tabular Editor,
-plus pbiplint's own rules for a year or a date fixed in DAX and for DAX
-user-defined functions; and the report layer (PBIR): the 11 base rules of PBI
+plus pbiplint's own rules for a year or a date fixed in DAX, for DAX
+user-defined functions, for translations, and for decimal columns' format
+strings; and the report layer (PBIR): the 11 base rules of PBI
 Inspector, ported and verified against it, plus pbiplint's own rules for what
 is broken, unfinished, or expensive in a report, for a filter held to a fixed
 year, and for what the model holds that the report never reaches. Power Query
@@ -110,7 +111,7 @@ page.json or visual.json. Desktop keeps it, and its value is a list of ids or `*
 
 ## What it checks
 
-Every rule from Microsoft's Best Practice Analyzer ruleset, ported so the results match Tabular Editor on the same model, with eleven documented deviations where the source is noisier, or quieter, than it means to be; and pbiplint's own rules for a year or a date fixed in DAX, such as a measure filtered to 2025 or a date table that ends in 2026, and for a DAX user-defined function that nothing calls, has a one-word name, or has no description. Five of the Microsoft rules need VertiPaq statistics and are listed but not run. Each rule has a page at https://pbiplint.com/rules (source under `rules/`) with what it checks, an example that fires it and the same example fixed, why it matters, how to fix it, when ignoring it is legitimate, known quirks, and related rules.
+Every rule from Microsoft's Best Practice Analyzer ruleset, ported so the results match Tabular Editor on the same model, with eleven documented deviations where the source is noisier, or quieter, than it means to be; and pbiplint's own rules for a year or a date fixed in DAX, such as a measure filtered to 2025 or a date table that ends in 2026, and for a DAX user-defined function that nothing calls, has a one-word name, or has no description, for a visible name that a translated culture gives no caption, and for a visible decimal column with no format string. Four of pbiplint's own model rules take their test from Tabular Editor's rules, from Tabular Editor 3's built-in set or the community's published rule files, and are checked against Tabular Editor on the same model. Five of the Microsoft rules need VertiPaq statistics and are listed but not run. Each rule has a page at https://pbiplint.com/rules (source under `rules/`) with what it checks, an example that fires it and the same example fixed, why it matters, how to fix it, when ignoring it is legitimate, known quirks, and related rules.
 
 The report layer: the 11 base rules of [PBI Inspector](https://github.com/NatVanG/fab-inspector)
 by Nat Van Gulck, ported so the results match its command line on the same report, with six

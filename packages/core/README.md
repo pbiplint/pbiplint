@@ -39,8 +39,10 @@ forward slashes and a folder with a trailing `/`; a path that is not a file the 
 layer then knows what it lacks, so no finding or fact states what was not read.
 
 The model rules are ports of the Microsoft Best Practice Analyzer ruleset, verified against Tabular
-Editor, and pbiplint's own rules for a year or a date fixed in DAX and for DAX user-defined
-functions. The report rules are the 11 base rules of PBI Inspector by Nat Van Gulck, ported and
+Editor, and pbiplint's own rules for a year or a date fixed in DAX, for DAX user-defined functions,
+for translations, and for decimal columns' format strings, four of them taking their test from
+Tabular Editor 3's built-in rules or the community's published rule files and checked against
+Tabular Editor. The report rules are the 11 base rules of PBI Inspector by Nat Van Gulck, ported and
 verified against fab-inspector's command line, and pbiplint's own rules for the report and for the
 model and report together. A port keeps its source's quirks on purpose, apart from eleven documented
 deviations from the Microsoft ruleset and six from PBI Inspector, and each rule's page documents

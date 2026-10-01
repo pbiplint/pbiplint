@@ -137,7 +137,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   PERSPECTIVES_WITH_NO_OBJECTS:
     "Perspectives that contain no tables. The rule reads only a perspective's table entries, which is enough: each column, measure, and hierarchy a perspective includes sits under the entry for its table, so with no table entry it includes nothing.",
   PROVIDE_FORMAT_STRING_FOR_MEASURES:
-    "Visible measures with no format string and no dynamic format string.",
+    "Visible measures with no format string and no dynamic format string, other than those whose DAX plainly returns text.",
   REDUCE_ADVANCED_FILTERS:
     "Pages with more visuals carrying an Advanced filter with a condition applied than the threshold, 4 by default.",
   REDUCE_NUMBER_OF_CALCULATED_COLUMNS:

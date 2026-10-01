@@ -13,6 +13,33 @@ describe("measure format rules", () => {
     );
     expect(objectNames(rules.PROVIDE_FORMAT_STRING_FOR_MEASURES, m)).toEqual(["[A]", "[E]"]);
   });
+  it("PROVIDE_FORMAT_STRING_FOR_MEASURES leaves out a measure whose DAX plainly returns text", () => {
+    // A documented deviation: the source rule does not read what a measure returns. Text the
+    // tokens do not show plainly (F, a MAXX; H, an IF) is still reported, as is text in a comment
+    // (G), in a VAR before RETURN (I), or inside a call (J).
+    const m = measures(
+      [
+        '\tmeasure A = "Hello"',
+        '\tmeasure B = VAR x = 1 RETURN "n: " & x',
+        '\tmeasure C = FORMAT(1, "0")',
+        '\tmeasure D = concatenatex(T, T[Amount], ", ")',
+        "\tmeasure E = 1",
+        "\tmeasure F = MAXX(T, T[Amount])",
+        '\tmeasure G = 1 /* "a" & "b" */',
+        '\tmeasure H = IF(1, "a", "b")',
+        '\tmeasure I = VAR s = "x" & 1 RETURN 2',
+        '\tmeasure J = CALCULATE(VAR x = 1 RETURN x & "a")',
+      ].join("\n"),
+    );
+    expect(objectNames(rules.PROVIDE_FORMAT_STRING_FOR_MEASURES, m)).toEqual([
+      "[E]",
+      "[F]",
+      "[G]",
+      "[H]",
+      "[I]",
+      "[J]",
+    ]);
+  });
   it("INTEGER_FORMATTING flags everything that is not currency, percent, #,0 or #,0.0, including no format string", () => {
     const m = measures(
       "\tmeasure A = 1\n\tmeasure B = 1\n\t\tformatString: #,0\n\tmeasure C = 1\n\t\tformatString: $ #,0\n\tmeasure D = 1\n\t\tformatString: 0.0%\n\tmeasure E = 1\n\t\tformatString: #,0.00\n\tmeasure F = 1\n\t\tformatString: #,0.0",

@@ -1,3 +1,4 @@
+import { isPunctuation, isWord, tokenizeDax } from "../../dax/tokenize.js";
 import {
   allMeasures,
   type ExpressionKind,
@@ -22,7 +23,54 @@ const patternRule = (id: string, kinds: ExpressionKind[], patterns: RegExp[]): R
       .map((o) => o.finding),
   );
 
-// A part of the measure's table pbiplint could not read may hide the table.
+/** DAX functions that return text, for `returnsText`. */
+const TEXT_FUNCTIONS = new Set([
+  "FORMAT",
+  "CONCATENATE",
+  "CONCATENATEX",
+  "UNICHAR",
+  "COMBINEVALUES",
+  "LEFT",
+  "RIGHT",
+  "MID",
+  "UPPER",
+  "LOWER",
+  "SUBSTITUTE",
+  "REPT",
+  "TRIM",
+  "FIXED",
+  "REPLACE",
+]);
+
+/**
+ * Whether a measure plainly returns text, as its tokens show it: the result, which is what follows
+ * the last top-level `RETURN` or the whole expression when there is none, is a lone string, joins
+ * values with a top-level `&`, or starts with a call to a function that returns text. Comments and
+ * strings cannot mislead it. Text returned any other way, such as `MAXX` over a text column, is not
+ * seen, since pbiplint does not work out a DAX expression's type.
+ */
+export function returnsText(expression: string): boolean {
+  const tokens = tokenizeDax(expression);
+  let from = 0;
+  tokens.forEach((t, i) => {
+    if (t.depth === 0 && isWord(t, "RETURN")) from = i + 1;
+  });
+  const result = tokens.slice(from);
+  const first = result[0];
+  if (first === undefined) return false;
+  if (result.length === 1 && first.kind === "string") return true;
+  if (result.some((t) => t.depth === 0 && t.kind === "operator" && t.text === "&")) return true;
+  return (
+    first.kind === "identifier" &&
+    TEXT_FUNCTIONS.has(first.text.toUpperCase()) &&
+    isPunctuation(result[1], "(")
+  );
+}
+
+// A measure that plainly returns text is left out, which the source does not do: a documented
+// deviation. Power BI sets no format string on text, and Tabular Editor 3's built-in version of
+// the rule leaves out every measure it reads as text. A part of the measure's table pbiplint could
+// not read may hide the table.
 export const PROVIDE_FORMAT_STRING_FOR_MEASURES = bpaRule(
   "PROVIDE_FORMAT_STRING_FOR_MEASURES",
   { skipWhenModelUnread: tablesPartlyRead },
@@ -33,7 +81,8 @@ export const PROVIDE_FORMAT_STRING_FOR_MEASURES = bpaRule(
           !x.isHidden &&
           !x.table.isHidden &&
           isBlank(x.formatString) &&
-          isBlank(x.formatStringDefinition),
+          isBlank(x.formatStringDefinition) &&
+          !returnsText(x.expression),
       )
       .map(finding.measure),
 );

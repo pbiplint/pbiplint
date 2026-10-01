@@ -102,7 +102,7 @@ Often the better move is a name that says so. An object whose name carries its y
 
 ## Related rules
 
-- `MODEL_SHOULD_HAVE_A_DATE_TABLE` reports a model with no marked date table and no table that defines a calendar; a date table built with CALENDAR counts once it is marked, and this rule checks where it ends.
+- `MODEL_SHOULD_HAVE_A_DATE_TABLE` reports a model with no marked date table and no table that defines a calendar; a date table built with CALENDAR counts once it is marked or defines a calendar, and this rule checks where it ends.
 - `DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE` asks that a table with date or calendar in its name be marked as a date table, and does not report one that defines a calendar.
 - `REMOVE_AUTO-DATE_TABLE` reports Desktop's auto date/time tables, which this rule leaves alone.
 - `HARDCODED_YEAR_IN_FILTER` reports the same problem in the report: a Filters pane filter held to a fixed year.

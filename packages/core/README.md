@@ -42,7 +42,7 @@ The model rules are ports of the Microsoft Best Practice Analyzer ruleset, verif
 Editor, and pbiplint's own rules for a year or a date fixed in DAX and for DAX user-defined
 functions. The report rules are the 11 base rules of PBI Inspector by Nat Van Gulck, ported and
 verified against fab-inspector's command line, and pbiplint's own rules for the report and for the
-model and report together. A port keeps its source's quirks on purpose, apart from five documented
+model and report together. A port keeps its source's quirks on purpose, apart from eleven documented
 deviations from the Microsoft ruleset and six from PBI Inspector, and each rule's page documents
 them.
 

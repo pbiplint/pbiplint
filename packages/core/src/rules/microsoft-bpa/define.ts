@@ -75,9 +75,9 @@ type ModelCheck = (model: Model, ctx: RuleContext) => RuleFinding[];
 /**
  * A port of one Microsoft BPA rule: metadata from the ruleset, behavior from `check`, and what
  * stops it, when anything does, from the spec given before `check`. A port keeps the source's
- * quirks, apart from the five deviations named on the pages and in the rules' doc comments; those a
- * fixture shows are pinned by `ours` in the model expectation files, the others by the rules' unit
- * tests.
+ * quirks, apart from the eleven deviations named on the pages and in the rules' doc comments;
+ * those a fixture shows are pinned by `ours` in the model expectation files, the others by the
+ * rules' unit tests.
  * The description is pbiplint's own summary from the rule page, never the ruleset's text; the
  * ruleset description is read only for the reference URLs it carries.
  */

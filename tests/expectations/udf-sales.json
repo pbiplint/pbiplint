@@ -1,7 +1,7 @@
 {
   "fixture": "tests/fixtures/udf-sales.SemanticModel",
-  "oracle": "Tabular Editor CLI 0.5.2.11639 with BPARules.json sha256 ddb9cff4c2a0611a6467e2559d38319d9867381998066473ffa1e11c2d360392",
-  "captured": "2026-09-28",
+  "oracle": "Tabular Editor CLI 0.7.1.2 with BPARules.json sha256 ddb9cff4c2a0611a6467e2559d38319d9867381998066473ffa1e11c2d360392",
+  "captured": "2026-10-01",
   "skipRules": {},
   "deviations": {
     "INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED": "A USERELATIONSHIP inside a user-defined function counts as activating the relationship, which Tabular Editor does not count, since the source rule reads measures and calculation items only.",

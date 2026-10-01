@@ -1,0 +1,17 @@
+table Budget
+	isHidden
+
+	measure 'Budget Total' = SUM('Budget'[Budget Amount])
+
+	column 'Budget Amount'
+		dataType: double
+		summarizeBy: sum
+		sourceColumn: Budget Amount
+
+	partition Budget = m
+		mode: import
+		source =
+				let
+					Source = Table.FromRows({})
+				in
+					Source

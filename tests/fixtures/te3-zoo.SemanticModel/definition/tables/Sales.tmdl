@@ -1,0 +1,80 @@
+table Sales
+
+	measure 'Total Amount' = SUM('Sales'[Amount])
+		formatString: #,0.00
+
+	measure 'Order Count' = COUNTROWS('Sales')
+
+	measure 'Top Region Label' =
+			VAR _region = MAXX(TOPN(1, VALUES('Customer'[Region]), [Total Amount]), 'Customer'[Region])
+			RETURN "Top region: " & _region
+
+	measure 'Amount Text' = FORMAT([Total Amount], "#,0")
+
+	measure 'Status Note' = "Preliminary"
+
+	measure 'Last Region' = MAXX('Customer', 'Customer'[Region])
+
+	column 'Order ID'
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: Order ID
+
+	column 'Customer ID'
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: Customer ID
+
+	column 'Order Date'
+		dataType: dateTime
+		isHidden
+		summarizeBy: none
+		sourceColumn: Order Date
+
+	column Amount
+		dataType: decimal
+		formatString: #,0.00
+		summarizeBy: sum
+		sourceColumn: Amount
+
+	column 'Unit Price'
+		dataType: decimal
+		summarizeBy: none
+		sourceColumn: Unit Price
+
+	column 'Discount Pct'
+		dataType: double
+		summarizeBy: none
+		sourceColumn: Discount Pct
+
+	column 'Tax Rate'
+		dataType: double
+		formatString: 0.00%
+		summarizeBy: none
+		sourceColumn: Tax Rate
+
+	column 'Internal Cost'
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: Internal Cost
+
+	column Quantity
+		dataType: int64
+		summarizeBy: sum
+		sourceColumn: Quantity
+
+	column 'Ship Date'
+		dataType: dateTime
+		summarizeBy: none
+		sourceColumn: Ship Date
+
+	partition Sales = m
+		mode: import
+		source =
+				let
+					Source = Table.FromRows({})
+				in
+					Source

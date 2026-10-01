@@ -1,0 +1,22 @@
+table 'Time Intelligence'
+
+	calculationGroup
+		precedence: 1
+
+		calculationItem Current = SELECTEDMEASURE()
+
+		calculationItem 'Prior Year' = CALCULATE(SELECTEDMEASURE(), SAMEPERIODLASTYEAR('Date'[Date]))
+
+	column Name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Name
+
+	column Ordinal
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: Ordinal
+
+	partition 'Time Intelligence' = calculationGroup
+		mode: import

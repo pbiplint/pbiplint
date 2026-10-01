@@ -1,0 +1,50 @@
+table Date
+
+	column Date
+		dataType: dateTime
+		summarizeBy: none
+		sourceColumn: Date
+
+	column Year
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: Year
+
+	column 'Quarter Key'
+		dataType: int64
+		isHidden
+		isAvailableInMdx: false
+		summarizeBy: none
+		sourceColumn: Quarter Key
+
+	column 'Month Key'
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: Month Key
+
+	column 'Month Name'
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Month Name
+
+	calendar Gregorian
+
+		calendarColumnGroup = year
+			primaryColumn: Year
+
+		calendarColumnGroup = quarter
+			primaryColumn: 'Quarter Key'
+
+		calendarColumnGroup = month
+			primaryColumn: 'Month Key'
+			associatedColumn: 'Month Name'
+
+	partition Date = m
+		mode: import
+		source =
+				let
+					Source = Table.FromRows({})
+				in
+					Source

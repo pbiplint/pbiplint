@@ -1,0 +1,7 @@
+relationship 5f0c2a10-0000-4000-8000-000000000001
+	fromColumn: Sales.'Customer ID'
+	toColumn: Customer.'Customer ID'
+
+relationship 5f0c2a10-0000-4000-8000-000000000002
+	fromColumn: Sales.'Order Date'
+	toColumn: Date.Date

@@ -1,0 +1,4 @@
+function Discount = (price: NUMERIC, pct: DOUBLE) => price * ( 1 - pct )
+
+/// Adds tax to a price.
+function 'Pricing.WithTax' = (price: NUMERIC, rate: DOUBLE) => price * ( 1 + rate )

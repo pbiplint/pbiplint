@@ -126,10 +126,7 @@ expectations".
 Every capture from `te` under `tests/expectations/` was made with Tabular Editor CLI 0.7.1.2 in
 October 2026, as each file's `oracle` and `captured` fields say. Each model fixture captured before
 October 31, 2026 has three; `scripts/test/te-captures.test.mjs` lists those fixtures and pins the
-build in their oracles. A fixture added later has only its Microsoft capture. A listed fixture
-keeps its captures as they are once 0.7.1.2 stops working: a change to it changes its Microsoft
-capture, which the survey's run of Microsoft's own file must equal, so all seven are then
-re-captured three ways with one licensed build, or the change goes in a new fixture. The three are:
+build in their oracles. A fixture added later has only its Microsoft capture. The three are:
 
 - **Microsoft's ruleset**, `tests/expectations/<fixture>.json`: the parity oracle for the ported
   rules. The six files first captured with the 0.5.2 build were re-captured with 0.7.1.2, and no
@@ -143,6 +140,10 @@ re-captured three ways with one licensed build, or the change goes in a new fixt
   [custom rules](https://github.com/pbiplint/pbiplint/issues/118). The rule files themselves are
   not committed, since several carry no license: the list pins each one to a commit and a sha256,
   and the script fetches it from there and checks it.
+
+A listed fixture keeps its captures as they are once 0.7.1.2 stops working: a change to it changes
+its Microsoft capture, which the survey's run of Microsoft's own file must equal, so every listed
+fixture is then re-captured three ways with one licensed build, or the change goes in a new fixture.
 
 Tabular Editor CLI 0.7.1.2 is a preview build that stops working after October 31, 2026, and the
 [0.7.0 release post](https://tabulareditor.com/blog/tabular-editor-cli-0-7-0-release) (September

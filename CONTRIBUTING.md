@@ -47,7 +47,7 @@ A port matches its source unless the source is wrong in a way that would make pb
 
 Tabular Editor is a development-time oracle only. Users, the CLI, and CI never need it.
 
-Each model fixture captured before October 31, 2026 has three captures from the Tabular Editor 3 command line, `te`, which docs/RELEASING.md describes under Model parity expectations; `scripts/test/te-captures.test.mjs` lists those fixtures. A fixture added later needs only its Microsoft capture (the first command below), from a licensed build or hand-verified. A listed fixture keeps its captures as they are once the build that made them stops working: a change to it changes its Microsoft capture, which the survey's run of Microsoft's own file must equal, so it would need all seven listed fixtures re-captured three ways with one licensed build. From the repository root, for one fixture:
+Each model fixture captured before October 31, 2026 has three captures from the Tabular Editor 3 command line, `te`, which docs/RELEASING.md describes under Model parity expectations; `scripts/test/te-captures.test.mjs` lists those fixtures. A fixture added later needs only its Microsoft capture (the first command below), from a licensed build or hand-verified. A listed fixture keeps its captures as they are once the build that made them stops working: a change to it changes its Microsoft capture, which the survey's run of Microsoft's own file must equal, so it would need every listed fixture re-captured three ways with one licensed build. From the repository root, for one fixture:
 
 ```bash
 node scripts/te-expectations.mjs tests/fixtures/rule-zoo.SemanticModel tests/expectations/rule-zoo.json --rules /path/to/BPARules.json

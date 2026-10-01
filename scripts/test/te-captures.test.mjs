@@ -19,8 +19,8 @@ const isObject = (value) => typeof value === "object" && value !== null && !Arra
 // The model fixtures captured three ways with te 0.7.1.2 before October 31, 2026, by name. A
 // fixture whose captures are made before October 31, 2026 (such as #164's) is added here. A fixture
 // added later has only its Microsoft capture and is not listed. A listed fixture keeps its captures
-// as they are after that date: a change to it needs all seven re-captured three ways with one
-// licensed build (docs/RELEASING.md).
+// as they are after that date: a change to it needs every listed fixture re-captured three ways
+// with one licensed build (docs/RELEASING.md).
 const CAPTURED = [
   "data-sources",
   "kitchen-sink",

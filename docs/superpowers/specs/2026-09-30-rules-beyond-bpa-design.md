@@ -1,13 +1,13 @@
 # Rules beyond Microsoft's set: what #117 builds
 
-Issue #117, milestone 0.2.3. Written September 30, 2026, after Michael settled the list and approved this design in outline the same day; approved October 1, 2026. Amended the same day with what the capture plan measured on `te` 0.7.1.2 (sections 3.1, 3.4, 3.5, and 5.1), and with Michael's ruling that a column a feature needs counts as used (sections 1, 4.2, and 4.5). Section 8 lists what is still open.
+Issue #117, milestone 0.2.3. Written September 30, 2026, after Michael settled the list and approved this design in outline the same day; approved October 1, 2026. Amended the same day with what the capture plan measured on `te` 0.7.1.2 (sections 3.1, 3.4, 3.5, and 5.1), with Michael's rulings that a column a feature needs counts as used and that a calendar's month name still wants a sort-by column (sections 1, 4.2, and 4.5), and with what the plan for pull request 2 measured (sections 2, 4.2, 4.5, and 5.3). Section 8 lists what is still open.
 
 ## 1. Sources and decisions
 
 - **The issue.** #117 as corrected on September 30, 2026, and its comment of that day, which records every candidate kept or dropped with its reason. This spec covers the issue's last four boxes: the capture, the rules, the rule pages, and the existing rules.
 - **The research.** Four reports in `.superpowers/research/2026-09-30-117-candidates/` (git-ignored): translations and perspectives, format strings and the compatibility level, naming and layout, and the TODO rule with Tabular Editor 3's versions of Microsoft's rules. They measured the #104 corpus (1,317 models: 970 saved by Power BI Desktop, 45 written by AI agents, 302 by other tools), read sampled findings by hand, and ran Tabular Editor CLI 0.7.1.2 on targeted models.
 - **Michael's decisions of September 30, 2026.** Two new rules (section 5). Four existing rules change, each as a recorded deviation, with a calendar reader they share; a Direct Lake Quirk; a perspectives page fix (section 4). Everything else dropped, with display folders and CamelCase handed to custom rules (#118). The work is ordered capture first, then rules (section 2). The addition beyond Tabular Editor 3 for `DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE` (section 4.3) is approved.
-- **Michael's ruling of October 1, 2026.** A column the model or one of its features needs counts as used: "not used" stands for "takes up space without providing value". So `UNNECESSARY_COLUMNS` joins the calendar changes (section 4.2), a fifth existing rule.
+- **Michael's ruling of October 1, 2026.** A column the model or one of its features needs counts as used: "not used" stands for "takes up space without providing value". So `UNNECESSARY_COLUMNS` joins the calendar changes (section 4.2), a fifth existing rule. The same day, on sorting: a month name column without a sort-by column is an opportunity for improvement whether or not a calendar names it, so `MONTH_(AS_A_STRING)_MUST_BE_SORTED` stays as it is (section 4.2).
 - **Michael's bar** (September 30, 2026): the smallest change that meets the boxes, a shape handled only when real files show it or Desktop writes it, and what was left out on that ground listed (section 9).
 - **The deadline.** `te` 0.7.1.2 stops working after October 31, 2026, and a later build needs a license. Everything that needs `te` is in pull request 1, so the rules can be built after that date against committed captures.
 - **Already checked:** `te` 0.7.1.2 with Microsoft's ruleset reproduces every committed model expectation exactly (724 findings on the six fixtures), so moving the oracle to 0.7 changes no captured result.
@@ -17,7 +17,7 @@ Issue #117, milestone 0.2.3. Written September 30, 2026, after Michael settled t
 | Pull request | What | Needs `te` |
 | --- | --- | --- |
 | 1. The capture | `scripts/te-expectations.mjs` for 0.7, three capture modes; the six Microsoft expectation files re-captured; a new fixture; Tabular Editor 3 built-in captures and survey-file captures for every fixture; RELEASING and CONTRIBUTING | Yes, by October 31, 2026 |
-| 2. The existing rules | Calendar reader; deviations in five rules; the text-measure skip; Direct Lake Quirk; perspectives page fix | No |
+| 2. The existing rules | Calendar reader; deviations in five rules; the text-measure skip; Direct Lake Quirk; perspectives page fix; the first two rows of the check against Tabular Editor 3's built-in rules (section 5.3); the count of deviations in the copy; the docs on captured fixtures | No |
 | 3. The new rules | `NAME_WITHOUT_TRANSLATION`, `DECIMAL_COLUMN_WITHOUT_FORMAT_STRING`, their pages, and the check against their sources | No |
 
 Pull requests 2 and 3 are independent of each other; 2 goes first because it is smaller. #164 (calculated columns saved with no `dataType`) is a separate issue with its own pull request, fixture, and capture, also before October 31, 2026 (section 7).
@@ -79,6 +79,9 @@ A column a calendar names is, for these rules, a column the calendar needs: "the
 - **`ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS`** skips a column a calendar names, as Tabular Editor 3's built-in rule does (`not UsedInCalendars.Any()`). In the corpus this clears 6 false findings in 2 Desktop models, all hidden primary columns. te3-zoo's capture backs this for both kinds of column: Tabular Editor 3's built-in rule reports neither the calendar's hidden primary columns nor its hidden associated column `'Date'[Month Short Name]`, which it does report on a copy whose calendar leaves that column out (measured October 1, 2026).
 - **`SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS`** reports a column a calendar names that is set to `isAvailableInMdx: false`, as Tabular Editor 3's does, so the two rules stay mirrors. No corpus model has one.
 - **`UNNECESSARY_COLUMNS`** counts a column a calendar names as used. Michael's ruling of October 1, 2026: "not used" is the rule's proxy for a column that takes up space in the model without providing value, and a column the model or one of its features needs to work is providing value. Tabular Editor 3 has no version of this rule, so this goes beyond it, as the rule's existing `groupByColumn` deviation for field parameters already does. te3-zoo shows it: Microsoft's rule reports the calendar's three hidden primary columns and its hidden associated column.
+- **`NOT_REACHED_FROM_REPORT`**, pbiplint's own rule, starts its walk from the columns a calendar names as well, under the same ruling (found by pull request 2's final review, October 1, 2026).
+- **Both IsAvailableInMdx rules then match Tabular Editor 3's built-in versions** on all seven captured fixtures (measured on a draft, October 1, 2026), so `packages/core/test/sourced-parity.test.ts` arrives in pull request 2 with these two rules, and pull request 3 adds its four (section 5.3).
+- **`MONTH_(AS_A_STRING)_MUST_BE_SORTED` unchanged:** it reports a calendar's associated month name columns that have no `sortByColumn`, as for any other month name column. Michael, October 1, 2026: a month name sorts alphabetically until it sorts by the month number, so one without that is an opportunity for improvement. Microsoft's own calendar example gives its associated `MonthName` a `sortByColumn` ([TMDL script for calendars](https://learn.microsoft.com/power-bi/transform-model/desktop-time-intelligence#tmdl-script-for-calendars)).
 - **Direct Lake, a Quirk only:** Tabular Editor 3's versions skip tables with a Direct Lake partition, and no source says why (606 Desktop findings in 31 models). The false rule's page says so, and that Direct Lake loads columns on demand rather than processing them at refresh ([Direct Lake overview](https://learn.microsoft.com/fabric/fundamentals/direct-lake-overview)), in Quirks and in When to ignore it.
 
 ### 4.3 The date table rules
@@ -88,7 +91,7 @@ A column a calendar names is, for these rules, a column the calendar needs: "the
 
 ### 4.4 Measures that plainly return text
 
-`PROVIDE_FORMAT_STRING_FOR_MEASURES` skips a measure whose result, after its last top-level `RETURN` or the whole expression when there is none, is a lone string literal, holds a top-level `&`, or starts with a text function: `FORMAT`, `CONCATENATE`, `CONCATENATEX`, `UNICHAR`, `COMBINEVALUES`, `LEFT`, `RIGHT`, `MID`, `UPPER`, `LOWER`, `SUBSTITUTE`, `REPT`, `TRIM`, `FIXED`, `REPLACE`. It reads the tokens #104's tokenizer gives, so comments and strings cannot mislead it.
+`PROVIDE_FORMAT_STRING_FOR_MEASURES` skips a measure whose result, after its last top-level `RETURN` or the whole expression when there is none, is a lone string literal, holds a top-level `&`, or starts with a text function: `FORMAT`, `CONCATENATE`, `CONCATENATEX`, `UNICHAR`, `COMBINEVALUES`, `LEFT`, `RIGHT`, `MID`, `UPPER`, `LOWER`, `SUBSTITUTE`, `REPT`, `TRIM`, `FIXED`, `REPLACE`, `USERPRINCIPALNAME`, `USERNAME`, `USEROBJECTID`, `USERCULTURE`, `CUSTOMDATA`, `SELECTEDMEASURENAME`, `NAMEOF`, `TOJSON`, `TOCSV` (the last nine, which return text in every case, added by pull request 2's final review, October 1, 2026). It reads the tokens #104's tokenizer gives, so comments and strings cannot mislead it.
 
 Microsoft: "You can't set a custom format string for fields that are of type string or Boolean" ([Use custom format strings in Power BI Desktop, Considerations and limitations](https://learn.microsoft.com/power-bi/create-reports/desktop-custom-format-strings#considerations-and-limitations)). Tabular Editor 3's built-in rule skips every measure it reads as not a number or a date. pbiplint has no DAX type inference, so it skips only what it can see: on the research's 36-model sample this matched 176 of the 390 measures Tabular Editor types as text and nothing else, and corpus-wide it clears 1,161 Desktop findings in 234 models. A measure that returns text another way, such as `MAXX` over a text column, is still reported; the page's Quirks say so, beside its existing When to ignore it line.
 
@@ -96,7 +99,9 @@ Following a returned variable, or requiring every branch of an `IF` or `SWITCH` 
 
 ### 4.5 The deviations
 
-Each change is a recorded deviation where a fixture shows it: `PROVIDE_FORMAT_STRING_FOR_MEASURES` on tvw-baseline (`[Top Region Label]` is skipped, `[Top Product Label]`, a `MAXX` over a text column, is still reported) and on te3-zoo; the five calendar changes on te3-zoo. Each rule page states its deviation in a sentence, as the existing ones do. The ported model rules' deviations go from five in three rules to eleven in eight (`UNNECESSARY_COLUMNS` already has deviations); the README's "five documented deviations" follows, in this pull request.
+Each change is a recorded deviation where a fixture shows it: `PROVIDE_FORMAT_STRING_FOR_MEASURES` on tvw-baseline (`[Top Region Label]` is skipped, `[Top Product Label]`, a `MAXX` over a text column, is still reported) and on te3-zoo; the five calendar changes on te3-zoo. Each rule page states its deviation in a sentence, as the existing ones do. The ported model rules' deviations go from five in three rules to eleven in eight (`UNNECESSARY_COLUMNS` already has deviations); the count in the root, CLI, and core READMEs, the site's About page, and `bpaRule`'s doc comment follows, in this pull request.
+
+Pull request 2 also carries a sentence from pull request 1's final review: after October 31, 2026 a fixture listed in `scripts/test/te-captures.test.mjs` keeps its captures as they are, since a change to it needs all seven re-captured three ways with one licensed build, so a new construct goes in a new fixture; and a new `--from` file without `--oracle` names 0.7.1.2. CONTRIBUTING, RELEASING, and the test's own comment say so.
 
 ### 4.6 The perspectives page
 
@@ -134,6 +139,10 @@ Each change is a recorded deviation where a fixture shows it: `PROVIDE_FORMAT_ST
 | `DECIMAL_COLUMN_WITHOUT_FORMAT_STRING` | te3 | `TE3_BUILT_IN_FORMAT_STRING_COLUMNS` |
 | `UDF_USE_COMPOUND_NAMES` | te3 | `TE3_BUILT_IN_UDF_USE_COMPOUND_NAMES` |
 | `UDF_WITHOUT_DESCRIPTION` | te3 | `TE3_BUILT_IN_VISIBLE_UDF_NO_DESCRIPTION` |
+| `ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS` | te3 | `TE3_BUILT_IN_SET_ISAVAILABLEINMDX_FALSE` |
+| `SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS` | te3 | `TE3_BUILT_IN_SET_ISAVAILABLEINMDX_TRUE_NECESSARY` |
+
+The last two rows come first, in pull request 2 (section 4.2), with the te3 capture alone and no deviation to read; pull request 3 adds the first four, the survey capture, and the deviation checks.
 
 On every fixture, pbiplint's findings for the rule equal the union of the source rules' findings, or, where the capture records a deviation for the rule, its `ours`. The same checks as `parity.test.ts`: a deviation must show a difference on that fixture and name a mapped rule. Object names compare as Tabular Editor writes them, which the plan checks against the captures for levels and hierarchies before writing the rules.
 

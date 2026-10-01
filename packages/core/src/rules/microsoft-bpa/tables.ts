@@ -21,16 +21,24 @@ import { bpaRule } from "./define.js";
 const hasDateTimeKey = (t: Table): boolean =>
   t.columns.some((c) => c.isKey && dataType(c) === "datetime");
 
-// A model file pbiplint could not fully read may hold the date table.
+const hasCalendar = (t: Table): boolean => (t.calendars?.length ?? 0) > 0;
+
+// A table that defines a calendar satisfies the rule, as it does Tabular Editor 3's built-in
+// version and not the source: a documented deviation. A model file pbiplint could not fully read
+// may hold the date table.
 export const MODEL_SHOULD_HAVE_A_DATE_TABLE = bpaRule(
   "MODEL_SHOULD_HAVE_A_DATE_TABLE",
   { skipWhenModelUnread: modelPartlyRead },
   (m) =>
-    m.tables.some((t) => t.dataCategory === "Time" && hasDateTimeKey(t)) ? [] : [finding.model(m)],
+    m.tables.some((t) => hasCalendar(t) || (t.dataCategory === "Time" && hasDateTimeKey(t)))
+      ? []
+      : [finding.model(m)],
 );
 
-// A part of the table pbiplint could not read may mark it, hold its key, or make it a calculation
-// group, which the rule leaves out.
+// A table that defines a calendar is left out, which the source does not do and Tabular Editor 3
+// has no version of: a documented deviation. A part of the table pbiplint could not read may mark
+// it, hold its key, define a calendar on it, or make it a calculation group, which the rule leaves
+// out.
 export const DATE_CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE = bpaRule(
   "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE",
   { skipWhenModelUnread: tablesPartlyRead },
@@ -40,6 +48,7 @@ export const DATE_CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE = bpaRule(
         const u = t.name.toUpperCase();
         return (
           (u.includes("DATE") || u.includes("CALENDAR")) &&
+          !hasCalendar(t) &&
           (t.dataCategory !== "Time" || !hasDateTimeKey(t))
         );
       })

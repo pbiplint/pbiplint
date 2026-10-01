@@ -36,16 +36,16 @@ const listOf = (items: string[]): string =>
  * What the report reaches in the model, to a fixed point (spec section 6). Roots: every resolved
  * report reference (a hierarchy's level columns, and the date column a variation reference goes
  * through), both columns of every relationship except one to an auto date/time table, the columns
- * and measures RLS filters reference, the columns OLS names, variation default columns, every
- * column with an `alternateOf` mapping (an aggregation table's), and the references of the
- * report's own measures. From a reached object: a measure reaches what its DAX references; a
- * calculated column likewise; a column reaches its table, its sort-by column, the columns it
- * groups by (a field parameter's hidden Fields column), the base column or table its `alternateOf`
- * mapping names, and, on a calculated table, the table's expression references; a calculation
- * group table reaches its items' references. Every DAX expression the walk reads, a user-defined
- * function's too, also reaches the functions it calls, and a function reaches what its body
- * references; the functions the report's own measures and the RLS filters call are roots. The path
- * kept for each object is the shortest, so a finding's detail can say what reached it or why
+ * and measures RLS filters reference, the columns OLS names, variation default columns, the columns
+ * a calendar names, every column with an `alternateOf` mapping (an aggregation table's), and the
+ * references of the report's own measures. From a reached object: a measure reaches what its DAX
+ * references; a calculated column likewise; a column reaches its table, its sort-by column, the
+ * columns it groups by (a field parameter's hidden Fields column), the base column or table its
+ * `alternateOf` mapping names, and, on a calculated table, the table's expression references; a
+ * calculation group table reaches its items' references. Every DAX expression the walk reads, a
+ * user-defined function's too, also reaches the functions it calls, and a function reaches what its
+ * body references; the functions the report's own measures and the RLS filters call are roots. The
+ * path kept for each object is the shortest, so a finding's detail can say what reached it or why
  * nothing did.
  */
 export function buildReachabilityIndex(
@@ -122,6 +122,10 @@ export function buildReachabilityIndex(
     for (const c of t.columns)
       for (const v of c.variations)
         if (v.defaultColumn) reach(columnOf(v.defaultColumn.table, v.defaultColumn.column), null);
+  // A calendar needs the columns it names for time intelligence.
+  for (const t of model.tables)
+    for (const cal of t.calendars ?? [])
+      for (const name of cal.columns) reach(columnOf(t.name, name), null);
   // An aggregation table's columns: report queries name the detail table, and Power BI answers
   // them from the aggregation table where it can, so no report names these columns. The walk is
   // breadth-first and keeps the first path it finds, so of two paths of the same length the one

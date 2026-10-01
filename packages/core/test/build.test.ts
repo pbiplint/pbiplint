@@ -87,6 +87,43 @@ describe("buildModel on the spec sample", () => {
     expect(sales.calculationGroup!.items[1]!.formatStringDefinition).toBe('"0.0%"');
   });
 
+  it("reads each calendar's primary, associated, and time-related columns, unquoted, in file order", () => {
+    const m = modelFrom(
+      [
+        "table Date",
+        "\tcolumn Date",
+        "\t\tdataType: dateTime",
+        "\tcalendar 'Fiscal Calendar'",
+        "\t\tlineageTag: 0a1b",
+        "",
+        "\t\tcalendarColumnGroup = year",
+        "\t\t\tprimaryColumn: Year",
+        "",
+        "\t\tcalendarColumnGroup = month",
+        "\t\t\tprimaryColumn: 'Month Key'",
+        "\t\t\tassociatedColumn: 'Month Name'",
+        "\t\t\tassociatedColumn: MonthShort",
+        "",
+        "\t\tcalendarColumnGroup",
+        "\t\t\tcolumn: 'Holiday Name'",
+        "\t\t\tcolumn: IsWorkingDay",
+        "table Sales",
+        "\tcolumn Amount",
+        "\t\tdataType: decimal",
+      ].join("\n"),
+    );
+    const [date, sales] = m.tables;
+    expect(date!.calendars).toEqual([
+      expect.objectContaining({
+        name: "Fiscal Calendar",
+        table: date,
+        columns: ["Year", "Month Key", "Month Name", "MonthShort", "Holiday Name", "IsWorkingDay"],
+        location: { file: "inline.tmdl", line: 4 },
+      }),
+    ]);
+    expect(sales!.calendars).toEqual([]);
+  });
+
   it("builds relationships with defaults, roles with table permissions, perspectives, expressions, cultures, functions", () => {
     expect(model.relationships[0]).toMatchObject({
       fromTable: "Sales",

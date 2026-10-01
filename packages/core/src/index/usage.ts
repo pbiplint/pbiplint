@@ -12,6 +12,11 @@ export interface UsageIndex {
    * `groupByColumn`), as a field parameter's display column groups by its hidden Fields column.
    */
   usedInGroupBy(c: Column): boolean;
+  /**
+   * A calendar on the column's table names it, as a primary, associated, or time-related column.
+   * The calendar needs it for time intelligence, and for sorting when it is a primary column.
+   */
+  usedInCalendars(c: Column): boolean;
 }
 
 const key = (table: string, column: string): string => `${table} ${column}`;
@@ -21,7 +26,10 @@ export function buildUsageIndex(model: Model): UsageIndex {
   const levelColumns = new Set<string>();
   const variationDefaults = new Set<string>();
   const groupByTargets = new Set<string>();
+  const calendarColumns = new Set<string>();
   for (const t of model.tables) {
+    for (const cal of t.calendars ?? [])
+      for (const c of cal.columns) calendarColumns.add(key(t.name, c));
     for (const c of t.columns) {
       if (c.sortByColumn !== undefined) sortTargets.add(key(t.name, c.sortByColumn));
       for (const g of c.groupByColumns) groupByTargets.add(key(t.name, g));
@@ -37,5 +45,6 @@ export function buildUsageIndex(model: Model): UsageIndex {
     usedInHierarchies: (c) => levelColumns.has(key(c.table.name, c.name)),
     usedInVariations: (c) => variationDefaults.has(key(c.table.name, c.name)),
     usedInGroupBy: (c) => groupByTargets.has(key(c.table.name, c.name)),
+    usedInCalendars: (c) => calendarColumns.has(key(c.table.name, c.name)),
   };
 }

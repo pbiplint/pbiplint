@@ -51,6 +51,22 @@ export interface Table extends Named {
   partitions: Partition[];
   hierarchies: Hierarchy[];
   calculationGroup?: CalculationGroup;
+  /**
+   * The table's calendars, for calendar-based time intelligence. Optional, so a `Table` built
+   * by hand against an earlier version still type-checks; buildModel always sets it.
+   */
+  calendars?: Calendar[];
+}
+
+/**
+ * A `calendar` block under a table. `columns` holds the names, unquoted and in file order, of the
+ * table's columns its `calendarColumnGroup` blocks name: each `primaryColumn` and
+ * `associatedColumn`, and each `column` of a group with no category, which TMDL reads as
+ * time-related. A calendar can name only columns of its own table.
+ */
+export interface Calendar extends Named {
+  table: Table;
+  columns: string[];
 }
 
 export interface Variation {

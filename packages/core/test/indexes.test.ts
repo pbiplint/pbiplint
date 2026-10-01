@@ -199,6 +199,29 @@ describe("usage index", () => {
     expect(usage.usedInGroupBy(col("P Order"))).toBe(false);
     expect(usage.usedInGroupBy(col("P"))).toBe(false);
   });
+  it("knows the columns a calendar on their own table names", () => {
+    const m = modelFrom(
+      [
+        "table Date",
+        "\tcolumn Year",
+        "\t\tdataType: int64",
+        "\tcolumn Spare",
+        "\t\tdataType: int64",
+        "\tcalendar Gregorian",
+        "\t\tcalendarColumnGroup = year",
+        "\t\t\tprimaryColumn: Year",
+        "table Other",
+        "\tcolumn Year",
+        "\t\tdataType: int64",
+      ].join("\n"),
+    );
+    const { usage } = buildIndexes({ model: m });
+    const col = (table: string, name: string) =>
+      m.tables.find((t) => t.name === table)!.columns.find((c) => c.name === name)!;
+    expect(usage.usedInCalendars(col("Date", "Year"))).toBe(true);
+    expect(usage.usedInCalendars(col("Date", "Spare"))).toBe(false);
+    expect(usage.usedInCalendars(col("Other", "Year"))).toBe(false);
+  });
 });
 
 describe("reference index", () => {

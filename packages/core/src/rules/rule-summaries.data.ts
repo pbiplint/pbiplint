@@ -45,7 +45,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   DATA_COLUMNS_MUST_HAVE_A_SOURCE_COLUMN:
     "Data columns with no source column. Calculated columns are not checked.",
   "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE":
-    "Tables with date or calendar in the name that are not marked as a date table, meaning the data category is not Time or no DateTime column is marked as the key.",
+    "Tables with date or calendar in the name that define no calendar and are not marked as a date table, meaning the data category is not Time or no DateTime column is marked as the key.",
   DATECOLUMN_FORMATSTRING:
     "DateTime columns with date in the name whose format string is not exactly `mm/dd/yyyy`.",
   DAX_COLUMNS_FULLY_QUALIFIED:
@@ -93,7 +93,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   INTEGER_FORMATTING:
     "Measures whose static format string is not a recognized whole-number, currency, or percentage format. The only format strings the rule accepts are `#,0`, `#,0.0`, and any string containing `$` or `%`. A measure with no format string at all fires too, and that is the common case: the rule reads only the format string, so it cannot tell an unformatted currency or ratio from an unformatted count.",
   ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS:
-    "Hidden columns, or columns in hidden tables, that still have IsAvailableInMdx set to true and are not used to sort another column, in a hierarchy, or in a variation, and do not themselves sort by another column.",
+    "Hidden columns, or columns in hidden tables, that still have IsAvailableInMdx set to true and are not used to sort another column, in a hierarchy, in a variation, or in a calendar, and do not themselves sort by another column.",
   LANDING_PAGE_NOT_SET:
     "A report whose pages.json sets no landing page, so it opens on the page that was active when it was last saved, or, when pages.json records no active page either, on the first page.",
   LARGE_TABLES_SHOULD_BE_PARTITIONED:
@@ -111,7 +111,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   MINIMIZE_POWER_QUERY_TRANSFORMATIONS:
     "Power Query partitions whose M text contains Table.Combine, Table.Join, Table.NestedJoin, Table.AddColumn, Table.Group, Table.Sort, Table.Pivot, Table.Unpivot, Table.UnpivotOtherColumns, Table.Distinct, a native SQL query, or an OLE DB or ODBC query.",
   MODEL_SHOULD_HAVE_A_DATE_TABLE:
-    "Models with no table that has the data category Time and a DateTime column marked as the key, which is what Mark as date table sets.",
+    "Models with no table that defines a calendar, and none that has the data category Time and a DateTime column marked as the key, which is what Mark as date table sets.",
   MODEL_USING_DIRECT_QUERY_AND_NO_AGGREGATIONS:
     "Models that have at least one DirectQuery table, no aggregation table (no column has an alternateOf mapping), and the PowerBI_V3 data source version, which is every project Desktop writes today.",
   "MONTH_(AS_A_STRING)_MUST_BE_SORTED":
@@ -119,7 +119,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   MONTHCOLUMN_FORMATSTRING:
     "DateTime columns with month in the name whose format string is not exactly `MMMM yyyy`.",
   NOT_REACHED_FROM_REPORT:
-    "Columns and measures that nothing in the report reaches, directly or through the model. The walk starts from every field the report names, both columns of every relationship except one to an auto date/time table, the columns and measures that row-level security filters name, the columns that object-level security names, the default column of every variation, the columns of an aggregation table (the ones with an `alternateOf` mapping), the fields the report's own measures reference, and the user-defined functions those measures and the security filters call, and it follows DAX references, calls to user-defined functions, sort-by and group-by columns, the detail column or table each mapping names, and calculated tables until nothing new is reached.",
+    "Columns and measures that nothing in the report reaches, directly or through the model. The walk starts from every field the report names, both columns of every relationship except one to an auto date/time table, the columns and measures that row-level security filters name, the columns that object-level security names, the default column of every variation, the columns a calendar names, the columns of an aggregation table (the ones with an `alternateOf` mapping), the fields the report's own measures reference, and the user-defined functions those measures and the security filters call, and it follows DAX references, calls to user-defined functions, sort-by and group-by columns, the detail column or table each mapping names, and calculated tables until nothing new is reached.",
   NUMERIC_COLUMN_SUMMARIZE_BY:
     "Visible whole number, decimal, or double columns whose default summarization is anything other than None.",
   OBJECTS_SHOULD_NOT_START_OR_END_WITH_A_SPACE:
@@ -137,7 +137,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   PERSPECTIVES_WITH_NO_OBJECTS:
     "Perspectives that contain no tables. The rule reads only a perspective's table entries, which is enough: each column, measure, and hierarchy a perspective includes sits under the entry for its table, so with no table entry it includes nothing.",
   PROVIDE_FORMAT_STRING_FOR_MEASURES:
-    "Visible measures with no format string and no dynamic format string.",
+    "Visible measures with no format string and no dynamic format string, other than those whose DAX plainly returns text.",
   REDUCE_ADVANCED_FILTERS:
     "Pages with more visuals carrying an Advanced filter with a condition applied than the threshold, 4 by default.",
   REDUCE_NUMBER_OF_CALCULATED_COLUMNS:
@@ -169,7 +169,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   REPORT_LEVEL_MEASURES:
     "Measures defined in the report's reportExtensions.json rather than in the model, reported when the model the report reads is in the input, so that each can move into it.",
   SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS:
-    "Columns with IsAvailableInMdx set to false that are used to sort another column, appear in a hierarchy or a variation, or sort by another column.",
+    "Columns with IsAvailableInMdx set to false that are used to sort another column, appear in a hierarchy, a variation, or a calendar, or sort by another column.",
   SLICER_SEARCH_SAVED:
     "Slicers saved with a term in their search box: any visual whose visual.json holds a `selfFilter` with a condition under `objects.general`, which is where Power BI Desktop's saved files keep the text typed in a slicer's search box.",
   SLICER_SELECTION_SAVED:
@@ -190,7 +190,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   UDF_WITHOUT_DESCRIPTION:
     "User-defined functions with no description, or one of only spaces, other than functions installed from a DAX Lib package. Tabular Editor 3 has a built-in rule with the same test, which also reports package functions.",
   UNNECESSARY_COLUMNS:
-    "Hidden columns, or columns in hidden tables, that nothing references: no DAX expression, relationship, hierarchy, sort-by column, group-by column, row-level security filter, or object-level security rule.",
+    "Hidden columns, or columns in hidden tables, that nothing references: no DAX expression, relationship, hierarchy, sort-by column, group-by column, calendar, row-level security filter, or object-level security rule.",
   UNNECESSARY_MEASURES:
     "Hidden measures, or measures on hidden tables, that no DAX expression references.",
   "UNPIVOT_PIVOTED_(MONTH)_DATA":

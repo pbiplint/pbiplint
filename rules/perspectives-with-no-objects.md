@@ -55,7 +55,7 @@ An empty perspective still shows up in clients that offer perspectives, such as 
 
 ## How to fix it
 
-Power BI Desktop has no perspective editor, so the fix is in the file. A perspective is a `perspective` block of its own, and the objects it shows are `perspectiveTable` entries under it, with the columns, measures, and hierarchies it shows listed beneath each one. Add the tables the perspective should show, or delete its file from the `perspectives` folder and drop the matching `ref perspective` line from `model.tmdl`. Tabular Editor edits perspectives in a UI if you would rather tick boxes than edit the file.
+Power BI Desktop has no graphical editor for perspectives, and its TMDL view is the route Microsoft gives ([Common use cases for TMDL view](https://learn.microsoft.com/power-bi/transform-model/desktop-tmdl-view#common-use-cases-for-tmdl-view)). A perspective is a `perspective` block of its own, and the objects it shows are `perspectiveTable` entries under it, with the columns, measures, and hierarchies it shows listed beneath each one. In TMDL view, write a `createOrReplace` script of the whole perspective with the tables it should show, and select Apply. To remove the perspective instead, close Desktop, delete its file from the `perspectives` folder, and drop the matching `ref perspective` line from `model.tmdl`. Tabular Editor edits perspectives in a UI if you would rather tick boxes than edit the file.
 
 ## When to ignore it
 
@@ -64,7 +64,6 @@ There is no case for it. A perspective you have created and not yet filled is th
 ## Quirks
 
 - The rule counts the `perspectiveTable` entries the perspective carries, not the objects they resolve to. A perspective that lists a table which was deleted is not empty and is not reported.
-- Power BI Desktop never writes perspectives, so this rule fires only on models built or edited somewhere else.
 
 ## Related rules
 

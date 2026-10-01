@@ -342,6 +342,53 @@ table 'Sales Agg'
       buildIndexes({ model: agg, report: summed }).reachability!.pathTo(at("Sales", "Amount")),
     ).toEqual(["[Total Sales]", "'Sales'[Amount]"]);
   });
+  it("roots every column a calendar names, primary, associated, or time-related, and no other", () => {
+    // The calendar's table has no relationship and no report field, so only the calendar can reach
+    // its columns; Spare is the same as Year in every way but the calendar's naming it.
+    const cal = modelFrom(
+      [
+        "table Sales",
+        "\tcolumn Amount",
+        "\t\tdataType: decimal",
+        "\tmeasure 'Total Sales' = SUM('Sales'[Amount])",
+        "table Date",
+        "\tcolumn Year",
+        "\t\tdataType: int64",
+        "\t\tisHidden",
+        "\tcolumn 'Month Number'",
+        "\t\tdataType: int64",
+        "\t\tisHidden",
+        "\tcolumn 'Month Name'",
+        "\t\tdataType: string",
+        "\t\tisHidden",
+        "\tcolumn Holiday",
+        "\t\tdataType: string",
+        "\t\tisHidden",
+        "\tcolumn Spare",
+        "\t\tdataType: int64",
+        "\t\tisHidden",
+        "\tcalendar Gregorian",
+        "\t\tcalendarColumnGroup = year",
+        "\t\t\tprimaryColumn: Year",
+        "\t\tcalendarColumnGroup = monthOfYear",
+        "\t\t\tprimaryColumn: 'Month Number'",
+        "\t\t\tassociatedColumn: 'Month Name'",
+        "\t\tcalendarColumnGroup",
+        "\t\t\tcolumn: Holiday",
+      ].join("\n"),
+    );
+    const { report } = buildReport(visualBinding(measure("Sales", "Total Sales")));
+    const reach = buildIndexes({ model: cal, report }).reachability!;
+    const at = (name: string): Column =>
+      cal.tables.find((t) => t.name === "Date")!.columns.find((c) => c.name === name)!;
+    // No report names a calendar's column, so each is a root of its own.
+    for (const name of ["Year", "Month Number", "Month Name", "Holiday"])
+      expect(reach.pathTo(at(name))).toEqual([`'Date'[${name}]`]);
+    expect(reach.reached(at("Spare"))).toBe(false);
+    const u = reach.unreached();
+    expect(u.columns.map((c) => `${c.table.name}.${c.name}`)).toEqual(["Date.Spare"]);
+    expect(u.tables).toEqual([]);
+  });
   it("roots no relationship to an auto date/time table, and leaves those tables out of the unreached list", () => {
     const fixture = `${fixturesDir}tvw-baseline.SemanticModel/definition/tables/`;
     const LDT = "LocalDateTable_1b2c1fde-0cf3-455e-bfee-a8e4970804e0";

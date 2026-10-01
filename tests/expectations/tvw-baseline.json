@@ -3,6 +3,14 @@
   "oracle": "Tabular Editor CLI 0.7.1.2 with BPARules.json sha256 ddb9cff4c2a0611a6467e2559d38319d9867381998066473ffa1e11c2d360392",
   "captured": "2026-10-01",
   "skipRules": {},
+  "deviations": {
+    "PROVIDE_FORMAT_STRING_FOR_MEASURES": "A measure that plainly returns text is not reported: one whose result, after its last top-level `RETURN`, is a lone string, joins values with `&`, or starts with a function that returns text, such as `FORMAT` or `CONCATENATEX`. The source rule does not read what a measure returns, so Tabular Editor reports such a measure."
+  },
+  "ours": {
+    "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+      "[Top Product Label]"
+    ]
+  },
   "findings": {
     "ADD_DATA_CATEGORY_FOR_COLUMNS": [
       "'Store'[Latitude]",

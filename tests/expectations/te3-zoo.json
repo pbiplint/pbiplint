@@ -3,6 +3,39 @@
   "oracle": "Tabular Editor CLI 0.7.1.2 with BPARules.json sha256 ddb9cff4c2a0611a6467e2559d38319d9867381998066473ffa1e11c2d360392",
   "captured": "2026-10-01",
   "skipRules": {},
+  "deviations": {
+    "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": "A column a calendar names, as a primary, associated, or time-related column, is not reported: the calendar uses the column for time intelligence, and a primary column for sorting. Tabular Editor 3's built-in version of the rule does not report a primary or associated column a calendar names either. The source rule does not read calendars, so Tabular Editor reports such a column when it is hidden.",
+    "SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS": "A column a calendar names, as a primary, associated, or time-related column, is reported when IsAvailableInMdx is false, so the two rules stay mirrors. Tabular Editor 3's built-in version of the rule also reports a primary column a calendar names when its IsAvailableInMdx is false. The source rule does not read calendars.",
+    "UNNECESSARY_COLUMNS": "A column a calendar names, as a primary, associated, or time-related column, counts as used: the calendar needs it for time intelligence. The source rule does not read calendars, so Tabular Editor reports such a column when it is hidden and nothing else uses it.",
+    "MODEL_SHOULD_HAVE_A_DATE_TABLE": "A table that defines a calendar satisfies the rule, as it satisfies Tabular Editor 3's built-in version, since calendar-based time intelligence works without a table marked as a date table. The source rule does not read calendars, so Tabular Editor reports a model whose only calendar table is not marked.",
+    "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": "A table that defines a calendar is not reported, since calendar-based time intelligence works without the table being marked as a date table. The source rule does not read calendars, and Tabular Editor 3 has no version of this rule.",
+    "PROVIDE_FORMAT_STRING_FOR_MEASURES": "A measure that plainly returns text is not reported: one whose result, after its last top-level `RETURN`, is a lone string, joins values with `&`, or starts with a function that returns text, such as `FORMAT` or `CONCATENATEX`. The source rule does not read what a measure returns, so Tabular Editor reports such a measure."
+  },
+  "ours": {
+    "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+      "'Budget'[Budget Amount]",
+      "'Customer'[Customer ID]",
+      "'Sales'[Customer ID]",
+      "'Sales'[Internal Cost]",
+      "'Sales'[Order Date]",
+      "'Sales'[Order ID]",
+      "'Time Intelligence'[Ordinal]"
+    ],
+    "SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS": [
+      "'Date'[Quarter Key]"
+    ],
+    "UNNECESSARY_COLUMNS": [
+      "'Sales'[Internal Cost]",
+      "'Sales'[Order ID]",
+      "'Time Intelligence'[Ordinal]"
+    ],
+    "MODEL_SHOULD_HAVE_A_DATE_TABLE": [],
+    "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [],
+    "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+      "[Last Region]",
+      "[Order Count]"
+    ]
+  },
   "findings": {
     "AVOID_FLOATING_POINT_DATA_TYPES": [
       "'Budget'[Budget Amount]",

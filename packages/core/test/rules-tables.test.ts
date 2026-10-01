@@ -35,6 +35,20 @@ describe("date table rules", () => {
       ),
     ).toEqual(["'Calendar'", "'Updates'"]);
   });
+  it("both date table rules accept a table that defines a calendar, marked or not", () => {
+    // A documented deviation in both rules: calendar-based time intelligence needs no marking.
+    const withCalendar = t(
+      "Date",
+      "\tcolumn Date\n\t\tdataType: dateTime\n\tcalendar Gregorian\n\t\tcalendarColumnGroup = date\n\t\t\tprimaryColumn: Date\n",
+    );
+    expect(objectNames(rules.MODEL_SHOULD_HAVE_A_DATE_TABLE, withCalendar)).toEqual([]);
+    expect(
+      objectNames(
+        rules.DATE_CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE,
+        withCalendar + unmarked,
+      ),
+    ).toEqual(["'Calendar'"]);
+  });
   it("REMOVE_AUTO-DATE_TABLE requires a calculated table with the Desktop prefix", () => {
     const calc = t(
       "LocalDateTable_1",

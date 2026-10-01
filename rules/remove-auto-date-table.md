@@ -101,7 +101,7 @@ There is no lasting exception. These tables are not something a modeler chose, t
 ## Related rules
 
 - `REDUCE_USAGE_OF_CALCULATED_TABLES` reports every calculated table, so each table reported here is reported there as well, and clearing the option clears both.
-- `DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE` matches any table whose name contains date or calendar and that is not marked as a date table, which these tables are not, so an auto-date table is reported there too until it is gone.
+- `DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE` matches any table whose name contains date or calendar, that defines no calendar, and that is not marked as a date table, which these tables are not, so an auto-date table is reported there too until it is gone.
 - `MODEL_SHOULD_HAVE_A_DATE_TABLE` reports the model that has no calendar of its own, which is the state that leaves Auto date/time doing the work.
 
 ## Links

@@ -141,6 +141,10 @@ build in their oracles. A fixture added later has only its Microsoft capture. Th
   not committed, since several carry no license: the list pins each one to a commit and a sha256,
   and the script fetches it from there and checks it.
 
+A listed fixture keeps its captures as they are once 0.7.1.2 stops working: a change to it changes
+its Microsoft capture, which the survey's run of Microsoft's own file must equal, so every listed
+fixture is then re-captured three ways with one licensed build, or the change goes in a new fixture.
+
 Tabular Editor CLI 0.7.1.2 is a preview build that stops working after October 31, 2026, and the
 [0.7.0 release post](https://tabulareditor.com/blog/tabular-editor-cli-0-7-0-release) (September
 14, 2026) says, "After the preview period, a license will be required." So a re-capture after

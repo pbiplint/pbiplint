@@ -2,6 +2,7 @@ import { unquoteName } from "../tmdl/quote.js";
 import type { ParsedFile, TmdlNode } from "../tmdl/types.js";
 import type {
   AlternateOf,
+  Calendar,
   CalculationGroup,
   CalculationItem,
   Column,
@@ -175,6 +176,19 @@ function buildCalculationGroup(cg: TmdlNode, table: Table): CalculationGroup {
   return group;
 }
 
+/** The prop lines under a `calendarColumnGroup` that name a column of the calendar's table. */
+const CALENDAR_COLUMN_PROPS = new Set(["primarycolumn", "associatedcolumn", "column"]);
+
+function buildCalendar(cal: TmdlNode, table: Table): Calendar {
+  const columns: string[] = [];
+  for (const group of cal.children)
+    if (group.type === "calendarcolumngroup")
+      for (const p of group.children)
+        if (p.kind === "prop" && CALENDAR_COLUMN_PROPS.has(p.type) && p.value !== undefined)
+          columns.push(unquoteName(p.value));
+  return { ...named(cal), table, columns };
+}
+
 function buildTable(r: TmdlNode, model: Model): void {
   let t = model.tables.find((x) => x.name === r.name);
   if (!t) {
@@ -187,6 +201,7 @@ function buildTable(r: TmdlNode, model: Model): void {
       measures: [],
       partitions: [],
       hierarchies: [],
+      calendars: [],
     };
     model.tables.push(t);
   } else {
@@ -202,6 +217,8 @@ function buildTable(r: TmdlNode, model: Model): void {
     else if (c.kind === "object" && c.type === "partition") t.partitions.push(buildPartition(c, t));
     else if (c.kind === "object" && c.type === "hierarchy")
       t.hierarchies.push(buildHierarchy(c, t));
+    else if (c.kind === "object" && c.type === "calendar")
+      (t.calendars ??= []).push(buildCalendar(c, t));
     else if (c.type === "calculationgroup") {
       const group = buildCalculationGroup(c, t);
       const first = t.calculationGroup;

@@ -63,7 +63,7 @@ table Date
 
 ## Why it matters
 
-Every time intelligence function needs a contiguous date column to work over, and the marked date table is where it finds one. Without it, the model either leans on Auto date/time, which adds a hidden date table per date column and cannot be extended with fiscal periods or holidays, or does no time intelligence at all. A single shared date table also gives every fact table the same month, quarter, and year attributes, so visuals from different tables line up.
+Classic time intelligence, where DATESYTD and the rest are given a date column, needs that column to run without a gap, and the marked date table is where it comes from ([Classic time intelligence](https://learn.microsoft.com/power-bi/transform-model/desktop-time-intelligence#classic-time-intelligence)); calendar-based time intelligence, a preview, is given a calendar defined on the date table instead. Without it, the model either leans on Auto date/time, which adds a hidden date table per date column and cannot be extended with fiscal periods or holidays, or does no time intelligence at all. A single shared date table also gives every fact table the same month, quarter, and year attributes, so visuals from different tables line up.
 
 ## How to fix it
 

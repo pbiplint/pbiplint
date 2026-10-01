@@ -52,7 +52,7 @@ table Date
 
 ## Why it matters
 
-Marking the date table tells the engine which column is the calendar key, and every time intelligence function relies on it: DATESYTD, SAMEPERIODLASTYEAR, and the rest return wrong or blank results over an unmarked table without raising any error. Marking it also lets you turn off Auto date/time, which otherwise adds a hidden date table for every date column in the model.
+Marking the date table tells the engine which column is the calendar key, and classic time intelligence relies on it ([Classic time intelligence](https://learn.microsoft.com/power-bi/transform-model/desktop-time-intelligence#classic-time-intelligence)): DATESYTD, SAMEPERIODLASTYEAR, and the rest, given a date column, return wrong or blank results over an unmarked table without raising any error. Marking it also lets you turn off Auto date/time, which otherwise adds a hidden date table for every date column in the model.
 
 ## How to fix it
 
@@ -65,10 +65,10 @@ The name test is a plain substring, so Updates, Candidates, and Mandates are all
 ## Quirks
 
 - The table name is upper-cased before the test and the match is a substring, so `Date`, `date`, and `DATE_DIM` all count, and so do Updates and Candidates.
-- The data category comparison is exact and case-sensitive. A file that says `dataCategory: time` does not count as marked.
-- The key has to be a DateTime column. A calendar keyed on an integer date key is reported however it is categorized.
+- The data category comparison is exact and case-sensitive. A file that says `dataCategory: time` does not count as marked, so a table without a calendar is still reported.
+- Without a calendar, the key has to be a DateTime column, and a table keyed on an integer date key is reported however it is categorized.
 - Calculated tables are in scope and calculation groups are not, so a calendar built with CALENDAR is checked and a calculation group called Date Intelligence is left alone.
-- A table that defines a calendar is not reported, since calendar-based time intelligence works without the table being marked as a date table. The source rule does not read calendars, and Tabular Editor 3 has no version of this rule.
+- A table that defines a calendar is not reported, since calendar-based time intelligence works without the table being marked as a date table. The source rule does not read calendars, and Tabular Editor 3 has no version of this rule. The cases where Microsoft still asks for the marking, among them a relationship to the table on a column that is not DateTime, such as an integer date key, are not read here, so a table that defines a calendar is left out even in those cases ([When you must mark your date table](https://learn.microsoft.com/power-bi/transform-model/desktop-date-tables#when-you-must-mark-your-date-table)).
 - The rule also needs every part of a table's declaration, which TMDL lets sit in more than one file (Power BI Desktop writes each table in one). While pbiplint could not open a model file or folder, or a parse issue took a line that could be a `table` line, such as a misspelt `table`, the rule reports nothing, because a part of the table in what pbiplint missed could mark the table, hold its key column, define a calendar on it, or make it a calculation group, which the rule leaves out, and pbiplint does not guess what a file it could not read says. A parse issue inside a declaration, such as a property indented with spaces, does not stop the rule. The skipped line gives the reason, `a model file could not be fully read`, and a notice names what pbiplint could not open, or the file's own `PARSE_ISSUE` finding names the line.
 
 ## Related rules

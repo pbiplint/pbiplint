@@ -10,6 +10,7 @@ import {
   modelPartlyRead,
   tablesInScope,
   tablesPartlyRead,
+  typeKnown,
 } from "../helpers.js";
 import type { RuleContext } from "../types.js";
 import { bpaRule } from "./define.js";
@@ -18,12 +19,17 @@ const isManyToMany = (r: Relationship): boolean =>
   r.fromCardinality === "many" && r.toCardinality === "many";
 const isBidirectional = (r: Relationship): boolean => r.crossFilteringBehavior === "bothdirections";
 
+// A column with no dataType line is not read, since its type is unknown (#164): a documented
+// deviation.
 export const RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE = bpaRule(
   "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE",
   (m, { indexes: { relationships } }: RuleContext) =>
     allColumns(m)
       .filter(
-        (c) => relationships.forColumn(c.table.name, c.name).length > 0 && dataType(c) !== "int64",
+        (c) =>
+          relationships.forColumn(c.table.name, c.name).length > 0 &&
+          typeKnown(c) &&
+          dataType(c) !== "int64",
       )
       .map(finding.column),
 );
@@ -118,6 +124,8 @@ export const CHECK_IF_BIDIRECTIONAL_AND_MANY_TO_MANY_RELATIONSHIPS_ARE_VALID = b
     m.relationships.filter((r) => isManyToMany(r) || isBidirectional(r)).map(finding.relationship),
 );
 
+// A relationship with an untyped column on either side is not compared, since that type is
+// unknown (#164): a documented deviation.
 export const RELATIONSHIP_COLUMNS_SAME_DATA_TYPE = bpaRule(
   "RELATIONSHIP_COLUMNS_SAME_DATA_TYPE",
   (m) => {
@@ -127,7 +135,13 @@ export const RELATIONSHIP_COLUMNS_SAME_DATA_TYPE = bpaRule(
       .filter((r) => {
         const from = column(r.fromTable, r.fromColumn);
         const to = column(r.toTable, r.toColumn);
-        return from !== undefined && to !== undefined && dataType(from) !== dataType(to);
+        return (
+          from !== undefined &&
+          to !== undefined &&
+          typeKnown(from) &&
+          typeKnown(to) &&
+          dataType(from) !== dataType(to)
+        );
       })
       .map(finding.relationship);
   },

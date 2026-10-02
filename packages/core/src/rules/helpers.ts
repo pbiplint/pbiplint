@@ -29,6 +29,12 @@ export const allTablePermissions = (m: Model): TablePermission[] =>
   m.roles.flatMap((r) => r.tablePermissions);
 
 export const dataType = (c: Column): string => (c.dataType ?? "").toLowerCase();
+/**
+ * Whether the column's type is known: false when its TMDL has no `dataType` line, as Power BI
+ * Desktop saves most calculated columns (#164). A rule reports nothing that rests on a type it
+ * cannot see.
+ */
+export const typeKnown = (c: Column): boolean => dataType(c) !== "";
 export const isNumericType = (c: Column): boolean =>
   ["int64", "decimal", "double"].includes(dataType(c));
 export const hiddenOrTableHidden = (c: Column): boolean => c.isHidden || c.table.isHidden;

@@ -15,17 +15,22 @@ import {
   modelPartlyRead,
   tablesInScope,
   tablesPartlyRead,
+  typeKnown,
 } from "../helpers.js";
 import { bpaRule } from "./define.js";
 
+// A key column with no dataType line counts: its type is unknown (#164), and a marked date table's
+// key is meant to be a date.
 const hasDateTimeKey = (t: Table): boolean =>
-  t.columns.some((c) => c.isKey && dataType(c) === "datetime");
+  t.columns.some((c) => c.isKey && (dataType(c) === "datetime" || !typeKnown(c)));
 
 const hasCalendar = (t: Table): boolean => (t.calendars?.length ?? 0) > 0;
 
 // A table that defines a calendar satisfies the rule, as it does Tabular Editor 3's built-in
 // version and not the source: a documented deviation. A model file pbiplint could not fully read
 // may hold the date table.
+// A marked table whose key has no dataType line counts as having its date key (#164): a
+// documented deviation.
 export const MODEL_SHOULD_HAVE_A_DATE_TABLE = bpaRule(
   "MODEL_SHOULD_HAVE_A_DATE_TABLE",
   { skipWhenModelUnread: modelPartlyRead },
@@ -39,6 +44,8 @@ export const MODEL_SHOULD_HAVE_A_DATE_TABLE = bpaRule(
 // has no version of: a documented deviation. A part of the table pbiplint could not read may mark
 // it, hold its key, define a calendar on it, or make it a calculation group, which the rule leaves
 // out.
+// A marked table whose key has no dataType line counts as having its date key (#164): a
+// documented deviation.
 export const DATE_CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE = bpaRule(
   "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE",
   { skipWhenModelUnread: tablesPartlyRead },
@@ -71,6 +78,8 @@ export const REDUCE_NUMBER_OF_CALCULATED_COLUMNS = bpaRule(
 
 const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN"];
 
+// A column with no dataType line is not read, since its type is unknown (#164): a documented
+// deviation.
 export const UNPIVOT_PIVOTED_MONTH_DATA = bpaRule("UNPIVOT_PIVOTED_(MONTH)_DATA", (m) =>
   tablesInScope(m)
     .filter((t) =>

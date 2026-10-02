@@ -2,8 +2,12 @@
   "fixture": "tests/fixtures/untyped-columns.SemanticModel",
   "oracle": "Tabular Editor CLI 0.7.1.2 built-in rules",
   "captured": "2026-10-02",
-  "deviations": {},
-  "ours": {},
+  "deviations": {
+    "DECIMAL_COLUMN_WITHOUT_FORMAT_STRING": "A column whose TMDL has no `dataType` line is not read, since pbiplint does not know its type. Power BI Desktop leaves the line out of most calculated columns it saves."
+  },
+  "ours": {
+    "DECIMAL_COLUMN_WITHOUT_FORMAT_STRING": []
+  },
   "findings": {
     "TE3_BUILT_IN_DO_NOT_SUMMARIZE_NUMERIC": [
       "'Calendar'[Year]",

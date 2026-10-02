@@ -36,7 +36,11 @@ type Child = Node | string | null | undefined;
 
 /**
  * Builds an element. Every child string becomes a text node and every attribute is written with
- * setAttribute, so nothing from a model file is ever parsed as HTML. Attribute values are taken as
+ * setAttribute, so nothing from a model file is ever parsed as HTML. Every child string is also
+ * shown through core's `showControls`, as the CLI's text format shows it, so a bidirectional
+ * control in a name cannot reorder the text around it on the page, and text a later change adds is
+ * covered without a call of its own. pbiplint's own words hold no control characters, so they read
+ * as they are, and a string already shown through it reads the same. Attribute values are taken as
  * given, though: a href or a handler name would be set exactly as passed, which is why every
  * attribute here is built from pbiplint's own strings and never from model text.
  */
@@ -50,7 +54,8 @@ export function h<K extends keyof HTMLElementTagNameMap>(
     if (value === false) continue;
     el.setAttribute(name, value === true ? "" : value);
   }
-  for (const child of children) if (child != null) el.append(child);
+  for (const child of children)
+    if (child != null) el.append(typeof child === "string" ? showControls(child) : child);
   return el;
 }
 
@@ -90,8 +95,8 @@ const count = (n: number, severity: Severity): string => {
  * "Results for the sample project (model, 14 files · report, 78 files)": the source, then each
  * layer the run read with its file count. Present layers only, so a run given one part says nothing
  * about the part it was not given (decision 14), and a run that read neither part names no count.
- * The page announces the same words ahead of the summary sentence, so the source, a dropped
- * folder's name, is shown through `showControls` here, once for both.
+ * The page also announces these words ahead of the summary sentence, in #announce, which `h` does
+ * not build, so the source, a dropped folder's name, is shown through `showControls` here.
  */
 export function heading(result: LintResult, source: string): string {
   const layers = LAYERS.flatMap((name) => {
@@ -105,10 +110,8 @@ export function heading(result: LintResult, source: string): string {
 /**
  * Renders a run into `container`. Every string from the input (a name, a path, a location, a
  * detail, a fact's label, value, and detail, a notice, an absent layer's reason, a config's rule
- * id, a rule's error) is shown through core's `showControls`, as the CLI's text format shows it,
- * so a bidirectional control in a name cannot reorder the text around it on the page, and the page
- * and the terminal show the same text. pbiplint's own words (rule names and ids, categories, URLs,
- * the page's fixed labels) are shown as they are.
+ * id, a rule's error) reaches the page as a child string of `h`, which shows it through core's
+ * `showControls`, so the page and the terminal show the same text.
  */
 export function renderResults(
   container: HTMLElement,
@@ -125,19 +128,13 @@ export function renderResults(
     h("h2", {}, heading(result, options.source)),
     // The summary is not a live region: everything is rebuilt on each run, and a region inserted
     // with its text already set may not be announced. The page announces it through #announce.
-    h("p", { class: "summary" }, `${summaryLine(result)}. ${showControls(skippedLine(result))}.`),
-    ...(options.notes ?? []).map((note) => h("p", { class: "notice" }, showControls(note))),
+    h("p", { class: "summary" }, `${summaryLine(result)}. ${skippedLine(result)}.`),
+    ...(options.notes ?? []).map((note) => h("p", { class: "notice" }, note)),
     // What the reader could not read, or read as a legacy part, follows the input's notes, so no
     // read failure is silent.
-    ...result.diagnostics.map((d) =>
-      h("p", { class: "notice" }, ...withLearnLinks(showControls(d.message))),
-    ),
+    ...result.diagnostics.map((d) => h("p", { class: "notice" }, ...withLearnLinks(d.message))),
     ...result.summary.unknownRules.map((id) =>
-      h(
-        "p",
-        { class: "notice" },
-        `pbiplint.config.json names no rule called "${showControls(id)}".`,
-      ),
+      h("p", { class: "notice" }, `pbiplint.config.json names no rule called "${id}".`),
     ),
     // Beside the other notices rather than below the groups: a rule that threw is worth reporting
     // whether or not the rules that ran found anything, and a clean run stops before the groups.
@@ -147,9 +144,7 @@ export function renderResults(
             "p",
             { class: "notice" },
             "Rule errors (please report these): " +
-              result.summary.ruleErrors
-                .map((e) => `${e.id}: ${showControls(e.message)}`)
-                .join("; "),
+              result.summary.ruleErrors.map((e) => `${e.id}: ${e.message}`).join("; "),
           ),
         ]
       : []),
@@ -279,12 +274,11 @@ function renderFacts(result: LintResult): HTMLElement[] {
   if (result.facts.length === 0) return [];
   const onPage = new Map(result.groups.map((g) => [g.rule.id, g.rule.slug]));
   const value = (f: Fact): Node | string => {
-    const shown = showControls(f.value);
-    if (f.ruleId === undefined) return shown;
+    if (f.ruleId === undefined) return f.value;
     const here = onPage.get(f.ruleId);
     return here === undefined
-      ? h("a", { class: "fact", href: pagePath(slug(f.ruleId)) }, shown)
-      : h("a", { class: "fact flag", href: `#rule-${here}` }, shown);
+      ? h("a", { class: "fact", href: pagePath(slug(f.ruleId)) }, f.value)
+      : h("a", { class: "fact flag", href: `#rule-${here}` }, f.value);
   };
   return [
     h(
@@ -295,14 +289,12 @@ function renderFacts(result: LintResult): HTMLElement[] {
         "dl",
         {},
         ...result.facts.flatMap((f) => [
-          h("dt", {}, showControls(f.label)),
+          h("dt", {}, f.label),
           h(
             "dd",
             {},
             value(f),
-            ...(f.detail === undefined
-              ? []
-              : [" · ", h("span", { class: "detail" }, showControls(f.detail))]),
+            ...(f.detail === undefined ? [] : [" · ", h("span", { class: "detail" }, f.detail)]),
           ),
         ]),
       ),
@@ -318,7 +310,7 @@ function renderFilesRead(files: string[] | undefined): HTMLElement[] {
       "details",
       { class: "files" },
       h("summary", {}, `Files read (${files.length})`),
-      h("ul", {}, ...files.map((path) => h("li", { class: "mono" }, showControls(path)))),
+      h("ul", {}, ...files.map((path) => h("li", { class: "mono" }, path))),
     ),
   ];
 }
@@ -418,14 +410,10 @@ function renderGroup(g: RankedGroup): HTMLElement {
     h(
       "tr",
       {},
-      h("td", { class: "mono" }, showControls(f.objectName)),
+      h("td", { class: "mono" }, f.objectName),
       h("td", {}, f.objectType),
-      h(
-        "td",
-        { class: "mono" },
-        f.location ? showControls(`${f.location.file}:${f.location.line}`) : "",
-      ),
-      h("td", {}, showControls(f.detail ?? "")),
+      h("td", { class: "mono" }, f.location ? `${f.location.file}:${f.location.line}` : ""),
+      h("td", {}, f.detail ?? ""),
     ),
   );
   return h(

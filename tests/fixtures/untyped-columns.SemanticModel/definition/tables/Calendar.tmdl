@@ -1,0 +1,36 @@
+table Calendar
+	lineageTag: 08f33eb5-1f3f-4d74-95d6-077e71758aa9
+	dataCategory: Time
+
+	column Date
+		isKey
+		formatString: dd-mmm-yy
+		lineageTag: 14ab337c-4678-4caa-b1c6-1705e71b3b28
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Date]
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+		annotation PBI_FormatHint = {"isDateTimeCustom":true}
+
+	column Year = YEAR('Calendar'[Date])
+		lineageTag: e2da23b5-e84a-4967-a7fd-4ee8332c3be4
+		summarizeBy: sum
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Month Name' = FORMAT('Calendar'[Date], "MMMM")
+		lineageTag: 72a6c3b1-ad16-4f91-aca4-002f0a5962cc
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Calendar = calculated
+		mode: import
+		source = CALENDAR(MIN('Orders'[Order Date]), MAX('Orders'[Order Date]))
+
+	annotation PBI_Id = ccc46cec0ea145ffa4fa03003aa22511
+

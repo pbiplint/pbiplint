@@ -1,0 +1,52 @@
+{
+  "fixture": "tests/fixtures/untyped-columns.SemanticModel",
+  "oracle": "Tabular Editor CLI 0.7.1.2 built-in rules",
+  "captured": "2026-10-02",
+  "deviations": {},
+  "ours": {},
+  "findings": {
+    "TE3_BUILT_IN_DO_NOT_SUMMARIZE_NUMERIC": [
+      "'Calendar'[Year]",
+      "'Orders'[Is Large Order]",
+      "'Orders'[Unit Price]",
+      "'Orders'[Units per Case]"
+    ],
+    "TE3_BUILT_IN_FORMAT_STRING_COLUMNS": [
+      "'Calendar'[Year]",
+      "'Orders'[Due Date]",
+      "'Orders'[Is Large Order]",
+      "'Orders'[Unit Price]",
+      "'Orders'[Units per Case]"
+    ],
+    "TE3_BUILT_IN_POWERBI_LATEST_COMPATIBILITY": [
+      "Model"
+    ],
+    "TE3_BUILT_IN_SET_ISAVAILABLEINMDX_FALSE": [
+      "'Orders'[Month Key]",
+      "'Orders'[Order Date]",
+      "'Orders'[Order ID]",
+      "'Targets'[Month Key]"
+    ],
+    "TE3_BUILT_IN_VISIBLE_COLUMNS_NO_DESCRIPTION": [
+      "'Calendar'[Date]",
+      "'Calendar'[Month Name]",
+      "'Calendar'[Year]",
+      "'Orders'[Amount]",
+      "'Orders'[Due Date]",
+      "'Orders'[Is Large Order]",
+      "'Orders'[Quantity]",
+      "'Orders'[Rush Flag]",
+      "'Orders'[Unit Price]",
+      "'Orders'[Units per Case]",
+      "'Targets'[Target]"
+    ],
+    "TE3_BUILT_IN_VISIBLE_MEASURES_NO_DESCRIPTION": [
+      "[Total Line Value]"
+    ],
+    "TE3_BUILT_IN_VISIBLE_TABLES_NO_DESCRIPTION": [
+      "'Calendar'",
+      "'Orders'",
+      "'Targets'"
+    ]
+  }
+}

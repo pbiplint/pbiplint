@@ -17,7 +17,7 @@ const names = (sub) =>
 const isObject = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 
 // The model fixtures captured three ways with te 0.7.1.2 before October 31, 2026, by name. A
-// fixture whose captures are made before October 31, 2026 (such as #164's) is added here. A fixture
+// fixture whose captures are made before October 31, 2026 is added here. A fixture
 // added later has only its Microsoft capture and is not listed. A listed fixture keeps its captures
 // as they are after that date: a change to it needs every listed fixture re-captured three ways
 // with one licensed build (docs/RELEASING.md).
@@ -29,6 +29,7 @@ const CAPTURED = [
   "te3-zoo",
   "tvw-baseline",
   "udf-sales",
+  "untyped-columns",
 ];
 
 // The oracle each kind of capture names. A re-capture with another build changes them here.
@@ -80,15 +81,16 @@ describe("the captures", () => {
     expect(survey.oracle).toBe(SURVEY_ORACLE);
   });
   it.each(CAPTURED)(
-    "%s: the survey capture has findings or an error for every listed file, and at most one error",
+    "%s: the survey capture has findings, an error, or a note that GitHub no longer has it, for every listed file, and at most one error",
     (name) => {
       const { results } = read(`survey/${name}.json`);
       expect(Object.keys(results).sort()).toEqual(ids);
       for (const [id, result] of Object.entries(results)) {
-        if ("error" in result) {
-          expect(Object.keys(result), id).toEqual(["error"]);
-          expect(typeof result.error, id).toBe("string");
-          expect(result.error.length, id).toBeGreaterThan(0);
+        if ("error" in result || "unavailable" in result) {
+          const [key] = Object.keys(result);
+          expect(Object.keys(result), id).toEqual([key]);
+          expect(typeof result[key], id).toBe("string");
+          expect(result[key].length, id).toBeGreaterThan(0);
         } else {
           expect(Object.keys(result).sort(), id).toEqual(["findings", "ruleErrors"]);
           expect(isObject(result.findings), id).toBe(true);

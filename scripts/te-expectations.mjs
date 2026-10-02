@@ -115,11 +115,20 @@ function bpaJson(run) {
   return teJson(run.stdout);
 }
 
-/** A rule file the survey list names, fetched at its commit and checked against its sha256. */
-async function fetchRuleFile(file) {
+/** Where a rule file the survey list names is, at its commit. */
+function ruleFileUrl(file) {
   const path = file.path.split("/").map(encodeURIComponent).join("/");
-  const url = `https://raw.githubusercontent.com/${file.repository}/${file.commit}/${path}`;
+  return `https://raw.githubusercontent.com/${file.repository}/${file.commit}/${path}`;
+}
+
+/**
+ * A rule file the survey list names, fetched at its commit and checked against its sha256, or null
+ * when GitHub answers 404: its repository, or the commit, is no longer there.
+ */
+async function fetchRuleFile(file) {
+  const url = ruleFileUrl(file);
   const res = await fetch(url);
+  if (res.status === 404) return null;
   if (!res.ok) throw new Error(`${file.id}: ${url} returned ${res.status}`);
   const body = Buffer.from(await res.arrayBuffer());
   checkSha256(body, file.sha256, file.id);
@@ -206,8 +215,16 @@ async function main() {
     const tmp = mkdtempSync(join(tmpdir(), "pbiplint-te-"));
     try {
       for (const [i, file] of files.entries()) {
+        const body = await fetchRuleFile(file);
+        if (body === null) {
+          // Recorded, not run: no build of te can run a file that is gone.
+          results[file.id] = { unavailable: `${ruleFileUrl(file)} returned 404 on ${captured}` };
+          console.error(`warning: ${file.id}: GitHub no longer has it; recorded as unavailable`);
+          console.error(`${i + 1}/${files.length} ${file.id}: unavailable`);
+          continue;
+        }
         const local = join(tmp, `${i}.json`);
-        writeFileSync(local, await fetchRuleFile(file));
+        writeFileSync(local, body);
         const result = surveyResult(bpaRun(definition, local));
         if (result.error)
           console.error(`warning: ${file.id}: Tabular Editor ran no rules: ${result.error}`);

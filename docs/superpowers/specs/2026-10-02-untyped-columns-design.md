@@ -1,6 +1,6 @@
 # Columns with no dataType: what #164 builds
 
-Issue #164, milestone 0.2.3. Written October 2, 2026, after Michael chose the approach (a missing type is unknown) and approved this design in outline the same day.
+Issue #164, milestone 0.2.3. Written October 2, 2026, after Michael chose the approach (a missing type is unknown) and approved this design in outline the same day. Amended the same day with what the plan measured (sections 4, 5, and 6).
 
 ## 1. The problem
 
@@ -54,6 +54,8 @@ A real mismatch with an untyped side (an untyped calculated column whose DAX giv
   - untyped calculated columns whose DAX gives a whole number, a decimal, text, and a date, named so the rules that read names see them (a `… Flag` text column, an `Is …` whole-number column, a `… Date` date column), visible, with the `summarizeBy` Desktop writes;
   - a measure that sums one of the untyped numeric columns.
 - **Every shape is one Desktop writes**; none is constructed to show a miss (section 3.5).
+- **What the plan measured:** the calendar is `CALENDAR(MIN('Orders'[Order Date]), MAX('Orders'[Order Date]))`, since a fixed year would fire `HARDCODED_PERIOD_IN_DAX`, which a test keeps silent on every fixture. `te` types `DIVIDE` of a fixed decimal by a whole number as a fixed decimal, so the fixture has a `DIVIDE` of two whole numbers as well, for a decimal number. With Microsoft's ruleset, `te` reports none of section 1's false findings on it.
+- **A survey file is gone.** `aswalsheshant-cell/mt-dashboard/PowerBI/CI/bpa_rules.json` answers 404 (its repository is gone), and neither this Mac nor the Software Heritage archive holds a copy with its sha256; every earlier capture recorded no findings for it. `scripts/te-expectations.mjs` records a file GitHub no longer has as `{ "unavailable": "<url> returned 404 on <date>" }` instead of failing the run, and the capture test accepts that shape. It is not recorded as an error, since every survey capture already uses its one allowed error on a file `te` cannot run.
 - **Before capturing**, `te list -m <fixture>/definition Columns` confirms each untyped column's type is the one its DAX was written for, and `te bpa run` with Microsoft's ruleset shows the false findings of section 1 absent from Tabular Editor's results on it.
 - **Three captures** with `te` 0.7.1.2, by the commands in CONTRIBUTING's "Refreshing parity expectations": Microsoft's ruleset (`tests/expectations/untyped-columns.json`), the built-in rules (`te3/`), and the survey's files (`survey/`). The fixture joins the list in `scripts/test/te-captures.test.mjs`, which checks all three.
 
@@ -61,6 +63,7 @@ A real mismatch with an untyped side (an untyped calculated column whose DAX giv
 
 - **One recorded deviation per rule** on which pbiplint and a capture still differ on the new fixture, every sentence in the same shape: a column with no `dataType` line, as Power BI Desktop saves most calculated columns, has a type pbiplint does not know, so the rule does not report it (or compare it), where Tabular Editor reads the type from the column's DAX. The sentence goes in the fixture's capture (`deviations`, with pbiplint's findings under `ours`), on the rule's page under Quirks, and in the rule's doc comment, as for every deviation.
 - **`DECIMAL_COLUMN_WITHOUT_FORMAT_STRING`**'s existing Quirk on untyped columns becomes a recorded deviation on the fixture's te3 capture, if the fixture shows it; the whole-number and date sentence too, if it shows that.
+- **What the plan measured:** seven Microsoft rules differ on the fixture and get the recorded deviation (`AVOID_FLOATING_POINT_DATA_TYPES`, `DATECOLUMN_FORMATSTRING`, `FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS`, `HIDE_FACT_TABLE_COLUMNS`, `MONTH_(AS_A_STRING)_MUST_BE_SORTED`, `NUMERIC_COLUMN_SUMMARIZE_BY`, `RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE`), with `DECIMAL_COLUMN_WITHOUT_FORMAT_STRING` on the te3 capture by its existing untyped-column sentence alone. The other six ported rules that test a type (`RELATIONSHIP_COLUMNS_SAME_DATA_TYPE`, both date table rules, `ADD_DATA_CATEGORY_FOR_COLUMNS`, `MONTHCOLUMN_FORMATSTRING`, `UNPIVOT_PIVOTED_(MONTH)_DATA`) state it on their pages without a fixture. `RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE` loses a finding Tabular Editor rightly gives, a `CALENDAR` table's untyped `Date` key in a relationship: the cost of section 2's decision.
 - **Pages:**
   - `RELATIONSHIP_COLUMNS_SAME_DATA_TYPE`: its Quirk and How to fix text that "a column with no `dataType` line compares as having none" is replaced by the new behavior, with section 3.5's miss.
   - `RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE` and `FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS`: a Quirk for the skipped untyped column.
@@ -70,8 +73,8 @@ A real mismatch with an untyped side (an untyped calculated column whose DAX giv
 
 ## 6. Copy and counts
 
-- **The count of documented deviations** in the Microsoft rules (eleven today) moves to what the plan measures, in `README.md`, `packages/cli/README.md`, `packages/core/README.md`, `packages/web/content/about.md`, and the doc comment in `packages/core/src/rules/microsoft-bpa/define.ts`.
-- **The sample's count** should not move: its three untyped columns are field-parameter columns, on which no type test changes its answer. The plan measures it; if it moves, #153's Sample and Smoke boxes apply.
+- **The count of documented deviations** in the Microsoft rules stays eleven: those are where the source is noisier or quieter than it means to be. Untyped columns are one reading rule across thirteen rules, not thirteen judgments, so `README.md`, `packages/cli/README.md`, `packages/core/README.md`, `packages/web/content/about.md`, and the doc comment in `packages/core/src/rules/microsoft-bpa/define.ts` gain a sentence of their own: a column whose TMDL names no type, as Power BI Desktop saves most calculated columns, is left out of the thirteen ported rules that test a column's type, where Tabular Editor reads the type from the column's DAX. (Plan amendment of October 2, 2026; the spec first said the count would move.) `docs/RELEASING.md` and `CONTRIBUTING.md` say what a capture does with a survey file GitHub no longer has.
+- **The sample's count** does not move (measured): its three untyped columns are field-parameter columns, on which no type test changes its answer.
 - **No rule is added**, so the rule counts stay at 106 and 24 built in.
 
 ## 7. One pull request, and the release note

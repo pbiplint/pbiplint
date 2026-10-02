@@ -60,6 +60,38 @@ export function h<K extends keyof HTMLElementTagNameMap>(
 }
 
 /**
+ * What a link that opens in a new tab adds to its accessible name, hidden from the eye, since the
+ * stylesheet's arrow on `a[target="_blank"]` says the same thing on screen (WCAG 3.2.5). The
+ * generated pages write the same words (NEW_TAB_NOTE in pages.ts).
+ */
+export const NEW_TAB_NOTE = " (opens in a new tab)";
+
+/**
+ * The attributes that open a link in a new tab. `rel` keeps the new page from reaching back into
+ * this one through `window.opener` and keeps this page's address out of the request.
+ */
+export const NEW_TAB = { target: "_blank", rel: "noopener noreferrer" } as const;
+
+/** The note as hidden text, for the end of a link that takes its name from its content. */
+export const newTabNote = (): HTMLSpanElement =>
+  h("span", { class: "visually-hidden" }, NEW_TAB_NOTE);
+
+/**
+ * A link that opens in a new tab, so following it leaves the results on this page where they are.
+ * Its name says so: an `aria-label` ends with the note, and a link named by its content ends with
+ * the note as hidden text.
+ */
+function newTabLink(
+  attrs: Record<string, string> & { href: string },
+  ...children: Child[]
+): HTMLAnchorElement {
+  const label = attrs["aria-label"];
+  return label === undefined
+    ? h("a", { ...attrs, ...NEW_TAB }, ...children, newTabNote())
+    : h("a", { ...attrs, ...NEW_TAB, "aria-label": `${label}${NEW_TAB_NOTE}` }, ...children);
+}
+
+/**
  * Core's Learn URLs, the only text in a message the page links, as a pattern whose one group keeps
  * each URL when a message is split on it. Each is matched literally, so every link's href is one
  * of core's constants: text from the input, a file's name or a config's key, can at most repeat one
@@ -69,14 +101,14 @@ const literal = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, "\
 const LINKED = new RegExp(`(${LEARN_HELP_URLS.map(literal).join("|")})`);
 
 /**
- * A message as children for `h`, each of core's Learn URLs in it a link, written as the site's
- * other outbound Learn links are: an href and nothing else. The status line's refusals and the
- * results' notices both use it, so a .pbix's refusal and a legacy report's notice link alike.
+ * A message as children for `h`, each of core's Learn URLs in it a link, opening in a new tab as
+ * every link off the site does. The status line's refusals and the results' notices both use it,
+ * so a .pbix's refusal and a legacy report's notice link alike.
  */
 export function withLearnLinks(text: string): (string | HTMLAnchorElement)[] {
   // Once a message is split on core's URLs, its odd parts are those URLs, which become links; a
   // message with none is one part and stays plain text.
-  return text.split(LINKED).map((part, i) => (i % 2 ? h("a", { href: part }, part) : part));
+  return text.split(LINKED).map((part, i) => (i % 2 ? newTabLink({ href: part }, part) : part));
 }
 
 const SEVERITIES: readonly Severity[] = [3, 2, 1];
@@ -112,6 +144,9 @@ export function heading(result: LintResult, source: string): string {
  * detail, a fact's label, value, and detail, a notice, an absent layer's reason, a config's rule
  * id, a rule's error) reaches the page as a child string of `h`, which shows it through core's
  * `showControls`, so the page and the terminal show the same text.
+ *
+ * The run lives only in this page, so every link that would leave it opens in a new tab: a rule's
+ * page, the About page, and Learn. Links within the results, to a group, stay in this tab.
  */
 export function renderResults(
   container: HTMLElement,
@@ -123,7 +158,7 @@ export function renderResults(
       "p",
       { class: "privacy" },
       "Nothing was uploaded. The analysis ran in this browser tab. ",
-      h("a", { href: "/about/#verify" }, "How to check that"),
+      newTabLink({ href: "/about/#verify" }, "How to check that"),
     ),
     h("h2", {}, heading(result, options.source)),
     // The summary is not a live region: everything is rebuilt on each run, and a region inserted
@@ -179,15 +214,7 @@ export function renderResults(
           ` (${count(g.findings.length, g.rule.severity)}) `,
           layerTag(g),
           " · ",
-          h(
-            "a",
-            {
-              class: "rule-link",
-              href: pagePath(g.rule.slug),
-              "aria-label": `How to fix it: ${g.rule.name}`,
-            },
-            "How to fix it",
-          ),
+          fixLink(g),
         ),
       ),
     ),
@@ -265,10 +292,25 @@ const layerTag = (g: RankedGroup): HTMLElement =>
   h("span", { class: `layer ${g.rule.layer}` }, g.rule.layer);
 
 /**
+ * "How to fix it", on a fix-first item and in a group's panel: the rule's page. Up to ten of them
+ * read the same, so the accessible name says which rule each one opens.
+ */
+const fixLink = (g: RankedGroup): HTMLAnchorElement =>
+  newTabLink(
+    {
+      class: "rule-link",
+      href: pagePath(g.rule.slug),
+      "aria-label": `How to fix it: ${g.rule.name}`,
+    },
+    "How to fix it",
+  );
+
+/**
  * "Report at a glance": what the report will do, one row per fact core gives, and nothing when it
  * gives none (a run with no report). A fact whose rule ran links its value: to the rule's group on
- * this page when the run has one, flagged, since there is something to fix, and to the rule's page
- * when the rule found nothing. Every href is built from the rule id, never from report text.
+ * this page when the run has one, flagged, since there is something to fix, and to the rule's page,
+ * in a new tab, when the rule found nothing. Every href is built from the rule id, never from report
+ * text.
  */
 function renderFacts(result: LintResult): HTMLElement[] {
   if (result.facts.length === 0) return [];
@@ -277,7 +319,7 @@ function renderFacts(result: LintResult): HTMLElement[] {
     if (f.ruleId === undefined) return f.value;
     const here = onPage.get(f.ruleId);
     return here === undefined
-      ? h("a", { class: "fact", href: pagePath(slug(f.ruleId)) }, f.value)
+      ? newTabLink({ class: "fact", href: pagePath(slug(f.ruleId)) }, f.value)
       : h("a", { class: "fact flag", href: `#rule-${here}` }, f.value);
   };
   return [
@@ -443,21 +485,7 @@ function renderGroup(g: RankedGroup): HTMLElement {
         h("span", { class: "visually-hidden" }, count(g.findings.length, g.rule.severity)),
       ),
     ),
-    h(
-      "p",
-      { class: "meta" },
-      h("code", {}, g.rule.id),
-      ` · ${g.rule.category} · `,
-      h(
-        "a",
-        {
-          class: "rule-link",
-          href: pagePath(g.rule.slug),
-          "aria-label": `How to fix it: ${g.rule.name}`,
-        },
-        "How to fix it",
-      ),
-    ),
+    h("p", { class: "meta" }, h("code", {}, g.rule.id), ` · ${g.rule.category} · `, fixLink(g)),
     // The wrapper scrolls sideways on a narrow screen, so a long object name never widens the page.
     // Nothing inside it takes focus, so it is a named tab stop of its own for keyboard scrolling.
     h(

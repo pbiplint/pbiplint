@@ -11,7 +11,14 @@ const html = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../inde
 const body = html
   .slice(html.indexOf("<body>") + 6, html.indexOf("</body>"))
   .replace(/<script[\s\S]*?<\/script>/, "");
+const notFound = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../404.html"), "utf8");
 const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
+
+/** The hidden words a link that opens in a new tab ends with, in its text. */
+const NOTE = " (opens in a new tab)";
+/** A message as the page shows it, where each of core's Learn URLs is a link ending in NOTE. */
+const shown = (message: string): string =>
+  LEARN_HELP_URLS.reduce((text, url) => text.replaceAll(url, `${url}${NOTE}`), message);
 
 /** The accessor an element inherits for a DOM property, so a spy can record and then delegate. */
 const inherited = (el: object, prop: string): PropertyDescriptor => {
@@ -329,10 +336,10 @@ describe("home page", () => {
     await tick();
     await tick();
     const notice = document.querySelector("#results .notice")!;
-    expect(notice.textContent).toBe(legacyReportNotice("Demo.Report").message);
+    expect(notice.textContent).toBe(shown(legacyReportNotice("Demo.Report").message));
     const links = [...notice.querySelectorAll("a")];
     expect(links.map((a) => a.getAttribute("href"))).toEqual([LEARN_HELP_URLS[1]]);
-    for (const a of links) expect(a.getAttributeNames()).toEqual(["href"]);
+    for (const a of links) expect(a.getAttributeNames()).toEqual(["href", "target", "rel"]);
   });
   it("passes the reason a layer was left out to lint, so the skipped line gives it", async () => {
     const input = document.getElementById("folder-input") as HTMLInputElement;
@@ -471,6 +478,47 @@ describe("home page", () => {
     expect(results.hidden).toBe(true);
     expect(results.children.length).toBe(0);
   });
+  it("opens the header and footer links into the site in a new tab while results show, and only then", async () => {
+    const paste = document.getElementById("paste") as HTMLTextAreaElement;
+    const link = (selector: string): HTMLAnchorElement => document.querySelector(selector)!;
+    const site = [
+      ".site-header a.brand",
+      '.site-header nav a[href="/"]',
+      '.site-header nav a[href="/rules/"]',
+      '.site-header nav a[href="/about/"]',
+      '.site-footer a[href="/about/#verify"]',
+    ].map(link);
+    const away = [
+      '.site-header nav a[href^="https://github.com/"]',
+      '.site-footer a[href^="https://www.youtube.com/"]',
+    ].map(link);
+    /** How a link opens: its target and rel, and every hidden note it carries. */
+    const opens = (a: HTMLAnchorElement): (string | null)[] => [
+      a.getAttribute("target"),
+      a.getAttribute("rel"),
+      ...[...a.querySelectorAll(".visually-hidden")].map((n) => n.textContent),
+    ];
+    const newTab = ["_blank", "noopener noreferrer", NOTE];
+    // An empty paste leaves no results, so there is nothing to lose: the site's links navigate.
+    paste.value = "";
+    document.getElementById("lint-paste")!.click();
+    for (const a of site) expect(opens(a)).toEqual([null, null]);
+    for (const a of away) expect(opens(a)).toEqual(newTab);
+    // Results showing: each opens a new tab and says so once, however many runs follow.
+    document.getElementById("try-sample")!.click();
+    await tick();
+    document.getElementById("try-sample")!.click();
+    await tick();
+    for (const a of site) expect(opens(a)).toEqual(newTab);
+    expect(link('.site-header nav a[href="/rules/"]').textContent).toBe(`Rules${NOTE}`);
+    // A problem clears the results, and the links go back to navigating in this tab.
+    document.getElementById("lint-paste")!.click();
+    expect(document.getElementById("results")!.hidden).toBe(true);
+    for (const a of site) expect(opens(a)).toEqual([null, null]);
+    expect(link('.site-header nav a[href="/rules/"]').textContent).toBe("Rules");
+    // GitHub and YouTube leave the site, so they open a new tab throughout.
+    for (const a of away) expect(opens(a)).toEqual(newTab);
+  });
   it("says the page reads a whole project, and names the command that lints the same sample", () => {
     const text = (selector: string): string =>
       document.querySelector(selector)!.textContent!.replace(/\s+/g, " ").trim();
@@ -540,25 +588,25 @@ describe("home page", () => {
     dropFile("Annual\u202excod.pbix");
     await tick();
     await tick();
-    expect(status.textContent).toBe(pbixRefusal("Annual\\u202excod.pbix"));
+    expect(status.textContent).toBe(shown(pbixRefusal("Annual\\u202excod.pbix")));
     expect(status.textContent).not.toMatch(RAW_CONTROL);
     // An ordinary name with accents and CJK is shown as it is.
     dropFile("Ventes café 売上.pbix");
     await tick();
     await tick();
-    expect(status.textContent).toBe(pbixRefusal("Ventes café 売上.pbix"));
+    expect(status.textContent).toBe(shown(pbixRefusal("Ventes café 売上.pbix")));
   });
   it("links the Learn page a refused .pbix's message names, and nothing else", async () => {
     const status = document.getElementById("status")!;
     dropFile("Sales.pbix");
     await tick();
     await tick();
-    expect(status.textContent).toBe(pbixRefusal("Sales.pbix"));
+    expect(status.textContent).toBe(shown(pbixRefusal("Sales.pbix")));
     const links = [...status.querySelectorAll("a")];
     expect(links.map((a) => a.getAttribute("href"))).toEqual([LEARN_HELP_URLS[0]]);
-    expect(links.map((a) => a.textContent)).toEqual([LEARN_HELP_URLS[0]]);
-    // Written as the site's other outbound Learn links are: an href and nothing else.
-    for (const a of links) expect(a.getAttributeNames()).toEqual(["href"]);
+    expect(links.map((a) => a.textContent)).toEqual([`${LEARN_HELP_URLS[0]}${NOTE}`]);
+    // Written as every link off the site is: in a new tab, and nothing more.
+    for (const a of links) expect(a.getAttributeNames()).toEqual(["href", "target", "rel"]);
     // Only core's own URLs are linked, so a URL in the input stays text.
     feedFolder([
       at("Proj/Demo.SemanticModel/definition/tables/T.tmdl", "table T\n"),
@@ -641,3 +689,25 @@ function dropFile(name: string): void {
   });
   document.getElementById("drop")!.dispatchEvent(drop);
 }
+
+describe("hand-written pages", () => {
+  it("open every link off the site in a new tab and say so, and no link within it", () => {
+    for (const [name, text] of [
+      ["index.html", html],
+      ["404.html", notFound],
+    ] as const) {
+      const links = [...new DOMParser().parseFromString(text, "text/html").querySelectorAll("a")];
+      const away = links.filter((a) => /^https?:/.test(a.getAttribute("href") ?? ""));
+      // GitHub in the header and YouTube in the footer.
+      expect(away.length, name).toBe(2);
+      for (const a of away) {
+        expect(a.getAttribute("target"), name).toBe("_blank");
+        expect(a.getAttribute("rel"), name).toBe("noopener noreferrer");
+        expect(a.lastElementChild?.className, name).toBe("visually-hidden");
+        expect(a.lastElementChild?.textContent, name).toBe(NOTE);
+      }
+      for (const a of links.filter((l) => !away.includes(l)))
+        expect(a.hasAttribute("target"), `${name}: ${a.getAttribute("href")}`).toBe(false);
+    }
+  });
+});

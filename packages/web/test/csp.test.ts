@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CSP, cspPlugin } from "../src/build/csp.js";
+import { CSP, cspPlugin, REFERRER } from "../src/build/csp.js";
 
 describe("content security policy", () => {
   it("forbids every connection and every external resource", () => {
@@ -29,6 +29,10 @@ describe("content security policy", () => {
         attrs: { "http-equiv": "Content-Security-Policy", content: CSP },
         injectTo: "head-prepend",
       },
+      { tag: "meta", attrs: { name: "referrer", content: REFERRER }, injectTo: "head-prepend" },
     ]);
+  });
+  it("sends no Referer, so a link off the site never names the page it was followed from", () => {
+    expect(REFERRER).toBe("no-referrer");
   });
 });

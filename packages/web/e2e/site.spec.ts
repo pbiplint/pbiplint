@@ -2,7 +2,8 @@ import { AxeBuilder } from "@axe-core/playwright";
 import { expect, test } from "./fixtures.js";
 
 // The generated pages and the properties every page shares: the policy, the build marker, the
-// deep-link anchors, the names code blocks carry, and an accessibility scan of each page template.
+// referrer policy, the deep-link anchors, the names code blocks carry, and an accessibility scan of
+// each page template.
 // Every test also ends by proving no console error was written and no request left the origin
 // (see fixtures.ts).
 
@@ -35,7 +36,30 @@ test("every page carries the policy and the build marker", async ({ page }) => {
       "content",
       /^(dev|[0-9a-f]{7})$/,
     );
+    // A link off the site that missed its rel still sends no Referer.
+    await expect(page.locator('meta[name="referrer"]')).toHaveAttribute("content", "no-referrer");
   }
+});
+
+test("How to fix it opens the rule's page in a new tab, and the results stay put", async ({
+  page,
+  context,
+}) => {
+  await page.getByRole("button", { name: "Try the sample project" }).click();
+  const groups = page.locator("#results .group");
+  await expect(groups.first()).toBeVisible();
+  const count = await groups.count();
+  const fix = page.locator("#results .fix-first a.rule-link").first();
+  const href = await fix.getAttribute("href");
+  expect(href).toMatch(/^\/rules\/[a-z0-9-]+\/$/);
+  const [opened] = await Promise.all([context.waitForEvent("page"), fix.click()]);
+  await opened.waitForLoadState();
+  expect(new URL(opened.url()).pathname).toBe(href);
+  await expect(opened.locator("article.rule h1")).toBeVisible();
+  await opened.close();
+  expect(new URL(page.url()).pathname).toBe("/");
+  await expect(groups).toHaveCount(count);
+  await expect(groups.first()).toBeVisible();
 });
 
 test("a section of a rule page, the rules index, and the About page can be deep-linked", async ({

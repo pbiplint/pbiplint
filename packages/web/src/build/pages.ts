@@ -56,6 +56,24 @@ const CONFIG_FENCE = "json pbiplint.config.json";
 export const escapeHtml = (s: string): string =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
+/**
+ * What a link that opens in a new tab adds to its accessible name, hidden from the eye, since the
+ * stylesheet's arrow says the same thing on screen (WCAG 3.2.5). The results page writes the same
+ * words; the copy is deliberate for the reason CATEGORY_ORDER gives, and a test holds the two equal.
+ */
+export const NEW_TAB_NOTE = " (opens in a new tab)";
+
+/** Whether a link leaves the site: an absolute http or https URL, rather than a path or an anchor. */
+const leavesSite = (href: string): boolean => /^https?:\/\//i.test(href);
+
+/**
+ * A link that leaves the site, which opens in a new tab so a reader partway through a page keeps
+ * their place. `rel` keeps the new page from reaching back into this one through `window.opener`
+ * and keeps this page's address out of the request. `label` is HTML.
+ */
+export const external = (href: string, label: string): string =>
+  `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${label}<span class="visually-hidden">${NEW_TAB_NOTE}</span></a>`;
+
 const str = (v: string | string[] | undefined): string =>
   Array.isArray(v) ? (v[0] ?? "") : (v ?? "");
 const list = (v: string | string[] | undefined): string[] => (Array.isArray(v) ? v : v ? [v] : []);
@@ -169,7 +187,7 @@ export function ruleLinks(pages: { slug: string; markdown: string }[]): RuleLink
 export function attribution(sources: string[]): string {
   const links = sources
     .filter((url) => SOURCE_NAMES[url] !== undefined)
-    .map((url) => `<a href="${escapeHtml(url)}">${escapeHtml(SOURCE_NAMES[url]!)}</a>`);
+    .map((url) => external(url, escapeHtml(SOURCE_NAMES[url]!)));
   if (links.length === 0) return "";
   return `<p class="sources">Ported from ${links.join(" and ")}.</p>\n`;
 }
@@ -378,6 +396,9 @@ const plainFence = new Renderer();
  * (CONTROL_CHARACTER). A code span naming another rule links to its page; the renderer writes
  * every other code span too, rather than handing it back to marked, whose escaping would leave a
  * control character raw.
+ *
+ * A link to another site, written as a link or as a bare URL, is written by `external`, so it
+ * opens in a new tab and says so; a path or an anchor on this site goes back to marked as it is.
  */
 function siteMarkdown(links: RuleLinks = new Map(), self = ""): Marked {
   let figures = 0;
@@ -425,6 +446,11 @@ function siteMarkdown(links: RuleLinks = new Map(), self = ""): Marked {
         if (slug === undefined || text === self) return code;
         return `<a href="/rules/${escapeHtml(slug)}/">${code}</a>`;
       },
+      link({ href, text, tokens, autolink }: Tokens.Link): string | false {
+        if (!leavesSite(href)) return false;
+        // A bare URL is its own label, as marked writes one.
+        return external(href, autolink ? escapeHtml(text) : this.parser.parseInline(tokens));
+      },
     },
   });
 }
@@ -445,7 +471,7 @@ function header(path: string): string {
       <div class="container">
         <a class="brand" href="/"><img src="/favicon.svg" alt="" width="28" height="28" /> pbiplint</a>
         <nav>
-          ${NAV.map((n) => `<a href="${n.href}"${current(n.href) ? ' aria-current="page"' : ""}>${n.label}</a>`).join("")}
+          ${NAV.map((n) => (leavesSite(n.href) ? external(n.href, n.label) : `<a href="${n.href}"${current(n.href) ? ' aria-current="page"' : ""}>${n.label}</a>`)).join("")}
         </nav>
       </div>
     </header>`;
@@ -456,7 +482,7 @@ const FOOTER = `<footer class="site-footer">
         <p>Nothing you lint leaves your browser. <a href="/about/#verify">How to check that</a>.</p>
         <p>
           Free software under the AGPL-3.0-or-later license, from the makers of
-          <a href="https://www.youtube.com/@TheDataPractitioner">The Data Practitioner</a>. pbiplint
+          ${external("https://www.youtube.com/@TheDataPractitioner", "The Data Practitioner")}. pbiplint
           and its logo are trademarks of McKinley Consulting.
         </p>
       </div>
@@ -537,9 +563,9 @@ export function rulePage(
   <p class="eyebrow"><a href="/rules/">Rules</a> / ${escapeHtml(meta.category)}</p>
   <h1>${escapeHtml(title)}</h1>
   <p class="meta"><span class="badge ${escapeHtml(meta.severity)}">${escapeHtml(meta.severity)}</span> <code>${escapeHtml(meta.id)}</code> · ${escapeHtml(STATUS_LABEL[meta.status] ?? meta.status)}${layerItem} · scope: ${escapeHtml(list(data.scope).join(", "))}</p>
-  ${video ? `<p class="video"><a href="${escapeHtml(video)}">Watch the video for this rule</a></p>` : ""}
+  ${video ? `<p class="video">${external(video, "Watch the video for this rule")}</p>` : ""}
   ${render(withIgnoreHelp(body.replace(/^# .+\n/m, ""), meta.id, list(data.scope)), links, meta.id)}
-  ${attribution(list(data.sources))}<p class="cta"><a class="button" href="/">${CHECK_LABEL[meta.layer]}</a> <a href="https://github.com/pbiplint/pbiplint/edit/main/rules/${escapeHtml(slug)}.md">Improve this page</a></p>
+  ${attribution(list(data.sources))}<p class="cta"><a class="button" href="/">${CHECK_LABEL[meta.layer]}</a> ${external(`https://github.com/pbiplint/pbiplint/edit/main/rules/${slug}.md`, "Improve this page")}</p>
 </article>`;
   return {
     html: page({

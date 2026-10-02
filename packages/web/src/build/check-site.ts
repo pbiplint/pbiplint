@@ -171,6 +171,21 @@ function checkHtml(rel: string, html: string, report: SiteReport): void {
       if (targets.some((target) => OFF_ORIGIN.test(target)))
         report.problems.push(`${rel}: external resource ${tag.raw}`);
     }
+    // A link off the site opens in a new tab, so a reader partway through a page keeps their
+    // place, and a new tab never hands the new page this one through window.opener or its address
+    // through the Referer header.
+    if (tag.name === "a") {
+      const newTab = tag.attrs.get("target") === "_blank";
+      const rels = new Set((tag.attrs.get("rel") ?? "").toLowerCase().split(/\s+/));
+      if (newTab && !(rels.has("noopener") && rels.has("noreferrer")))
+        report.problems.push(
+          `${rel}: new-tab link without rel="noopener noreferrer" ${brief(tag.raw)}`,
+        );
+      if (!newTab && OFF_ORIGIN.test(tag.attrs.get("href") ?? ""))
+        report.problems.push(
+          `${rel}: link off the site that opens in the same tab ${brief(tag.raw)}`,
+        );
+    }
     const id = tag.attrs.get("id");
     if (id === "") report.problems.push(`${rel}: empty id on ${tag.raw}`);
     else if (id !== undefined) {
@@ -220,7 +235,9 @@ export function siteCheckPlugin(): Plugin {
       console.log(`site: ${report.files} files, ${(report.bytes / 1024).toFixed(0)} KB`);
       if (report.problems.length)
         throw new Error(`site check failed:\n  ${report.problems.join("\n  ")}`);
-      console.log("site check passed: CSP on every page, no external resources, no network APIs");
+      console.log(
+        "site check passed: CSP on every page, no external resources, no network APIs, every link off the site in a new tab",
+      );
     },
   };
 }

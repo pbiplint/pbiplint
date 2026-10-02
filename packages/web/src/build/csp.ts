@@ -17,6 +17,13 @@ export const CSP = [
   "base-uri 'none'",
 ].join("; ");
 
+/**
+ * The page's address stays out of every request a link makes, so following one tells the site at
+ * the other end nothing about where the reader came from. Every link off the site already carries
+ * `rel="noreferrer"`; this covers one that does not.
+ */
+export const REFERRER = "no-referrer";
+
 export function cspPlugin(): Plugin {
   return {
     name: "pbiplint-csp",
@@ -30,6 +37,7 @@ export function cspPlugin(): Plugin {
             attrs: { "http-equiv": "Content-Security-Policy", content: CSP },
             injectTo: "head-prepend",
           },
+          { tag: "meta", attrs: { name: "referrer", content: REFERRER }, injectTo: "head-prepend" },
         ],
       };
     },

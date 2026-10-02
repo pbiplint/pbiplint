@@ -9,7 +9,15 @@ import {
   type Rule,
 } from "@pbiplint/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { applyFilters, h, heading, renderResults } from "../src/results/render.js";
+import { NEW_TAB_NOTE as PAGES_NEW_TAB_NOTE } from "../src/build/pages.js";
+import {
+  applyFilters,
+  h,
+  heading,
+  NEW_TAB_NOTE,
+  renderResults,
+  withLearnLinks,
+} from "../src/results/render.js";
 import { SAMPLE_CONFIG, SAMPLE_FILES } from "../src/sample.js";
 
 /** The sample as the page lints it: both parts, under the sample's own config. */
@@ -82,19 +90,44 @@ describe("renderResults", () => {
       `(${info.findings.length} info)`,
     );
   });
-  it("links each fix-first item to its rule page as well as to its group", () => {
+  it("links each fix-first item to its rule page, in a new tab, as well as to its group", () => {
     renderResults(container, result, { source: "x" });
     const items = [...container.querySelectorAll(".fix-first li")];
     items.forEach((li, i) => {
       const { slug, name } = result.groups[i]!.rule;
-      expect(li.querySelector("a")!.getAttribute("href")).toBe(`#rule-${slug}`);
+      const jump = li.querySelector("a")!;
+      expect(jump.getAttribute("href")).toBe(`#rule-${slug}`);
+      // The jump to the group stays on this page.
+      expect(jump.hasAttribute("target")).toBe(false);
       const link = li.querySelector("a.rule-link")!;
       expect(link.getAttribute("href")).toBe(`/rules/${slug}/`);
-      // Up to ten links read "How to fix it"; the accessible name says which rule each one opens.
-      expect(link.getAttribute("aria-label")).toBe(`How to fix it: ${name}`);
+      expect(link.getAttribute("target")).toBe("_blank");
+      expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+      // Up to ten links read "How to fix it"; the accessible name says which rule each one opens,
+      // and that it opens in a new tab.
+      expect(link.getAttribute("aria-label")).toBe(`How to fix it: ${name} (opens in a new tab)`);
+      // The label carries the warning, so the text needs no hidden note of its own.
+      expect(link.textContent).toBe("How to fix it");
     });
     const group = container.querySelector(".group a.rule-link")!;
-    expect(group.getAttribute("aria-label")).toBe(`How to fix it: ${result.groups[0]!.rule.name}`);
+    expect(group.getAttribute("aria-label")).toBe(
+      `How to fix it: ${result.groups[0]!.rule.name} (opens in a new tab)`,
+    );
+    expect(group.getAttribute("target")).toBe("_blank");
+    expect(group.getAttribute("rel")).toBe("noopener noreferrer");
+  });
+  it("opens the privacy line's How to check that in a new tab, and says so", () => {
+    renderResults(container, result, { source: "x" });
+    const link = container.querySelector(".privacy a")!;
+    expect(link.getAttribute("href")).toBe("/about/#verify");
+    expect(link.getAttribute("target")).toBe("_blank");
+    expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+    expect(link.textContent).toBe("How to check that (opens in a new tab)");
+    expect(link.querySelector("span.visually-hidden")!.textContent).toBe(" (opens in a new tab)");
+  });
+  it("words the new-tab note as the generated pages do", () => {
+    // The build cannot import core (see CATEGORY_ORDER in pages.ts), so the words are copied there.
+    expect(NEW_TAB_NOTE).toBe(PAGES_NEW_TAB_NOTE);
   });
   it("renders one group per rule with the objects, a page link, and severity and category data", () => {
     renderResults(container, result, { source: "x" });
@@ -388,6 +421,14 @@ describe("renderResults", () => {
     const page = container.querySelector("section.facts dd a[href='/rules/filters-pane-state/']")!;
     expect(page).not.toBeNull();
     expect(page.className).toBe("fact");
+    // The rule's page opens in a new tab and says so; the flag, a jump within these results, stays.
+    expect(page.getAttribute("target")).toBe("_blank");
+    expect(page.getAttribute("rel")).toBe("noopener noreferrer");
+    expect(page.querySelector("span.visually-hidden")!.textContent).toBe(" (opens in a new tab)");
+    const flag = container.querySelector("section.facts dd a.fact.flag")!;
+    expect(flag.getAttribute("href")).toMatch(/^#rule-/);
+    expect(flag.hasAttribute("target")).toBe(false);
+    expect(flag.querySelector("span")).toBeNull();
     // A rule that did not run links nothing: the fact is plain text.
     const off = lint(SAMPLE_FILES, {
       config: resolveConfig({ rules: { FILTERS_PANE_STATE: "off" } }),
@@ -629,9 +670,26 @@ describe("renderResults", () => {
     const run = lint(bare, { diagnostics: [legacy] });
     renderResults(container, run, { source: "x" });
     const notice = container.querySelector(".notice")!;
-    expect(notice.textContent).toBe(legacy.message);
-    expect([...notice.querySelectorAll("a")].map((a) => a.getAttribute("href"))).toEqual([
-      LEARN_HELP_URLS[1],
+    expect(notice.textContent).toBe(
+      legacy.message.replace(LEARN_HELP_URLS[1]!, `${LEARN_HELP_URLS[1]} (opens in a new tab)`),
+    );
+    const links = [...notice.querySelectorAll("a")];
+    expect(links.map((a) => a.getAttribute("href"))).toEqual([LEARN_HELP_URLS[1]]);
+    // Learn is off the site, so it opens in a new tab, as every such link does.
+    for (const a of links) {
+      expect(a.getAttribute("target")).toBe("_blank");
+      expect(a.getAttribute("rel")).toBe("noopener noreferrer");
+    }
+  });
+  it("writes each Learn link with its URL as its text and the new-tab note after it", () => {
+    const [before, link, after] = withLearnLinks(`See ${LEARN_HELP_URLS[0]} for more.`);
+    expect(before).toBe("See ");
+    expect(after).toBe(" for more.");
+    const a = link as HTMLAnchorElement;
+    expect(a.getAttributeNames()).toEqual(["href", "target", "rel"]);
+    expect([...a.childNodes].map((n) => n.textContent)).toEqual([
+      LEARN_HELP_URLS[0],
+      " (opens in a new tab)",
     ]);
   });
   it("never parses model text as HTML", () => {

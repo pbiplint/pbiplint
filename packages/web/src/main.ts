@@ -11,7 +11,7 @@ import {
 import { InputError, selectProject, type InputTree } from "./input/project-files.js";
 import { directoryPicker, readDirectoryInput, readPickedDirectory } from "./input/pick-folder.js";
 import { readDataTransfer } from "./input/read-drop.js";
-import { heading, renderResults, withLearnLinks } from "./results/render.js";
+import { heading, NEW_TAB, newTabNote, renderResults, withLearnLinks } from "./results/render.js";
 import { SAMPLE_NAME, SAMPLE_TREE } from "./sample.js";
 
 /**
@@ -33,6 +33,35 @@ const announcer = byId("announce", HTMLParagraphElement);
 const results = byId("results", HTMLElement);
 const dropZone = byId("drop", HTMLElement);
 const folderInput = byId("folder-input", HTMLInputElement);
+
+/**
+ * The header and footer links into the site: the brand, Lint, Rules, About, and the footer's "How
+ * to check that". GitHub and YouTube leave the site, so the markup opens them in a new tab already.
+ */
+const siteLinks = [
+  ...document.querySelectorAll<HTMLAnchorElement>(".site-header a, .site-footer a"),
+].filter((a) => a.getAttribute("href")?.startsWith("/"));
+
+/**
+ * While results are showing, the site's own header and footer links open in a new tab, since
+ * following one here would discard the run; the brand and Lint then open a second lint page for
+ * another project while these results stay put. Before a run, and once a problem has cleared the
+ * results, there is nothing to lose, so they navigate as usual. The arrow the stylesheet draws on
+ * `a[target="_blank"]` comes and goes with the attribute, and the hidden note with it.
+ */
+function keepResults(showing: boolean): void {
+  for (const a of siteLinks) {
+    if (showing === (a.target === NEW_TAB.target)) continue;
+    if (showing) {
+      Object.assign(a, NEW_TAB);
+      a.append(newTabNote());
+    } else {
+      a.removeAttribute("target");
+      a.removeAttribute("rel");
+      a.querySelector(".visually-hidden")?.remove();
+    }
+  }
+}
 
 function say(text: string, kind: "info" | "error" = "info"): void {
   // Unhidden before the text is written: a screen reader can miss text set on a hidden live region.
@@ -59,6 +88,7 @@ function problem(message: string): void {
   announcer.textContent = "";
   results.hidden = true;
   results.replaceChildren();
+  keepResults(false);
   if (typeof status.scrollIntoView === "function")
     status.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
@@ -119,6 +149,7 @@ function run({ files, source, config, read, notes, diagnostics, absent, unreadPa
     // stays, and home.test.ts holds it.
     results.hidden = false;
     renderResults(results, result, { source, files: read, notes });
+    keepResults(true);
     say("");
     // The results are rebuilt on every run, so the live region is this one paragraph that never
     // leaves the page: a screen reader hears the heading and the summary sentence, not every

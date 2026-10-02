@@ -14,7 +14,13 @@ import {
 } from "@pbiplint/core";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { makeTempDir, removeTempDir, tempDir } from "../../../tests/support/temp-dir.js";
-import { generatePlugin, generateSite, pageEntries, RULES_DIR } from "../src/build/generate.js";
+import {
+  CONTENT_DIR,
+  generatePlugin,
+  generateSite,
+  pageEntries,
+  RULES_DIR,
+} from "../src/build/generate.js";
 import {
   attribution,
   CATEGORY_ORDER,
@@ -34,6 +40,10 @@ import {
 
 const read = (slug: string): string => readFileSync(join(RULES_DIR, `${slug}.md`), "utf8");
 const home = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+
+/** A link off the site as every page writes one: in a new tab, and saying so to a screen reader. */
+const opens = (href: string, label: string): string =>
+  `<a href="${href}" target="_blank" rel="noopener noreferrer">${label}<span class="visually-hidden"> (opens in a new tab)</span></a>`;
 
 /**
  * A C0 control character other than tab, line feed, and carriage return, or U+007F: what an HTML
@@ -355,7 +365,7 @@ describe("rulePage", () => {
       "sources:\n  - https://github.com/NatVanG/fab-inspector/blob/main/Rules/Base-rules.json\n",
     );
     expect(rulePage(page, "x").html).toContain(
-      `<p class="sources">Ported from <a href="https://github.com/NatVanG/fab-inspector/blob/main/Rules/Base-rules.json">PBI Inspector's base rules by Nat Van Gulck</a>.</p>`,
+      `<p class="sources">Ported from <a href="https://github.com/NatVanG/fab-inspector/blob/main/Rules/Base-rules.json" target="_blank" rel="noopener noreferrer">PBI Inspector's base rules by Nat Van Gulck<span class="visually-hidden"> (opens in a new tab)</span></a>.</p>`,
     );
   });
   it("names the page's layer in its meta line only when the site publishes more than one family", () => {
@@ -431,7 +441,7 @@ describe("rulePage", () => {
   it("prints where the rule was ported from, and nothing for a rule with no source", () => {
     const { html } = rulePage(read("hide-foreign-keys"), "hide-foreign-keys");
     expect(html).toContain(
-      `<p class="sources">Ported from <a href="https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json">Microsoft's Best Practice Analyzer ruleset</a>.</p>`,
+      `<p class="sources">Ported from <a href="https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json" target="_blank" rel="noopener noreferrer">Microsoft's Best Practice Analyzer ruleset<span class="visually-hidden"> (opens in a new tab)</span></a>.</p>`,
     );
     const none = rulePage(
       read("hide-foreign-keys").replace(/sources:\n( {2}- .*\n)+/, "sources:\n"),
@@ -456,9 +466,45 @@ describe("rulePage", () => {
       "x",
     );
     expect(both.html).toContain(
-      `<p class="sources">Ported from <a href="https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json">Microsoft's Best Practice Analyzer ruleset</a>.</p>`,
+      `<p class="sources">Ported from <a href="https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json" target="_blank" rel="noopener noreferrer">Microsoft's Best Practice Analyzer ruleset<span class="visually-hidden"> (opens in a new tab)</span></a>.</p>`,
     );
     expect(both.html).not.toContain("sqlbi");
+  });
+  it("opens every link off the site in a new tab and says so, and keeps the site's own links in this one", () => {
+    const page = read("hide-foreign-keys")
+      .replace("video:\n", "video: https://youtu.be/abc\n")
+      .replace(
+        "## Quirks",
+        "See [Learn](https://learn.microsoft.com/x), <https://dax.guide/>, the [rules](/rules/), and [Quirks](#quirks).\n\n## Quirks",
+      );
+    const { html } = rulePage(page, "hide-foreign-keys");
+    // In the body, a link and a bare URL leave the site; a path and an anchor stay on it.
+    expect(html).toContain(`See ${opens("https://learn.microsoft.com/x", "Learn")}, `);
+    expect(html).toContain(opens("https://dax.guide/", "https://dax.guide/"));
+    expect(html).toContain('the <a href="/rules/">rules</a>, and <a href="#quirks">Quirks</a>.');
+    // Around the body: the video, the edit link, GitHub in the header, and YouTube in the footer.
+    expect(html).toContain(opens("https://youtu.be/abc", "Watch the video for this rule"));
+    expect(html).toContain(
+      opens(
+        "https://github.com/pbiplint/pbiplint/edit/main/rules/hide-foreign-keys.md",
+        "Improve this page",
+      ),
+    );
+    expect(html).toContain(opens("https://github.com/pbiplint/pbiplint", "GitHub"));
+    expect(html).toContain(
+      opens("https://www.youtube.com/@TheDataPractitioner", "The Data Practitioner"),
+    );
+    // Site navigation, the breadcrumb, the button, and the footer's check stay in this tab.
+    expect(html).toContain('<a class="brand" href="/">');
+    expect(html).toContain('<a href="/">Lint</a><a href="/rules/" aria-current="page">Rules</a>');
+    expect(html).toContain('<p class="eyebrow"><a href="/rules/">Rules</a> / ');
+    expect(html).toContain('<a class="button" href="/">Check a model for this</a>');
+    expect(html).toContain('<a href="/about/#verify">How to check that</a>');
+    // Every link that opens a new tab says so: the two in the body, the four above, and the
+    // attribution line's.
+    const newTabs = html.match(/target="_blank"/g)?.length;
+    expect(newTabs).toBe(7);
+    expect(html.match(/\(opens in a new tab\)/g)?.length).toBe(newTabs);
   });
 });
 
@@ -554,7 +600,7 @@ describe("ruleLinks and attribution", () => {
         "https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json",
       ]),
     ).toBe(
-      `<p class="sources">Ported from <a href="https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json">Microsoft's Best Practice Analyzer ruleset</a>.</p>\n`,
+      `<p class="sources">Ported from <a href="https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json" target="_blank" rel="noopener noreferrer">Microsoft's Best Practice Analyzer ruleset<span class="visually-hidden"> (opens in a new tab)</span></a>.</p>\n`,
     );
     expect(attribution(["https://example.org/a?b=1"])).toBe("");
     expect(
@@ -563,7 +609,7 @@ describe("ruleLinks and attribution", () => {
         "https://www.sqlbi.com/articles/x",
       ]),
     ).toBe(
-      `<p class="sources">Ported from <a href="https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json">Microsoft's Best Practice Analyzer ruleset</a>.</p>\n`,
+      `<p class="sources">Ported from <a href="https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json" target="_blank" rel="noopener noreferrer">Microsoft's Best Practice Analyzer ruleset<span class="visually-hidden"> (opens in a new tab)</span></a>.</p>\n`,
     );
   });
 });
@@ -933,11 +979,32 @@ describe("generatePlugin", () => {
   });
 });
 
+describe("contentPage", () => {
+  it("opens the About page's links off the site in a new tab, and its links within the site in this one", () => {
+    const html = contentPage(
+      readFileSync(join(CONTENT_DIR, "about.md"), "utf8"),
+      "/about/",
+      "content/about.md",
+    );
+    expect(html).toContain(
+      `the makers of ${opens("https://www.youtube.com/@TheDataPractitioner", "The Data Practitioner")}. It is`,
+    );
+    expect(html).toContain(`on ${opens("https://github.com/pbiplint/pbiplint", "GitHub")}.`);
+    expect(html).toContain('<a href="/">home page</a>');
+    expect(html).toContain('<a href="/rules/">rules index</a>');
+  });
+});
+
 describe("home page shell", () => {
   it("has the same navigation and privacy footer as the generated pages", () => {
     for (const n of NAV) {
       expect(home).toContain(`href="${n.href}"`);
-      expect(home).toMatch(new RegExp(`>\\s*${n.label}\\s*</a`));
+      // A link off the site ends with its hidden note (see home.test.ts).
+      expect(home).toMatch(
+        new RegExp(
+          `>\\s*${n.label}\\s*(<span class="visually-hidden"> \\(opens in a new tab\\)</span>)?</a`,
+        ),
+      );
     }
     expect(home).toContain("Nothing you lint leaves your browser.");
   });

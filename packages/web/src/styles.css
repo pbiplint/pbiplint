@@ -47,6 +47,37 @@ a {
 a:hover {
   color: var(--fg-1);
 }
+/* A link that opens in a new tab ends in the usual external-link mark, in the link's own colour,
+   cut from the colour by a mask so it follows the link through hover. It is empty, so a screen
+   reader reads nothing for it: the link's name already ends "(opens in a new tab)". An inline-block
+   rather than an inline box, since WebKit does not mask an inline box; like an image, it can wrap
+   onto the next line by itself at some widths. */
+a[target="_blank"]::after {
+  content: "";
+  display: inline-block;
+  width: 0.75em;
+  height: 0.75em;
+  margin-left: 0.2em;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 3H3v10h10V9M10 2h4v4M14 2 7.5 8.5'/%3E%3C/svg%3E")
+    no-repeat 50% 50% / contain;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 3H3v10h10V9M10 2h4v4M14 2 7.5 8.5'/%3E%3C/svg%3E")
+    no-repeat 50% 50% / contain;
+}
+/* A contrast theme repaints every background in the page's own colour, which would hide the mark,
+   so there it is drawn in the theme's link colour. */
+@media (forced-colors: active) {
+  a[target="_blank"]::after {
+    forced-color-adjust: none;
+    background-color: LinkText;
+  }
+}
+/* The note is for a screen reader, so a reader who copies a sentence with a link in it does not
+   paste "(opens in a new tab)" with it. */
+a[target="_blank"] > .visually-hidden {
+  -webkit-user-select: none;
+  user-select: none;
+}
 code,
 pre,
 .mono {
@@ -183,6 +214,11 @@ h3 {
 }
 .brand img {
   border-radius: 6px;
+}
+/* The brand is a flex row with a gap between its logo and its name; the new-tab mark takes back
+   all but its own margin of that gap, so it sits against the name as it does on every other link. */
+.brand[target="_blank"]::after {
+  margin-left: calc(0.2em - 10px);
 }
 .site-header nav {
   display: flex;

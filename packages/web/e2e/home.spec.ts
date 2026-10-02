@@ -92,6 +92,47 @@ test("a link to a group the Show filter hid shows that group, opens it, and scro
   await expect(group.locator("summary")).toBeFocused();
 });
 
+test("while results show, the site's own links open in a new tab, so the results stay put", async ({
+  page,
+  context,
+}) => {
+  const header = page.locator(".site-header");
+  const site = [
+    header.locator("a.brand"),
+    header.locator('nav a[href="/"]'),
+    header.locator('nav a[href="/rules/"]'),
+    header.locator('nav a[href="/about/"]'),
+    page.locator('.site-footer a[href="/about/#verify"]'),
+  ];
+  // Before a run there is nothing to lose, so they navigate as usual.
+  for (const link of site) await expect(link).not.toHaveAttribute("target");
+  await page.getByRole("button", { name: "Try the sample project" }).click();
+  const groups = page.locator("#results .group");
+  await expect(groups.first()).toBeVisible();
+  for (const link of site) {
+    await expect(link).toHaveAttribute("target", "_blank");
+    await expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  }
+  // The name a screen reader hears says where the link opens.
+  const rules = header.getByRole("link", { name: "Rules (opens in a new tab)", exact: true });
+  const [opened] = await Promise.all([context.waitForEvent("page"), rules.click()]);
+  await opened.waitForLoadState();
+  expect(new URL(opened.url()).pathname).toBe("/rules/");
+  await expect(opened.locator("h1")).toHaveText("Rules");
+  await opened.close();
+  expect(new URL(page.url()).pathname).toBe("/");
+  await expect(groups.first()).toBeVisible();
+  // An empty paste clears the results, and the links go back to navigating in this tab.
+  await page.getByRole("button", { name: "Lint pasted TMDL" }).click();
+  await expect(page.locator("#status")).toHaveText("Paste some TMDL first.");
+  await expect(page.locator("#results")).toBeHidden();
+  for (const link of site) {
+    await expect(link).not.toHaveAttribute("target");
+    await expect(link).not.toHaveAttribute("rel");
+  }
+  await expect(header.getByRole("link", { name: "Rules", exact: true })).toBeVisible();
+});
+
 test("lints pasted TMDL, and an empty paste keeps the textarea in view", async ({ page }) => {
   const lint = page.getByRole("button", { name: "Lint pasted TMDL" });
   await lint.click();

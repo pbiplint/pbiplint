@@ -19,7 +19,7 @@ function site(files: Record<string, string>): string {
 describe("checkSite", () => {
   it("passes a site whose pages carry the CSP and reference only their own origin", () => {
     const dir = site({
-      "index.html": `<html><head>${META}<link rel="canonical" href="https://pbiplint.com/" /><link rel="stylesheet" href="/assets/a.css"></head><body><a href="https://github.com/pbiplint/pbiplint">GitHub</a><script type="module" src="/assets/a.js"></script></body></html>`,
+      "index.html": `<html><head>${META}<link rel="canonical" href="https://pbiplint.com/" /><link rel="stylesheet" href="/assets/a.css"></head><body><a href="https://github.com/pbiplint/pbiplint" target="_blank" rel="noopener noreferrer">GitHub</a><a href="/rules/">Rules</a><a href="#verify">verify</a><script type="module" src="/assets/a.js"></script></body></html>`,
       "rules/x/index.html": `<html><head>${META}</head><body><img src="/favicon.svg"></body></html>`,
       "assets/a.js": 'document.createElement("a");URL.createObjectURL(new Blob([""]));',
       "assets/a.css": "@font-face{src:url(/assets/inter.woff2)}",
@@ -187,6 +187,19 @@ describe("checkSite", () => {
       "index.html: raw control character U+007F on line 2",
     ]);
   });
+  it("names a link off the site that opens in the same tab, and a new-tab link without its rel", () => {
+    const dir = site({
+      "index.html": `<html><head>${META}</head><body><a href="https://learn.microsoft.com/x">Learn</a><a href="//example.com/">x</a><a href="/about/" target="_blank">About</a><a href="https://dax.guide/" target=_blank rel=noopener>DAX</a></body></html>`,
+      // Either order of the two rel tokens, in any case, and a new tab on a link within the site.
+      "ok/index.html": `<html><head>${META}</head><body><a href="https://dax.guide/" target="_blank" rel="NoReferrer noopener">DAX</a><a href="/rules/" target="_blank" rel="noopener noreferrer">Rules</a></body></html>`,
+    });
+    expect(checkSite(dir).problems).toEqual([
+      'index.html: link off the site that opens in the same tab <a href="//example.com/">',
+      'index.html: link off the site that opens in the same tab <a href="https://learn.microsoft.com/x">',
+      'index.html: new-tab link without rel="noopener noreferrer" <a href="/about/" target="_blank">',
+      'index.html: new-tab link without rel="noopener noreferrer" <a href="https://dax.guide/" target=_blank rel=noopener>',
+    ]);
+  });
   it("reads every unquoted attribute on a tag, not only the first", () => {
     const dir = site({
       "index.html": `<html><head>${META}</head><body><img src=/a.png srcset=https://evil.example/x.png></body></html>`,
@@ -275,7 +288,7 @@ describe("siteCheckPlugin", () => {
     expect(error).toBeUndefined();
     expect(logs[0]).toMatch(/^site: 2 files, \d+ KB$/);
     expect(logs[1]).toBe(
-      "site check passed: CSP on every page, no external resources, no network APIs",
+      "site check passed: CSP on every page, no external resources, no network APIs, every link off the site in a new tab",
     );
   });
 

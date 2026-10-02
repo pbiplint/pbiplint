@@ -142,7 +142,8 @@ build in their oracles. A fixture added later has only its Microsoft capture. Th
   captures do for the rules taken from the built-in set; `packages/core/test/sourced-parity.test.ts`
   holds each such rule to its capture. The rule files themselves are not committed, since several
   carry no license: the list pins each one to a commit and a sha256, and the script fetches it from
-  there and checks it.
+  there and checks it. A file GitHub no longer has is recorded as unavailable, with the date the
+  capture found it gone, as one of the 46 is in the captures made from October 2, 2026.
 
 A listed fixture keeps its captures as they are once 0.7.1.2 stops working: a change to it changes
 its Microsoft capture, which the survey's run of Microsoft's own file must equal, so every listed

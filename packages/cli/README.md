@@ -67,8 +67,11 @@ calls, has a one-word name, or has no description, for a visible name that a tra
 gives no caption, and for a visible decimal column with no format string. Four of pbiplint's own
 model rules take their test from Tabular Editor's rules, from Tabular Editor 3's built-in set or the
 community's published rule files, and are checked against Tabular Editor on the same model. Five of
-the Microsoft rules need statistics only a live model has; they are listed but not run. Each rule
-has a page at https://pbiplint.com/rules with what it checks, why, how to fix it, and quirks.
+the Microsoft rules need statistics only a live model has; they are listed but not run. A column
+whose TMDL names no type, as Power BI Desktop saves most calculated columns, is left out of the
+thirteen ported rules that test a column's type, where Tabular Editor reads the type from the
+column's DAX; each rule's page says so. Each rule has a page at https://pbiplint.com/rules with
+what it checks, why, how to fix it, and quirks.
 
 The report layer (PBIR) is read beside the model: a `.Report` folder alone is valid input, and with
 the model beside it the two are paired through `definition.pbir` and checked together. The report

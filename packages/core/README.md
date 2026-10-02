@@ -46,7 +46,9 @@ Tabular Editor. The report rules are the 11 base rules of PBI Inspector by Nat V
 verified against fab-inspector's command line, and pbiplint's own rules for the report and for the
 model and report together. A port keeps its source's quirks on purpose, apart from eleven documented
 deviations from the Microsoft ruleset and six from PBI Inspector, and each rule's page documents
-them.
+them. A column whose TMDL names no type, as Power BI Desktop saves most calculated columns, is left
+out of the thirteen ported rules that test a column's type, where Tabular Editor reads the type
+from the column's DAX.
 
 For the command line, install [`pbiplint`](https://www.npmjs.com/package/pbiplint). Source, issues,
 and contributing: https://github.com/pbiplint/pbiplint.

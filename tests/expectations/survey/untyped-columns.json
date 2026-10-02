@@ -1,0 +1,2024 @@
+{
+  "fixture": "tests/fixtures/untyped-columns.SemanticModel",
+  "oracle": "Tabular Editor CLI 0.7.1.2, each rule file in tests/expectations/survey/files.json at its commit",
+  "captured": "2026-10-02",
+  "deviations": {},
+  "ours": {},
+  "results": {
+    "microsoft/Analysis-Services/BestPracticeRules/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Orders'[Units per Case]"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Calendar'[Date]",
+          "'Orders'[Due Date]",
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [
+          "'Orders'[Is Large Order]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Unit Price]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Total Line Value]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Orders'[Month Key]",
+          "'Orders'[Order Date]",
+          "'Orders'[Order ID]",
+          "'Targets'[Month Key]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Targets'[Month Key]"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Calendar'[Month Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Calendar'",
+          "'Calendar'[Date]",
+          "'Calendar'[Month Name]",
+          "'Calendar'[Year]",
+          "'Orders'",
+          "'Orders'[Amount]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Quantity]",
+          "'Orders'[Rush Flag]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]",
+          "'Targets'",
+          "'Targets'[Target]",
+          "[Total Line Value]"
+        ],
+        "REDUCE_NUMBER_OF_CALCULATED_COLUMNS": [
+          "Model"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Calendar'"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Calendar'[Date]",
+          "'Orders'[Order Date]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order ID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "microsoft/Analysis-Services/BestPracticeRules/Italian/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Orders'[Units per Case]"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Calendar'[Date]",
+          "'Orders'[Due Date]",
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [
+          "'Orders'[Is Large Order]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Unit Price]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Total Line Value]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Orders'[Month Key]",
+          "'Orders'[Order Date]",
+          "'Orders'[Order ID]",
+          "'Targets'[Month Key]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Targets'[Month Key]"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Calendar'[Month Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Calendar'",
+          "'Calendar'[Date]",
+          "'Calendar'[Month Name]",
+          "'Calendar'[Year]",
+          "'Orders'",
+          "'Orders'[Amount]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Quantity]",
+          "'Orders'[Rush Flag]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]",
+          "'Targets'",
+          "'Targets'[Target]",
+          "[Total Line Value]"
+        ],
+        "REDUCE_NUMBER_OF_CALCULATED_COLUMNS": [
+          "Model"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Calendar'"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Calendar'[Date]",
+          "'Orders'[Order Date]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order ID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "microsoft/Analysis-Services/BestPracticeRules/Spanish/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Orders'[Units per Case]"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Calendar'[Date]",
+          "'Orders'[Due Date]",
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [
+          "'Orders'[Is Large Order]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Unit Price]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Total Line Value]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Orders'[Month Key]",
+          "'Orders'[Order Date]",
+          "'Orders'[Order ID]",
+          "'Targets'[Month Key]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Targets'[Month Key]"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Calendar'[Month Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Calendar'",
+          "'Calendar'[Date]",
+          "'Calendar'[Month Name]",
+          "'Calendar'[Year]",
+          "'Orders'",
+          "'Orders'[Amount]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Quantity]",
+          "'Orders'[Rush Flag]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]",
+          "'Targets'",
+          "'Targets'[Target]",
+          "[Total Line Value]"
+        ],
+        "REDUCE_NUMBER_OF_CALCULATED_COLUMNS": [
+          "Model"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Calendar'"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Calendar'[Date]",
+          "'Orders'[Order Date]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order ID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "microsoft/Analysis-Services/BestPracticeRules/Japanese/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Orders'[Units per Case]"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Calendar'[Date]",
+          "'Orders'[Due Date]",
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [
+          "'Orders'[Is Large Order]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Unit Price]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Total Line Value]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Orders'[Month Key]",
+          "'Orders'[Order Date]",
+          "'Orders'[Order ID]",
+          "'Targets'[Month Key]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Targets'[Month Key]"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Calendar'[Month Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Calendar'",
+          "'Calendar'[Date]",
+          "'Calendar'[Month Name]",
+          "'Calendar'[Year]",
+          "'Orders'",
+          "'Orders'[Amount]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Quantity]",
+          "'Orders'[Rush Flag]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]",
+          "'Targets'",
+          "'Targets'[Target]",
+          "[Total Line Value]"
+        ],
+        "REDUCE_NUMBER_OF_CALCULATED_COLUMNS": [
+          "Model"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Calendar'"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Calendar'[Date]",
+          "'Orders'[Order Date]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order ID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "BenniDeJagere/Presentations/2020/20200707_PBIMCR/BPARules.json": {
+      "findings": {
+        "META_AVOID_FLOAT": [
+          "'Orders'[Units per Case]"
+        ],
+        "META_SUMMARIZE_NONE": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "PERF_UNUSED_COLUMNS": [
+          "'Orders'[Order ID]"
+        ],
+        "RELATIONSHIP_COLUMN_NAMES": [
+          "'Orders'[Order Date] ∞←1 'Calendar'[Date]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "BenniDeJagere/Presentations/2020/20201002_SQLBits/BPARules.json": {
+      "findings": {
+        "META_AVOID_FLOAT": [
+          "'Orders'[Units per Case]"
+        ],
+        "META_SUMMARIZE_NONE": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "PERF_UNUSED_COLUMNS": [
+          "'Orders'[Order ID]"
+        ],
+        "RELATIONSHIP_COLUMN_NAMES": [
+          "'Orders'[Order Date] ∞←1 'Calendar'[Date]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "gronnerup/FabricOps/automation/resources/BPARules.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_COLUMNS": [
+          "'Calendar'[Year]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "AVOID_SINGLE_ATTRIBUTE_DIMENSIONS": [
+          "'Targets'"
+        ],
+        "DISABLE_ATTRIBUTE_HIERACHIES": [
+          "'Orders'[Order Date]",
+          "'Orders'[Order ID]",
+          "'Targets'[Month Key]"
+        ],
+        "META_AVOID_FLOAT": [
+          "'Orders'[Units per Case]"
+        ],
+        "META_SUMMARIZE_NONE": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "PERF_UNUSED_COLUMNS": [
+          "'Orders'[Order ID]"
+        ],
+        "RELATIONSHIP_COLUMN_NAMES": [
+          "'Orders'[Order Date] ∞←1 'Calendar'[Date]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "Reinsight-SE/Tabular/BestPractices/BPARules.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_COLUMNS": [
+          "'Calendar'[Year]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Orders'[Units per Case]"
+        ],
+        "AVOID_SINGLE_ATTRIBUTE_DIMENSIONS": [
+          "'Targets'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Orders'[Due Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES_NO_VALUE_STRINGS": [
+          "'Orders'[Is Large Order]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Unit Price]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Total Line Value]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Orders'[Month Key]",
+          "'Orders'[Order Date]",
+          "'Orders'[Order ID]",
+          "'Targets'[Month Key]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Targets'[Month Key]"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Calendar'[Month Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Calendar'",
+          "'Calendar'[Date]",
+          "'Calendar'[Month Name]",
+          "'Calendar'[Year]",
+          "'Orders'",
+          "'Orders'[Amount]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Quantity]",
+          "'Orders'[Rush Flag]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]",
+          "'Targets'",
+          "'Targets'[Target]",
+          "[Total Line Value]"
+        ],
+        "REDUCE_NUMBER_OF_CALCULATED_COLUMNS": [
+          "Model"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Calendar'"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Calendar'[Date]",
+          "'Orders'[Order Date]"
+        ],
+        "RELATIONSHIP_COLUMN_NAMES": [
+          "'Orders'[Order Date] ∞←1 'Calendar'[Date]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order ID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "filcuk/ssas-best-practice-rules/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Orders'[Units per Case]"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Calendar'[Date]",
+          "'Orders'[Due Date]",
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [
+          "'Orders'[Is Large Order]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Unit Price]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Orders'[Month Key]",
+          "'Orders'[Order Date]",
+          "'Orders'[Order ID]",
+          "'Targets'[Month Key]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Targets'[Month Key]"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Calendar'[Month Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Calendar'",
+          "'Calendar'[Date]",
+          "'Calendar'[Month Name]",
+          "'Calendar'[Year]",
+          "'Orders'",
+          "'Orders'[Amount]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Quantity]",
+          "'Orders'[Rush Flag]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]",
+          "'Targets'",
+          "'Targets'[Target]",
+          "[Total Line Value]"
+        ],
+        "REDUCE_NUMBER_OF_CALCULATED_COLUMNS": [
+          "Model"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Calendar'"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Calendar'[Date]",
+          "'Orders'[Order Date]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order ID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "rafaelxkr/Power-BI/Tabular_Editor/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Orders'[Units per Case]"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Calendar'[Date]",
+          "'Orders'[Due Date]",
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [
+          "'Orders'[Is Large Order]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Unit Price]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Total Line Value]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Orders'[Month Key]",
+          "'Orders'[Order Date]",
+          "'Orders'[Order ID]",
+          "'Targets'[Month Key]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Targets'[Month Key]"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Calendar'[Month Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Calendar'",
+          "'Calendar'[Date]",
+          "'Calendar'[Month Name]",
+          "'Calendar'[Year]",
+          "'Orders'",
+          "'Orders'[Amount]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Quantity]",
+          "'Orders'[Rush Flag]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]",
+          "'Targets'",
+          "'Targets'[Target]",
+          "[Total Line Value]"
+        ],
+        "REDUCE_NUMBER_OF_CALCULATED_COLUMNS": [
+          "Model"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Calendar'"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Calendar'[Date]",
+          "'Orders'[Order Date]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order ID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "Adrian1903/BPA-Rules/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Orders'[Units per Case]"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Calendar'[Date]",
+          "'Orders'[Due Date]",
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [
+          "'Orders'[Is Large Order]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Unit Price]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Total Line Value]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Orders'[Month Key]",
+          "'Orders'[Order Date]",
+          "'Orders'[Order ID]",
+          "'Targets'[Month Key]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Targets'[Month Key]"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Calendar'[Month Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Calendar'",
+          "'Calendar'[Date]",
+          "'Calendar'[Month Name]",
+          "'Calendar'[Year]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Rush Flag]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]",
+          "[Total Line Value]"
+        ],
+        "REDUCE_NUMBER_OF_CALCULATED_COLUMNS": [
+          "Model"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Calendar'[Date]",
+          "'Orders'[Order Date]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order ID]"
+        ]
+      },
+      "ruleErrors": {
+        "CHECK_IF_DYNAMIC_ROW_LEVEL_SECURITY_(RLS)_IS_NECESSARY": "Error while evaluating expression on Tables: Value cannot be null. (Parameter 'input')"
+      }
+    },
+    "marcelodfelman/PowerBI-BPA-Analyzer/data/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Orders'[Units per Case]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Orders'[Month Key]",
+          "'Orders'[Order Date]",
+          "'Orders'[Order ID]",
+          "'Targets'[Month Key]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "punitgiri921/Brightline-Analytics/bpa-rules/BPARules.json": {
+      "findings": {},
+      "ruleErrors": {}
+    },
+    "bonardi/PowerBI-CICD/resources/report/config/bparules.json": {
+      "error": "Could not parse BPA rules. Expected JSON array or object with 'rules' array."
+    },
+    "bonardi/PowerBI-CICD/resources/dataset/config/bparules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Orders'[Units per Case]"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Calendar'[Date]",
+          "'Orders'[Due Date]",
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [
+          "'Orders'[Is Large Order]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Unit Price]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Total Line Value]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Orders'[Month Key]",
+          "'Orders'[Order Date]",
+          "'Orders'[Order ID]",
+          "'Targets'[Month Key]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Targets'[Month Key]"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Calendar'[Month Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Calendar'",
+          "'Calendar'[Date]",
+          "'Calendar'[Month Name]",
+          "'Calendar'[Year]",
+          "'Orders'",
+          "'Orders'[Amount]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Quantity]",
+          "'Orders'[Rush Flag]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]",
+          "'Targets'",
+          "'Targets'[Target]",
+          "[Total Line Value]"
+        ],
+        "REDUCE_NUMBER_OF_CALCULATED_COLUMNS": [
+          "Model"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Calendar'"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Calendar'[Date]",
+          "'Orders'[Order Date]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order ID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "gordoncheme/powerbi/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Orders'[Units per Case]"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Calendar'[Date]",
+          "'Orders'[Due Date]",
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [
+          "'Orders'[Is Large Order]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Unit Price]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Total Line Value]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Orders'[Month Key]",
+          "'Orders'[Order Date]",
+          "'Orders'[Order ID]",
+          "'Targets'[Month Key]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Targets'[Month Key]"
+        ],
+        "MODELING_AVOID_CALCULATED_COLUMNS": [
+          "'Calendar'[Month Name]",
+          "'Calendar'[Year]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Month Key]",
+          "'Orders'[Rush Flag]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Calendar'[Month Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Calendar'",
+          "'Calendar'[Date]",
+          "'Calendar'[Month Name]",
+          "'Calendar'[Year]",
+          "'Orders'",
+          "'Orders'[Amount]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Quantity]",
+          "'Orders'[Rush Flag]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]",
+          "'Targets'",
+          "'Targets'[Target]",
+          "[Total Line Value]"
+        ],
+        "REDUCE_NUMBER_OF_CALCULATED_COLUMNS": [
+          "Model"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Calendar'"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Calendar'[Date]",
+          "'Orders'[Order Date]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order ID]"
+        ],
+        "USABILITY_MEASURE_DISPLAY_FOLDERS": [
+          "[Total Line Value]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "thijsknaapRob/BPARulesOnline/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Orders'[Units per Case]"
+        ],
+        "CHECK_IF_CALCULATED_COLUMNS_ARE_NEEDED": [
+          "'Calendar'[Month Name]",
+          "'Calendar'[Year]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Month Key]",
+          "'Orders'[Rush Flag]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Calendar'[Date]",
+          "'Orders'[Due Date]",
+          "'Orders'[Order Date]"
+        ],
+        "DISABLE_ATTRIBUTE_HIERACHIES": [
+          "'Orders'[Order Date]",
+          "'Orders'[Order ID]",
+          "'Targets'[Month Key]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Orders'[Month Key]",
+          "'Orders'[Order Date]",
+          "'Orders'[Order ID]",
+          "'Targets'[Month Key]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Targets'[Month Key]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Calendar'[Date]",
+          "'Orders'[Order Date]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "twelve-baskets-analytics/pbi-bpa/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Orders'[Units per Case]"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Calendar'[Date]",
+          "'Orders'[Due Date]",
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [
+          "'Orders'[Is Large Order]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Unit Price]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Total Line Value]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Orders'[Month Key]",
+          "'Orders'[Order Date]",
+          "'Orders'[Order ID]",
+          "'Targets'[Month Key]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Targets'[Month Key]"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Calendar'[Month Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Calendar'",
+          "'Calendar'[Date]",
+          "'Calendar'[Month Name]",
+          "'Calendar'[Year]",
+          "'Orders'",
+          "'Orders'[Amount]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Quantity]",
+          "'Orders'[Rush Flag]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]",
+          "'Targets'",
+          "'Targets'[Target]",
+          "[Total Line Value]"
+        ],
+        "REDUCE_NUMBER_OF_CALCULATED_COLUMNS": [
+          "Model"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Calendar'"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Calendar'[Date]",
+          "'Orders'[Order Date]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order ID]"
+        ],
+        "UNUSED_COLUMN": [
+          "'Orders'[Order ID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "faby31/test/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Orders'[Units per Case]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [
+          "'Orders'[Is Large Order]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Unit Price]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Orders'[Month Key]",
+          "'Orders'[Order Date]",
+          "'Orders'[Order ID]",
+          "'Targets'[Month Key]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Targets'[Month Key]"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Calendar'[Month Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Calendar'",
+          "'Calendar'[Date]",
+          "'Calendar'[Month Name]",
+          "'Calendar'[Year]",
+          "'Orders'",
+          "'Orders'[Amount]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Quantity]",
+          "'Orders'[Rush Flag]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]",
+          "'Targets'",
+          "'Targets'[Target]",
+          "[Total Line Value]"
+        ],
+        "REDUCE_NUMBER_OF_CALCULATED_COLUMNS": [
+          "Model"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Calendar'"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Calendar'[Date]",
+          "'Orders'[Order Date]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order ID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "Mikd14/BPARules/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Orders'[Units per Case]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [
+          "'Orders'[Is Large Order]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Total Line Value]"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Calendar'[Month Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "REDUCE_NUMBER_OF_CALCULATED_COLUMNS": [
+          "Model"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Calendar'"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Calendar'[Date]",
+          "'Orders'[Order Date]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order ID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "GreyskullAnalytics/by-the-power-of-analyics-engineering/powerbi/bestpracticeanalyser/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Orders'[Units per Case]"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Calendar'[Date]",
+          "'Orders'[Due Date]",
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [
+          "'Orders'[Is Large Order]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Unit Price]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Total Line Value]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Orders'[Month Key]",
+          "'Orders'[Order Date]",
+          "'Orders'[Order ID]",
+          "'Targets'[Month Key]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Targets'[Month Key]"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Calendar'[Month Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Calendar'",
+          "'Calendar'[Date]",
+          "'Calendar'[Month Name]",
+          "'Calendar'[Year]",
+          "'Orders'",
+          "'Orders'[Amount]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Quantity]",
+          "'Orders'[Rush Flag]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]",
+          "'Targets'",
+          "'Targets'[Target]",
+          "[Total Line Value]"
+        ],
+        "REDUCE_NUMBER_OF_CALCULATED_COLUMNS": [
+          "Model"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Calendar'"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order ID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "Code-DataFyre/PowerInsighter/PowerInsighter/ModelBestPractices/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Orders'[Units per Case]"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Calendar'[Date]",
+          "'Orders'[Due Date]",
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [
+          "'Orders'[Is Large Order]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Unit Price]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Total Line Value]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Orders'[Month Key]",
+          "'Orders'[Order Date]",
+          "'Orders'[Order ID]",
+          "'Targets'[Month Key]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Targets'[Month Key]"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Calendar'[Month Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Calendar'",
+          "'Calendar'[Date]",
+          "'Calendar'[Month Name]",
+          "'Calendar'[Year]",
+          "'Orders'",
+          "'Orders'[Amount]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Quantity]",
+          "'Orders'[Rush Flag]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]",
+          "'Targets'",
+          "'Targets'[Target]",
+          "[Total Line Value]"
+        ],
+        "REDUCE_NUMBER_OF_CALCULATED_COLUMNS": [
+          "Model"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Calendar'"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Calendar'[Date]",
+          "'Orders'[Order Date]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order ID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "eugenecp/fabcon2026-ai-ci-cd/Fabric2026-CI-CD-Complete-Package/scripts/.bpaRules.json": {
+      "findings": {
+        "COL_HIDE_UNUSED": [
+          "'Calendar'[Month Name]",
+          "'Calendar'[Year]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Rush Flag]",
+          "'Orders'[Units per Case]",
+          "'Targets'[Target]"
+        ],
+        "DOC_MEASURE_DESCRIPTION": [
+          "[Total Line Value]"
+        ],
+        "DOC_TABLE_DESCRIPTION": [
+          "'Orders'",
+          "'Targets'"
+        ],
+        "MEASURE_FOLDER_RECOMMENDED": [
+          "[Total Line Value]"
+        ],
+        "MEASURE_ONLY_IN_FACT_TABLES": [
+          "[Total Line Value]"
+        ],
+        "NAME_NO_SPACES_COLUMN": [
+          "'Calendar'[Month Name]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Month Key]",
+          "'Orders'[Order Date]",
+          "'Orders'[Order ID]",
+          "'Orders'[Rush Flag]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]",
+          "'Targets'[Month Key]"
+        ],
+        "NAME_NO_SPACES_MEASURE": [
+          "[Total Line Value]"
+        ],
+        "NAME_TABLE_PREFIXES": [
+          "'Orders'",
+          "'Targets'"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "TabularEditor/SessionArchive/Webinars/2025-12-10 - CICD and version control for Fabric/src/automation/resources/BPARules.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_COLUMNS": [
+          "'Calendar'[Year]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "AVOID_SINGLE_ATTRIBUTE_DIMENSIONS": [
+          "'Targets'"
+        ],
+        "DISABLE_ATTRIBUTE_HIERACHIES": [
+          "'Orders'[Order Date]",
+          "'Orders'[Order ID]",
+          "'Targets'[Month Key]"
+        ],
+        "META_AVOID_FLOAT": [
+          "'Orders'[Units per Case]"
+        ],
+        "META_SUMMARIZE_NONE": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "PERF_UNUSED_COLUMNS": [
+          "'Orders'[Order ID]"
+        ],
+        "RELATIONSHIP_COLUMN_NAMES": [
+          "'Orders'[Order Date] ∞←1 'Calendar'[Date]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "data-goblin/power-bi-agentic-development/plugins/tabular-editor/skills/bpa-rules/examples/course-3-business-case-bpa-rules.json": {
+      "findings": {
+        "RULE1": [
+          "'Targets'"
+        ],
+        "RULE10": [
+          "[Total Line Value]"
+        ],
+        "RULE6": [
+          "'Orders'[Units per Case]"
+        ],
+        "RULE9": [
+          "'Calendar'[Date]",
+          "'Calendar'[Month Name]",
+          "'Calendar'[Year]",
+          "'Orders'[Amount]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Month Key]",
+          "'Orders'[Order Date]",
+          "'Orders'[Order ID]",
+          "'Orders'[Quantity]",
+          "'Orders'[Rush Flag]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]",
+          "'Targets'[Month Key]",
+          "'Targets'[Target]",
+          "[Total Line Value]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "bgarcevic/fabric-utils/.devops/bpa-rules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Orders'[Units per Case]"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Calendar'[Date]",
+          "'Orders'[Due Date]",
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [
+          "'Orders'[Is Large Order]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Unit Price]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Total Line Value]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Orders'[Month Key]",
+          "'Orders'[Order Date]",
+          "'Orders'[Order ID]",
+          "'Targets'[Month Key]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Targets'[Month Key]"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Calendar'[Month Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Calendar'",
+          "'Calendar'[Date]",
+          "'Calendar'[Month Name]",
+          "'Calendar'[Year]",
+          "'Orders'",
+          "'Orders'[Amount]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Quantity]",
+          "'Orders'[Rush Flag]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]",
+          "'Targets'",
+          "'Targets'[Target]",
+          "[Total Line Value]"
+        ],
+        "REDUCE_NUMBER_OF_CALCULATED_COLUMNS": [
+          "Model"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Calendar'"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order ID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "luccapinto/agentic-data-kit/.agent/skills/pbi-quality-rules/bpa-rules.json": {
+      "findings": {
+        "DOC_MEASURE_DESCRIPTION": [
+          "[Total Line Value]"
+        ],
+        "DOC_TABLE_DESCRIPTION": [
+          "'Orders'",
+          "'Targets'"
+        ],
+        "NAMING_MEASURE_DISPLAYFOLDER": [
+          "[Total Line Value]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "bgarcevic/tomix-cli/src/Tomix.App/Bpa/Rules/bpa-rules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Orders'[Units per Case]"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Calendar'[Date]",
+          "'Orders'[Due Date]",
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [
+          "'Orders'[Is Large Order]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Unit Price]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Total Line Value]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Orders'[Month Key]",
+          "'Orders'[Order Date]",
+          "'Orders'[Order ID]",
+          "'Targets'[Month Key]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Targets'[Month Key]"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Calendar'[Month Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Calendar'",
+          "'Calendar'[Date]",
+          "'Calendar'[Month Name]",
+          "'Calendar'[Year]",
+          "'Orders'",
+          "'Orders'[Amount]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Quantity]",
+          "'Orders'[Rush Flag]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]",
+          "'Targets'",
+          "'Targets'[Target]",
+          "[Total Line Value]"
+        ],
+        "REDUCE_NUMBER_OF_CALCULATED_COLUMNS": [
+          "Model"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Calendar'"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order ID]"
+        ]
+      },
+      "ruleErrors": {
+        "DATA_COLUMNS_MUST_HAVE_A_SOURCE_COLUMN": "No property or field 'CalculationItems' exists in type 'Table'",
+        "RELATIONSHIP_COLUMNS_SAME_DATA_TYPE": "Operator '!=' incompatible with operand types 'DataType' and 'String'"
+      }
+    },
+    "AlahmadiQ8/copilot-sdk-challenge/backend/src/data/bpa-rules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Orders'[Units per Case]"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Calendar'[Date]",
+          "'Orders'[Due Date]",
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [
+          "'Orders'[Is Large Order]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Unit Price]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Total Line Value]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Orders'[Month Key]",
+          "'Orders'[Order Date]",
+          "'Orders'[Order ID]",
+          "'Targets'[Month Key]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Targets'[Month Key]"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Calendar'[Month Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Calendar'",
+          "'Calendar'[Date]",
+          "'Calendar'[Month Name]",
+          "'Calendar'[Year]",
+          "'Orders'",
+          "'Orders'[Amount]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Quantity]",
+          "'Orders'[Rush Flag]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]",
+          "'Targets'",
+          "'Targets'[Target]",
+          "[Total Line Value]"
+        ],
+        "REDUCE_NUMBER_OF_CALCULATED_COLUMNS": [
+          "Model"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Calendar'"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Calendar'[Date]",
+          "'Orders'[Order Date]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order ID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "petecarlssonw/powerbi-testing/BPARules/bpa-rules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Orders'[Units per Case]"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Calendar'[Date]",
+          "'Orders'[Due Date]",
+          "'Orders'[Order Date]"
+        ],
+        "DO_NOT_USE_CALCULATED_COLUMNS": [
+          "Model"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [
+          "'Orders'[Is Large Order]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Unit Price]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Total Line Value]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Orders'[Month Key]",
+          "'Orders'[Order Date]",
+          "'Orders'[Order ID]",
+          "'Targets'[Month Key]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Targets'[Month Key]"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Calendar'[Month Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Calendar'",
+          "'Calendar'[Date]",
+          "'Calendar'[Month Name]",
+          "'Calendar'[Year]",
+          "'Orders'",
+          "'Orders'[Amount]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Quantity]",
+          "'Orders'[Rush Flag]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]",
+          "'Targets'",
+          "'Targets'[Target]",
+          "[Total Line Value]"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Calendar'"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order ID]"
+        ]
+      },
+      "ruleErrors": {
+        "CHECK_IF_DYNAMIC_ROW_LEVEL_SECURITY_(RLS)_IS_NECESSARY": "Error while evaluating expression on Tables: Value cannot be null. (Parameter 'input')"
+      }
+    },
+    "TabularEditor/BestPracticeRules/BPARules-standard.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_COLUMNS": [
+          "'Calendar'[Year]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "AVOID_SINGLE_ATTRIBUTE_DIMENSIONS": [
+          "'Targets'"
+        ],
+        "DISABLE_ATTRIBUTE_HIERACHIES": [
+          "'Orders'[Order Date]",
+          "'Orders'[Order ID]",
+          "'Targets'[Month Key]"
+        ],
+        "META_AVOID_FLOAT": [
+          "'Orders'[Units per Case]"
+        ],
+        "META_SUMMARIZE_NONE": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "PERF_UNUSED_COLUMNS": [
+          "'Orders'[Order ID]"
+        ],
+        "RELATIONSHIP_COLUMN_NAMES": [
+          "'Orders'[Order Date] ∞←1 'Calendar'[Date]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "TabularEditor/BestPracticeRules/BPARules-PowerBI.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_COLUMNS": [
+          "'Calendar'[Year]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "AVOID_SINGLE_ATTRIBUTE_DIMENSIONS": [
+          "'Targets'"
+        ],
+        "META_AVOID_FLOAT": [
+          "'Orders'[Units per Case]"
+        ],
+        "META_SUMMARIZE_NONE": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "PERF_UNUSED_COLUMNS": [
+          "'Orders'[Order ID]"
+        ],
+        "RELATIONSHIP_COLUMN_NAMES": [
+          "'Orders'[Order Date] ∞←1 'Calendar'[Date]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "tenfingerseddy/semanticus-vscode/Semanticus.Analysis/Rules/BPARules-PowerBI.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Orders'[Units per Case]"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Calendar'[Date]",
+          "'Orders'[Due Date]",
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [
+          "'Orders'[Is Large Order]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Unit Price]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Total Line Value]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Orders'[Month Key]",
+          "'Orders'[Order Date]",
+          "'Orders'[Order ID]",
+          "'Targets'[Month Key]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Targets'[Month Key]"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Calendar'[Month Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Calendar'",
+          "'Calendar'[Date]",
+          "'Calendar'[Month Name]",
+          "'Calendar'[Year]",
+          "'Orders'",
+          "'Orders'[Amount]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Quantity]",
+          "'Orders'[Rush Flag]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]",
+          "'Targets'",
+          "'Targets'[Target]",
+          "[Total Line Value]"
+        ],
+        "REDUCE_NUMBER_OF_CALCULATED_COLUMNS": [
+          "Model"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Calendar'"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Calendar'[Date]",
+          "'Orders'[Order Date]"
+        ],
+        "SEM_COLUMN_NEEDS_FORMAT_STRING": [
+          "'Calendar'[Year]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order ID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "KavasiMihaly/SelfServiceBIBlog/TabularEditor/BPARules-PowerBI.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_COLUMNS": [
+          "'Calendar'[Year]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "AVOID_SINGLE_ATTRIBUTE_DIMENSIONS": [
+          "'Targets'"
+        ],
+        "META_AVOID_FLOAT": [
+          "'Orders'[Units per Case]"
+        ],
+        "META_SUMMARIZE_NONE": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "PERF_UNUSED_COLUMNS": [
+          "'Orders'[Order ID]"
+        ],
+        "RELATIONSHIP_COLUMN_NAMES": [
+          "'Orders'[Order Date] ∞←1 'Calendar'[Date]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "bredeespelid/PBIP_SemLin/docs/bpa/semantic model/BPARules-PowerBI.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_COLUMNS": [
+          "'Calendar'[Year]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "AVOID_SINGLE_ATTRIBUTE_DIMENSIONS": [
+          "'Targets'"
+        ],
+        "META_AVOID_FLOAT": [
+          "'Orders'[Units per Case]"
+        ],
+        "META_SUMMARIZE_NONE": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "PERF_UNUSED_COLUMNS": [
+          "'Orders'[Order ID]"
+        ],
+        "RELATIONSHIP_COLUMN_NAMES": [
+          "'Orders'[Order Date] ∞←1 'Calendar'[Date]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "vlpatkosdani/powerbi-cicd-with-githubactions-demos/BPA_Rules.json": {
+      "findings": {},
+      "ruleErrors": {}
+    },
+    "vlpatkosdani/powerbi-cicd-with-githubactions-demos/scripts/BPA_Rules.json": {
+      "findings": {
+        "2": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "7": [
+          "'Orders'[Order Date]",
+          "'Orders'[Order ID]",
+          "'Targets'[Month Key]"
+        ],
+        "8": [
+          "'Orders'[Month Key]",
+          "'Orders'[Order Date]",
+          "'Orders'[Order ID]",
+          "'Targets'[Month Key]"
+        ],
+        "13": [
+          "'Orders'[Order ID]"
+        ],
+        "14": [
+          "'Orders'[Order ID]"
+        ],
+        "17": [
+          "'Orders'[Units per Case]"
+        ],
+        "29": [
+          "'Calendar'",
+          "'Calendar'[Date]",
+          "'Calendar'[Month Name]",
+          "'Calendar'[Year]",
+          "'Orders'",
+          "'Orders'[Amount]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Quantity]",
+          "'Orders'[Rush Flag]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]",
+          "'Targets'",
+          "'Targets'[Target]",
+          "[Total Line Value]"
+        ],
+        "31": [
+          "'Calendar'[Year]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "33": [
+          "[Total Line Value]"
+        ],
+        "42": [
+          "Model"
+        ],
+        "49": [
+          "'Calendar'[Month Name]"
+        ],
+        "58": [
+          "'Targets'"
+        ],
+        "60": [
+          "'Calendar'"
+        ],
+        "65": [
+          "'Orders'[Is Large Order]"
+        ]
+      },
+      "ruleErrors": {
+        "5": "Syntax error '\\'",
+        "62": "Syntax error '\\'",
+        "63": "Expression of type 'Boolean' expected"
+      }
+    },
+    "ianfinkdata/sql-practice/pbip/bpa/bpa_rules.json": {
+      "findings": {
+        "BPA_MEASURE_CENTRALIZE_IN_MEASURES_TABLE": [
+          "[Total Line Value]"
+        ]
+      },
+      "ruleErrors": {
+        "BPA_MEASURE_ORGANIZE_DISPLAY_FOLDERS": "No property or field 'Visible' exists in type 'Measure'",
+        "BPA_MEASURE_PROVIDE_DESCRIPTION": "No property or field 'Visible' exists in type 'Measure'",
+        "BPA_MEASURE_SET_FORMAT_STRING": "No property or field 'Visible' exists in type 'Measure'",
+        "BPA_MODEL_HIDE_FOREIGN_KEYS": "No property or field 'r' exists in type 'SingleColumnRelationship'"
+      }
+    },
+    "omezquita/PowerBI/MDA_BPA_Rules.json": {
+      "findings": {
+        "META_AVOID_FLOAT": [
+          "'Orders'[Units per Case]"
+        ],
+        "PERF_UNUSED_COLUMNS": [
+          "'Orders'[Order ID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "aswalsheshant-cell/mt-dashboard/PowerBI/CI/bpa_rules.json": {
+      "unavailable": "https://raw.githubusercontent.com/aswalsheshant-cell/mt-dashboard/5839efcbb11ad9c1f9e453c7d1a53e4e70e90ea5/PowerBI/CI/bpa_rules.json returned 404 on 2026-10-02"
+    },
+    "StuffbyYuki/PBI-BPA-Rules/BPA_Rules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Orders'[Units per Case]"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Calendar'[Date]",
+          "'Orders'[Due Date]",
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [
+          "'Orders'[Is Large Order]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Unit Price]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Total Line Value]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Orders'[Month Key]",
+          "'Orders'[Order Date]",
+          "'Orders'[Order ID]",
+          "'Targets'[Month Key]"
+        ],
+        "MARK_PRIMARY_KEYS": [
+          "'Targets'[Month Key]"
+        ],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+          "'Calendar'[Month Name]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Calendar'",
+          "'Calendar'[Date]",
+          "'Calendar'[Month Name]",
+          "'Calendar'[Year]",
+          "'Orders'",
+          "'Orders'[Amount]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Quantity]",
+          "'Orders'[Rush Flag]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]",
+          "'Targets'",
+          "'Targets'[Target]",
+          "[Total Line Value]"
+        ],
+        "REDUCE_NUMBER_OF_CALCULATED_COLUMNS": [
+          "Model"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Calendar'"
+        ],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Calendar'[Date]",
+          "'Orders'[Order Date]"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order ID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "sautalwar/hearst_cicd_fabric_demo/tests/semantic_model/bpa_rules.json": {
+      "findings": {},
+      "ruleErrors": {}
+    },
+    "ryanduguid/accounting-review-pipeline/apps/australian-accounting-power-bi/tests/model_bpa_rules.json": {
+      "findings": {
+        "BPA_MEASURE_DESCRIPTION": [
+          "[Total Line Value]"
+        ]
+      },
+      "ruleErrors": {
+        "BPA_CALC_GROUP_PRECEDENCE": "No property or field 'Precedence' exists in type 'CalculationGroupTable'"
+      }
+    },
+    "pranamg/powerbi-hub/Scripts/CSharp/TabularEditor/BestPracticeRules.json": {
+      "findings": {
+        "CALC_COLUMN_AVOID_IF_POSSIBLE": [
+          "'Calendar'[Month Name]",
+          "'Calendar'[Year]",
+          "'Orders'[Due Date]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Month Key]",
+          "'Orders'[Rush Flag]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "COLUMN_NO_SORT_BY_COLUMN": [
+          "'Calendar'[Month Name]"
+        ],
+        "MEASURE_IN_DISPLAY_FOLDER": [
+          "[Total Line Value]"
+        ],
+        "MEASURE_REQUIRES_DESCRIPTION": [
+          "[Total Line Value]"
+        ],
+        "MODEL_HAS_DESCRIPTION": [
+          "Model"
+        ]
+      },
+      "ruleErrors": {
+        "DAX_NO_HARDCODED_DATES": "No property or field '@' exists in type 'Measure'",
+        "TABLE_HAS_DATE_TABLE": "No property or field 't' exists in type 'Table'",
+        "TABLE_NO_AUTO_DATE": "No property or field 't' exists in type 'Table'"
+      }
+    },
+    "TabularEditor/BestPracticeRules/BPARules-contrib.json": {
+      "findings": {},
+      "ruleErrors": {}
+    },
+    "TabularEditor/BestPracticeRules/BPARules-standard-lax.json": {
+      "findings": {
+        "META_AVOID_FLOAT": [
+          "'Orders'[Units per Case]"
+        ],
+        "META_SUMMARIZE_NONE": [
+          "'Calendar'[Year]",
+          "'Orders'[Is Large Order]",
+          "'Orders'[Unit Price]",
+          "'Orders'[Units per Case]"
+        ],
+        "PERF_UNUSED_COLUMNS": [
+          "'Orders'[Order ID]"
+        ],
+        "RELATIONSHIP_COLUMN_NAMES": [
+          "'Orders'[Order Date] ∞←1 'Calendar'[Date]"
+        ]
+      },
+      "ruleErrors": {}
+    }
+  }
+}

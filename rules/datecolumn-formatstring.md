@@ -70,6 +70,7 @@ A model whose house convention is a different date order has nothing to gain her
 - Only the exact string `mm/dd/yyyy` passes, and the comparison is case-sensitive, so a format string that differs from it only in letter case is still reported. Every other format fires too, including `dd/mm/yyyy` and `yyyy-mm-dd`.
 - Hidden columns and columns in hidden tables are in scope.
 - Only DateTime columns are read. A date held as text or as an integer date key is not reported here.
+- A column with no `dataType` line, as Power BI Desktop saves most calculated columns, is not reported, since pbiplint does not know its type. Tabular Editor reads the type from the column's DAX.
 
 ## Related rules
 

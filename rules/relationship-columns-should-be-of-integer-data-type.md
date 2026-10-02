@@ -79,6 +79,7 @@ A date relationship on a DateTime column is the common one to leave: it is what 
 - Decimal and double columns are reported too. The test is for the whole number type alone, not for numeric types in general.
 - Both ends of a relationship are read, so converting one end and leaving the other clears half the findings.
 - Inactive relationships count, and so do relationships whose cross-filter direction is both.
+- A column with no `dataType` line, as Power BI Desktop saves most calculated columns, is not reported, since pbiplint does not know its type. Tabular Editor reads the type from the column's DAX.
 
 ## Related rules
 

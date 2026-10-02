@@ -54,6 +54,7 @@ An additive column with no measure behind it is the case to weigh. On a small pl
 - The property value is compared without regard to letter case, so `summarizeBy: None` passes as well as `summarizeBy: none`.
 - Hidden columns, and columns in hidden tables, are skipped.
 - Only whole number, decimal, and double columns are in scope, so a DateTime or text column with a summarization set is never reported here.
+- A column with no `dataType` line, as Power BI Desktop saves most calculated columns, is not reported, since pbiplint does not know its type. Tabular Editor reads the type from the column's DAX.
 - The rule also needs every part of a table's declaration, which TMDL lets sit in more than one file (Power BI Desktop writes each table in one). While pbiplint could not open a model file or folder, or a parse issue took a line that could be a `table` line, such as a misspelt `table`, the rule reports nothing, because a part of the table in what pbiplint missed could hide the table, and pbiplint does not guess what a file it could not read says. A parse issue inside a declaration, such as a property indented with spaces, does not stop the rule. The skipped line gives the reason, `a model file could not be fully read`, and a notice names what pbiplint could not open, or the file's own `PARSE_ISSUE` finding names the line.
 
 ## Related rules

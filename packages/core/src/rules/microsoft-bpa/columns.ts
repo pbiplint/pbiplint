@@ -11,6 +11,7 @@ import {
   isNumericType,
   modelPartlyRead,
   tablesPartlyRead,
+  typeKnown,
 } from "../helpers.js";
 import type { RuleContext, RuleFinding } from "../types.js";
 import { bpaRule } from "./define.js";
@@ -18,10 +19,14 @@ import { bpaRule } from "./define.js";
 const columns = (m: Model, pred: (c: Column) => boolean): RuleFinding[] =>
   allColumns(m).filter(pred).map(finding.column);
 
+// A column with no dataType line is not read, since its type is unknown (#164): a documented
+// deviation.
 export const AVOID_FLOATING_POINT_DATA_TYPES = bpaRule("AVOID_FLOATING_POINT_DATA_TYPES", (m) =>
   columns(m, (c) => dataType(c) === "double"),
 );
 
+// A column with no dataType line is not read, since its type is unknown (#164): a documented
+// deviation.
 export const DATECOLUMN_FORMATSTRING = bpaRule("DATECOLUMN_FORMATSTRING", (m) =>
   columns(
     m,
@@ -30,6 +35,8 @@ export const DATECOLUMN_FORMATSTRING = bpaRule("DATECOLUMN_FORMATSTRING", (m) =>
   ),
 );
 
+// A column with no dataType line is not read, since its type is unknown (#164): a documented
+// deviation.
 export const MONTHCOLUMN_FORMATSTRING = bpaRule("MONTHCOLUMN_FORMATSTRING", (m) =>
   columns(
     m,
@@ -38,6 +45,8 @@ export const MONTHCOLUMN_FORMATSTRING = bpaRule("MONTHCOLUMN_FORMATSTRING", (m) 
   ),
 );
 
+// A column with no dataType line is not read, since its type is unknown (#164): a documented
+// deviation.
 export const ADD_DATA_CATEGORY_FOR_COLUMNS = bpaRule("ADD_DATA_CATEGORY_FOR_COLUMNS", (m) =>
   columns(m, (c) => {
     const n = c.name.toLowerCase();
@@ -51,6 +60,8 @@ export const ADD_DATA_CATEGORY_FOR_COLUMNS = bpaRule("ADD_DATA_CATEGORY_FOR_COLU
   }),
 );
 
+// A column with no dataType line is not read, since its type is unknown (#164): a documented
+// deviation.
 export const MONTH_AS_A_STRING_MUST_BE_SORTED = bpaRule("MONTH_(AS_A_STRING)_MUST_BE_SORTED", (m) =>
   columns(m, (c) => {
     const u = c.name.toUpperCase();
@@ -65,6 +76,8 @@ export const MONTH_AS_A_STRING_MUST_BE_SORTED = bpaRule("MONTH_(AS_A_STRING)_MUS
 
 // TOM's default SummarizeBy is Default, which is not None, so a column without the property is flagged.
 // A part of the table pbiplint could not read may hide it.
+// A column with no dataType line is not read, since its type is unknown (#164): a documented
+// deviation.
 export const NUMERIC_COLUMN_SUMMARIZE_BY = bpaRule(
   "NUMERIC_COLUMN_SUMMARIZE_BY",
   { skipWhenModelUnread: tablesPartlyRead },
@@ -79,6 +92,8 @@ export const NUMERIC_COLUMN_SUMMARIZE_BY = bpaRule(
 );
 
 // A part of the table pbiplint could not read may hide it.
+// A column with no dataType line is not read, since its type is unknown (#164): a documented
+// deviation.
 export const FORMAT_FLAG_COLUMNS_AS_YES_NO_VALUE_STRINGS = bpaRule(
   "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS",
   { skipWhenModelUnread: tablesPartlyRead },
@@ -88,7 +103,7 @@ export const FORMAT_FLAG_COLUMNS_AS_YES_NO_VALUE_STRINGS = bpaRule(
       (c) =>
         !hiddenOrTableHidden(c) &&
         ((c.name.startsWith("Is") && dataType(c) === "int64") ||
-          (c.name.endsWith(" Flag") && dataType(c) !== "string")),
+          (c.name.endsWith(" Flag") && typeKnown(c) && dataType(c) !== "string")),
     ),
 );
 
@@ -200,6 +215,8 @@ const AGGREGATIONS = [
   "MINA",
 ];
 
+// A column with no dataType line is not read, since its type is unknown (#164): a documented
+// deviation.
 export const HIDE_FACT_TABLE_COLUMNS = bpaRule("HIDE_FACT_TABLE_COLUMNS", (m) => {
   const measures = allMeasures(m);
   return columns(m, (c) => {

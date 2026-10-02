@@ -64,6 +64,7 @@ A numeric column readers use as an attribute rather than as a number is the case
 - The expression is read as raw text, so an aggregation written inside a string literal or a comment counts.
 - Only numeric columns are in scope, so `COUNTA('Sales'[Region])` over a text column is not reported.
 - A visible column in a hidden table is still reported: the rule tests the column's own visibility, not the table's.
+- A column with no `dataType` line, as Power BI Desktop saves most calculated columns, is not reported, since pbiplint does not know its type. Tabular Editor reads the type from the column's DAX.
 
 ## Related rules
 

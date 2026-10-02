@@ -1,0 +1,34 @@
+table Targets
+	lineageTag: 1f2df56c-5689-4a12-b303-2ebb084737c0
+
+	column 'Month Key'
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 8776ad2f-8c53-4daf-90e8-20bde4e1ca85
+		summarizeBy: none
+		sourceColumn: Month Key
+
+		annotation SummarizationSetBy = Automatic
+
+	column Target
+		dataType: decimal
+		formatString: #,0.00
+		lineageTag: d55839e0-ffbd-4b44-b21a-90ebc181b501
+		summarizeBy: none
+		sourceColumn: Target
+
+		annotation SummarizationSetBy = User
+
+	partition Targets = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents("targets.csv"), [Delimiter = ",", Encoding = 65001]),
+				    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+				    Typed = Table.TransformColumnTypes(Promoted, {{"Month Key", Int64.Type}, {"Target", Currency.Type}})
+				in
+				    Typed
+
+	annotation PBI_ResultType = Table
+

@@ -1,0 +1,95 @@
+{
+  "fixture": "tests/fixtures/untyped-columns.SemanticModel",
+  "oracle": "Tabular Editor CLI 0.7.1.2 with BPARules.json sha256 ddb9cff4c2a0611a6467e2559d38319d9867381998066473ffa1e11c2d360392",
+  "captured": "2026-10-02",
+  "skipRules": {},
+  "deviations": {
+    "AVOID_FLOATING_POINT_DATA_TYPES": "A column with no `dataType` line, as Power BI Desktop saves most calculated columns, is not reported, since pbiplint does not know its type. Tabular Editor reads the type from the column's DAX.",
+    "DATECOLUMN_FORMATSTRING": "A column with no `dataType` line, as Power BI Desktop saves most calculated columns, is not reported, since pbiplint does not know its type. Tabular Editor reads the type from the column's DAX.",
+    "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": "A column with no `dataType` line, as Power BI Desktop saves most calculated columns, is not reported, since pbiplint does not know its type. Tabular Editor reads the type from the column's DAX.",
+    "HIDE_FACT_TABLE_COLUMNS": "A column with no `dataType` line, as Power BI Desktop saves most calculated columns, is not reported, since pbiplint does not know its type. Tabular Editor reads the type from the column's DAX.",
+    "MONTH_(AS_A_STRING)_MUST_BE_SORTED": "A column with no `dataType` line, as Power BI Desktop saves most calculated columns, is not reported, since pbiplint does not know its type. Tabular Editor reads the type from the column's DAX.",
+    "NUMERIC_COLUMN_SUMMARIZE_BY": "A column with no `dataType` line, as Power BI Desktop saves most calculated columns, is not reported, since pbiplint does not know its type. Tabular Editor reads the type from the column's DAX.",
+    "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": "A column with no `dataType` line, as Power BI Desktop saves most calculated columns, is not reported, since pbiplint does not know its type. Tabular Editor reads the type from the column's DAX."
+  },
+  "ours": {
+    "AVOID_FLOATING_POINT_DATA_TYPES": [],
+    "DATECOLUMN_FORMATSTRING": [
+      "'Orders'[Order Date]"
+    ],
+    "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [],
+    "HIDE_FACT_TABLE_COLUMNS": [],
+    "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [],
+    "NUMERIC_COLUMN_SUMMARIZE_BY": [],
+    "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+      "'Orders'[Order Date]"
+    ]
+  },
+  "findings": {
+    "AVOID_FLOATING_POINT_DATA_TYPES": [
+      "'Orders'[Units per Case]"
+    ],
+    "DATECOLUMN_FORMATSTRING": [
+      "'Calendar'[Date]",
+      "'Orders'[Due Date]",
+      "'Orders'[Order Date]"
+    ],
+    "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [
+      "'Orders'[Is Large Order]"
+    ],
+    "HIDE_FACT_TABLE_COLUMNS": [
+      "'Orders'[Unit Price]"
+    ],
+    "INTEGER_FORMATTING": [
+      "[Total Line Value]"
+    ],
+    "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+      "'Orders'[Month Key]",
+      "'Orders'[Order Date]",
+      "'Orders'[Order ID]",
+      "'Targets'[Month Key]"
+    ],
+    "MARK_PRIMARY_KEYS": [
+      "'Targets'[Month Key]"
+    ],
+    "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [
+      "'Calendar'[Month Name]"
+    ],
+    "NUMERIC_COLUMN_SUMMARIZE_BY": [
+      "'Calendar'[Year]",
+      "'Orders'[Is Large Order]",
+      "'Orders'[Unit Price]",
+      "'Orders'[Units per Case]"
+    ],
+    "OBJECTS_WITH_NO_DESCRIPTION": [
+      "'Calendar'",
+      "'Calendar'[Date]",
+      "'Calendar'[Month Name]",
+      "'Calendar'[Year]",
+      "'Orders'",
+      "'Orders'[Amount]",
+      "'Orders'[Due Date]",
+      "'Orders'[Is Large Order]",
+      "'Orders'[Quantity]",
+      "'Orders'[Rush Flag]",
+      "'Orders'[Unit Price]",
+      "'Orders'[Units per Case]",
+      "'Targets'",
+      "'Targets'[Target]",
+      "[Total Line Value]"
+    ],
+    "REDUCE_NUMBER_OF_CALCULATED_COLUMNS": [
+      "Model"
+    ],
+    "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+      "'Calendar'"
+    ],
+    "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+      "'Calendar'[Date]",
+      "'Orders'[Order Date]"
+    ],
+    "UNNECESSARY_COLUMNS": [
+      "'Orders'[Order ID]"
+    ]
+  }
+}

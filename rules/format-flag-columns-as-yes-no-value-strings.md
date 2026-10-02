@@ -65,6 +65,7 @@ A column whose type is already boolean is the common false alarm: Power BI shows
 - The suffix is a space followed by Flag, so Priority Flag is reported and PriorityFlag is not.
 - Hidden columns, and columns in hidden tables, are skipped by both halves.
 - The Is half needs the type to be exactly whole number, so a decimal IsActive is not reported. The Flag half fires on every type that is not text, boolean and DateTime included.
+- A column with no `dataType` line, as Power BI Desktop saves most calculated columns, is not reported, since pbiplint does not know its type. Tabular Editor reads the type from the column's DAX.
 - The rule also needs every part of a table's declaration, which TMDL lets sit in more than one file (Power BI Desktop writes each table in one). While pbiplint could not open a model file or folder, or a parse issue took a line that could be a `table` line, such as a misspelt `table`, the rule reports nothing, because a part of the table in what pbiplint missed could hide the table, and pbiplint does not guess what a file it could not read says. A parse issue inside a declaration, such as a property indented with spaces, does not stop the rule. The skipped line gives the reason, `a model file could not be fully read`, and a notice names what pbiplint could not open, or the file's own `PARSE_ISSUE` finding names the line.
 
 ## Related rules

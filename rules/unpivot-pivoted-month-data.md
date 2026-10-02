@@ -106,6 +106,7 @@ A coincidence is the case to check for first, though it takes six of them at onc
 - Only the first six months are tested, so a table with July through December and nothing else is never reported, and one with January through June is reported whether or not the rest of the year is there.
 - The names are matched as substrings of the upper-cased column name, so full names count and so do unrelated words: Margin matches MAR, January Budget matches JAN, and a table needs one match for each of the six months before it is reported.
 - The column that matches has to be numeric, meaning int64, decimal, or double. A month column loaded as text does not count, so a table of twelve text columns passes.
+- A column with no `dataType` line, as Power BI Desktop saves most calculated columns, does not count as a numeric month column, since pbiplint does not know its type. Tabular Editor reads the type from the column's DAX.
 - Tables and calculated tables are in scope; calculation groups are not.
 
 ## Related rules

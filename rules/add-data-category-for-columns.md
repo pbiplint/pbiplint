@@ -67,6 +67,7 @@ A column the name test catches that holds no geography is the case to look for f
 - The country, continent, and city tests are substrings, matched without regard to letter case, so a text column called City Code or Country Manager is reported. Latitude and longitude must be the whole name, also without regard to case.
 - The type gate goes with the name. A Country column stored as a whole number is not reported, and neither is a Latitude column stored as text, because the rule wants text for the first group and decimal or double for the second.
 - Only the presence of a category is tested, not which one it is, so any value clears the finding. A City column given a Web URL category passes.
+- A column with no `dataType` line, as Power BI Desktop saves most calculated columns, is not reported, since pbiplint does not know its type. Tabular Editor reads the type from the column's DAX.
 
 ## Related rules
 

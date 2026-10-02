@@ -62,6 +62,7 @@ A value that genuinely needs more than four decimal places has to stay Double, a
 - The type name is compared in lower case, so `dataType: Double` and `dataType: double` are both reported.
 - Every kind of column is in scope, including calculated columns and the columns of a calculated table, whose type comes from the expression rather than from a load step.
 - Only the declared type is read. A column whose values happen to be whole numbers is reported all the same while the type says Double.
+- A column with no `dataType` line, as Power BI Desktop saves most calculated columns, is not reported, since pbiplint does not know its type. Tabular Editor reads the type from the column's DAX.
 
 ## Related rules
 

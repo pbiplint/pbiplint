@@ -81,12 +81,13 @@ Set the two columns to the same type, and prefer a whole number for a key. In Po
 
 ## When to ignore it
 
-A column whose declaration carries no `dataType` at all compares as having none, so a relationship onto a calculated column that was written without the property is reported although both sides may hold the same type once the model is loaded. That is the one finding here worth reading twice, and the answer to it is to write the property rather than to change a type. Where both types are written and they differ, there is nothing to ignore.
+There is nothing to ignore: where both columns name a type and the types differ, set them to the same type. The rule compares only the types the TMDL names, so a relationship with a calculated column saved with no `dataType` line is not reported at all (see Quirks).
 
 ## Quirks
 
 - Both sides have to resolve to a column the model declares. A relationship naming a table or a column that does not exist is skipped, so a typo in `fromColumn` or `toColumn` hides the relationship from this rule.
-- The comparison is on the declared `dataType`, ignoring letter case. A column with no `dataType` line compares as having none, and so differs from any column that has one.
+- The comparison is on the declared `dataType`, ignoring letter case.
+- A relationship with a column that has no `dataType` line on either side, as Power BI Desktop saves most calculated columns, is not reported, since pbiplint does not know that column's type. Tabular Editor reads the type from the column's DAX, so it still reports a real mismatch on such a relationship, which pbiplint misses.
 - Only the declared type is compared, never the values. Two text keys that will never match, one padded and one not, pass the rule.
 
 ## Related rules

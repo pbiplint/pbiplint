@@ -70,6 +70,7 @@ A DateTime column with month in its name that holds a full date, not a month sta
 - Only the exact string `MMMM yyyy` passes, and the comparison is case-sensitive, so a format string that differs from it only in letter case is still reported.
 - Only DateTime columns are read. A month held as text or as a whole number is not reported here.
 - Hidden columns, and columns in hidden tables, are in scope.
+- A column with no `dataType` line, as Power BI Desktop saves most calculated columns, is not reported, since pbiplint does not know its type. Tabular Editor reads the type from the column's DAX.
 
 ## Related rules
 

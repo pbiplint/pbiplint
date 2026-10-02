@@ -69,6 +69,7 @@ A text column the name test catches that is not a list of month names is noise: 
 - Only text columns are read. A month held as a whole number, or as a DateTime, is not reported here.
 - Any sort-by column clears the finding. The rule checks that the property is set, not that it points at a month number.
 - Hidden columns, and columns in hidden tables, are in scope.
+- A column with no `dataType` line, as Power BI Desktop saves most calculated columns, is not reported, since pbiplint does not know its type. Tabular Editor reads the type from the column's DAX.
 
 ## Related rules
 

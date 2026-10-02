@@ -1,0 +1,8 @@
+relationship a70ae52d-24ec-40e1-a273-1d00da6616af
+	fromColumn: Orders.'Order Date'
+	toColumn: Calendar.Date
+
+relationship 741df519-0ec4-4d70-906f-53dc62542efc
+	fromColumn: Orders.'Month Key'
+	toColumn: Targets.'Month Key'
+

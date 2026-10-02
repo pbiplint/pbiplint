@@ -1,0 +1,96 @@
+table Orders
+	lineageTag: fe87c0c3-4d10-49af-bdc6-b7b11867de2c
+
+	measure 'Total Line Value' = SUM('Orders'[Unit Price])
+		formatString: #,0.00
+		lineageTag: 7d4c3b71-7686-4547-8162-f31df1937a01
+
+	column 'Order ID'
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 15f4f9ce-1ef6-4b9f-a266-f0f89ae48a47
+		summarizeBy: none
+		sourceColumn: Order ID
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Order Date'
+		dataType: dateTime
+		isHidden
+		formatString: General Date
+		lineageTag: d3fa466f-0102-44a6-a5e2-eb336a388cfb
+		summarizeBy: none
+		sourceColumn: Order Date
+
+		annotation SummarizationSetBy = Automatic
+
+	column Quantity
+		dataType: int64
+		formatString: 0
+		lineageTag: 2787bf11-305d-4314-960a-337ddd191dc0
+		summarizeBy: none
+		sourceColumn: Quantity
+
+		annotation SummarizationSetBy = User
+
+	column Amount
+		dataType: decimal
+		formatString: #,0.00
+		lineageTag: a4497492-50ff-4368-8e71-db98d85fc77a
+		summarizeBy: none
+		sourceColumn: Amount
+
+		annotation SummarizationSetBy = User
+
+	column 'Month Key' = YEAR('Orders'[Order Date]) * 100 + MONTH('Orders'[Order Date])
+		isHidden
+		lineageTag: 9a296541-734b-43c8-942c-66f81c423e16
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Unit Price' = DIVIDE('Orders'[Amount], 'Orders'[Quantity])
+		lineageTag: fd5a7169-b597-4577-932d-791ef1c7c25c
+		summarizeBy: sum
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Units per Case' = DIVIDE('Orders'[Quantity], 12)
+		lineageTag: 5f1c2a8e-7d43-4b9a-9e61-2c8d4f0b7a35
+		summarizeBy: sum
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Rush Flag' = IF('Orders'[Quantity] > 10, "Y", "N")
+		lineageTag: b55302e7-1d02-48d6-8dcc-c20ad8318ee3
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Is Large Order' = IF('Orders'[Quantity] > 10, 1, 0)
+		lineageTag: c40b3a27-5de9-4bfe-b1cb-177b168df6b9
+		summarizeBy: sum
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Due Date' = 'Orders'[Order Date] + 30
+		lineageTag: b3283db3-484b-4af3-8fef-0588c5bcb6e3
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	partition Orders = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents("orders.csv"), [Delimiter = ",", Encoding = 65001]),
+				    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+				    Typed = Table.TransformColumnTypes(Promoted, {{"Order ID", Int64.Type}, {"Order Date", type datetime}, {"Quantity", Int64.Type}, {"Amount", Currency.Type}})
+				in
+				    Typed
+
+	annotation PBI_ResultType = Table
+

@@ -39,7 +39,7 @@ table Sales
 
 ## Why it matters
 
-A format string says what a column's numbers are. Without one, a share, an amount, and a plain measurement look alike, or as Tabular Editor's guidance for its version of this rule puts it, "Users can't tell if values are currency, percentages, or plain numbers" ([Provide format string for numeric and date columns](https://docs.tabulareditor.com/en/kb/bpa-format-string-columns.html#why-this-matters)). A format set on the column in the model applies wherever the column is used, "unless a visual or element level format string overrides it" ([Use custom format strings in Power BI Desktop](https://learn.microsoft.com/power-bi/create-reports/desktop-custom-format-strings)), so setting it once spares every report author setting it visual by visual.
+A format string says what a column's numbers are. Without one, a share, an amount, and a plain measurement look alike, or as Tabular Editor's guidance for its version of this rule puts it, "Users can't tell if values are currency, percentages, or plain numbers" ([Provide format string for numeric and date columns](https://docs.tabulareditor.com/en/kb/bpa-format-string-columns.html#why-this-matters)). Left at General, Power BI Desktop shows the column's values as plain numbers: in a table visual, a discount amount reads `20.30` with no currency symbol, and a share of 0.25 reads `0.25`, not 25%. A format set on the column in the model applies wherever the column is used, "unless a visual or element level format string overrides it" ([Use custom format strings in Power BI Desktop](https://learn.microsoft.com/power-bi/create-reports/desktop-custom-format-strings)), so setting it once spares every report author setting it visual by visual.
 
 ## How to fix it
 
@@ -47,7 +47,7 @@ In Power BI Desktop, select the column in the Data pane and set Format under Col
 
 ## When to ignore it
 
-When no reader sees the column as a number: a decimal kept for a relationship or read only by measures is better hidden than formatted, which clears the finding too. Otherwise a visible decimal column is one a report author can drop into a visual, where it shows with no format of its own.
+When no reader sees the column as a number: a decimal kept for a relationship or read only by measures is better hidden than formatted, which clears the finding too. Coordinates are the other case: a latitude or longitude column is there to place points on a map, not to be read as a number, so leaving it at General is fine. Otherwise a visible decimal column is one a report author can drop into a visual, where it shows with no format of its own.
 
 ## Quirks
 

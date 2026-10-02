@@ -3,7 +3,7 @@ id: NAME_WITHOUT_TRANSLATION
 name: "Visible name with no translation"
 category: Naming Conventions
 severity: info
-scope: [Table, Column, CalculatedColumn, CalculatedTableColumn, Measure, Hierarchy, Level]
+scope: [Table, Column, CalculatedColumn, CalculatedTable, CalculatedTableColumn, CalculationGroupTable, Measure, Hierarchy, Level]
 status: builtin
 layer: model
 video:
@@ -58,7 +58,7 @@ A caption is the name a reader sees for an object when a report is shown in that
 
 ## How to fix it
 
-Give the object a `caption` in the culture's `translations` block. Power BI Desktop has no editor for translations, and Microsoft gives its TMDL view as the route for metadata that lacks a graphical interface, "such as translations" ([Common use cases for TMDL view](https://learn.microsoft.com/power-bi/transform-model/desktop-tmdl-view#common-use-cases-for-tmdl-view)). In TMDL view, write a `createOrReplace` script of the whole `cultureInfo` block from `definition/cultures/<culture>.tmdl`, add each missing `caption:` line in its place (a table's under its `table`, a column's, measure's, or hierarchy's under its table's entry, a level's under its hierarchy's), and select Apply. Script the whole block: `createOrReplace` "Creates or replaces the specified semantic model objects and all the descendants" ([CreateOrReplace command](https://learn.microsoft.com/analysis-services/tmdl/tmdl-scripts#createorreplace-command)), so a script of part of it drops the captions it leaves out. Or edit the culture's file while Desktop is closed. For many objects at once, Microsoft's Translations Builder, an optional tool, can fill in captions, machine translations included ([Create multiple-language reports with Translations Builder](https://learn.microsoft.com/power-bi/guidance/translation-builder)).
+Give the object a `caption` in the culture's `translations` block. Power BI Desktop has no editor for translations, and Microsoft gives its TMDL view as the route for metadata that lacks a graphical interface, "such as translations" ([Common use cases for TMDL view](https://learn.microsoft.com/power-bi/transform-model/desktop-tmdl-view#common-use-cases-for-tmdl-view)). In TMDL view, type `createOrReplace` on the first line of an empty tab, paste the whole `cultureInfo` block from `definition/cultures/<culture>.tmdl` beneath it, and indent the pasted lines one level, so the block sits under the command. Then give each object with no caption an entry in its place, with a `caption:` line one level beneath the entry, as the fixed example adds `measure Revenue` under `table Sales`: a table's entry goes under the `model` entry, a column's, measure's, or hierarchy's under its table's entry, and a level's under its hierarchy's entry. Where the block already has the object's entry, as it has a table's once any of the table's objects is captioned, add only the `caption:` line. Select Apply. Script the whole block: `createOrReplace` "Creates or replaces the specified semantic model objects and all the descendants" ([CreateOrReplace command](https://learn.microsoft.com/analysis-services/tmdl/tmdl-scripts#createorreplace-command)), so a script of part of it drops the captions it leaves out. Or edit the culture's file while Desktop is closed. For many objects at once, Microsoft's Translations Builder, an optional tool, can fill in captions, machine translations included ([Create multiple-language reports with Translations Builder](https://learn.microsoft.com/power-bi/guidance/translation-builder)).
 
 ## When to ignore it
 

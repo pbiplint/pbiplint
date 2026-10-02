@@ -173,6 +173,8 @@ For Michael, before pull request 3's pages:
 
 The plan for pull request 3 writes the decimal page so it stands without either answer; an answer sharpens its Why it matters or How to fix.
 
+Michael answered both on October 2, 2026, after pull request 3 merged. (1) A Decimal number column left at General, in a table visual, showed plain numbers with two decimal places and no symbol (`20.30`, `0.00`); the page's Why it matters now says what a reader sees, without claiming two places for every column, since Auto may take them from the data. (2) The model he checked carries no `PBI_FormatHint` at all, as a model not built through Get Data may not; with the corpus showing Desktop drops the hint when a format is set (6 Desktop-saved Decimal number columns carry both), neither route on the page needs to mention it. He also ruled the same day that a coordinate column (latitude, longitude) needs no format string, and the page's When to ignore it says so.
+
 ## 9. Left out on the real-files bar
 
 - Display folders and descriptions in the translation rule (no multi-language corpus model has one to translate).

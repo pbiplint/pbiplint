@@ -68,6 +68,7 @@ A value that genuinely needs more than four decimal places has to stay Double, a
 - `RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE` reports the same column when it is also on either side of a relationship, so a Double key fires both. Changing it to `int64` clears both; changing it to `decimal` clears only this one.
 - `NUMERIC_COLUMN_SUMMARIZE_BY` counts Double among its numeric types, so a visible Double column is reported there too until its summarize-by is set to none.
 - `ADD_DATA_CATEGORY_FOR_COLUMNS` accepts either Double or Decimal on a column named Latitude or Longitude, so setting the data category it asks for does not take the column out of this rule, and the two findings sit on the same column.
+- `DECIMAL_COLUMN_WITHOUT_FORMAT_STRING` reports a visible Double or Fixed Decimal Number column with no format string, for what readers see; this rule is about how the values are stored. Changing such a column to `decimal` clears this rule and leaves that one until the column has a format string; changing it to `int64` clears both.
 
 ## Links
 

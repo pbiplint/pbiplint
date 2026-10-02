@@ -62,7 +62,7 @@ page.json or visual.json (Power BI Desktop keeps it there too):
 Every rule from the Microsoft Best Practice Analyzer ruleset, ported so the results match Tabular
 Editor on the same model, with eleven documented deviations where the source is noisier, or quieter,
 than it means to be; and pbiplint's own rules for a year or a date fixed in DAX, such as a measure
-filtered to 2025 or a date table that ends in 2026, and for a DAX user-defined function that nothing
+filtered to 2025 or a date table that ends in 2026, for a DAX user-defined function that nothing
 calls, has a one-word name, or has no description, for a visible name that a translated culture
 gives no caption, and for a visible decimal column with no format string. Four of pbiplint's own
 model rules take their test from Tabular Editor's rules, from Tabular Editor 3's built-in set or the

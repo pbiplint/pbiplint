@@ -68,3 +68,4 @@ A measure that returns text has nothing to format. pbiplint leaves out the ones 
 ## Related rules
 
 - `INTEGER_FORMATTING` reports the same measure whenever it has no static format string, whether or not it is visible, so one format string it accepts clears both findings on a visible measure.
+- `DECIMAL_COLUMN_WITHOUT_FORMAT_STRING` asks the same of visible Decimal number and Fixed decimal number columns, and reads visibility the same way, so a column on a hidden table is not reported.

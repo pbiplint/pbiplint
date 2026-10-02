@@ -64,6 +64,20 @@ a[target="_blank"]::after {
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 3H3v10h10V9M10 2h4v4M14 2 7.5 8.5'/%3E%3C/svg%3E")
     no-repeat 50% 50% / contain;
 }
+/* A contrast theme repaints every background in the page's own colour, which would hide the mark,
+   so there it is drawn in the theme's link colour. */
+@media (forced-colors: active) {
+  a[target="_blank"]::after {
+    forced-color-adjust: none;
+    background-color: LinkText;
+  }
+}
+/* The note is for a screen reader, so a reader who copies a sentence with a link in it does not
+   paste "(opens in a new tab)" with it. */
+a[target="_blank"] > .visually-hidden {
+  -webkit-user-select: none;
+  user-select: none;
+}
 code,
 pre,
 .mono {

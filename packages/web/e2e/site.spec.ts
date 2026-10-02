@@ -62,6 +62,41 @@ test("How to fix it opens the rule's page in a new tab, and the results stay put
   await expect(groups.first()).toBeVisible();
 });
 
+test("a sentence copied from a page leaves out the note a link off the site carries", async ({
+  page,
+}) => {
+  await page.goto("/rules/hide-foreign-keys/");
+  const credit = page.locator(".site-footer p").last();
+  // The note is still in the name a screen reader hears.
+  await expect(
+    credit.getByRole("link", { name: "The Data Practitioner (opens in a new tab)", exact: true }),
+  ).toHaveCount(1);
+  const copied = await credit.evaluate((p) => {
+    const range = document.createRange();
+    range.selectNodeContents(p);
+    const selection = window.getSelection()!;
+    selection.removeAllRanges();
+    selection.addRange(range);
+    return selection.toString();
+  });
+  expect(copied).toContain("from the makers of The Data Practitioner");
+  expect(copied).not.toContain("opens in a new tab");
+});
+
+test("a contrast theme still shows the mark on a link that opens in a new tab", async ({
+  page,
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "only Chromium emulates forced colors");
+  await page.emulateMedia({ forcedColors: "active" });
+  await page.goto("/rules/hide-foreign-keys/");
+  const colours = await page.locator(".site-footer a[target='_blank']").evaluate((a) => ({
+    mark: getComputedStyle(a, "::after").backgroundColor,
+    page: getComputedStyle(document.documentElement).backgroundColor,
+  }));
+  expect(colours.mark).not.toBe(colours.page);
+});
+
 test("a section of a rule page, the rules index, and the About page can be deep-linked", async ({
   page,
 }) => {

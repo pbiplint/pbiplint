@@ -106,4 +106,14 @@ describe("styles.css", () => {
     // So do the Learn URLs that end the .pbix refusal in the status line.
     expect(rule(".status")).toMatch(/overflow-wrap: anywhere/);
   });
+  it("marks a link that opens in a new tab in its own colour, in a contrast theme too, and keeps its note out of a copy", () => {
+    // The mark is the link's colour cut by a mask, so it follows the link's colour through hover.
+    expect(rule('a[target="_blank"]::after')).toMatch(/background-color: currentColor/);
+    expect(rule('a[target="_blank"]::after')).toMatch(/(^|\s)mask: url\("data:image\/svg\+xml,/);
+    // A contrast theme would repaint that background in the page's colour; there it is LinkText.
+    expect(css).toMatch(
+      /@media \(forced-colors: active\) \{\s*a\[target="_blank"\]::after \{\s*forced-color-adjust: none;\s*background-color: LinkText;/,
+    );
+    expect(rule('a[target="_blank"] > .visually-hidden')).toMatch(/(^|\s)user-select: none/);
+  });
 });

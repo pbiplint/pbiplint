@@ -70,8 +70,8 @@ community's published rule files, and are checked against Tabular Editor on the 
 the Microsoft rules need statistics only a live model has; they are listed but not run. A column
 whose TMDL names no type, as Power BI Desktop saves most calculated columns, is left out of the
 thirteen ported rules that test a column's type, where Tabular Editor reads the type from the
-column's DAX; each rule's page says so. Each rule has a page at https://pbiplint.com/rules with
-what it checks, why, how to fix it, and quirks.
+column's DAX. Each rule has a page at https://pbiplint.com/rules with what it checks, why, how to
+fix it, and quirks.
 
 The report layer (PBIR) is read beside the model: a `.Report` folder alone is valid input, and with
 the model beside it the two are paired through `definition.pbir` and checked together. The report

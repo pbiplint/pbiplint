@@ -9,7 +9,8 @@
 // --rules runs Microsoft's ruleset, the parity oracle for the ported rules
 // (tests/expectations/<fixture>.json). --built-in runs Tabular Editor 3's built-in rules
 // (tests/expectations/te3/<fixture>.json). --survey runs every rule file the list names, each
-// fetched at its commit and checked against its sha256 (tests/expectations/survey/<fixture>.json).
+// fetched at its commit and checked against its sha256 (tests/expectations/survey/<fixture>.json);
+// a file GitHub no longer has (404) is recorded as unavailable, with the capture's date.
 // --from converts a saved `te bpa run` JSON as --rules would. A rule te cannot evaluate is printed
 // and recorded under ruleErrors, never as a finding. Keeps skipRules, deviations, and ours from an
 // existing <out.json>. Tabular Editor is a development-time oracle only; see docs/RELEASING.md.

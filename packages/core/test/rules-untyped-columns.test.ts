@@ -109,4 +109,32 @@ describe("a column with no dataType line (#164)", () => {
       objectNames(tables.DATE_CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE, wholeKey),
     ).toEqual(["'Calendar'"]);
   });
+
+  it("is not reported by the other rules that test a type", () => {
+    // The same model with no dataType lines, then with each column's type written out.
+    const model = (typed: boolean) => {
+      const type = (t: string) => (typed ? [`\t\tdataType: ${t}`] : []);
+      return [
+        "table T",
+        '\tcolumn City = "Nashville"',
+        ...type("string"),
+        "\tcolumn 'Month Start' = DATE(2026, 1, 1)",
+        ...type("dateTime"),
+        "table Budget",
+        ...["Jan", "Feb", "Mar", "Apr", "May", "Jun"].flatMap((mo) => [
+          `\tcolumn ${mo} = 1`,
+          ...type("int64"),
+        ]),
+      ].join("\n");
+    };
+    const untyped = model(false);
+    expect(objectNames(columns.ADD_DATA_CATEGORY_FOR_COLUMNS, untyped)).toEqual([]);
+    expect(objectNames(columns.MONTHCOLUMN_FORMATSTRING, untyped)).toEqual([]);
+    expect(objectNames(tables.UNPIVOT_PIVOTED_MONTH_DATA, untyped)).toEqual([]);
+    // With the types written out, each rule reports, so the missing type is what keeps it quiet.
+    const typed = model(true);
+    expect(objectNames(columns.ADD_DATA_CATEGORY_FOR_COLUMNS, typed)).toEqual(["'T'[City]"]);
+    expect(objectNames(columns.MONTHCOLUMN_FORMATSTRING, typed)).toEqual(["'T'[Month Start]"]);
+    expect(objectNames(tables.UNPIVOT_PIVOTED_MONTH_DATA, typed)).toEqual(["'Budget'"]);
+  });
 });

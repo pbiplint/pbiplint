@@ -988,4 +988,11 @@ describe("h", () => {
     expect(el.getAttribute("value")).toBe('"><img src=x onerror=alert(1)>');
     expect(el.querySelector("img")).toBeNull();
   });
+  it("shows a control character in any string child as an escape, so new text is covered too", () => {
+    const el = h("p", {}, EVIL, h("span", {}, `${EVIL}\n`), null, "plain");
+    expect(el.textContent).toBe(`${SHOWN}${SHOWN}\\u000aplain`);
+    expect(el.textContent).not.toMatch(RAW_CONTROL);
+    // A string shown once already, as heading's is, reads the same the second time.
+    expect(h("p", {}, SHOWN).textContent).toBe(SHOWN);
+  });
 });

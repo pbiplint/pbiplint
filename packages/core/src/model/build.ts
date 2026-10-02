@@ -6,6 +6,8 @@ import type {
   CalculationGroup,
   CalculationItem,
   Column,
+  Culture,
+  CultureTranslations,
   DataSource,
   Hierarchy,
   Level,
@@ -233,6 +235,36 @@ function buildTable(r: TmdlNode, model: Model): void {
   }
 }
 
+/** A culture, with what its `translations` block captions when it has one. */
+function buildCulture(r: TmdlNode): Culture {
+  const block = r.children.find((c) => c.type === "translations");
+  if (!block) return named(r);
+  const translations: CultureTranslations = {
+    tables: [],
+    columns: [],
+    measures: [],
+    hierarchies: [],
+    levels: [],
+  };
+  const captioned = (n: TmdlNode): boolean => (str(n.props.caption) ?? "").trim() !== "";
+  for (const m of objects(block, "model"))
+    for (const t of objects(m, "table")) {
+      const table = t.name ?? "";
+      if (captioned(t)) translations.tables.push(table);
+      for (const c of objects(t, "column"))
+        if (captioned(c)) translations.columns.push({ table, name: c.name ?? "" });
+      for (const x of objects(t, "measure"))
+        if (captioned(x)) translations.measures.push({ table, name: x.name ?? "" });
+      for (const h of objects(t, "hierarchy")) {
+        const hierarchy = h.name ?? "";
+        if (captioned(h)) translations.hierarchies.push({ table, name: hierarchy });
+        for (const l of objects(h, "level"))
+          if (captioned(l)) translations.levels.push({ table, hierarchy, name: l.name ?? "" });
+      }
+    }
+  return { ...named(r), translations };
+}
+
 function buildRelationship(r: TmdlNode): Relationship {
   const p = r.props;
   const from = splitQualifiedName(str(p.fromcolumn) ?? "");
@@ -370,7 +402,7 @@ function readDeclaration(r: TmdlNode, model: Model): void {
       break;
     }
     case "cultureinfo":
-      model.cultures.push(named(r));
+      model.cultures.push(buildCulture(r));
       break;
     case "expression":
       model.expressions.push({ ...named(r), expression: r.value ?? "" });

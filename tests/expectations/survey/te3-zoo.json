@@ -2,8 +2,22 @@
   "fixture": "tests/fixtures/te3-zoo.SemanticModel",
   "oracle": "Tabular Editor CLI 0.7.1.2, each rule file in tests/expectations/survey/files.json at its commit",
   "captured": "2026-10-01",
-  "deviations": {},
-  "ours": {},
+  "deviations": {
+    "NAME_WITHOUT_TRANSLATION": [
+      "A calculation group table is read like any other table, so a visible one with no caption is reported. The source rules do not read calculation group tables.",
+      "An object counts as visible only when it and its table are not hidden, as pbiplint reads visibility elsewhere, so a hidden table, and a measure in one, are not reported. The source rules report both."
+    ]
+  },
+  "ours": {
+    "NAME_WITHOUT_TRANSLATION": [
+      "'Customer'",
+      "'Sales'[Unit Price]",
+      "'Time Intelligence'",
+      "Customer Name",
+      "Geography",
+      "[Order Count]"
+    ]
+  },
   "results": {
     "microsoft/Analysis-Services/BestPracticeRules/BPARules.json": {
       "findings": {

@@ -125,6 +125,17 @@ const legacy = [
   ),
 ];
 
+/** fr-FR, captioning the table and its measure, the measure's caption indented with `indent`. */
+const french = (indent = "\t\t\t\t\t"): File => ({
+  path: "definition/cultures/fr-FR.tmdl",
+  text: `cultureInfo fr-FR\n\ttranslations\n\t\tmodel Model\n\t\t\ttable Sales\n\t\t\t\tcaption: Ventes\n\t\t\t\tmeasure Total\n${indent}caption: Total\n`,
+});
+const translated: File[] = [
+  { path: "definition/model.tmdl", text: "model Model\n\tculture: en-US\n" },
+  table("Sales", "\tmeasure Total = 1\n"),
+  french(),
+];
+
 /** A function and the measure that calls it, in another file. */
 const taxed: File[] = [
   {
@@ -227,6 +238,13 @@ const cases: Case[] = [
     partly: unread(taxed, "definition/tables/Measures.tmdl"),
     wouldReport: ["Local.AddTax"],
   },
+  {
+    rule: "NAME_WITHOUT_TRANSLATION",
+    // A caption line indented with spaces is a line the parser skips, so the caption is lost.
+    whole: translated,
+    partly: damaged(translated, french().path, french("          ").text),
+    wouldReport: ["[Total]"],
+  },
 ];
 
 const ruleNamed = (id: string) => defaultRules.find((r) => r.id === id)!;
@@ -311,6 +329,11 @@ const tableCases: Case[] = [
     rule: "PROVIDE_FORMAT_STRING_FOR_MEASURES",
     ...withPart(part("Sales", "Sales", "\tmeasure Total = 1\n"), salesHidden),
     wouldReport: ["[Total]"],
+  },
+  {
+    rule: "DECIMAL_COLUMN_WITHOUT_FORMAT_STRING",
+    ...withPart(part("Sales", "Sales", "\tcolumn Ratio\n\t\tdataType: double\n"), salesHidden),
+    wouldReport: ["'Sales'[Ratio]"],
   },
   {
     rule: "DATA_COLUMNS_MUST_HAVE_A_SOURCE_COLUMN",

@@ -71,6 +71,7 @@ A name that already says the whole thing needs nothing added: `'Date'[Year]` gai
 - `PARSE_ISSUE` reports a `///` description with a blank line between it and its declaration. The object is then read as having none, so the same edit produces a finding from both rules.
 - `UNNECESSARY_COLUMNS` reports hidden columns that nothing references, which are exactly the columns this rule passes over.
 - `UDF_WITHOUT_DESCRIPTION` asks the same of user-defined functions, which are outside this rule's scope.
+- `NAME_WITHOUT_TRANSLATION` reports visible objects that a translated culture gives no caption, the other text a reader sees about an object: its name in that culture's language. It reads hierarchies and levels as well, and passes over a column or measure in a hidden table, which this rule reports.
 
 ## Links
 

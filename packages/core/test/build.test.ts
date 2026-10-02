@@ -124,6 +124,39 @@ describe("buildModel on the spec sample", () => {
     expect(sales!.calendars).toEqual([]);
   });
 
+  it("reads what a culture's translations block captions, and leaves translations off a culture with none", () => {
+    const m = modelFrom(
+      [
+        "cultureInfo fr-FR",
+        "\ttranslations",
+        "\t\tmodel Model",
+        "\t\t\ttable Sales",
+        "\t\t\t\tcaption: Ventes",
+        "\t\t\t\tcolumn Amount",
+        "\t\t\t\t\tcaption: Montant",
+        "\t\t\t\tmeasure Total",
+        "\t\t\t\t\tcaption: Total",
+        "\t\t\t\tmeasure Blank",
+        '\t\t\t\t\tcaption: " "',
+        "\t\t\t\thierarchy Geography",
+        "\t\t\t\t\tlevel Country",
+        "\t\t\t\t\t\tcaption: Pays",
+        "cultureInfo en-US",
+        '\tlinguisticMetadata = {"Version": "2.0.0"}',
+        "\t\tcontentType: json",
+      ].join("\n"),
+    );
+    const [fr, en] = m.cultures;
+    expect(fr!.translations).toEqual({
+      tables: ["Sales"],
+      columns: [{ table: "Sales", name: "Amount" }],
+      measures: [{ table: "Sales", name: "Total" }],
+      hierarchies: [],
+      levels: [{ table: "Sales", hierarchy: "Geography", name: "Country" }],
+    });
+    expect(en!.translations).toBeUndefined();
+  });
+
   it("builds relationships with defaults, roles with table permissions, perspectives, expressions, cultures, functions", () => {
     expect(model.relationships[0]).toMatchObject({
       fromTable: "Sales",

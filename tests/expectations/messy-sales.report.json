@@ -110,6 +110,18 @@
     ],
     "HARDCODED_YEAR_IN_FILTER": [
       "3cea48e58036b1654474"
+    ],
+    "DECIMAL_COLUMN_WITHOUT_FORMAT_STRING": [
+      "'Product'[List Price]",
+      "'Product'[Standard Cost]",
+      "'Promotion'[Discount Pct]",
+      "'Sales'[Discount Amount]",
+      "'Sales'[Net Amount]",
+      "'Sales'[Total Amount]",
+      "'Sales'[Unit Cost]",
+      "'Sales'[Unit Price]",
+      "'Store'[Latitude]",
+      "'Store'[Longitude]"
     ]
   },
   "results": {

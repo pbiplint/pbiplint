@@ -137,9 +137,12 @@ build in their oracles. A fixture added later has only its Microsoft capture. Th
 - **The survey's rule files**, `tests/expectations/survey/<fixture>.json`: what each of the 46
   distinct rule files in `tests/expectations/survey/files.json` reports, the files a survey on
   September 28, 2026 found published on GitHub. They are the expected results for
-  [custom rules](https://github.com/pbiplint/pbiplint/issues/118). The rule files themselves are
-  not committed, since several carry no license: the list pins each one to a commit and a sha256,
-  and the script fetches it from there and checks it.
+  [custom rules](https://github.com/pbiplint/pbiplint/issues/118). They are also the oracle for a
+  rule pbiplint takes from one of these files, and hold that rule's deviations, as the built-in
+  captures do for the rules taken from the built-in set; `packages/core/test/sourced-parity.test.ts`
+  holds each such rule to its capture. The rule files themselves are not committed, since several
+  carry no license: the list pins each one to a commit and a sha256, and the script fetches it from
+  there and checks it.
 
 A listed fixture keeps its captures as they are once 0.7.1.2 stops working: a change to it changes
 its Microsoft capture, which the survey's run of Microsoft's own file must equal, so every listed

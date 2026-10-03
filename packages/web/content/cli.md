@@ -11,9 +11,9 @@ The package is [`pbiplint` on npm](https://www.npmjs.com/package/pbiplint). It i
 
 ## Get it
 
-pbiplint runs on Node.js 20.19 or later, or 22.12 or later (the package's `engines` field reads `^20.19.0 || >=22.12.0`). There are three ways to run it:
+pbiplint runs on Node.js 20.19 or a later 20 release, or 22.12 or later (the package's `engines` field reads `^20.19.0 || >=22.12.0`). There are three ways to run it:
 
-- **To try it:** `npx pbiplint path/to/project`. npm fetches the package the first time and runs it.
+- **To try it:** `npx pbiplint path/to/project`. The first time, npm asks before it installs the package (`--yes` skips the question), then runs it.
 - **To pin a version in a project:** `npm install --save-dev pbiplint`, then add a script to `package.json`, such as `"lint:pbi": "pbiplint ."`, and run `npm run lint:pbi`. Everyone on the project, and its CI, then runs the same version.
 - **For one machine:** `npm install --global pbiplint`, then run `pbiplint` from anywhere.
 
@@ -55,7 +55,7 @@ These are the options `pbiplint --help` lists:
 
 ### Gate a build on it
 
-pbiplint exits `0` when nothing is at or above `--fail-on`, `1` when something is, and `2` for a usage or input error, such as a path that is not there. Any CI system that fails a step on a nonzero exit can use it as a gate. `--fail-on error` is the default; `--fail-on warning` and `--fail-on info` tighten the gate, and `--fail-on none` always exits 0, for a run that reports without blocking.
+pbiplint exits `0` when nothing is at or above `--fail-on`, `1` when something is, and `2` for a usage or input error, such as a path that is not there. Any CI system that fails a step on a nonzero exit can use it as a gate. `--fail-on error` is the default; `--fail-on warning` and `--fail-on info` tighten the gate, and `--fail-on none` never exits 1, for a run that reports without blocking.
 
 On GitHub, [the pbiplint Action](https://github.com/pbiplint/action) runs the CLI for you and puts the findings on the pull request.
 
@@ -80,8 +80,8 @@ To ignore a rule on one object, add `annotation pbiplint.ignore = HIDE_FOREIGN_K
 
 This is the command line's part of [the pbiplint Privacy Promise](/privacy/), in detail.
 
-- **It reads** the files that describe a project, under the path you give it: the `.pbip` file, the model's `.tmdl` files, and the report's `definition.pbir`, `.platform`, and JSON files, along with the report or model folder a `.pbip` file or a report's `definition.pbir` points to. It also reads the nearest `pbiplint.config.json`, or the one `--config` names. It lists folders to find those files, and opens nothing else: it never enters the `.pbi` folder, where Power BI Desktop keeps the model's local data cache, nor `.git`, `node_modules`, or a report's `StaticResources` and `CustomVisuals` folders, and it does not follow symbolic links.
-- **It writes** the report to your terminal, or to the file `--output` names (creating its folder if needed), with a one-line summary on stderr. Nothing else: no cache, no settings file, no log.
+- **It reads** the files that describe a project, under the path you give it: the `.pbip` file, the model's `.tmdl` files, and the report's `definition.pbir`, `.platform`, and JSON files, along with the report or model folder a `.pbip` file or a report's `definition.pbir` points to. It also reads the nearest `pbiplint.config.json`, or the one `--config` names. It lists folders to find those files, and opens nothing else: it never enters the `.pbi` folder, where Power BI Desktop keeps the model's local data cache, nor `.git`, `node_modules`, or a report's `StaticResources` and `CustomVisuals` folders, and it does not follow a symbolic link below the path you give.
+- **It writes** the report to your terminal, or to the file `--output` names (creating its folder if needed). Notices, and with `--output` a one-line summary, go to stderr. Nothing else: no cache, no settings file, no log.
 - **It sends** nothing. It makes no network request: no telemetry, no update check, no call home.
 
 The network steps that are not pbiplint's own belong to npm. Installing the package fetches it from the registry. And `npx pbiplint` asks the registry for the package's details on every run, even when a copy is already in npm's cache, to see whether a newer version matches; with no network, npm retries for about a minute before it runs the cached copy. Neither request carries anything from your project. To run with no network request at all, run an installed copy, or `npx --offline pbiplint`, which uses the cached copy without asking.
@@ -110,7 +110,7 @@ On Windows, in PowerShell:
 node --permission --allow-fs-read=* "$(npm root -g)\pbiplint\dist\pbiplint.mjs" --sample
 ```
 
-`--allow-fs-read='*'` lets pbiplint read files as it always can; what the check takes away is the network. With `--output`, add `--allow-fs-write=` and the folder the file goes in; the file alone is not enough, since pbiplint creates the folder first. For a copy installed in a project rather than globally, the bundle is at `node_modules/pbiplint/dist/pbiplint.mjs`. To see the refusal for yourself, run `node --permission -e "fetch('https://example.com').catch(e => console.log(e.cause.code))"`, which prints `ERR_ACCESS_DENIED`.
+`--allow-fs-read='*'` lets pbiplint read files as it always can, so the check takes away only the network. Reading is left open because pbiplint looks for a `pbiplint.config.json` in every folder above the project, and a narrower grant stops the run there. With `--output`, also allow writing to the folder the file goes in, such as `--allow-fs-write="$PWD/reports"` for `--output reports/pbiplint.sarif`; the file alone is not enough, since pbiplint creates the folder first. For a copy installed in a project rather than globally, the bundle is at `node_modules/pbiplint/dist/pbiplint.mjs`. To see the refusal for yourself, run `node --permission -e "fetch('https://example.com').catch(e => console.log(e.cause.code))"`, which prints `ERR_ACCESS_DENIED`.
 
 On a Mac with any Node version, the system's own sandbox can refuse the network instead:
 
@@ -118,23 +118,23 @@ On a Mac with any Node version, the system's own sandbox can refuse the network 
 sandbox-exec -p '(version 1)(allow default)(deny network*)' pbiplint --sample
 ```
 
-Apple marks `sandbox-exec` as deprecated, but it is still on every Mac. On Linux, or anywhere Docker runs, a container started with `--network none` has no network at all. This one runs your installed copy, mounted read-only:
+Apple marks `sandbox-exec` as deprecated, but it is still on every Mac. On Linux, a container started with `--network none` has no network at all. This one, for bash, runs your installed copy, mounted read-only:
 
 ```bash
 docker run --rm --network none -v "$(npm root -g)/pbiplint:/opt/pbiplint:ro" node:26 node /opt/pbiplint/dist/pbiplint.mjs --sample
 ```
 
-To lint a project of your own, mount it too, with `-v "$PWD/MyProject:/work:ro"`, and give `/work` in place of `--sample`.
+To lint a project of your own, mount it too, with `-v "$PWD/MyProject:/work:ro"`, and give `/work` in place of `--sample`. Inside the container pbiplint cannot see a `pbiplint.config.json` above the project, so mount that folder instead, or pass the file with `--config`, if the project uses one.
 
 ### 3. Watch it
 
-On Linux, `strace -f -e trace=network pbiplint --sample` lists every network call the process and its children make, and shows none. On Windows, Resource Monitor (`resmon`) has a Network tab that lists each process with network activity while it happens; pbiplint runs as `node.exe`, so lint a large project and look for it there.
+On Linux, `strace -f -e trace=network pbiplint --sample` lists every network call the process and its children make, and shows none. On Windows, Resource Monitor (`resmon`) has a Network tab that lists each process with network activity while it happens; pbiplint runs as `node.exe`. A lint takes seconds, so this is a weak check on its own; the permission-model check above refuses the network outright.
 
 ### 4. Check what you installed
 
 - `npm view pbiplint dependencies` prints nothing: the package has no runtime dependencies, so nothing else is installed with it.
 - `npm pack pbiplint --dry-run` lists what it ships: the `dist/pbiplint.mjs` bundle, the sample project, the README, `NOTICE`, `LICENSE`, and `package.json`.
-- `npm audit signatures`, in a folder that installs pbiplint, reports "1 package has a verified registry signature" and "1 package has a verified attestation". Releases are published from GitHub Actions with npm provenance, and [the npm page](https://www.npmjs.com/package/pbiplint) links the commit and the workflow run that built each version.
+- `npm audit signatures`, in an empty folder where you install only pbiplint, reports "1 package has a verified registry signature" and "1 package has a verified attestation". Releases are published from GitHub Actions with npm provenance, and [the npm page](https://www.npmjs.com/package/pbiplint) links the commit and the workflow run that built each version.
 
 ### 5. Read the code
 

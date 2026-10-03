@@ -52,9 +52,9 @@ const siteLinks = [
 
 /**
  * While results are showing, these links open in a new tab, since following one here would
- * discard the run; the brand and Lint then open a second lint page for
- * another project while these results stay put. Before a run, and once a problem has cleared the
- * results, there is nothing to lose, so they navigate as usual. The arrow the stylesheet draws on
+ * discard the run; the brand and Lint then open a second lint page for another project while these
+ * results stay put. Before a run, and once a problem has cleared the results, there is nothing to
+ * lose, so they navigate as usual. The arrow the stylesheet draws on
  * `a[target="_blank"]` comes and goes with the attribute, and the hidden note with it.
  */
 function keepResults(showing: boolean): void {

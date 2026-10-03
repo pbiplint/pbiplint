@@ -114,7 +114,7 @@ describe("export for an AI assistant", () => {
   it("opens with a preamble that says where the findings came from and what to ask first", () => {
     expect(preamble).toContain("pbiplint.com");
     expect(preamble).toMatch(/errors first/i);
-    expect(preamble).toContain("pbiplint.ignore");
+    expect(preamble).toMatch(/Ask before ignoring, deleting, or renaming anything/);
     expect(preamble).toMatch(/renam/i);
     expect(preamble).toMatch(/Power BI Desktop/);
   });

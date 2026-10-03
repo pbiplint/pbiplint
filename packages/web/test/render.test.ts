@@ -235,12 +235,18 @@ describe("renderResults", () => {
   it("says beside the export what the copy holds and where a paste goes, linking the Promise", () => {
     renderResults(container, result, { source: "x" });
     const note = container.querySelector(".export + .export-note")!;
-    expect(note.textContent).toMatch(/names your tables, columns, measures, and files/);
+    expect(note.textContent).toMatch(/names in your project/);
+    expect(note.textContent).toMatch(/file paths/);
     expect(note.textContent).toMatch(/pbiplint sends nothing/);
     const link = note.querySelector("a")!;
     expect(link.getAttribute("href")).toBe("/privacy/");
     expect(link.getAttribute("target")).toBe("_blank");
-    expect(link.textContent).toContain("the pbiplint Privacy Promise");
+    expect(link.textContent).toContain("The pbiplint Privacy Promise");
+    // The note describes the button it is about.
+    const button = [...container.querySelectorAll("button")].find(
+      (b) => b.textContent === "Copy for an AI assistant",
+    )!;
+    expect(container.querySelector(`#${button.getAttribute("aria-describedby")}`)).toBe(note);
   });
   it("says so on the button when the copy is refused", async () => {
     Object.defineProperty(navigator, "clipboard", {

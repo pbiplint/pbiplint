@@ -1,9 +1,10 @@
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { defaultRules, ignoreHelp, slug } from "@pbiplint/core";
 import { describe, expect, it } from "vitest";
 import { RULE_GUIDANCE } from "../src/results/rule-guidance.data.js";
 
-const rulesDir = new URL("../../../rules/", import.meta.url).pathname;
+const rulesDir = fileURLToPath(new URL("../../../rules/", import.meta.url));
 
 /** The section between one `## ` heading and the next, trimmed, or "" when the page has none. */
 const section = (text: string, heading: string): string =>

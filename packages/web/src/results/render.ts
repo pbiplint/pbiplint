@@ -393,6 +393,14 @@ function renderExportBar(result: LintResult): HTMLElement[] {
         .catch(() => flash("Copy failed", "Copying to the clipboard failed"));
     });
   };
+  const assistantButton = copyButton(
+    "Copy for an AI assistant",
+    () => exportForAssistant(result),
+    "Report and guidance copied to the clipboard",
+  );
+  // The note under the bar says what this copy holds, so a screen reader hears it on the button.
+  // One results block is on the page at a time, so the id is unique.
+  assistantButton.setAttribute("aria-describedby", "export-note");
   return [
     h(
       "div",
@@ -400,20 +408,16 @@ function renderExportBar(result: LintResult): HTMLElement[] {
       button("Download Markdown", () => download(exportMarkdown(result))),
       button("Download JSON", () => download(exportJson(result))),
       copyButton("Copy Markdown", () => exportMarkdown(result), "Report copied to the clipboard"),
-      copyButton(
-        "Copy for an AI assistant",
-        () => exportForAssistant(result),
-        "Report and guidance copied to the clipboard",
-      ),
+      assistantButton,
       announce,
     ),
     // Item 5 of the Promise, said where the copy is made: the paste, not pbiplint, sends it.
     h(
       "p",
-      { class: "export-note" },
-      "Copy for an AI assistant adds each rule's guidance to the report. Like the report, it names your tables, columns, measures, and files. pbiplint sends nothing: whatever you paste goes to the service you paste it into, as ",
-      newTabLink({ href: "/privacy/" }, "the pbiplint Privacy Promise"),
-      " says.",
+      { class: "export-note", id: "export-note" },
+      "Copy for an AI assistant adds each rule's guidance to the report. Like the report, it holds the names in your project, such as its tables, columns, measures, pages, and visuals, and its file paths. pbiplint sends nothing: what you paste goes to the service you paste it into. ",
+      newTabLink({ href: "/privacy/" }, "The pbiplint Privacy Promise"),
+      " covers pbiplint, not that service.",
     ),
   ];
 }

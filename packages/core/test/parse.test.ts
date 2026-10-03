@@ -561,8 +561,35 @@ describe("root object types", () => {
   });
 
   it("reports nothing again under a line it already reported", () => {
-    const pf = parseTmdl("t.tmdl", "table Sales\n\tcolumm Amount\n\t\tvariationn V\n");
+    // `level` is listed, so without the guard `measure` under it would be a second issue.
+    const pf = parseTmdl("t.tmdl", "table Sales\n\tlevel L\n\t\tmeasure X = 1\n");
     expect(pf.issues.map((i) => i.line)).toEqual([2]);
+  });
+
+  it("reports nothing again under a line at the root that it reported", () => {
+    const pf = parseTmdl("t.tmdl", "column Foo\n\tmeasure X = 1\n");
+    expect(pf.issues.map((i) => i.line)).toEqual([1]);
+  });
+
+  it("does not blame the object above a skipped line for the lines under it", () => {
+    const pf = parseTmdl(
+      "t.tmdl",
+      "table T\n\tcolumn A\n\t\tdataType: string\n\thierarchy-H\n\t\tlevel L\n\tmeasure M = 1\n\t\tcolumm X\n",
+    );
+    expect(pf.issues.map((i) => [i.line, i.reason])).toEqual([
+      [4, "unrecognized line"],
+      [7, '"columm" is not a type TMDL declares under a measure'],
+    ]);
+  });
+
+  it("checks only under an object or a flag, and names a parent as written", () => {
+    const pf = parseTmdl(
+      "t.tmdl",
+      "TABLE Sales\n\tColumm Amount\n\tcolumn A\n\t\tvariation V\n\t\t\trelationship: abc\n\t\t\t\tcolumn D\n",
+    );
+    expect(pf.issues.map((i) => [i.line, i.reason])).toEqual([
+      [2, '"Columm" is not a type TMDL declares under a TABLE'],
+    ]);
   });
 
   it("keeps today's reading of ref lines at the root, and reports properties and expressions there", () => {

@@ -138,11 +138,11 @@ const blockText = (lines: readonly string[], from: number, end: number, depth: n
  * declaration other than its `model`. A flag there is checked only by a word TMDL declares, or,
  * under a model, by a declaration under it, since the model's own properties include flags and
  * blocks of flags. Under the model's objects, a declaration whose type its object does not hold
- * (child-types.ts) is an issue (#144), such as a misspelt `columm` under a table; flags, properties,
- * and lines inside a culture's translations or a TMDL script are not checked. A `table` line
- * under anything but a model is one too. A declaration the model reads by name that has none (at the root or under a model, as
- * above), and a name not enclosed in single quotes as TMDL requires wherever it sits, are issues
- * (#135). Each issue says whether it can take an object out of the model
+ * (child-types.ts) is an issue (#144), such as a misspelt `columm` under a table; flags,
+ * properties, and lines inside a culture's translations or a TMDL script are not checked. A
+ * `table` line under anything but a model is one too. A declaration the model reads by name that
+ * has none (at the root or under a model, as above), and a name not enclosed in single quotes as
+ * TMDL requires wherever it sits, are issues (#135). Each issue says whether it can take an object out of the model
  * (`TmdlParseIssue.canDropObjects`); every one can except a description nothing claims.
  */
 export function parseTmdl(file: string, text: string): ParsedFile {
@@ -164,6 +164,13 @@ export function parseTmdl(file: string, text: string): ParsedFile {
    * against its object's child types (#144), since the issue on that line already covers it.
    */
   const reported = new Set<TmdlNode>();
+  /**
+   * The depth of the last line skipped with an issue of its own (space indentation, an
+   * unrecognized line, orphan indentation), while the lines under it are read. Those lines attach
+   * to whatever sits above the skipped line, so they are not checked against that object's child
+   * types either: the skipped line's issue covers them.
+   */
+  let skippedAt: number | undefined;
   /**
    * What sits above a line keeps the parser's reading of it: a culture's translations, which
    * restate the model's objects in a shape of their own, and a TMDL script's `createOrReplace`.
@@ -238,6 +245,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
         canDropObjects: true,
         canDropTableLine: mayBeRootLine(raw) || namesTable(raw),
       });
+      skippedAt = Math.min(skippedAt ?? indent, indent);
       i++;
       continue;
     }
@@ -330,6 +338,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
           canDropObjects: true,
           canDropTableLine: mayBeModelLevelLine(raw, indent),
         });
+        skippedAt = Math.min(skippedAt ?? indent, indent);
         i++;
         continue;
       }
@@ -374,7 +383,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
       // property or an expression with no name whose word is `table`; no other property or
       // expression can be one, and the lines under it are indented.
       rootIssue = reason;
-      if (reason !== undefined)
+      if (reason !== undefined) {
         issues.push({
           file,
           line: lineNo,
@@ -383,6 +392,8 @@ export function parseTmdl(file: string, text: string): ParsedFile {
           canDropObjects: true,
           canDropTableLine: node.kind === "object" || node.kind === "flag" || namesTable(raw),
         });
+        reported.add(node);
+      }
     }
 
     if (pendingDescription) {
@@ -418,6 +429,8 @@ export function parseTmdl(file: string, text: string): ParsedFile {
     // of its properties, such as `discourageImplicitMeasures`, so one there is reported only when
     // its word is a type TMDL declares, such as a bare `table` or `model`; a flag or a property
     // that lost its tabs, with nothing under it, reads as one of the model's own.
+    // A line back at or above the depth of a skipped line is past the lines that line covers.
+    if (skippedAt !== undefined && indent <= skippedAt) skippedAt = undefined;
     const level = parent && holders.get(parent);
     const declaration = node.kind === "object" || node.kind === "flag";
     const keyword = word?.toLowerCase();
@@ -449,7 +462,8 @@ export function parseTmdl(file: string, text: string): ParsedFile {
         malformed = `"${word}" is declared with no name`;
       } else if (
         node.kind === "object" &&
-        parent !== undefined &&
+        (parent?.kind === "object" || parent?.kind === "flag") &&
+        skippedAt === undefined &&
         checksChildren(parent.type) &&
         !allowsChild(parent.type, keyword) &&
         !stack.slice(0, indent).some((a) => reported.has(a) || KEEPS_READING.has(a.type))

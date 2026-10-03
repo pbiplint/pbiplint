@@ -8,7 +8,7 @@
  * Checked on October 3, 2026, and a pair is reported only when both of the first two agree:
  * - Microsoft's TMDL reader, through Tabular Editor 3's CLI 0.7.1.2 (`te list`), on copies of the
  *   rule-zoo, kitchen-sink, te3-zoo, tvw-baseline, and shelfmart fixtures with one line added at
- *   the end of the parent's block. Every pair listed here loads, but those marked below. Among
+ *   the end of the parent's block. Every pair listed here loads, but those named below. Among
  *   those it refuses: `columm` and `level` under a table ("Unsupported child"), `measure` under a
  *   column, `column` under a hierarchy and under a query group, a named `kpi` under a measure,
  *   `calculationItem` under a table, `columnPermission` under a role, `extendedProperty` under a

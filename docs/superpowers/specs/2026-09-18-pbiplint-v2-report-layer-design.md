@@ -1758,8 +1758,10 @@ Model's classes on Learn, and the corpus. A pair is reported only when
 the reader refuses it and the parent's class has no collection for it.
 Flags, properties, and expressions with no name keep today's reading,
 as do lines under an object the table does not list (`refreshPolicy`),
-inside a culture's translations or a TMDL script, and under a line
-already reported. Such an issue can take an object out of the model
+inside a culture's translations or a TMDL script, under a line
+already reported, and under a line the parser skipped, whose own issue
+covers them. A parent is checked only when it is an object or a flag,
+never a property or a `ref` line. Such an issue can take an object out of the model
 (`canDropObjects`) but not a `table` line, which sits only at the root
 or under a model. Over the 23,457 files, compared on October 3, 2026,
 the parser gives every file the same issues and the same tree as

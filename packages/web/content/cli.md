@@ -92,7 +92,7 @@ From quickest to strongest. Each check lints the sample with `--sample`; put the
 
 ### 1. Run it offline
 
-Install it with `npm install --global pbiplint`, turn off the network (airplane mode, or unplug the cable), and run `pbiplint --sample`. It works, because it never needed the network.
+Install it with `npm install --global pbiplint`, turn off the network (airplane mode, or unplug the cable), and run `pbiplint --sample`. It works, because it never needed the network. (It exits 1 on the sample in this check and the ones below, because the sample has findings; 2 would mean it could not run.)
 
 ### 2. Run it where the network is refused
 
@@ -118,7 +118,13 @@ On a Mac with any Node version, the system's own sandbox can refuse the network 
 sandbox-exec -p '(version 1)(allow default)(deny network*)' pbiplint --sample
 ```
 
-Apple marks `sandbox-exec` as deprecated, but it is still on every Mac. On Linux, run pbiplint in a container with no network: `docker run --rm --network none` with the folder pbiplint is installed in, and your project, mounted into it.
+Apple marks `sandbox-exec` as deprecated, but it is still on every Mac. On Linux, or anywhere Docker runs, a container started with `--network none` has no network at all. This one runs your installed copy, mounted read-only:
+
+```bash
+docker run --rm --network none -v "$(npm root -g)/pbiplint:/opt/pbiplint:ro" node:26 node /opt/pbiplint/dist/pbiplint.mjs --sample
+```
+
+To lint a project of your own, mount it too, with `-v "$PWD/MyProject:/work:ro"`, and give `/work` in place of `--sample`.
 
 ### 3. Watch it
 

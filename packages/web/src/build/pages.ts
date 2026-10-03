@@ -5,6 +5,7 @@ export const SITE = "https://pbiplint.com";
 export const NAV = [
   { href: "/", label: "Lint" },
   { href: "/rules/", label: "Rules" },
+  { href: "/cli/", label: "CLI" },
   { href: "/privacy/", label: "Privacy" },
   { href: "/about/", label: "About" },
   { href: "https://github.com/pbiplint/pbiplint", label: "GitHub" },
@@ -442,7 +443,10 @@ function siteMarkdown(links: RuleLinks = new Map(), self = ""): Marked {
         return figure(`example ${kind}`, caption, language);
       },
       codespan({ text }: Tokens.Codespan): string {
-        const code = `<code>${escapeCode(text)}</code>`;
+        // A browser may break a line between the two hyphens of --output, so each flag is kept
+        // whole (see code .flag in styles.css); the spaces between words still break.
+        const flags = escapeCode(text).replace(/(^|\s)(-\S+)/g, '$1<span class="flag">$2</span>');
+        const code = `<code>${flags}</code>`;
         const slug = links.get(text);
         if (slug === undefined || text === self) return code;
         return `<a href="/rules/${escapeHtml(slug)}/">${code}</a>`;

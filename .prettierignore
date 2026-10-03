@@ -10,4 +10,5 @@ tests/expectations
 packages/web/rules/
 packages/web/about/
 packages/web/privacy/
+packages/web/cli/
 packages/web/public/sitemap.xml

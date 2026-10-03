@@ -1,3 +1,4 @@
+import { isAbsolute } from "node:path";
 import type { Readable, Writable } from "node:stream";
 import { McpServer } from "@modelcontextprotocol/server";
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
@@ -41,8 +42,8 @@ export interface LintInput {
 
 /** The CLI arguments for the lint tool's input: the JSON document, or the quiet text. */
 export function lintArgv(input: LintInput): string[] {
-  // A path the CLI would read as an option stays a path.
-  const path = input.path.startsWith("-") ? `./${input.path}` : input.path;
+  // A relative path the CLI would read as an option or a command (rules, explain) stays a path.
+  const path = isAbsolute(input.path) ? input.path : `./${input.path}`;
   const argv = [path, ...(input.quiet ? ["--quiet"] : ["--format", "json"])];
   for (const rule of input.rules ?? []) argv.push("--rule", rule);
   if (input.failOn) argv.push("--fail-on", input.failOn);
@@ -57,9 +58,15 @@ const text = (t: string, isError = false) => ({
 /**
  * A run's answer: what it printed on stdout when it ran (exit 0, or 1 for findings, which are an
  * answer and not a failure), or its stderr as an error when it could not (exit 2), so the
- * assistant reads the CLI's own message.
+ * assistant reads the CLI's own message. The JSON document carries the run's notices, but a rule
+ * that failed or a config naming no rule reaches only stderr, so stderr follows the answer.
  */
-const answer = (run: CliRun) => (run.code === 2 ? text(run.stderr.trim(), true) : text(run.stdout));
+const answer = (run: CliRun) => {
+  if (run.code === 2) return text(run.stderr.trim(), true);
+  const out = text(run.stdout);
+  if (run.stderr.trim()) out.content.push({ type: "text", text: run.stderr });
+  return out;
+};
 
 export function createServer(run: RunCli, version: string): McpServer {
   const server = new McpServer({ name: "pbiplint", version }, { instructions: INSTRUCTIONS });

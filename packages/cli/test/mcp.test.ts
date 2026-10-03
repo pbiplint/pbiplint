@@ -1,7 +1,9 @@
+import { cpSync, writeFileSync } from "node:fs";
 import { PassThrough } from "node:stream";
 import { join } from "node:path";
 import { defaultRules } from "@pbiplint/core";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { tempDir } from "../../../tests/support/temp-dir.js";
 import { main } from "../src/main.js";
 import { lintArgv, serveMcp, TOOL_ANNOTATIONS, type McpHandle } from "../src/mcp.js";
 
@@ -107,8 +109,11 @@ describe("lintArgv", () => {
     ]);
   });
 
-  it("keeps a path that starts with a dash a path", () => {
-    expect(lintArgv({ path: "-x" })[0]).toBe("./-x");
+  it("keeps a relative path a path, whatever it is named", () => {
+    for (const name of ["-x", "rules", "explain", "mcp", "hook"])
+      expect(lintArgv({ path: name })[0]).toBe(`./${name}`);
+    expect(lintArgv({ path: "a/b" })[0]).toBe("./a/b");
+    expect(lintArgv({ path: "/abs/rules" })[0]).toBe("/abs/rules");
   });
 });
 
@@ -175,9 +180,26 @@ describe("pbiplint mcp", () => {
   });
 
   it("writes nothing to its stdout but protocol messages", async () => {
+    const stray = vi.spyOn(process.stdout, "write");
     const client = await connect();
     await client.call("lint", { path: sample });
     await client.call("lint", { path: join(repo, "no-such-folder") });
     for (const line of client.lines) expect(JSON.parse(line)).toMatchObject({ jsonrpc: "2.0" });
+    // Nothing reached the process's own stdout, which an app reads as the protocol.
+    expect(stray).not.toHaveBeenCalled();
+    stray.mockRestore();
+  });
+
+  it("follows the answer with what the CLI wrote to stderr", async () => {
+    const project = join(tempDir("mcp-stderr"), "p");
+    cpSync(sample, project, { recursive: true });
+    writeFileSync(
+      join(project, "pbiplint.config.json"),
+      JSON.stringify({ rules: { NO_SUCH_RULE: "off" } }),
+    );
+    const client = await connect();
+    const got = await client.call("lint", { path: project, quiet: true });
+    expect(got.isError).toBe(false);
+    expect(got.text).toContain('no rule named "NO_SUCH_RULE"');
   });
 });

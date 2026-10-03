@@ -398,6 +398,43 @@ describe("pbiplint CLI", () => {
       `pbiplint: ${root} contains 2 semantic models; point at one of them: Cost.SemanticModel, Sales.SemanticModel\nRun pbiplint --help for usage.\n`,
     );
   });
+  it("lints the one project below a folder as if pointed at it, its config included, and names it (#174)", async () => {
+    // The sample, whose config sets the policies two of its report rules need, one folder down.
+    const root = tempDir("below");
+    cpSync(sample, join(root, "sub", "messy-sales"), { recursive: true });
+    const notice =
+      "sub/messy-sales is the only project below the folder given, so it was linted as if given directly";
+    const text = await run([root]);
+    expect(text.code).toBe(1);
+    expect(text.err).toBe(`pbiplint: notice: ${notice}\n`);
+    expect(text.out).toBe((await run([sample])).out.replace("\n\n", `\nNotice: ${notice}\n\n`));
+    const doc = JSON.parse((await run([root, "--format", "json"])).out);
+    expect(doc.summary.findings).toBe(266);
+    expect(doc.diagnostics).toEqual([
+      { kind: "project-below-input", path: "sub/messy-sales", message: notice },
+    ]);
+    expect({ ...doc, diagnostics: [] }).toEqual(
+      JSON.parse((await run([sample, "--format", "json"])).out),
+    );
+  });
+  it("exits 2 on a folder with two projects below it, linting neither, and lists the command for each (#174)", async () => {
+    const root = tempDir("below-two");
+    for (const at of ["b", "a"]) cpSync(sample, join(root, at, "messy-sales"), { recursive: true });
+    const r = await run([root, "--format", "json"]);
+    expect(r.code).toBe(2);
+    expect(r.out).toBe("");
+    expect(r.err).toBe(
+      `pbiplint: ${root} contains 2 projects; point at one of them:\n` +
+        `  a/messy-sales: pbiplint ${root}/a/messy-sales\n` +
+        `  b/messy-sales: pbiplint ${root}/b/messy-sales\n` +
+        "Run pbiplint --help for usage.\n",
+    );
+    // Each line goes to stderr on its own, so a folder's name cannot write a line of its own.
+    cpSync(sample, join(root, "c\nRun\u001b[2J"), { recursive: true });
+    expect((await run([root])).err.split("\n")[3]).toBe(
+      `  c\\u000aRun\\u001b[2J: pbiplint "${root}/c\\u000aRun\\u001b[2J"`,
+    );
+  });
   // These tests have the operating system refuse a read, as a POSIX system does for a user, or
   // put a symbolic link where the walk would read (CI runs them on Ubuntu). Root reads a folder
   // whatever its mode, and Windows ignores a mode of 000 and makes a symbolic link only in

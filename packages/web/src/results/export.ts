@@ -58,7 +58,9 @@ function guidance(result: LintResult): string {
 export const exportForAssistant = (result: LintResult): ExportFile => ({
   name: "pbiplint-report-for-ai.md",
   type: "text/markdown",
-  text: [ASSISTANT_PREAMBLE, exportMarkdown(result).text.trimEnd(), "", guidance(result)].join("\n"),
+  text: [ASSISTANT_PREAMBLE, exportMarkdown(result).text.trimEnd(), "", guidance(result)].join(
+    "\n",
+  ),
 });
 
 /** Offers the text as a download through a same-origin blob URL. No request leaves the page. */

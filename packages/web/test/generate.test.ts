@@ -711,14 +711,19 @@ describe("generateSite", () => {
     );
     expect(privacy).toContain('<h2 id="check">How to check it</h2>');
     expect(privacy).toContain('<a href="/privacy/" aria-current="page">Privacy</a>');
+    const cli = readFileSync(join(out, "cli/index.html"), "utf8");
+    expect(cli).toContain("<title>The pbiplint CLI</title>");
+    expect(cli).toContain('<h1 id="the-pbiplint-cli">The pbiplint CLI</h1>');
+    expect(cli).toContain('<a href="/cli/" aria-current="page">CLI</a>');
     const sitemap = readFileSync(join(out, "public/sitemap.xml"), "utf8");
     expect(sitemap).toContain("<loc>https://pbiplint.com/rules/hide-foreign-keys/</loc>");
     expect(sitemap).toContain("<loc>https://pbiplint.com/rules/filters-pane-state/</loc>");
     expect(sitemap).toContain("<loc>https://pbiplint.com/privacy/</loc>");
-    // The home page, the About and Privacy Promise pages, the rules index, and one entry per rule page.
-    expect((sitemap.match(/<loc>/g) ?? []).length).toBe(4 + 106);
+    expect(sitemap).toContain("<loc>https://pbiplint.com/cli/</loc>");
+    // The home page, the About, Privacy Promise, and CLI pages, the rules index, and one entry per rule page.
+    expect((sitemap.match(/<loc>/g) ?? []).length).toBe(5 + 106);
     expect(Object.keys(pageEntries(out)).sort()).toEqual(
-      ["about", "privacy", "rules", ...metas.map((m) => `rules/${m.slug}`)].sort(),
+      ["about", "cli", "privacy", "rules", ...metas.map((m) => `rules/${m.slug}`)].sort(),
     );
   });
   it("clears the generated rules tree, so a renamed rule leaves no orphan page", () => {

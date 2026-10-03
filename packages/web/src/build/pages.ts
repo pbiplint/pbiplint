@@ -5,6 +5,7 @@ export const SITE = "https://pbiplint.com";
 export const NAV = [
   { href: "/", label: "Lint" },
   { href: "/rules/", label: "Rules" },
+  { href: "/cli/", label: "CLI" },
   { href: "/privacy/", label: "Privacy" },
   { href: "/about/", label: "About" },
   { href: "https://github.com/pbiplint/pbiplint", label: "GitHub" },

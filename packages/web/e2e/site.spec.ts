@@ -17,6 +17,7 @@ const PAGES = [
   "/rules/ensure-alttext/", // a report page with a visual.json figure
   "/about/",
   "/privacy/",
+  "/cli/",
   "/404.html",
 ];
 
@@ -176,4 +177,18 @@ test("no page scrolls sideways at 320 CSS pixels", async ({ page }) => {
     if (scroll > client) wide.push(`${path}: ${scroll} > ${client}`);
   }
   expect(wide).toEqual([]);
+});
+
+test("the navigation stays on one row from 360 pixels up", async ({ page }) => {
+  // Six links since the CLI page joined; the narrower gap under 400 pixels is what fits them.
+  for (const width of [360, 1280]) {
+    await page.setViewportSize({ width, height: 800 });
+    for (const path of ["/", "/cli/"]) {
+      await page.goto(path);
+      const tops = await page
+        .locator(".site-header nav a")
+        .evaluateAll((links) => links.map((a) => Math.round(a.getBoundingClientRect().top)));
+      expect(new Set(tops).size, `${path} at ${width} pixels`).toBe(1);
+    }
+  }
 });

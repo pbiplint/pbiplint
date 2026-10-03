@@ -229,10 +229,11 @@ h3 {
   flex-wrap: wrap;
   gap: 4px 20px;
 }
-/* Five links take a second row on a phone; a narrower gap keeps them on one from 360 pixels up. */
+/* Six links take a second row on a phone; a narrower gap keeps them on one from 360 pixels up, where
+   the row is 320 pixels wide and the links themselves take about 266. */
 @media (max-width: 400px) {
   .site-header nav {
-    column-gap: 16px;
+    column-gap: 10px;
   }
 }
 .site-header nav a {

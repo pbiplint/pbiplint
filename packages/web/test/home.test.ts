@@ -498,6 +498,7 @@ describe("home page", () => {
       ".site-header a.brand",
       '.site-header nav a[href="/"]',
       '.site-header nav a[href="/rules/"]',
+      '.site-header nav a[href="/cli/"]',
       '.site-header nav a[href="/privacy/"]',
       '.site-header nav a[href="/about/"]',
       '.site-footer a[href="/privacy/"]',

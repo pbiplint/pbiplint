@@ -23,7 +23,7 @@ The analysis runs in your browser, and nothing behind this site receives what yo
 
 ## Known limits in the browser
 
-pbiplint reads one semantic model and one report per run. A folder that holds two semantic models saved as TMDL, or two reports, is refused with their names; drop the one you want, or a folder that holds one of each.
+pbiplint reads one semantic model and one report per run. A folder that holds two semantic models saved as TMDL, or two reports, is refused with their names; drop the one you want, or a folder that holds one of each. A folder that holds projects in folders below it is linted as the one project there, with a notice naming it, or refused with a list of them when it holds more than one; drop one at a time.
 
 The "Choose a folder" button uses the browser's folder picker. In Chrome and Edge that picker does not list files whose names begin or end with a space, so a table file named that way is skipped without a message and its findings are missing. Dragging the folder onto the page, or running the command line, reads every file. The rule that flags such names, `OBJECTS_SHOULD_NOT_START_OR_END_WITH_A_SPACE`, says the same on its page.
 

@@ -1005,6 +1005,18 @@ describe("contentPage", () => {
     expect(html).toContain('<a href="/">home page</a>');
     expect(html).toContain('<a href="/rules/">rules index</a>');
   });
+  it("keeps each flag in inline code whole, so a line never breaks between its hyphens", () => {
+    const html = contentPage(
+      "---\ntitle: T\ndescription: D\n---\n\n# T\n\nRun `npx pbiplint --format sarif --output out.sarif` or `--sample`, not `HIDE_FOREIGN_KEYS`.\n",
+      "/t/",
+      "content/t.md",
+    );
+    expect(html).toContain(
+      '<code>npx pbiplint <span class="flag">--format</span> sarif <span class="flag">--output</span> out.sarif</code>',
+    );
+    expect(html).toContain('<code><span class="flag">--sample</span></code>');
+    expect(html).toContain("<code>HIDE_FOREIGN_KEYS</code>");
+  });
   it("opens the Privacy Promise's links off the site in a new tab, and its link to its checks in this one", () => {
     const html = contentPage(
       readFileSync(join(CONTENT_DIR, "privacy.md"), "utf8"),

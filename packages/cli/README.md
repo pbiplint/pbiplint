@@ -16,6 +16,8 @@ npx pbiplint path/to/model --format sarif --output pbiplint.sarif
 npx pbiplint path/to/model --format markdown
 npx pbiplint rules                                          # every rule with status and severity
 npx pbiplint explain HIDE_FOREIGN_KEYS                      # one rule's guidance, offline (--format json too)
+npx pbiplint path/to/model --quiet                          # the counts, one line per rule
+npx pbiplint path/to/model --rule HIDE_FOREIGN_KEYS         # one rule's findings (repeatable)
 npx pbiplint --help                                         # every option, in one screen
 npx pbiplint --version
 ```

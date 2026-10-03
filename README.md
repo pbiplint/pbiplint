@@ -32,6 +32,8 @@ npx pbiplint --sample                            # try it on the bundled sample 
 npx pbiplint path/to/model --format sarif --output pbiplint.sarif
 npx pbiplint rules                               # every rule with status and severity
 npx pbiplint explain HIDE_FOREIGN_KEYS           # one rule's guidance, offline (--format json too)
+npx pbiplint path/to/model --quiet               # the counts, one line per rule
+npx pbiplint path/to/model --rule HIDE_FOREIGN_KEYS  # one rule's findings (repeatable)
 ```
 
 Or use it in the browser at https://pbiplint.com: paste TMDL, or drop a PBIP folder, a

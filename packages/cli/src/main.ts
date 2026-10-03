@@ -8,11 +8,13 @@ import {
   resolveConfig,
   SEVERITY_LABEL,
   showControls,
+  showOnly,
   summaryLine,
 } from "@pbiplint/core";
 import { HELP, parseArgs, UsageError } from "./args.js";
 import { CONFIG_FILE, findConfig } from "./config.js";
-import { explainJson, explainRule, explainText } from "./explain.js";
+import { explainJson, explainRule, explainText, findRule, noRuleLines } from "./explain.js";
+import { quietText } from "./quiet.js";
 import { logSafe } from "./log-safe.js";
 import { sampleDir } from "./sample.js";
 import { RULE_HELP } from "./rule-help.data.js";
@@ -68,17 +70,21 @@ export async function main(argv: string[], given: Io): Promise<number> {
     if (opts.command === "explain") {
       const explained = explainRule(opts.ruleId!);
       if (!("rule" in explained)) {
-        stderrLine(`pbiplint: no rule named "${opts.ruleId!}"`);
-        const s = explained.suggestions;
-        if (s.length)
-          stderrLine(
-            `Did you mean ${s.length === 1 ? s[0] : `${s.slice(0, -1).join(", ")}, or ${s.at(-1)}`}?`,
-          );
-        stderrLine("Run pbiplint rules for the list.");
+        for (const line of noRuleLines(opts.ruleId!)) stderrLine(line);
         return 2;
       }
       io.stdout(opts.format === "json" ? explainJson(explained, VERSION) : explainText(explained));
       return 0;
+    }
+    // Each --rule id is checked before the walk, so a mistyped one costs no lint.
+    const shownIds: string[] = [];
+    for (const input of opts.rules ?? []) {
+      const rule = findRule(input);
+      if (!rule) {
+        for (const line of noRuleLines(input)) stderrLine(line);
+        return 2;
+      }
+      if (!shownIds.includes(rule.id)) shownIds.push(rule.id);
     }
     const target = opts.sample ? sampleDir() : resolve(io.cwd(), opts.path!);
     const project = resolveProject(target);
@@ -91,7 +97,7 @@ export async function main(argv: string[], given: Io): Promise<number> {
       ...(opts.failOn ? { failOn: opts.failOn } : {}),
     });
     const files = [...(project.model?.files ?? []), ...(project.report?.files ?? [])];
-    const result = lint(files, {
+    const linted = lint(files, {
       config,
       diagnostics: project.diagnostics,
       absent: project.absent,
@@ -102,20 +108,23 @@ export async function main(argv: string[], given: Io): Promise<number> {
         ...(project.report ? { report: project.report.unread } : {}),
       },
     });
+    const result = opts.rules ? showOnly(linted, shownIds, config) : linted;
     // SARIF artifact URIs are resolved from where the tool ran, so each part's root, relative to
     // the cwd, goes in front of that part's finding paths.
     const prefix = (root: string | undefined): string | undefined =>
       root === undefined ? undefined : relative(io.cwd(), root).split("\\").join("/");
-    const formatted = formatResult(opts.format, result, {
-      toolVersion: VERSION,
-      pathPrefix: prefix(project.model?.root) ?? prefix(project.report?.root) ?? "",
-      reportPathPrefix: prefix(project.report?.root),
-      help: RULE_HELP,
-    });
+    const formatted = opts.quiet
+      ? quietText(result)
+      : formatResult(opts.format, result, {
+          toolVersion: VERSION,
+          pathPrefix: prefix(project.model?.root) ?? prefix(project.report?.root) ?? "",
+          reportPathPrefix: prefix(project.report?.root),
+          help: RULE_HELP,
+        });
     // The text format is for a person or an assistant reading a terminal, so with findings it
     // ends by naming where each rule's guidance is. Core names no CLI command, so the line is added here.
     const report =
-      opts.format === "text" && result.groups.length > 0
+      opts.format === "text" && !opts.quiet && result.groups.length > 0
         ? `${formatted.trimEnd()}\n\n${EXPLAIN_HINT}\n`
         : formatted;
     if (opts.output) {

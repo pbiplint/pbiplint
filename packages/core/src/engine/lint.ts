@@ -65,6 +65,16 @@ export interface LintSummary {
   ignored: number;
   /** Rule ids named in the config that match no rule, as written there. */
   unknownRules: string[];
+  /** Set by `showOnly`: the rules kept and their counts, when the result shows only some rules. */
+  shown?: ShownSummary;
+}
+
+export interface ShownSummary {
+  rules: string[];
+  findings: number;
+  errors: number;
+  warnings: number;
+  infos: number;
 }
 
 export interface LintResult {

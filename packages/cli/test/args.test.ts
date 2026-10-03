@@ -66,6 +66,19 @@ describe("parseArgs", () => {
     for (const extra of [["--sample"], ["--fail-on", "info"], ["--config", "c.json"], ["-o", "o"]])
       expect(() => parseArgs(["explain", "x", ...extra])).toThrow(/explain takes only --format/);
   });
+  it("takes --quiet and repeated --rule, and keeps --quiet to text (#178)", () => {
+    expect(parseArgs(["./m", "-q", "--rule", "A", "--rule=b"])).toMatchObject({
+      command: "lint",
+      quiet: true,
+      rules: ["A", "b"],
+    });
+    expect(parseArgs(["./m", "--quiet", "--format", "text"]).quiet).toBe(true);
+    for (const f of ["json", "sarif", "markdown"])
+      expect(() => parseArgs(["./m", "--quiet", "--format", f])).toThrow(/--quiet is text only/);
+    expect(() => parseArgs(["./m", "--rule"])).toThrow(/--rule needs a value/);
+    for (const extra of [["--quiet"], ["--rule", "A"]])
+      expect(() => parseArgs(["explain", "x", ...extra])).toThrow(/explain takes only --format/);
+  });
   it("lints a folder named explain given as ./explain", () => {
     expect(parseArgs(["./explain"])).toMatchObject({ command: "lint", path: "./explain" });
   });

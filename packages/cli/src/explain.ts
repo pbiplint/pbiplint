@@ -4,6 +4,7 @@ import {
   SEVERITY_LABEL,
   slug,
   summarizeRule,
+  type Rule,
   type RuleSummary,
 } from "@pbiplint/core";
 import { RULE_HELP } from "./rule-help.data.js";
@@ -91,9 +92,26 @@ export function suggest(input: string): string[] {
  * One rule's guidance, from the rule pages the CLI carries: its id as a finding names it, in any
  * case, or its page name. What `pbiplint explain` prints and the MCP server's explain_rule returns.
  */
-export function explainRule(input: string): Explained | NotFound {
+/** The rule an id names, as a finding names it, in any case, or by its page name. */
+export function findRule(input: string): Rule | undefined {
   const wanted = slug(input);
-  const rule = wanted === "" ? undefined : defaultRules.find((r) => slug(r.id) === wanted);
+  return wanted === "" ? undefined : defaultRules.find((r) => slug(r.id) === wanted);
+}
+
+/** What stderr says for an id that names no rule: the id, the nearest ids, and where the list is. */
+export function noRuleLines(input: string): string[] {
+  const s = suggest(input);
+  return [
+    `pbiplint: no rule named "${input}"`,
+    ...(s.length
+      ? [`Did you mean ${s.length === 1 ? s[0] : `${s.slice(0, -1).join(", ")}, or ${s.at(-1)}`}?`]
+      : []),
+    "Run pbiplint rules for the list.",
+  ];
+}
+
+export function explainRule(input: string): Explained | NotFound {
+  const rule = findRule(input);
   const help = rule && RULE_HELP[rule.id];
   if (!rule || !help) return { suggestions: suggest(input) };
   return {

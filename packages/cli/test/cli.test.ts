@@ -12,6 +12,7 @@ import { defaultRules } from "@pbiplint/core";
 import { describe, expect, it } from "vitest";
 import { tempDir } from "../../../tests/support/temp-dir.js";
 import { EXPLAIN_HINT, main } from "../src/main.js";
+import { QUIET_NEXT } from "../src/quiet.js";
 
 const repo = new URL("../../../", import.meta.url).pathname;
 // A control character a terminal would act on, as the CLI must never write one raw.
@@ -344,6 +345,74 @@ describe("pbiplint CLI", () => {
     const clean = await run([sample, "--fail-on", "none", "--config", noRules()]);
     expect(clean.out).toContain("No findings.");
     expect(clean.out).not.toContain(EXPLAIN_HINT);
+  });
+  it("--quiet prints the header, a line per rule in the text order, and the next step (#178)", async () => {
+    const full = await run([sample]);
+    const json = JSON.parse((await run([sample, "--format", "json"])).out);
+    const q = await run([sample, "--quiet"]);
+    expect(q.code).toBe(full.code);
+    expect(q.err).toBe(full.err);
+    const lines = q.out.trimEnd().split("\n");
+    expect(lines.slice(0, 2)).toEqual(full.out.split("\n").slice(0, 2));
+    const label = { 3: "error", 2: "warning", 1: "info" } as Record<number, string>;
+    expect(lines.slice(2, -1)).toEqual(
+      json.groups.map(
+        (g: { rule: { id: string; severity: number }; count: number }) =>
+          `${label[g.rule.severity]} ${g.rule.id} ${g.count}`,
+      ),
+    );
+    expect(lines.at(-1)).toBe(QUIET_NEXT);
+    expect(q.out).not.toContain("https://");
+    expect(q.out).not.toContain("Fix these first");
+    expect(q.out).not.toContain("Report at a glance");
+    const clean = await run([sample, "-q", "--config", noRules()]);
+    expect(clean.out.trimEnd().split("\n").at(-1)).toBe("No findings.");
+    expect(clean.out).not.toContain("Next:");
+  });
+  it("--rule shows only those rules' findings in every format, and gates on them (#178)", async () => {
+    const all = JSON.parse((await run([sample, "--format", "json"])).out);
+    const warning = all.groups.find((g: { rule: { severity: number } }) => g.rule.severity === 2);
+    const id: string = warning.rule.id;
+    const text = await run([sample, "--rule", id.toLowerCase()]);
+    // The sample has errors, but only a warning rule is shown, so the default gate passes.
+    expect(text.code).toBe(0);
+    expect(text.out).toMatch(
+      new RegExp(
+        `^pbiplint: ${warning.count} of ${all.summary.findings} findings shown, 1 rule \\(`,
+      ),
+    );
+    expect(text.out).toContain(`  ${id}  (`);
+    expect(text.out.match(/^(ERROR|WARN |INFO ) /gm)).toHaveLength(1);
+    expect((await run([sample, "--rule", id, "--fail-on", "warning"])).code).toBe(1);
+    const json = JSON.parse((await run([sample, "--rule", id, "--format", "json"])).out);
+    expect(json.groups.map((g: { rule: { id: string } }) => g.rule.id)).toEqual([id]);
+    expect(json.summary.shown).toMatchObject({ rules: [id], findings: warning.count });
+    expect(json.summary.findings).toBe(all.summary.findings);
+    const sarif = JSON.parse((await run([sample, "--rule", id, "--format", "sarif"])).out);
+    expect(new Set(sarif.runs[0].results.map((r: { ruleId: string }) => r.ruleId))).toEqual(
+      new Set([id]),
+    );
+    expect((await run([sample, "--rule", id, "--format", "markdown"])).out).toContain(
+      `${warning.count} of ${all.summary.findings} findings shown`,
+    );
+    const two = all.groups.slice(0, 2).map((g: { rule: { id: string } }) => g.rule.id);
+    const q = await run([sample, "-q", "--rule", two[0], "--rule", two[1], "--rule", two[0]]);
+    expect(
+      q.out
+        .trimEnd()
+        .split("\n")
+        .slice(2, -1)
+        .map((l) => l.split(" ")[1]),
+    ).toEqual(two);
+  });
+  it("exits 2 on an unknown --rule id before linting, with the nearest ids (#178)", async () => {
+    const r = await run([sample, "--rule", "HIDE_FOREIGN_KEY"]);
+    expect(r).toEqual({
+      code: 2,
+      out: "",
+      err: 'pbiplint: no rule named "HIDE_FOREIGN_KEY"\nDid you mean HIDE_FOREIGN_KEYS?\nRun pbiplint rules for the list.\n',
+    });
+    expect((await run([join(repo, "nope"), "--rule", "zzzz"])).err).toContain("no rule named");
   });
   it("lints a folder named explain when given as ./explain", async () => {
     const dir = tempDir("explain-folder");

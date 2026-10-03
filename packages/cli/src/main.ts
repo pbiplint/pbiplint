@@ -44,6 +44,18 @@ function listRules(): string {
     .join("\n");
 }
 
+/** One run of the CLI with its output captured, as `pbiplint mcp` runs it for each tool call. */
+async function capture(argv: string[], cwd: string) {
+  let stdout = "";
+  let stderr = "";
+  const code = await main(argv, {
+    stdout: (s) => (stdout += s),
+    stderr: (s) => (stderr += s),
+    cwd: () => cwd,
+  });
+  return { code, stdout, stderr };
+}
+
 export async function main(argv: string[], given: Io): Promise<number> {
   // Everything written to stdout and stderr, and nothing written to a file with --output.
   const io: Io = {
@@ -69,6 +81,12 @@ export async function main(argv: string[], given: Io): Promise<number> {
       return 0;
     }
     if (opts.command === "skill") return runSkill(opts, io, stderrLine);
+    if (opts.command === "mcp") {
+      // Serves until the app closes stdin. Each tool runs this CLI with its output captured.
+      const { serveMcp } = await import("./mcp.js");
+      await serveMcp((argv) => capture(argv, given.cwd()), {}, VERSION);
+      return 0;
+    }
     if (opts.command === "explain") {
       const explained = explainRule(opts.ruleId!);
       if (!("rule" in explained)) {

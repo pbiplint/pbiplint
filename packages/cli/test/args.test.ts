@@ -83,6 +83,13 @@ describe("parseArgs", () => {
     for (const extra of [["--quiet"], ["--rule", "A"]])
       expect(() => parseArgs(["explain", "x", ...extra])).toThrow(/explain takes only --format/);
   });
+  it("takes mcp with nothing else", () => {
+    expect(parseArgs(["mcp"])).toMatchObject({ command: "mcp" });
+    for (const extra of [["x"], ["--format", "json"], ["--quiet"], ["--sample"]])
+      expect(() => parseArgs(["mcp", ...extra])).toThrow(/mcp takes no arguments/);
+    expect(parseArgs(["./mcp"])).toMatchObject({ command: "lint", path: "./mcp" });
+  });
+
   it("lints a folder named explain given as ./explain", () => {
     expect(parseArgs(["./explain"])).toMatchObject({ command: "lint", path: "./explain" });
   });

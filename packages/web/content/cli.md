@@ -25,11 +25,11 @@ The source is on [GitHub](https://github.com/pbiplint/pbiplint), and each versio
 
 ```bash
 npx pbiplint path/to/Model.SemanticModel
-npx pbiplint --sample                                       # a bundled project, a model and its report, with planted violations
+npx pbiplint --sample        # the sample project that comes with the package
 npx pbiplint path/to/model --format sarif --output pbiplint.sarif
 npx pbiplint path/to/model --format markdown
-npx pbiplint rules                                          # every rule with status and severity
-npx pbiplint --help                                         # every option, in one screen
+npx pbiplint rules           # every rule with its status and severity
+npx pbiplint --help          # every option, in one screen
 npx pbiplint --version
 ```
 

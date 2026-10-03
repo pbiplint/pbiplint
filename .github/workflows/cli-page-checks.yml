@@ -15,7 +15,8 @@ jobs:
     timeout-minutes: 15
     defaults:
       run:
-        shell: bash
+        # No -e: a lint with findings exits 1, and every command's output is wanted.
+        shell: bash {0}
     steps:
       - uses: actions/setup-node@v7
         with:
@@ -88,6 +89,7 @@ jobs:
           pbiplint --version
           npx --yes pbiplint --version
           npx --offline pbiplint --sample > $null; "exit $LASTEXITCODE"
+          exit 0
       - name: Node permission model
         run: |
           node --permission --allow-fs-read=* "$(npm root -g)\pbiplint\dist\pbiplint.mjs" --sample > $null; "exit $LASTEXITCODE"

@@ -88,10 +88,6 @@ export function suggest(input: string): string[] {
     .map((c) => c.id);
 }
 
-/**
- * One rule's guidance, from the rule pages the CLI carries: its id as a finding names it, in any
- * case, or its page name. What `pbiplint explain` prints and the MCP server's explain_rule returns.
- */
 /** The rule an id names, as a finding names it, in any case, or by its page name. */
 export function findRule(input: string): Rule | undefined {
   const wanted = slug(input);
@@ -110,6 +106,10 @@ export function noRuleLines(input: string): string[] {
   ];
 }
 
+/**
+ * One rule's guidance, from the rule pages the CLI carries: its id as a finding names it, in any
+ * case, or its page name. What `pbiplint explain` prints and the MCP server's explain_rule returns.
+ */
 export function explainRule(input: string): Explained | NotFound {
   const rule = findRule(input);
   const help = rule && RULE_HELP[rule.id];

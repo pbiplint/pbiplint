@@ -585,6 +585,12 @@ describe("pbiplint CLI", () => {
     expect({ ...doc, diagnostics: [] }).toEqual(
       JSON.parse((await run([sample, "--format", "json"])).out),
     );
+    // Quiet keeps the full text's header, the notice included, and stderr as it was (#178).
+    const quiet = await run([root, "--quiet"]);
+    expect(quiet.err).toBe(text.err);
+    const header = text.out.slice(0, text.out.indexOf("\n\n") + 1);
+    expect(header).toContain(`Notice: ${notice}\n`);
+    expect(quiet.out.startsWith(header)).toBe(true);
   });
   it("exits 2 on a folder with two projects below it, linting neither, and lists the command for each (#174)", async () => {
     const root = tempDir("below-two");

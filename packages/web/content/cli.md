@@ -45,7 +45,7 @@ These are the options `pbiplint --help` lists:
 | `--fail-on <level>` | The lowest severity that makes the run exit 1: `error` (the default), `warning`, `info`, or `none`. |
 | `--config <file>` | The `pbiplint.config.json` to use, instead of the nearest one above the project. |
 | `--output <file>` | Writes the report to a file instead of the terminal, with a one-line summary on stderr. |
-| `--quiet` | Prints the summary, then one line per rule with findings, its severity, id, and count, and nothing else. Text only. |
+| `--quiet` | Prints the summary and what was read or skipped, any notices, then one line per rule with findings (its severity, id, and count), then the next step. Text only. |
 | `--rule <RULE_ID>` | Shows only that rule's findings, in any format; give it more than once for several. Every rule still runs, the summary says how many findings are shown of how many, and `--fail-on` counts only the ones shown. |
 | `--help`, `--version` | Prints the help text, or the version. |
 
@@ -60,7 +60,7 @@ These are the options `pbiplint --help` lists:
 
 `pbiplint explain <RULE_ID>` prints what a rule checks, an example, why it matters, how to fix it, when to ignore it, and its quirks, from the rule's page as the installed version carries it, with no network. The id is the one each finding names, in any case; the page name from its link works too. `--format json` prints the same as one document, each section a field of its own, for a script or an AI assistant. An id it does not know exits `2` and names the nearest ones. The text report ends by pointing at it when there are findings.
 
-An AI assistant that lints after each edit can keep its context small: `pbiplint <path> --quiet` for the counts, `pbiplint <path> --rule <RULE_ID>` for one rule's findings, and `pbiplint explain <RULE_ID>` for how to fix them. The quiet output's last line names the other two.
+An AI assistant that lints after each edit can keep its context small: `pbiplint <path> --quiet` for the counts, `pbiplint <path> --rule <RULE_ID>` for one rule's findings, and `pbiplint explain <RULE_ID>` for how to fix them. When there are findings, the quiet output's last line names the other two.
 
 To lint a folder named `explain` or `rules`, give it as `./explain` or `./rules`.
 

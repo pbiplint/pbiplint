@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseArgs, UsageError } from "../src/args.js";
+import { HELP, parseArgs, UsageError } from "../src/args.js";
 
 describe("parseArgs", () => {
   it("defaults to lint with text output", () => {
@@ -73,6 +73,8 @@ describe("parseArgs", () => {
       rules: ["A", "b"],
     });
     expect(parseArgs(["./m", "--quiet", "--format", "text"]).quiet).toBe(true);
+    expect(HELP).toMatch(/^--quiet .*\(text only\)$/m);
+    expect(HELP).toMatch(/^--rule <RULE_ID> .*\(repeatable\)/m);
     for (const f of ["json", "sarif", "markdown"])
       expect(() => parseArgs(["./m", "--quiet", "--format", f])).toThrow(/--quiet is text only/);
     expect(() => parseArgs(["./m", "--rule"])).toThrow(/--rule needs a value/);

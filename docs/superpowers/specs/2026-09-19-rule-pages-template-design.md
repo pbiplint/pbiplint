@@ -468,8 +468,9 @@ Per section:
   only where the snippet needs a word of orientation.
 - **How to fix it.** Desktop route and TMDL property, both, where both
   exist. Power Query or the source where the fix lives there.
-  From October 3, 2026 (#96), a report page gives the Desktop route
-  only, with no report JSON route; see section 4.
+  From October 3, 2026 (#96), a report page gives the Desktop route,
+  and the model or source route where the fix lives there, but no
+  report JSON route; see section 4.
 - **When to ignore it.** Name the concrete legitimate situations, for
   example a key column deliberately left visible for a lookup page, and
   what to check before deciding. When there is none, say so in a

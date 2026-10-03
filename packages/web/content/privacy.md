@@ -9,9 +9,9 @@ pbiplint checks your Power BI project where it already is: in your browser tab, 
 
 ## The promise
 
-1. **Nothing you lint leaves your machine.** The site runs in your browser tab. The command line reads the files you point it at and writes to your terminal or to a file you name. Neither makes a network request.
+1. **Nothing you lint leaves your machine.** The site runs in your browser tab. The command line reads the files you point it at and writes to your terminal or to a file you name. Neither makes a network request. The GitHub Action runs the command line on your workflow's runner and sends the findings only to your own repository on GitHub, as [below](#in-the-github-action) says.
 2. **pbiplint never stores, sends, or opens your data.**\* It reads only the files that describe your model and report, never the data they load. Imported data lives in the model's local cache, the `.pbi` folder, which pbiplint never opens. It never connects to a data source, the Power BI engine, or the Power BI service.
-3. **No account, no cookies, and no analytics script.** There is no pbiplint server: the site is static files, and nothing behind them receives what you lint. Like any web host, the one that serves these files sees each request for a page and can log it, and the request names the page, never your project. The site stores nothing in your browser.
+3. **No account, no cookies, and no analytics script.** There is no pbiplint server: the site is static files, and nothing behind them receives what you lint. Like any website, the services that host and deliver these files see each request for a page, with the address it came from, and can log or count it; the request names the page, never your project. The site stores nothing in your browser.
 4. **You can check it.** The [checks below](#check) need nothing but a browser, and the code they point to is public.
 5. **If you use an AI assistant.** If you give pbiplint's findings to an AI assistant, or run pbiplint inside one, the assistant sees the findings, as it sees anything else you show it. The promise covers pbiplint, not the assistant.
 
@@ -21,11 +21,11 @@ pbiplint checks your Power BI project where it already is: in your browser tab, 
 
 ### On this site
 
-The linter is part of the page and runs in your browser tab. When you drop or choose a folder, the page opens only the files that describe a project: the `.tmdl` files, the report's JSON files, the `.pbip` file, `definition.pbir`, `.platform`, and `pbiplint.config.json`. Everything else in the folder, the `.pbi` folder included, stays unopened. The results, and any report you export, are made in the tab and saved only where you choose.
+The linter is part of the page and runs in your browser tab. When you drop or choose a folder, the page opens only the files that describe a project: the `.tmdl` files, the report's JSON files, the `.pbip` file, `definition.pbir`, `.platform`, and `pbiplint.config.json`. Everything else in the folder, the `.pbi` folder included, stays unopened. The results are made in the tab, and a report you export goes only to your browser's downloads, or to your clipboard when you copy it.
 
 ### On the command line
 
-`pbiplint` opens the same files the site does, under the path you give it, along with the nearest `pbiplint.config.json` or the one `--config` names. It writes to your terminal, or to the file `--output` names, and nowhere else. It makes no network request: no telemetry and no update check. Installing it is the only network step: `npm` or `npx` fetches the package from the npm registry, and that request carries nothing from your project.
+`pbiplint` opens the same kinds of files the site does: those under the path you give it, and those in the report or model folder that a `.pbip` file or a report's `definition.pbir` points to, along with the nearest `pbiplint.config.json` or the one `--config` names. It writes to your terminal, or to the file `--output` names, and nowhere else. It makes no network request: no telemetry and no update check. Installing it is the only network step: `npm` or `npx` fetches the package from the npm registry, and that request carries nothing from your project.
 
 ### In the GitHub Action
 

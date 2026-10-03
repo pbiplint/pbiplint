@@ -21,14 +21,15 @@ const code = readFileSync(bundle, "utf8");
 const ALLOWED = new Set(["node:fs", "node:path", "node:url"]);
 // The bundle is not minified, so each static import or re-export starts a line, which keeps a
 // rule's message that says `from "Sales"` from reading as one. A dynamic import or require is
-// matched anywhere, and one whose module is not a plain string cannot be checked, so it fails.
+// matched anywhere, as is esbuild's `__require`, which a bundled CommonJS dependency's require
+// becomes, and one whose module is not a plain string cannot be checked, so it fails.
 const SPECIFIERS = [
   /^\s*(?:import|export)\b[^;'"]*?\bfrom\s*["']([^"']+)["']/gm,
   /^\s*import\s*["']([^"']+)["']/gm,
-  /\b(?:import|require)\s*\(\s*["']([^"']+)["']\s*\)/g,
+  /\b(?:import|require|__require)\s*\(\s*["']([^"']+)["']\s*\)/g,
 ];
 const imports = new Set(SPECIFIERS.flatMap((re) => [...code.matchAll(re)].map((m) => m[1])));
-const computed = /\b(?:import|require)\s*\(\s*(?!["'][^"']+["']\s*\))/.test(code);
+const computed = /\b(?:import|require|__require)\s*\(\s*(?!["'][^"']+["']\s*\))/.test(code);
 const notAllowed = [
   ...[...imports].filter((s) => !ALLOWED.has(s)).sort(),
   ...(computed ? ["a dynamic import or require of a computed name"] : []),

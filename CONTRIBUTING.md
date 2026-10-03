@@ -8,6 +8,7 @@ npm test            # unit tests and the parity suites (Tabular Editor and fab-i
 npm run typecheck && npm run lint
 npm run check:browser
 npm run build       # core, CLI, and the site (the site build fails on any network reference)
+npm run check:network  # after the build: the CLI bundle reaches for no network module or API
 npm run test:e2e    # the site in Chromium, Firefox, and WebKit; run `npx playwright install` once first
 ```
 

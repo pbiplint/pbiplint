@@ -735,6 +735,11 @@ describe("generateSite", () => {
     // A section for each pipeline a link can land on, and the pages it leans on, in this tab.
     expect(pipelines).toContain('<h2 id="github-actions">GitHub Actions</h2>');
     expect(pipelines).toContain('<h2 id="azure-pipelines">Azure Pipelines</h2>');
+    // Where to get the task: its Marketplace listing, in a new tab, and no "coming with" line.
+    expect(pipelines).toContain(
+      '<a href="https://marketplace.visualstudio.com/items?itemName=pbiplint.pbiplint" target="_blank"',
+    );
+    expect(pipelines).not.toContain("goes on the Visual Studio Marketplace");
     expect(pipelines).toContain('<a href="/cli/#reads">');
     expect(pipelines).toContain('<a href="/privacy/#in-the-github-action">');
     expect(cli).toContain('<a href="/pipelines/">Pipelines</a>');

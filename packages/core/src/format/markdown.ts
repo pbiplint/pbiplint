@@ -24,7 +24,7 @@ import {
 const oneLine = (s: string): string => s.replace(/\r\n?|\n/g, " ");
 
 /**
- * Text from the input, outside a code span. Each backslash is doubled, so none escapes what follows
+ * A word of input text outside a code span. Each backslash is doubled, so none escapes what follows
  * it; each control character is shown as the text format shows it; `&`, `<`, and `>` are written
  * as HTML entities, so no tag or entity is read as HTML; and `` ` ``, `[`, `]`, `*`, `_`, `~`, and
  * `|` are escaped with a backslash (CommonMark lets any ASCII punctuation be escaped, and shows the
@@ -32,27 +32,43 @@ const oneLine = (s: string): string => s.replace(/\r\n?|\n/g, " ");
  * a link, an image, emphasis, or strikethrough, and a table cell holds its text whole.
  * GitHub-flavoured Markdown also links a bare URL and a `www.` address as the source spells them,
  * so a backslash inside one would land in the link; the colon of `://` and the dot after `www` (in
- * any case) are escaped, so neither is a link and each shows as written. `@` and `$` are escaped
- * too. The `@` escape keeps marked from linking part of an email address (`last@example.com` out
- * of `first_last@example.com`); marked does no math, so the `$` escape changes nothing there.
- * GitHub ignores both escapes: it still links an email address (the link's text and target are the
- * address as written), links an @mention or #reference in an issue or comment, and can render the
- * text between two `$` on one line as math.
+ * any case) are escaped, so neither is a link and each shows as written.
  */
-const text = (s: string): string =>
+const escaped = (s: string): string =>
   showControls(s.replace(/\\/g, "\\\\"))
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/[`[\]*_~|@$]/g, "\\$&")
+    .replace(/[`[\]*_~|]/g, "\\$&")
     .replace(/:(?=\/\/)/g, "\\:")
     .replace(/(www)\./gi, "$1\\.");
 
+/**
+ * Text from the input, outside a code span, word by word (a word ends at a space; a tab or line
+ * break is a control character, shown, so it never ends one). GitHub ignores a backslash before
+ * `@` and `$`: it links an email address (the link's text and target are the address as written),
+ * links an @name, which notifies that user, or a #123 in an issue or comment, and renders the text
+ * between two `$` on one line as math (#109). So a word holding `@`, `#` before a digit, or `$`
+ * when the text holds two or more, is written as a code span, which GitHub neither links nor
+ * renders and a CommonMark viewer shows as written; every other word is escaped. In a table cell
+ * (`table`), the code span's `|` is escaped as a name's is.
+ */
+function text(s: string, table = false): string {
+  const math = (s.match(/\$/g) ?? []).length > 1;
+  return s
+    .split(/( +)/)
+    .map((w, i) =>
+      i % 2 === 0 && (/@|#\d/.test(w) || (math && w.includes("$"))) ? code(w, table) : escaped(w),
+    )
+    .join("");
+}
+
 /** Input text in a table cell, a line break shown as a space. */
-const cell = (s: string): string => text(oneLine(s));
+const cell = (s: string): string => text(oneLine(s), true);
 
 /**
- * A name from the input as a code span in a table cell, showing the whole name. A code span shows
+ * A name from the input as a code span in a table cell, showing the whole name, or a word of text
+ * as one anywhere (`table` false, where a line break is shown and `|` needs no escape). A code span shows
  * its `<` and `&` as written, so nothing is entity-escaped here. Its fence is one backtick longer
  * than the longest run of backticks in the name. CommonMark strips one space from each end of a
  * span that begins and ends with a space and is not all spaces, so a space goes inside each end
@@ -63,11 +79,13 @@ const cell = (s: string): string => text(oneLine(s));
  * cell's end, and the rest of the name as Markdown outside the span, so an odd run of backslashes
  * before a pipe in the name gains one, and shows one longer.
  */
-function code(name: string): string {
-  const shown = showControls(oneLine(name)).replace(
-    /(\\*)\|/g,
-    (_, run: string) => `${run}${run.length % 2 ? "\\" : ""}\\|`,
-  );
+function code(name: string, table = true): string {
+  const shown = table
+    ? showControls(oneLine(name)).replace(
+        /(\\*)\|/g,
+        (_, run: string) => `${run}${run.length % 2 ? "\\" : ""}\\|`,
+      )
+    : showControls(name);
   const fence = "`".repeat(Math.max(0, ...(shown.match(/`+/g) ?? []).map((r) => r.length)) + 1);
   const spaced = shown.startsWith(" ") && shown.endsWith(" ") && /[^ ]/.test(shown);
   const pad = shown.startsWith("`") || shown.endsWith("`") || spaced ? " " : "";

@@ -9,7 +9,7 @@ pbiplint checks your Power BI project where it already is: in your browser tab, 
 
 ## The Promise
 
-1. **Nothing you lint leaves your machine.** The site runs in your browser tab. The command line reads the files you point it at and writes to your terminal or to a file you name. Neither makes a network request. The GitHub Action runs the command line on your workflow's runner and sends the findings only to your own repository on GitHub, as [below](#in-the-github-action) says.
+1. **Nothing you lint leaves your machine.** The site runs in your browser tab. The command line reads the files you point it at and writes to your terminal or to a file you name. Neither makes a network request. The GitHub Action runs the command line on your workflow's runner and sends the findings only to your own repository on GitHub as [shown below](#in-the-github-action).
 2. **pbiplint never stores, sends, or opens your data.**\* It reads only the files that describe your model and report, never the data they load. Imported data lives in the model's local cache, the `.pbi` folder, which pbiplint never opens. It never connects to a data source, the Power BI engine, or the Power BI service.
 3. **No account, no cookies, and no analytics script.** There is no pbiplint server: the site is static files, and nothing behind them receives what you lint. Like any website, the services that host and deliver these files see each request for a page, with the address it came from, and can log or count it; the request names the page, never your project. The site stores nothing in your browser.
 4. **You can check it.** The [checks below](#check) need nothing but a browser, and the code they point to is public.

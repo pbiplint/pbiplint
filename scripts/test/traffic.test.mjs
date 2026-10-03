@@ -26,7 +26,16 @@ describe("mergeTraffic", () => {
       paths: {
         "2026-10-05": [{ path: "/pbiplint/pbiplint", title: "pbiplint", count: 6, uniques: 3 }],
       },
+      totals: {
+        "2026-10-05": { views: { count: 7, uniques: 3 }, clones: { count: 1, uniques: 1 } },
+      },
     });
+  });
+
+  it("keeps each fetch's 14-day totals, since daily uniques do not add up to them", () => {
+    const first = mergeTraffic({}, FETCHED, "2026-10-05");
+    const next = mergeTraffic(first, FETCHED, "2026-10-12");
+    expect(Object.keys(next.totals)).toEqual(["2026-10-05", "2026-10-12"]);
   });
 
   it("a later fetch replaces a day it reports again and keeps the days it no longer reports", () => {

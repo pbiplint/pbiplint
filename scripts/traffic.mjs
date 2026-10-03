@@ -50,7 +50,8 @@ function list(value, name) {
 /**
  * `archive` with `fetched` merged in. Views and clones are daily, so a day reported again is
  * replaced (the newest day is partial until it closes) and days no longer reported are kept.
- * Referrers and paths are 14-day totals with no date, so each fetch is kept under `fetchedOn`.
+ * Referrers and paths, and the 14-day view and clone totals, have no date, so each fetch's are kept
+ * under `fetchedOn`.
  */
 export function mergeTraffic(archive, fetched, fetchedOn) {
   const daily = (kind) => {
@@ -67,6 +68,14 @@ export function mergeTraffic(archive, fetched, fetchedOn) {
       [fetchedOn]: list(fetched.referrers, "referrers"),
     }),
     paths: sortKeys({ ...archive.paths, [fetchedOn]: list(fetched.paths, "paths") }),
+    // The 14-day counts and unique visitors, the only deduplicated figure GitHub gives.
+    totals: sortKeys({
+      ...archive.totals,
+      [fetchedOn]: {
+        views: { count: fetched.views.count, uniques: fetched.views.uniques },
+        clones: { count: fetched.clones.count, uniques: fetched.clones.uniques },
+      },
+    }),
   };
 }
 

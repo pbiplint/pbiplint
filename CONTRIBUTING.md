@@ -123,8 +123,8 @@ views, and visitors by address. Read them as trends.
   `.github/workflows/traffic.yml` saves them every Monday to `traffic.json` on the `metrics`
   branch, merged by date (`scripts/traffic.mjs`). It reads them with a fine-grained token in the
   `TRAFFIC_TOKEN` secret, with read access to this repository's administration and nothing else.
-  The token expires; when it does, the workflow fails with a 401 and GitHub emails the maintainer.
-  Make a new one with the same access and replace the secret. GitHub Pages gives no visitor counts,
+  The token expires; when it does, the workflow fails with a 401, and GitHub notifies whoever last
+  changed the workflow's schedule. Make a new one with the same access and replace the secret. GitHub Pages gives no visitor counts,
   so this covers the repository, not pbiplint.com.
 - **The GitHub Action:** search code for
   [`uses: pbiplint/action`](https://github.com/search?q=%22uses%3A+pbiplint%2Faction%22&type=code)
@@ -135,8 +135,11 @@ views, and visitors by address. Read them as trends.
   pbiplint 0.2.4. An install is an Azure DevOps organization adding the extension, not a person or
   a run.
 - **The site:** once pbiplint.com is proxied through Cloudflare, the zone's analytics count
-  requests as they pass, with no script on the page. Cloudflare Web Analytics, which injects a
-  script, stays off, and so does Bot Fight Mode, which sets a cookie.
+  requests as they pass, with no script on the page. Everything in Cloudflare that adds to a page
+  or sets a cookie stays off: Web Analytics (a script), Bot Fight Mode (a cookie and a script),
+  Email Address Obfuscation, Rocket Loader, Automatic HTTPS Rewrites, and Always Online. After any
+  change there, check that no response from pbiplint.com carries `Set-Cookie` and that no page's
+  HTML mentions `/cdn-cgi/`.
 
 ## Style
 

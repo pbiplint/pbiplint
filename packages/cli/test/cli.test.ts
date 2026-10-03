@@ -8,15 +8,26 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { defaultRules } from "@pbiplint/core";
 import { describe, expect, it } from "vitest";
 import { tempDir } from "../../../tests/support/temp-dir.js";
-import { main } from "../src/main.js";
+import { EXPLAIN_HINT, main } from "../src/main.js";
 
 const repo = new URL("../../../", import.meta.url).pathname;
 // A control character a terminal would act on, as the CLI must never write one raw.
 // eslint-disable-next-line no-control-regex -- finding control characters is what this is for
 const RAW_CONTROL = /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/;
 const sample = join(repo, "examples/messy-sales");
+
+/** A config that turns every rule off, so a lint of the sample finds nothing. */
+function noRules(): string {
+  const file = join(tempDir("no-rules"), "pbiplint.config.json");
+  writeFileSync(
+    file,
+    JSON.stringify({ rules: Object.fromEntries(defaultRules.map((r) => [r.id, "off"])) }),
+  );
+  return file;
+}
 
 async function run(argv: string[], cwd = repo) {
   let out = "";
@@ -288,6 +299,59 @@ describe("pbiplint CLI", () => {
     );
     expect(r.out).toMatch(/SPLIT_DATE_AND_TIME\s+model\s+needs live model/);
     expect(r.out.trim().split("\n").length).toBeGreaterThanOrEqual(72);
+  });
+  it("explains a rule in text or JSON, offline, from the pages it carries (#177)", async () => {
+    const text = await run(["explain", "hide_foreign_keys"]);
+    expect(text.code).toBe(0);
+    expect(text.err).toBe("");
+    expect(text.out.split("\n").slice(0, 3)).toEqual([
+      "HIDE_FOREIGN_KEYS  Hide foreign keys",
+      "Warning, model layer, Formatting",
+      "https://pbiplint.com/rules/hide-foreign-keys",
+    ]);
+    expect(text.out).toContain("\nHow to fix it\n");
+    const json = await run(["explain", "HIDE_FOREIGN_KEYS", "--format", "json"]);
+    expect(json.code).toBe(0);
+    const doc = JSON.parse(json.out);
+    // The rule's fields are lint JSON's, as the sample's group for the same rule gives them.
+    const lintDoc = JSON.parse((await run([sample, "--format", "json"])).out);
+    const group = lintDoc.groups.find(
+      (g: { rule: { id: string } }) => g.rule.id === "HIDE_FOREIGN_KEYS",
+    );
+    expect(doc.rule).toEqual({ ...group.rule, description: doc.rule.description });
+    expect(doc.sections.howToFixIt).toBeTruthy();
+  });
+  it("exits 2 on an unknown rule id and names the nearest ones (#177)", async () => {
+    const one = await run(["explain", "HIDE_FOREIGN_KEY"]);
+    expect(one).toEqual({
+      code: 2,
+      out: "",
+      err: 'pbiplint: no rule named "HIDE_FOREIGN_KEY"\nDid you mean HIDE_FOREIGN_KEYS?\nRun pbiplint rules for the list.\n',
+    });
+    const several = await run(["explain", "MEASURE"]);
+    expect(several.err).toMatch(/^Did you mean \S+, \S+, or \S+\?$/m);
+    const none = await run(["explain", "zzzz"]);
+    expect(none.err).toBe('pbiplint: no rule named "zzzz"\nRun pbiplint rules for the list.\n');
+  });
+  it("ends the text report with where a rule's guidance is, when there are findings (#177)", async () => {
+    const r = await run([sample]);
+    expect(r.out.endsWith(`\n\n${EXPLAIN_HINT}\n`)).toBe(true);
+    const dir = tempDir("hint");
+    await run([sample, "--output", "report.txt"], dir);
+    expect(readFileSync(join(dir, "report.txt"), "utf8").endsWith(`${EXPLAIN_HINT}\n`)).toBe(true);
+    for (const format of ["json", "sarif", "markdown"])
+      expect((await run([sample, "--format", format])).out).not.toContain("pbiplint explain");
+    const clean = await run([sample, "--fail-on", "none", "--config", noRules()]);
+    expect(clean.out).toContain("No findings.");
+    expect(clean.out).not.toContain(EXPLAIN_HINT);
+  });
+  it("lints a folder named explain when given as ./explain", async () => {
+    const dir = tempDir("explain-folder");
+    cpSync(join(sample, "Messy Sales Demo.SemanticModel"), join(dir, "explain"), {
+      recursive: true,
+    });
+    const r = await run(["./explain"], dir);
+    expect(r.out).toMatch(/^pbiplint: \d+ findings/);
   });
   it("prints help and version, and exits 2 on usage errors", async () => {
     const help = (await run(["--help"])).out;

@@ -48,4 +48,25 @@ describe("parseArgs", () => {
     expect(() => parseArgs(["a", "b"])).toThrow(/one path/);
     expect(() => parseArgs(["./m", "--sample"])).toThrow(/either/);
   });
+  it("takes explain and one rule id, with --format text or json only", () => {
+    expect(parseArgs(["explain", "HIDE_FOREIGN_KEYS"])).toEqual({
+      command: "explain",
+      ruleId: "HIDE_FOREIGN_KEYS",
+      format: "text",
+      sample: false,
+    });
+    expect(parseArgs(["--format", "json", "explain", "x"])).toMatchObject({
+      command: "explain",
+      format: "json",
+    });
+    expect(() => parseArgs(["explain"])).toThrow(/explain needs a rule id/);
+    expect(() => parseArgs(["explain", "a", "b"])).toThrow(/explain takes one rule id/);
+    for (const f of ["markdown", "sarif"])
+      expect(() => parseArgs(["explain", "x", "--format", f])).toThrow(/text or json/);
+    for (const extra of [["--sample"], ["--fail-on", "info"], ["--config", "c.json"], ["-o", "o"]])
+      expect(() => parseArgs(["explain", "x", ...extra])).toThrow(/explain takes only --format/);
+  });
+  it("lints a folder named explain given as ./explain", () => {
+    expect(parseArgs(["./explain"])).toMatchObject({ command: "lint", path: "./explain" });
+  });
 });

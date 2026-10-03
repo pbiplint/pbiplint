@@ -12,6 +12,7 @@ import {
 } from "@pbiplint/core";
 import { HELP, parseArgs, UsageError } from "./args.js";
 import { CONFIG_FILE, findConfig } from "./config.js";
+import { explainJson, explainRule, explainText } from "./explain.js";
 import { logSafe } from "./log-safe.js";
 import { sampleDir } from "./sample.js";
 import { RULE_HELP } from "./rule-help.data.js";
@@ -20,6 +21,9 @@ import { resolveProject } from "./walk.js";
 declare const __PBIPLINT_VERSION__: string | undefined;
 export const VERSION =
   typeof __PBIPLINT_VERSION__ === "string" ? __PBIPLINT_VERSION__ : "0.0.0-dev";
+
+/** The text report's last line when it has findings. */
+export const EXPLAIN_HINT = "Run pbiplint explain <RULE_ID> for a rule's guidance, offline.";
 
 export interface Io {
   stdout(text: string): void;
@@ -61,6 +65,21 @@ export async function main(argv: string[], given: Io): Promise<number> {
       io.stdout(listRules() + "\n");
       return 0;
     }
+    if (opts.command === "explain") {
+      const explained = explainRule(opts.ruleId!);
+      if (!("rule" in explained)) {
+        stderrLine(`pbiplint: no rule named "${opts.ruleId!}"`);
+        const s = explained.suggestions;
+        if (s.length)
+          stderrLine(
+            `Did you mean ${s.length === 1 ? s[0] : `${s.slice(0, -1).join(", ")}, or ${s.at(-1)}`}?`,
+          );
+        stderrLine("Run pbiplint rules for the list.");
+        return 2;
+      }
+      io.stdout(opts.format === "json" ? explainJson(explained, VERSION) : explainText(explained));
+      return 0;
+    }
     const target = opts.sample ? sampleDir() : resolve(io.cwd(), opts.path!);
     const project = resolveProject(target);
     const found = findConfig(
@@ -87,12 +106,18 @@ export async function main(argv: string[], given: Io): Promise<number> {
     // the cwd, goes in front of that part's finding paths.
     const prefix = (root: string | undefined): string | undefined =>
       root === undefined ? undefined : relative(io.cwd(), root).split("\\").join("/");
-    const report = formatResult(opts.format, result, {
+    const formatted = formatResult(opts.format, result, {
       toolVersion: VERSION,
       pathPrefix: prefix(project.model?.root) ?? prefix(project.report?.root) ?? "",
       reportPathPrefix: prefix(project.report?.root),
       help: RULE_HELP,
     });
+    // The text format is for a person or an assistant reading a terminal, so with findings it
+    // ends by naming where each rule's guidance is. Core names no CLI command, so the line is added here.
+    const report =
+      opts.format === "text" && result.groups.length > 0
+        ? `${formatted.trimEnd()}\n\n${EXPLAIN_HINT}\n`
+        : formatted;
     if (opts.output) {
       const out = resolve(io.cwd(), opts.output);
       mkdirSync(dirname(out), { recursive: true });

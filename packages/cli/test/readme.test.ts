@@ -19,6 +19,12 @@ describe.each([
     expect(options.filter((o) => !readme.includes(o))).toEqual([]);
   });
 
+  it("names every command the help text's usage lines give", () => {
+    const commands = [...HELP.matchAll(/^(?:Usage:)?\s+pbiplint ([a-z]+)/gm)].map((m) => m[1]!);
+    expect(commands).toEqual(["rules", "explain"]);
+    expect(commands.filter((c) => !readme.includes(`pbiplint ${c}`))).toEqual([]);
+  });
+
   it("names every level --fail-on takes", () => {
     const levels = /--fail-on <level>\s+(.+?):/
       .exec(HELP)![1]!

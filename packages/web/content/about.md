@@ -5,7 +5,7 @@ description: What pbiplint is, what it checks, who makes it, and what it does no
 
 # About pbiplint
 
-pbiplint is a free, open-source best-practice linter for Power BI projects. Paste TMDL or drop a PBIP folder on the [home page](/), or run `npx pbiplint <path>` on your own machine, and get a ranked list of findings with a page for every rule that says what it checks, why it matters, and how to fix it.
+pbiplint is a free, open-source best-practice linter for Power BI projects. Paste TMDL or drop a PBIP folder on the [home page](/), or run `npx pbiplint <path>` on your own machine with [the pbiplint CLI](/cli/), and get a ranked list of findings with a page for every rule that says what it checks, why it matters, and how to fix it.
 
 ## What it checks
 

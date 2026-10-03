@@ -502,6 +502,7 @@ describe("home page", () => {
       '.site-header nav a[href="/privacy/"]',
       '.site-header nav a[href="/about/"]',
       '.site-footer a[href="/privacy/"]',
+      '.hint a[href="/cli/"]',
     ].map(link);
     const away = [
       '.site-header nav a[href^="https://github.com/"]',

@@ -106,6 +106,7 @@ test("while results show, the site's own links open in a new tab, so the results
     header.locator('nav a[href="/privacy/"]'),
     header.locator('nav a[href="/about/"]'),
     page.locator('.site-footer a[href="/privacy/"]'),
+    page.locator('.hint a[href="/cli/"]'),
   ];
   // Before a run there is nothing to lose, so they navigate as usual.
   for (const link of site) await expect(link).not.toHaveAttribute("target");

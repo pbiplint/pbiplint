@@ -3,8 +3,10 @@
 pbiplint runs on your machine and makes no network calls. It reads the files you point it at
 and writes to your terminal or to the file you name, and it uploads nothing.
 [The pbiplint Privacy Promise](https://pbiplint.com/privacy/) says this for the site, the command
-line, and the GitHub Action, with the checks that show it. There is no service to attack, so the
-security surface is what happens when the linter is handed input it did not expect.
+line, and the GitHub Action, with the checks that show it, and
+[the CLI page](https://pbiplint.com/cli/#check) has the command line's checks in detail. There is
+no service to attack, so the security surface is what happens when the linter is handed input it
+did not expect.
 
 ## Reporting a vulnerability
 

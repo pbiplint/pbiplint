@@ -6,7 +6,8 @@ ranked findings with a link to a fix page for each rule, and, when the input has
 "Report at a glance" block that says what the report will do when someone opens it. Nothing is
 uploaded: it reads the files you name and writes to your terminal, and
 [the pbiplint Privacy Promise](https://pbiplint.com/privacy/) says what that covers. Node 20.19 or
-later (or 22.12 or later).
+later (or 22.12 or later). [The pbiplint CLI](https://pbiplint.com/cli/) page on the site has more:
+where to get it, what it reads, and how to check that it sends nothing.
 
 ```bash
 npx pbiplint path/to/Model.SemanticModel

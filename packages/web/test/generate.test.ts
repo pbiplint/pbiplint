@@ -711,6 +711,9 @@ describe("generateSite", () => {
     );
     expect(privacy).toContain('<h2 id="check">How to check it</h2>');
     expect(privacy).toContain('<a href="/privacy/" aria-current="page">Privacy</a>');
+    // The command line's paragraph of the Promise, and About's, lead to the CLI page.
+    expect(privacy).toContain('<a href="/cli/#reads">');
+    expect(about).toContain('<a href="/cli/">');
     const cli = readFileSync(join(out, "cli/index.html"), "utf8");
     expect(cli).toContain("<title>The pbiplint CLI</title>");
     expect(cli).toContain('<h1 id="the-pbiplint-cli">The pbiplint CLI</h1>');

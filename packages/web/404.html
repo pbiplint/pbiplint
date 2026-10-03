@@ -22,13 +22,30 @@
         <a class="brand" href="/"
           ><img src="/favicon.svg" alt="" width="28" height="28" /> pbiplint</a
         >
-        <nav>
-          <a href="/">Lint</a><a href="/rules/">Rules</a><a href="/privacy/">Privacy</a
+        <nav class="nav-row" aria-label="Site">
+          <a href="/">Lint</a><a href="/rules/">Rules</a><a href="/cli/">CLI</a
+          ><a href="/pipelines/">Pipelines</a><a href="/privacy/">Privacy</a
           ><a href="/about/">About</a
           ><a href="https://github.com/pbiplint/pbiplint" target="_blank" rel="noopener noreferrer"
             >GitHub<span class="visually-hidden"> (opens in a new tab)</span></a
           >
         </nav>
+        <details class="nav-menu">
+          <summary aria-label="Menu">
+            <span class="nav-menu-icon" aria-hidden="true"></span>
+          </summary>
+          <nav class="nav-panel" aria-label="Site">
+            <a href="/">Lint</a><a href="/rules/">Rules</a><a href="/cli/">CLI</a
+            ><a href="/pipelines/">Pipelines</a><a href="/privacy/">Privacy</a
+            ><a href="/about/">About</a
+            ><a
+              href="https://github.com/pbiplint/pbiplint"
+              target="_blank"
+              rel="noopener noreferrer"
+              >GitHub<span class="visually-hidden"> (opens in a new tab)</span></a
+            >
+          </nav>
+        </details>
       </div>
     </header>
     <main class="container">
@@ -55,5 +72,6 @@
         </p>
       </div>
     </footer>
+    <script type="module" src="/src/nav.ts"></script>
   </body>
 </html>

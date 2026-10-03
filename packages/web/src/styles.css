@@ -193,6 +193,7 @@ h3 {
 
 /* Header and footer */
 .site-header {
+  position: relative;
   border-bottom: 1px solid var(--line-1);
 }
 /* At least 60 pixels tall rather than exactly, so on a narrow screen the links can wrap under the
@@ -224,17 +225,11 @@ h3 {
 .brand[target="_blank"]::after {
   margin-left: calc(0.2em - 10px);
 }
-.site-header nav {
+/* Wraps rather than run off the page should enlarged text make the row wider than the window. */
+.site-header .nav-row {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 20px;
-}
-/* Six links take a second row on a phone; a narrower gap keeps them on one from 360 pixels up, where
-   the row is 320 pixels wide and the links themselves take about 266. */
-@media (max-width: 400px) {
-  .site-header nav {
-    column-gap: 10px;
-  }
 }
 .site-header nav a {
   color: var(--fg-2);
@@ -244,6 +239,85 @@ h3 {
 .site-header nav a:hover,
 .site-header nav a[aria-current="page"] {
   color: var(--fg-1);
+}
+/* The Menu button. Seven links fit beside the brand down to about 620 pixels, so below 680 the row
+   gives way to a button that opens the same links as a list. It is a details element, so it opens
+   and closes with no script (nav.ts adds Escape and a tap outside), and the browser tells a screen
+   reader whether it is expanded. */
+.nav-menu {
+  display: none;
+}
+@media (max-width: 679px) {
+  .site-header .nav-row {
+    display: none;
+  }
+  .nav-menu {
+    display: block;
+  }
+}
+.nav-menu > summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-right: -10px;
+  border-radius: 8px;
+  color: var(--fg-1);
+  cursor: pointer;
+  list-style: none;
+}
+.nav-menu > summary::-webkit-details-marker {
+  display: none;
+}
+.nav-menu > summary:hover,
+.nav-menu[open] > summary {
+  background: var(--surface-2);
+}
+.nav-menu > summary:focus-visible {
+  outline: 2px solid var(--brand-teal);
+  outline-offset: 2px;
+}
+/* Three lines, drawn with borders, which a contrast theme repaints in its own text colour. */
+.nav-menu-icon {
+  position: relative;
+  box-sizing: border-box;
+  width: 22px;
+  height: 16px;
+  border-top: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+}
+.nav-menu-icon::before {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: 0;
+  right: 0;
+  border-top: 2px solid currentColor;
+}
+/* The open list runs the width of the header, under it, one link to a line, each a full tap high. */
+.nav-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  padding: 4px 20px 12px;
+  background: var(--canvas);
+  border-bottom: 1px solid var(--line-2);
+}
+.nav-panel a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+}
+/* The current page is marked by more than colour, which a contrast theme flattens. */
+.nav-panel a[aria-current="page"] {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
 }
 main {
   padding: 32px 0 64px;

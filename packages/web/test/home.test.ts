@@ -496,16 +496,19 @@ describe("home page", () => {
     const link = (selector: string): HTMLAnchorElement => document.querySelector(selector)!;
     const site = [
       ".site-header a.brand",
-      '.site-header nav a[href="/"]',
-      '.site-header nav a[href="/rules/"]',
-      '.site-header nav a[href="/cli/"]',
-      '.site-header nav a[href="/privacy/"]',
-      '.site-header nav a[href="/about/"]',
+      '.site-header .nav-row a[href="/"]',
+      '.site-header .nav-row a[href="/rules/"]',
+      '.site-header .nav-row a[href="/cli/"]',
+      '.site-header .nav-row a[href="/pipelines/"]',
+      '.site-header .nav-row a[href="/privacy/"]',
+      '.site-header .nav-row a[href="/about/"]',
       '.site-footer a[href="/privacy/"]',
       '.hint a[href="/cli/"]',
+      // The Menu button's copy of the links, for a narrow screen, behaves the same.
+      '.site-header .nav-panel a[href="/rules/"]',
     ].map(link);
     const away = [
-      '.site-header nav a[href^="https://github.com/"]',
+      '.site-header .nav-row a[href^="https://github.com/"]',
       '.site-footer a[href^="https://www.youtube.com/"]',
     ].map(link);
     /** How a link opens: its target and rel, and every hidden note it carries. */
@@ -526,12 +529,12 @@ describe("home page", () => {
     document.getElementById("try-sample")!.click();
     await tick();
     for (const a of site) expect(opens(a)).toEqual(newTab);
-    expect(link('.site-header nav a[href="/rules/"]').textContent).toBe(`Rules${NOTE}`);
+    expect(link('.site-header .nav-row a[href="/rules/"]').textContent).toBe(`Rules${NOTE}`);
     // A problem clears the results, and the links go back to navigating in this tab.
     document.getElementById("lint-paste")!.click();
     expect(document.getElementById("results")!.hidden).toBe(true);
     for (const a of site) expect(opens(a)).toEqual([null, null]);
-    expect(link('.site-header nav a[href="/rules/"]').textContent).toBe("Rules");
+    expect(link('.site-header .nav-row a[href="/rules/"]').textContent).toBe("Rules");
     // GitHub and YouTube leave the site, so they open a new tab throughout.
     for (const a of away) expect(opens(a)).toEqual(newTab);
   });
@@ -714,8 +717,8 @@ describe("hand-written pages", () => {
     ] as const) {
       const links = [...new DOMParser().parseFromString(text, "text/html").querySelectorAll("a")];
       const away = links.filter((a) => /^https?:/.test(a.getAttribute("href") ?? ""));
-      // GitHub in the header and YouTube in the footer.
-      expect(away.length, name).toBe(2);
+      // GitHub in the header's row and in its menu, and YouTube in the footer.
+      expect(away.length, name).toBe(3);
       for (const a of away) {
         expect(a.getAttribute("target"), name).toBe("_blank");
         expect(a.getAttribute("rel"), name).toBe("noopener noreferrer");

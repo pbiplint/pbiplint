@@ -499,6 +499,7 @@ describe("home page", () => {
       '.site-header .nav-row a[href="/"]',
       '.site-header .nav-row a[href="/rules/"]',
       '.site-header .nav-row a[href="/cli/"]',
+      '.site-header .nav-row a[href="/pipelines/"]',
       '.site-header .nav-row a[href="/privacy/"]',
       '.site-header .nav-row a[href="/about/"]',
       '.site-footer a[href="/privacy/"]',

@@ -42,8 +42,9 @@ const dropZone = byId("drop", HTMLElement);
 const folderInput = byId("folder-input", HTMLInputElement);
 
 /**
- * The header and footer links into the site (the brand, Lint, Rules, CLI, Privacy, About, and the
- * footer's link to the Privacy Promise), and the sample hint's link to the CLI page. GitHub and
+ * The header and footer links into the site (the brand, Lint, Rules, CLI, Pipelines, Privacy, and
+ * About, in the header's row and in its Menu button's list, and the footer's link to the Privacy
+ * Promise), and the sample hint's link to the CLI page. GitHub and
  * YouTube leave the site, so the markup opens them in a new tab already.
  */
 const siteLinks = [

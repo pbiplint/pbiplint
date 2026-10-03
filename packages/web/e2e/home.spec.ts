@@ -103,6 +103,7 @@ test("while results show, the site's own links open in a new tab, so the results
     header.locator('.nav-row a[href="/"]'),
     header.locator('.nav-row a[href="/rules/"]'),
     header.locator('.nav-row a[href="/cli/"]'),
+    header.locator('.nav-row a[href="/pipelines/"]'),
     header.locator('.nav-row a[href="/privacy/"]'),
     header.locator('.nav-row a[href="/about/"]'),
     page.locator('.site-footer a[href="/privacy/"]'),

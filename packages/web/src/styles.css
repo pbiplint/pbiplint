@@ -313,6 +313,12 @@ h3 {
   align-items: center;
   min-height: 44px;
 }
+/* The current page is marked by more than colour, which a contrast theme flattens. */
+.nav-panel a[aria-current="page"] {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+}
 main {
   padding: 32px 0 64px;
 }

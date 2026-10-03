@@ -225,19 +225,41 @@ test("the header shows its links in a row on a wide screen and behind a Menu but
     await expect(panel.locator("a")).toHaveCount(7);
     await expect(panel.locator('a[aria-current="page"]')).toHaveCount(1);
     expect(await sideways(), path).toBe(false);
-    // Tab goes from the button into the list. WebKit, like Safari by default, skips links on Tab.
-    if (browserName !== "webkit") {
-      await page.keyboard.press("Tab");
-      await expect(panel.locator("a").first()).toBeFocused();
-    }
+    // Tab goes from the button into the list. WebKit, like Safari by default, moves to a link
+    // with Option and Tab.
+    const tab = browserName === "webkit" ? "Alt+Tab" : "Tab";
+    await page.keyboard.press(tab);
+    await expect(panel.locator("a").first()).toBeFocused();
     await page.keyboard.press("Escape");
     await expect(panel).toBeHidden();
     await expect(button).toBeFocused();
 
-    // A tap outside the open menu closes it.
+    // A tap outside the open menu closes it, and so does focus moving out of it.
     await button.click();
     await expect(panel).toBeVisible();
-    await page.mouse.click(180, 700);
+    // The footer's text: inert, and never under the open list.
+    await page
+      .locator(".site-footer p")
+      .first()
+      .click({ position: { x: 4, y: 4 } });
+    await expect(panel).toBeHidden();
+    await button.click();
+    await panel.locator("a").last().focus();
+    await page.keyboard.press(tab);
     await expect(panel).toBeHidden();
   }
+});
+
+test.describe("with JavaScript off", () => {
+  test.use({ javaScriptEnabled: false, viewport: { width: 360, height: 800 } });
+  test("the Menu button still opens and closes the header's links", async ({ page }) => {
+    await page.goto("/pipelines/");
+    const panel = page.locator(".site-header .nav-panel");
+    await expect(panel).toBeHidden();
+    await page.locator(".site-header .nav-menu > summary").click();
+    await expect(panel).toBeVisible();
+    await expect(panel.locator('a[aria-current="page"]')).toHaveText("Pipelines");
+    await page.locator(".site-header .nav-menu > summary").click();
+    await expect(panel).toBeHidden();
+  });
 });

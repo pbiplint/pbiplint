@@ -462,8 +462,9 @@ function walked(input: string, base: string, read: (w: Walk) => ResolvedProject)
     throw new UsageError(`Could not read ${named(w.refusal.path)}: ${w.refusal.reason}`);
   const [first, ...rest] = w.legacy.map((l) => LEGACY_NOTICE[l.layer](named(l.path)).message);
   if (first !== undefined) throw new UsageError(first, rest);
-  // Nothing the readers return leaves both parts out without a refusal or a legacy part; this
-  // keeps a run that read nothing from ever going on.
+  // Not reached today: every unread path sets the refusal, and readFolder and readNamed throw
+  // before returning neither part with nothing else to say. Kept so that a run that read nothing
+  // can never go on, whatever a later reader returns.
   throw new UsageError(
     `No semantic model or report found at ${input} (expected ${EXPECTED_INPUT})`,
   );
@@ -739,9 +740,10 @@ function readFolder(w: Walk, input: string, path: string, preferred?: string): R
   // Nothing else explains it, so a model folder the walk met is named first, in core's words, as
   // the browser names it: the input when it is one, and each below it. Each holds no .tmdl files,
   // or the walk would have read one, and none has a notice, legacy or unread, or the run would
-  // have returned above, to be refused in walked. Each is joined to `input` as the nothing-read refusal joins its path,
-  // the input itself named by `input` alone, and they are listed in name order by their whole
-  // path, as the browser sorts its drop-relative paths, not in the order the walk met them.
+  // have returned above, to be refused in walked. Each is joined to `input` as the nothing-read
+  // refusal joins its path, the input itself named by `input` alone, and they are listed in name
+  // order by their whole path, as the browser sorts its drop-relative paths, not in the order the
+  // walk met them.
   const noTmdl = [...(name.endsWith(".SemanticModel") ? [""] : []), ...passed.models].sort(byName);
   if (noTmdl.length)
     throw new UsageError(

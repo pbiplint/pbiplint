@@ -1511,6 +1511,25 @@ describe("resolveProject and a run that reads nothing but legacy parts (#175)", 
     writeFileSync(join(root, "sub", "Demo.Report", "report.json"), "{}");
     expect(refusal(root)).toEqual({ message: report(`${root}/sub/Demo.Report`), lines: [] });
   });
+  it("names a legacy report over a model folder that holds no .tmdl files beside it", () => {
+    const root = pbip({ legacyReport: true });
+    mkdirSync(join(root, "Demo.SemanticModel", "definition"), { recursive: true });
+    expect(refusal(root)).toEqual({ message: report(`${root}/Demo.Report`), lines: [] });
+  });
+  it.skipIf(noModes)("names a path that refused over a legacy part beside it", () => {
+    const root = pbip({ legacyReport: true });
+    const model = join(root, "Demo.SemanticModel");
+    mkdirSync(join(model, "definition"), { recursive: true });
+    chmodSync(model, 0o000);
+    try {
+      expect(refusal(root)).toEqual({
+        message: `Could not read ${root}/Demo.SemanticModel: EACCES: permission denied`,
+        lines: [],
+      });
+    } finally {
+      chmodSync(model, 0o755);
+    }
+  });
   it("still lints a part read beside a legacy one, with the notice and the layer's reason", () => {
     const p = resolveProject(pbip({ model: true, legacyReport: true }));
     expect(p.model).toBeDefined();

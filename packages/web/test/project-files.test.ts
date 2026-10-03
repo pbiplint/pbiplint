@@ -1550,6 +1550,27 @@ describe("selectProject and a drop that reads nothing but legacy parts (#175)", 
       }),
     ).toThrow(new InputError(message));
   });
+  it("names a legacy report over a model folder that holds no .tmdl files beside it", () => {
+    expect(() =>
+      selectProject({
+        ...emptyTree(),
+        ...legacyReport("Proj/Demo.Report"),
+        modelFolders: ["Proj/Demo.SemanticModel"],
+      }),
+    ).toThrow(report("Proj/Demo.Report"));
+  });
+  it("names a path that refused over a legacy part beside it", () => {
+    expect(() =>
+      selectProject({
+        ...emptyTree(),
+        ...legacyReport("Proj/Demo.Report"),
+        modelFolders: ["Proj/Demo.SemanticModel"],
+        diagnostics: [unreadAt("Proj/Demo.SemanticModel")],
+        unreadFolders: ["Proj/Demo.SemanticModel"],
+        refusal: { path: "Proj/Demo.SemanticModel", reason: "locked" },
+      }),
+    ).toThrow(new InputError("Could not read Proj/Demo.SemanticModel: locked"));
+  });
   it("still lints a part read beside a legacy one, with the notice and the layer's reason", () => {
     const p = selectProject({
       ...emptyTree(),

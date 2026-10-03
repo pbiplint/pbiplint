@@ -783,8 +783,8 @@ export function selectProject(tree: InputTree): SelectedProject {
     if (unlintable.length) throw new InputError(noTmdlRefusal(unlintable));
     // Else a walk stopped at the depth cap, which the CLI has no counterpart to, says why: what it
     // did not read may be the project.
-    const cap = tree.diagnostics.find((d) => d.kind === "depth-cap");
-    if (cap) throw new InputError(cap.message);
+    const cap = s.capped[0];
+    if (cap) throw new InputError(cap.diagnostic.message);
     // Else a .pbix the walk met is named for what it is, as the CLI names it: the first its walk
     // would meet, by its path in the drop, which is the CLI's path joined to its input, and how
     // many more.

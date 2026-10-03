@@ -1,0 +1,47 @@
+# One-off: runs the pbiplint Action for the pipelines page (#163) and records the runner's DNS
+# lookups and outbound connections, first while idle (the runner's own traffic), then during the
+# Action. Removed before the pull request merges, and its code scanning analysis deleted.
+# Lints only the bundled sample: the logs are public.
+name: Pipelines page checks
+
+on:
+  push:
+    branches: [docs/pipelines-page]
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  action:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Record while idle (the runner's own traffic)
+        run: |
+          filter='udp port 53 or (tcp[tcpflags] & tcp-syn != 0 and tcp[tcpflags] & tcp-ack == 0)'
+          sudo tcpdump -i any -nn -U -w "$RUNNER_TEMP/idle.pcap" "$filter" > /dev/null 2>&1 &
+          sleep 30
+          sudo pkill -INT tcpdump; sleep 2
+          sudo tcpdump -i any -nn -U -w "$RUNNER_TEMP/action.pcap" "$filter" > /dev/null 2>&1 &
+          sleep 3
+      - uses: pbiplint/action@v1
+        id: pbiplint
+        with:
+          path: examples/messy-sales
+          fail-on: none
+          sarif-category: pbiplint-page-check
+      - name: Read the records
+        if: always()
+        run: |
+          sudo pkill -INT tcpdump; sleep 2
+          for window in idle action; do
+            echo "=== $window: names looked up"
+            sudo tcpdump -nn -r "$RUNNER_TEMP/$window.pcap" 'udp port 53' 2>/dev/null \
+              | grep -oE ' (A|AAAA|HTTPS)\? [^ ]+' | awk '{print $2}' | sort | uniq -c
+            echo "=== $window: outbound connections (destination address and port)"
+            sudo tcpdump -nn -r "$RUNNER_TEMP/$window.pcap" 'tcp' 2>/dev/null \
+              | awk '{print $5}' | sed -E 's/:$//' | grep -vE '^(127\.|::1)' | sort | uniq -c
+          done
+          echo "=== outputs: exit-code ${{ steps.pbiplint.outputs.exit-code }}, findings ${{ steps.pbiplint.outputs.findings }}"

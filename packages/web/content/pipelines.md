@@ -11,11 +11,11 @@ In any other CI system, run the CLI as a step and gate on its exit code; [the CL
 
 <h2 id="github-actions">GitHub Actions</h2>
 
-### What it is
+### What the Action is
 
 [The pbiplint Action](https://github.com/pbiplint/action) is a composite action: it runs the published pbiplint CLI at a pinned version, then turns the report into a failed or passed check, annotations on the lines of the pull request, a job summary with the full ranked report, and code scanning alerts. Everything it runs is in [`action.yml`](https://github.com/pbiplint/action/blob/main/action.yml), plus one script with no dependencies, [`src/annotate.mjs`](https://github.com/pbiplint/action/blob/main/src/annotate.mjs). There is no bundled code. The [README](https://github.com/pbiplint/action#readme) describes each of these in detail.
 
-### Get it
+### Get the Action
 
 The Action is on the [GitHub Marketplace](https://github.com/marketplace/actions/pbiplint), and its source is at [pbiplint/action](https://github.com/pbiplint/action). Choose how you refer to it by how much change you accept without review:
 
@@ -27,7 +27,7 @@ Each release of the Action pins a CLI version, the default of its `pbiplint-vers
 
 The Action works on GitHub-hosted Ubuntu, Windows, and macOS runners. A self-hosted runner needs Node.js 20.19 or a later 20 release, or 22.12 or later.
 
-### Use it
+### Use the Action
 
 ```yaml
 name: Lint Power BI
@@ -58,7 +58,7 @@ For several projects in one repository, add a step for each, each with its own `
 
 On a private repository, code scanning needs GitHub Code Security. Without it the upload fails, the step says why, and the run carries on; `upload-sarif: false` stops it trying.
 
-### What leaves, and where it goes
+### What leaves the runner, and where it goes
 
 1. **The download.** The Action runs `npx` to fetch the pinned `pbiplint` from the public npm registry (twice per run: once for the SARIF report and once for the job summary). The request names the package and its version, and carries nothing from your project. It is the only request to a host outside GitHub.
 2. **The lint.** pbiplint runs on the runner, reads the project `path` names and its `pbiplint.config.json`, and makes no network request of its own. [The CLI page](/cli/#reads) lists exactly which files it reads.
@@ -68,7 +68,7 @@ On a private repository, code scanning needs GitHub Code Security. Without it th
 
 On a self-hosted runner the list is the same, with the runner inside your network. The npm download is still the one request beyond GitHub, and it follows npm's own settings: set `NPM_CONFIG_REGISTRY` on the job, or put an `.npmrc` with a `registry=` line at the top of the repository, and the Action's `npx` fetches pbiplint from your registry mirror instead. A firm that blocks the public registry can use the Action that way.
 
-### How to check it
+### Check the Action
 
 - **Read what it runs.** [`action.yml`](https://github.com/pbiplint/action/blob/main/action.yml) has every command, and [`src/annotate.mjs`](https://github.com/pbiplint/action/blob/main/src/annotate.mjs), the one script, imports nothing outside Node.js.
 - **Pin a commit SHA,** and read the diff each time you move the pin.
@@ -78,13 +78,13 @@ On a self-hosted runner the list is the same, with the runner inside your networ
 
 <h2 id="azure-pipelines">Azure Pipelines</h2>
 
-### What it is
+### What the task is
 
 [The pbiplint task](https://github.com/pbiplint/azure-pipelines) runs the published pbiplint CLI at a pinned version, then reports each finding as a build issue with its file and line, attaches the ranked report to the run's Extensions tab, publishes the SARIF report as a build artifact, and fails the step on findings. It is two scripts with no dependencies, [`task/main.mjs`](https://github.com/pbiplint/azure-pipelines/blob/main/task/main.mjs) and [`task/report.mjs`](https://github.com/pbiplint/azure-pipelines/blob/main/task/report.mjs), in an extension on the Visual Studio Marketplace.
 
 For organizations that cannot install an extension, [the plain YAML route](https://github.com/pbiplint/azure-pipelines/blob/main/examples/plain.yml) runs the same CLI from a script step, with no extension at all.
 
-### Get it
+### Get the task
 
 The source and the README are at [pbiplint/azure-pipelines](https://github.com/pbiplint/azure-pipelines).
 
@@ -92,7 +92,7 @@ The source and the README are at [pbiplint/azure-pipelines](https://github.com/p
 - **Which version runs.** A pipeline names the task's major version, `pbiplint@1`, and takes each new minor version as the extension is updated; `pbiplint@1.0.0` pins one exact version. When the extension is updated, Azure DevOps installs the update in every organization that has it, and holding an organization at an older version of the extension is not something Azure DevOps documents. Each task release pins a CLI version in its `pbiplintVersion` input, which you can set to run another. The plain YAML route pins the CLI in the file itself, and only changes when you change it.
 - **Agents.** Microsoft-hosted Ubuntu, Windows, and macOS agents, and self-hosted agents with Node.js 20.19 or a later 20 release, or 22.12 or later, npm on the path, and agent version 4.248.0 or later.
 
-### Use it
+### Use the task
 
 ```yaml
 trigger:
@@ -114,7 +114,7 @@ The plain YAML route is one `bash` step: copy [`examples/plain.yml`](https://git
 
 **Advanced Security.** Teams with GitHub Advanced Security for Azure DevOps, a paid add-on, can send the findings to its code scanning alerts by adding Microsoft's [`AdvancedSecurity-Publish@1`](https://learn.microsoft.com/azure/devops/pipelines/tasks/reference/advanced-security-publish-v1) step after pbiplint's. The task's README has [the YAML](https://github.com/pbiplint/azure-pipelines#advanced-security). It needs pbiplint 0.2.4 or later, and it has not been run against the service itself, since that needs the paid add-on.
 
-### What leaves, and where it goes
+### What leaves the agent, and where it goes
 
 1. **The extension and the download.** The organization installs the extension from the Visual Studio Marketplace once. On each run, the task runs `npx` to fetch the pinned `pbiplint` from the public npm registry, a request that carries nothing from your project. The plain YAML route skips the extension and makes the same request.
 2. **The lint.** As in GitHub Actions: on the agent, reading only the path and its config, with no network request of its own.
@@ -125,7 +125,7 @@ The plain YAML route is one `bash` step: copy [`examples/plain.yml`](https://git
 
 On a self-hosted agent the list is the same, with the agent inside your network, and the npm download is the one request beyond Azure DevOps. The task passes the agent's environment to `npx`, so `NPM_CONFIG_REGISTRY` on the pipeline, or an `.npmrc` with a `registry=` line at the top of the repository, points it at your registry mirror. Behind a proxy, set `HTTPS_PROXY` or npm's own proxy setting: the agent's proxy configuration is not passed to `npx`.
 
-### How to check it
+### Check the task
 
 - **Read what it runs.** [`task/main.mjs`](https://github.com/pbiplint/azure-pipelines/blob/main/task/main.mjs) and [`task/report.mjs`](https://github.com/pbiplint/azure-pipelines/blob/main/task/report.mjs) import nothing outside Node.js, and the plain route is one file you can read in full before you copy it.
 - **Turn off what you do not want:** `annotations: false` stops the build issues, `publishSarif: false` stops the artifact, and Advanced Security sees nothing unless you add its step.

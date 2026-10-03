@@ -17,7 +17,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      # Checked out below the workspace, so its root holds no package.json, as in a Power BI
+      # repository; this repository's own workspace has a package named pbiplint, which npx
+      # would otherwise pick.
       - uses: actions/checkout@v7
+        with:
+          path: repo
       - name: Record while idle (the runner's own traffic)
         run: |
           filter='udp port 53 or (tcp[tcpflags] & tcp-syn != 0 and tcp[tcpflags] & tcp-ack == 0)'
@@ -29,7 +34,7 @@ jobs:
       - uses: pbiplint/action@v1
         id: pbiplint
         with:
-          path: examples/messy-sales
+          path: repo/examples/messy-sales
           fail-on: none
           sarif-category: pbiplint-page-check
       - name: Read the records
@@ -42,6 +47,6 @@ jobs:
               | grep -oE ' (A|AAAA|HTTPS)\? [^ ]+' | awk '{print $2}' | sort | uniq -c
             echo "=== $window: outbound connections (destination address and port)"
             sudo tcpdump -nn -r "$RUNNER_TEMP/$window.pcap" 'tcp' 2>/dev/null \
-              | awk '{print $5}' | sed -E 's/:$//' | grep -vE '^(127\.|::1)' | sort | uniq -c
+              | grep -oE '> [^ ]+:' | sed -E 's/^> //; s/:$//' | grep -vE '^(127\.|::1)' | sort | uniq -c
           done
           echo "=== outputs: exit-code ${{ steps.pbiplint.outputs.exit-code }}, findings ${{ steps.pbiplint.outputs.findings }}"

@@ -89,11 +89,15 @@ export function formatSarif(result: LintResult, options: FormatOptions = {}): st
   const incomplete = result.diagnostics.filter(
     (d) => d.kind === "depth-cap" || d.kind === "unread-file",
   );
+  const version = options.toolVersion ?? VERSION;
   const run = {
     tool: {
       driver: {
         name: "pbiplint",
-        version: options.toolVersion ?? VERSION,
+        // The name with its version, as SARIF defines fullName. GitHub Advanced Security for Azure
+        // DevOps requires it (rule GHAzDO1018 of Microsoft's SARIF validator).
+        fullName: `pbiplint ${version}`,
+        version,
         informationUri: "https://pbiplint.com",
         rules,
       },

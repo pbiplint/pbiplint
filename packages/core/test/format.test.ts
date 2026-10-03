@@ -240,6 +240,9 @@ describe("formatSarif", () => {
     const run = sarif.runs[0];
     expect(run.tool.driver).toMatchObject({
       name: "pbiplint",
+      // GitHub Advanced Security for Azure DevOps asks for fullName (GHAzDO1018 in Microsoft's
+      // SARIF validator); SARIF's fullName is the name with its version.
+      fullName: "pbiplint 1.2.3",
       version: "1.2.3",
       informationUri: "https://pbiplint.com",
     });

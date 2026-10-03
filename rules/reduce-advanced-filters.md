@@ -209,7 +209,7 @@ An Advanced filter is a condition rather than a list of values a reader picked, 
 
 ## How to fix it
 
-Where a condition picks out a group the report keeps coming back to, such as bikes, put the group in the model: add a column in Power Query (Transform data, then Add Column) that names the group for each product, and filter that column with Basic filtering, which picks values instead of matching text. Where several visuals share one condition, state it once in the Filters pane under Filters on this page, where a reader can see it, and remove it from each visual. A condition nobody needs any more can be cleared with the eraser on its filter card. In visual.json, an applied Advanced filter is an entry with `"type": "Advanced"` in `filterConfig.filters` that carries a `filter` object; without the `filter` object, as in the fixed example, the entry is a card with nothing set.
+Where a condition picks out a group the report keeps coming back to, such as bikes, put the group in the model: add a column in Power Query (in Power BI Desktop, Transform data, then Add Column) that names the group for each product, and filter that column with Basic filtering, which picks values instead of matching text. Where several visuals share one condition, state it once in the Filters pane under Filters on this page, where a reader can see it, and remove it from each visual. A condition nobody needs any more can be cleared with the eraser on its filter card.
 
 ## When to ignore it
 

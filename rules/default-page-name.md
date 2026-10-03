@@ -52,7 +52,7 @@ A page's name is how readers find their way around a report. It labels the page'
 
 ## How to fix it
 
-In Power BI Desktop, right-click the page's tab at the bottom of the report, select Rename Page, and type the new name. Or, with nothing selected on the page, select the Page information card in the Format pane and type the name into Name. In page.json the name is `displayName`, as in the example; leave `name` as it is, since pages.json and the page's folder use it.
+In Power BI Desktop, right-click the page's tab at the bottom of the report, select Rename Page, and type the new name. Or, with nothing selected on the page, select the Page information card in the Format pane and type the name into Name.
 
 A page navigator's buttons take the new name on their own. A button that picks its destination from a table of page names, through conditional formatting, does not: Power BI matches those values to the page names exactly, so change the name in that table too.
 

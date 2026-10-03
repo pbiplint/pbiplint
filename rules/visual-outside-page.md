@@ -74,9 +74,7 @@ A report page has the width and height its canvas settings give it, and Microsof
 
 ## How to fix it
 
-In Power BI Desktop, select the visual, open the Format pane, select the General tab, and under Properties change its Position, the horizontal and vertical position in pixels from the top-left corner of the canvas, or its Size, the height and width in pixels, until it ends inside the page. If the page should be larger instead, change its size: with nothing selected on the page, the Visualizations pane shows Format page options, and under Canvas settings you can choose a larger Size, or the Custom type to set the height and width in pixels yourself.
-
-In visual.json the box is `position`: bring `x` or `y` back, or shrink `width` or `height`, as the example does with `x`. For a visual inside a group, move or resize the group.
+In Power BI Desktop, select the visual, open the Format pane, select the General tab, and under Properties change its Position, the horizontal and vertical position in pixels from the top-left corner of the canvas, or its Size, the height and width in pixels, until it ends inside the page. For a visual inside a group, select the group and move or resize it the same way. If the page should be larger instead, change its size: with nothing selected on the page, the Visualizations pane shows Format page options, and under Canvas settings you can choose a larger Size, or the Custom type to set the height and width in pixels yourself.
 
 ## When to ignore it
 

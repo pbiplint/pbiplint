@@ -87,8 +87,6 @@ A page name that matches no page usually comes from a hand edit or a merge: a pa
 
 In Power BI Desktop, set a visible landing page: right-click the tab of the page readers should start on and select Set as landing page, or, with nothing selected on the page, open the Format pane, expand Page information, and turn on Landing page. The report then opens there whatever page is active when it is saved. Without a landing page, open a visible page before you save, so that page becomes the active one.
 
-In pages.json, point `landingPageName` or `activePageName` at the `name` of a page that exists and is visible, one whose page.json does not set `"visibility": "HiddenInViewMode"`. `landingPageName` needs the pagesMetadata 1.1.0 schema in `$schema`, as the fixed example shows.
-
 ## When to ignore it
 
 When readers are meant to start on a hidden page, make it the landing page: Power BI supports a hidden landing page, and this rule does not report one. Short of that, there is no case for keeping the finding, because a report that opens on a missing page, or on a helper page by accident, starts every reader in the wrong place.

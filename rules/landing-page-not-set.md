@@ -83,8 +83,6 @@ Without a landing page, the page a reader starts on is whichever page the last a
 
 In Power BI Desktop, right-click the tab of the page readers should start on and select Set as landing page; an icon on the tab marks it. Or, with nothing selected on the page, open the Format pane, expand Page information, and turn on Landing page. Only one page can be the landing page, so setting another moves it.
 
-In pages.json, set `landingPageName` to the page's `name` from its page.json, not its display name, as in the example. The property needs the pagesMetadata 1.1.0 schema, so update `$schema` to that version when you add it by hand.
-
 ## When to ignore it
 
 A report with a single page opens on that page whatever pages.json says, so a landing page adds nothing there. Ignore the finding on a one-page report you do not expect to grow.

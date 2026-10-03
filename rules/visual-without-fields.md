@@ -66,8 +66,6 @@ Microsoft's guidance divides what sits on a report page into visuals, which are 
 
 Decide what the visual was meant to show. In Power BI Desktop, select it and drag those fields from the Data pane into its wells in the Visualizations pane; the wells depend on the visual's type, such as the X-axis area of a column chart, or the Bubble size and Legend areas of a map. If the page does not need the visual, delete it.
 
-In visual.json, a visual's fields are the `projections` under `query.queryState`, one entry per field, grouped under the name of the data role behind the well, as `Data` for the card in the example. Role names differ from one visual type to the next and are not always the labels the Visualizations pane shows, so adding fields in Desktop is the surer route.
-
 ## When to ignore it
 
 A custom visual, or a visual type newer than pbiplint, that takes no fields, such as a custom visual that only draws a logo or a menu, is not a data visual, but pbiplint cannot tell that from the file and counts it as one. Check the Visualizations pane with the visual selected: if it offers no wells to fill, ignore the finding on it.

@@ -153,7 +153,7 @@ Every visual that shows data sends its own query when the page opens, and again 
 
 ## How to fix it
 
-Decide what the page is for and move the rest somewhere a reader goes on purpose. Detail about one item belongs on a drillthrough page, and context for a single data point on a report page tooltip; neither runs a query until a reader asks for it. Cards that each show one measure can become one card visual that shows them all: in Power BI Desktop, drag the other measures into the first card's Values well in the Visualizations pane and delete the cards they came from. Delete visuals that repeat what another visual on the page already shows. In the files, each visual is its own folder under the page's visuals folder, and deleting a visual in Desktop removes that folder.
+Decide what the page is for and move the rest somewhere a reader goes on purpose. Detail about one item belongs on a drillthrough page, and context for a single data point on a report page tooltip; neither runs a query until a reader asks for it. Cards that each show one measure can become one card visual that shows them all: in Power BI Desktop, drag the other measures into the first card's Values well in the Visualizations pane and delete the cards they came from. Delete visuals that repeat what another visual on the page already shows.
 
 ## When to ignore it
 

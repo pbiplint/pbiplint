@@ -111,7 +111,7 @@ A colour picked from the theme is stored as a position in the theme's palette, s
 
 ## How to fix it
 
-In Power BI Desktop, select the visual, open the Format pane, find the colour (for this chart's bars, Bars, then Color), and pick a swatch from Theme colors at the top of the colour picker instead of More colors. To return a whole section of the Format pane to the theme, use Reset to default at the bottom of that section. If the report needs a colour its theme does not have, add it to the theme (View, then Themes, then Customize current theme) so that every visual can pick it from the palette. In visual.json, a theme colour is written as `ThemeDataColor`, with a `ColorId` for the swatch and a `Percent` for its shade, in place of the `Literal` hex value, as in the example.
+In Power BI Desktop, select the visual, open the Format pane, find the colour (for this chart's bars, Bars, then Color), and pick a swatch from Theme colors at the top of the colour picker instead of More colors. To return a whole section of the Format pane to the theme, use Reset to default at the bottom of that section. If the report needs a colour its theme does not have, add it to the theme (View, then Themes, then Customize current theme) so that every visual can pick it from the palette.
 
 ## When to ignore it
 

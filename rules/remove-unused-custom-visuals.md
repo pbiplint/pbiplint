@@ -75,7 +75,7 @@ Importing a visual from AppSource registers it with the report, and deleting the
 
 ## How to fix it
 
-In Power BI Desktop, right-click the visual's icon among the imported visuals in the Visualizations pane and remove it, confirming when Desktop asks. In report.json, delete the name from `publicCustomVisuals`; when it was the only one, the list is left empty, as in the example. If a page needs the visual again later, import it again from AppSource.
+In Power BI Desktop, right-click the visual's icon among the imported visuals in the Visualizations pane and remove it, confirming when Desktop asks. If a page needs the visual again later, import it again from AppSource.
 
 ## When to ignore it
 

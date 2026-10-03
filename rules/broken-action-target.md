@@ -106,8 +106,6 @@ Destinations are stored by `name`, a page's or bookmark's identifier, rather tha
 
 In Power BI Desktop, select the button, and on the Button tab of the Format button pane, expand Action. Check that Type is the action you meant, then pick the page under Destination, the target drillthrough page for a drillthrough action, or, for a bookmark action, the bookmark under Bookmarks. Shapes and images carry actions too; select the one the finding names. To test the button while you edit, hold Ctrl and select it. If the button should not do anything any more, turn Action off or delete the button.
 
-In visual.json, the action is an entry of `visualLink` under `visual.visualContainerObjects`, and its destination is the property that belongs to its `type`: `navigationSection` for `'PageNavigation'`, `drillthroughSection` for `'Drillthrough'`, and `bookmark` for `'Bookmark'`. Set it to the `name` of the page or bookmark, in single quotes inside `expr.Literal.Value` as the example shows. That is the identifier in its page.json or bookmark file, not its display name. Microsoft's PBIR documentation says pages and bookmarks are named with a 20-character identifier by default, used as their folder or file name as well, and that Power BI Desktop can copy an object's name to the clipboard once Copy object names when right clicking on report objects is turned on in its report settings.
-
 ## When to ignore it
 
 There is no legitimate case. An action whose destination is not in the report has nowhere in it to take readers, so point it at a page or bookmark that exists, or turn the action off if the button is meant to do nothing.

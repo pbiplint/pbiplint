@@ -724,8 +724,16 @@ describe("generateSite", () => {
     expect(cli).toContain('<a href="/privacy/">the pbiplint Privacy Promise</a>');
     // The CLI item covers the pipelines page too, so it is the current one there.
     const pipelines = readFileSync(join(out, "pipelines/index.html"), "utf8");
-    expect(pipelines).toContain("<title>pbiplint in your pipelines</title>");
+    expect(pipelines).toContain(
+      "<title>Pipelines: GitHub Actions and Azure Pipelines · pbiplint</title>",
+    );
     expect(pipelines).toContain('<a href="/cli/" aria-current="page">CLI</a>');
+    // A section for each pipeline a link can land on, and the pages it leans on, in this tab.
+    expect(pipelines).toContain('<h2 id="github-actions">GitHub Actions</h2>');
+    expect(pipelines).toContain('<h2 id="azure-pipelines">Azure Pipelines</h2>');
+    expect(pipelines).toContain('<a href="/cli/#reads">');
+    expect(pipelines).toContain('<a href="/privacy/#in-the-github-action">');
+    expect(cli).toContain('<a href="/pipelines/">Pipelines</a>');
     const sitemap = readFileSync(join(out, "public/sitemap.xml"), "utf8");
     expect(sitemap).toContain("<loc>https://pbiplint.com/rules/hide-foreign-keys/</loc>");
     expect(sitemap).toContain("<loc>https://pbiplint.com/rules/filters-pane-state/</loc>");

@@ -5,7 +5,7 @@ description: How to get the pbiplint command line from npm, run it, and check fo
 
 # The pbiplint CLI
 
-The pbiplint CLI is the linter this site runs, with a folder walk in front of it. Point it at a Power BI project on your own machine and it reads the files you name, checks them against the same rules, and writes the findings to your terminal or to a file you name. It sends nothing anywhere, and the [checks below](#check) let you see that for yourself.
+The pbiplint CLI is the linter this site runs, with a folder walk in front of it. Point it at a Power BI project on your own machine and it reads the files you name, checks them against the same rules, and writes the findings to your terminal or to a file you name. It sends nothing anywhere, and the [checks below](#check) let you see that for yourself. To run it in GitHub Actions or Azure Pipelines, see [Pipelines](/pipelines/), which covers the step each has for it.
 
 The package is [`pbiplint` on npm](https://www.npmjs.com/package/pbiplint). It is built on [`@pbiplint/core`](https://github.com/pbiplint/pbiplint/tree/main/packages/core#readme), the library behind both the CLI and this site, which is there for anyone who wants to embed the linter in a tool of their own.
 
@@ -57,7 +57,7 @@ These are the options `pbiplint --help` lists:
 
 pbiplint exits `0` when nothing is at or above `--fail-on`, `1` when something is, and `2` for a usage or input error, such as a path that is not there. Any CI system that fails a step on a nonzero exit can use it as a gate. `--fail-on error` is the default; `--fail-on warning` and `--fail-on info` tighten the gate, and `--fail-on none` never exits 1, for a run that reports without blocking.
 
-On GitHub, [the pbiplint Action](https://github.com/pbiplint/action) runs the CLI for you and puts the findings on the pull request.
+In GitHub Actions and Azure Pipelines, pbiplint's own step runs the CLI for you and puts the findings on the run; [Pipelines](/pipelines/) covers both, with what each sends where.
 
 ### Configure it
 

@@ -114,7 +114,7 @@ export function explainText(e: Explained): string {
     ...(r.status === "needsLiveModel" ? ["needs a live model (listed, not run)"] : []),
   ].join(", ");
   const body = RULE_HELP[r.id]!.text.replace(/\n*Read more: \S+\s*$/, "");
-  return `${r.id}  ${r.name}\n${about}\n${r.url}\n\n${r.description}\n\n${body}\n`;
+  return `${r.id}  ${r.name}\n${about}\n${r.url}\n\n${r.description.replace(/`([^`]*)`/g, "$1")}\n\n${body}\n`;
 }
 
 /** The document `pbiplint explain --format json` prints. */

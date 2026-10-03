@@ -95,6 +95,8 @@ describe("explainText", () => {
       "https://pbiplint.com/rules/broken-action-target",
       "",
     ]);
+    // The body is plain text, so the description drops its code spans too.
+    expect(lines[4]).not.toContain("`");
   });
   it("says a rule that needs a live model is listed but not run", () => {
     const live = defaultRules.find((r) => r.status === "needsLiveModel")!;

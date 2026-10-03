@@ -29,7 +29,7 @@ npx pbiplint --sample        # the sample project that comes with the package
 npx pbiplint path/to/model --format sarif --output pbiplint.sarif
 npx pbiplint path/to/model --format markdown
 npx pbiplint rules           # every rule with its status and severity
-npx pbiplint explain HIDE_FOREIGN_KEYS   # one rule's guidance, from its page
+npx pbiplint explain HIDE_FOREIGN_KEYS   # one rule's guidance, offline (--format json too)
 npx pbiplint --help          # every option, in one screen
 npx pbiplint --version
 ```
@@ -58,7 +58,7 @@ These are the options `pbiplint --help` lists:
 
 `pbiplint explain <RULE_ID>` prints what a rule checks, an example, why it matters, how to fix it, when to ignore it, and its quirks, from the rule's page as the installed version carries it, with no network. The id is the one each finding names, in any case; the page name from its link works too. `--format json` prints the same as one document, each section a field of its own, for a script or an AI assistant. An id it does not know exits `2` and names the nearest ones. The text report ends by pointing at it when there are findings.
 
-A folder named `explain` or `rules` is linted as `./explain` or `./rules`.
+To lint a folder named `explain` or `rules`, give it as `./explain` or `./rules`.
 
 ### Gate a build on it
 

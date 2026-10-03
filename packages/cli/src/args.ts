@@ -1,6 +1,21 @@
 import { FORMATS, type FormatName, type SeverityName } from "@pbiplint/core";
 
-export class UsageError extends Error {}
+export class UsageError extends Error {
+  readonly #lines: readonly string[];
+  constructor(message: string, lines: readonly string[] = []) {
+    super(message);
+    this.#lines = lines;
+  }
+  /**
+   * What the message introduces, such as a list, one line each. main prints each on a line of its
+   * own, its control characters shown, so nothing in one can write a line that reads as the CLI's.
+   * A getter, so a usage error still compares equal to an Error with its message, as tests compare
+   * them.
+   */
+  get lines(): readonly string[] {
+    return this.#lines;
+  }
+}
 
 export interface CliOptions {
   command: "lint" | "rules" | "help" | "version";

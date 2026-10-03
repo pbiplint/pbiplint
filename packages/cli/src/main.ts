@@ -107,7 +107,10 @@ export async function main(argv: string[], io: Io): Promise<number> {
   } catch (e) {
     if (e instanceof UsageError || e instanceof ConfigError) {
       stderrLine(`pbiplint: ${e.message}`);
-      if (e instanceof UsageError) stderrLine(`Run pbiplint --help for usage.`);
+      if (e instanceof UsageError) {
+        for (const line of e.lines) stderrLine(line);
+        stderrLine(`Run pbiplint --help for usage.`);
+      }
       return 2;
     }
     for (const [i, line] of unexpectedLines(e).entries())

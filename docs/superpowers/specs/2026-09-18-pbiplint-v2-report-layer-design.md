@@ -617,6 +617,94 @@ model and no other reason (one holding no `.tmdl` files) now gets the
 same reason as the folder route, where it gave "no model in the
 input".
 
+Amended 2026-10-03 (#174): a plain folder, one that is neither a
+part (named `.SemanticModel` or `.Report`, or a `definition` folder)
+nor a PBIP folder (holding a `.SemanticModel` or `.Report` folder at
+its top), and that holds no `.pbip` at its top, is searched for
+projects below it before its loose `.tmdl` files are read. Read as
+loose files, a project one folder down was linted as its model alone,
+its report skipped (194 findings for a copy of the sample, where
+pointing at the copy gives 266), and two projects below were linted as
+one model, every measure reported by `AVOID_DUPLICATE_MEASURES`
+against its twin in the other project.
+
+What counts as a project below the folder: each `.pbip`; each
+`.Report` folder no `.pbip` names; and each `.SemanticModel` folder no
+project takes in. A `.pbip` takes in the reports its `artifacts` name
+and the model each of those reports names in its `definition.pbir` by
+path, wherever they sit, as the `.pbip` route (#86, above) reads them;
+a `.pbip` that names no report takes in the parts beside it, as that
+route reads its folder. A report no `.pbip` names takes in the model
+it reads (the one it names by path, or, when its `definition.pbir`
+names none, the one model beside it, as the pairing pairs them) only
+when the two are given as their folder (below), since a `.Report`
+folder given alone reads its report alone. Each thing found is known
+by its path; a path a project file writes is matched with it, and
+failing that with one that differs from it only in case, as the
+pairing compares names. A project is given by the path that lints it:
+the folder that holds it, when it is more than one of these, all in
+that folder, and the folder holds no other `.pbip`, `.Report`, or
+`.SemanticModel`; else its `.pbip`, or its part folder. Two exceptions
+keep the folder from standing in for what it would not read: a
+`.pbip` whose report names by path a model the search did not find
+(one outside the folder searched, say) is given as the `.pbip`, which
+follows the path, and a folder named `definition` is never given,
+since it would be read as a model's definition folder. So a project
+Power BI Desktop saved in a folder of its own is that folder; projects
+that share a folder are each their `.pbip`; and a report and its model
+with no `.pbip` are their folder when alone in it, and each its own
+part folder beside another pair, since that folder would be refused as
+holding two of each.
+
+The search skips the folders the walk skips (`.git`, `.pbi`,
+`node_modules`, `StaticResources`, `CustomVisuals`), does not enter a
+part folder, does not follow a link, and passes over a folder the
+system will not list, without a notice: what either holds is outside
+every project linted, and when no project is found the walk for loose
+files meets the same path and names it, as before. Hence the notice
+below says the project is the only one found.
+
+One project found is linted as if it had been given: its folder,
+`.pbip`, or part folder is resolved as the input, so its config search
+starts from it, the notices name paths relative to it, and a refusal
+of it (a model folder that holds no `.tmdl` files, say) names its path
+joined to the input. Its walk is its own: what the plain folder's own
+read met (a `definition` folder in it that could not be read, say) is
+outside the project and neither refuses the run nor is named. A
+notice of a new kind, `project-below-input`, comes first and names the
+project's path relative to the input: `sub/messy-sales is the only
+project found below the folder given, so it was linted as if given
+directly`. Core builds the words, and decides which
+projects there are for both surfaces from what each saw.
+
+More than one: nothing is linted. The CLI exits 2 naming each
+project's path relative to the input, in name order by the whole path,
+with the command that lints it, one per line:
+
+```
+pbiplint: /repo contains 2 projects; point at one of them:
+  a/messy-sales: pbiplint /repo/a/messy-sales
+  b/messy-sales: pbiplint /repo/b/messy-sales
+Run pbiplint --help for usage.
+```
+
+The command names the path joined to the input, in double quotes when
+it holds a character a shell reads specially, such as a space, which
+POSIX shells, PowerShell, and cmd all take. Each line goes to stderr
+on its own with its control characters shown, as every line does, so
+no folder's name can write a line of its own. The browser, which
+cannot run a command, lists the same paths on one line and says to
+drop one: `repo contains 2 projects; drop one of them: a/messy-sales,
+b/messy-sales`, or `The drop contains ...` for several items dropped
+side by side.
+
+Loose `.tmdl` files with no project below still read as one model, as
+before. A project beside loose `.tmdl` files is linted, and the loose
+files are not. Nothing changes for an input that names a project, a
+part, a `definition` folder, or a `.pbip`, nor for a folder that holds
+a `.pbip` at its top. One run across every project found is not done:
+the project stays the unit pbiplint lints, and #174 says why.
+
 ## 5. PBIR parser and report object model
 
 **Parser.** Plain JSON, read tolerantly: unknown properties ignored;
@@ -2276,6 +2364,17 @@ never the path a refusal names, so batch F's note above holds for such
 a run otherwise: it goes on with its `depth-cap` notice, and with the
 note naming any model folder it saw that holds no `.tmdl` files. The
 CLI has no cap, so it is unchanged.
+
+Amended 2026-10-03 (#174): `selectProject` searches a plain folder
+for projects below it as the CLI does (section 4), core deciding for
+both from what each saw, so the two find the same projects and list
+them in the same order. The one project found is read as if its
+folder had been dropped alone, the `.pbip`'s folder for a project
+given by its `.pbip`, since the browser has no `.pbip` route: a thin
+report whose model sits outside its folder is read alone, with the
+reason naming the model it reads, where the CLI follows the `.pbip`
+to the model. `packages/web/test/projects-below.test.ts` runs both
+surfaces on the same folders on disk.
 
 ## 13. CLI changes
 

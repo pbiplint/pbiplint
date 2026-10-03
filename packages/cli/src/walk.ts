@@ -6,6 +6,7 @@ import {
   readFileSync,
   realpathSync,
   statSync,
+  type Dirent,
   type Stats,
 } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
@@ -19,9 +20,12 @@ import {
   noTmdlRefusal,
   pairingDecision,
   pbixRefusal,
-  readJson,
+  projectBelowNotice,
+  projectsBelow,
+  reportsNamed,
   type DatasetReference,
   type Diagnostic,
+  type FoundBelow,
   type LayerName,
   type LintFile,
 } from "@pbiplint/core";
@@ -80,8 +84,6 @@ const statOf = (p: string): Stats | undefined => statSync(p, { throwIfNoEntry: f
 const isDir = (p: string): boolean => statOf(p)?.isDirectory() ?? false;
 const isFile = (p: string): boolean => statOf(p)?.isFile() ?? false;
 const byName = (a: string, b: string): number => a.localeCompare(b, "en");
-const isRecord = (v: unknown): v is Record<string, unknown> =>
-  typeof v === "object" && v !== null && !Array.isArray(v);
 
 /**
  * Whether the path a file names, or a link points at, is a folder: undefined when nothing is
@@ -327,18 +329,21 @@ function readPart(
 }
 
 /**
- * The project's .pbip: the one the user pointed at, else the only file with that suffix in the
- * folder, a link to one counted, so that its read names it. A folder holding several is refused
- * rather than guessed at, and a directory whose name ends in .pbip is not one of them.
+ * Whether an entry listed in `folder` is a .pbip: a file with that suffix, or a link that is not
+ * to a folder, so that its read names it. A directory whose name ends in .pbip is not one.
+ */
+const isPbipEntry = (folder: string, e: Dirent): boolean =>
+  e.name.endsWith(".pbip") &&
+  (e.isFile() || (e.isSymbolicLink() && folderAt(join(folder, e.name)) !== true));
+
+/**
+ * The project's .pbip: the one the user pointed at, else the only one in the folder (isPbipEntry).
+ * A folder holding several is refused rather than guessed at.
  */
 function pbipIn(input: string, folder: string, preferred: string | undefined): string | undefined {
   if (preferred !== undefined) return preferred;
   const found = readdirSync(folder, { withFileTypes: true })
-    .filter(
-      (e) =>
-        e.name.endsWith(".pbip") &&
-        (e.isFile() || (e.isSymbolicLink() && folderAt(join(folder, e.name)) !== true)),
-    )
+    .filter((e) => isPbipEntry(folder, e))
     .map((e) => e.name)
     .sort(byName);
   if (found.length > 1)
@@ -414,8 +419,9 @@ function resolveFolder(input: string, path: string, preferred?: string): Resolve
 }
 
 /**
- * One walk from the folder `base`, which is the project root, by `read`. `input` names that folder
- * in a refusal.
+ * One walk from the folder `base`, which is the project root, by `read`, unless the one project
+ * below a plain folder is read in its place, by a walk of its own (readFolder, #174). `input`
+ * names that folder in a refusal.
  *
  * A walk of which nothing could be read, while something in it was refused, is an input that
  * could not be read: a run over it would report no findings in 0 files and read as clean with
@@ -437,19 +443,6 @@ function walked(input: string, base: string, read: (w: Walk) => ResolvedProject)
 }
 
 /**
- * The report paths a .pbip's `artifacts` name, as it writes them. Microsoft's pbipProperties
- * schema gives `artifacts` as `{ "report": { "path" } }` entries only: a .pbip reaches its model
- * through the report's definition.pbir. A .pbip that is not a JSON object names none.
- */
-function reportsNamed(name: string, text: string): string[] {
-  const json = readJson(name, text).json;
-  if (!isRecord(json) || !Array.isArray(json.artifacts)) return [];
-  return json.artifacts.flatMap((a: unknown) =>
-    isRecord(a) && isRecord(a.report) && typeof a.report.path === "string" ? [a.report.path] : [],
-  );
-}
-
-/**
  * A .pbip the user named (#86): the one report its `artifacts` name, its path relative to the
  * .pbip's folder, and the model that report's definition.pbir names, wherever each sits, so a
  * project beside others in one folder lints with both parts. Nothing else in the .pbip's folder
@@ -464,7 +457,7 @@ function resolvePbip(input: string, path: string): ResolvedProject {
   // Each report folder once, as first written, counted by the path it resolves to: a report
   // named twice as `Cost.Report`, `./Cost.Report`, or `Cost.Report/` is one report.
   const named = new Map<string, string>();
-  for (const written of reportsNamed(basename(path), text)) {
+  for (const written of reportsNamed(text)) {
     const at = resolve(folder, toPosix(written));
     if (!named.has(at)) named.set(at, written);
   }
@@ -573,7 +566,10 @@ function readNamed(
   throw new UsageError(`No semantic model or report found in ${written}, which ${input} names`);
 }
 
-/** The parts of the folder `w` walks, or what it has to say about them. */
+/**
+ * The parts of the folder `w` walks, or of the one project below it (#174), or what it has to say
+ * about them.
+ */
 function readFolder(w: Walk, input: string, path: string, preferred?: string): ResolvedProject {
   const out = w.project;
   const name = basename(path);
@@ -625,7 +621,8 @@ function readFolder(w: Walk, input: string, path: string, preferred?: string): R
 
   // A PBIP folder: the parts sit beside each other. A link to a folder named as a part is one, so
   // that its read names it; a link to nothing is no folder, as in readTree.
-  const dirs = readdirSync(path, { withFileTypes: true })
+  const listed = readdirSync(path, { withFileTypes: true });
+  const dirs = listed
     .filter((e) => e.isDirectory() || (e.isSymbolicLink() && folderAt(join(path, e.name)) === true))
     .map((e) => e.name);
   const models = dirs.filter((d) => d.endsWith(".SemanticModel")).sort(byName);
@@ -686,9 +683,40 @@ function readFolder(w: Walk, input: string, path: string, preferred?: string): R
   if (report) out.report = report;
   if (model || report) return out;
 
-  // Loose .tmdl files anywhere under a plain folder, as v1 accepted. The same walk, the whole
-  // folder but the skipped folders, notes each .pbix and model folder it passes, for the refusals
-  // below.
+  // A plain folder, neither a part nor a PBIP folder and holding no .pbip (a link counted, as
+  // pbipIn counts one), may hold projects in folders below it, as a repository holds each in a
+  // folder of its own (#174). Read as loose files, one project's model would be linted without its
+  // report, and two projects' models as one. So the one project found is linted as if it had been
+  // given, its root the config search's start and the base of its notices' paths, with a notice
+  // that names it first; several are refused with a list, each with the command that lints it, and
+  // nothing is linted. The project's walk is its own: what this folder's read met (a definition
+  // folder that could not be read, say) is outside the project and refuses nothing, and a refusal
+  // of the project itself, such as a model folder that holds no .tmdl files, is the run's, naming
+  // the project's path joined to `input`, as any refusal of a path below the input does.
+  if (
+    !namedPart &&
+    name !== "definition" &&
+    !models.length &&
+    !reports.length &&
+    !listed.some((e) => isPbipEntry(path, e))
+  ) {
+    const below = projectsBelow(foundBelow(w, path));
+    const at = (p: string): string => toPosix(join(input, p));
+    if (below.length === 1) {
+      const project = resolveProject(at(below[0]!));
+      w.refusal = undefined;
+      return { ...project, diagnostics: [projectBelowNotice(below[0]!), ...project.diagnostics] };
+    }
+    if (below.length > 1)
+      throw new UsageError(
+        `${input} contains ${below.length} projects; point at one of them:`,
+        below.map((p) => `  ${p}: pbiplint ${shellWord(at(p))}`),
+      );
+  }
+
+  // Loose .tmdl files anywhere under a plain folder that holds no project, as v1 accepted. The
+  // same walk, the whole folder but the skipped folders, notes each .pbix and model folder it
+  // passes, for the refusals below.
   const direct = emptyPart(path);
   const passed: Passed = { pbix: [], models: [] };
   readTree(w, direct, path, (n) => n.endsWith(".tmdl"), passed);
@@ -716,3 +744,61 @@ function readFolder(w: Walk, input: string, path: string, preferred?: string): R
     `No semantic model or report found at ${input} (expected ${EXPECTED_INPUT})`,
   );
 }
+
+/**
+ * A file's text, or undefined when it is not there, is not a file, is a link, which is not
+ * followed, or is one the operating system will not give.
+ */
+function textAt(p: string): string | undefined {
+  try {
+    return isLink(p) || !isFile(p) ? undefined : readFileSync(p, "utf8");
+  } catch (e) {
+    if (isSystemError(e)) return undefined;
+    throw e;
+  }
+}
+
+/**
+ * What lies below the plain folder `dir`, for projectsBelow (#174): each .pbip with its text, each
+ * .Report folder with its definition.pbir's, and each .SemanticModel folder, by its path from the
+ * walk's base. A part folder is not entered, since what is in it is the part's, and neither are
+ * the folders the walk skips (SKIP_DIRS: git's, the packages', Desktop's caches, and a report's
+ * resources), which keeps a repository's root as quick to search as the walk for loose files is
+ * to read. A link is not followed, a link to a .pbip included, and a folder the operating system
+ * will not list is passed over without a notice: what either holds is outside every project
+ * linted, and when no project is found the walk for loose files meets the same path and names it.
+ * So the notice says the project is the only one found.
+ */
+function foundBelow(
+  w: Walk,
+  dir: string,
+  found: FoundBelow = { pbips: [], reports: [], models: [] },
+): FoundBelow {
+  let entries: Dirent[];
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch (e) {
+    if (isSystemError(e)) return found;
+    throw e;
+  }
+  for (const entry of entries) {
+    const p = join(dir, entry.name);
+    const path = toPosix(relative(w.base, p));
+    if (entry.isFile() && entry.name.endsWith(".pbip")) found.pbips.push({ path, text: textAt(p) });
+    else if (!entry.isDirectory() || SKIP_DIRS.has(entry.name)) continue;
+    else if (entry.name.endsWith(".Report"))
+      found.reports.push({ path, pbir: textAt(join(p, "definition.pbir")) });
+    else if (entry.name.endsWith(".SemanticModel")) found.models.push(path);
+    else foundBelow(w, p, found);
+  }
+  return found;
+}
+
+/**
+ * `p` as one word on a command line: as it is when it holds only characters no shell treats
+ * specially, else in double quotes, which POSIX shells, PowerShell, and cmd all take for a path
+ * with a space in it. A name holding `$`, a backquote, a double quote, `!` (bash's history), or
+ * `%` (cmd's variables) needs escaping for the shell at hand, which no one quoting does for all
+ * three.
+ */
+const shellWord = (p: string): string => (/^[\w./:@+-]+$/.test(p) ? p : `"${p}"`);

@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -22,6 +22,7 @@ const shelfmart = fileURLToPath(new URL("../../../tests/fixtures/shelfmart", imp
 const demo = fileURLToPath(
   new URL("../../../tests/fixtures/pbip-and-github-demo", import.meta.url),
 );
+const sample = fileURLToPath(new URL("../../../examples/messy-sales", import.meta.url));
 // Written by scripts/make-big-report.mjs, which the web server command runs before the build.
 const big = fileURLToPath(new URL("../../../tests/generated/big-report", import.meta.url));
 
@@ -244,6 +245,39 @@ test("refuses a folder with two reports and names them", async ({ page }) => {
       await page.locator("#folder-input").setInputFiles(dir);
       await expect(page.locator("#status")).toHaveText(
         /contains 2 reports; drop one of them: A\.Report, B\.Report/,
+      );
+      await expect(page.locator("#results")).toBeHidden();
+    },
+  );
+});
+
+test("lints the one project below a folder and names it, and refuses a folder with two (#174)", async ({
+  page,
+}) => {
+  await withTempFolder(
+    "below-",
+    (dir) => cpSync(sample, join(dir, "sub", "messy-sales"), { recursive: true }),
+    async (dir) => {
+      await page.locator("#folder-input").setInputFiles(dir);
+      const results = page.locator("#results");
+      await expect(results.locator("h2")).toHaveText(
+        /^Results for below-\w+\/sub\/messy-sales \(model, \d+ files · report, \d+ files\)$/,
+      );
+      await expect(results.locator(".notice").first()).toHaveText(
+        "sub/messy-sales is the only project found below the folder given, so it was linted as if given directly",
+      );
+    },
+  );
+  await withTempFolder(
+    "two-below-",
+    (dir) => {
+      for (const at of ["a", "b"])
+        cpSync(sample, join(dir, at, "messy-sales"), { recursive: true });
+    },
+    async (dir) => {
+      await page.locator("#folder-input").setInputFiles(dir);
+      await expect(page.locator("#status")).toHaveText(
+        /contains 2 projects; drop one of them: a\/messy-sales, b\/messy-sales$/,
       );
       await expect(page.locator("#results")).toBeHidden();
     },

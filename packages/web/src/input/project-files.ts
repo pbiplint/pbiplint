@@ -8,8 +8,11 @@ import {
   noTmdlRefusal,
   pairingDecision,
   pbixRefusal,
+  projectBelowNotice,
+  projectsBelow,
   type DatasetReference,
   type Diagnostic,
+  type FoundBelow,
   type LayerName,
   type LintFile,
 } from "@pbiplint/core";
@@ -85,8 +88,9 @@ export interface SelectedProject {
   /**
    * The project root inside the drop, the folder the CLI's resolveProject would take: the dropped
    * PBIP folder, whether it holds one part or two; the part folder when a part is dropped alone; a
-   * definition folder dropped alone; "" for a lone file, or several dropped side by side. The
-   * config search starts here, and `read` is relative to it.
+   * definition folder dropped alone; the folder of the one project below a plain folder (#174);
+   * "" for a lone file, or several dropped side by side. The config search starts here, and
+   * `read` is relative to it.
    */
   root: string;
   /**
@@ -381,6 +385,11 @@ function loneReportAbsent(report: Part): Partial<Record<LayerName, string>> {
 interface Parts {
   model?: Part;
   report?: Part;
+  /**
+   * The one project below a plain folder, read in its place (#174): `path` relative to the folder,
+   * as the notice names it, and `root`, the drop-relative folder it was read as.
+   */
+  below?: { path: string; root: string };
 }
 
 /** The parts of the folder at `base`, as the CLI's readFolder finds them, in the same order. */
@@ -488,9 +497,85 @@ function readFolder(s: Selection, base: string): Parts {
   }
   if (model || report) return { model, report };
 
-  // Loose .tmdl files anywhere under a plain folder, as v1 accepted.
+  // A plain folder, neither a part nor a PBIP folder and holding no .pbip, may hold projects in
+  // folders below it, as the CLI's readFolder finds them (#174): the one found is read as if it
+  // had been dropped alone, and several are refused with a list, to be dropped one at a time. The
+  // browser takes folders and has no .pbip route (spec section 12), so a project given by its .pbip
+  // is read as the .pbip's folder.
+  if (
+    !isModelFolder(name) &&
+    !isReportFolder(name) &&
+    name !== "definition" &&
+    modelDirs.length === 0 &&
+    reports.length === 0 &&
+    pbipsIn(s, base).length === 0
+  ) {
+    const found = foundBelow(s, base);
+    const below = projectsBelow(found);
+    if (below.length > 1)
+      throw new InputError(
+        `${base || "The drop"} contains ${below.length} projects; drop one of them: ${below.join(", ")}`,
+      );
+    const path = below[0];
+    if (path !== undefined) {
+      const folder = found.pbips.some((p) => p.path === path) ? parent(path) : path;
+      const root = join(base, folder);
+      // The project's reads are the run's, as the CLI's walk of it is its own: what this folder's
+      // reads met (a definition folder that could not be listed, say) is outside the project and
+      // neither refuses nor is named.
+      s.reads.length = 0;
+      return { ...readFolder(s, root), below: { path, root } };
+    }
+  }
+
+  // Loose .tmdl files anywhere under a plain folder that holds no project, as v1 accepted.
   const loose = tmdlRead(s, base, base);
   return loose ? { model: loose } : {};
+}
+
+/**
+ * What lies below the plain folder `base`, for projectsBelow, as the CLI's search finds it (#174):
+ * each .pbip with its text, each .Report folder with its definition.pbir's, and each .SemanticModel
+ * folder, relative to `base`, leaving out what sits inside a part folder, which the search does not
+ * enter. The walkers skip the folders the CLI's search skips, and a .pbip the walk could not read
+ * is there without its text, as the CLI lists one it cannot open.
+ */
+function foundBelow(s: Selection, base: string): FoundBelow {
+  const isPart = (name: string): boolean => isModelFolder(name) || isReportFolder(name);
+  const below = (p: string): boolean => {
+    if (!within(p, base)) return false;
+    for (let d = parent(p); d !== base; d = parent(d)) if (isPart(nameOf(d))) return false;
+    return true;
+  };
+  const texts = new Map(s.tree.entries.map((e) => [e.path, e.text]));
+  const pbips = new Set([
+    ...s.tree.entries.map((e) => e.path),
+    ...s.unread.filter((u) => !u.folder).map((u) => u.path),
+  ]);
+  const dirs = [...s.dirs].filter(below);
+  return {
+    pbips: [...pbips]
+      .filter((p) => p.endsWith(".pbip") && below(p))
+      .map((p) => ({ path: relativeTo(p, base), text: texts.get(p) })),
+    reports: dirs
+      .filter((d) => isReportFolder(nameOf(d)))
+      .map((d) => ({ path: relativeTo(d, base), pbir: texts.get(join(d, "definition.pbir")) })),
+    models: dirs.filter((d) => isModelFolder(nameOf(d))).map((d) => relativeTo(d, base)),
+  };
+}
+
+/**
+ * The .pbip files directly in `dir`, read or refused, in name order: the one beside a report, or
+ * the one that keeps a plain folder from being searched for projects below it.
+ */
+function pbipsIn(s: Selection, dir: string): string[] {
+  const atDir = (p: string): boolean => parent(p) === dir && p.endsWith(".pbip");
+  return [
+    ...new Set([
+      ...s.tree.entries.map((e) => e.path).filter(atDir),
+      ...s.unread.filter((u) => !u.folder && atDir(u.path)).map((u) => u.path),
+    ]),
+  ].sort(byName);
 }
 
 /**
@@ -499,13 +584,7 @@ function readFolder(s: Selection, base: string): Parts {
  * a report layer present on its own (tracked in #59). Two are refused rather than guessed at.
  */
 function readPbip(s: Selection, base: string, report: Part): void {
-  const atBase = (p: string): boolean => parent(p) === base && p.endsWith(".pbip");
-  const found = [
-    ...new Set([
-      ...s.tree.entries.map((e) => e.path).filter(atBase),
-      ...s.unread.filter((u) => !u.folder && atBase(u.path)).map((u) => u.path),
-    ]),
-  ].sort(byName);
+  const found = pbipsIn(s, base);
   if (found.length > 1)
     throw new InputError(
       `${base || "The drop"} contains ${found.length} .pbip files; drop a folder that holds one of them: ${found.map(nameOf).join(", ")}`,
@@ -611,8 +690,9 @@ function rebased(d: Diagnostic, root: string): Diagnostic {
  * holds .tmdl files, else a .Report's report; a definition folder dropped alone is a model; a part
  * folder in the legacy format is a diagnostic with its layer absent; else the .SemanticModel and
  * .Report folders directly inside the folder are the project, paired through the report's
- * definition.pbir, with the .pbip beside them; else every .tmdl file under the folder is linted
- * with paths relative to it.
+ * definition.pbir, with the .pbip beside them; else, in a plain folder, the one project below it
+ * is read in its place and several are refused (#174); else every .tmdl file under the folder is
+ * linted with paths relative to it.
  *
  * Where the browser has always differed, it still does: a .SemanticModel folder holding no .tmdl
  * file (an older model.bim model, or an empty one) never triggers the two-model refusal the CLI
@@ -650,8 +730,8 @@ export function selectProject(tree: InputTree): SelectedProject {
   // several items dropped side by side have no one folder above them.
   const firsts = new Set([...filePaths, ...folders].map((p) => p.split("/")[0]!));
   const base = firsts.size === 1 && filePaths.every((p) => p.includes("/")) ? [...firsts][0]! : "";
-  const { model, report } = readFolder(s, base);
-  const root = base;
+  const { model, report, below } = readFolder(s, base);
+  const root = below?.root ?? base;
 
   // What each part could not read, relative to its root, from the reads that were its own: the
   // files and folders that refused, and a folder the walk stopped in at the depth cap, which is
@@ -741,6 +821,8 @@ export function selectProject(tree: InputTree): SelectedProject {
     config,
     notes,
     read,
-    diagnostics,
+    // The one project below the dropped folder is named first, as the CLI names it, once nothing
+    // above has refused the drop: it says nothing about why nothing was linted.
+    diagnostics: below ? [projectBelowNotice(below.path), ...diagnostics] : diagnostics,
   };
 }

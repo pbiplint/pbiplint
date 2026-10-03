@@ -378,8 +378,9 @@ describe("selectProject", () => {
   });
   it("passes the walk's diagnostics through", () => {
     const p = selectProject(
-      tree(proj, { diagnostics: [{ kind: "depth-cap", message: "stopped", path: "x" }] }),
+      tree(proj, { diagnostics: [{ kind: "depth-cap", message: "stopped", path: "Proj/x" }] }),
     );
+    // Rebased onto the root, Proj, as every notice is.
     expect(p.diagnostics[0]).toEqual({ kind: "depth-cap", message: "stopped", path: "x" });
   });
 
@@ -966,6 +967,181 @@ describe("selectProject", () => {
   });
 });
 
+describe("selectProject on a folder with projects below it (#174)", () => {
+  // walk.test.ts holds the CLI to the same trees, which it lints as these do, or lists with the
+  // command for each where these say to drop one.
+  const j = (v: unknown) => JSON.stringify(v);
+  const pbipText = (...reports: string[]): string =>
+    j({ version: "1.0", artifacts: reports.map((path) => ({ report: { path } })) });
+  const byPath = (path: string): string => j({ datasetReference: { byPath: { path } } });
+  /** A model folder at `at` whose one table is `table`, as the walkers record it. */
+  const modelIn = (at: string, table: string): Partial<InputTree> => ({
+    entries: [
+      e(`${at}/definition/model.tmdl`, "model Model\n"),
+      e(`${at}/definition/tables/${table}.tmdl`, `table ${table}\n`),
+    ],
+    modelFolders: [at],
+  });
+  /** A report folder at `at` of one page whose definition.pbir reads the model at `model`. */
+  const reportIn = (at: string, model: string): Partial<InputTree> => ({
+    entries: [
+      e(`${at}/definition.pbir`, byPath(model)),
+      e(`${at}/definition/report.json`, "{}"),
+      e(`${at}/definition/pages/p/page.json`, j({ name: "p" })),
+    ],
+    reportFolders: [at],
+  });
+  /** A project in the folder `dir`: its .pbip, its model, and a report that reads the model. */
+  const projectIn = (dir: string, name = "Demo"): Partial<InputTree> =>
+    treeOf(
+      { entries: [e(`${dir}/${name}.pbip`, pbipText(`${name}.Report`))] },
+      modelIn(`${dir}/${name}.SemanticModel`, name),
+      reportIn(`${dir}/${name}.Report`, `../${name}.SemanticModel`),
+    );
+  const treeOf = (...parts: Partial<InputTree>[]): InputTree => ({
+    ...emptyTree(),
+    entries: parts.flatMap((p) => p.entries ?? []),
+    modelFolders: parts.flatMap((p) => p.modelFolders ?? []),
+    reportFolders: parts.flatMap((p) => p.reportFolders ?? []),
+  });
+  const below = (path: string): Diagnostic => ({
+    kind: "project-below-input",
+    path,
+    message: `${path} is the only project found below the folder given, so it was linted as if given directly`,
+  });
+  it("lints the one project one folder down, or two, as if dropped alone, naming it first", () => {
+    for (const at of ["sub", "a/b"]) {
+      const direct = selectProject(treeOf(projectIn("Demo")));
+      const p = selectProject(treeOf(projectIn(`Drop/${at}`)));
+      // Rooted at the project, where the config search starts, with every path relative to it.
+      expect(p).toEqual({ ...direct, root: `Drop/${at}`, diagnostics: [below(at)] });
+      expect(p.files.map((f) => f.path)).toEqual([
+        "definition/model.tmdl",
+        "definition/tables/Demo.tmdl",
+        "../Demo.pbip",
+        "definition.pbir",
+        "definition/pages/p/page.json",
+        "definition/report.json",
+      ]);
+    }
+    // The project's config, else the nearest above it in the drop.
+    const config = (...paths: string[]) =>
+      selectProject(treeOf(projectIn("Drop/sub"), { entries: paths.map((path) => e(path, "{}")) }))
+        .config?.path;
+    expect(config("Drop/pbiplint.config.json", "Drop/sub/pbiplint.config.json")).toBe(
+      "Drop/sub/pbiplint.config.json",
+    );
+    expect(config("Drop/pbiplint.config.json")).toBe("Drop/pbiplint.config.json");
+  });
+  it("refuses a folder with two projects below it, saying to drop one, and a drop of two side by side", () => {
+    expect(() =>
+      selectProject(treeOf(projectIn("Drop/b/Sales"), projectIn("Drop/a/Sales"))),
+    ).toThrow(new InputError("Drop contains 2 projects; drop one of them: a/Sales, b/Sales"));
+    // Two folders dropped together have no one folder above them, so the drop is the folder.
+    expect(() => selectProject(treeOf(projectIn("b"), projectIn("a")))).toThrow(
+      new InputError("The drop contains 2 projects; drop one of them: a, b"),
+    );
+  });
+  it("lints the project beside loose .tmdl files, leaving them out", () => {
+    const p = selectProject(
+      treeOf(projectIn("Drop/sub"), { entries: [e("Drop/model.tmdl"), e("Drop/snippets/T.tmdl")] }),
+    );
+    expect(p.root).toBe("Drop/sub");
+    expect(p.files.map((f) => f.path)).not.toContain("model.tmdl");
+    expect(p.read).toEqual(
+      expect.arrayContaining(["../model.tmdl (not linted)", "../snippets/T.tmdl (not linted)"]),
+    );
+    expect(p.diagnostics).toEqual([below("sub")]);
+  });
+  it("lints a thin report's .pbip below the folder with the model beside it, and reads one whose model is elsewhere as its folder", () => {
+    const beside = selectProject(
+      treeOf(
+        { entries: [e("Drop/sub/Thin.pbip", pbipText("Thin.Report"))] },
+        reportIn("Drop/sub/Thin.Report", "../Shared.SemanticModel"),
+        modelIn("Drop/sub/Shared.SemanticModel", "Shared"),
+      ),
+    );
+    expect(beside.root).toBe("Drop/sub");
+    expect(beside.files.map((f) => f.path)).toContain("definition/tables/Shared.tmdl");
+    expect(beside.files.map((f) => f.path)).toContain("definition/report.json");
+    expect(beside.absent).toEqual({});
+    expect(beside.diagnostics).toEqual([below("sub")]);
+    // The browser has no .pbip route (spec section 12), so a .pbip whose model sits elsewhere is
+    // read as its folder, the report alone, where the CLI follows the .pbip to the model too.
+    const elsewhere = selectProject(
+      treeOf(
+        { entries: [e("Drop/reports/Thin.pbip", pbipText("Thin.Report"))] },
+        reportIn("Drop/reports/Thin.Report", "../../models/Shared.SemanticModel"),
+        modelIn("Drop/models/Shared.SemanticModel", "Shared"),
+      ),
+    );
+    expect(elsewhere.root).toBe("Drop/reports");
+    expect(elsewhere.files.map((f) => f.path)).not.toContain("definition/tables/Shared.tmdl");
+    expect(elsewhere.absent).toEqual({
+      model: "this report reads ../../models/Shared.SemanticModel, which this run did not include",
+    });
+    expect(elsewhere.diagnostics).toEqual([below("reports/Thin.pbip")]);
+  });
+  it("lints a report and its model with no .pbip as their folder, and lists each part where the folder holds more", () => {
+    const pairIn = (name: string): Partial<InputTree> =>
+      treeOf(
+        modelIn(`Drop/ws/${name}.SemanticModel`, name),
+        reportIn(`Drop/ws/${name}.Report`, `../${name}.SemanticModel`),
+      );
+    const p = selectProject(treeOf(pairIn("A")));
+    expect(p.root).toBe("Drop/ws");
+    expect(p.files.map((f) => f.path)).toContain("definition/tables/A.tmdl");
+    expect(p.files.map((f) => f.path)).toContain("definition/report.json");
+    expect(p.diagnostics).toEqual([below("ws")]);
+    expect(() => selectProject(treeOf(pairIn("A"), pairIn("B")))).toThrow(
+      new InputError(
+        "Drop contains 4 projects; drop one of them: ws/A.Report, ws/A.SemanticModel, ws/B.Report, ws/B.SemanticModel",
+      ),
+    );
+    // Projects that share a folder each by its .pbip, as the CLI lists them.
+    expect(() =>
+      selectProject(treeOf(projectIn("Drop/ws", "Cost"), projectIn("Drop/ws", "Sales"))),
+    ).toThrow(
+      new InputError("Drop contains 2 projects; drop one of them: ws/Cost.pbip, ws/Sales.pbip"),
+    );
+  });
+  it("reads the project below as a walk of its own, which nothing the folder's own reads met refuses", () => {
+    // The folder's definition folder could not be listed, and the project below it reads nothing
+    // but a legacy part, which says so in its notice, as the CLI's walk.test.ts has it.
+    const p = selectProject({
+      ...emptyTree(),
+      reportFolders: ["Drop/sub/Demo.Report"],
+      markers: [{ path: "Drop/sub/Demo.Report/report.json", kind: "legacy-report" }],
+      diagnostics: [unreadAt("Drop/definition")],
+      unreadFolders: ["Drop/definition"],
+      refusal: { path: "Drop/definition", reason: "locked" },
+    });
+    expect(p.root).toBe("Drop/sub/Demo.Report");
+    expect(p.diagnostics.map((d) => [d.kind, d.path])).toEqual([
+      ["project-below-input", "sub/Demo.Report"],
+      ["legacy-report-format", "Demo.Report"],
+    ]);
+  });
+  it("finds no project inside a part folder, which is that part's to read", () => {
+    const p = selectProject(
+      treeOf(projectIn("Drop/sub"), projectIn("Drop/sub/Demo.Report/nested")),
+    );
+    expect(p.root).toBe("Drop/sub");
+    expect(p.diagnostics).toEqual([below("sub")]);
+  });
+  it("searches only a plain folder, and reads loose .tmdl files as before when it finds no project", () => {
+    // A folder holding a .pbip is a project, read as before, whatever is below it.
+    const p = selectProject(
+      treeOf(projectIn("Drop/sub"), {
+        entries: [e("Drop/Demo.pbip", pbipText()), e("Drop/loose.tmdl")],
+      }),
+    );
+    expect(p.root).toBe("Drop");
+    expect(p.files.map((f) => f.path)).toContain("loose.tmdl");
+    expect(p.diagnostics).toEqual([]);
+  });
+});
+
 describe("selectProject and a .pbix (tracked in #88)", () => {
   // The words for a .pbix are core's, written out in route.test.ts; these hold the path and the
   // count. The CLI's tests hold the same trees to the same words.
@@ -1082,17 +1258,14 @@ describe("selectProject and a model folder that holds no .tmdl files (tracked in
         refusal(["Proj/Old.SemanticModel"]),
       );
   });
-  it("names one below that, and several in name order", () => {
+  it("names one below that, the one project there, and lists several as projects in name order", () => {
+    // The one model folder below a plain folder is the one project there (#174), which, dropped
+    // alone, is refused naming it, relative to the drop as before.
     expect(() => selectProject(withModels(["Proj/Models/Old.SemanticModel"]))).toThrow(
       refusal(["Proj/Models/Old.SemanticModel"]),
     );
-    expect(() =>
-      selectProject(
-        withModels(["Proj/Sales/Sales.SemanticModel", "Proj/Archive/Old.SemanticModel"]),
-      ),
-    ).toThrow(refusal(["Proj/Archive/Old.SemanticModel", "Proj/Sales/Sales.SemanticModel"]));
-    // The whole path's name order, whatever order the walk recorded them in: "Archive 2024/"
-    // sorts before "Archive/".
+    // Several are several projects, to be dropped one at a time, in the whole path's name order,
+    // whatever order the walk recorded them in: "Archive 2024/" sorts before "Archive/".
     expect(() =>
       selectProject(
         withModels([
@@ -1102,11 +1275,9 @@ describe("selectProject and a model folder that holds no .tmdl files (tracked in
         ]),
       ),
     ).toThrow(
-      refusal([
-        "Proj/Archive 2024/Older.SemanticModel",
-        "Proj/Archive/Old.SemanticModel",
-        "Proj/Sales/Sales.SemanticModel",
-      ]),
+      new InputError(
+        "Proj contains 3 projects; drop one of them: Archive 2024/Older.SemanticModel, Archive/Old.SemanticModel, Sales/Sales.SemanticModel",
+      ),
     );
   });
   it("lints what it lints beside one and notes the folder, as before", () => {
@@ -1145,7 +1316,7 @@ describe("selectProject and a model folder that holds no .tmdl files (tracked in
     expect(beside.files.map((f) => f.path)).toEqual(["definition/model.tmdl"]);
     expect(beside.notes).toEqual([noTmdlNote(["Proj/Old.SemanticModel"])]);
   });
-  it("gives a legacy model folder its notice, as before, and names one further down", () => {
+  it("gives a legacy model folder its notice, as before, and one further down too, as the one project there", () => {
     for (const at of ["Old.SemanticModel", "Proj/Old.SemanticModel"]) {
       const p = selectProject(
         withModels([at], { markers: [{ path: `${at}/model.bim`, kind: "legacy-model" }] }),
@@ -1156,13 +1327,18 @@ describe("selectProject and a model folder that holds no .tmdl files (tracked in
         ["legacy-model-format", "Old.SemanticModel"],
       ]);
     }
-    // Further down, no read looks for its model.bim, so no notice explains it, in either surface.
+    // Further down, it is the one project below the folder (#174), read as if dropped alone,
+    // which looks for its model.bim, as the CLI does.
     const deep = "Proj/Models/Old.SemanticModel";
-    expect(() =>
-      selectProject(
-        withModels([deep], { markers: [{ path: `${deep}/model.bim`, kind: "legacy-model" }] }),
-      ),
-    ).toThrow(refusal([deep]));
+    const p = selectProject(
+      withModels([deep], { markers: [{ path: `${deep}/model.bim`, kind: "legacy-model" }] }),
+    );
+    expect(p.files).toEqual([]);
+    expect(p.absent).toEqual({ model: "the model is saved in the legacy model.bim format" });
+    expect(p.diagnostics.map((d) => [d.kind, d.path])).toEqual([
+      ["project-below-input", "Models/Old.SemanticModel"],
+      ["legacy-model-format", "Old.SemanticModel"],
+    ]);
   });
   it("names no model folder the walk stopped in at the depth cap, which could hold .tmdl files", () => {
     const capAt = (path: string): Diagnostic => ({

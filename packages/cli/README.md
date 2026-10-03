@@ -27,7 +27,9 @@ The Markdown export writes an email address, an `@name`, a `#123` or `GH-123`, a
 holding two or more `$` as code, so pasted into a GitHub issue or comment it links no one,
 notifies no one, and renders no math.
 
-Exit codes: `0` no findings at or above `--fail-on`, `1` findings, `2` usage or input error.
+Exit codes: `0` no findings at or above `--fail-on`, `1` findings, `2` a usage error, an input it
+cannot read, or nothing to lint. [What a script can rely on](https://pbiplint.com/cli/#contract)
+states what stdout carries, every exit code, and the JSON documents' fields.
 `--fail-on error` is the default; `--fail-on warning` and `--fail-on info` tighten the gate;
 `--fail-on none` exits 0 on any run that lints something. A run that can read nothing in the input,
 such as a report saved as a single `report.json` (PBIR-Legacy) with no model beside it, exits `2`

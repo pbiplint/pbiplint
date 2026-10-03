@@ -135,7 +135,10 @@ violations. Either part alone is fine. Nothing is uploaded.
 --rule <RULE_ID>    show only this rule's findings (repeatable); --fail-on counts only these
 --help, --version
 
-Exit codes: 0 no findings at or above --fail-on, 1 findings, 2 usage or input error.
+Exit codes: 0 no findings at or above --fail-on, 1 findings, 2 a usage error, an input it cannot read, or nothing to lint.
+With --format json, sarif, or markdown, stdout is one document and nothing else.
+Notices and errors go to stderr; the text format also lists notices in its report.
+What a script can rely on: https://pbiplint.com/cli/#contract
 Rule pages: https://pbiplint.com/rules/
 The pbiplint Privacy Promise: https://pbiplint.com/privacy/
 `;

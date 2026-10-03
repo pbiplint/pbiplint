@@ -40,7 +40,9 @@ Or use it in the browser at https://pbiplint.com: paste TMDL, or drop a PBIP fol
 `.SemanticModel` folder, or a `.Report` folder. The page never uploads anything; the
 [Privacy Promise](https://pbiplint.com/privacy/) explains how to check that.
 
-Exit codes: 0 no findings at or above --fail-on (default error), 1 findings, 2 usage or input error. That makes it a CI gate.
+Exit codes: 0 no findings at or above --fail-on (default error), 1 findings, 2 a usage error, an
+input it cannot read, or nothing to lint. That makes it a CI gate. What a script can rely on, from
+stdout to the JSON fields: https://pbiplint.com/cli/#contract
 [The pbiplint CLI](https://pbiplint.com/cli/) page has the rest: where to get it, what it reads and
 writes, and how to check that it sends nothing.
 

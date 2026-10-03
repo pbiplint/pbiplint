@@ -715,6 +715,10 @@ describe("generateSite", () => {
     expect(cli).toContain("<title>The pbiplint CLI</title>");
     expect(cli).toContain('<h1 id="the-pbiplint-cli">The pbiplint CLI</h1>');
     expect(cli).toContain('<a href="/cli/" aria-current="page">CLI</a>');
+    // The sections a link from elsewhere lands on, and the Promise it details, in this tab.
+    expect(cli).toContain('<h2 id="check">How to check it</h2>');
+    expect(cli).toContain('<h2 id="reads">What it reads, writes, and sends</h2>');
+    expect(cli).toContain('<a href="/privacy/">the pbiplint Privacy Promise</a>');
     const sitemap = readFileSync(join(out, "public/sitemap.xml"), "utf8");
     expect(sitemap).toContain("<loc>https://pbiplint.com/rules/hide-foreign-keys/</loc>");
     expect(sitemap).toContain("<loc>https://pbiplint.com/rules/filters-pane-state/</loc>");

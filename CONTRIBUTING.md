@@ -12,6 +12,8 @@ npm run check:network  # after the build: the CLI bundle reaches for no network 
 npm run test:e2e    # the site in Chromium, Firefox, and WebKit; run `npx playwright install` once first
 ```
 
+The end-to-end suite serves the site on a free port it picks for each run, so two checkouts can run it at once; CI uses 4173, and `PBIPLINT_E2E_PORT=5180 npm run test:e2e` pins a port of your choosing.
+
 Node 20.19 or later (or 22.12 or later), which Vite needs for the site build. No runtime dependencies are allowed in `packages/core` or `packages/cli`.
 
 ## Layout

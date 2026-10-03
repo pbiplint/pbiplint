@@ -1,11 +1,17 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig, devices } from "@playwright/test";
+import { e2ePort } from "./e2e/port.js";
 
 // The end-to-end suite runs against the production build served by `vite preview`, in the three
 // browser engines, so it exercises the same bundle, CSP, and generated pages a visitor gets. It
 // covers what the happy-dom unit tests cannot: real drag and drop events, a real folder input,
 // downloads, keyboard focus, and an accessibility scan of the rendered page.
-const port = 4173;
+//
+// Playwright evaluates this file again in every worker process, so the port is settled once, in
+// the main process, and handed to the workers through the environment they inherit. A port picked
+// afresh in each worker would point the tests at a server nobody started.
+process.env.PBIPLINT_E2E_PORT = String(await e2ePort());
+const port = Number(process.env.PBIPLINT_E2E_PORT);
 const repo = fileURLToPath(new URL("../..", import.meta.url));
 
 export default defineConfig({

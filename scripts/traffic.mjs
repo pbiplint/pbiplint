@@ -1,13 +1,20 @@
 #!/usr/bin/env node
-// Usage: TRAFFIC_TOKEN=... GITHUB_REPOSITORY=pbiplint/pbiplint node scripts/traffic.mjs <traffic.json>
-// Archives the repository's traffic, which GitHub keeps for 14 days only: daily views and clones,
+// Usage: TRAFFIC_TOKEN=... [TRAFFIC_REPO=pbiplint/pbiplint] node scripts/traffic.mjs <traffic.json>
+// Archives a repository's traffic, which GitHub keeps for 14 days only: daily views and clones,
 // and the top referrers and paths. Merges a fetch into the JSON file by date and says whether
-// anything changed (`changed=true|false` to $GITHUB_OUTPUT when set). Run weekly by
-// .github/workflows/traffic.yml; see "Usage counts" in CONTRIBUTING.md.
+// anything changed (`changed=true|false` to $GITHUB_OUTPUT when set). Run weekly by a workflow in
+// the private repository pbiplint/metrics, which keeps the archive; see "Usage counts" in
+// CONTRIBUTING.md.
 import { appendFileSync, existsSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 const API = "https://api.github.com";
+
+/**
+ * The repository to archive: TRAFFIC_REPO, or pbiplint/pbiplint. Not GITHUB_REPOSITORY, which in
+ * the workflow names pbiplint/metrics, where it runs.
+ */
+export const trafficRepo = (env) => env.TRAFFIC_REPO || "pbiplint/pbiplint";
 
 /** The traffic endpoints, under /repos/{owner}/{repo}/traffic/. Views and clones per day. */
 const ENDPOINTS = {
@@ -97,7 +104,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.ar
     process.exit(2);
   }
   const { changed } = await main({
-    repo: process.env.GITHUB_REPOSITORY ?? "pbiplint/pbiplint",
+    repo: trafficRepo(process.env),
     token: process.env.TRAFFIC_TOKEN,
     file,
     today: new Date().toISOString().slice(0, 10),

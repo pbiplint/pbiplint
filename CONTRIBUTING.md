@@ -119,13 +119,15 @@ views, and visitors by address. Read them as trends.
   and https://api.npmjs.org/downloads/range/last-year/pbiplint for a daily series (the same for
   `@pbiplint/core`). CI runs, registry mirrors, and security scanners all download, so most of the
   count is machines.
-- **The repository:** GitHub keeps views, clones, referrers, and popular paths for 14 days only, so
-  `.github/workflows/traffic.yml` saves them every Monday to `traffic.json` on the `metrics`
-  branch, merged by date (`scripts/traffic.mjs`). It reads them with a fine-grained token in the
-  `TRAFFIC_TOKEN` secret, with read access to this repository's administration and nothing else.
-  The token expires; when it does, the workflow fails with a 401, and GitHub notifies whoever last
-  changed the workflow's schedule. Make a new one with the same access and replace the secret. GitHub Pages gives no visitor counts,
-  so this covers the repository, not pbiplint.com.
+- **The repository:** GitHub keeps views, clones, referrers, and popular paths for 14 days only, and
+  shows them only to maintainers, so a weekly workflow in the private repository `pbiplint/metrics`
+  saves them every Monday to its `traffic.json`, merged by date, with `scripts/traffic.mjs` from
+  here. Private, because referrers can name the organizations behind them. It reads the traffic
+  with a fine-grained token in that repository's `TRAFFIC_TOKEN` secret, with read access to this
+  repository's administration and nothing else. The token expires; when it does, the workflow fails
+  with a 401, and GitHub notifies whoever last changed the workflow's schedule. Make a new one with
+  the same access and replace the secret. GitHub Pages gives no visitor counts, so this covers the
+  repository, not pbiplint.com.
 - **The GitHub Action:** search code for
   [`uses: pbiplint/action`](https://github.com/search?q=%22uses%3A+pbiplint%2Faction%22&type=code)
   by hand now and then. It finds public repositories only, and the total shifts as GitHub's index

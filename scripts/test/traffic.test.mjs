@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { tempDir } from "../../tests/support/temp-dir.js";
-import { fetchTraffic, main, mergeTraffic } from "../traffic.mjs";
+import { fetchTraffic, main, mergeTraffic, trafficRepo } from "../traffic.mjs";
 
 const day = (date, count, uniques) => ({ timestamp: `${date}T00:00:00Z`, count, uniques });
 
@@ -158,5 +158,16 @@ describe("main", () => {
       "2026-09-28",
       "2026-09-29",
     ]);
+  });
+});
+
+describe("trafficRepo", () => {
+  it("archives pbiplint/pbiplint unless TRAFFIC_REPO names another", () => {
+    expect(trafficRepo({})).toBe("pbiplint/pbiplint");
+    expect(trafficRepo({ TRAFFIC_REPO: "pbiplint/action" })).toBe("pbiplint/action");
+  });
+
+  it("ignores GITHUB_REPOSITORY, which names the repository the workflow runs in", () => {
+    expect(trafficRepo({ GITHUB_REPOSITORY: "pbiplint/metrics" })).toBe("pbiplint/pbiplint");
   });
 });

@@ -101,8 +101,9 @@ test("while results show, the site's own links open in a new tab, so the results
     header.locator("a.brand"),
     header.locator('nav a[href="/"]'),
     header.locator('nav a[href="/rules/"]'),
+    header.locator('nav a[href="/privacy/"]'),
     header.locator('nav a[href="/about/"]'),
-    page.locator('.site-footer a[href="/about/#verify"]'),
+    page.locator('.site-footer a[href="/privacy/"]'),
   ];
   // Before a run there is nothing to lose, so they navigate as usual.
   for (const link of site) await expect(link).not.toHaveAttribute("target");
@@ -146,6 +147,46 @@ test("lints pasted TMDL, and an empty paste keeps the textarea in view", async (
   await expect(page.locator("#results h2")).toHaveText("Results for pasted TMDL (model, 1 file)");
   await expect(page.locator("#status")).toBeHidden();
   await expect(page.locator("#results details.files")).toHaveCount(0);
+});
+
+test("once the page has loaded, linting makes no request, whatever alphabet the names are in", async ({
+  page,
+}) => {
+  // The Privacy Promise's first check, a lint and an export, on a project whose names reach every
+  // file Inter is split into: Cyrillic, Cyrillic extended (Ґ), Greek, Greek extended (Ἀ), Latin
+  // extended (ż), and Vietnamese (ư). A browser fetches each file the first time the page shows one
+  // of its letters, so main.ts loads them all as the page starts.
+  await page.waitForLoadState("networkidle");
+  await page.evaluate(() => document.fonts.ready);
+  const requests: string[] = [];
+  page.on("request", (request) => requests.push(request.url()));
+  const name = "Продажи Ґ Ποσό Ἀθήνα Sprzedaż Ước";
+  await withTempFolder(
+    "pbiplint-alphabets-",
+    (dir) => {
+      const tables = join(dir, `${name}.SemanticModel`, "definition", "tables");
+      mkdirSync(tables, { recursive: true });
+      writeFileSync(
+        join(tables, "Продажи.tmdl"),
+        "table Продажи\n\tcolumn Ποσό\n\t\tdataType: double\n\t\tsourceColumn: Ποσό\n",
+      );
+    },
+    async (dir) => {
+      await page.locator("#folder-input").setInputFiles(join(dir, `${name}.SemanticModel`));
+      await expect(page.locator("#results h2")).toContainText(name);
+    },
+  );
+  // An export is made in the tab and handed to the browser as a blob, which is not a request.
+  await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Download Markdown" }).click(),
+  ]);
+  // Two frames, so the heading has been laid out and any font it needs has been asked for.
+  await page.evaluate(
+    () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+  );
+  await page.evaluate(() => document.fonts.ready);
+  expect(requests.filter((url) => /^https?:/.test(url))).toEqual([]);
 });
 
 test("reads a whole model from the folder input, including a file whose name starts with a space", async ({

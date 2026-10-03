@@ -1,9 +1,10 @@
 # Security
 
 pbiplint runs on your machine and makes no network calls. It reads the files you point it at
-and writes to your terminal or to the file you name, and it uploads nothing. There is no
-service to attack, so the security surface is what happens when the linter is handed input it
-did not expect.
+and writes to your terminal or to the file you name, and it uploads nothing.
+[The pbiplint Privacy Promise](https://pbiplint.com/privacy/) says this for the site, the command
+line, and the GitHub Action, with the checks that show it. There is no service to attack, so the
+security surface is what happens when the linter is handed input it did not expect.
 
 ## Reporting a vulnerability
 
@@ -37,6 +38,8 @@ do not trust, which puts attacker-controlled TMDL in front of the parser.
   through finding text.
 - Anything in `packages/core` that reaches the network or the file system. The package is
   browser-pure by design and a build check is meant to make this impossible.
+- Anything that breaks the Privacy Promise: a network request from the site or the command line,
+  or a file opened that the Promise says pbiplint never opens.
 
 ## Not in scope
 

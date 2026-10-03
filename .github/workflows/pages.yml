@@ -59,7 +59,7 @@ jobs:
           marker="name=\"pbiplint-build\" content=\"${SHA:0:7}\""
           for attempt in $(seq 1 18); do
             ok=true
-            for path in / /rules/ /about/; do
+            for path in / /rules/ /privacy/ /about/; do
               curl -fsS --max-time 15 -H 'Cache-Control: no-cache' "https://pbiplint.com${path}" | grep -qF "$marker" || ok=false
             done
             if [ "$ok" = true ]; then

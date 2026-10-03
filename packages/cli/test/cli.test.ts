@@ -290,7 +290,9 @@ describe("pbiplint CLI", () => {
     expect(r.out.trim().split("\n").length).toBeGreaterThanOrEqual(72);
   });
   it("prints help and version, and exits 2 on usage errors", async () => {
-    expect((await run(["--help"])).out).toContain("Usage: pbiplint");
+    const help = (await run(["--help"])).out;
+    expect(help).toContain("Usage: pbiplint");
+    expect(help).toMatch(/\nThe pbiplint Privacy Promise: https:\/\/pbiplint\.com\/privacy\/\n$/);
     expect((await run(["--version"])).out).toMatch(/^pbiplint \d+\.\d+\.\d+/);
     const bad = await run(["--format", "xml", sample]);
     expect(bad.code).toBe(2);

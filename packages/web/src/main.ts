@@ -27,6 +27,13 @@ const byId = <T extends HTMLElement>(id: string, type: new () => T): T => {
   return el;
 };
 
+// Inter comes as one file per alphabet, and a browser fetches each the first time the page shows
+// one of its letters. Loading them all now means a project whose names are in Cyrillic, Greek, or
+// Vietnamese, or carry accented letters, fetches nothing once it is dropped: the Privacy Promise's
+// first check holds, and no request hints at the alphabet a project uses. A file that fails to load
+// leaves the system font in its place. happy-dom, which the unit tests run in, has no font API.
+if ("fonts" in document) document.fonts.forEach((face) => void face.load().catch(() => undefined));
+
 const paste = byId("paste", HTMLTextAreaElement);
 const status = byId("status", HTMLParagraphElement);
 const announcer = byId("announce", HTMLParagraphElement);

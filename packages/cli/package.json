@@ -1,7 +1,7 @@
 {
   "name": "pbiplint",
   "version": "0.2.3",
-  "description": "Lint Power BI projects, the semantic model (TMDL) and the report (PBIR), for best-practice violations, with text, JSON, SARIF, and Markdown output. Nothing is uploaded.",
+  "description": "Lint Power BI projects, the semantic model (TMDL) and the report (PBIR), for best-practice violations, with text, JSON, SARIF, and Markdown output. Nothing is uploaded: the pbiplint Privacy Promise, https://pbiplint.com/privacy/",
   "keywords": [
     "power-bi",
     "tmdl",

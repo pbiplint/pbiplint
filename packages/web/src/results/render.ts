@@ -146,7 +146,7 @@ export function heading(result: LintResult, source: string): string {
  * `showControls`, so the page and the terminal show the same text.
  *
  * The run lives only in this page, so every link that would leave it opens in a new tab: a rule's
- * page, the About page, and Learn. Links within the results, to a group, stay in this tab.
+ * page, the Privacy Promise, and Learn. Links within the results, to a group, stay in this tab.
  */
 export function renderResults(
   container: HTMLElement,
@@ -158,7 +158,7 @@ export function renderResults(
       "p",
       { class: "privacy" },
       "Nothing was uploaded. The analysis ran in this browser tab. ",
-      newTabLink({ href: "/about/#verify" }, "How to check that"),
+      newTabLink({ href: "/privacy/" }, "The pbiplint Privacy Promise"),
     ),
     h("h2", {}, heading(result, options.source)),
     // The summary is not a live region: everything is rebuilt on each run, and a region inserted

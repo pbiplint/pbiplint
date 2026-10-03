@@ -13,6 +13,7 @@ export default tseslint.config(
       "tests/fixtures/**",
       "packages/web/rules/**",
       "packages/web/about/**",
+      "packages/web/privacy/**",
       "**/test-results/**",
       "**/playwright-report/**",
       // Git-ignored working notes and research scratch, never part of a commit.

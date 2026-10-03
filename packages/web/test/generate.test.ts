@@ -499,7 +499,7 @@ describe("rulePage", () => {
     expect(html).toContain('<a href="/">Lint</a><a href="/rules/" aria-current="page">Rules</a>');
     expect(html).toContain('<p class="eyebrow"><a href="/rules/">Rules</a> / ');
     expect(html).toContain('<a class="button" href="/">Check a model for this</a>');
-    expect(html).toContain('<a href="/about/#verify">How to check that</a>');
+    expect(html).toContain('<a href="/privacy/">the pbiplint Privacy Promise</a>');
     // Every link that opens a new tab says so: the two in the body, the four above, and the
     // attribution line's.
     const newTabs = html.match(/target="_blank"/g)?.length;
@@ -699,14 +699,26 @@ describe("generateSite", () => {
     const about = readFileSync(join(out, "about/index.html"), "utf8");
     expect(about).toContain('<h2 id="verify">');
     expect(about).toContain('<h2 id="known-limits-in-the-browser">');
-    expect(about).toContain("<title>About pbiplint");
+    // A title that names pbiplint already is not given the suffix again.
+    expect(about).toContain("<title>About pbiplint</title>");
+    // The section links out in the world point at still lands on the subject, and links on.
+    expect(about).toContain('<h2 id="verify">Privacy</h2>');
+    expect(about).toContain('<a href="/privacy/">The pbiplint Privacy Promise</a>');
+    const privacy = readFileSync(join(out, "privacy/index.html"), "utf8");
+    expect(privacy).toContain("<title>The pbiplint Privacy Promise</title>");
+    expect(privacy).toContain(
+      '<h1 id="the-pbiplint-privacy-promise">The pbiplint Privacy Promise</h1>',
+    );
+    expect(privacy).toContain('<h2 id="check">How to check it</h2>');
+    expect(privacy).toContain('<a href="/privacy/" aria-current="page">Privacy</a>');
     const sitemap = readFileSync(join(out, "public/sitemap.xml"), "utf8");
     expect(sitemap).toContain("<loc>https://pbiplint.com/rules/hide-foreign-keys/</loc>");
     expect(sitemap).toContain("<loc>https://pbiplint.com/rules/filters-pane-state/</loc>");
-    // The home page, the About page, the rules index, and one entry per rule page.
-    expect((sitemap.match(/<loc>/g) ?? []).length).toBe(3 + 106);
+    expect(sitemap).toContain("<loc>https://pbiplint.com/privacy/</loc>");
+    // The home page, the About and Privacy Promise pages, the rules index, and one entry per rule page.
+    expect((sitemap.match(/<loc>/g) ?? []).length).toBe(4 + 106);
     expect(Object.keys(pageEntries(out)).sort()).toEqual(
-      ["about", "rules", ...metas.map((m) => `rules/${m.slug}`)].sort(),
+      ["about", "privacy", "rules", ...metas.map((m) => `rules/${m.slug}`)].sort(),
     );
   });
   it("clears the generated rules tree, so a renamed rule leaves no orphan page", () => {
@@ -993,6 +1005,26 @@ describe("contentPage", () => {
     expect(html).toContain('<a href="/">home page</a>');
     expect(html).toContain('<a href="/rules/">rules index</a>');
   });
+  it("opens the Privacy Promise's links off the site in a new tab, and its link to its checks in this one", () => {
+    const html = contentPage(
+      readFileSync(join(CONTENT_DIR, "privacy.md"), "utf8"),
+      "/privacy/",
+      "content/privacy.md",
+    );
+    expect(html).toContain('<a href="#check">checks below</a>');
+    expect(html).toContain(
+      opens(
+        "https://github.com/pbiplint/pbiplint/blob/main/packages/cli/scripts/check-network.mjs",
+        "a check of its own",
+      ),
+    );
+    expect(html).toContain(
+      opens("https://github.com/pbiplint/pbiplint/blob/main/SECURITY.md", "the security policy"),
+    );
+    // The footnote's mark ends the line of the Promise it belongs to, and opens the footnote.
+    expect(html).toContain("the Power BI engine, or the Power BI service.*</li>");
+    expect(html).toContain("<p>* Some values live inside the files");
+  });
 });
 
 describe("home page shell", () => {
@@ -1006,6 +1038,8 @@ describe("home page shell", () => {
         ),
       );
     }
-    expect(home).toContain("Nothing you lint leaves your browser.");
+    expect(home).toMatch(
+      /Nothing you lint leaves your browser:\s*<a href="\/privacy\/">the pbiplint Privacy Promise<\/a>\./,
+    );
   });
 });

@@ -37,6 +37,7 @@ jobs:
       - run: npm test
       - run: npm run check:browser
       - run: npm run build
+      - run: npm run check:network
       - run: npm run check:pack
 
   publish:
@@ -64,6 +65,7 @@ jobs:
       - run: npm run build
       # Run again on this job's own tree rather than trusting the verify job's: this is the
       # tarball that ships.
+      - run: npm run check:network
       - run: npm run check:pack
       - run: node scripts/publish.mjs
       - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3

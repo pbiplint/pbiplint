@@ -8,6 +8,7 @@ npm test            # unit tests and the parity suites (Tabular Editor and fab-i
 npm run typecheck && npm run lint
 npm run check:browser
 npm run build       # core, CLI, and the site (the site build fails on any network reference)
+npm run check:network  # after the build: the CLI bundle reaches for no network module or API
 npm run test:e2e    # the site in Chromium, Firefox, and WebKit; run `npx playwright install` once first
 ```
 
@@ -17,7 +18,7 @@ Node 20.19 or later (or 22.12 or later), which Vite needs for the site build. No
 
 - `packages/core`: parser (TMDL and PBIR), object models, indexes, rules, ranking, formatters. Browser-pure: no `node:` imports, no network.
 - `packages/cli`: the `pbiplint` command. Folder walk, config discovery, output, exit codes.
-- `packages/web`: the site, a static Vite build. `src/build` generates the rule pages, the rules index, the about page, and the sitemap from `rules/*.md` and `content/about.md` into gitignored folders, and fails the build if any page references the network. `npm run dev -w @pbiplint/web` serves it.
+- `packages/web`: the site, a static Vite build. `src/build` generates the rule pages, the rules index, the About and Privacy Promise pages, and the sitemap from `rules/*.md` and `content/*.md` (listed in `CONTENT_PAGES`) into gitignored folders, and fails the build if any page references the network. `npm run dev -w @pbiplint/web` serves it.
 - `rules/`: one Markdown page per rule, written by hand. Content, not code; see Rule pages below.
 - `tests/fixtures`, `tests/expectations`: parity fixtures (model fixtures and whole-PBIP project fixtures) and the results they must match: `<name>.json` from Tabular Editor, and `<name>.report.json` from fab-inspector, with the native rules' findings and pbiplint's side of each deviation written by hand.
 - `tests/support`: what the unit tests share. A test that needs a folder on disk makes it with `tempDir` from `temp-dir.ts`, which removes it when the test ends, pass or fail; a test that locks a file or folder in it restores the mode in a `finally` first. Lint refuses `mkdtemp`, `mkdtempSync`, and `tmpdir` in a test file, and the run fails, naming the folder, if a test leaves one behind.

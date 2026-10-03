@@ -15,6 +15,7 @@ export default tseslint.config(
       "packages/web/about/**",
       "packages/web/privacy/**",
       "packages/web/cli/**",
+      "packages/web/pipelines/**",
       "**/test-results/**",
       "**/playwright-report/**",
       // Git-ignored working notes and research scratch, never part of a commit.

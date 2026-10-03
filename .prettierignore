@@ -11,4 +11,5 @@ packages/web/rules/
 packages/web/about/
 packages/web/privacy/
 packages/web/cli/
+packages/web/pipelines/
 packages/web/public/sitemap.xml

@@ -20,7 +20,7 @@ export const WEB_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 export const RULES_DIR = join(WEB_ROOT, "../../rules");
 export const CONTENT_DIR = join(WEB_ROOT, "content");
 /** The pages written from content/<name>.md to <name>/index.html. Each output folder is gitignored. */
-export const CONTENT_PAGES = ["about", "privacy", "cli"] as const;
+export const CONTENT_PAGES = ["about", "privacy", "cli", "pipelines"] as const;
 
 export interface GenerateOptions {
   rulesDir?: string;

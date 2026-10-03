@@ -18,6 +18,7 @@ const PAGES = [
   "/about/",
   "/privacy/",
   "/cli/",
+  "/pipelines/",
   "/404.html",
 ];
 
@@ -185,7 +186,7 @@ test("the navigation stays on one row from 360 pixels up", async ({ page }) => {
   // While results show, the new-tab arrows widen the row, and it may wrap; that state is not held.
   for (const width of [360, 1280]) {
     await page.setViewportSize({ width, height: 800 });
-    for (const path of ["/", "/cli/"]) {
+    for (const path of ["/", "/cli/", "/pipelines/"]) {
       await page.goto(path);
       await page.evaluate(() => document.fonts.ready);
       const tops = await page

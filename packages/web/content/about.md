@@ -19,7 +19,7 @@ pbiplint is made by McKinley Consulting, the makers of [The Data Practitioner](h
 
 <h2 id="verify">Privacy</h2>
 
-The analysis runs in your browser, and nothing behind this site receives what you lint. [The pbiplint Privacy Promise](/privacy/) says what that covers on the site, on the command line, and in the GitHub Action, and how to check it for yourself.
+The analysis runs in your browser, and nothing behind this site receives what you lint. [The pbiplint Privacy Promise](/privacy/) says what that covers on the site, on the command line, and in your pipelines, and how to check it for yourself.
 
 ## Known limits in the browser
 

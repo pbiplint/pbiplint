@@ -713,6 +713,9 @@ describe("generateSite", () => {
     expect(privacy).toContain('<a href="/privacy/" aria-current="page">Privacy</a>');
     // The command line's paragraph of the Promise, and About's, lead to the CLI page.
     expect(privacy).toContain('<a href="/cli/#reads">');
+    // The section links out in the world point at keeps its id under its pipelines heading.
+    expect(privacy).toContain('<h3 id="in-the-github-action">In your pipelines</h3>');
+    expect(privacy).toContain('<a href="/pipelines/">Pipelines</a>');
     expect(about).toContain('<a href="/cli/">');
     const cli = readFileSync(join(out, "cli/index.html"), "utf8");
     expect(cli).toContain("<title>The pbiplint CLI</title>");
@@ -722,15 +725,36 @@ describe("generateSite", () => {
     expect(cli).toContain('<h2 id="check">How to check it</h2>');
     expect(cli).toContain('<h2 id="reads">What it reads, writes, and sends</h2>');
     expect(cli).toContain('<a href="/privacy/">the pbiplint Privacy Promise</a>');
+    // The CLI item covers the pipelines page too, so it is the current one there.
+    const pipelines = readFileSync(join(out, "pipelines/index.html"), "utf8");
+    expect(pipelines).toContain(
+      "<title>Pipelines: GitHub Actions and Azure Pipelines · pbiplint</title>",
+    );
+    expect(pipelines).toContain('<a href="/cli/" aria-current="page">CLI</a>');
+    // A section for each pipeline a link can land on, and the pages it leans on, in this tab.
+    expect(pipelines).toContain('<h2 id="github-actions">GitHub Actions</h2>');
+    expect(pipelines).toContain('<h2 id="azure-pipelines">Azure Pipelines</h2>');
+    expect(pipelines).toContain('<a href="/cli/#reads">');
+    expect(pipelines).toContain('<a href="/privacy/#in-the-github-action">');
+    expect(cli).toContain('<a href="/pipelines/">Pipelines</a>');
     const sitemap = readFileSync(join(out, "public/sitemap.xml"), "utf8");
     expect(sitemap).toContain("<loc>https://pbiplint.com/rules/hide-foreign-keys/</loc>");
     expect(sitemap).toContain("<loc>https://pbiplint.com/rules/filters-pane-state/</loc>");
     expect(sitemap).toContain("<loc>https://pbiplint.com/privacy/</loc>");
     expect(sitemap).toContain("<loc>https://pbiplint.com/cli/</loc>");
-    // The home page, the About, Privacy Promise, and CLI pages, the rules index, and one entry per rule page.
-    expect((sitemap.match(/<loc>/g) ?? []).length).toBe(5 + 106);
+    expect(sitemap).toContain("<loc>https://pbiplint.com/pipelines/</loc>");
+    // The home page, the About, Privacy Promise, CLI, and pipelines pages, the rules index, and one
+    // entry per rule page.
+    expect((sitemap.match(/<loc>/g) ?? []).length).toBe(6 + 106);
     expect(Object.keys(pageEntries(out)).sort()).toEqual(
-      ["about", "cli", "privacy", "rules", ...metas.map((m) => `rules/${m.slug}`)].sort(),
+      [
+        "about",
+        "cli",
+        "pipelines",
+        "privacy",
+        "rules",
+        ...metas.map((m) => `rules/${m.slug}`),
+      ].sort(),
     );
   });
   it("clears the generated rules tree, so a renamed rule leaves no orphan page", () => {
@@ -1016,6 +1040,16 @@ describe("contentPage", () => {
     expect(html).toContain(`on ${opens("https://github.com/pbiplint/pbiplint", "GitHub")}.`);
     expect(html).toContain('<a href="/">home page</a>');
     expect(html).toContain('<a href="/rules/">rules index</a>');
+  });
+  it("marks the CLI item current on the CLI and pipelines pages and below them, and nowhere else", () => {
+    const at = (path: string): string =>
+      contentPage("---\ntitle: T\ndescription: D\n---\n\n# T\n", path, "content/t.md");
+    const cliCurrent = '<a href="/cli/" aria-current="page">CLI</a>';
+    expect(at("/cli/")).toContain(cliCurrent);
+    expect(at("/pipelines/")).toContain(cliCurrent);
+    expect(at("/pipelines/azure/")).toContain(cliCurrent);
+    expect(at("/pipelinesx/")).not.toContain(cliCurrent);
+    expect(at("/about/")).not.toContain(cliCurrent);
   });
   it("keeps each flag in inline code whole, so a line never breaks between its hyphens", () => {
     const html = contentPage(

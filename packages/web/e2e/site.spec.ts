@@ -18,6 +18,7 @@ const PAGES = [
   "/about/",
   "/privacy/",
   "/cli/",
+  "/pipelines/",
   "/404.html",
 ];
 
@@ -109,9 +110,10 @@ test("a section of a rule page, the rules index, the About page, and the Privacy
     ["/rules/#formatting", "formatting", "Formatting"],
     ["/about/#verify", "verify", "Privacy"],
     ["/privacy/#check", "check", "How to check it"],
+    ["/privacy/#in-the-github-action", "in-the-github-action", "In your pipelines"],
   ]) {
     await page.goto(path!);
-    const heading = page.locator(`h2#${id}`);
+    const heading = page.locator(`#${id}`);
     await expect(heading).toHaveText(text!);
     await expect(heading).toBeInViewport();
     expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
@@ -185,7 +187,7 @@ test("the navigation stays on one row from 360 pixels up", async ({ page }) => {
   // While results show, the new-tab arrows widen the row, and it may wrap; that state is not held.
   for (const width of [360, 1280]) {
     await page.setViewportSize({ width, height: 800 });
-    for (const path of ["/", "/cli/"]) {
+    for (const path of ["/", "/cli/", "/pipelines/"]) {
       await page.goto(path);
       await page.evaluate(() => document.fonts.ready);
       const tops = await page

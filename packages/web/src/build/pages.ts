@@ -5,7 +5,8 @@ export const SITE = "https://pbiplint.com";
 export const NAV = [
   { href: "/", label: "Lint" },
   { href: "/rules/", label: "Rules" },
-  { href: "/cli/", label: "CLI" },
+  // One item for the command line and the pipelines that run it (Michael, October 3, 2026).
+  { href: "/cli/", label: "CLI", also: ["/pipelines/"] },
   { href: "/privacy/", label: "Privacy" },
   { href: "/about/", label: "About" },
   { href: "https://github.com/pbiplint/pbiplint", label: "GitHub" },
@@ -470,13 +471,15 @@ const renderInline = (markdown: string): string =>
   plainText(md.parseInline(markdown, { async: false }) as string);
 
 function header(path: string): string {
-  const current = (href: string): boolean =>
+  const under = (href: string): boolean =>
     href === path || (href !== "/" && !href.startsWith("http") && path.startsWith(href));
+  const current = (n: (typeof NAV)[number]): boolean =>
+    under(n.href) || ("also" in n && n.also.some(under));
   return `<header class="site-header">
       <div class="container">
         <a class="brand" href="/"><img src="/favicon.svg" alt="" width="28" height="28" /> pbiplint</a>
         <nav>
-          ${NAV.map((n) => (leavesSite(n.href) ? external(n.href, n.label) : `<a href="${n.href}"${current(n.href) ? ' aria-current="page"' : ""}>${n.label}</a>`)).join("")}
+          ${NAV.map((n) => (leavesSite(n.href) ? external(n.href, n.label) : `<a href="${n.href}"${current(n) ? ' aria-current="page"' : ""}>${n.label}</a>`)).join("")}
         </nav>
       </div>
     </header>`;

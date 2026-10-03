@@ -167,6 +167,13 @@ where the fix lives there. Never a third-party tool as the route.
 Tabular Editor may be named only after that route, as an optional bulk
 shortcut or a linked walkthrough. Not machine-checked; review checks it.
 
+Note, October 3, 2026 (#96): a report rule's How to fix it gives the
+Power BI Desktop route, and the model or source route where the fix
+lives there, but no edit to the report's JSON or folders, since a person
+fixes a report in Desktop. The Example's `pbir` fences stay: they show
+the file the rule reads. `parse-issue` alone keeps a file repair route,
+because Desktop cannot open a report file that is not valid JSON.
+
 **Frontmatter.** Unchanged fields, one changed meaning. `sources` is
 attribution only: the ruleset URL for every `ported` and
 `needsLiveModel` page, and nothing for `builtin`, since nothing was
@@ -461,6 +468,8 @@ Per section:
   only where the snippet needs a word of orientation.
 - **How to fix it.** Desktop route and TMDL property, both, where both
   exist. Power Query or the source where the fix lives there.
+  From October 3, 2026 (#96), a report page gives the Desktop route
+  only, with no report JSON route; see section 4.
 - **When to ignore it.** Name the concrete legitimate situations, for
   example a key column deliberately left visible for a lookup page, and
   what to check before deciding. When there is none, say so in a

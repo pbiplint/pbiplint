@@ -18,8 +18,10 @@ export class UsageError extends Error {
 }
 
 export interface CliOptions {
-  command: "lint" | "rules" | "help" | "version";
+  command: "lint" | "rules" | "explain" | "help" | "version";
   path?: string;
+  /** The rule id `explain` was given. */
+  ruleId?: string;
   format: FormatName;
   failOn?: SeverityName | "none";
   config?: string;
@@ -86,6 +88,15 @@ export function parseArgs(argv: string[]): CliOptions {
     if (positional.length > 1) throw new UsageError("rules takes no arguments");
     return { ...opts, command: "rules" };
   }
+  if (positional[0] === "explain") {
+    if (positional.length === 1) throw new UsageError("explain needs a rule id");
+    if (positional.length > 2) throw new UsageError("explain takes one rule id");
+    if (opts.sample || opts.failOn || opts.config || opts.output)
+      throw new UsageError("explain takes only --format");
+    if (opts.format !== "text" && opts.format !== "json")
+      throw new UsageError("explain prints text or json");
+    return { ...opts, command: "explain", ruleId: positional[1] };
+  }
   if (positional.length > 1) throw new UsageError("Expected one path");
   if (positional.length === 1 && opts.sample)
     throw new UsageError("Give either a path or --sample, not both");
@@ -97,6 +108,7 @@ export function parseArgs(argv: string[]): CliOptions {
 export const HELP = `Usage: pbiplint <path> [options]
        pbiplint --sample [options]
        pbiplint rules
+       pbiplint explain <RULE_ID> [--format json]
 
 Lint a Power BI project, its semantic model (TMDL) and its report (PBIR), for best-practice
 violations. Either part alone is fine. Nothing is uploaded.

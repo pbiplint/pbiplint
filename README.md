@@ -31,6 +31,7 @@ npx pbiplint path/to/Project                     # a PBIP folder, a .pbip file, 
 npx pbiplint --sample                            # try it on the bundled sample project
 npx pbiplint path/to/model --format sarif --output pbiplint.sarif
 npx pbiplint rules                               # every rule with status and severity
+npx pbiplint explain HIDE_FOREIGN_KEYS           # one rule's guidance, offline (--format json too)
 ```
 
 Or use it in the browser at https://pbiplint.com: paste TMDL, or drop a PBIP folder, a

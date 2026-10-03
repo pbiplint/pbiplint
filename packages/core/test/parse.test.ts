@@ -507,6 +507,22 @@ describe("root object types", () => {
     ]);
   });
 
+  it("leaves unreported what Microsoft's reader refuses but the object model holds a collection of", () => {
+    const pf = parseTmdl(
+      "t.tmdl",
+      [
+        "table T",
+        "\tset S",
+        "\tchangedProperty IsHidden",
+        "\tcalendar Gregorian",
+        "\t\tcalendarColumnGroup Year",
+        "\t\ttimeUnitColumnAssociation Month",
+        "",
+      ].join("\n"),
+    );
+    expect(pf.issues).toEqual([]);
+  });
+
   it("keeps today's reading of flags, properties, and what sits under an object it does not list", () => {
     const pf = parseTmdl(
       "t.tmdl",

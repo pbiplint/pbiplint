@@ -108,6 +108,36 @@ The tests pin the sample project's counts, so a change to a rule or to the sampl
 
 See docs/RELEASING.md.
 
+## Usage counts
+
+For maintainers. pbiplint counts nothing from inside the site or the tools, as
+[the pbiplint Privacy Promise](https://pbiplint.com/privacy/) says, so every number here comes
+from the services that deliver pbiplint. None of them counts people: they count downloads, page
+views, and visitors by address. Read them as trends.
+
+- **The CLI on npm:** https://api.npmjs.org/downloads/point/last-month/pbiplint for the last month,
+  and https://api.npmjs.org/downloads/range/last-year/pbiplint for a daily series (the same for
+  `@pbiplint/core`). CI runs, registry mirrors, and security scanners all download, so most of the
+  count is machines.
+- **The repository:** GitHub keeps views, clones, referrers, and popular paths for 14 days only, so
+  `.github/workflows/traffic.yml` saves them every Monday to `traffic.json` on the `metrics`
+  branch, merged by date (`scripts/traffic.mjs`). It reads them with a fine-grained token in the
+  `TRAFFIC_TOKEN` secret, with read access to this repository's administration and nothing else.
+  The token expires; when it does, the workflow fails with a 401 and GitHub emails the maintainer.
+  Make a new one with the same access and replace the secret. GitHub Pages gives no visitor counts,
+  so this covers the repository, not pbiplint.com.
+- **The GitHub Action:** search code for
+  [`uses: pbiplint/action`](https://github.com/search?q=%22uses%3A+pbiplint%2Faction%22&type=code)
+  by hand now and then. It finds public repositories only, and the total shifts as GitHub's index
+  catches up.
+- **The Azure Pipelines task:** the install count on its Visual Studio Marketplace listing, and the
+  publisher page's reports over time. The count starts when the extension goes public with
+  pbiplint 0.2.4. An install is an Azure DevOps organization adding the extension, not a person or
+  a run.
+- **The site:** once pbiplint.com is proxied through Cloudflare, the zone's analytics count
+  requests as they pass, with no script on the page. Cloudflare Web Analytics, which injects a
+  script, stays off, and so does Bot Fight Mode, which sets a cookie.
+
 ## Style
 
 - TypeScript strict, ESM, relative imports end in `.js`.

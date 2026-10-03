@@ -14,7 +14,14 @@ import {
   type RankedGroup,
   type Severity,
 } from "@pbiplint/core";
-import { copy, download, exportJson, exportMarkdown } from "./export.js";
+import {
+  copy,
+  download,
+  exportForAssistant,
+  exportJson,
+  exportMarkdown,
+  type ExportFile,
+} from "./export.js";
 
 export interface RenderOptions {
   /**
@@ -218,7 +225,7 @@ export function renderResults(
         ),
       ),
     ),
-    renderExportBar(result),
+    ...renderExportBar(result),
     renderFilters(result),
     h("div", { class: "groups" }, ...result.groups.map(renderGroup)),
   );
@@ -357,39 +364,58 @@ function renderFilesRead(files: string[] | undefined): HTMLElement[] {
   ];
 }
 
-function renderExportBar(result: LintResult): HTMLElement {
+function renderExportBar(result: LintResult): HTMLElement[] {
   const button = (label: string, onClick: (b: HTMLButtonElement) => void): HTMLButtonElement => {
     const b = h("button", { type: "button", class: "secondary" }, label);
     b.addEventListener("click", () => onClick(b));
     return b;
   };
-  // One handle for the copy button's reset: a second click before the first reset lands would
-  // otherwise schedule a second one that flips the label back early.
-  let restoreTimer: ReturnType<typeof setTimeout> | undefined;
   // The button label flips for everyone who can see it; this says the same thing out loud. It is
-  // empty until a copy happens, so it never competes with the #announce region on the page.
+  // empty until a copy happens, so it never competes with the #announce region on the page. Both
+  // copy buttons speak through it.
   const announce = h("span", { class: "visually-hidden", role: "status" });
-  return h(
-    "div",
-    { class: "export" },
-    button("Download Markdown", () => download(exportMarkdown(result))),
-    button("Download JSON", () => download(exportJson(result))),
-    button("Copy Markdown", (b) => {
-      const flash = (label: string, spoken: string): void => {
-        b.textContent = label;
+  const copyButton = (label: string, file: () => ExportFile, copied: string): HTMLButtonElement => {
+    // One handle per button for its reset: a second click before the first reset lands would
+    // otherwise schedule a second one that flips the label back early.
+    let restoreTimer: ReturnType<typeof setTimeout> | undefined;
+    return button(label, (b) => {
+      const flash = (shown: string, spoken: string): void => {
+        b.textContent = shown;
         announce.textContent = spoken;
         clearTimeout(restoreTimer);
-        restoreTimer = setTimeout(() => (b.textContent = "Copy Markdown"), 1500);
+        restoreTimer = setTimeout(() => (b.textContent = label), 1500);
       };
-      void copy(exportMarkdown(result))
-        .then(() => flash("Copied", "Report copied to the clipboard"))
+      void copy(file())
+        .then(() => flash("Copied", copied))
         // A browser with no clipboard API, an insecure context, an unfocused document, or a
         // refused permission all land here. Say so on the button and in the status region beside
         // it instead of failing silently.
         .catch(() => flash("Copy failed", "Copying to the clipboard failed"));
-    }),
-    announce,
-  );
+    });
+  };
+  return [
+    h(
+      "div",
+      { class: "export" },
+      button("Download Markdown", () => download(exportMarkdown(result))),
+      button("Download JSON", () => download(exportJson(result))),
+      copyButton("Copy Markdown", () => exportMarkdown(result), "Report copied to the clipboard"),
+      copyButton(
+        "Copy for an AI assistant",
+        () => exportForAssistant(result),
+        "Report and guidance copied to the clipboard",
+      ),
+      announce,
+    ),
+    // Item 5 of the Promise, said where the copy is made: the paste, not pbiplint, sends it.
+    h(
+      "p",
+      { class: "export-note" },
+      "Copy for an AI assistant adds each rule's guidance to the report. Like the report, it names your tables, columns, measures, and files. pbiplint sends nothing: whatever you paste goes to the service you paste it into, as ",
+      newTabLink({ href: "/privacy/" }, "the pbiplint Privacy Promise"),
+      " says.",
+    ),
+  ];
 }
 
 function renderFilters(result: LintResult): HTMLElement {

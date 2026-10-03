@@ -230,8 +230,23 @@ interface Selection {
   absent: Partial<Record<LayerName, string>>;
   /** Diagnostics selectProject adds: the legacy parts, then the pairing. */
   said: Diagnostic[];
-  /** The part folders a legacy diagnostic named, which need no note besides. */
-  legacy: Set<string>;
+  /**
+   * The part folders a legacy diagnostic named, which need no note besides, each with its layer, in
+   * the order the reads met them: a drop that reads nothing else is refused with their notices.
+   */
+  legacy: Map<string, LayerName>;
+}
+
+const LEGACY_NOTICE = { model: legacyModel, report: legacyReport } as const;
+
+/**
+ * The part folder `dir`, saved in a legacy format pbiplint cannot read, as the CLI's legacyPart:
+ * its notice, named by its folder's name, and its layer absent with the reason.
+ */
+function legacyPart(s: Selection, layer: LayerName, dir: string): void {
+  s.said.push(LEGACY_NOTICE[layer](nameOf(dir)));
+  s.absent[layer] = layer === "model" ? LEGACY_MODEL_REASON : LEGACY_REPORT_REASON;
+  s.legacy.set(dir, layer);
 }
 
 /**
@@ -418,15 +433,11 @@ function readFolder(s: Selection, base: string): Parts {
   }
   // A part folder in the legacy format.
   if (isReportFolder(name) && hasMarker(s, join(base, "report.json"), "legacy-report")) {
-    s.said.push(legacyReport(name));
-    s.absent.report = LEGACY_REPORT_REASON;
-    s.legacy.add(base);
+    legacyPart(s, "report", base);
     return {};
   }
   if (isModelFolder(name) && hasMarker(s, join(base, "model.bim"), "legacy-model")) {
-    s.said.push(legacyModel(name));
-    s.absent.model = LEGACY_MODEL_REASON;
-    s.legacy.add(base);
+    legacyPart(s, "model", base);
     return {};
   }
 
@@ -457,11 +468,8 @@ function readFolder(s: Selection, base: string): Parts {
     !model &&
     !s.absent.model &&
     hasMarker(s, join(modelDir, "model.bim"), "legacy-model")
-  ) {
-    s.said.push(legacyModel(nameOf(modelDir)));
-    s.absent.model = LEGACY_MODEL_REASON;
-    s.legacy.add(modelDir);
-  }
+  )
+    legacyPart(s, "model", modelDir);
   const report = reportDir
     ? readPart(s, "report", reportDir, () => reportRead(s, reportDir))
     : undefined;
@@ -470,11 +478,8 @@ function readFolder(s: Selection, base: string): Parts {
     !report &&
     !s.absent.report &&
     hasMarker(s, join(reportDir, "report.json"), "legacy-report")
-  ) {
-    s.said.push(legacyReport(nameOf(reportDir)));
-    s.absent.report = LEGACY_REPORT_REASON;
-    s.legacy.add(reportDir);
-  }
+  )
+    legacyPart(s, "report", reportDir);
   if (report && reportDir) {
     readPbip(s, base, report);
     const pbir = report.files.find((f) => f.path === "definition.pbir");
@@ -723,7 +728,7 @@ export function selectProject(tree: InputTree): SelectedProject {
     reads: [],
     absent: {},
     said: [],
-    legacy: new Set(),
+    legacy: new Map(),
   };
 
   // The dropped folder is the first path segment of everything; a lone file has no folder, and
@@ -762,32 +767,34 @@ export function selectProject(tree: InputTree): SelectedProject {
     .sort(byName);
 
   if (!model && !report) {
-    // A drop of which nothing could be read, while something this run read refused, is refused
-    // naming the first such path in the CLI's read order: a run over it would read as clean with
-    // nothing linted. What refused counts only when a read would have opened or listed it, so a
-    // legacy part alone refuses nothing, as in the CLI, whatever else it holds. The path stays
-    // relative to the drop, which joins it to the dropped folder as the CLI joins it to its input.
+    // A drop of which nothing was read is refused, whatever the reason, as the CLI refuses such a
+    // run: a run over it would read as clean with nothing linted (#175). One in which something
+    // this run read refused names the first such path in the CLI's read order. What refused counts
+    // only when a read would have opened or listed it. The path stays relative to the drop, which
+    // joins it to the dropped folder as the CLI joins it to its input.
     const refused = firstRefused(s);
     if (refused) throw new InputError(`Could not read ${refused.path}: ${reasonOf(tree, refused)}`);
-    // Nothing to lint but something to say, a legacy part alone or a walk stopped at the cap: the
-    // run goes on, and its notices say why nothing was linted.
-    if (diagnostics.length === 0) {
-      // Nothing else explains it, so a model folder holding no .tmdl files is named first, in
-      // core's words, as the CLI names it.
-      if (unlintable.length) throw new InputError(noTmdlRefusal(unlintable));
-      // Else a .pbix the walk met is named for what it is, as the CLI names it: the first its
-      // walk would meet, by its path in the drop, which is the CLI's path joined to its input,
-      // and how many more.
-      const pbix = [
-        ...new Set(tree.markers.filter((m) => m.kind === "pbix").map((m) => m.path)),
-      ].sort(walkOrder);
-      if (pbix[0] !== undefined) throw new InputError(pbixRefusal(pbix[0], pbix.length - 1));
-      // Else nothing was found, which the directory input cannot tell from a folder it could not
-      // open, so its refusal suggests the drag that names one.
-      throw new InputError(
-        tree.directoryInput ? `${NOTHING_FOUND} ${DRAG_INSTEAD}` : NOTHING_FOUND,
-      );
-    }
+    // Else a legacy part's notice, and a second's after it, in the order the reads met them,
+    // each named by its path in the drop as the CLI names it by its path joined to its input.
+    // The status line is one paragraph, so the two are one message.
+    const legacy = [...s.legacy].map(([dir, layer]) => LEGACY_NOTICE[layer](dir).message);
+    if (legacy.length) throw new InputError(legacy.join(" "));
+    // Else a model folder holding no .tmdl files is named, in core's words, as the CLI names it.
+    if (unlintable.length) throw new InputError(noTmdlRefusal(unlintable));
+    // Else a walk stopped at the depth cap, which the CLI has no counterpart to, says why: what it
+    // did not read may be the project.
+    const cap = tree.diagnostics.find((d) => d.kind === "depth-cap");
+    if (cap) throw new InputError(cap.message);
+    // Else a .pbix the walk met is named for what it is, as the CLI names it: the first its walk
+    // would meet, by its path in the drop, which is the CLI's path joined to its input, and how
+    // many more.
+    const pbix = [
+      ...new Set(tree.markers.filter((m) => m.kind === "pbix").map((m) => m.path)),
+    ].sort(walkOrder);
+    if (pbix[0] !== undefined) throw new InputError(pbixRefusal(pbix[0], pbix.length - 1));
+    // Else nothing was found, which the directory input cannot tell from a folder it could not
+    // open, so its refusal suggests the drag that names one.
+    throw new InputError(tree.directoryInput ? `${NOTHING_FOUND} ${DRAG_INSTEAD}` : NOTHING_FOUND);
   }
   const notes = unlintable.length ? [noTmdlNote(unlintable)] : [];
   // The config after the parts, as the CLI finds it after resolveProject: a drop that is refused

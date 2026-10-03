@@ -1,4 +1,12 @@
-import { lint, noTmdlNote, noTmdlRefusal, pbixRefusal, type Diagnostic } from "@pbiplint/core";
+import {
+  legacyModelNotice,
+  legacyReportNotice,
+  lint,
+  noTmdlNote,
+  noTmdlRefusal,
+  pbixRefusal,
+  type Diagnostic,
+} from "@pbiplint/core";
 import { describe, expect, it } from "vitest";
 import {
   emptyTree,
@@ -442,7 +450,7 @@ describe("selectProject", () => {
     // The model was read, and is listed as read but not linted.
     expect(p.read).toContain("Demo.SemanticModel/definition/model.tmdl (not linted)");
   });
-  it("notes a legacy model beside a lintable one, and gives a legacy model alone its diagnostic", () => {
+  it("notes a legacy model beside a lintable one, and refuses a legacy model alone with its notice", () => {
     const beside = selectProject(
       tree(proj, {
         modelFolders: ["Proj/Demo.SemanticModel", "Proj/Old.SemanticModel"],
@@ -451,31 +459,27 @@ describe("selectProject", () => {
     );
     expect(beside.diagnostics).toEqual([]);
     expect(beside.notes).toEqual([expect.stringMatching(/^Proj\/Old\.SemanticModel holds no/)]);
-    const alone = selectProject({
-      ...emptyTree(),
-      modelFolders: ["Proj/Old.SemanticModel"],
-      markers: [{ path: "Proj/Old.SemanticModel/model.bim", kind: "legacy-model" }],
-    });
-    expect(alone.files).toEqual([]);
-    expect(alone.absent).toEqual({ model: "the model is saved in the legacy model.bim format" });
-    expect(alone.diagnostics).toEqual([
-      {
-        kind: "legacy-model-format",
-        path: "Old.SemanticModel",
-        message:
-          "Old.SemanticModel is stored as model.bim, which pbiplint cannot read; save it in the TMDL format from Power BI Desktop",
-      },
-    ]);
-    // The diagnostic says it, so the note does not say it again.
-    expect(alone.notes).toEqual([]);
+    // Alone it reads nothing, so it refuses the drop with its notice (#175), not the no-.tmdl
+    // refusal, naming it by its path in the drop.
+    expect(() =>
+      selectProject({
+        ...emptyTree(),
+        modelFolders: ["Proj/Old.SemanticModel"],
+        markers: [{ path: "Proj/Old.SemanticModel/model.bim", kind: "legacy-model" }],
+      }),
+    ).toThrow(
+      new InputError(
+        "Proj/Old.SemanticModel is stored as model.bim, which pbiplint cannot read; save it in the TMDL format from Power BI Desktop",
+      ),
+    );
     // A legacy model folder dropped on its own says the same.
-    const part = selectProject({
-      ...emptyTree(),
-      modelFolders: ["Old.SemanticModel"],
-      markers: [{ path: "Old.SemanticModel/model.bim", kind: "legacy-model" }],
-    });
-    expect(part.root).toBe("Old.SemanticModel");
-    expect(part.diagnostics.map((d) => d.kind)).toEqual(["legacy-model-format"]);
+    expect(() =>
+      selectProject({
+        ...emptyTree(),
+        modelFolders: ["Old.SemanticModel"],
+        markers: [{ path: "Old.SemanticModel/model.bim", kind: "legacy-model" }],
+      }),
+    ).toThrow(new InputError(legacyModelNotice("Old.SemanticModel").message));
   });
   it("lets a folder no read would list refuse nothing and give no notice, beside a legacy part or inside one", () => {
     const legacy = {
@@ -485,18 +489,18 @@ describe("selectProject", () => {
         "Old.SemanticModel is stored as model.bim, which pbiplint cannot read; save it in the TMDL format from Power BI Desktop",
     };
     // A legacy model dropped alone, whose DAXQueries folder could not be listed: the CLI returns
-    // at its legacy check and never lists that folder, so it refuses nothing and has no notice.
-    const alone = selectProject({
-      ...emptyTree(),
-      modelFolders: ["Old.SemanticModel"],
-      markers: [{ path: "Old.SemanticModel/model.bim", kind: "legacy-model" }],
-      diagnostics: [unreadAt("Old.SemanticModel/DAXQueries")],
-      unreadFolders: ["Old.SemanticModel/DAXQueries"],
-      refusal: { path: "Old.SemanticModel/DAXQueries", reason: "locked" },
-    });
-    expect(alone.files).toEqual([]);
-    expect(alone.absent).toEqual({ model: "the model is saved in the legacy model.bim format" });
-    expect(alone.diagnostics).toEqual([legacy]);
+    // at its legacy check and never lists that folder, so the drop is refused with the legacy
+    // notice (#175), not naming that folder.
+    expect(() =>
+      selectProject({
+        ...emptyTree(),
+        modelFolders: ["Old.SemanticModel"],
+        markers: [{ path: "Old.SemanticModel/model.bim", kind: "legacy-model" }],
+        diagnostics: [unreadAt("Old.SemanticModel/DAXQueries")],
+        unreadFolders: ["Old.SemanticModel/DAXQueries"],
+        refusal: { path: "Old.SemanticModel/DAXQueries", reason: "locked" },
+      }),
+    ).toThrow(new InputError(legacy.message));
     // The same model beside a lintable report keeps its legacy reason and diagnostic, rather than
     // reading as a model folder that could not be read.
     const beside = selectProject(
@@ -774,7 +778,8 @@ describe("selectProject", () => {
         }),
       ),
     ).toThrow(new InputError("Could not read Proj/pbiplint.config.json: The file is locked"));
-    // A legacy part alone is read as the CLI reads it, and then the config it would use refuses.
+    // A legacy part alone reads nothing, which refuses the drop before its config is looked for,
+    // as the CLI refuses the project before it finds its config (#175).
     expect(() =>
       selectProject({
         ...emptyTree(),
@@ -783,7 +788,7 @@ describe("selectProject", () => {
         diagnostics: [lockedConfig],
         refusal: { path: "Proj/pbiplint.config.json", reason: "The file is locked" },
       }),
-    ).toThrow("Could not read Proj/pbiplint.config.json: The file is locked");
+    ).toThrow(new InputError(legacyModelNotice("Proj/Old.SemanticModel").message));
     // What the drop holds is refused first, as the CLI resolves the project before its config:
     // nothing read, and nothing found.
     expect(() =>
@@ -1107,20 +1112,17 @@ describe("selectProject on a folder with projects below it (#174)", () => {
   });
   it("reads the project below as a walk of its own, which nothing the folder's own reads met refuses", () => {
     // The folder's definition folder could not be listed, and the project below it reads nothing
-    // but a legacy part, which says so in its notice, as the CLI's walk.test.ts has it.
-    const p = selectProject({
-      ...emptyTree(),
-      reportFolders: ["Drop/sub/Demo.Report"],
-      markers: [{ path: "Drop/sub/Demo.Report/report.json", kind: "legacy-report" }],
-      diagnostics: [unreadAt("Drop/definition")],
-      unreadFolders: ["Drop/definition"],
-      refusal: { path: "Drop/definition", reason: "locked" },
-    });
-    expect(p.root).toBe("Drop/sub/Demo.Report");
-    expect(p.diagnostics.map((d) => [d.kind, d.path])).toEqual([
-      ["project-below-input", "sub/Demo.Report"],
-      ["legacy-report-format", "Demo.Report"],
-    ]);
+    // but a legacy part, whose notice refuses the drop (#175), as the CLI's walk.test.ts has it.
+    expect(() =>
+      selectProject({
+        ...emptyTree(),
+        reportFolders: ["Drop/sub/Demo.Report"],
+        markers: [{ path: "Drop/sub/Demo.Report/report.json", kind: "legacy-report" }],
+        diagnostics: [unreadAt("Drop/definition")],
+        unreadFolders: ["Drop/definition"],
+        refusal: { path: "Drop/definition", reason: "locked" },
+      }),
+    ).toThrow(new InputError(legacyReportNotice("Drop/sub/Demo.Report").message));
   });
   it("finds no project inside a part folder, which is that part's to read", () => {
     const p = selectProject(
@@ -1191,9 +1193,10 @@ describe("selectProject and a .pbix (tracked in #88)", () => {
       reportFolders: ["Demo/Demo.Report"],
       markers: [{ path: "Demo/Demo.Report/report.json", kind: "legacy-report" }],
     };
-    const notice = selectProject({ ...emptyTree(), ...legacy });
-    expect(notice.diagnostics.map((d) => d.kind)).toEqual(["legacy-report-format"]);
-    expect(selectProject(withPbix(["Demo/Demo.pbix"], legacy))).toEqual(notice);
+    // A legacy part alone is refused with its notice (#175), a .pbix beside it or not.
+    const notice = new InputError(legacyReportNotice("Demo/Demo.Report").message);
+    expect(() => selectProject({ ...emptyTree(), ...legacy })).toThrow(notice);
+    expect(() => selectProject(withPbix(["Demo/Demo.pbix"], legacy))).toThrow(notice);
     // The nothing-read refusal.
     expect(() =>
       selectProject(
@@ -1224,14 +1227,19 @@ describe("selectProject and a .pbix (tracked in #88)", () => {
         }),
       ),
     ).toThrow(/contains 2 reports; drop one of them: A\.Report, B\.Report/);
-    // A walk stopped at the depth cap goes on with its notice, as it does without one.
+    // A walk stopped at the depth cap, having read nothing, is refused with its notice, as it is
+    // without one (#175).
     const cap: Diagnostic = {
       kind: "depth-cap",
       path: "Demo/d0",
       message: "the walk stopped 64 folders deep at Demo/d0, so files below it were not read",
     };
-    const capped = selectProject({ ...emptyTree(), diagnostics: [cap] });
-    expect(selectProject(withPbix(["Demo/Sales.pbix"], { diagnostics: [cap] }))).toEqual(capped);
+    expect(() => selectProject({ ...emptyTree(), diagnostics: [cap] })).toThrow(
+      new InputError(cap.message),
+    );
+    expect(() => selectProject(withPbix(["Demo/Sales.pbix"], { diagnostics: [cap] }))).toThrow(
+      new InputError(cap.message),
+    );
   });
 });
 
@@ -1316,29 +1324,20 @@ describe("selectProject and a model folder that holds no .tmdl files (tracked in
     expect(beside.files.map((f) => f.path)).toEqual(["definition/model.tmdl"]);
     expect(beside.notes).toEqual([noTmdlNote(["Proj/Old.SemanticModel"])]);
   });
-  it("gives a legacy model folder its notice, as before, and one further down too, as the one project there", () => {
-    for (const at of ["Old.SemanticModel", "Proj/Old.SemanticModel"]) {
-      const p = selectProject(
-        withModels([at], { markers: [{ path: `${at}/model.bim`, kind: "legacy-model" }] }),
-      );
-      expect(p.files).toEqual([]);
-      expect(p.absent).toEqual({ model: "the model is saved in the legacy model.bim format" });
-      expect(p.diagnostics.map((d) => [d.kind, d.path])).toEqual([
-        ["legacy-model-format", "Old.SemanticModel"],
-      ]);
-    }
-    // Further down, it is the one project below the folder (#174), read as if dropped alone,
-    // which looks for its model.bim, as the CLI does.
-    const deep = "Proj/Models/Old.SemanticModel";
-    const p = selectProject(
-      withModels([deep], { markers: [{ path: `${deep}/model.bim`, kind: "legacy-model" }] }),
-    );
-    expect(p.files).toEqual([]);
-    expect(p.absent).toEqual({ model: "the model is saved in the legacy model.bim format" });
-    expect(p.diagnostics.map((d) => [d.kind, d.path])).toEqual([
-      ["project-below-input", "Models/Old.SemanticModel"],
-      ["legacy-model-format", "Old.SemanticModel"],
-    ]);
+  it("refuses a legacy model folder with its notice, not the no-.tmdl refusal, and one further down too, as the one project there", () => {
+    // A drop that reads nothing is refused (#175); the legacy notice says why. Further down, it
+    // is the one project below the folder (#174), read as if dropped alone, which looks for its
+    // model.bim, as the CLI does.
+    for (const at of [
+      "Old.SemanticModel",
+      "Proj/Old.SemanticModel",
+      "Proj/Models/Old.SemanticModel",
+    ])
+      expect(() =>
+        selectProject(
+          withModels([at], { markers: [{ path: `${at}/model.bim`, kind: "legacy-model" }] }),
+        ),
+      ).toThrow(new InputError(legacyModelNotice(at).message));
   });
   it("names no model folder the walk stopped in at the depth cap, which could hold .tmdl files", () => {
     const capAt = (path: string): Diagnostic => ({
@@ -1353,13 +1352,11 @@ describe("selectProject and a model folder that holds no .tmdl files (tracked in
       ["Proj/Deep.SemanticModel/definition", ["Proj/Deep.SemanticModel"]],
       ["Proj/Deep.SemanticModel/definition/tables", ["Proj/Deep.SemanticModel"]],
     ] as const) {
-      const p = selectProject(withModels([...modelFolders], { diagnostics: [capAt(cap)] }));
-      expect(p.notes, cap).toEqual([]);
-      // The notice names it relative to the root, Proj, as every notice does.
-      expect(p.diagnostics, cap).toEqual([capAt(cap.slice("Proj/".length))]);
-      // Nothing of the model was read, and the skipped line says so rather than that the input
-      // holds no model.
-      expect(p.absent, cap).toEqual({ model: "the model folder could not be read" });
+      // Nothing of the model was read, so the drop is refused (#175), and the notice says why,
+      // rather than that the folder holds no .tmdl files.
+      expect(() =>
+        selectProject(withModels([...modelFolders], { diagnostics: [capAt(cap)] })),
+      ).toThrow(new InputError(capAt(cap).message));
       // Beside a model it lints, it is a second model, as a folder that could not be listed is.
       const beside = withModels([...modelFolders, "Proj/Demo.SemanticModel"], {
         entries: [e("Proj/Demo.SemanticModel/definition/model.tmdl")],
@@ -1381,14 +1378,23 @@ describe("selectProject and a model folder that holds no .tmdl files (tracked in
     expect(nested.files.map((f) => f.path)).toEqual(["definition/model.tmdl"]);
     expect(nested.notes).toEqual([]);
     // A folder the walk stopped in that could hide no .tmdl file (the model's DAXQueries, below
-    // its definition folder's listing) leaves the folder named, as one that could not be listed.
+    // its definition folder's listing) leaves the folder named, as one that could not be listed:
+    // in the note beside a model it lints, and alone in the refusal, which the CLI gives too.
     const daxQueries = selectProject(
-      withModels(["Proj/Old.SemanticModel"], {
+      withModels(["Proj/Old.SemanticModel", "Proj/Demo.SemanticModel"], {
+        entries: [e("Proj/Demo.SemanticModel/definition/model.tmdl")],
         diagnostics: [capAt("Proj/Old.SemanticModel/DAXQueries")],
       }),
     );
     expect(daxQueries.notes).toEqual([noTmdlNote(["Proj/Old.SemanticModel"])]);
     expect(daxQueries.absent).toEqual({});
+    expect(() =>
+      selectProject(
+        withModels(["Proj/Old.SemanticModel"], {
+          diagnostics: [capAt("Proj/Old.SemanticModel/DAXQueries")],
+        }),
+      ),
+    ).toThrow(refusal(["Proj/Old.SemanticModel"]));
   });
   it("says a report folder the walk stopped in could not be read, rather than that the input holds no report", () => {
     const cap: Diagnostic = {
@@ -1488,5 +1494,71 @@ describe("relativeToRoot", () => {
     // A path beside the root, not above it, climbs to the shared folder and descends from there.
     expect(relativeToRoot("Proj/Demo.SemanticModel", "Proj/Other/x.tmdl")).toBe("../Other/x.tmdl");
     expect(relativeToRoot("a/b", "c/d.tmdl")).toBe("../../c/d.tmdl");
+  });
+});
+
+describe("selectProject and a drop that reads nothing but legacy parts (#175)", () => {
+  // As the CLI's walk.test.ts has it: a run that reads nothing is refused, a legacy part's notice
+  // the message, naming the part by its path in the drop as the CLI joins it to its input.
+  const report = (path: string): InputError => new InputError(legacyReportNotice(path).message);
+  const model = (path: string): string => legacyModelNotice(path).message;
+  const legacyReport = (dir: string): Partial<InputTree> => ({
+    reportFolders: [dir],
+    markers: [{ path: `${dir}/report.json`, kind: "legacy-report" }],
+  });
+  const legacyModel = (dir: string): Partial<InputTree> => ({
+    modelFolders: [dir],
+    markers: [{ path: `${dir}/model.bim`, kind: "legacy-model" }],
+  });
+  it("refuses a legacy report alone, in its PBIP folder and dropped alone", () => {
+    for (const dir of ["Proj/Demo.Report", "Demo.Report"])
+      expect(() => selectProject({ ...emptyTree(), ...legacyReport(dir) })).toThrow(report(dir));
+  });
+  it("refuses a legacy model alone, in its PBIP folder and dropped alone", () => {
+    for (const dir of ["Proj/Demo.SemanticModel", "Demo.SemanticModel"])
+      expect(() => selectProject({ ...emptyTree(), ...legacyModel(dir) })).toThrow(
+        new InputError(model(dir)),
+      );
+  });
+  it("refuses both legacy parts, the model first, as the CLI's walk meets them", () => {
+    const both: InputTree = {
+      ...emptyTree(),
+      modelFolders: ["Proj/Demo.SemanticModel"],
+      reportFolders: ["Proj/Demo.Report"],
+      markers: [
+        { path: "Proj/Demo.Report/report.json", kind: "legacy-report" },
+        { path: "Proj/Demo.SemanticModel/model.bim", kind: "legacy-model" },
+      ],
+    };
+    expect(() => selectProject(both)).toThrow(
+      new InputError(
+        `${model("Proj/Demo.SemanticModel")} ${legacyReportNotice("Proj/Demo.Report").message}`,
+      ),
+    );
+  });
+  it("refuses the one project below a plain folder when it is legacy, by its path in the drop", () => {
+    expect(() =>
+      selectProject({ ...emptyTree(), ...legacyReport("Drop/sub/Demo.Report") }),
+    ).toThrow(report("Drop/sub/Demo.Report"));
+  });
+  it("refuses a drop of which the walk read nothing before it stopped at the depth cap", () => {
+    const message = "the walk stopped 64 folders deep at Drop/d0, so files below it were not read";
+    expect(() =>
+      selectProject({
+        ...emptyTree(),
+        diagnostics: [{ kind: "depth-cap", path: "Drop/d0", message }],
+      }),
+    ).toThrow(new InputError(message));
+  });
+  it("still lints a part read beside a legacy one, with the notice and the layer's reason", () => {
+    const p = selectProject({
+      ...emptyTree(),
+      entries: [e("Proj/Demo.SemanticModel/definition/model.tmdl", "model Model\n")],
+      modelFolders: ["Proj/Demo.SemanticModel"],
+      ...legacyReport("Proj/Demo.Report"),
+    });
+    expect(p.files.map((f) => f.path)).toEqual(["definition/model.tmdl"]);
+    expect(p.absent).toEqual({ report: "the report is saved in the legacy report.json format" });
+    expect(p.diagnostics.map((d) => d.kind)).toEqual(["legacy-report-format"]);
   });
 });

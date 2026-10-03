@@ -1,0 +1,98 @@
+# One-off: runs the CLI page's commands (#162) on Linux and Windows and prints what they print.
+# Removed before the pull request merges. Lints only the bundled sample: the logs are public.
+name: CLI page checks
+
+on:
+  push:
+    branches: [docs/cli-page]
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+      - name: Install and run
+        run: |
+          set -x
+          node --version
+          npm install --global pbiplint
+          pbiplint --version
+          npx --yes pbiplint --version
+          npx --yes --loglevel http pbiplint --version 2>&1 | grep "http fetch" || true
+          npx --offline pbiplint --sample > /dev/null; echo "exit $?"
+          npx --offline --loglevel http pbiplint --version 2>&1 | grep -c "http fetch" || true
+      - name: Node permission model (Node 26)
+        run: |
+          set -x
+          node --permission --allow-fs-read='*' "$(npm root -g)/pbiplint/dist/pbiplint.mjs" --sample > /dev/null; echo "exit $?"
+          node --permission -e "fetch('https://example.com').catch(e => console.log(e.cause.code))"
+          mkdir -p out
+          node --permission --allow-fs-read='*' --allow-fs-write="$PWD/out" "$(npm root -g)/pbiplint/dist/pbiplint.mjs" --sample --format sarif --output out/pbiplint.sarif; echo "exit $?"
+          ls -la out
+      - name: Watch it with strace
+        run: |
+          sudo apt-get install -y -q strace > /dev/null
+          strace -f -e trace=network pbiplint --sample > /dev/null 2> strace.txt; echo "exit $?"
+          grep -v "^pbiplint:" strace.txt | grep -v "^+++\|^---" | head -40
+          echo "network syscalls: $(grep -cE "socket|connect|sendto|recvfrom|bind" strace.txt)"
+          echo "--- control: a fetch under strace"
+          strace -f -e trace=network node -e "fetch('https://example.com').then(r => console.log(r.status))" 2>&1 | grep -E "connect\(" | head -3
+      - name: No network at all
+        run: |
+          set -x
+          docker run --rm --network none -v "$(npm root -g)/pbiplint:/opt/pbiplint:ro" node:26 node /opt/pbiplint/dist/pbiplint.mjs --sample > /dev/null; echo "exit $?"
+          docker run --rm --network none node:26 node -e "fetch('https://example.com').catch(e => console.log(e.cause.code))"
+          unshare --user --map-root-user --net pbiplint --sample > /dev/null; echo "exit $?"
+      - name: Check what you installed
+        run: |
+          set -x
+          npm view pbiplint dependencies; echo "(end of dependencies)"
+          npm pack pbiplint --dry-run 2>&1 | grep -v "sample/"
+          mkdir audit && cd audit && npm init -y > /dev/null && npm install -q pbiplint > /dev/null && npm audit signatures
+
+  linux-node24:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Node 24 accepts --permission but does not restrict the network
+        run: |
+          node --version
+          node --permission -e "fetch('https://example.com').then(r => console.log('fetch went through', r.status), e => console.log(e.cause.code))"
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+      - name: Install and run
+        run: |
+          node --version
+          npm install --global pbiplint
+          pbiplint --version
+          npx --yes pbiplint --version
+          npx --offline pbiplint --sample > $null; "exit $LASTEXITCODE"
+      - name: Node permission model
+        run: |
+          node --permission --allow-fs-read=* "$(npm root -g)\pbiplint\dist\pbiplint.mjs" --sample > $null; "exit $LASTEXITCODE"
+          node --permission -e "fetch('https://example.com').catch(e => console.log(e.cause.code))"
+          New-Item -ItemType Directory -Force out | Out-Null
+          node --permission --allow-fs-read=* --allow-fs-write="$PWD\out" "$(npm root -g)\pbiplint\dist\pbiplint.mjs" --sample --format sarif --output out\pbiplint.sarif; "exit $LASTEXITCODE"
+          Get-ChildItem out
+          exit 0

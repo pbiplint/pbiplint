@@ -694,6 +694,31 @@ export function contentPage(markdown: string, path: string, source: string): str
   });
 }
 
+/**
+ * The site's llms.txt (https://llmstxt.org/): what pbiplint is, and for an assistant in a terminal,
+ * the skill the CLI prints at its own version, ahead of the pages.
+ */
+export function llmsTxt(): string {
+  return `# pbiplint
+
+> pbiplint lints Power BI projects (PBIP), the semantic model in TMDL and the report in PBIR, for best-practice problems. It runs on your own machine, in the browser at ${SITE} or as a command line from npm, and the site and the command line send nothing anywhere.
+
+For a coding assistant that can run commands: run \`npx pbiplint skill\` and follow it. It prints a skill, at the version installed, that says when to run pbiplint, how to keep its output short, how to read the results, and what to leave to the user. \`npx pbiplint explain <RULE_ID>\` prints a rule's guidance the same way, so the rule pages need not be fetched.
+
+## Docs
+
+- [The pbiplint CLI](${SITE}/cli/): how to get it, run it, and check that it sends nothing
+- [What a script can rely on](${SITE}/cli/#contract): stdout, exit codes, and the JSON fields
+- [Rules](${SITE}/rules/): every rule, what it checks, and how to fix it
+- [The pbiplint Privacy Promise](${SITE}/privacy/): what the site, the CLI, and the pipeline steps read and send
+
+## Optional
+
+- [Pipelines](${SITE}/pipelines/): pbiplint in GitHub Actions and Azure Pipelines
+- [About](${SITE}/about/): what pbiplint is and who makes it
+`;
+}
+
 export function sitemap(paths: string[]): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

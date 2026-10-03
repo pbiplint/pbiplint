@@ -10,6 +10,7 @@ import {
   ruleLinks,
   rulePage,
   rulesIndex,
+  llmsTxt,
   SITE_LAYERS,
   sitemap,
   type RuleMeta,
@@ -30,7 +31,7 @@ export interface GenerateOptions {
   published?: readonly SiteLayer[];
 }
 
-/** Writes rules/<slug>/index.html, rules/index.html, a page per CONTENT_PAGES entry, and public/sitemap.xml under outDir. */
+/** Writes rules/<slug>/index.html, rules/index.html, a page per CONTENT_PAGES entry, public/sitemap.xml, and public/llms.txt under outDir. */
 export function generateSite({
   rulesDir = RULES_DIR,
   contentDir = CONTENT_DIR,
@@ -88,6 +89,7 @@ export function generateSite({
       ...metas.map((m) => `/rules/${m.slug}/`),
     ]),
   );
+  write(join(outDir, "public", "llms.txt"), llmsTxt());
   return metas;
 }
 

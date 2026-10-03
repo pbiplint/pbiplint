@@ -32,6 +32,7 @@ const cli = (extra = []) =>
     "sample/Messy Sales Demo.Report/definition.pbir",
     "sample/Messy Sales Demo.pbip",
     "sample/pbiplint.config.json",
+    "skill/SKILL.md",
     ...extra,
   ]);
 
@@ -66,6 +67,7 @@ describe("packProblems", () => {
       "pbiplint: missing sample/Messy Sales Demo.Report/definition.pbir",
       "pbiplint: missing sample/Messy Sales Demo.pbip",
       "pbiplint: missing sample/pbiplint.config.json",
+      "pbiplint: missing skill/SKILL.md",
       "versions differ: 0.1.0, 0.2.0",
     ]);
   });

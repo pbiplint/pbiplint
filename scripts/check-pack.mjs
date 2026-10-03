@@ -33,6 +33,7 @@ export const REQUIRED = {
     "sample/Messy Sales Demo.Report/definition.pbir",
     "sample/Messy Sales Demo.pbip",
     "sample/pbiplint.config.json",
+    "skill/SKILL.md",
   ],
 };
 /**

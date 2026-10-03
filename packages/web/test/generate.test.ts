@@ -752,6 +752,12 @@ describe("generateSite", () => {
     // The home page, the About, Privacy Promise, CLI, and pipelines pages, the rules index, and one
     // entry per rule page.
     expect((sitemap.match(/<loc>/g) ?? []).length).toBe(6 + 106);
+    // llms.txt points an assistant at the skill first, then at the pages.
+    const llms = readFileSync(join(out, "public/llms.txt"), "utf8");
+    expect(llms.startsWith("# pbiplint\n\n> ")).toBe(true);
+    expect(llms.indexOf("npx pbiplint skill")).toBeLessThan(llms.indexOf("## Docs"));
+    for (const path of ["/cli/", "/cli/#contract", "/rules/", "/privacy/", "/pipelines/"])
+      expect(llms).toContain(`(https://pbiplint.com${path})`);
     expect(Object.keys(pageEntries(out)).sort()).toEqual(
       [
         "about",

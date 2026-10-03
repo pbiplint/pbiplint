@@ -30,6 +30,7 @@ npx pbiplint path/to/model --format sarif --output pbiplint.sarif
 npx pbiplint path/to/model --format markdown
 npx pbiplint rules           # every rule with its status and severity
 npx pbiplint explain HIDE_FOREIGN_KEYS   # one rule's guidance, offline (--format json too)
+npx pbiplint skill --install claude      # the skill for AI assistants, where Claude Code reads it
 npx pbiplint --help          # every option, in one screen
 npx pbiplint --version
 ```
@@ -62,7 +63,21 @@ These are the options `pbiplint --help` lists:
 
 An AI assistant that lints after each edit can keep its context small: `pbiplint <path> --quiet` for the counts, `pbiplint <path> --rule <RULE_ID>` for one rule's findings, and `pbiplint explain <RULE_ID>` for how to fix them. When there are findings, the quiet output's last line names the other two.
 
-To lint a folder named `explain` or `rules`, give it as `./explain` or `./rules`.
+### Give an AI assistant the skill
+
+`pbiplint skill` prints a skill, in the [Agent Skills](https://agentskills.io/home) format, that tells a coding assistant when to run pbiplint, how to keep its output short, how to read the results, and what to leave to you, such as ignoring a finding or editing files while Power BI Desktop has the project open. It ships with the CLI, so it always matches the version installed, and an assistant can read it from that command without installing anything.
+
+To keep it in a project, run `pbiplint skill --install <assistant>` from the project's or repository's root folder:
+
+| Assistant | Folder it writes |
+| --- | --- |
+| `claude` (Claude Code) | `.claude/skills/pbiplint/` |
+| `copilot` (GitHub Copilot) | `.github/skills/pbiplint/` |
+| `codex` (Codex) or `gemini` (Gemini CLI) | `.agents/skills/pbiplint/` |
+
+GitHub Copilot reads all three folders, so one copy is enough for it. `--install` never replaces a copy that differs from the one it would write, an edited copy or one from another version, unless you add `--force`; `--dry-run` says what it would do and writes nothing. `--show` lists each folder, whether the skill is there, and whether that copy matches the version installed. To remove it, delete the `pbiplint` folder `--show` names.
+
+To lint a folder named `explain`, `rules`, or `skill`, give it as `./explain`, `./rules`, or `./skill`.
 
 ### Gate a build on it
 
@@ -100,7 +115,7 @@ Scripts, pipelines, and AI assistants read what the CLI prints, so these parts o
 
 ### Exit codes
 
-- `0`: nothing at or above `--fail-on`. With `--rule` (from 0.2.5), only the findings shown count. `pbiplint rules`, `pbiplint explain` with a rule it knows, `--help`, and `--version` exit `0` too.
+- `0`: nothing at or above `--fail-on`. With `--rule` (from 0.2.5), only the findings shown count. `pbiplint rules`, `pbiplint explain` with a rule it knows, `pbiplint skill` (from 0.2.5) when it prints, shows, or installs the skill, `--help`, and `--version` exit `0` too.
 - `1`: something at or above `--fail-on`.
 - `2`, with nothing on stdout and the reason on stderr:
   - a usage error, such as an unknown option, an option with no value or a value it does not take, two paths, or options with no path; from 0.2.5 also an unknown rule id given to `explain` or `--rule`, or `--quiet` with a format other than text;
@@ -108,6 +123,7 @@ Scripts, pipelines, and AI assistants read what the CLI prints, so these parts o
   - an input it cannot read, such as a path that is not there, a `.pbix` file, or a model folder with no `.tmdl` files;
   - a run that reads nothing it can lint, such as a report stored only as `report.json`;
   - a folder that holds several projects or parts, naming each;
+  - `pbiplint skill --install` finding a copy that differs from the one it would write, without `--force` (from 0.2.5);
   - an unexpected error.
 
 ### The JSON document
@@ -139,8 +155,8 @@ The text format's layout and wording, which are for people and may change; the M
 
 This is the command line's part of [the pbiplint Privacy Promise](/privacy/), in detail.
 
-- **It reads** the files that describe a project, under the path you give it: the `.pbip` file, the model's `.tmdl` files, and the report's `definition.pbir`, `.platform`, and JSON files, along with the report or model folder a `.pbip` file or a report's `definition.pbir` points to. It also reads the nearest `pbiplint.config.json`, or the one `--config` names. It lists folders to find those files, and opens nothing else: it never enters the `.pbi` folder, where Power BI Desktop keeps the model's local data cache, nor `.git`, `node_modules`, or a report's `StaticResources` and `CustomVisuals` folders, and it does not follow a symbolic link below the path you give.
-- **It writes** the report to your terminal, or to the file `--output` names (creating its folder if needed). Notices, and with `--output` a one-line summary, go to stderr. Nothing else: no cache, no settings file, no log.
+- **It reads** the files that describe a project, under the path you give it: the `.pbip` file, the model's `.tmdl` files, and the report's `definition.pbir`, `.platform`, and JSON files, along with the report or model folder a `.pbip` file or a report's `definition.pbir` points to. It also reads the nearest `pbiplint.config.json`, or the one `--config` names. It lists folders to find those files, and opens nothing else: it never enters the `.pbi` folder, where Power BI Desktop keeps the model's local data cache, nor `.git`, `node_modules`, or a report's `StaticResources` and `CustomVisuals` folders, and it does not follow a symbolic link below the path you give. `pbiplint skill` reads the skill file it ships with, and any copy already installed below the current folder.
+- **It writes** the report to your terminal, or to the file `--output` names (creating its folder if needed). Notices, and with `--output` a one-line summary, go to stderr. `pbiplint skill --install` writes the skill's `SKILL.md` into the folder the assistant reads, below the current folder, when you ask it to. Nothing else: no cache, no settings file, no log.
 - **It sends** nothing. It makes no network request: no telemetry, no update check, no call home.
 
 The network steps that are not pbiplint's own belong to npm. Installing the package fetches it from the registry. And `npx pbiplint` asks the registry for the package's details on every run, even when a copy is already in npm's cache, to see whether a newer version matches; with no network, npm retries for about a minute before it runs the cached copy. Neither request carries anything from your project. To run with no network request at all, run an installed copy, or `npx --offline pbiplint`, which uses the cached copy without asking.
@@ -192,7 +208,7 @@ On Linux, `strace -f -e trace=network pbiplint --sample` lists every network cal
 ### 4. Check what you installed
 
 - `npm view pbiplint dependencies` prints nothing: the package has no runtime dependencies, so nothing else is installed with it.
-- `npm pack pbiplint --dry-run` lists what it ships: the `dist/pbiplint.mjs` bundle, the sample project, the README, `NOTICE`, `LICENSE`, and `package.json`.
+- `npm pack pbiplint --dry-run` lists what it ships: the `dist/pbiplint.mjs` bundle, the sample project, the skill (`skill/SKILL.md`), the README, `NOTICE`, `LICENSE`, and `package.json`.
 - `npm audit signatures`, in an empty folder where you install only pbiplint, reports "1 package has a verified registry signature" and "1 package has a verified attestation". Releases are published from GitHub Actions with npm provenance, and [the npm page](https://www.npmjs.com/package/pbiplint) links the commit and the workflow run that built each version.
 
 ### 5. Read the code

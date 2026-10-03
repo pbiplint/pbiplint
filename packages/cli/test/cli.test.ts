@@ -376,6 +376,42 @@ describe("pbiplint CLI", () => {
       "pbiplint: notice: Demo.Report is stored as a single report.json (PBIR-Legacy), which pbiplint cannot read. Power BI Desktop converts it to PBIR when you edit and save it, in releases from September 2026 on. See Microsoft Learn: https://learn.microsoft.com/power-bi/developer/projects/projects-report#convert-existing-report-to-pbir\n",
     );
   });
+  it("refuses a run that reads nothing but a legacy part, with exit 2 and the notice's words (#175)", async () => {
+    const root = tempDir("legacy-only");
+    mkdirSync(join(root, "Demo.Report"), { recursive: true });
+    writeFileSync(join(root, "Demo.Report", "report.json"), "{}");
+    for (const format of ["text", "markdown", "json", "sarif"]) {
+      const r = await run([root, "--format", format]);
+      expect(r.code).toBe(2);
+      // Nothing on stdout, so no "No findings." and no report to pass as clean.
+      expect(r.out).toBe("");
+      expect(r.err).toBe(
+        `pbiplint: ${root}/Demo.Report is stored as a single report.json (PBIR-Legacy), which pbiplint cannot read. Power BI Desktop converts it to PBIR when you edit and save it, in releases from September 2026 on. See Microsoft Learn: https://learn.microsoft.com/power-bi/developer/projects/projects-report#convert-existing-report-to-pbir\nRun pbiplint --help for usage.\n`,
+      );
+    }
+    // A legacy model beside it is named on a line of its own, first, as the walk meets it.
+    mkdirSync(join(root, "Demo.SemanticModel"));
+    writeFileSync(join(root, "Demo.SemanticModel", "model.bim"), "{}");
+    const both = await run([root]);
+    expect(both.code).toBe(2);
+    expect(both.err.split("\n").slice(0, 2)).toEqual([
+      `pbiplint: ${root}/Demo.SemanticModel is stored as model.bim, which pbiplint cannot read; save it in the TMDL format from Power BI Desktop`,
+      expect.stringMatching(
+        new RegExp(`^${root}/Demo\\.Report is stored as a single report\\.json`),
+      ),
+    ]);
+  });
+  it("names a legacy part left out beside a part it lints in the Markdown export too", async () => {
+    const root = tempDir("legacy-beside");
+    mkdirSync(join(root, "Demo.SemanticModel", "definition"), { recursive: true });
+    writeFileSync(join(root, "Demo.SemanticModel", "definition", "model.tmdl"), "model Model\n");
+    mkdirSync(join(root, "Demo.Report"), { recursive: true });
+    writeFileSync(join(root, "Demo.Report", "report.json"), "{}");
+    const r = await run([root, "--format", "markdown", "--fail-on", "none"]);
+    expect(r.code).toBe(0);
+    expect(r.out).toContain("the report is saved in the legacy report.json format");
+    expect(r.out).toContain("Demo.Report is stored as a single report.json (PBIR-Legacy)");
+  });
   it("lints each project of a folder that holds two by its .pbip, and refuses the folder", async () => {
     const root = workspace();
     // The model's files are model.tmdl and one per table; the report's are definition.pbir,

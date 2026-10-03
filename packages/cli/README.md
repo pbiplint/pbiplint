@@ -22,7 +22,9 @@ Formats: `text` (default), `json`, `sarif` (for GitHub code scanning and editors
 
 Exit codes: `0` no findings at or above `--fail-on`, `1` findings, `2` usage or input error.
 `--fail-on error` is the default; `--fail-on warning` and `--fail-on info` tighten the gate;
-`--fail-on none` always exits 0.
+`--fail-on none` exits 0 on any run that lints something. A run that can read nothing in the input,
+such as a report saved as a single `report.json` (PBIR-Legacy) with no model beside it, exits `2`
+and says why, rather than passing with no findings.
 
 Pointed at a folder that is not a project but holds one in a folder below it, as a repository
 often does, pbiplint lints that project and names it in a notice. A folder that holds several exits

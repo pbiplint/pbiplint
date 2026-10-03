@@ -110,6 +110,11 @@ interface Walk {
    * is refused naming that path.
    */
   refusal?: { path: string; reason: string };
+  /**
+   * Each part met in a legacy format, in the order the walk met it, by its path from `base` ("" for
+   * the base itself): a run that read nothing else is refused with their notices (#175).
+   */
+  legacy: { layer: LayerName; path: string }[];
 }
 
 /** Why a path below the input was not read: the reason a refused run gives, and a notice's words. */
@@ -211,6 +216,21 @@ function attempt<T>(
     unread(w, p, refusalOf(e), part, folder);
     return undefined;
   }
+}
+
+const LEGACY_NOTICE = { model: legacyModel, report: legacyReport } as const;
+
+/**
+ * The part folder `folder`, saved in a legacy format pbiplint cannot read (model.bim, or a single
+ * report.json): its notice, named by its path from the walk's base or, for the base itself, by its
+ * name, and its layer absent with the reason. The walk records it, for the refusal of a run that
+ * reads nothing else.
+ */
+function legacyPart(w: Walk, layer: LayerName, folder: string): void {
+  const path = toPosix(relative(w.base, folder));
+  w.project.diagnostics.push(LEGACY_NOTICE[layer](path === "" ? basename(folder) : path));
+  w.project.absent[layer] = layer === "model" ? LEGACY_MODEL_REASON : LEGACY_REPORT_REASON;
+  w.legacy.push({ layer, path });
 }
 
 /** A part at `root` with nothing read yet, for a read to fill. */
@@ -423,23 +443,31 @@ function resolveFolder(input: string, path: string, preferred?: string): Resolve
  * below a plain folder is read in its place, by a walk of its own (readFolder, #174). `input`
  * names that folder in a refusal.
  *
- * A walk of which nothing could be read, while something in it was refused, is an input that
- * could not be read: a run over it would report no findings in 0 files and read as clean with
- * nothing linted. It is refused naming the first path that refused, with that refusal's reason:
+ * A walk of which nothing was read is refused, whatever the reason: a run over it would report no
+ * findings in 0 files and read as clean with nothing linted, passing a gated pipeline (#175). One
+ * in which something was refused names the first path that refused, with that refusal's reason:
  * the folder itself was read, so what refused is below it, and a refused run prints none of the
- * notices that name it. A legacy part on its own refuses nothing, so it stays a notice.
+ * notices that name it. Else one that met a part in a legacy format gives that part's notice, and
+ * a second's on a line of its own, in the order the walk met them, rather than the run's first
+ * diagnostic, which for the one project below a plain folder is the notice naming it.
  */
 function walked(input: string, base: string, read: (w: Walk) => ResolvedProject): ResolvedProject {
-  const w: Walk = { base, project: { root: base, absent: {}, diagnostics: [] } };
+  const w: Walk = { base, project: { root: base, absent: {}, diagnostics: [] }, legacy: [] };
   const project = read(w);
-  if (!project.model && !project.report && w.refusal) {
-    const { path: below, reason } = w.refusal;
-    // Joined to `input`, as the readers' messages name the folder, in the notices' forward
-    // slashes. The folder itself, were it to refuse once read, is named by `input` alone.
-    const named = below === "" ? input : toPosix(join(input, below));
-    throw new UsageError(`Could not read ${named}: ${reason}`);
-  }
-  return project;
+  if (project.model || project.report) return project;
+  // Each path joined to `input`, as the readers' messages name the folder, in the notices' forward
+  // slashes. The folder itself is named by `input` alone.
+  const named = (below: string): string => (below === "" ? input : toPosix(join(input, below)));
+  if (w.refusal)
+    throw new UsageError(`Could not read ${named(w.refusal.path)}: ${w.refusal.reason}`);
+  const [first, ...rest] = w.legacy.map((l) => LEGACY_NOTICE[l.layer](named(l.path)).message);
+  if (first !== undefined) throw new UsageError(first, rest);
+  // Not reached today: every unread path sets the refusal, and readFolder and readNamed throw
+  // before returning neither part with nothing else to say. Kept so that a run that read nothing
+  // can never go on, whatever a later reader returns.
+  throw new UsageError(
+    `No semantic model or report found at ${input} (expected ${EXPECTED_INPUT})`,
+  );
 }
 
 /**
@@ -514,10 +542,8 @@ function readNamed(
   const at = (p: string): string => toPosix(relative(w.base, p));
   const report = readPart(w, "report", reportFolder, reportPart);
   // A part folder that could not be read has said so already, and cannot be looked in.
-  if (!report && !out.absent.report && isFile(join(reportFolder, "report.json"))) {
-    out.diagnostics.push(legacyReport(at(reportFolder)));
-    out.absent.report = LEGACY_REPORT_REASON;
-  }
+  if (!report && !out.absent.report && isFile(join(reportFolder, "report.json")))
+    legacyPart(w, "report", reportFolder);
   // The .pbip rides with the report at its path from the report root, as it does from a folder,
   // so a finding on it points at the real file.
   if (report) report.files.push({ path: toPosix(relative(report.root, pbip)), text });
@@ -535,10 +561,8 @@ function readNamed(
     const modelFolder = resolve(reportFolder, toPosix(ref.path));
     if (folderAt(modelFolder)) {
       model = readPart(w, "model", modelFolder, modelPart);
-      if (!model && !out.absent.model && isFile(join(modelFolder, "model.bim"))) {
-        out.diagnostics.push(legacyModel(at(modelFolder)));
-        out.absent.model = LEGACY_MODEL_REASON;
-      }
+      if (!model && !out.absent.model && isFile(join(modelFolder, "model.bim")))
+        legacyPart(w, "model", modelFolder);
       // A folder that is there and yields nothing else to say (one holding no .tmdl files) is
       // named as the folder route names it: the run did not include the model the report reads.
       if (!model && !out.absent.model) {
@@ -609,13 +633,11 @@ function readFolder(w: Walk, input: string, path: string, preferred?: string): R
   }
   // A part folder in the legacy format.
   if (name.endsWith(".Report") && isFile(join(path, "report.json"))) {
-    out.diagnostics.push(legacyReport(name));
-    out.absent.report = LEGACY_REPORT_REASON;
+    legacyPart(w, "report", path);
     return out;
   }
   if (name.endsWith(".SemanticModel") && isFile(join(path, "model.bim"))) {
-    out.diagnostics.push(legacyModel(name));
-    out.absent.model = LEGACY_MODEL_REASON;
+    legacyPart(w, "model", path);
     return out;
   }
 
@@ -637,20 +659,11 @@ function readFolder(w: Walk, input: string, path: string, preferred?: string): R
     );
   let model = models[0] ? readPart(w, "model", join(path, models[0]), modelPart) : undefined;
   // A part folder that could not be read has said so already, and cannot be looked in.
-  if (models[0] && !model && !out.absent.model && isFile(join(path, models[0], "model.bim"))) {
-    out.diagnostics.push(legacyModel(models[0]));
-    out.absent.model = LEGACY_MODEL_REASON;
-  }
+  if (models[0] && !model && !out.absent.model && isFile(join(path, models[0], "model.bim")))
+    legacyPart(w, "model", join(path, models[0]));
   const report = reports[0] ? readPart(w, "report", join(path, reports[0]), reportPart) : undefined;
-  if (
-    reports[0] &&
-    !report &&
-    !out.absent.report &&
-    isFile(join(path, reports[0], "report.json"))
-  ) {
-    out.diagnostics.push(legacyReport(reports[0]));
-    out.absent.report = LEGACY_REPORT_REASON;
-  }
+  if (reports[0] && !report && !out.absent.report && isFile(join(path, reports[0], "report.json")))
+    legacyPart(w, "report", join(path, reports[0]));
   if (report) {
     const pbip = pbipIn(input, path, preferred);
     // The .pbip sits at the project root, one level above the report root every other path is
@@ -722,14 +735,15 @@ function readFolder(w: Walk, input: string, path: string, preferred?: string): R
   readTree(w, direct, path, (n) => n.endsWith(".tmdl"), passed);
   if (direct.files.length) return { ...out, model: direct };
   // Nothing to lint but something to say: a legacy part alone, or a part that could not be read,
-  // which resolveFolder turns into a refused run naming the path that refused.
+  // which walked turns into a refused run naming the part or the path that refused.
   if (out.diagnostics.length) return out;
   // Nothing else explains it, so a model folder the walk met is named first, in core's words, as
   // the browser names it: the input when it is one, and each below it. Each holds no .tmdl files,
   // or the walk would have read one, and none has a notice, legacy or unread, or the run would
-  // have returned above. Each is joined to `input` as the nothing-read refusal joins its path,
-  // the input itself named by `input` alone, and they are listed in name order by their whole
-  // path, as the browser sorts its drop-relative paths, not in the order the walk met them.
+  // have returned above, to be refused in walked. Each is joined to `input` as the nothing-read
+  // refusal joins its path, the input itself named by `input` alone, and they are listed in name
+  // order by their whole path, as the browser sorts its drop-relative paths, not in the order the
+  // walk met them.
   const noTmdl = [...(name.endsWith(".SemanticModel") ? [""] : []), ...passed.models].sort(byName);
   if (noTmdl.length)
     throw new UsageError(

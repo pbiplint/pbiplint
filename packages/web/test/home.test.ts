@@ -317,16 +317,17 @@ describe("home page", () => {
     expect(document.querySelector("#results .notice")!.textContent).toMatch(
       /^Proj\/Old\.SemanticModel holds no \.tmdl files/,
     );
-    // A legacy model alone refuses nothing: the run goes on and its notice says why nothing was
-    // linted, as the CLI's does.
+    // A legacy model alone reads nothing, so the drop is refused with its notice as the error,
+    // and no results say "No findings." (#175), as the CLI exits 2.
     feed([at("Proj/Old.SemanticModel/model.bim", "{}")]);
     await tick();
     await tick();
-    expect(document.getElementById("status")!.hidden).toBe(true);
-    expect(document.getElementById("results")!.hidden).toBe(false);
-    expect([...document.querySelectorAll("#results .notice")].map((n) => n.textContent)).toEqual([
-      "Old.SemanticModel is stored as model.bim, which pbiplint cannot read; save it in the TMDL format from Power BI Desktop",
-    ]);
+    expect(document.getElementById("status")!.hidden).toBe(false);
+    expect(document.getElementById("status")!.textContent).toBe(
+      "Proj/Old.SemanticModel is stored as model.bim, which pbiplint cannot read; save it in the TMDL format from Power BI Desktop",
+    );
+    expect(document.getElementById("results")!.hidden).toBe(true);
+    expect(document.getElementById("results")!.textContent).not.toContain("No findings.");
   });
   it("links the Learn page a legacy report's notice names (tracked in #88)", async () => {
     feedFolder([
@@ -340,6 +341,18 @@ describe("home page", () => {
     const links = [...notice.querySelectorAll("a")];
     expect(links.map((a) => a.getAttribute("href"))).toEqual([LEARN_HELP_URLS[1]]);
     for (const a of links) expect(a.getAttributeNames()).toEqual(["href", "target", "rel"]);
+  });
+  it("refuses a legacy report alone with its notice as the error, linking the same Learn page (#175)", async () => {
+    feedFolder([at("Proj/Demo.Report/report.json", "{}")]);
+    await tick();
+    await tick();
+    const status = document.getElementById("status")!;
+    expect(status.dataset.kind).toBe("error");
+    expect(status.textContent).toBe(shown(legacyReportNotice("Proj/Demo.Report").message));
+    expect([...status.querySelectorAll("a")].map((a) => a.getAttribute("href"))).toEqual([
+      LEARN_HELP_URLS[1],
+    ]);
+    expect(document.getElementById("results")!.hidden).toBe(true);
   });
   it("passes the reason a layer was left out to lint, so the skipped line gives it", async () => {
     const input = document.getElementById("folder-input") as HTMLInputElement;

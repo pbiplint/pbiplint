@@ -9,7 +9,13 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, join } from "node:path";
-import { lint, noTmdlRefusal, pbixRefusal } from "@pbiplint/core";
+import {
+  legacyModelNotice,
+  legacyReportNotice,
+  lint,
+  noTmdlRefusal,
+  pbixRefusal,
+} from "@pbiplint/core";
 import { describe, expect, it } from "vitest";
 import { tempDir } from "../../../tests/support/temp-dir.js";
 import { UsageError } from "../src/args.js";
@@ -293,9 +299,9 @@ describe("resolveProject", () => {
     expect(bim.model).toBeUndefined();
     expect(bim.absent.model).toBe("the model is saved in the legacy model.bim format");
     expect(bim.diagnostics.map((d) => d.kind)).toEqual(["legacy-model-format"]);
-    const only = resolveProject(join(pbip({ legacyModel: true }), "Demo.SemanticModel"));
-    expect(only.model).toBeUndefined();
-    expect(only.diagnostics.map((d) => d.kind)).toEqual(["legacy-model-format"]);
+    // A legacy part alone reads nothing, so it refuses the run (#175).
+    const only = join(pbip({ legacyModel: true }), "Demo.SemanticModel");
+    expect(() => resolveProject(only)).toThrow(new Error(legacyModelNotice(only).message));
   });
   it("refuses two reports or two models by name and explains what it could not find", () => {
     expect(() => resolveProject(pbip({ report: true, secondReport: true }))).toThrow(
@@ -670,7 +676,7 @@ describe("resolveProject on a folder with projects below it (#174)", () => {
         chmodSync(locked, 0o755);
       }
       // Nor does the folder's own definition folder refuse the run of a project below it that
-      // reads nothing but a legacy part, which says so in its notice.
+      // reads nothing but a legacy part: the part's notice does (#175).
       const legacy = tempDir("below-locked-legacy");
       mkdirSync(join(legacy, "sub", "Demo.Report"), { recursive: true });
       writeFileSync(join(legacy, "sub", "Demo.Report", "report.json"), "{}");
@@ -678,10 +684,9 @@ describe("resolveProject on a folder with projects below it (#174)", () => {
       mkdirSync(def);
       chmodSync(def, 0o000);
       try {
-        expect(resolveProject(legacy).diagnostics.map((d) => [d.kind, d.path])).toEqual([
-          ["project-below-input", "sub/Demo.Report"],
-          ["legacy-report-format", "Demo.Report"],
-        ]);
+        expect(() => resolveProject(legacy)).toThrow(
+          new Error(legacyReportNotice(`${legacy}/sub/Demo.Report`).message),
+        );
       } finally {
         chmodSync(def, 0o755);
       }
@@ -760,11 +765,12 @@ describe("resolveProject and a .pbix (tracked in #88)", () => {
     writeFileSync(join(lints, "Archive", "Demo.PBIX"), "");
     expect(resolveProject(lints)).toEqual(before);
     expect(resolveProject(join(lints, "Demo.pbip"))).toEqual(beforePbip);
+    // A legacy part alone is refused with its notice (#175), a .pbix beside it or not.
     const legacy = pbip({ legacyReport: true });
-    const notice = resolveProject(legacy);
-    expect(notice.diagnostics.map((d) => d.kind)).toEqual(["legacy-report-format"]);
+    const notice = new Error(legacyReportNotice(`${legacy}/Demo.Report`).message);
+    expect(() => resolveProject(legacy)).toThrow(notice);
     writeFileSync(join(legacy, "Demo.pbix"), "");
-    expect(resolveProject(legacy)).toEqual(notice);
+    expect(() => resolveProject(legacy)).toThrow(notice);
     const two = pbip({ report: true, secondReport: true });
     writeFileSync(join(two, "Demo.pbix"), "");
     expect(() => resolveProject(two)).toThrow(
@@ -1118,30 +1124,22 @@ describe("resolveProject and a model folder that holds no .tmdl files (tracked i
       ),
     );
   });
-  it("gives a legacy model folder its notice, as before, and one further down too, as the one project there", () => {
+  it("refuses a legacy model folder with its notice, not the no-.tmdl refusal, and one further down too, as the one project there", () => {
+    // A run that reads nothing is refused (#175); the legacy notice says why.
     const root = folder();
     mkdirSync(join(root, "Old.SemanticModel"));
     writeFileSync(join(root, "Old.SemanticModel", "model.bim"), "{}");
-    for (const input of [join(root, "Old.SemanticModel"), root]) {
-      const p = resolveProject(input);
-      expect(p.model).toBeUndefined();
-      expect(p.absent).toEqual({ model: "the model is saved in the legacy model.bim format" });
-      expect(p.diagnostics.map((d) => [d.kind, d.path])).toEqual([
-        ["legacy-model-format", "Old.SemanticModel"],
-      ]);
-    }
+    const part = join(root, "Old.SemanticModel");
+    expect(() => resolveProject(part)).toThrow(new Error(legacyModelNotice(part).message));
+    expect(() => resolveProject(root)).toThrow(new Error(legacyModelNotice(part).message));
     // Further down, it is the one project below the folder (#174), read as if pointed at, which
     // looks for its model.bim, as the browser does.
     const deep = folder();
     mkdirSync(join(deep, "Models", "Old.SemanticModel"), { recursive: true });
     writeFileSync(join(deep, "Models", "Old.SemanticModel", "model.bim"), "{}");
-    const p = resolveProject(deep);
-    expect(p.model).toBeUndefined();
-    expect(p.absent).toEqual({ model: "the model is saved in the legacy model.bim format" });
-    expect(p.diagnostics.map((d) => [d.kind, d.path])).toEqual([
-      ["project-below-input", "Models/Old.SemanticModel"],
-      ["legacy-model-format", "Old.SemanticModel"],
-    ]);
+    expect(() => resolveProject(deep)).toThrow(
+      new Error(legacyModelNotice(`${deep}/Models/Old.SemanticModel`).message),
+    );
   });
   it.skipIf(noModes)(
     "refuses a run of which nothing could be read naming what refused, as before",
@@ -1459,5 +1457,83 @@ describe("resolveProject and the layouts nothing else pins", () => {
     expect(p.model).toBeUndefined();
     expect(p.absent).toEqual({ model: "this report reads a published model" });
     expect(p.diagnostics.map((d) => d.kind)).toEqual(["legacy-model-format"]);
+  });
+});
+
+describe("resolveProject and a run that reads nothing but legacy parts (#175)", () => {
+  // A legacy part alone used to be a notice on a run of 0 files, which read as clean. The run is
+  // refused with exit 2 instead, its message the part's notice, the path joined to the input as
+  // the nothing-read refusal joins its own.
+  const report = (path: string): string => legacyReportNotice(path).message;
+  const model = (path: string): string => legacyModelNotice(path).message;
+  it("refuses a legacy report alone, from its PBIP folder and given directly", () => {
+    const root = pbip({ legacyReport: true });
+    expect(refusal(root)).toEqual({ message: report(`${root}/Demo.Report`), lines: [] });
+    const part = join(root, "Demo.Report");
+    expect(refusal(part)).toEqual({ message: report(part), lines: [] });
+  });
+  it("refuses a legacy model alone, from its PBIP folder and given directly", () => {
+    const root = pbip({ legacyModel: true });
+    expect(refusal(root)).toEqual({ message: model(`${root}/Demo.SemanticModel`), lines: [] });
+    const part = join(root, "Demo.SemanticModel");
+    expect(refusal(part)).toEqual({ message: model(part), lines: [] });
+  });
+  it("refuses both legacy parts, naming each in the order the walk meets them", () => {
+    const root = pbip({ legacyModel: true, legacyReport: true });
+    expect(refusal(root)).toEqual({
+      message: model(`${root}/Demo.SemanticModel`),
+      lines: [report(`${root}/Demo.Report`)],
+    });
+    // By the .pbip, the report comes first, and the model is the one its definition.pbir names.
+    writeFileSync(
+      join(root, "Demo.Report", "definition.pbir"),
+      j({ datasetReference: { byPath: { path: "../Demo.SemanticModel" } } }),
+    );
+    expect(refusal(join(root, "Demo.pbip"))).toEqual({
+      message: report(`${root}/Demo.Report`),
+      lines: [model(`${root}/Demo.SemanticModel`)],
+    });
+  });
+  it("refuses a .pbip whose report is legacy and names a published model", () => {
+    const root = pbip({ legacyReport: true });
+    writeFileSync(
+      join(root, "Demo.Report", "definition.pbir"),
+      j({ datasetReference: { byConnection: { connectionString: "x" } } }),
+    );
+    expect(refusal(join(root, "Demo.pbip"))).toEqual({
+      message: report(`${root}/Demo.Report`),
+      lines: [],
+    });
+  });
+  it("refuses the one project below a plain folder when it is legacy, by its path below", () => {
+    const root = tempDir("legacy-below");
+    mkdirSync(join(root, "sub", "Demo.Report"), { recursive: true });
+    writeFileSync(join(root, "sub", "Demo.Report", "report.json"), "{}");
+    expect(refusal(root)).toEqual({ message: report(`${root}/sub/Demo.Report`), lines: [] });
+  });
+  it("names a legacy report over a model folder that holds no .tmdl files beside it", () => {
+    const root = pbip({ legacyReport: true });
+    mkdirSync(join(root, "Demo.SemanticModel", "definition"), { recursive: true });
+    expect(refusal(root)).toEqual({ message: report(`${root}/Demo.Report`), lines: [] });
+  });
+  it.skipIf(noModes)("names a path that refused over a legacy part beside it", () => {
+    const root = pbip({ legacyReport: true });
+    const model = join(root, "Demo.SemanticModel");
+    mkdirSync(join(model, "definition"), { recursive: true });
+    chmodSync(model, 0o000);
+    try {
+      expect(refusal(root)).toEqual({
+        message: `Could not read ${root}/Demo.SemanticModel: EACCES: permission denied`,
+        lines: [],
+      });
+    } finally {
+      chmodSync(model, 0o755);
+    }
+  });
+  it("still lints a part read beside a legacy one, with the notice and the layer's reason", () => {
+    const p = resolveProject(pbip({ model: true, legacyReport: true }));
+    expect(p.model).toBeDefined();
+    expect(p.absent).toEqual({ report: "the report is saved in the legacy report.json format" });
+    expect(p.diagnostics.map((d) => d.kind)).toEqual(["legacy-report-format"]);
   });
 });

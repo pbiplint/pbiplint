@@ -57,6 +57,12 @@ describe("the CLI's contract", () => {
     const text = await run([below]);
     expect(text.out).toMatch(/^Notice: /m);
     expect(text.err).toMatch(/^pbiplint: notice: /);
+    // A config's unknown rule id goes to stderr and leaves the document whole.
+    const config = join(tempDir("contract-config"), "pbiplint.config.json");
+    writeFileSync(config, JSON.stringify({ rules: { NO_SUCH_RULE: "off" } }));
+    const unknown = await run([below, "--format", "json", "--config", config]);
+    expect(() => JSON.parse(unknown.out)).not.toThrow();
+    expect(unknown.err).toContain('no rule named "NO_SUCH_RULE"');
     const explained = await run(["explain", "HIDE_FOREIGN_KEYS", "--format", "json"]);
     expect(() => JSON.parse(explained.out)).not.toThrow();
     expect(explained.err).toBe("");
@@ -97,6 +103,8 @@ describe("the CLI's contract", () => {
       ["a model folder with no .tmdl files", [join(dir, "Empty.SemanticModel")]],
       ["a run that reads nothing it can lint", [join(dir, "legacy")]],
       ["a folder holding several projects", [join(dir, "two")]],
+      ["options with no path", ["--format", "json"]],
+      ["an unexpected error", ["a\u0000b"]],
     ];
     for (const [what, argv] of refusals) {
       const r = await run(argv);
@@ -129,8 +137,14 @@ describe("the CLI's contract", () => {
     );
     for (const s of doc.summary.rulesSkipped) hasFields(s, ["id", "reason"]);
     hasFields(doc.layers, ["model", "report"]);
-    for (const layer of Object.values(doc.layers) as object[])
-      hasFields(layer, ["present"], ["files", "reason"]);
+    for (const layer of Object.values(doc.layers) as { present: boolean }[])
+      hasFields(layer, layer.present ? ["present", "files"] : ["present", "reason"]);
+    const modelOnly = JSON.parse(
+      (await run([join(sample, "Messy Sales Demo.SemanticModel"), "--format", "json"])).out,
+    );
+    hasFields(modelOnly.layers.report, ["present", "reason"]);
+    expect(modelOnly.layers.report.present).toBe(false);
+    expect(doc.summary.shown).toBeUndefined();
     expect(doc.facts.length).toBeGreaterThan(0);
     for (const f of doc.facts) hasFields(f, ["layer", "label", "value"], ["detail", "ruleId"]);
     expect(doc.diagnostics.length).toBeGreaterThan(0);
@@ -203,7 +217,7 @@ describe("the CLI's contract", () => {
       "With --format json, sarif, or markdown, stdout is one document and nothing else.",
     );
     expect(HELP).toContain(
-      "Notices and errors go to stderr; the text format also lists notices in its report.",
+      "Notices and errors go to stderr; the text and Markdown reports also list notices.",
     );
     expect(HELP).toContain("What a script can rely on: https://pbiplint.com/cli/#contract");
   });

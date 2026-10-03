@@ -39,6 +39,8 @@ describe("parseArgs", () => {
     expect(parseArgs(["rules"]).command).toBe("rules");
     expect(parseArgs(["--help"]).command).toBe("help");
     expect(parseArgs([]).command).toBe("help");
+    expect(() => parseArgs(["--format", "json"])).toThrow(/Give a path or --sample/);
+    expect(() => parseArgs(["--rule", "X"])).toThrow(/Give a path or --sample/);
     expect(parseArgs(["--version"]).command).toBe("version");
   });
   it("rejects bad input with a UsageError", () => {

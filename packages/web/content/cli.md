@@ -89,12 +89,13 @@ To ignore a rule on one object, add `annotation pbiplint.ignore = HIDE_FOREIGN_K
 
 <h2 id="contract">What a script can rely on</h2>
 
-Scripts, pipelines, and AI assistants read what the CLI prints, so these parts of its behavior are promised. A change that breaks one is named in the release notes, and for a JSON document it raises the document's `version`. Each is pinned by a test in the CLI's [contract tests](https://github.com/pbiplint/pbiplint/blob/main/packages/cli/test/contract.test.ts). This page describes the newest version; a promise marked "from 0.2.5" does not hold for an older copy, and `pbiplint --version` says which you have.
+Scripts, pipelines, and AI assistants read what the CLI prints, so these parts of its behavior are promised, and the CLI's [contract tests](https://github.com/pbiplint/pbiplint/blob/main/packages/cli/test/contract.test.ts) pin each one. This page follows the main branch: a promise marked "from 0.2.5" holds from that release on, and `pbiplint --version` says which you have.
 
 ### stdout and stderr
 
 - With `--format json`, `sarif`, or `markdown`, stdout carries exactly one document and nothing else, so it can be piped straight into a parser or a file. So does `pbiplint explain --format json` (from 0.2.5).
-- Notices (`pbiplint: notice: ...`), the one-line summary `--output` prints, a config's unknown rule ids, rule failures, and every error go to stderr. The text format also lists each notice in its report, on stdout.
+- Notices (`pbiplint: notice: ...`), the one-line summary `--output` prints, a config's unknown rule ids, and every error go to stderr. The text and Markdown reports also list each notice in the report.
+- `--help` and `--version` print text, whatever the format. `pbiplint` alone prints the help and exits `0`; options with no path and no `--sample` exit `2` (from 0.2.5), so an empty path in a script never passes as a clean run.
 - With `--output`, stdout is empty: the report goes to the file and the one-line summary to stderr.
 
 ### Exit codes
@@ -102,11 +103,11 @@ Scripts, pipelines, and AI assistants read what the CLI prints, so these parts o
 - `0`: nothing at or above `--fail-on`. With `--rule` (from 0.2.5), only the findings shown count. `pbiplint rules`, `pbiplint explain` with a rule it knows, `--help`, and `--version` exit `0` too.
 - `1`: something at or above `--fail-on`.
 - `2`, with nothing on stdout and the reason on stderr:
-  - a usage error: an unknown option, an option with no value, an unknown rule id given to `explain` or `--rule`, or `--quiet` with a format other than text;
+  - a usage error, such as an unknown option, an option with no value or a value it does not take, two paths, or options with no path; from 0.2.5 also an unknown rule id given to `explain` or `--rule`, or `--quiet` with a format other than text;
   - a config file it cannot use;
-  - an input it cannot read: a path that is not there, a `.pbix` file, or a model folder with no `.tmdl` files;
+  - an input it cannot read, such as a path that is not there, a `.pbix` file, or a model folder with no `.tmdl` files;
   - a run that reads nothing it can lint, such as a report stored only as `report.json`;
-  - a folder that holds several projects, which lists the command for each;
+  - a folder that holds several projects or parts, naming each;
   - an unexpected error.
 
 ### The JSON document
@@ -114,13 +115,13 @@ Scripts, pipelines, and AI assistants read what the CLI prints, so these parts o
 `--format json` prints one object. `version` is `1`. Its fields:
 
 - `tool`: `name` and `version`.
-- `summary`: `files`, `findings`, `errors`, `warnings`, and `infos` (counts); `rulesRun`; `rulesSkipped`, each with `id` and `reason`; `ruleErrors`, each with `id` and `message`; `ignored`, the findings an annotation ignored; and `unknownRules`, the config's rule ids that match no rule. Under `--rule` (from 0.2.5), `shown` holds `rules`, `findings`, `errors`, `warnings`, and `infos` for what is shown, while the other counts stay the whole run's.
-- `layers`: `model` and `report`, each `present: true` with `files`, or `present: false` with `reason`.
+- `summary`: the number of `files` read, and of `findings`, `errors`, `warnings`, and `infos`; `rulesRun`, the number of rules that ran; `rulesSkipped`, each with `id` and `reason`; `ruleErrors`, each with `id` and `message`; `ignored`, the number of findings an annotation ignored; and `unknownRules`, the config's rule ids that match no rule. Under `--rule` (from 0.2.5), `shown` holds `rules`, `findings`, `errors`, `warnings`, and `infos` for what is shown, while the other counts stay the whole run's.
+- `layers`: `model` and `report`, each `present: true` with `files`, the number read, or `present: false` with `reason`.
 - `facts`: what the report is at a glance, each with `layer`, `label`, `value`, and an optional `detail` and `ruleId`.
 - `diagnostics`: the notices, each with `kind`, `message`, and an optional `path`.
 - `groups`: the findings by rule, errors first. Each has `rule` (`id`, `name`, `category`, `severity` from `1` for info to `3` for error, `layer`, `slug`, `url`, and `status`), `count`, and `findings`, each with `layer`, `objectType`, `objectName`, and an optional `objectId`, `file`, `line`, and `detail`.
 
-A new field is additive and keeps `version` at `1`, so a reader should ignore fields it does not know; fields for a finding's message id and parameters are one such addition planned. A field removed or renamed, or one whose meaning changes, raises `version`.
+A new field is additive and keeps `version` at `1`, so a reader should ignore fields it does not know. One planned addition is a message id and parameters for each finding. New values can appear in a field that names one of a set, such as a skipped rule's `reason`, a notice's `kind`, or a rule's `category` and `status`, also without a version change. A field removed or renamed, or one whose meaning changes, raises `version`.
 
 ### The quiet output (from 0.2.5)
 
@@ -128,7 +129,7 @@ A new field is additive and keeps `version` at `1`, so a reader should ignore fi
 
 ### pbiplint explain --format json (from 0.2.5)
 
-One object: `version` (`1`), `tool`, `rule` (the JSON document's rule fields plus `description`, what the rule checks), and `sections`: `example`, `whyItMatters`, `howToFixIt`, `whenToIgnoreIt`, and `quirks`, each in Markdown and each left out when the rule's page has none. The same rule for changes applies.
+One object: `version` (`1`), `tool`, `rule` (the JSON document's rule fields plus `description`, what the rule checks), and `sections`: `example`, `whyItMatters`, `howToFixIt`, `whenToIgnoreIt`, and `quirks`, each in Markdown. `whyItMatters` and `howToFixIt` are always there; the others are left out when the rule's page has none. The same rule for changes applies.
 
 ### Not promised
 

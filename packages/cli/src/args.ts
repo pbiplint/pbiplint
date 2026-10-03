@@ -112,7 +112,11 @@ export function parseArgs(argv: string[]): CliOptions {
   if (positional.length > 1) throw new UsageError("Expected one path");
   if (positional.length === 1 && opts.sample)
     throw new UsageError("Give either a path or --sample, not both");
-  if (positional.length === 0 && !opts.sample) return { ...opts, command: "help" };
+  if (positional.length === 0 && !opts.sample) {
+    // Options with nothing to lint, as an empty $DIR gives, must not pass as a clean run.
+    if (argv.length > 0) throw new UsageError("Give a path or --sample");
+    return { ...opts, command: "help" };
+  }
   if (positional.length === 1) opts.path = positional[0];
   return opts;
 }
@@ -137,7 +141,7 @@ violations. Either part alone is fine. Nothing is uploaded.
 
 Exit codes: 0 no findings at or above --fail-on, 1 findings, 2 a usage error, an input it cannot read, or nothing to lint.
 With --format json, sarif, or markdown, stdout is one document and nothing else.
-Notices and errors go to stderr; the text format also lists notices in its report.
+Notices and errors go to stderr; the text and Markdown reports also list notices.
 What a script can rely on: https://pbiplint.com/cli/#contract
 Rule pages: https://pbiplint.com/rules/
 The pbiplint Privacy Promise: https://pbiplint.com/privacy/

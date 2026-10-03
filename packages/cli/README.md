@@ -113,4 +113,6 @@ https://github.com/pbiplint/pbiplint.
 
 Copyright (C) 2026 McKinley Consulting. GNU Affero General Public License, version 3 or later; see
 LICENSE. The vendored Microsoft ruleset and PBI Inspector rule metadata are MIT-licensed; see
-NOTICE. The name pbiplint and its logo are trademarks of McKinley Consulting.
+NOTICE. The skill for AI assistants (`skill/SKILL.md`, which `pbiplint skill` prints and installs) is
+MIT-licensed, so it can be committed to any repository; its notice is at the end of the file. The
+name pbiplint and its logo are trademarks of McKinley Consulting.

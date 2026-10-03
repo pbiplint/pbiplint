@@ -32,7 +32,11 @@ describe("the skill file", () => {
     expect(/^name: (.+)$/m.exec(frontmatter)![1]).toBe("pbiplint");
     expect(description.length).toBeGreaterThan(0);
     expect(description.length).toBeLessThanOrEqual(1024);
-    expect(frontmatter).toMatch(/^license: AGPL-3\.0-or-later$/m);
+    // MIT, so a copy can be committed to any repository; every copy carries the notice.
+    expect(frontmatter).toMatch(/^license: MIT$/m);
+    expect(text.trimEnd().endsWith("-->")).toBe(true);
+    expect(text).toContain("Copyright (c) 2026 McKinley Consulting");
+    expect(text).toContain("Permission is hereby granted, free of charge");
   });
 
   it("names the CLI's version in its description and its metadata", () => {

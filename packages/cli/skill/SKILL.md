@@ -1,7 +1,7 @@
 ---
 name: pbiplint
 description: Lint a Power BI project (PBIP), its semantic model in TMDL and its report in PBIR, for best-practice problems, offline, with the pbiplint CLI. Use after creating or changing any TMDL or PBIR file, however the change was made (a script, an editor, an MCP server, or Power BI Desktop); when asked to check, review, or lint a Power BI project, model, or report, or whether one is right or ready; and before a commit or pull request that touches one. pbiplint 0.2.4.
-license: AGPL-3.0-or-later
+license: MIT
 metadata:
   version: "0.2.4"
 ---
@@ -59,3 +59,30 @@ Use `npx pbiplint` (or `pbiplint` where it is installed).
 ## Reporting back
 
 Tell the user what you fixed, what is left and why, and what needs their decision, naming each rule by its id.
+
+<!--
+This skill file is licensed under the MIT License, so it can be committed to any repository.
+The rest of pbiplint is licensed under the GNU Affero General Public License, version 3 or later.
+
+MIT License
+
+Copyright (c) 2026 McKinley Consulting
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+-->

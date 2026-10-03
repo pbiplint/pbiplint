@@ -170,7 +170,10 @@ and share it. If you distribute a modified version, or run one as a
 service, you must publish your source under the same license. Other
 terms for closed products can be discussed with the copyright holder.
 The vendored Microsoft ruleset and PBI Inspector rule metadata have their own notices in
-[NOTICE](NOTICE).
+[NOTICE](NOTICE). The skill for AI assistants
+([packages/cli/skill/SKILL.md](packages/cli/skill/SKILL.md), which `pbiplint skill` prints and
+installs) is MIT-licensed, so it can be committed to any repository; its notice is at the end of
+the file.
 
 The name pbiplint and its logo are trademarks of McKinley Consulting.
 The code license does not cover them. The logo files are in [brand](brand/).

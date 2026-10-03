@@ -110,9 +110,10 @@ test("a section of a rule page, the rules index, the About page, and the Privacy
     ["/rules/#formatting", "formatting", "Formatting"],
     ["/about/#verify", "verify", "Privacy"],
     ["/privacy/#check", "check", "How to check it"],
+    ["/privacy/#in-the-github-action", "in-the-github-action", "In your pipelines"],
   ]) {
     await page.goto(path!);
-    const heading = page.locator(`h2#${id}`);
+    const heading = page.locator(`#${id}`);
     await expect(heading).toHaveText(text!);
     await expect(heading).toBeInViewport();
     expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);

@@ -41,12 +41,13 @@ Exit codes: 0 no findings at or above --fail-on (default error), 1 findings, 2 u
 [The pbiplint CLI](https://pbiplint.com/cli/) page has the rest: where to get it, what it reads and
 writes, and how to check that it sends nothing.
 
-### In GitHub Actions
+### In your pipelines
 
-One step lints the project, its semantic model and its report, on every pull request: the check
-fails on findings, each finding is annotated on its line in the Files changed tab, the full report
-is in the job summary, and the findings reach code scanning. See https://github.com/pbiplint/action
-for the inputs and outputs.
+GitHub Actions and Azure Pipelines each have a pbiplint step. In GitHub Actions, one step lints the
+project, its semantic model and its report, on every pull request: the check fails on findings,
+each finding is annotated on its line in the Files changed tab, the full report is in the job
+summary, and the findings reach code scanning. See https://github.com/pbiplint/action for the
+inputs and outputs.
 
 ```yaml
 permissions:
@@ -58,6 +59,20 @@ steps:
     with:
       path: Sales.pbip
 ```
+
+In Azure Pipelines, the pbiplint task does the same with build issues, a report on the run, and a
+SARIF artifact; see https://github.com/pbiplint/azure-pipelines, which also has a plain YAML route
+for organizations that cannot install an extension.
+
+```yaml
+steps:
+  - task: pbiplint@1
+    inputs:
+      path: Sales.pbip
+```
+
+[Pipelines](https://pbiplint.com/pipelines/) on the site lists what each sends where, and how to
+check it.
 
 ## Configure it
 

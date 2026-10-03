@@ -1,7 +1,7 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it, onTestFinished } from "vitest";
+import { describe, expect, it } from "vitest";
+import { tempDir } from "../../tests/support/temp-dir.js";
 import { fetchTraffic, main, mergeTraffic } from "../traffic.mjs";
 
 const day = (date, count, uniques) => ({ timestamp: `${date}T00:00:00Z`, count, uniques });
@@ -116,11 +116,6 @@ describe("fetchTraffic", () => {
 });
 
 describe("main", () => {
-  function folder() {
-    const dir = mkdtempSync(join(tmpdir(), "pbiplint-traffic-"));
-    onTestFinished(() => rmSync(dir, { recursive: true, force: true }));
-    return dir;
-  }
   const fetch = async (url) => ({
     ok: true,
     status: 200,
@@ -135,7 +130,7 @@ describe("main", () => {
   });
 
   it("writes the archive, then reports nothing new when a second fetch adds nothing", async () => {
-    const file = join(folder(), "traffic.json");
+    const file = join(tempDir("traffic"), "traffic.json");
     const args = { repo: "pbiplint/pbiplint", token: "t", file, today: "2026-10-05", fetch };
     expect(await main(args)).toEqual({ changed: true });
     const written = readFileSync(file, "utf8");
@@ -146,7 +141,7 @@ describe("main", () => {
   });
 
   it("adds to an archive already there", async () => {
-    const file = join(folder(), "traffic.json");
+    const file = join(tempDir("traffic"), "traffic.json");
     writeFileSync(file, JSON.stringify({ views: { "2026-01-01": { count: 1, uniques: 1 } } }));
     await main({ repo: "pbiplint/pbiplint", token: "t", file, today: "2026-10-05", fetch });
     expect(Object.keys(JSON.parse(readFileSync(file, "utf8")).views)).toEqual([

@@ -19,6 +19,9 @@ describe("logSafe", () => {
       "ok\n  \\u003a:error::x\n\t\\u003a:a\n\u00a0\\u003a:b",
     );
     expect(logSafe("a ::warning::x")).toBe("a ::warning::x");
+    // A carriage return, a line or paragraph separator, and U+0085 end a line or lead one.
+    expect(logSafe("a\r::x\u2028::y\u2029::z")).toBe("a\r\\u003a:x\u2028\\u003a:y\u2029\\u003a:z");
+    expect(logSafe("\u0085::x")).toBe("\u0085\\u003a:x");
   });
   it("leaves everything else as it is", () => {
     for (const s of [

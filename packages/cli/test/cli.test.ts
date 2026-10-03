@@ -930,6 +930,28 @@ describe("the CLI's output and CI log command sequences", () => {
       expect(COMMAND.test(toFile.err), format).toBe(false);
     }
   });
+  it("keeps JSON on stdout parsing to what --output writes when a name holds a line separator before ::", async () => {
+    const root = tempDir("log-commands-ls");
+    mkdirSync(join(root, "definition"), { recursive: true });
+    writeFileSync(
+      join(root, "definition", "model.tmdl"),
+      "model Model\n\ntable T\n\tmeasure 'a\u2028::warning::b' = 1\n",
+    );
+    const input = join(root, "definition");
+    const file = join(tempDir("log-commands-ls-out"), "out.json");
+    await run([input, "--format", "json", "--fail-on", "none", "--output", file]);
+    const r = await run([input, "--format", "json", "--fail-on", "none"]);
+    expect(JSON.parse(r.out)).toEqual(JSON.parse(readFileSync(file, "utf8")));
+    expect(r.out).toContain("\\u003a:warning::b");
+  });
+  it("leaves its own help, rule list, and version as they are", async () => {
+    // None of the CLI's own text holds a sequence, so none of it gains an escape.
+    for (const argv of [["--help"], ["rules"], ["--version"]]) {
+      const r = await run(argv);
+      expect(r.out.length, argv[0]).toBeGreaterThan(0);
+      expect(r.out, argv[0]).not.toMatch(/\\u0023|\\u003a/);
+    }
+  });
   it("writes none in a notice, a refusal, or a refusal's list on stderr", async () => {
     // Two projects below a plain folder, named so the list's lines would start with ::.
     const root = tempDir("log-commands-two");

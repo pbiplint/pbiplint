@@ -16,6 +16,7 @@ const PAGES = [
   "/rules/filters-pane-state/", // a report page whose example runs under a config
   "/rules/ensure-alttext/", // a report page with a visual.json figure
   "/about/",
+  "/privacy/",
   "/404.html",
 ];
 
@@ -97,7 +98,7 @@ test("a contrast theme still shows the mark on a link that opens in a new tab", 
   expect(colours.mark).not.toBe(colours.page);
 });
 
-test("a section of a rule page, the rules index, and the About page can be deep-linked", async ({
+test("a section of a rule page, the rules index, the About page, and the Privacy Promise can be deep-linked", async ({
   page,
 }) => {
   // Each heading must be in view and the page must have scrolled to get there, since a heading
@@ -105,7 +106,8 @@ test("a section of a rule page, the rules index, and the About page can be deep-
   for (const [path, id, text] of [
     ["/rules/hide-foreign-keys/#how-to-fix-it", "how-to-fix-it", "How to fix it"],
     ["/rules/#formatting", "formatting", "Formatting"],
-    ["/about/#verify", "verify", "How to check that nothing is uploaded"],
+    ["/about/#verify", "verify", "Privacy"],
+    ["/privacy/#check", "check", "How to check it"],
   ]) {
     await page.goto(path!);
     const heading = page.locator(`h2#${id}`);

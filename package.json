@@ -18,6 +18,7 @@
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "check:browser": "node packages/core/scripts/check-browser-bundle.mjs",
+    "check:network": "node packages/cli/scripts/check-network.mjs",
     "check:pack": "node scripts/check-pack.mjs",
     "version:sync": "node scripts/sync-version.mjs"
   },

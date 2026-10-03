@@ -116,13 +116,13 @@ describe("renderResults", () => {
     expect(group.getAttribute("target")).toBe("_blank");
     expect(group.getAttribute("rel")).toBe("noopener noreferrer");
   });
-  it("opens the privacy line's How to check that in a new tab, and says so", () => {
+  it("opens the privacy line's link to the Privacy Promise in a new tab, and says so", () => {
     renderResults(container, result, { source: "x" });
     const link = container.querySelector(".privacy a")!;
-    expect(link.getAttribute("href")).toBe("/about/#verify");
+    expect(link.getAttribute("href")).toBe("/privacy/");
     expect(link.getAttribute("target")).toBe("_blank");
     expect(link.getAttribute("rel")).toBe("noopener noreferrer");
-    expect(link.textContent).toBe("How to check that (opens in a new tab)");
+    expect(link.textContent).toBe("The pbiplint Privacy Promise (opens in a new tab)");
     expect(link.querySelector("span.visually-hidden")!.textContent).toBe(" (opens in a new tab)");
   });
   it("words the new-tab note as the generated pages do", () => {

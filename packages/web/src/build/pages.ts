@@ -5,6 +5,7 @@ export const SITE = "https://pbiplint.com";
 export const NAV = [
   { href: "/", label: "Lint" },
   { href: "/rules/", label: "Rules" },
+  { href: "/privacy/", label: "Privacy" },
   { href: "/about/", label: "About" },
   { href: "https://github.com/pbiplint/pbiplint", label: "GitHub" },
 ] as const;
@@ -479,7 +480,7 @@ function header(path: string): string {
 
 const FOOTER = `<footer class="site-footer">
       <div class="container">
-        <p>Nothing you lint leaves your browser. <a href="/about/#verify">How to check that</a>.</p>
+        <p>Nothing you lint leaves your browser: <a href="/privacy/">the pbiplint Privacy Promise</a>.</p>
         <p>
           Free software under the AGPL-3.0-or-later license, from the makers of
           ${external("https://www.youtube.com/@TheDataPractitioner", "The Data Practitioner")}. pbiplint
@@ -668,8 +669,10 @@ ${sections}
 /** A Markdown page with `title` and `description` frontmatter, such as content/about.md. */
 export function contentPage(markdown: string, path: string, source: string): string {
   const { data, body } = parseFrontmatter(markdown, source);
+  const title = str(data.title);
   return page({
-    title: `${str(data.title)} · pbiplint`,
+    // A title that already names pbiplint, as "About pbiplint" does, is not named twice.
+    title: title.includes("pbiplint") ? title : `${title} · pbiplint`,
     description: str(data.description),
     path,
     main: `<article class="prose">\n${render(body)}\n</article>`,

@@ -6,7 +6,8 @@ Paste TMDL, or drop a PBIP folder, a `.SemanticModel` folder, or a `.Report` fol
 ranked best-practice findings with guidance on how to fix each one, and, when the input has a
 report, a "Report at a glance" block that says what the report will do when someone opens it. The
 analysis runs entirely in your browser or on your own machine from the command line. Nothing is
-uploaded, ever.
+uploaded, ever: [the pbiplint Privacy Promise](https://pbiplint.com/privacy/) says what that covers
+and how to check it.
 
 ## Status
 
@@ -33,8 +34,8 @@ npx pbiplint rules                               # every rule with status and se
 ```
 
 Or use it in the browser at https://pbiplint.com: paste TMDL, or drop a PBIP folder, a
-`.SemanticModel` folder, or a `.Report` folder. The page never uploads anything; the About page
-explains how to check that.
+`.SemanticModel` folder, or a `.Report` folder. The page never uploads anything; the
+[Privacy Promise](https://pbiplint.com/privacy/) explains how to check that.
 
 Exit codes: 0 no findings at or above --fail-on (default error), 1 findings, 2 usage or input error. That makes it a CI gate.
 

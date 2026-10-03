@@ -19,6 +19,8 @@ import {
 export const WEB_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 export const RULES_DIR = join(WEB_ROOT, "../../rules");
 export const CONTENT_DIR = join(WEB_ROOT, "content");
+/** The pages written from content/<name>.md to <name>/index.html. Each output folder is gitignored. */
+export const CONTENT_PAGES = ["about", "privacy"] as const;
 
 export interface GenerateOptions {
   rulesDir?: string;
@@ -28,7 +30,7 @@ export interface GenerateOptions {
   published?: readonly SiteLayer[];
 }
 
-/** Writes rules/<slug>/index.html, rules/index.html, about/index.html, and public/sitemap.xml under outDir. */
+/** Writes rules/<slug>/index.html, rules/index.html, a page per CONTENT_PAGES entry, and public/sitemap.xml under outDir. */
 export function generateSite({
   rulesDir = RULES_DIR,
   contentDir = CONTENT_DIR,
@@ -72,13 +74,19 @@ export function generateSite({
   rmSync(join(outDir, "rules"), { recursive: true, force: true });
   for (const p of pages) write(join(outDir, "rules", p.slug, "index.html"), p.html);
   write(join(outDir, "rules", "index.html"), index);
-  write(
-    join(outDir, "about", "index.html"),
-    contentPage(readFileSync(join(contentDir, "about.md"), "utf8"), "/about/", "content/about.md"),
-  );
+  for (const name of CONTENT_PAGES) {
+    const source = `content/${name}.md`;
+    const markdown = readFileSync(join(contentDir, `${name}.md`), "utf8");
+    write(join(outDir, name, "index.html"), contentPage(markdown, `/${name}/`, source));
+  }
   write(
     join(outDir, "public", "sitemap.xml"),
-    sitemap(["/", "/about/", "/rules/", ...metas.map((m) => `/rules/${m.slug}/`)]),
+    sitemap([
+      "/",
+      ...CONTENT_PAGES.map((name) => `/${name}/`),
+      "/rules/",
+      ...metas.map((m) => `/rules/${m.slug}/`),
+    ]),
   );
   return metas;
 }
@@ -136,7 +144,9 @@ export function generatePlugin(): Plugin {
     apply: (_config, env) => !env.isPreview,
     config() {
       const n = generateSite().length;
-      console.log(`generated ${n} rule pages, the rules index, the about page, and the sitemap`);
+      console.log(
+        `generated ${n} rule pages, the rules index, the ${CONTENT_PAGES.join(" and ")} pages, and the sitemap`,
+      );
       return { build: { rollupOptions: { input: pageEntries(WEB_ROOT) } } };
     },
   };

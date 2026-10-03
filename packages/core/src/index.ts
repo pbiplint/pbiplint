@@ -14,7 +14,9 @@ export {
   type LintOptions,
   type LintResult,
   type LintSummary,
+  type ShownSummary,
 } from "./engine/lint.js";
+export { showOnly } from "./engine/show-only.js";
 export {
   effectiveSeverity,
   rank,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseArgs, UsageError } from "../src/args.js";
+import { HELP, parseArgs, UsageError } from "../src/args.js";
 
 describe("parseArgs", () => {
   it("defaults to lint with text output", () => {
@@ -64,6 +64,21 @@ describe("parseArgs", () => {
     for (const f of ["markdown", "sarif"])
       expect(() => parseArgs(["explain", "x", "--format", f])).toThrow(/text or json/);
     for (const extra of [["--sample"], ["--fail-on", "info"], ["--config", "c.json"], ["-o", "o"]])
+      expect(() => parseArgs(["explain", "x", ...extra])).toThrow(/explain takes only --format/);
+  });
+  it("takes --quiet and repeated --rule, and keeps --quiet to text (#178)", () => {
+    expect(parseArgs(["./m", "-q", "--rule", "A", "--rule=b"])).toMatchObject({
+      command: "lint",
+      quiet: true,
+      rules: ["A", "b"],
+    });
+    expect(parseArgs(["./m", "--quiet", "--format", "text"]).quiet).toBe(true);
+    expect(HELP).toMatch(/^--quiet .*\(text only\)$/m);
+    expect(HELP).toMatch(/^--rule <RULE_ID> .*\(repeatable\)/m);
+    for (const f of ["json", "sarif", "markdown"])
+      expect(() => parseArgs(["./m", "--quiet", "--format", f])).toThrow(/--quiet is text only/);
+    expect(() => parseArgs(["./m", "--rule"])).toThrow(/--rule needs a value/);
+    for (const extra of [["--quiet"], ["--rule", "A"]])
       expect(() => parseArgs(["explain", "x", ...extra])).toThrow(/explain takes only --format/);
   });
   it("lints a folder named explain given as ./explain", () => {

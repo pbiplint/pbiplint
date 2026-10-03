@@ -42,6 +42,11 @@ export const plural = (n: number, noun: string): string => `${n} ${noun}${n === 
 /** Summary sentence shared by the text and markdown formats. */
 export function summaryLine(result: LintResult): string {
   const s = result.summary;
+  // A result kept to some rules says so, so a filtered run never reads as the whole lint.
+  if (s.shown) {
+    const k = s.shown;
+    return `${k.findings} of ${plural(s.findings, "finding")} shown, ${plural(k.rules.length, "rule")} (${plural(k.errors, "error")}, ${plural(k.warnings, "warning")}, ${k.infos} info) in ${plural(s.files, "file")}`;
+  }
   return `${plural(s.findings, "finding")} (${plural(s.errors, "error")}, ${plural(s.warnings, "warning")}, ${s.infos} info) in ${plural(s.files, "file")}`;
 }
 

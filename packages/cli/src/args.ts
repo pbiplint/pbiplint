@@ -27,6 +27,10 @@ export interface CliOptions {
   config?: string;
   output?: string;
   sample: boolean;
+  /** --quiet: the summary and one line per rule. */
+  quiet?: boolean;
+  /** --rule, as typed, once per use. */
+  rules?: string[];
 }
 
 const FAIL_ON = ["error", "warning", "info", "none"] as const;
@@ -57,6 +61,13 @@ export function parseArgs(argv: string[]): CliOptions {
         return { ...opts, command: "version" };
       case "--sample":
         opts.sample = true;
+        break;
+      case "--quiet":
+      case "-q":
+        opts.quiet = true;
+        break;
+      case "--rule":
+        opts.rules = [...(opts.rules ?? []), value()];
         break;
       case "--format": {
         const f = value();
@@ -91,12 +102,13 @@ export function parseArgs(argv: string[]): CliOptions {
   if (positional[0] === "explain") {
     if (positional.length === 1) throw new UsageError("explain needs a rule id");
     if (positional.length > 2) throw new UsageError("explain takes one rule id");
-    if (opts.sample || opts.failOn || opts.config || opts.output)
+    if (opts.sample || opts.failOn || opts.config || opts.output || opts.quiet || opts.rules)
       throw new UsageError("explain takes only --format");
     if (opts.format !== "text" && opts.format !== "json")
       throw new UsageError("explain prints text or json");
     return { ...opts, command: "explain", ruleId: positional[1] };
   }
+  if (opts.quiet && opts.format !== "text") throw new UsageError("--quiet is text only");
   if (positional.length > 1) throw new UsageError("Expected one path");
   if (positional.length === 1 && opts.sample)
     throw new UsageError("Give either a path or --sample, not both");
@@ -119,6 +131,8 @@ violations. Either part alone is fine. Nothing is uploaded.
 --fail-on <level>   error (default), warning, info, none: lowest severity that exits 1
 --config <file>     pbiplint.config.json to use (default: nearest one above the project)
 --output <file>     write the report to a file instead of stdout (a one-line summary goes to stderr)
+--quiet             the summary, then one line per rule with findings (text only)
+--rule <RULE_ID>    show only this rule's findings (repeatable); --fail-on counts only these
 --help, --version
 
 Exit codes: 0 no findings at or above --fail-on, 1 findings, 2 usage or input error.

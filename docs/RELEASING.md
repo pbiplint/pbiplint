@@ -32,9 +32,10 @@ Do these once, at the first release, not before.
 ## Every release
 
 Each release has a milestone, and its last issue is opened from the Release issue template
-(`.github/ISSUE_TEMPLATE/release.md`), which lists the steps below and the Action's, to be ticked
-as they happen. While the milestone is open, an issue that changes what users see leaves a comment
-headed "For the 0.x.y release summary", and the release notes are drafted from those comments.
+(`.github/ISSUE_TEMPLATE/release.md`), which lists the steps below, the Action's, and the Azure
+Pipelines task's, to be ticked as they happen. While the milestone is open, an issue that changes
+what users see leaves a comment headed "For the 0.x.y release summary", and the release notes are
+drafted from those comments.
 
 1. On a branch from main, set the version in both packages and regenerate the core's version file:
 
@@ -88,6 +89,10 @@ headed "For the 0.x.y release summary", and the release notes are drafted from t
    `pbiplint-version` default in `action.yml` and the version in the README's inputs table to the
    new version, then release the action following its own `RELEASING.md`. Until then, workflows
    using `pbiplint/action@v1` keep running the previous CLI.
+7. Bump the Azure Pipelines task's pin the same way. In https://github.com/pbiplint/azure-pipelines,
+   change the `pbiplintVersion` default in `task/task.json`, the README's inputs table, and the
+   plain YAML route's `PBIPLINT_VERSION`, then publish the extension following its own
+   `RELEASING.md`. Until then, pipelines using `pbiplint@1` keep running the previous CLI.
 
 A rerun of the workflow, or a tag pushed after a manual publish, is safe: `scripts/publish.mjs`
 skips a version that is already on the registry.

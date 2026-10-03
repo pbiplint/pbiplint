@@ -4,9 +4,9 @@ about: The last issue in a release's milestone, with each step ticked as it happ
 title: "Release 0.x.y: "
 ---
 
-The last issue in the 0.x.y milestone. Once everything else in the milestone is closed: publish 0.x.y to npm, release the GitHub Action with it, and update the roadmap (#103). This issue closes last.
+The last issue in the 0.x.y milestone. Once everything else in the milestone is closed: publish 0.x.y to npm, release the GitHub Action and the Azure Pipelines task with it, and update the roadmap (#103). This issue closes last.
 
-The steps follow `docs/RELEASING.md` here and `RELEASING.md` in pbiplint/action. This issue adds what 0.x.y needs beyond them and records each step as it happens, with the run, commit, or pull request that shows it. Replace every `0.x.y` with the version and `0.p.q` with the version before it, and set this issue's milestone to 0.x.y by hand, since a template cannot.
+The steps follow `docs/RELEASING.md` here and `RELEASING.md` in pbiplint/action and pbiplint/azure-pipelines. This issue adds what 0.x.y needs beyond them and records each step as it happens, with the run, commit, or pull request that shows it. Replace every `0.x.y` with the version and `0.p.q` with the version before it, and set this issue's milestone to 0.x.y by hand, since a template cannot.
 
 ## Particular to this release
 
@@ -42,9 +42,18 @@ Following pbiplint/action's `RELEASING.md`, "After a pbiplint CLI release".
 - [ ] **Tag.** The maintainer tags v1.x.y on the merge commit and pushes it; the Release workflow moves `v1` and creates the release.
 - [ ] **Smoke.** Once the tag is out, run the Smoke workflow and confirm it passes on the released `v1`. If the sample changed and needs the new CLI, do not run it between the merge and the tag.
 
+## Release the Azure Pipelines task
+
+Following pbiplint/azure-pipelines' `RELEASING.md`, "After a pbiplint CLI release".
+
+- [ ] **Task pull request.** The `pbiplintVersion` default in `task/task.json`, the README's inputs table, and `PBIPLINT_VERSION` in `examples/plain.yml` and the README's copy of it set to 0.x.y. The messy-sales checkout's `ref` in `ci.yml` moved to the commit v0.x.y points at. CONTRIBUTING's fixture command moved to 0.x.y, `test/fixtures/messy-sales.sarif` regenerated with it from a checkout of this repository at that commit, and the tests' pins moved to what the new file holds. The README's rules paragraph still true of what 0.x.y checks. `npm test`, pull request, CI green, merge.
+- [ ] **Version it in the same pull request,** in `task/task.json`, `vss-extension.json`, and `package.json`, which must match. Number it as the Action's: a minor if 0.x.y adds rules or changes the findings an unchanged project gets, otherwise a patch.
+- [ ] **Publish.** The maintainer runs `npm ci`, `npm test`, `npm run package`, and `tfx extension publish` from a clean checkout of main, as `RELEASING.md` says, then tags the merge commit v1.x.y and pushes the tag.
+- [ ] **Test pipeline.** In the test organization, on the new version: the task on the sample gives build issues, the summary, the `CodeAnalysisLogs` artifact, and a failed step, and the same step with `failOn: none` passes. The organization runs on the free hosted job only, so keep the runs to a few minutes.
+
 ## Close out
 
 - [ ] **The milestone** closed on GitHub, with this issue the last one closed in it.
 - [ ] **The roadmap (#103):** 0.x.y under Shipped, named for what it shipped as the entries above it are, with its date and this issue; the "Now:" line moved to what comes next; and a comment noting the change.
-- [ ] **Tidy.** Merged release branches deleted in both repositories.
-- [ ] **Close this issue** with a summary comment: what was published, the Action release, and anything that left the milestone and where it went.
+- [ ] **Tidy.** Merged release branches deleted in all three repositories.
+- [ ] **Close this issue** with a summary comment: what was published, the Action and task releases, and anything that left the milestone and where it went.

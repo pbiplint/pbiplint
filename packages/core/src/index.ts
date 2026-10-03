@@ -95,6 +95,12 @@ export {
 } from "./pbir/names.js";
 export { collectFieldRefs } from "./pbir/refs.js";
 export type * from "./pbir/types.js";
+export {
+  projectBelowNotice,
+  projectsBelow,
+  reportsNamed,
+  type FoundBelow,
+} from "./project/below.js";
 export { buildFacts } from "./project/facts.js";
 export {
   datasetReference,

@@ -181,19 +181,63 @@ test("no page scrolls sideways at 320 CSS pixels", async ({ page }) => {
   expect(wide).toEqual([]);
 });
 
-test("the navigation stays on one row from 360 pixels up", async ({ page }) => {
-  // Six links since the CLI page joined; the narrower gap under 400 pixels is what fits them,
-  // measured once the site's font has loaded, since a fallback font could fit where it does not.
-  // While results show, the new-tab arrows widen the row, and it may wrap; that state is not held.
-  for (const width of [360, 1280]) {
-    await page.setViewportSize({ width, height: 800 });
-    for (const path of ["/", "/cli/", "/pipelines/"]) {
-      await page.goto(path);
-      await page.evaluate(() => document.fonts.ready);
-      const tops = await page
-        .locator(".site-header nav a")
-        .evaluateAll((links) => links.map((a) => Math.round(a.getBoundingClientRect().top)));
-      expect(new Set(tops).size, `${path} at ${width} pixels`).toBe(1);
+test("the header shows its links in a row on a wide screen and behind a Menu button on a narrow one", async ({
+  page,
+  browserName,
+}) => {
+  const sideways = () =>
+    page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    );
+  const row = page.locator(".site-header .nav-row");
+  const button = page.locator(".site-header .nav-menu > summary");
+  const panel = page.locator(".site-header .nav-panel");
+  for (const path of ["/", "/pipelines/"]) {
+    // Wide: the seven links on one row, measured once the site's font has loaded, and no button.
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto(path);
+    await page.evaluate(() => document.fonts.ready);
+    await expect(row.locator("a")).toHaveCount(7);
+    const middles = await row
+      .locator("a")
+      .evaluateAll((links) =>
+        links.map((a) => a.getBoundingClientRect().top + a.getBoundingClientRect().height / 2),
+      );
+    expect(Math.max(...middles) - Math.min(...middles), path).toBeLessThan(10);
+    await expect(button).toBeHidden();
+    expect(await sideways(), path).toBe(false);
+
+    // Narrow: a Menu button, big enough to tap, in place of the row.
+    await page.setViewportSize({ width: 360, height: 800 });
+    await expect(row).toBeHidden();
+    await expect(button).toBeVisible();
+    await expect(button).toHaveAccessibleName("Menu");
+    const box = (await button.boundingBox())!;
+    expect(box.width).toBeGreaterThanOrEqual(44);
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    await expect(panel).toBeHidden();
+    expect(await sideways(), path).toBe(false);
+
+    // The keyboard opens it on the button, and Escape closes it and gives the button focus back.
+    await button.focus();
+    await page.keyboard.press("Enter");
+    await expect(panel).toBeVisible();
+    await expect(panel.locator("a")).toHaveCount(7);
+    await expect(panel.locator('a[aria-current="page"]')).toHaveCount(1);
+    expect(await sideways(), path).toBe(false);
+    // Tab goes from the button into the list. WebKit, like Safari by default, skips links on Tab.
+    if (browserName !== "webkit") {
+      await page.keyboard.press("Tab");
+      await expect(panel.locator("a").first()).toBeFocused();
     }
+    await page.keyboard.press("Escape");
+    await expect(panel).toBeHidden();
+    await expect(button).toBeFocused();
+
+    // A tap outside the open menu closes it.
+    await button.click();
+    await expect(panel).toBeVisible();
+    await page.mouse.click(180, 700);
+    await expect(panel).toBeHidden();
   }
 });

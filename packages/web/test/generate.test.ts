@@ -123,7 +123,9 @@ describe("rulePage", () => {
       'href="https://github.com/pbiplint/pbiplint/edit/main/rules/hide-foreign-keys.md"',
     );
     expect(html).toContain('<link rel="stylesheet" href="/src/styles.css" />');
-    expect(html).not.toContain("<script");
+    // The one script is the header menu's, for Escape and a tap outside.
+    expect(html.match(/<script/g)).toHaveLength(1);
+    expect(html).toContain('<script type="module" src="/src/nav.ts"></script>');
   });
   it("gives every section heading an id, so a section can be linked to", () => {
     const { html } = rulePage(read("hide-foreign-keys"), "hide-foreign-keys");
@@ -500,10 +502,10 @@ describe("rulePage", () => {
     expect(html).toContain('<p class="eyebrow"><a href="/rules/">Rules</a> / ');
     expect(html).toContain('<a class="button" href="/">Check a model for this</a>');
     expect(html).toContain('<a href="/privacy/">the pbiplint Privacy Promise</a>');
-    // Every link that opens a new tab says so: the two in the body, the four above, and the
-    // attribution line's.
+    // Every link that opens a new tab says so: the two in the body, the four above (GitHub twice,
+    // in the header's row and its menu), and the attribution line's.
     const newTabs = html.match(/target="_blank"/g)?.length;
-    expect(newTabs).toBe(7);
+    expect(newTabs).toBe(8);
     expect(html.match(/\(opens in a new tab\)/g)?.length).toBe(newTabs);
   });
 });
@@ -725,12 +727,11 @@ describe("generateSite", () => {
     expect(cli).toContain('<h2 id="check">How to check it</h2>');
     expect(cli).toContain('<h2 id="reads">What it reads, writes, and sends</h2>');
     expect(cli).toContain('<a href="/privacy/">the pbiplint Privacy Promise</a>');
-    // The CLI item covers the pipelines page too, so it is the current one there.
     const pipelines = readFileSync(join(out, "pipelines/index.html"), "utf8");
     expect(pipelines).toContain(
       "<title>Pipelines: GitHub Actions and Azure Pipelines · pbiplint</title>",
     );
-    expect(pipelines).toContain('<a href="/cli/" aria-current="page">CLI</a>');
+    expect(pipelines).toContain('<a href="/pipelines/" aria-current="page">Pipelines</a>');
     // A section for each pipeline a link can land on, and the pages it leans on, in this tab.
     expect(pipelines).toContain('<h2 id="github-actions">GitHub Actions</h2>');
     expect(pipelines).toContain('<h2 id="azure-pipelines">Azure Pipelines</h2>');
@@ -1041,15 +1042,23 @@ describe("contentPage", () => {
     expect(html).toContain('<a href="/">home page</a>');
     expect(html).toContain('<a href="/rules/">rules index</a>');
   });
-  it("marks the CLI item current on the CLI and pipelines pages and below them, and nowhere else", () => {
-    const at = (path: string): string =>
-      contentPage("---\ntitle: T\ndescription: D\n---\n\n# T\n", path, "content/t.md");
-    const cliCurrent = '<a href="/cli/" aria-current="page">CLI</a>';
-    expect(at("/cli/")).toContain(cliCurrent);
-    expect(at("/pipelines/")).toContain(cliCurrent);
-    expect(at("/pipelines/azure/")).toContain(cliCurrent);
-    expect(at("/pipelinesx/")).not.toContain(cliCurrent);
-    expect(at("/about/")).not.toContain(cliCurrent);
+  it("gives the header a full row of links and a Menu button with the same links, each marking the page", () => {
+    const html = contentPage(
+      "---\ntitle: T\ndescription: D\n---\n\n# T\n",
+      "/pipelines/",
+      "content/t.md",
+    );
+    expect(html).toContain('<nav class="nav-row" aria-label="Site">');
+    expect(html).toContain('<details class="nav-menu">');
+    expect(html).toContain('<summary aria-label="Menu">');
+    expect(html).toContain('<nav class="nav-panel" aria-label="Site">');
+    // Both lists mark the page, and only Pipelines: the CLI item no longer covers it.
+    expect(html.match(/<a href="\/pipelines\/" aria-current="page">Pipelines<\/a>/g)).toHaveLength(
+      2,
+    );
+    expect(html).not.toContain('<a href="/cli/" aria-current="page">');
+    // The script that closes the menu on Escape or a tap outside, bundled with the page.
+    expect(html).toContain('<script type="module" src="/src/nav.ts"></script>');
   });
   it("keeps each flag in inline code whole, so a line never breaks between its hyphens", () => {
     const html = contentPage(
@@ -1087,14 +1096,25 @@ describe("contentPage", () => {
 
 describe("home page shell", () => {
   it("has the same navigation and privacy footer as the generated pages", () => {
-    for (const n of NAV) {
-      expect(home).toContain(`href="${n.href}"`);
-      // A link off the site ends with its hidden note (see home.test.ts).
-      expect(home).toMatch(
-        new RegExp(
-          `>\\s*${n.label}\\s*(<span class="visually-hidden"> \\(opens in a new tab\\)</span>)?</a`,
-        ),
-      );
+    // The 404 page carries the header by hand too.
+    const notFound = readFileSync(new URL("../404.html", import.meta.url), "utf8");
+    for (const [name, page] of [
+      ["index.html", home],
+      ["404.html", notFound],
+    ] as const) {
+      expect(page, name).toContain('<nav class="nav-row" aria-label="Site">');
+      expect(page, name).toContain('<summary aria-label="Menu">');
+      expect(page, name).toContain('<nav class="nav-panel" aria-label="Site">');
+      expect(page, name).toContain('<script type="module" src="/src/nav.ts"></script>');
+      for (const n of NAV) {
+        // In the row and in the menu. A link off the site ends with its hidden note (see
+        // home.test.ts).
+        const label = new RegExp(
+          `<a\\s+href="${n.href}"[^>]*>\\s*${n.label}\\s*(<span class="visually-hidden"> \\(opens in a new tab\\)</span>)?</a`,
+          "g",
+        );
+        expect(page.match(label), `${name}: ${n.label}`).toHaveLength(2);
+      }
     }
     expect(home).toMatch(
       /Nothing you lint leaves your browser:\s*<a href="\/privacy\/">the pbiplint Privacy Promise<\/a>\./,

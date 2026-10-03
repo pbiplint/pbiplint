@@ -92,12 +92,12 @@ describe("styles.css", () => {
     expect(contrast("--success", "--canvas")).toBeGreaterThanOrEqual(3);
   });
   it("lets the header's links and a long rule id wrap, so a narrow page does not scroll sideways", () => {
-    // At 320 pixels the brand and four links do not fit on one row, and a rule id such as
+    // At 320 pixels the brand and the links do not fit on one row, and a rule id such as
     // RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE has no hyphen to break at. The e2e suite
     // measures the page itself at that width.
     expect(rule(".site-header .container")).toMatch(/flex-wrap: wrap/);
     expect(rule(".site-header .container")).not.toMatch(/(^|\s)height:/);
-    expect(rule(".site-header nav")).toMatch(/flex-wrap: wrap/);
+    expect(rule(".site-header .nav-row")).toMatch(/flex-wrap: wrap/);
     // Every inline code span, a group's meta line and a rule page's among them; a code block
     // keeps its lines and scrolls.
     expect(rule(":not(pre) > code")).toMatch(/overflow-wrap: anywhere/);

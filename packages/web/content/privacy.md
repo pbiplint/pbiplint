@@ -5,7 +5,7 @@ description: What pbiplint promises about the projects you lint, on this site, o
 
 # The pbiplint Privacy Promise
 
-pbiplint checks your Power BI project where it already is: in your browser tab, on your own machine, or in your own GitHub workflow. The Promise is what it commits to about what you lint, on every one of those surfaces, and every line of it can be checked.
+pbiplint checks your Power BI project where it already is: in your browser tab, on your own machine, or in your own GitHub workflow. The Promise below says what pbiplint does, and never does, with the projects you lint. It holds in all three places, and you can check every line of it yourself.
 
 ## The Promise
 

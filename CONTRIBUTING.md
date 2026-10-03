@@ -80,7 +80,7 @@ Sections, in this order: What it checks, Example, Why it matters, How to fix it,
 - When to ignore it is the judgment only: the cases where the finding is noise, or a sentence saying there are none. The annotation and config lines are generated from the rule id (`ignoreHelp` in core) onto the page and into the help block, and the test rejects a page that writes them by hand.
 - Document every quirk kept from the source rule under Quirks, and every deviation from it (see Deviating from a ported rule).
 - Related rules is a bulleted list. Each bullet opens with a rule id in backticks and says how the rules relate. The test checks the ids. On the site, a rule id in backticks anywhere on a page links to that rule's page.
-- The pages also feed tool output. After editing a page, run `npm run build -w @pbiplint/core && node scripts/sync-rule-pages.mjs` to regenerate `packages/core/src/rules/rule-summaries.data.ts` and `packages/cli/src/rule-help.data.ts`; the rule-pages tests fail until they match.
+- The pages also feed tool output. After editing a page, run `npm run build -w @pbiplint/core && node scripts/sync-rule-pages.mjs` to regenerate `packages/core/src/rules/rule-summaries.data.ts`, `packages/cli/src/rule-help.data.ts`, and `packages/web/src/results/rule-guidance.data.ts` (what the results page's Copy for an AI assistant adds to the report); the rule-pages tests fail until they match.
 
 ## Testing a pull request
 

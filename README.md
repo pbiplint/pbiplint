@@ -11,7 +11,7 @@ and how to check it.
 
 ## Status
 
-Version 0.2.3. It covers the semantic model layer (TMDL): every rule from the
+Version 0.2.4. It covers the semantic model layer (TMDL): every rule from the
 Microsoft best-practice ruleset, ported and verified against Tabular Editor,
 plus pbiplint's own rules for a year or a date fixed in DAX, for DAX
 user-defined functions, for translations, and for decimal columns' format

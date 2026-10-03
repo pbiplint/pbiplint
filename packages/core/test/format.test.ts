@@ -871,9 +871,9 @@ describe("the Markdown export and what the input holds", () => {
     expect(summary.children).toHaveLength(0);
     expect(summary.textContent).toMatch(/ \(~~a~~ _b_\)\.$/);
   });
-  it("writes a URL, a www address, an email address, and a format string as text in marked, not as a link", () => {
-    // marked's rendering: no cell holds a link, and each shows the input as written. GitHub's
-    // renderer is not asserted here, and it still links an email address, escaped or not.
+  it("writes a URL, a www address, an email address, and a format string as written in marked, not as a link", () => {
+    // marked's rendering: no cell holds a link, and each shows the input as written (an email
+    // address and a format string with two $ in a code span, below).
     for (const input of [
       "https://contoso.sharepoint.com/sites/Finance_Team/Shared",
       "www.example.com/a_b_c",
@@ -886,9 +886,80 @@ describe("the Markdown export and what the input holds", () => {
       expect(doc.querySelectorAll("td a"), input).toHaveLength(0);
       expect(rows(doc), input).toEqual([["M", "Measure", "", input]]);
     }
-    // marked does no math, so this asserts only that the source carries `\$`, which GitHub's math
-    // does not honour.
-    expect(exported({ detail: "$#,0.00;($#,0.00)" })).toContain("\\$#,0.00;(\\$#,0.00)");
+  });
+  it("puts each word GitHub would link or render as math in a code span (#109)", () => {
+    // GitHub ignores a backslash before @ and $: it links an email address, links an @name (and
+    // notifies that user) or a #123 or GH-123 in an issue or comment, and renders text between two
+    // $ on a line as math. A code span does none of these, in GitHub or in a plain CommonMark viewer.
+    for (const [detail, words] of [
+      [
+        "role finance@contoso.com, see first_last@example.com",
+        ["finance@contoso.com", "first_last@example.com"],
+      ],
+      ["asked by @someone today", ["@someone"]],
+      ["fixed in #123, not in #x", ["#123"]],
+      ["fixed in GH-123 and gh-4", ["GH-123", "gh-4"]],
+      ['format string "$#,0.00;($#,0.00)"', ["$#,0.00;($#,0.00)"]],
+      ["from $1 to $2", ["$1", "$2"]],
+    ] as const) {
+      const doc = rendered(exported({ detail }));
+      expect(rows(doc), detail).toEqual([["M", "Measure", "", detail]]);
+      const [, , , cell] = [...doc.querySelectorAll("tbody td")];
+      expect(
+        [...cell!.querySelectorAll("code")].map((c) => c.textContent),
+        detail,
+      ).toEqual(words);
+    }
+    // A lone $ is no math, so it stays text.
+    const lone = rendered(exported({ detail: "Sales $ by region" }));
+    expect(codes(lone)).toEqual(["M"]);
+    expect(rows(lone)).toEqual([["M", "Measure", "", "Sales $ by region"]]);
+    // A location too, and a word holding a backquote or a | keeps its whole text in the span.
+    const doc = rendered(
+      exported({ detail: "a`@b|c", location: { file: "definition/tables/a@b.tmdl", line: 3 } }),
+    );
+    expect(rows(doc)).toEqual([["M", "Measure", "definition/tables/a@b.tmdl:3", "a`@b|c"]]);
+    expect(codes(doc)).toEqual(["M", "definition/tables/a@b.tmdl:3", "a`@b|c"]);
+    // A word that begins or ends with a backquote keeps it in its span.
+    const ticks = rendered(exported({ detail: "`@x` and x`" }));
+    expect(codes(ticks)).toEqual(["M", "`@x`"]);
+    expect(rows(ticks)).toEqual([["M", "Measure", "", "`@x` and x`"]]);
+  });
+  it("leaves the punctuation around such a word outside its code span, as written", () => {
+    expect(exported({ detail: "(#123), see user@example.com." })).toContain(
+      "| (`#123`), see `user@example.com`. |",
+    );
+    expect(exported({ detail: `'@a'; "$1" and $2!` })).toContain(
+      `| '\`@a\`'; "\`$1\`" and \`$2\`! |`,
+    );
+  });
+  it("puts such a word in a code span outside a table too, where a | needs no backslash", () => {
+    const doc = rendered(
+      exported(
+        {},
+        {
+          diagnostics: [{ kind: "unread-file", path: "x", message: "x@y.com a|b@c and $1 to $2" }],
+        },
+      ),
+    );
+    const notice = doc.querySelector("blockquote p")!;
+    expect(notice.textContent).toBe("Notice: x@y.com a|b@c and $1 to $2");
+    expect([...notice.querySelectorAll("code")].map((c) => c.textContent)).toEqual([
+      "x@y.com",
+      "a|b@c",
+      "$1",
+      "$2",
+    ]);
+    // A line break or a tab inside such a word is shown, as anywhere outside a table.
+    const shown = rendered(
+      exported({}, { diagnostics: [{ kind: "unread-file", path: "x", message: "a@b\nc\td" }] }),
+    );
+    expect(shown.querySelector("blockquote code")!.textContent).toBe("a@b\\u000ac\\u0009d");
+    // The summary line's reasons too.
+    const summary = rendered(exported({}, { absent: { report: "see #12 and a@b.com" } }));
+    expect(
+      [...summary.querySelector("p")!.querySelectorAll("code")].map((c) => c.textContent),
+    ).toEqual(["#12", "a@b.com"]);
   });
   it("keeps a name holding | in its cell, and in its code span, a backslash before it included", () => {
     for (const name of ["a|b", "a\\\\|b|"]) {

@@ -19,6 +19,9 @@ npx pbiplint --version
 ```
 
 Formats: `text` (default), `json`, `sarif` (for GitHub code scanning and editors), `markdown`.
+The Markdown export writes an email address, an `@name`, a `#123` or `GH-123`, and text
+holding two or more `$` as code, so pasted into a GitHub issue or comment it links no one,
+notifies no one, and renders no math.
 
 Exit codes: `0` no findings at or above `--fail-on`, `1` findings, `2` usage or input error.
 `--fail-on error` is the default; `--fail-on warning` and `--fail-on info` tighten the gate;

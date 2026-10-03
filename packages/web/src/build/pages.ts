@@ -701,7 +701,7 @@ export function contentPage(markdown: string, path: string, source: string): str
 export function llmsTxt(): string {
   return `# pbiplint
 
-> pbiplint lints Power BI projects (PBIP), the semantic model in TMDL and the report in PBIR, for best-practice problems. It runs on your own machine, in the browser at ${SITE} or as a command line from npm, and sends nothing anywhere.
+> pbiplint lints Power BI projects (PBIP), the semantic model in TMDL and the report in PBIR, for best-practice problems. It runs on your own machine, in the browser at ${SITE} or as a command line from npm, and the site and the command line send nothing anywhere.
 
 For a coding assistant that can run commands: run \`npx pbiplint skill\` and follow it. It prints a skill, at the version installed, that says when to run pbiplint, how to keep its output short, how to read the results, and what to leave to the user. \`npx pbiplint explain <RULE_ID>\` prints a rule's guidance the same way, so the rule pages need not be fetched.
 

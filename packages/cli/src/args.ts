@@ -184,7 +184,8 @@ violations. Either part alone is fine. Nothing is uploaded.
 --help, --version
 
 pbiplint skill prints a skill that tells an AI assistant how to use pbiplint.
---install <name>    claude, copilot, codex, or gemini: write it where that assistant reads a project's
+--install <assistant>
+                    claude, copilot, codex, or gemini: write it where that assistant reads a project's
                     skills, below the current folder (copilot also reads the claude and codex folders)
 --force             replace a copy that differs (an edited or older one)
 --dry-run           say what --install would do, and write nothing

@@ -25,7 +25,7 @@ The linter is part of the page and runs in your browser tab. When you drop or ch
 
 ### On the command line
 
-`pbiplint` opens the same kinds of files the site does: those under the path you give it, and those in the report or model folder that a `.pbip` file or a report's `definition.pbir` points to, along with the nearest `pbiplint.config.json` or the one `--config` names. It writes to your terminal, or to the file `--output` names, and nowhere else. It makes no network request: no telemetry and no update check. Installing it is the only network step: `npm` or `npx` fetches the package from the npm registry, and that request carries nothing from your project. [The pbiplint CLI](/cli/#reads) page says exactly which files it opens, and how to check all of this on your own machine.
+`pbiplint` opens the same kinds of files the site does: those under the path you give it, and those in the report or model folder that a `.pbip` file or a report's `definition.pbir` points to, along with the nearest `pbiplint.config.json` or the one `--config` names. It writes to your terminal, or to the file `--output` names, and nowhere else, except that `pbiplint skill --install` writes the skill file for an AI assistant into the folder it names below the current one. It makes no network request: no telemetry and no update check. Installing it is the only network step: `npm` or `npx` fetches the package from the npm registry, and that request carries nothing from your project. [The pbiplint CLI](/cli/#reads) page says exactly which files it opens, and how to check all of this on your own machine.
 
 <h3 id="in-the-github-action">In your pipelines</h3>
 

@@ -81,7 +81,7 @@ describe("the CLI's contract", () => {
     expect(warning.severity).toBe(2);
     // With --rule, the gate counts only the findings shown.
     expect((await run([sample, "--rule", warning.id])).code).toBe(0);
-    for (const argv of [["rules"], ["explain", warning.id], ["--help"], ["--version"]])
+    for (const argv of [["rules"], ["explain", warning.id], ["skill"], ["--help"], ["--version"]])
       expect((await run(argv)).code, argv.join(" ")).toBe(0);
 
     const dir = tempDir("contract-exit-2");
@@ -91,7 +91,11 @@ describe("the CLI's contract", () => {
     mkdirSync(join(dir, "legacy", "Demo.Report"), { recursive: true });
     writeFileSync(join(dir, "legacy", "Demo.Report", "report.json"), "{}");
     for (const at of ["a", "b"]) cpSync(sample, join(dir, "two", at), { recursive: true });
-    const refusals: [string, string[]][] = [
+    // A skill copy that differs from the one --install would write, in its own folder.
+    const skillDir = join(dir, "skill-differs");
+    mkdirSync(join(skillDir, ".claude/skills/pbiplint"), { recursive: true });
+    writeFileSync(join(skillDir, ".claude/skills/pbiplint/SKILL.md"), "an edited copy\n");
+    const refusals: [string, string[], string?][] = [
       ["an unknown option", [sample, "--bogus"]],
       ["a missing value", [sample, "--format"]],
       ["an unknown rule id for explain", ["explain", "NO_SUCH_RULE"]],
@@ -105,9 +109,10 @@ describe("the CLI's contract", () => {
       ["a folder holding several projects", [join(dir, "two")]],
       ["options with no path", ["--format", "json"]],
       ["an unexpected error", ["a\u0000b"]],
+      ["a skill copy that differs, without --force", ["skill", "--install", "claude"], skillDir],
     ];
-    for (const [what, argv] of refusals) {
-      const r = await run(argv);
+    for (const [what, argv, cwd] of refusals) {
+      const r = await run(argv, cwd);
       expect(r.code, what).toBe(2);
       expect(r.out, what).toBe("");
       expect(r.err, what).toMatch(/^pbiplint: /);

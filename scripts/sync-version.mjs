@@ -22,7 +22,7 @@ const skill = "packages/cli/skill/SKILL.md";
 writeFileSync(
   skill,
   readFileSync(skill, "utf8")
-    .replace(/ pbiplint \d+\.\d+\.\d+[^\s.]*\.$/m, ` pbiplint ${cli}.`)
+    .replace(/ pbiplint \S+\.$/m, ` pbiplint ${cli}.`)
     .replace(/^ {2}version: "[^"]+"$/m, `  version: "${cli}"`),
 );
 console.log(`wrote ${cli} to ${skill}`);

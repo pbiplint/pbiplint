@@ -96,4 +96,5 @@ violations. Either part alone is fine. Nothing is uploaded.
 
 Exit codes: 0 no findings at or above --fail-on, 1 findings, 2 usage or input error.
 Rule pages: https://pbiplint.com/rules/
+The pbiplint Privacy Promise: https://pbiplint.com/privacy/
 `;

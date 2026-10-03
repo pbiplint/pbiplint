@@ -39,7 +39,7 @@ do not trust, which puts attacker-controlled TMDL in front of the parser.
 - Anything in `packages/core` that reaches the network or the file system. The package is
   browser-pure by design and a build check is meant to make this impossible.
 - Anything that breaks the Privacy Promise: a network request from the site or the command line,
-  or a file opened that the promise says pbiplint never opens.
+  or a file opened that the Promise says pbiplint never opens.
 
 ## Not in scope
 

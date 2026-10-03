@@ -5,15 +5,15 @@ description: What pbiplint promises about the projects you lint, on this site, o
 
 # The pbiplint Privacy Promise
 
-pbiplint checks your Power BI project where it already is: in your browser tab, on your own machine, or in your own GitHub workflow. These are the promises it makes about what you lint, on every one of those surfaces, and each one can be checked.
+pbiplint checks your Power BI project where it already is: in your browser tab, on your own machine, or in your own GitHub workflow. The Promise is what it commits to about what you lint, on every one of those surfaces, and every line of it can be checked.
 
-## The promise
+## The Promise
 
 1. **Nothing you lint leaves your machine.** The site runs in your browser tab. The command line reads the files you point it at and writes to your terminal or to a file you name. Neither makes a network request. The GitHub Action runs the command line on your workflow's runner and sends the findings only to your own repository on GitHub, as [below](#in-the-github-action) says.
 2. **pbiplint never stores, sends, or opens your data.**\* It reads only the files that describe your model and report, never the data they load. Imported data lives in the model's local cache, the `.pbi` folder, which pbiplint never opens. It never connects to a data source, the Power BI engine, or the Power BI service.
 3. **No account, no cookies, and no analytics script.** There is no pbiplint server: the site is static files, and nothing behind them receives what you lint. Like any website, the services that host and deliver these files see each request for a page, with the address it came from, and can log or count it; the request names the page, never your project. The site stores nothing in your browser.
 4. **You can check it.** The [checks below](#check) need nothing but a browser, and the code they point to is public.
-5. **If you use an AI assistant.** If you give pbiplint's findings to an AI assistant, or run pbiplint inside one, the assistant sees the findings, as it sees anything else you show it. The promise covers pbiplint, not the assistant.
+5. **If you use an AI assistant.** If you give pbiplint's findings to an AI assistant, or run pbiplint inside one, the assistant sees the findings, as it sees anything else you show it. The Promise covers pbiplint, not the assistant.
 
 \* Some values live inside the files that describe a project: rows typed in with Enter data, a table written with `DATATABLE`, the values a filter or slicer is set to, and the text of titles and text boxes. And those files are metadata by nature: the names of your tables, columns, and measures, your formulas, and queries that can name your servers and databases. pbiplint reads all of it, because that is what it checks, and none of it leaves your machine.
 
@@ -39,4 +39,4 @@ The Action runs the same command line inside your own workflow, on GitHub's runn
 4. **Look for stored data.** In the developer tools' Application tab (Storage in Firefox and Safari), the site has no cookies, and nothing in local storage, session storage, or IndexedDB.
 5. **Read the code.** The linter core has [a build check](https://github.com/pbiplint/pbiplint/blob/main/packages/core/scripts/check-browser-bundle.mjs) that fails if it references a network API, and the command line has [a check of its own](https://github.com/pbiplint/pbiplint/blob/main/packages/cli/scripts/check-network.mjs) that fails if its bundle reaches for a network module or API. Both run on every change, and the site build fails if any page references an external script, style, font, or image. The source is on [GitHub](https://github.com/pbiplint/pbiplint).
 
-If you ever find pbiplint breaking this promise, that is a security bug. Report it privately, as [the security policy](https://github.com/pbiplint/pbiplint/blob/main/SECURITY.md) describes.
+If you ever find pbiplint breaking the Promise, that is a security bug. Report it privately, as [the security policy](https://github.com/pbiplint/pbiplint/blob/main/SECURITY.md) describes.

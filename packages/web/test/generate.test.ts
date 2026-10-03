@@ -1021,7 +1021,7 @@ describe("contentPage", () => {
     expect(html).toContain(
       opens("https://github.com/pbiplint/pbiplint/blob/main/SECURITY.md", "the security policy"),
     );
-    // The footnote's mark follows the promise it belongs to, and opens the footnote.
+    // The footnote's mark follows the line of the Promise it belongs to, and opens the footnote.
     expect(html).toContain("<strong>pbiplint never stores, sends, or opens your data.</strong>*");
     expect(html).toContain("<p>* Some values live inside the files");
   });

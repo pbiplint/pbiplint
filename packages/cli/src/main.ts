@@ -12,6 +12,7 @@ import {
 } from "@pbiplint/core";
 import { HELP, parseArgs, UsageError } from "./args.js";
 import { CONFIG_FILE, findConfig } from "./config.js";
+import { logSafe } from "./log-safe.js";
 import { sampleDir } from "./sample.js";
 import { RULE_HELP } from "./rule-help.data.js";
 import { resolveProject } from "./walk.js";
@@ -36,7 +37,13 @@ function listRules(): string {
     .join("\n");
 }
 
-export async function main(argv: string[], io: Io): Promise<number> {
+export async function main(argv: string[], given: Io): Promise<number> {
+  // Everything written to stdout and stderr, and nothing written to a file with --output.
+  const io: Io = {
+    stdout: (text) => given.stdout(logSafe(text)),
+    stderr: (text) => given.stderr(logSafe(text)),
+    cwd: () => given.cwd(),
+  };
   // Every line on stderr can carry a name or a path from the repository, so its control
   // characters are shown, not sent to the terminal; the line's own newline is kept.
   const stderrLine = (line: string): void => io.stderr(`${showControls(line)}\n`);

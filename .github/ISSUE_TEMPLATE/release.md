@@ -48,8 +48,8 @@ Following pbiplint/azure-pipelines' `RELEASING.md`, "After a pbiplint CLI releas
 
 - [ ] **Task pull request.** The `pbiplintVersion` default in `task/task.json`, the README's inputs table, and `PBIPLINT_VERSION` in `examples/plain.yml` and the README's copy of it set to 0.x.y. The messy-sales checkout's `ref` in `ci.yml` moved to the commit v0.x.y points at. CONTRIBUTING's fixture command moved to 0.x.y, `test/fixtures/messy-sales.sarif` regenerated with it from a checkout of this repository at that commit, and the tests' pins moved to what the new file holds. The README's rules paragraph still true of what 0.x.y checks. `npm test`, pull request, CI green, merge.
 - [ ] **Version it in the same pull request,** in `task/task.json`, `vss-extension.json`, and `package.json`, which must match. Number it as the Action's: a minor if 0.x.y adds rules or changes the findings an unchanged project gets, otherwise a patch.
-- [ ] **Publish.** The maintainer runs `npm run package` and `tfx extension publish` from main, as `RELEASING.md` says, then tags the merge commit v1.x.y and pushes the tag.
-- [ ] **Test pipeline.** In the test organization, the task on the sample gives build issues, the summary, the `CodeAnalysisLogs` artifact, and a failed step, on the new version.
+- [ ] **Publish.** The maintainer runs `npm ci`, `npm test`, `npm run package`, and `tfx extension publish` from a clean checkout of main, as `RELEASING.md` says, then tags the merge commit v1.x.y and pushes the tag.
+- [ ] **Test pipeline.** In the test organization, on the new version: the task on the sample gives build issues, the summary, the `CodeAnalysisLogs` artifact, and a failed step, and the same step with `failOn: none` passes. The organization runs on the free hosted job only, so keep the runs to a few minutes.
 
 ## Close out
 

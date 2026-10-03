@@ -80,13 +80,13 @@ On a self-hosted runner the list is the same, with the runner inside your networ
 
 ### What the task is
 
-[The pbiplint task](https://github.com/pbiplint/azure-pipelines) runs the published pbiplint CLI at a pinned version, then reports findings as build issues with their file, line, and rule (the agent keeps at most 10 errors and 10 warnings per step), attaches the full ranked report to the run's Extensions tab, publishes the SARIF report as a build artifact, and fails the step on findings. It is the scripts in [`task`](https://github.com/pbiplint/azure-pipelines/tree/main/task), which import nothing outside Node.js, in an extension for the Visual Studio Marketplace.
+[The pbiplint task](https://github.com/pbiplint/azure-pipelines) runs the published pbiplint CLI at a pinned version, then reports findings as build issues with their file, line, and rule (the agent keeps at most 10 errors and 10 warnings per step), attaches the full ranked report to the run's Extensions tab, publishes the SARIF report as a build artifact, and fails the step on findings. It is the scripts in [`task`](https://github.com/pbiplint/azure-pipelines/tree/main/task), which import nothing outside Node.js, in [an extension on the Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=pbiplint.pbiplint).
 
 For organizations that cannot install an extension, [the plain YAML route](https://github.com/pbiplint/azure-pipelines/blob/main/examples/plain.yml) runs the same CLI from a script step, with no extension at all.
 
 ### Get the task
 
-The source and the README are at [pbiplint/azure-pipelines](https://github.com/pbiplint/azure-pipelines). The extension goes on the Visual Studio Marketplace with the pbiplint 0.2.4 release; until then, the plain YAML route works with any organization.
+The extension is on the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=pbiplint.pbiplint), and its source and README are at [pbiplint/azure-pipelines](https://github.com/pbiplint/azure-pipelines).
 
 - **Installing it** takes a Project Collection Administrator, which an organization's owners are. Anyone else in the organization can request the extension, and once an administrator approves the request, Azure DevOps installs it. Teams that cannot get that approval use the plain YAML route.
 - **Which version runs.** A pipeline names the task's major version, `pbiplint@1`, and takes each new minor version as the extension is updated. When the extension is updated, Azure DevOps installs the update in every organization that has it, and holding an organization at an older version of the extension is not something Azure DevOps documents. Each task release pins a CLI version in its `pbiplintVersion` input, which you can set to run another. The plain YAML route pins the CLI in the file itself, and only changes when you change it.
@@ -116,7 +116,7 @@ The plain YAML route is one `bash` step: copy [`examples/plain.yml`](https://git
 
 ### What leaves the agent, and where it goes
 
-1. **The extension and the download.** The organization installs the extension from the Visual Studio Marketplace once. On each run, the task runs `npx` to fetch the pinned `pbiplint` from the public npm registry, a request that carries nothing from your project. The plain YAML route skips the extension and makes the same request.
+1. **The extension and the download.** The organization installs the extension from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=pbiplint.pbiplint) once. On each run, the task runs `npx` to fetch the pinned `pbiplint` from the public npm registry, a request that carries nothing from your project. The plain YAML route skips the extension and makes the same request.
 2. **The lint.** As in GitHub Actions: on the agent, reading only the path and its config, with no network request of its own.
 3. **Build issues and the run summary.** Written to the run, in your Azure DevOps organization. Anyone with permission to view the pipeline's builds can see them, which a project's Readers have by default. Azure DevOps no longer allows public projects: none can be created, and the ones left become private in 2027.
 4. **The SARIF artifact.** Kept with the run, for as long as the project's retention settings keep the run's artifacts.

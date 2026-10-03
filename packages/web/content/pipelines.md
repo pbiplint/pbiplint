@@ -80,7 +80,7 @@ On a self-hosted runner the list is the same, with the runner inside your networ
 
 ### What the task is
 
-[The pbiplint task](https://github.com/pbiplint/azure-pipelines) runs the published pbiplint CLI at a pinned version, then reports each finding as a build issue with its file and line, attaches the ranked report to the run's Extensions tab, publishes the SARIF report as a build artifact, and fails the step on findings. It is the scripts in [`task`](https://github.com/pbiplint/azure-pipelines/tree/main/task), which import nothing outside Node.js, in an extension for the Visual Studio Marketplace.
+[The pbiplint task](https://github.com/pbiplint/azure-pipelines) runs the published pbiplint CLI at a pinned version, then reports findings as build issues with their file, line, and rule (the agent keeps at most 10 errors and 10 warnings per step), attaches the full ranked report to the run's Extensions tab, publishes the SARIF report as a build artifact, and fails the step on findings. It is the scripts in [`task`](https://github.com/pbiplint/azure-pipelines/tree/main/task), which import nothing outside Node.js, in an extension for the Visual Studio Marketplace.
 
 For organizations that cannot install an extension, [the plain YAML route](https://github.com/pbiplint/azure-pipelines/blob/main/examples/plain.yml) runs the same CLI from a script step, with no extension at all.
 
@@ -110,7 +110,7 @@ steps:
 
 The inputs are the Action's, spelled the way Azure Pipelines allows: `path`, `failOn`, and `publishSarif` are the ones a first run usually changes, and the README has [every input](https://github.com/pbiplint/azure-pipelines#inputs). For several projects in one repository, add a step for each with its own `path` and `sarifCategory`.
 
-The plain YAML route is one `bash` step: copy [`examples/plain.yml`](https://github.com/pbiplint/azure-pipelines/blob/main/examples/plain.yml) to `azure-pipelines.yml` and set the path. It runs the same pinned CLI, attaches the same report to the run, publishes the same SARIF artifact, and fails the step the same way. It leaves out the build issue for each finding and the output variables, which need the task's script.
+The plain YAML route is one `bash` step: copy [`examples/plain.yml`](https://github.com/pbiplint/azure-pipelines/blob/main/examples/plain.yml) to `azure-pipelines.yml` and set the path. It runs the same pinned CLI, attaches the same report to the run, publishes the same SARIF artifact, and fails the step the same way. It leaves out the build issues and the output variables, which need the task's script.
 
 **Advanced Security.** Teams with GitHub Advanced Security for Azure DevOps, a paid add-on, can send the findings to its code scanning alerts by adding Microsoft's [`AdvancedSecurity-Publish@1`](https://learn.microsoft.com/azure/devops/pipelines/tasks/reference/advanced-security-publish-v1) step after pbiplint's. The task's README has [the YAML](https://github.com/pbiplint/azure-pipelines#advanced-security). It needs pbiplint 0.2.4 or later, and it has not been run against the service itself, since that needs the paid add-on.
 
@@ -118,7 +118,7 @@ The plain YAML route is one `bash` step: copy [`examples/plain.yml`](https://git
 
 1. **The extension and the download.** The organization installs the extension from the Visual Studio Marketplace once. On each run, the task runs `npx` to fetch the pinned `pbiplint` from the public npm registry, a request that carries nothing from your project. The plain YAML route skips the extension and makes the same request.
 2. **The lint.** As in GitHub Actions: on the agent, reading only the path and its config, with no network request of its own.
-3. **Build issues and the report.** Written to the run, in your Azure DevOps organization. Anyone with permission to view the pipeline's builds can see them, which a project's Readers have by default. Azure DevOps no longer allows public projects: none can be created, and the ones left become private in 2027.
+3. **Build issues and the run summary.** Written to the run, in your Azure DevOps organization. Anyone with permission to view the pipeline's builds can see them, which a project's Readers have by default. Azure DevOps no longer allows public projects: none can be created, and the ones left become private in 2027.
 4. **The SARIF artifact.** Kept with the run, for as long as the project's retention settings keep the run's artifacts.
 5. **Advanced Security,** only when a team adds Microsoft's step. That step sends the SARIF report to the organization's Advanced Security, where people with permission to view its alerts, a project's Contributors by default, can see them.
 6. **Nothing to pbiplint,** as above.
@@ -129,7 +129,7 @@ On a self-hosted agent the list is the same, with the agent inside your network,
 
 - **Read what it runs.** The scripts in [`task`](https://github.com/pbiplint/azure-pipelines/tree/main/task) import nothing outside Node.js, and the plain route is one file you can read in full before you copy it.
 - **Turn off what you do not want:** `annotations: false` stops the build issues, `publishSarif: false` stops the artifact, and Advanced Security sees nothing unless you add its step.
-- **Watch an agent's network.** For one run, your proxy's or firewall's log should show the npm registry, or your mirror, and Azure DevOps.
+- **Watch an agent's network.** On October 3, 2026 we ran `pbiplint@1` (1.0.0, running pbiplint 0.2.3) and the plain YAML route on a Microsoft-hosted Ubuntu agent, linted the sample project, and recorded every DNS lookup and new outbound connection, first with the agent idle and then during pbiplint's step. Beyond the agent's own traffic to Azure DevOps (`dev.azure.com`, and the `vssps` and `vsblob` hosts under `visualstudio.com` that take the run's issues, summary, and artifact), the one name looked up during the step was `registry.npmjs.org`; the only other connections went to the agent host's own platform address, which the record showed while the agent sat idle. On a self-hosted agent, your proxy's or firewall's log for one run should show the same: the npm registry, or your mirror, and Azure DevOps.
 - **Check the CLI it runs,** with the [package checks on the CLI page](/cli/#check).
 
 ## Both pipelines

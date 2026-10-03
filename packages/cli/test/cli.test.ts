@@ -891,3 +891,65 @@ describe("pbiplint CLI", () => {
     expect(r.out).toMatch(/^HIDE_FOREIGN_KEYS\s+model\s+ported/m);
   });
 });
+
+describe("the CLI's output and CI log command sequences", () => {
+  /** A model whose one measure's name, and one file's name, carry the sequences. */
+  function hostile(): string {
+    const root = tempDir("log-commands");
+    mkdirSync(join(root, "definition", "tables"), { recursive: true });
+    writeFileSync(join(root, "definition", "model.tmdl"), "model Model\n");
+    writeFileSync(
+      join(root, "definition", "tables", "::warning::t.tmdl"),
+      "table T\n\tmeasure 'x ##vso[task.setvariable variable=a]b ##[warning]w ##teamcity[m]' = 1\n",
+    );
+    return join(root, "definition");
+  }
+  /** A sequence a CI agent reads as a command: ## before a word and [, or a line starting with ::. */
+  const COMMAND = /##\w*\[|^[^\S\n]*::/m;
+  it("writes none to stdout in any format, nor to stderr", async () => {
+    const input = hostile();
+    for (const format of ["text", "markdown", "json", "sarif"]) {
+      const r = await run([input, "--format", format, "--fail-on", "none"]);
+      expect(r.code, format).toBe(0);
+      expect(r.out, format).toContain("#\\u0023vso[");
+      expect(COMMAND.test(r.out), format).toBe(false);
+      expect(COMMAND.test(r.err), format).toBe(false);
+    }
+  });
+  it("writes JSON and SARIF to stdout that parse to what --output writes, which holds the input as written", async () => {
+    const input = hostile();
+    for (const format of ["json", "sarif"]) {
+      const file = join(tempDir("log-commands-out"), `out.${format}`);
+      const toFile = await run([input, "--format", format, "--fail-on", "none", "--output", file]);
+      expect(toFile.code, format).toBe(0);
+      const written = readFileSync(file, "utf8");
+      expect(written, format).toContain("##vso[task.setvariable");
+      const r = await run([input, "--format", format, "--fail-on", "none"]);
+      expect(JSON.parse(r.out), format).toEqual(JSON.parse(written));
+      // The summary line on stderr names nothing from the input, and neither sequence is there.
+      expect(COMMAND.test(toFile.err), format).toBe(false);
+    }
+  });
+  it("writes none in a notice, a refusal, or a refusal's list on stderr", async () => {
+    // Two projects below a plain folder, named so the list's lines would start with ::.
+    const root = tempDir("log-commands-two");
+    for (const name of ["::warning::a ##vso[x]", "::error::b"]) {
+      const dir = join(root, name);
+      mkdirSync(join(dir, "Demo.SemanticModel", "definition"), { recursive: true });
+      writeFileSync(join(dir, "Demo.SemanticModel", "definition", "model.tmdl"), "model Model\n");
+    }
+    const two = await run([root]);
+    expect(two.code).toBe(2);
+    expect(two.err).toContain("\\u003a:warning::a #\\u0023vso[x]");
+    expect(COMMAND.test(two.err)).toBe(false);
+    // A notice naming a legacy report beside a model.
+    const proj = tempDir("log-commands-notice");
+    mkdirSync(join(proj, "Demo.SemanticModel", "definition"), { recursive: true });
+    writeFileSync(join(proj, "Demo.SemanticModel", "definition", "model.tmdl"), "model Model\n");
+    mkdirSync(join(proj, "##vso[x]y.Report"));
+    writeFileSync(join(proj, "##vso[x]y.Report", "report.json"), "{}");
+    const notice = await run([proj, "--fail-on", "none"]);
+    expect(notice.err).toContain("pbiplint: notice: #\\u0023vso[x]y.Report is stored");
+    expect(COMMAND.test(notice.err)).toBe(false);
+  });
+});

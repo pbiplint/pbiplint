@@ -1,4 +1,5 @@
 import { showControls } from "@pbiplint/core";
+import { logSafe } from "./log-safe.js";
 import { main } from "./main.js";
 
 // `pbiplint model | head` closes stdout early; exit quietly instead of dumping an EPIPE stack.
@@ -16,9 +17,10 @@ main(process.argv.slice(2), {
     process.exitCode = code;
   })
   .catch((e: unknown) => {
-    // As main does for every line it writes to stderr, the message's control characters are shown.
+    // As main does for every line it writes to stderr, the message's control characters are shown
+    // and CI log command sequences escaped.
     process.stderr.write(
-      `${showControls(`pbiplint: ${e instanceof Error ? e.message : String(e)}`)}\n`,
+      logSafe(`${showControls(`pbiplint: ${e instanceof Error ? e.message : String(e)}`)}\n`),
     );
     process.exitCode = 2;
   });

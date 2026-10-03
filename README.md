@@ -38,6 +38,8 @@ Or use it in the browser at https://pbiplint.com: paste TMDL, or drop a PBIP fol
 [Privacy Promise](https://pbiplint.com/privacy/) explains how to check that.
 
 Exit codes: 0 no findings at or above --fail-on (default error), 1 findings, 2 usage or input error. That makes it a CI gate.
+[The pbiplint CLI](https://pbiplint.com/cli/) page has the rest: where to get it, what it reads and
+writes, and how to check that it sends nothing.
 
 ### In GitHub Actions
 
@@ -129,6 +131,8 @@ to 2025. "Report at a glance" states what the report will do whether or not anyt
 
 - Website: https://pbiplint.com
 - Rule pages: https://pbiplint.com/rules
+- The command line: https://pbiplint.com/cli/
+- The pbiplint Privacy Promise: https://pbiplint.com/privacy/
 - From the makers of [The Data Practitioner](https://www.youtube.com/@TheDataPractitioner)
 
 ## Contributing

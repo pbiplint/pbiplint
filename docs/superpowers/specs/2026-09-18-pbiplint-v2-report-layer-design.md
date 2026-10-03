@@ -635,34 +635,46 @@ and the model each of those reports names in its `definition.pbir` by
 path, wherever they sit, as the `.pbip` route (#86, above) reads them;
 a `.pbip` that names no report takes in the parts beside it, as that
 route reads its folder. A report no `.pbip` names takes in the model
-it names by path only when the two are given as their folder (below),
-since a `.Report` folder given alone reads its report alone. Names are
-compared without regard to case, as the pairing compares them. A
-project is given by the path that lints it: the folder that holds it,
-when it is more than one of these, all in that folder, and the folder
-holds no other `.pbip`, `.Report`, or `.SemanticModel`; else its
-`.pbip`, or its part folder. So a project Power BI Desktop saved in a
-folder of its own is that folder; projects that share a folder are
-each their `.pbip`; and a report and its model with no `.pbip` are
-their folder when alone in it, and each its own part folder beside
-another pair, since that folder would be refused as holding two of
-each.
+it reads (the one it names by path, or, when its `definition.pbir`
+names none, the one model beside it, as the pairing pairs them) only
+when the two are given as their folder (below), since a `.Report`
+folder given alone reads its report alone. Each thing found is known
+by its path; a path a project file writes is matched with it, and
+failing that with one that differs from it only in case, as the
+pairing compares names. A project is given by the path that lints it:
+the folder that holds it, when it is more than one of these, all in
+that folder, and the folder holds no other `.pbip`, `.Report`, or
+`.SemanticModel`; else its `.pbip`, or its part folder. Two exceptions
+keep the folder from standing in for what it would not read: a
+`.pbip` whose report names by path a model the search did not find
+(one outside the folder searched, say) is given as the `.pbip`, which
+follows the path, and a folder named `definition` is never given,
+since it would be read as a model's definition folder. So a project
+Power BI Desktop saved in a folder of its own is that folder; projects
+that share a folder are each their `.pbip`; and a report and its model
+with no `.pbip` are their folder when alone in it, and each its own
+part folder beside another pair, since that folder would be refused as
+holding two of each.
 
 The search skips the folders the walk skips (`.git`, `.pbi`,
 `node_modules`, `StaticResources`, `CustomVisuals`), does not enter a
 part folder, does not follow a link, and passes over a folder the
 system will not list, without a notice: what either holds is outside
 every project linted, and when no project is found the walk for loose
-files meets the same path and names it, as before.
+files meets the same path and names it, as before. Hence the notice
+below says the project is the only one found.
 
 One project found is linted as if it had been given: its folder,
 `.pbip`, or part folder is resolved as the input, so its config search
 starts from it, the notices name paths relative to it, and a refusal
 of it (a model folder that holds no `.tmdl` files, say) names its path
-joined to the input. A notice of a new kind, `project-below-input`,
-comes first and names the project's path relative to the input:
-`sub/messy-sales is the only project below the folder given, so it was
-linted as if given directly`. Core builds the words, and decides which
+joined to the input. Its walk is its own: what the plain folder's own
+read met (a `definition` folder in it that could not be read, say) is
+outside the project and neither refuses the run nor is named. A
+notice of a new kind, `project-below-input`, comes first and names the
+project's path relative to the input: `sub/messy-sales is the only
+project found below the folder given, so it was linted as if given
+directly`. Core builds the words, and decides which
 projects there are for both surfaces from what each saw.
 
 More than one: nothing is linted. The CLI exits 2 naming each

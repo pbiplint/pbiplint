@@ -522,7 +522,7 @@ describe("resolveProject on a folder with projects below it (#174)", () => {
   const below = (path: string) => ({
     kind: "project-below-input",
     path,
-    message: `${path} is the only project below the folder given, so it was linted as if given directly`,
+    message: `${path} is the only project found below the folder given, so it was linted as if given directly`,
   });
   it("lints the one project one folder down, or two, as if pointed at it, naming it first", () => {
     for (const at of ["sub", join("a", "b")]) {
@@ -669,8 +669,46 @@ describe("resolveProject on a folder with projects below it (#174)", () => {
       } finally {
         chmodSync(locked, 0o755);
       }
+      // Nor does the folder's own definition folder refuse the run of a project below it that
+      // reads nothing but a legacy part, which says so in its notice.
+      const legacy = tempDir("below-locked-legacy");
+      mkdirSync(join(legacy, "sub", "Demo.Report"), { recursive: true });
+      writeFileSync(join(legacy, "sub", "Demo.Report", "report.json"), "{}");
+      const def = join(legacy, "definition");
+      mkdirSync(def);
+      chmodSync(def, 0o000);
+      try {
+        expect(resolveProject(legacy).diagnostics.map((d) => [d.kind, d.path])).toEqual([
+          ["project-below-input", "sub/Demo.Report"],
+          ["legacy-report-format", "Demo.Report"],
+        ]);
+      } finally {
+        chmodSync(def, 0o755);
+      }
     },
   );
+  it("lints a .pbip whose model sits outside the folder by the .pbip, which follows it", () => {
+    const top = tempDir("below-outside");
+    const root = join(top, "repo");
+    mkdirSync(join(root, "sub"), { recursive: true });
+    pbipAt(join(root, "sub", "Thin.pbip"), ["Thin.Report"]);
+    reportAt(join(root, "sub", "Thin.Report"), {
+      byPath: { path: "../../../Shared/Shared.SemanticModel" },
+    });
+    modelAt(join(top, "Shared", "Shared.SemanticModel"), "Shared");
+    const p = resolveProject(root);
+    expect(p.model!.root).toBe(join(top, "Shared", "Shared.SemanticModel"));
+    expect(p.report!.root).toBe(join(root, "sub", "Thin.Report"));
+    expect(p.diagnostics).toEqual([below("sub/Thin.pbip")]);
+  });
+  it("lints a project in a folder named definition by its .pbip, never as a model's definition folder", () => {
+    const root = tempDir("below-definition");
+    projectAt(join(root, "x", "definition"));
+    const p = resolveProject(root);
+    expect(p.model!.root).toBe(join(root, "x", "definition", "Demo.SemanticModel"));
+    expect(p.report!.root).toBe(join(root, "x", "definition", "Demo.Report"));
+    expect(p.diagnostics).toEqual([below("x/definition/Demo.pbip")]);
+  });
 });
 
 describe("resolveProject and a .pbix (tracked in #88)", () => {

@@ -64,6 +64,55 @@ describe("projectsBelow (#174)", () => {
     };
     expect(projectsBelow(cased)).toEqual(["sub"]);
   });
+  it("gives a .pbip whose report reads a model the search did not find as the .pbip, which follows it", () => {
+    // Alone in its folder, but read as that folder the report's path would not be followed.
+    const outside: FoundBelow = {
+      pbips: [{ path: "sub/Thin.pbip", text: pbipText("Thin.Report") }],
+      reports: [{ path: "sub/Thin.Report", pbir: byPath("../../../Shared/Shared.SemanticModel") }],
+      models: [],
+    };
+    expect(projectsBelow(outside)).toEqual(["sub/Thin.pbip"]);
+  });
+  it("knows each thing found by its path, matching a path written in another case only failing that", () => {
+    // Two folders whose names differ only in case, as a case-sensitive file system can hold, are
+    // two projects.
+    expect(
+      projectsBelow({ ...none, models: ["A/Sales.SemanticModel", "a/Sales.SemanticModel"] }),
+    ).toEqual(["a/Sales.SemanticModel", "A/Sales.SemanticModel"]);
+    // A report reads the one its path names exactly, where another differs only in case.
+    const exact: FoundBelow = {
+      pbips: [],
+      reports: [{ path: "sub/R.Report", pbir: byPath("../M.SemanticModel") }],
+      models: ["sub/M.SemanticModel", "sub/m.SemanticModel"],
+    };
+    expect(projectsBelow(exact)).toEqual([
+      "sub/m.SemanticModel",
+      "sub/M.SemanticModel",
+      "sub/R.Report",
+    ]);
+  });
+  it("never gives a folder named definition, which would be read as a model's definition folder", () => {
+    expect(projectsBelow(project("x/definition"))).toEqual(["x/definition/Demo.pbip"]);
+  });
+  it("pairs a report whose definition.pbir names no model with the one model beside it, as a PBIP folder does", () => {
+    for (const pbir of [j({ version: "4.0" }), undefined]) {
+      const pair: FoundBelow = {
+        pbips: [],
+        reports: [{ path: "sub/R.Report", pbir }],
+        models: ["sub/M.SemanticModel"],
+      };
+      expect(projectsBelow(pair)).toEqual(["sub"]);
+    }
+    // A report bound to a published model reads none of them.
+    const published = j({ datasetReference: { byConnection: { connectionString: "x" } } });
+    expect(
+      projectsBelow({
+        pbips: [],
+        reports: [{ path: "sub/R.Report", pbir: published }],
+        models: ["sub/M.SemanticModel"],
+      }),
+    ).toEqual(["sub/M.SemanticModel", "sub/R.Report"]);
+  });
   it("gives each .pbip of a folder that holds several, as a folder of them is refused", () => {
     const shared = both(project("ws", "Cost"), project("ws", "Sales"));
     expect(projectsBelow(shared)).toEqual(["ws/Cost.pbip", "ws/Sales.pbip"]);
@@ -120,12 +169,12 @@ describe("reportsNamed", () => {
 });
 
 describe("projectBelowNotice", () => {
-  it("names the one project below the folder given, which was linted as if given directly", () => {
+  it("names the one project found below the folder given, which was linted as if given directly", () => {
     expect(projectBelowNotice("sub/messy-sales")).toEqual({
       kind: "project-below-input",
       path: "sub/messy-sales",
       message:
-        "sub/messy-sales is the only project below the folder given, so it was linted as if given directly",
+        "sub/messy-sales is the only project found below the folder given, so it was linted as if given directly",
     });
   });
 });

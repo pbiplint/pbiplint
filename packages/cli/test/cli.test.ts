@@ -403,7 +403,7 @@ describe("pbiplint CLI", () => {
     const root = tempDir("below");
     cpSync(sample, join(root, "sub", "messy-sales"), { recursive: true });
     const notice =
-      "sub/messy-sales is the only project below the folder given, so it was linted as if given directly";
+      "sub/messy-sales is the only project found below the folder given, so it was linted as if given directly";
     const text = await run([root]);
     expect(text.code).toBe(1);
     expect(text.err).toBe(`pbiplint: notice: ${notice}\n`);

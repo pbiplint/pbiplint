@@ -264,7 +264,7 @@ test("lints the one project below a folder and names it, and refuses a folder wi
         /^Results for below-\w+\/sub\/messy-sales \(model, \d+ files · report, \d+ files\)$/,
       );
       await expect(results.locator(".notice").first()).toHaveText(
-        "sub/messy-sales is the only project below the folder given, so it was linted as if given directly",
+        "sub/messy-sales is the only project found below the folder given, so it was linted as if given directly",
       );
     },
   );

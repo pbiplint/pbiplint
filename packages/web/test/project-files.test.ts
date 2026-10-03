@@ -1007,7 +1007,7 @@ describe("selectProject on a folder with projects below it (#174)", () => {
   const below = (path: string): Diagnostic => ({
     kind: "project-below-input",
     path,
-    message: `${path} is the only project below the folder given, so it was linted as if given directly`,
+    message: `${path} is the only project found below the folder given, so it was linted as if given directly`,
   });
   it("lints the one project one folder down, or two, as if dropped alone, naming it first", () => {
     for (const at of ["sub", "a/b"]) {
@@ -1104,6 +1104,23 @@ describe("selectProject on a folder with projects below it (#174)", () => {
     ).toThrow(
       new InputError("Drop contains 2 projects; drop one of them: ws/Cost.pbip, ws/Sales.pbip"),
     );
+  });
+  it("reads the project below as a walk of its own, which nothing the folder's own reads met refuses", () => {
+    // The folder's definition folder could not be listed, and the project below it reads nothing
+    // but a legacy part, which says so in its notice, as the CLI's walk.test.ts has it.
+    const p = selectProject({
+      ...emptyTree(),
+      reportFolders: ["Drop/sub/Demo.Report"],
+      markers: [{ path: "Drop/sub/Demo.Report/report.json", kind: "legacy-report" }],
+      diagnostics: [unreadAt("Drop/definition")],
+      unreadFolders: ["Drop/definition"],
+      refusal: { path: "Drop/definition", reason: "locked" },
+    });
+    expect(p.root).toBe("Drop/sub/Demo.Report");
+    expect(p.diagnostics.map((d) => [d.kind, d.path])).toEqual([
+      ["project-below-input", "sub/Demo.Report"],
+      ["legacy-report-format", "Demo.Report"],
+    ]);
   });
   it("finds no project inside a part folder, which is that part's to read", () => {
     const p = selectProject(

@@ -419,8 +419,9 @@ function resolveFolder(input: string, path: string, preferred?: string): Resolve
 }
 
 /**
- * One walk from the folder `base`, which is the project root, by `read`. `input` names that folder
- * in a refusal.
+ * One walk from the folder `base`, which is the project root, by `read`, unless the one project
+ * below a plain folder is read in its place, by a walk of its own (readFolder, #174). `input`
+ * names that folder in a refusal.
  *
  * A walk of which nothing could be read, while something in it was refused, is an input that
  * could not be read: a run over it would report no findings in 0 files and read as clean with
@@ -565,7 +566,10 @@ function readNamed(
   throw new UsageError(`No semantic model or report found in ${written}, which ${input} names`);
 }
 
-/** The parts of the folder `w` walks, or what it has to say about them. */
+/**
+ * The parts of the folder `w` walks, or of the one project below it (#174), or what it has to say
+ * about them.
+ */
 function readFolder(w: Walk, input: string, path: string, preferred?: string): ResolvedProject {
   const out = w.project;
   const name = basename(path);
@@ -679,14 +683,16 @@ function readFolder(w: Walk, input: string, path: string, preferred?: string): R
   if (report) out.report = report;
   if (model || report) return out;
 
-  // A plain folder, neither a part nor a PBIP folder and holding no .pbip, may hold projects in
-  // folders below it, as a repository holds each in a folder of its own (#174). Read as loose
-  // files, one project's model would be linted without its report, and two projects' models as
-  // one. So the one project found is linted as if it had been given, its root the config search's
-  // start and the base of its notices' paths, with a notice that names it first; several are
-  // refused with a list, each with the command that lints it, and nothing is linted. A refusal of
-  // the project itself, such as a model folder that holds no .tmdl files, is the run's, naming the
-  // project's path joined to `input`, as any refusal of a path below the input does.
+  // A plain folder, neither a part nor a PBIP folder and holding no .pbip (a link counted, as
+  // pbipIn counts one), may hold projects in folders below it, as a repository holds each in a
+  // folder of its own (#174). Read as loose files, one project's model would be linted without its
+  // report, and two projects' models as one. So the one project found is linted as if it had been
+  // given, its root the config search's start and the base of its notices' paths, with a notice
+  // that names it first; several are refused with a list, each with the command that lints it, and
+  // nothing is linted. The project's walk is its own: what this folder's read met (a definition
+  // folder that could not be read, say) is outside the project and refuses nothing, and a refusal
+  // of the project itself, such as a model folder that holds no .tmdl files, is the run's, naming
+  // the project's path joined to `input`, as any refusal of a path below the input does.
   if (
     !namedPart &&
     name !== "definition" &&
@@ -698,6 +704,7 @@ function readFolder(w: Walk, input: string, path: string, preferred?: string): R
     const at = (p: string): string => toPosix(join(input, p));
     if (below.length === 1) {
       const project = resolveProject(at(below[0]!));
+      w.refusal = undefined;
       return { ...project, diagnostics: [projectBelowNotice(below[0]!), ...project.diagnostics] };
     }
     if (below.length > 1)
@@ -739,13 +746,12 @@ function readFolder(w: Walk, input: string, path: string, preferred?: string): R
 }
 
 /**
- * A file's text, or undefined when it is not there, is a link, which is not followed, or is one
- * the operating system will not give.
+ * A file's text, or undefined when it is not there, is not a file, is a link, which is not
+ * followed, or is one the operating system will not give.
  */
 function textAt(p: string): string | undefined {
-  if (isLink(p)) return undefined;
   try {
-    return readFileSync(p, "utf8");
+    return isLink(p) || !isFile(p) ? undefined : readFileSync(p, "utf8");
   } catch (e) {
     if (isSystemError(e)) return undefined;
     throw e;
@@ -758,9 +764,10 @@ function textAt(p: string): string | undefined {
  * walk's base. A part folder is not entered, since what is in it is the part's, and neither are
  * the folders the walk skips (SKIP_DIRS: git's, the packages', Desktop's caches, and a report's
  * resources), which keeps a repository's root as quick to search as the walk for loose files is
- * to read. A link is not followed, and a folder the operating system will not list is passed over
- * without a notice: what either holds is outside every project linted, and when no project is
- * found the walk for loose files meets the same path and names it.
+ * to read. A link is not followed, a link to a .pbip included, and a folder the operating system
+ * will not list is passed over without a notice: what either holds is outside every project
+ * linted, and when no project is found the walk for loose files meets the same path and names it.
+ * So the notice says the project is the only one found.
  */
 function foundBelow(
   w: Walk,
@@ -790,7 +797,8 @@ function foundBelow(
 /**
  * `p` as one word on a command line: as it is when it holds only characters no shell treats
  * specially, else in double quotes, which POSIX shells, PowerShell, and cmd all take for a path
- * with a space in it. A name holding `$`, a backquote, or a double quote needs escaping for the
- * shell at hand, which no one quoting does for all three.
+ * with a space in it. A name holding `$`, a backquote, a double quote, `!` (bash's history), or
+ * `%` (cmd's variables) needs escaping for the shell at hand, which no one quoting does for all
+ * three.
  */
 const shellWord = (p: string): string => (/^[\w./:@+-]+$/.test(p) ? p : `"${p}"`);

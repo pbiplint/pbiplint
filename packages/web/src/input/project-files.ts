@@ -520,6 +520,10 @@ function readFolder(s: Selection, base: string): Parts {
     if (path !== undefined) {
       const folder = found.pbips.some((p) => p.path === path) ? parent(path) : path;
       const root = join(base, folder);
+      // The project's reads are the run's, as the CLI's walk of it is its own: what this folder's
+      // reads met (a definition folder that could not be listed, say) is outside the project and
+      // neither refuses nor is named.
+      s.reads.length = 0;
       return { ...readFolder(s, root), below: { path, root } };
     }
   }

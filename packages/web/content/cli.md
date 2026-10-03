@@ -30,6 +30,7 @@ npx pbiplint path/to/model --format sarif --output pbiplint.sarif
 npx pbiplint path/to/model --format markdown
 npx pbiplint rules           # every rule with its status and severity
 npx pbiplint explain HIDE_FOREIGN_KEYS   # one rule's guidance, offline (--format json too)
+npx pbiplint skill --install claude      # the skill for AI assistants, where Claude Code reads it
 npx pbiplint --help          # every option, in one screen
 npx pbiplint --version
 ```
@@ -62,7 +63,21 @@ These are the options `pbiplint --help` lists:
 
 An AI assistant that lints after each edit can keep its context small: `pbiplint <path> --quiet` for the counts, `pbiplint <path> --rule <RULE_ID>` for one rule's findings, and `pbiplint explain <RULE_ID>` for how to fix them. When there are findings, the quiet output's last line names the other two.
 
-To lint a folder named `explain` or `rules`, give it as `./explain` or `./rules`.
+### Give an AI assistant the skill
+
+`pbiplint skill` prints a skill, in the [Agent Skills](https://agentskills.io/home) format, that tells a coding assistant when to run pbiplint, how to keep its output short, how to read the results, and what to leave to you, such as ignoring a finding or editing files while Power BI Desktop has the project open. It ships with the CLI, so it always matches the version installed, and an assistant can read it from that command without installing anything.
+
+To keep it in a project, run `pbiplint skill --install <assistant>` from the project's or repository's root folder:
+
+| Assistant | Folder it writes |
+| --- | --- |
+| `claude` (Claude Code) | `.claude/skills/pbiplint/` |
+| `copilot` (GitHub Copilot) | `.github/skills/pbiplint/` |
+| `codex` (Codex) or `gemini` (Gemini CLI) | `.agents/skills/pbiplint/` |
+
+GitHub Copilot reads all three folders, so one copy is enough for it. `--install` never replaces a copy that differs from the one it would write, an edited copy or one from another version, unless you add `--force`; `--dry-run` says what it would do and writes nothing. `--show` lists each folder, whether the skill is there, and whether that copy matches the version installed. To remove it, delete the `pbiplint` folder `--show` names.
+
+To lint a folder named `explain`, `rules`, or `skill`, give it as `./explain`, `./rules`, or `./skill`.
 
 ### Gate a build on it
 

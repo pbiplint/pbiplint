@@ -1,4 +1,5 @@
 import { FORMATS, type FormatName, type SeverityName } from "@pbiplint/core";
+import { SKILL_TARGETS, type SkillTarget } from "./skill.js";
 
 export class UsageError extends Error {
   readonly #lines: readonly string[];
@@ -18,7 +19,7 @@ export class UsageError extends Error {
 }
 
 export interface CliOptions {
-  command: "lint" | "rules" | "explain" | "help" | "version";
+  command: "lint" | "rules" | "explain" | "skill" | "help" | "version";
   path?: string;
   /** The rule id `explain` was given. */
   ruleId?: string;
@@ -31,6 +32,12 @@ export interface CliOptions {
   quiet?: boolean;
   /** --rule, as typed, once per use. */
   rules?: string[];
+  /** `skill --install`: the assistant to install the skill for. */
+  install?: SkillTarget;
+  force?: boolean;
+  dryRun?: boolean;
+  /** `skill --show`. */
+  show?: boolean;
 }
 
 const FAIL_ON = ["error", "warning", "info", "none"] as const;
@@ -69,6 +76,22 @@ export function parseArgs(argv: string[]): CliOptions {
       case "--rule":
         opts.rules = [...(opts.rules ?? []), value()];
         break;
+      case "--install": {
+        const t = value();
+        if (!Object.hasOwn(SKILL_TARGETS, t))
+          throw new UsageError(`--install must be one of ${Object.keys(SKILL_TARGETS).join(", ")}`);
+        opts.install = t as SkillTarget;
+        break;
+      }
+      case "--force":
+        opts.force = true;
+        break;
+      case "--dry-run":
+        opts.dryRun = true;
+        break;
+      case "--show":
+        opts.show = true;
+        break;
       case "--format": {
         const f = value();
         if (!(FORMATS as readonly string[]).includes(f))
@@ -95,6 +118,26 @@ export function parseArgs(argv: string[]): CliOptions {
         positional.push(arg);
     }
   }
+  const skillOption = opts.install || opts.force || opts.dryRun || opts.show;
+  if (positional[0] === "skill") {
+    if (positional.length > 1) throw new UsageError("skill takes no arguments");
+    if (
+      opts.sample ||
+      opts.failOn ||
+      opts.config ||
+      opts.output ||
+      opts.quiet ||
+      opts.rules ||
+      opts.format !== "text"
+    )
+      throw new UsageError("skill takes only --install, --force, --dry-run, and --show");
+    if ((opts.force || opts.dryRun) && !opts.install)
+      throw new UsageError("--force and --dry-run go with --install");
+    if (opts.install && opts.show) throw new UsageError("Give either --install or --show");
+    return { ...opts, command: "skill" };
+  }
+  if (skillOption)
+    throw new UsageError("--install, --force, --dry-run, and --show go with pbiplint skill");
   if (positional[0] === "rules") {
     if (positional.length > 1) throw new UsageError("rules takes no arguments");
     return { ...opts, command: "rules" };
@@ -125,6 +168,7 @@ export const HELP = `Usage: pbiplint <path> [options]
        pbiplint --sample [options]
        pbiplint rules
        pbiplint explain <RULE_ID> [--format json]
+       pbiplint skill [--install <assistant> [--force] [--dry-run] | --show]
 
 Lint a Power BI project, its semantic model (TMDL) and its report (PBIR), for best-practice
 violations. Either part alone is fine. Nothing is uploaded.
@@ -138,6 +182,13 @@ violations. Either part alone is fine. Nothing is uploaded.
 --quiet             the summary, then one line per rule with findings (text only)
 --rule <RULE_ID>    show only this rule's findings (repeatable); --fail-on counts only these
 --help, --version
+
+pbiplint skill prints a skill that tells an AI assistant how to use pbiplint.
+--install <name>    claude, copilot, codex, or gemini: write it where that assistant reads a project's
+                    skills, below the current folder (copilot also reads the claude and codex folders)
+--force             replace a copy that differs (an edited or older one)
+--dry-run           say what --install would do, and write nothing
+--show              which folders have it, and whether each copy matches this version
 
 Exit codes: 0 no findings at or above --fail-on, 1 findings, 2 a usage error, an input it cannot read, or nothing to lint.
 With --format json, sarif, or markdown, stdout is one document and nothing else.

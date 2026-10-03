@@ -15,6 +15,7 @@ import { HELP, parseArgs, UsageError } from "./args.js";
 import { CONFIG_FILE, findConfig } from "./config.js";
 import { explainJson, explainRule, explainText, findRule, noRuleLines } from "./explain.js";
 import { quietText } from "./quiet.js";
+import { runSkill } from "./skill.js";
 import { logSafe } from "./log-safe.js";
 import { sampleDir } from "./sample.js";
 import { RULE_HELP } from "./rule-help.data.js";
@@ -67,6 +68,7 @@ export async function main(argv: string[], given: Io): Promise<number> {
       io.stdout(listRules() + "\n");
       return 0;
     }
+    if (opts.command === "skill") return runSkill(opts, io, stderrLine);
     if (opts.command === "explain") {
       const explained = explainRule(opts.ruleId!);
       if (!("rule" in explained)) {

@@ -1,4 +1,5 @@
 import { unquoteName, unquoteValue } from "./quote.js";
+import { allowsChild, checksChildren } from "./child-types.js";
 import { isModelChildType, isNamedRootType, isRootType } from "./root-types.js";
 import type { ParsedFile, TmdlNode, TmdlParseIssue } from "./types.js";
 
@@ -136,8 +137,10 @@ const blockText = (lines: readonly string[], from: number, end: number, depth: n
  * property, or an expression with no name that has lines under it; and under that `database`, a
  * declaration other than its `model`. A flag there is checked only by a word TMDL declares, or,
  * under a model, by a declaration under it, since the model's own properties include flags and
- * blocks of flags. Other nested lines are not checked, but for a `table` line under anything but a
- * model. A declaration the model reads by name that has none (at the root or under a model, as
+ * blocks of flags. Under the model's objects, a declaration whose type its object does not hold
+ * (child-types.ts) is an issue (#144), such as a misspelt `columm` under a table; flags, properties,
+ * and lines inside a culture's translations or a TMDL script are not checked. A `table` line
+ * under anything but a model is one too. A declaration the model reads by name that has none (at the root or under a model, as
  * above), and a name not enclosed in single quotes as TMDL requires wherever it sits, are issues
  * (#135). Each issue says whether it can take an object out of the model
  * (`TmdlParseIssue.canDropObjects`); every one can except a description nothing claims.
@@ -156,6 +159,16 @@ export function parseTmdl(file: string, text: string): ParsedFile {
    * a model too, and it is not the model's.
    */
   const holders = new Map<TmdlNode, "model" | "database">();
+  /**
+   * The lines kept out of the model with an issue of their own: nothing under one is checked
+   * against its object's child types (#144), since the issue on that line already covers it.
+   */
+  const reported = new Set<TmdlNode>();
+  /**
+   * What sits above a line keeps the parser's reading of it: a culture's translations, which
+   * restate the model's objects in a shape of their own, and a TMDL script's `createOrReplace`.
+   */
+  const KEEPS_READING = new Set(["cultureinfo", "createorreplace"]);
   /**
    * Whether a line the parser lost may have been one of the model's own declarations, such as a
    * table's: a line that may have been at the root (`mayBeRootLine`), or one whose tabs put it
@@ -434,6 +447,19 @@ export function parseTmdl(file: string, text: string): ParsedFile {
         isNamedRootType(keyword)
       ) {
         malformed = `"${word}" is declared with no name`;
+      } else if (
+        node.kind === "object" &&
+        parent !== undefined &&
+        checksChildren(parent.type) &&
+        !allowsChild(parent.type, keyword) &&
+        !stack.slice(0, indent).some((a) => reported.has(a) || KEEPS_READING.has(a.type))
+      ) {
+        // A declaration its object does not hold (#144): a misspelt `columm`, a `level` that lost
+        // its tab and landed under the table, a `measure` with a tab too many under a column. Only
+        // a word followed by a name is checked, the way TMDL declares an object; a lone word is a
+        // flag and keeps today's reading. Both words are named as written.
+        const under = /^\s*(\w+)/.exec(lines[parent.line - 1]!)?.[1] ?? parent.type;
+        malformed = `"${word}" is not a type TMDL declares under a ${under}`;
       } else if (!readableName) {
         malformed = "the name is not enclosed in single quotes as TMDL requires";
       }
@@ -447,6 +473,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
         canDropObjects: true,
         canDropTableLine: mayBeTable,
       });
+      reported.add(node);
       stack[indent] = node;
       i++;
       continue;

@@ -1745,6 +1745,26 @@ model under a culture's translations or a TMDL script's
 Over the 23,457 files, the parser gives every file the same issues and
 the same tree as before.
 
+Amended 2026-10-03 (issue #144): under the model's objects, a
+declaration (a word followed by a name, as TMDL declares an object) of
+a type its object does not hold is a `PARSE_ISSUE` that keeps the line
+out of the model with the lines under it, such as a misspelt `columm`
+under a table, a hierarchy's `level` that lost a tab and landed under
+the table, or a `measure` with a tab too many under a column. The table
+of the types each object holds is `tmdl/child-types.ts`, whose header
+says where each entry was checked: Microsoft's TMDL reader through
+Tabular Editor 3's CLI 0.7.1.2 on October 3, 2026, the Tabular Object
+Model's classes on Learn, and the corpus. A pair is reported only when
+the reader refuses it and the parent's class has no collection for it.
+Flags, properties, and expressions with no name keep today's reading,
+as do lines under an object the table does not list (`refreshPolicy`),
+inside a culture's translations or a TMDL script, and under a line
+already reported. Such an issue can take an object out of the model
+(`canDropObjects`) but not a `table` line, which sits only at the root
+or under a model. Over the 23,457 files, compared on October 3, 2026,
+the parser gives every file the same issues and the same tree as
+before.
+
 Amended 2026-09-24 with Michael (release triage, batch D, ruling H82):
 while a TMDL file has a parse issue that can take an object out of the
 model, which is any but an orphaned `///` description, a reference to a

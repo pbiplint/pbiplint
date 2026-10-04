@@ -19,6 +19,7 @@ npx pbiplint explain HIDE_FOREIGN_KEYS                      # one rule's guidanc
 npx pbiplint path/to/model --quiet                          # the counts, one line per rule
 npx pbiplint path/to/model --rule HIDE_FOREIGN_KEYS         # one rule's findings (repeatable)
 npx pbiplint skill --install claude                         # the skill for AI assistants (--install copilot, codex, gemini; --show)
+npx pbiplint mcp                                            # a local MCP server for an AI assistant to start
 npx pbiplint --help                                         # every option, in one screen
 npx pbiplint --version
 ```
@@ -28,6 +29,11 @@ a coding assistant how to use pbiplint. `--install claude`, `copilot`, `codex`, 
 where that assistant reads a project's skills, below the current folder; it never replaces a copy
 that differs unless given `--force`, and `--dry-run` writes nothing. `--show` lists where it is and
 whether each copy matches this version.
+
+`pbiplint mcp` is a local MCP server over stdin and stdout, for an assistant that runs local
+servers (Claude Desktop, Claude Code, VS Code, Cursor) to start. Its three tools only read: `lint`
+(what `--format json` prints, or with `quiet` the short summary), `explain_rule`, and `list_rules`.
+It opens no port. See [the CLI page](https://pbiplint.com/cli/#mcp) for each app's setup.
 
 Formats: `text` (default), `json`, `sarif` (for GitHub code scanning and editors), `markdown`.
 The Markdown export writes an email address, an `@name`, a `#123` or `GH-123`, and text

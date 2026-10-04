@@ -19,7 +19,7 @@ export class UsageError extends Error {
 }
 
 export interface CliOptions {
-  command: "lint" | "rules" | "explain" | "skill" | "help" | "version";
+  command: "lint" | "rules" | "explain" | "skill" | "mcp" | "help" | "version";
   path?: string;
   /** The rule id `explain` was given. */
   ruleId?: string;
@@ -142,6 +142,10 @@ export function parseArgs(argv: string[]): CliOptions {
     if (positional.length > 1) throw new UsageError("rules takes no arguments");
     return { ...opts, command: "rules" };
   }
+  if (positional[0] === "mcp") {
+    if (positional.length > 1 || argv.length > 1) throw new UsageError("mcp takes no arguments");
+    return { ...opts, command: "mcp" };
+  }
   if (positional[0] === "explain") {
     if (positional.length === 1) throw new UsageError("explain needs a rule id");
     if (positional.length > 2) throw new UsageError("explain takes one rule id");
@@ -169,6 +173,7 @@ export const HELP = `Usage: pbiplint <path> [options]
        pbiplint rules
        pbiplint explain <RULE_ID> [--format json]
        pbiplint skill [--install <assistant> [--force] [--dry-run] | --show]
+       pbiplint mcp
 
 Lint a Power BI project, its semantic model (TMDL) and its report (PBIR), for best-practice
 violations. Either part alone is fine. Nothing is uploaded.

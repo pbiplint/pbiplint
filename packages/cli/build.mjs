@@ -17,7 +17,11 @@ await build({
   format: "esm",
   target: "node20",
   banner: { js: "#!/usr/bin/env node" },
-  alias: { "@pbiplint/core": join(here, "../core/src/index.ts") },
+  alias: {
+    "@pbiplint/core": join(here, "../core/src/index.ts"),
+    // The MCP SDK's Node shim brings ajv for a check pbiplint never needs; see src/mcp-shims.ts.
+    "@modelcontextprotocol/server/_shims": join(here, "src/mcp-shims.ts"),
+  },
   define: { __PBIPLINT_VERSION__: JSON.stringify(pkg.version) },
   logLevel: "info",
 });

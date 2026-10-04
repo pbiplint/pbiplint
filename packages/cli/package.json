@@ -43,9 +43,13 @@
   "scripts": {
     "build": "node build.mjs",
     "prepack": "npm run build",
-    "test:bundle": "node dist/pbiplint.mjs --sample --format json > /dev/null; test $? -eq 1"
+    "test:bundle": "node dist/pbiplint.mjs --sample --format json > /dev/null; test $? -eq 1 && node scripts/smoke-mcp.mjs"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/server": "^2.3.0",
+    "zod": "^4.6.5"
   }
 }

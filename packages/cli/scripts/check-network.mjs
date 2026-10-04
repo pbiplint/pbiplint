@@ -18,7 +18,8 @@ const code = readFileSync(bundle, "utf8");
 // Everything the CLI uses from npm is bundled in, so every import left in the bundle is a Node
 // builtin. An allowlist rather than a list of network modules: a new import fails here until
 // someone has checked that it cannot reach the network and added it.
-const ALLOWED = new Set(["node:fs", "node:path", "node:url"]);
+// node:process is the process object, which the MCP SDK's stdio transport imports by name.
+const ALLOWED = new Set(["node:fs", "node:path", "node:process", "node:url"]);
 // The bundle is not minified, so each static import or re-export starts a line, which keeps a
 // rule's message that says `from "Sales"` from reading as one. A dynamic import or require is
 // matched anywhere, as is esbuild's `__require`, which a bundled CommonJS dependency's require

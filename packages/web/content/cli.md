@@ -31,6 +31,7 @@ npx pbiplint path/to/model --format markdown
 npx pbiplint rules           # every rule with its status and severity
 npx pbiplint explain HIDE_FOREIGN_KEYS   # one rule's guidance, offline (--format json too)
 npx pbiplint skill --install claude      # the skill for AI assistants, where Claude Code reads it
+npx pbiplint mcp                         # a local MCP server, for an AI assistant to start
 npx pbiplint --help          # every option, in one screen
 npx pbiplint --version
 ```
@@ -77,7 +78,29 @@ To keep it in a project, run `pbiplint skill --install <assistant>` from the pro
 
 GitHub Copilot reads all three folders, so one copy is enough for it. `--install` never replaces a copy that differs from the one it would write, an edited copy or one from another version, unless you add `--force`; `--dry-run` says what it would do and writes nothing. `--show` lists each folder, whether the skill is there, and whether that copy matches the version installed. To remove it, delete the `pbiplint` folder `--show` names.
 
-To lint a folder named `explain`, `rules`, or `skill`, give it as `./explain`, `./rules`, or `./skill`.
+<h3 id="mcp">Serve an AI assistant over MCP (from 0.2.5)</h3>
+
+`pbiplint mcp` is a local [MCP](https://modelcontextprotocol.io) server for an AI assistant that runs local servers, such as Claude Desktop, Claude Code, VS Code with GitHub Copilot, or Cursor. The assistant starts it and talks to it over stdin and stdout; it opens no port. It is the way to lint from an app that gives the assistant no terminal, such as Claude Desktop's chat. Its three tools only read, and each carries MCP's read-only annotation, so an app can approve them once:
+
+| Tool | What it returns |
+| --- | --- |
+| `lint` | What `pbiplint <path> --format json` prints, or with `quiet`, what `--quiet` prints. `rules` and `failOn` work as `--rule` and `--fail-on` do. A path it cannot read comes back as an error with the CLI's own message. |
+| `explain_rule` | What `pbiplint explain <RULE_ID> --format json` prints. |
+| `list_rules` | Every rule with its layer, status, severity, and category, as JSON. |
+
+Give `lint` an absolute path: a relative one is taken from the folder the app started the server in. To add it to Claude Code, run `claude mcp add pbiplint -- npx -y pbiplint mcp`. Claude Desktop and Cursor take a server like this in their MCP settings, and VS Code in `.vscode/mcp.json` under `servers` rather than `mcpServers`:
+
+```json
+{
+  "mcpServers": {
+    "pbiplint": { "command": "npx", "args": ["-y", "pbiplint", "mcp"] }
+  }
+}
+```
+
+Pin a version, as in `pbiplint@0.2.5`, to keep every machine on the same rules.
+
+To lint a folder named `explain`, `rules`, `skill`, or `mcp`, give it as `./explain`, `./rules`, `./skill`, or `./mcp`.
 
 ### Gate a build on it
 
@@ -115,7 +138,7 @@ Scripts, pipelines, and AI assistants read what the CLI prints, so these parts o
 
 ### Exit codes
 
-- `0`: nothing at or above `--fail-on`. With `--rule` (from 0.2.5), only the findings shown count. `pbiplint rules`, `pbiplint explain` with a rule it knows, `pbiplint skill` (from 0.2.5) when it prints, shows, or installs the skill, `--help`, and `--version` exit `0` too.
+- `0`: nothing at or above `--fail-on`. With `--rule` (from 0.2.5), only the findings shown count. `pbiplint rules`, `pbiplint explain` with a rule it knows, `pbiplint skill` (from 0.2.5) when it prints, shows, or installs the skill, `pbiplint mcp` (from 0.2.5) when the app closes its input, `--help`, and `--version` exit `0` too.
 - `1`: something at or above `--fail-on`.
 - `2`, with nothing on stdout and the reason on stderr:
   - a usage error, such as an unknown option, an option with no value or a value it does not take, two paths, or options with no path; from 0.2.5 also an unknown rule id given to `explain` or `--rule`, or `--quiet` with a format other than text;
@@ -155,8 +178,8 @@ The text format's layout and wording, which are for people and may change; the M
 
 This is the command line's part of [the pbiplint Privacy Promise](/privacy/), in detail.
 
-- **It reads** the files that describe a project, under the path you give it: the `.pbip` file, the model's `.tmdl` files, and the report's `definition.pbir`, `.platform`, and JSON files, along with the report or model folder a `.pbip` file or a report's `definition.pbir` points to. It also reads the nearest `pbiplint.config.json`, or the one `--config` names. It lists folders to find those files, and opens nothing else: it never enters the `.pbi` folder, where Power BI Desktop keeps the model's local data cache, nor `.git`, `node_modules`, or a report's `StaticResources` and `CustomVisuals` folders, and it does not follow a symbolic link below the path you give. `pbiplint skill` reads the skill file it ships with, and any copy already installed below the current folder.
-- **It writes** the report to your terminal, or to the file `--output` names (creating its folder if needed). Notices, and with `--output` a one-line summary, go to stderr. `pbiplint skill --install` writes the skill's `SKILL.md` into the folder the assistant reads, below the current folder, when you ask it to. Nothing else: no cache, no settings file, no log.
+- **It reads** the files that describe a project, under the path you give it: the `.pbip` file, the model's `.tmdl` files, and the report's `definition.pbir`, `.platform`, and JSON files, along with the report or model folder a `.pbip` file or a report's `definition.pbir` points to. It also reads the nearest `pbiplint.config.json`, or the one `--config` names. It lists folders to find those files, and opens nothing else: it never enters the `.pbi` folder, where Power BI Desktop keeps the model's local data cache, nor `.git`, `node_modules`, or a report's `StaticResources` and `CustomVisuals` folders, and it does not follow a symbolic link below the path you give. `pbiplint skill` reads the skill file it ships with, and any copy already installed below the current folder. `pbiplint mcp` reads what its `lint` tool is given, as `pbiplint <path>` does.
+- **It writes** the report to your terminal, or to the file `--output` names (creating its folder if needed). Notices, and with `--output` a one-line summary, go to stderr. `pbiplint skill --install` writes the skill's `SKILL.md` into the folder the assistant reads, below the current folder, when you ask it to. `pbiplint mcp` writes only its MCP messages, to stdout, for the app that started it. Nothing else: no cache, no settings file, no log.
 - **It sends** nothing. It makes no network request: no telemetry, no update check, no call home.
 
 The network steps that are not pbiplint's own belong to npm. Installing the package fetches it from the registry. And `npx pbiplint` asks the registry for the package's details on every run, even when a copy is already in npm's cache, to see whether a newer version matches; with no network, npm retries for about a minute before it runs the cached copy. Neither request carries anything from your project. To run with no network request at all, run an installed copy, or `npx --offline pbiplint`, which uses the cached copy without asking.
@@ -213,6 +236,6 @@ On Linux, `strace -f -e trace=network pbiplint --sample` lists every network cal
 
 ### 5. Read the code
 
-The CLI is one bundle, `dist/pbiplint.mjs`, built from [`packages/cli`](https://github.com/pbiplint/pbiplint/tree/main/packages/cli). [A check that runs on every change](https://github.com/pbiplint/pbiplint/blob/main/packages/cli/scripts/check-network.mjs), and before every release, fails if that bundle imports any module but `node:fs`, `node:path`, and `node:url`, or refers to a network API.
+The CLI is one bundle, `dist/pbiplint.mjs`, built from [`packages/cli`](https://github.com/pbiplint/pbiplint/tree/main/packages/cli). [A check that runs on every change](https://github.com/pbiplint/pbiplint/blob/main/packages/cli/scripts/check-network.mjs), and before every release, fails if that bundle imports any module but `node:fs`, `node:path`, `node:process` (which the MCP server's stdio transport names), and `node:url`, or refers to a network API.
 
 If you ever find pbiplint breaking the Promise, that is a security bug. Report it privately, as [the security policy](https://github.com/pbiplint/pbiplint/blob/main/SECURITY.md) describes.

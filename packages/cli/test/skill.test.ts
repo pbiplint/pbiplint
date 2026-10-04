@@ -49,6 +49,14 @@ describe("the skill file", () => {
       expect(description).toContain(words);
   });
 
+  it("points at pbiplint's MCP tools, by the names the server registers, when they are there", () => {
+    const run = /^## How to run it\n([\s\S]*?)\n## /m.exec(text)![1]!;
+    const server = readFileSync(new URL("../src/mcp.ts", import.meta.url), "utf8");
+    const tools = [...server.matchAll(/registerTool\(\s*"([a-z_]+)"/g)].map((m) => m[1]!);
+    expect(tools).toEqual(["lint", "explain_rule", "list_rules"]);
+    for (const name of [...tools, "quiet", "rules"]) expect(run).toContain(`\`${name}\``);
+  });
+
   it("holds one judgment block a chat assistant can read with no CLI", () => {
     expect(judgment).not.toBeNull();
     expect(text.match(/<!-- judgment -->/g)).toHaveLength(1);

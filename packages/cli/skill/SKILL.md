@@ -26,7 +26,7 @@ It runs on this machine. It reads the project's files and prints to the terminal
 
 ## How to run it
 
-Use `npx pbiplint` (or `pbiplint` where it is installed).
+Use `npx pbiplint` (or `pbiplint` where it is installed). If pbiplint's MCP tools are available (`lint`, `explain_rule`, and `list_rules`), use them in place of the commands: `lint` takes the project's path with the same `quiet` and `rules` options, and `explain_rule` takes a rule id.
 
 1. `pbiplint <path> --quiet` prints the summary and one line per rule with findings: `<severity> <RULE_ID> <count>`.
 2. Work on errors first, then warnings. Info findings are suggestions: mention them, do not work through them unless asked.

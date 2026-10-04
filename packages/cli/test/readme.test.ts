@@ -21,7 +21,7 @@ describe.each([
 
   it("names every command the help text's usage lines give", () => {
     const commands = [...HELP.matchAll(/^(?:Usage:)?[ \t]+pbiplint ([a-z]+)/gm)].map((m) => m[1]!);
-    expect(commands).toEqual(["rules", "explain", "skill"]);
+    expect(commands).toEqual(["rules", "explain", "skill", "mcp"]);
     expect(commands.filter((c) => !readme.includes(`pbiplint ${c}`))).toEqual([]);
   });
 

@@ -1,5 +1,5 @@
 import { formatJson, formatMarkdown, VERSION, type LintResult } from "@pbiplint/core";
-import { RULE_GUIDANCE } from "./rule-guidance.data.js";
+import { JUDGMENT, RULE_GUIDANCE } from "./rule-guidance.data.js";
 
 export interface ExportFile {
   name: string;
@@ -21,19 +21,22 @@ export const exportJson = (result: LintResult): ExportFile => ({
 });
 
 /**
- * What holds for every rule, for an assistant reading a run it did not make. The judgment items
- * follow the list in #180's skill; once the skill's source file is in the CLI package, the sync
- * script copies its marked block here instead, so the two cannot drift.
+ * What an assistant reading a run it did not make needs first. The list under "What holds for
+ * every rule" is the judgment block of the skill the CLI ships, copied in by the sync script, so
+ * the two cannot drift; the lines above it are the results page's own.
  */
 export const ASSISTANT_PREAMBLE = `# For the AI assistant reading this
 
 The person who sent you this linted a Power BI project with pbiplint on pbiplint.com, which ran in their browser. Below is its report, followed by pbiplint's guidance for each rule that has findings: how to fix it, and when to leave it alone.
 
-- Work through the errors first, then the warnings. Info findings are suggestions, not a to-do list.
-- Fix a report in Power BI Desktop. Fix a model in Desktop, or in its TMDL files, which are indented with tabs.
-- In a file you suggest editing, keep the formatting and key order Power BI Desktop writes, and leave \`$schema\` alone. Desktop may overwrite files edited while it has the project open.
-- Ask before ignoring, deleting, or renaming anything. A finding that matches its rule's When to ignore it is a question for the person, not a fix. Each When to ignore it ends with how to ignore the rule; suggest that, a config change, or deleting an object only once the person agrees, never just to clear a finding.
-- Renaming a table, column, or measure reaches the report's files too. When the fixes are made, and after any rename, ask the person to lint the whole project again on pbiplint.com.
+- Work through the errors first, then the warnings.
+- Fix a report in Power BI Desktop. Fix a model in Desktop, or in its TMDL files.
+- Each rule's When to ignore it ends with how to ignore the rule. Suggest that only once the person agrees.
+- When the fixes are made, and after any rename, ask the person to lint the whole project again on pbiplint.com.
+
+## What holds for every rule
+
+${JUDGMENT}
 `;
 
 /** Each fired rule's How to fix it and When to ignore it, in the report's order, with its page. */

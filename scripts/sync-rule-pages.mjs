@@ -10,7 +10,10 @@
 //                                                    which the CLI hands to the SARIF formatter as
 //                                                    each rule's help block
 //   packages/web/src/results/rule-guidance.data.ts   How to fix it and When to ignore it, which
-//                                                    the results page copies for an AI assistant
+//                                                    the results page copies for an AI assistant,
+//                                                    and the judgment list from the skill the CLI
+//                                                    ships (packages/cli/skill/SKILL.md, between its
+//                                                    judgment markers), so the two never disagree
 // The rule-pages tests fail when a data file and the pages disagree. Core is imported for the
 // ignore mechanics, so build it first.
 import { execFileSync } from "node:child_process";
@@ -21,6 +24,14 @@ import { ignoreHelp } from "@pbiplint/core";
 const SUMMARIES_OUT = "packages/core/src/rules/rule-summaries.data.ts";
 const HELP_OUT = "packages/cli/src/rule-help.data.ts";
 const GUIDANCE_OUT = "packages/web/src/results/rule-guidance.data.ts";
+const SKILL = "packages/cli/skill/SKILL.md";
+
+/** The skill's judgment list: the lines between its `<!-- judgment -->` and `<!-- /judgment -->` lines. */
+export const judgmentBlock = (skill) => {
+  const m = /^<!-- judgment -->\n([\s\S]*?)\n<!-- \/judgment -->$/m.exec(skill);
+  if (!m) throw new Error(`${SKILL}: no judgment block`);
+  return m[1];
+};
 const RULE_URL_BASE = "https://pbiplint.com/rules/";
 
 /** The page's `## ` sections by heading, frontmatter and title dropped. */
@@ -173,6 +184,9 @@ export interface RuleGuidance {
 
 /** What the results page copies for an AI assistant, per rule id. Example stays on the page. */
 export const RULE_GUIDANCE: Readonly<Record<string, RuleGuidance>> = ${JSON.stringify(guidance, null, 2)};
+
+/** The judgment list from ${SKILL}, as Markdown bullets: what holds for every rule. */
+export const JUDGMENT = ${JSON.stringify(judgmentBlock(readFileSync(SKILL, "utf8")))};
 `,
   );
   execFileSync("node_modules/.bin/prettier", ["--write", SUMMARIES_OUT, HELP_OUT, GUIDANCE_OUT], {

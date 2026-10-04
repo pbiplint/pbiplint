@@ -8,7 +8,7 @@ import {
   exportJson,
   exportMarkdown,
 } from "../src/results/export.js";
-import { RULE_GUIDANCE } from "../src/results/rule-guidance.data.js";
+import { JUDGMENT, RULE_GUIDANCE } from "../src/results/rule-guidance.data.js";
 import { SAMPLE_CONFIG, SAMPLE_FILES } from "../src/sample.js";
 
 /** The sample as the page lints it: both parts, under the sample's own config. */
@@ -114,7 +114,9 @@ describe("export for an AI assistant", () => {
   it("opens with a preamble that says where the findings came from and what to ask first", () => {
     expect(preamble).toContain("pbiplint.com");
     expect(preamble).toMatch(/errors first/i);
-    expect(preamble).toMatch(/Ask before ignoring, deleting, or renaming anything/);
+    // The judgment list is the skill's, word for word.
+    expect(preamble).toContain(`## What holds for every rule\n\n${JUDGMENT}\n`);
+    expect(preamble).toMatch(/Never clear a finding by ignoring it/);
     expect(preamble).toMatch(/renam/i);
     expect(preamble).toMatch(/Power BI Desktop/);
   });

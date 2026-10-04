@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { defaultRules, ignoreHelp, slug } from "@pbiplint/core";
 import { describe, expect, it } from "vitest";
-import { RULE_GUIDANCE } from "../src/results/rule-guidance.data.js";
+import { JUDGMENT, RULE_GUIDANCE } from "../src/results/rule-guidance.data.js";
 
 const rulesDir = fileURLToPath(new URL("../../../rules/", import.meta.url));
 
@@ -27,4 +27,14 @@ describe.each(defaultRules.map((r) => [r.id, r] as const))("guidance for %s", (_
 
 it("carries no rule the engine does not have", () => {
   expect(Object.keys(RULE_GUIDANCE).sort()).toEqual(defaultRules.map((r) => r.id).sort());
+});
+
+it("carries the skill's judgment list as the skill has it", () => {
+  const skill = readFileSync(
+    fileURLToPath(new URL("../../cli/skill/SKILL.md", import.meta.url)),
+    "utf8",
+  );
+  const block = /^<!-- judgment -->\n([\s\S]*?)\n<!-- \/judgment -->$/m.exec(skill)?.[1];
+  expect(block).toBeDefined();
+  expect(JUDGMENT).toBe(block);
 });

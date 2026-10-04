@@ -41,15 +41,16 @@ The example runs against a model with one table, Sales, holding Amount and Regio
 }
 ```
 
-```pbir fixed reportExtensions.json
+```pbir fixed tree.json
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/reportExtension/1.0.0/schema.json",
-  "name": "extension",
-  "entities": []
+  "definition/report.json": {
+    "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/report/3.2.0/schema.json",
+    "themeCollection": { "baseTheme": { "name": "Fluent2-CY26SU04", "type": "SharedResources" } }
+  }
 }
 ```
 
-The report defines Sales per Region for itself, on the Sales table, so the finding reads `[Sales per Region] (report)` with `defined in the report on table "Sales"`. The fixed file shows the report's side of the move: once the measure is in the model's Sales table, as How to fix it describes, the report defines none. In a project, delete the file once its list is empty, as How to fix it says: Power BI Desktop does not open a project whose reportExtensions.json has an empty `entities` list.
+The report defines Sales per Region for itself, on the Sales table, so the finding reads `[Sales per Region] (report)` with `defined in the report on table "Sales"`. The fixed report shows its side of the move: once the measure is in the model's Sales table, as How to fix it describes, the report defines none, and its definition folder holds no reportExtensions.json, since Power BI Desktop does not open a project whose reportExtensions.json has an empty `entities` list.
 
 ## Why it matters
 
@@ -61,7 +62,7 @@ pbiplint checks such a measure less well too. Its DAX rules read the model's mea
 
 Move the measure into the model with the same name, on the same table, with the same DAX, then point the report at it. How depends on how the report reads its model.
 
-**If the project opens its model by path,** as the sample does, the fix edits a report file, which among the report pages only `PARSE_ISSUE`'s also does. Power BI Desktop shows the report measures in such a project, but its menu fails on them, so it cannot rename or remove them (checked in Power BI Desktop 2.158, September 2026).
+**If the project opens its model by path,** as the sample does, the fix edits one report file, which only `PARSE_ISSUE`'s page also asks for among the report pages. Power BI Desktop shows the report measures in such a project, but its menu fails on them, so it cannot rename or remove them (checked in Power BI Desktop 2.158, September 2026).
 
 1. Note each report measure's DAX and any format it sets. A report measure that another one uses moves with it: in the sample, Margin % (report) uses Net Margin.
 2. With Power BI Desktop closed, delete their entries from reportExtensions.json, and an entity when it holds no measure any more. When no measure is left, delete the file itself: Desktop does not open a project whose reportExtensions.json has an empty `entities` list (checked in Power BI Desktop 2.158, September 2026).

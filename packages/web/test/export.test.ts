@@ -121,6 +121,21 @@ describe("export for an AI assistant", () => {
     expect(preamble).toMatch(/Power BI Desktop/);
   });
 
+  it("tells an assistant that can run commands to lint the project itself, before the rules", () => {
+    const tools = preamble!.indexOf("If you can run commands where the project is");
+    expect(tools).toBeGreaterThan(0);
+    expect(tools).toBeLessThan(preamble!.indexOf("- Work through the errors first"));
+    for (const command of [
+      "`npx pbiplint <path> --quiet`",
+      "`npx pbiplint <path> --rule <RULE_ID>`",
+      "`npx pbiplint explain <RULE_ID>`",
+    ])
+      expect(preamble).toContain(command);
+    expect(preamble).toMatch(/MCP tools are connected, use those/);
+    // The judgment block stays the skill's alone.
+    expect(JUDGMENT).not.toMatch(/npx|MCP/);
+  });
+
   it("carries the Markdown export verbatim", () => {
     expect(rest).toBeDefined();
     expect(copied).toContain(exportMarkdown(result).text);

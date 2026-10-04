@@ -29,6 +29,8 @@ export const ASSISTANT_PREAMBLE = `# For the AI assistant reading this
 
 The person who sent you this linted a Power BI project with pbiplint on pbiplint.com, which ran in their browser. Below is its report, followed by pbiplint's guidance for each rule that has findings: how to fix it, and when to leave it alone.
 
+If you can run commands where the project is, run \`npx pbiplint <path> --quiet\` rather than working from this paste, then \`npx pbiplint <path> --rule <RULE_ID>\` for one rule's findings and \`npx pbiplint explain <RULE_ID>\` for how to fix it. If pbiplint's MCP tools are connected, use those instead. Either way you get current results and can lint again after each fix.
+
 - Work through the errors first, then the warnings.
 - Fix a report in Power BI Desktop. Fix a model in Desktop, or in its TMDL files.
 - Each rule's When to ignore it ends with how to ignore the rule. Suggest that only once the person agrees.

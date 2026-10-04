@@ -428,7 +428,7 @@ test("copies the Markdown report from the button beside the downloads", async ({
   await page.getByRole("button", { name: "Try the sample project" }).click();
   // Found by position rather than by name, because the name is the thing that changes: a name
   // locator stops matching the moment the copy lands.
-  const copy = page.locator(".export button").nth(2);
+  const copy = page.locator(".export button").nth(0);
   await expect(copy).toHaveText("Copy Markdown");
   await copy.click();
   // The label, not the clipboard contents: reading the clipboard needs a permission that is not
@@ -449,7 +449,7 @@ test("copies the report with each rule's guidance for an AI assistant, from the 
   await page.getByRole("button", { name: "Try the sample project" }).click();
   await expect(page.locator(".export-note")).toContainText("pbiplint sends nothing");
   // By position, as above: the name changes when the copy lands.
-  const copy = page.locator(".export button").nth(3);
+  const copy = page.locator(".export button").nth(1);
   await expect(copy).toHaveText("Copy for an AI assistant");
   await copy.focus();
   await page.keyboard.press("Enter");

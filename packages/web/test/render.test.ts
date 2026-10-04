@@ -208,13 +208,15 @@ describe("renderResults", () => {
       ),
     ).toEqual(["3", "2", "1"]);
   });
-  it("offers Markdown and JSON export", () => {
+  it("offers Markdown and JSON export, as two pairs: the copies, then the downloads", () => {
     renderResults(container, result, { source: "x" });
-    expect([...container.querySelectorAll(".export button")].map((b) => b.textContent)).toEqual([
-      "Download Markdown",
-      "Download JSON",
-      "Copy Markdown",
-      "Copy for an AI assistant",
+    expect(
+      [...container.querySelectorAll(".export .export-pair")].map((pair) =>
+        [...pair.querySelectorAll("button")].map((b) => b.textContent),
+      ),
+    ).toEqual([
+      ["Copy Markdown", "Copy for an AI assistant"],
+      ["Download Markdown", "Download JSON"],
     ]);
   });
   it("copies the report with each rule's guidance for an AI assistant, and says so out loud", async () => {

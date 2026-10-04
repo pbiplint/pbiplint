@@ -405,10 +405,20 @@ function renderExportBar(result: LintResult): HTMLElement[] {
     h(
       "div",
       { class: "export" },
-      button("Download Markdown", () => download(exportMarkdown(result))),
-      button("Download JSON", () => download(exportJson(result))),
-      copyButton("Copy Markdown", () => exportMarkdown(result), "Report copied to the clipboard"),
-      assistantButton,
+      // Two pairs, the copies first, then the downloads, with a wider gap between them (Michael,
+      // October 4, 2026).
+      h(
+        "div",
+        { class: "export-pair" },
+        copyButton("Copy Markdown", () => exportMarkdown(result), "Report copied to the clipboard"),
+        assistantButton,
+      ),
+      h(
+        "div",
+        { class: "export-pair" },
+        button("Download Markdown", () => download(exportMarkdown(result))),
+        button("Download JSON", () => download(exportJson(result))),
+      ),
       announce,
     ),
     // Item 5 of the Promise, said where the copy is made: the paste, not pbiplint, sends it.

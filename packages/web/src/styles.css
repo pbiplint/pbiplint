@@ -509,7 +509,13 @@ button.secondary:hover,
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin: 16px 0;
+  margin: 16px 0 8px;
+}
+.export-note {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: var(--fg-2);
+  max-width: 70ch;
 }
 .groups {
   margin-top: 16px;

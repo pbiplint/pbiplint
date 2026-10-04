@@ -58,7 +58,8 @@ Skills](https://agentskills.io/home) format, that tells the assistant when to li
 results, and what to leave to you; `--install claude`, `copilot`, `codex`, or `gemini` writes it
 where that assistant reads a project's skills. For a chat app with no terminal, `pbiplint mcp` is a
 local MCP server with three read-only tools (`lint`, `explain_rule`, `list_rules`); the [CLI
-page](https://pbiplint.com/cli/#mcp) has each app's setup.
+page](https://pbiplint.com/cli/#mcp) has each app's setup. On the site, the results page's "Copy for
+an AI assistant" button copies the report with each rule's guidance, to paste into a chat.
 
 ### In your pipelines
 

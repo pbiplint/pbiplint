@@ -1,7 +1,14 @@
 // @vitest-environment happy-dom
 import { lint, resolveConfig, VERSION } from "@pbiplint/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { copy, download, exportJson, exportMarkdown } from "../src/results/export.js";
+import {
+  copy,
+  download,
+  exportForAssistant,
+  exportJson,
+  exportMarkdown,
+} from "../src/results/export.js";
+import { JUDGMENT, RULE_GUIDANCE } from "../src/results/rule-guidance.data.js";
 import { SAMPLE_CONFIG, SAMPLE_FILES } from "../src/sample.js";
 
 /** The sample as the page lints it: both parts, under the sample's own config. */
@@ -97,5 +104,49 @@ describe("export", () => {
       },
     });
     await expect(copy(file)).rejects.toThrow("Blocked by permissions policy");
+  });
+});
+
+describe("export for an AI assistant", () => {
+  const copied = exportForAssistant(result).text;
+  const [preamble, rest] = copied.split("\n# pbiplint report\n");
+
+  it("opens with a preamble that says where the findings came from and what to ask first", () => {
+    expect(preamble).toContain("pbiplint.com");
+    expect(preamble).toMatch(/errors first/i);
+    // The judgment list is the skill's, word for word.
+    expect(preamble).toContain(`## What holds for every rule\n\n${JUDGMENT}\n`);
+    expect(preamble).toMatch(/Never clear a finding by ignoring it/);
+    expect(preamble).toMatch(/renam/i);
+    expect(preamble).toMatch(/Power BI Desktop/);
+  });
+
+  it("carries the Markdown export verbatim", () => {
+    expect(rest).toBeDefined();
+    expect(copied).toContain(exportMarkdown(result).text);
+  });
+
+  it("adds each rule's How to fix it and When to ignore it once, for the rules with findings only", () => {
+    const fired = new Set(result.groups.map((g) => g.rule.id));
+    expect(new Set(result.groups.map((g) => g.rule.layer))).toEqual(new Set(["model", "report"]));
+    for (const g of result.groups) {
+      const guidance = RULE_GUIDANCE[g.rule.id]!;
+      expect(copied.split(`### ${g.rule.name} (${g.rule.id})`).length - 1, g.rule.id).toBe(1);
+      expect(copied).toContain(guidance.fix);
+      if (guidance.ignore) expect(copied).toContain(guidance.ignore);
+    }
+    for (const id of Object.keys(RULE_GUIDANCE).filter((id) => !fired.has(id)))
+      expect(copied).not.toContain(`(${id})\n`);
+  });
+
+  it("leaves each rule's Example on its page", () => {
+    expect(copied).not.toContain("**Fires the rule");
+    expect(copied).not.toMatch(/^```(tmdl|pbir) (fires|fixed)/m);
+  });
+
+  it("is named and typed like the Markdown export", () => {
+    const file = exportForAssistant(result);
+    expect(file.name).toBe("pbiplint-report-for-ai.md");
+    expect(file.type).toBe("text/markdown");
   });
 });

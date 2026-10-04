@@ -1,4 +1,5 @@
 import { formatJson, formatMarkdown, VERSION, type LintResult } from "@pbiplint/core";
+import { JUDGMENT, RULE_GUIDANCE } from "./rule-guidance.data.js";
 
 export interface ExportFile {
   name: string;
@@ -17,6 +18,52 @@ export const exportJson = (result: LintResult): ExportFile => ({
   name: "pbiplint-report.json",
   type: "application/json",
   text: formatJson(result, { toolVersion: VERSION }),
+});
+
+/**
+ * What an assistant reading a run it did not make needs first. The list under "What holds for
+ * every rule" is the judgment block of the skill the CLI ships, copied in by the sync script, so
+ * the two cannot drift; the lines above it are the results page's own.
+ */
+export const ASSISTANT_PREAMBLE = `# For the AI assistant reading this
+
+The person who sent you this linted a Power BI project with pbiplint on pbiplint.com, which ran in their browser. Below is its report, followed by pbiplint's guidance for each rule that has findings: how to fix it, and when to leave it alone.
+
+- Work through the errors first, then the warnings.
+- Fix a report in Power BI Desktop. Fix a model in Desktop, or in its TMDL files.
+- Each rule's When to ignore it ends with how to ignore the rule. Suggest that only once the person agrees.
+- When the fixes are made, and after any rename, ask the person to lint the whole project again on pbiplint.com.
+
+## What holds for every rule
+
+${JUDGMENT}
+`;
+
+/** Each fired rule's How to fix it and When to ignore it, in the report's order, with its page. */
+function guidance(result: LintResult): string {
+  const out = ["## How to fix these findings", ""];
+  for (const { rule } of result.groups) {
+    const g = RULE_GUIDANCE[rule.id];
+    out.push(`### ${rule.name} (${rule.id})`, "");
+    // A rule with no page text still gets its heading and its page, so no fired rule goes unnamed.
+    if (g) out.push("**How to fix it**", "", g.fix, "");
+    if (g?.ignore) out.push("**When to ignore it**", "", g.ignore, "");
+    out.push(`Rule page: ${rule.url}`, "");
+  }
+  return out.join("\n");
+}
+
+/**
+ * The Markdown report between a preamble for an AI assistant and each fired rule's guidance. The
+ * rule's Example stays on its page: a report rule's Example is the report JSON a person does not
+ * edit by hand, and it would double each rule's share of the paste.
+ */
+export const exportForAssistant = (result: LintResult): ExportFile => ({
+  name: "pbiplint-report-for-ai.md",
+  type: "text/markdown",
+  text: [ASSISTANT_PREAMBLE, exportMarkdown(result).text.trimEnd(), "", guidance(result)].join(
+    "\n",
+  ),
 });
 
 /** Offers the text as a download through a same-origin blob URL. No request leaves the page. */

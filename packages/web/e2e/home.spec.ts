@@ -1,4 +1,12 @@
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -23,6 +31,7 @@ const demo = fileURLToPath(
   new URL("../../../tests/fixtures/pbip-and-github-demo", import.meta.url),
 );
 const sample = fileURLToPath(new URL("../../../examples/messy-sales", import.meta.url));
+const rulesDir = fileURLToPath(new URL("../../../rules", import.meta.url));
 // Written by scripts/make-big-report.mjs, which the web server command runs before the build.
 const big = fileURLToPath(new URL("../../../tests/generated/big-report", import.meta.url));
 
@@ -419,7 +428,7 @@ test("copies the Markdown report from the button beside the downloads", async ({
   await page.getByRole("button", { name: "Try the sample project" }).click();
   // Found by position rather than by name, because the name is the thing that changes: a name
   // locator stops matching the moment the copy lands.
-  const copy = page.locator(".export button").last();
+  const copy = page.locator(".export button").nth(2);
   await expect(copy).toHaveText("Copy Markdown");
   await copy.click();
   // The label, not the clipboard contents: reading the clipboard needs a permission that is not
@@ -428,6 +437,63 @@ test("copies the Markdown report from the button beside the downloads", async ({
   // write rides the click's own gesture, which is what Safari requires: none of the three engines
   // enforces that gate here, so only the unit tests and the shape of copy() speak to it.
   await expect(copy).toHaveText("Copied");
+});
+
+test("copies the report with each rule's guidance for an AI assistant, from the keyboard", async ({
+  page,
+  context,
+  browserName,
+}) => {
+  if (browserName === "chromium")
+    await context.grantPermissions(["clipboard-write", "clipboard-read"]);
+  await page.getByRole("button", { name: "Try the sample project" }).click();
+  await expect(page.locator(".export-note")).toContainText("pbiplint sends nothing");
+  // By position, as above: the name changes when the copy lands.
+  const copy = page.locator(".export button").nth(3);
+  await expect(copy).toHaveText("Copy for an AI assistant");
+  await copy.focus();
+  await page.keyboard.press("Enter");
+  await expect(copy).toHaveText("Copied");
+  await expect(page.locator(".export [role='status']")).toHaveText(
+    "Report and guidance copied to the clipboard",
+  );
+  // Only Chromium lets a test read the clipboard back. The sample has report and model findings,
+  // so the copy holds guidance for a rule of each layer.
+  if (browserName === "chromium") {
+    const text = await page.evaluate(() => navigator.clipboard.readText());
+    expect(text.startsWith("# For the AI assistant reading this")).toBe(true);
+    expect(text).toContain("# pbiplint report");
+    expect(text).toContain("266 findings");
+    expect(text).toContain("## How to fix these findings");
+    expect(text).toContain("(BROKEN_FIELD_REFERENCE)\n");
+    expect(text).toContain("(AVOID_FLOATING_POINT_DATA_TYPES)\n");
+    expect(text).not.toContain("**Fires the rule");
+  }
+});
+
+test("a clean run offers nothing to copy", async ({ page }) => {
+  // Every rule off, so a bare model is clean: no small model is clean under the defaults.
+  const ids = readdirSync(rulesDir)
+    .filter((f) => f.endsWith(".md"))
+    .map((f) => /^id: (.+)$/m.exec(readFileSync(join(rulesDir, f), "utf8"))![1]!.trim());
+  await withTempFolder(
+    "pbiplint-clean-",
+    (dir) => {
+      const model = join(dir, "Clean.SemanticModel");
+      mkdirSync(join(model, "definition"), { recursive: true });
+      writeFileSync(join(model, "definition", "model.tmdl"), "model Model\n");
+      writeFileSync(
+        join(model, "pbiplint.config.json"),
+        JSON.stringify({ rules: Object.fromEntries(ids.map((id) => [id, "off"])) }),
+      );
+    },
+    async (dir) => {
+      await page.locator("#folder-input").setInputFiles(join(dir, "Clean.SemanticModel"));
+      await expect(page.locator("#results .clean")).toHaveText("No findings.");
+      await expect(page.getByRole("button", { name: "Copy for an AI assistant" })).toHaveCount(0);
+      await expect(page.locator(".export-note")).toHaveCount(0);
+    },
+  );
 });
 
 test("a keyboard user can reach a findings table that scrolls sideways, and the page itself does not", async ({

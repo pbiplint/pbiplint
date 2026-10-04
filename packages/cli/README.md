@@ -24,6 +24,12 @@ npx pbiplint --help                                         # every option, in o
 npx pbiplint --version
 ```
 
+An AI assistant that edits a project can keep its context small: `--quiet` for the counts, one line
+per rule; `--rule <RULE_ID>`, repeatable, for those rules' findings (every rule still runs, the
+summary says how many are shown of how many, and `--fail-on` counts only those); and
+`pbiplint explain <RULE_ID>` for the rule's guidance, from this version, with no network. When there
+are findings, the quiet output's last line names the other two.
+
 `pbiplint skill` prints a skill, in the [Agent Skills](https://agentskills.io/home) format, that tells
 a coding assistant how to use pbiplint. `--install claude`, `copilot`, `codex`, or `gemini` writes it
 where that assistant reads a project's skills, below the current folder; it never replaces a copy
@@ -99,8 +105,10 @@ community's published rule files, and are checked against Tabular Editor on the 
 the Microsoft rules need statistics only a live model has; they are listed but not run. A column
 whose TMDL names no type, as Power BI Desktop saves most calculated columns, is left out of the
 thirteen ported rules that test a column's type, where Tabular Editor reads the type from the
-column's DAX. Each rule has a page at https://pbiplint.com/rules with what it checks, why, how to
-fix it, and quirks.
+column's DAX. A TMDL line the parser cannot place gets a `PARSE_ISSUE` error on that line rather
+than being dropped silently; that includes a declaration its object does not hold, such as a
+misspelt `columm` under a table or a hierarchy's `level` that lost its tab. Each rule has a page at
+https://pbiplint.com/rules with what it checks, why, how to fix it, and quirks.
 
 The report layer (PBIR) is read beside the model: a `.Report` folder alone is valid input, and with
 the model beside it the two are paired through `definition.pbir` and checked together. The report

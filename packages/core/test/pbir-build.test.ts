@@ -1225,6 +1225,19 @@ describe("reportExtensions.json with no entity (#208)", () => {
     expect(report.measures.map((m) => m.name)).toEqual(["M"]);
   });
 
+  it("reports a null entities list as missing, and keeps the file read", () => {
+    const { report } = buildReport(ext({ $schema: SCHEMA, name: "extension", entities: null }));
+    expect(report.issues.map((i) => i.reason)).toEqual([`"entities" is missing: ${DESKTOP}`]);
+    expect(report.unreadDefinitionFiles).toEqual([]);
+    expect(report.extensions).toBe("read");
+  });
+
+  it("finds the line in a file with a BOM and Windows line breaks", () => {
+    const text = '\ufeff{\r\n  "name": "extension",\r\n  "entities": []\r\n}\r\n';
+    const { report } = buildReport([{ path: "definition/reportExtensions.json", text }]);
+    expect(report.issues.map((i) => [i.line, i.text])).toEqual([[3, '  "entities": []']]);
+  });
+
   it("leaves an entity with an empty measures list alone until Desktop is checked", () => {
     const { report } = buildReport(
       ext({ $schema: SCHEMA, name: "extension", entities: [{ name: "Sales", measures: [] }] }),

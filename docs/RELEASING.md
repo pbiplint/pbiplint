@@ -94,20 +94,15 @@ drafted from those comments.
    listing's (`overview.md`) inputs tables, the plain YAML route's `PBIPLINT_VERSION`, and the test
    organization's `test/pipelines/plain.yml`, then publish the extension following its own
    `RELEASING.md`. Until then, pipelines using `pbiplint@1` keep running the previous CLI.
-8. Release the Claude plugin, which carries the CLI's own version. In
-   https://github.com/pbiplint/claude-plugin, following its own `RELEASING.md`: set the new version
-   in `.claude-plugin/plugin.json`, in `.mcp.json`'s `pbiplint@<version>`, in
-   `mcpb/manifest.json`, and in the README and SETUP.md; refresh `skills/pbiplint/SKILL.md` from
-   `npx pbiplint@<version> skill`, so the plugin bundles the skill at that version; build the
-   `.mcpb` with `scripts/build-mcpb.sh` from the published package; open a pull request with its
-   checks passing, and merge. The maintainer tags the merge commit `v<version>` and pushes it, and
-   the GitHub release for that tag carries the `.mcpb`. Then check from a clean Claude Code
-   configuration that `/plugin marketplace add pbiplint/claude-plugin` and
-   `/plugin install pbiplint@pbiplint` install the new version. Until then, the plugin keeps
-   running the previous CLI. Once the plugin is listed in Anthropic's directory, no resubmission
-   is needed: the directory picks up each commit on the branch it tracks, scans it, and publishes
-   it by the listing's publish setting, which may need **Publish** in the developer portal at
-   https://claude.ai/directory/manage
+8. Release the Claude plugin, which carries the CLI's own version, following
+   [pbiplint/claude-plugin's `RELEASING.md`](https://github.com/pbiplint/claude-plugin/blob/main/RELEASING.md#after-a-pbiplint-release),
+   "After a pbiplint release": the version pinned in the plugin's files, the bundled skill refreshed
+   from the published CLI, the `.mcpb` built from the published package, a pull request with CI
+   green, the maintainer's `v<version>` tag, a GitHub release with the `.mcpb` attached, and an
+   install check from GitHub. Until then, the plugin keeps running the previous CLI. Once the plugin
+   is listed in Anthropic's directory, a new version needs no resubmission: the directory picks up
+   each commit on the branch it tracks, scans it, and publishes it by the listing's publish
+   setting, which may need **Publish** in the developer portal
    ([Update a published plugin](https://claude.com/docs/plugins/submit#update-a-published-plugin)).
 
 A rerun of the workflow, or a tag pushed after a manual publish, is safe: `scripts/publish.mjs`

@@ -53,14 +53,14 @@ Following pbiplint/azure-pipelines' `RELEASING.md`, "After a pbiplint CLI releas
 
 ## Release the Claude plugin
 
-Following pbiplint/claude-plugin's `RELEASING.md`. The plugin carries the CLI's version, 0.x.y.
+Following pbiplint/claude-plugin's [`RELEASING.md`](https://github.com/pbiplint/claude-plugin/blob/main/RELEASING.md#after-a-pbiplint-release), "After a pbiplint release". The plugin carries the CLI's version, 0.x.y.
 
-- [ ] **Plugin pull request.** 0.x.y set in `.claude-plugin/plugin.json`, in `.mcp.json`'s `pbiplint@0.x.y`, in `mcpb/manifest.json`, and in the README and SETUP.md. `skills/pbiplint/SKILL.md` refreshed from `npx pbiplint@0.x.y skill`. `claude plugin validate` passing, pull request, checks passing, merge.
-- [ ] **MCP Bundle.** `scripts/build-mcpb.sh` builds `pbiplint-0.x.y.mcpb` from the published package, and `mcpb validate` passes.
-- [ ] **Tag and release.** The maintainer tags the merge commit v0.x.y and pushes it, and the GitHub release for that tag carries `pbiplint-0.x.y.mcpb`.
-- [ ] **Install check.** From a clean Claude Code configuration, `/plugin marketplace add pbiplint/claude-plugin` and `/plugin install pbiplint@pbiplint` install 0.x.y.
+- [ ] **Plugin pull request.** 0.x.y pinned in `plugin.json`, `.mcp.json`, `mcpb/manifest.json`, README, SETUP, and PERMISSIONS; the skill refreshed with `npx -y pbiplint@0.x.y skill`; `node scripts/check-pins.mjs` passing; CI green, merge.
+- [ ] **MCP Bundle.** `sh scripts/build-mcpb.sh` builds `pbiplint-0.x.y.mcpb` from the published package; note its sha256.
+- [ ] **Tag and release.** The maintainer tags the merge commit v0.x.y and pushes it; the GitHub release carries the `.mcpb` and its sha256.
+- [ ] **Install check.** In a clean `CLAUDE_CONFIG_DIR`, the marketplace add and the install from GitHub give 0.x.y.
 
-Once the plugin is listed in Anthropic's directory, a new version needs no resubmission: the directory picks up each commit on the branch it tracks, scans it, and publishes it by the listing's publish setting, which may need **Publish** in the developer portal at claude.ai/directory/manage ([Update a published plugin](https://claude.com/docs/plugins/submit#update-a-published-plugin)). While it is not listed, this paragraph does not apply.
+Once the plugin is listed in Anthropic's directory, a new version needs no resubmission: the directory picks up each commit on the branch it tracks, scans it, and publishes it by the listing's publish setting, which may need **Publish** in the developer portal at claude.ai/directory/manage ([Update a published plugin](https://claude.com/docs/plugins/submit#update-a-published-plugin)). Until it is listed, this does not apply.
 
 ## Close out
 

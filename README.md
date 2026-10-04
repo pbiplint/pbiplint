@@ -48,6 +48,18 @@ stdout to the JSON fields: https://pbiplint.com/cli/#contract
 [The pbiplint CLI](https://pbiplint.com/cli/) page has the rest: where to get it, what it reads and
 writes, and how to check that it sends nothing.
 
+### With an AI assistant
+
+An assistant that edits a Power BI project can lint its own work without reading pages of output:
+`--quiet` gives the counts, one line per rule; `--rule <RULE_ID>` gives that rule's findings with
+their files and lines; and `pbiplint explain <RULE_ID>` gives the rule's guidance from the version
+installed, with no network. `pbiplint skill` prints a skill, in the [Agent
+Skills](https://agentskills.io/home) format, that tells the assistant when to lint, how to read the
+results, and what to leave to you; `--install claude`, `copilot`, `codex`, or `gemini` writes it
+where that assistant reads a project's skills. For a chat app with no terminal, `pbiplint mcp` is a
+local MCP server with three read-only tools (`lint`, `explain_rule`, `list_rules`); the [CLI
+page](https://pbiplint.com/cli/#mcp) has each app's setup.
+
 ### In your pipelines
 
 GitHub Actions and Azure Pipelines each have a pbiplint step. In GitHub Actions, one step lints the
@@ -136,7 +148,7 @@ page.json or visual.json. Desktop keeps it, and its value is a list of ids or `*
 
 ## What it checks
 
-Every rule from Microsoft's Best Practice Analyzer ruleset, ported so the results match Tabular Editor on the same model, with eleven documented deviations where the source is noisier, or quieter, than it means to be; and pbiplint's own rules for a year or a date fixed in DAX, such as a measure filtered to 2025 or a date table that ends in 2026, for a DAX user-defined function that nothing calls, has a one-word name, or has no description, for a visible name that a translated culture gives no caption, and for a visible decimal column with no format string. Four of pbiplint's own model rules take their test from Tabular Editor's rules, from Tabular Editor 3's built-in set or the community's published rule files, and are checked against Tabular Editor on the same model. Five of the Microsoft rules need VertiPaq statistics and are listed but not run. A column whose TMDL names no type, as Power BI Desktop saves most calculated columns, is left out of the thirteen ported rules that test a column's type, where Tabular Editor reads the type from the column's DAX. Each rule has a page at https://pbiplint.com/rules (source under `rules/`) with what it checks, an example that fires it and the same example fixed, why it matters, how to fix it, when ignoring it is legitimate, known quirks, and related rules.
+Every rule from Microsoft's Best Practice Analyzer ruleset, ported so the results match Tabular Editor on the same model, with eleven documented deviations where the source is noisier, or quieter, than it means to be; and pbiplint's own rules for a year or a date fixed in DAX, such as a measure filtered to 2025 or a date table that ends in 2026, for a DAX user-defined function that nothing calls, has a one-word name, or has no description, for a visible name that a translated culture gives no caption, and for a visible decimal column with no format string. Four of pbiplint's own model rules take their test from Tabular Editor's rules, from Tabular Editor 3's built-in set or the community's published rule files, and are checked against Tabular Editor on the same model. Five of the Microsoft rules need VertiPaq statistics and are listed but not run. A column whose TMDL names no type, as Power BI Desktop saves most calculated columns, is left out of the thirteen ported rules that test a column's type, where Tabular Editor reads the type from the column's DAX. A TMDL line the parser cannot place gets a `PARSE_ISSUE` error on that line rather than being dropped silently; that includes a declaration its object does not hold, such as a misspelt `columm` under a table or a hierarchy's `level` that lost its tab. Each rule has a page at https://pbiplint.com/rules (source under `rules/`) with what it checks, an example that fires it and the same example fixed, why it matters, how to fix it, when ignoring it is legitimate, known quirks, and related rules.
 
 The report layer: the 11 base rules of [PBI Inspector](https://github.com/NatVanG/fab-inspector)
 by Nat Van Gulck, ported so the results match its command line on the same report, with six
@@ -154,6 +166,8 @@ to 2025. "Report at a glance" states what the report will do whether or not anyt
 - Website: https://pbiplint.com
 - Rule pages: https://pbiplint.com/rules
 - The command line: https://pbiplint.com/cli/
+- What a script can rely on: https://pbiplint.com/cli/#contract
+- For AI assistants: https://pbiplint.com/llms.txt
 - The pbiplint Privacy Promise: https://pbiplint.com/privacy/
 - From the makers of [The Data Practitioner](https://www.youtube.com/@TheDataPractitioner)
 

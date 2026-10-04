@@ -28,6 +28,12 @@ for (const group of result.groups) console.log(group.rule.id, group.findings.len
 the website show it. Every rule has a page at `https://pbiplint.com/rules/<slug>`; `group.rule.url`
 points at it.
 
+`showOnly(result, ruleIds, config)` keeps a result to some rules' findings, as the command line's
+`--rule` does: every rule still ran, `result.summary.shown` counts what is kept (the rest of the
+summary stays the whole run's), `failed` follows the kept findings, `summaryLine` (and with it the
+text and Markdown formats) says the result is filtered ("3 of 266 findings shown, 1 rule ..."), and
+the JSON format carries `summary.shown`. It is absent on an unfiltered result.
+
 The optional second argument, `lint(files, options)`, takes the config, the rules to run, and
 what the caller's input reader found besides the files. `config` is a `pbiplint.config.json`
 object. `rules` lists the rules to run in place of the default set, `defaultRules`. `diagnostics`
@@ -36,7 +42,10 @@ gives, per layer, why the reader left that layer out, for the skipped line. `unr
 per layer, the files and folders the reader could not read, each relative to its part's root in
 forward slashes and a folder with a trailing `/`; a path that is not a file the layer reads (a
 `.tmdl` file for the model, a file `isReportFile` accepts for the report) is read as a folder. The
-layer then knows what it lacks, so no finding or fact states what was not read.
+layer then knows what it lacks, so no finding or fact states what was not read. A TMDL line the
+parser cannot place, including a declaration its object does not hold, such as a misspelt `columm`
+under a table, is a `PARSE_ISSUE` error finding on that line rather than being dropped
+silently.
 
 The model rules are ports of the Microsoft Best Practice Analyzer ruleset, verified against Tabular
 Editor, and pbiplint's own rules for a year or a date fixed in DAX, for DAX user-defined functions,

@@ -44,6 +44,8 @@ Use `npx pbiplint` (or `pbiplint` where it is installed). If pbiplint's MCP tool
 - Never clear a finding by ignoring it, changing the lint configuration, or deleting the object it names, without the user's say-so.
 - When a finding matches its rule's "When to ignore it" case, ask the user rather than fixing it.
 - Renaming a table, column, or measure reaches the report's files too. After a rename, check the whole project, not only the model.
+- When a fix needs a choice the files don't settle, such as which table's column a visual should use or which page a button should open, ask first, or say plainly when you report back that it was your choice, rather than presenting it as the only answer.
+- After fixing, look for findings your own change introduced, not only the ones you set out to fix. A format string that clears one rule can trip another.
 - Info findings are suggestions, not a to-do list.
 <!-- /judgment -->
 

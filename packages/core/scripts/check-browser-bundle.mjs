@@ -41,8 +41,9 @@ console.log(
   `core browser bundle: ${kb(size)} KB minified, ${kb(gzipSync(code).length)} KB gzipped`,
 );
 
-// The site loads the core on every visit; 200 KB minified is the budget the v2 spec sets.
-const LIMIT_KB = 200;
+// The site loads the core on every visit; 210 KB minified is the budget the v2 spec sets
+// (200 KB until #208, October 4, 2026). A tripwire for conscious growth: raise it on purpose.
+const LIMIT_KB = 210;
 if (size > LIMIT_KB * 1024) {
   console.error(`core bundle is ${kb(size)} KB minified, over the ${LIMIT_KB} KB budget`);
   process.exit(1);

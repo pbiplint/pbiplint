@@ -379,15 +379,217 @@ describe("root object types", () => {
     ]);
   });
 
-  it("reads a misspelt keyword under a known object as a generic child, as before", () => {
-    // Only the root is checked: a nested keyword keeps the parser's generic reading.
-    const pf = parseTmdl("t.tmdl", "table Sales\n\tcolumm Amount\n\t\tdataType: decimal\n");
+  it("reports a declaration whose type its object does not allow, and keeps it out of the model (#144)", () => {
+    // Microsoft's TMDL reader refuses this file: "Unsupported child - columm is not a supported...".
+    const pf = parseTmdl(
+      "t.tmdl",
+      "table Sales\n\tcolumm Amount\n\t\tdataType: decimal\n\tcolumn Region\n\t\tdataType: string\n",
+    );
+    expect(pf.issues).toEqual([
+      {
+        file: "t.tmdl",
+        line: 2,
+        text: "\tcolumm Amount",
+        reason: '"columm" is not a type TMDL declares under a table',
+        canDropObjects: true,
+        canDropTableLine: false,
+      },
+    ]);
+    expect(pf.roots[0]!.children.map((c) => [c.type, c.name])).toEqual([["column", "Region"]]);
+  });
+
+  it("reports a level that lost its tab, and a measure with one tab too many", () => {
+    const pf = parseTmdl(
+      "t.tmdl",
+      [
+        "table Product",
+        "\tcolumn Category",
+        "\t\tdataType: string",
+        "\t\tmeasure 'Item Count' = 1",
+        "\thierarchy 'by Category'",
+        "\t\tlevel Category",
+        "\t\t\tcolumn: Category",
+        "\tlevel Subcategory",
+        "\t\tcolumn: Subcategory",
+        "",
+      ].join("\n"),
+    );
+    expect(pf.issues.map((i) => [i.line, i.reason])).toEqual([
+      [4, '"measure" is not a type TMDL declares under a column'],
+      [8, '"level" is not a type TMDL declares under a table'],
+    ]);
+    const hierarchy = pf.roots[0]!.children.find((c) => c.type === "hierarchy")!;
+    expect(hierarchy.children.map((c) => c.name)).toEqual(["Category"]);
+  });
+
+  it("names both words as written, whatever their case", () => {
+    const pf = parseTmdl("t.tmdl", "role Admins\n\tTablePermision Sales = TRUE()\n");
+    expect(pf.issues.map((i) => i.reason)).toEqual([
+      '"TablePermision" is not a type TMDL declares under a role',
+    ]);
+  });
+
+  it("reads every child object type its object allows with no issue", () => {
+    const text = [
+      "table Sales",
+      "\tcolumn Amount",
+      "\t\tvariation Variation",
+      "\t\t\tisDefault",
+      "\t\t\tannotation A = 1",
+      "\t\tannotation A = 1",
+      "\t\textendedProperty E = {}",
+      "\tmeasure Total = 1",
+      "\t\tkpi",
+      "\t\t\ttargetExpression = 1",
+      "\t\t\tannotation A = 1",
+      "\t\tannotation A = 1",
+      "\thierarchy H",
+      "\t\tlevel L",
+      "\t\t\tcolumn: Amount",
+      "\t\t\tannotation A = 1",
+      "\tpartition Sales = m",
+      "\t\tannotation A = 1",
+      "\tcalendar Gregorian",
+      "\tcalculationGroup",
+      "\t\tcalculationItem YTD = SELECTEDMEASURE()",
+      "\t\tannotation A = 1",
+      "\tannotation A = 1",
+      "\textendedProperty E = {}",
+      "",
+      "role Admins",
+      "\tmember 'a@example.com'",
+      "\t\tannotation A = 1",
+      "\ttablePermission Sales = TRUE()",
+      "\t\tcolumnPermission Amount = none",
+      "\t\t\tannotation A = 1",
+      "",
+      "perspective View",
+      "\tperspectiveTable Sales",
+      "\t\tperspectiveColumn Amount",
+      "\t\tperspectiveMeasure Total",
+      "\t\tperspectiveHierarchy H",
+      "\t\t\tannotation A = 1",
+      "",
+      "relationship R",
+      "\tannotation A = 1",
+      "expression P = 1",
+      "\tannotation A = 1",
+      "function F = () => 1",
+      "\tannotation A = 1",
+      "queryGroup G",
+      "\tannotation A = 1",
+      "",
+    ].join("\n");
+    expect(parseTmdl("t.tmdl", text).issues).toEqual([]);
+  });
+
+  it("refuses what Microsoft's reader refuses under a calculation item, a calendar, and a query group", () => {
+    const pf = parseTmdl(
+      "t.tmdl",
+      [
+        "table T",
+        "\tcalendar Gregorian",
+        "\t\tannotation A = 1",
+        "\tcalculationGroup",
+        "\t\tcalculationItem YTD = SELECTEDMEASURE()",
+        "\t\t\tannotation A = 1",
+        "\t\textendedProperty E = {}",
+        "queryGroup G",
+        "\textendedProperty E = {}",
+        "",
+      ].join("\n"),
+    );
+    expect(pf.issues.map((i) => [i.line, i.reason])).toEqual([
+      [3, '"annotation" is not a type TMDL declares under a calendar'],
+      [6, '"annotation" is not a type TMDL declares under a calculationItem'],
+      [7, '"extendedProperty" is not a type TMDL declares under a calculationGroup'],
+      [9, '"extendedProperty" is not a type TMDL declares under a queryGroup'],
+    ]);
+  });
+
+  it("leaves unreported what Microsoft's reader refuses but the object model holds a collection of", () => {
+    const pf = parseTmdl(
+      "t.tmdl",
+      [
+        "table T",
+        "\tset S",
+        "\tchangedProperty IsHidden",
+        "\tcalendar Gregorian",
+        "\t\tcalendarColumnGroup Year",
+        "\t\ttimeUnitColumnAssociation Month",
+        "",
+      ].join("\n"),
+    );
     expect(pf.issues).toEqual([]);
-    expect(pf.roots[0]!.children[0]).toMatchObject({
-      kind: "object",
-      type: "columm",
-      name: "Amount",
-    });
+  });
+
+  it("keeps today's reading of flags, properties, and what sits under an object it does not list", () => {
+    const pf = parseTmdl(
+      "t.tmdl",
+      [
+        "table Sales",
+        "\tcolumn Amount",
+        "\t\tisHiden",
+        "\t\tsumarizeBy: none",
+        "\trefreshPolicy",
+        "\t\tpolicyType: basic",
+        "\t\tanything Goes",
+        "",
+      ].join("\n"),
+    );
+    expect(pf.issues).toEqual([]);
+  });
+
+  it("keeps today's reading inside a culture's translations and a TMDL script", () => {
+    const pf = parseTmdl(
+      "t.tmdl",
+      [
+        "cultureInfo de-DE",
+        "\ttranslations",
+        "\t\tmodel Model",
+        "\t\t\ttable Sales",
+        "\t\t\t\tcolumn Amount",
+        "\t\t\t\t\ttranslatedCaption: Betrag",
+        "createOrReplace",
+        "\ttable Sales",
+        "\t\tcolumn Amount",
+        "\t\t\tsomething Odd",
+        "",
+      ].join("\n"),
+    );
+    expect(pf.issues).toEqual([]);
+  });
+
+  it("reports nothing again under a line it already reported", () => {
+    // `level` is listed, so without the guard `measure` under it would be a second issue.
+    const pf = parseTmdl("t.tmdl", "table Sales\n\tlevel L\n\t\tmeasure X = 1\n");
+    expect(pf.issues.map((i) => i.line)).toEqual([2]);
+  });
+
+  it("reports nothing again under a line at the root that it reported", () => {
+    const pf = parseTmdl("t.tmdl", "column Foo\n\tmeasure X = 1\n");
+    expect(pf.issues.map((i) => i.line)).toEqual([1]);
+  });
+
+  it("does not blame the object above a skipped line for the lines under it", () => {
+    const pf = parseTmdl(
+      "t.tmdl",
+      "table T\n\tcolumn A\n\t\tdataType: string\n\thierarchy-H\n\t\tlevel L\n\tmeasure M = 1\n\t\tcolumm X\n",
+    );
+    expect(pf.issues.map((i) => [i.line, i.reason])).toEqual([
+      [4, "unrecognized line"],
+      [7, '"columm" is not a type TMDL declares under a measure'],
+    ]);
+  });
+
+  it("checks only under an object or a flag, and names a parent as written", () => {
+    const pf = parseTmdl(
+      "t.tmdl",
+      "TABLE Sales\n\tColumm Amount\n\tcolumn A\n\t\tvariation V\n\t\t\trelationship: abc\n\t\t\t\tcolumn D\n",
+    );
+    expect(pf.issues.map((i) => [i.line, i.reason])).toEqual([
+      [2, '"Columm" is not a type TMDL declares under a TABLE'],
+    ]);
   });
 
   it("keeps today's reading of ref lines at the root, and reports properties and expressions there", () => {

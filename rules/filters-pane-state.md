@@ -78,8 +78,6 @@ Power BI leaves it to the report's author whether the Filters pane is open or co
 
 In Power BI Desktop, collapse the Filters pane, or expand it for a policy of open, and save the report in that state. To keep the pane from readers altogether, select the eye icon next to Filters in the pane; that is a third state, which neither policy accepts.
 
-In report.json, the state is `expanded` under `objects.outspacePane[0].properties`, as in the example: `false` saves the pane collapsed and `true` saves it open.
-
 ## When to ignore it
 
 Only when the project has no single state its reports should open with, and then the right move is to set no policy, which leaves the rule silent, rather than to ignore findings one report at a time.

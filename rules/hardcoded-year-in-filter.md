@@ -124,8 +124,6 @@ Is Latest Year = 'Date'[Year] = YEAR ( MAX ( Sales[Order Date] ) )
 
 Then drag Is Latest Year into the Filters pane in place of the year filter and keep True. For the calendar's current year, write `YEAR ( TODAY () )` in place of the MAX. Either way the flag moves at the first refresh of the new year, since, as Microsoft puts it for calculated columns, "Column values are recalculated as necessary, like when the underlying data is refreshed and values have changed" ([Using calculated columns](https://learn.microsoft.com/power-bi/transform-model/desktop-calculated-columns)).
 
-In the report's files, the filter is an entry in `filterConfig` in report.json for all pages, the page.json for a page, or the visual.json for a visual: replace the year's entry with one on the date column, as the example does.
-
 ## When to ignore it
 
 A fixed year is sometimes the point: a page or a visual about one year, such as a review of 2024; a baseline year others are compared with; a cohort; a series that has ended, such as figures that stopped being published; or sample data that never changes.

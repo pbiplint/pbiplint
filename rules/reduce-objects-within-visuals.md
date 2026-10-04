@@ -121,7 +121,7 @@ A visual sends one query for everything in its wells, so every field makes that 
 
 ## How to fix it
 
-Keep the fields the visual is about and move the rest to where a reader asks for them: secondary measures to a report page tooltip that shows them for the row under the pointer, and detail columns to a drillthrough page. In Power BI Desktop, remove a field by selecting the X beside it in the field well on the Visualizations pane. Where readers do want to choose among many measures or columns, a field parameter (Modeling, then New parameter, then Fields) puts the choice in a slicer, and the visual shows only the fields a reader has picked. In visual.json, each field is one entry in a well's `projections` array under `visual.query.queryState`, and deleting the entry removes the field.
+Keep the fields the visual is about and move the rest to where a reader asks for them: secondary measures to a report page tooltip that shows them for the row under the pointer, and detail columns to a drillthrough page. In Power BI Desktop, remove a field by selecting the X beside it in the field well on the Visualizations pane. Where readers do want to choose among many measures or columns, a field parameter (Modeling, then New parameter, then Fields) puts the choice in a slicer, and the visual shows only the fields a reader has picked.
 
 ## When to ignore it
 

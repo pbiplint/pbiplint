@@ -60,7 +60,7 @@ A tooltip page is built to appear small, over a data point, already filtered to 
 
 ## How to fix it
 
-In Power BI Desktop, right-click the page's tab and choose Hide Page. A hidden tooltip page still appears over the visuals it serves, and a hidden drillthrough page is still reached with Drill through on a data point; readers just cannot open either one directly. In page.json, add `"visibility": "HiddenInViewMode"`.
+In Power BI Desktop, right-click the page's tab and choose Hide Page. A hidden tooltip page still appears over the visuals it serves, and a hidden drillthrough page is still reached with Drill through on a data point; readers just cannot open either one directly.
 
 ## When to ignore it
 

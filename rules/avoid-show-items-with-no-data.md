@@ -92,7 +92,7 @@ A visual normally leaves out any group whose measures are all blank. With Show i
 
 ## How to fix it
 
-In Power BI Desktop, select the visual, open the Build visual tab of the Visualizations pane, and in the well that holds the field select the arrow beside the field (or right-click it) and clear Show items with no data. Desktop sets the option for every field in the same well at once, so clearing it once clears the well. In visual.json, delete `"showAll": true` from the well under `visual.query.queryState`.
+In Power BI Desktop, select the visual, open the Build visual tab of the Visualizations pane, and in the well that holds the field select the arrow beside the field (or right-click it) and clear Show items with no data. Desktop sets the option for every field in the same well at once, so clearing it once clears the well.
 
 ## When to ignore it
 

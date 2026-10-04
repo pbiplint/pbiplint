@@ -49,7 +49,7 @@ A page taller than the screen it is read on no longer fits in one view. Under Fi
 
 ## How to fix it
 
-Split the page: move the lower half to a page of its own, or to a drillthrough page if it holds detail about one item. Where the content has to stay together, tighten it, with fewer or smaller visuals, or with bookmarks that switch between two views in the same space. Then set the height back: in Power BI Desktop, click an empty part of the canvas so the Format pane shows the page, open Canvas settings, and choose the 16:9 type, or set the Height under the Custom type. In page.json, the page's size is its `height` and `width`.
+Split the page: move the lower half to a page of its own, or to a drillthrough page if it holds detail about one item. Where the content has to stay together, tighten it, with fewer or smaller visuals, or with bookmarks that switch between two views in the same space. Then set the height back: in Power BI Desktop, click an empty part of the canvas so the Format pane shows the page, open Canvas settings, and choose the 16:9 type, or set the Height under the Custom type.
 
 ## When to ignore it
 

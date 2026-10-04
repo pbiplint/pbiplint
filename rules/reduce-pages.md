@@ -99,7 +99,7 @@ Every page is another tab a reader has to scan, and once there are more than fit
 
 ## How to fix it
 
-Start with the pages nobody opens: the usage metrics report in the Power BI service counts views per page, and a page with none in the last month is a candidate for deletion. Pages that show the same visuals for different slices of the data, a region or a year each, can become one page with a slicer, or with bookmarks that switch between views. A report that serves separate audiences can split into one report per audience, each reading the same semantic model. In Power BI Desktop, delete a page by right-clicking its tab and choosing Delete page. In the files, a page is its folder under `definition/pages` and an entry in the `pageOrder` of pages.json, and Desktop removes both.
+Start with the pages nobody opens: the usage metrics report in the Power BI service counts views per page, and a page with none in the last month is a candidate for deletion. Pages that show the same visuals for different slices of the data, a region or a year each, can become one page with a slicer, or with bookmarks that switch between views. A report that serves separate audiences can split into one report per audience, each reading the same semantic model. In Power BI Desktop, delete a page by right-clicking its tab and choosing Delete page.
 
 ## When to ignore it
 

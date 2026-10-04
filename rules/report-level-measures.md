@@ -41,15 +41,16 @@ The example runs against a model with one table, Sales, holding Amount and Regio
 }
 ```
 
-```pbir fixed reportExtensions.json
+```pbir fixed tree.json
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/reportExtension/1.0.0/schema.json",
-  "name": "extension",
-  "entities": []
+  "definition/report.json": {
+    "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/report/3.2.0/schema.json",
+    "themeCollection": { "baseTheme": { "name": "Fluent2-CY26SU04", "type": "SharedResources" } }
+  }
 }
 ```
 
-The report defines Sales per Region for itself, on the Sales table, so the finding reads `[Sales per Region] (report)` with `defined in the report on table "Sales"`. The fixed file shows the report's side of the move: once the measure is in the model's Sales table, as How to fix it describes, the report defines none.
+The report defines Sales per Region for itself, on the Sales table, so the finding reads `[Sales per Region] (report)` with `defined in the report on table "Sales"`. The fixed report shows its side of the move: once the measure is in the model's Sales table, as How to fix it describes, the report defines none, and its definition folder holds no reportExtensions.json, since Power BI Desktop does not open a project whose reportExtensions.json has an empty `entities` list.
 
 ## Why it matters
 
@@ -59,15 +60,27 @@ pbiplint checks such a measure less well too. Its DAX rules read the model's mea
 
 ## How to fix it
 
-Move the measure into the model, with the same name, on the same table, with the same DAX, then point the report at it.
+Move the measure into the model with the same name, on the same table, with the same DAX, then point the report at it. How depends on how the report reads its model.
 
-Take the measure's `name` and `expression` from its entry in reportExtensions.json, with any other property it sets, such as `formatString`, `displayFolder`, `description`, `hidden`, or `dataCategory`. Then delete that entry, and the entity with it when it holds no other measure, as in the example. Do this before the model gets the measure: the schema for reportExtensions.json asks that a report measure's name be unique across the model, so the two should not exist side by side.
+**If the project opens its model by path,** as the sample does, the fix edits one report file, which only `PARSE_ISSUE`'s page also asks for among the report pages. Power BI Desktop shows the report measures in such a project, but its menu fails on them, so it cannot rename or remove them (checked in Power BI Desktop 2.158, September 2026).
 
-Create the measure in the model. A report that reads its model by path opens that model for editing in Power BI Desktop: right-click the table in the Data pane, or hover over it and select More options (...), choose New measure, and type the name and the DAX into the formula bar. A measure created from a table's menu is saved in that table. In the model's TMDL, the same measure is a `measure` under the table in its file, as `measure 'Sales per Region' = DIVIDE([Total Sales], DISTINCTCOUNT('Sales'[Region]))`, with its other properties set to match.
+1. Note each report measure's DAX and any format it sets. A report measure that another one uses moves with it: in the sample, Margin % (report) uses Net Margin.
+2. With Power BI Desktop closed, delete their entries from reportExtensions.json, and an entity when it holds no measure any more. When no measure is left, delete the file itself: Desktop does not open a project whose reportExtensions.json has an empty `entities` list (checked in Power BI Desktop 2.158, September 2026).
+3. Open the project in Power BI Desktop and create each measure with New measure on its table, with the same name and DAX: right-click the table in the Data pane, or hover over it and select More options (...), choose New measure, and type the name and the DAX into the formula bar ([Create a measure](https://learn.microsoft.com/power-bi/transform-model/desktop-tutorial-create-measures#create-a-measure)). In such a project the measure is saved in the model's TMDL (checked in Power BI Desktop 2.158, September 2026).
+4. Put the model's measure in each visual, filter, and bookmark that used the report measure, as step 4 of the route below describes. A visual stays broken until the measure is added again, and a sort on the measure follows it back (checked in Power BI Desktop 2.158, September 2026).
+5. Save the project and lint again: `BROKEN_FIELD_REFERENCE` names any reference left.
 
-Then point the report at the model's measure. A reference to a report measure names the report's extension: `"Schema": "extension"` sits on the reference's `SourceRef`, beside the `Entity`, or, in a filter's condition, on the `From` entry its alias names, where a reference to a model measure has no `Schema`. Microsoft's schemas describe the key: in a query, `Schema` is "the name of the schema containing the referenced entity" and can be left out, and where a report measure lists the measures its DAX uses, the schema is left empty for a model measure and set to the extension's name for one of the extension's own. So every well, filter, sort, and bookmark that used the measure still names it in the extension after the move. In Power BI Desktop, add the model's measure from the Data pane to each well, filter, and sort that used the report measure, and for a bookmark that captured it, select the bookmark and choose Update from its More options menu. In the report's JSON, remove the `"Schema": "extension"` key from every reference to the measure, in each visual.json and in the bookmarks.
+**If the report connects live to a published model** and you can change the model, in Power BI Desktop:
 
-Lint again when you are done. `BROKEN_FIELD_REFERENCE` reports every reference still naming the extension, and each finding's detail depends on whether reportExtensions.json is still there. While it is, as in the fixed example, the detail reads `[Sales per Region]: no measure named "Sales per Region" on "Sales" in the report's extension`. A report's definition folder does not require the file, so once its `entities` list is empty you can delete it instead, and then the detail reads `[Sales per Region]: no measure named "Sales per Region" on "Sales": the report defines no extension measures`.
+1. Open the report so that it connects live to the published model, through the .pbir file When to ignore it describes. Note the measure's DAX and any format it sets, then rename it so the model's measure can take its name: right-click it in the Data pane and select Rename. Checked in Power BI Desktop (version 2.158, September 2026), a report measure's menu in a report connected live to a published model has Rename and Delete from model. Microsoft's schema for report measures asks that a report measure's name be unique across the model, so the two should not exist side by side under one name.
+2. Open the model itself in Power BI Desktop, from its own project or file: in a report that connects live to a model, "left navigation and modeling are disabled" ([Connect to semantic models in Power BI](https://learn.microsoft.com/power-bi/connect-data/desktop-report-lifecycle-datasets#considerations-and-limitations)). Right-click the table in the Data pane, or hover over it and select More options (...), choose New measure, and type the name and the DAX into the formula bar. Microsoft notes that this "saves your new measure in the Sales table" for its example ([Create a measure](https://learn.microsoft.com/power-bi/transform-model/desktop-tutorial-create-measures#create-a-measure)), so a measure created from a table's menu is saved in that table.
+3. Publish the model. Republishing replaces the semantic model in the service ([Republish or replace a semantic model](https://learn.microsoft.com/power-bi/create-reports/desktop-upload-desktop-files#republish-or-replace-a-semantic-model-published-from-power-bi-desktop)), and "any changes to the semantic model reflect in the report" ([Connect to semantic models in Power BI](https://learn.microsoft.com/power-bi/connect-data/desktop-report-lifecycle-datasets#considerations-and-limitations)).
+4. Back in the report, put the model's measure wherever the report measure was: drag it from the Data pane into each well in place of the renamed one ([Create your first visualizations](https://learn.microsoft.com/power-bi/fundamentals/desktop-getting-started#create-your-first-visualizations)), into the Filters pane in place of each filter on it ([Add a filter to a report](https://learn.microsoft.com/power-bi/create-reports/power-bi-report-add-filter#filter-with-a-field-thats-not-in-the-visual)), and, for a visual sorted by it, choose it under More options (...), then Sort axis ([Change the visualization type](https://learn.microsoft.com/power-bi/visuals/power-bi-report-add-visualizations-i#change-the-visualization-type)). For each bookmark that captured it, select More options (...) next to the bookmark's name and choose Update ([Create report bookmarks](https://learn.microsoft.com/power-bi/create-reports/desktop-bookmarks#create-report-bookmarks)).
+5. Delete the renamed report measure: right-click it in the Data pane and select Delete from model, the item step 1's check found on the same menu.
+
+Lint again when you are done. A well, filter, sort, or bookmark that still names the report measure after step 5 is reported by `BROKEN_FIELD_REFERENCE`.
+
+**If you cannot change the model,** keep the report measure: it is the supported route for an author who cannot change the model, as When to ignore it says.
 
 ## When to ignore it
 
@@ -78,6 +91,7 @@ A report measure is the supported route for an author who cannot change the mode
 - The rule reports only when the model the report reads is in the input. A report whose definition.pbir connects to a published model is left alone on purpose: Microsoft presents report measures as the way an author who builds on a shared semantic model through a live connection, which cannot change the model itself, adds calculations of their own. Such a report is linted without a model, as is a report given on its own, and the skipped line gives the reason, such as `this report reads a published model` or `this report reads ../Sales.SemanticModel, which this run did not include`.
 - pbiplint reads no annotation on a measure in reportExtensions.json, so the rule is turned off for a whole project rather than for one measure.
 - A measure with an empty expression is reported like any other.
+- As of Power BI Desktop 2.158 (September 2026), a report measure in a project that opens its model by path shows in the Data pane, but right-clicking it shows an error rather than its menu, so How to fix it removes it from reportExtensions.json for such a project. Once Desktop's menu works there, the Desktop route for a report connected live to a published model applies to such a project too, and the file step can go.
 
 ## Related rules
 

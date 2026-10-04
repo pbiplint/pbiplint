@@ -1184,3 +1184,51 @@ describe("buildReport with the paths the input reader could not read", () => {
     expect(stray("definition/bookmarks/")).toBe(false);
   });
 });
+
+describe("reportExtensions.json with no entity (#208)", () => {
+  const SCHEMA =
+    "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/reportExtension/1.0.0/schema.json";
+  const DESKTOP =
+    "Power BI Desktop does not open a project whose reportExtensions.json lists no entity; delete the file when it holds no report measure";
+  const ext = (doc: unknown) => [{ path: "definition/reportExtensions.json", text: j(doc) }];
+
+  it("reports an empty entities list on its line, and reads the file as defining no measure", () => {
+    const { report } = buildReport(ext({ $schema: SCHEMA, name: "extension", entities: [] }));
+    expect(report.issues).toEqual([
+      {
+        file: "definition/reportExtensions.json",
+        line: 4,
+        text: '  "entities": []',
+        reason: `"entities" is empty: ${DESKTOP}`,
+      },
+    ]);
+    expect(report.extensions).toBe("read");
+    expect(report.measures).toEqual([]);
+  });
+
+  it("reports a missing entities list on the line where the document opens", () => {
+    const { report } = buildReport(ext({ $schema: SCHEMA, name: "extension" }));
+    expect(report.issues.map((i) => [i.line, i.text, i.reason])).toEqual([
+      [1, "{", `"entities" is missing: ${DESKTOP}`],
+    ]);
+  });
+
+  it("reports nothing for a file that holds measures", () => {
+    const { report } = buildReport(
+      ext({
+        $schema: SCHEMA,
+        name: "extension",
+        entities: [{ name: "Sales", measures: [{ name: "M", expression: "1" }] }],
+      }),
+    );
+    expect(report.issues).toEqual([]);
+    expect(report.measures.map((m) => m.name)).toEqual(["M"]);
+  });
+
+  it("leaves an entity with an empty measures list alone until Desktop is checked", () => {
+    const { report } = buildReport(
+      ext({ $schema: SCHEMA, name: "extension", entities: [{ name: "Sales", measures: [] }] }),
+    );
+    expect(report.issues).toEqual([]);
+  });
+});

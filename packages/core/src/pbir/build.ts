@@ -2,6 +2,7 @@ import type { LintFile } from "../engine/lint.js";
 import type { Diagnostic } from "../project/types.js";
 import {
   escapePointer,
+  issueLine,
   lineOfPointer,
   newerMajor,
   newerThan,
@@ -677,6 +678,21 @@ export function buildReport(
     } else if (f.path === "definition/reportExtensions.json") {
       report.extensions = "read";
       report.measures.push(...readExtensions(f.path, f.text, json));
+      // Power BI Desktop 2.158 (September 2026) does not open a project whose reportExtensions.json
+      // lists no entity, checked on October 3, 2026 with the sample's measures removed: its error
+      // dialog names a null reference in the model extension's constructor (#208). Desktop
+      // opened the project once the file was deleted. The file defines no measure either way, so
+      // it stays read.
+      const entities = json.entities;
+      if (entities === undefined || (Array.isArray(entities) && entities.length === 0))
+        report.issues.push({
+          file: f.path,
+          ...issueLine(
+            f.text,
+            entities === undefined ? undefined : lineOfPointer(f.text, "/entities"),
+          ),
+          reason: `"entities" is ${entities === undefined ? "missing" : "empty"}: Power BI Desktop does not open a project whose reportExtensions.json lists no entity; delete the file when it holds no report measure`,
+        });
     }
   }
   for (const v of visuals) {

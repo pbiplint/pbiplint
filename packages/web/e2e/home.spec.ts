@@ -405,6 +405,16 @@ test("keeps the drop zone lit across its children and unlights it when the drag 
   await expect(zone).not.toHaveClass(/over/, { timeout: 3000 });
 });
 
+test("the footer's divider sits clear of the sample button", async ({ page }) => {
+  // At 1280 px the hint sits beside the button, so the button is the page's last row.
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const button = (await page
+    .getByRole("button", { name: "Try the sample project" })
+    .boundingBox())!;
+  const footer = (await page.locator(".site-footer").boundingBox())!;
+  expect(footer.y - (button.y + button.height)).toBeGreaterThanOrEqual(48);
+});
+
 test("downloads the Markdown report", async ({ page }) => {
   await page.getByRole("button", { name: "Try the sample project" }).click();
   const [download] = await Promise.all([

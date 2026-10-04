@@ -1238,10 +1238,26 @@ describe("reportExtensions.json with no entity (#208)", () => {
     expect(report.issues.map((i) => [i.line, i.text])).toEqual([[3, '  "entities": []']]);
   });
 
-  it("leaves an entity with an empty measures list alone until Desktop is checked", () => {
+  it("reports an entity whose measures list is empty or missing, on its own line", () => {
+    const ENTITY =
+      "Power BI Desktop does not open a project whose reportExtensions.json holds an entity with no measure; remove the entity, or the file when it holds no report measure";
     const { report } = buildReport(
-      ext({ $schema: SCHEMA, name: "extension", entities: [{ name: "Sales", measures: [] }] }),
+      ext({
+        $schema: SCHEMA,
+        name: "extension",
+        entities: [
+          { name: "Sales", measures: [] },
+          { name: "Product", measures: [{ name: "M", expression: "1" }] },
+          { name: "Store" },
+          "not an entity",
+        ],
+      }),
     );
-    expect(report.issues).toEqual([]);
+    expect(report.issues.map((i) => [i.line, i.text.trim(), i.reason])).toEqual([
+      [7, '"measures": []', `entity "Sales" has an empty "measures" list: ${ENTITY}`],
+      [18, "{", `entity "Store" has no "measures" list: ${ENTITY}`],
+    ]);
+    expect(report.measures.map((m) => m.name)).toEqual(["M"]);
+    expect(report.extensions).toBe("read");
   });
 });

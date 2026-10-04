@@ -14,6 +14,7 @@ of McKinley Consulting, and the code license does not cover them (see [License](
 | `pbiplint-mark-only-64.png` | The mark at 64 × 64. |
 | `pbiplint-avatar.png` | The profile picture at 1024 × 1024, used as the pbiplint GitHub organization's avatar. |
 | `pbiplint-avatar-512.png` | The profile picture at 512 × 512. |
+| `pbiplint-avatar-128.png` | The profile picture at 128 × 128. |
 | `banner/pbiplint-banner-1280x640-github-social` | Banner sized for a GitHub repository's social preview (`.svg` and `.png`). |
 | `banner/pbiplint-banner-1500x500-x-header` | Banner sized for an X header (`.svg` and `.png`). |
 | `banner/pbiplint-banner-2560x1440-youtube-master` | Banner sized for a YouTube channel (`.svg` and `.png`). |

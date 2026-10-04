@@ -118,8 +118,9 @@ describe("styles.css", () => {
   });
 });
 
-it("keeps the footer's divider clear of the last row of every page", () => {
+it("keeps every page's content clear of the header's line and the footer's divider", () => {
   // main carries .container, so a bare `main` rule loses to its padding shorthand.
+  expect(rule("main.container")).toContain("padding-top: 32px");
   expect(rule("main.container")).toContain("padding-bottom: 64px");
   expect(rule("main")).toBe("");
 });

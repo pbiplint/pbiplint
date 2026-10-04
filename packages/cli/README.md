@@ -36,10 +36,12 @@ where that assistant reads a project's skills, below the current folder; it neve
 that differs unless given `--force`, and `--dry-run` writes nothing. `--show` lists where it is and
 whether each copy matches this version.
 
-`pbiplint mcp` is a local MCP server over stdin and stdout, for an assistant that runs local
-servers (Claude Desktop, Claude Code, VS Code, Cursor) to start. Its three tools only read: `lint`
-(what `--format json` prints, or with `quiet` the short summary), `explain_rule`, and `list_rules`.
-It opens no port. See [the CLI page](https://pbiplint.com/cli/#mcp) for each app's setup.
+`pbiplint mcp` is a local MCP server over stdin and stdout, for an assistant that runs local servers
+(Claude Desktop, Claude Code, VS Code, Cursor) to start. Its three tools only read: `lint` (what
+`--format json` prints, or with `quiet` the short summary), `explain_rule`, and `list_rules`. It
+opens no port. See [the CLI page](https://pbiplint.com/cli/#mcp) for each app's setup. With Claude,
+the [pbiplint plugin for Claude](https://github.com/pbiplint/claude-plugin) installs the skill and
+the server together.
 
 Formats: `text` (default), `json`, `sarif` (for GitHub code scanning and editors), `markdown`.
 The Markdown export writes an email address, an `@name`, a `#123` or `GH-123`, and text

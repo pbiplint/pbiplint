@@ -88,7 +88,12 @@ GitHub Copilot reads all three folders, so one copy is enough for it. `--install
 | `explain_rule` | What `pbiplint explain <RULE_ID> --format json` prints. |
 | `list_rules` | Every rule with its layer, status, severity, and category, as JSON. |
 
-Give `lint` an absolute path: a relative one is taken from the folder the app started the server in. To add it to Claude Code, run `claude mcp add pbiplint -- npx -y pbiplint mcp`. Claude Desktop and Cursor take a server like this in their MCP settings, and VS Code in `.vscode/mcp.json` under `servers` rather than `mcpServers`:
+With Claude, the [pbiplint plugin for Claude](https://github.com/pbiplint/claude-plugin) is the easy route. Each of its releases is pinned to a pbiplint release.
+
+- **Claude Code and Cowork:** run `/plugin marketplace add pbiplint/claude-plugin`, then `/plugin install pbiplint@pbiplint`. The plugin brings both the skill and this MCP server.
+- **Claude Desktop's chat:** download the `.mcpb` file from the plugin's [latest release](https://github.com/pbiplint/claude-plugin/releases/latest) and open it, and Claude Desktop installs the server in one click. The file carries pbiplint itself, so nothing is downloaded when it runs.
+
+To set it up by hand, in Claude or another app: give `lint` an absolute path, since a relative one is taken from the folder the app started the server in. To add it to Claude Code, run `claude mcp add pbiplint -- npx -y pbiplint mcp`. Claude Desktop and Cursor take a server like this in their MCP settings, and VS Code in `.vscode/mcp.json` under `servers` rather than `mcpServers`:
 
 ```json
 {

@@ -319,8 +319,10 @@ h3 {
   text-decoration-thickness: 2px;
   text-underline-offset: 6px;
 }
-main {
-  padding: 32px 0 64px;
+/* Every page's main also carries .container, whose padding shorthand set its top and bottom to 0,
+   so the footer's divider ran along the last row of the page. The bottom keeps it clear. */
+main.container {
+  padding-bottom: 64px;
 }
 .site-footer {
   border-top: 1px solid var(--line-1);

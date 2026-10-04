@@ -117,3 +117,9 @@ describe("styles.css", () => {
     expect(rule('a[target="_blank"] > .visually-hidden')).toMatch(/(^|\s)user-select: none/);
   });
 });
+
+it("keeps the footer's divider clear of the last row of every page", () => {
+  // main carries .container, so a bare `main` rule loses to its padding shorthand.
+  expect(rule("main.container")).toContain("padding-bottom: 64px");
+  expect(rule("main")).toBe("");
+});

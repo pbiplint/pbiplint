@@ -1106,6 +1106,17 @@ describe("lint over a project", () => {
       expect(r.summary.rulesSkipped.map((s) => s.id)).not.toContain("BROKEN_FIELD_REFERENCE");
       expect(ids("BROKEN_FIELD_REFERENCE")).toEqual(["r"]);
     });
+    it("reports a reportExtensions.json that lists no entity, which still counts as read (#208)", () => {
+      const { r, ids } = run({
+        path: "definition/reportExtensions.json",
+        text: JSON.stringify({ name: "extension", entities: [] }, null, 2),
+      });
+      expect(ids("PARSE_ISSUE")).toEqual(["definition/reportExtensions.json"]);
+      const finding = r.groups.find((g) => g.rule.id === "PARSE_ISSUE")!.findings[0]!;
+      expect(finding.location?.line).toBe(3);
+      // The file was read, so no rule is skipped for a report file that could not be.
+      expect(r.summary.rulesSkipped).not.toContainEqual(skipped);
+    });
     it("runs when the file that could not be read is the author's own or the report's .platform", () => {
       for (const file of [
         { path: "definition/notes/owners.json", text: '["alice",]' },

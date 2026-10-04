@@ -2186,6 +2186,14 @@ depth-cap diagnostic rendered as a notice. `check:browser` is unchanged.
 browser test; the core bundle stays under 200 KB minified. Both are
 asserted.
 
+Amended 2026-10-04 (issue #208): the core bundle budget is now 210 KB
+minified. The budget is a tripwire for conscious growth, not a ceiling
+the core must never pass: main stood at 199.9 KB, 61.7 KB gzipped, and
+#208's check of a reportExtensions.json that Power BI Desktop refuses
+to open is worth its 0.6 KB. v3's Power Query parser will need the
+budget revisited on its own terms, so 210 KB is not the new permanent
+line.
+
 ## 11. The sample project
 
 `examples/messy-sales/` gains `Messy Sales Demo.Report` beside the

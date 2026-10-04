@@ -1184,3 +1184,80 @@ describe("buildReport with the paths the input reader could not read", () => {
     expect(stray("definition/bookmarks/")).toBe(false);
   });
 });
+
+describe("reportExtensions.json with no entity (#208)", () => {
+  const SCHEMA =
+    "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/reportExtension/1.0.0/schema.json";
+  const DESKTOP =
+    "Power BI Desktop does not open a project whose reportExtensions.json lists no entity; delete the file when it holds no report measure";
+  const ext = (doc: unknown) => [{ path: "definition/reportExtensions.json", text: j(doc) }];
+
+  it("reports an empty entities list on its line, and reads the file as defining no measure", () => {
+    const { report } = buildReport(ext({ $schema: SCHEMA, name: "extension", entities: [] }));
+    expect(report.issues).toEqual([
+      {
+        file: "definition/reportExtensions.json",
+        line: 4,
+        text: '  "entities": []',
+        reason: `"entities" is empty: ${DESKTOP}`,
+      },
+    ]);
+    expect(report.extensions).toBe("read");
+    expect(report.measures).toEqual([]);
+  });
+
+  it("reports a missing entities list on the line where the document opens", () => {
+    const { report } = buildReport(ext({ $schema: SCHEMA, name: "extension" }));
+    expect(report.issues.map((i) => [i.line, i.text, i.reason])).toEqual([
+      [1, "{", `"entities" is missing: ${DESKTOP}`],
+    ]);
+  });
+
+  it("reports nothing for a file that holds measures", () => {
+    const { report } = buildReport(
+      ext({
+        $schema: SCHEMA,
+        name: "extension",
+        entities: [{ name: "Sales", measures: [{ name: "M", expression: "1" }] }],
+      }),
+    );
+    expect(report.issues).toEqual([]);
+    expect(report.measures.map((m) => m.name)).toEqual(["M"]);
+  });
+
+  it("reports a null entities list as missing, and keeps the file read", () => {
+    const { report } = buildReport(ext({ $schema: SCHEMA, name: "extension", entities: null }));
+    expect(report.issues.map((i) => i.reason)).toEqual([`"entities" is missing: ${DESKTOP}`]);
+    expect(report.unreadDefinitionFiles).toEqual([]);
+    expect(report.extensions).toBe("read");
+  });
+
+  it("finds the line in a file with a BOM and Windows line breaks", () => {
+    const text = '\ufeff{\r\n  "name": "extension",\r\n  "entities": []\r\n}\r\n';
+    const { report } = buildReport([{ path: "definition/reportExtensions.json", text }]);
+    expect(report.issues.map((i) => [i.line, i.text])).toEqual([[3, '  "entities": []']]);
+  });
+
+  it("reports an entity whose measures list is empty or missing, on its own line", () => {
+    const ENTITY =
+      "Power BI Desktop does not open a project whose reportExtensions.json holds an entity with no measure; remove the entity, or the file when it holds no report measure";
+    const { report } = buildReport(
+      ext({
+        $schema: SCHEMA,
+        name: "extension",
+        entities: [
+          { name: "Sales", measures: [] },
+          { name: "Product", measures: [{ name: "M", expression: "1" }] },
+          { name: "Store" },
+          "not an entity",
+        ],
+      }),
+    );
+    expect(report.issues.map((i) => [i.line, i.text.trim(), i.reason])).toEqual([
+      [7, '"measures": []', `entity "Sales" has an empty "measures" list: ${ENTITY}`],
+      [18, "{", `entity "Store" has no "measures" list: ${ENTITY}`],
+    ]);
+    expect(report.measures.map((m) => m.name)).toEqual(["M"]);
+    expect(report.extensions).toBe("read");
+  });
+});

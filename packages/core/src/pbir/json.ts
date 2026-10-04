@@ -60,6 +60,17 @@ function quoted(line: string | undefined): string {
   return `${text.slice(0, end)}…`;
 }
 
+/**
+ * A line of a file as a parse issue quotes it, for an issue found after `readJson` read the file:
+ * the line `line` (1-based), or, with no line, the first one holding anything but whitespace,
+ * where the document opens. The BOM is not part of the first line, as `readJson` reads it.
+ */
+export function issueLine(text: string, line?: number): { line: number; text: string } {
+  const lines = (text.charCodeAt(0) === 0xfeff ? text.slice(1) : text).split(LINE_BREAK);
+  const at = line ?? lines.findIndex((l) => /\S/.test(l)) + 1;
+  return { line: at, text: quoted(lines[at - 1]) };
+}
+
 /** The 1-based line of the character at `offset` in `body`. */
 const lineAt = (body: string, offset: number): number =>
   body.slice(0, offset).split(LINE_BREAK).length;

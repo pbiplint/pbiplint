@@ -46,14 +46,25 @@ Following pbiplint/action's `RELEASING.md`, "After a pbiplint CLI release".
 
 Following pbiplint/azure-pipelines' `RELEASING.md`, "After a pbiplint CLI release".
 
-- [ ] **Task pull request.** The `pbiplintVersion` default in `task/task.json`, the README's inputs table, and `PBIPLINT_VERSION` in `examples/plain.yml` and the README's copy of it set to 0.x.y. The messy-sales checkout's `ref` in `ci.yml` moved to the commit v0.x.y points at. CONTRIBUTING's fixture command moved to 0.x.y, `test/fixtures/messy-sales.sarif` regenerated with it from a checkout of this repository at that commit, and the tests' pins moved to what the new file holds. The README's rules paragraph still true of what 0.x.y checks. `npm test`, pull request, CI green, merge.
+- [ ] **Task pull request.** The `pbiplintVersion` default in `task/task.json`, the README's and `overview.md`'s (the Marketplace listing's) inputs tables, and `PBIPLINT_VERSION` in `examples/plain.yml`, the README's copy of it, and `test/pipelines/plain.yml` set to 0.x.y. The messy-sales checkout's `ref` in `ci.yml` moved to the commit v0.x.y points at. CONTRIBUTING's fixture command moved to 0.x.y, `test/fixtures/messy-sales.sarif` regenerated with it from a checkout of this repository at that commit, and the tests' pins moved to what the new file holds. The README's rules paragraph still true of what 0.x.y checks. `npm test`, pull request, CI green, merge.
 - [ ] **Version it in the same pull request,** in `task/task.json`, `vss-extension.json`, and `package.json`, which must match. Number it as the Action's: a minor if 0.x.y adds rules or changes the findings an unchanged project gets, otherwise a patch.
 - [ ] **Publish.** The maintainer runs `npm ci`, `npm test`, `npm run package`, and `tfx extension publish` from a clean checkout of main, as `RELEASING.md` says, then tags the merge commit v1.x.y and pushes the tag.
 - [ ] **Test pipeline.** In the test organization, on the new version: the task on the sample gives build issues, the summary, the `CodeAnalysisLogs` artifact, and a failed step, and the same step with `failOn: none` passes. The organization runs on the free hosted job only, so keep the runs to a few minutes.
+
+## Release the Claude plugin
+
+Following pbiplint/claude-plugin's [`RELEASING.md`](https://github.com/pbiplint/claude-plugin/blob/main/RELEASING.md#after-a-pbiplint-release), "After a pbiplint release". The plugin carries the CLI's version, 0.x.y.
+
+- [ ] **Plugin pull request.** 0.x.y pinned in `plugin.json`, `.mcp.json`, `mcpb/manifest.json`, README, SETUP, and PERMISSIONS; the skill refreshed with `npx -y pbiplint@0.x.y skill`; `node scripts/check-pins.mjs` passing; CI green, merge.
+- [ ] **MCP Bundle.** `sh scripts/build-mcpb.sh` builds `pbiplint-0.x.y.mcpb` from the published package; note its sha256.
+- [ ] **Tag and release.** The maintainer tags the merge commit v0.x.y and pushes it; the GitHub release carries the `.mcpb` and its sha256.
+- [ ] **Install check.** In a clean `CLAUDE_CONFIG_DIR`, the marketplace add and the install from GitHub give 0.x.y.
+
+Once the plugin is listed in Anthropic's directory, a new version needs no resubmission: the directory picks up each commit on the branch it tracks, scans it, and publishes it by the listing's publish setting, which may need **Publish** in the developer portal at claude.ai/directory/manage ([Update a published plugin](https://claude.com/docs/plugins/submit#update-a-published-plugin)). Until it is listed, this does not apply.
 
 ## Close out
 
 - [ ] **The milestone** closed on GitHub, with this issue the last one closed in it.
 - [ ] **The roadmap (#103):** 0.x.y under Shipped, named for what it shipped as the entries above it are, with its date and this issue; the "Now:" line moved to what comes next; and a comment noting the change.
-- [ ] **Tidy.** Merged release branches deleted in all three repositories.
-- [ ] **Close this issue** with a summary comment: what was published, the Action and task releases, and anything that left the milestone and where it went.
+- [ ] **Tidy.** Merged release branches deleted in all four repositories.
+- [ ] **Close this issue** with a summary comment: what was published, the Action, task, and plugin releases, and anything that left the milestone and where it went.

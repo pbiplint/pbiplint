@@ -90,9 +90,20 @@ drafted from those comments.
    new version, then release the action following its own `RELEASING.md`. Until then, workflows
    using `pbiplint/action@v1` keep running the previous CLI.
 7. Bump the Azure Pipelines task's pin the same way. In https://github.com/pbiplint/azure-pipelines,
-   change the `pbiplintVersion` default in `task/task.json`, the README's inputs table, and the
-   plain YAML route's `PBIPLINT_VERSION`, then publish the extension following its own
+   change the `pbiplintVersion` default in `task/task.json`, the README's and the Marketplace
+   listing's (`overview.md`) inputs tables, the plain YAML route's `PBIPLINT_VERSION`, and the test
+   organization's `test/pipelines/plain.yml`, then publish the extension following its own
    `RELEASING.md`. Until then, pipelines using `pbiplint@1` keep running the previous CLI.
+8. Release the Claude plugin, which carries the CLI's own version, following
+   [pbiplint/claude-plugin's `RELEASING.md`](https://github.com/pbiplint/claude-plugin/blob/main/RELEASING.md#after-a-pbiplint-release),
+   "After a pbiplint release": the version pinned in the plugin's files, the bundled skill refreshed
+   from the published CLI, the `.mcpb` built from the published package, a pull request with CI
+   green, the maintainer's `v<version>` tag, a GitHub release with the `.mcpb` attached, and an
+   install check from GitHub. Until then, the plugin keeps running the previous CLI. Once the plugin
+   is listed in Anthropic's directory, a new version needs no resubmission: the directory picks up
+   each commit on the branch it tracks, scans it, and publishes it by the listing's publish
+   setting, which may need **Publish** in the developer portal
+   ([Update a published plugin](https://claude.com/docs/plugins/submit#update-a-published-plugin)).
 
 A rerun of the workflow, or a tag pushed after a manual publish, is safe: `scripts/publish.mjs`
 skips a version that is already on the registry.

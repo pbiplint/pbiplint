@@ -14,7 +14,14 @@ import {
   type RankedGroup,
   type Severity,
 } from "@pbiplint/core";
-import { copy, download, exportJson, exportMarkdown } from "./export.js";
+import {
+  copy,
+  download,
+  exportForAssistant,
+  exportJson,
+  exportMarkdown,
+  type ExportFile,
+} from "./export.js";
 
 export interface RenderOptions {
   /**
@@ -218,7 +225,7 @@ export function renderResults(
         ),
       ),
     ),
-    renderExportBar(result),
+    ...renderExportBar(result),
     renderFilters(result),
     h("div", { class: "groups" }, ...result.groups.map(renderGroup)),
   );
@@ -357,39 +364,72 @@ function renderFilesRead(files: string[] | undefined): HTMLElement[] {
   ];
 }
 
-function renderExportBar(result: LintResult): HTMLElement {
+function renderExportBar(result: LintResult): HTMLElement[] {
   const button = (label: string, onClick: (b: HTMLButtonElement) => void): HTMLButtonElement => {
     const b = h("button", { type: "button", class: "secondary" }, label);
     b.addEventListener("click", () => onClick(b));
     return b;
   };
-  // One handle for the copy button's reset: a second click before the first reset lands would
-  // otherwise schedule a second one that flips the label back early.
-  let restoreTimer: ReturnType<typeof setTimeout> | undefined;
   // The button label flips for everyone who can see it; this says the same thing out loud. It is
-  // empty until a copy happens, so it never competes with the #announce region on the page.
+  // empty until a copy happens, so it never competes with the #announce region on the page. Both
+  // copy buttons speak through it.
   const announce = h("span", { class: "visually-hidden", role: "status" });
-  return h(
-    "div",
-    { class: "export" },
-    button("Download Markdown", () => download(exportMarkdown(result))),
-    button("Download JSON", () => download(exportJson(result))),
-    button("Copy Markdown", (b) => {
-      const flash = (label: string, spoken: string): void => {
-        b.textContent = label;
+  const copyButton = (label: string, file: () => ExportFile, copied: string): HTMLButtonElement => {
+    // One handle per button for its reset: a second click before the first reset lands would
+    // otherwise schedule a second one that flips the label back early.
+    let restoreTimer: ReturnType<typeof setTimeout> | undefined;
+    return button(label, (b) => {
+      const flash = (shown: string, spoken: string): void => {
+        b.textContent = shown;
         announce.textContent = spoken;
         clearTimeout(restoreTimer);
-        restoreTimer = setTimeout(() => (b.textContent = "Copy Markdown"), 1500);
+        restoreTimer = setTimeout(() => (b.textContent = label), 1500);
       };
-      void copy(exportMarkdown(result))
-        .then(() => flash("Copied", "Report copied to the clipboard"))
+      void copy(file())
+        .then(() => flash("Copied", copied))
         // A browser with no clipboard API, an insecure context, an unfocused document, or a
         // refused permission all land here. Say so on the button and in the status region beside
         // it instead of failing silently.
         .catch(() => flash("Copy failed", "Copying to the clipboard failed"));
-    }),
-    announce,
+    });
+  };
+  const assistantButton = copyButton(
+    "Copy for an AI assistant",
+    () => exportForAssistant(result),
+    "Report and guidance copied to the clipboard",
   );
+  // The note under the bar says what this copy holds, so a screen reader hears it on the button.
+  // One results block is on the page at a time, so the id is unique.
+  assistantButton.setAttribute("aria-describedby", "export-note");
+  return [
+    h(
+      "div",
+      { class: "export" },
+      // Two pairs, the copies first, then the downloads, with a wider gap between them (Michael,
+      // October 4, 2026).
+      h(
+        "div",
+        { class: "export-pair" },
+        copyButton("Copy Markdown", () => exportMarkdown(result), "Report copied to the clipboard"),
+        assistantButton,
+      ),
+      h(
+        "div",
+        { class: "export-pair" },
+        button("Download Markdown", () => download(exportMarkdown(result))),
+        button("Download JSON", () => download(exportJson(result))),
+      ),
+      announce,
+    ),
+    // Item 5 of the Promise, said where the copy is made: the paste, not pbiplint, sends it.
+    h(
+      "p",
+      { class: "export-note", id: "export-note" },
+      "Copy for an AI assistant adds each rule's guidance to the report. Like the report, it holds the names in your project, such as its tables, columns, measures, pages, and visuals, and its file paths. pbiplint sends nothing: what you paste goes to the service you paste it into. ",
+      newTabLink({ href: "/privacy/" }, "The pbiplint Privacy Promise"),
+      " covers pbiplint, not that service.",
+    ),
+  ];
 }
 
 function renderFilters(result: LintResult): HTMLElement {

@@ -18,6 +18,7 @@ import {
   renderResults,
   withLearnLinks,
 } from "../src/results/render.js";
+import { exportForAssistant } from "../src/results/export.js";
 import { SAMPLE_CONFIG, SAMPLE_FILES } from "../src/sample.js";
 
 /** The sample as the page lints it: both parts, under the sample's own config. */
@@ -207,13 +208,47 @@ describe("renderResults", () => {
       ),
     ).toEqual(["3", "2", "1"]);
   });
-  it("offers Markdown and JSON export", () => {
+  it("offers Markdown and JSON export, as two pairs: the copies, then the downloads", () => {
     renderResults(container, result, { source: "x" });
-    expect([...container.querySelectorAll(".export button")].map((b) => b.textContent)).toEqual([
-      "Download Markdown",
-      "Download JSON",
-      "Copy Markdown",
+    expect(
+      [...container.querySelectorAll(".export .export-pair")].map((pair) =>
+        [...pair.querySelectorAll("button")].map((b) => b.textContent),
+      ),
+    ).toEqual([
+      ["Copy Markdown", "Copy for an AI assistant"],
+      ["Download Markdown", "Download JSON"],
     ]);
+  });
+  it("copies the report with each rule's guidance for an AI assistant, and says so out loud", async () => {
+    const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    renderResults(container, result, { source: "x" });
+    const button = [...container.querySelectorAll("button")].find(
+      (b) => b.textContent === "Copy for an AI assistant",
+    )!;
+    button.click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(writeText).toHaveBeenCalledWith(exportForAssistant(result).text);
+    expect(button.textContent).toBe("Copied");
+    expect(container.querySelector(".export [role='status']")!.textContent).toBe(
+      "Report and guidance copied to the clipboard",
+    );
+  });
+  it("says beside the export what the copy holds and where a paste goes, linking the Promise", () => {
+    renderResults(container, result, { source: "x" });
+    const note = container.querySelector(".export + .export-note")!;
+    expect(note.textContent).toMatch(/names in your project/);
+    expect(note.textContent).toMatch(/file paths/);
+    expect(note.textContent).toMatch(/pbiplint sends nothing/);
+    const link = note.querySelector("a")!;
+    expect(link.getAttribute("href")).toBe("/privacy/");
+    expect(link.getAttribute("target")).toBe("_blank");
+    expect(link.textContent).toContain("The pbiplint Privacy Promise");
+    // The note describes the button it is about.
+    const button = [...container.querySelectorAll("button")].find(
+      (b) => b.textContent === "Copy for an AI assistant",
+    )!;
+    expect(container.querySelector(`#${button.getAttribute("aria-describedby")}`)).toBe(note);
   });
   it("says so on the button when the copy is refused", async () => {
     Object.defineProperty(navigator, "clipboard", {
@@ -221,8 +256,9 @@ describe("renderResults", () => {
       value: { writeText: () => Promise.reject(new Error("NotAllowedError")) },
     });
     renderResults(container, result, { source: "x" });
-    const buttons = [...container.querySelectorAll<HTMLButtonElement>(".export button")];
-    const copyButton = buttons.at(-1)!;
+    const copyButton = [...container.querySelectorAll<HTMLButtonElement>(".export button")].find(
+      (b) => b.textContent === "Copy Markdown",
+    )!;
     copyButton.click();
     // A macrotask flushes every pending microtask, well before the 1500 ms label reset.
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -275,6 +311,9 @@ describe("renderResults", () => {
     });
     expect(container.textContent).toContain("No findings.");
     expect(container.querySelector(".filters")).toBeNull();
+    // Nothing to fix, so nothing to export or hand to an assistant.
+    expect(container.querySelector(".export")).toBeNull();
+    expect(container.querySelector(".export-note")).toBeNull();
   });
   it("lists the files it read, collapsed, right under the summary that counts them", () => {
     const files = [

@@ -171,8 +171,11 @@ Note, October 3, 2026 (#96): a report rule's How to fix it gives the
 Power BI Desktop route, and the model or source route where the fix
 lives there, but no edit to the report's JSON or folders, since a person
 fixes a report in Desktop. The Example's `pbir` fences stay: they show
-the file the rule reads. `parse-issue` alone keeps a file repair route,
-because Desktop cannot open a report file that is not valid JSON.
+the file the rule reads. `parse-issue` keeps a file repair route,
+because Desktop cannot open a report file that is not valid JSON, and
+`report-level-measures` gives one file step for a project that opens
+its model by path, because Desktop 2.158 (September 2026) cannot
+rename or remove a report measure there. Each page says why.
 
 **Frontmatter.** Unchanged fields, one changed meaning. `sources` is
 attribution only: the ruleset URL for every `ported` and

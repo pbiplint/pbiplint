@@ -19,6 +19,11 @@ import {
 export const FORMATS = ["text", "json", "markdown", "sarif"] as const;
 export type FormatName = (typeof FORMATS)[number];
 
+/**
+ * A lint result written out in the named format: plain text for a terminal, JSON, Markdown, or
+ * SARIF for code scanning. The same as calling that format's own function, for a caller that
+ * holds the format as a name, such as the CLI's `--format`.
+ */
 export function formatResult(
   name: FormatName,
   result: LintResult,

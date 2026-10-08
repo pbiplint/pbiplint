@@ -4,22 +4,33 @@ import { layerOf, type Finding, type Rule, type RuleOptions } from "../rules/typ
 import type { ResolvedConfig } from "./config.js";
 import { isIgnored } from "./ignore.js";
 
+/** A rule that did not run, and why. */
 export interface SkippedRule {
   id: string;
+  /**
+   * `disabled`: the config turns it off. `needsLiveModel`: it needs column statistics a TMDL file
+   * does not carry, so it is listed and never run. `noModel` or `noReport`: a layer it needs is
+   * absent from the input. `reportFileUnread` or `modelFileUnread`: a file its findings depend on
+   * could not be read, so it reports nothing rather than something wrong.
+   */
   reason:
     "disabled" | "needsLiveModel" | "noModel" | "noReport" | "reportFileUnread" | "modelFileUnread";
 }
 
+/** A rule whose check threw. It counts as run, and its message is the thrown error's. */
 export interface RuleError {
   id: string;
   message: string;
 }
 
 export interface RunResult {
+  /** Every finding, in rule order, with the ignored ones left out. Severity is not set here. */
   findings: Finding[];
+  /** Ids of the rules that ran, a rule that threw among them. */
   rulesRun: string[];
   rulesSkipped: SkippedRule[];
   ruleErrors: RuleError[];
+  /** Findings dropped because their object's `pbiplint.ignore` annotation names the rule. */
   ignored: number;
 }
 
@@ -32,6 +43,14 @@ export function optionsFor(rule: Rule, config: ResolvedConfig): RuleOptions {
   return out;
 }
 
+/**
+ * Run each rule over the project, in the order given, and collect what it reports. A rule is
+ * skipped, with its reason, when the config turns it off, when it needs a live model, when a layer
+ * it needs is absent, or when its `skipWhenUnread` or `skipWhenModelUnread` holds. A rule that
+ * throws is recorded in `ruleErrors` and the run goes on. `config` must already be bound to the
+ * rules' ids (`bindConfig`), since ids are compared here as written. Most callers want `lint`,
+ * which builds the project and indexes, runs this, and ranks the findings by severity.
+ */
 export function runRules(
   project: Project,
   indexes: Indexes,

@@ -144,6 +144,39 @@ describe("readM", () => {
     ]);
     expect(m.queries.find((q) => q.name === "Sales")!.ast).toBeUndefined();
   });
+  it("locates M after a text literal holding U+2028 or U+2029 on the TMDL line a person counts", async () => {
+    const text = [
+      "table Sales", //                                              1
+      "\tpartition Sales = m", //                                    2
+      "\t\tsource =", //                                             3
+      '\t\t\t\tlet a = "x y z",', //                      4, M line 0
+      "\t\t\t\t    b =", //                                          5, M line 1
+      "\t\t\t\tin", //                                               6, M line 2
+      "\t\t\t\t    a", //                                            7
+      "",
+    ].join("\n");
+    const m = await read([file(text)]);
+    // The parser breaks lines at \n, U+2028, and U+2029, so its lines are 0 `let a = "x`, 1 `y`,
+    // 2 `z",`, 3 `    b =`, 4 `in`, 5 `    a`. TMDL breaks only at \n, so M has four lines there.
+    // The error is at `in`, parser line 4 code unit 0: M line 2, TMDL line 4 + 2 = 6, after four
+    // tabs, so column 5 (not TMDL line 4 + 4 = 8).
+    expect(m.issues.map((i) => [i.line, i.column, i.text])).toEqual([[6, 5, "in"]]);
+    const q = m.queries[0]!;
+    // `z` is parser line 2 code unit 0. On M line 0, `let a = "x` is code units 0 to 9, U+2028 is
+    // 10, `y` 11, U+2029 12, so `z` is code unit 13: TMDL line 4, after four tabs, column
+    // 4 + 13 + 1 = 18.
+    expect(m.locate(q, { lineNumber: 2, lineCodeUnit: 0 })).toEqual({
+      file: "definition/tables/Sales.tmdl",
+      line: 4,
+      column: 18,
+    });
+    // `b` is parser line 3 code unit 4: M line 1 code unit 4, TMDL line 5, column 4 + 4 + 1 = 9.
+    expect(m.locate(q, { lineNumber: 3, lineCodeUnit: 4 })).toEqual({
+      file: "definition/tables/Sales.tmdl",
+      line: 5,
+      column: 9,
+    });
+  });
 });
 
 describe("lint and the M index", () => {

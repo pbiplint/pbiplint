@@ -593,6 +593,8 @@ It reads the values from the fixture, so a new fake secret is covered when it is
 
 Amended October 13, 2026 (the coordinator's decision, pull request 6): the guard looks for every 8-character run of a value that takes in at least one character of its distinctive part, not only runs inside that part, so a leak of a value's end such as `0002-notreal` fails it too; runs inside the prefix or suffix every value shares are not looked for. The helper is `tests/support/fake-secrets.ts`; the MCP check sits in `packages/cli/test/mcp.test.ts`, beside its client, and an e2e test holds the site in a real browser to it: the page, both downloads, and, in Chromium, the copy for an AI assistant.
 
+Amended October 13, 2026 (the coordinator's decision, pull request 7): a second fixture, `tests/fixtures/parse-secrets.SemanticModel`, plants a made-up key on an M line and a made-up token on a TMDL line, neither of which parses, so `PARSE_ISSUE` quotes both (section 7). It sits apart from m-zoo, which must parse cleanly and has Tabular Editor captures. `PARSE_SECRETS_FIXTURE` in the helper names it, and every check above (core's four formats, the site, the CLI, the MCP lint tool, and the browser) holds its outputs to its two values.
+
 ### 11.4 The corpus diff
 
 A throwaway script in the plan's folder (not committed; the corpus is not pbiplint's to commit) lints every corpus model with main and with the branch, and compares each finding by rule, object, file, line, and detail:

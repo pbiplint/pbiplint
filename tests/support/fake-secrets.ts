@@ -12,6 +12,15 @@ export const SECRETS_FIXTURE = join(
   "../fixtures/m-zoo.SemanticModel",
 );
 
+/**
+ * parse-secrets, the fixture that plants a made-up key on an M line and a made-up token on a TMDL
+ * line that do not parse, so PARSE_ISSUE quotes both lines (v3 spec, sections 7 and 11.3).
+ */
+export const PARSE_SECRETS_FIXTURE = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "../fixtures/parse-secrets.SemanticModel",
+);
+
 /** A made-up credential as fixtures write one: it matches no real provider's format. */
 const FAKE = /pbiplint-fixture-[a-z]+-\d{4}-notreal/g;
 

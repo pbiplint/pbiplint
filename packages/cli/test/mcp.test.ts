@@ -3,7 +3,12 @@ import { PassThrough } from "node:stream";
 import { join } from "node:path";
 import { defaultRules } from "@pbiplint/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fakeSecrets, leaks, SECRETS_FIXTURE } from "../../../tests/support/fake-secrets.js";
+import {
+  fakeSecrets,
+  leaks,
+  PARSE_SECRETS_FIXTURE,
+  SECRETS_FIXTURE,
+} from "../../../tests/support/fake-secrets.js";
 import { tempDir } from "../../../tests/support/temp-dir.js";
 import { main } from "../src/main.js";
 import { lintArgv, serveMcp, TOOL_ANNOTATIONS, type McpHandle } from "../src/mcp.js";
@@ -157,6 +162,17 @@ describe("pbiplint mcp", () => {
     expect(json.text).toContain("HARDCODED_SECRET_IN_QUERY");
     expect(quiet.text).toContain("HARDCODED_SECRET_IN_QUERY");
     expect(leaks(json.text + quiet.text + client.lines.join("\n"), secrets)).toEqual([]);
+  });
+
+  it("keeps every part of the made-up values on lines PARSE_ISSUE quotes out of the lint tool's answers (v3 spec, sections 7 and 11.3)", async () => {
+    const planted = fakeSecrets(PARSE_SECRETS_FIXTURE);
+    expect(planted).toHaveLength(2);
+    const client = await connect();
+    const json = await client.call("lint", { path: PARSE_SECRETS_FIXTURE });
+    const quiet = await client.call("lint", { path: PARSE_SECRETS_FIXTURE, quiet: true });
+    expect(json.text).toContain("PARSE_ISSUE");
+    expect(quiet.text).toContain("PARSE_ISSUE");
+    expect(leaks(json.text + quiet.text + client.lines.join("\n"), planted)).toEqual([]);
   });
 
   it("returns the CLI's message as an error for a path it cannot read", async () => {

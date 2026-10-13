@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { fakeSecrets, leaks, SECRETS_FIXTURE } from "../../../tests/support/fake-secrets.js";
+import {
+  fakeSecrets,
+  leaks,
+  PARSE_SECRETS_FIXTURE,
+  SECRETS_FIXTURE,
+} from "../../../tests/support/fake-secrets.js";
 import { lint } from "../src/engine/lint.js";
 import { formatJson, formatMarkdown, formatSarif, formatText } from "../src/format/index.js";
 import { readModelFiles } from "./helpers.js";
@@ -39,5 +44,27 @@ describe("the secret guard, in core (v3 spec, section 11.3)", () => {
     ["SARIF", formatSarif],
   ] as const)("keeps every part of every value out of the %s format", (_name, format) => {
     expect(leaks(format(result, { toolVersion: "0.0.0" }), secrets)).toEqual([]);
+  });
+});
+
+describe("the secret guard, on lines PARSE_ISSUE quotes (v3 spec, sections 7 and 11.3)", async () => {
+  const planted = fakeSecrets(PARSE_SECRETS_FIXTURE);
+  const parsed = await lint(readModelFiles(PARSE_SECRETS_FIXTURE));
+  it("reads the fixture's key and token, and quotes both lines with their literals hidden", () => {
+    expect(planted.map((v) => v.split("-")[2])).toEqual(["key", "token"]);
+    expect(parsed.findings.filter((f) => f.ruleId === "PARSE_ISSUE").map((f) => f.detail)).toEqual([
+      "space indentation (TMDL requires tabs): measure 'Service Token' = \"…\"",
+      expect.stringMatching(
+        /^M could not be parsed: .*: Source = Web\.Contents\("…", \[Headers = \[#"x-api-key" = "…"\]\]\)\),$/,
+      ),
+    ]);
+  });
+  it.each([
+    ["text", formatText],
+    ["JSON", formatJson],
+    ["Markdown", formatMarkdown],
+    ["SARIF", formatSarif],
+  ] as const)("keeps every part of both values out of the %s format", (_name, format) => {
+    expect(leaks(format(parsed, { toolVersion: "0.0.0" }), planted)).toEqual([]);
   });
 });

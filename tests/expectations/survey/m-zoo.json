@@ -1,0 +1,2863 @@
+{
+  "fixture": "tests/fixtures/m-zoo.SemanticModel",
+  "oracle": "Tabular Editor CLI 0.7.1.2, each rule file in tests/expectations/survey/files.json at its commit",
+  "captured": "2026-10-13",
+  "deviations": {},
+  "ours": {},
+  "results": {
+    "microsoft/Analysis-Services/BestPracticeRules/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Fixed Dates'",
+          "'Range Date Key'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Fixed Dates'[Order Date]",
+          "'Range Correct'[Order Date]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales'[Order Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Api Secrets'",
+          "'Budget'",
+          "'Customers Inline'",
+          "'Customers Latest'",
+          "'Default Steps'",
+          "'Fixed Dates'",
+          "'Group In Comment'",
+          "'Local Paths'",
+          "'Native Lowercase'",
+          "'Navigation Only'",
+          "'Odbc Orders'",
+          "'Orders Files'",
+          "'Orders Pending Check'",
+          "'Orders Web'",
+          "'Range Correct'",
+          "'Range Date Key'",
+          "'Range Exclusive'",
+          "'Range Reversed'",
+          "'Range Shadowed'",
+          "'Sales Files'",
+          "'Sales'",
+          "'Scores'",
+          "'Server Literal'",
+          "'Server Step'",
+          "'Sort Held'",
+          "'Top Rows Kept'",
+          "'Top Rows'"
+        ],
+        "MINIMIZE_POWER_QUERY_TRANSFORMATIONS": [
+          "Budget",
+          "Customers Inline",
+          "Customers Latest",
+          "Default Steps",
+          "Fixed Dates",
+          "Group In Comment",
+          "Odbc Orders",
+          "Orders Web",
+          "Sales Files",
+          "Scores",
+          "Server Literal",
+          "Sort Held",
+          "Top Rows Kept"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Api Secrets'[Content]",
+          "'Budget'[Amount]",
+          "'Customers Inline'[Customer ID]",
+          "'Customers Latest'[Customer ID]",
+          "'Default Steps'[Region]",
+          "'Fixed Dates'[Order Date]",
+          "'Group In Comment'[OrderID]",
+          "'Local Paths'[Content]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Orders Files'[Content]",
+          "'Orders Pending Check'[Content]",
+          "'Orders Web'[Body]",
+          "'Range Correct'[Order Date]",
+          "'Range Date Key'[Order Date Key]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales Files'[Name]",
+          "'Sales'[Order Date]",
+          "'Scores'[Score]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Sort Held'[Customer ID]",
+          "'Top Rows Kept'[Region]",
+          "'Top Rows'[OrderID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "microsoft/Analysis-Services/BestPracticeRules/Italian/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Fixed Dates'",
+          "'Range Date Key'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Fixed Dates'[Order Date]",
+          "'Range Correct'[Order Date]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales'[Order Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Api Secrets'",
+          "'Budget'",
+          "'Customers Inline'",
+          "'Customers Latest'",
+          "'Default Steps'",
+          "'Fixed Dates'",
+          "'Group In Comment'",
+          "'Local Paths'",
+          "'Native Lowercase'",
+          "'Navigation Only'",
+          "'Odbc Orders'",
+          "'Orders Files'",
+          "'Orders Pending Check'",
+          "'Orders Web'",
+          "'Range Correct'",
+          "'Range Date Key'",
+          "'Range Exclusive'",
+          "'Range Reversed'",
+          "'Range Shadowed'",
+          "'Sales Files'",
+          "'Sales'",
+          "'Scores'",
+          "'Server Literal'",
+          "'Server Step'",
+          "'Sort Held'",
+          "'Top Rows Kept'",
+          "'Top Rows'"
+        ],
+        "MINIMIZE_POWER_QUERY_TRANSFORMATIONS": [
+          "Budget",
+          "Customers Inline",
+          "Customers Latest",
+          "Default Steps",
+          "Fixed Dates",
+          "Group In Comment",
+          "Odbc Orders",
+          "Orders Web",
+          "Sales Files",
+          "Scores",
+          "Server Literal",
+          "Sort Held",
+          "Top Rows Kept"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Api Secrets'[Content]",
+          "'Budget'[Amount]",
+          "'Customers Inline'[Customer ID]",
+          "'Customers Latest'[Customer ID]",
+          "'Default Steps'[Region]",
+          "'Fixed Dates'[Order Date]",
+          "'Group In Comment'[OrderID]",
+          "'Local Paths'[Content]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Orders Files'[Content]",
+          "'Orders Pending Check'[Content]",
+          "'Orders Web'[Body]",
+          "'Range Correct'[Order Date]",
+          "'Range Date Key'[Order Date Key]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales Files'[Name]",
+          "'Sales'[Order Date]",
+          "'Scores'[Score]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Sort Held'[Customer ID]",
+          "'Top Rows Kept'[Region]",
+          "'Top Rows'[OrderID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "microsoft/Analysis-Services/BestPracticeRules/Spanish/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Fixed Dates'",
+          "'Range Date Key'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Fixed Dates'[Order Date]",
+          "'Range Correct'[Order Date]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales'[Order Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Api Secrets'",
+          "'Budget'",
+          "'Customers Inline'",
+          "'Customers Latest'",
+          "'Default Steps'",
+          "'Fixed Dates'",
+          "'Group In Comment'",
+          "'Local Paths'",
+          "'Native Lowercase'",
+          "'Navigation Only'",
+          "'Odbc Orders'",
+          "'Orders Files'",
+          "'Orders Pending Check'",
+          "'Orders Web'",
+          "'Range Correct'",
+          "'Range Date Key'",
+          "'Range Exclusive'",
+          "'Range Reversed'",
+          "'Range Shadowed'",
+          "'Sales Files'",
+          "'Sales'",
+          "'Scores'",
+          "'Server Literal'",
+          "'Server Step'",
+          "'Sort Held'",
+          "'Top Rows Kept'",
+          "'Top Rows'"
+        ],
+        "MINIMIZE_POWER_QUERY_TRANSFORMATIONS": [
+          "Budget",
+          "Customers Inline",
+          "Customers Latest",
+          "Default Steps",
+          "Fixed Dates",
+          "Group In Comment",
+          "Odbc Orders",
+          "Orders Web",
+          "Sales Files",
+          "Scores",
+          "Server Literal",
+          "Sort Held",
+          "Top Rows Kept"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Api Secrets'[Content]",
+          "'Budget'[Amount]",
+          "'Customers Inline'[Customer ID]",
+          "'Customers Latest'[Customer ID]",
+          "'Default Steps'[Region]",
+          "'Fixed Dates'[Order Date]",
+          "'Group In Comment'[OrderID]",
+          "'Local Paths'[Content]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Orders Files'[Content]",
+          "'Orders Pending Check'[Content]",
+          "'Orders Web'[Body]",
+          "'Range Correct'[Order Date]",
+          "'Range Date Key'[Order Date Key]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales Files'[Name]",
+          "'Sales'[Order Date]",
+          "'Scores'[Score]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Sort Held'[Customer ID]",
+          "'Top Rows Kept'[Region]",
+          "'Top Rows'[OrderID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "microsoft/Analysis-Services/BestPracticeRules/Japanese/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Fixed Dates'",
+          "'Range Date Key'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Fixed Dates'[Order Date]",
+          "'Range Correct'[Order Date]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales'[Order Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Api Secrets'",
+          "'Budget'",
+          "'Customers Inline'",
+          "'Customers Latest'",
+          "'Default Steps'",
+          "'Fixed Dates'",
+          "'Group In Comment'",
+          "'Local Paths'",
+          "'Native Lowercase'",
+          "'Navigation Only'",
+          "'Odbc Orders'",
+          "'Orders Files'",
+          "'Orders Pending Check'",
+          "'Orders Web'",
+          "'Range Correct'",
+          "'Range Date Key'",
+          "'Range Exclusive'",
+          "'Range Reversed'",
+          "'Range Shadowed'",
+          "'Sales Files'",
+          "'Sales'",
+          "'Scores'",
+          "'Server Literal'",
+          "'Server Step'",
+          "'Sort Held'",
+          "'Top Rows Kept'",
+          "'Top Rows'"
+        ],
+        "MINIMIZE_POWER_QUERY_TRANSFORMATIONS": [
+          "Budget",
+          "Customers Inline",
+          "Customers Latest",
+          "Default Steps",
+          "Fixed Dates",
+          "Group In Comment",
+          "Odbc Orders",
+          "Orders Web",
+          "Sales Files",
+          "Scores",
+          "Server Literal",
+          "Sort Held",
+          "Top Rows Kept"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Api Secrets'[Content]",
+          "'Budget'[Amount]",
+          "'Customers Inline'[Customer ID]",
+          "'Customers Latest'[Customer ID]",
+          "'Default Steps'[Region]",
+          "'Fixed Dates'[Order Date]",
+          "'Group In Comment'[OrderID]",
+          "'Local Paths'[Content]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Orders Files'[Content]",
+          "'Orders Pending Check'[Content]",
+          "'Orders Web'[Body]",
+          "'Range Correct'[Order Date]",
+          "'Range Date Key'[Order Date Key]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales Files'[Name]",
+          "'Sales'[Order Date]",
+          "'Scores'[Score]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Sort Held'[Customer ID]",
+          "'Top Rows Kept'[Region]",
+          "'Top Rows'[OrderID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "BenniDeJagere/Presentations/2020/20200707_PBIMCR/BPARules.json": {
+      "findings": {
+        "META_AVOID_FLOAT": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "NO_CAMELCASE_COLUMNS_HIERARCHIES": [
+          "'Group In Comment'[OrderID]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Top Rows'[OrderID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "BenniDeJagere/Presentations/2020/20201002_SQLBits/BPARules.json": {
+      "findings": {
+        "META_AVOID_FLOAT": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "NO_CAMELCASE_COLUMNS_HIERARCHIES": [
+          "'Group In Comment'[OrderID]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Top Rows'[OrderID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "gronnerup/FabricOps/automation/resources/BPARules.json": {
+      "findings": {
+        "META_AVOID_FLOAT": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "NO_CAMELCASE_COLUMNS_HIERARCHIES": [
+          "'Group In Comment'[OrderID]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Top Rows'[OrderID]"
+        ],
+        "TRANSLATE_DESCRIPTIONS": [
+          "'Api Secrets'",
+          "'Budget'",
+          "'Customers Inline'",
+          "'Customers Latest'",
+          "'Default Steps'",
+          "'Fixed Dates'",
+          "'Group In Comment'",
+          "'Local Paths'",
+          "'Native Lowercase'",
+          "'Navigation Only'",
+          "'Odbc Orders'",
+          "'Orders Files'",
+          "'Orders Pending Check'",
+          "'Orders Web'",
+          "'Range Correct'",
+          "'Range Date Key'",
+          "'Range Exclusive'",
+          "'Range Reversed'",
+          "'Range Shadowed'",
+          "'Sales Files'",
+          "'Sales'",
+          "'Scores'",
+          "'Server Literal'",
+          "'Server Step'",
+          "'Sort Held'",
+          "'Top Rows Kept'",
+          "'Top Rows'"
+        ],
+        "TRANSLATE_HIDEABLE_OBJECT_NAMES": [
+          "'Api Secrets'",
+          "'Api Secrets'[Content]",
+          "'Budget'",
+          "'Budget'[Amount]",
+          "'Customers Inline'",
+          "'Customers Inline'[Customer ID]",
+          "'Customers Latest'",
+          "'Customers Latest'[Customer ID]",
+          "'Default Steps'",
+          "'Default Steps'[Region]",
+          "'Fixed Dates'",
+          "'Fixed Dates'[Order Date]",
+          "'Group In Comment'",
+          "'Group In Comment'[OrderID]",
+          "'Local Paths'",
+          "'Local Paths'[Content]",
+          "'Native Lowercase'",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'",
+          "'Odbc Orders'[OrderID]",
+          "'Orders Files'",
+          "'Orders Files'[Content]",
+          "'Orders Pending Check'",
+          "'Orders Pending Check'[Content]",
+          "'Orders Web'",
+          "'Orders Web'[Body]",
+          "'Range Correct'",
+          "'Range Correct'[Order Date]",
+          "'Range Date Key'",
+          "'Range Date Key'[Order Date Key]",
+          "'Range Exclusive'",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'",
+          "'Range Shadowed'[Order Date]",
+          "'Sales Files'",
+          "'Sales Files'[Name]",
+          "'Sales'",
+          "'Sales'[Order Date]",
+          "'Scores'",
+          "'Scores'[Score]",
+          "'Server Literal'",
+          "'Server Literal'[OrderID]",
+          "'Server Step'",
+          "'Server Step'[OrderID]",
+          "'Sort Held'",
+          "'Sort Held'[Customer ID]",
+          "'Top Rows Kept'",
+          "'Top Rows Kept'[Region]",
+          "'Top Rows'",
+          "'Top Rows'[OrderID]"
+        ],
+        "TRANSLATE_OTHER_NAMES": [
+          "Model"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "Reinsight-SE/Tabular/BestPractices/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "DATE_CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Fixed Dates'",
+          "'Range Date Key'"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Api Secrets'",
+          "'Budget'",
+          "'Customers Inline'",
+          "'Customers Latest'",
+          "'Default Steps'",
+          "'Fixed Dates'",
+          "'Group In Comment'",
+          "'Local Paths'",
+          "'Native Lowercase'",
+          "'Navigation Only'",
+          "'Odbc Orders'",
+          "'Orders Files'",
+          "'Orders Pending Check'",
+          "'Orders Web'",
+          "'Range Correct'",
+          "'Range Date Key'",
+          "'Range Exclusive'",
+          "'Range Reversed'",
+          "'Range Shadowed'",
+          "'Sales Files'",
+          "'Sales'",
+          "'Scores'",
+          "'Server Literal'",
+          "'Server Step'",
+          "'Sort Held'",
+          "'Top Rows Kept'",
+          "'Top Rows'"
+        ],
+        "MINIMIZE_POWER_QUERY_TRANSFORMATIONS": [
+          "Budget",
+          "Customers Inline",
+          "Customers Latest",
+          "Default Steps",
+          "Fixed Dates",
+          "Group In Comment",
+          "Odbc Orders",
+          "Orders Web",
+          "Sales Files",
+          "Scores",
+          "Server Literal",
+          "Sort Held",
+          "Top Rows Kept"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "NO_CAMELCASE_VISIBLE_OBJECTS": [
+          "'Group In Comment'[OrderID]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Top Rows'[OrderID]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Api Secrets'[Content]",
+          "'Budget'[Amount]",
+          "'Customers Inline'[Customer ID]",
+          "'Customers Latest'[Customer ID]",
+          "'Default Steps'[Region]",
+          "'Fixed Dates'[Order Date]",
+          "'Group In Comment'[OrderID]",
+          "'Local Paths'[Content]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Orders Files'[Content]",
+          "'Orders Pending Check'[Content]",
+          "'Orders Web'[Body]",
+          "'Range Correct'[Order Date]",
+          "'Range Date Key'[Order Date Key]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales Files'[Name]",
+          "'Sales'[Order Date]",
+          "'Scores'[Score]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Sort Held'[Customer ID]",
+          "'Top Rows Kept'[Region]",
+          "'Top Rows'[OrderID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "filcuk/ssas-best-practice-rules/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Fixed Dates'",
+          "'Range Date Key'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Fixed Dates'[Order Date]",
+          "'Range Correct'[Order Date]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales'[Order Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Api Secrets'",
+          "'Budget'",
+          "'Customers Inline'",
+          "'Customers Latest'",
+          "'Default Steps'",
+          "'Fixed Dates'",
+          "'Group In Comment'",
+          "'Local Paths'",
+          "'Native Lowercase'",
+          "'Navigation Only'",
+          "'Odbc Orders'",
+          "'Orders Files'",
+          "'Orders Pending Check'",
+          "'Orders Web'",
+          "'Range Correct'",
+          "'Range Date Key'",
+          "'Range Exclusive'",
+          "'Range Reversed'",
+          "'Range Shadowed'",
+          "'Sales Files'",
+          "'Sales'",
+          "'Scores'",
+          "'Server Literal'",
+          "'Server Step'",
+          "'Sort Held'",
+          "'Top Rows Kept'",
+          "'Top Rows'"
+        ],
+        "MINIMIZE_POWER_QUERY_TRANSFORMATIONS": [
+          "Budget",
+          "Customers Inline",
+          "Customers Latest",
+          "Default Steps",
+          "Fixed Dates",
+          "Group In Comment",
+          "Odbc Orders",
+          "Orders Web",
+          "Sales Files",
+          "Scores",
+          "Server Literal",
+          "Sort Held",
+          "Top Rows Kept"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Api Secrets'[Content]",
+          "'Budget'[Amount]",
+          "'Customers Inline'[Customer ID]",
+          "'Customers Latest'[Customer ID]",
+          "'Default Steps'[Region]",
+          "'Fixed Dates'[Order Date]",
+          "'Group In Comment'[OrderID]",
+          "'Local Paths'[Content]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Orders Files'[Content]",
+          "'Orders Pending Check'[Content]",
+          "'Orders Web'[Body]",
+          "'Range Correct'[Order Date]",
+          "'Range Date Key'[Order Date Key]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales Files'[Name]",
+          "'Sales'[Order Date]",
+          "'Scores'[Score]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Sort Held'[Customer ID]",
+          "'Top Rows Kept'[Region]",
+          "'Top Rows'[OrderID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "rafaelxkr/Power-BI/Tabular_Editor/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Fixed Dates'",
+          "'Range Date Key'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Fixed Dates'[Order Date]",
+          "'Range Correct'[Order Date]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales'[Order Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Api Secrets'",
+          "'Budget'",
+          "'Customers Inline'",
+          "'Customers Latest'",
+          "'Default Steps'",
+          "'Fixed Dates'",
+          "'Group In Comment'",
+          "'Local Paths'",
+          "'Native Lowercase'",
+          "'Navigation Only'",
+          "'Odbc Orders'",
+          "'Orders Files'",
+          "'Orders Pending Check'",
+          "'Orders Web'",
+          "'Range Correct'",
+          "'Range Date Key'",
+          "'Range Exclusive'",
+          "'Range Reversed'",
+          "'Range Shadowed'",
+          "'Sales Files'",
+          "'Sales'",
+          "'Scores'",
+          "'Server Literal'",
+          "'Server Step'",
+          "'Sort Held'",
+          "'Top Rows Kept'",
+          "'Top Rows'"
+        ],
+        "MINIMIZE_POWER_QUERY_TRANSFORMATIONS": [
+          "Budget",
+          "Customers Inline",
+          "Customers Latest",
+          "Default Steps",
+          "Fixed Dates",
+          "Group In Comment",
+          "Odbc Orders",
+          "Orders Web",
+          "Sales Files",
+          "Scores",
+          "Server Literal",
+          "Sort Held",
+          "Top Rows Kept"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Api Secrets'[Content]",
+          "'Budget'[Amount]",
+          "'Customers Inline'[Customer ID]",
+          "'Customers Latest'[Customer ID]",
+          "'Default Steps'[Region]",
+          "'Fixed Dates'[Order Date]",
+          "'Group In Comment'[OrderID]",
+          "'Local Paths'[Content]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Orders Files'[Content]",
+          "'Orders Pending Check'[Content]",
+          "'Orders Web'[Body]",
+          "'Range Correct'[Order Date]",
+          "'Range Date Key'[Order Date Key]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales Files'[Name]",
+          "'Sales'[Order Date]",
+          "'Scores'[Score]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Sort Held'[Customer ID]",
+          "'Top Rows Kept'[Region]",
+          "'Top Rows'[OrderID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "Adrian1903/BPA-Rules/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Fixed Dates'",
+          "'Range Date Key'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Fixed Dates'[Order Date]",
+          "'Range Correct'[Order Date]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales'[Order Date]"
+        ]
+      },
+      "ruleErrors": {
+        "CHECK_IF_DYNAMIC_ROW_LEVEL_SECURITY_(RLS)_IS_NECESSARY": "Error while evaluating expression on Tables: Value cannot be null. (Parameter 'input')"
+      }
+    },
+    "marcelodfelman/PowerBI-BPA-Analyzer/data/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "punitgiri921/Brightline-Analytics/bpa-rules/BPARules.json": {
+      "findings": {},
+      "ruleErrors": {}
+    },
+    "bonardi/PowerBI-CICD/resources/report/config/bparules.json": {
+      "error": "Could not parse BPA rules. Expected JSON array or object with 'rules' array."
+    },
+    "bonardi/PowerBI-CICD/resources/dataset/config/bparules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Fixed Dates'",
+          "'Range Date Key'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Fixed Dates'[Order Date]",
+          "'Range Correct'[Order Date]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales'[Order Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Api Secrets'",
+          "'Budget'",
+          "'Customers Inline'",
+          "'Customers Latest'",
+          "'Default Steps'",
+          "'Fixed Dates'",
+          "'Group In Comment'",
+          "'Local Paths'",
+          "'Native Lowercase'",
+          "'Navigation Only'",
+          "'Odbc Orders'",
+          "'Orders Files'",
+          "'Orders Pending Check'",
+          "'Orders Web'",
+          "'Range Correct'",
+          "'Range Date Key'",
+          "'Range Exclusive'",
+          "'Range Reversed'",
+          "'Range Shadowed'",
+          "'Sales Files'",
+          "'Sales'",
+          "'Scores'",
+          "'Server Literal'",
+          "'Server Step'",
+          "'Sort Held'",
+          "'Top Rows Kept'",
+          "'Top Rows'"
+        ],
+        "MINIMIZE_POWER_QUERY_TRANSFORMATIONS": [
+          "Budget",
+          "Customers Inline",
+          "Customers Latest",
+          "Default Steps",
+          "Fixed Dates",
+          "Group In Comment",
+          "Odbc Orders",
+          "Orders Web",
+          "Sales Files",
+          "Scores",
+          "Server Literal",
+          "Sort Held",
+          "Top Rows Kept"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Api Secrets'[Content]",
+          "'Budget'[Amount]",
+          "'Customers Inline'[Customer ID]",
+          "'Customers Latest'[Customer ID]",
+          "'Default Steps'[Region]",
+          "'Fixed Dates'[Order Date]",
+          "'Group In Comment'[OrderID]",
+          "'Local Paths'[Content]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Orders Files'[Content]",
+          "'Orders Pending Check'[Content]",
+          "'Orders Web'[Body]",
+          "'Range Correct'[Order Date]",
+          "'Range Date Key'[Order Date Key]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales Files'[Name]",
+          "'Sales'[Order Date]",
+          "'Scores'[Score]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Sort Held'[Customer ID]",
+          "'Top Rows Kept'[Region]",
+          "'Top Rows'[OrderID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "gordoncheme/powerbi/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Fixed Dates'",
+          "'Range Date Key'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Fixed Dates'[Order Date]",
+          "'Range Correct'[Order Date]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales'[Order Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Api Secrets'",
+          "'Budget'",
+          "'Customers Inline'",
+          "'Customers Latest'",
+          "'Default Steps'",
+          "'Fixed Dates'",
+          "'Group In Comment'",
+          "'Local Paths'",
+          "'Native Lowercase'",
+          "'Navigation Only'",
+          "'Odbc Orders'",
+          "'Orders Files'",
+          "'Orders Pending Check'",
+          "'Orders Web'",
+          "'Range Correct'",
+          "'Range Date Key'",
+          "'Range Exclusive'",
+          "'Range Reversed'",
+          "'Range Shadowed'",
+          "'Sales Files'",
+          "'Sales'",
+          "'Scores'",
+          "'Server Literal'",
+          "'Server Step'",
+          "'Sort Held'",
+          "'Top Rows Kept'",
+          "'Top Rows'"
+        ],
+        "MINIMIZE_POWER_QUERY_TRANSFORMATIONS": [
+          "Budget",
+          "Customers Inline",
+          "Customers Latest",
+          "Default Steps",
+          "Fixed Dates",
+          "Group In Comment",
+          "Odbc Orders",
+          "Orders Web",
+          "Sales Files",
+          "Scores",
+          "Server Literal",
+          "Sort Held",
+          "Top Rows Kept"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Api Secrets'[Content]",
+          "'Budget'[Amount]",
+          "'Customers Inline'[Customer ID]",
+          "'Customers Latest'[Customer ID]",
+          "'Default Steps'[Region]",
+          "'Fixed Dates'[Order Date]",
+          "'Group In Comment'[OrderID]",
+          "'Local Paths'[Content]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Orders Files'[Content]",
+          "'Orders Pending Check'[Content]",
+          "'Orders Web'[Body]",
+          "'Range Correct'[Order Date]",
+          "'Range Date Key'[Order Date Key]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales Files'[Name]",
+          "'Sales'[Order Date]",
+          "'Scores'[Score]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Sort Held'[Customer ID]",
+          "'Top Rows Kept'[Region]",
+          "'Top Rows'[OrderID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "thijsknaapRob/BPARulesOnline/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Fixed Dates'",
+          "'Range Date Key'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Fixed Dates'[Order Date]",
+          "'Range Correct'[Order Date]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales'[Order Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Api Secrets'",
+          "'Budget'",
+          "'Customers Inline'",
+          "'Customers Latest'",
+          "'Default Steps'",
+          "'Fixed Dates'",
+          "'Group In Comment'",
+          "'Local Paths'",
+          "'Native Lowercase'",
+          "'Navigation Only'",
+          "'Odbc Orders'",
+          "'Orders Files'",
+          "'Orders Pending Check'",
+          "'Orders Web'",
+          "'Range Correct'",
+          "'Range Date Key'",
+          "'Range Exclusive'",
+          "'Range Reversed'",
+          "'Range Shadowed'",
+          "'Sales Files'",
+          "'Sales'",
+          "'Scores'",
+          "'Server Literal'",
+          "'Server Step'",
+          "'Sort Held'",
+          "'Top Rows Kept'",
+          "'Top Rows'"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "twelve-baskets-analytics/pbi-bpa/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Fixed Dates'",
+          "'Range Date Key'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Fixed Dates'[Order Date]",
+          "'Range Correct'[Order Date]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales'[Order Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Api Secrets'",
+          "'Budget'",
+          "'Customers Inline'",
+          "'Customers Latest'",
+          "'Default Steps'",
+          "'Fixed Dates'",
+          "'Group In Comment'",
+          "'Local Paths'",
+          "'Native Lowercase'",
+          "'Navigation Only'",
+          "'Odbc Orders'",
+          "'Orders Files'",
+          "'Orders Pending Check'",
+          "'Orders Web'",
+          "'Range Correct'",
+          "'Range Date Key'",
+          "'Range Exclusive'",
+          "'Range Reversed'",
+          "'Range Shadowed'",
+          "'Sales Files'",
+          "'Sales'",
+          "'Scores'",
+          "'Server Literal'",
+          "'Server Step'",
+          "'Sort Held'",
+          "'Top Rows Kept'",
+          "'Top Rows'"
+        ],
+        "MINIMIZE_POWER_QUERY_TRANSFORMATIONS": [
+          "Budget",
+          "Customers Inline",
+          "Customers Latest",
+          "Default Steps",
+          "Fixed Dates",
+          "Group In Comment",
+          "Odbc Orders",
+          "Orders Web",
+          "Sales Files",
+          "Scores",
+          "Server Literal",
+          "Sort Held",
+          "Top Rows Kept"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Api Secrets'[Content]",
+          "'Budget'[Amount]",
+          "'Customers Inline'[Customer ID]",
+          "'Customers Latest'[Customer ID]",
+          "'Default Steps'[Region]",
+          "'Fixed Dates'[Order Date]",
+          "'Group In Comment'[OrderID]",
+          "'Local Paths'[Content]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Orders Files'[Content]",
+          "'Orders Pending Check'[Content]",
+          "'Orders Web'[Body]",
+          "'Range Correct'[Order Date]",
+          "'Range Date Key'[Order Date Key]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales Files'[Name]",
+          "'Sales'[Order Date]",
+          "'Scores'[Score]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Sort Held'[Customer ID]",
+          "'Top Rows Kept'[Region]",
+          "'Top Rows'[OrderID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "faby31/test/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Fixed Dates'",
+          "'Range Date Key'"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Api Secrets'",
+          "'Budget'",
+          "'Customers Inline'",
+          "'Customers Latest'",
+          "'Default Steps'",
+          "'Fixed Dates'",
+          "'Group In Comment'",
+          "'Local Paths'",
+          "'Native Lowercase'",
+          "'Navigation Only'",
+          "'Odbc Orders'",
+          "'Orders Files'",
+          "'Orders Pending Check'",
+          "'Orders Web'",
+          "'Range Correct'",
+          "'Range Date Key'",
+          "'Range Exclusive'",
+          "'Range Reversed'",
+          "'Range Shadowed'",
+          "'Sales Files'",
+          "'Sales'",
+          "'Scores'",
+          "'Server Literal'",
+          "'Server Step'",
+          "'Sort Held'",
+          "'Top Rows Kept'",
+          "'Top Rows'"
+        ],
+        "MINIMIZE_POWER_QUERY_TRANSFORMATIONS": [
+          "Budget",
+          "Customers Inline",
+          "Customers Latest",
+          "Default Steps",
+          "Fixed Dates",
+          "Group In Comment",
+          "Odbc Orders",
+          "Orders Web",
+          "Sales Files",
+          "Scores",
+          "Server Literal",
+          "Sort Held",
+          "Top Rows Kept"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Api Secrets'[Content]",
+          "'Budget'[Amount]",
+          "'Customers Inline'[Customer ID]",
+          "'Customers Latest'[Customer ID]",
+          "'Default Steps'[Region]",
+          "'Fixed Dates'[Order Date]",
+          "'Group In Comment'[OrderID]",
+          "'Local Paths'[Content]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Orders Files'[Content]",
+          "'Orders Pending Check'[Content]",
+          "'Orders Web'[Body]",
+          "'Range Correct'[Order Date]",
+          "'Range Date Key'[Order Date Key]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales Files'[Name]",
+          "'Sales'[Order Date]",
+          "'Scores'[Score]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Sort Held'[Customer ID]",
+          "'Top Rows Kept'[Region]",
+          "'Top Rows'[OrderID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "Mikd14/BPARules/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Fixed Dates'",
+          "'Range Date Key'"
+        ],
+        "MINIMIZE_POWER_QUERY_TRANSFORMATIONS": [
+          "Budget",
+          "Customers Inline",
+          "Customers Latest",
+          "Default Steps",
+          "Fixed Dates",
+          "Group In Comment",
+          "Odbc Orders",
+          "Orders Web",
+          "Sales Files",
+          "Scores",
+          "Server Literal",
+          "Sort Held",
+          "Top Rows Kept"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "GreyskullAnalytics/by-the-power-of-analyics-engineering/powerbi/bestpracticeanalyser/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Fixed Dates'",
+          "'Range Date Key'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Fixed Dates'[Order Date]",
+          "'Range Correct'[Order Date]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales'[Order Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Api Secrets'",
+          "'Budget'",
+          "'Customers Inline'",
+          "'Customers Latest'",
+          "'Default Steps'",
+          "'Fixed Dates'",
+          "'Group In Comment'",
+          "'Local Paths'",
+          "'Native Lowercase'",
+          "'Navigation Only'",
+          "'Odbc Orders'",
+          "'Orders Files'",
+          "'Orders Pending Check'",
+          "'Orders Web'",
+          "'Range Correct'",
+          "'Range Date Key'",
+          "'Range Exclusive'",
+          "'Range Reversed'",
+          "'Range Shadowed'",
+          "'Sales Files'",
+          "'Sales'",
+          "'Scores'",
+          "'Server Literal'",
+          "'Server Step'",
+          "'Sort Held'",
+          "'Top Rows Kept'",
+          "'Top Rows'"
+        ],
+        "MINIMIZE_POWER_QUERY_TRANSFORMATIONS": [
+          "Budget",
+          "Customers Inline",
+          "Customers Latest",
+          "Default Steps",
+          "Fixed Dates",
+          "Group In Comment",
+          "Odbc Orders",
+          "Orders Web",
+          "Sales Files",
+          "Scores",
+          "Server Literal",
+          "Sort Held",
+          "Top Rows Kept"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Api Secrets'[Content]",
+          "'Budget'[Amount]",
+          "'Customers Inline'[Customer ID]",
+          "'Customers Latest'[Customer ID]",
+          "'Default Steps'[Region]",
+          "'Fixed Dates'[Order Date]",
+          "'Group In Comment'[OrderID]",
+          "'Local Paths'[Content]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Orders Files'[Content]",
+          "'Orders Pending Check'[Content]",
+          "'Orders Web'[Body]",
+          "'Range Correct'[Order Date]",
+          "'Range Date Key'[Order Date Key]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales Files'[Name]",
+          "'Sales'[Order Date]",
+          "'Scores'[Score]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Sort Held'[Customer ID]",
+          "'Top Rows Kept'[Region]",
+          "'Top Rows'[OrderID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "Code-DataFyre/PowerInsighter/PowerInsighter/ModelBestPractices/BPARules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Fixed Dates'",
+          "'Range Date Key'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Fixed Dates'[Order Date]",
+          "'Range Correct'[Order Date]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales'[Order Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Api Secrets'",
+          "'Budget'",
+          "'Customers Inline'",
+          "'Customers Latest'",
+          "'Default Steps'",
+          "'Fixed Dates'",
+          "'Group In Comment'",
+          "'Local Paths'",
+          "'Native Lowercase'",
+          "'Navigation Only'",
+          "'Odbc Orders'",
+          "'Orders Files'",
+          "'Orders Pending Check'",
+          "'Orders Web'",
+          "'Range Correct'",
+          "'Range Date Key'",
+          "'Range Exclusive'",
+          "'Range Reversed'",
+          "'Range Shadowed'",
+          "'Sales Files'",
+          "'Sales'",
+          "'Scores'",
+          "'Server Literal'",
+          "'Server Step'",
+          "'Sort Held'",
+          "'Top Rows Kept'",
+          "'Top Rows'"
+        ],
+        "MINIMIZE_POWER_QUERY_TRANSFORMATIONS": [
+          "Budget",
+          "Customers Inline",
+          "Customers Latest",
+          "Default Steps",
+          "Fixed Dates",
+          "Group In Comment",
+          "Odbc Orders",
+          "Orders Web",
+          "Sales Files",
+          "Scores",
+          "Server Literal",
+          "Sort Held",
+          "Top Rows Kept"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Api Secrets'[Content]",
+          "'Budget'[Amount]",
+          "'Customers Inline'[Customer ID]",
+          "'Customers Latest'[Customer ID]",
+          "'Default Steps'[Region]",
+          "'Fixed Dates'[Order Date]",
+          "'Group In Comment'[OrderID]",
+          "'Local Paths'[Content]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Orders Files'[Content]",
+          "'Orders Pending Check'[Content]",
+          "'Orders Web'[Body]",
+          "'Range Correct'[Order Date]",
+          "'Range Date Key'[Order Date Key]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales Files'[Name]",
+          "'Sales'[Order Date]",
+          "'Scores'[Score]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Sort Held'[Customer ID]",
+          "'Top Rows Kept'[Region]",
+          "'Top Rows'[OrderID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "eugenecp/fabcon2026-ai-ci-cd/Fabric2026-CI-CD-Complete-Package/scripts/.bpaRules.json": {
+      "findings": {
+        "COL_HIDE_UNUSED": [
+          "'Api Secrets'[Content]",
+          "'Budget'[Amount]",
+          "'Customers Inline'[Customer ID]",
+          "'Customers Latest'[Customer ID]",
+          "'Default Steps'[Region]",
+          "'Fixed Dates'[Order Date]",
+          "'Group In Comment'[OrderID]",
+          "'Local Paths'[Content]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Orders Files'[Content]",
+          "'Orders Pending Check'[Content]",
+          "'Orders Web'[Body]",
+          "'Range Correct'[Order Date]",
+          "'Range Date Key'[Order Date Key]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales Files'[Name]",
+          "'Sales'[Order Date]",
+          "'Scores'[Score]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Sort Held'[Customer ID]",
+          "'Top Rows Kept'[Region]",
+          "'Top Rows'[OrderID]"
+        ],
+        "NAME_NO_SPACES_COLUMN": [
+          "'Customers Inline'[Customer ID]",
+          "'Customers Latest'[Customer ID]",
+          "'Fixed Dates'[Order Date]",
+          "'Range Correct'[Order Date]",
+          "'Range Date Key'[Order Date Key]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales'[Order Date]",
+          "'Sort Held'[Customer ID]"
+        ],
+        "NAME_NO_SPACES_TABLE": [
+          "'Api Secrets'",
+          "'Customers Inline'",
+          "'Customers Latest'",
+          "'Default Steps'",
+          "'Fixed Dates'",
+          "'Group In Comment'",
+          "'Local Paths'",
+          "'Native Lowercase'",
+          "'Navigation Only'",
+          "'Odbc Orders'",
+          "'Orders Files'",
+          "'Orders Pending Check'",
+          "'Orders Web'",
+          "'Range Correct'",
+          "'Range Date Key'",
+          "'Range Exclusive'",
+          "'Range Reversed'",
+          "'Range Shadowed'",
+          "'Sales Files'",
+          "'Server Literal'",
+          "'Server Step'",
+          "'Sort Held'",
+          "'Top Rows Kept'",
+          "'Top Rows'"
+        ],
+        "NAME_TABLE_PREFIXES": [
+          "'Api Secrets'",
+          "'Budget'",
+          "'Customers Inline'",
+          "'Customers Latest'",
+          "'Default Steps'",
+          "'Fixed Dates'",
+          "'Group In Comment'",
+          "'Local Paths'",
+          "'Native Lowercase'",
+          "'Navigation Only'",
+          "'Odbc Orders'",
+          "'Orders Files'",
+          "'Orders Pending Check'",
+          "'Orders Web'",
+          "'Range Correct'",
+          "'Range Date Key'",
+          "'Range Exclusive'",
+          "'Range Reversed'",
+          "'Range Shadowed'",
+          "'Sales Files'",
+          "'Sales'",
+          "'Scores'",
+          "'Server Literal'",
+          "'Server Step'",
+          "'Sort Held'",
+          "'Top Rows Kept'",
+          "'Top Rows'"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "TabularEditor/SessionArchive/Webinars/2025-12-10 - CICD and version control for Fabric/src/automation/resources/BPARules.json": {
+      "findings": {
+        "META_AVOID_FLOAT": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "NO_CAMELCASE_COLUMNS_HIERARCHIES": [
+          "'Group In Comment'[OrderID]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Top Rows'[OrderID]"
+        ],
+        "TRANSLATE_DESCRIPTIONS": [
+          "'Api Secrets'",
+          "'Budget'",
+          "'Customers Inline'",
+          "'Customers Latest'",
+          "'Default Steps'",
+          "'Fixed Dates'",
+          "'Group In Comment'",
+          "'Local Paths'",
+          "'Native Lowercase'",
+          "'Navigation Only'",
+          "'Odbc Orders'",
+          "'Orders Files'",
+          "'Orders Pending Check'",
+          "'Orders Web'",
+          "'Range Correct'",
+          "'Range Date Key'",
+          "'Range Exclusive'",
+          "'Range Reversed'",
+          "'Range Shadowed'",
+          "'Sales Files'",
+          "'Sales'",
+          "'Scores'",
+          "'Server Literal'",
+          "'Server Step'",
+          "'Sort Held'",
+          "'Top Rows Kept'",
+          "'Top Rows'"
+        ],
+        "TRANSLATE_HIDEABLE_OBJECT_NAMES": [
+          "'Api Secrets'",
+          "'Api Secrets'[Content]",
+          "'Budget'",
+          "'Budget'[Amount]",
+          "'Customers Inline'",
+          "'Customers Inline'[Customer ID]",
+          "'Customers Latest'",
+          "'Customers Latest'[Customer ID]",
+          "'Default Steps'",
+          "'Default Steps'[Region]",
+          "'Fixed Dates'",
+          "'Fixed Dates'[Order Date]",
+          "'Group In Comment'",
+          "'Group In Comment'[OrderID]",
+          "'Local Paths'",
+          "'Local Paths'[Content]",
+          "'Native Lowercase'",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'",
+          "'Odbc Orders'[OrderID]",
+          "'Orders Files'",
+          "'Orders Files'[Content]",
+          "'Orders Pending Check'",
+          "'Orders Pending Check'[Content]",
+          "'Orders Web'",
+          "'Orders Web'[Body]",
+          "'Range Correct'",
+          "'Range Correct'[Order Date]",
+          "'Range Date Key'",
+          "'Range Date Key'[Order Date Key]",
+          "'Range Exclusive'",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'",
+          "'Range Shadowed'[Order Date]",
+          "'Sales Files'",
+          "'Sales Files'[Name]",
+          "'Sales'",
+          "'Sales'[Order Date]",
+          "'Scores'",
+          "'Scores'[Score]",
+          "'Server Literal'",
+          "'Server Literal'[OrderID]",
+          "'Server Step'",
+          "'Server Step'[OrderID]",
+          "'Sort Held'",
+          "'Sort Held'[Customer ID]",
+          "'Top Rows Kept'",
+          "'Top Rows Kept'[Region]",
+          "'Top Rows'",
+          "'Top Rows'[OrderID]"
+        ],
+        "TRANSLATE_OTHER_NAMES": [
+          "Model"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "data-goblin/power-bi-agentic-development/plugins/tabular-editor/skills/bpa-rules/examples/course-3-business-case-bpa-rules.json": {
+      "findings": {
+        "RULE1": [
+          "'Api Secrets'",
+          "'Customers Inline'",
+          "'Customers Latest'",
+          "'Default Steps'",
+          "'Fixed Dates'",
+          "'Group In Comment'",
+          "'Local Paths'",
+          "'Native Lowercase'",
+          "'Navigation Only'",
+          "'Odbc Orders'",
+          "'Orders Files'",
+          "'Orders Pending Check'",
+          "'Orders Web'",
+          "'Range Correct'",
+          "'Range Date Key'",
+          "'Range Exclusive'",
+          "'Range Reversed'",
+          "'Range Shadowed'",
+          "'Sales Files'",
+          "'Sales'",
+          "'Scores'",
+          "'Server Literal'",
+          "'Server Step'",
+          "'Sort Held'",
+          "'Top Rows Kept'",
+          "'Top Rows'"
+        ],
+        "RULE2": [
+          "Customers Inline",
+          "Customers Latest",
+          "Sort Held"
+        ],
+        "RULE6": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "RULE9": [
+          "'Api Secrets'[Content]",
+          "'Budget'[Amount]",
+          "'Customers Inline'[Customer ID]",
+          "'Customers Latest'[Customer ID]",
+          "'Default Steps'[Region]",
+          "'Fixed Dates'[Order Date]",
+          "'Group In Comment'[OrderID]",
+          "'Local Paths'[Content]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Orders Files'[Content]",
+          "'Orders Pending Check'[Content]",
+          "'Orders Web'[Body]",
+          "'Range Correct'[Order Date]",
+          "'Range Date Key'[Order Date Key]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales Files'[Name]",
+          "'Sales'[Order Date]",
+          "'Scores'[Score]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Sort Held'[Customer ID]",
+          "'Top Rows Kept'[Region]",
+          "'Top Rows'[OrderID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "bgarcevic/fabric-utils/.devops/bpa-rules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Fixed Dates'",
+          "'Range Date Key'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Fixed Dates'[Order Date]",
+          "'Range Correct'[Order Date]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales'[Order Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Api Secrets'",
+          "'Budget'",
+          "'Customers Inline'",
+          "'Customers Latest'",
+          "'Default Steps'",
+          "'Fixed Dates'",
+          "'Group In Comment'",
+          "'Local Paths'",
+          "'Native Lowercase'",
+          "'Navigation Only'",
+          "'Odbc Orders'",
+          "'Orders Files'",
+          "'Orders Pending Check'",
+          "'Orders Web'",
+          "'Range Correct'",
+          "'Range Date Key'",
+          "'Range Exclusive'",
+          "'Range Reversed'",
+          "'Range Shadowed'",
+          "'Sales Files'",
+          "'Sales'",
+          "'Scores'",
+          "'Server Literal'",
+          "'Server Step'",
+          "'Sort Held'",
+          "'Top Rows Kept'",
+          "'Top Rows'"
+        ],
+        "MINIMIZE_POWER_QUERY_TRANSFORMATIONS": [
+          "Budget",
+          "Customers Inline",
+          "Customers Latest",
+          "Default Steps",
+          "Fixed Dates",
+          "Group In Comment",
+          "Odbc Orders",
+          "Orders Web",
+          "Sales Files",
+          "Scores",
+          "Server Literal",
+          "Sort Held",
+          "Top Rows Kept"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Api Secrets'[Content]",
+          "'Budget'[Amount]",
+          "'Customers Inline'[Customer ID]",
+          "'Customers Latest'[Customer ID]",
+          "'Default Steps'[Region]",
+          "'Fixed Dates'[Order Date]",
+          "'Group In Comment'[OrderID]",
+          "'Local Paths'[Content]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Orders Files'[Content]",
+          "'Orders Pending Check'[Content]",
+          "'Orders Web'[Body]",
+          "'Range Correct'[Order Date]",
+          "'Range Date Key'[Order Date Key]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales Files'[Name]",
+          "'Sales'[Order Date]",
+          "'Scores'[Score]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Sort Held'[Customer ID]",
+          "'Top Rows Kept'[Region]",
+          "'Top Rows'[OrderID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "luccapinto/agentic-data-kit/.agent/skills/pbi-quality-rules/bpa-rules.json": {
+      "findings": {
+        "DOC_KEY_COLUMN_HIDDEN": [
+          "'Customers Inline'[Customer ID]",
+          "'Customers Latest'[Customer ID]",
+          "'Group In Comment'[OrderID]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Sort Held'[Customer ID]",
+          "'Top Rows'[OrderID]"
+        ],
+        "MODEL_ISLAND_TABLE": [
+          "'Api Secrets'",
+          "'Budget'",
+          "'Customers Inline'",
+          "'Customers Latest'",
+          "'Default Steps'",
+          "'Fixed Dates'",
+          "'Group In Comment'",
+          "'Local Paths'",
+          "'Native Lowercase'",
+          "'Navigation Only'",
+          "'Odbc Orders'",
+          "'Orders Files'",
+          "'Orders Pending Check'",
+          "'Orders Web'",
+          "'Range Correct'",
+          "'Range Date Key'",
+          "'Range Exclusive'",
+          "'Range Reversed'",
+          "'Range Shadowed'",
+          "'Sales Files'",
+          "'Sales'",
+          "'Scores'",
+          "'Server Literal'",
+          "'Server Step'",
+          "'Sort Held'",
+          "'Top Rows Kept'",
+          "'Top Rows'"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "bgarcevic/tomix-cli/src/Tomix.App/Bpa/Rules/bpa-rules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Fixed Dates'",
+          "'Range Date Key'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Fixed Dates'[Order Date]",
+          "'Range Correct'[Order Date]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales'[Order Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Api Secrets'",
+          "'Budget'",
+          "'Customers Inline'",
+          "'Customers Latest'",
+          "'Default Steps'",
+          "'Fixed Dates'",
+          "'Group In Comment'",
+          "'Local Paths'",
+          "'Native Lowercase'",
+          "'Navigation Only'",
+          "'Odbc Orders'",
+          "'Orders Files'",
+          "'Orders Pending Check'",
+          "'Orders Web'",
+          "'Range Correct'",
+          "'Range Date Key'",
+          "'Range Exclusive'",
+          "'Range Reversed'",
+          "'Range Shadowed'",
+          "'Sales Files'",
+          "'Sales'",
+          "'Scores'",
+          "'Server Literal'",
+          "'Server Step'",
+          "'Sort Held'",
+          "'Top Rows Kept'",
+          "'Top Rows'"
+        ],
+        "MINIMIZE_POWER_QUERY_TRANSFORMATIONS": [
+          "Budget",
+          "Customers Inline",
+          "Customers Latest",
+          "Default Steps",
+          "Fixed Dates",
+          "Group In Comment",
+          "Odbc Orders",
+          "Orders Web",
+          "Sales Files",
+          "Scores",
+          "Server Literal",
+          "Sort Held",
+          "Top Rows Kept"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Api Secrets'[Content]",
+          "'Budget'[Amount]",
+          "'Customers Inline'[Customer ID]",
+          "'Customers Latest'[Customer ID]",
+          "'Default Steps'[Region]",
+          "'Fixed Dates'[Order Date]",
+          "'Group In Comment'[OrderID]",
+          "'Local Paths'[Content]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Orders Files'[Content]",
+          "'Orders Pending Check'[Content]",
+          "'Orders Web'[Body]",
+          "'Range Correct'[Order Date]",
+          "'Range Date Key'[Order Date Key]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales Files'[Name]",
+          "'Sales'[Order Date]",
+          "'Scores'[Score]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Sort Held'[Customer ID]",
+          "'Top Rows Kept'[Region]",
+          "'Top Rows'[OrderID]"
+        ]
+      },
+      "ruleErrors": {
+        "DATA_COLUMNS_MUST_HAVE_A_SOURCE_COLUMN": "No property or field 'CalculationItems' exists in type 'Table'",
+        "RELATIONSHIP_COLUMNS_SAME_DATA_TYPE": "Operator '!=' incompatible with operand types 'DataType' and 'String'"
+      }
+    },
+    "AlahmadiQ8/copilot-sdk-challenge/backend/src/data/bpa-rules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Fixed Dates'",
+          "'Range Date Key'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Fixed Dates'[Order Date]",
+          "'Range Correct'[Order Date]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales'[Order Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Api Secrets'",
+          "'Budget'",
+          "'Customers Inline'",
+          "'Customers Latest'",
+          "'Default Steps'",
+          "'Fixed Dates'",
+          "'Group In Comment'",
+          "'Local Paths'",
+          "'Native Lowercase'",
+          "'Navigation Only'",
+          "'Odbc Orders'",
+          "'Orders Files'",
+          "'Orders Pending Check'",
+          "'Orders Web'",
+          "'Range Correct'",
+          "'Range Date Key'",
+          "'Range Exclusive'",
+          "'Range Reversed'",
+          "'Range Shadowed'",
+          "'Sales Files'",
+          "'Sales'",
+          "'Scores'",
+          "'Server Literal'",
+          "'Server Step'",
+          "'Sort Held'",
+          "'Top Rows Kept'",
+          "'Top Rows'"
+        ],
+        "MINIMIZE_POWER_QUERY_TRANSFORMATIONS": [
+          "Budget",
+          "Customers Inline",
+          "Customers Latest",
+          "Default Steps",
+          "Fixed Dates",
+          "Group In Comment",
+          "Odbc Orders",
+          "Orders Web",
+          "Sales Files",
+          "Scores",
+          "Server Literal",
+          "Sort Held",
+          "Top Rows Kept"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Api Secrets'[Content]",
+          "'Budget'[Amount]",
+          "'Customers Inline'[Customer ID]",
+          "'Customers Latest'[Customer ID]",
+          "'Default Steps'[Region]",
+          "'Fixed Dates'[Order Date]",
+          "'Group In Comment'[OrderID]",
+          "'Local Paths'[Content]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Orders Files'[Content]",
+          "'Orders Pending Check'[Content]",
+          "'Orders Web'[Body]",
+          "'Range Correct'[Order Date]",
+          "'Range Date Key'[Order Date Key]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales Files'[Name]",
+          "'Sales'[Order Date]",
+          "'Scores'[Score]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Sort Held'[Customer ID]",
+          "'Top Rows Kept'[Region]",
+          "'Top Rows'[OrderID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "petecarlssonw/powerbi-testing/BPARules/bpa-rules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Fixed Dates'",
+          "'Range Date Key'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Fixed Dates'[Order Date]",
+          "'Range Correct'[Order Date]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales'[Order Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Api Secrets'",
+          "'Budget'",
+          "'Customers Inline'",
+          "'Customers Latest'",
+          "'Default Steps'",
+          "'Fixed Dates'",
+          "'Group In Comment'",
+          "'Local Paths'",
+          "'Native Lowercase'",
+          "'Navigation Only'",
+          "'Odbc Orders'",
+          "'Orders Files'",
+          "'Orders Pending Check'",
+          "'Orders Web'",
+          "'Range Correct'",
+          "'Range Date Key'",
+          "'Range Exclusive'",
+          "'Range Reversed'",
+          "'Range Shadowed'",
+          "'Sales Files'",
+          "'Sales'",
+          "'Scores'",
+          "'Server Literal'",
+          "'Server Step'",
+          "'Sort Held'",
+          "'Top Rows Kept'",
+          "'Top Rows'"
+        ],
+        "MINIMIZE_POWER_QUERY_TRANSFORMATIONS": [
+          "Budget",
+          "Customers Inline",
+          "Customers Latest",
+          "Default Steps",
+          "Fixed Dates",
+          "Group In Comment",
+          "Odbc Orders",
+          "Orders Web",
+          "Sales Files",
+          "Scores",
+          "Server Literal",
+          "Sort Held",
+          "Top Rows Kept"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Api Secrets'[Content]",
+          "'Budget'[Amount]",
+          "'Customers Inline'[Customer ID]",
+          "'Customers Latest'[Customer ID]",
+          "'Default Steps'[Region]",
+          "'Fixed Dates'[Order Date]",
+          "'Group In Comment'[OrderID]",
+          "'Local Paths'[Content]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Orders Files'[Content]",
+          "'Orders Pending Check'[Content]",
+          "'Orders Web'[Body]",
+          "'Range Correct'[Order Date]",
+          "'Range Date Key'[Order Date Key]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales Files'[Name]",
+          "'Sales'[Order Date]",
+          "'Scores'[Score]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Sort Held'[Customer ID]",
+          "'Top Rows Kept'[Region]",
+          "'Top Rows'[OrderID]"
+        ]
+      },
+      "ruleErrors": {
+        "CHECK_IF_DYNAMIC_ROW_LEVEL_SECURITY_(RLS)_IS_NECESSARY": "Error while evaluating expression on Tables: Value cannot be null. (Parameter 'input')"
+      }
+    },
+    "TabularEditor/BestPracticeRules/BPARules-standard.json": {
+      "findings": {
+        "META_AVOID_FLOAT": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "NO_CAMELCASE_COLUMNS_HIERARCHIES": [
+          "'Group In Comment'[OrderID]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Top Rows'[OrderID]"
+        ],
+        "TRANSLATE_DESCRIPTIONS": [
+          "'Api Secrets'",
+          "'Budget'",
+          "'Customers Inline'",
+          "'Customers Latest'",
+          "'Default Steps'",
+          "'Fixed Dates'",
+          "'Group In Comment'",
+          "'Local Paths'",
+          "'Native Lowercase'",
+          "'Navigation Only'",
+          "'Odbc Orders'",
+          "'Orders Files'",
+          "'Orders Pending Check'",
+          "'Orders Web'",
+          "'Range Correct'",
+          "'Range Date Key'",
+          "'Range Exclusive'",
+          "'Range Reversed'",
+          "'Range Shadowed'",
+          "'Sales Files'",
+          "'Sales'",
+          "'Scores'",
+          "'Server Literal'",
+          "'Server Step'",
+          "'Sort Held'",
+          "'Top Rows Kept'",
+          "'Top Rows'"
+        ],
+        "TRANSLATE_HIDEABLE_OBJECT_NAMES": [
+          "'Api Secrets'",
+          "'Api Secrets'[Content]",
+          "'Budget'",
+          "'Budget'[Amount]",
+          "'Customers Inline'",
+          "'Customers Inline'[Customer ID]",
+          "'Customers Latest'",
+          "'Customers Latest'[Customer ID]",
+          "'Default Steps'",
+          "'Default Steps'[Region]",
+          "'Fixed Dates'",
+          "'Fixed Dates'[Order Date]",
+          "'Group In Comment'",
+          "'Group In Comment'[OrderID]",
+          "'Local Paths'",
+          "'Local Paths'[Content]",
+          "'Native Lowercase'",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'",
+          "'Odbc Orders'[OrderID]",
+          "'Orders Files'",
+          "'Orders Files'[Content]",
+          "'Orders Pending Check'",
+          "'Orders Pending Check'[Content]",
+          "'Orders Web'",
+          "'Orders Web'[Body]",
+          "'Range Correct'",
+          "'Range Correct'[Order Date]",
+          "'Range Date Key'",
+          "'Range Date Key'[Order Date Key]",
+          "'Range Exclusive'",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'",
+          "'Range Shadowed'[Order Date]",
+          "'Sales Files'",
+          "'Sales Files'[Name]",
+          "'Sales'",
+          "'Sales'[Order Date]",
+          "'Scores'",
+          "'Scores'[Score]",
+          "'Server Literal'",
+          "'Server Literal'[OrderID]",
+          "'Server Step'",
+          "'Server Step'[OrderID]",
+          "'Sort Held'",
+          "'Sort Held'[Customer ID]",
+          "'Top Rows Kept'",
+          "'Top Rows Kept'[Region]",
+          "'Top Rows'",
+          "'Top Rows'[OrderID]"
+        ],
+        "TRANSLATE_OTHER_NAMES": [
+          "Model"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "TabularEditor/BestPracticeRules/BPARules-PowerBI.json": {
+      "findings": {
+        "META_AVOID_FLOAT": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "NO_CAMELCASE_COLUMNS_HIERARCHIES": [
+          "'Group In Comment'[OrderID]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Top Rows'[OrderID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "tenfingerseddy/semanticus-vscode/Semanticus.Analysis/Rules/BPARules-PowerBI.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Fixed Dates'",
+          "'Range Date Key'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Fixed Dates'[Order Date]",
+          "'Range Correct'[Order Date]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales'[Order Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Api Secrets'",
+          "'Budget'",
+          "'Customers Inline'",
+          "'Customers Latest'",
+          "'Default Steps'",
+          "'Fixed Dates'",
+          "'Group In Comment'",
+          "'Local Paths'",
+          "'Native Lowercase'",
+          "'Navigation Only'",
+          "'Odbc Orders'",
+          "'Orders Files'",
+          "'Orders Pending Check'",
+          "'Orders Web'",
+          "'Range Correct'",
+          "'Range Date Key'",
+          "'Range Exclusive'",
+          "'Range Reversed'",
+          "'Range Shadowed'",
+          "'Sales Files'",
+          "'Sales'",
+          "'Scores'",
+          "'Server Literal'",
+          "'Server Step'",
+          "'Sort Held'",
+          "'Top Rows Kept'",
+          "'Top Rows'"
+        ],
+        "MINIMIZE_POWER_QUERY_TRANSFORMATIONS": [
+          "Budget",
+          "Customers Inline",
+          "Customers Latest",
+          "Default Steps",
+          "Fixed Dates",
+          "Group In Comment",
+          "Odbc Orders",
+          "Orders Web",
+          "Sales Files",
+          "Scores",
+          "Server Literal",
+          "Sort Held",
+          "Top Rows Kept"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Api Secrets'[Content]",
+          "'Budget'[Amount]",
+          "'Customers Inline'[Customer ID]",
+          "'Customers Latest'[Customer ID]",
+          "'Default Steps'[Region]",
+          "'Fixed Dates'[Order Date]",
+          "'Group In Comment'[OrderID]",
+          "'Local Paths'[Content]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Orders Files'[Content]",
+          "'Orders Pending Check'[Content]",
+          "'Orders Web'[Body]",
+          "'Range Correct'[Order Date]",
+          "'Range Date Key'[Order Date Key]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales Files'[Name]",
+          "'Sales'[Order Date]",
+          "'Scores'[Score]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Sort Held'[Customer ID]",
+          "'Top Rows Kept'[Region]",
+          "'Top Rows'[OrderID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "KavasiMihaly/SelfServiceBIBlog/TabularEditor/BPARules-PowerBI.json": {
+      "findings": {
+        "META_AVOID_FLOAT": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "NO_CAMELCASE_COLUMNS_HIERARCHIES": [
+          "'Group In Comment'[OrderID]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Top Rows'[OrderID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "bredeespelid/PBIP_SemLin/docs/bpa/semantic model/BPARules-PowerBI.json": {
+      "findings": {
+        "META_AVOID_FLOAT": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "NO_CAMELCASE_COLUMNS_HIERARCHIES": [
+          "'Group In Comment'[OrderID]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Top Rows'[OrderID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "vlpatkosdani/powerbi-cicd-with-githubactions-demos/BPA_Rules.json": {
+      "findings": {
+        "7_TRANSLATE_OTHER_NAMES": [
+          "Model"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "vlpatkosdani/powerbi-cicd-with-githubactions-demos/scripts/BPA_Rules.json": {
+      "findings": {
+        "17": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "23": [
+          "Model"
+        ],
+        "26": [
+          "'Api Secrets'",
+          "'Budget'",
+          "'Customers Inline'",
+          "'Customers Latest'",
+          "'Default Steps'",
+          "'Fixed Dates'",
+          "'Group In Comment'",
+          "'Local Paths'",
+          "'Native Lowercase'",
+          "'Navigation Only'",
+          "'Odbc Orders'",
+          "'Orders Files'",
+          "'Orders Pending Check'",
+          "'Orders Web'",
+          "'Range Correct'",
+          "'Range Date Key'",
+          "'Range Exclusive'",
+          "'Range Reversed'",
+          "'Range Shadowed'",
+          "'Sales Files'",
+          "'Sales'",
+          "'Scores'",
+          "'Server Literal'",
+          "'Server Step'",
+          "'Sort Held'",
+          "'Top Rows Kept'",
+          "'Top Rows'"
+        ],
+        "27": [
+          "'Api Secrets'",
+          "'Api Secrets'[Content]",
+          "'Budget'",
+          "'Budget'[Amount]",
+          "'Customers Inline'",
+          "'Customers Inline'[Customer ID]",
+          "'Customers Latest'",
+          "'Customers Latest'[Customer ID]",
+          "'Default Steps'",
+          "'Default Steps'[Region]",
+          "'Fixed Dates'",
+          "'Fixed Dates'[Order Date]",
+          "'Group In Comment'",
+          "'Group In Comment'[OrderID]",
+          "'Local Paths'",
+          "'Local Paths'[Content]",
+          "'Native Lowercase'",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'",
+          "'Odbc Orders'[OrderID]",
+          "'Orders Files'",
+          "'Orders Files'[Content]",
+          "'Orders Pending Check'",
+          "'Orders Pending Check'[Content]",
+          "'Orders Web'",
+          "'Orders Web'[Body]",
+          "'Range Correct'",
+          "'Range Correct'[Order Date]",
+          "'Range Date Key'",
+          "'Range Date Key'[Order Date Key]",
+          "'Range Exclusive'",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'",
+          "'Range Shadowed'[Order Date]",
+          "'Sales Files'",
+          "'Sales Files'[Name]",
+          "'Sales'",
+          "'Sales'[Order Date]",
+          "'Scores'",
+          "'Scores'[Score]",
+          "'Server Literal'",
+          "'Server Literal'[OrderID]",
+          "'Server Step'",
+          "'Server Step'[OrderID]",
+          "'Sort Held'",
+          "'Sort Held'[Customer ID]",
+          "'Top Rows Kept'",
+          "'Top Rows Kept'[Region]",
+          "'Top Rows'",
+          "'Top Rows'[OrderID]"
+        ],
+        "29": [
+          "'Api Secrets'[Content]",
+          "'Budget'[Amount]",
+          "'Customers Inline'[Customer ID]",
+          "'Customers Latest'[Customer ID]",
+          "'Default Steps'[Region]",
+          "'Fixed Dates'[Order Date]",
+          "'Group In Comment'[OrderID]",
+          "'Local Paths'[Content]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Orders Files'[Content]",
+          "'Orders Pending Check'[Content]",
+          "'Orders Web'[Body]",
+          "'Range Correct'[Order Date]",
+          "'Range Date Key'[Order Date Key]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales Files'[Name]",
+          "'Sales'[Order Date]",
+          "'Scores'[Score]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Sort Held'[Customer ID]",
+          "'Top Rows Kept'[Region]",
+          "'Top Rows'[OrderID]"
+        ],
+        "32": [
+          "'Api Secrets'",
+          "'Budget'",
+          "'Customers Inline'",
+          "'Customers Latest'",
+          "'Default Steps'",
+          "'Fixed Dates'",
+          "'Group In Comment'",
+          "'Local Paths'",
+          "'Native Lowercase'",
+          "'Navigation Only'",
+          "'Odbc Orders'",
+          "'Orders Files'",
+          "'Orders Pending Check'",
+          "'Orders Web'",
+          "'Range Correct'",
+          "'Range Date Key'",
+          "'Range Exclusive'",
+          "'Range Reversed'",
+          "'Range Shadowed'",
+          "'Sales Files'",
+          "'Sales'",
+          "'Scores'",
+          "'Server Literal'",
+          "'Server Step'",
+          "'Sort Held'",
+          "'Top Rows Kept'",
+          "'Top Rows'"
+        ],
+        "55": [
+          "Model"
+        ],
+        "72": [
+          "'Fixed Dates'",
+          "'Range Date Key'"
+        ]
+      },
+      "ruleErrors": {
+        "5": "Syntax error '\\'",
+        "62": "Syntax error '\\'",
+        "63": "Expression of type 'Boolean' expected"
+      }
+    },
+    "ianfinkdata/sql-practice/pbip/bpa/bpa_rules.json": {
+      "findings": {
+        "BPA_MODEL_HIDE_SURROGATE_KEYS": [
+          "'Range Date Key'[Order Date Key]"
+        ]
+      },
+      "ruleErrors": {
+        "BPA_MEASURE_ORGANIZE_DISPLAY_FOLDERS": "No property or field 'Visible' exists in type 'Measure'",
+        "BPA_MEASURE_PROVIDE_DESCRIPTION": "No property or field 'Visible' exists in type 'Measure'",
+        "BPA_MEASURE_SET_FORMAT_STRING": "No property or field 'Visible' exists in type 'Measure'",
+        "BPA_MODEL_HIDE_FOREIGN_KEYS": "No property or field 'r' exists in type 'SingleColumnRelationship'"
+      }
+    },
+    "omezquita/PowerBI/MDA_BPA_Rules.json": {
+      "findings": {
+        "META_AVOID_FLOAT": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "aswalsheshant-cell/mt-dashboard/PowerBI/CI/bpa_rules.json": {
+      "findings": {},
+      "ruleErrors": {
+        "COLUMN_NAMING_CONVENTION": "Value cannot be null. (Parameter 'expression')",
+        "DAX_NO_UNFORMATTED_DIVIDE": "Value cannot be null. (Parameter 'expression')",
+        "FORMAT_STRING_MISSING": "Value cannot be null. (Parameter 'expression')",
+        "HIERARCHY_VALIDATION": "Value cannot be null. (Parameter 'expression')",
+        "MEASURE_DESCRIPTION_MISSING": "Value cannot be null. (Parameter 'expression')",
+        "RELATIONSHIPS_BOTH_DIRECTIONS": "Value cannot be null. (Parameter 'expression')"
+      }
+    },
+    "StuffbyYuki/PBI-BPA-Rules/BPA_Rules.json": {
+      "findings": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+          "'Fixed Dates'",
+          "'Range Date Key'"
+        ],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Fixed Dates'[Order Date]",
+          "'Range Correct'[Order Date]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales'[Order Date]"
+        ],
+        "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+          "'Api Secrets'",
+          "'Budget'",
+          "'Customers Inline'",
+          "'Customers Latest'",
+          "'Default Steps'",
+          "'Fixed Dates'",
+          "'Group In Comment'",
+          "'Local Paths'",
+          "'Native Lowercase'",
+          "'Navigation Only'",
+          "'Odbc Orders'",
+          "'Orders Files'",
+          "'Orders Pending Check'",
+          "'Orders Web'",
+          "'Range Correct'",
+          "'Range Date Key'",
+          "'Range Exclusive'",
+          "'Range Reversed'",
+          "'Range Shadowed'",
+          "'Sales Files'",
+          "'Sales'",
+          "'Scores'",
+          "'Server Literal'",
+          "'Server Step'",
+          "'Sort Held'",
+          "'Top Rows Kept'",
+          "'Top Rows'"
+        ],
+        "MINIMIZE_POWER_QUERY_TRANSFORMATIONS": [
+          "Budget",
+          "Customers Inline",
+          "Customers Latest",
+          "Default Steps",
+          "Fixed Dates",
+          "Group In Comment",
+          "Odbc Orders",
+          "Orders Web",
+          "Sales Files",
+          "Scores",
+          "Server Literal",
+          "Sort Held",
+          "Top Rows Kept"
+        ],
+        "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+          "Model"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Api Secrets'[Content]",
+          "'Budget'[Amount]",
+          "'Customers Inline'[Customer ID]",
+          "'Customers Latest'[Customer ID]",
+          "'Default Steps'[Region]",
+          "'Fixed Dates'[Order Date]",
+          "'Group In Comment'[OrderID]",
+          "'Local Paths'[Content]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Orders Files'[Content]",
+          "'Orders Pending Check'[Content]",
+          "'Orders Web'[Body]",
+          "'Range Correct'[Order Date]",
+          "'Range Date Key'[Order Date Key]",
+          "'Range Exclusive'[Order Date]",
+          "'Range Reversed'[Order Date]",
+          "'Range Shadowed'[Order Date]",
+          "'Sales Files'[Name]",
+          "'Sales'[Order Date]",
+          "'Scores'[Score]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Sort Held'[Customer ID]",
+          "'Top Rows Kept'[Region]",
+          "'Top Rows'[OrderID]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "sautalwar/hearst_cicd_fabric_demo/tests/semantic_model/bpa_rules.json": {
+      "findings": {},
+      "ruleErrors": {}
+    },
+    "ryanduguid/accounting-review-pipeline/apps/australian-accounting-power-bi/tests/model_bpa_rules.json": {
+      "findings": {},
+      "ruleErrors": {
+        "BPA_CALC_GROUP_PRECEDENCE": "No property or field 'Precedence' exists in type 'CalculationGroupTable'"
+      }
+    },
+    "pranamg/powerbi-hub/Scripts/CSharp/TabularEditor/BestPracticeRules.json": {
+      "findings": {
+        "HIDDEN_UNUSED_COLUMNS": [
+          "'Customers Inline'[Customer ID]",
+          "'Customers Latest'[Customer ID]",
+          "'Group In Comment'[OrderID]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Range Date Key'[Order Date Key]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Sort Held'[Customer ID]",
+          "'Top Rows'[OrderID]"
+        ],
+        "MODEL_HAS_DESCRIPTION": [
+          "Model"
+        ]
+      },
+      "ruleErrors": {
+        "DAX_NO_HARDCODED_DATES": "No property or field '@' exists in type 'Measure'",
+        "TABLE_HAS_DATE_TABLE": "No property or field 't' exists in type 'Table'",
+        "TABLE_NO_AUTO_DATE": "No property or field 't' exists in type 'Table'"
+      }
+    },
+    "TabularEditor/BestPracticeRules/BPARules-contrib.json": {
+      "findings": {},
+      "ruleErrors": {}
+    },
+    "TabularEditor/BestPracticeRules/BPARules-standard-lax.json": {
+      "findings": {
+        "META_AVOID_FLOAT": [
+          "'Budget'[Amount]",
+          "'Scores'[Score]"
+        ],
+        "NO_CAMELCASE_COLUMNS_HIERARCHIES": [
+          "'Group In Comment'[OrderID]",
+          "'Native Lowercase'[OrderID]",
+          "'Navigation Only'[OrderID]",
+          "'Odbc Orders'[OrderID]",
+          "'Server Literal'[OrderID]",
+          "'Server Step'[OrderID]",
+          "'Top Rows'[OrderID]"
+        ]
+      },
+      "ruleErrors": {}
+    }
+  }
+}

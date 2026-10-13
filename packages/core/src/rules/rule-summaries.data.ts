@@ -144,6 +144,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Measures with a percent format string other than `#,0.0%;-#,0.0%;#,0.0%`.",
   PERSPECTIVES_WITH_NO_OBJECTS:
     "Perspectives that contain no tables. The rule reads only a perspective's table entries, which is enough: each column, measure, and hierarchy a perspective includes sits under the entry for its table, so with no table entry it includes nothing.",
+  PRIVACY_LEVELS_IGNORED:
+    "A model whose Power Query options ignore privacy levels: the `fastCombine` flag in the `dataAccessOptions` block of `model.tmdl`, which Power BI Desktop writes when Ignore the Privacy Levels and potentially improve performance is chosen for the file.",
   PROVIDE_FORMAT_STRING_FOR_MEASURES:
     "Visible measures with no format string and no dynamic format string, other than those whose DAX plainly returns text.",
   REDUCE_ADVANCED_FILTERS:

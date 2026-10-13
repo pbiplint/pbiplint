@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { lint } from "../src/engine/lint.js";
+import { buildIndexes } from "../src/index/build.js";
 import {
   EXCEL_USE_HEADERS,
   LOCAL_DRIVE_PATH,
+  PRIVACY_LEVELS_IGNORED,
   SCRIPT_IN_QUERY,
 } from "../src/rules/pbiplint/power-query.js";
 import type { Rule } from "../src/rules/types.js";
-import { mFindings, mObjectNames } from "./helpers.js";
+import { mFindings, modelFrom, mObjectNames } from "./helpers.js";
 
 /** A table whose one M partition holds `m`, as Desktop writes a block: four tabs before each M line. */
 const table = (name: string, ...m: string[]): string =>
@@ -203,5 +205,43 @@ describe("EXCEL_USE_HEADERS (v3 spec, section 9.12)", () => {
     expect((await mFindings(rule, tmdl)).map((f) => f.detail)).toEqual([
       "query 'Budget', step 'Wrapped': Excel.Workbook promotes headers in the refreshing machine's culture",
     ]);
+  });
+});
+
+describe("PRIVACY_LEVELS_IGNORED (v3 spec, section 9.8)", () => {
+  const rule = PRIVACY_LEVELS_IGNORED;
+  const run = (tmdl: string) => {
+    const model = modelFrom(tmdl);
+    return rule
+      .check({ model }, { indexes: buildIndexes({ model }), options: {} })
+      .map(({ object: _object, ...f }) => f);
+  };
+  const block = (...flags: string[]): string =>
+    `model Model\n\tculture: en-US\n\tdataAccessOptions\n${flags.map((f) => `\t\t${f}\n`).join("")}`;
+  it("is a built-in Power Query warning on the model", () => {
+    isPowerQueryRule(rule, 2, "Error Prevention");
+    expect(rule.name).toBe("Privacy levels ignored for this file");
+    expect(rule.scope).toEqual(["Model"]);
+  });
+  it("reports fastCombine once, on its own line", () => {
+    expect(run(block("fastCombine", "legacyRedirects", "returnErrorValuesAsNull"))).toEqual([
+      {
+        objectType: "Model",
+        objectName: "Model",
+        location: { file: "inline.tmdl", line: 4 },
+        detail: "Ignore the Privacy Levels is on for this file; the service does not honor it",
+      },
+    ]);
+  });
+  it("leaves alone the flags Desktop writes by default, and a model without the block", () => {
+    expect(run(block("legacyRedirects", "returnErrorValuesAsNull"))).toEqual([]);
+    expect(run("model Model\n\tculture: en-US\n")).toEqual([]);
+  });
+  it("is silenced by an ignore annotation on the model", async () => {
+    const tmdl = `${block("fastCombine")}\n\tannotation pbiplint.ignore = PRIVACY_LEVELS_IGNORED\n`;
+    const result = await lint([{ path: "definition/model.tmdl", text: tmdl }]);
+    expect(result.findings.filter((f) => f.ruleId === rule.id)).toEqual([]);
+    const before = await lint([{ path: "definition/model.tmdl", text: block("fastCombine") }]);
+    expect(before.findings.filter((f) => f.ruleId === rule.id)).toHaveLength(1);
   });
 });

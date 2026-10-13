@@ -1,5 +1,6 @@
 import { Language } from "@microsoft/powerquery-parser";
 import { calls, identifierName, textLiterals, unwrap } from "../../m/ast.js";
+import { finding } from "../helpers.js";
 import { mFinding } from "../m-helpers.js";
 import type { Rule } from "../types.js";
 import { pbiplintRule } from "./define.js";
@@ -111,8 +112,37 @@ export const EXCEL_USE_HEADERS = pbiplintRule({
     ),
 });
 
+// Reads no M: Ignore the Privacy Levels is a Power Query option, saved in model.tmdl (v3 spec,
+// section 9.8). legacyRedirects and returnErrorValuesAsNull, which Desktop writes by default, are
+// left alone.
+export const PRIVACY_LEVELS_IGNORED = pbiplintRule({
+  id: "PRIVACY_LEVELS_IGNORED",
+  name: "Privacy levels ignored for this file",
+  category: "Error Prevention",
+  severity: 2,
+  scope: ["Model"],
+  layer: "powerquery",
+  check: ({ model }) => {
+    const fastCombine = model?.dataAccessOptions?.flags.find((f) => f.name === "fastcombine");
+    return model && fastCombine
+      ? [
+          {
+            ...finding.model(model),
+            location: fastCombine.location,
+            detail: "Ignore the Privacy Levels is on for this file; the service does not honor it",
+          },
+        ]
+      : [];
+  },
+});
+
 /**
  * pbiplint's own Power Query rules (v3 spec, section 9): each reads the M a model's queries hold,
  * or the file's Power Query options, and reports on the model's files.
  */
-export const powerQueryRules: Rule[] = [LOCAL_DRIVE_PATH, SCRIPT_IN_QUERY, EXCEL_USE_HEADERS];
+export const powerQueryRules: Rule[] = [
+  LOCAL_DRIVE_PATH,
+  SCRIPT_IN_QUERY,
+  EXCEL_USE_HEADERS,
+  PRIVACY_LEVELS_IGNORED,
+];

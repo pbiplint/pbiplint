@@ -116,7 +116,8 @@ const isLiteralContainer = (n: Node): boolean =>
  * among them; `unknown` for a function's parameter, a name nothing defines, a field or item of a
  * record or list written in place, or a cycle; `computed` for a function call anywhere in it;
  * `row` for `_` or a field or item of anything else. A value is the worst of what it reaches.
- * Each node is followed once, so a cycle reads as unknown.
+ * An `if` is read by its two branches, since its condition only chooses, and an `error` is static,
+ * since it reaches no source. Each node is followed once, so a cycle reads as unknown.
  */
 export function origin(m: MIndex, q: MQuery, node: Node, seen: Set<string> = new Set()): Origin {
   const key = `${q.kind}:${q.name}:${node.id}`;
@@ -143,6 +144,15 @@ export function origin(m: MIndex, q: MQuery, node: Node, seen: Set<string> = new
       return "row";
     case Kind.LetExpression:
       return origin(m, q, node.expression, seen);
+    // The condition only chooses: the value is one of the two branches.
+    case Kind.IfExpression:
+      return worst([
+        origin(m, q, node.trueExpression, seen),
+        origin(m, q, node.falseExpression, seen),
+      ]);
+    // An error stops the query, so it reaches no source.
+    case Kind.ErrorRaisingExpression:
+      return "static";
     case Kind.FunctionExpression:
     case Kind.EachExpression:
       return "unknown";

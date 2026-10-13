@@ -253,6 +253,8 @@ On top of it, `origin(q, expression)` classifies a value, for the data source ru
 
 Order: `static` < `unknown` < `computed` < `row`. Each name is followed once per classification (a visited set of node ids), so a cycle reads as `unknown`.
 
+Amended October 13, 2026 (the coordinator's decision, pull request 6, from the corpus spot check): an `if ... then ... else` is read by its two branches only, since its condition chooses between them and builds neither, and an `error` expression is `static`, since it stops the query before any source is read. As first written, a function call in the condition made the value `computed`, which reported 3 custom functions whose address is a parameter either way (`if Text.EndsWith(DataFolder, "\") then DataFolder else DataFolder & "\"`, and an `error` when a parameter is empty). `DYNAMIC_DATA_SOURCE`'s corpus count was 19 findings in 11 models (8 repositories) as written, and is 16 in 8 models (6 repositories) after. An `if` over a parameter stays `static`, pending the Desktop check (section 9.3).
+
 ## 9. The rules
 
 ### 9.1 Common to all fifteen

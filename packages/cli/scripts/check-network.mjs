@@ -31,7 +31,14 @@ const SPECIFIERS = [
   /\b(?:import|require|__require)\s*\(\s*["']([^"']+)["']\s*\)/g,
 ];
 const imports = new Set(SPECIFIERS.flatMap((re) => [...code.matchAll(re)].map((m) => m[1])));
-const computed = /\b(?:import|require|__require)\s*\(\s*(?!["'][^"']+["']\s*\))/.test(code);
+// esbuild wraps each bundled CommonJS module (the M parser is one) in its __commonJS helper, whose
+// definition names an inner function `__require()` with no argument. That declaration is not a call,
+// so its exact text is removed before the computed-name test; every real call site, `__require(x)`
+// included, is still tested.
+const COMMONJS_HELPER = "var __commonJS = (cb, mod) => function __require() {";
+const computed = /\b(?:import|require|__require)\s*\(\s*(?!["'][^"']+["']\s*\))/.test(
+  code.replaceAll(COMMONJS_HELPER, ""),
+);
 const notAllowed = [
   ...[...imports].filter((s) => !ALLOWED.has(s)).sort(),
   ...(computed ? ["a dynamic import or require of a computed name"] : []),

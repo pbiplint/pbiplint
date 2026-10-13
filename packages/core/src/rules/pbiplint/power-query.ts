@@ -1,5 +1,13 @@
 import { Language } from "@microsoft/powerquery-parser";
-import { callOf, calls, identifierName, textLiterals, textValue, unwrap } from "../../m/ast.js";
+import {
+  callOf,
+  calls,
+  identifierName,
+  parentOf,
+  textLiterals,
+  textValue,
+  unwrap,
+} from "../../m/ast.js";
 import { boundValue, resolve } from "../../m/resolve.js";
 import type { MIndex, MQuery } from "../../m/types.js";
 import { tableRef } from "../../model/names.js";
@@ -256,6 +264,53 @@ export const SORT_NOT_HELD_FOR_REMOVE_DUPLICATES = pbiplintRule({
     ),
 });
 
+/** A number written in place, as M reads it; undefined for anything else. */
+function numberLiteral(n: Node): number | undefined {
+  const v = unwrap(n);
+  return v.kind === Kind.LiteralExpression && v.literalKind === Language.Ast.LiteralKind.Numeric
+    ? Number(v.literal)
+    : undefined;
+}
+
+/** A table that is a Table.Sort, or a Table.Buffer of one, written in place or held by a step. */
+function isSorted(m: MIndex, q: MQuery, table: Node): boolean {
+  let c = callOf(boundValue(m, q, table).node);
+  if (c?.name === "Table.Buffer" && c.args[0]) c = callOf(boundValue(m, q, c.args[0]).node);
+  return c?.name === "Table.Sort";
+}
+
+/** Whether a node sits inside an `each` or a function, where it runs once per row or per call. */
+function inFunction(q: MQuery, node: Node): boolean {
+  for (let n = parentOf(q, node); n; n = parentOf(q, n))
+    if (n.kind === Kind.EachExpression || n.kind === Kind.FunctionExpression) return true;
+  return false;
+}
+
+// Keep First Rows left in a query that loads: a partition's, or a refresh policy's that is read
+// (v3 spec, section 9.11). A count of 0 or 1, a top N after a sort, a count that is not written
+// in place, a top N per group, and shared expressions, which do not load, are left alone.
+export const KEEP_FIRST_ROWS_LEFT_IN = pbiplintRule({
+  id: "KEEP_FIRST_ROWS_LEFT_IN",
+  name: "Keep First Rows left in a loaded query",
+  category: "Error Prevention",
+  severity: 2,
+  scope: ["Partition", "NamedExpression", "Table"],
+  layer: "powerquery",
+  check: (_project, { indexes: { m } }) =>
+    m.queries
+      .filter((q) => q.kind !== "expression")
+      .flatMap((q) =>
+        calls(q).flatMap((c) => {
+          const [table, count] = c.args;
+          if (c.name !== "Table.FirstN" || !table || !count) return [];
+          const n = numberLiteral(count);
+          if (n === undefined || n <= 1 || isSorted(m, q, table) || inFunction(q, c.node))
+            return [];
+          return [mFinding(m, q, c.node, `only the first ${n} rows load`)];
+        }),
+      ),
+});
+
 /**
  * pbiplint's own Power Query rules (v3 spec, section 9): each reads the M a model's queries hold,
  * or the file's Power Query options, and reports on the model's files.
@@ -267,4 +322,5 @@ export const powerQueryRules: Rule[] = [
   ODBC_WHERE_CONNECTOR_EXISTS,
   PRIVACY_LEVELS_IGNORED,
   SORT_NOT_HELD_FOR_REMOVE_DUPLICATES,
+  KEEP_FIRST_ROWS_LEFT_IN,
 ];

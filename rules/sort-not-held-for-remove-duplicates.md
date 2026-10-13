@@ -85,6 +85,7 @@ When every row that shares the listed columns is the same in every column the qu
 ## Related rules
 
 - `MINIMIZE_POWER_QUERY_TRANSFORMATIONS` counts `Table.Sort` and `Table.Distinct` among the steps it would rather see in the source, where a database's own `ORDER BY` and `DISTINCT`, or a window function, decide the surviving row with no doubt about order.
+- `KEEP_FIRST_ROWS_LEFT_IN` reads a sort the same way, as what decides which rows a Keep First Rows step keeps, and leaves a sorted top N alone.
 
 ## Links
 

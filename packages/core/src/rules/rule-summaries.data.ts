@@ -98,6 +98,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Measures whose static format string is not a recognized whole-number, currency, or percentage format. The only format strings the rule accepts are `#,0`, `#,0.0`, and any string containing `$` or `%`. A measure with no format string at all fires too, and that is the common case: the rule reads only the format string, so it cannot tell an unformatted currency or ratio from an unformatted count.",
   ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS:
     "Hidden columns, or columns in hidden tables, that still have IsAvailableInMdx set to true and are not used to sort another column, in a hierarchy, in a variation, or in a calendar, and do not themselves sort by another column.",
+  KEEP_FIRST_ROWS_LEFT_IN:
+    "Power Query queries that load into the model and keep only their first rows: a `Table.FirstN` call with a number greater than 1, the Keep First Rows step, whose table is not sorted first.",
   LANDING_PAGE_NOT_SET:
     "A report whose pages.json sets no landing page, so it opens on the page that was active when it was last saved, or, when pages.json records no active page either, on the first page.",
   LARGE_TABLES_SHOULD_BE_PARTITIONED:

@@ -3,6 +3,7 @@ import { lint } from "../src/engine/lint.js";
 import { buildIndexes } from "../src/index/build.js";
 import {
   EXCEL_USE_HEADERS,
+  KEEP_FIRST_ROWS_LEFT_IN,
   LOCAL_DRIVE_PATH,
   ODBC_WHERE_CONNECTOR_EXISTS,
   PRIVACY_LEVELS_IGNORED,
@@ -408,5 +409,56 @@ describe("SORT_NOT_HELD_FOR_REMOVE_DUPLICATES (v3 spec, section 9.2)", () => {
     );
     const before = await lint([{ path: "definition/tables/Customers.tmdl", text: without }]);
     expect(before.findings.filter((f) => f.ruleId === rule.id)).toHaveLength(1);
+  });
+});
+
+describe("KEEP_FIRST_ROWS_LEFT_IN (v3 spec, section 9.11)", () => {
+  const rule = KEEP_FIRST_ROWS_LEFT_IN;
+  const orders =
+    "\tSource = #table(type table [OrderID = number, Amount = number], {{1, 10}, {2, 20}}),";
+  it("is a built-in Power Query warning on a query's owner", () => {
+    isPowerQueryRule(rule, 2, "Error Prevention");
+    expect(rule.name).toBe("Keep First Rows left in a loaded query");
+    expect(rule.scope).toEqual(["Partition", "NamedExpression", "Table"]);
+  });
+  it("reports a Keep First Rows step in a partition, with its count", async () => {
+    const tmdl = table(
+      "Orders",
+      "let",
+      orders,
+      '\t#"Kept First Rows" = Table.FirstN(Source, 1000)',
+      "in",
+      '\t#"Kept First Rows"',
+    );
+    expect(await mFindings(rule, tmdl)).toEqual([
+      {
+        objectType: "Partition",
+        objectName: "Orders",
+        location: { file: "inline.tmdl", line: 7, column: 27 },
+        detail: "query 'Orders', step 'Kept First Rows': only the first 1000 rows load",
+      },
+    ]);
+  });
+  it("leaves alone a top N after a sort or a buffered sort, a count of 0 or 1, a count not written as a number, and a top N per group", async () => {
+    const tmdl = table(
+      "Orders",
+      "let",
+      orders,
+      '\tTopTen = Table.FirstN(Table.Sort(Source, {{"Amount", Order.Descending}}), 10),',
+      '\tSorted = Table.Buffer(Table.Sort(Source, {{"Amount", Order.Descending}})),',
+      "\tTopFive = Table.FirstN(Sorted, 5),",
+      "\tSchemaOnly = Table.FirstN(Source, 0),",
+      "\tSettings = Table.FirstN(Source, 1),",
+      "\tFromParameter = Table.FirstN(Source, RowLimit),",
+      "\tWhile = Table.FirstN(Source, each [Amount] > 0),",
+      '\tPerGroup = Table.Group(Source, {"OrderID"}, {{"Top", each Table.FirstN(_, 3), type table}})',
+      "in",
+      "\tPerGroup",
+    );
+    expect(await mFindings(rule, tmdl)).toEqual([]);
+  });
+  it("leaves alone a shared expression, which does not load", async () => {
+    const tmdl = 'expression Preview =\n\t\tTable.FirstN(#table({"OrderID"}, {{1}}), 1000)\n';
+    expect(await mFindings(rule, tmdl)).toEqual([]);
   });
 });

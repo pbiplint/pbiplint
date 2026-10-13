@@ -1,4 +1,4 @@
-import { textLiterals } from "../../m/ast.js";
+import { calls, textLiterals } from "../../m/ast.js";
 import { mFinding } from "../m-helpers.js";
 import type { Rule } from "../types.js";
 import { pbiplintRule } from "./define.js";
@@ -28,8 +28,41 @@ export const LOCAL_DRIVE_PATH = pbiplintRule({
     ),
 });
 
+/** The script functions, and the language each one runs. */
+const SCRIPT_LANGUAGE: ReadonlyMap<string, string> = new Map([
+  ["Python.Execute", "Python"],
+  ["R.Execute", "R"],
+]);
+
+// A call, as the Run Python script and Run R script steps write it (v3 spec, section 9.9). Python
+// and R visuals live in the report, not in M, and are not read.
+export const SCRIPT_IN_QUERY = pbiplintRule({
+  id: "SCRIPT_IN_QUERY",
+  name: "Python or R script in a query",
+  category: "Error Prevention",
+  severity: 2,
+  scope: ["Partition", "NamedExpression", "Table"],
+  layer: "powerquery",
+  check: (_project, { indexes: { m } }) =>
+    m.queries.flatMap((q) =>
+      calls(q).flatMap((c) => {
+        const language = SCRIPT_LANGUAGE.get(c.name);
+        return language
+          ? [
+              mFinding(
+                m,
+                q,
+                c.node,
+                `${c.name} refreshes only through a personal gateway on a machine with ${language} installed`,
+              ),
+            ]
+          : [];
+      }),
+    ),
+});
+
 /**
  * pbiplint's own Power Query rules (v3 spec, section 9): each reads the M a model's queries hold,
  * or the file's Power Query options, and reports on the model's files.
  */
-export const powerQueryRules: Rule[] = [LOCAL_DRIVE_PATH];
+export const powerQueryRules: Rule[] = [LOCAL_DRIVE_PATH, SCRIPT_IN_QUERY];

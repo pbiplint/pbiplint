@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { lint } from "../src/engine/lint.js";
-import { LOCAL_DRIVE_PATH } from "../src/rules/pbiplint/power-query.js";
+import { LOCAL_DRIVE_PATH, SCRIPT_IN_QUERY } from "../src/rules/pbiplint/power-query.js";
 import type { Rule } from "../src/rules/types.js";
 import { mFindings, mObjectNames } from "./helpers.js";
 
@@ -99,5 +99,52 @@ describe("LOCAL_DRIVE_PATH (v3 spec, section 9.6)", () => {
     const without = tmdl.replace("\n\t\tannotation pbiplint.ignore = LOCAL_DRIVE_PATH", "");
     const before = await lint([{ path: "definition/tables/Sales.tmdl", text: without }]);
     expect(before.findings.filter((f) => f.ruleId === rule.id)).toHaveLength(1);
+  });
+});
+
+describe("SCRIPT_IN_QUERY (v3 spec, section 9.9)", () => {
+  const rule = SCRIPT_IN_QUERY;
+  it("is a built-in Power Query warning on a query's owner", () => {
+    isPowerQueryRule(rule, 2, "Error Prevention");
+    expect(rule.name).toBe("Python or R script in a query");
+    expect(rule.scope).toEqual(["Partition", "NamedExpression", "Table"]);
+  });
+  it("reports each Python and R script call at its step, naming the language", async () => {
+    const tmdl = table(
+      "Scores",
+      "let",
+      '\tSource = #table({"Score"}, {{1}}),',
+      "\t#\"Run Python script\" = Python.Execute(\"dataset['Score'] = dataset['Score'] * 2\", [dataset = Source]),",
+      '\t#"Run R script" = R.Execute("output <- dataset", [dataset = Source])',
+      "in",
+      '\t#"Run R script"',
+    );
+    expect(await mFindings(rule, tmdl)).toEqual([
+      {
+        objectType: "Partition",
+        objectName: "Scores",
+        location: { file: "inline.tmdl", line: 7, column: 29 },
+        detail:
+          "query 'Scores', step 'Run Python script': Python.Execute refreshes only through a personal gateway on a machine with Python installed",
+      },
+      {
+        objectType: "Partition",
+        objectName: "Scores",
+        location: { file: "inline.tmdl", line: 8, column: 24 },
+        detail:
+          "query 'Scores', step 'Run R script': R.Execute refreshes only through a personal gateway on a machine with R installed",
+      },
+    ]);
+  });
+  it("leaves alone a script function passed as a value, and its name in text", async () => {
+    const tmdl = table(
+      "Scores",
+      "let",
+      "\tRun = List.Transform({}, Python.Execute),",
+      '\tText = "Python.Execute(x)"',
+      "in",
+      "\tText",
+    );
+    expect(await mFindings(rule, tmdl)).toEqual([]);
   });
 });

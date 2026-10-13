@@ -4,7 +4,7 @@ import { buildIndexes } from "../src/index/build.js";
 import { readM } from "../src/m/read.js";
 import { buildModel } from "../src/model/build.js";
 import type { Model } from "../src/model/types.js";
-import type { Rule } from "../src/rules/types.js";
+import type { Rule, RuleFinding } from "../src/rules/types.js";
 import { parseTmdl } from "../src/tmdl/parse.js";
 import type { ParsedFile } from "../src/tmdl/types.js";
 
@@ -30,6 +30,18 @@ export async function mObjectNames(rule: Rule, tmdl: string): Promise<string[]> 
   return rule
     .check({ model }, { indexes: buildIndexes({ model }, m), options: {} })
     .map((f) => f.objectName);
+}
+
+/**
+ * Run one rule on inline TMDL with its M read by Microsoft's parser, as `lint` reads it, and
+ * return its findings without the object each carries for ignores, in emission order.
+ */
+export async function mFindings(rule: Rule, tmdl: string): Promise<Omit<RuleFinding, "object">[]> {
+  const model = modelFrom(tmdl);
+  const m = await readM(model, [{ path: "inline.tmdl", text: tmdl }]);
+  return rule
+    .check({ model }, { indexes: buildIndexes({ model }, m), options: {} })
+    .map(({ object: _object, ...f }) => f);
 }
 
 /** Read every .tmdl under `<root>/definition` (or under `<root>` when it is itself a definition folder). */

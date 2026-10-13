@@ -1,0 +1,6 @@
+{
+  "fixture": "tests/fixtures/m-zoo.SemanticModel",
+  "about": "pbiplint's own Power Query rules on m-zoo: rule, object, file, line, column, and detail of every finding. These rules have no Tabular Editor oracle (v3 spec, section 11.1), so this file is pbiplint's own, written in place order and reviewed by hand.",
+  "rules": [],
+  "findings": []
+}

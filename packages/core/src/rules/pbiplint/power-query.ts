@@ -15,7 +15,7 @@ import type { MIndex, MQuery } from "../../m/types.js";
 import { tableRef } from "../../model/names.js";
 import type { Partition } from "../../model/types.js";
 import { finding } from "../helpers.js";
-import { mFinding } from "../m-helpers.js";
+import { mFinding, queryLabel } from "../m-helpers.js";
 import type { Rule } from "../types.js";
 import { pbiplintRule } from "./define.js";
 import { longDate } from "./periods.js";
@@ -490,6 +490,81 @@ export const FIXED_DATE_IN_ROW_FILTER = pbiplintRule({
       }),
 });
 
+/** Power BI Desktop's default step names in English, each with or without a number after it. */
+const DEFAULT_STEP = new RegExp(
+  "^(?:(?:" +
+    [
+      "Changed Type",
+      "Changed Type with Locale",
+      "Promoted Headers",
+      "Removed Columns",
+      "Removed Other Columns",
+      "Renamed Columns",
+      "Reordered Columns",
+      "Filtered Rows",
+      "Sorted Rows",
+      "Removed Duplicates",
+      "Grouped Rows",
+      "Merged Queries",
+      "Appended Query",
+      "Added Custom",
+      "Added Conditional Column",
+      "Added Index",
+      "Duplicated Column",
+      "Replaced Value",
+      "Pivoted Column",
+      "Unpivoted Columns",
+      "Unpivoted Other Columns",
+      "Split Column by Delimiter",
+      "Removed Top Rows",
+      "Removed Bottom Rows",
+      "Removed Blank Rows",
+      "Removed Alternate Rows",
+      "Removed Errors",
+      "Kept First Rows",
+      "Kept Range of Rows",
+      "Trimmed Text",
+      "Cleaned Text",
+      "Uppercased Text",
+      "Lowercased Text",
+      "Capitalized Each Word",
+      "Transposed Table",
+      "Filled Down",
+      "Filled Up",
+      "Invoke Custom Function",
+      "Custom",
+    ].join("|") +
+    ")\\d*|(?:Expanded|Inserted|Extracted|Calculated)(?:\\d*| .*))$",
+);
+
+// Once per query, on its first such step, with the count (v3 spec, section 9.13): a shape Desktop
+// writes by default, reported per step, would bury everything else. Only the outermost let's
+// steps are read; Source and Navigation name what they are.
+export const DEFAULT_STEP_NAMES = pbiplintRule({
+  id: "DEFAULT_STEP_NAMES",
+  name: "Steps keep Power Query's default names",
+  category: "Maintenance",
+  severity: 1,
+  scope: ["Partition", "NamedExpression", "Table"],
+  layer: "powerquery",
+  check: (_project, { indexes: { m } }) =>
+    m.queries.flatMap((q) => {
+      const root = q.ast && unwrap(q.ast);
+      if (root?.kind !== Kind.LetExpression) return [];
+      const steps = root.variableList.elements
+        .map((csv) => csv.node)
+        .filter((pair) => DEFAULT_STEP.test(identifierName(pair.key.literal)));
+      if (steps.length === 0) return [];
+      const [a, b] = steps.map((pair) => tableRef(identifierName(pair.key.literal)));
+      const what =
+        steps.length === 1
+          ? `1 step keeps its default name, ${a}`
+          : `${steps.length} steps keep default names, ${steps.length > 2 ? "such as " : ""}${a} and ${b}`;
+      // The detail names the query only: the steps it lists say where.
+      return [{ ...mFinding(m, q, steps[0]!, what), detail: `${queryLabel(q)}: ${what}` }];
+    }),
+});
+
 /**
  * pbiplint's own Power Query rules (v3 spec, section 9): each reads the M a model's queries hold,
  * or the file's Power Query options, and reports on the model's files.
@@ -504,4 +579,5 @@ export const powerQueryRules: Rule[] = [
   KEEP_FIRST_ROWS_LEFT_IN,
   INCREMENTAL_REFRESH_RANGE_BOUNDS,
   FIXED_DATE_IN_ROW_FILTER,
+  DEFAULT_STEP_NAMES,
 ];

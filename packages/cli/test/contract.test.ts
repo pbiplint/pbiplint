@@ -70,7 +70,7 @@ describe("the CLI's contract", () => {
     const dir = tempDir("contract-output");
     const written = await run([sample, "--format", "json", "--output", "r.json"], dir);
     expect(written.out).toBe("");
-    expect(written.err).toMatch(/^pbiplint: 273 findings .*, wrote r\.json\n$/);
+    expect(written.err).toMatch(/^pbiplint: 280 findings .*, wrote r\.json\n$/);
     expect(() => JSON.parse(readFileSync(join(dir, "r.json"), "utf8"))).not.toThrow();
   });
 

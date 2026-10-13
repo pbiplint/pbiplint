@@ -131,6 +131,15 @@
       "Promotion",
       "Sales",
       "Store"
+    ],
+    "DEFAULT_STEP_NAMES": [
+      "Customer",
+      "Date",
+      "Employee",
+      "Product",
+      "Promotion",
+      "Sales",
+      "Store"
     ]
   },
   "results": {

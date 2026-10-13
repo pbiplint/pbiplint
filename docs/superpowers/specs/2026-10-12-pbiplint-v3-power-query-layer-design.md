@@ -607,6 +607,8 @@ A throwaway script in the plan's folder (not committed; the corpus is not pbipli
   | `ODBC_WHERE_CONNECTOR_EXISTS` | 236, 17 or fewer | |
   | `FIXED_DATE_IN_ROW_FILTER` | 31 or fewer, 15 or fewer | The start exception |
   | `LEGACY_EXCEL_FILE` | 8, 1 | |
+
+  `DEFAULT_STEP_NAMES`, measured on October 13, 2026: it reports 4,125 queries in 492 models of the corpus. The research's 517 models cannot be reproduced from today's corpus; a plain text match of the same names finds 489.
 - **`PARSE_ISSUE`** gains exactly 1 finding.
 - Run once per pull request that adds or moves an M rule.
 

@@ -36,6 +36,13 @@
       "Product",
       "Sales",
       "User Region"
+    ],
+    "DEFAULT_STEP_NAMES": [
+      "Customer",
+      "Date",
+      "Product",
+      "Sales",
+      "User Region"
     ]
   },
   "results": {

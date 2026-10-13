@@ -20,7 +20,7 @@ and verified against it, plus pbiplint's own rules for what is broken,
 unfinished, or expensive in a report, for a filter held to a fixed year, and
 for what the model holds that the report never reaches; and Power Query, the
 M behind the model's tables and shared expressions, read with Microsoft's
-Power Query parser: 10 rules, 9 of them pbiplint's own. 115 rules in all, 33 of
+Power Query parser: 11 rules, 10 of them pbiplint's own. 116 rules in all, 34 of
 them built into pbiplint. The site at https://pbiplint.com runs the code on
 main; the command line runs the version npm gives you, and the
 [releases page](https://github.com/pbiplint/pbiplint/releases) lists each
@@ -170,11 +170,11 @@ selections and search terms, and Filters pane filters held to a fixed year, such
 to 2025. "Report at a glance" states what the report will do whether or not anything fired.
 
 The Power Query layer: the M behind each table's partitions, the shared expressions, and incremental
-refresh policies, read with Microsoft's Power Query parser, and the file's Power Query options. 10
-rules check it: Microsoft's `MINIMIZE_POWER_QUERY_TRANSFORMATIONS` and 9 of pbiplint's own. A
+refresh policies, read with Microsoft's Power Query parser, and the file's Power Query options. 11
+rules check it: Microsoft's `MINIMIZE_POWER_QUERY_TRANSFORMATIONS` and 10 of pbiplint's own. A
 finding in M names the query and the step as Power Query's editor shows them, at the line and column
-in the TMDL file, and M that does not parse gets a `PARSE_ISSUE` error where the parser stopped. 115
-rules in all, 33 of them built into pbiplint; the
+in the TMDL file, and M that does not parse gets a `PARSE_ISSUE` error where the parser stopped. 116
+rules in all, 34 of them built into pbiplint; the
 [rules index](https://pbiplint.com/rules/?layer=powerquery) filters to the Power Query ones.
 
 ## Links

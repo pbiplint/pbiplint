@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { lint } from "../src/engine/lint.js";
 import { buildIndexes } from "../src/index/build.js";
 import {
+  DEFAULT_STEP_NAMES,
   EXCEL_USE_HEADERS,
   FIXED_DATE_IN_ROW_FILTER,
   INCREMENTAL_REFRESH_RANGE_BOUNDS,
@@ -638,5 +639,78 @@ describe("FIXED_DATE_IN_ROW_FILTER (v3 spec, section 9.16)", () => {
     const slice = (year: number) =>
       `\tpartition 'Sales ${year}' = m\n\t\tmode: import\n\t\tsource = Table.SelectRows(S, each [Order Date] >= #date(${year}, 1, 1) and [Order Date] <= #date(${year}, 12, 31))\n`;
     expect(await mFindings(rule, `table Sales\n${slice(2024)}${slice(2025)}`)).toEqual([]);
+  });
+});
+
+describe("DEFAULT_STEP_NAMES (v3 spec, section 9.13)", () => {
+  const rule = DEFAULT_STEP_NAMES;
+  it("is a built-in Power Query info rule on a query's owner", () => {
+    isPowerQueryRule(rule, 1, "Maintenance");
+    expect(rule.name).toBe("Steps keep Power Query's default names");
+    expect(rule.scope).toEqual(["Partition", "NamedExpression", "Table"]);
+  });
+  it("reports a query once, on its first default name, with the count and two names", async () => {
+    const tmdl = table(
+      "Sales",
+      "let",
+      "\tSource = #table(type table [Amount = number], {{1}}),",
+      '\t#"Changed Type" = Table.TransformColumnTypes(Source, {{"Amount", type number}}),',
+      '\t#"Added Custom1" = Table.AddColumn(#"Changed Type", "Doubled", each [Amount] * 2),',
+      '\t#"Expanded Orders" = #"Added Custom1",',
+      '\tCustom = #"Expanded Orders"',
+      "in",
+      "\tCustom",
+    );
+    expect(await mFindings(rule, tmdl)).toEqual([
+      {
+        objectType: "Partition",
+        objectName: "Sales",
+        location: { file: "inline.tmdl", line: 7, column: 6 },
+        detail:
+          "query 'Sales': 4 steps keep default names, such as 'Changed Type' and 'Added Custom1'",
+      },
+    ]);
+  });
+  it("words one and two names as English does", async () => {
+    const one = table("Sales", "let", '\t#"Filtered Rows" = 1', "in", '\t#"Filtered Rows"');
+    expect((await mFindings(rule, one)).map((f) => f.detail)).toEqual([
+      "query 'Sales': 1 step keeps its default name, 'Filtered Rows'",
+    ]);
+    const two = table(
+      "Sales",
+      "let",
+      '\t#"Promoted Headers" = 1,',
+      '\t#"Changed Type with Locale" = 2',
+      "in",
+      '\t#"Changed Type with Locale"',
+    );
+    expect((await mFindings(rule, two)).map((f) => f.detail)).toEqual([
+      "query 'Sales': 2 steps keep default names, 'Promoted Headers' and 'Changed Type with Locale'",
+    ]);
+  });
+  it("reads a shared expression's steps too", async () => {
+    const tmdl =
+      'expression Staging =\n\t\tlet\n\t\t\t#"Removed Errors" = 1\n\t\tin\n\t\t\t#"Removed Errors"\n';
+    expect((await mFindings(rule, tmdl)).map((f) => [f.objectType, f.detail])).toEqual([
+      ["NamedExpression", "query 'Staging': 1 step keeps its default name, 'Removed Errors'"],
+    ]);
+  });
+  it("leaves alone Source and Navigation, renamed steps, names that only start like a default, nested lets, parameters, and functions", async () => {
+    const tmdl =
+      'expression Limit = 10 meta [IsParameterQuery = true, Type = "Number", IsParameterQueryRequired = true]\n\n' +
+      'expression GetPage = (url as text) => let #"Changed Type" = 1 in #"Changed Type"\n\n' +
+      table(
+        "Sales",
+        "let",
+        "\tSource = 1,",
+        "\tNavigation = Source,",
+        "\tTypedAmount = Navigation,",
+        '\t#"Changed Types Of Amount" = TypedAmount,',
+        "\tExpandedRows = 1,",
+        '\tInner = let #"Added Custom" = 1 in #"Added Custom"',
+        "in",
+        "\tInner",
+      );
+    expect(await mFindings(rule, tmdl)).toEqual([]);
   });
 });

@@ -38,7 +38,7 @@ describe("export", () => {
     const json = exportJson(result);
     expect(json.name).toBe("pbiplint-report.json");
     const doc = JSON.parse(json.text);
-    expect(doc.summary.findings).toBe(273);
+    expect(doc.summary.findings).toBe(280);
     expect(doc.layers).toEqual({
       model: { present: true, files: 14 },
       report: { present: true, files: 78 },

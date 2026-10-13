@@ -38,7 +38,7 @@ points at it.
 `showOnly(result, ruleIds, config)` keeps a result to some rules' findings, as the command line's
 `--rule` does: every rule still ran, `result.summary.shown` counts what is kept (the rest of the
 summary stays the whole run's), `failed` follows the kept findings, `summaryLine` (and with it the
-text and Markdown formats) says the result is filtered ("3 of 273 findings shown, 1 rule ..."), and
+text and Markdown formats) says the result is filtered ("3 of 280 findings shown, 1 rule ..."), and
 the JSON format carries `summary.shown`. It is absent on an unfiltered result.
 
 The optional second argument, `lint(files, options)`, takes the config, the rules to run, and
@@ -68,9 +68,9 @@ from the column's DAX.
 
 The Power Query rules read the M behind each table's partitions, the shared expressions, and
 incremental refresh policies, parsed with Microsoft's Power Query parser, and the file's Power Query
-options: 10 rules, `MINIMIZE_POWER_QUERY_TRANSFORMATIONS` and 9 of pbiplint's own, each with
+options: 11 rules, `MINIMIZE_POWER_QUERY_TRANSFORMATIONS` and 10 of pbiplint's own, each with
 `rule.layer` `powerquery` while its findings' `layer` stays `model`. A finding in M carries
-`location.column` as well as its line. 115 rules in all, 33 of them built into pbiplint.
+`location.column` as well as its line. 116 rules in all, 34 of them built into pbiplint.
 
 For the command line, install [`pbiplint`](https://www.npmjs.com/package/pbiplint). Source, issues,
 and contributing: https://github.com/pbiplint/pbiplint.

@@ -58,6 +58,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Pages whose display name in page.json has the shape `Page <n>`, `Duplicate of <name>`, or `<name> (copy)`: the names English Power BI Desktop gives a new page and a duplicated one, and a name marked as a copy. The rule also matches the forms Desktop-saved files show for a new or duplicated page in other languages, such as `Seite <n>` and `Doublon de <name>`.",
   DEFAULT_STEP_NAMES:
     "Power Query queries whose steps keep the names Power BI Desktop gives them, such as Changed Type, Added Custom1, or Removed Other Columns, reported once per query.",
+  DYNAMIC_DATA_SOURCE:
+    "Data sources whose address is read from a table's rows or built by a function call: a call such as `Web.Contents`, `File.Contents`, or `Sql.Database` whose first argument the Power BI service cannot know before the query runs.",
   ENSURE_ALTTEXT:
     "Visuals other than shapes whose alt text is missing or empty. A visual group is checked by its own alt text, the one set on the group rather than on the visuals inside it.",
   ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY:

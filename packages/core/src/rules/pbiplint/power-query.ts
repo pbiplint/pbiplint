@@ -10,7 +10,7 @@ import {
   textValue,
   unwrap,
 } from "../../m/ast.js";
-import { boundValue, resolve } from "../../m/resolve.js";
+import { boundValue, origin, resolve } from "../../m/resolve.js";
 import type { MIndex, MQuery } from "../../m/types.js";
 import { tableRef } from "../../model/names.js";
 import type { Partition } from "../../model/types.js";
@@ -622,6 +622,43 @@ export const DEFAULT_STEP_NAMES = pbiplintRule({
 });
 
 /**
+ * The functions whose first argument is the address of a data source (v3 spec, section 9.3), and
+ * what each calls it: a path, an address, a connection string, or a server.
+ */
+const DATA_SOURCE =
+  /^(?:(File\.Contents|Folder\.(?:Files|Contents))|(Web\.Contents|OData\.Feed|SharePoint\.(?:Files|Contents|Tables)|AzureStorage\.(?:Blobs|DataLake))|((?:Odbc|OleDb)\.(?:DataSource|Query))|Sql\.Databases?|Oracle\.Database|PostgreSQL\.Database|MySQL\.Database|Snowflake\.Databases|AnalysisServices\.Databases?|Databricks\.Catalogs|DB2\.Database|Teradata\.Database|SapHana\.Database)$/;
+
+// A data source whose address is read from the rows or built by a function call cannot refresh in
+// the service (v3 spec, section 9.3). Only the first argument is read, so Web.Contents' RelativePath
+// and Query options, Microsoft's route for a dynamic request to a static address, are left alone,
+// as are literals, parameters, joins of them, and a custom function's parameter.
+export const DYNAMIC_DATA_SOURCE = pbiplintRule({
+  id: "DYNAMIC_DATA_SOURCE",
+  name: "Data source the service can't refresh",
+  category: "Error Prevention",
+  severity: 3,
+  scope: ["Partition", "NamedExpression", "Table"],
+  layer: "powerquery",
+  check: (_project, { indexes: { m } }) =>
+    m.queries.flatMap((q) =>
+      calls(q).flatMap((c) => {
+        const source = DATA_SOURCE.exec(c.name);
+        const o = source && c.args[0] ? origin(m, q, c.args[0]) : "static";
+        if (o !== "row" && o !== "computed") return [];
+        const noun = source![1]
+          ? "path"
+          : source![2]
+            ? "address"
+            : source![3]
+              ? "connection string"
+              : "server";
+        const how = o === "row" ? "is read from the rows" : "is built by a function call";
+        return [mFinding(m, q, c.node, `${c.name}'s ${noun} ${how}`)];
+      }),
+    ),
+});
+
+/**
  * pbiplint's own Power Query rules (v3 spec, section 9): each reads the M a model's queries hold,
  * or the file's Power Query options, and reports on the model's files.
  */
@@ -636,4 +673,5 @@ export const powerQueryRules: Rule[] = [
   INCREMENTAL_REFRESH_RANGE_BOUNDS,
   FIXED_DATE_IN_ROW_FILTER,
   DEFAULT_STEP_NAMES,
+  DYNAMIC_DATA_SOURCE,
 ];

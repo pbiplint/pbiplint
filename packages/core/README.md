@@ -68,9 +68,9 @@ from the column's DAX.
 
 The Power Query rules read the M behind each table's partitions, the shared expressions, and
 incremental refresh policies, parsed with Microsoft's Power Query parser, and the file's Power Query
-options: 11 rules, `MINIMIZE_POWER_QUERY_TRANSFORMATIONS` and 10 of pbiplint's own, each with
+options: 12 rules, `MINIMIZE_POWER_QUERY_TRANSFORMATIONS` and 11 of pbiplint's own, each with
 `rule.layer` `powerquery` while its findings' `layer` stays `model`. A finding in M carries
-`location.column` as well as its line. 116 rules in all, 34 of them built into pbiplint.
+`location.column` as well as its line. 117 rules in all, 35 of them built into pbiplint.
 
 For the command line, install [`pbiplint`](https://www.npmjs.com/package/pbiplint). Source, issues,
 and contributing: https://github.com/pbiplint/pbiplint.

@@ -3,6 +3,7 @@ import { lint } from "../src/engine/lint.js";
 import { buildIndexes } from "../src/index/build.js";
 import {
   DEFAULT_STEP_NAMES,
+  DYNAMIC_DATA_SOURCE,
   EXCEL_USE_HEADERS,
   FIXED_DATE_IN_ROW_FILTER,
   INCREMENTAL_REFRESH_RANGE_BOUNDS,
@@ -763,6 +764,99 @@ describe("DEFAULT_STEP_NAMES (v3 spec, section 9.13)", () => {
         "in",
         "\tInner",
       );
+    expect(await mFindings(rule, tmdl)).toEqual([]);
+  });
+});
+
+describe("DYNAMIC_DATA_SOURCE (v3 spec, section 9.3)", () => {
+  const rule = DYNAMIC_DATA_SOURCE;
+  const base =
+    'expression ApiBase = "https://api.example.com" meta [IsParameterQuery = true, Type = "Text", IsParameterQueryRequired = true]\n\nexpression DataFolder = "C:\\Demo\\Data\\" meta [IsParameterQuery = true, Type = "Text", IsParameterQueryRequired = true]\n\n';
+  it("is a built-in Power Query error on a query's owner", () => {
+    isPowerQueryRule(rule, 3, "Error Prevention");
+    expect(rule.name).toBe("Data source the service can't refresh");
+    expect(rule.scope).toEqual(["Partition", "NamedExpression", "Table"]);
+  });
+  it("reports an address read from the rows, on the call", async () => {
+    const tmdl = table(
+      "Orders",
+      "let",
+      '\tSource = #table(type table [url = text], {{"https://api.example.com/v1/orders/1"}}),',
+      '\t#"Added Custom" = Table.AddColumn(Source, "Body", each Web.Contents([url]))',
+      "in",
+      '\t#"Added Custom"',
+    );
+    expect(await mFindings(rule, tmdl)).toEqual([
+      {
+        objectType: "Partition",
+        objectName: "Orders",
+        location: { file: "inline.tmdl", line: 7, column: 61 },
+        detail: "query 'Orders', step 'Added Custom': Web.Contents's address is read from the rows",
+      },
+    ]);
+  });
+  it("reports an address built by a function call, naming what each function calls its address", async () => {
+    const tmdl =
+      base +
+      table(
+        "Orders",
+        "let",
+        '\tBuilt = File.Contents(Text.Combine({DataFolder, "orders.csv"})),',
+        "\tListed = Folder.Files(Text.Lower(DataFolder)),",
+        '\tServer = Sql.Database(Text.Upper("sql.example"), "Warehouse"),',
+        '\tOdbc = Odbc.DataSource(Text.Combine({"dsn=", "Sales"})),',
+        '\tWeb = Web.Contents(Uri.Combine(ApiBase, "v1"))',
+        "in",
+        "\tWeb",
+      );
+    expect((await mFindings(rule, tmdl)).map((f) => f.detail)).toEqual([
+      "query 'Orders', step 'Built': File.Contents's path is built by a function call",
+      "query 'Orders', step 'Listed': Folder.Files's path is built by a function call",
+      "query 'Orders', step 'Server': Sql.Database's server is built by a function call",
+      "query 'Orders', step 'Odbc': Odbc.DataSource's connection string is built by a function call",
+      "query 'Orders', step 'Web': Web.Contents's address is built by a function call",
+    ]);
+  });
+  it("leaves alone literals, parameters, joins of them, steps that hold them, and RelativePath and Query", async () => {
+    const tmdl =
+      base +
+      table(
+        "Orders",
+        "let",
+        '\tArchive = "C:\\Demo\\Data\\orders.csv",',
+        "\tNested = let Inner = let Read = File.Contents(Archive) in Read in Inner,",
+        '\tJoined = Web.Contents(ApiBase & "/v1/orders"),',
+        '\tRelative = Web.Contents(ApiBase, [RelativePath = "v1/orders/" & Text.From(1), Query = [page = Text.From(2)]]),',
+        '\tFolder = Folder.Files(DataFolder & "Sales")',
+        "in",
+        "\tFolder",
+      );
+    expect(await mFindings(rule, tmdl)).toEqual([]);
+  });
+  it("leaves alone the two shapes awaiting the Desktop check: if over a parameter, and a function's parameter", async () => {
+    const tmdl =
+      base +
+      "expression GetPage = (address as text) => Web.Contents(address)\n\n" +
+      table(
+        "Orders",
+        "let",
+        '\tAddress = if ApiBase = "" then "https://test.example.com" else ApiBase,',
+        "\tChosen = Web.Contents(Address),",
+        '\tThroughFunction = GetPage("https://api.example.com/v1/customers")',
+        "in",
+        "\tThroughFunction",
+      );
+    expect(await mFindings(rule, tmdl)).toEqual([]);
+  });
+  it("leaves alone a function that is not a data source, and an address it cannot follow", async () => {
+    const tmdl = table(
+      "Orders",
+      "let",
+      '\tSource = Json.Document(Text.Combine({"{", "}"})),',
+      "\tUnknown = Web.Contents(Nowhere)",
+      "in",
+      "\tUnknown",
+    );
     expect(await mFindings(rule, tmdl)).toEqual([]);
   });
 });

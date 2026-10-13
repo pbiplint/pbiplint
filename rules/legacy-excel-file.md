@@ -64,7 +64,7 @@ Open the workbook in Excel and save it as an Excel Workbook (`.xlsx`) with File,
 
 ## When to ignore it
 
-When the workbook is produced by a system that can only write the legacy format, and its data is simple enough that the engine reads it right, a gateway with the engine installed keeps it refreshing. The finding then says only that the refresh depends on that gateway.
+When the workbook is produced by a system that can only write the legacy format, and its data is simple enough that the engine reads it right, a gateway with the engine installed keeps it refreshing.
 
 ## Quirks
 

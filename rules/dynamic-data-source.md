@@ -85,6 +85,7 @@ A model that is never published, or never refreshed in the service, can build it
 
 - `LOCAL_DRIVE_PATH` reports a fixed path on a local drive; this rule reports an address read from the rows or built at run time.
 - `HARDCODED_SERVER_NAME` reports a server written as text; a parameter is the fix for both rules.
+- `HARDCODED_SECRET_IN_QUERY` reads the same `Web.Contents` calls for a credential; a key moved into the `Query` record keeps the address static but is still written into the query.
 
 ## Links
 

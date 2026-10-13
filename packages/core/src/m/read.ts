@@ -1,6 +1,7 @@
 import type { LintFile } from "../engine/lint.js";
 import type { Model, NamedExpression, Partition, SourceLocation, Table } from "../model/types.js";
 import type { TmdlNode } from "../tmdl/types.js";
+import { maskLiterals } from "./mask.js";
 import { parseM, type MPosition } from "./parse.js";
 import type { MIndex, MParseIssue, MQuery } from "./types.js";
 
@@ -127,13 +128,21 @@ export async function readM(model: Model, files: LintFile[]): Promise<MIndex> {
       continue;
     }
     const at = locate(q, parsed.position ?? { lineNumber: 0, lineCodeUnit: 0 });
+    // The TMDL line with its M's text literals hidden (v3 spec, section 7): the M is masked whole,
+    // since a literal may open on an earlier line, and its line put back after the TMDL line's head.
+    const n = at.line - q.valueLine;
+    const line = lineAt(at.file, at.line);
+    const head = line.trimEnd().length - (mLines.get(q)!.lines[n] ?? "").trimEnd().length;
     issues.push({
       file: at.file,
       line: at.line,
       column: at.column!,
-      // Cut as a JSON issue's line is (readJson): a generated partition can hold lines of megabytes.
-      text: lineAt(at.file, at.line).trim().slice(0, 120),
-      reason: `M could not be parsed: ${parsed.message}`,
+      // Masked, then cut as a JSON issue's line is (readJson): a generated partition can hold
+      // lines of megabytes, and a literal the cut leaves open is already hidden.
+      text: (line.slice(0, Math.max(0, head)) + (maskLiterals(q.text).split("\n")[n] ?? ""))
+        .trim()
+        .slice(0, 120),
+      reason: `M could not be parsed: ${maskLiterals(parsed.message)}`,
     });
   }
   return { queries, issues, locate };

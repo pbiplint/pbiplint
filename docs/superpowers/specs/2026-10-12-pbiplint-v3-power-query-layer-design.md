@@ -226,6 +226,8 @@ Each query whose M the parser rejects is one `PARSE_ISSUE` finding, alongside th
 
 `rules/parse-issue.md` says M is parsed too, and the copy that lists what PARSE_ISSUE covers follows.
 
+Amended October 13, 2026 (the coordinator's decision, pull request 7): the quoted line hides its text literals. Inside every `"..."` of a line `PARSE_ISSUE` quotes, TMDL or M, the text becomes `…` and the quotes stay (`packages/core/src/m/mask.ts`); a `#"..."` name and a TMDL `'...'` name are kept, and a comment is read as one, so its quotes never pair with a literal's. M is masked as a whole query before its line is taken, so a literal opened on a line above is hidden too, and before the 120-character cut, so the cut never shows part of a literal. The parser's message is masked the same way: its English templates name a token's kind, never its text, so only a fault in the parser itself could carry text. A TMDL line is masked by itself, so one that continues a literal from the line above can read its quotes inverted. A value in a comment, outside quotes, is not hidden. A report JSON line is quoted as written: Power BI writes no credential into a report file, and a JSON line is mostly keys, which masking would hide. This replaces "the quoted line may show it" in the bullet above. Corpus: 51 `PARSE_ISSUE` details change in 7 models, and no finding is added or removed.
+
 ## 8. The name-resolution helper
 
 `DYNAMIC_DATA_SOURCE` must know where a value comes from, and an early pass that resolved only the outermost `let` flagged 35 correct `RelativePath` calls. `INCREMENTAL_REFRESH_RANGE_BOUNDS` and `HARDCODED_SECRET_IN_QUERY` use the same helper to tell the model's `RangeStart` parameter, or a header's value, from a local name.

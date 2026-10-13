@@ -16,7 +16,7 @@ sources:
 
 Lines the TMDL parser could not use: space indentation, an unterminated code fence, a line at an impossible indentation, a line in no form the parser recognizes, a line at the root of a file that TMDL does not allow there (a misspelt `table`, a `column` or a property that lost its tabs, or an annotation with lines under it, for example), much the same directly under a model, where TMDL lets the model's tables, relationships, and other objects sit indented (a property that lost its tabs is reported there only when lines sit under it, and a flag such as `isHidden` only when a declaration does, since the model has properties and flags of its own), a declaration under a database other than its model, a `table` line under anything but a model, which a stray tab puts under the declaration above it, a declaration that its object does not hold, such as a misspelt `columm` under a table or a hierarchy's `level` that lost a tab, a declaration such as `table` or `role` written with no name, a name not enclosed in single quotes as TMDL requires, such as `table 'Date`, and a `///` description with a blank line between it and its declaration; a report JSON file that is not valid JSON, carries a merge conflict marker, or nests more than 256 levels deep; a report file Microsoft publishes a schema for, such as report.json or a page.json, whose content is not a JSON object; and a reportExtensions.json that lists no entity, or holds an entity with no measure, which Power BI Desktop does not open. It also covers M that Microsoft's Power Query parser cannot read, in a partition's source, a shared expression, or an incremental refresh policy's source expression, at the line and column where the parser stopped.
 
-Each finding names the file and the line and says what was wrong with it, as `space indentation (TMDL requires tabs): column Amount`, `"tabel" is not a type TMDL declares at the root of a file: tabel Sales`, or `M could not be parsed: Finished parsing but more tokens remain: source = "a" 2`.
+Each finding names the file and the line and says what was wrong with it, as `space indentation (TMDL requires tabs): column Amount`, `"tabel" is not a type TMDL declares at the root of a file: tabel Sales`, or `M could not be parsed: Finished parsing but more tokens remain: source = "…" 2`. In a TMDL or M line the finding quotes, the text of every text literal shows as `…` between its quotes, so a key or password written on a line that does not parse never reaches a report; names, such as `'Sales'` or a step's `#"Changed Type"`, show as written. A report JSON line is quoted as written.
 
 ## Example
 
@@ -75,6 +75,11 @@ Open the file at the reported line. TMDL is indented with tabs, and a fenced exp
 ## When to ignore it
 
 Not on purpose. A parse issue means the model pbiplint checked is not the model in the file, or, in a report JSON file, that nothing the file defines was checked (a reportExtensions.json that lists no entity, or an entity with no measure, is the exception: it is read, and the rest of what it defines is checked), so every other result on that file is in doubt until the line is fixed. The one exception is a line that Power BI Desktop wrote and opens without complaint and pbiplint still reports, in a TMDL file or a report JSON file: that is a gap in pbiplint's parser. Report it with the line. Until it is fixed, only the project-wide switch quiets it, and that also hides real parse issues, so weigh the two.
+
+## Quirks
+
+- A TMDL line that continues a multi-line text literal from the line above is masked on its own, so its quotes can pair the wrong way round and show the literal's text while hiding the code after it.
+- A value written in a comment, outside quotes, is not hidden.
 
 ## Links
 

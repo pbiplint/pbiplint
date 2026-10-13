@@ -118,7 +118,7 @@ describe("readM", () => {
     });
   });
   it("records M that does not parse as an issue at its TMDL line and column, cut to 120 characters", async () => {
-    const long = `"${"x".repeat(200)}" 2`;
+    const long = `${"x".repeat(202)} 2`;
     const m = await read([
       file(
         `table Sales\n\tpartition Sales = m\n\t\tsource =\n\t\t\t\tlet\n\t\t\t\t    a = 1,\n\t\t\t\t    b = \n\t\t\t\tin\n\t\t\t\t    a\n\ntable Long\n\tpartition Long = m\n\t\tsource = ${long}\n`,
@@ -143,6 +143,17 @@ describe("readM", () => {
       },
     ]);
     expect(m.queries.find((q) => q.name === "Sales")!.ast).toBeUndefined();
+  });
+  it("hides the text literals of the line it quotes, before the cut, and one opened on a line above", async () => {
+    const key = ["pbiplint", "fixture", "key", "0110", "notreal"].join("-");
+    const m = await read([
+      file(
+        `table Sales\n\tpartition Sales = m\n\t\tsource =\n\t\t\t\tlet\n\t\t\t\t    a = "${"x".repeat(100)}", k = "${key}" 2\n\t\t\t\tin\n\t\t\t\t    a\n\ntable Open\n\tpartition Open = m\n\t\tsource =\n\t\t\t\tlet\n\t\t\t\t    a = "one\n\t\t\t\t${key}", b = 1 2\n\t\t\t\tin\n\t\t\t\t    a\n`,
+      ),
+    ]);
+    // Masked before the cut: the first line is 150 characters as written, and reads whole once
+    // masked. The second continues a literal opened on the line above.
+    expect(m.issues.map((i) => i.text)).toEqual(['a = "…", k = "…" 2', '…", b = 1 2']);
   });
   it("locates M after a text literal holding U+2028 or U+2029 on the TMDL line a person counts", async () => {
     const text = [

@@ -795,7 +795,8 @@ function credentialsIn(m: MIndex, q: MQuery): Credential[] {
       for (const [, name = "", v = ""] of value.matchAll(SECRET_PARAMETER))
         if (isCredential(v))
           out.push({ held, where: `the ${name.toLowerCase()} parameter of the web address` });
-    if (/^bearer [\w.~+/-]{16}/i.test(value)) out.push({ held, where: "the Bearer token" });
+    if (/^bearer [\w.~+/-]{16}/i.test(value) && isCredential(value))
+      out.push({ held, where: "the Bearer token" });
   }
   return out;
 }

@@ -964,9 +964,11 @@ describe("HARDCODED_SECRET_IN_QUERY (v3 spec, sections 9.5 and 11.3)", () => {
       '\tH = Web.Contents("https://api.example.com/v1", [Headers = [Accept = "application/json; charset=utf-8"], Query = [page = "pbiplint-fixture-page-0112-notreal"]]),',
       '\tI = Web.Contents("https://api.example.com/v1?api_key=&format=json"),',
       '\tJ = Odbc.DataSource("dsn=Sales;Pwd=***", [HierarchicalNavigation = true]),',
-      '\tK = Web.Contents("https://api.example.com/v1", [Headers = [Authorization = "Bearer " & Text.From(Number.Random())]])',
+      '\tK = Web.Contents("https://api.example.com/v1", [Headers = [Authorization = "Bearer " & Text.From(Number.Random())]]),',
+      '\tL = Web.Contents("https://api.example.com/v1", [Headers = [Authorization = "Bearer YOUR_ACCESS_TOKEN_HERE"]]),',
+      '\tM = Web.Contents("https://api.example.com/v1", [Headers = [Authorization = "Bearer xxxxxxxxxxxxxxxxxxxxxxxx"]])',
       "in",
-      "\tK",
+      "\tM",
     );
     expect(await mFindings(rule, tmdl)).toEqual([]);
   });

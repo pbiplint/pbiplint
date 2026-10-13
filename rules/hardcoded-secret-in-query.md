@@ -74,6 +74,7 @@ When the text is not a working credential, such as a public demo key the provide
 - Text under 8 characters once a scheme word such as `Bearer ` is left off, text with a space left in it, such as `Enter your key here`, and placeholders (text in angle brackets or braces, such as `<your key>`; text starting with three x's or three asterisks; text starting `your`; and `placeholder`, `null`, `none`, `test`, and `demo`) are not read as credentials.
 - `ApiKeyName`, which names the key rather than holding it, is left alone, and so is anything in a comment.
 - A connection string written as a record, rather than as text, is not read.
+- A connection string or a web address built with `&` is not followed, so a password or a key joined into it from a step or a parameter, as in `Odbc.DataSource("dsn=Sales;Pwd=" & Password)`, is not read.
 - A query whose M does not parse is not read, and its `PARSE_ISSUE` finding quotes the line where the parser stopped, which may hold the credential.
 
 ## Related rules

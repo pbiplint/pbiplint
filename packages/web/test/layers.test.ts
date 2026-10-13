@@ -30,6 +30,7 @@ describe("layerShown", () => {
   });
   it("shows a project rule when neither Model nor Report has a box", () => {
     expect(layerShown("project", new Set(["powerquery"]), ["powerquery"])).toBe(true);
+    expect(layerShown("project", new Set(["model"]), ["model", "powerquery"])).toBe(true);
   });
   it("shows everything when there are no boxes, and a family that has no box", () => {
     for (const layer of ["model", "report", "project", "powerquery"])

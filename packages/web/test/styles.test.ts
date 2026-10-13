@@ -100,6 +100,7 @@ describe("styles.css", () => {
     expect(rule(".layer.powerquery")).toMatch(/color: var\(--layer-powerquery\)/);
     // Text, so WCAG 1.4.3's 4.5:1.
     expect(contrast("--layer-powerquery", "--canvas")).toBeGreaterThanOrEqual(4.5);
+    expect(contrast("--layer-powerquery", "--surface-1")).toBeGreaterThanOrEqual(4.5);
   });
   it("lets the header's links and a long rule id wrap, so a narrow page does not scroll sideways", () => {
     // At 320 pixels the brand and the links do not fit on one row, and a rule id such as

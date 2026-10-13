@@ -182,7 +182,12 @@ describe("column count, pivot, partition, and Power Query rules", () => {
       const tmdl =
         m("A", 'Web.Contents("https://api.example.com", [Query = [page = "1"]])') +
         m("B", 'AnalysisServices.Database("s", "d", [Query = "EVALUATE Sales"])') +
-        m("C", 'Odbc.Query("dsn=x", "select 1")');
+        m("C", 'Odbc.Query("dsn=x", "select 1")') +
+        m(
+          "D",
+          'AnalysisServices.Database("s", "d", [Query = "SELECT * FROM $System.TMSCHEMA_TABLES"])',
+        );
+      // A DMV query is SQL-shaped but asks Analysis Services about a model, so it does not count.
       expect(await mObjectNames(rule, tmdl)).toEqual(["C"]);
     });
     it("does not report a partition whose M does not parse: PARSE_ISSUE does", async () => {

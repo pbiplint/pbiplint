@@ -128,8 +128,8 @@ const TRANSFORMATIONS: ReadonlySet<string> = new Set([
 
 /**
  * The database connectors whose options record's `Query` field is a native query. Web.Contents'
- * `Query` holds a web request's parameters, and AnalysisServices.Database's holds DAX or MDX, so
- * neither is here.
+ * `Query` holds a web request's parameters, and AnalysisServices.Database's holds DAX, MDX, or a
+ * DMV query, so neither is here.
  */
 const NATIVE_QUERY_CONNECTORS: ReadonlySet<string> = new Set([
   "Sql.Database",
@@ -175,8 +175,9 @@ function hasQueryField(
  * transformation the M names, called or passed as a function value, and `<connector> Query` for a
  * database connector given a native query in its options record. Empty when the M has neither, or
  * did not parse. `m` is the model's M, so a named options record held in another query is found;
- * without it only the query's own names are followed. Read from the parsed M, so a name in a comment or a text literal does not count:
- * a documented deviation from Tabular Editor's text match (v3 spec, section 9.7).
+ * without it only the query's own names are followed. Read from the parsed M, so a name in a
+ * comment or a text literal does not count: a documented deviation from Tabular Editor's text
+ * match (v3 spec, section 9.7).
  */
 export function powerQueryTransformations(
   q: MQuery,

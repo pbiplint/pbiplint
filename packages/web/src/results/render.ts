@@ -298,7 +298,10 @@ function filterBoxes(container: HTMLElement, kind: string): HTMLInputElement[] {
   return [...container.querySelectorAll<HTMLInputElement>(`input[data-filter="${kind}"]`)];
 }
 
-/** A group's layer, as the tag on its row and on its fix-first item: model, report, project, or Power Query. */
+/**
+ * A group's layer, as the tag on its row and on its fix-first item: model, report, project, or
+ * Power Query.
+ */
 const layerTag = (g: RankedGroup): HTMLElement =>
   h("span", { class: `layer ${g.rule.layer}` }, LAYER_LABEL[g.rule.layer]);
 

@@ -11,7 +11,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "./fixtures.js";
-import { fakeSecrets, leaks, SECRETS_FIXTURE } from "../../../tests/support/fake-secrets.js";
+import {
+  fakeSecrets,
+  leaks,
+  PARSE_SECRETS_FIXTURE,
+  SECRETS_FIXTURE,
+} from "../../../tests/support/fake-secrets.js";
 import { setFolder } from "./folder-input.js";
 
 // The home page in a real browser: the inputs, the results, and the behaviours the happy-dom unit
@@ -596,6 +601,40 @@ test("shows, downloads, and copies m-zoo's results with no part of a made-up cre
     const text = await page.evaluate(() => navigator.clipboard.readText());
     expect(text).toContain("HARDCODED_SECRET_IN_QUERY");
     expect(leaks(text, secrets)).toEqual([]);
+  }
+});
+
+test("shows, downloads, and copies parse-secrets's results with no part of a made-up value on a line PARSE_ISSUE quotes (v3 spec, sections 7 and 11.3)", async ({
+  page,
+  context,
+  browserName,
+}) => {
+  if (browserName === "chromium")
+    await context.grantPermissions(["clipboard-write", "clipboard-read"]);
+  const planted = fakeSecrets(PARSE_SECRETS_FIXTURE);
+  expect(planted).toHaveLength(2);
+  await setFolder(page.locator("#folder-input"), PARSE_SECRETS_FIXTURE);
+  const results = page.locator("#results");
+  await expect(results.locator("h2")).toContainText("parse-secrets.SemanticModel");
+  await expect(results).toContainText("PARSE_ISSUE");
+  expect(leaks(await page.content(), planted)).toEqual([]);
+  for (const name of ["Download Markdown", "Download JSON"]) {
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page.getByRole("button", { name }).click(),
+    ]);
+    const text = readFileSync((await download.path())!, "utf8");
+    expect(text).toContain("PARSE_ISSUE");
+    expect(leaks(text, planted)).toEqual([]);
+  }
+  const copy = page.locator(".export button").nth(1);
+  await expect(copy).toHaveText("Copy for an AI assistant");
+  await copy.click();
+  await expect(copy).toHaveText("Copied");
+  if (browserName === "chromium") {
+    const text = await page.evaluate(() => navigator.clipboard.readText());
+    expect(text).toContain("PARSE_ISSUE");
+    expect(leaks(text, planted)).toEqual([]);
   }
 });
 

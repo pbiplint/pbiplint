@@ -1,7 +1,12 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { fakeSecrets, leaks, SECRETS_FIXTURE } from "../../../tests/support/fake-secrets.js";
+import {
+  fakeSecrets,
+  leaks,
+  PARSE_SECRETS_FIXTURE,
+  SECRETS_FIXTURE,
+} from "../../../tests/support/fake-secrets.js";
 import { tempDir } from "../../../tests/support/temp-dir.js";
 import { main } from "../src/main.js";
 
@@ -43,5 +48,28 @@ describe("the secret guard, in the CLI (v3 spec, section 11.3)", () => {
     const written = readFileSync(file, "utf8");
     expect(written).toContain("HARDCODED_SECRET_IN_QUERY");
     expect(leaks(written + r.out + r.err, secrets)).toEqual([]);
+  });
+});
+
+describe("the secret guard, on lines PARSE_ISSUE quotes, in the CLI (v3 spec, sections 7 and 11.3)", () => {
+  const planted = fakeSecrets(PARSE_SECRETS_FIXTURE);
+  it.each(["text", "json", "markdown", "sarif"])(
+    "keeps every part of both values out of --format %s and stderr",
+    async (format) => {
+      expect(planted).toHaveLength(2);
+      const r = await run([PARSE_SECRETS_FIXTURE, "--format", format]);
+      expect(r.code).toBe(1);
+      expect(r.out).toContain("PARSE_ISSUE");
+      expect(leaks(r.out + r.err, planted)).toEqual([]);
+    },
+  );
+  it("keeps every part of both values out of the quiet text and a report written with --output", async () => {
+    const quiet = await run([PARSE_SECRETS_FIXTURE, "--quiet"]);
+    expect(quiet.out).toContain("PARSE_ISSUE");
+    const file = join(tempDir("parse-secret-output"), "report.sarif");
+    const r = await run([PARSE_SECRETS_FIXTURE, "--format", "sarif", "--output", file]);
+    const written = readFileSync(file, "utf8");
+    expect(written).toContain("PARSE_ISSUE");
+    expect(leaks(quiet.out + quiet.err + written + r.out + r.err, planted)).toEqual([]);
   });
 });

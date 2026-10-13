@@ -226,6 +226,8 @@ Each query whose M the parser rejects is one `PARSE_ISSUE` finding, alongside th
 
 `rules/parse-issue.md` says M is parsed too, and the copy that lists what PARSE_ISSUE covers follows.
 
+Amended October 13, 2026 (the coordinator's decision, pull request 7): the quoted line hides its text literals. Inside every `"..."` of a line `PARSE_ISSUE` quotes, TMDL or M, the text becomes `…` and the quotes stay (`packages/core/src/m/mask.ts`); a `#"..."` name and a TMDL `'...'` name are kept, and a comment is read as one, so its quotes never pair with a literal's. M is masked as a whole query before its line is taken, so a literal opened on a line above is hidden too, and before the 120-character cut, so the cut never shows part of a literal. The parser's message is masked the same way: its English templates name a token's kind, never its text, so only a fault in the parser itself could carry text. A TMDL line is masked by itself, so one that continues a literal from the line above can read its quotes inverted. A value written outside quotes, in a comment or as a bare word, is not hidden. A report JSON line is quoted as written: Power BI writes no credential into a report file, and a JSON line is mostly keys, which masking would hide. This replaces "the quoted line may show it" in the bullet above. Corpus: 51 `PARSE_ISSUE` details change in 7 models, and no finding is added or removed.
+
 ## 8. The name-resolution helper
 
 `DYNAMIC_DATA_SOURCE` must know where a value comes from, and an early pass that resolved only the outermost `let` flagged 35 correct `RelativePath` calls. `INCREMENTAL_REFRESH_RANGE_BOUNDS` and `HARDCODED_SECRET_IN_QUERY` use the same helper to tell the model's `RangeStart` parameter, or a header's value, from a local name.
@@ -590,6 +592,8 @@ One test, `packages/core/test/secret-masking.test.ts` with a web and a CLI count
 It reads the values from the fixture, so a new fake secret is covered when it is added.
 
 Amended October 13, 2026 (the coordinator's decision, pull request 6): the guard looks for every 8-character run of a value that takes in at least one character of its distinctive part, not only runs inside that part, so a leak of a value's end such as `0002-notreal` fails it too; runs inside the prefix or suffix every value shares are not looked for. The helper is `tests/support/fake-secrets.ts`; the MCP check sits in `packages/cli/test/mcp.test.ts`, beside its client, and an e2e test holds the site in a real browser to it: the page, both downloads, and, in Chromium, the copy for an AI assistant.
+
+Amended October 13, 2026 (the coordinator's decision, pull request 7): a second fixture, `tests/fixtures/parse-secrets.SemanticModel`, plants a made-up key on an M line and a made-up token on a TMDL line, neither of which parses, so `PARSE_ISSUE` quotes both (section 7). It sits apart from m-zoo, which must parse cleanly and has Tabular Editor captures. `PARSE_SECRETS_FIXTURE` in the helper names it, and every check above (core's four formats, the site, the CLI, the MCP lint tool, and the browser) holds its outputs to its two values.
 
 ### 11.4 The corpus diff
 

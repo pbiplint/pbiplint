@@ -1,0 +1,9 @@
+/// A TMDL line that does not parse and holds a made-up token: a measure indented with spaces.
+table Settings
+	lineageTag: 6c0f5a1e-0007-4000-8000-000000000002
+
+    measure 'Service Token' = "pbiplint-fixture-token-0008-notreal"
+
+	partition Settings = m
+		mode: import
+		source = #table(type table [Name = text], {{"Token"}})

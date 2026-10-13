@@ -70,20 +70,20 @@ In the TMDL file, the call is in the partition's `source` block.
 
 ## When to ignore it
 
-A model that is never published, or never refreshed in the service, can build its addresses however it likes. If Data source settings shows no warning for the source, the service can work it out after all, and the finding can go.
+A model that is never published, or never refreshed in the service, can build its addresses however it likes. If Data source settings shows no warning for the source, the service can work it out after all, and you can ignore the finding.
 
 ## Quirks
 
 - Only the first argument, the address, is read. `Web.Contents`' `RelativePath` and `Query` options are left alone whatever they hold, since they are Microsoft's route for a request that changes.
 - An address held by a parameter, a fixed text, a step that holds one, or text joined with `&` from those, is left alone, however deeply the steps nest.
-- An address chosen with `if ... then ... else` between fixed texts or parameters is left alone, and so is a branch that raises an error. A function call in the condition alone does not count.
+- An address chosen with `if ... then ... else` between fixed texts or parameters is left alone, and so is a branch that raises an error. Nothing in the condition counts, since it only chooses between the branches.
 - An address that is a custom function's own parameter is left alone, since the query that calls the function decides it. A name nothing in the model defines is left alone too.
 - Each call is its own finding.
 - A query whose M does not parse is not read; it gets a `PARSE_ISSUE` finding instead.
 
 ## Related rules
 
-- `LOCAL_DRIVE_PATH` reports a fixed path on a local drive; this rule reports a path built at run time.
+- `LOCAL_DRIVE_PATH` reports a fixed path on a local drive; this rule reports an address read from the rows or built at run time.
 
 ## Links
 

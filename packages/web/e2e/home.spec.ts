@@ -63,10 +63,10 @@ test("lints the sample project and announces the result", async ({ page }) => {
     "Results for the sample project (model, 14 files · report, 78 files)",
   );
   await expect(results.locator(".summary")).toContainText(
-    "273 findings (19 errors, 84 warnings, 170 info) in 92 files",
+    "280 findings (19 errors, 84 warnings, 177 info) in 92 files",
   );
   await expect(page.locator("#announce")).toHaveText(
-    /^Results for the sample project \(model, 14 files · report, 78 files\): 273 findings/,
+    /^Results for the sample project \(model, 14 files · report, 78 files\): 280 findings/,
   );
   await expect(results.locator("section.facts h3")).toHaveText("Report at a glance");
   await expect(results.locator(".fix-first li")).toHaveCount(5);
@@ -504,7 +504,7 @@ test("downloads the Markdown report", async ({ page }) => {
   ]);
   expect(download.suggestedFilename()).toMatch(/\.md$/);
   const text = readFileSync((await download.path())!, "utf8");
-  expect(text).toContain("273 findings");
+  expect(text).toContain("280 findings");
 });
 
 test("copies the Markdown report from the button beside the downloads", async ({
@@ -554,7 +554,7 @@ test("copies the report with each rule's guidance for an AI assistant, from the 
     const text = await page.evaluate(() => navigator.clipboard.readText());
     expect(text.startsWith("# For the AI assistant reading this")).toBe(true);
     expect(text).toContain("# pbiplint report");
-    expect(text).toContain("273 findings");
+    expect(text).toContain("280 findings");
     expect(text).toContain("## How to fix these findings");
     expect(text).toContain("(BROKEN_FIELD_REFERENCE)\n");
     expect(text).toContain("(AVOID_FLOATING_POINT_DATA_TYPES)\n");

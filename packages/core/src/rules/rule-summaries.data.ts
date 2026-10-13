@@ -56,6 +56,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Visible Decimal number and Fixed decimal number columns with no format string.",
   DEFAULT_PAGE_NAME:
     "Pages whose display name in page.json has the shape `Page <n>`, `Duplicate of <name>`, or `<name> (copy)`: the names English Power BI Desktop gives a new page and a duplicated one, and a name marked as a copy. The rule also matches the forms Desktop-saved files show for a new or duplicated page in other languages, such as `Seite <n>` and `Doublon de <name>`.",
+  DEFAULT_STEP_NAMES:
+    "Power Query queries whose steps keep the names Power BI Desktop gives them, such as Changed Type, Added Custom1, or Removed Other Columns, reported once per query.",
   ENSURE_ALTTEXT:
     "Visuals other than shapes whose alt text is missing or empty. A visual group is checked by its own alt text, the one set on the group rather than on the visuals inside it.",
   ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY:
@@ -79,6 +81,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Tables, measures, hierarchies, calculated columns, calculated tables, and calculation groups whose first character has an upper case form and is not upper case.",
   FIX_REFERENTIAL_INTEGRITY_VIOLATIONS:
     "Relationships where the many side holds key values that do not exist on the one side. The count of offending rows is a statistic of the loaded data, not of the model files, so pbiplint lists this rule but does not run it: it needs statistics that only a live model carries.",
+  FIXED_DATE_IN_ROW_FILTER:
+    "Power Query row filters that end at, or match, a date written into the query: a `Table.SelectRows` condition that compares a column with `<`, `<=`, or `=` to a `#date`, `#datetime`, or `#datetimezone` of fixed numbers.",
   "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS":
     "Visible columns whose name starts with Is and whose type is whole number, and visible columns whose name ends with the word Flag after a space and whose type is not text.",
   HARDCODED_PERIOD_IN_DAX:
@@ -94,10 +98,14 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   HIDE_TOOLTIP_DRILLTROUGH_PAGES: "Tooltip pages and drillthrough pages that are not hidden.",
   INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED:
     "Inactive relationships that no measure, calculation item, or user-defined function activates with USERELATIONSHIP.",
+  INCREMENTAL_REFRESH_RANGE_BOUNDS:
+    "Power Query queries that filter on both of the model's incremental refresh parameters, `RangeStart` and `RangeEnd`, and either include the boundary on both (`>= RangeStart` and `<= RangeEnd`) or on neither (`> RangeStart` and `< RangeEnd`).",
   INTEGER_FORMATTING:
     "Measures whose static format string is not a recognized whole-number, currency, or percentage format. The only format strings the rule accepts are `#,0`, `#,0.0`, and any string containing `$` or `%`. A measure with no format string at all fires too, and that is the common case: the rule reads only the format string, so it cannot tell an unformatted currency or ratio from an unformatted count.",
   ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS:
     "Hidden columns, or columns in hidden tables, that still have IsAvailableInMdx set to true and are not used to sort another column, in a hierarchy, in a variation, or in a calendar, and do not themselves sort by another column.",
+  KEEP_FIRST_ROWS_LEFT_IN:
+    "Power Query queries that load into the model and keep only their first rows: a `Table.FirstN` call with a number greater than 1, the Keep First Rows step, whose table is not sorted first.",
   LANDING_PAGE_NOT_SET:
     "A report whose pages.json sets no landing page, so it opens on the page that was active when it was last saved, or, when pages.json records no active page either, on the first page.",
   LARGE_TABLES_SHOULD_BE_PARTITIONED:
@@ -190,6 +198,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Slicers saved with a selection, so that the report opens with it applied: any visual whose visual.json holds a `filter` with a condition under `objects.general`, which is where Power BI Desktop saves the selection of a slicer, button slicer, list slicer, input slicer, or `filterSlicer`, and of a custom slicer from AppSource that filters through the Visual Filters API. It is info without a policy, and a warning when the project's policy expects no saved selections.",
   SNOWFLAKE_SCHEMA_ARCHITECTURE:
     "Tables that are on the from side of one relationship and the to side of another, which is what a dimension related to a sub-dimension looks like.",
+  SORT_NOT_HELD_FOR_REMOVE_DUPLICATES:
+    "Power Query queries that remove duplicates by some of their columns straight after a sort, with nothing holding the sort's order: a `Table.Distinct` call with a list of columns whose table is a `Table.Sort`, written in place or as the step it reads. Power BI Desktop writes this shape as a Sorted Rows step followed by Removed Duplicates.",
   SPECIAL_CHARS_IN_OBJECT_NAMES: "Names containing a tab, line feed, or carriage return.",
   SPLIT_DATE_AND_TIME:
     "DateTime columns holding values that are not at midnight. Whether any row carries a time is a statistic of the loaded data, not of the model files, so pbiplint lists this rule but does not run it: it needs statistics that only a live model carries.",

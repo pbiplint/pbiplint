@@ -70,6 +70,7 @@ A page whose real name has one of these shapes is named on purpose. A report tha
 ## Related rules
 
 - `REDUCE_PAGES` counts every page, hidden or not, so a leftover duplicate this rule reports also counts toward that rule's limit.
+- `DEFAULT_STEP_NAMES` reports the same habit in Power Query: steps that keep the names Power BI Desktop gave them.
 
 ## Links
 

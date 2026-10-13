@@ -1,11 +1,24 @@
 import { Language } from "@microsoft/powerquery-parser";
-import { calls, identifierName, textLiterals, textValue, unwrap } from "../../m/ast.js";
-import { resolve } from "../../m/resolve.js";
+import {
+  callOf,
+  calls,
+  identifierName,
+  isWithin,
+  nodesOfKind,
+  parentOf,
+  textLiterals,
+  textValue,
+  unwrap,
+} from "../../m/ast.js";
+import { boundValue, resolve } from "../../m/resolve.js";
 import type { MIndex, MQuery } from "../../m/types.js";
+import { tableRef } from "../../model/names.js";
+import type { Partition } from "../../model/types.js";
 import { finding } from "../helpers.js";
-import { mFinding } from "../m-helpers.js";
+import { mFinding, queryLabel } from "../m-helpers.js";
 import type { Rule } from "../types.js";
 import { pbiplintRule } from "./define.js";
+import { longDate } from "./periods.js";
 
 type Node = Language.Ast.TNode;
 const Kind = Language.Ast.NodeKind;
@@ -121,7 +134,7 @@ export const EXCEL_USE_HEADERS = pbiplintRule({
 const NATIVE_CONNECTORS: readonly { pattern: RegExp; name: string; article: "a" | "an" }[] = [
   { pattern: /amazon redshift/i, name: "Amazon Redshift", article: "an" },
   { pattern: /postgresql/i, name: "PostgreSQL", article: "a" },
-  { pattern: /sql server|sqlncli|msoledbsql/i, name: "SQL Server", article: "a" },
+  { pattern: /sql server|sqlncli|sqloledb|msoledbsql/i, name: "SQL Server", article: "a" },
   { pattern: /mysql/i, name: "MySQL", article: "a" },
   { pattern: /oracle/i, name: "Oracle", article: "an" },
   { pattern: /snowflake/i, name: "Snowflake", article: "a" },
@@ -217,6 +230,397 @@ export const PRIVACY_LEVELS_IGNORED = pbiplintRule({
   },
 });
 
+/** A `null` written as an argument, which M's table functions read as the argument left out. */
+const isNull = (n: Node | undefined): boolean =>
+  n !== undefined &&
+  unwrap(n).kind === Kind.LiteralExpression &&
+  (unwrap(n) as Language.Ast.LiteralExpression).literalKind === Language.Ast.LiteralKind.Null;
+
+/** An `Order.Ascending` or `Order.Descending` written as itself. */
+const isOrder = (n: Node | undefined): boolean => {
+  const v = n && unwrap(n);
+  return (
+    v?.kind === Kind.IdentifierExpression &&
+    /^Order\.(Ascending|Descending)$/.test(identifierName(v.identifier.literal))
+  );
+};
+
+/** The items of a list written in place; undefined for anything else. */
+function listItems(n: Node | undefined): Node[] | undefined {
+  const v = n && unwrap(n);
+  return v?.kind === Kind.ListExpression ? v.content.elements.map((csv) => csv.node) : undefined;
+}
+
+/**
+ * A Table.Sort's columns, read from a text literal, a list of text literals, and `{column, order}`
+ * pairs, a bare `{"Col", Order.Descending}` included; undefined for anything else.
+ */
+function sortColumns(n: Node | undefined): string[] | undefined {
+  const one = textValue(n && unwrap(n));
+  if (one !== undefined) return [one];
+  const items = listItems(n);
+  if (!items) return undefined;
+  if (items.length === 2 && isOrder(items[1])) {
+    const col = textValue(unwrap(items[0]!));
+    return col === undefined ? undefined : [col];
+  }
+  const columns: string[] = [];
+  for (const item of items) {
+    const pair = listItems(item);
+    const col = pair
+      ? pair.length === 2 && isOrder(pair[1])
+        ? textValue(unwrap(pair[0]!))
+        : undefined
+      : textValue(unwrap(item));
+    if (col === undefined) return undefined;
+    columns.push(col);
+  }
+  return columns;
+}
+
+/**
+ * Whether every sort column is one of the Table.Distinct columns, by exact name, with the distinct
+ * list all text literals and no comparer. Every row in a set of duplicates then ties on the sort,
+ * so it cannot choose between them. Anything not read this way is false.
+ */
+function sortWithinKeys(sortArg: Node | undefined, distinctArg: Node): boolean {
+  const keys = listItems(distinctArg)?.map((k) => textValue(unwrap(k)));
+  if (!keys || keys.some((k) => k === undefined)) return false;
+  const sorted = sortColumns(sortArg);
+  return sorted !== undefined && sorted.length > 0 && sorted.every((c) => keys.includes(c));
+}
+
+// Desktop's Sorted Rows then Removed Duplicates, with a column list deciding what is a duplicate
+// (v3 spec, section 9.2). The sort is the intended way to choose the row that survives; the fault
+// is that nothing holds its order. A sort held by Table.Buffer, a distinct over whole rows, and a
+// sort with other steps between are left alone, as is a sort only on the duplicate keys, which
+// cannot choose between duplicates (amended October 13, 2026).
+export const SORT_NOT_HELD_FOR_REMOVE_DUPLICATES = pbiplintRule({
+  id: "SORT_NOT_HELD_FOR_REMOVE_DUPLICATES",
+  name: "Sort may not decide which duplicate is kept",
+  category: "Error Prevention",
+  severity: 2,
+  scope: ["Partition", "NamedExpression", "Table"],
+  layer: "powerquery",
+  check: (_project, { indexes: { m } }) =>
+    m.queries.flatMap((q) =>
+      calls(q).flatMap((c) => {
+        const [table, columns] = c.args;
+        if (c.name !== "Table.Distinct" || !table || !columns || isNull(columns)) return [];
+        const sorted = boundValue(m, q, table);
+        const sortCall = callOf(sorted.node);
+        if (sortCall?.name !== "Table.Sort" || sortWithinKeys(sortCall.args[1], columns)) return [];
+        const sort =
+          sorted.step === undefined ? "the Table.Sort inside it" : `step ${tableRef(sorted.step)}`;
+        return [
+          mFinding(
+            m,
+            q,
+            c.node,
+            `nothing holds the order of ${sort}, so the sort may not decide which duplicate is kept`,
+          ),
+        ];
+      }),
+    ),
+});
+
+/** A number written in place, as M reads it; undefined for anything else. */
+function numberLiteral(n: Node): number | undefined {
+  const v = unwrap(n);
+  return v.kind === Kind.LiteralExpression && v.literalKind === Language.Ast.LiteralKind.Numeric
+    ? Number(v.literal)
+    : undefined;
+}
+
+/** A table that is a Table.Sort, or a Table.Buffer of one, written in place or held by a step. */
+function isSorted(m: MIndex, q: MQuery, table: Node): boolean {
+  let c = callOf(boundValue(m, q, table).node);
+  if (c?.name === "Table.Buffer" && c.args[0]) c = callOf(boundValue(m, q, c.args[0]).node);
+  return c?.name === "Table.Sort";
+}
+
+/** Whether a node sits inside an `each` or a function, where it runs once per row or per call. */
+function inFunction(q: MQuery, node: Node): boolean {
+  for (let n = parentOf(q, node); n; n = parentOf(q, n))
+    if (n.kind === Kind.EachExpression || n.kind === Kind.FunctionExpression) return true;
+  return false;
+}
+
+// Keep First Rows left in a query that loads: a partition's, or a refresh policy's that is read
+// (v3 spec, section 9.11). A count of 0 or 1, a top N after a sort, a count that is not written
+// in place, a top N per group, and shared expressions, which do not load, are left alone.
+export const KEEP_FIRST_ROWS_LEFT_IN = pbiplintRule({
+  id: "KEEP_FIRST_ROWS_LEFT_IN",
+  name: "Keep First Rows left in a loaded query",
+  category: "Error Prevention",
+  severity: 2,
+  scope: ["Partition", "NamedExpression", "Table"],
+  layer: "powerquery",
+  check: (_project, { indexes: { m } }) =>
+    m.queries
+      .filter((q) => q.kind !== "expression")
+      .flatMap((q) =>
+        calls(q).flatMap((c) => {
+          const [table, count] = c.args;
+          if (c.name !== "Table.FirstN" || !table || !count) return [];
+          const n = numberLiteral(count);
+          if (n === undefined || n <= 1 || isSorted(m, q, table) || inFunction(q, c.node))
+            return [];
+          return [mFinding(m, q, c.node, `only the first ${n} rows load`)];
+        }),
+      ),
+});
+
+type RangeParameter = "RangeStart" | "RangeEnd";
+
+/**
+ * The incremental refresh parameter one side of a comparison reads: the model's `RangeStart` or
+ * `RangeEnd`, written as itself, through steps that hold it, or inside a call
+ * (`DateKey(RangeStart)`). A local name that shadows the parameter is not it.
+ */
+function rangeParameterOf(m: MIndex, q: MQuery, side: Node, depth = 0): RangeParameter | undefined {
+  const v = boundValue(m, q, side).node;
+  if (v.kind === Kind.IdentifierExpression) {
+    const r = resolve(m, q, v);
+    const name = r.kind === "modelParameter" ? r.query.name : undefined;
+    return name === "RangeStart" || name === "RangeEnd" ? name : undefined;
+  }
+  const c = callOf(v);
+  if (!c || depth > 8) return undefined;
+  for (const a of c.args) {
+    const found = rangeParameterOf(m, q, a, depth + 1);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+/** A relational operator read the other way round: `RangeStart <= [Date]` is `[Date] >= RangeStart`. */
+const FLIPPED: Readonly<Record<string, string>> = { "<": ">", "<=": ">=", ">": "<", ">=": "<=" };
+
+// Microsoft asks for an equals sign on one of RangeStart and RangeEnd, not both (v3 spec, section
+// 9.4). A query whose comparisons with the two include both bounds, or neither, is an error: a row
+// on the boundary lands in two partitions, or in none. Comparisons of both kinds on one parameter
+// are left alone, since which one filters cannot be told.
+export const INCREMENTAL_REFRESH_RANGE_BOUNDS = pbiplintRule({
+  id: "INCREMENTAL_REFRESH_RANGE_BOUNDS",
+  name: "Incremental refresh filter counts a boundary row twice or never",
+  category: "Error Prevention",
+  severity: 3,
+  scope: ["Partition", "NamedExpression", "Table"],
+  layer: "powerquery",
+  check: (_project, { indexes: { m } }) =>
+    m.queries.flatMap((q) => {
+      const start = { inclusive: [] as Node[], exclusive: [] as Node[] };
+      const end = { inclusive: [] as Node[], exclusive: [] as Node[] };
+      for (const node of nodesOfKind(q, Kind.RelationalExpression)) {
+        if (node.kind !== Kind.RelationalExpression) continue;
+        const left = rangeParameterOf(m, q, node.left);
+        const right = rangeParameterOf(m, q, node.right);
+        if ((left === undefined) === (right === undefined)) continue;
+        const op = node.operatorConstant.constantKind as string;
+        // Read as "column, operator, parameter".
+        const operator = right ? op : FLIPPED[op]!;
+        const parameter = right ?? left;
+        if (parameter === "RangeStart" && operator === ">=") start.inclusive.push(node);
+        else if (parameter === "RangeStart" && operator === ">") start.exclusive.push(node);
+        else if (parameter === "RangeEnd" && operator === "<=") end.inclusive.push(node);
+        else if (parameter === "RangeEnd" && operator === "<") end.exclusive.push(node);
+      }
+      const one = (b: typeof start) => b.inclusive.length > 0 !== b.exclusive.length > 0;
+      if (!one(start) || !one(end)) return [];
+      if (start.inclusive.length > 0 && end.inclusive.length > 0)
+        return [
+          mFinding(
+            m,
+            q,
+            end.inclusive[0]!,
+            "both RangeStart and RangeEnd include the boundary, so a row on it lands in two partitions",
+          ),
+        ];
+      if (start.exclusive.length > 0 && end.exclusive.length > 0)
+        return [
+          mFinding(
+            m,
+            q,
+            start.exclusive[0]!,
+            "neither RangeStart nor RangeEnd includes the boundary, so a row on it lands in none",
+          ),
+        ];
+      return [];
+    }),
+});
+
+/** The constructors of a fixed date. */
+const DATE_CONSTRUCTORS: ReadonlySet<string> = new Set(["#date", "#datetime", "#datetimezone"]);
+
+/** A whole number written in place, with a sign if it has one. */
+function wholeNumber(n: Node): number | undefined {
+  const v = unwrap(n);
+  if (v.kind === Kind.UnaryExpression) {
+    const inner = numberLiteral(v.typeExpression);
+    const signs = v.operators.elements.map((o) => o.constantKind as string);
+    if (inner === undefined || signs.some((s) => s !== "-" && s !== "+")) return undefined;
+    return signs.filter((s) => s === "-").length % 2 ? -inner : inner;
+  }
+  const value = numberLiteral(v);
+  return value !== undefined && Number.isInteger(value) ? value : undefined;
+}
+
+/** A `#date`, `#datetime`, or `#datetimezone` of numbers written in place, as the day it names. */
+function fixedDate(n: Node): string | undefined {
+  const c = callOf(unwrap(n));
+  if (!c || !DATE_CONSTRUCTORS.has(c.name) || c.args.length < 3) return undefined;
+  const parts = c.args.map(wholeNumber);
+  if (parts.some((p) => p === undefined)) return undefined;
+  const [year, month, day] = parts as number[];
+  return month! >= 1 && month! <= 12 && day! >= 1 && day! <= 31
+    ? longDate(year!, month!, day!)
+    : undefined;
+}
+
+/**
+ * What a filter does with a fixed date, by the operator read as "column, operator, date". A date
+ * left out with `<>`, such as a placeholder or a holiday, does not go stale and is not read.
+ */
+const FIXED_DATE_USE: Readonly<Record<string, string>> = {
+  "<": "rows end at a fixed date",
+  "<=": "rows end at a fixed date",
+  "=": "rows match a fixed date",
+};
+
+/** Whether a filter's condition reads the model's RangeStart or RangeEnd anywhere. */
+function readsRange(m: MIndex, q: MQuery, condition: Node): boolean {
+  return nodesOfKind(q, Kind.IdentifierExpression).some(
+    (n) => isWithin(q, n, condition) && rangeParameterOf(m, q, n) !== undefined,
+  );
+}
+
+/**
+ * A partition of a table with more than one M partition: a slice of the table cut by hand, whose
+ * fixed range is the point.
+ */
+function isHandPartition(q: MQuery): boolean {
+  if (q.kind !== "partition") return false;
+  const p = q.owner as Partition;
+  return p.table.partitions.filter((x) => x.sourceType === "m").length > 1;
+}
+
+// A row filter whose end, or equality, is a fixed date goes stale without an error (v3 spec,
+// section 9.16, amended), as HARDCODED_PERIOD_IN_DAX says of DAX. A fixed start is normal history,
+// and a filter on the incremental refresh range and a table partitioned by hand are left alone.
+export const FIXED_DATE_IN_ROW_FILTER = pbiplintRule({
+  id: "FIXED_DATE_IN_ROW_FILTER",
+  name: "Fixed date in a row filter",
+  category: "Maintenance",
+  severity: 1,
+  scope: ["Partition", "NamedExpression", "Table"],
+  layer: "powerquery",
+  check: (_project, { indexes: { m } }) =>
+    m.queries
+      .filter((q) => !isHandPartition(q))
+      .flatMap((q) => {
+        const reported = new Set<number>();
+        return calls(q).flatMap((c) => {
+          const condition = c.args[1];
+          if (c.name !== "Table.SelectRows" || !condition || readsRange(m, q, condition)) return [];
+          return nodesOfKind(q, Kind.RelationalExpression, Kind.EqualityExpression).flatMap(
+            (node) => {
+              if (
+                (node.kind !== Kind.RelationalExpression &&
+                  node.kind !== Kind.EqualityExpression) ||
+                !isWithin(q, node, condition)
+              )
+                return [];
+              const onLeft = fixedDate(node.left);
+              const onRight = fixedDate(node.right);
+              if ((onLeft === undefined) === (onRight === undefined)) return [];
+              const op = node.operatorConstant.constantKind as string;
+              const use = FIXED_DATE_USE[onRight ? op : (FLIPPED[op] ?? op)];
+              const date = unwrap(onRight ? node.right : node.left);
+              if (!use || reported.has(date.id)) return [];
+              reported.add(date.id);
+              return [mFinding(m, q, date, `${use}, ${onRight ?? onLeft}`)];
+            },
+          );
+        });
+      }),
+});
+
+/** Power BI Desktop's default step names in English, each with or without a number after it. */
+const DEFAULT_STEP = new RegExp(
+  "^(?:(?:" +
+    [
+      "Changed Type",
+      "Changed Type with Locale",
+      "Promoted Headers",
+      "Removed Columns",
+      "Removed Other Columns",
+      "Renamed Columns",
+      "Reordered Columns",
+      "Filtered Rows",
+      "Sorted Rows",
+      "Removed Duplicates",
+      "Grouped Rows",
+      "Merged Queries",
+      "Appended Query",
+      "Added Custom",
+      "Added Conditional Column",
+      "Added Index",
+      "Duplicated Column",
+      "Replaced Value",
+      "Pivoted Column",
+      "Unpivoted Columns",
+      "Unpivoted Other Columns",
+      "Split Column by Delimiter",
+      "Removed Top Rows",
+      "Removed Bottom Rows",
+      "Removed Blank Rows",
+      "Removed Alternate Rows",
+      "Removed Errors",
+      "Kept First Rows",
+      "Kept Range of Rows",
+      "Trimmed Text",
+      "Cleaned Text",
+      "Uppercased Text",
+      "Lowercased Text",
+      "Capitalized Each Word",
+      "Transposed Table",
+      "Filled Down",
+      "Filled Up",
+      "Invoke Custom Function",
+      "Custom",
+    ].join("|") +
+    ")\\d*|(?:Expanded|Inserted|Extracted|Calculated)(?:\\d*| .*))$",
+);
+
+// Once per query, on its first such step, with the count (v3 spec, section 9.13): a shape Desktop
+// writes by default, reported per step, would bury everything else. Only the outermost let's
+// steps are read; Source and Navigation name what they are.
+export const DEFAULT_STEP_NAMES = pbiplintRule({
+  id: "DEFAULT_STEP_NAMES",
+  name: "Steps keep Power Query's default names",
+  category: "Maintenance",
+  severity: 1,
+  scope: ["Partition", "NamedExpression", "Table"],
+  layer: "powerquery",
+  check: (_project, { indexes: { m } }) =>
+    m.queries.flatMap((q) => {
+      const root = q.ast && unwrap(q.ast);
+      if (root?.kind !== Kind.LetExpression) return [];
+      const steps = root.variableList.elements
+        .map((csv) => csv.node)
+        .filter((pair) => DEFAULT_STEP.test(identifierName(pair.key.literal)));
+      if (steps.length === 0) return [];
+      const [a, b] = steps.map((pair) => tableRef(identifierName(pair.key.literal)));
+      const what =
+        steps.length === 1
+          ? `1 step keeps its default name, ${a}`
+          : `${steps.length} steps keep default names, ${steps.length > 2 ? "such as " : ""}${a} and ${b}`;
+      // The detail names the query only: the steps it lists say where.
+      return [{ ...mFinding(m, q, steps[0]!, what), detail: `${queryLabel(q)}: ${what}` }];
+    }),
+});
+
 /**
  * pbiplint's own Power Query rules (v3 spec, section 9): each reads the M a model's queries hold,
  * or the file's Power Query options, and reports on the model's files.
@@ -227,4 +631,9 @@ export const powerQueryRules: Rule[] = [
   EXCEL_USE_HEADERS,
   ODBC_WHERE_CONNECTOR_EXISTS,
   PRIVACY_LEVELS_IGNORED,
+  SORT_NOT_HELD_FOR_REMOVE_DUPLICATES,
+  KEEP_FIRST_ROWS_LEFT_IN,
+  INCREMENTAL_REFRESH_RANGE_BOUNDS,
+  FIXED_DATE_IN_ROW_FILTER,
+  DEFAULT_STEP_NAMES,
 ];

@@ -92,6 +92,18 @@
       "Store",
       "Weather Data",
       "Weather Data"
+    ],
+    "DEFAULT_STEP_NAMES": [
+      "Average High Temperature Summary",
+      "Average Revenue per Visit",
+      "Average Revenue per Visit Forecast 2024",
+      "Foot Traffic",
+      "Foot Traffic Forecast 2024",
+      "Revenue per Store",
+      "Revenue per Store Forecast 2024",
+      "Sample File",
+      "Transform Sample File",
+      "Weather Data"
     ]
   },
   "results": {

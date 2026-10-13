@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { LintFile } from "../src/engine/lint.js";
 import { calls, identifierName, nodeOf, textValue } from "../src/m/ast.js";
 import { readM } from "../src/m/read.js";
-import { origin, resolve } from "../src/m/resolve.js";
+import { boundValue, origin, resolve } from "../src/m/resolve.js";
 import type { MIndex, MQuery } from "../src/m/types.js";
 import { buildModel } from "../src/model/build.js";
 import { parseTmdl } from "../src/tmdl/parse.js";
@@ -265,6 +265,63 @@ describe("origin of a field or item", () => {
   it("is row for a field of _ inside each", async () => {
     expect(await originOf('Table.AddColumn(#table({}, {}), "R", each Web.Contents(_[url]))')).toBe(
       "row",
+    );
+  });
+});
+
+describe("boundValue", () => {
+  /** What the first argument of the first call to `fn` stands for: the call it is, and the step that holds it. */
+  async function bound(partition: string, fn = "Table.Distinct", expressions = "") {
+    const { m, q } = await index(partition, expressions);
+    const b = boundValue(m, q, calls(q).find((c) => c.name === fn)!.args[0]!);
+    return {
+      name: calls(q).find((c) => c.node.id === b.node.id)?.name,
+      step: b.step,
+      kind: b.node.kind,
+    };
+  }
+  it("follows a name to the step that holds its value", async () => {
+    expect(
+      await bound(
+        'let #"Sorted Rows" = Table.Sort(S, {"x"}), D = Table.Distinct(#"Sorted Rows", {"k"}) in D',
+      ),
+    ).toEqual({
+      name: "Table.Sort",
+      step: "Sorted Rows",
+      kind: Language.Ast.NodeKind.RecursivePrimaryExpression,
+    });
+  });
+  it("follows a step that only renames another, and takes parentheses off", async () => {
+    expect(
+      await bound(
+        'let Sorted = Table.Sort(S, {"x"}), Again = (Sorted), D = Table.Distinct(Again, {"k"}) in D',
+      ),
+    ).toMatchObject({ name: "Table.Sort", step: "Sorted" });
+  });
+  it("gives a value written in place with no step", async () => {
+    expect(await bound('Table.Distinct(Table.Sort(S, {"x"}), {"k"})')).toMatchObject({
+      name: "Table.Sort",
+      step: undefined,
+    });
+  });
+  it("stops at a model parameter and at a name nothing defines", async () => {
+    const parameter = await bound(
+      'Table.Distinct(Customers, {"k"})',
+      "Table.Distinct",
+      'expression Customers = "x" meta [IsParameterQuery = true, Type = "Text", IsParameterQueryRequired = true]\n',
+    );
+    expect(parameter).toEqual({
+      name: undefined,
+      step: undefined,
+      kind: Language.Ast.NodeKind.IdentifierExpression,
+    });
+    expect((await bound('Table.Distinct(Nowhere, {"k"})')).kind).toBe(
+      Language.Ast.NodeKind.IdentifierExpression,
+    );
+  });
+  it("stops on a cycle", async () => {
+    expect((await bound('let a = b, b = a, D = Table.Distinct(a, {"k"}) in D')).kind).toBe(
+      Language.Ast.NodeKind.IdentifierExpression,
     );
   });
 });

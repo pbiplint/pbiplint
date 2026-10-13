@@ -1,5 +1,5 @@
 import { Marked, Renderer, type Tokens } from "marked";
-import { LAYER_LABEL, RULE_LAYERS, type RuleLayer } from "../layers.js";
+import { FILTER_LAYERS, LAYER_LABEL, RULE_LAYERS, boxLabel, type RuleLayer } from "../layers.js";
 
 export const SITE = "https://pbiplint.com";
 
@@ -512,10 +512,12 @@ export interface PageOptions {
   path: string;
   /** HTML for the inside of <main>. */
   main: string;
+  /** Module scripts this page loads after the shared nav script, as site paths. */
+  scripts?: string[];
 }
 
 /** The shell every generated page shares. The home page (index.html) carries the same header and footer by hand. */
-export function page({ title, description, path, main }: PageOptions): string {
+export function page({ title, description, path, main, scripts = [] }: PageOptions): string {
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -535,7 +537,7 @@ export function page({ title, description, path, main }: PageOptions): string {
 ${main}
     </main>
     ${FOOTER}
-    <script type="module" src="/src/nav.ts"></script>
+    <script type="module" src="/src/nav.ts"></script>${scripts.map((s) => `\n    <script type="module" src="${escapeHtml(s)}"></script>`).join("")}
   </body>
 </html>
 `;
@@ -666,21 +668,35 @@ export function rulesIndex(
     const items = rows
       .map(
         (m) =>
-          `  <li><a href="/rules/${escapeHtml(m.slug)}/">${escapeHtml(m.title)}</a> <span class="badge ${escapeHtml(m.severity)}">${escapeHtml(m.severity)}</span>${layerBadge(m)}${m.status === "needsLiveModel" ? ' <span class="badge muted">needs a live model</span>' : ""}<br /><span class="summary">${renderInline(m.summary)}</span></li>`,
+          `  <li data-layer="${escapeHtml(m.layer)}"><a href="/rules/${escapeHtml(m.slug)}/">${escapeHtml(m.title)}</a> <span class="badge ${escapeHtml(m.severity)}">${escapeHtml(m.severity)}</span>${layerBadge(m)}${m.status === "needsLiveModel" ? ' <span class="badge muted">needs a live model</span>' : ""}<br /><span class="summary">${renderInline(m.summary)}</span></li>`,
       )
       .join("\n");
     return `<h2 id="${headingId(category)}">${escapeHtml(category)}</h2>\n<ul class="rule-list">\n${items}\n</ul>`;
   }).join("\n");
+  // The Show filter (v3 spec, section 10.2): one box per family the listed rules span, hidden
+  // until rules-filter.ts reveals it, so a reader without the script sees every rule and no
+  // control that does nothing. With one family there is nothing to filter, so there is none.
+  const families = FILTER_LAYERS.filter((l) => metas.some((m) => m.layer === l));
+  const filter =
+    families.length >= 2
+      ? `<fieldset class="filters" id="rules-filter" hidden>
+<legend>Show</legend>
+${families.map((l) => `<label class="filter"><input type="checkbox" value="${l}" checked />${escapeHtml(boxLabel(l))}</label>`).join("\n")}
+<p class="rules-shown" role="status" aria-live="polite"></p>
+</fieldset>
+`
+      : "";
   const main = `<article class="prose">
 <h1>Rules</h1>
 <p>${metas.length} rules: ${sources}. Ranked by severity, then category, then how many objects they hit.</p>
-${sections}
+${filter}${sections}
 </article>`;
   return page({
     title: "Rules · pbiplint",
     description: "Every rule pbiplint checks: what it checks, why it matters, and how to fix it.",
     path: "/rules/",
     main,
+    scripts: filter ? ["/src/rules-filter.ts"] : [],
   });
 }
 

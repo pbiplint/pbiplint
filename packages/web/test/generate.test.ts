@@ -102,6 +102,11 @@ describe("parseFrontmatter errors", () => {
 });
 
 describe("rulePage", () => {
+  it("does not load the rules index's filter script", () => {
+    expect(rulePage(read("hide-foreign-keys"), "hide-foreign-keys").html).not.toContain(
+      "rules-filter.ts",
+    );
+  });
   it("renders the page inside the site shell with the rule's metadata", () => {
     const { html, meta } = rulePage(read("hide-foreign-keys"), "hide-foreign-keys");
     expect(meta).toMatchObject({
@@ -919,6 +924,43 @@ describe("rulesIndex", () => {
     } finally {
       removeTempDir(out);
     }
+  });
+  it("renders the Show filter hidden, one box per family listed, and each row's family", () => {
+    const index = rulesIndex(metas);
+    const fieldset = /<fieldset class="filters" id="rules-filter" hidden>[\s\S]*?<\/fieldset>/.exec(
+      index,
+    )?.[0];
+    expect(fieldset).toBeDefined();
+    expect(fieldset).toContain("<legend>Show</legend>");
+    expect(
+      [...fieldset!.matchAll(/<input type="checkbox" value="([a-z]+)" checked \/>([^<]+)</g)].map(
+        (m) => [m[1], m[2]],
+      ),
+    ).toEqual([
+      ["model", "Model"],
+      ["report", "Report"],
+      ["powerquery", "Power Query"],
+    ]);
+    expect(fieldset).toContain('<p class="rules-shown" role="status" aria-live="polite"></p>');
+    // Every row carries its family, the hook the script hides it by.
+    const rows = [...index.matchAll(/<li data-layer="([a-z]+)">/g)].map((m) => m[1]);
+    expect(rows).toHaveLength(metas.length);
+    expect(new Set(rows)).toEqual(new Set(metas.map((m) => m.layer)));
+    // The filter's script loads on the index, after the shared nav script.
+    expect(index).toContain(
+      '<script type="module" src="/src/nav.ts"></script>\n    <script type="module" src="/src/rules-filter.ts"></script>',
+    );
+  });
+  it("leaves the Power Query box out when no Power Query page is listed, and the filter out with one family", () => {
+    const noPq = rulesIndex(metas.filter((m) => m.layer !== "powerquery"));
+    expect(noPq).toContain('value="report"');
+    expect(noPq).not.toContain('value="powerquery"');
+    const modelOnly = rulesIndex(
+      metas.filter((m) => m.layer === "model" || m.layer === "project"),
+      ["model"],
+    );
+    expect(modelOnly).not.toContain('id="rules-filter"');
+    expect(modelOnly).not.toContain("rules-filter.ts");
   });
   it("sorts with an explicit locale, so the order does not depend on the build machine", () => {
     // Intl.LocalesArgument, not string | string[], because ES2020 widened the parameter and the

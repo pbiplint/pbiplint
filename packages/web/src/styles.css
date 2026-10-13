@@ -506,6 +506,13 @@ button.secondary:hover,
   gap: 6px;
   cursor: pointer;
 }
+/* The rules index's live count, on its own line under the boxes. */
+.rules-shown {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--fg-2);
+  font-size: 13px;
+}
 .gap {
   width: 8px;
   height: 20px;

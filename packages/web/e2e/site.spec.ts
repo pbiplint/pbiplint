@@ -251,8 +251,109 @@ test("the header shows its links in a row on a wide screen and behind a Menu but
   }
 });
 
+test.describe("the rules index's Show filter", () => {
+  const filter = (page: import("@playwright/test").Page) =>
+    page.getByRole("group", { name: "Show" });
+  const box = (page: import("@playwright/test").Page, name: string) =>
+    filter(page).getByRole("checkbox", { name, exact: true });
+  /** Each category heading's state, and whether its list holds a row of the family given. */
+  const headings = (page: import("@playwright/test").Page, layer: string) =>
+    page.locator(".rule-list").evaluateAll(
+      (lists, l) =>
+        lists.map((list) => ({
+          name: list.previousElementSibling!.textContent,
+          shown: !(list.previousElementSibling as HTMLElement).hidden,
+          holds: list.querySelector(`li[data-layer="${l}"]`) !== null,
+        })),
+      layer,
+    );
+
+  test("hides a family's rows and any heading left empty, counts what is shown, and keeps the address", async ({
+    page,
+  }) => {
+    await page.goto("/rules/");
+    await expect(filter(page)).toBeVisible();
+    const total = await page.locator(".rule-list > li").count();
+    const pq = await page.locator('.rule-list > li[data-layer="powerquery"]').count();
+    expect(pq).toBeGreaterThan(0);
+    const status = filter(page).getByRole("status");
+    await expect(status).toHaveText(`Showing ${total} of ${total} rules`);
+    const before = await page.evaluate(() => history.length);
+    await box(page, "Power Query").uncheck();
+    await expect(
+      page.locator('.rule-list > li[data-layer="powerquery"]:not([hidden])'),
+    ).toHaveCount(0);
+    await expect(page.locator(".rule-list > li:not([hidden])")).toHaveCount(total - pq);
+    await expect(status).toHaveText(`Showing ${total - pq} of ${total} rules`);
+    await expect(page).toHaveURL(/\/rules\/\?layer=model,report$/);
+    // Model and Report off too: a project rule hides with them, and so does every heading.
+    await box(page, "Model").uncheck();
+    await box(page, "Report").uncheck();
+    await expect(status).toHaveText(`Showing 0 of ${total} rules`);
+    await expect(page.locator("article h2:not([hidden])")).toHaveCount(0);
+    // Every box checked again: the plain address, and no history entry was added on the way.
+    for (const name of ["Model", "Report", "Power Query"]) await box(page, name).check();
+    await expect(page).toHaveURL(/\/rules\/$/);
+    expect(await page.evaluate(() => history.length)).toBe(before);
+  });
+
+  test("opens on the families the address names, and keeps a deep link's section", async ({
+    page,
+  }) => {
+    await page.goto("/rules/?layer=powerquery#performance");
+    await expect(box(page, "Power Query")).toBeChecked();
+    await expect(box(page, "Model")).not.toBeChecked();
+    await expect(box(page, "Report")).not.toBeChecked();
+    await expect(page.locator(".rule-list > li:not([hidden])")).toHaveCount(
+      await page.locator('.rule-list > li[data-layer="powerquery"]').count(),
+    );
+    for (const h of await headings(page, "powerquery")) expect(h.shown, h.name ?? "").toBe(h.holds);
+    await expect(page).toHaveURL(/\/rules\/\?layer=powerquery#performance$/);
+    // An unknown name among known ones is ignored.
+    await page.goto("/rules/?layer=powerquery,bogus");
+    await expect(box(page, "Power Query")).toBeChecked();
+    await expect(box(page, "Model")).not.toBeChecked();
+  });
+
+  test("opens with every box checked for an address it cannot read", async ({ page }) => {
+    for (const path of ["/rules/?layer=", "/rules/?layer=bogus", "/rules/?layer=POWERQUERY"]) {
+      await page.goto(path);
+      for (const name of ["Model", "Report", "Power Query"])
+        await expect(box(page, name), `${path} ${name}`).toBeChecked();
+    }
+  });
+
+  test("stores nothing in the browser", async ({ page }) => {
+    await page.goto("/rules/");
+    await box(page, "Power Query").uncheck();
+    await box(page, "Model").uncheck();
+    await page.reload();
+    expect(
+      await page.evaluate(() => [localStorage.length, sessionStorage.length, document.cookie]),
+    ).toEqual([0, 0, ""]);
+  });
+
+  test("is reached and used with the keyboard", async ({ page, browserName }) => {
+    await page.goto("/rules/");
+    await box(page, "Model").focus();
+    // WebKit, like Safari by default, moves to a checkbox with Option and Tab.
+    await page.keyboard.press(browserName === "webkit" ? "Alt+Tab" : "Tab");
+    await expect(box(page, "Report")).toBeFocused();
+    await page.keyboard.press("Space");
+    await expect(box(page, "Report")).not.toBeChecked();
+    await expect(page).toHaveURL(/\/rules\/\?layer=model,powerquery$/);
+  });
+});
+
 test.describe("with JavaScript off", () => {
   test.use({ javaScriptEnabled: false, viewport: { width: 360, height: 800 } });
+  test("the rules index lists every rule and shows no filter", async ({ page }) => {
+    await page.goto("/rules/?layer=powerquery");
+    await expect(page.locator("#rules-filter")).toBeHidden();
+    await expect(page.locator(".rule-list > li:visible")).toHaveCount(
+      await page.locator(".rule-list > li").count(),
+    );
+  });
   test("the Menu button still opens and closes the header's links", async ({ page }) => {
     await page.goto("/pipelines/");
     const panel = page.locator(".site-header .nav-panel");

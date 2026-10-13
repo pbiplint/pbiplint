@@ -88,6 +88,7 @@ type ModelCheck = (model: Model, ctx: RuleContext) => RuleFinding[];
  * ruleset description is read only for the reference URLs it carries.
  */
 export function bpaRule(id: string, check: ModelCheck): Rule;
+/** As above, with a spec that says what partly read model stops the rule. */
 export function bpaRule(id: string, spec: BpaRuleSpec, check: ModelCheck): Rule;
 export function bpaRule(id: string, ...args: [ModelCheck] | [BpaRuleSpec, ModelCheck]): Rule {
   const [{ skipWhenModelUnread, layer = "model" }, check] =

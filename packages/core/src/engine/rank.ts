@@ -33,6 +33,11 @@ export interface RankedGroup {
 export const effectiveSeverity = (rule: Rule, config: ResolvedConfig): Severity =>
   config.severity.get(rule.id) ?? rule.policySeverity?.(optionsFor(rule, config)) ?? rule.severity;
 
+/**
+ * What a result says about a rule: its name, category, effective severity under `config`, layer,
+ * and the address of its page. `findings` are the rule's own and matter only to a `project` rule,
+ * whose layer is the one they share.
+ */
 export function summarizeRule(
   rule: Rule,
   config: ResolvedConfig,

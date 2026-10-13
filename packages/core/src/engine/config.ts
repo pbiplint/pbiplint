@@ -26,6 +26,11 @@ export interface ResolvedConfig {
   failOn: Severity | null;
 }
 
+/**
+ * A config that cannot be used: the wrong shape, an unknown key, or an option the rule does not
+ * declare. Its message names the file and the key at fault, and is written to be shown to the
+ * user as it stands, as the CLI and the site do.
+ */
 export class ConfigError extends Error {}
 
 export interface BoundConfig {
@@ -100,6 +105,7 @@ export const SEVERITY_BY_NAME: Record<SeverityName, Severity> = { info: 1, warni
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
 
+/** Whether `v` is already a ResolvedConfig rather than a config file's raw JSON, so `lint` takes either. */
 export function isResolvedConfig(v: unknown): v is ResolvedConfig {
   return (
     isRecord(v) &&
@@ -109,6 +115,12 @@ export function isResolvedConfig(v: unknown): v is ResolvedConfig {
   );
 }
 
+/**
+ * Check a parsed pbiplint.config.json and turn it into a ResolvedConfig, throwing a ConfigError at
+ * the first thing wrong with it. With nothing given, every rule is on at its own severity and
+ * `failOn` is `error`. Rule ids are kept as written and options are not checked against any rule
+ * yet; `bindConfig` does both once the rules are known.
+ */
 export function resolveConfig(raw: unknown = {}): ResolvedConfig {
   if (!isRecord(raw)) throw new ConfigError("pbiplint.config.json must be a JSON object");
   for (const k of Object.keys(raw))

@@ -12,7 +12,13 @@ const body = html
   .slice(html.indexOf("<body>") + 6, html.indexOf("</body>"))
   .replace(/<script[\s\S]*?<\/script>/, "");
 const notFound = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../404.html"), "utf8");
-const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
+// main.ts waits one frame and one task before it lints, so the status line is painted first; a
+// tick waits that out and then the task a run used to need.
+const tick = async (): Promise<void> => {
+  await new Promise((r) => requestAnimationFrame(r));
+  await new Promise((r) => setTimeout(r, 0));
+  await new Promise((r) => setTimeout(r, 0));
+};
 
 /** The hidden words a link that opens in a new tab ends with, in its text. */
 const NOTE = " (opens in a new tab)";

@@ -34,6 +34,10 @@ const sample = fileURLToPath(new URL("../../../examples/messy-sales", import.met
 const rulesDir = fileURLToPath(new URL("../../../rules", import.meta.url));
 // Written by scripts/make-big-report.mjs, which the web server command runs before the build.
 const big = fileURLToPath(new URL("../../../tests/generated/big-report", import.meta.url));
+// Written by scripts/make-big-model.mjs, which the web server command runs before the build.
+const bigModel = fileURLToPath(
+  new URL("../../../tests/generated/big-model/big-model.SemanticModel", import.meta.url),
+);
 
 /** A folder under the OS temp directory, built by `fill` for one test and removed after it. */
 async function withTempFolder(
@@ -181,7 +185,7 @@ test("once the page has loaded, linting makes no request, whatever alphabet the 
       mkdirSync(tables, { recursive: true });
       writeFileSync(
         join(tables, "Продажи.tmdl"),
-        "table Продажи\n\tcolumn Ποσό\n\t\tdataType: double\n\t\tsourceColumn: Ποσό\n",
+        'table Продажи\n\tcolumn Ποσό\n\t\tdataType: double\n\t\tsourceColumn: Ποσό\n\n\tpartition Продажи = m\n\t\tmode: import\n\t\tsource = #table({"Ποσό"}, {{1}})\n',
       );
     },
     async (dir) => {
@@ -347,6 +351,41 @@ test("lints a 300-visual report in under two seconds", async ({ page }) => {
   test.info().annotations.push({ type: "lint-ms", description: String(ms) });
   expect(ms).toBeGreaterThan(0);
   expect(ms).toBeLessThan(2000);
+});
+
+test("lints a model as heavy to parse as the corpus's slowest within its engine's budget, the status painted first", async ({
+  page,
+  browserName,
+}) => {
+  // Every frame's status line, read in requestAnimationFrame, which runs just before the browser
+  // paints: lint holds the main thread for seconds, so a status set but never painted would be
+  // set in vain.
+  await page.evaluate(() => {
+    const seen: string[] = [];
+    (window as unknown as { painted: string[] }).painted = seen;
+    const status = document.getElementById("status")!;
+    const frame = (): void => {
+      if (!status.hidden) seen.push(status.textContent ?? "");
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  });
+  await page.locator("#folder-input").setInputFiles(bigModel);
+  const results = page.locator("#results");
+  await expect(results.locator("h2")).toHaveText(/model, 10 files/, { timeout: 30_000 });
+  // PARSE_ISSUE's name, as the results list it: no M in the model failed to parse.
+  await expect(results).not.toContainText("File could not be fully parsed");
+  const painted = await page.evaluate(() => (window as unknown as { painted: string[] }).painted);
+  expect(painted).toContain("Reading files...");
+  const ms = Number(await results.getAttribute("data-lint-ms"));
+  test.info().annotations.push({ type: "lint-ms", description: String(ms) });
+  expect(ms).toBeGreaterThan(0);
+  // Measured on October 13, 2026: on this model Microsoft's parser takes about 0.8 s in Chromium,
+  // 1.0 s in WebKit, and 6.2 s in Firefox. Firefox's parse stays linear in size (600 rows 70 ms,
+  // 3,000 rows 375 ms), a constant factor of about 7.5 over Chromium, most likely because the
+  // parser awaits at nearly every node. The guard is here to catch a parser that has turned
+  // quadratic, which the 5-second engines still do, so Firefox gets 20 seconds (pb-coord).
+  expect(ms).toBeLessThan(browserName === "firefox" ? 20_000 : 5000);
 });
 
 test("the Choose a folder button opens the browser's file chooser where there is no folder picker", async ({

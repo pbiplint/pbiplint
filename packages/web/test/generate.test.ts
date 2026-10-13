@@ -692,9 +692,22 @@ describe("generateSite", () => {
     expect(reportPages).toHaveLength(26);
     for (const slug of reportPages)
       expect(existsSync(join(out, `rules/${slug}/index.html`)), slug).toBe(true);
-    // The shipped rule is on the Power Query layer with pbiplint's own (v3 spec, section 10.1).
-    expect(metas.filter((m) => m.layer === "powerquery").map((m) => m.slug)).toContain(
+    // The shipped rule and pbiplint's own Power Query rules (v3 spec, sections 9 and 10.1).
+    expect(
+      metas
+        .filter((m) => m.layer === "powerquery")
+        .map((m) => m.slug)
+        .sort(),
+    ).toEqual([
+      "excel-use-headers",
+      "local-drive-path",
       "minimize-power-query-transformations",
+      "odbc-where-connector-exists",
+      "privacy-levels-ignored",
+      "script-in-query",
+    ]);
+    expect(readFileSync(join(out, "rules/local-drive-path/index.html"), "utf8")).toContain(
+      "· built in · Power Query layer · scope: Partition, NamedExpression, Table",
     );
     expect(
       readFileSync(join(out, "rules/minimize-power-query-transformations/index.html"), "utf8"),

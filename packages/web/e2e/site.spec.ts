@@ -16,6 +16,7 @@ const PAGES = [
   "/rules/filters-pane-state/", // a report page whose example runs under a config
   "/rules/ensure-alttext/", // a report page with a visual.json figure
   "/rules/minimize-power-query-transformations/", // the first Power Query page
+  "/rules/local-drive-path/", // pbiplint's own Power Query page, with a quote in When to ignore it
   "/about/",
   "/privacy/",
   "/cli/",

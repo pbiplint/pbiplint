@@ -37,6 +37,36 @@ function lineReader(files: LintFile[]): (file: string, line: number) => string {
   };
 }
 
+/** M's lines as TMDL holds them, where each starts, and where each line the parser counts starts. */
+interface MLines {
+  lines: string[];
+  starts: number[];
+  parserStarts: number[];
+}
+
+function splitM(text: string): MLines {
+  const starts = [0];
+  const parserStarts = [0];
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    if (c === 0x0a) starts.push(i + 1);
+    if (c === 0x0a || c === 0x2028 || c === 0x2029) parserStarts.push(i + 1);
+  }
+  return { lines: text.split("\n"), starts, parserStarts };
+}
+
+/** The index of the last of ascending `xs` at or before `x`; 0 when none is. */
+function lastAtOrBefore(xs: number[], x: number): number {
+  let lo = 0;
+  let hi = xs.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (xs[mid]! <= x) lo = mid;
+    else hi = mid - 1;
+  }
+  return lo;
+}
+
 /** The index of a model with no M, and of a lint with no model. */
 export function emptyMIndex(): MIndex {
   return {
@@ -55,15 +85,18 @@ export function emptyMIndex(): MIndex {
  */
 export async function readM(model: Model, files: LintFile[]): Promise<MIndex> {
   const lineAt = lineReader(files);
-  const mLines = new WeakMap<MQuery, string[]>();
+  const mLines = new WeakMap<MQuery, MLines>();
   const locate = (q: MQuery, at: MPosition): SourceLocation => {
-    let lines = mLines.get(q);
-    if (!lines) mLines.set(q, (lines = q.text.split("\n")));
-    const line = q.valueLine + at.lineNumber;
+    let m = mLines.get(q);
+    if (!m) mLines.set(q, (m = splitM(q.text)));
+    // The parser counts lines as M's lexer breaks them, at \n, U+2028, and U+2029; TMDL breaks
+    // only at \n. Its position becomes a code unit of the whole M, then a place on a TMDL line.
+    const at0 = (m.parserStarts[at.lineNumber] ?? q.text.length) + at.lineCodeUnit;
+    const n = lastAtOrBefore(m.starts, at0);
+    const line = q.valueLine + n;
     // Every M line that is not blank ends where its TMDL line ends (v3 spec, section 6.1).
-    const offset =
-      lineAt(q.file, line).trimEnd().length - (lines[at.lineNumber] ?? "").trimEnd().length;
-    return { file: q.file, line, column: Math.max(0, offset) + at.lineCodeUnit + 1 };
+    const offset = lineAt(q.file, line).trimEnd().length - (m.lines[n] ?? "").trimEnd().length;
+    return { file: q.file, line, column: Math.max(0, offset) + at0 - m.starts[n]! + 1 };
   };
   const queries: MQuery[] = [];
   const add = (

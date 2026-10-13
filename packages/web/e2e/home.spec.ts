@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "./fixtures.js";
+import { fakeSecrets, leaks, SECRETS_FIXTURE } from "../../../tests/support/fake-secrets.js";
 import { setFolder } from "./folder-input.js";
 
 // The home page in a real browser: the inputs, the results, and the behaviours the happy-dom unit
@@ -559,6 +560,42 @@ test("copies the report with each rule's guidance for an AI assistant, from the 
     expect(text).toContain("(BROKEN_FIELD_REFERENCE)\n");
     expect(text).toContain("(AVOID_FLOATING_POINT_DATA_TYPES)\n");
     expect(text).not.toContain("**Fires the rule");
+  }
+});
+
+test("shows, downloads, and copies m-zoo's results with no part of a made-up credential (v3 spec, section 11.3)", async ({
+  page,
+  context,
+  browserName,
+}) => {
+  if (browserName === "chromium")
+    await context.grantPermissions(["clipboard-write", "clipboard-read"]);
+  const secrets = fakeSecrets();
+  expect(secrets.length).toBeGreaterThanOrEqual(6);
+  await setFolder(page.locator("#folder-input"), SECRETS_FIXTURE);
+  const results = page.locator("#results");
+  await expect(results.locator("h2")).toContainText("m-zoo.SemanticModel");
+  await expect(results).toContainText("HARDCODED_SECRET_IN_QUERY");
+  expect(leaks(await page.content(), secrets)).toEqual([]);
+  for (const name of ["Download Markdown", "Download JSON"]) {
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page.getByRole("button", { name }).click(),
+    ]);
+    const text = readFileSync((await download.path())!, "utf8");
+    expect(text).toContain("HARDCODED_SECRET_IN_QUERY");
+    expect(leaks(text, secrets)).toEqual([]);
+  }
+  // Only Chromium lets a test read the clipboard back; the unit test holds the copy's text in every
+  // engine.
+  const copy = page.locator(".export button").nth(1);
+  await expect(copy).toHaveText("Copy for an AI assistant");
+  await copy.click();
+  await expect(copy).toHaveText("Copied");
+  if (browserName === "chromium") {
+    const text = await page.evaluate(() => navigator.clipboard.readText());
+    expect(text).toContain("HARDCODED_SECRET_IN_QUERY");
+    expect(leaks(text, secrets)).toEqual([]);
   }
 });
 

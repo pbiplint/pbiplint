@@ -587,6 +587,8 @@ One test, `packages/core/test/secret-masking.test.ts` with a web and a CLI count
 
 It reads the values from the fixture, so a new fake secret is covered when it is added.
 
+Amended October 13, 2026 (pull request 6): the guard looks for every 8-character run of a value that takes in at least one character of its distinctive part, not only runs inside that part, so a leak of a value's end such as `0002-notreal` fails it too; runs inside the prefix or suffix every value shares are not looked for. The helper is `tests/support/fake-secrets.ts`; the MCP check sits in `packages/cli/test/mcp.test.ts`, beside its client, and an e2e test holds the site in a real browser to it: the page, both downloads, and, in Chromium, the copy for an AI assistant.
+
 ### 11.4 The corpus diff
 
 A throwaway script in the plan's folder (not committed; the corpus is not pbiplint's to commit) lints every corpus model with main and with the branch, and compares each finding by rule, object, file, line, and detail:

@@ -33,8 +33,11 @@ export interface FormatOptions {
 
 const SEVERITY_TAG = { 3: "ERROR", 2: "WARN ", 1: "INFO " } as const;
 
+/** Where a finding is, as editors and terminals link it: `file:line`, or `file:line:column`. */
 export const locationOf = (f: Finding): string =>
-  f.location ? `${f.location.file}:${f.location.line}` : "";
+  f.location
+    ? `${f.location.file}:${f.location.line}${f.location.column === undefined ? "" : `:${f.location.column}`}`
+    : "";
 
 /** "1 rule", "2 rules". Nouns that do not take an s ("info") are written out by the caller. */
 export const plural = (n: number, noun: string): string => `${n} ${noun}${n === 1 ? "" : "s"}`;

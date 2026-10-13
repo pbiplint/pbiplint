@@ -3,6 +3,8 @@ import type { ParsedFile, TmdlNode } from "../tmdl/types.js";
 export interface SourceLocation {
   file: string;
   line: number;
+  /** 1-based, in UTF-16 code units, as SARIF counts columns; set only where a finding has one (M findings). */
+  column?: number;
 }
 
 /** Fields shared by every model object. */

@@ -36,6 +36,7 @@ export {
   formatText,
   layersLine,
   layerTag,
+  locationOf,
   noticeLines,
   plural,
   skippedLine,

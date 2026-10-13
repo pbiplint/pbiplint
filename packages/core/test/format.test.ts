@@ -14,6 +14,7 @@ import {
   formatText,
   FORMATS,
 } from "../src/format/index.js";
+import { locationOf } from "../src/format/text.js";
 import { showControls } from "../src/index.js";
 
 const files = [
@@ -1070,5 +1071,66 @@ describe("the Markdown export and what the input holds", () => {
       "Notice: Bad\\u001b]0;t\\u0007\\u000anext",
     );
     expect(doc.querySelector("p")!.textContent).toMatch(/ \(reason\\u000d\\u000awith a break\)\.$/);
+  });
+});
+
+describe("a finding's column", () => {
+  const withColumn = (r: LintResult): LintResult => {
+    const f = {
+      ...r.groups[0]!.findings[0]!,
+      location: { file: "definition/tables/Sales.tmdl", line: 12, column: 9 },
+    };
+    return {
+      ...r,
+      findings: [f, ...r.findings.slice(1)],
+      groups: [
+        { ...r.groups[0]!, findings: [f, ...r.groups[0]!.findings.slice(1)] },
+        ...r.groups.slice(1),
+      ],
+    };
+  };
+  it("is written file:line:column by locationOf, and file:line without one", () => {
+    expect(
+      locationOf({
+        ruleId: "X",
+        layer: "model",
+        objectType: "Partition",
+        objectName: "P",
+        location: { file: "a.tmdl", line: 3, column: 7 },
+      }),
+    ).toBe("a.tmdl:3:7");
+    expect(
+      locationOf({
+        ruleId: "X",
+        layer: "model",
+        objectType: "Partition",
+        objectName: "P",
+        location: { file: "a.tmdl", line: 3 },
+      }),
+    ).toBe("a.tmdl:3");
+  });
+  it("reaches the text, JSON, SARIF, and Markdown outputs", () => {
+    const r = withColumn(result);
+    expect(formatText(r)).toContain("definition/tables/Sales.tmdl:12:9");
+    expect(formatMarkdown(r)).toContain("definition/tables/Sales.tmdl:12:9");
+    const json = JSON.parse(formatJson(r));
+    expect(json.groups[0].findings[0]).toMatchObject({
+      file: "definition/tables/Sales.tmdl",
+      line: 12,
+      column: 9,
+    });
+    const sarif = JSON.parse(formatSarif(r));
+    expect(sarif.runs[0].results[0].locations[0].physicalLocation.region).toEqual({
+      startLine: 12,
+      startColumn: 9,
+    });
+  });
+  it("is absent from every output for a finding without one, as before", () => {
+    const json = JSON.parse(formatJson(result));
+    for (const g of json.groups) for (const f of g.findings) expect(f).not.toHaveProperty("column");
+    const sarif = JSON.parse(formatSarif(result));
+    for (const res of sarif.runs[0].results)
+      for (const l of res.locations ?? [])
+        expect(l.physicalLocation.region).not.toHaveProperty("startColumn");
   });
 });

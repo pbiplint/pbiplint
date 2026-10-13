@@ -130,6 +130,21 @@ describe("renderResults", () => {
     // The build cannot import core (see CATEGORY_ORDER in pages.ts), so the words are copied there.
     expect(NEW_TAB_NOTE).toBe(PAGES_NEW_TAB_NOTE);
   });
+  it("shows a finding's column after its line in the location cell", () => {
+    const g0 = result.groups[0]!;
+    const f = {
+      ...g0.findings[0]!,
+      location: { file: "definition/tables/Sales.tmdl", line: 12, column: 9 },
+    };
+    const withColumn: LintResult = {
+      ...result,
+      groups: [{ ...g0, findings: [f, ...g0.findings.slice(1)] }, ...result.groups.slice(1)],
+    };
+    renderResults(container, withColumn, { source: "x" });
+    const cell = container.querySelectorAll(`#rule-${g0.rule.slug} tbody tr:first-child td`)[2]!;
+    expect(cell.textContent).toBe("definition/tables/Sales.tmdl:12:9");
+    expect(cell.textContent).toContain(":12:9");
+  });
   it("renders one group per rule with the objects, a page link, and severity and category data", () => {
     renderResults(container, result, { source: "x" });
     const groups = [...container.querySelectorAll<HTMLElement>(".group")];

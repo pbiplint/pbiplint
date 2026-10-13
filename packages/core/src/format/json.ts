@@ -19,7 +19,13 @@ export function formatJson(result: LintResult, options: FormatOptions = {}): str
         objectType: f.objectType,
         objectName: f.objectName,
         ...(f.objectId !== undefined ? { objectId: f.objectId } : {}),
-        ...(f.location ? { file: f.location.file, line: f.location.line } : {}),
+        ...(f.location
+          ? {
+              file: f.location.file,
+              line: f.location.line,
+              ...(f.location.column !== undefined ? { column: f.location.column } : {}),
+            }
+          : {}),
         ...(f.detail !== undefined ? { detail: f.detail } : {}),
       })),
     })),

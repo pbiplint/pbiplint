@@ -1,7 +1,7 @@
 {
   "fixture": "tests/fixtures/m-zoo.SemanticModel",
   "about": "pbiplint's own Power Query rules on m-zoo: rule, object, file, line, column, and detail of every finding. These rules have no Tabular Editor oracle (v3 spec, section 11.1), so this file is pbiplint's own, written in place order and reviewed by hand.",
-  "rules": ["DEFAULT_STEP_NAMES", "DYNAMIC_DATA_SOURCE", "EXCEL_USE_HEADERS", "FIXED_DATE_IN_ROW_FILTER", "HARDCODED_SECRET_IN_QUERY", "HARDCODED_SERVER_NAME", "INCREMENTAL_REFRESH_RANGE_BOUNDS", "KEEP_FIRST_ROWS_LEFT_IN", "LOCAL_DRIVE_PATH", "ODBC_WHERE_CONNECTOR_EXISTS", "PRIVACY_LEVELS_IGNORED", "SCRIPT_IN_QUERY", "SORT_NOT_HELD_FOR_REMOVE_DUPLICATES"],
+  "rules": ["DEFAULT_STEP_NAMES", "DYNAMIC_DATA_SOURCE", "EXCEL_USE_HEADERS", "FIXED_DATE_IN_ROW_FILTER", "HARDCODED_SECRET_IN_QUERY", "HARDCODED_SERVER_NAME", "INCREMENTAL_REFRESH_RANGE_BOUNDS", "KEEP_FIRST_ROWS_LEFT_IN", "LEGACY_EXCEL_FILE", "LOCAL_DRIVE_PATH", "ODBC_WHERE_CONNECTOR_EXISTS", "PRIVACY_LEVELS_IGNORED", "SCRIPT_IN_QUERY", "SORT_NOT_HELD_FOR_REMOVE_DUPLICATES"],
   "findings": [
     { "rule": "LOCAL_DRIVE_PATH", "objectType": "NamedExpression", "object": "DataFolder", "file": "definition/expressions.tmdl", "line": 18, "column": 25, "detail": "query 'DataFolder': the path is on a local drive (C:)" },
     { "rule": "LOCAL_DRIVE_PATH", "objectType": "NamedExpression", "object": "ExportFolder", "file": "definition/expressions.tmdl", "line": 21, "column": 27, "detail": "query 'ExportFolder': the path is on a local drive (D:)" },
@@ -15,6 +15,7 @@
     { "rule": "EXCEL_USE_HEADERS", "objectType": "Partition", "object": "Budget", "file": "definition/tables/Budget.tmdl", "line": 16, "column": 22, "detail": "query 'Budget', step 'OptionHeaders': Excel.Workbook promotes headers in the refreshing machine's culture" },
     { "rule": "LOCAL_DRIVE_PATH", "objectType": "Partition", "object": "Budget", "file": "definition/tables/Budget.tmdl", "line": 16, "column": 51, "detail": "query 'Budget', step 'OptionHeaders': the path is on a local drive (C:)" },
     { "rule": "LOCAL_DRIVE_PATH", "objectType": "Partition", "object": "Budget", "file": "definition/tables/Budget.tmdl", "line": 17, "column": 45, "detail": "query 'Budget', step 'Desktop': the path is on a local drive (C:)" },
+    { "rule": "LEGACY_EXCEL_FILE", "objectType": "Partition", "object": "Budget", "file": "definition/tables/Budget.tmdl", "line": 18, "column": 44, "detail": "query 'Budget', step 'Legacy': the workbook is a legacy .xls file, read through the Access Database Engine" },
     { "rule": "LOCAL_DRIVE_PATH", "objectType": "Partition", "object": "Budget", "file": "definition/tables/Budget.tmdl", "line": 18, "column": 44, "detail": "query 'Budget', step 'Legacy': the path is on a local drive (C:)" },
     { "rule": "DEFAULT_STEP_NAMES", "objectType": "Partition", "object": "Budget", "file": "definition/tables/Budget.tmdl", "line": 20, "column": 6, "detail": "query 'Budget': 1 step keeps its default name, 'Promoted Headers'" },
     { "rule": "SORT_NOT_HELD_FOR_REMOVE_DUPLICATES", "objectType": "Partition", "object": "Customers Inline", "file": "definition/tables/Customers Inline.tmdl", "line": 12, "column": 12, "detail": "query 'Customers Inline': nothing holds the order of the Table.Sort inside it, so the sort may not decide which duplicate is kept" },

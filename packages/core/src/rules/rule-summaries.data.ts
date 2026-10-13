@@ -116,6 +116,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "A report whose pages.json sets no landing page, so it opens on the page that was active when it was last saved, or, when pages.json records no active page either, on the first page.",
   LARGE_TABLES_SHOULD_BE_PARTITIONED:
     "Tables with more than 25 million rows and a single partition. The row count is a statistic of the loaded data, not of the model files, so pbiplint lists this rule but does not run it: it needs statistics that only a live model carries.",
+  LEGACY_EXCEL_FILE:
+    "Power Query queries that read an `.xls` or `.xlsb` workbook, which Power Query opens through the Access Database Engine rather than reading the file itself.",
   "LIMIT_ROW_LEVEL_SECURITY_(RLS)_LOGIC":
     "Tables whose row-level security filter, in any role, calls RIGHT, LEFT, UPPER, LOWER, or FIND.",
   LOCAL_DRIVE_PATH:

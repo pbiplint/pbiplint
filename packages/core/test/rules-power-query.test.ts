@@ -10,6 +10,7 @@ import {
   HARDCODED_SERVER_NAME,
   INCREMENTAL_REFRESH_RANGE_BOUNDS,
   KEEP_FIRST_ROWS_LEFT_IN,
+  LEGACY_EXCEL_FILE,
   LOCAL_DRIVE_PATH,
   ODBC_WHERE_CONNECTOR_EXISTS,
   PRIVACY_LEVELS_IGNORED,
@@ -1066,5 +1067,70 @@ describe("HARDCODED_SERVER_NAME (v3 spec, section 9.14)", () => {
     const tmdl = table("Sales", 'Sql.Database("finance-sql.example", "Warehouse")');
     const [f] = await mFindings(rule, tmdl);
     expect(f?.detail).not.toContain("finance-sql");
+  });
+});
+
+describe("LEGACY_EXCEL_FILE (v3 spec, section 9.17)", () => {
+  const rule = LEGACY_EXCEL_FILE;
+  it("is a built-in Power Query info rule on a query's owner", () => {
+    isPowerQueryRule(rule, 1, "Error Prevention");
+    expect(rule.name).toBe("Legacy Excel workbook");
+    expect(rule.scope).toEqual(["Partition", "NamedExpression", "Table"]);
+  });
+  it("reports an .xls path, on the path", async () => {
+    const tmdl = table(
+      "Budget",
+      "let",
+      '\tSource = Excel.Workbook(File.Contents("C:\\Demo\\Data\\Budget.xls"), null, true)',
+      "in",
+      "\tSource",
+    );
+    expect(await mFindings(rule, tmdl)).toEqual([
+      {
+        objectType: "Partition",
+        objectName: "Budget",
+        location: { file: "inline.tmdl", line: 6, column: 44 },
+        detail:
+          "query 'Budget', step 'Source': the workbook is a legacy .xls file, read through the Access Database Engine",
+      },
+    ]);
+  });
+  it("reads .xlsb in any case, a path held by a step, and one in a parameter once however many queries read it", async () => {
+    const tmdl =
+      'expression BudgetFile = "C:\\Demo\\Data\\Budget.XLS" meta [IsParameterQuery = true, Type = "Text", IsParameterQueryRequired = true]\n\n' +
+      table("A", "Excel.Workbook(File.Contents(BudgetFile), null, true)") +
+      table("B", "Excel.Workbook(File.Contents(BudgetFile), null, true)") +
+      table(
+        "C",
+        "let",
+        '\tPath = "C:\\Demo\\Data\\Forecast.xlsb",',
+        "\tBinary = File.Contents(Path),",
+        "\tSource = Excel.Workbook(Binary, null, true)",
+        "in",
+        "\tSource",
+      );
+    expect((await mFindings(rule, tmdl)).map((f) => [f.objectName, f.detail])).toEqual([
+      [
+        "BudgetFile",
+        "query 'BudgetFile': the workbook is a legacy .xls file, read through the Access Database Engine",
+      ],
+      [
+        "C",
+        "query 'C', step 'Path': the workbook is a legacy .xlsb file, read through the Access Database Engine",
+      ],
+    ]);
+  });
+  it("leaves alone .xlsx and .xlsm, a workbook from the web, and a path built at run time", async () => {
+    const tmdl = table(
+      "Budget",
+      "let",
+      '\tA = Excel.Workbook(File.Contents("C:\\Demo\\Data\\Budget.xlsx"), null, true),',
+      '\tB = Excel.Workbook(File.Contents("C:\\Demo\\Data\\Budget.xlsm"), null, true),',
+      '\tC = Excel.Workbook(Web.Contents("https://files.example.com/Budget.xls"), null, true),',
+      '\tD = Excel.Workbook(File.Contents(Text.Combine({"C:\\Demo\\Data\\", "Budget.xls"})), null, true)',
+      "in",
+      "\tD",
+    );
+    expect(await mFindings(rule, tmdl)).toEqual([]);
   });
 });

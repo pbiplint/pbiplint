@@ -506,6 +506,7 @@ The shipped rule (`packages/core/src/rules/microsoft-bpa/tables.ts:106`) matches
 - **Fix route:** open the workbook in Excel and save it as an Excel Workbook (`.xlsx`); then in Desktop, **Transform data**, select the query's **Source** step, open its settings, and point it at the new file.
 - **Fixtures:** `Excel.Workbook(File.Contents("C:\Demo\Data\Budget.xls"), null, true)` (fires, and `LOCAL_DRIVE_PATH` fires on the same literal); a `.xlsx` path (does not).
 - **Corpus:** 8 calls in 1 model (1 repository).
+- **Amended October 13, 2026** (pull request 6): the finding is on the path, once however many workbook calls read it, as `HARDCODED_SECRET_IN_QUERY` reports a parameter (section 9.5). The corpus's 8 calls read one parameter's path, so the corpus count is 1 finding in 1 model (1 repository).
 
 ## 10. The site
 

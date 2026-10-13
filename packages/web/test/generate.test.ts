@@ -685,8 +685,8 @@ describe("generateSite", () => {
   it("writes every rule page, the index, the about page, and the sitemap", () => {
     const out = tempDir("site");
     const metas = generateSite({ outDir: out });
-    expect(metas.length).toBe(119);
-    expect(readdirSync(join(out, "rules")).filter((d) => d !== "index.html").length).toBe(119);
+    expect(metas.length).toBe(120);
+    expect(readdirSync(join(out, "rules")).filter((d) => d !== "index.html").length).toBe(120);
     // Every report page publishes, each one on the site's rule-id link map with the rest.
     const reportPages = metas.filter((m) => m.layer === "report").map((m) => m.slug);
     expect(reportPages).toHaveLength(26);
@@ -707,6 +707,7 @@ describe("generateSite", () => {
       "hardcoded-server-name",
       "incremental-refresh-range-bounds",
       "keep-first-rows-left-in",
+      "legacy-excel-file",
       "local-drive-path",
       "minimize-power-query-transformations",
       "odbc-where-connector-exists",
@@ -729,19 +730,19 @@ describe("generateSite", () => {
     );
     const index = readFileSync(join(out, "rules/index.html"), "utf8");
     expect(index).toContain(
-      "119 rules: 66 rules ported from Microsoft's Best Practice Analyzer ruleset and verified against Tabular Editor, 5 listed but not run because they need statistics only a live model has, 11 report rules ported from PBI Inspector's base rules by Nat Van Gulck, and 37 built into pbiplint.",
+      "120 rules: 66 rules ported from Microsoft's Best Practice Analyzer ruleset and verified against Tabular Editor, 5 listed but not run because they need statistics only a live model has, 11 report rules ported from PBI Inspector's base rules by Nat Van Gulck, and 38 built into pbiplint.",
     );
     expect(index).toContain('<h2 id="error-prevention">Error Prevention</h2>');
     expect((index.match(/needs a live model/g) ?? []).length).toBe(5);
     // The layer column is on: every row names its layer.
     expect(
       (index.match(/<span class="layer (model|report|project|powerquery)">/g) ?? []).length,
-    ).toBe(119);
+    ).toBe(120);
     for (const m of metas) expect(index).toContain(`href="/rules/${m.slug}/"`);
     const summaries = [...index.matchAll(/<span class="summary">([\s\S]*?)<\/span>/g)].map(
       (m) => m[1]!,
     );
-    expect(summaries.length).toBe(119);
+    expect(summaries.length).toBe(120);
     expect(summaries.some((s) => s.includes("<code>///</code>"))).toBe(true);
     expect(summaries.filter((s) => s.includes("`"))).toEqual([]);
     const parseIssue = readFileSync(join(out, "rules/parse-issue/index.html"), "utf8");
@@ -801,7 +802,7 @@ describe("generateSite", () => {
     expect(sitemap).toContain("<loc>https://pbiplint.com/pipelines/</loc>");
     // The home page, the About, Privacy Promise, CLI, and pipelines pages, the rules index, and one
     // entry per rule page.
-    expect((sitemap.match(/<loc>/g) ?? []).length).toBe(6 + 119);
+    expect((sitemap.match(/<loc>/g) ?? []).length).toBe(6 + 120);
     // llms.txt points an assistant at the skill first, then at the pages.
     const llms = readFileSync(join(out, "public/llms.txt"), "utf8");
     expect(llms.startsWith("# pbiplint\n\n> ")).toBe(true);
@@ -1039,7 +1040,7 @@ describe("rulesIndex", () => {
     );
     // The count takes the added page into the clause for its source.
     expect(index).toContain(
-      "120 rules: 66 rules ported from Microsoft's Best Practice Analyzer ruleset and verified against Tabular Editor, 5 listed but not run because they need statistics only a live model has, 12 report rules ported from PBI Inspector's base rules by Nat Van Gulck, and 37 built into pbiplint.",
+      "121 rules: 66 rules ported from Microsoft's Best Practice Analyzer ruleset and verified against Tabular Editor, 5 listed but not run because they need statistics only a live model has, 12 report rules ported from PBI Inspector's base rules by Nat Van Gulck, and 38 built into pbiplint.",
     );
     // With no report page published, the report clause is left out rather than read as zero.
     expect(
@@ -1048,7 +1049,7 @@ describe("rulesIndex", () => {
         ["model"],
       ),
     ).toContain(
-      "93 rules: 66 rules ported from Microsoft's Best Practice Analyzer ruleset and verified against Tabular Editor, 5 listed but not run because they need statistics only a live model has, and 22 built into pbiplint.",
+      "94 rules: 66 rules ported from Microsoft's Best Practice Analyzer ruleset and verified against Tabular Editor, 5 listed but not run because they need statistics only a live model has, and 23 built into pbiplint.",
     );
   });
   it("badges a Power Query rule and counts a ported one with Microsoft's ruleset", () => {
@@ -1066,7 +1067,7 @@ describe("rulesIndex", () => {
     expect(index).toContain(`${metas.length + 1} rules: 67 rules ported from Microsoft's`);
     // A built-in Power Query rule is counted with the other built-in rules.
     const builtin = rulesIndex([...metas, { ...pq, status: "builtin" }]);
-    expect(builtin).toContain("and 38 built into pbiplint.");
+    expect(builtin).toContain("and 39 built into pbiplint.");
   });
   it("refuses a rule no clause of the count names, rather than printing a count its clauses do not sum to", () => {
     // Each clause counts one status and source; a page that falls in none would be in the total at

@@ -863,6 +863,41 @@ export const HARDCODED_SERVER_NAME = pbiplintRule({
     }),
 });
 
+// An .xls or .xlsb workbook, read through the Access Database Engine, which the service's cloud
+// cannot install (v3 spec, section 9.17). Only a path the resolver can read is checked.
+export const LEGACY_EXCEL_FILE = pbiplintRule({
+  id: "LEGACY_EXCEL_FILE",
+  name: "Legacy Excel workbook",
+  category: "Error Prevention",
+  severity: 1,
+  scope: ["Partition", "NamedExpression", "Table"],
+  layer: "powerquery",
+  check: (_project, { indexes: { m } }) => {
+    const reported = new Set<string>();
+    return m.queries.flatMap((q) =>
+      calls(q).flatMap((c) => {
+        const file =
+          c.name === "Excel.Workbook" && c.args[0] && callOf(boundValue(m, q, c.args[0]).node);
+        const path =
+          file && file.name === "File.Contents" && file.args[0] && heldText(m, q, file.args[0]);
+        const ext = path && /\.(xlsb?)$/i.exec(path.value.trim());
+        if (!path || !ext) return [];
+        const key = `${path.query.kind}:${path.query.name}:${path.node.id}`;
+        if (reported.has(key)) return [];
+        reported.add(key);
+        return [
+          mFinding(
+            m,
+            path.query,
+            path.node,
+            `the workbook is a legacy .${ext[1]!.toLowerCase()} file, read through the Access Database Engine`,
+          ),
+        ];
+      }),
+    );
+  },
+});
+
 /**
  * pbiplint's own Power Query rules (v3 spec, section 9): each reads the M a model's queries hold,
  * or the file's Power Query options, and reports on the model's files.
@@ -881,4 +916,5 @@ export const powerQueryRules: Rule[] = [
   DYNAMIC_DATA_SOURCE,
   HARDCODED_SECRET_IN_QUERY,
   HARDCODED_SERVER_NAME,
+  LEGACY_EXCEL_FILE,
 ];

@@ -81,6 +81,7 @@ A model that is never published needs no refresh in the service, and one refresh
 - `EXCEL_USE_HEADERS` reports a workbook read with its headers promoted by the reader, often one read from a local path.
 - `DYNAMIC_DATA_SOURCE` reports a path built at run time, from the rows or by a function call, which the service cannot refresh at all.
 - `HARDCODED_SERVER_NAME` reports a database server written into a query, which a parameter holds in the same way.
+- `LEGACY_EXCEL_FILE` reports an `.xls` or `.xlsb` workbook, often one read from a local path.
 
 ## Links
 

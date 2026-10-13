@@ -1,7 +1,7 @@
 {
   "fixture": "tests/fixtures/m-zoo.SemanticModel",
   "about": "pbiplint's own Power Query rules on m-zoo: rule, object, file, line, column, and detail of every finding. These rules have no Tabular Editor oracle (v3 spec, section 11.1), so this file is pbiplint's own, written in place order and reviewed by hand.",
-  "rules": ["DEFAULT_STEP_NAMES", "DYNAMIC_DATA_SOURCE", "EXCEL_USE_HEADERS", "FIXED_DATE_IN_ROW_FILTER", "HARDCODED_SECRET_IN_QUERY", "INCREMENTAL_REFRESH_RANGE_BOUNDS", "KEEP_FIRST_ROWS_LEFT_IN", "LOCAL_DRIVE_PATH", "ODBC_WHERE_CONNECTOR_EXISTS", "PRIVACY_LEVELS_IGNORED", "SCRIPT_IN_QUERY", "SORT_NOT_HELD_FOR_REMOVE_DUPLICATES"],
+  "rules": ["DEFAULT_STEP_NAMES", "DYNAMIC_DATA_SOURCE", "EXCEL_USE_HEADERS", "FIXED_DATE_IN_ROW_FILTER", "HARDCODED_SECRET_IN_QUERY", "HARDCODED_SERVER_NAME", "INCREMENTAL_REFRESH_RANGE_BOUNDS", "KEEP_FIRST_ROWS_LEFT_IN", "LOCAL_DRIVE_PATH", "ODBC_WHERE_CONNECTOR_EXISTS", "PRIVACY_LEVELS_IGNORED", "SCRIPT_IN_QUERY", "SORT_NOT_HELD_FOR_REMOVE_DUPLICATES"],
   "findings": [
     { "rule": "LOCAL_DRIVE_PATH", "objectType": "NamedExpression", "object": "DataFolder", "file": "definition/expressions.tmdl", "line": 18, "column": 25, "detail": "query 'DataFolder': the path is on a local drive (C:)" },
     { "rule": "LOCAL_DRIVE_PATH", "objectType": "NamedExpression", "object": "ExportFolder", "file": "definition/expressions.tmdl", "line": 21, "column": 27, "detail": "query 'ExportFolder': the path is on a local drive (D:)" },
@@ -44,6 +44,8 @@
     { "rule": "INCREMENTAL_REFRESH_RANGE_BOUNDS", "objectType": "Partition", "object": "Sales", "file": "definition/tables/Sales.tmdl", "line": 17, "column": 85, "detail": "query 'Sales', step 'Filtered Rows': both RangeStart and RangeEnd include the boundary, so a row on it lands in two partitions" },
     { "rule": "SCRIPT_IN_QUERY", "objectType": "Partition", "object": "Scores", "file": "definition/tables/Scores.tmdl", "line": 16, "column": 29, "detail": "query 'Scores', step 'Run Python script': Python.Execute refreshes only through a personal gateway on a machine with Python installed" },
     { "rule": "SCRIPT_IN_QUERY", "objectType": "Partition", "object": "Scores", "file": "definition/tables/Scores.tmdl", "line": 17, "column": 24, "detail": "query 'Scores', step 'Run R script': R.Execute refreshes only through a personal gateway on a machine with R installed" },
+    { "rule": "HARDCODED_SERVER_NAME", "objectType": "Partition", "object": "Server Literal", "file": "definition/tables/Server Literal.tmdl", "line": 15, "column": 15, "detail": "query 'Server Literal', step 'Source': Sql.Database names its server as text (2 calls in this query); a parameter would hold it" },
+    { "rule": "HARDCODED_SERVER_NAME", "objectType": "Partition", "object": "Server Step", "file": "definition/tables/Server Step.tmdl", "line": 16, "column": 15, "detail": "query 'Server Step', step 'Source': Sql.Database names its server as text; a parameter would hold it" },
     { "rule": "DEFAULT_STEP_NAMES", "objectType": "Partition", "object": "Top Rows", "file": "definition/tables/Top Rows.tmdl", "line": 17, "column": 6, "detail": "query 'Top Rows': 1 step keeps its default name, 'Kept First Rows'" },
     { "rule": "KEEP_FIRST_ROWS_LEFT_IN", "objectType": "Partition", "object": "Top Rows", "file": "definition/tables/Top Rows.tmdl", "line": 17, "column": 27, "detail": "query 'Top Rows', step 'Kept First Rows': only the first 1000 rows load" }
   ]

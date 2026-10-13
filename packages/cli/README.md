@@ -124,9 +124,9 @@ than the one beside it.
 
 The Power Query layer is read inside the model: the M behind each table's partitions, the shared
 expressions, and incremental refresh policies, with Microsoft's Power Query parser, and the file's
-Power Query options. 13 rules check it, `MINIMIZE_POWER_QUERY_TRANSFORMATIONS` and 12 of pbiplint's
+Power Query options. 14 rules check it, `MINIMIZE_POWER_QUERY_TRANSFORMATIONS` and 13 of pbiplint's
 own; a finding in M names the query and the step as Power Query's editor shows them, at
-`file:line:column`. 118 rules in all, 36 of them built into pbiplint; `pbiplint rules` lists them
+`file:line:column`. 119 rules in all, 37 of them built into pbiplint; `pbiplint rules` lists them
 with their layer.
 
 The same linter runs in the browser at https://pbiplint.com. Source, issues, and contributing:

@@ -7,6 +7,7 @@ import {
   EXCEL_USE_HEADERS,
   FIXED_DATE_IN_ROW_FILTER,
   HARDCODED_SECRET_IN_QUERY,
+  HARDCODED_SERVER_NAME,
   INCREMENTAL_REFRESH_RANGE_BOUNDS,
   KEEP_FIRST_ROWS_LEFT_IN,
   LOCAL_DRIVE_PATH,
@@ -985,5 +986,85 @@ describe("HARDCODED_SECRET_IN_QUERY (v3 spec, sections 9.5 and 11.3)", () => {
     const details = (await mFindings(rule, tmdl)).map((f) => f.detail ?? "");
     expect(details).toHaveLength(2);
     for (const d of details) expect(d).not.toMatch(/fixture|notreal|0113|0114/);
+  });
+});
+
+describe("HARDCODED_SERVER_NAME (v3 spec, section 9.14)", () => {
+  const rule = HARDCODED_SERVER_NAME;
+  it("is a built-in Power Query info rule on a query's owner", () => {
+    isPowerQueryRule(rule, 1, "Maintenance");
+    expect(rule.name).toBe("Server name written into the query");
+    expect(rule.scope).toEqual(["Partition", "NamedExpression", "Table"]);
+  });
+  it("reports a query once, on its first call, with the number of calls", async () => {
+    const tmdl = table(
+      "Sales",
+      "let",
+      '\tSource = Sql.Database("finance-sql.example", "Warehouse"),',
+      '\tArchive = Sql.Database("finance-sql.example", "Archive"),',
+      '\tOrders = Table.Combine({Source{[Schema = "dbo", Item = "Orders"]}[Data], Archive{[Schema = "dbo", Item = "Orders"]}[Data]})',
+      "in",
+      "\tOrders",
+    );
+    expect(await mFindings(rule, tmdl)).toEqual([
+      {
+        objectType: "Partition",
+        objectName: "Sales",
+        location: { file: "inline.tmdl", line: 6, column: 15 },
+        detail:
+          "query 'Sales', step 'Source': Sql.Database names its server as text (2 calls in this query); a parameter would hold it",
+      },
+    ]);
+  });
+  it("reads a server held by a step, and every connector spec 9.14 names", async () => {
+    const tmdl = [
+      [
+        "A",
+        'let Server = "finance-sql.example", Source = Sql.Database(Server, "Warehouse") in Source',
+      ],
+      ["B", 'Sql.Databases("finance-sql.example")'],
+      ["C", 'PostgreSQL.Database("pg.example", "sales")'],
+      ["D", 'MySQL.Database("mysql.example", "sales")'],
+      ["E", 'Oracle.Database("oracle.example")'],
+      ["F", 'Snowflake.Databases("account.example", "WAREHOUSE")'],
+      ["G", 'AnalysisServices.Database("powerbi://api.example.com/v1.0/myorg/Sales", "Sales")'],
+      ["H", 'AnalysisServices.Databases("as.example")'],
+      ["I", 'DB2.Database("db2.example", "SALES")'],
+      ["J", 'Teradata.Database("teradata.example")'],
+    ]
+      .map(([name, m]) => table(name!, m!))
+      .join("");
+    expect((await mFindings(rule, tmdl)).map((f) => f.detail)).toEqual([
+      "query 'A', step 'Source': Sql.Database names its server as text; a parameter would hold it",
+      "query 'B': Sql.Databases names its server as text; a parameter would hold it",
+      "query 'C': PostgreSQL.Database names its server as text; a parameter would hold it",
+      "query 'D': MySQL.Database names its server as text; a parameter would hold it",
+      "query 'E': Oracle.Database names its server as text; a parameter would hold it",
+      "query 'F': Snowflake.Databases names its server as text; a parameter would hold it",
+      "query 'G': AnalysisServices.Database names its server as text; a parameter would hold it",
+      "query 'H': AnalysisServices.Databases names its server as text; a parameter would hold it",
+      "query 'I': DB2.Database names its server as text; a parameter would hold it",
+      "query 'J': Teradata.Database names its server as text; a parameter would hold it",
+    ]);
+  });
+  it("leaves alone a server from a parameter or a call, the database argument, and other connectors", async () => {
+    const tmdl =
+      'expression ServerName = "finance-sql.example" meta [IsParameterQuery = true, Type = "Text", IsParameterQueryRequired = true]\n\n' +
+      table(
+        "Sales",
+        "let",
+        '\tSource = Sql.Database(ServerName, "Warehouse"),',
+        '\tBuilt = Sql.Database(Text.Lower(ServerName), "Warehouse"),',
+        '\tHana = SapHana.Database("hana.example"),',
+        '\tOdbc = Odbc.DataSource("dsn=Sales")',
+        "in",
+        "\tOdbc",
+      );
+    expect(await mFindings(rule, tmdl)).toEqual([]);
+  });
+  it("never prints the server's name", async () => {
+    const tmdl = table("Sales", 'Sql.Database("finance-sql.example", "Warehouse")');
+    const [f] = await mFindings(rule, tmdl);
+    expect(f?.detail).not.toContain("finance-sql");
   });
 });

@@ -827,6 +827,42 @@ export const HARDCODED_SECRET_IN_QUERY = pbiplintRule({
   },
 });
 
+/** The database connectors whose first argument names the server (v3 spec, section 9.14). */
+const SERVER_CONNECTOR =
+  /^(?:Sql\.Databases?|PostgreSQL\.Database|MySQL\.Database|Oracle\.Database|Snowflake\.Databases|AnalysisServices\.Databases?|DB2\.Database|Teradata\.Database)$/;
+
+// Once per query, on its first connector that names its server as text, written in place or held
+// by a step (v3 spec, section 9.14). A server from a model parameter is the fix. The server's name
+// is not printed: an internal host name need not travel with an export.
+export const HARDCODED_SERVER_NAME = pbiplintRule({
+  id: "HARDCODED_SERVER_NAME",
+  name: "Server name written into the query",
+  category: "Maintenance",
+  severity: 1,
+  scope: ["Partition", "NamedExpression", "Table"],
+  layer: "powerquery",
+  check: (_project, { indexes: { m } }) =>
+    m.queries.flatMap((q) => {
+      const named = calls(q).filter(
+        (c) =>
+          SERVER_CONNECTOR.test(c.name) &&
+          c.args[0] !== undefined &&
+          textValue(boundValue(m, q, c.args[0]).node) !== undefined,
+      );
+      const [first] = named;
+      if (!first) return [];
+      const count = named.length > 1 ? ` (${named.length} calls in this query)` : "";
+      return [
+        mFinding(
+          m,
+          q,
+          first.node,
+          `${first.name} names its server as text${count}; a parameter would hold it`,
+        ),
+      ];
+    }),
+});
+
 /**
  * pbiplint's own Power Query rules (v3 spec, section 9): each reads the M a model's queries hold,
  * or the file's Power Query options, and reports on the model's files.
@@ -844,4 +880,5 @@ export const powerQueryRules: Rule[] = [
   DEFAULT_STEP_NAMES,
   DYNAMIC_DATA_SOURCE,
   HARDCODED_SECRET_IN_QUERY,
+  HARDCODED_SERVER_NAME,
 ];

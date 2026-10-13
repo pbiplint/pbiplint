@@ -91,6 +91,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Measures, calculated columns, and calculation items whose DAX fixes a year or a date, and date tables whose CALENDAR ends on a fixed date.",
   HARDCODED_SECRET_IN_QUERY:
     "Credentials written into Power Query queries as text: a key, token, or password in a web request's headers or `Query` record, in a web address, as a Bearer token, or in an ODBC or OLE DB connection string.",
+  HARDCODED_SERVER_NAME:
+    "Power Query queries that name a database server as text in a connector such as `Sql.Database`, rather than reading it from a parameter, reported once per query.",
   HARDCODED_YEAR_IN_FILTER:
     "Filters in the Filters pane, on a visual, a page, or all pages, that hold a year column to fixed years: years picked in Basic filtering, a year set with Advanced filtering's is, years kept up to one with is less than or is less than or equal to, and a range between two years.",
   HIDDEN_VISUAL_WITH_FIELDS:

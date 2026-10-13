@@ -84,6 +84,7 @@ A model that is never published, or never refreshed in the service, can build it
 ## Related rules
 
 - `LOCAL_DRIVE_PATH` reports a fixed path on a local drive; this rule reports an address read from the rows or built at run time.
+- `HARDCODED_SERVER_NAME` reports a server written as text; a parameter is the fix for both rules.
 
 ## Links
 

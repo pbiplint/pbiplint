@@ -1,7 +1,7 @@
 {
   "fixture": "tests/fixtures/m-zoo.SemanticModel",
   "about": "pbiplint's own Power Query rules on m-zoo: rule, object, file, line, column, and detail of every finding. These rules have no Tabular Editor oracle (v3 spec, section 11.1), so this file is pbiplint's own, written in place order and reviewed by hand.",
-  "rules": ["EXCEL_USE_HEADERS", "INCREMENTAL_REFRESH_RANGE_BOUNDS", "KEEP_FIRST_ROWS_LEFT_IN", "LOCAL_DRIVE_PATH", "ODBC_WHERE_CONNECTOR_EXISTS", "PRIVACY_LEVELS_IGNORED", "SCRIPT_IN_QUERY", "SORT_NOT_HELD_FOR_REMOVE_DUPLICATES"],
+  "rules": ["EXCEL_USE_HEADERS", "FIXED_DATE_IN_ROW_FILTER", "INCREMENTAL_REFRESH_RANGE_BOUNDS", "KEEP_FIRST_ROWS_LEFT_IN", "LOCAL_DRIVE_PATH", "ODBC_WHERE_CONNECTOR_EXISTS", "PRIVACY_LEVELS_IGNORED", "SCRIPT_IN_QUERY", "SORT_NOT_HELD_FOR_REMOVE_DUPLICATES"],
   "findings": [
     { "rule": "LOCAL_DRIVE_PATH", "objectType": "NamedExpression", "object": "DataFolder", "file": "definition/expressions.tmdl", "line": 18, "column": 25, "detail": "query 'DataFolder': the path is on a local drive (C:)" },
     { "rule": "LOCAL_DRIVE_PATH", "objectType": "NamedExpression", "object": "ExportFolder", "file": "definition/expressions.tmdl", "line": 21, "column": 27, "detail": "query 'ExportFolder': the path is on a local drive (D:)" },
@@ -15,6 +15,7 @@
     { "rule": "SORT_NOT_HELD_FOR_REMOVE_DUPLICATES", "objectType": "Partition", "object": "Customers Inline", "file": "definition/tables/Customers Inline.tmdl", "line": 12, "column": 12, "detail": "query 'Customers Inline': nothing holds the order of the Table.Sort inside it, so the sort may not decide which duplicate is kept" },
     { "rule": "LOCAL_DRIVE_PATH", "objectType": "Partition", "object": "Customers Latest", "file": "definition/tables/Customers Latest.tmdl", "line": 14, "column": 42, "detail": "query 'Customers Latest', step 'Source': the path is on a local drive (C:)" },
     { "rule": "SORT_NOT_HELD_FOR_REMOVE_DUPLICATES", "objectType": "Partition", "object": "Customers Latest", "file": "definition/tables/Customers Latest.tmdl", "line": 18, "column": 30, "detail": "query 'Customers Latest', step 'Removed Duplicates': nothing holds the order of step 'Sorted Rows', so the sort may not decide which duplicate is kept" },
+    { "rule": "FIXED_DATE_IN_ROW_FILTER", "objectType": "Partition", "object": "Fixed Dates", "file": "definition/tables/Fixed Dates.tmdl", "line": 16, "column": 71, "detail": "query 'Fixed Dates', step 'Filtered Rows': rows end at a fixed date, December 31, 2025" },
     { "rule": "LOCAL_DRIVE_PATH", "objectType": "Partition", "object": "Local Paths", "file": "definition/tables/Local Paths.tmdl", "line": 15, "column": 28, "detail": "query 'Local Paths', step 'Local': the path is on a local drive (C:)" },
     { "rule": "ODBC_WHERE_CONNECTOR_EXISTS", "objectType": "Partition", "object": "Odbc Orders", "file": "definition/tables/Odbc Orders.tmdl", "line": 15, "column": 17, "detail": "query 'Odbc Orders', step 'Redshift': the ODBC connection names the Amazon Redshift driver; Power BI has an Amazon Redshift connector" },
     { "rule": "LOCAL_DRIVE_PATH", "objectType": "Partition", "object": "Orders Files", "file": "definition/tables/Orders Files.tmdl", "line": 15, "column": 16, "detail": "query 'Orders Files', step 'Archive': the path is on a local drive (C:)" },

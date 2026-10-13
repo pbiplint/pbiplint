@@ -3,6 +3,7 @@ import { lint } from "../src/engine/lint.js";
 import { buildIndexes } from "../src/index/build.js";
 import {
   EXCEL_USE_HEADERS,
+  FIXED_DATE_IN_ROW_FILTER,
   INCREMENTAL_REFRESH_RANGE_BOUNDS,
   KEEP_FIRST_ROWS_LEFT_IN,
   LOCAL_DRIVE_PATH,
@@ -563,5 +564,79 @@ describe("INCREMENTAL_REFRESH_RANGE_BOUNDS (v3 spec, section 9.4)", () => {
       `table Sales\n\tpartition Sales = m\n\t\tmode: import\n\t\tsource =\n${m.map((l) => `\t\t\t\t${l}`).join("\n")}\n\n` +
       `\trefreshPolicy\n\t\tpolicyType: basic\n\t\tsourceExpression =\n${m.map((l) => `\t\t\t\t${l}`).join("\n")}\n`;
     expect((await mFindings(rule, tmdl)).map((f) => f.objectType)).toEqual(["Partition"]);
+  });
+});
+
+describe("FIXED_DATE_IN_ROW_FILTER (v3 spec, section 9.16)", () => {
+  const rule = FIXED_DATE_IN_ROW_FILTER;
+  /** A Sales partition filtered with `condition`. */
+  const filtered = (condition: string, extra = ""): string =>
+    extra +
+    table(
+      "Sales",
+      "let",
+      '\tSource = #table(type table [#"Order Date" = date], {}),',
+      `\t#"Filtered Rows" = Table.SelectRows(Source, each ${condition})`,
+      "in",
+      '\t#"Filtered Rows"',
+    );
+  it("is a built-in Power Query info rule on a query's owner", () => {
+    isPowerQueryRule(rule, 1, "Maintenance");
+    expect(rule.name).toBe("Fixed date in a row filter");
+    expect(rule.scope).toEqual(["Partition", "NamedExpression", "Table"]);
+  });
+  it("reports a fixed end on the date, written long form", async () => {
+    expect(await mFindings(rule, filtered("[Order Date] <= #date(2025, 12, 31)"))).toEqual([
+      {
+        objectType: "Partition",
+        objectName: "Sales",
+        location: { file: "inline.tmdl", line: 7, column: 71 },
+        detail: "query 'Sales', step 'Filtered Rows': rows end at a fixed date, December 31, 2025",
+      },
+    ]);
+  });
+  it("reads <, =, the date first, #datetime, and #datetimezone with a negative offset", async () => {
+    const details = async (condition: string) =>
+      (await mFindings(rule, filtered(condition))).map((f) => f.detail!.split(": ")[1]);
+    expect(await details("[Order Date] < #datetime(2026, 1, 1, 0, 0, 0)")).toEqual([
+      "rows end at a fixed date, January 1, 2026",
+    ]);
+    expect(await details("[Month] = #date(2026, 3, 1) or [Month] = #date(2026, 3, 31)")).toEqual([
+      "rows match a fixed date, March 1, 2026",
+      "rows match a fixed date, March 31, 2026",
+    ]);
+    expect(await details("#datetimezone(2025, 6, 30, 0, 0, 0, -5, 0) >= [Order Date]")).toEqual([
+      "rows end at a fixed date, June 30, 2025",
+    ]);
+  });
+  it("leaves alone a fixed start, a date left out with <>, a date from a parameter or from now, and a filter on the refresh range", async () => {
+    expect(await mFindings(rule, filtered("[Order Date] >= #date(2020, 1, 1)"))).toEqual([]);
+    expect(await mFindings(rule, filtered("[Order Date] <> #date(1900, 1, 1)"))).toEqual([]);
+    expect(await mFindings(rule, filtered("[Order Date] <= #date(EndYear, 12, 31)"))).toEqual([]);
+    expect(
+      await mFindings(rule, filtered("[Order Date] <= Date.From(DateTime.LocalNow())")),
+    ).toEqual([]);
+    const parameters =
+      'expression RangeStart = #datetime(2024, 1, 1, 0, 0, 0) meta [IsParameterQuery = true, Type = "DateTime", IsParameterQueryRequired = true]\n\n';
+    expect(
+      await mFindings(
+        rule,
+        filtered("[Order Date] >= RangeStart and [Order Date] < #date(2030, 1, 1)", parameters),
+      ),
+    ).toEqual([]);
+  });
+  it("leaves alone a fixed date outside a row filter, and a table partitioned by hand", async () => {
+    const column = table(
+      "Sales",
+      "let",
+      '\tSource = #table(type table [#"Order Date" = date], {}),',
+      '\tFlagged = Table.AddColumn(Source, "Old", each [Order Date] < #date(2025, 1, 1))',
+      "in",
+      "\tFlagged",
+    );
+    expect(await mFindings(rule, column)).toEqual([]);
+    const slice = (year: number) =>
+      `\tpartition 'Sales ${year}' = m\n\t\tmode: import\n\t\tsource = Table.SelectRows(S, each [Order Date] >= #date(${year}, 1, 1) and [Order Date] <= #date(${year}, 12, 31))\n`;
+    expect(await mFindings(rule, `table Sales\n${slice(2024)}${slice(2025)}`)).toEqual([]);
   });
 });

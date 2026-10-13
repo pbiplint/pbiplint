@@ -79,6 +79,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Tables, measures, hierarchies, calculated columns, calculated tables, and calculation groups whose first character has an upper case form and is not upper case.",
   FIX_REFERENTIAL_INTEGRITY_VIOLATIONS:
     "Relationships where the many side holds key values that do not exist on the one side. The count of offending rows is a statistic of the loaded data, not of the model files, so pbiplint lists this rule but does not run it: it needs statistics that only a live model carries.",
+  FIXED_DATE_IN_ROW_FILTER:
+    "Power Query row filters that end at, or match, a date written into the query: a `Table.SelectRows` condition that compares a column with `<`, `<=`, or `=` to a `#date`, `#datetime`, or `#datetimezone` of fixed numbers.",
   "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS":
     "Visible columns whose name starts with Is and whose type is whole number, and visible columns whose name ends with the word Flag after a space and whose type is not text.",
   HARDCODED_PERIOD_IN_DAX:

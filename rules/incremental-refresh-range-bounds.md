@@ -86,6 +86,7 @@ A column that can never hold a value equal to a boundary, such as a timestamp th
 ## Related rules
 
 - `LARGE_TABLES_SHOULD_BE_PARTITIONED` asks for incremental refresh on a large table; this rule checks the filter that incremental refresh depends on.
+- `FIXED_DATE_IN_ROW_FILTER` reports a row filter that ends at a fixed date, and leaves a filter on `RangeStart` or `RangeEnd` to this rule.
 
 ## Links
 

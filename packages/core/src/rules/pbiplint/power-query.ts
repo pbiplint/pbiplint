@@ -3,6 +3,7 @@ import {
   callOf,
   calls,
   identifierName,
+  isWithin,
   nodesOfKind,
   parentOf,
   textLiterals,
@@ -12,10 +13,12 @@ import {
 import { boundValue, resolve } from "../../m/resolve.js";
 import type { MIndex, MQuery } from "../../m/types.js";
 import { tableRef } from "../../model/names.js";
+import type { Partition } from "../../model/types.js";
 import { finding } from "../helpers.js";
 import { mFinding } from "../m-helpers.js";
 import type { Rule } from "../types.js";
 import { pbiplintRule } from "./define.js";
+import { longDate } from "./periods.js";
 
 type Node = Language.Ast.TNode;
 const Kind = Language.Ast.NodeKind;
@@ -391,6 +394,102 @@ export const INCREMENTAL_REFRESH_RANGE_BOUNDS = pbiplintRule({
     }),
 });
 
+/** The constructors of a fixed date. */
+const DATE_CONSTRUCTORS: ReadonlySet<string> = new Set(["#date", "#datetime", "#datetimezone"]);
+
+/** A whole number written in place, with a sign if it has one. */
+function wholeNumber(n: Node): number | undefined {
+  const v = unwrap(n);
+  if (v.kind === Kind.UnaryExpression) {
+    const inner = numberLiteral(v.typeExpression);
+    const signs = v.operators.elements.map((o) => o.constantKind as string);
+    if (inner === undefined || signs.some((s) => s !== "-" && s !== "+")) return undefined;
+    return signs.filter((s) => s === "-").length % 2 ? -inner : inner;
+  }
+  const value = numberLiteral(v);
+  return value !== undefined && Number.isInteger(value) ? value : undefined;
+}
+
+/** A `#date`, `#datetime`, or `#datetimezone` of numbers written in place, as the day it names. */
+function fixedDate(n: Node): string | undefined {
+  const c = callOf(unwrap(n));
+  if (!c || !DATE_CONSTRUCTORS.has(c.name) || c.args.length < 3) return undefined;
+  const parts = c.args.map(wholeNumber);
+  if (parts.some((p) => p === undefined)) return undefined;
+  const [year, month, day] = parts as number[];
+  return month! >= 1 && month! <= 12 && day! >= 1 && day! <= 31
+    ? longDate(year!, month!, day!)
+    : undefined;
+}
+
+/**
+ * What a filter does with a fixed date, by the operator read as "column, operator, date". A date
+ * left out with `<>`, such as a placeholder or a holiday, does not go stale and is not read.
+ */
+const FIXED_DATE_USE: Readonly<Record<string, string>> = {
+  "<": "rows end at a fixed date",
+  "<=": "rows end at a fixed date",
+  "=": "rows match a fixed date",
+};
+
+/** Whether a filter's condition reads the model's RangeStart or RangeEnd anywhere. */
+function readsRange(m: MIndex, q: MQuery, condition: Node): boolean {
+  return nodesOfKind(q, Kind.IdentifierExpression).some(
+    (n) => isWithin(q, n, condition) && rangeParameterOf(m, q, n) !== undefined,
+  );
+}
+
+/**
+ * A partition of a table with more than one M partition: a slice of the table cut by hand, whose
+ * fixed range is the point.
+ */
+function isHandPartition(q: MQuery): boolean {
+  if (q.kind !== "partition") return false;
+  const p = q.owner as Partition;
+  return p.table.partitions.filter((x) => x.sourceType === "m").length > 1;
+}
+
+// A row filter whose end, or equality, is a fixed date goes stale without an error (v3 spec,
+// section 9.16, amended), as HARDCODED_PERIOD_IN_DAX says of DAX. A fixed start is normal history,
+// and a filter on the incremental refresh range and a table partitioned by hand are left alone.
+export const FIXED_DATE_IN_ROW_FILTER = pbiplintRule({
+  id: "FIXED_DATE_IN_ROW_FILTER",
+  name: "Fixed date in a row filter",
+  category: "Maintenance",
+  severity: 1,
+  scope: ["Partition", "NamedExpression", "Table"],
+  layer: "powerquery",
+  check: (_project, { indexes: { m } }) =>
+    m.queries
+      .filter((q) => !isHandPartition(q))
+      .flatMap((q) => {
+        const reported = new Set<number>();
+        return calls(q).flatMap((c) => {
+          const condition = c.args[1];
+          if (c.name !== "Table.SelectRows" || !condition || readsRange(m, q, condition)) return [];
+          return nodesOfKind(q, Kind.RelationalExpression, Kind.EqualityExpression).flatMap(
+            (node) => {
+              if (
+                (node.kind !== Kind.RelationalExpression &&
+                  node.kind !== Kind.EqualityExpression) ||
+                !isWithin(q, node, condition)
+              )
+                return [];
+              const onLeft = fixedDate(node.left);
+              const onRight = fixedDate(node.right);
+              if ((onLeft === undefined) === (onRight === undefined)) return [];
+              const op = node.operatorConstant.constantKind as string;
+              const use = FIXED_DATE_USE[onRight ? op : (FLIPPED[op] ?? op)];
+              const date = unwrap(onRight ? node.right : node.left);
+              if (!use || reported.has(date.id)) return [];
+              reported.add(date.id);
+              return [mFinding(m, q, date, `${use}, ${onRight ?? onLeft}`)];
+            },
+          );
+        });
+      }),
+});
+
 /**
  * pbiplint's own Power Query rules (v3 spec, section 9): each reads the M a model's queries hold,
  * or the file's Power Query options, and reports on the model's files.
@@ -404,4 +503,5 @@ export const powerQueryRules: Rule[] = [
   SORT_NOT_HELD_FOR_REMOVE_DUPLICATES,
   KEEP_FIRST_ROWS_LEFT_IN,
   INCREMENTAL_REFRESH_RANGE_BOUNDS,
+  FIXED_DATE_IN_ROW_FILTER,
 ];

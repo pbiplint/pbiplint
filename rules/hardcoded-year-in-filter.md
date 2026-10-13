@@ -146,6 +146,7 @@ Often the better move is a name that says so. A page whose name, or a visual who
 
 - `HARDCODED_PERIOD_IN_DAX` reports the same problem in DAX: a year or a date fixed in a measure, a calculated column, or a date table.
 - `SLICER_SELECTION_SAVED` reports a slicer saved with a selection, a year picked in one among them.
+- `FIXED_DATE_IN_ROW_FILTER` reports the same problem in Power Query: a row filter that ends at a fixed date, so the model never loads what comes after it.
 
 ## Links
 

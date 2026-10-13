@@ -76,6 +76,7 @@ export {
   tableRef,
 } from "./model/names.js";
 export type * from "./model/types.js";
+export { parseM, type MParse, type MPosition } from "./m/parse.js";
 export { buildReport, KNOWN_SCHEMAS, literal } from "./pbir/build.js";
 export {
   escapePointer,

@@ -6,6 +6,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { GERMAN_PROBE } from "../../core/build/m-parser-build.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const bundle = process.argv[2] ?? join(here, "../dist/pbiplint.mjs");
@@ -48,5 +49,9 @@ if (notAllowed.length) {
   );
 }
 if (globals.length) console.error(`CLI bundle references network APIs: ${globals.join(", ")}`);
-if (notAllowed.length || globals.length) process.exit(1);
+// Not a network check, but this is the one check that reads the built CLI: the M parser ships with
+// its English messages only (v3 spec, section 3.2).
+const german = code.includes(GERMAN_PROBE);
+if (german) console.error("CLI bundle holds the M parser's German messages");
+if (notAllowed.length || globals.length || german) process.exit(1);
 console.log("CLI bundle makes no network request");

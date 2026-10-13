@@ -19,6 +19,7 @@ import {
   withLearnLinks,
 } from "../src/results/render.js";
 import { exportForAssistant } from "../src/results/export.js";
+import { LAYER_LABEL } from "../src/layers.js";
 import { SAMPLE_CONFIG, SAMPLE_FILES } from "../src/sample.js";
 
 /** The sample as the page lints it: both parts, under the sample's own config. */
@@ -627,7 +628,7 @@ describe("renderResults", () => {
       const tag = g.querySelector("summary .layer")!;
       expect(tag.previousElementSibling!.classList.contains("badge")).toBe(true);
       expect(tag.nextElementSibling!.className).toBe("name");
-      expect(tag.textContent).toBe(g.dataset.layer);
+      expect(tag.textContent).toBe(LAYER_LABEL[g.dataset.layer as keyof typeof LAYER_LABEL]);
     }
     // The whole row, in order: badge, layer tag, name, count.
     expect(
@@ -705,6 +706,58 @@ describe("renderResults", () => {
     expect(group.hidden).toBe(false);
     model!.checked = false;
     applyFilters(container);
+    expect(group.hidden).toBe(true);
+  });
+  /** The sample with one group moved to another layer: the sample has no Power Query group yet. */
+  const relabelled = (r: LintResult, layers: Record<string, Rule["layer"]>): LintResult => ({
+    ...r,
+    groups: r.groups.map((g) =>
+      layers[g.rule.id] ? { ...g, rule: { ...g.rule, layer: layers[g.rule.id]! } } : g,
+    ),
+  });
+
+  it("offers a Power Query box beside Model and Report, tags its groups Power Query, and hides only them", () => {
+    renderResults(container, relabelled(result, { BROKEN_FIELD_REFERENCE: "powerquery" }), {
+      source: "x",
+    });
+    const group = container.querySelector<HTMLElement>("#rule-broken-field-reference")!;
+    expect(group.dataset.layer).toBe("powerquery");
+    const tag = group.querySelector("summary .layer")!;
+    expect(tag.className).toBe("layer powerquery");
+    expect(tag.textContent).toBe("Power Query");
+    const boxes = [...container.querySelectorAll<HTMLInputElement>('input[data-filter="layer"]')];
+    expect(boxes.map((b) => b.value)).toEqual(["model", "report", "powerquery"]);
+    expect(boxes.map((b) => b.parentElement!.textContent)).toEqual([
+      "Model",
+      "Report",
+      "Power Query",
+    ]);
+    uncheck("layer:powerquery");
+    for (const g of container.querySelectorAll<HTMLElement>(".group"))
+      expect(g.hidden, g.id).toBe(g.dataset.layer === "powerquery");
+  });
+
+  it("offers the boxes for a model and Power Query run with no report", async () => {
+    const modelOnly = await lint(SAMPLE_FILES.filter((f) => f.path.endsWith(".tmdl")));
+    const first = modelOnly.groups[0]!.rule.id;
+    renderResults(container, relabelled(modelOnly, { [first]: "powerquery" }), { source: "x" });
+    const boxes = [...container.querySelectorAll<HTMLInputElement>('input[data-filter="layer"]')];
+    expect(boxes.map((b) => b.value)).toEqual(["model", "powerquery"]);
+  });
+
+  it("shows a project group while Model or Report is checked, and not for Power Query alone", () => {
+    renderResults(
+      container,
+      relabelled(result, {
+        BROKEN_FIELD_REFERENCE: "project",
+        [result.groups.find((g) => g.rule.layer === "model")!.rule.id]: "powerquery",
+      }),
+      { source: "x" },
+    );
+    const group = container.querySelector<HTMLElement>("#rule-broken-field-reference")!;
+    uncheck("layer:model");
+    expect(group.hidden).toBe(false);
+    uncheck("layer:report");
     expect(group.hidden).toBe(true);
   });
   it("renders diagnostics as notices after the input notes", async () => {
@@ -1056,6 +1109,25 @@ describe("a link to a finding group", () => {
     follow(link());
     expect(group(id).hidden).toBe(false);
     expect(boxStates()).toEqual({ ...before, "severity:3": true });
+  });
+
+  it("checks the Power Query box again for a hidden Power Query group, and nothing else", () => {
+    const mixed: LintResult = {
+      ...result,
+      groups: result.groups.map((g) =>
+        g.rule.id === "BROKEN_FIELD_REFERENCE"
+          ? { ...g, rule: { ...g.rule, layer: "powerquery" } }
+          : g,
+      ),
+    };
+    const id = "rule-broken-field-reference";
+    renderResults(container, mixed, { source: "x" });
+    uncheck("layer:powerquery", "layer:model");
+    expect(group(id).hidden).toBe(true);
+    follow(container.querySelector('.fix-first li > a[href="#rule-broken-field-reference"]')!);
+    expect(group(id).hidden).toBe(false);
+    expect(boxStates()["layer:powerquery"]).toBe(true);
+    expect(boxStates()["layer:model"]).toBe(false);
   });
 
   it("leaves the filters alone for a rule page link, and for a click that opens a new tab", () => {

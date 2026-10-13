@@ -30,7 +30,11 @@ describe("microsoft-bpa pack", () => {
       expect(r.scope.length, r.id).toBeGreaterThan(0);
       expect(r.name.startsWith("["), r.id).toBe(false);
       expect(CATEGORY_ORDER).toContain(r.category);
-      expect(r.layer, r.id).toBe("model");
+      // MINIMIZE_POWER_QUERY_TRANSFORMATIONS reads M, so it sits on the Power Query layer (v3 spec,
+      // section 9.7); it still needs only the model.
+      expect(r.layer, r.id).toBe(
+        r.id === "MINIMIZE_POWER_QUERY_TRANSFORMATIONS" ? "powerquery" : "model",
+      );
       expect(r.needs, r.id).toEqual(["model"]);
     }
   });

@@ -111,7 +111,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   MEASURES_USING_TIME_INTELLIGENCE_AND_MODEL_IS_USING_DIRECT_QUERY:
     "Measures and calculation items that call a time intelligence function, in a model where at least one table is in DirectQuery mode.",
   MINIMIZE_POWER_QUERY_TRANSFORMATIONS:
-    "Power Query partitions whose M text contains Table.Combine, Table.Join, Table.NestedJoin, Table.AddColumn, Table.Group, Table.Sort, Table.Pivot, Table.Unpivot, Table.UnpivotOtherColumns, Table.Distinct, a native SQL query, or an OLE DB or ODBC query.",
+    "Power Query partitions whose M names Table.Combine, Table.Join, Table.NestedJoin, Table.AddColumn, Table.Group, Table.Sort, Table.Pivot, Table.Unpivot, Table.UnpivotOtherColumns, Table.Distinct, Value.NativeQuery, OleDb.Query, or Odbc.Query, or gives a database connector a native SQL query in its `Query` option.",
   MODEL_SHOULD_HAVE_A_DATE_TABLE:
     "Models with no table that defines a calendar, and none that has the data category Time and a DateTime column marked as the key, which is what Mark as date table sets.",
   MODEL_USING_DIRECT_QUERY_AND_NO_AGGREGATIONS:

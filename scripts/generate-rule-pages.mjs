@@ -20,34 +20,38 @@ for (const rule of defaultRules) {
     rule.status === "builtin" ? [] : [rule.layer === "report" ? INSPECTOR_URL : RULESET_URL];
   // A live-model rule never runs, so it has no example to show and no finding to ignore.
   const runs = rule.status !== "needsLiveModel";
-  // A model rule's example is TMDL; a report or project rule's is the report JSON it stands for.
-  const example =
-    rule.layer === "model"
-      ? [
-          "```tmdl fires",
-          "TODO: the smallest TMDL that fires the rule",
-          "```",
-          "",
-          "```tmdl fixed",
-          "TODO: the same TMDL with the fix applied",
-          "```",
-        ]
-      : [
-          "```pbir fires visual.json",
-          '{ "TODO": "the smallest report JSON that fires the rule" }',
-          "```",
-          "",
-          "```pbir fixed visual.json",
-          '{ "TODO": "the same JSON with the fix applied" }',
-          "```",
-        ];
-  // The fix route follows the files the rule reads: a model rule's can be in Power Query, the
-  // source, or the TMDL file as well as Desktop; a report or project rule's starts in Power BI
-  // Desktop, and its file route is a JSON edit Desktop keeps.
+  // A model or Power Query rule's example is TMDL; a report or project rule's is the report JSON
+  // it stands for.
+  const tmdl = rule.layer === "model" || rule.layer === "powerquery";
+  const example = tmdl
+    ? [
+        "```tmdl fires",
+        "TODO: the smallest TMDL that fires the rule",
+        "```",
+        "",
+        "```tmdl fixed",
+        "TODO: the same TMDL with the fix applied",
+        "```",
+      ]
+    : [
+        "```pbir fires visual.json",
+        '{ "TODO": "the smallest report JSON that fires the rule" }',
+        "```",
+        "",
+        "```pbir fixed visual.json",
+        '{ "TODO": "the same JSON with the fix applied" }',
+        "```",
+      ];
+  // The fix route follows the files the rule reads: a Power Query rule's starts in Power BI
+  // Desktop's Power Query editor; a model rule's can be in Power Query, the source, or the TMDL
+  // file as well as Desktop; a report or project rule's starts in Power BI Desktop, and its file
+  // route is a JSON edit Desktop keeps.
   const fixPrompt =
-    rule.layer === "model"
-      ? "TODO: a route that needs no third-party tool: Power BI Desktop, Power Query, the source, or the TMDL file. Name the Desktop route and the TMDL property where both exist."
-      : "TODO: a route that needs no third-party tool: the Power BI Desktop route first, then an edit to the report JSON that Desktop keeps when it next saves the file. Name both where both exist.";
+    rule.layer === "powerquery"
+      ? "TODO: a route that needs no third-party tool: Transform data in Power BI Desktop, the query, and the step in Applied steps first; then the source; then the partition's or expression's M in the TMDL file."
+      : rule.layer === "model"
+        ? "TODO: a route that needs no third-party tool: Power BI Desktop, Power Query, the source, or the TMDL file. Name the Desktop route and the TMDL property where both exist."
+        : "TODO: a route that needs no third-party tool: the Power BI Desktop route first, then an edit to the report JSON that Desktop keeps when it next saves the file. Name both where both exist.";
   const lines = [
     "---",
     `id: ${rule.id}`,

@@ -60,7 +60,7 @@ for translations, and for decimal columns' format strings, four of them taking t
 Tabular Editor 3's built-in rules or Tabular Editor's community rule files and checked against
 Tabular Editor. The report rules are the 11 base rules of PBI Inspector by Nat Van Gulck, ported and
 verified against fab-inspector's command line, and pbiplint's own rules for the report and for the
-model and report together. A port keeps its source's quirks on purpose, apart from eleven documented
+model and report together. A port keeps its source's quirks on purpose, apart from twelve documented
 deviations from the Microsoft ruleset and six from PBI Inspector, and each rule's page documents
 them. A column whose TMDL names no type, as Power BI Desktop saves most calculated columns, is left
 out of the thirteen ported rules that test a column's type, where Tabular Editor reads the type

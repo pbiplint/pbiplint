@@ -5,6 +5,9 @@
   --brand-blue-soft: #4f9de8;
   --brand-teal: #00a9a5;
   --brand-teal-soft: #3fc7c3;
+  /* The Power Query layer's tag, told from the model, report, and project tags. #223's light
+     palette needs its own darker step for this token. */
+  --layer-powerquery: #b392f0;
   --canvas: #0a0e1a;
   --surface-1: #11172a;
   --surface-2: #18203a;
@@ -503,6 +506,13 @@ button.secondary:hover,
   gap: 6px;
   cursor: pointer;
 }
+/* The rules index's live count, on its own line under the boxes. */
+.rules-shown {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--fg-2);
+  font-size: 13px;
+}
 .gap {
   width: 8px;
   height: 20px;
@@ -603,7 +613,8 @@ button.secondary:hover,
 /* Which layer a rule or a group belongs to: an outlined tag beside the severity badge. A model tag
    is the plain outline and a report tag teal. A project tag, for a rule whose findings fall on
    both parts, is blue and dashed, so it is told from a model tag by its outline as well as its
-   colour and its word. */
+   colour and its word. A Power Query tag, for a rule that reads the M in a model's files, is
+   violet and dotted, so it too is told apart by its outline as well as its colour and its words. */
 .layer {
   display: inline-block;
   font-size: 10px;
@@ -625,6 +636,11 @@ button.secondary:hover,
   border-style: dashed;
   border-color: var(--brand-blue-soft);
   color: var(--brand-blue-soft);
+}
+.layer.powerquery {
+  border-style: dotted;
+  border-color: var(--layer-powerquery);
+  color: var(--layer-powerquery);
 }
 /* The same phrase on every row, so it reads as the secondary link it is beside the rule's own
    name, and never breaks across the separator before it. It keeps the link colour and the

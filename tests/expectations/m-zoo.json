@@ -3,6 +3,30 @@
   "oracle": "Tabular Editor CLI 0.7.1.2 with BPARules.json sha256 ddb9cff4c2a0611a6467e2559d38319d9867381998066473ffa1e11c2d360392",
   "captured": "2026-10-13",
   "skipRules": {},
+  "deviations": {
+    "MINIMIZE_POWER_QUERY_TRANSFORMATIONS": [
+      "pbiplint reads the partition's M with Microsoft's Power Query parser, so a native SQL query in a database connector's `Query` option counts however it is written (in lower case, after a comment or a line break, as `WITH`, `DECLARE`, or `EXEC`, or with spaces around the equals sign), and a function name counts only where the M names it, never inside a comment or a text literal. Tabular Editor matches the M text, so it misses such a native query and reports a partition whose only match is in a comment.",
+      "A transformation also counts where Tabular Editor's text match, which looks for the name and its opening parenthesis together, does not see it: written with a space before the parenthesis, as `Table.Group (`, or passed as a function value, as in `List.Transform(tables, Table.Distinct)`, so pbiplint reports some partitions that Tabular Editor does not.",
+      "A `Query` field given to any other connector, such as a DMV query like `SELECT * FROM $System.TMSCHEMA_TABLES` given to `AnalysisServices.Database`, or a query given to `AmazonRedshift.Database` or `Odbc.DataSource`, does not count, while Tabular Editor's text match reports it when it is written as `[Query=\"SELECT`, so Tabular Editor reports some partitions that pbiplint does not."
+    ]
+  },
+  "ours": {
+    "MINIMIZE_POWER_QUERY_TRANSFORMATIONS": [
+      "Budget",
+      "Customers Inline",
+      "Customers Latest",
+      "Default Steps",
+      "Fixed Dates",
+      "Native Lowercase",
+      "Odbc Orders",
+      "Orders Web",
+      "Sales Files",
+      "Scores",
+      "Server Literal",
+      "Sort Held",
+      "Top Rows Kept"
+    ]
+  },
   "findings": {
     "AVOID_FLOATING_POINT_DATA_TYPES": [
       "'Budget'[Amount]",

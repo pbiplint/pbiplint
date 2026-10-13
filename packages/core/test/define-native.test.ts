@@ -26,6 +26,8 @@ describe("pbiplintRule", () => {
       description: "X",
     });
     expect(pbiplintRule({ ...spec, layer: "report" }).needs).toEqual(["report"]);
+    // A Power Query rule reads the M in the model's files, so it needs the model.
+    expect(pbiplintRule({ ...spec, layer: "powerquery" }).needs).toEqual(["model"]);
   });
   it("takes the needs a rule declares over the ones its layer implies", () => {
     expect(pbiplintRule({ ...spec, layer: "report", needs: ["model", "report"] })).toMatchObject({

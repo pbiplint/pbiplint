@@ -1,9 +1,13 @@
+import { Language } from "@microsoft/powerquery-parser";
+import { calls, identifierName, nodeOf, unwrap } from "../../m/ast.js";
+import { emptyMIndex } from "../../m/read.js";
+import { resolve } from "../../m/resolve.js";
+import type { MIndex, MQuery } from "../../m/types.js";
 import { isAutoDateTable } from "../../model/names.js";
-import type { Table } from "../../model/types.js";
+import type { Partition, Table } from "../../model/types.js";
 import {
   allColumns,
   allMeasures,
-  allPartitions,
   allTablePermissions,
   dataType,
   escapeRegExp,
@@ -103,32 +107,107 @@ export const PARTITION_NAME_SHOULD_MATCH_TABLE_NAME_FOR_SINGLE_PARTITION_TABLES 
       .map(finding.table),
 );
 
-const POWER_QUERY_PATTERNS = [
-  "Table.Combine(",
-  "Table.Join(",
-  "Table.NestedJoin(",
-  "Table.AddColumn(",
-  "Table.Group(",
-  "Table.Sort(",
-  "Table.Pivot(",
-  "Table.Unpivot(",
-  "Table.UnpivotOtherColumns(",
-  "Table.Distinct(",
-  '[Query="SELECT',
+const Kind = Language.Ast.NodeKind;
+
+/** The functions whose work the source could often do instead, and the native query functions. */
+const TRANSFORMATIONS: ReadonlySet<string> = new Set([
+  "Table.Combine",
+  "Table.Join",
+  "Table.NestedJoin",
+  "Table.AddColumn",
+  "Table.Group",
+  "Table.Sort",
+  "Table.Pivot",
+  "Table.Unpivot",
+  "Table.UnpivotOtherColumns",
+  "Table.Distinct",
   "Value.NativeQuery",
   "OleDb.Query",
   "Odbc.Query",
-];
+]);
 
+/**
+ * The database connectors whose options record's `Query` field is a native query. Web.Contents'
+ * `Query` holds a web request's parameters, and AnalysisServices.Database's holds DAX, MDX, or a
+ * DMV query, so neither is here.
+ */
+const NATIVE_QUERY_CONNECTORS: ReadonlySet<string> = new Set([
+  "Sql.Database",
+  "Sql.Databases",
+  "Oracle.Database",
+  "PostgreSQL.Database",
+  "MySQL.Database",
+  "Snowflake.Databases",
+  "DB2.Database",
+  "Teradata.Database",
+  "SapHana.Database",
+  "GoogleBigQuery.Database",
+]);
+
+/**
+ * An options argument that is, or names, a record written in place with a `Query` field. A name is
+ * followed to its value through `let` steps, record fields, and the model's other queries, a `let`
+ * standing for what its `in` returns; a function's parameter, a name nothing defines, and anything
+ * computed are not followed. Each node is visited once, so a cycle ends the search.
+ */
+function hasQueryField(
+  m: MIndex,
+  q: MQuery,
+  node: Language.Ast.TNode,
+  seen: Set<string> = new Set(),
+): boolean {
+  const n = unwrap(node);
+  const key = `${q.kind}:${q.name}:${n.id}`;
+  if (seen.has(key)) return false;
+  seen.add(key);
+  if (n.kind === Kind.RecordExpression || n.kind === Kind.RecordLiteral)
+    return n.content.elements.some((csv) => identifierName(csv.node.key.literal) === "Query");
+  if (n.kind === Kind.LetExpression) return hasQueryField(m, q, n.expression, seen);
+  if (n.kind !== Kind.IdentifierExpression) return false;
+  const r = resolve(m, q, n);
+  if (r.kind === "value") return hasQueryField(m, q, r.node, seen);
+  if (r.kind === "query" && r.query.ast) return hasQueryField(m, r.query, r.query.ast, seen);
+  return false;
+}
+
+/**
+ * What makes a partition's query one MINIMIZE_POWER_QUERY_TRANSFORMATIONS reports, sorted: each
+ * transformation the M names, called or passed as a function value, and `<connector> Query` for a
+ * database connector given a native query in its options record. Empty when the M has neither, or
+ * did not parse. `m` is the model's M, so a named options record held in another query is found;
+ * without it only the query's own names are followed. Read from the parsed M, so a name in a
+ * comment or a text literal does not count: a documented deviation from Tabular Editor's text
+ * match (v3 spec, section 9.7).
+ */
+export function powerQueryTransformations(
+  q: MQuery,
+  m: MIndex = { ...emptyMIndex(), queries: [q] },
+): string[] {
+  const found = new Set<string>();
+  for (const id of q.nodeIdMapCollection?.idsByNodeKind.get(Kind.IdentifierExpression) ?? []) {
+    const n = nodeOf(q, id);
+    if (n?.kind !== Kind.IdentifierExpression) continue;
+    const name = identifierName(n.identifier.literal);
+    if (TRANSFORMATIONS.has(name)) found.add(name);
+  }
+  for (const c of calls(q))
+    if (NATIVE_QUERY_CONNECTORS.has(c.name) && c.args.some((a) => hasQueryField(m, q, a)))
+      found.add(`${c.name} Query`);
+  return [...found].sort();
+}
+
+// Read from Microsoft's parser rather than the M text: a native query counts however its SQL is
+// written, and a name in a comment or a text literal does not. A documented deviation, and a
+// partition whose M does not parse is left to PARSE_ISSUE.
 export const MINIMIZE_POWER_QUERY_TRANSFORMATIONS = bpaRule(
   "MINIMIZE_POWER_QUERY_TRANSFORMATIONS",
-  (m) =>
-    allPartitions(m)
+  { layer: "powerquery" },
+  (_model, ctx) =>
+    ctx.indexes.m.queries
       .filter(
-        (p) =>
-          p.sourceType === "m" && POWER_QUERY_PATTERNS.some((s) => (p.source ?? "").includes(s)),
+        (q) => q.kind === "partition" && powerQueryTransformations(q, ctx.indexes.m).length > 0,
       )
-      .map(finding.partition),
+      .map((q) => finding.partition(q.owner as Partition)),
 );
 
 // A model file pbiplint could not fully read may hold the aggregation table.

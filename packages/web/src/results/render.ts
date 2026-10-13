@@ -23,6 +23,7 @@ import {
   exportMarkdown,
   type ExportFile,
 } from "./export.js";
+import { boxLabel, FILTER_LAYERS, LAYER_LABEL, layerShown } from "../layers.js";
 
 export interface RenderOptions {
   /**
@@ -120,6 +121,7 @@ export function withLearnLinks(text: string): (string | HTMLAnchorElement)[] {
 }
 
 const SEVERITIES: readonly Severity[] = [3, 2, 1];
+/** The file families, for the heading's file counts. The filter's families are FILTER_LAYERS. */
 const LAYERS: readonly LayerName[] = ["model", "report"];
 const pagePath = (slug: string): string => `/rules/${slug}/`;
 
@@ -270,8 +272,8 @@ export function renderResults(
 /**
  * Shows a group a filter hid and opens it. Only the boxes that hide it are checked again (its
  * severity, its category, and its layer when there are layer boxes) and every other box stays as
- * the reader set it. A project group shows while either layer is checked, so both layer boxes are
- * checked only when neither is.
+ * the reader set it. A project group shows while the Model or the Report box is checked, so those
+ * two are checked again only when neither is.
  */
 function reveal(container: HTMLElement, group: HTMLDetailsElement): void {
   if (group.hidden) {
@@ -283,7 +285,8 @@ function reveal(container: HTMLElement, group: HTMLDetailsElement): void {
     check(filterBoxes(container, "category").find((b) => b.value === category));
     const layers = filterBoxes(container, "layer");
     if (layer === "project") {
-      if (!layers.some((b) => b.checked)) layers.forEach(check);
+      const files = layers.filter((b) => b.value === "model" || b.value === "report");
+      if (!files.some((b) => b.checked)) files.forEach(check);
     } else check(layers.find((b) => b.value === layer));
     applyFilters(container);
   }
@@ -295,9 +298,12 @@ function filterBoxes(container: HTMLElement, kind: string): HTMLInputElement[] {
   return [...container.querySelectorAll<HTMLInputElement>(`input[data-filter="${kind}"]`)];
 }
 
-/** A group's layer, as the tag on its row and on its fix-first item: model, report, or project. */
+/**
+ * A group's layer, as the tag on its row and on its fix-first item: model, report, project, or
+ * Power Query.
+ */
 const layerTag = (g: RankedGroup): HTMLElement =>
-  h("span", { class: `layer ${g.rule.layer}` }, g.rule.layer);
+  h("span", { class: `layer ${g.rule.layer}` }, LAYER_LABEL[g.rule.layer]);
 
 /**
  * "How to fix it", on a fix-first item and in a group's panel: the rule's page. Up to ten of them
@@ -445,16 +451,16 @@ function renderFilters(result: LintResult): HTMLElement {
   const categories = CATEGORY_ORDER.filter((c) => result.groups.some((g) => g.rule.category === c));
   // "Error", not "error": the category labels beside them are title case.
   const titleCase = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
-  // A Model and Report pair only when both layers have groups: with one, unchecking it would only
+  // Layer boxes only when the groups span two or more families: with one, unchecking it would only
   // hide everything, which the severity boxes already do.
-  const layers = LAYERS.filter((l) => result.groups.some((g) => g.rule.layer === l));
+  const layers = FILTER_LAYERS.filter((l) => result.groups.some((g) => g.rule.layer === l));
   return h(
     "fieldset",
     { class: "filters" },
     h("legend", {}, "Show"),
     ...severities.map((s) => box("severity", String(s), titleCase(SEVERITY_LABEL[s]))),
-    ...(layers.length === LAYERS.length
-      ? [h("span", { class: "gap" }), ...layers.map((l) => box("layer", l, titleCase(l)))]
+    ...(layers.length >= 2
+      ? [h("span", { class: "gap" }), ...layers.map((l) => box("layer", l, boxLabel(l)))]
       : []),
     h("span", { class: "gap" }),
     ...categories.map((c) => box("category", c, c)),
@@ -462,9 +468,9 @@ function renderFilters(result: LintResult): HTMLElement {
 }
 
 /**
- * Hides every group whose severity, category, or layer is unchecked. A project group, whose
- * findings fall on both layers, stays shown while either layer is checked. With no layer boxes,
- * a run with groups on one layer, the layer hides nothing.
+ * Hides every group whose severity, category, or layer is unchecked. A layer follows layerShown
+ * (layers.ts), the rule the rules index follows too: a project group stays shown while the Model or
+ * the Report box is checked. With no layer boxes, the layer hides nothing.
  */
 export function applyFilters(container: HTMLElement): void {
   const checked = (kind: string): Set<string> =>
@@ -475,15 +481,13 @@ export function applyFilters(container: HTMLElement): void {
     );
   const severities = checked("severity");
   const categories = checked("category");
-  const byLayer = filterBoxes(container, "layer").length > 0;
+  const present = filterBoxes(container, "layer").map((b) => b.value);
   const layers = checked("layer");
-  const layerShown = (layer: string): boolean =>
-    !byLayer || (layer === "project" ? layers.size > 0 : layers.has(layer));
   for (const group of container.querySelectorAll<HTMLElement>(".group"))
     group.hidden = !(
       severities.has(group.dataset.severity ?? "") &&
       categories.has(group.dataset.category ?? "") &&
-      layerShown(group.dataset.layer ?? "")
+      layerShown(group.dataset.layer ?? "", layers, present)
     );
 }
 

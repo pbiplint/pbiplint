@@ -232,7 +232,17 @@ test("lints a whole PBIP from the folder input: both layers, the facts panel, an
   );
   await expect(results.locator("section.facts h3")).toHaveText("Report at a glance");
   await expect(results.locator("section.facts dt").first()).toHaveText("Opens on");
-  await expect(results.locator('input[data-filter="layer"]')).toHaveCount(2);
+  await expect(results.locator('input[data-filter="layer"]')).toHaveCount(3);
+  await expect(
+    results.locator('input[data-filter="layer"][value="powerquery"]'),
+  ).toHaveAccessibleName("Power Query");
+  await expect(results.locator('.group[data-layer="powerquery"] summary .layer')).toHaveText(
+    "Power Query",
+  );
+  await results.locator('input[data-filter="layer"][value="powerquery"]').uncheck();
+  await expect(results.locator('.group[data-layer="powerquery"]:not([hidden])')).toHaveCount(0);
+  await expect(results.locator('.group[data-layer="model"]:not([hidden])').first()).toBeVisible();
+  await results.locator('input[data-filter="layer"][value="powerquery"]').check();
   await results.locator('input[data-filter="layer"][value="model"]').uncheck();
   await expect(results.locator(".group:not([hidden]) summary .layer.report").first()).toBeVisible();
   await expect(results.locator('.group[data-layer="model"]:not([hidden])')).toHaveCount(0);

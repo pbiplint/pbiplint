@@ -461,9 +461,9 @@ describe("a whole-project report", () => {
     expect(text).toMatch(/\n {2}1\. File could not be fully parsed {2}\(1 error\) {3}\[report\]\n/);
     expect(text).toMatch(/\n {2}\d\. .+ {3}\[model\]\n/);
     expect(text).toMatch(
-      /\nERROR {2}\[report\] {3}File could not be fully parsed {2}PARSE_ISSUE {2}\(1\)\n/,
+      /\nERROR {2}\[report\] {6}File could not be fully parsed {2}PARSE_ISSUE {2}\(1\)\n/,
     );
-    expect(text).toMatch(/\nERROR {2}\[model\] {4}Column references should be fully qualified/);
+    expect(text).toMatch(/\nERROR {2}\[model\] {7}Column references should be fully qualified/);
   });
   it("prints the counted Model row with NOT_REACHED_FROM_REPORT in the margin when every report file was read", async () => {
     const text = formatText(await lint([...files, ...readable]));
@@ -495,7 +495,7 @@ describe("a whole-project report", () => {
       { path: "definition/tables/Sales.tmdl", text: "table Sales\n  column Amount\n" },
       { path: "definition/pages/p/page.json", text: '{\n  "name": "p",\n<<<<<<< HEAD\n}\n' },
     ]);
-    expect(formatText(spanning)).toContain("ERROR  [project]  File could not be fully parsed");
+    expect(formatText(spanning)).toContain("ERROR  [project]     File could not be fully parsed");
   });
   it("names present layers only and rides an absent layer's reason on the skipped line", async () => {
     const text = formatText(await lint(files));
@@ -1132,5 +1132,68 @@ describe("a finding's column", () => {
     for (const res of sarif.runs[0].results)
       for (const l of res.locations ?? [])
         expect(l.physicalLocation.region).not.toHaveProperty("startColumn");
+  });
+});
+
+describe("a Power Query rule in every format", () => {
+  const pq: Rule = {
+    id: "PQ_RULE",
+    name: "A Power Query rule",
+    category: "Performance",
+    severity: 2,
+    scope: ["Partition"],
+    layer: "powerquery",
+    needs: ["model"],
+    description: "Made up.",
+    references: [],
+    status: "builtin",
+    check: ({ model }) =>
+      model!.tables.flatMap((t) => t.partitions.map((p) => finding.partition(p))),
+  };
+  const wholeModel: Rule = {
+    ...pq,
+    id: "PROJECT_RULE",
+    name: "A project rule",
+    layer: "project",
+    needs: [],
+    check: ({ model }) => [finding.model(model!)],
+  };
+  let run: LintResult;
+  beforeAll(async () => {
+    run = await lint(files, { rules: [pq, wholeModel] });
+  });
+  it("keeps the rule's layer on its group, and the model layer on its findings (v3 spec, section 10.1)", () => {
+    const group = run.groups.find((g) => g.rule.id === "PQ_RULE")!;
+    expect(group.rule.layer).toBe("powerquery");
+    expect(group.findings.map((f) => f.layer)).toEqual(["model"]);
+    const doc = JSON.parse(formatJson(run));
+    const json = doc.groups.find((g: { rule: { id: string } }) => g.rule.id === "PQ_RULE");
+    expect(json.rule.layer).toBe("powerquery");
+    expect(json.findings[0].layer).toBe("model");
+  });
+  it("tags SARIF's rule with the layer and keeps the model path for its result", () => {
+    const sarif = JSON.parse(formatSarif(run, { pathPrefix: "proj/Demo.SemanticModel" }));
+    const rule = sarif.runs[0].tool.driver.rules.find((r: { id: string }) => r.id === "PQ_RULE");
+    expect(rule.properties.layer).toBe("powerquery");
+    const uris = sarif.runs[0].results
+      .filter((r: { ruleId: string }) => r.ruleId === "PQ_RULE")
+      .map(
+        (r: { locations: [{ physicalLocation: { artifactLocation: { uri: string } } }] }) =>
+          r.locations[0].physicalLocation.artifactLocation.uri,
+      );
+    expect(uris).toEqual(["proj/Demo.SemanticModel/definition/tables/Sales.tmdl"]);
+  });
+  it("prints powerquery in Markdown's list and heading", () => {
+    const md = formatMarkdown(run);
+    expect(md).toContain("\n## WARNING: A Power Query rule (1) · powerquery\n");
+  });
+  it("tags the text format's groups so every rule name starts in the same column", () => {
+    const text = formatText(run);
+    expect(text).toMatch(/\nWARN {3}\[powerquery\] {2}A Power Query rule {2}PQ_RULE {2}\(1\)\n/);
+    const heads = text.split("\n").filter((l) => /^(ERROR|WARN |INFO ) {2}\[/.test(l));
+    expect(heads.length).toBeGreaterThanOrEqual(2);
+    // Severity tag (5) and two spaces, then the tag padded to 12, then two spaces.
+    for (const line of heads) expect(line.charAt(21), line).not.toBe(" ");
+    for (const line of heads) expect(line.slice(19, 21), line).toBe("  ");
   });
 });

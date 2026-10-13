@@ -42,7 +42,13 @@ export function pbiplintRule(spec: PbiplintRuleSpec): Rule {
   const { needs, options, references, policySeverity, ...rest } = spec;
   return {
     ...rest,
-    needs: needs ?? (spec.layer === "project" ? ["model", "report"] : [spec.layer]),
+    needs:
+      needs ??
+      (spec.layer === "project"
+        ? ["model", "report"]
+        : spec.layer === "powerquery"
+          ? ["model"]
+          : [spec.layer]),
     ...(options ? { options } : {}),
     ...(policySeverity ? { policySeverity } : {}),
     description: RULE_SUMMARIES[spec.id] ?? spec.name,

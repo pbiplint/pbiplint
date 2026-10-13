@@ -27,7 +27,11 @@ const expectations: Expectation[] = readdirSync(expectationsDir)
     ...(JSON.parse(readFileSync(expectationsDir + f, "utf8")) as Omit<Expectation, "name">),
   }));
 
-const ported = defaultRules.filter((r) => r.status === "ported" && r.layer === "model");
+// MINIMIZE_POWER_QUERY_TRANSFORMATIONS is Microsoft's and on the Power Query layer (v3 spec,
+// section 10.1), so it stays checked against Tabular Editor.
+const ported = defaultRules.filter(
+  (r) => r.status === "ported" && (r.layer === "model" || r.layer === "powerquery"),
+);
 const expectedCounts = new Map<string, number>(ported.map((r) => [r.id, 0]));
 
 /** The names a ported rule must report on a fixture: `ours` for a deviating rule, else the oracle's. */

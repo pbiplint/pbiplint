@@ -171,6 +171,20 @@ describe("the CLI's contract", () => {
     hasFields(filtered.summary.shown, ["rules", "findings", "errors", "warnings", "infos"]);
   });
 
+  it("3a. a rule's layer is model, report, project, or powerquery; a finding's is model or report", async () => {
+    const zoo = join(repo, "tests/fixtures/m-zoo.SemanticModel");
+    const doc = JSON.parse((await run([zoo, "--format", "json", "--fail-on", "none"])).out);
+    for (const g of doc.groups) {
+      expect(["model", "report", "project", "powerquery"]).toContain(g.rule.layer);
+      for (const f of g.findings) expect(["model", "report"]).toContain(f.layer);
+    }
+    const pq = doc.groups.find(
+      (g: { rule: { id: string } }) => g.rule.id === "MINIMIZE_POWER_QUERY_TRANSFORMATIONS",
+    );
+    expect(pq.rule.layer).toBe("powerquery");
+    expect(new Set(pq.findings.map((f: { layer: string }) => f.layer))).toEqual(new Set(["model"]));
+  });
+
   it("4. the quiet output: the summary first, rule lines of three fields, and the Next line last", async () => {
     const lines = (await run([sampleBelow(), "--quiet"])).out.trimEnd().split("\n");
     expect(lines[0]).toMatch(/^pbiplint: /);

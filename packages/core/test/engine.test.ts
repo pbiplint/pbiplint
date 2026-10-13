@@ -1300,7 +1300,9 @@ describe("lint over a project", () => {
       r.findings.filter((f) => f.ruleId === id).map((f) => f.detail);
     const fact = (r: Awaited<ReturnType<typeof lint>>, label: string) =>
       r.facts.find((f) => f.label === label);
-    const modelRules = new Set(defaultRules.filter((r) => r.layer === "model").map((r) => r.id));
+    const modelRules = new Set(
+      defaultRules.filter((r) => r.layer === "model" || r.layer === "powerquery").map((r) => r.id),
+    );
     const modelRuleFindings = (r: Awaited<ReturnType<typeof lint>>) =>
       r.findings.filter((f) => modelRules.has(f.ruleId));
     const stoppedByModel = new Set(

@@ -1,0 +1,100 @@
+{
+  "fixture": "tests/fixtures/m-zoo.SemanticModel",
+  "oracle": "Tabular Editor CLI 0.7.1.2 with BPARules.json sha256 ddb9cff4c2a0611a6467e2559d38319d9867381998066473ffa1e11c2d360392",
+  "captured": "2026-10-13",
+  "skipRules": {},
+  "findings": {
+    "AVOID_FLOATING_POINT_DATA_TYPES": [
+      "'Budget'[Amount]",
+      "'Scores'[Score]"
+    ],
+    "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE": [
+      "'Fixed Dates'",
+      "'Range Date Key'"
+    ],
+    "DATECOLUMN_FORMATSTRING": [
+      "'Fixed Dates'[Order Date]",
+      "'Range Correct'[Order Date]",
+      "'Range Exclusive'[Order Date]",
+      "'Range Reversed'[Order Date]",
+      "'Range Shadowed'[Order Date]",
+      "'Sales'[Order Date]"
+    ],
+    "ENSURE_TABLES_HAVE_RELATIONSHIPS": [
+      "'Api Secrets'",
+      "'Budget'",
+      "'Customers Inline'",
+      "'Customers Latest'",
+      "'Default Steps'",
+      "'Fixed Dates'",
+      "'Group In Comment'",
+      "'Local Paths'",
+      "'Native Lowercase'",
+      "'Navigation Only'",
+      "'Odbc Orders'",
+      "'Orders Files'",
+      "'Orders Pending Check'",
+      "'Orders Web'",
+      "'Range Correct'",
+      "'Range Date Key'",
+      "'Range Exclusive'",
+      "'Range Reversed'",
+      "'Range Shadowed'",
+      "'Sales Files'",
+      "'Sales'",
+      "'Scores'",
+      "'Server Literal'",
+      "'Server Step'",
+      "'Sort Held'",
+      "'Top Rows Kept'",
+      "'Top Rows'"
+    ],
+    "MINIMIZE_POWER_QUERY_TRANSFORMATIONS": [
+      "Budget",
+      "Customers Inline",
+      "Customers Latest",
+      "Default Steps",
+      "Fixed Dates",
+      "Group In Comment",
+      "Odbc Orders",
+      "Orders Web",
+      "Sales Files",
+      "Scores",
+      "Server Literal",
+      "Sort Held",
+      "Top Rows Kept"
+    ],
+    "MODEL_SHOULD_HAVE_A_DATE_TABLE": [
+      "Model"
+    ],
+    "OBJECTS_WITH_NO_DESCRIPTION": [
+      "'Api Secrets'[Content]",
+      "'Budget'[Amount]",
+      "'Customers Inline'[Customer ID]",
+      "'Customers Latest'[Customer ID]",
+      "'Default Steps'[Region]",
+      "'Fixed Dates'[Order Date]",
+      "'Group In Comment'[OrderID]",
+      "'Local Paths'[Content]",
+      "'Native Lowercase'[OrderID]",
+      "'Navigation Only'[OrderID]",
+      "'Odbc Orders'[OrderID]",
+      "'Orders Files'[Content]",
+      "'Orders Pending Check'[Content]",
+      "'Orders Web'[Body]",
+      "'Range Correct'[Order Date]",
+      "'Range Date Key'[Order Date Key]",
+      "'Range Exclusive'[Order Date]",
+      "'Range Reversed'[Order Date]",
+      "'Range Shadowed'[Order Date]",
+      "'Sales Files'[Name]",
+      "'Sales'[Order Date]",
+      "'Scores'[Score]",
+      "'Server Literal'[OrderID]",
+      "'Server Step'[OrderID]",
+      "'Sort Held'[Customer ID]",
+      "'Top Rows Kept'[Region]",
+      "'Top Rows'[OrderID]"
+    ]
+  }
+}

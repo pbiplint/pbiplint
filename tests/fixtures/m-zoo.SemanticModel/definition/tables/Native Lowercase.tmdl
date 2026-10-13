@@ -1,0 +1,17 @@
+/// A native SQL query written in lower case with spaces around the equals sign, which a text match for [Query="SELECT misses.
+table 'Native Lowercase'
+	lineageTag: 6c0f5a1e-0002-4000-8000-000000000019
+
+	column OrderID
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: OrderID
+
+	partition 'Native Lowercase' = m
+		mode: import
+		source =
+				let
+					Source = Sql.Database(ServerName, "Warehouse", [Query = "select OrderID from dbo.Orders"])
+				in
+					Source

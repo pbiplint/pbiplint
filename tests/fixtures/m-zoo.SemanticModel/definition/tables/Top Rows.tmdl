@@ -1,0 +1,19 @@
+/// A Keep First Rows step left in a loaded query.
+table 'Top Rows'
+	lineageTag: 6c0f5a1e-0002-4000-8000-000000000012
+
+	column OrderID
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: OrderID
+
+	partition 'Top Rows' = m
+		mode: import
+		source =
+				let
+					Source = Sql.Database(ServerName, "Warehouse"),
+					Orders = Source{[Schema="dbo",Item="Orders"]}[Data],
+					#"Kept First Rows" = Table.FirstN(Orders, 1000)
+				in
+					#"Kept First Rows"

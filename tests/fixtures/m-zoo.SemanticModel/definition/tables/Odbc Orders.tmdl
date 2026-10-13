@@ -1,0 +1,20 @@
+/// ODBC naming a driver Power BI has a connector for, with a password in its connection string, beside a bare DSN.
+table 'Odbc Orders'
+	lineageTag: 6c0f5a1e-0002-4000-8000-00000000000e
+
+	column OrderID
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: OrderID
+
+	partition 'Odbc Orders' = m
+		mode: import
+		source =
+				let
+					Redshift = Odbc.DataSource("Driver={Amazon Redshift (x64)};Server=redshift.example;Database=dev;Pwd=pbiplint-fixture-pwd-0004-notreal", [HierarchicalNavigation = true]),
+					Dsn = Odbc.DataSource("dsn=Sales", [HierarchicalNavigation = true]),
+					Orders = Redshift{[Name = "dev", Kind = "Database"]}[Data]{[Name = "orders", Kind = "Table"]}[Data],
+					Combined = Table.Combine({Orders, Dsn{[Name = "orders", Kind = "Table"]}[Data]})
+				in
+					Combined

@@ -1,0 +1,18 @@
+/// One bound included and one not, as Microsoft asks.
+table 'Range Correct'
+	lineageTag: 6c0f5a1e-0002-4000-8000-000000000009
+
+	column 'Order Date'
+		dataType: dateTime
+		formatString: General Date
+		summarizeBy: none
+		sourceColumn: OrderDate
+
+	partition 'Range Correct' = m
+		mode: import
+		source =
+				let
+					Source = #table(type table [OrderDate = datetime], {{#datetime(2024, 6, 1, 0, 0, 0)}}),
+					#"Filtered Rows" = Table.SelectRows(Source, each [OrderDate] >= RangeStart and [OrderDate] < RangeEnd)
+				in
+					#"Filtered Rows"

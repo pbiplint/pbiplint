@@ -1,0 +1,29 @@
+/// A path built by a function call (fires), beside addresses the service can refresh: a literal two scopes up, a parameter joined with &, and RelativePath.
+table 'Orders Files'
+	lineageTag: 6c0f5a1e-0002-4000-8000-000000000005
+
+	column Content
+		dataType: binary
+		summarizeBy: none
+		sourceColumn: Content
+
+	partition 'Orders Files' = m
+		mode: import
+		source =
+				let
+					Built = File.Contents(Text.Combine({DataFolder, "orders.csv"})),
+					Archive = "C:\Demo\Data\orders-archive.csv",
+					Nested =
+						let
+							Inner =
+								let
+									Read = File.Contents(Archive)
+								in
+									Read
+						in
+							Inner,
+					Joined = Web.Contents(ApiBase & "/v1/orders"),
+					Relative = Web.Contents(ApiBase, [RelativePath = "v1/orders/" & Text.From(1)]),
+					Contents = #table(type table [Content = binary], {{Built}, {Nested}, {Joined}, {Relative}})
+				in
+					Contents

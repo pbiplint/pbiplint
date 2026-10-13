@@ -2,8 +2,13 @@
 
 The linter behind [pbiplint](https://pbiplint.com): parse TMDL and PBIR, build the semantic model
 and the report, run the best-practice rules, rank the findings, and format them. Pure TypeScript
-with no dependencies, no Node APIs, and no network access, so it runs in a browser tab as well as
-in Node 20.19 or later (or 22.12 or later).
+with no Node APIs and no network access, so it runs in a browser tab as well as in Node 20.19 or
+later (or 22.12 or later). It has one dependency, Microsoft's M parser
+([`@microsoft/powerquery-parser`](https://github.com/microsoft/powerquery-parser), MIT), and still
+makes no network call.
+
+Installing the core on Node 20 prints npm's `EBADENGINE` warning, because the parser declares Node
+22, and installs anyway; the parser uses nothing Node 22 added.
 
 `lint(files)` takes both parts of a Power BI project, `.tmdl` files for the model and the report's
 JSON (paths relative to each part's root), and returns findings for both, `layers` saying which
@@ -11,11 +16,13 @@ part was read, `facts` for "Report at a glance", and `diagnostics` for what a re
 must know about the input, such as a file that could not be read. Either part alone is valid
 input; with both parts, each is also checked against the other, for example the report for fields
 the model does not have and the model for columns and measures the report never reaches.
+From 0.3.0, `lint()` returns a Promise, because it reads M with Microsoft's Power Query parser,
+whose parse is async.
 
 ```ts
 import { formatText, lint } from "@pbiplint/core";
 
-const result = lint([
+const result = await lint([
   { path: "definition/model.tmdl", text: modelTmdl },
   { path: "definition/tables/Sales.tmdl", text: salesTmdl },
 ]);

@@ -160,7 +160,9 @@ async function run({
     }
     // lint holds the main thread for as long as M takes to parse, about 6 s in Firefox on the
     // slowest models, and reading files can finish inside one frame, so "Reading files..." would
-    // never be painted. One frame and one task first let the browser paint the status line.
+    // never be painted. One frame and one task first let the browser paint the status line. A
+    // browser does not run animation frames in a hidden tab, so a run started there lints when the
+    // tab is shown, which changes no result.
     await new Promise((done) => requestAnimationFrame(done));
     await new Promise((done) => setTimeout(done, 0));
     // An input made during that wait owns the page now; a lint here would hold the main thread for

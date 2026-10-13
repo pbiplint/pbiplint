@@ -1,6 +1,6 @@
 # pbiplint v3: the Power Query layer
 
-Issue [#78](https://github.com/pbiplint/pbiplint/issues/78), milestone v3, released as 0.3.0. Written October 12, 2026, for Michael's review. Spec only: the plan follows his approval. Section 9.8 stays open for the rules Michael approves from the second research pass.
+Issue [#78](https://github.com/pbiplint/pbiplint/issues/78), milestone v3, released as 0.3.0. Written October 12, 2026, for Michael's review; updated October 13, 2026 with the 15 rules he approved that day. Spec only: the plan follows his approval of the spec.
 
 ## 1. Sources and decisions
 
@@ -10,7 +10,7 @@ Issue [#78](https://github.com/pbiplint/pbiplint/issues/78), milestone v3, relea
   - M is read with Microsoft's parser, `@microsoft/powerquery-parser`, not a reader of pbiplint's own.
   - The parser loads with the page, never when a folder is dropped.
   - No Tabular Editor parity for the new M rules: committed fixtures pin them.
-  - The five rules in section 9 and their severities.
+  - On October 13, 2026 ([issuecomment-6143569646](https://github.com/pbiplint/pbiplint/issues/78#issuecomment-6143569646)): 15 new rules and their severities (section 9.1), drawn from both research passes (`report.md` and `report-2.md` in the research folder), with the severity test in section 9.1. The IDs are working names until this spec settles them.
   - `MINIMIZE_POWER_QUERY_TRANSFORMATIONS` moves onto the parser as a recorded deviation.
   - M that does not parse is a `PARSE_ISSUE`.
   - Michael's design idea: messages name the query as Power Query's Queries pane shows it.
@@ -251,35 +251,47 @@ Order: `static` < `unknown` < `computed` < `row`. Each name is followed once per
 
 ## 9. The rules
 
-### 9.1 Common to all five
+### 9.1 Common to all fifteen
 
-- **Layer:** `model`. **Scope:** `Partition`, `NamedExpression`, and `Table` (a `sourceExpression`). **Status:** `builtin`, through `pbiplintRule` (`packages/core/src/rules/pbiplint/define.ts`).
-- **One finding per occurrence**, at its own TMDL line and column, so a query with two problems has two findings.
+Michael approved 15 new rules on October 13, 2026 ([issuecomment-6143569646](https://github.com/pbiplint/pbiplint/issues/78#issuecomment-6143569646)), with their severities:
+
+| Severity | Rules |
+| --- | --- |
+| Error | `DYNAMIC_DATA_SOURCE` (9.3), `INCREMENTAL_REFRESH_RANGE_BOUNDS` (9.4), `HARDCODED_SECRET_IN_QUERY` (9.5) |
+| Warning | `SORT_NOT_HELD_FOR_REMOVE_DUPLICATES` (9.2), `LOCAL_DRIVE_PATH` (9.6), `PRIVACY_LEVELS_IGNORED` (9.8), `SCRIPT_IN_QUERY` (9.9), `EXTENSION_FILTER_CASE` (9.10, if the Desktop check keeps it), `KEEP_FIRST_ROWS_LEFT_IN` (9.11) |
+| Info | `EXCEL_USE_HEADERS` (9.12), `DEFAULT_STEP_NAMES` (9.13), `HARDCODED_SERVER_NAME` (9.14), `ODBC_WHERE_CONNECTOR_EXISTS` (9.15), `FIXED_DATE_IN_ROW_FILTER` (9.16), `LEGACY_EXCEL_FILE` (9.17) |
+
+- **The severity test** (Michael, October 13, 2026). An error fails a pipeline by default (`--fail-on error`), so an error means the query text alone shows a broken model or unreliable data, and nobody writes it on purpose. A warning is likely trouble that a setting can fix, or that might be deliberate. Info is an improvement worth making.
+- **Layer:** `model`. **Scope:** `Partition`, `NamedExpression`, and `Table` (a `sourceExpression`), except `PRIVACY_LEVELS_IGNORED`, which reports the `Model`. **Status:** `builtin`, through `pbiplintRule` (`packages/core/src/rules/pbiplint/define.ts`).
+- **One finding per occurrence**, at its own TMDL line and column, so a query with two problems has two findings. `DEFAULT_STEP_NAMES` and `HARDCODED_SERVER_NAME` are the exceptions: each reports once per query, on its first occurrence, with the count in the detail, since a common shape reported per step or per call would bury everything else.
 - **Detail:** query and step first (section 6.3), then what was found, in pbiplint's own words.
 - **Pages:** from the rule-page template, in pbiplint's own words, with the fix route in Power BI Desktop's Power Query editor first (no third-party tool), then `scripts/sync-rule-pages.mjs`.
 - **The proposed IDs** follow pbiplint's own (`HARDCODED_PERIOD_IN_DAX`, `NAME_WITHOUT_TRANSLATION`): a noun phrase in Power BI's words. Michael approves them with this spec.
 - **Corpus counts** are the research's, counted per occurrence, models, and repositories, before the refinements this spec makes; the corpus diff (section 11.4) measures them again and the plan's notes record the final numbers.
 
-### 9.2 `REMOVE_DUPLICATES_AFTER_SORT`
+### 9.2 `SORT_NOT_HELD_FOR_REMOVE_DUPLICATES`
 
-- **Name:** "Duplicates removed straight after a sort". **Category:** Error Prevention. **Severity:** warning.
+- **Name:** "Sort may not decide which duplicate is kept". **Category:** Error Prevention. **Severity:** warning.
+- **The framing** (Michael, October 13, 2026): sorting first is the intended pattern for choosing which row survives, newest first so the latest record is kept. The fault is that nothing holds the order. The page and the detail say so, and never tell the reader not to sort.
 - **Flags:** a `Table.Distinct` call with a second argument (the columns that decide what is a duplicate) whose table is a `Table.Sort` call, either written in place or a name the resolver binds to a `Table.Sort` call. Desktop's own steps make exactly this: **Sorted Rows**, then **Removed Duplicates**. Located on the `Table.Distinct` call.
 - **Leaves alone:**
+  - A sort held by `Table.Buffer` (`Table.Distinct(Table.Buffer(Table.Sort(...)), ...)`, or a buffered step between), which is the fix the page leads with.
   - A `Table.Distinct` with no second argument: every column then decides, so the rows it chooses between are identical, and which one survives makes no difference.
-  - A `Table.Buffer` between the two (`Table.Distinct(Table.Buffer(Table.Sort(...)), ...)`, or a buffered step), which is Microsoft's second workaround.
   - A sort that is not the table argument's own value, such as one several steps earlier with other steps between.
-- **Detail:** `query 'Customers', step 'Removed Duplicates': duplicates are removed straight after the sort in step 'Sorted Rows'`.
+- **Detail:** `query 'Customers', step 'Removed Duplicates': nothing holds the order of step 'Sorted Rows', so the sort may not decide which duplicate is kept`.
 - **Sources:**
-  - Microsoft, [Common authoring issues, Preserving sort](https://learn.microsoft.com/en-us/power-query/common-issues#preserving-sort): "sort order isn't guaranteed to be preserved through aggregations (such as `Table.Group`), merges (such as `Table.NestedJoin`), or duplicate removal (such as `Table.Distinct`)."
+  - Microsoft, [Common authoring issues, Preserving sort](https://learn.microsoft.com/en-us/power-query/common-issues#preserving-sort): "if you sort a sales table so that each store's largest sale is shown first, you might expect that doing a "Remove duplicates" operation returns only the top sale for each store. And this operation might, in fact, appear to work. However, this behavior isn't guaranteed." And: "sort order isn't guaranteed to be preserved through aggregations (such as `Table.Group`), merges (such as `Table.NestedJoin`), or duplicate removal (such as `Table.Distinct`)."
   - Microsoft, [Working with duplicate values, Remove duplicate rows in Power Query](https://learn.microsoft.com/en-us/power-query/working-with-duplicates#remove-duplicate-rows-in-power-query): "Power Query doesn't guarantee that it keeps the first instance in a set of duplicates when it removes duplicates."
-  - Ken Puls, [Keep The Most Recent Entry](https://excelguru.ca/keep-the-most-recent-entry/); Matt Allington, [Remove Duplicates and Keep the Last Record with Power Query](https://exceleratorbi.com.au/remove-duplicates-keep-last-record-power-query/); Rick de Groot, [How to Remove Duplicates in Power Query](https://gorilla.bi/power-query/removing-duplicates#inconsistent-results). The research's report quotes each.
-- **Fix route,** Microsoft's three ([Preserving sort](https://learn.microsoft.com/en-us/power-query/common-issues#preserving-sort)), in Desktop: **Transform data**, select the query, and in **Applied steps** find **Removed Duplicates** after **Sorted Rows**. Then either rank and filter ("instead of using `Table.Distinct`, you could order by the column(s) containing the duplicate values, rank based on a tie-breaker column (such as `modified_date`), and then filter to keep just the rank 1 rows"), or buffer the sorted table ("Buffer the data (using `Table.Buffer`) before applying the downstream operation. In some cases, this operation causes the downstream operation to preserve the buffered sort order."). The page leads with ranking, since Microsoft hedges the buffer ("In some cases"), and says the buffer holds the whole table in memory.
-- **Fixtures:** in m-zoo (section 11.1): a **Sorted Rows** then **Removed Duplicates** pair (fires); the same written in one expression (fires); with `Table.Buffer` between (does not); `Table.Distinct` with no columns after a sort (does not); a sort two steps before the distinct (does not).
+  - Leila Gharani, [Power Query Remove Duplicates Keeps the Wrong Record](https://www.xelplus.com/power-query-keep-latest-record/) (XelPlus, June 9, 2026), the current treatment of exactly this shape: "[wrap your sort step in Table.Buffer()](https://www.xelplus.com/power-query-keep-latest-record/#h-the-one-line-fix-table-buffer)", and for a result that does not depend on order, "[Group By the columns that define your group, then pull the row with the latest timestamp from each.](https://www.xelplus.com/power-query-keep-latest-record/#h-the-sturdier-fix-group-by-to-keep-the-latest-record)"
+  - Ken Puls, [Keep The Most Recent Entry](https://excelguru.ca/keep-the-most-recent-entry/); Matt Allington, [Remove Duplicates and Keep the Last Record with Power Query](https://exceleratorbi.com.au/remove-duplicates-keep-last-record-power-query/); Rick de Groot, [How to Remove Duplicates in Power Query](https://gorilla.bi/power-query/removing-duplicates#inconsistent-results). The research's report quotes each; all three use `Table.Buffer`.
+  - Imke Feldmann's Fabric community blog post on the same shape could not be read (the page refused access on October 12 and 13, 2026), so it is not cited.
+- **Fix route** in Desktop: **Transform data**, select the query, and in **Applied steps** select **Sorted Rows**. Keep the sort and hold it: in the formula bar, wrap the step's formula in `Table.Buffer( ... )`, which is Microsoft's second suggestion ("Buffer the data (using `Table.Buffer`) before applying the downstream operation. In some cases, this operation causes the downstream operation to preserve the buffered sort order.", [Preserving sort](https://learn.microsoft.com/en-us/power-query/common-issues#preserving-sort)). The page says the buffer holds the whole table in memory, and that Microsoft hedges it ("In some cases"). For a result that does not depend on order at all, replace the two steps with **Group By** on the key columns, keeping the row with the latest date, or with Microsoft's rank ("order by the column(s) containing the duplicate values, rank based on a tie-breaker column (such as `modified_date`), and then filter to keep just the rank 1 rows").
+- **Fixtures:** in m-zoo (section 11.1): a **Sorted Rows** then **Removed Duplicates** pair (fires); the same written in one expression (fires); with `Table.Buffer` around the sort (does not); `Table.Distinct` with no columns after a sort (does not); a sort two steps before the distinct (does not).
 - **Corpus:** 19 occurrences in 10 models (8 repositories) before the one-argument exception, which can only lower it.
 
 ### 9.3 `DYNAMIC_DATA_SOURCE`
 
-- **Name:** "Data source the service can't refresh". **Category:** Error Prevention. **Severity:** warning.
+- **Name:** "Data source the service can't refresh". **Category:** Error Prevention. **Severity:** error (Michael, October 13, 2026): the published model cannot refresh, and no gateway or setting fixes it, only rewriting the query. The rule flags only the certain shapes, so an error is always right.
 - **Flags:** a call to a data source function whose first argument, the address, has origin `row` or `computed` (section 8). The functions: `Web.Contents`, `OData.Feed`, `File.Contents`, `Folder.Files`, `Folder.Contents`, `SharePoint.Files`, `SharePoint.Contents`, `SharePoint.Tables`, `AzureStorage.Blobs`, `AzureStorage.DataLake`, `Sql.Database`, `Sql.Databases`, `Oracle.Database`, `PostgreSQL.Database`, `MySQL.Database`, `Snowflake.Databases`, `AnalysisServices.Database`, `AnalysisServices.Databases`, `Odbc.DataSource`, `Odbc.Query`, `OleDb.DataSource`, `OleDb.Query`, `Databricks.Catalogs`, `DB2.Database`, `Teradata.Database`, `SapHana.Database`. Located on the call.
 - **Leaves alone:**
   - Literals, model parameters, `&` joins of them, and names that resolve to them, through any depth of `let`.
@@ -297,7 +309,7 @@ Order: `static` < `unknown` < `computed` < `row`. Each name is followed once per
 
 ### 9.4 `INCREMENTAL_REFRESH_RANGE_BOUNDS`
 
-- **Name:** "Incremental refresh filter counts a boundary row twice or never". **Category:** Error Prevention. **Severity:** warning.
+- **Name:** "Incremental refresh filter counts a boundary row twice or never". **Category:** Error Prevention. **Severity:** error (Michael, October 13, 2026): the text alone shows rows duplicated or lost, and nobody writes it on purpose.
 - **Flags:** a query that compares something with both of the model's `RangeStart` and `RangeEnd` parameters (as the resolver finds them, so a local name that shadows one does not count), where:
   - both comparisons include their bound (`>= RangeStart` and `<= RangeEnd`): located on the `RangeEnd` comparison; or
   - neither does (`> RangeStart` and `< RangeEnd`): located on the `RangeStart` comparison.
@@ -364,46 +376,132 @@ The shipped rule (`packages/core/src/rules/microsoft-bpa/tables.ts:106`) matches
 - **Recorded:** in m-zoo's Microsoft capture (`deviations` and `ours`), shown by a partition with `[Query = "select ...` (pbiplint reports it, Tabular Editor does not) and one whose only `Table.Group(` is in a comment (Tabular Editor reports it, pbiplint does not). The page's Quirks lose the four lines about substring matching and state the deviation in a sentence, as other pages do; the count of deviations in the READMEs, the About page, and `bpaRule`'s doc comment follows.
 - **A parse failure:** a partition whose M does not parse is not reported by this rule (it has a `PARSE_ISSUE`), where Tabular Editor's text match may report it. No fixture shows this, since a captured fixture must parse cleanly (`parity.test.ts:50`); a unit test covers it and the page says it.
 
-### 9.8 Rules from the second research pass (open)
+### 9.8 `PRIVACY_LEVELS_IGNORED`
 
-The second research pass (`.superpowers/research/2026-10-12-78-m-rules/report-2.md`) proposes four rules. **None is approved yet:** each is sketched here, proposed and awaiting Michael, so m-zoo's design is ready for it. If Michael approves one before m-zoo is captured, its shapes go into m-zoo; if after, into a fixture of its own (section 11.1). Each approved rule then gets the full shape of sections 9.2 to 9.6, and a rejected one leaves this section.
+- **Name:** "Privacy levels ignored for this file". **Category:** Error Prevention. **Severity:** warning (a setting fixes it, and it may be deliberate in a model that is never published). **Scope:** `Model`.
+- **Flags:** a `model.tmdl` whose `dataAccessOptions` block holds `fastCombine`, which is how a PBIP saves the file's **Ignore the Privacy Levels and potentially improve performance** option. One finding on the model, located on the `fastCombine` line.
+- **Leaves alone:** the block's other flags, `legacyRedirects` and `returnErrorValuesAsNull`, which Desktop writes by default.
+- **No parser needed.** Today the TMDL parser keeps the block as a flag under `model` with its flags as children (`packages/core/src/tmdl/parse.ts:526` describes such blocks), and `buildModel` exposes only `props.dataaccessoptions = true`. `Model` gains `dataAccessOptions?: { flags: string[]; location: SourceLocation }`, the block's flags lowercased with each one's line, optional as `Table.calendars` is.
+- **Detail:** `Ignore the Privacy Levels is on for this file; the service does not honor it`.
+- **Sources:**
+  - Microsoft, [Privacy levels, Set the privacy level options](https://learn.microsoft.com/en-us/power-query/privacy-levels#set-the-privacy-level-options): "**Ignore the Privacy Levels and potentially improve performance** doesn't work for semantic models. Reports created in Power BI Desktop with this setting and published to the Power BI service don't adhere to the setting." And: "Enabling Fast Combine by selecting **Ignore the Privacy levels and potentially improve performance** could expose sensitive or confidential data to an unauthorized person."
+- **Fix route** in Desktop, from [Set the privacy level options in Power BI Desktop](https://learn.microsoft.com/en-us/power-query/privacy-levels#set-the-privacy-level-options-in-power-bi-desktop): **File**, **Options and settings**, **Options**, then **Privacy** under **Current file**, and choose **Combine data according to your Privacy Level settings for each source**. Then refresh in Desktop: a query that only worked because privacy levels were ignored now shows the firewall error the service would have shown, and the page links Microsoft's [Behind the scenes of the Data Privacy Firewall](https://learn.microsoft.com/en-us/power-query/data-privacy-firewall) for restructuring it.
+- **Fixtures:** m-zoo's `model.tmdl` carries a `dataAccessOptions` block with `fastCombine`, `legacyRedirects`, and `returnErrorValuesAsNull` (fires once). A unit test covers a block without `fastCombine` (does not). The other fixtures have no `fastCombine` and stay silent.
+- **Corpus:** 44 models in 29 repositories; 22 of them call two or more kinds of data source, where a firewall error is most likely once the setting stops applying.
 
-**`PRIVACY_LEVELS_IGNORED`** (proposed: warning, Error Prevention). No parser needed.
+### 9.9 `SCRIPT_IN_QUERY`
 
-- **Flags:** a `model.tmdl` whose `dataAccessOptions` block holds `fastCombine`, which is how a PBIP saves the file's **Ignore the Privacy Levels and potentially improve performance** option. `legacyRedirects` and `returnErrorValuesAsNull` are Desktop defaults and are left alone. One finding on the model, at the `fastCombine` line.
-- **The model:** today the TMDL parser keeps the block as a flag under `model` with its flags as children (`packages/core/src/tmdl/parse.ts:526` describes such blocks), and `buildModel` exposes only `props.dataaccessoptions = true`. `Model` gains `dataAccessOptions?: string[]`, the block's flags lowercased, optional as `Table.calendars` is.
-- **Source:** Microsoft, [Privacy levels, Set the privacy level options](https://learn.microsoft.com/en-us/power-query/privacy-levels#set-the-privacy-level-options), which the report quotes on the setting not applying to published semantic models and on the data it can expose.
-- **m-zoo shape:** a `dataAccessOptions` block with `fastCombine` in its `model.tmdl`. That makes the whole fixture one that fires it, which affects no other rule.
-- **Corpus:** 44 models in 29 repositories.
+- **Name:** "Python or R script in a query". **Category:** Error Prevention. **Severity:** warning (a personal gateway can refresh it, so it may be deliberate).
+- **Flags:** a `Python.Execute` or `R.Execute` call, located on the call.
+- **Leaves alone:** Python and R visuals, which live in the report, not in M.
+- **Detail:** `query 'Scores', step 'Run Python script': Python.Execute refreshes only through a personal gateway on a machine with Python installed`.
+- **Sources:**
+  - Microsoft, [Use R in Power Query Editor, Considerations and limitations](https://learn.microsoft.com/en-us/power-bi/transform-model/desktop-r-in-query-editor#considerations-and-limitations): "You can't use an enterprise gateway to refresh semantic models containing R scripts in Power Query."
+  - Microsoft, [Use Python in Power BI Power Query Editor, Create visuals from Python script data](https://learn.microsoft.com/en-us/power-bi/transform-model/desktop-python-in-query-editor#create-visuals-from-python-script-data): "You need a Personal Gateway installed on the machine where the file is located, and where Python is installed."
+- **Fix route** in Desktop: **Transform data**, select the query, and find the **Run Python script** or **Run R script** step in **Applied steps**. Move what the script does upstream (a view, or a notebook in Fabric) or rebuild it with Power Query's own steps, then delete the script step. Where the script must stay, the page says plainly that refresh then depends on a personal gateway on one machine, and links Microsoft's [personal gateway](https://learn.microsoft.com/en-us/power-bi/connect-data/service-gateway-personal-mode) page.
+- **Fixtures:** one `Python.Execute` step and one `R.Execute` step, with short scripts that read nothing (both fire).
+- **Corpus:** 7 calls (4 Python, 3 R) in 3 models (3 repositories).
 
-**`SCRIPT_IN_QUERY`** (proposed: warning, Error Prevention).
+### 9.10 `EXTENSION_FILTER_CASE`
 
-- **Flags:** a `Python.Execute` or `R.Execute` call (section 5.3's `calls`), located on the call.
-- **Source:** Microsoft, [Use R in Power Query Editor, Considerations and limitations](https://learn.microsoft.com/en-us/power-bi/connect-data/desktop-r-in-query-editor#considerations-and-limitations), and [Use Python in Power Query Editor](https://learn.microsoft.com/en-us/power-bi/connect-data/desktop-python-in-query-editor#create-visuals-from-python-script-data): only a personal gateway on the author's machine refreshes it.
-- **m-zoo shapes:** one `Python.Execute` step and one `R.Execute` step, with short scripts that read nothing.
-- **Corpus:** 7 calls in 3 models (3 repositories).
+- **Name:** "File extension filter misses other cases". **Category:** Error Prevention. **Severity:** warning.
+- **Conditional:** kept only if Michael's Windows VM check shows that `Folder.Files` keeps an extension's case (a folder holding `a.csv` and `B.CSV`; read the **Extension** column). If it lowercases, the rule is dropped before its pull request, its page is not written, and its m-zoo shapes stay as harmless data.
+- **Flags:** a `Table.SelectRows` over a file listing (`Folder.Files`, `Folder.Contents`, `SharePoint.Files`, `SharePoint.Contents`, followed back through earlier steps with the resolver) whose condition compares `[Extension]` with a text literal, with no case folding. Located on the comparison.
+- **Leaves alone:** a condition with `Text.Lower`, `Text.Upper`, or `Comparer.OrdinalIgnoreCase`; a listing whose **Extension** column an earlier step lowercases or uppercases; a listing the resolver cannot follow back to one of the four functions (10 corpus filters over lakehouse and storage listings).
+- **Detail:** `query 'Sales Files', step 'Filtered Rows': the extension test matches ".csv" but not ".CSV"`.
+- **Sources:**
+  - Microsoft, [SharePoint.Files, Example 2](https://learn.microsoft.com/en-us/powerquery-m/sharepoint-files#example-2), whose filter is `Comparer.OrdinalIgnoreCase([Extension], ".xlsx") = 0`: "The extension comparison is case-insensitive, so it also matches `.XLSX`."
+  - Gašper Kamenšek, [Making Importing from Folder in Power Query (or Power BI) Bulletproof](https://excelunplugged.com/2018/02/13/making-importing-from-folder-in-power-query-or-power-bi-bulletproof/) (February 13, 2018), as the second research pass quotes it.
+- **Fix route** in Desktop: **Transform data**, select the query, select the filter step, and in the formula bar change `[Extension] = ".csv"` to `Comparer.OrdinalIgnoreCase([Extension], ".csv") = 0`, as Microsoft's example writes it. Without editing the formula: before the filter, select the **Extension** column and choose **Transform**, **Format**, **lowercase**.
+- **Fixtures:** `each [Extension] = ".csv"` over `Folder.Files` (fires, if kept); the same with `Comparer.OrdinalIgnoreCase` (does not); the same after a lowercase step (does not).
+- **Corpus:** 54 filters over `Folder.Files` in at most 12 models (10 repositories).
 
-**`EXCEL_USE_HEADERS`** (proposed: info, severity Michael's question 3 in the report).
+### 9.11 `KEEP_FIRST_ROWS_LEFT_IN`
 
-- **Flags:** `Excel.Workbook` with `useHeaders` `true`, as its second argument or as `UseHeaders = true` in its options record. Desktop's own `Excel.Workbook(File.Contents(...), null, true)`, which sets `delayTypes`, is left alone.
+- **Name:** "Keep First Rows left in a loaded query". **Category:** Error Prevention. **Severity:** warning (it may be deliberate).
+- **Flags:** a `Table.FirstN` call whose count is a number literal greater than 1, in a query that loads (a partition, or a `sourceExpression` that is read). Located on the call.
+- **Leaves alone:**
+  - A `Table.FirstN` whose table is a `Table.Sort`, or a `Table.Buffer` of one, written in place or bound by the resolver: a top N after a sort is deliberate.
+  - A count of 0 or 1, which the corpus shows on purpose (115 of 117 calls: an empty table to keep a schema, or one row of settings).
+  - A count that is not a literal, a call inside an `each` or a function (a top N per group), and shared expressions that do not load.
+- **Detail:** `query 'Sales', step 'Kept First Rows': only the first 1000 rows load`.
+- **Source:** Microsoft, [Best practices, Use a data subset while developing a query](https://learn.microsoft.com/en-us/power-query/best-practices#use-a-data-subset-while-developing-a-query): "After you add all the required steps, remove the **Keep First Rows** step so the completed query processes the full data set."
+- **Fix route** in Desktop: **Transform data**, select the query, and in **Applied steps** delete **Kept First Rows** (the **X** beside it, [Applied steps, Delete step](https://learn.microsoft.com/en-us/power-query/applied-steps#delete-step)). If the top rows are meant, sort first so the step reads as a top N.
+- **Fixtures:** `Table.FirstN(Source, 1000)` in a partition (fires); after a `Table.Sort` (does not); `Table.FirstN(Source, 0)` (does not); inside `Table.Group(..., each Table.FirstN(_, 3))` (does not).
+- **Corpus:** 2 calls in 1 model (1 repository).
+
+### 9.12 `EXCEL_USE_HEADERS`
+
+- **Name:** "Excel headers promoted by the workbook reader". **Category:** Error Prevention. **Severity:** info.
+- **Flags:** `Excel.Workbook` with `useHeaders` set to `true`, as its second argument or as `UseHeaders = true` in its options record. Located on the call.
+- **Leaves alone:** Desktop's own `Excel.Workbook(File.Contents(...), null, true)`, which leaves `useHeaders` unset and sets `delayTypes` (914 of the corpus's 999 calls).
+- **Detail:** `query 'Budget', step 'Source': Excel.Workbook promotes headers in the refreshing machine's culture`.
 - **Source:** Microsoft, [Excel connector, Limitations and considerations](https://learn.microsoft.com/en-us/power-query/connectors/excel#limitations-and-considerations): "The Excel.Workbook `useHeaders` option converts numbers and dates to text using the current culture, and thus behaves differently when run in environments with different operating system cultures set. We recommend using Table.PromoteHeaders instead."
-- **m-zoo shapes:** `Excel.Workbook(..., true)` (fires), `[UseHeaders = true]` (fires), and Desktop's `null, true` (does not).
-- **Corpus:** 26 calls in 21 models (19 repositories), 14 distinct expressions.
+- **Fix route** in Desktop: **Transform data**, select the query, select **Source**, and in the formula bar change the second argument to `null`; then select the sheet's step and choose **Home**, **Use First Row as Headers**, which writes `Table.PromoteHeaders`.
+- **Fixtures:** `Excel.Workbook(..., true)` (fires); `[UseHeaders = true]` (fires); Desktop's `null, true` (does not).
+- **Corpus:** 26 calls in 21 models (19 repositories), 14 distinct expressions, most from one widely copied demo.
 
-**`EXTENSION_FILTER_CASE`** (proposed: warning, Error Prevention), only if Michael's Windows VM check shows `Folder.Files` keeps an extension's case (`a.csv` and `B.CSV` in one folder).
+### 9.13 `DEFAULT_STEP_NAMES`
 
-- **Flags:** a `Table.SelectRows` over a file listing (`Folder.Files`, `Folder.Contents`, `SharePoint.Files`, `SharePoint.Contents`, followed back through earlier steps with the resolver) that compares `[Extension]` with a text literal and folds no case (no `Text.Lower`, `Text.Upper`, or `Comparer.OrdinalIgnoreCase` in the condition or on the column upstream).
-- **Source:** Microsoft, [SharePoint.Files, Example 2](https://learn.microsoft.com/en-us/powerquery-m/sharepoint-files#example-2), whose filter uses `Comparer.OrdinalIgnoreCase`.
-- **m-zoo shapes:** `each [Extension] = ".csv"` over `Folder.Files` (fires if kept), the same with `Comparer.OrdinalIgnoreCase` (does not). Since the VM check may drop the rule, these shapes are harmless in m-zoo either way: they fire no other rule.
-- **Corpus:** 64 filters in 12 models (10 repositories).
+- **Name:** "Steps keep Power Query's default names". **Category:** Maintenance. **Severity:** info. **Once per query.**
+- **Flags:** a query whose outermost `let` has steps named as Power BI Desktop names them by default: **Changed Type**, **Changed Type with Locale**, **Promoted Headers**, **Removed Columns**, **Removed Other Columns**, **Renamed Columns**, **Reordered Columns**, **Filtered Rows**, **Sorted Rows**, **Removed Duplicates**, **Grouped Rows**, **Merged Queries**, **Appended Query**, **Added Custom**, **Added Conditional Column**, **Added Index**, **Duplicated Column**, **Replaced Value**, **Pivoted Column**, **Unpivoted Columns**, **Unpivoted Other Columns**, **Split Column by Delimiter**, **Removed Top Rows**, **Removed Bottom Rows**, **Removed Blank Rows**, **Removed Alternate Rows**, **Removed Errors**, **Kept First Rows**, **Kept Range of Rows**, **Trimmed Text**, **Cleaned Text**, **Uppercased Text**, **Lowercased Text**, **Capitalized Each Word**, **Transposed Table**, **Filled Down**, **Filled Up**, **Invoke Custom Function**, **Custom**, and names starting **Expanded**, **Inserted**, **Extracted**, or **Calculated**, each with or without a number after it (`Added Custom1`). One finding per query, located on the first such step.
+- **Leaves alone:** **Source** and **Navigation**, which name what they are; parameters and functions; a step a person has renamed to anything else. A Desktop in another language writes other default names; the rule reads only the English ones, and the page says so.
+- **Detail:** `query 'Sales': 6 steps keep default names, such as 'Changed Type' and 'Added Custom1'` (at most two names).
+- **Source:** Microsoft, [Best practices, Document your work](https://learn.microsoft.com/en-us/power-query/best-practices#document-your-work): "Document a Power Query solution by giving steps, queries, and groups meaningful names and descriptions. These details make the purpose of each transformation easier to understand and maintain."
+- **Fix route** in Desktop: **Transform data**, select the query, and in **Applied steps** right-click each step and choose **Rename** ([Applied steps, Rename step](https://learn.microsoft.com/en-us/power-query/applied-steps#rename-step)), or **Properties** to add a description as well ([Edit step names and their descriptions](https://learn.microsoft.com/en-us/power-query/applied-steps#edit-step-names-and-their-descriptions)).
+- **Fixtures:** a partition with **Changed Type** and **Added Custom1** (fires once, on **Changed Type**); a partition whose steps are renamed (does not); a query with only **Source** and **Navigation** (does not). Most m-zoo queries keep Desktop's names on purpose, since the other rules' shapes are written as Desktop writes them, so this rule fires on many m-zoo queries; `tests/expectations/pbiplint/m-zoo.json` records each.
+- **Corpus:** 3,274 partition queries in 517 models (247 repositories), counted on partitions only; shared expressions add some, which the corpus diff counts. The sample fires it too (messy-sales keeps Desktop's names), so its count rises.
 
-If all four are approved, the counts in section 10 become 115 rules (33 built in).
+### 9.14 `HARDCODED_SERVER_NAME`
+
+- **Name:** "Server name written into the query". **Category:** Maintenance. **Severity:** info. **Once per query.**
+- **Flags:** a text literal as the server argument of a database connector, written in place or bound by the resolver to a `let` step: the first argument of `Sql.Database`, `Sql.Databases`, `PostgreSQL.Database`, `MySQL.Database`, `Oracle.Database`, `Snowflake.Databases`, `AnalysisServices.Database`, `AnalysisServices.Databases`, `DB2.Database`, and `Teradata.Database`. One finding per query, located on the first such call.
+- **Leaves alone:** a server argument that resolves to a model parameter, which is the fix; any other argument (the database name).
+- **Detail:** `query 'Sales', step 'Source': Sql.Database names its server as text (2 calls in this query); a parameter would hold it`. The server's name is not printed: an internal host name need not travel with an export.
+- **Source:** Microsoft, [Best practices, Use parameters](https://learn.microsoft.com/en-us/power-query/best-practices#use-parameters): "You can even use parameters in some of the arguments of the data connectors. For example, you could create a parameter for your server name when connecting to your SQL Server database." And: "If you change your server location, all you need to do is update the parameter for your server name, and your queries are updated."
+- **Fix route** in Desktop: **Transform data**, **Manage Parameters**, **New Parameter**, type **Text**, the server as its current value; then select the query's **Source** step, open its settings (the gear), and choose **Parameter** for **Server**.
+- **Fixtures:** `Sql.Database("finance-sql.example", "Warehouse")` twice in one query (fires once); `Sql.Database(ServerName, "Warehouse")` with `ServerName` a parameter (does not); a `let` step holding the literal (fires).
+- **Corpus:** 2,463 calls in 465 models (166 repositories), counted per call; once per query lowers the occurrences, which the corpus diff measures.
+
+### 9.15 `ODBC_WHERE_CONNECTOR_EXISTS`
+
+- **Name:** "ODBC or OLE DB where Power BI has a connector". **Category:** Performance. **Severity:** info.
+- **Flags:** `Odbc.DataSource` or `OleDb.DataSource` whose connection string (a literal, or a name the resolver binds to one) names the driver or provider of a source Power BI connects to natively. The list, kept small: Amazon Redshift (`Amazon Redshift`, the only driver the corpus shows in volume), PostgreSQL (`PostgreSQL`), SQL Server (`SQL Server`, `SQLNCLI`, `MSOLEDBSQL`, `ODBC Driver <n> for SQL Server`), MySQL (`MySQL`), Oracle (`Oracle`), and Snowflake (`Snowflake`), matched in the `Driver=` or `Provider=` part, any case. Located on the call.
+- **Leaves alone:** a connection string that names only a DSN (`dsn=Sales`), which says nothing of the driver behind it; a driver not on the list.
+- **Detail:** `query 'Orders', step 'Source': the ODBC connection names the Amazon Redshift driver; Power BI has an Amazon Redshift connector`.
+- **Source:** Microsoft, [Best practices, Choose the right connector](https://learn.microsoft.com/en-us/power-query/best-practices#choose-the-right-connector): "Choose the purpose-built connector for your data source when one is available. For example, the SQL Server connector provides a better **Get Data** experience than the generic ODBC connector when you connect to a SQL Server database. The SQL Server connector also supports performance features such as query folding." The page links Microsoft's [connector list](https://learn.microsoft.com/en-us/power-query/connectors/) to confirm each entry.
+- **Fix route** in Desktop: **Get data**, the named connector (for example **Amazon Redshift**), connect to the same database, and in the original query's **Source** step point at the new connection (the page shows the formula), then check that the later steps still find their columns.
+- **Fixtures:** `Odbc.DataSource("Driver={Amazon Redshift (x64)};Server=...")` (fires); `Odbc.DataSource("dsn=Sales")` (does not).
+- **Corpus:** 236 calls naming Redshift or PostgreSQL drivers, within the 17 models (6 repositories) that use ODBC or OLE DB at all.
+
+### 9.16 `FIXED_DATE_IN_ROW_FILTER`
+
+- **Name:** "Fixed date in a row filter". **Category:** Maintenance. **Severity:** info.
+- **The framing** matches `HARDCODED_PERIOD_IN_DAX` (`rules/hardcoded-period-in-dax.md`), its DAX sibling: a fixed date goes stale without an error, and the report quietly shows an old window.
+- **Flags:** a `Table.SelectRows` whose condition compares a column with a fixed `#date(...)`, `#datetime(...)`, or `#datetimezone(...)` of number literals, as an end (`<`, `<=`) or an equality (`=`, `<>`). Located on the date.
+- **Leaves alone:** a fixed start (`>`, `>=`): history that starts on a fixed date is normal, as the DAX rule leaves a `CALENDAR` start alone; a condition that also uses `RangeStart` or `RangeEnd`; a date built from a parameter or from `DateTime.LocalNow()`.
+- **Detail:** `query 'Sales', step 'Filtered Rows': rows end at a fixed date, December 31, 2025`, the date written long form as the DAX rule writes it.
+- **Source:** Microsoft, [Data reduction techniques for Import modeling, Remove unnecessary rows](https://learn.microsoft.com/en-us/power-bi/guidance/import-modeling-data-reduction#remove-unnecessary-rows): "You can implement time-based Power Query filters with parameters, and even set them to use relative time periods". Microsoft, [Best practices, Filter data early to improve performance](https://learn.microsoft.com/en-us/power-query/best-practices#filter-data-early-to-improve-performance): "You can also take advantage of the type-specific filters such as **In the previous** for a date, datetime, or even date timezone column."
+- **Fix route** in Desktop: **Transform data**, select the query, select the filter step's gear in **Applied steps**, and use a relative date filter (**Date Filters**, **In the Previous**) or a parameter in place of the fixed date.
+- **Fixtures:** `each [Order Date] <= #date(2025, 12, 31)` (fires); `each [Order Date] >= #date(2020, 1, 1)` (does not); a `RangeStart` filter (does not).
+- **Corpus:** 31 filters in 15 models (13 repositories), counted before the start exception, which can only lower it.
+
+### 9.17 `LEGACY_EXCEL_FILE`
+
+- **Name:** "Legacy Excel workbook". **Category:** Error Prevention. **Severity:** info.
+- **Flags:** `Excel.Workbook` whose content is `File.Contents` of a path, a literal or a name the resolver binds to one, ending `.xls` or `.xlsb` (any case). Located on the path.
+- **Leaves alone:** `.xlsx` and `.xlsm`; a path the resolver cannot follow (185 corpus Excel sources sit in parameters or functions it cannot read through).
+- **Detail:** `query 'Budget', step 'Source': the workbook is a legacy .xls file, read through the Access Database Engine`.
+- **Source:** Microsoft, [Excel connector, Legacy ACE connector](https://learn.microsoft.com/en-us/power-query/connectors/excel#legacy-ace-connector): "Power Query reads legacy workbooks (such as .xls or .xlsb) using the Access Database Engine (or ACE) OLEDB provider. Because of this dependency, you might come across unexpected behaviors when importing legacy workbooks that don't occur when importing OpenXML workbooks (such as .xlsx)." And from [Prerequisites](https://learn.microsoft.com/en-us/power-query/connectors/excel#prerequisites): "ACE can't be installed in cloud service environments."
+- **Fix route:** open the workbook in Excel and save it as an Excel Workbook (`.xlsx`); then in Desktop, **Transform data**, select the query's **Source** step, open its settings, and point it at the new file.
+- **Fixtures:** `Excel.Workbook(File.Contents("C:\Demo\Data\Budget.xls"), null, true)` (fires, and `LOCAL_DRIVE_PATH` fires on the same literal); a `.xlsx` path (does not).
+- **Corpus:** 8 calls in 1 model (1 repository).
 
 ## 10. The site
 
 - **No new `SITE_LAYERS` gate.** The gate (`packages/web/src/build/pages.ts:289`) publishes pages by the layer their findings land in, and every M finding lands on a `.tmdl` file in the model layer, which the site already publishes. The pages carry `layer: model`. The site deploys the core from main on merge, so each rule's code and its page arrive in the same pull request, and nothing half-built shows on the site.
-- **Rule pages:** five new pages from the template, and changes to `parse-issue.md` and `minimize-power-query-transformations.md`. Each new page's example is a `tmdl fires` and `tmdl fixed` pair that `rule-pages.test.ts` lints, as for every page, so each example must parse and fire.
-- **The rules index** counts its rules itself. The rule counts in the root, CLI, and core READMEs and the About page move from 106 rules (24 built in) to 111 (29 built in), plus any from section 9.8. The About page and the READMEs name Power Query as a part pbiplint reads.
+- **Rule pages:** fifteen new pages from the template (fourteen if the Desktop check drops `EXTENSION_FILTER_CASE`), and changes to `parse-issue.md` and `minimize-power-query-transformations.md`. Each new page's example is a `tmdl fires` and `tmdl fixed` pair that `rule-pages.test.ts` lints, as for every page, so each example must parse and fire.
+- **The rules index** counts its rules itself. The rule counts in the root, CLI, and core READMEs and the About page move from 106 rules (24 built in) to 121 (39 built in), or 120 (38 built in) without `EXTENSION_FILTER_CASE`. The About page and the READMEs name Power Query as a part pbiplint reads.
 - **Privacy page:** no change. Its statements hold as written (section 3.3).
 
 A suggestion, not in scope: a "Power Query" filter on the rules index, once the M rules number more than a handful.
@@ -413,12 +511,13 @@ A suggestion, not in scope: a "Power Query" filter on the rules index, once the 
 ### 11.1 Fixtures
 
 - **`tests/fixtures/m-zoo.SemanticModel`**, hand-written and sanitized: no real names, servers, or paths, and the project's `C:\Demo\Data\` convention for file paths (the Desktop checks rewrite it for the Windows VM). It holds:
-  - Every fixture shape sections 9.2 to 9.7 name, each in its own table or shared expression, named for what it shows.
+  - Every fixture shape sections 9.2 to 9.17 name, each in its own table or shared expression, named for what it shows.
   - All three ways TMDL stores M (inline, block, fence), an `expression 'Name'` written with an `expression =` line, and a table with a `refreshPolicy` whose `sourceExpression` matches its partition.
   - `RangeStart` and `RangeEnd` parameters, and a parameter that holds a fake key.
   - Nothing unparsable: the parity test requires a captured fixture to read with no `PARSE_ISSUE`.
-  - The shapes of any section 9.8 rule Michael approves before the capture.
-- **The Desktop check does not hold up the capture.** Michael's Windows VM check can move the two dynamic-source shapes (section 9.3) into `row` or `computed`, and decide `EXTENSION_FILTER_CASE` (section 9.8). Both shapes are in m-zoo from the start, so the check's answer changes only pbiplint's own `tests/expectations/pbiplint/m-zoo.json`, never the Tabular Editor captures, which hold no M rule. Nobody waits on the check to capture.
+  - A `model.tmdl` with a `dataAccessOptions` block holding `fastCombine` (section 9.8).
+  - A `C:\Demo\Data\` `.xls` path for `LEGACY_EXCEL_FILE`; it has no file behind it, as no fixture path does.
+- **The Desktop check does not hold up the capture.** Michael's Windows VM check can move the two dynamic-source shapes (section 9.3) into `row` or `computed`, and keep or drop `EXTENSION_FILTER_CASE` (section 9.10). All three shapes are in m-zoo from the start, so the check's answer changes only pbiplint's own `tests/expectations/pbiplint/m-zoo.json`, never the Tabular Editor captures, which hold no M rule. Nobody waits on the check to capture.
 - **Captured before October 31, 2026,** all three ways with `te` 0.7.1.2 (Microsoft's ruleset, the built-in rules, and the survey's files) and added to `CAPTURED` in `scripts/test/te-captures.test.mjs`, as te3-zoo was. After that date it cannot change; a later shape goes in a new fixture whose expectations are pbiplint's own.
 - **The new rules' expectations** are pinned in `tests/expectations/pbiplint/m-zoo.json` (rule, object, line, column, detail; a folder of its own, since `parity.test.ts:23` reads every `.json` file at the top level as a Tabular Editor capture), read by a new `packages/core/test/rules-m.test.ts`. The M rules have no Tabular Editor oracle (Michael, October 12, 2026), so the file is pbiplint's own, reviewed by hand once.
 - **Unit tests** for what a fixture cannot hold: M that does not parse (`PARSE_ISSUE` with line and column, the 120-character cut), a lex error, a `sourceExpression` that differs from its partition, the resolver's scopes one by one, and the column formula on each storage style with tabs and spaces.
@@ -442,7 +541,25 @@ It reads the values from the fixture, so a new fake secret is covered when it is
 A throwaway script in the plan's folder (not committed; the corpus is not pbiplint's to commit) lints every corpus model with main and with the branch, and compares each finding by rule, object, file, line, and detail:
 
 - **Every existing finding is unchanged,** except `MINIMIZE_POWER_QUERY_TRANSFORMATIONS`, whose difference must be exactly the deviation: partitions gained only through native queries or spacing, partitions lost only through matches in comments or literals (expected: up to 402 gained, since the research also counted `Query` fields outside the connectors section 9.7 lists, and 1 lost).
-- **New findings** are counted per rule in occurrences, models, and repositories, and compared with sections 9.2 to 9.6; a difference is explained in the plan's notes before the rule's pull request merges.
+- **New findings** are counted per rule in occurrences, models, and repositories, and compared with each rule's Corpus line in sections 9.2 to 9.17; a difference is explained in the plan's notes before the rule's pull request merges. Expected, as the research counted them (occurrences, models):
+
+  | Rule | Expected | Moves because |
+  | --- | --- | --- |
+  | `SORT_NOT_HELD_FOR_REMOVE_DUPLICATES` | 19 or fewer, 10 or fewer | The one-argument exception |
+  | `DYNAMIC_DATA_SOURCE` | 18, 13 or fewer | Function parameters left out |
+  | `INCREMENTAL_REFRESH_RANGE_BOUNDS` | 4, 4 | |
+  | `HARDCODED_SECRET_IN_QUERY` | 60 or more, 2 or more | The parameter-literal shape |
+  | `LOCAL_DRIVE_PATH` | 1,083, 303 or fewer | |
+  | `PRIVACY_LEVELS_IGNORED` | 44, 44 | |
+  | `SCRIPT_IN_QUERY` | 7, 3 | |
+  | `EXTENSION_FILTER_CASE` | 54, 12 or fewer | Unresolved listings left out |
+  | `KEEP_FIRST_ROWS_LEFT_IN` | 2, 1 | |
+  | `EXCEL_USE_HEADERS` | 26, 21 | |
+  | `DEFAULT_STEP_NAMES` | 3,274 or more, 517 or more | Shared expressions added |
+  | `HARDCODED_SERVER_NAME` | fewer than 2,463, 465 | Once per query |
+  | `ODBC_WHERE_CONNECTOR_EXISTS` | 236, 17 or fewer | |
+  | `FIXED_DATE_IN_ROW_FILTER` | 31 or fewer, 15 or fewer | The start exception |
+  | `LEGACY_EXCEL_FILE` | 8, 1 | |
 - **`PARSE_ISSUE`** gains exactly 1 finding.
 - Run once per pull request that adds or moves an M rule.
 
@@ -474,25 +591,30 @@ Pull requests in order, each with CI and e2e green and one Opus review of the br
 1. **The m-zoo fixture and its captures** (needs `te`, so by October 31, 2026). The fixture, its three captures, `CAPTURED`, and nothing else: on main it changes no result, since today's text-match rule is what Tabular Editor runs, so the capture records no deviation yet.
 2. **The reader.** The parser pinned; the two build changes in all three bundlers; the budgets and bundle checks; `lint()` async with every caller; `readM`, `Indexes.m`, `refreshPolicy`, the `expression =` fallback; locations with columns in every output; `PARSE_ISSUE` for M; the resolver with its unit tests; `make-big-model.mjs` and both parse-time guards. No new rule, so the corpus diff must show only the 1 new `PARSE_ISSUE`.
 3. **The shipped rule on the parser**, with the deviation in m-zoo's capture, the page, and the deviation counts.
-4. **`REMOVE_DUPLICATES_AFTER_SORT`, `INCREMENTAL_REFRESH_RANGE_BOUNDS`, and `LOCAL_DRIVE_PATH`**, the three that need little of the resolver, with their pages, `tests/expectations/pbiplint/m-zoo.json`, and the sample and fixture counts.
-5. **`DYNAMIC_DATA_SOURCE` and `HARDCODED_SECRET_IN_QUERY`**, with their pages and the secret guard (section 11.3).
-6. **Rules from section 9.8,** if Michael approves any, one pull request per rule or per close family.
+4. **Calls and literals:** `LOCAL_DRIVE_PATH`, `SCRIPT_IN_QUERY`, `EXCEL_USE_HEADERS`, `ODBC_WHERE_CONNECTOR_EXISTS`, and `PRIVACY_LEVELS_IGNORED` (which reads `model.tmdl` and needs only `Model.dataAccessOptions`). Each reads a call or a literal where it stands, so none needs the resolver beyond a step's name. This pull request also starts `tests/expectations/pbiplint/m-zoo.json` and moves the sample and fixture counts.
+5. **Steps:** `SORT_NOT_HELD_FOR_REMOVE_DUPLICATES`, `KEEP_FIRST_ROWS_LEFT_IN`, `INCREMENTAL_REFRESH_RANGE_BOUNDS`, `FIXED_DATE_IN_ROW_FILTER`, and `DEFAULT_STEP_NAMES`. Each reads a step, its table argument, or a filter's comparisons, through the resolver's `let` scopes.
+6. **The resolver's full reach:** `DYNAMIC_DATA_SOURCE`, `HARDCODED_SECRET_IN_QUERY` with the secret guard (section 11.3), `HARDCODED_SERVER_NAME`, `LEGACY_EXCEL_FILE`, and `EXTENSION_FILTER_CASE` if the Desktop check keeps it. These follow names into model parameters and other queries. If the check has not happened when the rest is ready, `EXTENSION_FILTER_CASE` waits for a pull request of its own and the others go ahead.
 
-Pull requests 4 and 5 are independent and may go in either order. Then:
+Pull requests 4, 5, and 6 depend only on 2 and may go in any order; 6 is last only because it is the largest and carries the guard. Then:
 
-- **Release 0.3.0**, from the coordinator, with its release issue's boxes: the notes lead with the Power Query layer and the five rules, list what can change in results (new findings, the sample's count, the shipped rule's deviation, columns in locations), and say under "For code that uses `@pbiplint/core`" that `lint()` now returns a Promise (section 4.4). The Action, the Azure Pipelines task, and the Claude plugin follow with their pins.
+- **Release 0.3.0**, from the coordinator, with its release issue's boxes: the notes lead with the Power Query layer and its fifteen rules (three errors, six warnings, six info), list what can change in results (new findings, the sample's count, the shipped rule's deviation, columns in locations), and say under "For code that uses `@pbiplint/core`" that `lint()` now returns a Promise (section 4.4). The Action, the Azure Pipelines task, and the Claude plugin follow with their pins.
 - **#70**, the Fabric Stack catalog submission, once 0.3.0 is on npm and live at pbiplint.com.
 
 ## 13. For Michael
 
-- **Approve this spec,** including the five proposed IDs (section 9). Pull request 1 needs approval of section 11.1 in time to capture before October 31, 2026; the rest of the spec can still change after that.
-- **The Desktop check** for `DYNAMIC_DATA_SOURCE` (from the research, still open): two tiny queries in the Windows VM, one choosing a web address with `if ... then ... else` over a parameter and one passing it as a custom function's parameter; for each, whether **Data source settings**, **Data sources in current file**, shows the dynamic source warning. Until then the rule leaves both alone (section 9.3). The same visit can settle `EXTENSION_FILTER_CASE` (section 9.8). Neither holds up m-zoo's capture (section 11.1).
-- **The four proposed rules in section 9.8,** and `EXCEL_USE_HEADERS`' severity.
+The rule list and severities are decided (Michael, October 13, 2026). Still open:
+
+- **Approve this spec,** including the IDs and names in section 9. The IDs are Michael's working names; the one this spec proposes beyond them is the name "Sort may not decide which duplicate is kept" for `SORT_NOT_HELD_FOR_REMOVE_DUPLICATES`. Pull request 1 needs approval of section 11.1 in time to capture before October 31, 2026; the rest of the spec can still change after that.
+- **The Desktop check,** three tests in the Windows VM, none of which holds up m-zoo's capture (section 11.1):
+  1. A web address chosen with `if ... then ... else` over a parameter: does **Data source settings**, **Data sources in current file**, show the dynamic source warning? (Section 9.3.)
+  2. A web address passed in as a custom function's parameter: the same question. (Section 9.3.)
+  3. A folder holding `a.csv` and `B.CSV`, read with **Folder**: does the **Extension** column show `.CSV`? If it shows `.csv`, `EXTENSION_FILTER_CASE` is dropped. (Section 9.10.)
 
 ## 14. Left out
 
 - **The `expression =` shape for measures and partition sources** (`source` with `type: m` and `expression =` lines). Seen in the same single corpus repository (8 files) as the shared-expression case, a shape Desktop does not write; it is a TMDL reader question for #144's class of guards, not v3's.
 - **Unknown identifiers** (`True` for `true`, a deleted query): later, with #144's guards for AI-written files, as the research recommends.
 - **`STEPS_AFTER_NATIVE_QUERY`:** dropped by pb-coord, since the shipped rule already flags every native-query partition.
-- **Everything the research dropped**, for the reasons it gives: default step names, fixed server names, `Table.Buffer`, `DateTime.LocalNow`, TODO comments, referenced queries, and the rest.
+- **Everything else the research passes dropped**, for the reasons they give: `Table.Buffer`, `DateTime.LocalNow`, TODO comments, referenced queries, distinct on a text key, `Table.RemoveColumns`, the legacy dataflows connector, and the rest. Default step names, fixed server names, ODBC where a connector exists, fixed dates, Keep First Rows, and legacy Excel files were dropped or deferred by the first pass and are in v3 under Michael's decision of October 13, 2026 to take Microsoft's own best-practice recommendations even where they are common.
+- **Network paths with a short server name** (27 literals in 6 models): advice on `LOCAL_DRIVE_PATH`'s page, not a rule (section 9.6).
 - **Trimming the parser's type system** (section 3.4).

@@ -79,6 +79,7 @@ Where there is no upstream to move to, the finding is noise. A folder of CSV exp
 - `UNPIVOT_PIVOTED_(MONTH)_DATA` asks for an unpivot, and `Table.UnpivotOtherColumns` is one of the names this rule reads, so doing what that rule asks in Power Query creates a finding here.
 - `PARTITION_NAME_SHOULD_MATCH_TABLE_NAME_FOR_SINGLE_PARTITION_TABLES` reads the same partitions and reports the table when a single partition's name is not the table's name.
 - `ODBC_WHERE_CONNECTOR_EXISTS` reports `Odbc.DataSource` and `OleDb.DataSource` calls whose driver has a native connector, the data source functions beside the `Odbc.Query` and `OleDb.Query` this rule reads.
+- `SORT_NOT_HELD_FOR_REMOVE_DUPLICATES` reports a `Table.Distinct` straight after a `Table.Sort`, two of the names this rule reads, when nothing holds the sort's order.
 
 ## Links
 

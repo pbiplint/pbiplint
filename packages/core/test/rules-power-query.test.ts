@@ -7,6 +7,7 @@ import {
   ODBC_WHERE_CONNECTOR_EXISTS,
   PRIVACY_LEVELS_IGNORED,
   SCRIPT_IN_QUERY,
+  SORT_NOT_HELD_FOR_REMOVE_DUPLICATES,
 } from "../src/rules/pbiplint/power-query.js";
 import type { Rule } from "../src/rules/types.js";
 import { mFindings, modelFrom, mObjectNames } from "./helpers.js";
@@ -328,5 +329,84 @@ describe("ODBC_WHERE_CONNECTOR_EXISTS (v3 spec, section 9.15)", () => {
       "\tDsn",
     );
     expect(await mFindings(rule, tmdl)).toEqual([]);
+  });
+});
+
+describe("SORT_NOT_HELD_FOR_REMOVE_DUPLICATES (v3 spec, section 9.2)", () => {
+  const rule = SORT_NOT_HELD_FOR_REMOVE_DUPLICATES;
+  const customers =
+    '\tSource = #table(type table [#"Customer ID" = text, Updated = date], {{"C1", #date(2025, 1, 1)}, {"C1", #date(2025, 2, 1)}}),';
+  it("is a built-in Power Query warning on a query's owner", () => {
+    isPowerQueryRule(rule, 2, "Error Prevention");
+    expect(rule.name).toBe("Sort may not decide which duplicate is kept");
+    expect(rule.scope).toEqual(["Partition", "NamedExpression", "Table"]);
+  });
+  it("reports Desktop's Sorted Rows then Removed Duplicates on the Table.Distinct call, naming the sort's step", async () => {
+    const tmdl = table(
+      "Customers",
+      "let",
+      customers,
+      '\t#"Sorted Rows" = Table.Sort(Source, {{"Updated", Order.Descending}}),',
+      '\t#"Removed Duplicates" = Table.Distinct(#"Sorted Rows", {"Customer ID"})',
+      "in",
+      '\t#"Removed Duplicates"',
+    );
+    expect(await mFindings(rule, tmdl)).toEqual([
+      {
+        objectType: "Partition",
+        objectName: "Customers",
+        location: { file: "inline.tmdl", line: 8, column: 30 },
+        detail:
+          "query 'Customers', step 'Removed Duplicates': nothing holds the order of step 'Sorted Rows', so the sort may not decide which duplicate is kept",
+      },
+    ]);
+  });
+  it("reports the sort written in place, and a step that only renames the sort", async () => {
+    const tmdl = table(
+      "Customers",
+      "let",
+      customers,
+      '\tInPlace = Table.Distinct(Table.Sort(Source, {{"Updated", Order.Descending}}), {"Customer ID"}),',
+      '\tSorted = Table.Sort(Source, {{"Updated", Order.Descending}}),',
+      "\tAgain = Sorted,",
+      '\tRenamed = Table.Distinct(Again, {"Customer ID"})',
+      "in",
+      "\tRenamed",
+    );
+    expect((await mFindings(rule, tmdl)).map((f) => f.detail)).toEqual([
+      "query 'Customers', step 'InPlace': nothing holds the order of the Table.Sort inside it, so the sort may not decide which duplicate is kept",
+      "query 'Customers', step 'Renamed': nothing holds the order of step 'Sorted', so the sort may not decide which duplicate is kept",
+    ]);
+  });
+  it("leaves alone a buffered sort, whole rows, a null column list, and a sort two steps back", async () => {
+    const tmdl = table(
+      "Customers",
+      "let",
+      customers,
+      '\tBuffered = Table.Buffer(Table.Sort(Source, {{"Updated", Order.Descending}})),',
+      '\tFromBuffer = Table.Distinct(Buffered, {"Customer ID"}),',
+      '\tSorted = Table.Sort(Source, {{"Updated", Order.Descending}}),',
+      "\tBufferedStep = Table.Buffer(Sorted),",
+      '\tFromBufferedStep = Table.Distinct(BufferedStep, {"Customer ID"}),',
+      "\tWholeRows = Table.Distinct(Sorted),",
+      "\tNullColumns = Table.Distinct(Sorted, null),",
+      '\tTyped = Table.TransformColumnTypes(Sorted, {{"Updated", type date}}),',
+      '\tTwoBack = Table.Distinct(Typed, {"Customer ID"})',
+      "in",
+      "\tTwoBack",
+    );
+    expect(await mFindings(rule, tmdl)).toEqual([]);
+  });
+  it("is silenced by an ignore annotation on the partition", async () => {
+    const tmdl =
+      'table Customers\n\tpartition Customers = m\n\t\tmode: import\n\t\tsource = Table.Distinct(Table.Sort(S, {"Updated"}), {"Customer ID"})\n\n\t\tannotation pbiplint.ignore = SORT_NOT_HELD_FOR_REMOVE_DUPLICATES\n';
+    const result = await lint([{ path: "definition/tables/Customers.tmdl", text: tmdl }]);
+    expect(result.findings.filter((f) => f.ruleId === rule.id)).toEqual([]);
+    const without = tmdl.replace(
+      "\n\t\tannotation pbiplint.ignore = SORT_NOT_HELD_FOR_REMOVE_DUPLICATES",
+      "",
+    );
+    const before = await lint([{ path: "definition/tables/Customers.tmdl", text: without }]);
+    expect(before.findings.filter((f) => f.ruleId === rule.id)).toHaveLength(1);
   });
 });

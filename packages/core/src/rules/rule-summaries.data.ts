@@ -190,6 +190,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Slicers saved with a selection, so that the report opens with it applied: any visual whose visual.json holds a `filter` with a condition under `objects.general`, which is where Power BI Desktop saves the selection of a slicer, button slicer, list slicer, input slicer, or `filterSlicer`, and of a custom slicer from AppSource that filters through the Visual Filters API. It is info without a policy, and a warning when the project's policy expects no saved selections.",
   SNOWFLAKE_SCHEMA_ARCHITECTURE:
     "Tables that are on the from side of one relationship and the to side of another, which is what a dimension related to a sub-dimension looks like.",
+  SORT_NOT_HELD_FOR_REMOVE_DUPLICATES:
+    "Power Query queries that remove duplicates by some of their columns straight after a sort, with nothing holding the sort's order: a `Table.Distinct` call with a list of columns whose table is a `Table.Sort`, written in place or as the step it reads. Power BI Desktop writes this shape as a Sorted Rows step followed by Removed Duplicates.",
   SPECIAL_CHARS_IN_OBJECT_NAMES: "Names containing a tab, line feed, or carriage return.",
   SPLIT_DATE_AND_TIME:
     "DateTime columns holding values that are not at midnight. Whether any row carries a time is a statistic of the loaded data, not of the model files, so pbiplint lists this rule but does not run it: it needs statistics that only a live model carries.",

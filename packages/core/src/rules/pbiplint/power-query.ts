@@ -1,7 +1,8 @@
 import { Language } from "@microsoft/powerquery-parser";
-import { calls, identifierName, textLiterals, textValue, unwrap } from "../../m/ast.js";
-import { resolve } from "../../m/resolve.js";
+import { callOf, calls, identifierName, textLiterals, textValue, unwrap } from "../../m/ast.js";
+import { boundValue, resolve } from "../../m/resolve.js";
 import type { MIndex, MQuery } from "../../m/types.js";
+import { tableRef } from "../../model/names.js";
 import { finding } from "../helpers.js";
 import { mFinding } from "../m-helpers.js";
 import type { Rule } from "../types.js";
@@ -217,6 +218,44 @@ export const PRIVACY_LEVELS_IGNORED = pbiplintRule({
   },
 });
 
+/** A `null` written as an argument, which M's table functions read as the argument left out. */
+const isNull = (n: Node | undefined): boolean =>
+  n !== undefined &&
+  unwrap(n).kind === Kind.LiteralExpression &&
+  (unwrap(n) as Language.Ast.LiteralExpression).literalKind === Language.Ast.LiteralKind.Null;
+
+// Desktop's Sorted Rows then Removed Duplicates, with a column list deciding what is a duplicate
+// (v3 spec, section 9.2). The sort is the intended way to choose the row that survives; the fault
+// is that nothing holds its order. A sort held by Table.Buffer, a distinct over whole rows, and a
+// sort with other steps between are left alone.
+export const SORT_NOT_HELD_FOR_REMOVE_DUPLICATES = pbiplintRule({
+  id: "SORT_NOT_HELD_FOR_REMOVE_DUPLICATES",
+  name: "Sort may not decide which duplicate is kept",
+  category: "Error Prevention",
+  severity: 2,
+  scope: ["Partition", "NamedExpression", "Table"],
+  layer: "powerquery",
+  check: (_project, { indexes: { m } }) =>
+    m.queries.flatMap((q) =>
+      calls(q).flatMap((c) => {
+        const [table, columns] = c.args;
+        if (c.name !== "Table.Distinct" || !table || !columns || isNull(columns)) return [];
+        const sorted = boundValue(m, q, table);
+        if (callOf(sorted.node)?.name !== "Table.Sort") return [];
+        const sort =
+          sorted.step === undefined ? "the Table.Sort inside it" : `step ${tableRef(sorted.step)}`;
+        return [
+          mFinding(
+            m,
+            q,
+            c.node,
+            `nothing holds the order of ${sort}, so the sort may not decide which duplicate is kept`,
+          ),
+        ];
+      }),
+    ),
+});
+
 /**
  * pbiplint's own Power Query rules (v3 spec, section 9): each reads the M a model's queries hold,
  * or the file's Power Query options, and reports on the model's files.
@@ -227,4 +266,5 @@ export const powerQueryRules: Rule[] = [
   EXCEL_USE_HEADERS,
   ODBC_WHERE_CONNECTOR_EXISTS,
   PRIVACY_LEVELS_IGNORED,
+  SORT_NOT_HELD_FOR_REMOVE_DUPLICATES,
 ];

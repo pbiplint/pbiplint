@@ -69,7 +69,7 @@ When the connector cannot reach the database the way the driver does: an authent
 ## Quirks
 
 - A connection string that names only a DSN, such as `dsn=Sales`, is not reported. The DSN's driver is set on each machine, not in the query; open ODBC Data Sources on the machine that refreshes to see which driver it uses.
-- Only the `Driver=` or `Provider=` part is read, its key in any case. SQL Server counts under `SQL Server`, `ODBC Driver 18 for SQL Server`, `SQLNCLI`, and `MSOLEDBSQL`.
+- Only the `Driver=` or `Provider=` part is read, its key in any case. SQL Server counts under `SQL Server`, `ODBC Driver 18 for SQL Server`, `SQLNCLI`, `SQLOLEDB`, and `MSOLEDBSQL`.
 - The connection string is read where the call writes it, or where a step or a parameter holds it as text. One built at refresh time, or given as a record, is not read.
 - A driver named inside `Extended Properties` behind `Provider=MSDASQL`, the OLE DB bridge to ODBC, is not read; only the provider is, and it names no database.
 - Each call is its own finding.

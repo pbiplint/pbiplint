@@ -477,6 +477,7 @@ The shipped rule (`packages/core/src/rules/microsoft-bpa/tables.ts:106`) matches
 - **Fix route** in Desktop: **Get data**, the named connector (for example **Amazon Redshift**), connect to the same database, and in the original query's **Source** step point at the new connection (the page shows the formula), then check that the later steps still find their columns.
 - **Fixtures:** `Odbc.DataSource("Driver={Amazon Redshift (x64)};Server=...")` (fires); `Odbc.DataSource("dsn=Sales")` (does not).
 - **Corpus:** 236 calls naming Redshift or PostgreSQL drivers, within the 17 models (6 repositories) that use ODBC or OLE DB at all.
+- **Amended October 13, 2026** (the coordinator's decision, pull request 5): `SQLOLEDB`, the older OLE DB provider for SQL Server, joins the SQL Server names, a synonym inside the approved rule. The corpus has none.
 
 ### 9.16 `FIXED_DATE_IN_ROW_FILTER`
 

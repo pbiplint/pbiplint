@@ -121,7 +121,7 @@ export const EXCEL_USE_HEADERS = pbiplintRule({
 const NATIVE_CONNECTORS: readonly { pattern: RegExp; name: string; article: "a" | "an" }[] = [
   { pattern: /amazon redshift/i, name: "Amazon Redshift", article: "an" },
   { pattern: /postgresql/i, name: "PostgreSQL", article: "a" },
-  { pattern: /sql server|sqlncli|msoledbsql/i, name: "SQL Server", article: "a" },
+  { pattern: /sql server|sqlncli|sqloledb|msoledbsql/i, name: "SQL Server", article: "a" },
   { pattern: /mysql/i, name: "MySQL", article: "a" },
   { pattern: /oracle/i, name: "Oracle", article: "an" },
   { pattern: /snowflake/i, name: "Snowflake", article: "a" },

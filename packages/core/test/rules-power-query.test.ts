@@ -307,6 +307,15 @@ describe("ODBC_WHERE_CONNECTOR_EXISTS (v3 spec, section 9.15)", () => {
       "query 'Orders': the ODBC connection names the MySQL driver; Power BI has a MySQL connector",
     ]);
   });
+  it("reads SQLOLEDB, the older OLE DB provider, as SQL Server", async () => {
+    const tmdl = table(
+      "Orders",
+      'OleDb.DataSource("Provider=SQLOLEDB.1;Data Source=sql.example;Initial Catalog=Sales")',
+    );
+    expect((await mFindings(rule, tmdl)).map((f) => f.detail)).toEqual([
+      "query 'Orders': the OLE DB connection names the SQL Server provider; Power BI has a SQL Server connector",
+    ]);
+  });
   it("leaves alone a DSN, a driver with no connector, a server's name, and a string built at refresh", async () => {
     const tmdl = table(
       "Orders",

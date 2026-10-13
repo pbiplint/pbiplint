@@ -1,4 +1,5 @@
 import { Marked, Renderer, type Tokens } from "marked";
+import { LAYER_LABEL, RULE_LAYERS, type RuleLayer } from "../layers.js";
 
 export const SITE = "https://pbiplint.com";
 
@@ -43,6 +44,8 @@ const CHECK_LABEL: Record<RuleLayer, string> = {
   model: "Check a model for this",
   report: "Check a report for this",
   project: "Check a project for this",
+  // A Power Query rule reads the M in a model's files, so the button takes a model.
+  powerquery: "Check a model for this",
 };
 /** The caption a fenced example carries, by the word after `tmdl` or `pbir` in its info string. */
 const EXAMPLE_CAPTION: Record<string, string> = {
@@ -253,15 +256,8 @@ export function parseFrontmatter(
 /** A file family a project can hold, and so a family the site can lint: core calls these `LayerName`. */
 export type SiteLayer = "model" | "report";
 
-/**
- * The layer a rule page declares, the site's copy of core's `Layer`: a file family, or `project`
- * for a rule that reads both and can fire on either. The copy is deliberate for the reason
- * CATEGORY_ORDER gives, this build imports nothing from core.
- */
-export type RuleLayer = SiteLayer | "project";
-
-/** Every layer a page may declare, and the list the error names when a page declares another. */
-const RULE_LAYERS: readonly RuleLayer[] = ["model", "report", "project"];
+/** The layer a rule page declares: see layers.ts, which the results page shares. */
+export type { RuleLayer };
 
 /**
  * The file families pbiplint.com publishes. A rule page whose layer is not published is not
@@ -321,12 +317,18 @@ export function pageLayer(data: Frontmatter, source: string): RuleLayer {
 /**
  * Whether the site publishes a page on a layer, and so whether it is generated at all. A `project`
  * page publishes as soon as either family does, because a project rule can fire on any input the
- * site can lint. `published` is SITE_LAYERS unless a test renders another site.
+ * site can lint. A `powerquery` page publishes whenever the model does, since its rule reads the M
+ * in model files. `published` is SITE_LAYERS unless a test renders another site.
  */
 export const publishesLayer = (
   layer: RuleLayer,
   published: readonly SiteLayer[] = SITE_LAYERS,
-): boolean => (layer === "project" ? published.length > 0 : published.includes(layer));
+): boolean =>
+  layer === "project"
+    ? published.length > 0
+    : layer === "powerquery"
+      ? published.includes("model")
+      : published.includes(layer);
 
 const section = (body: string, heading: string): string =>
   body.split(`## ${heading}`)[1]?.split(/\n## /)[0] ?? "";
@@ -573,7 +575,7 @@ export function rulePage(
     layer: pageLayer(data, source),
     summary: firstParagraph(section(body, "What it checks")),
   };
-  const layerItem = showsLayers(published) ? ` · ${escapeHtml(meta.layer)} layer` : "";
+  const layerItem = showsLayers(published) ? ` · ${escapeHtml(LAYER_LABEL[meta.layer])} layer` : "";
   const video = str(data.video);
   const main = `<article class="rule">
   <p class="eyebrow"><a href="/rules/">Rules</a> / ${escapeHtml(meta.category)}</p>
@@ -612,13 +614,14 @@ export function rulesIndex(
   // fails on one, as it fails on an unknown category, rather than print a count whose clauses do
   // not sum to the pages listed (tracked in #66).
   const is =
-    (status: string, layer?: RuleLayer) =>
+    (status: string, ...layers: RuleLayer[]) =>
     (m: RuleMeta): boolean =>
-      m.status === status && (layer === undefined || m.layer === layer);
+      m.status === status && (layers.length === 0 || layers.includes(m.layer));
   const clauses: [(m: RuleMeta) => boolean, string][] = [
     [
-      is("ported", "model"),
-      "model rules ported from Microsoft's Best Practice Analyzer ruleset and verified against Tabular Editor",
+      // MINIMIZE_POWER_QUERY_TRANSFORMATIONS is Microsoft's and on the Power Query layer.
+      is("ported", "model", "powerquery"),
+      "rules ported from Microsoft's Best Practice Analyzer ruleset and verified against Tabular Editor",
     ],
     [is("needsLiveModel"), "listed but not run because they need statistics only a live model has"],
     [
@@ -651,7 +654,7 @@ export function rulesIndex(
       : parts.join(" and ");
   const layerBadge = (m: RuleMeta): string =>
     showsLayers(published)
-      ? ` <span class="layer ${escapeHtml(m.layer)}">${escapeHtml(m.layer)}</span>`
+      ? ` <span class="layer ${escapeHtml(m.layer)}">${escapeHtml(LAYER_LABEL[m.layer])}</span>`
       : "";
   const sections = CATEGORY_ORDER.map((category) => {
     const rows = metas

@@ -95,6 +95,12 @@ describe("styles.css", () => {
     expect(contrast("--danger", "--canvas")).toBeGreaterThanOrEqual(3);
     expect(contrast("--success", "--canvas")).toBeGreaterThanOrEqual(3);
   });
+  it("tags a Power Query rule in its own colour and outline, readable on the canvas", () => {
+    expect(rule(".layer.powerquery")).toMatch(/border-style: dotted/);
+    expect(rule(".layer.powerquery")).toMatch(/color: var\(--layer-powerquery\)/);
+    // Text, so WCAG 1.4.3's 4.5:1.
+    expect(contrast("--layer-powerquery", "--canvas")).toBeGreaterThanOrEqual(4.5);
+  });
   it("lets the header's links and a long rule id wrap, so a narrow page does not scroll sideways", () => {
     // At 320 pixels the brand and the links do not fit on one row, and a rule id such as
     // RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE has no hyphen to break at. The e2e suite

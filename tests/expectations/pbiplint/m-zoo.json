@@ -1,0 +1,23 @@
+{
+  "fixture": "tests/fixtures/m-zoo.SemanticModel",
+  "about": "pbiplint's own Power Query rules on m-zoo: rule, object, file, line, column, and detail of every finding. These rules have no Tabular Editor oracle (v3 spec, section 11.1), so this file is pbiplint's own, written in place order and reviewed by hand.",
+  "rules": ["EXCEL_USE_HEADERS", "LOCAL_DRIVE_PATH", "ODBC_WHERE_CONNECTOR_EXISTS", "PRIVACY_LEVELS_IGNORED", "SCRIPT_IN_QUERY"],
+  "findings": [
+    { "rule": "LOCAL_DRIVE_PATH", "objectType": "NamedExpression", "object": "DataFolder", "file": "definition/expressions.tmdl", "line": 18, "column": 25, "detail": "query 'DataFolder': the path is on a local drive (C:)" },
+    { "rule": "LOCAL_DRIVE_PATH", "objectType": "NamedExpression", "object": "ExportFolder", "file": "definition/expressions.tmdl", "line": 21, "column": 27, "detail": "query 'ExportFolder': the path is on a local drive (D:)" },
+    { "rule": "PRIVACY_LEVELS_IGNORED", "objectType": "Model", "object": "Model", "file": "definition/model.tmdl", "line": 6, "detail": "Ignore the Privacy Levels is on for this file; the service does not honor it" },
+    { "rule": "EXCEL_USE_HEADERS", "objectType": "Partition", "object": "Budget", "file": "definition/tables/Budget.tmdl", "line": 15, "column": 22, "detail": "query 'Budget', step 'ReaderHeaders': Excel.Workbook promotes headers in the refreshing machine's culture" },
+    { "rule": "LOCAL_DRIVE_PATH", "objectType": "Partition", "object": "Budget", "file": "definition/tables/Budget.tmdl", "line": 15, "column": 51, "detail": "query 'Budget', step 'ReaderHeaders': the path is on a local drive (C:)" },
+    { "rule": "EXCEL_USE_HEADERS", "objectType": "Partition", "object": "Budget", "file": "definition/tables/Budget.tmdl", "line": 16, "column": 22, "detail": "query 'Budget', step 'OptionHeaders': Excel.Workbook promotes headers in the refreshing machine's culture" },
+    { "rule": "LOCAL_DRIVE_PATH", "objectType": "Partition", "object": "Budget", "file": "definition/tables/Budget.tmdl", "line": 16, "column": 51, "detail": "query 'Budget', step 'OptionHeaders': the path is on a local drive (C:)" },
+    { "rule": "LOCAL_DRIVE_PATH", "objectType": "Partition", "object": "Budget", "file": "definition/tables/Budget.tmdl", "line": 17, "column": 45, "detail": "query 'Budget', step 'Desktop': the path is on a local drive (C:)" },
+    { "rule": "LOCAL_DRIVE_PATH", "objectType": "Partition", "object": "Budget", "file": "definition/tables/Budget.tmdl", "line": 18, "column": 44, "detail": "query 'Budget', step 'Legacy': the path is on a local drive (C:)" },
+    { "rule": "LOCAL_DRIVE_PATH", "objectType": "Partition", "object": "Customers Latest", "file": "definition/tables/Customers Latest.tmdl", "line": 14, "column": 42, "detail": "query 'Customers Latest', step 'Source': the path is on a local drive (C:)" },
+    { "rule": "LOCAL_DRIVE_PATH", "objectType": "Partition", "object": "Local Paths", "file": "definition/tables/Local Paths.tmdl", "line": 15, "column": 28, "detail": "query 'Local Paths', step 'Local': the path is on a local drive (C:)" },
+    { "rule": "ODBC_WHERE_CONNECTOR_EXISTS", "objectType": "Partition", "object": "Odbc Orders", "file": "definition/tables/Odbc Orders.tmdl", "line": 15, "column": 17, "detail": "query 'Odbc Orders', step 'Redshift': the ODBC connection names the Amazon Redshift driver; Power BI has an Amazon Redshift connector" },
+    { "rule": "LOCAL_DRIVE_PATH", "objectType": "Partition", "object": "Orders Files", "file": "definition/tables/Orders Files.tmdl", "line": 15, "column": 16, "detail": "query 'Orders Files', step 'Archive': the path is on a local drive (C:)" },
+    { "rule": "LOCAL_DRIVE_PATH", "objectType": "Partition", "object": "Sales Files", "file": "definition/tables/Sales Files.tmdl", "line": 14, "column": 28, "detail": "query 'Sales Files', step 'Source': the path is on a local drive (C:)" },
+    { "rule": "SCRIPT_IN_QUERY", "objectType": "Partition", "object": "Scores", "file": "definition/tables/Scores.tmdl", "line": 16, "column": 29, "detail": "query 'Scores', step 'Run Python script': Python.Execute refreshes only through a personal gateway on a machine with Python installed" },
+    { "rule": "SCRIPT_IN_QUERY", "objectType": "Partition", "object": "Scores", "file": "definition/tables/Scores.tmdl", "line": 17, "column": 24, "detail": "query 'Scores', step 'Run R script': R.Execute refreshes only through a personal gateway on a machine with R installed" }
+  ]
+}

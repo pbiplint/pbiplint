@@ -65,6 +65,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   ENSURE_THEME_COLOURS:
     "Visuals other than text boxes with a colour property set to a hex value instead of a theme colour, including a hex value inside a conditional formatting rule or a gradient.",
   EVALUATEANDLOG_SHOULD_NOT_BE_USED_IN_PRODUCTION_MODELS: "Measures that call EVALUATEANDLOG.",
+  EXCEL_USE_HEADERS:
+    "Excel.Workbook calls that ask the workbook reader to promote headers: `true` as the second argument, or `UseHeaders = true` in its options record.",
   EXPRESSION_RELIANT_OBJECTS_MUST_HAVE_AN_EXPRESSION:
     "Measures, calculated columns, and calculation items whose expression is empty.",
   FILTER_COLUMN_VALUES:
@@ -102,6 +104,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Tables with more than 25 million rows and a single partition. The row count is a statistic of the loaded data, not of the model files, so pbiplint lists this rule but does not run it: it needs statistics that only a live model carries.",
   "LIMIT_ROW_LEVEL_SECURITY_(RLS)_LOGIC":
     "Tables whose row-level security filter, in any role, calls RIGHT, LEFT, UPPER, LOWER, or FIND.",
+  LOCAL_DRIVE_PATH:
+    "Text in a Power Query query or parameter that starts with a path on a drive letter, such as `C:\\Demo\\Data\\Sales.csv` or `D:/Exports/`.",
   "MANY-TO-MANY_RELATIONSHIPS_SHOULD_BE_SINGLE-DIRECTION":
     "Many-to-many relationships with bi-directional cross filtering.",
   MARK_PRIMARY_KEYS:
@@ -130,6 +134,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Names that start or end with a space, for the model, tables, measures, hierarchies, perspectives, partitions, data columns, and calculated columns.",
   OBJECTS_WITH_NO_DESCRIPTION:
     "Visible tables, columns, measures, and calculation groups with no description. Visibility is the object's own flag.",
+  ODBC_WHERE_CONNECTOR_EXISTS:
+    "ODBC and OLE DB sources whose connection string names the driver or provider of a database Power BI has its own connector for: Amazon Redshift, PostgreSQL, SQL Server, MySQL, Oracle, or Snowflake.",
   OPENING_PAGE_INVALID:
     "A pages.json whose landing page names a page the report does not have, or, when no landing page is set, whose active page names a page the report does not have or a page hidden from readers.",
   PARSE_ISSUE:
@@ -140,6 +146,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Measures with a percent format string other than `#,0.0%;-#,0.0%;#,0.0%`.",
   PERSPECTIVES_WITH_NO_OBJECTS:
     "Perspectives that contain no tables. The rule reads only a perspective's table entries, which is enough: each column, measure, and hierarchy a perspective includes sits under the entry for its table, so with no table entry it includes nothing.",
+  PRIVACY_LEVELS_IGNORED:
+    "A model whose Power Query options ignore privacy levels: the `fastCombine` flag in the `dataAccessOptions` block of `model.tmdl`, which Power BI Desktop writes when Ignore the Privacy Levels and potentially improve performance is chosen for the file.",
   PROVIDE_FORMAT_STRING_FOR_MEASURES:
     "Visible measures with no format string and no dynamic format string, other than those whose DAX plainly returns text.",
   REDUCE_ADVANCED_FILTERS:
@@ -172,6 +180,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Custom visuals from AppSource that the report registers in report.json and that no visual on any page uses.",
   REPORT_LEVEL_MEASURES:
     "Measures defined in the report's reportExtensions.json rather than in the model, reported when the model the report reads is in the input, so that each can move into it.",
+  SCRIPT_IN_QUERY:
+    "Power Query queries that run a Python or R script: a `Python.Execute` or `R.Execute` call, which the Run Python script and Run R script steps write.",
   SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS:
     "Columns with IsAvailableInMdx set to false that are used to sort another column, appear in a hierarchy, a variation, or a calendar, or sort by another column.",
   SLICER_SEARCH_SAVED:

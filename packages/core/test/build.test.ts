@@ -686,3 +686,22 @@ describe("buildModel and v3's M sources", () => {
     expect(m.expressions.map((x) => x.expression)).toEqual(["1", ""]);
   });
 });
+
+describe("the model's data access options (v3 spec, section 9.8)", () => {
+  it("reads each flag under dataAccessOptions, lowercased, with its line", () => {
+    const m = modelFrom(
+      "model Model\n\tculture: en-US\n\tdataAccessOptions\n\t\tfastCombine\n\t\tlegacyRedirects\n\t\treturnErrorValuesAsNull\n",
+    );
+    expect(m.dataAccessOptions).toEqual({
+      location: { file: "inline.tmdl", line: 3 },
+      flags: [
+        { name: "fastcombine", location: { file: "inline.tmdl", line: 4 } },
+        { name: "legacyredirects", location: { file: "inline.tmdl", line: 5 } },
+        { name: "returnerrorvaluesasnull", location: { file: "inline.tmdl", line: 6 } },
+      ],
+    });
+  });
+  it("leaves dataAccessOptions unset on a model without the block", () => {
+    expect(modelFrom("model Model\n\tculture: en-US\n").dataAccessOptions).toBeUndefined();
+  });
+});

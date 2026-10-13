@@ -122,6 +122,13 @@ opens it, whether or not anything fired. A notice names anything about the input
 know, such as a file that could not be read or a `definition.pbir` that points at a model other
 than the one beside it.
 
+The Power Query layer is read inside the model: the M behind each table's partitions, the shared
+expressions, and incremental refresh policies, with Microsoft's Power Query parser, and the file's
+Power Query options. 6 rules check it, `MINIMIZE_POWER_QUERY_TRANSFORMATIONS` and 5 of pbiplint's
+own; a finding in M names the query and the step as Power Query's editor shows them, at
+`file:line:column`. 111 rules in all, 29 of them built into pbiplint; `pbiplint rules` lists them
+with their layer.
+
 The same linter runs in the browser at https://pbiplint.com. Source, issues, and contributing:
 https://github.com/pbiplint/pbiplint.
 

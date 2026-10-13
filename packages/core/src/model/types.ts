@@ -42,6 +42,16 @@ export interface Model extends Named {
    * and is not listed.
    */
   unreadPaths: string[];
+  /**
+   * The model's `dataAccessOptions` block, when it has one (v3 spec, section 9.8): the block's line
+   * and each flag under it, its name lowercased, with its own line. Power BI Desktop writes
+   * `fastCombine` there when a file ignores privacy levels. Optional, so a `Model` built by hand
+   * against an earlier version still type-checks.
+   */
+  dataAccessOptions?: {
+    location: SourceLocation;
+    flags: { name: string; location: SourceLocation }[];
+  };
 }
 
 export interface Table extends Named {

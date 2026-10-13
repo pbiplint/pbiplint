@@ -66,6 +66,18 @@ export function calls(q: MQuery): MCall[] {
   return out;
 }
 
+/** Every text literal in a query, in text order, with its value as `textValue` reads it. */
+export function textLiterals(q: MQuery): { node: Node; value: string }[] {
+  const ids = q.nodeIdMapCollection?.idsByNodeKind.get(Kind.LiteralExpression) ?? new Set<number>();
+  const out: { node: Node; value: string }[] = [];
+  for (const id of [...ids].sort((a, b) => a - b)) {
+    const node = nodeOf(q, id);
+    const value = textValue(node);
+    if (node && value !== undefined) out.push({ node, value });
+  }
+  return out;
+}
+
 /**
  * The name of the outermost `let` step that holds a node, as Applied steps lists it, or undefined
  * when the node is in no step: the query has no `let`, or the node is in its `in` expression.

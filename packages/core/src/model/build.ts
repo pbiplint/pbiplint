@@ -451,6 +451,14 @@ function readModel(r: TmdlNode, model: Model): void {
     annotations: model.annotations,
     props: { ...model.props, ...r.props },
   });
+  // A flag-style block of flags (tmdl/parse.ts keeps it so); a second declaration of the model
+  // adds its flags to the first's.
+  const block = r.children.find((c) => c.type === "dataaccessoptions");
+  if (block) {
+    model.dataAccessOptions ??= { location: loc(block), flags: [] };
+    for (const c of block.children)
+      if (c.kind === "flag") model.dataAccessOptions.flags.push({ name: c.type, location: loc(c) });
+  }
 }
 
 /**

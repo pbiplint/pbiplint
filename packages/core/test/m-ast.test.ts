@@ -1,6 +1,14 @@
 import { Language } from "@microsoft/powerquery-parser";
 import { describe, expect, it } from "vitest";
-import { calls, identifierName, nodeOf, stepOf, textValue, unwrap } from "../src/m/ast.js";
+import {
+  calls,
+  identifierName,
+  nodeOf,
+  stepOf,
+  textLiterals,
+  textValue,
+  unwrap,
+} from "../src/m/ast.js";
 import { parseM } from "../src/m/parse.js";
 import type { MQuery } from "../src/m/types.js";
 
@@ -37,6 +45,28 @@ describe("identifierName and textValue", () => {
   it("takes meta and parentheses off a value", async () => {
     const q = await query('("x") meta [IsParameterQuery = true]');
     expect(textValue(unwrap(q.ast!))).toBe("x");
+  });
+});
+
+describe("textLiterals", () => {
+  it("lists every text literal in text order with its value, and nothing else", async () => {
+    const q = await query('let a = "one", b = 2, c = {"two", true} in "th""ree"');
+    expect(textLiterals(q).map((l) => l.value)).toEqual(["one", "two", 'th"ree']);
+    expect(
+      textLiterals(q).every((l) => l.node.kind === Language.Ast.NodeKind.LiteralExpression),
+    ).toBe(true);
+  });
+  it("finds none in a query that did not parse", () => {
+    expect(
+      textLiterals({
+        kind: "expression",
+        name: "Q",
+        owner: { name: "Q" } as never,
+        text: "",
+        file: "q.tmdl",
+        valueLine: 1,
+      }),
+    ).toEqual([]);
   });
 });
 

@@ -91,8 +91,12 @@ export interface LintResult {
   failed: boolean;
 }
 
-/** The one call the web app and the CLI both make. Pure: no I/O, no network. */
-export function lint(files: LintFile[], options: LintOptions = {}): LintResult {
+/**
+ * The one call the web app and the CLI both make. Pure: no I/O, no network. Async because it reads
+ * M with Microsoft's parser, whose parse returns a Promise; it waits on no timer or I/O, so a run's
+ * promise settles before the caller handles another event.
+ */
+export async function lint(files: LintFile[], options: LintOptions = {}): Promise<LintResult> {
   const rules = options.rules ?? defaultRules;
   const { config, unknownRules } = bindConfig(
     isResolvedConfig(options.config) ? options.config : resolveConfig(options.config),

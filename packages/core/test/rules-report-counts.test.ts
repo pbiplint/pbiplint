@@ -72,16 +72,18 @@ describe("REDUCE_OBJECTS_WITHIN_VISUALS", () => {
     Array.from({ length: n }, (_, i) => entry(column("Product", `C${i}`), `Product.C${i}`));
   const wells = (name: string, queryState: Record<string, unknown>) =>
     visual("p", name, "tableEx", {}, { query: { queryState } });
-  const details = (files: LintFile[], max?: number) =>
-    lint([page("p"), ...files], {
-      rules: [rules.REDUCE_OBJECTS_WITHIN_VISUALS],
-      config: {
-        failOn: "none",
-        ...(max === undefined ? {} : { rules: { REDUCE_OBJECTS_WITHIN_VISUALS: { max } } }),
-      },
-    }).findings.map((f) => [f.objectId, f.detail]);
+  const details = async (files: LintFile[], max?: number) =>
+    (
+      await lint([page("p"), ...files], {
+        rules: [rules.REDUCE_OBJECTS_WITHIN_VISUALS],
+        config: {
+          failOn: "none",
+          ...(max === undefined ? {} : { rules: { REDUCE_OBJECTS_WITHIN_VISUALS: { max } } }),
+        },
+      })
+    ).findings.map((f) => [f.objectId, f.detail]);
 
-  it("counts one per projection entry, so a field bound in two roles counts twice", () => {
+  it("counts one per projection entry, so a field bound in two roles counts twice", async () => {
     const files = [
       wells("twice", {
         Rows: { projections: columns(4) },
@@ -94,10 +96,10 @@ describe("REDUCE_OBJECTS_WITHIN_VISUALS", () => {
         },
       }),
     ];
-    expect(details(files)).toEqual([["twice", "7 fields bound, more than 6"]]);
+    expect(await details(files)).toEqual([["twice", "7 fields bound, more than 6"]]);
   });
 
-  it("counts a visual calculation as one, though it binds no model field", () => {
+  it("counts a visual calculation as one, though it binds no model field", async () => {
     const calc = entry(
       {
         NativeVisualCalculation: {
@@ -109,10 +111,10 @@ describe("REDUCE_OBJECTS_WITHIN_VISUALS", () => {
       "select",
     );
     const files = [wells("calc", { Values: { projections: [...columns(6), calc] } })];
-    expect(details(files)).toEqual([["calc", "7 fields bound, more than 6"]]);
+    expect(await details(files)).toEqual([["calc", "7 fields bound, more than 6"]]);
   });
 
-  it("counts a sparkline as one, though it binds a measure and a grouping column", () => {
+  it("counts a sparkline as one, though it binds a measure and a grouping column", async () => {
     const sparkline = entry(
       {
         SparklineData: {
@@ -123,11 +125,11 @@ describe("REDUCE_OBJECTS_WITHIN_VISUALS", () => {
       "Sales.Total Sales by Month",
     );
     const files = [wells("spark", { Values: { projections: [...columns(5), sparkline] } })];
-    expect(details(files)).toEqual([]);
-    expect(details(files, 5)).toEqual([["spark", "6 fields bound, more than 5"]]);
+    expect(await details(files)).toEqual([]);
+    expect(await details(files, 5)).toEqual([["spark", "6 fields bound, more than 5"]]);
   });
 
-  it("counts an arithmetic projection as one, though each operand is a field", () => {
+  it("counts an arithmetic projection as one, though each operand is a field", async () => {
     const arithmetic = entry(
       {
         Arithmetic: {
@@ -139,8 +141,8 @@ describe("REDUCE_OBJECTS_WITHIN_VISUALS", () => {
       "Sales.Total Sales - Sales.Total Cost",
     );
     const files = [wells("sum", { Values: { projections: [...columns(5), arithmetic] } })];
-    expect(details(files)).toEqual([]);
-    expect(details(files, 5)).toEqual([["sum", "6 fields bound, more than 5"]]);
+    expect(await details(files)).toEqual([]);
+    expect(await details(files, 5)).toEqual([["sum", "6 fields bound, more than 5"]]);
   });
 });
 

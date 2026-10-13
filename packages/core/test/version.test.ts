@@ -51,11 +51,11 @@ it('exports the plural helper, so the site says "1 file" the way the text format
   expect(plural(0, "file")).toBe("0 files");
 });
 
-it("exports the summary helpers the site shares with the text format", () => {
+it("exports the summary helpers the site shares with the text format", async () => {
   // The sample ranks twenty-two groups, so the cap is what makes this a list of five rather than
   // all of them. A model with fewer groups than the cap cannot tell the two apart, which is what
   // the earlier fixture here did.
-  const result = lint(
+  const result = await lint(
     readModelFiles(join(examplesDir, "messy-sales/Messy Sales Demo.SemanticModel")),
   );
   expect(skippedLine(result)).toMatch(/rules run/);

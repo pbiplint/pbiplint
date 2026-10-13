@@ -117,7 +117,7 @@ export async function main(argv: string[], given: Io): Promise<number> {
       ...(opts.failOn ? { failOn: opts.failOn } : {}),
     });
     const files = [...(project.model?.files ?? []), ...(project.report?.files ?? [])];
-    const linted = lint(files, {
+    const linted = await lint(files, {
       config,
       diagnostics: project.diagnostics,
       absent: project.absent,

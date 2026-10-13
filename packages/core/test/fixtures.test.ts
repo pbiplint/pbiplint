@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
-import { describe, expect, it } from "vitest";
-import { lint } from "../src/engine/lint.js";
+import { beforeAll, describe, expect, it } from "vitest";
+import { lint, type LintResult } from "../src/engine/lint.js";
 import { fixturesDir, readProjectFiles } from "./helpers.js";
 
 /** The committed project fixtures and the shape each one has (spec section 3.3). */
@@ -14,7 +14,10 @@ const PROJECTS = [
 describe.each(PROJECTS)("project fixture $name", ({ name, pages, visuals, bookmarks }) => {
   const root = `${fixturesDir}${name}`;
   const files = readProjectFiles(root);
-  const result = lint([...files.model, ...files.report]);
+  let result: LintResult;
+  beforeAll(async () => {
+    result = await lint([...files.model, ...files.report]);
+  });
   it("is a whole PBIP with both parts, read without parse issues, rule errors, or diagnostics", () => {
     expect(existsSync(root)).toBe(true);
     expect(files.modelFolder).toMatch(/\.SemanticModel$/);

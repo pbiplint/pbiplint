@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { lint } from "../src/engine/lint.js";
 import { defaultRules } from "../src/rules/index.js";
 import { readModelFiles } from "./helpers.js";
@@ -100,9 +100,11 @@ describe("the sourced rules", () => {
 
 describe.each(fixtures)("parity with Tabular Editor's rules: %s", (name) => {
   const fixture = read<BuiltInCapture>(`te3/${name}.json`).fixture;
-  const result = lint(readModelFiles(repoRoot + fixture), { config: { failOn: "none" } });
   const ours: Record<string, string[]> = {};
-  for (const f of result.findings) (ours[f.ruleId] ??= []).push(f.objectName);
+  beforeAll(async () => {
+    const result = await lint(readModelFiles(repoRoot + fixture), { config: { failOn: "none" } });
+    for (const f of result.findings) (ours[f.ruleId] ??= []).push(f.objectName);
+  });
 
   it.each(SOURCED.map((s) => [s.rule, s] as const))("%s", (rule, s) => {
     const { capture, oracle } = sourceOf(name, s);

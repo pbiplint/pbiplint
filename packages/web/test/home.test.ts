@@ -118,7 +118,7 @@ describe("home page", () => {
     expect(status.hidden).toBe(false);
     expect(status.textContent).toBe("Paste some TMDL first.");
   });
-  it("unhides the results before it renders into them", () => {
+  it("unhides the results before it renders into them", async () => {
     const results = document.getElementById("results")!;
     results.hidden = true;
     const order: string[] = [];
@@ -138,6 +138,7 @@ describe("home page", () => {
     }) as typeof results.replaceChildren;
     try {
       document.getElementById("try-sample")!.click();
+      await tick();
     } finally {
       Reflect.deleteProperty(results, "hidden");
       Reflect.deleteProperty(results, "replaceChildren");

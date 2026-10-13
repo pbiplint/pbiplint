@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { lint } from "../src/engine/lint.js";
+import type { Finding } from "../src/rules/types.js";
 import { buildIndexes } from "../src/index/build.js";
 import { buildModel } from "../src/model/build.js";
 import { buildReport } from "../src/pbir/build.js";
@@ -187,7 +188,7 @@ describe("BROKEN_FIELD_REFERENCE", () => {
       ["definition/reportExtensions.json", 5, "merge conflict marker: >>>>>>> main"],
     ]);
   });
-  it("leaves a reference naming the report's extension unreported while reportExtensions.json holds no object", () => {
+  it("leaves a reference naming the report's extension unreported while reportExtensions.json holds no object", async () => {
     // `[]` is valid JSON, but not the object Microsoft's schema gives the file, so no measure is read
     // from it and nothing says what the extension defines. Neither does the model define Net Margin,
     // so a reference resolved against the model or an empty extension would be reported.
@@ -197,7 +198,7 @@ describe("BROKEN_FIELD_REFERENCE", () => {
         Property: "Net Margin",
       },
     };
-    const r = lint([
+    const r = await lint([
       { path: "definition/tables/Sales.tmdl", text: tmdl },
       page("p"),
       bound("p", "v", "cardVisual", [inExtension]),
@@ -217,8 +218,8 @@ describe("BROKEN_FIELD_REFERENCE", () => {
       ],
     ]);
   });
-  it("says nothing about a table a misspelt keyword took out of the model, which PARSE_ISSUE reports", () => {
-    const r = lint([
+  it("says nothing about a table a misspelt keyword took out of the model, which PARSE_ISSUE reports", async () => {
+    const r = await lint([
       { path: "definition/tables/Sales.tmdl", text: tmdl.replace("table Sales", "tabel Sales") },
       page("p"),
       bound("p", "v", "tableEx", [column("Sales", "Amount"), measure("Sales", "Total Sales")]),
@@ -233,11 +234,11 @@ describe("BROKEN_FIELD_REFERENCE", () => {
       ],
     ]);
   });
-  it("says nothing about a field missing from a table whose own file has a parse issue, and reports one on a table read in full", () => {
+  it("says nothing about a field missing from a table whose own file has a parse issue, and reports one on a table read in full", async () => {
     // Sales loses Amount to a line indented with spaces, Returns loses a measure to an unterminated
     // code fence, and Stock loses a column to a line the parser does not recognize. Product's file is
     // clean, so its missing column is reported whatever the other files hold.
-    const r = lint([
+    const r = await lint([
       {
         path: "definition/tables/Sales.tmdl",
         text: tmdl.replace("\tcolumn Amount", "    column Amount"),
@@ -275,19 +276,19 @@ describe("BROKEN_FIELD_REFERENCE", () => {
       "definition/tables/Stock.tmdl",
     ]);
   });
-  it("says nothing about a field a model file the input reader could not read could declare, on shelfmart", () => {
+  it("says nothing about a field a model file the input reader could not read could declare, on shelfmart", async () => {
     // The files the CLI reads from the fixture with Store.tmdl refused: the model has no Store.
     const files = readProjectFiles(`${fixturesDir}shelfmart`);
     const STORE = "definition/tables/Store.tmdl";
     const model = files.model.filter((f) => f.path !== STORE);
     expect(model).toHaveLength(files.model.length - 1);
-    const broken = (r: ReturnType<typeof lint>) =>
+    const broken = (r: Awaited<ReturnType<typeof lint>>) =>
       r.findings.filter((f) => f.ruleId === "BROKEN_FIELD_REFERENCE").map((f) => f.detail);
     // Not told the file is there, lint takes Store for a table the model does not have.
-    const unaware = broken(lint([...model, ...files.report]));
+    const unaware = broken(await lint([...model, ...files.report]));
     expect(unaware).toHaveLength(13);
     expect(unaware.every((d) => d!.endsWith(`: no table named "Store"`))).toBe(true);
-    const r = lint([...model, ...files.report], { unreadPaths: { model: [STORE] } });
+    const r = await lint([...model, ...files.report], { unreadPaths: { model: [STORE] } });
     expect(broken(r)).toEqual([]);
     expect(r.findings.filter((f) => f.ruleId === "PARSE_ISSUE")).toEqual([]);
     expect(r.summary.rulesSkipped).toContainEqual({
@@ -295,8 +296,8 @@ describe("BROKEN_FIELD_REFERENCE", () => {
       reason: "modelFileUnread",
     });
   });
-  it("reports a missing table while the model's only parse issue is an orphaned description", () => {
-    const r = lint([
+  it("reports a missing table while the model's only parse issue is an orphaned description", async () => {
+    const r = await lint([
       {
         path: "definition/tables/Sales.tmdl",
         text: tmdl.replace("\tcolumn Region", "\t/// Described\n\n\tcolumn Region"),
@@ -331,8 +332,8 @@ describe("BROKEN_FIELD_REFERENCE", () => {
         "\tmeasure Total = SUM(Sales[Amount])",
         "",
       ].join("\n");
-    const run = (text: string) => {
-      const r = lint([
+    const run = async (text: string) => {
+      const r = await lint([
         { path: "definition/tables/Sales.tmdl", text },
         page("p"),
         bound("p", "v", "tableEx", [column("Sales", "Region"), measure("Sales", "Total")]),
@@ -345,8 +346,8 @@ describe("BROKEN_FIELD_REFERENCE", () => {
       };
     };
 
-    it("is one PARSE_ISSUE, and no finding for the fields under it, for a column's annotation", () => {
-      expect(run(salesWith("annotation SummarizationSetBy = Automatic"))).toEqual({
+    it("is one PARSE_ISSUE, and no finding for the fields under it, for a column's annotation", async () => {
+      expect(await run(salesWith("annotation SummarizationSetBy = Automatic"))).toEqual({
         parse: [
           [
             10,
@@ -357,8 +358,8 @@ describe("BROKEN_FIELD_REFERENCE", () => {
       });
     });
 
-    it("is one PARSE_ISSUE, and no finding for the fields under it, for a column's property", () => {
-      expect(run(salesWith("summarizeBy: none"))).toEqual({
+    it("is one PARSE_ISSUE, and no finding for the fields under it, for a column's property", async () => {
+      expect(await run(salesWith("summarizeBy: none"))).toEqual({
         parse: [
           [
             10,
@@ -381,8 +382,8 @@ describe("BROKEN_FIELD_REFERENCE", () => {
     ],
   ])(
     "says nothing about a measure a second file held when that file's table line is %s",
-    (_, tableLine, reasons) => {
-      const r = lint([
+    async (_, tableLine, reasons) => {
+      const r = await lint([
         { path: "definition/tables/Sales.tmdl", text: "table Sales\n\tcolumn Amount\n" },
         {
           path: "definition/tables/measures.tmdl",
@@ -410,8 +411,8 @@ describe("BROKEN_FIELD_REFERENCE", () => {
     ],
   ])(
     "still reports a field missing from a table read in full when another file has %s at its root",
-    (_, line, reason) => {
-      const r = lint([
+    async (_, line, reason) => {
+      const r = await lint([
         { path: "definition/tables/Sales.tmdl", text: "table Sales\n\tcolumn Amount\n" },
         {
           path: "definition/tables/Product.tmdl",
@@ -941,7 +942,7 @@ table Date
       "'Date'[Date]",
     ]);
   });
-  it("reports a column the subquery reads and the model lacks once, at error, on the inner field's line", () => {
+  it("reports a column the subquery reads and the model lacks once, at error, on the inner field's line", async () => {
     // Form F3: the value is the latest Last Update, which Date does not have. The query names it in
     // its Select and again in its OrderBy; the rule reports it once, at the Select item.
     const lastUpdate = aggregationOf(
@@ -956,7 +957,7 @@ table Date
       ),
     );
     const box = textBox("t", [lastUpdate, "Value"]);
-    const r = lint([{ path: "definition/tables/Model.tmdl", text: model }, page("p"), box]);
+    const r = await lint([{ path: "definition/tables/Model.tmdl", text: model }, page("p"), box]);
     const select = lineOf(box.text, '"Select"') + 1;
     expect(select).toBeGreaterThan(lineOf(box.text, '"Subquery"'));
     expect(select).toBeLessThan(lineOf(box.text, '"Last Update"'));
@@ -997,10 +998,14 @@ table Date
       "'Date'[Date]",
     ]);
   });
-  it("lowers the Model fact's not-reached count by what the subquery reaches, as it shortens the rule's list", () => {
+  it("lowers the Model fact's not-reached count by what the subquery reaches, as it shortens the rule's list", async () => {
     // The fact's clause counts what the rule lists, so the two move together.
-    const run = (...files: { path: string; text: string }[]) => {
-      const r = lint([{ path: "definition/tables/Model.tmdl", text: model }, page("p"), ...files]);
+    const run = async (...files: { path: string; text: string }[]) => {
+      const r = await lint([
+        { path: "definition/tables/Model.tmdl", text: model },
+        page("p"),
+        ...files,
+      ]);
       return {
         fact: r.facts.find((f) => f.label === "Model"),
         listed: r.findings
@@ -1008,7 +1013,7 @@ table Date
           .map((f) => f.objectName),
       };
     };
-    const before = run();
+    const before = await run();
     expect(before.fact?.detail).toBe("4 columns and 1 measure not reached from this report");
     expect(before.listed).toEqual([
       "[Total Sales]",
@@ -1018,7 +1023,7 @@ table Date
       "'Date'[Date]",
     ]);
     // The text box reaches Total Sales, and Total Sales reaches Total Amount through its DAX.
-    const after = run(textBox("t", [totalSales, "Total Sales"]));
+    const after = await run(textBox("t", [totalSales, "Total Sales"]));
     expect(after.fact).toEqual({
       layer: "model",
       label: "Model",
@@ -1035,7 +1040,7 @@ table Date
 });
 
 describe("NOT_REACHED_FROM_REPORT and aggregation tables", () => {
-  it("lists neither an aggregation table's columns nor the detail fields they map to", () => {
+  it("lists neither an aggregation table's columns nor the detail fields they map to", async () => {
     // Report queries name the DirectQuery detail table, and Power BI answers them from the
     // imported aggregation table where it can, so no visual names Sales by Day.
     const aggregated = `table Sales
@@ -1077,7 +1082,7 @@ table 'Sales by Day'
 		mode: import
 		source = let Source = Sql.Database("finance", "Warehouse") in Source{[Item = "vwSalesByDay"]}[Data]
 `;
-    const r = lint([
+    const r = await lint([
       { path: "definition/tables/Sales.tmdl", text: aggregated },
       page("p"),
       bound("p", "v", "cardVisual", [measure("Sales", "Order Count")]),
@@ -1247,13 +1252,18 @@ describe("NOT_REACHED_FROM_REPORT and user-defined functions, on the sample's re
     new URL("../../../examples/messy-sales", import.meta.url).pathname,
   ).model;
   const udfModel = readModelFiles(`${fixturesDir}udf-sales.SemanticModel`);
-  const notReached = (model: typeof udfModel) =>
-    lint([...model, ...report], { config: { failOn: "none" } }).findings.filter(
+  const notReached = async (model: typeof udfModel) =>
+    (await lint([...model, ...report], { config: { failOn: "none" } })).findings.filter(
       (f) => f.ruleId === "NOT_REACHED_FROM_REPORT",
     );
-  const onSample = notReached(sampleModel).map((f) => f.objectName);
-  const onUdf = notReached(udfModel);
-  const names = onUdf.map((f) => f.objectName);
+  let onSample: string[];
+  let onUdf: Finding[];
+  let names: string[];
+  beforeAll(async () => {
+    onSample = (await notReached(sampleModel)).map((f) => f.objectName);
+    onUdf = await notReached(udfModel);
+    names = onUdf.map((f) => f.objectName);
+  });
 
   it("reaches what [Net Sales] uses through Sales.NetAfterReserve, and the added relationship's columns", () => {
     expect(onSample.filter((n) => !names.includes(n))).toEqual([

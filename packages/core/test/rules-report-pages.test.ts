@@ -28,7 +28,7 @@ describe("REMOVE_UNUSED_CUSTOM_VISUALS", () => {
       ]),
     ).toEqual([]);
   });
-  it("is skipped while a visual.json could not be read, since that visual could be of any registered type", () => {
+  it("is skipped while a visual.json could not be read, since that visual could be of any registered type", async () => {
     const files = [
       {
         path: "definition/report.json",
@@ -37,9 +37,9 @@ describe("REMOVE_UNUSED_CUSTOM_VISUALS", () => {
       page("p"),
       visual("p", "v", "Used123"),
     ];
-    const run = (...extra: { path: string; text: string }[]) =>
-      lint([...files, ...extra], { rules: [REMOVE_UNUSED_CUSTOM_VISUALS] });
-    const unread = run({
+    const run = async (...extra: { path: string; text: string }[]) =>
+      await lint([...files, ...extra], { rules: [REMOVE_UNUSED_CUSTOM_VISUALS] });
+    const unread = await run({
       path: "definition/pages/p/visuals/w/visual.json",
       text: '{ "name": "w", ',
     });
@@ -53,7 +53,7 @@ describe("REMOVE_UNUSED_CUSTOM_VISUALS", () => {
       { path: "definition/pages/p/visuals/v/mobile.json", text: "{" },
       { path: "definition/pages/pages.json", text: "<<<<<<< HEAD\n{}\n" },
     ]) {
-      const r = run(file);
+      const r = await run(file);
       expect(r.summary.rulesSkipped, file.path).toEqual([]);
       expect(
         r.findings.map((f) => f.objectId),
@@ -62,10 +62,10 @@ describe("REMOVE_UNUSED_CUSTOM_VISUALS", () => {
     }
     expect(REMOVE_UNUSED_CUSTOM_VISUALS.skipWhenUnread).toBe(customVisualUseUnknown);
   });
-  it("runs while a visual.json could not be read when the unread visual could not change its answer", () => {
+  it("runs while a visual.json could not be read when the unread visual could not change its answer", async () => {
     const unread = { path: "definition/pages/p/visuals/w/visual.json", text: '{ "name": "w", ' };
-    const run = (registered: string[] | undefined) =>
-      lint(
+    const run = async (registered: string[] | undefined) =>
+      await lint(
         [
           {
             path: "definition/report.json",
@@ -79,13 +79,13 @@ describe("REMOVE_UNUSED_CUSTOM_VISUALS", () => {
       );
     // No custom visual registered, or every registered type used by a visual that was read.
     for (const registered of [undefined, [], ["Used123"]]) {
-      const r = run(registered);
+      const r = await run(registered);
       expect(r.summary.rulesSkipped, String(registered)).toEqual([]);
       expect(r.summary.rulesRun, String(registered)).toBe(1);
       expect(r.findings, String(registered)).toEqual([]);
     }
     // A registered type no visual that was read uses: the unread one could, so the rule is skipped.
-    expect(run(["Used123", "ChicletSlicer1448559807354"]).summary.rulesSkipped).toEqual([
+    expect((await run(["Used123", "ChicletSlicer1448559807354"])).summary.rulesSkipped).toEqual([
       { id: "REMOVE_UNUSED_CUSTOM_VISUALS", reason: "reportFileUnread" },
     ]);
   });
@@ -110,10 +110,10 @@ describe("HIDE_TOOLTIP_DRILLTROUGH_PAGES", () => {
   // Inspector reads it: in the research corpus `type` Drillthrough alone marks pages that are no
   // drillthrough target, and every drillthrough target carries the binding.
   /** Lint one pretty-printed page with the rule; the finding's detail and the text of its line. */
-  const lintPage = (name: string, extra: Record<string, unknown>) => {
+  const lintPage = async (name: string, extra: Record<string, unknown>) => {
     const file = page(name, extra);
     const text = pretty(JSON.parse(file.text));
-    const { findings } = lint([{ ...file, text }], {
+    const { findings } = await lint([{ ...file, text }], {
       rules: [HIDE_TOOLTIP_DRILLTROUGH_PAGES],
       config: { failOn: "none" },
     });
@@ -124,17 +124,22 @@ describe("HIDE_TOOLTIP_DRILLTROUGH_PAGES", () => {
     }));
   };
 
-  it("fires on a visible page marked as a tooltip by page.json's own type alone, at the type line", () => {
-    expect(lintPage("tip", { type: "Tooltip" })).toEqual([
+  it("fires on a visible page marked as a tooltip by page.json's own type alone, at the type line", async () => {
+    expect(await lintPage("tip", { type: "Tooltip" })).toEqual([
       { objectId: "tip", detail: "tooltip page is visible to readers", line: '"type": "Tooltip"' },
     ]);
   });
 
-  it("leaves a visible page marked as a drillthrough by page.json's own type alone", () => {
-    expect(lintPage("drill", { type: "Drillthrough", visibility: "AlwaysVisible" })).toEqual([]);
+  it("leaves a visible page marked as a drillthrough by page.json's own type alone", async () => {
+    expect(await lintPage("drill", { type: "Drillthrough", visibility: "AlwaysVisible" })).toEqual(
+      [],
+    );
     // The schema's third binding type, Default, is "No specific usage of this binding."
     expect(
-      lintPage("drill", { type: "Drillthrough", pageBinding: { name: "b", type: "Default" } }),
+      await lintPage("drill", {
+        type: "Drillthrough",
+        pageBinding: { name: "b", type: "Default" },
+      }),
     ).toEqual([]);
   });
 
@@ -146,9 +151,11 @@ describe("HIDE_TOOLTIP_DRILLTROUGH_PAGES", () => {
     expect(reportObjectIds(HIDE_TOOLTIP_DRILLTROUGH_PAGES, files)).toEqual([]);
   });
 
-  it("fires once on a page with both markings, at the pageBinding line", () => {
+  it("fires once on a page with both markings, at the pageBinding line", async () => {
     for (const kind of ["Tooltip", "Drillthrough"]) {
-      expect(lintPage("both", { type: kind, pageBinding: { name: "b", type: kind } })).toEqual([
+      expect(
+        await lintPage("both", { type: kind, pageBinding: { name: "b", type: kind } }),
+      ).toEqual([
         {
           objectId: "both",
           detail: `${kind.toLowerCase()} page is visible to readers`,
@@ -158,10 +165,10 @@ describe("HIDE_TOOLTIP_DRILLTROUGH_PAGES", () => {
     }
   });
 
-  it("reads page.json's own type when the pageBinding marks no tooltip or drillthrough", () => {
+  it("reads page.json's own type when the pageBinding marks no tooltip or drillthrough", async () => {
     // The schema's third binding type, Default, is "No specific usage of this binding."
     expect(
-      lintPage("tip", { type: "Tooltip", pageBinding: { name: "b", type: "Default" } }),
+      await lintPage("tip", { type: "Tooltip", pageBinding: { name: "b", type: "Default" } }),
     ).toEqual([
       { objectId: "tip", detail: "tooltip page is visible to readers", line: '"type": "Tooltip",' },
     ]);
@@ -181,11 +188,11 @@ describe("ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY", () => {
     ).toEqual([]);
   });
 
-  it("points the finding at the height line", () => {
+  it("points the finding at the height line", async () => {
     // Pretty-printed, as Desktop writes it, so a mistyped pointer cannot fall back to line 1 unseen.
     const tall = page("tall", { height: 721 });
     const text = JSON.stringify(JSON.parse(tall.text), null, 2);
-    const { findings } = lint([{ ...tall, text }], {
+    const { findings } = await lint([{ ...tall, text }], {
       rules: [ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY],
       config: { failOn: "none" },
     });

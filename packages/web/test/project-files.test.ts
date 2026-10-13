@@ -43,7 +43,7 @@ describe("selectProject on a model", () => {
     ]);
     expect(m.config).toBeUndefined();
   });
-  it("hands over the model's files in the CLI's walk order when a folder's name begins with a sibling's (tracked in #101)", () => {
+  it("hands over the model's files in the CLI's walk order when a folder's name begins with a sibling's (tracked in #101)", async () => {
     // A backup kept beside the tables folder, which walk.test.ts gives the CLI too. As whole
     // paths, tables.old sorts first; the CLI's walk goes through tables first. Core reads the
     // files in the walk's order whatever order it is given, so the results agree either way.
@@ -61,7 +61,7 @@ describe("selectProject on a model", () => {
       "definition/tables/Sales.tmdl",
       "definition/tables.old/Sales.tmdl",
     ]);
-    expect(lint(m.files).model.tables[0]!.columns.map((c) => c.name)).toEqual([
+    expect((await lint(m.files)).model.tables[0]!.columns.map((c) => c.name)).toEqual([
       "Amount",
       "Old Amount",
     ]);
@@ -392,7 +392,7 @@ describe("selectProject", () => {
     expect(p.diagnostics[0]).toEqual({ kind: "depth-cap", message: "stopped", path: "x" });
   });
 
-  it("reads a PBIP folder holding a model and a .pbip but no report as the model alone", () => {
+  it("reads a PBIP folder holding a model and a .pbip but no report as the model alone", async () => {
     const p = selectProject(
       tree(
         proj.filter((x) => !x.path.includes(".Report")),
@@ -407,7 +407,7 @@ describe("selectProject", () => {
     // nothing in it (tracked in #59).
     expect(p.absent).toEqual({});
     expect(p.read).toContain("Demo.pbip (not linted)");
-    expect(lint(p.files, { absent: p.absent }).layers.report).toEqual({
+    expect((await lint(p.files, { absent: p.absent })).layers.report).toEqual({
       present: false,
       reason: "no report in the input",
     });
@@ -817,7 +817,7 @@ describe("selectProject", () => {
     expect(nearer.config?.path).toBe("Proj/pbiplint.config.json");
     expect(nearer.diagnostics).toEqual([]);
   });
-  it("tells lint a folder that could not be listed is a folder, under the model and under the report", () => {
+  it("tells lint a folder that could not be listed is a folder, under the model and under the report", async () => {
     const folders = [
       "Proj/Demo.SemanticModel/definition/tables",
       "Proj/Demo.Report/definition/pages/p/visuals",
@@ -834,7 +834,7 @@ describe("selectProject", () => {
       model: ["definition/tables/"],
       report: ["definition/pages/p/visuals/"],
     });
-    const result = lint(p.files, {
+    const result = await lint(p.files, {
       absent: p.absent,
       diagnostics: p.diagnostics,
       unreadPaths: p.unreadPaths,
@@ -889,7 +889,7 @@ describe("selectProject", () => {
     expect(loose.diagnostics).toEqual([unreadAt("Archive")]);
     expect(loose.unreadPaths).toEqual({ model: ["Archive/"] });
   });
-  it("tells a part a folder the walk stopped in at the depth cap is unread, without refusing anything", () => {
+  it("tells a part a folder the walk stopped in at the depth cap is unread, without refusing anything", async () => {
     const cap = {
       kind: "depth-cap" as const,
       path: "Proj/Demo.Report/definition/pages/p/visuals",
@@ -907,7 +907,7 @@ describe("selectProject", () => {
     ]);
     expect(p.absent).toEqual({});
     expect(p.unreadPaths).toEqual({ model: [], report: ["definition/pages/p/visuals/"] });
-    const result = lint(p.files, {
+    const result = await lint(p.files, {
       absent: p.absent,
       diagnostics: p.diagnostics,
       unreadPaths: p.unreadPaths,

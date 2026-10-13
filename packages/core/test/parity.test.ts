@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
-import { lint } from "../src/engine/lint.js";
+import { beforeAll, describe, expect, it } from "vitest";
+import { lint, type LintResult } from "../src/engine/lint.js";
 import { defaultRules } from "../src/rules/index.js";
 import { readModelFiles } from "./helpers.js";
 
@@ -39,9 +39,12 @@ function expectedNames(exp: Expectation, id: string): string[] {
 
 describe.each(expectations)("parity with Tabular Editor: $name", (exp) => {
   const files = readModelFiles(repoRoot + exp.fixture);
-  const result = lint(files, { config: { failOn: "none" } });
+  let result: LintResult;
   const ours: Record<string, string[]> = {};
-  for (const f of result.findings) (ours[f.ruleId] ??= []).push(f.objectName);
+  beforeAll(async () => {
+    result = await lint(files, { config: { failOn: "none" } });
+    for (const f of result.findings) (ours[f.ruleId] ??= []).push(f.objectName);
+  });
 
   it("reads at least one file", () => {
     expect(files.length).toBeGreaterThan(0);

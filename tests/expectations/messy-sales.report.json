@@ -122,6 +122,15 @@
       "'Sales'[Unit Price]",
       "'Store'[Latitude]",
       "'Store'[Longitude]"
+    ],
+    "LOCAL_DRIVE_PATH": [
+      "Customer",
+      "Date",
+      "Employee",
+      "Product",
+      "Promotion",
+      "Sales",
+      "Store"
     ]
   },
   "results": {

@@ -38,7 +38,7 @@ describe("export", () => {
     const json = exportJson(result);
     expect(json.name).toBe("pbiplint-report.json");
     const doc = JSON.parse(json.text);
-    expect(doc.summary.findings).toBe(266);
+    expect(doc.summary.findings).toBe(273);
     expect(doc.layers).toEqual({
       model: { present: true, files: 14 },
       report: { present: true, files: 78 },
@@ -143,7 +143,9 @@ describe("export for an AI assistant", () => {
 
   it("adds each rule's How to fix it and When to ignore it once, for the rules with findings only", () => {
     const fired = new Set(result.groups.map((g) => g.rule.id));
-    expect(new Set(result.groups.map((g) => g.rule.layer))).toEqual(new Set(["model", "report"]));
+    expect(new Set(result.groups.map((g) => g.rule.layer))).toEqual(
+      new Set(["model", "report", "powerquery"]),
+    );
     for (const g of result.groups) {
       const guidance = RULE_GUIDANCE[g.rule.id]!;
       expect(copied.split(`### ${g.rule.name} (${g.rule.id})`).length - 1, g.rule.id).toBe(1);

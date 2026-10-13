@@ -1,6 +1,17 @@
 {
   "fixture": "tests/fixtures/m-zoo.SemanticModel",
   "about": "pbiplint's own Power Query rules on m-zoo: rule, object, file, line, column, and detail of every finding. These rules have no Tabular Editor oracle (v3 spec, section 11.1), so this file is pbiplint's own, written in place order and reviewed by hand.",
-  "rules": [],
-  "findings": []
+  "rules": ["LOCAL_DRIVE_PATH"],
+  "findings": [
+    { "rule": "LOCAL_DRIVE_PATH", "objectType": "NamedExpression", "object": "DataFolder", "file": "definition/expressions.tmdl", "line": 18, "column": 25, "detail": "query 'DataFolder': the path is on a local drive (C:)" },
+    { "rule": "LOCAL_DRIVE_PATH", "objectType": "NamedExpression", "object": "ExportFolder", "file": "definition/expressions.tmdl", "line": 21, "column": 27, "detail": "query 'ExportFolder': the path is on a local drive (D:)" },
+    { "rule": "LOCAL_DRIVE_PATH", "objectType": "Partition", "object": "Budget", "file": "definition/tables/Budget.tmdl", "line": 15, "column": 51, "detail": "query 'Budget', step 'ReaderHeaders': the path is on a local drive (C:)" },
+    { "rule": "LOCAL_DRIVE_PATH", "objectType": "Partition", "object": "Budget", "file": "definition/tables/Budget.tmdl", "line": 16, "column": 51, "detail": "query 'Budget', step 'OptionHeaders': the path is on a local drive (C:)" },
+    { "rule": "LOCAL_DRIVE_PATH", "objectType": "Partition", "object": "Budget", "file": "definition/tables/Budget.tmdl", "line": 17, "column": 45, "detail": "query 'Budget', step 'Desktop': the path is on a local drive (C:)" },
+    { "rule": "LOCAL_DRIVE_PATH", "objectType": "Partition", "object": "Budget", "file": "definition/tables/Budget.tmdl", "line": 18, "column": 44, "detail": "query 'Budget', step 'Legacy': the path is on a local drive (C:)" },
+    { "rule": "LOCAL_DRIVE_PATH", "objectType": "Partition", "object": "Customers Latest", "file": "definition/tables/Customers Latest.tmdl", "line": 14, "column": 42, "detail": "query 'Customers Latest', step 'Source': the path is on a local drive (C:)" },
+    { "rule": "LOCAL_DRIVE_PATH", "objectType": "Partition", "object": "Local Paths", "file": "definition/tables/Local Paths.tmdl", "line": 15, "column": 28, "detail": "query 'Local Paths', step 'Local': the path is on a local drive (C:)" },
+    { "rule": "LOCAL_DRIVE_PATH", "objectType": "Partition", "object": "Orders Files", "file": "definition/tables/Orders Files.tmdl", "line": 15, "column": 16, "detail": "query 'Orders Files', step 'Archive': the path is on a local drive (C:)" },
+    { "rule": "LOCAL_DRIVE_PATH", "objectType": "Partition", "object": "Sales Files", "file": "definition/tables/Sales Files.tmdl", "line": 14, "column": 28, "detail": "query 'Sales Files', step 'Source': the path is on a local drive (C:)" }
+  ]
 }

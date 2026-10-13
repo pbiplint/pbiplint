@@ -102,6 +102,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Tables with more than 25 million rows and a single partition. The row count is a statistic of the loaded data, not of the model files, so pbiplint lists this rule but does not run it: it needs statistics that only a live model carries.",
   "LIMIT_ROW_LEVEL_SECURITY_(RLS)_LOGIC":
     "Tables whose row-level security filter, in any role, calls RIGHT, LEFT, UPPER, LOWER, or FIND.",
+  LOCAL_DRIVE_PATH:
+    "Text in a Power Query query or parameter that starts with a path on a drive letter, such as `C:\\Demo\\Data\\Sales.csv` or `D:/Exports/`.",
   "MANY-TO-MANY_RELATIONSHIPS_SHOULD_BE_SINGLE-DIRECTION":
     "Many-to-many relationships with bi-directional cross filtering.",
   MARK_PRIMARY_KEYS:

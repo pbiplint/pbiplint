@@ -63,10 +63,10 @@ test("lints the sample project and announces the result", async ({ page }) => {
     "Results for the sample project (model, 14 files · report, 78 files)",
   );
   await expect(results.locator(".summary")).toContainText(
-    "266 findings (19 errors, 77 warnings, 170 info) in 92 files",
+    "273 findings (19 errors, 84 warnings, 170 info) in 92 files",
   );
   await expect(page.locator("#announce")).toHaveText(
-    /^Results for the sample project \(model, 14 files · report, 78 files\): 266 findings/,
+    /^Results for the sample project \(model, 14 files · report, 78 files\): 273 findings/,
   );
   await expect(results.locator("section.facts h3")).toHaveText("Report at a glance");
   await expect(results.locator(".fix-first li")).toHaveCount(5);
@@ -76,6 +76,22 @@ test("lints the sample project and announces the result", async ({ page }) => {
   await results.getByRole("checkbox", { name: "Report", exact: true }).uncheck();
   await expect(results.locator('.group[data-layer="report"]').first()).toBeHidden();
   await expect(results.locator('.group[data-layer="model"]').first()).toBeVisible();
+  // The sample reads its CSV files from C:\Demo\Data\, so it has a Power Query group (v3 spec,
+  // sections 9.6 and 11.7): a finding's column, its query, and its step show, and the Power Query
+  // box hides only that family.
+  await results.getByRole("checkbox", { name: "Report", exact: true }).check();
+  const powerQuery = results.getByRole("checkbox", { name: "Power Query", exact: true });
+  await expect(powerQuery).toBeChecked();
+  const local = page.locator("#rule-local-drive-path");
+  await local.locator("summary").click();
+  await expect(local).toContainText("definition/tables/Customer.tmdl:105:45");
+  await expect(local).toContainText(
+    "query 'Customer', step 'Source': the path is on a local drive (C:)",
+  );
+  await powerQuery.uncheck();
+  await expect(results.locator('.group[data-layer="powerquery"]:not([hidden])')).toHaveCount(0);
+  await expect(results.locator('.group[data-layer="model"]').first()).toBeVisible();
+  await expect(results.locator('.group[data-layer="report"]').first()).toBeVisible();
 });
 
 test("a link to a group the Show filter hid shows that group, opens it, and scrolls to it", async ({
@@ -236,9 +252,9 @@ test("lints a whole PBIP from the folder input: both layers, the facts panel, an
   await expect(
     results.locator('input[data-filter="layer"][value="powerquery"]'),
   ).toHaveAccessibleName("Power Query");
-  await expect(results.locator('.group[data-layer="powerquery"] summary .layer')).toHaveText(
-    "Power Query",
-  );
+  await expect(
+    results.locator('.group[data-layer="powerquery"] summary .layer').first(),
+  ).toHaveText("Power Query");
   await results.locator('input[data-filter="layer"][value="powerquery"]').uncheck();
   await expect(results.locator('.group[data-layer="powerquery"]:not([hidden])')).toHaveCount(0);
   await expect(results.locator('.group[data-layer="model"]:not([hidden])').first()).toBeVisible();
@@ -488,7 +504,7 @@ test("downloads the Markdown report", async ({ page }) => {
   ]);
   expect(download.suggestedFilename()).toMatch(/\.md$/);
   const text = readFileSync((await download.path())!, "utf8");
-  expect(text).toContain("266 findings");
+  expect(text).toContain("273 findings");
 });
 
 test("copies the Markdown report from the button beside the downloads", async ({
@@ -538,7 +554,7 @@ test("copies the report with each rule's guidance for an AI assistant, from the 
     const text = await page.evaluate(() => navigator.clipboard.readText());
     expect(text.startsWith("# For the AI assistant reading this")).toBe(true);
     expect(text).toContain("# pbiplint report");
-    expect(text).toContain("266 findings");
+    expect(text).toContain("273 findings");
     expect(text).toContain("## How to fix these findings");
     expect(text).toContain("(BROKEN_FIELD_REFERENCE)\n");
     expect(text).toContain("(AVOID_FLOATING_POINT_DATA_TYPES)\n");

@@ -63,7 +63,7 @@ describe("renderResults", () => {
       "Results for the sample project (model, 14 files · report, 78 files)",
     );
     expect(container.querySelector(".summary")!.textContent).toContain(
-      "266 findings (19 errors, 77 warnings, 170 info) in 92 files",
+      "273 findings (19 errors, 84 warnings, 170 info) in 92 files",
     );
     const first = [...container.querySelectorAll(".fix-first li")];
     expect(first.length).toBe(5);
@@ -216,8 +216,8 @@ describe("renderResults", () => {
     renderResults(container, result, { source: "x" });
     const labels = [...container.querySelectorAll("label.filter")].map((l) => l.textContent);
     expect(labels.slice(0, 3)).toEqual(["Error", "Warning", "Info"]);
-    expect(labels.slice(3, 5)).toEqual(["Model", "Report"]);
-    expect(labels[5]).toBe("Performance");
+    expect(labels.slice(3, 6)).toEqual(["Model", "Report", "Power Query"]);
+    expect(labels[6]).toBe("Performance");
     expect(
       [...container.querySelectorAll<HTMLInputElement>('input[data-filter="severity"]')].map(
         (i) => i.value,
@@ -637,13 +637,17 @@ describe("renderResults", () => {
       ),
     ).toEqual(["badge error", "layer report", "name", "count"]);
     const boxes = [...container.querySelectorAll<HTMLInputElement>('input[data-filter="layer"]')];
-    expect(boxes.map((b) => b.value)).toEqual(["model", "report"]);
-    expect(boxes.map((b) => b.parentElement!.textContent)).toEqual(["Model", "Report"]);
+    expect(boxes.map((b) => b.value)).toEqual(["model", "report", "powerquery"]);
+    expect(boxes.map((b) => b.parentElement!.textContent)).toEqual([
+      "Model",
+      "Report",
+      "Power Query",
+    ]);
     // Between the severities and the categories, with a gap on each side.
     const legendAndBoxes = [...container.querySelector(".filters")!.children].map((el) =>
       el.tagName === "SPAN" ? "gap" : (el.textContent ?? ""),
     );
-    expect(legendAndBoxes.slice(0, 8)).toEqual([
+    expect(legendAndBoxes.slice(0, 9)).toEqual([
       "Show",
       "Error",
       "Warning",
@@ -651,6 +655,7 @@ describe("renderResults", () => {
       "gap",
       "Model",
       "Report",
+      "Power Query",
       "gap",
     ]);
     boxes[1]!.checked = false;
@@ -666,8 +671,12 @@ describe("renderResults", () => {
     for (const g of container.querySelectorAll<HTMLElement>(".group"))
       expect(g.hidden).toBe(g.dataset.layer === "model");
   });
-  it("offers no layer filter unless both layers have groups", async () => {
-    const modelOnly = await lint(SAMPLE_FILES.filter((f) => f.path.endsWith(".tmdl")));
+  it("offers no layer filter unless two families have groups", async () => {
+    // The sample's model files alone, without the Power Query rules its CSV paths fire: one family.
+    const modelOnly = await lint(
+      SAMPLE_FILES.filter((f) => f.path.endsWith(".tmdl")),
+      { rules: defaultRules.filter((r) => r.layer !== "powerquery") },
+    );
     renderResults(container, modelOnly, { source: "x" });
     expect(container.querySelector('input[data-filter="layer"]')).toBeNull();
     // One gap, between the severities and the categories, as before the report layer.

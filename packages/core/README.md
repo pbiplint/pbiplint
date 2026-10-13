@@ -38,7 +38,7 @@ points at it.
 `showOnly(result, ruleIds, config)` keeps a result to some rules' findings, as the command line's
 `--rule` does: every rule still ran, `result.summary.shown` counts what is kept (the rest of the
 summary stays the whole run's), `failed` follows the kept findings, `summaryLine` (and with it the
-text and Markdown formats) says the result is filtered ("3 of 266 findings shown, 1 rule ..."), and
+text and Markdown formats) says the result is filtered ("3 of 273 findings shown, 1 rule ..."), and
 the JSON format carries `summary.shown`. It is absent on an unfiltered result.
 
 The optional second argument, `lint(files, options)`, takes the config, the rules to run, and

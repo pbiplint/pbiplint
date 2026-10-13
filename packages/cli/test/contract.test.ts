@@ -70,7 +70,7 @@ describe("the CLI's contract", () => {
     const dir = tempDir("contract-output");
     const written = await run([sample, "--format", "json", "--output", "r.json"], dir);
     expect(written.out).toBe("");
-    expect(written.err).toMatch(/^pbiplint: 266 findings .*, wrote r\.json\n$/);
+    expect(written.err).toMatch(/^pbiplint: 273 findings .*, wrote r\.json\n$/);
     expect(() => JSON.parse(readFileSync(join(dir, "r.json"), "utf8"))).not.toThrow();
   });
 
@@ -160,7 +160,11 @@ describe("the CLI's contract", () => {
       expect([1, 2, 3]).toContain(g.rule.severity);
       expect(g.count).toBe(g.findings.length);
       for (const f of g.findings)
-        hasFields(f, ["layer", "objectType", "objectName"], ["objectId", "file", "line", "detail"]);
+        hasFields(
+          f,
+          ["layer", "objectType", "objectName"],
+          ["objectId", "file", "line", "column", "detail"],
+        );
     }
     // Groups are ranked, errors first.
     const severities = doc.groups.map((g: { rule: { severity: number } }) => g.rule.severity);

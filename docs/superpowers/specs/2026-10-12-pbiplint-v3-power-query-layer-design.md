@@ -280,7 +280,7 @@ Michael approved 15 new rules on October 13, 2026 ([issuecomment-6143569646](htt
 - **Flags:** a `Table.Distinct` call with a second argument (the columns that decide what is a duplicate) whose table is a `Table.Sort` call, either written in place or a name the resolver binds to a `Table.Sort` call. Desktop's own steps make exactly this: **Sorted Rows**, then **Removed Duplicates**. Located on the `Table.Distinct` call.
 - **Leaves alone:**
   - A sort held by `Table.Buffer` (`Table.Distinct(Table.Buffer(Table.Sort(...)), ...)`, or a buffered step between), which is the fix the page leads with.
-  - A `Table.Distinct` with no second argument: every column then decides, so the rows it chooses between are identical, and which one survives makes no difference.
+  - A `Table.Distinct` with no second argument, or `null` in its place: every column then decides, so the rows it chooses between are identical, and which one survives makes no difference.
   - A sort that is not the table argument's own value, such as one several steps earlier with other steps between.
 - **Detail:** `query 'Customers', step 'Removed Duplicates': nothing holds the order of step 'Sorted Rows', so the sort may not decide which duplicate is kept`.
 - **Sources:**
@@ -292,6 +292,7 @@ Michael approved 15 new rules on October 13, 2026 ([issuecomment-6143569646](htt
 - **Fix route** in Desktop: **Transform data**, select the query, and in **Applied steps** select **Sorted Rows**. Keep the sort and hold it: in the formula bar, wrap the step's formula in `Table.Buffer( ... )`, which is Microsoft's second suggestion ("Buffer the data (using `Table.Buffer`) before applying the downstream operation. In some cases, this operation causes the downstream operation to preserve the buffered sort order.", [Preserving sort](https://learn.microsoft.com/en-us/power-query/common-issues#preserving-sort)). The page says the buffer holds the whole table in memory, and that Microsoft hedges it ("In some cases"). For a result that does not depend on order at all, replace the two steps with **Group By** on the key columns, keeping the row with the latest date, or with Microsoft's rank ("order by the column(s) containing the duplicate values, rank based on a tie-breaker column (such as `modified_date`), and then filter to keep just the rank 1 rows").
 - **Fixtures:** in m-zoo (section 11.1): a **Sorted Rows** then **Removed Duplicates** pair (fires); the same written in one expression (fires); with `Table.Buffer` around the sort (does not); `Table.Distinct` with no columns after a sort (does not); a sort two steps before the distinct (does not).
 - **Corpus:** 19 occurrences in 10 models (8 repositories) before the one-argument exception, which can only lower it.
+- **Amended October 13, 2026** (the coordinator's decision, pull request 5, from the corpus spot check): a sort only on columns that are also among the `Table.Distinct` columns is left alone. Every row in a set of duplicates then ties on the sort, so the sort cannot choose between them, and `Table.Buffer` would change nothing. The rule reads the sort columns from a text, a list of texts, or `{column, order}` pairs, and the distinct columns only from a list of texts with no comparer; anything else it cannot read is still reported. A `Table.Distinct` whose second argument is `null` is also left alone, since it compares whole rows as a missing argument does; the code and the page already left it alone, and this line records it. The corpus count was 19 findings in 10 models (8 repositories) as written, and is 10 findings in 5 models (4 repositories) after.
 
 ### 9.3 `DYNAMIC_DATA_SOURCE`
 
@@ -592,7 +593,7 @@ A throwaway script in the plan's folder (not committed; the corpus is not pbipli
 
   | Rule | Expected | Moves because |
   | --- | --- | --- |
-  | `SORT_NOT_HELD_FOR_REMOVE_DUPLICATES` | 19 or fewer, 10 or fewer | The one-argument exception |
+  | `SORT_NOT_HELD_FOR_REMOVE_DUPLICATES` | 19 or fewer, 10 or fewer | The one-argument exception; measured 10, 5 after the sort-on-keys exception (section 9.2, amended) |
   | `DYNAMIC_DATA_SOURCE` | 18, 13 or fewer | Function parameters left out |
   | `INCREMENTAL_REFRESH_RANGE_BOUNDS` | 4, 4 | |
   | `HARDCODED_SECRET_IN_QUERY` | 60 or more, 2 or more | The parameter-literal shape |

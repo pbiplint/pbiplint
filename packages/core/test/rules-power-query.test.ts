@@ -401,6 +401,44 @@ describe("SORT_NOT_HELD_FOR_REMOVE_DUPLICATES (v3 spec, section 9.2)", () => {
     );
     expect(await mFindings(rule, tmdl)).toEqual([]);
   });
+  it("leaves alone a sort only on columns that also decide what is a duplicate", async () => {
+    const tmdl = table(
+      "Customers",
+      "let",
+      customers,
+      '\tSorted = Table.Sort(Source, {{"Customer ID", Order.Ascending}}),',
+      '\tPairs = Table.Distinct(Sorted, {"Customer ID"}),',
+      '\tSortedText = Table.Sort(Source, "Customer ID"),',
+      '\tText = Table.Distinct(SortedText, {"Customer ID"}),',
+      '\tSortedPair = Table.Sort(Source, {"Customer ID", Order.Descending}),',
+      '\tPair = Table.Distinct(SortedPair, {"Customer ID", "Updated"}),',
+      '\tSortedList = Table.Sort(Source, {"Updated", "Customer ID"}),',
+      '\tList = Table.Distinct(SortedList, {"Customer ID", "Updated"})',
+      "in",
+      "\tList",
+    );
+    expect(await mFindings(rule, tmdl)).toEqual([]);
+  });
+  it("reports a sort on a column outside the duplicate key, a distinct with a comparer, and a sort it cannot read", async () => {
+    const tmdl = table(
+      "Customers",
+      "let",
+      customers,
+      '\tSorted = Table.Sort(Source, {"Customer ID", "Updated"}),',
+      '\tOutside = Table.Distinct(Sorted, {"Customer ID"}),',
+      '\tSortedKey = Table.Sort(Source, {{"Customer ID", Order.Ascending}}),',
+      '\tComparer = Table.Distinct(SortedKey, {"Customer ID", Comparer.OrdinalIgnoreCase}),',
+      "\tSortedBy = Table.Sort(Source, SortColumns),",
+      '\tUnread = Table.Distinct(SortedBy, {"Customer ID"})',
+      "in",
+      "\tUnread",
+    );
+    expect((await mFindings(rule, tmdl)).map((f) => f.detail!.split(":")[0])).toEqual([
+      "query 'Customers', step 'Outside'",
+      "query 'Customers', step 'Comparer'",
+      "query 'Customers', step 'Unread'",
+    ]);
+  });
   it("is silenced by an ignore annotation on the partition", async () => {
     const tmdl =
       'table Customers\n\tpartition Customers = m\n\t\tmode: import\n\t\tsource = Table.Distinct(Table.Sort(S, {"Updated"}), {"Customer ID"})\n\n\t\tannotation pbiplint.ignore = SORT_NOT_HELD_FOR_REMOVE_DUPLICATES\n';

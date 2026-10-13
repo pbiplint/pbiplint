@@ -77,6 +77,7 @@ When every row that shares the listed columns is the same in every column the qu
 - Only the sort that the `Table.Distinct` reads is checked: one written in place, or the step it names, followed through steps that only give that step another name. A sort several steps earlier, with other steps between, is not reported, though those steps can lose the order as well.
 - A `Table.Buffer` around the sort, or a buffered step between the two, holds the order, and the query is not reported.
 - A `Table.Distinct` with no list of columns, or with `null` in its place, compares whole rows, so the rows it chooses between are identical and the query is not reported.
+- A sort only on columns that also decide what is a duplicate is not reported: every row in a set of duplicates ties on the sort, so it cannot choose between them, and `Table.Buffer` would change nothing.
 - A `Table.Distinct` over another query, even one that ends in a sort, is not reported: only sorts in the same query are read.
 - Only duplicate removal is read. A `Table.Group` after a sort can lose the order too, as Microsoft's page says, but it is not reported.
 - Each `Table.Distinct` call is its own finding.

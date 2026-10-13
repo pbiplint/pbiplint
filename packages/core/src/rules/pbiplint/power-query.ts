@@ -236,10 +236,65 @@ const isNull = (n: Node | undefined): boolean =>
   unwrap(n).kind === Kind.LiteralExpression &&
   (unwrap(n) as Language.Ast.LiteralExpression).literalKind === Language.Ast.LiteralKind.Null;
 
+/** An `Order.Ascending` or `Order.Descending` written as itself. */
+const isOrder = (n: Node | undefined): boolean => {
+  const v = n && unwrap(n);
+  return (
+    v?.kind === Kind.IdentifierExpression &&
+    /^Order\.(Ascending|Descending)$/.test(identifierName(v.identifier.literal))
+  );
+};
+
+/** The items of a list written in place; undefined for anything else. */
+function listItems(n: Node | undefined): Node[] | undefined {
+  const v = n && unwrap(n);
+  return v?.kind === Kind.ListExpression ? v.content.elements.map((csv) => csv.node) : undefined;
+}
+
+/**
+ * A Table.Sort's columns, read from a text literal, a list of text literals, and `{column, order}`
+ * pairs, a bare `{"Col", Order.Descending}` included; undefined for anything else.
+ */
+function sortColumns(n: Node | undefined): string[] | undefined {
+  const one = textValue(n && unwrap(n));
+  if (one !== undefined) return [one];
+  const items = listItems(n);
+  if (!items) return undefined;
+  if (items.length === 2 && isOrder(items[1])) {
+    const col = textValue(unwrap(items[0]!));
+    return col === undefined ? undefined : [col];
+  }
+  const columns: string[] = [];
+  for (const item of items) {
+    const pair = listItems(item);
+    const col = pair
+      ? pair.length === 2 && isOrder(pair[1])
+        ? textValue(unwrap(pair[0]!))
+        : undefined
+      : textValue(unwrap(item));
+    if (col === undefined) return undefined;
+    columns.push(col);
+  }
+  return columns;
+}
+
+/**
+ * Whether every sort column is one of the Table.Distinct columns, by exact name, with the distinct
+ * list all text literals and no comparer. Every row in a set of duplicates then ties on the sort,
+ * so it cannot choose between them. Anything not read this way is false.
+ */
+function sortWithinKeys(sortArg: Node | undefined, distinctArg: Node): boolean {
+  const keys = listItems(distinctArg)?.map((k) => textValue(unwrap(k)));
+  if (!keys || keys.some((k) => k === undefined)) return false;
+  const sorted = sortColumns(sortArg);
+  return sorted !== undefined && sorted.length > 0 && sorted.every((c) => keys.includes(c));
+}
+
 // Desktop's Sorted Rows then Removed Duplicates, with a column list deciding what is a duplicate
 // (v3 spec, section 9.2). The sort is the intended way to choose the row that survives; the fault
 // is that nothing holds its order. A sort held by Table.Buffer, a distinct over whole rows, and a
-// sort with other steps between are left alone.
+// sort with other steps between are left alone, as is a sort only on the duplicate keys, which
+// cannot choose between duplicates (amended October 13, 2026).
 export const SORT_NOT_HELD_FOR_REMOVE_DUPLICATES = pbiplintRule({
   id: "SORT_NOT_HELD_FOR_REMOVE_DUPLICATES",
   name: "Sort may not decide which duplicate is kept",
@@ -253,7 +308,8 @@ export const SORT_NOT_HELD_FOR_REMOVE_DUPLICATES = pbiplintRule({
         const [table, columns] = c.args;
         if (c.name !== "Table.Distinct" || !table || !columns || isNull(columns)) return [];
         const sorted = boundValue(m, q, table);
-        if (callOf(sorted.node)?.name !== "Table.Sort") return [];
+        const sortCall = callOf(sorted.node);
+        if (sortCall?.name !== "Table.Sort" || sortWithinKeys(sortCall.args[1], columns)) return [];
         const sort =
           sorted.step === undefined ? "the Table.Sort inside it" : `step ${tableRef(sorted.step)}`;
         return [

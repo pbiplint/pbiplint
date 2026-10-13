@@ -1,4 +1,5 @@
 import { buildIndexes } from "../index/build.js";
+import { emptyMIndex, readM } from "../m/read.js";
 import { buildModel } from "../model/build.js";
 import type { Model } from "../model/types.js";
 import { buildReport } from "../pbir/build.js";
@@ -130,7 +131,10 @@ export async function lint(files: LintFile[], options: LintOptions = {}): Promis
       : { present: false, reason: options.absent?.report ?? "no report in the input" },
   };
   const diagnostics = [...(options.diagnostics ?? []), ...(built?.diagnostics ?? [])];
-  const indexes = buildIndexes(project);
+  // M is read after the model and before the indexes, so every rule reads the parsed M from
+  // ctx.indexes.m and stays synchronous (v3 spec, section 4.2).
+  const m = model ? await readM(model, routed.model) : emptyMIndex();
+  const indexes = buildIndexes(project, m);
   const run = runRules(project, indexes, rules, config);
   const groups = rank(run.findings, rules, config);
   // Only the rules that ran: a fact never links the page of a rule turned off or skipped. Their

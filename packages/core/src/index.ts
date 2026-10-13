@@ -78,6 +78,8 @@ export {
 } from "./model/names.js";
 export type * from "./model/types.js";
 export { parseM, type MParse, type MPosition } from "./m/parse.js";
+export { emptyMIndex, readM } from "./m/read.js";
+export type { MIndex, MParseIssue, MQuery } from "./m/types.js";
 export { buildReport, KNOWN_SCHEMAS, literal } from "./pbir/build.js";
 export {
   escapePointer,

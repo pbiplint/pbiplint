@@ -1,5 +1,5 @@
 import { Language } from "@microsoft/powerquery-parser";
-import { identifierName, parentOf, unwrap } from "./ast.js";
+import { identifierName, nodeOf, parentOf, unwrap } from "./ast.js";
 import type { MIndex, MQuery } from "./types.js";
 
 type Node = Language.Ast.TNode;
@@ -92,4 +92,82 @@ export function resolve(m: MIndex, q: MQuery, node: Node): Resolution {
   const table = m.queries.find((x) => x.kind !== "expression" && x.name === name && x.name !== own);
   if (table) return { kind: "query", query: table };
   return name.includes(".") ? { kind: "library" } : { kind: "unknown" };
+}
+
+/** Where a value comes from, as the data source rule reads it (v3 spec, section 8). */
+export type Origin = "static" | "unknown" | "computed" | "row";
+/** Worst last: a value is as bad as the worst thing it reaches. */
+export const ORIGIN_ORDER: readonly Origin[] = ["static", "unknown", "computed", "row"];
+const worst = (origins: Origin[]): Origin =>
+  origins.reduce<Origin>(
+    (w, o) => (ORIGIN_ORDER.indexOf(o) > ORIGIN_ORDER.indexOf(w) ? o : w),
+    "static",
+  );
+
+/** A record or list written in place, whose fields or items are known without reading data. */
+const isLiteralContainer = (n: Node): boolean =>
+  n.kind === Kind.RecordExpression ||
+  n.kind === Kind.RecordLiteral ||
+  n.kind === Kind.ListExpression ||
+  n.kind === Kind.ListLiteral;
+
+/**
+ * Where a value comes from: `static` for literals, model parameters, and what joins or chooses
+ * among them; `unknown` for a function's parameter, a name nothing defines, a field or item of a
+ * record or list written in place, or a cycle; `computed` for a function call anywhere in it;
+ * `row` for `_` or a field or item of anything else. A value is the worst of what it reaches.
+ * Each node is followed once, so a cycle reads as unknown.
+ */
+export function origin(m: MIndex, q: MQuery, node: Node, seen: Set<string> = new Set()): Origin {
+  const key = `${q.kind}:${q.name}:${node.id}`;
+  if (seen.has(key)) return "unknown";
+  seen.add(key);
+  switch (node.kind) {
+    case Kind.LiteralExpression:
+    case Kind.Constant:
+      return "static";
+    case Kind.IdentifierExpression: {
+      const r = resolve(m, q, node);
+      if (r.kind === "row") return "row";
+      if (r.kind === "value") return origin(m, q, r.node, seen);
+      if (r.kind === "modelParameter" || r.kind === "library") return "static";
+      if (r.kind === "query") {
+        const body = r.query.ast && unwrap(r.query.ast);
+        if (!body || body.kind === Kind.FunctionExpression) return "unknown";
+        return origin(m, r.query, body, seen);
+      }
+      return "unknown";
+    }
+    case Kind.FieldSelector:
+    case Kind.FieldProjection:
+      return "row";
+    case Kind.LetExpression:
+      return origin(m, q, node.expression, seen);
+    case Kind.FunctionExpression:
+    case Kind.EachExpression:
+      return "unknown";
+    case Kind.RecursivePrimaryExpression: {
+      const steps = node.recursiveExpressions.elements;
+      const invoke = steps.find((s) => s.kind === Kind.InvokeExpression);
+      if (invoke && invoke.kind === Kind.InvokeExpression)
+        return worst([
+          "computed",
+          ...invoke.content.elements.map((csv) => origin(m, q, csv.node, seen)),
+        ]);
+      // A field or an item: of a record or list written in place, or a name bound to one, it is known.
+      const head = node.head;
+      const target = head.kind === Kind.IdentifierExpression ? resolve(m, q, head) : undefined;
+      const container = target?.kind === "value" ? unwrap(target.node) : unwrap(head);
+      return isLiteralContainer(container) ? "unknown" : "row";
+    }
+    default: {
+      const children = q.nodeIdMapCollection?.childIdsById.get(node.id) ?? [];
+      return worst(
+        children
+          .map((id) => nodeOf(q, id))
+          .filter((n): n is Node => n !== undefined)
+          .map((n) => origin(m, q, n, seen)),
+      );
+    }
+  }
 }

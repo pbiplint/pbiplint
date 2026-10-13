@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { LintFile } from "../src/engine/lint.js";
 import { calls, identifierName, nodeOf, textValue } from "../src/m/ast.js";
 import { readM } from "../src/m/read.js";
-import { resolve } from "../src/m/resolve.js";
+import { origin, resolve } from "../src/m/resolve.js";
 import type { MIndex, MQuery } from "../src/m/types.js";
 import { buildModel } from "../src/model/build.js";
 import { parseTmdl } from "../src/tmdl/parse.js";
@@ -173,5 +173,51 @@ describe("resolve never names the query asking", () => {
     ]);
     const q = m.queries.find((x) => x.name === "Helper")!;
     expect(argOf(m, q).kind).toBe("unknown");
+  });
+});
+
+describe("origin", () => {
+  const shared =
+    'expression ApiBase = "https://api.example.com" meta [IsParameterQuery=true, Type="Text"]\n\nexpression Environment = "Prod" meta [IsParameterQuery=true, Type="Text"]\n';
+  const cases: [string, string, string][] = [
+    ["a literal", 'Web.Contents("https://api.example.com")', "static"],
+    ["a model parameter", "Web.Contents(ApiBase)", "static"],
+    ["an & join of a parameter and a literal", 'Web.Contents(ApiBase & "/v1")', "static"],
+    [
+      "a let step holding a literal two scopes up",
+      'let Url = "https://a.example.com", In1 = let In2 = let r = Web.Contents(Url) in r in In2 in In1',
+      "static",
+    ],
+    [
+      "if over a parameter (until the Desktop check)",
+      'Web.Contents(if Environment = "Prod" then "https://a.example.com" else "https://b.example.com")',
+      "static",
+    ],
+    [
+      "a function's parameter (until the Desktop check)",
+      "let f = (u) => Web.Contents(u) in f",
+      "unknown",
+    ],
+    ["a name nothing defines", "Web.Contents(Nowhere)", "unknown"],
+    [
+      "a field of a record written as a literal",
+      'Web.Contents([Url = "https://a.example.com"][Url])',
+      "unknown",
+    ],
+    ["a function call", 'Web.Contents(Text.Combine({ApiBase, "v1"}))', "computed"],
+    ["a field of row data in each", 'Table.AddColumn(S, "c", each Web.Contents([url]))', "row"],
+    [
+      "a field of a table read from a source",
+      'let Config = Sql.Database("s.example", "d"), Url = Config{0}[BaseUrl] in Web.Contents(Url)',
+      "row",
+    ],
+    ["_ in each", 'Table.AddColumn(S, "c", each Web.Contents(_))', "row"],
+    ["a cycle", "let a = b, b = a in Web.Contents(a)", "unknown"],
+    ["an @name self-reference", 'let a = @a & "x" in Web.Contents(a)', "unknown"],
+  ];
+  it.each(cases)("%s is %s", async (_label, partition, expected) => {
+    const { m, q } = await index(partition, shared);
+    const call = calls(q).find((c) => c.name === "Web.Contents")!;
+    expect(origin(m, q, call.args[0]!)).toBe(expected);
   });
 });

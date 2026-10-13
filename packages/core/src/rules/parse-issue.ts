@@ -32,7 +32,7 @@ export const PARSE_ISSUE: Rule = {
     return [
       // A TMDL line with its text literals hidden (v3 spec, section 7); M's issues come masked.
       ...(model?.files.flatMap((f) => f.issues) ?? [])
-        .map((i) => ({ ...i, text: maskLiterals(i.text) }))
+        .map((i) => ({ ...i, text: maskLiterals(i.text, { tmdl: true }) }))
         .map(issue("model")),
       // M that Microsoft's parser rejects (v3 spec, section 7), after the TMDL issues.
       ...indexes.m.issues.map(issue("model")),

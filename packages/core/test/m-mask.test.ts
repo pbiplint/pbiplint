@@ -42,5 +42,25 @@ describe("maskLiterals (v3 spec, section 7)", () => {
     ],
   ])("hides %s", (_name, text, masked) => {
     expect(maskLiterals(text)).toBe(masked);
+    expect(maskLiterals(text, { tmdl: true })).toBe(masked);
+  });
+
+  it("keeps a TMDL name with a double quote in it, and hides the literal after it", () => {
+    expect(maskLiterals(`measure 'Size 5"' = "sample text"`, { tmdl: true })).toBe(
+      'measure \'Size 5"\' = "…"',
+    );
+  });
+
+  it("reads an apostrophe in M as no name delimiter", () => {
+    expect(maskLiterals(`a = "it's", b = 'plain note'`)).toBe(`a = "…", b = 'plain note'`);
+    // M's lexer pairs the double quotes as written, where TMDL would keep the `'...'` name.
+    expect(maskLiterals(`x = 'a"b' & "plain note"`)).toBe(`x = 'a"…"plain note"`);
+    expect(maskLiterals(`x = 'a"b' & "plain note"`, { tmdl: true })).toBe(`x = 'a"b' & "…"`);
+  });
+
+  it("leaves a value in a line comment showing when its quote is unpaired (a stated limit)", () => {
+    expect(maskLiterals('// old size 5" was a sample note, k = 1')).toBe(
+      '// old size 5" was a sample note, k = 1',
+    );
   });
 });

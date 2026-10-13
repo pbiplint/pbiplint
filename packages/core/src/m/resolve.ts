@@ -148,16 +148,31 @@ export function origin(m: MIndex, q: MQuery, node: Node, seen: Set<string> = new
       return "unknown";
     case Kind.RecursivePrimaryExpression: {
       const steps = node.recursiveExpressions.elements;
-      const invoke = steps.find((s) => s.kind === Kind.InvokeExpression);
-      if (invoke && invoke.kind === Kind.InvokeExpression)
+      const at = steps.findIndex((s) => s.kind === Kind.InvokeExpression);
+      const invoke = steps[at];
+      if (invoke && invoke.kind === Kind.InvokeExpression) {
+        // A field or an item of what a call returns is data the call read.
+        const read = steps.slice(at + 1).some((s) => s.kind !== Kind.InvokeExpression);
         return worst([
-          "computed",
+          read ? "row" : "computed",
           ...invoke.content.elements.map((csv) => origin(m, q, csv.node, seen)),
         ]);
-      // A field or an item: of a record or list written in place, or a name bound to one, it is known.
-      const head = node.head;
-      const target = head.kind === Kind.IdentifierExpression ? resolve(m, q, head) : undefined;
-      const container = target?.kind === "value" ? unwrap(target.node) : unwrap(head);
+      }
+      // A field or an item: of a record or list written in place, or a name bound to one through
+      // variables and queries, it is known.
+      let container = unwrap(node.head);
+      let cq = q;
+      while (container.kind === Kind.IdentifierExpression) {
+        const key = `${cq.kind}:${cq.name}:${container.id}`;
+        if (seen.has(key)) return "unknown";
+        seen.add(key);
+        const r = resolve(m, cq, container);
+        if (r.kind === "value") container = unwrap(r.node);
+        else if (r.kind === "query" && r.query.ast) {
+          cq = r.query;
+          container = unwrap(r.query.ast);
+        } else break;
+      }
       return isLiteralContainer(container) ? "unknown" : "row";
     }
     default: {

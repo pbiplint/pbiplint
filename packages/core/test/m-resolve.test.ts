@@ -221,3 +221,34 @@ describe("origin", () => {
     expect(origin(m, q, call.args[0]!)).toBe(expected);
   });
 });
+
+describe("origin of a field or item", () => {
+  const originOf = async (partition: string, expressions = "") => {
+    const { m, q } = await index(partition, expressions);
+    const call = calls(q).find((c) => c.name === "Web.Contents")!;
+    return origin(m, q, call.args[0]!);
+  };
+  it("is unknown for a field of a shared expression written as a record", async () => {
+    expect(
+      await originOf(
+        "Web.Contents(Settings[BaseUrl])",
+        'expression Settings = [BaseUrl = "https://a.example.com"]\n',
+      ),
+    ).toBe("unknown");
+  });
+  it("is unknown for a field of a record through an alias", async () => {
+    expect(
+      await originOf('let r = [Url = "https://a.example.com"], r2 = r in Web.Contents(r2[Url])'),
+    ).toBe("unknown");
+  });
+  it("is row for an item and field of a call's result", async () => {
+    expect(
+      await originOf('let S = Sql.Database("s.example", "d"){0}[BaseUrl] in Web.Contents(S)'),
+    ).toBe("row");
+  });
+  it("is row for a field of a parsed document", async () => {
+    expect(
+      await originOf('let J = Json.Document(File.Contents("c:/a.json"))[url] in Web.Contents(J)'),
+    ).toBe("row");
+  });
+});

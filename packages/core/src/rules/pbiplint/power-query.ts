@@ -3,6 +3,7 @@ import {
   callOf,
   calls,
   identifierName,
+  nodesOfKind,
   parentOf,
   textLiterals,
   textValue,
@@ -311,6 +312,85 @@ export const KEEP_FIRST_ROWS_LEFT_IN = pbiplintRule({
       ),
 });
 
+type RangeParameter = "RangeStart" | "RangeEnd";
+
+/**
+ * The incremental refresh parameter one side of a comparison reads: the model's `RangeStart` or
+ * `RangeEnd`, written as itself, through steps that hold it, or inside a call
+ * (`DateKey(RangeStart)`). A local name that shadows the parameter is not it.
+ */
+function rangeParameterOf(m: MIndex, q: MQuery, side: Node, depth = 0): RangeParameter | undefined {
+  const v = boundValue(m, q, side).node;
+  if (v.kind === Kind.IdentifierExpression) {
+    const r = resolve(m, q, v);
+    const name = r.kind === "modelParameter" ? r.query.name : undefined;
+    return name === "RangeStart" || name === "RangeEnd" ? name : undefined;
+  }
+  const c = callOf(v);
+  if (!c || depth > 8) return undefined;
+  for (const a of c.args) {
+    const found = rangeParameterOf(m, q, a, depth + 1);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+/** A relational operator read the other way round: `RangeStart <= [Date]` is `[Date] >= RangeStart`. */
+const FLIPPED: Readonly<Record<string, string>> = { "<": ">", "<=": ">=", ">": "<", ">=": "<=" };
+
+// Microsoft asks for an equals sign on one of RangeStart and RangeEnd, not both (v3 spec, section
+// 9.4). A query whose comparisons with the two include both bounds, or neither, is an error: a row
+// on the boundary lands in two partitions, or in none. Comparisons of both kinds on one parameter
+// are left alone, since which one filters cannot be told.
+export const INCREMENTAL_REFRESH_RANGE_BOUNDS = pbiplintRule({
+  id: "INCREMENTAL_REFRESH_RANGE_BOUNDS",
+  name: "Incremental refresh filter counts a boundary row twice or never",
+  category: "Error Prevention",
+  severity: 3,
+  scope: ["Partition", "NamedExpression", "Table"],
+  layer: "powerquery",
+  check: (_project, { indexes: { m } }) =>
+    m.queries.flatMap((q) => {
+      const start = { inclusive: [] as Node[], exclusive: [] as Node[] };
+      const end = { inclusive: [] as Node[], exclusive: [] as Node[] };
+      for (const node of nodesOfKind(q, Kind.RelationalExpression)) {
+        if (node.kind !== Kind.RelationalExpression) continue;
+        const left = rangeParameterOf(m, q, node.left);
+        const right = rangeParameterOf(m, q, node.right);
+        if ((left === undefined) === (right === undefined)) continue;
+        const op = node.operatorConstant.constantKind as string;
+        // Read as "column, operator, parameter".
+        const operator = right ? op : FLIPPED[op]!;
+        const parameter = right ?? left;
+        if (parameter === "RangeStart" && operator === ">=") start.inclusive.push(node);
+        else if (parameter === "RangeStart" && operator === ">") start.exclusive.push(node);
+        else if (parameter === "RangeEnd" && operator === "<=") end.inclusive.push(node);
+        else if (parameter === "RangeEnd" && operator === "<") end.exclusive.push(node);
+      }
+      const one = (b: typeof start) => b.inclusive.length > 0 !== b.exclusive.length > 0;
+      if (!one(start) || !one(end)) return [];
+      if (start.inclusive.length > 0 && end.inclusive.length > 0)
+        return [
+          mFinding(
+            m,
+            q,
+            end.inclusive[0]!,
+            "both RangeStart and RangeEnd include the boundary, so a row on it lands in two partitions",
+          ),
+        ];
+      if (start.exclusive.length > 0 && end.exclusive.length > 0)
+        return [
+          mFinding(
+            m,
+            q,
+            start.exclusive[0]!,
+            "neither RangeStart nor RangeEnd includes the boundary, so a row on it lands in none",
+          ),
+        ];
+      return [];
+    }),
+});
+
 /**
  * pbiplint's own Power Query rules (v3 spec, section 9): each reads the M a model's queries hold,
  * or the file's Power Query options, and reports on the model's files.
@@ -323,4 +403,5 @@ export const powerQueryRules: Rule[] = [
   PRIVACY_LEVELS_IGNORED,
   SORT_NOT_HELD_FOR_REMOVE_DUPLICATES,
   KEEP_FIRST_ROWS_LEFT_IN,
+  INCREMENTAL_REFRESH_RANGE_BOUNDS,
 ];

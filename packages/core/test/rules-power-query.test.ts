@@ -3,6 +3,7 @@ import { lint } from "../src/engine/lint.js";
 import { buildIndexes } from "../src/index/build.js";
 import {
   EXCEL_USE_HEADERS,
+  INCREMENTAL_REFRESH_RANGE_BOUNDS,
   KEEP_FIRST_ROWS_LEFT_IN,
   LOCAL_DRIVE_PATH,
   ODBC_WHERE_CONNECTOR_EXISTS,
@@ -18,7 +19,7 @@ const table = (name: string, ...m: string[]): string =>
   `table '${name}'\n\tpartition '${name}' = m\n\t\tmode: import\n\t\tsource =\n${m.map((l) => `\t\t\t\t${l}`).join("\n")}\n\n`;
 
 /** What all of pbiplint's own Power Query rules share (v3 spec, section 9.1). */
-function isPowerQueryRule(rule: Rule, severity: 1 | 2, category: string): void {
+function isPowerQueryRule(rule: Rule, severity: 1 | 2 | 3, category: string): void {
   expect(rule.status).toBe("builtin");
   expect(rule.layer).toBe("powerquery");
   expect(rule.needs).toEqual(["model"]);
@@ -460,5 +461,107 @@ describe("KEEP_FIRST_ROWS_LEFT_IN (v3 spec, section 9.11)", () => {
   it("leaves alone a shared expression, which does not load", async () => {
     const tmdl = 'expression Preview =\n\t\tTable.FirstN(#table({"OrderID"}, {{1}}), 1000)\n';
     expect(await mFindings(rule, tmdl)).toEqual([]);
+  });
+});
+
+describe("INCREMENTAL_REFRESH_RANGE_BOUNDS (v3 spec, section 9.4)", () => {
+  const rule = INCREMENTAL_REFRESH_RANGE_BOUNDS;
+  const parameters =
+    'expression RangeStart = #datetime(2024, 1, 1, 0, 0, 0) meta [IsParameterQuery = true, Type = "DateTime", IsParameterQueryRequired = true]\n\n' +
+    'expression RangeEnd = #datetime(2025, 1, 1, 0, 0, 0) meta [IsParameterQuery = true, Type = "DateTime", IsParameterQueryRequired = true]\n\n';
+  /** A Sales partition filtered with `condition`, beside the model's RangeStart and RangeEnd. */
+  const filtered = (condition: string, ...before: string[]): string =>
+    parameters +
+    table(
+      "Sales",
+      "let",
+      "\tSource = #table(type table [OrderDate = datetime], {}),",
+      ...before,
+      `\t#"Filtered Rows" = Table.SelectRows(Source, each ${condition})`,
+      "in",
+      '\t#"Filtered Rows"',
+    );
+  it("is a built-in Power Query error on a query's owner", () => {
+    isPowerQueryRule(rule, 3, "Error Prevention");
+    expect(rule.name).toBe("Incremental refresh filter counts a boundary row twice or never");
+    expect(rule.scope).toEqual(["Partition", "NamedExpression", "Table"]);
+  });
+  it("reports both bounds included, on the RangeEnd comparison", async () => {
+    expect(
+      await mFindings(rule, filtered("[OrderDate] >= RangeStart and [OrderDate] <= RangeEnd")),
+    ).toEqual([
+      {
+        objectType: "Partition",
+        objectName: "Sales",
+        location: { file: "inline.tmdl", line: 11, column: 85 },
+        detail:
+          "query 'Sales', step 'Filtered Rows': both RangeStart and RangeEnd include the boundary, so a row on it lands in two partitions",
+      },
+    ]);
+  });
+  it("reports neither bound included, on the RangeStart comparison", async () => {
+    const [f] = await mFindings(
+      rule,
+      filtered("[OrderDate] > RangeStart and [OrderDate] < RangeEnd"),
+    );
+    expect(f?.location).toEqual({ file: "inline.tmdl", line: 11, column: 55 });
+    expect(f?.detail).toBe(
+      "query 'Sales', step 'Filtered Rows': neither RangeStart nor RangeEnd includes the boundary, so a row on it lands in none",
+    );
+  });
+  it("reads a comparison with the parameter first, inside a call, or held by a step", async () => {
+    const details = async (condition: string, ...before: string[]) =>
+      (await mFindings(rule, filtered(condition, ...before))).map(
+        (f) => f.detail!.split(": ")[1]!.split(" ")[0],
+      );
+    expect(await details("RangeStart <= [OrderDate] and RangeEnd >= [OrderDate]")).toEqual([
+      "both",
+    ]);
+    expect(await details("[Key] > DateKey(RangeStart) and [Key] < DateKey(RangeEnd)")).toEqual([
+      "neither",
+    ]);
+    expect(
+      await details("[OrderDate] >= Start and [OrderDate] <= RangeEnd", "\tStart = RangeStart,"),
+    ).toEqual(["both"]);
+  });
+  it("leaves alone one bound included, one parameter only, a shadowed parameter, and both kinds on one parameter", async () => {
+    expect(
+      await mFindings(rule, filtered("[OrderDate] >= RangeStart and [OrderDate] < RangeEnd")),
+    ).toEqual([]);
+    expect(
+      await mFindings(rule, filtered("[Key] > DateKey(RangeStart) and [Key] <= DateKey(RangeEnd)")),
+    ).toEqual([]);
+    expect(await mFindings(rule, filtered("[OrderDate] >= RangeStart"))).toEqual([]);
+    expect(
+      await mFindings(
+        rule,
+        filtered(
+          "[OrderDate] >= RangeStart and [OrderDate] <= RangeEnd",
+          "\tRangeEnd = #datetime(2030, 1, 1, 0, 0, 0),",
+        ),
+      ),
+    ).toEqual([]);
+    expect(
+      await mFindings(
+        rule,
+        filtered(
+          "[OrderDate] >= RangeStart and [OrderDate] > RangeStart and [OrderDate] <= RangeEnd",
+        ),
+      ),
+    ).toEqual([]);
+  });
+  it("reports a refresh policy whose query matches its partition once, on the partition", async () => {
+    const m = [
+      "let",
+      "\tSource = #table(type table [OrderDate = datetime], {}),",
+      '\t#"Filtered Rows" = Table.SelectRows(Source, each [OrderDate] >= RangeStart and [OrderDate] <= RangeEnd)',
+      "in",
+      '\t#"Filtered Rows"',
+    ];
+    const tmdl =
+      parameters +
+      `table Sales\n\tpartition Sales = m\n\t\tmode: import\n\t\tsource =\n${m.map((l) => `\t\t\t\t${l}`).join("\n")}\n\n` +
+      `\trefreshPolicy\n\t\tpolicyType: basic\n\t\tsourceExpression =\n${m.map((l) => `\t\t\t\t${l}`).join("\n")}\n`;
+    expect((await mFindings(rule, tmdl)).map((f) => f.objectType)).toEqual(["Partition"]);
   });
 });

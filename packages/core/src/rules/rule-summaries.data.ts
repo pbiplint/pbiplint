@@ -94,6 +94,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   HIDE_TOOLTIP_DRILLTROUGH_PAGES: "Tooltip pages and drillthrough pages that are not hidden.",
   INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED:
     "Inactive relationships that no measure, calculation item, or user-defined function activates with USERELATIONSHIP.",
+  INCREMENTAL_REFRESH_RANGE_BOUNDS:
+    "Power Query queries that filter on both of the model's incremental refresh parameters, `RangeStart` and `RangeEnd`, and either include the boundary on both (`>= RangeStart` and `<= RangeEnd`) or on neither (`> RangeStart` and `< RangeEnd`).",
   INTEGER_FORMATTING:
     "Measures whose static format string is not a recognized whole-number, currency, or percentage format. The only format strings the rule accepts are `#,0`, `#,0.0`, and any string containing `$` or `%`. A measure with no format string at all fires too, and that is the common case: the rule reads only the format string, so it cannot tell an unformatted currency or ratio from an unformatted count.",
   ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS:

@@ -25,6 +25,28 @@ interface ErrorWithPosition {
   foundToken?: { token: { positionStart: MPosition } };
   positionStart?: MPosition;
   graphemePosition?: MPosition;
+  /**
+   * A lex error found on whole lines instead carries a map from each line (0-based) to that line's
+   * own error, whose message and position are the useful ones; the outer message only says
+   * "Error on line(s): 0".
+   */
+  errorLineMap?: Map<number, { error?: ParserError }>;
+}
+
+/** An error the parser reports: a message, and the error under it that knows where. */
+interface ParserError {
+  message?: string;
+  innerError?: ErrorWithPosition;
+}
+
+/** A line-level lex error's own error for its first line, or the error itself otherwise. */
+function firstLineError(error: ParserError | undefined): ParserError | undefined {
+  const lines = error?.innerError?.errorLineMap;
+  if (!(lines instanceof Map)) return error;
+  const first = [...lines.entries()]
+    .filter(([, entry]) => entry?.error)
+    .sort(([a], [b]) => a - b)[0];
+  return first?.[1].error ?? error;
 }
 
 /**
@@ -41,7 +63,7 @@ export async function parseM(text: string): Promise<MParse> {
   }
   if (TaskUtils.isParseStageOk(task))
     return { ok: true, ast: task.ast, nodeIdMapCollection: task.nodeIdMapCollection };
-  const error = (task as { error?: { message?: string; innerError?: ErrorWithPosition } }).error;
+  const error = firstLineError((task as { error?: ParserError }).error);
   const inner = error?.innerError;
   const at =
     inner?.foundToken?.token.positionStart ?? inner?.positionStart ?? inner?.graphemePosition;

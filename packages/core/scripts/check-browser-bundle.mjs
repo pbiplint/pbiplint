@@ -41,12 +41,15 @@ const hits = FORBIDDEN.filter(([, tokens]) => tokens.some((t) => code.includes(t
 );
 const kb = (n) => (n / 1024).toFixed(1);
 // The parser and its two dependencies (grapheme-splitter, and performance-now as the stub) apart
-// from the core's own code, each against its own budget (v3 spec, section 3.4).
+// from the core's own code, each against its own budget (v3 spec, section 3.4). They are matched
+// by name, so any other dependency the core takes on counts against the core's own budget.
+const PARSER_INPUT =
+  /node_modules[\\/](?:@microsoft[\\/]powerquery-parser|grapheme-splitter)[\\/]|^pbiplint-performance-now:/;
 const [output] = Object.values(result.metafile.outputs);
 let parserBytes = 0;
 let ownBytes = 0;
 for (const [path, input] of Object.entries(output.inputs))
-  if (/node_modules[\\/]|pbiplint-performance-now/.test(path)) parserBytes += input.bytesInOutput;
+  if (PARSER_INPUT.test(path)) parserBytes += input.bytesInOutput;
   else ownBytes += input.bytesInOutput;
 console.log(
   `core browser bundle: ${kb(size)} KB minified, ${kb(gzipSync(code).length)} KB gzipped; ` +

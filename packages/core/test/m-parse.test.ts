@@ -28,6 +28,25 @@ describe("parseM", () => {
       position: { lineNumber: 1, lineCodeUnit: 8 },
     });
   });
+  it("reports a line-level lex error with its own message and place", async () => {
+    expect(await parseM("let a = 0xZZ in a")).toEqual({
+      ok: false,
+      message: "Expected a hex literal",
+      position: { lineNumber: 0, lineCodeUnit: 8 },
+    });
+    expect(await parseM("let\n    a = ^\nin a")).toEqual({
+      ok: false,
+      message: "Expected a keyword or identifier",
+      position: { lineNumber: 1, lineCodeUnit: 8 },
+    });
+  });
+  it("reports the first line when line-level lex errors are on several lines", async () => {
+    expect(await parseM("let\n  a = 0xZZ,\n  b = ^\nin a")).toEqual({
+      ok: false,
+      message: "Expected a hex literal",
+      position: { lineNumber: 1, lineCodeUnit: 6 },
+    });
+  });
   it("reports tokens left over after a whole expression", async () => {
     const r = await parseM("1 2");
     expect(r).toEqual({

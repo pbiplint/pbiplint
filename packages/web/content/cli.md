@@ -163,7 +163,7 @@ Scripts, pipelines, and AI assistants read what the CLI prints, so these parts o
 - `layers`: `model` and `report`, each `present: true` with `files`, the number read, or `present: false` with `reason`.
 - `facts`: what the report is at a glance, each with `layer`, `label`, `value`, and an optional `detail` and `ruleId`.
 - `diagnostics`: the notices, each with `kind`, `message`, and an optional `path`.
-- `groups`: the findings by rule, errors first. Each has `rule` (`id`, `name`, `category`, `severity` from `1` for info to `3` for error, `layer`, `slug`, `url`, and `status`), `count`, and `findings`, each with `layer`, `objectType`, `objectName`, and an optional `objectId`, `file`, `line`, and `detail`.
+- `groups`: the findings by rule, errors first. Each has `rule` (`id`, `name`, `category`, `severity` from `1` for info to `3` for error, `layer`, `slug`, `url`, and `status`), `count`, and `findings`, each with `layer`, `objectType`, `objectName`, and an optional `objectId`, `file`, `line`, and `detail`. A rule's `layer` is `model`, `report`, `project` (a rule that reads both), or, from 0.3.0, `powerquery` (a rule that reads the Power Query M in a model's files). A finding's `layer` is the file family that holds it, `model` or `report`, so a Power Query rule's findings are `model`.
 
 A new field is additive and keeps `version` at `1`, so a reader should ignore fields it does not know. One planned addition is a message id and parameters for each finding. New values can appear in a field that names one of a set, such as a skipped rule's `reason`, a notice's `kind`, or a rule's `category` and `status`, also without a version change. A field removed or renamed, or one whose meaning changes, raises `version`.
 

@@ -1,0 +1,22 @@
+/// A folder of files filtered by extension: a case-sensitive test, and two that fold case.
+table 'Sales Files'
+	lineageTag: 6c0f5a1e-0002-4000-8000-000000000011
+
+	column Name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Name
+
+	partition 'Sales Files' = m
+		mode: import
+		source =
+				let
+					Source = Folder.Files("C:\Demo\Data\Sales"),
+					#"Filtered Rows" = Table.SelectRows(Source, each [Extension] = ".csv"),
+					IgnoringCase = Table.SelectRows(Source, each Comparer.OrdinalIgnoreCase([Extension], ".csv") = 0),
+					Lowercased = Table.TransformColumns(Source, {{"Extension", Text.Lower, type text}}),
+					AfterLowercase = Table.SelectRows(Lowercased, each [Extension] = ".csv"),
+					Combined = Table.Combine({#"Filtered Rows", IgnoringCase, AfterLowercase}),
+					Names = Table.SelectColumns(Combined, {"Name"})
+				in
+					Names

@@ -1,0 +1,19 @@
+/// Desktop's default step names left as they are, one with a number after it.
+table 'Default Steps'
+	lineageTag: 6c0f5a1e-0002-4000-8000-00000000001b
+
+	column Region
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Region
+
+	partition 'Default Steps' = m
+		mode: import
+		source =
+				let
+					Source = #table(type table [Region = text, Amount = number], {{"East", 10}, {"West", 20}}),
+					#"Changed Type" = Table.TransformColumnTypes(Source, {{"Amount", type number}}),
+					#"Added Custom1" = Table.AddColumn(#"Changed Type", "Doubled", each [Amount] * 2, type number),
+					#"Removed Other Columns" = Table.SelectColumns(#"Added Custom1", {"Region"})
+				in
+					#"Removed Other Columns"

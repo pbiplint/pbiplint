@@ -1,0 +1,19 @@
+/// A server named as text twice in one query.
+table 'Server Literal'
+	lineageTag: 6c0f5a1e-0002-4000-8000-000000000016
+
+	column OrderID
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: OrderID
+
+	partition 'Server Literal' = m
+		mode: import
+		source =
+				let
+					Source = Sql.Database("finance-sql.example", "Warehouse"),
+					Archive = Sql.Database("finance-sql.example", "Archive"),
+					Orders = Table.Combine({Source{[Schema="dbo",Item="Orders"]}[Data], Archive{[Schema="dbo",Item="Orders"]}[Data]})
+				in
+					Orders

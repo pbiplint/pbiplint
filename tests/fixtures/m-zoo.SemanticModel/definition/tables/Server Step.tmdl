@@ -1,0 +1,19 @@
+/// A server held as text in a step of the query rather than in a parameter.
+table 'Server Step'
+	lineageTag: 6c0f5a1e-0002-4000-8000-000000000017
+
+	column OrderID
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: OrderID
+
+	partition 'Server Step' = m
+		mode: import
+		source =
+				let
+					Server = "finance-sql.example",
+					Source = Sql.Database(Server, "Warehouse"),
+					Orders = Source{[Schema="dbo",Item="Orders"]}[Data]
+				in
+					Orders

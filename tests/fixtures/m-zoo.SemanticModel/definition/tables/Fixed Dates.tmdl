@@ -1,0 +1,21 @@
+/// Rows that end at a fixed date, beside a fixed start and a filter on the incremental refresh range.
+table 'Fixed Dates'
+	lineageTag: 6c0f5a1e-0002-4000-8000-000000000018
+
+	column 'Order Date'
+		dataType: dateTime
+		formatString: General Date
+		summarizeBy: none
+		sourceColumn: Order Date
+
+	partition 'Fixed Dates' = m
+		mode: import
+		source =
+				let
+					Source = #table(type table [#"Order Date" = date], {{#date(2025, 6, 1)}}),
+					#"Filtered Rows" = Table.SelectRows(Source, each [Order Date] <= #date(2025, 12, 31)),
+					SinceStart = Table.SelectRows(Source, each [Order Date] >= #date(2020, 1, 1)),
+					InRange = Table.SelectRows(Source, each [Order Date] >= Date.From(RangeStart)),
+					Combined = Table.Combine({#"Filtered Rows", SinceStart, InRange})
+				in
+					Combined

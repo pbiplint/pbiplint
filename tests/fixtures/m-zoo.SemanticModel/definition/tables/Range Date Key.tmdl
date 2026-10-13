@@ -1,0 +1,18 @@
+/// An integer date key compared through the DateKey function, after Microsoft's own example.
+table 'Range Date Key'
+	lineageTag: 6c0f5a1e-0002-4000-8000-00000000000a
+
+	column 'Order Date Key'
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: OrderDateKey
+
+	partition 'Range Date Key' = m
+		mode: import
+		source =
+				let
+					Source = #table(type table [OrderDateKey = number], {{20240601}}),
+					#"Filtered Rows" = Table.SelectRows(Source, each [OrderDateKey] > DateKey(RangeStart) and [OrderDateKey] <= DateKey(RangeEnd))
+				in
+					#"Filtered Rows"

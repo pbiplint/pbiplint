@@ -1,0 +1,19 @@
+/// A local RangeEnd hides the parameter, so only RangeStart is the model's.
+table 'Range Shadowed'
+	lineageTag: 6c0f5a1e-0002-4000-8000-00000000000c
+
+	column 'Order Date'
+		dataType: dateTime
+		formatString: General Date
+		summarizeBy: none
+		sourceColumn: OrderDate
+
+	partition 'Range Shadowed' = m
+		mode: import
+		source =
+				let
+					RangeEnd = #datetime(2030, 1, 1, 0, 0, 0),
+					Source = #table(type table [OrderDate = datetime], {{#datetime(2024, 6, 1, 0, 0, 0)}}),
+					#"Filtered Rows" = Table.SelectRows(Source, each [OrderDate] >= RangeStart and [OrderDate] <= RangeEnd)
+				in
+					#"Filtered Rows"

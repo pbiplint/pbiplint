@@ -1,0 +1,20 @@
+/// Top rows kept on purpose: after a sort, an empty schema, and a top three per group.
+table 'Top Rows Kept'
+	lineageTag: 6c0f5a1e-0002-4000-8000-000000000013
+
+	column Region
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Region
+
+	partition 'Top Rows Kept' = m
+		mode: import
+		source =
+				let
+					Sales = #table(type table [Region = text, Amount = number], {{"East", 10}, {"West", 20}}),
+					TopTen = Table.FirstN(Table.Sort(Sales, {{"Amount", Order.Descending}}), 10),
+					SchemaOnly = Table.FirstN(Sales, 0),
+					TopThreePerRegion = Table.Group(Sales, {"Region"}, {{"Top", each Table.FirstN(_, 3), type table}}),
+					Combined = Table.Combine({TopTen, SchemaOnly, Table.SelectColumns(TopThreePerRegion, {"Region"})})
+				in
+					Combined

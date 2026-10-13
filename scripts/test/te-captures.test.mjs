@@ -24,6 +24,7 @@ const isObject = (value) => typeof value === "object" && value !== null && !Arra
 const CAPTURED = [
   "data-sources",
   "kitchen-sink",
+  "m-zoo",
   "messy-sales",
   "rule-zoo",
   "te3-zoo",

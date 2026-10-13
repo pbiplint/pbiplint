@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { buildIndexes } from "../src/index/build.js";
+import { readM } from "../src/m/read.js";
 import { buildModel } from "../src/model/build.js";
 import type { Model } from "../src/model/types.js";
 import type { Rule } from "../src/rules/types.js";
@@ -16,6 +17,18 @@ export function objectNames(rule: Rule, tmdl: string): string[] {
   const model = modelFrom(tmdl);
   return rule
     .check({ model }, { indexes: buildIndexes({ model }), options: {} })
+    .map((f) => f.objectName);
+}
+
+/**
+ * Run one rule on inline TMDL with its M read by Microsoft's parser, as `lint` reads it, and return
+ * the object names it flags, in emission order. For the rules that read `ctx.indexes.m`.
+ */
+export async function mObjectNames(rule: Rule, tmdl: string): Promise<string[]> {
+  const model = modelFrom(tmdl);
+  const m = await readM(model, [{ path: "inline.tmdl", text: tmdl }]);
+  return rule
+    .check({ model }, { indexes: buildIndexes({ model }, m), options: {} })
     .map((f) => f.objectName);
 }
 

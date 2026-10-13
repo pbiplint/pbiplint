@@ -4,6 +4,7 @@ import { chmodSync, cpSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
+import { mParserEsbuild } from "../core/build/m-parser-build.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(readFileSync(join(here, "package.json"), "utf8"));
@@ -23,6 +24,7 @@ await build({
     "@modelcontextprotocol/server/_shims": join(here, "src/mcp-shims.ts"),
   },
   define: { __PBIPLINT_VERSION__: JSON.stringify(pkg.version) },
+  plugins: [mParserEsbuild],
   logLevel: "info",
 });
 

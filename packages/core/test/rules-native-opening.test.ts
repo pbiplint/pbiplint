@@ -96,8 +96,8 @@ describe("LANDING_PAGE_NOT_SET", () => {
       ]),
     ).toEqual([]);
   });
-  it("says nothing when pages.json holds no object, and PARSE_ISSUE names the file", () => {
-    const r = lint([
+  it("says nothing when pages.json holds no object, and PARSE_ISSUE names the file", async () => {
+    const r = await lint([
       { path: "definition/report.json", text: j({}) },
       { path: "definition/pages/pages.json", text: "[]" },
       page("a"),
@@ -269,14 +269,16 @@ describe("FILTERS_PANE_STATE", () => {
       ).toEqual([]);
     }
   });
-  it("says nothing under either policy when report.json holds no object, and PARSE_ISSUE names the file", () => {
+  it("says nothing under either policy when report.json holds no object, and PARSE_ISSUE names the file", async () => {
     const files = [
       { path: "definition/pages/pages.json", text: j({ pageOrder: ["p"], activePageName: "p" }) },
       page("p"),
       { path: "definition/report.json", text: "[]" },
     ];
     for (const policy of ["open", "closed"]) {
-      const r = lint(files, { config: { rules: { FILTERS_PANE_STATE: { expect: policy } } } });
+      const r = await lint(files, {
+        config: { rules: { FILTERS_PANE_STATE: { expect: policy } } },
+      });
       expect(r.findings.filter((f) => f.ruleId === "FILTERS_PANE_STATE")).toEqual([]);
       expect(parseIssues(r)).toEqual([
         ["definition/report.json", 1, "not a JSON object (the file holds an array): []"],

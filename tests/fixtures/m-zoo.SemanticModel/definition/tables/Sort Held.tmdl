@@ -1,0 +1,24 @@
+/// Duplicates removed where nothing depends on the sort: a buffered sort, whole rows, and a sort two steps back.
+table 'Sort Held'
+	lineageTag: 6c0f5a1e-0002-4000-8000-000000000003
+
+	column 'Customer ID'
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Customer ID
+
+	partition 'Sort Held' = m
+		mode: import
+		source =
+				let
+					Customers = #table(type table [#"Customer ID" = text, Updated = date], {{"C1", #date(2025, 1, 1)}, {"C1", #date(2025, 2, 1)}}),
+					NewestFirst = Table.Buffer(Table.Sort(Customers, {{"Updated", Order.Descending}})),
+					LatestPerCustomer = Table.Distinct(NewestFirst, {"Customer ID"}),
+					WholeRows = Table.Distinct(Table.Sort(Customers, {{"Updated", Order.Descending}})),
+					ByDate = Table.Sort(Customers, {{"Updated", Order.Descending}}),
+					Typed = Table.TransformColumnTypes(ByDate, {{"Updated", type date}}),
+					DistinctTyped = Table.Distinct(Typed, {"Customer ID"}),
+					Combined = Table.Combine({LatestPerCustomer, WholeRows, DistinctTyped}),
+					CustomerIds = Table.SelectColumns(Combined, {"Customer ID"})
+				in
+					CustomerIds

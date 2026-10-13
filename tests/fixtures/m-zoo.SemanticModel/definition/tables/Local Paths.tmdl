@@ -1,0 +1,20 @@
+/// A file on a local drive, beside a network path and a path in a comment.
+table 'Local Paths'
+	lineageTag: 6c0f5a1e-0002-4000-8000-00000000000f
+
+	column Content
+		dataType: binary
+		summarizeBy: none
+		sourceColumn: Content
+
+	partition 'Local Paths' = m
+		mode: import
+		source =
+				let
+					// Moved here from C:\Demo\Data\Old\Sales.csv.
+					Local = File.Contents("C:\Demo\Data\Sales.csv"),
+					Network = File.Contents("\\fileserver\share\Sales.csv"),
+					Exports = Folder.Files(ExportFolder),
+					Contents = #table(type table [Content = binary], {{Local}, {Network}, {Exports{0}[Content]}})
+				in
+					Contents

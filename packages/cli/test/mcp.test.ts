@@ -177,6 +177,10 @@ describe("pbiplint mcp", () => {
       ["category", "id", "layer", "name", "severity", "status"].sort(),
     );
     expect(new Set(rules.map((r) => r.severity))).toEqual(new Set(["error", "warning", "info"]));
+    const pq = (JSON.parse(got.text) as { id: string; layer: string }[]).find(
+      (r) => r.id === "MINIMIZE_POWER_QUERY_TRANSFORMATIONS",
+    );
+    expect(pq?.layer).toBe("powerquery");
   });
 
   it("writes nothing to its stdout but protocol messages", async () => {

@@ -102,6 +102,11 @@ describe("parseFrontmatter errors", () => {
 });
 
 describe("rulePage", () => {
+  it("does not load the rules index's filter script", () => {
+    expect(rulePage(read("hide-foreign-keys"), "hide-foreign-keys").html).not.toContain(
+      "rules-filter.ts",
+    );
+  });
   it("renders the page inside the site shell with the rule's metadata", () => {
     const { html, meta } = rulePage(read("hide-foreign-keys"), "hide-foreign-keys");
     expect(meta).toMatchObject({
@@ -384,6 +389,14 @@ describe("rulePage", () => {
     expect(both("filters-pane-state")).toContain("· built in · report layer · scope: ");
     expect(both("parse-issue")).toContain("· built in · project layer · scope: ");
   });
+  it("names a Power Query page's layer as Power Query, and offers to check a model", () => {
+    const markdown = read("hide-foreign-keys").replace("layer: model\n", "layer: powerquery\n");
+    expect(markdown).toContain("layer: powerquery\n");
+    const { html, meta } = rulePage(markdown, "hide-foreign-keys");
+    expect(meta.layer).toBe("powerquery");
+    expect(html).toContain("· ported · Power Query layer · scope: ");
+    expect(html).toContain('<a class="button" href="/">Check a model for this</a>');
+  });
   it("offers to check the part of a project the rule reads", () => {
     // The button under every page opens the home page; it names what a reader would drop there
     // to have the rule checked.
@@ -634,7 +647,7 @@ describe("pageLayer and SITE_LAYERS", () => {
     // A typo that quietly unpublished a page would be invisible on the site, and one that quietly
     // published a report page would defeat the gate.
     expect(() => pageLayer({ layer: "reprot" }, source)).toThrow(
-      'rules/made-up.md: unknown layer "reprot" (expected one of model, report, project, or no layer key at all)',
+      'rules/made-up.md: unknown layer "reprot" (expected one of model, report, project, powerquery, or no layer key at all)',
     );
   });
   it("refuses a layer key that says nothing, rather than reading `layer:` as the model layer", () => {
@@ -642,7 +655,7 @@ describe("pageLayer and SITE_LAYERS", () => {
     // form is the one a scaffolded page carries, so a report page written that way would reach the
     // site by accident. An absent key is the only thing that reads as model.
     expect(() => pageLayer({ layer: [] }, source)).toThrow(
-      'rules/made-up.md: unknown layer "" (expected one of model, report, project, or no layer key at all)',
+      'rules/made-up.md: unknown layer "" (expected one of model, report, project, powerquery, or no layer key at all)',
     );
   });
   it("publishes both families, now that the browser lints a report", () => {
@@ -659,6 +672,13 @@ describe("pageLayer and SITE_LAYERS", () => {
     expect(publishesLayer("project", ["model"])).toBe(true);
     expect(publishesLayer("project", [])).toBe(false);
   });
+  it("reads powerquery, and publishes a Power Query page whenever the model is published", () => {
+    expect(pageLayer({ layer: "powerquery" }, source)).toBe("powerquery");
+    expect(publishesLayer("powerquery")).toBe(true);
+    expect(publishesLayer("powerquery", ["model"])).toBe(true);
+    expect(publishesLayer("powerquery", ["report"])).toBe(false);
+    expect(publishesLayer("powerquery", [])).toBe(false);
+  });
 });
 
 describe("generateSite", () => {
@@ -672,6 +692,13 @@ describe("generateSite", () => {
     expect(reportPages).toHaveLength(26);
     for (const slug of reportPages)
       expect(existsSync(join(out, `rules/${slug}/index.html`)), slug).toBe(true);
+    // The shipped rule is the first on the Power Query layer (v3 spec, section 10.1).
+    expect(metas.filter((m) => m.layer === "powerquery").map((m) => m.slug)).toEqual([
+      "minimize-power-query-transformations",
+    ]);
+    expect(
+      readFileSync(join(out, "rules/minimize-power-query-transformations/index.html"), "utf8"),
+    ).toContain("· ported · Power Query layer · scope: Partition");
     expect(readFileSync(join(out, "rules/landing-page-not-set/index.html"), "utf8")).toContain(
       '<a href="/rules/opening-page-invalid/"><code>OPENING_PAGE_INVALID</code></a>',
     );
@@ -681,12 +708,14 @@ describe("generateSite", () => {
     );
     const index = readFileSync(join(out, "rules/index.html"), "utf8");
     expect(index).toContain(
-      "106 rules: 66 model rules ported from Microsoft's Best Practice Analyzer ruleset and verified against Tabular Editor, 5 listed but not run because they need statistics only a live model has, 11 report rules ported from PBI Inspector's base rules by Nat Van Gulck, and 24 built into pbiplint.",
+      "106 rules: 66 rules ported from Microsoft's Best Practice Analyzer ruleset and verified against Tabular Editor, 5 listed but not run because they need statistics only a live model has, 11 report rules ported from PBI Inspector's base rules by Nat Van Gulck, and 24 built into pbiplint.",
     );
     expect(index).toContain('<h2 id="error-prevention">Error Prevention</h2>');
     expect((index.match(/needs a live model/g) ?? []).length).toBe(5);
     // The layer column is on: every row names its layer.
-    expect((index.match(/<span class="layer (model|report|project)">/g) ?? []).length).toBe(106);
+    expect(
+      (index.match(/<span class="layer (model|report|project|powerquery)">/g) ?? []).length,
+    ).toBe(106);
     for (const m of metas) expect(index).toContain(`href="/rules/${m.slug}/"`);
     const summaries = [...index.matchAll(/<span class="summary">([\s\S]*?)<\/span>/g)].map(
       (m) => m[1]!,
@@ -828,7 +857,7 @@ describe("generateSite", () => {
     // Not in the index: neither in the count at the top nor in a list below it.
     const index = readFileSync(join(out, "rules/index.html"), "utf8");
     expect(index).toContain(
-      "1 rules: 1 model rules ported from Microsoft's Best Practice Analyzer ruleset and verified against Tabular Editor.",
+      "1 rules: 1 rules ported from Microsoft's Best Practice Analyzer ruleset and verified against Tabular Editor.",
     );
     expect(index).toContain('href="/rules/hide-foreign-keys/"');
     expect(index).not.toContain("mark-primary-keys");
@@ -861,7 +890,7 @@ describe("generateSite", () => {
     expect(existsSync(join(out, "rules/parse-issue/index.html"))).toBe(true);
     const index = readFileSync(join(out, "rules/index.html"), "utf8");
     expect(index).toContain(
-      "2 rules: 1 model rules ported from Microsoft's Best Practice Analyzer ruleset and verified against Tabular Editor and 1 built into pbiplint.",
+      "2 rules: 1 rules ported from Microsoft's Best Practice Analyzer ruleset and verified against Tabular Editor and 1 built into pbiplint.",
     );
     expect(index).toContain('href="/rules/parse-issue/"');
     expect(readFileSync(join(out, "public/sitemap.xml"), "utf8")).toContain(
@@ -875,7 +904,7 @@ describe("generateSite", () => {
     expect(typo).toContain("layer: reprot\n");
     writeFileSync(join(rules, "hide-foreign-keys.md"), typo);
     expect(() => generateSite({ outDir: out, rulesDir: rules })).toThrow(
-      'rules/hide-foreign-keys.md: unknown layer "reprot" (expected one of model, report, project, or no layer key at all)',
+      'rules/hide-foreign-keys.md: unknown layer "reprot" (expected one of model, report, project, powerquery, or no layer key at all)',
     );
     // The gate runs before anything is written, so a typo costs a build rather than the pages.
     expect(existsSync(join(out, "rules"))).toBe(false);
@@ -895,6 +924,43 @@ describe("rulesIndex", () => {
     } finally {
       removeTempDir(out);
     }
+  });
+  it("renders the Show filter hidden, one box per family listed, and each row's family", () => {
+    const index = rulesIndex(metas);
+    const fieldset = /<fieldset class="filters" id="rules-filter" hidden>[\s\S]*?<\/fieldset>/.exec(
+      index,
+    )?.[0];
+    expect(fieldset).toBeDefined();
+    expect(fieldset).toContain("<legend>Show</legend>");
+    expect(
+      [...fieldset!.matchAll(/<input type="checkbox" value="([a-z]+)" checked \/>([^<]+)</g)].map(
+        (m) => [m[1], m[2]],
+      ),
+    ).toEqual([
+      ["model", "Model"],
+      ["report", "Report"],
+      ["powerquery", "Power Query"],
+    ]);
+    expect(fieldset).toContain('<p class="rules-shown" role="status" aria-live="polite"></p>');
+    // Every row carries its family, the hook the script hides it by.
+    const rows = [...index.matchAll(/<li data-layer="([a-z]+)">/g)].map((m) => m[1]);
+    expect(rows).toHaveLength(metas.length);
+    expect(new Set(rows)).toEqual(new Set(metas.map((m) => m.layer)));
+    // The filter's script loads on the index, after the shared nav script.
+    expect(index).toContain(
+      '<script type="module" src="/src/nav.ts"></script>\n    <script type="module" src="/src/rules-filter.ts"></script>',
+    );
+  });
+  it("leaves the Power Query box out when no Power Query page is listed, and the filter out with one family", () => {
+    const noPq = rulesIndex(metas.filter((m) => m.layer !== "powerquery"));
+    expect(noPq).toContain('value="report"');
+    expect(noPq).not.toContain('value="powerquery"');
+    const modelOnly = rulesIndex(
+      metas.filter((m) => m.layer === "model" || m.layer === "project"),
+      ["model"],
+    );
+    expect(modelOnly).not.toContain('id="rules-filter"');
+    expect(modelOnly).not.toContain("rules-filter.ts");
   });
   it("sorts with an explicit locale, so the order does not depend on the build machine", () => {
     // Intl.LocalesArgument, not string | string[], because ES2020 widened the parameter and the
@@ -952,7 +1018,7 @@ describe("rulesIndex", () => {
     );
     // The count takes the added page into the clause for its source.
     expect(index).toContain(
-      "107 rules: 66 model rules ported from Microsoft's Best Practice Analyzer ruleset and verified against Tabular Editor, 5 listed but not run because they need statistics only a live model has, 12 report rules ported from PBI Inspector's base rules by Nat Van Gulck, and 24 built into pbiplint.",
+      "107 rules: 66 rules ported from Microsoft's Best Practice Analyzer ruleset and verified against Tabular Editor, 5 listed but not run because they need statistics only a live model has, 12 report rules ported from PBI Inspector's base rules by Nat Van Gulck, and 24 built into pbiplint.",
     );
     // With no report page published, the report clause is left out rather than read as zero.
     expect(
@@ -961,8 +1027,25 @@ describe("rulesIndex", () => {
         ["model"],
       ),
     ).toContain(
-      "80 rules: 66 model rules ported from Microsoft's Best Practice Analyzer ruleset and verified against Tabular Editor, 5 listed but not run because they need statistics only a live model has, and 9 built into pbiplint.",
+      "80 rules: 66 rules ported from Microsoft's Best Practice Analyzer ruleset and verified against Tabular Editor, 5 listed but not run because they need statistics only a live model has, and 9 built into pbiplint.",
     );
+  });
+  it("badges a Power Query rule and counts a ported one with Microsoft's ruleset", () => {
+    const pq: RuleMeta = {
+      ...metas[0]!,
+      slug: "a-power-query-rule",
+      title: "A Power Query rule",
+      status: "ported",
+      layer: "powerquery",
+    };
+    const index = rulesIndex([...metas, pq]);
+    expect(index).toContain('<a href="/rules/a-power-query-rule/">A Power Query rule</a>');
+    expect(index).toContain('<span class="layer powerquery">Power Query</span>');
+    // Microsoft's rule stays counted with Microsoft's ruleset after it moves to Power Query.
+    expect(index).toContain(`${metas.length + 1} rules: 67 rules ported from Microsoft's`);
+    // A built-in Power Query rule is counted with the other built-in rules.
+    const builtin = rulesIndex([...metas, { ...pq, status: "builtin" }]);
+    expect(builtin).toContain("and 25 built into pbiplint.");
   });
   it("refuses a rule no clause of the count names, rather than printing a count its clauses do not sum to", () => {
     // Each clause counts one status and source; a page that falls in none would be in the total at

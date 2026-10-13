@@ -33,8 +33,11 @@ export interface FormatOptions {
 
 const SEVERITY_TAG = { 3: "ERROR", 2: "WARN ", 1: "INFO " } as const;
 
+/** Where a finding is, as editors and terminals link it: `file:line`, or `file:line:column`. */
 export const locationOf = (f: Finding): string =>
-  f.location ? `${f.location.file}:${f.location.line}` : "";
+  f.location
+    ? `${f.location.file}:${f.location.line}${f.location.column === undefined ? "" : `:${f.location.column}`}`
+    : "";
 
 /** "1 rule", "2 rules". Nouns that do not take an s ("info") are written out by the caller. */
 export const plural = (n: number, noun: string): string => `${n} ${noun}${n === 1 ? "" : "s"}`;
@@ -150,9 +153,10 @@ export function formatText(result: LintResult, _options: FormatOptions = {}): st
       ),
     );
     out.push("");
+    // The tag column fits the longest tag, `[powerquery]`, so every rule name starts in one column.
     for (const g of result.groups) {
       out.push(
-        `${SEVERITY_TAG[g.rule.severity]}  ${layerTag(g.rule.layer).padEnd(9)}  ${g.rule.name}  ${g.rule.id}  (${g.findings.length})`,
+        `${SEVERITY_TAG[g.rule.severity]}  ${layerTag(g.rule.layer).padEnd(12)}  ${g.rule.name}  ${g.rule.id}  (${g.findings.length})`,
       );
       out.push(`       ${g.rule.url}`);
       // The location column is always emitted, empty or not, so a finding without a location never

@@ -248,20 +248,20 @@ const cases: Case[] = [
 ];
 
 const ruleNamed = (id: string) => defaultRules.find((r) => r.id === id)!;
-const reported = (r: ReturnType<typeof lint>, id: string) =>
+const reported = (r: Awaited<ReturnType<typeof lint>>, id: string) =>
   r.findings.filter((f) => f.ruleId === id).map((f) => f.objectName);
 
 /** The two runs every case makes: the whole model, and the model pbiplint could not fully read. */
 function itSkipsWhilePartlyRead({ rule, whole, partly, wouldReport }: Case): void {
-  it("runs and reports nothing while every model file was read", () => {
-    const r = lint(whole);
+  it("runs and reports nothing while every model file was read", async () => {
+    const r = await lint(whole);
     expect(r.findings.filter((f) => f.ruleId === "PARSE_ISSUE")).toEqual([]);
     expect(r.summary.rulesSkipped.map((s) => s.id)).not.toContain(rule);
     expect(reported(r, rule)).toEqual([]);
   });
 
-  it("is skipped with the reason while a model file could not be fully read", () => {
-    const r = lint(partly.files, { unreadPaths: { model: partly.unreadPaths } });
+  it("is skipped with the reason while a model file could not be fully read", async () => {
+    const r = await lint(partly.files, { unreadPaths: { model: partly.unreadPaths } });
     const model = r.project.model!;
     // Run on that model, the rule would state what is missing, and each finding would be false.
     expect(
@@ -430,11 +430,11 @@ describe("a rule that reads what any part of a table's declaration can hold (#13
   describe.each(tableCases)("$rule", (c) => {
     itSkipsWhilePartlyRead(c);
 
-    it("runs while the only parse issue sits inside a table, where it cannot take a part", () => {
+    it("runs while the only parse issue sits inside a table, where it cannot take a part", async () => {
       // The property line is indented with spaces, so the parser skips it: a PARSE_ISSUE that can
       // drop a property of Other, and no table line.
       const other = table("Other", "\tcolumn X\n        dataType: int64\n");
-      const r = lint([...c.whole, other]);
+      const r = await lint([...c.whole, other]);
       expect(r.findings.filter((f) => f.ruleId === "PARSE_ISSUE")).toHaveLength(1);
       expect(r.summary.rulesSkipped).toContainEqual({
         id: "UNNECESSARY_COLUMNS",
@@ -446,16 +446,16 @@ describe("a rule that reads what any part of a table's declaration can hold (#13
 });
 
 describe("tablesPartlyRead", () => {
-  const model = (files: File[], unreadPaths: string[] = []) =>
-    lint(files, { unreadPaths: { model: unreadPaths } }).project.model!;
+  const model = async (files: File[], unreadPaths: string[] = []) =>
+    (await lint(files, { unreadPaths: { model: unreadPaths } })).project.model!;
   const sales = table("Sales", "\tcolumn Amount\n\t\tdataType: decimal\n");
-  it("holds while a model path could not be read, since it could hold a part of any table", () => {
-    expect(tablesPartlyRead(model([sales], ["definition/tables/Other.tmdl"]))).toBe(true);
+  it("holds while a model path could not be read, since it could hold a part of any table", async () => {
+    expect(tablesPartlyRead(await model([sales], ["definition/tables/Other.tmdl"]))).toBe(true);
   });
-  it("holds while a parse issue can take a table line", () => {
+  it("holds while a parse issue can take a table line", async () => {
     expect(
       tablesPartlyRead(
-        model(
+        await model(
           [sales, table("Date", "")].map((f) =>
             f.path.endsWith("Date.tmdl") ? { ...f, text: "tabel Date\n" } : f,
           ),
@@ -463,12 +463,12 @@ describe("tablesPartlyRead", () => {
       ),
     ).toBe(true);
   });
-  it("does not hold while every parse issue sits inside a declaration", () => {
-    const m = model([sales, table("Other", "\tcolumn X\n        dataType: int64\n")]);
+  it("does not hold while every parse issue sits inside a declaration", async () => {
+    const m = await model([sales, table("Other", "\tcolumn X\n        dataType: int64\n")]);
     expect(modelPartlyRead(m)).toBe(true);
     expect(tablesPartlyRead(m)).toBe(false);
   });
-  it("does not hold while every model file was read", () => {
-    expect(tablesPartlyRead(model([sales]))).toBe(false);
+  it("does not hold while every model file was read", async () => {
+    expect(tablesPartlyRead(await model([sales]))).toBe(false);
   });
 });

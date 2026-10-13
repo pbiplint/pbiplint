@@ -19,10 +19,11 @@ import {
   withLearnLinks,
 } from "../src/results/render.js";
 import { exportForAssistant } from "../src/results/export.js";
+import { LAYER_LABEL } from "../src/layers.js";
 import { SAMPLE_CONFIG, SAMPLE_FILES } from "../src/sample.js";
 
 /** The sample as the page lints it: both parts, under the sample's own config. */
-const result = lint(SAMPLE_FILES, { config: resolveConfig(JSON.parse(SAMPLE_CONFIG)) });
+const result = await lint(SAMPLE_FILES, { config: resolveConfig(JSON.parse(SAMPLE_CONFIG)) });
 const bare = [{ path: "m.tmdl", text: "model Model\n" }];
 /** A rule that throws, so a run has a rule error to report. */
 const boom: Rule = {
@@ -129,6 +130,21 @@ describe("renderResults", () => {
   it("words the new-tab note as the generated pages do", () => {
     // The build cannot import core (see CATEGORY_ORDER in pages.ts), so the words are copied there.
     expect(NEW_TAB_NOTE).toBe(PAGES_NEW_TAB_NOTE);
+  });
+  it("shows a finding's column after its line in the location cell", () => {
+    const g0 = result.groups[0]!;
+    const f = {
+      ...g0.findings[0]!,
+      location: { file: "definition/tables/Sales.tmdl", line: 12, column: 9 },
+    };
+    const withColumn: LintResult = {
+      ...result,
+      groups: [{ ...g0, findings: [f, ...g0.findings.slice(1)] }, ...result.groups.slice(1)],
+    };
+    renderResults(container, withColumn, { source: "x" });
+    const cell = container.querySelectorAll(`#rule-${g0.rule.slug} tbody tr:first-child td`)[2]!;
+    expect(cell.textContent).toBe("definition/tables/Sales.tmdl:12:9");
+    expect(cell.textContent).toContain(":12:9");
   });
   it("renders one group per rule with the objects, a page link, and severity and category data", () => {
     renderResults(container, result, { source: "x" });
@@ -302,13 +318,17 @@ describe("renderResults", () => {
     await new Promise((r) => setTimeout(r, 0));
     expect(region.textContent).toBe("Report copied to the clipboard");
   });
-  it("says so when there is nothing to report", () => {
+  it("says so when there is nothing to report", async () => {
     // No model small enough to write here is actually clean (a bare model trips the date table
     // rule, a model with a date table trips four more), so the empty result comes from an empty
     // rule set, the way the core format tests shape one.
-    renderResults(container, lint([{ path: "m.tmdl", text: "model Model\n" }], { rules: [] }), {
-      source: "pasted TMDL",
-    });
+    renderResults(
+      container,
+      await lint([{ path: "m.tmdl", text: "model Model\n" }], { rules: [] }),
+      {
+        source: "pasted TMDL",
+      },
+    );
     expect(container.textContent).toContain("No findings.");
     expect(container.querySelector(".filters")).toBeNull();
     // Nothing to fix, so nothing to export or hand to an assistant.
@@ -338,8 +358,8 @@ describe("renderResults", () => {
     const after = container.querySelector<HTMLDetailsElement>("details.files")!;
     expect(after.previousElementSibling).toBe(container.querySelector(".notice"));
   });
-  it("lists the files it read even when there are no findings, and nothing for a paste", () => {
-    const clean = lint([{ path: "m.tmdl", text: "model Model\n" }], { rules: [] });
+  it("lists the files it read even when there are no findings, and nothing for a paste", async () => {
+    const clean = await lint([{ path: "m.tmdl", text: "model Model\n" }], { rules: [] });
     renderResults(container, clean, { source: "x", files: ["m.tmdl"] });
     expect(container.querySelector("details.files li")!.textContent).toBe("m.tmdl");
     renderResults(container, result, { source: "pasted TMDL" });
@@ -351,27 +371,31 @@ describe("renderResults", () => {
     expect(notice.textContent).toBe("Old.SemanticModel was skipped.");
     expect(notice.previousElementSibling).toBe(container.querySelector(".summary"));
   });
-  it("shows each of the run's diagnostics as a notice after the input's notes", () => {
+  it("shows each of the run's diagnostics as a notice after the input's notes", async () => {
     // Until the results page renders them in their own place, a notice is where a file pbiplint
     // could not read is named, so no read failure is silent.
     const message = "M/x.tmdl could not be read (locked), so it was not linted";
-    const run = lint(bare, { diagnostics: [{ kind: "unread-file", path: "M/x.tmdl", message }] });
+    const run = await lint(bare, {
+      diagnostics: [{ kind: "unread-file", path: "M/x.tmdl", message }],
+    });
     renderResults(container, run, { source: "x", notes: ["Old.SemanticModel was skipped."] });
     expect([...container.querySelectorAll(".notice")].map((n) => n.textContent)).toEqual([
       "Old.SemanticModel was skipped.",
       message,
     ]);
   });
-  it("names every rule id the config asked for that matches no rule", () => {
-    const configured = lint(SAMPLE_FILES, { config: { rules: { NOPE: "off", TYPOED: "error" } } });
+  it("names every rule id the config asked for that matches no rule", async () => {
+    const configured = await lint(SAMPLE_FILES, {
+      config: { rules: { NOPE: "off", TYPOED: "error" } },
+    });
     renderResults(container, configured, { source: "x" });
     expect([...container.querySelectorAll(".notice")].map((n) => n.textContent)).toEqual([
       'pbiplint.config.json names no rule called "NOPE".',
       'pbiplint.config.json names no rule called "TYPOED".',
     ]);
   });
-  it("reports a rule that threw, with or without findings beside it", () => {
-    renderResults(container, lint(SAMPLE_FILES, { rules: [...defaultRules, boom] }), {
+  it("reports a rule that threw, with or without findings beside it", async () => {
+    renderResults(container, await lint(SAMPLE_FILES, { rules: [...defaultRules, boom] }), {
       source: "x",
     });
     const notice = container.querySelector(".notice")!;
@@ -381,14 +405,14 @@ describe("renderResults", () => {
     expect(notice.previousElementSibling).toBe(container.querySelector(".summary"));
     // Nothing to rank, so the render stops early. The rule still broke, and saying so is the only
     // way anyone reports it.
-    const nothing = lint(bare, { rules: [boom] });
+    const nothing = await lint(bare, { rules: [boom] });
     expect(nothing.groups).toHaveLength(0);
     renderResults(container, nothing, { source: "x" });
     expect(container.querySelector(".notice")!.textContent).toBe(
       "Rule errors (please report these): BOOM: kaboom",
     );
   });
-  it("sets its change handler on every render and leaves none behind on a clean one", () => {
+  it("sets its change handler on every render and leaves none behind on a clean one", async () => {
     renderResults(container, result, { source: "x" });
     const first = container.onchange;
     expect(typeof first).toBe("function");
@@ -405,28 +429,28 @@ describe("renderResults", () => {
         (g) => g.hidden === (g.dataset.severity === "3"),
       ),
     ).toBe(true);
-    renderResults(container, lint(bare, { rules: [] }), { source: "x" });
+    renderResults(container, await lint(bare, { rules: [] }), { source: "x" });
     expect(container.onchange).toBeNull();
   });
-  it("names both layers with their file counts in the heading", () => {
+  it("names both layers with their file counts in the heading", async () => {
     renderResults(container, result, { source: "the sample project" });
     expect(container.querySelector("h2")!.textContent).toBe(
       `Results for the sample project (model, ${result.layers.model.present ? result.layers.model.files : 0} files · report, ${result.layers.report.present ? result.layers.report.files : 0} files)`,
     );
     // Present layers only: a run given one part says nothing about the part it was not given.
-    const modelOnly = lint(SAMPLE_FILES.filter((f) => f.path.endsWith(".tmdl")));
+    const modelOnly = await lint(SAMPLE_FILES.filter((f) => f.path.endsWith(".tmdl")));
     renderResults(container, modelOnly, { source: "x" });
     expect(container.querySelector("h2")!.textContent).toBe("Results for x (model, 14 files)");
-    const reportOnly = lint(SAMPLE_FILES.filter((f) => !f.path.endsWith(".tmdl")));
+    const reportOnly = await lint(SAMPLE_FILES.filter((f) => !f.path.endsWith(".tmdl")));
     renderResults(container, reportOnly, { source: "x" });
     expect(container.querySelector("h2")!.textContent).toBe("Results for x (report, 78 files)");
     // One file takes no s, and a run that read neither part has no counts to give.
-    expect(heading(lint([{ path: "pasted.tmdl", text: "table T\n" }]), "pasted TMDL")).toBe(
+    expect(heading(await lint([{ path: "pasted.tmdl", text: "table T\n" }]), "pasted TMDL")).toBe(
       "Results for pasted TMDL (model, 1 file)",
     );
-    expect(heading(lint([]), "Proj")).toBe("Results for Proj");
+    expect(heading(await lint([]), "Proj")).toBe("Results for Proj");
   });
-  it("shows the facts panel under the files list with links to a group on the page or to the rule page", () => {
+  it("shows the facts panel under the files list with links to a group on the page or to the rule page", async () => {
     renderResults(container, result, { source: "x", files: ["a.tmdl"] });
     const facts = container.querySelector("section.facts")!;
     expect(facts.previousElementSibling!.classList.contains("files")).toBe(true);
@@ -453,7 +477,7 @@ describe("renderResults", () => {
     // A fact whose rule ran and produced no finding links to the rule page. FILTERS_PANE_STATE
     // runs only under a policy, and the sample saves the pane open, so expecting it open runs the
     // rule and finds nothing.
-    const quiet = lint(SAMPLE_FILES, {
+    const quiet = await lint(SAMPLE_FILES, {
       config: resolveConfig({ rules: { FILTERS_PANE_STATE: { expect: "open" } } }),
     });
     renderResults(container, quiet, { source: "x" });
@@ -469,7 +493,7 @@ describe("renderResults", () => {
     expect(flag.hasAttribute("target")).toBe(false);
     expect(flag.querySelector("span")).toBeNull();
     // A rule that did not run links nothing: the fact is plain text.
-    const off = lint(SAMPLE_FILES, {
+    const off = await lint(SAMPLE_FILES, {
       config: resolveConfig({ rules: { FILTERS_PANE_STATE: "off" } }),
     });
     renderResults(container, off, { source: "x" });
@@ -563,15 +587,15 @@ describe("renderResults", () => {
       container.querySelector(".notice"),
     );
   });
-  it("leaves the facts panel out, heading and all, when the run has no report", () => {
-    const modelOnly = lint(SAMPLE_FILES.filter((f) => f.path.endsWith(".tmdl")));
+  it("leaves the facts panel out, heading and all, when the run has no report", async () => {
+    const modelOnly = await lint(SAMPLE_FILES.filter((f) => f.path.endsWith(".tmdl")));
     expect(modelOnly.facts).toEqual([]);
     renderResults(container, modelOnly, { source: "x" });
     expect(container.querySelector(".facts")).toBeNull();
     expect(container.textContent).not.toContain("Report at a glance");
   });
-  it("keeps the facts panel on a run with nothing to fix", () => {
-    const clean = lint(SAMPLE_FILES, { rules: [] });
+  it("keeps the facts panel on a run with nothing to fix", async () => {
+    const clean = await lint(SAMPLE_FILES, { rules: [] });
     renderResults(container, clean, { source: "x" });
     expect(container.querySelector("section.facts")).not.toBeNull();
     expect(container.querySelector(".clean")!.previousElementSibling).toBe(
@@ -604,7 +628,7 @@ describe("renderResults", () => {
       const tag = g.querySelector("summary .layer")!;
       expect(tag.previousElementSibling!.classList.contains("badge")).toBe(true);
       expect(tag.nextElementSibling!.className).toBe("name");
-      expect(tag.textContent).toBe(g.dataset.layer);
+      expect(tag.textContent).toBe(LAYER_LABEL[g.dataset.layer as keyof typeof LAYER_LABEL]);
     }
     // The whole row, in order: badge, layer tag, name, count.
     expect(
@@ -642,8 +666,8 @@ describe("renderResults", () => {
     for (const g of container.querySelectorAll<HTMLElement>(".group"))
       expect(g.hidden).toBe(g.dataset.layer === "model");
   });
-  it("offers no layer filter unless both layers have groups", () => {
-    const modelOnly = lint(SAMPLE_FILES.filter((f) => f.path.endsWith(".tmdl")));
+  it("offers no layer filter unless both layers have groups", async () => {
+    const modelOnly = await lint(SAMPLE_FILES.filter((f) => f.path.endsWith(".tmdl")));
     renderResults(container, modelOnly, { source: "x" });
     expect(container.querySelector('input[data-filter="layer"]')).toBeNull();
     // One gap, between the severities and the categories, as before the report layer.
@@ -684,8 +708,60 @@ describe("renderResults", () => {
     applyFilters(container);
     expect(group.hidden).toBe(true);
   });
-  it("renders diagnostics as notices after the input notes", () => {
-    const withNotice = lint(SAMPLE_FILES, {
+  /** The sample with one group moved to another layer: the sample has no Power Query group yet. */
+  const relabelled = (r: LintResult, layers: Record<string, Rule["layer"]>): LintResult => ({
+    ...r,
+    groups: r.groups.map((g) =>
+      layers[g.rule.id] ? { ...g, rule: { ...g.rule, layer: layers[g.rule.id]! } } : g,
+    ),
+  });
+
+  it("offers a Power Query box beside Model and Report, tags its groups Power Query, and hides only them", () => {
+    renderResults(container, relabelled(result, { BROKEN_FIELD_REFERENCE: "powerquery" }), {
+      source: "x",
+    });
+    const group = container.querySelector<HTMLElement>("#rule-broken-field-reference")!;
+    expect(group.dataset.layer).toBe("powerquery");
+    const tag = group.querySelector("summary .layer")!;
+    expect(tag.className).toBe("layer powerquery");
+    expect(tag.textContent).toBe("Power Query");
+    const boxes = [...container.querySelectorAll<HTMLInputElement>('input[data-filter="layer"]')];
+    expect(boxes.map((b) => b.value)).toEqual(["model", "report", "powerquery"]);
+    expect(boxes.map((b) => b.parentElement!.textContent)).toEqual([
+      "Model",
+      "Report",
+      "Power Query",
+    ]);
+    uncheck("layer:powerquery");
+    for (const g of container.querySelectorAll<HTMLElement>(".group"))
+      expect(g.hidden, g.id).toBe(g.dataset.layer === "powerquery");
+  });
+
+  it("offers the boxes for a model and Power Query run with no report", async () => {
+    const modelOnly = await lint(SAMPLE_FILES.filter((f) => f.path.endsWith(".tmdl")));
+    const first = modelOnly.groups[0]!.rule.id;
+    renderResults(container, relabelled(modelOnly, { [first]: "powerquery" }), { source: "x" });
+    const boxes = [...container.querySelectorAll<HTMLInputElement>('input[data-filter="layer"]')];
+    expect(boxes.map((b) => b.value)).toEqual(["model", "powerquery"]);
+  });
+
+  it("shows a project group while Model or Report is checked, and not for Power Query alone", () => {
+    renderResults(
+      container,
+      relabelled(result, {
+        BROKEN_FIELD_REFERENCE: "project",
+        [result.groups.find((g) => g.rule.layer === "model")!.rule.id]: "powerquery",
+      }),
+      { source: "x" },
+    );
+    const group = container.querySelector<HTMLElement>("#rule-broken-field-reference")!;
+    uncheck("layer:model");
+    expect(group.hidden).toBe(false);
+    uncheck("layer:report");
+    expect(group.hidden).toBe(true);
+  });
+  it("renders diagnostics as notices after the input notes", async () => {
+    const withNotice = await lint(SAMPLE_FILES, {
       diagnostics: [
         {
           kind: "depth-cap",
@@ -703,10 +779,10 @@ describe("renderResults", () => {
       "the walk stopped 64 folders deep at Deep, so files below it were not read",
     ]);
   });
-  it("links core's Learn URLs in a notice, and no other URL (tracked in #88)", () => {
+  it("links core's Learn URLs in a notice, and no other URL (tracked in #88)", async () => {
     // A path is the input's, so a URL in it stays text, even beside one of core's.
     const legacy = legacyReportNotice("https://example.com/Demo.Report");
-    const run = lint(bare, { diagnostics: [legacy] });
+    const run = await lint(bare, { diagnostics: [legacy] });
     renderResults(container, run, { source: "x" });
     const notice = container.querySelector(".notice")!;
     expect(notice.textContent).toBe(
@@ -731,8 +807,8 @@ describe("renderResults", () => {
       " (opens in a new tab)",
     ]);
   });
-  it("never parses model text as HTML", () => {
-    const hostile = lint([
+  it("never parses model text as HTML", async () => {
+    const hostile = await lint([
       {
         path: "t.tmdl",
         text: "table '<img src=x onerror=alert(1)>'\n\tcolumn A\n\t\tdataType: string\n",
@@ -755,8 +831,8 @@ const EVIL = "Evil\u202e\u001b[2JName";
 const SHOWN = "Evil\\u202e\\u001b[2JName";
 
 describe("control characters from the input", () => {
-  it("shows them in a finding's name, location, and detail, the heading, and the files read as escapes", () => {
-    const run = lint([
+  it("shows them in a finding's name, location, and detail, the heading, and the files read as escapes", async () => {
+    const run = await lint([
       { path: `${EVIL}.tmdl`, text: `table '${EVIL}'\n\tcolumn A\n\t\tdataType: string\n` },
     ]);
     // A detail that quotes the input, as SLICER_SEARCH_SAVED's quotes a saved term.
@@ -782,7 +858,7 @@ describe("control characters from the input", () => {
     expect(container.querySelector("details.files li")!.textContent).toBe(`${SHOWN}.tmdl`);
     expect(container.textContent).not.toMatch(RAW_CONTROL);
   });
-  it("shows them in a notice, a note, a skip reason, an unknown rule id, and a rule error as escapes", () => {
+  it("shows them in a notice, a note, a skip reason, an unknown rule id, and a rule error as escapes", async () => {
     const throwing: Rule = {
       ...boom,
       needs: [],
@@ -790,7 +866,7 @@ describe("control characters from the input", () => {
         throw new Error(`kaboom at ${EVIL}`);
       },
     };
-    const run = lint(bare, {
+    const run = await lint(bare, {
       rules: [...defaultRules, throwing],
       config: { rules: { [`NOPE${EVIL}`]: "off" } },
       diagnostics: [
@@ -843,9 +919,9 @@ describe("control characters from the input", () => {
     );
     expect(container.textContent).not.toMatch(RAW_CONTROL);
   });
-  it("leaves an ordinary name with accents and CJK as it is", () => {
+  it("leaves an ordinary name with accents and CJK as it is", async () => {
     const name = "Ventes café Überblick 売上 数据";
-    const run = lint([
+    const run = await lint([
       { path: `${name}.tmdl`, text: `table '${name}'\n\tcolumn A\n\t\tdataType: string\n` },
     ]);
     renderResults(container, run, {
@@ -1035,6 +1111,25 @@ describe("a link to a finding group", () => {
     expect(boxStates()).toEqual({ ...before, "severity:3": true });
   });
 
+  it("checks the Power Query box again for a hidden Power Query group, and nothing else", () => {
+    const mixed: LintResult = {
+      ...result,
+      groups: result.groups.map((g) =>
+        g.rule.id === "BROKEN_FIELD_REFERENCE"
+          ? { ...g, rule: { ...g.rule, layer: "powerquery" } }
+          : g,
+      ),
+    };
+    const id = "rule-broken-field-reference";
+    renderResults(container, mixed, { source: "x" });
+    uncheck("layer:powerquery", "layer:model");
+    expect(group(id).hidden).toBe(true);
+    follow(container.querySelector('.fix-first li > a[href="#rule-broken-field-reference"]')!);
+    expect(group(id).hidden).toBe(false);
+    expect(boxStates()["layer:powerquery"]).toBe(true);
+    expect(boxStates()["layer:model"]).toBe(false);
+  });
+
   it("leaves the filters alone for a rule page link, and for a click that opens a new tab", () => {
     renderResults(container, result, { source: "x" });
     uncheck("severity:3");
@@ -1058,14 +1153,14 @@ describe("a link to a finding group", () => {
     expect(group(id).open).toBe(false);
   });
 
-  it("sets its click handler on every render and leaves none behind on a clean one", () => {
+  it("sets its click handler on every render and leaves none behind on a clean one", async () => {
     renderResults(container, result, { source: "x" });
     const first = container.onclick;
     expect(typeof first).toBe("function");
     renderResults(container, result, { source: "x" });
     // Assigned, never added: a re-render replaces the handler rather than stacking a second one.
     expect(container.onclick).not.toBe(first);
-    renderResults(container, lint(bare, { rules: [] }), { source: "x" });
+    renderResults(container, await lint(bare, { rules: [] }), { source: "x" });
     expect(container.onclick).toBeNull();
   });
 });

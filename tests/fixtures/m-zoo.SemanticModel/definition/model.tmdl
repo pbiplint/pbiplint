@@ -1,0 +1,38 @@
+model Model
+	culture: en-US
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	sourceQueryCulture: en-US
+	dataAccessOptions
+		fastCombine
+		legacyRedirects
+		returnErrorValuesAsNull
+
+ref table 'Customers Latest'
+ref table 'Customers Inline'
+ref table 'Sort Held'
+ref table 'Orders Web'
+ref table 'Orders Files'
+ref table 'Orders Pending Check'
+ref table Sales
+ref table 'Range Exclusive'
+ref table 'Range Correct'
+ref table 'Range Date Key'
+ref table 'Range Reversed'
+ref table 'Range Shadowed'
+ref table 'Api Secrets'
+ref table 'Odbc Orders'
+ref table 'Local Paths'
+ref table Scores
+ref table 'Sales Files'
+ref table 'Top Rows'
+ref table 'Top Rows Kept'
+ref table Budget
+ref table 'Navigation Only'
+ref table 'Server Literal'
+ref table 'Server Step'
+ref table 'Fixed Dates'
+ref table 'Native Lowercase'
+ref table 'Group In Comment'
+ref table 'Default Steps'
+
+ref cultureInfo en-US

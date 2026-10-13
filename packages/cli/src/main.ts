@@ -34,12 +34,13 @@ export interface Io {
   cwd(): string;
 }
 
+// The layer column fits the longest layer, powerquery.
 function listRules(): string {
   const width = Math.max(...defaultRules.map((r) => r.id.length));
   return defaultRules
     .map(
       (r) =>
-        `${r.id.padEnd(width)}  ${r.layer.padEnd(7)}  ${(r.status === "needsLiveModel" ? "needs live model" : r.status).padEnd(16)}  ${SEVERITY_LABEL[r.severity].padEnd(7)}  ${r.category.padEnd(18)}  ${r.name}`,
+        `${r.id.padEnd(width)}  ${r.layer.padEnd(10)}  ${(r.status === "needsLiveModel" ? "needs live model" : r.status).padEnd(16)}  ${SEVERITY_LABEL[r.severity].padEnd(7)}  ${r.category.padEnd(18)}  ${r.name}`,
     )
     .join("\n");
 }
@@ -117,7 +118,7 @@ export async function main(argv: string[], given: Io): Promise<number> {
       ...(opts.failOn ? { failOn: opts.failOn } : {}),
     });
     const files = [...(project.model?.files ?? []), ...(project.report?.files ?? [])];
-    const linted = lint(files, {
+    const linted = await lint(files, {
       config,
       diagnostics: project.diagnostics,
       absent: project.absent,

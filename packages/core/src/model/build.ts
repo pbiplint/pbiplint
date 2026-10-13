@@ -16,6 +16,7 @@ import type {
   Named,
   Partition,
   Perspective,
+  RefreshPolicy,
   Relationship,
   Role,
   SourceLocation,
@@ -221,6 +222,13 @@ function buildTable(r: TmdlNode, model: Model): void {
       t.hierarchies.push(buildHierarchy(c, t));
     else if (c.kind === "object" && c.type === "calendar")
       (t.calendars ??= []).push(buildCalendar(c, t));
+    else if (c.type === "refreshpolicy")
+      // The first part of the table that declares one decides it, as a calculation group's does.
+      t.refreshPolicy ??= {
+        ...named(c, t.name),
+        table: t,
+        sourceExpression: str(c.props.sourceexpression),
+      } satisfies RefreshPolicy;
     else if (c.type === "calculationgroup") {
       const group = buildCalculationGroup(c, t);
       const first = t.calculationGroup;
@@ -405,7 +413,12 @@ function readDeclaration(r: TmdlNode, model: Model): void {
       model.cultures.push(buildCulture(r));
       break;
     case "expression":
-      model.expressions.push({ ...named(r), expression: r.value ?? "" });
+      // A declaration with no `=` may write its M on an `expression =` line under it (v3 spec,
+      // section 5.1); one corpus repository does.
+      model.expressions.push({
+        ...named(r),
+        expression: r.value ?? str(r.props.expression) ?? "",
+      });
       break;
     case "function":
       model.functions.push({ ...named(r), expression: r.value ?? "" });

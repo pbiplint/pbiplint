@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import type { Plugin } from "vite";
+import { GERMAN_PROBE } from "../../../core/build/m-parser-build.mjs";
 import { CONTROL_CHARACTER } from "./pages.js";
 
 export interface SiteReport {
@@ -208,6 +209,9 @@ function checkHtml(rel: string, html: string, report: SiteReport): void {
 function checkScript(rel: string, code: string, report: SiteReport): void {
   for (const api of NETWORK_APIS)
     if (code.includes(api)) report.problems.push(`${rel}: references ${api}`);
+  // The M parser ships with its English messages only (v3 spec, section 3.2).
+  if (code.includes(GERMAN_PROBE))
+    report.problems.push(`${rel}: holds the M parser's German messages`);
 }
 
 function checkStyle(rel: string, css: string, report: SiteReport): void {

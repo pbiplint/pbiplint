@@ -1,0 +1,18 @@
+/// Both bounds included, written with the parameters first.
+table 'Range Reversed'
+	lineageTag: 6c0f5a1e-0002-4000-8000-00000000000b
+
+	column 'Order Date'
+		dataType: dateTime
+		formatString: General Date
+		summarizeBy: none
+		sourceColumn: OrderDate
+
+	partition 'Range Reversed' = m
+		mode: import
+		source =
+				let
+					Source = #table(type table [OrderDate = datetime], {{#datetime(2024, 6, 1, 0, 0, 0)}}),
+					#"Filtered Rows" = Table.SelectRows(Source, each RangeStart <= [OrderDate] and RangeEnd >= [OrderDate])
+				in
+					#"Filtered Rows"

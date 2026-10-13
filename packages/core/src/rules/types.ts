@@ -61,8 +61,12 @@ export type ObjectType =
   | "Bookmark"
   | "ReportMeasure";
 
-/** Which part of a project a rule reads: one layer, or both (`project`). */
-export type Layer = "model" | "report" | "project";
+/**
+ * Which part of a project a rule reads: one file family, both (`project`), or the Power Query M
+ * that the model's files hold (`powerquery`, v3 spec, section 10.1). A Power Query rule's findings
+ * are on model files, so their own layer (`LayerName`) is `model`.
+ */
+export type Layer = "model" | "report" | "project" | "powerquery";
 /** The two parts a project can hold. */
 export type LayerName = "model" | "report";
 

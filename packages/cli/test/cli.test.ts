@@ -1028,6 +1028,13 @@ describe("pbiplint CLI", () => {
     const r = await run(["rules"]);
     expect(r.out).toMatch(/^PARSE_ISSUE\s+project\s+builtin/m);
     expect(r.out).toMatch(/^HIDE_FOREIGN_KEYS\s+model\s+ported/m);
+    expect(r.out).toMatch(/^MINIMIZE_POWER_QUERY_TRANSFORMATIONS\s+powerquery {2}ported/m);
+    // The layer column fits powerquery, so every status starts in one column.
+    const statusAt = r.out
+      .trim()
+      .split("\n")
+      .map((l) => l.search(/ {2}(ported|builtin|needs live model) /));
+    expect(new Set(statusAt).size).toBe(1);
   });
 });
 

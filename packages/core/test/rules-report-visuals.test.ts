@@ -169,22 +169,22 @@ describe("ENSURE_THEME_COLOURS", () => {
     ]);
   });
 
-  it("points the finding at the first hex value's own line and counts every hex", () => {
+  it("points the finding at the first hex value's own line and counts every hex", async () => {
     // Pretty-printed, as Desktop writes it, so a Literal and its Value sit on lines of their own.
-    const at = (file: LintFile) => {
+    const at = async (file: LintFile) => {
       const text = JSON.stringify(JSON.parse(file.text), null, 2);
-      const { findings } = lint([page("p"), { ...file, text }], {
+      const { findings } = await lint([page("p"), { ...file, text }], {
         rules: [ENSURE_THEME_COLOURS],
         config: { failOn: "none" },
       });
       expect(findings).toHaveLength(1);
       return [text.split("\n")[findings[0]!.location!.line - 1]!.trim(), findings[0]!.detail];
     };
-    expect(at(conditional)).toEqual([
+    expect(await at(conditional)).toEqual([
       `"Value": "'#E81123'"`,
       "2 colours set to a hex value instead of a theme colour",
     ]);
-    expect(at(gradient)).toEqual([
+    expect(await at(gradient)).toEqual([
       `"Value": "'#FFFFFF'"`,
       "1 colour set to a hex value instead of a theme colour",
     ]);
@@ -239,10 +239,10 @@ describe("ENSURE_ALTTEXT", () => {
     expect(reportObjectIds(ENSURE_ALTTEXT, files)).toEqual(["empty", "none"]);
   });
 
-  it("points an empty alt text's finding at the altText line", () => {
+  it("points an empty alt text's finding at the altText line", async () => {
     // Pretty-printed, as Desktop writes it, so each property has a line of its own.
     const text = JSON.stringify(JSON.parse(empty.text), null, 2);
-    const { findings } = lint([page("p"), { ...empty, text }], {
+    const { findings } = await lint([page("p"), { ...empty, text }], {
       rules: [ENSURE_ALTTEXT],
       config: { failOn: "none" },
     });
@@ -284,9 +284,9 @@ describe("ENSURE_ALTTEXT", () => {
     expect(reportObjectIds(ENSURE_ALTTEXT, files)).toEqual(["groupEmpty", "groupNone"]);
   });
 
-  it("points an empty group alt text's finding at the altText line", () => {
+  it("points an empty group alt text's finding at the altText line", async () => {
     const empty = group("groupEmpty", lit("''"));
-    const { findings } = lint([page("p"), empty], {
+    const { findings } = await lint([page("p"), empty], {
       rules: [ENSURE_ALTTEXT],
       config: { failOn: "none" },
     });

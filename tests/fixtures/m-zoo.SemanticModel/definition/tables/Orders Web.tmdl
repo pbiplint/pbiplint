@@ -1,0 +1,19 @@
+/// One web request per row, its address read from the rows: a source the service cannot refresh. Written in a code fence.
+table 'Orders Web'
+	lineageTag: 6c0f5a1e-0002-4000-8000-000000000004
+
+	column Body
+		dataType: binary
+		summarizeBy: none
+		sourceColumn: Body
+
+	partition 'Orders Web' = m
+		mode: import
+		source = ```
+				let
+					Source = #table(type table [url = text], {{"https://api.example.com/v1/orders/1"}, {"https://api.example.com/v1/orders/2"}}),
+					#"Added Custom" = Table.AddColumn(Source, "Body", each Web.Contents([url])),
+					#"Removed Other Columns" = Table.SelectColumns(#"Added Custom", {"Body"})
+				in
+					#"Removed Other Columns"
+				```

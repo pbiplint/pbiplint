@@ -135,7 +135,18 @@ interface Run {
 }
 
 /** Every input ends up here: read the config if there is one, lint, render. Nothing touches the network. */
-function run({ files, source, config, read, notes, diagnostics, absent, unreadPaths }: Run): void {
+async function run({
+  files,
+  source,
+  config,
+  read,
+  notes,
+  diagnostics,
+  absent,
+  unreadPaths,
+}: Run): Promise<void> {
+  // Every caller has claimed its token just before calling, so the newest token is this run's.
+  const token = latestRun;
   try {
     let raw: unknown;
     if (config) {
@@ -147,10 +158,25 @@ function run({ files, source, config, read, notes, diagnostics, absent, unreadPa
         );
       }
     }
+    // lint holds the main thread for as long as M takes to parse, about 6 s in Firefox on the
+    // slowest models, and reading files can finish inside one frame, so "Reading files..." would
+    // never be painted. One frame and one task first let the browser paint the status line. A
+    // browser does not run animation frames in a hidden tab, so a run started there lints when the
+    // tab is shown, which changes no result.
+    await new Promise((done) => requestAnimationFrame(done));
+    await new Promise((done) => setTimeout(done, 0));
+    // An input made during that wait owns the page now; a lint here would hold the main thread for
+    // a result nobody will see.
+    if (superseded(token)) return;
     // The browser reads reports, so it lints with every default rule, as the CLI does. The time
     // is kept on the results for the performance test to read.
     const started = performance.now();
-    const result = lint(files, { config: resolveConfig(raw), diagnostics, absent, unreadPaths });
+    const result = await lint(files, {
+      config: resolveConfig(raw),
+      diagnostics,
+      absent,
+      unreadPaths,
+    });
     results.dataset.lintMs = String(Math.round(performance.now() - started));
     // Unhidden before it is filled, as the status line is: a hidden block is out of the
     // accessibility tree, so anything rendered into one arrives where nothing can reach it. The
@@ -179,7 +205,7 @@ function run({ files, source, config, read, notes, diagnostics, absent, unreadPa
 function runEntries(tree: InputTree, name?: string): void {
   try {
     const project = selectProject(tree);
-    run({
+    void run({
       files: project.files,
       source: name ?? (project.root || "the dropped file"),
       config: project.config,
@@ -202,7 +228,7 @@ byId("lint-paste", HTMLButtonElement).addEventListener("click", () => {
     problem("Paste some TMDL first.");
     return;
   }
-  run({ files: [{ path: "pasted.tmdl", text }], source: "pasted TMDL" });
+  void run({ files: [{ path: "pasted.tmdl", text }], source: "pasted TMDL" });
 });
 
 // The sample runs as a drop of examples/messy-sales runs, through selectProject, so its results

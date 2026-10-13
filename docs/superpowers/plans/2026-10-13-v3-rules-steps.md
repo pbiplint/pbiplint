@@ -2262,7 +2262,7 @@ Expected: PASS.
 
 - [ ] **Step 6: Pin the rule's findings on m-zoo**
 
-Spec 9.13's three shapes are in m-zoo: `Default Steps` (Changed Type, Added Custom1, and Removed Other Columns: fires once, on Changed Type), `Sort Held` (every step renamed: silent), and `Navigation Only` (Source and Navigation: silent). Most other m-zoo queries keep Desktop's names on purpose, so the rule fires on fifteen tables, and no shared expression (each is a parameter or a function). Replace `tests/expectations/pbiplint/m-zoo.json` with this complete file, which is what the scratch run produced and is the state after Tasks 3 to 7:
+Spec 9.13's three shapes are in m-zoo: `Default Steps` (Changed Type, Added Custom1, and Removed Other Columns: fires once, on Changed Type), `Sort Held` (every step renamed: silent), and `Navigation Only` (Source and Navigation: silent). Most other m-zoo queries keep Desktop's names on purpose, so the rule fires on thirteen tables, and no shared expression (each is a parameter or a function). Replace `tests/expectations/pbiplint/m-zoo.json` with this complete file, which is what the scratch run produced and is the state after Tasks 3 to 7:
 
 ```json
 {
@@ -2311,7 +2311,7 @@ Spec 9.13's three shapes are in m-zoo: `Default Steps` (Changed Type, Added Cust
 ```
 
 Run: `npx vitest run packages/core/test/rules-m.test.ts`
-Expected: PASS. Then `git diff tests/expectations/pbiplint/m-zoo.json`: only `"DEFAULT_STEP_NAMES"` in `"rules"` and the fifteen `DEFAULT_STEP_NAMES` lines are added; every other line is as Task 6 left it. If anything else differs, stop and report.
+Expected: PASS. Then `git diff tests/expectations/pbiplint/m-zoo.json`: only `"DEFAULT_STEP_NAMES"` in `"rules"` and the thirteen `DEFAULT_STEP_NAMES` lines are added; every other line is as Task 6 left it. If anything else differs, stop and report.
 
 - [ ] **Step 7: The report fixtures' native maps**
 

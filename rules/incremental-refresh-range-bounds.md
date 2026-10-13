@@ -79,6 +79,7 @@ A column that can never hold a value equal to a boundary, such as a timestamp th
 - Comparisons are read anywhere in the query, in either order (`RangeStart <= [OrderDate]` reads as `[OrderDate] >= RangeStart`), and with the parameter inside a call, as in `DateKey(RangeStart)` for an integer date key, or held by a step.
 - Only the model's own parameters count: shared expressions named `RangeStart` and `RangeEnd` that are Power Query parameters. A step or a function parameter with the same name hides the model's parameter, and its comparison is not read.
 - A query that compares one parameter both ways, with and without the equals sign, is left alone, since which comparison filters cannot be told from the text.
+- A bound compared on the wrong side, such as `>=` on both parameters, is not read.
 - A query that compares with only one of the two parameters, or that uses `=` or `<>` with them, is not reported.
 - The refresh policy's own query is read only when it differs from the partition's, so a table where Desktop writes the same query in both places has one finding, on the partition.
 - A query whose M does not parse is not read; it gets a `PARSE_ISSUE` finding instead.

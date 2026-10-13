@@ -69,6 +69,7 @@ When the table is meant to hold a sample, such as a preview table beside the ful
 
 - A count of 0 or 1 is not reported: an empty table that keeps a query's columns, and a single row of settings, are both common and deliberate.
 - A `Table.FirstN` whose table is sorted, by a `Table.Sort` or a `Table.Buffer` of one, written in place or as the step it reads, is a top N and is not reported.
+- A sort with other steps between it and Keep First Rows is not read as a top N.
 - Only a count written as a number is read. A count from a parameter, or a condition such as `each [Amount] > 0` in place of a count, is not reported.
 - A `Table.FirstN` inside an `each` or a function, such as a top three per group in `Table.Group`, runs once per group or per call and is not reported.
 - Shared expressions do not load on their own, so they are not read. A table that reads a shared expression holding a Keep First Rows step is not reported either.

@@ -498,6 +498,20 @@ describe("KEEP_FIRST_ROWS_LEFT_IN (v3 spec, section 9.11)", () => {
     );
     expect(await mFindings(rule, tmdl)).toEqual([]);
   });
+  it("reports a refresh policy's own query on the Table", async () => {
+    const tmdl =
+      'table Orders\n\tpartition Orders = m\n\t\tmode: import\n\t\tsource = Sql.Database("db.example", "Warehouse")\n\n' +
+      "\trefreshPolicy\n\t\tpolicyType: basic\n\t\tsourceExpression = Table.FirstN(Source, 1000)\n";
+    // The policy's query differs from its partition's, so it is read (v3 spec, section 5.1).
+    expect(await mFindings(rule, tmdl)).toEqual([
+      {
+        objectType: "Table",
+        objectName: "'Orders'",
+        location: { file: "inline.tmdl", line: 8, column: 22 },
+        detail: "query 'Orders': only the first 1000 rows load",
+      },
+    ]);
+  });
   it("leaves alone a shared expression, which does not load", async () => {
     const tmdl = 'expression Preview =\n\t\tTable.FirstN(#table({"OrderID"}, {{1}}), 1000)\n';
     expect(await mFindings(rule, tmdl)).toEqual([]);

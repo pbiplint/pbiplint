@@ -1,7 +1,11 @@
-import { calls, textLiterals } from "../../m/ast.js";
+import { Language } from "@microsoft/powerquery-parser";
+import { calls, identifierName, textLiterals, unwrap } from "../../m/ast.js";
 import { mFinding } from "../m-helpers.js";
 import type { Rule } from "../types.js";
 import { pbiplintRule } from "./define.js";
+
+type Node = Language.Ast.TNode;
+const Kind = Language.Ast.NodeKind;
 
 /** Text that starts with a drive letter, a colon, and a slash either way: `C:\Data`, `d:/Exports`. */
 const DRIVE_PATH = /^([A-Za-z]):[\\/]/;
@@ -61,8 +65,54 @@ export const SCRIPT_IN_QUERY = pbiplintRule({
     ),
 });
 
+/** `true` as M writes it, with any parentheses or `meta` taken off. */
+function isTrue(node: Node | undefined): boolean {
+  const n = node && unwrap(node);
+  return (
+    n?.kind === Kind.LiteralExpression &&
+    n.literalKind === Language.Ast.LiteralKind.Logical &&
+    n.literal === "true"
+  );
+}
+
+/** Excel.Workbook's second argument when it asks for headers: `true`, or a record written in the call with `UseHeaders = true`. */
+function promotesHeaders(arg: Node | undefined): boolean {
+  if (arg === undefined) return false;
+  const a = unwrap(arg);
+  if (isTrue(a)) return true;
+  if (a.kind !== Kind.RecordExpression && a.kind !== Kind.RecordLiteral) return false;
+  return a.content.elements.some(
+    (csv) => identifierName(csv.node.key.literal) === "UseHeaders" && isTrue(csv.node.value),
+  );
+}
+
+// Desktop's own call, Excel.Workbook(File.Contents(...), null, true), leaves useHeaders unset and
+// sets delayTypes, and is left alone (v3 spec, section 9.12). Only a value written in the call is
+// read.
+export const EXCEL_USE_HEADERS = pbiplintRule({
+  id: "EXCEL_USE_HEADERS",
+  name: "Excel headers promoted by the workbook reader",
+  category: "Error Prevention",
+  severity: 1,
+  scope: ["Partition", "NamedExpression", "Table"],
+  layer: "powerquery",
+  check: (_project, { indexes: { m } }) =>
+    m.queries.flatMap((q) =>
+      calls(q)
+        .filter((c) => c.name === "Excel.Workbook" && promotesHeaders(c.args[1]))
+        .map((c) =>
+          mFinding(
+            m,
+            q,
+            c.node,
+            "Excel.Workbook promotes headers in the refreshing machine's culture",
+          ),
+        ),
+    ),
+});
+
 /**
  * pbiplint's own Power Query rules (v3 spec, section 9): each reads the M a model's queries hold,
  * or the file's Power Query options, and reports on the model's files.
  */
-export const powerQueryRules: Rule[] = [LOCAL_DRIVE_PATH, SCRIPT_IN_QUERY];
+export const powerQueryRules: Rule[] = [LOCAL_DRIVE_PATH, SCRIPT_IN_QUERY, EXCEL_USE_HEADERS];

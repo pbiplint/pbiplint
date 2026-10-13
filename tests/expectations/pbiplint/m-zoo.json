@@ -1,11 +1,13 @@
 {
   "fixture": "tests/fixtures/m-zoo.SemanticModel",
   "about": "pbiplint's own Power Query rules on m-zoo: rule, object, file, line, column, and detail of every finding. These rules have no Tabular Editor oracle (v3 spec, section 11.1), so this file is pbiplint's own, written in place order and reviewed by hand.",
-  "rules": ["LOCAL_DRIVE_PATH", "SCRIPT_IN_QUERY"],
+  "rules": ["EXCEL_USE_HEADERS", "LOCAL_DRIVE_PATH", "SCRIPT_IN_QUERY"],
   "findings": [
     { "rule": "LOCAL_DRIVE_PATH", "objectType": "NamedExpression", "object": "DataFolder", "file": "definition/expressions.tmdl", "line": 18, "column": 25, "detail": "query 'DataFolder': the path is on a local drive (C:)" },
     { "rule": "LOCAL_DRIVE_PATH", "objectType": "NamedExpression", "object": "ExportFolder", "file": "definition/expressions.tmdl", "line": 21, "column": 27, "detail": "query 'ExportFolder': the path is on a local drive (D:)" },
+    { "rule": "EXCEL_USE_HEADERS", "objectType": "Partition", "object": "Budget", "file": "definition/tables/Budget.tmdl", "line": 15, "column": 22, "detail": "query 'Budget', step 'ReaderHeaders': Excel.Workbook promotes headers in the refreshing machine's culture" },
     { "rule": "LOCAL_DRIVE_PATH", "objectType": "Partition", "object": "Budget", "file": "definition/tables/Budget.tmdl", "line": 15, "column": 51, "detail": "query 'Budget', step 'ReaderHeaders': the path is on a local drive (C:)" },
+    { "rule": "EXCEL_USE_HEADERS", "objectType": "Partition", "object": "Budget", "file": "definition/tables/Budget.tmdl", "line": 16, "column": 22, "detail": "query 'Budget', step 'OptionHeaders': Excel.Workbook promotes headers in the refreshing machine's culture" },
     { "rule": "LOCAL_DRIVE_PATH", "objectType": "Partition", "object": "Budget", "file": "definition/tables/Budget.tmdl", "line": 16, "column": 51, "detail": "query 'Budget', step 'OptionHeaders': the path is on a local drive (C:)" },
     { "rule": "LOCAL_DRIVE_PATH", "objectType": "Partition", "object": "Budget", "file": "definition/tables/Budget.tmdl", "line": 17, "column": 45, "detail": "query 'Budget', step 'Desktop': the path is on a local drive (C:)" },
     { "rule": "LOCAL_DRIVE_PATH", "objectType": "Partition", "object": "Budget", "file": "definition/tables/Budget.tmdl", "line": 18, "column": 44, "detail": "query 'Budget', step 'Legacy': the path is on a local drive (C:)" },

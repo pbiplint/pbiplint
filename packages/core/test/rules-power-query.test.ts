@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { lint } from "../src/engine/lint.js";
-import { LOCAL_DRIVE_PATH, SCRIPT_IN_QUERY } from "../src/rules/pbiplint/power-query.js";
+import {
+  EXCEL_USE_HEADERS,
+  LOCAL_DRIVE_PATH,
+  SCRIPT_IN_QUERY,
+} from "../src/rules/pbiplint/power-query.js";
 import type { Rule } from "../src/rules/types.js";
 import { mFindings, mObjectNames } from "./helpers.js";
 
@@ -146,5 +150,58 @@ describe("SCRIPT_IN_QUERY (v3 spec, section 9.9)", () => {
       "\tText",
     );
     expect(await mFindings(rule, tmdl)).toEqual([]);
+  });
+});
+
+describe("EXCEL_USE_HEADERS (v3 spec, section 9.12)", () => {
+  const rule = EXCEL_USE_HEADERS;
+  const book = 'Web.Contents("https://example.com/Budget.xlsx")';
+  it("is a built-in Power Query info rule on a query's owner", () => {
+    isPowerQueryRule(rule, 1, "Error Prevention");
+    expect(rule.name).toBe("Excel headers promoted by the workbook reader");
+    expect(rule.scope).toEqual(["Partition", "NamedExpression", "Table"]);
+  });
+  it("reports useHeaders set to true, as an argument or in the options record, and nothing else", async () => {
+    const tmdl = table(
+      "Budget",
+      "let",
+      `\tReader = Excel.Workbook(${book}, true),`,
+      `\tOption = Excel.Workbook(${book}, [UseHeaders = true]),`,
+      `\tDesktop = Excel.Workbook(${book}, null, true),`,
+      `\tOff = Excel.Workbook(${book}, false),`,
+      `\tDelay = Excel.Workbook(${book}, [DelayTypes = true]),`,
+      `\tBare = Excel.Workbook(${book})`,
+      "in",
+      "\tBare",
+    );
+    const what = "Excel.Workbook promotes headers in the refreshing machine's culture";
+    expect(await mFindings(rule, tmdl)).toEqual([
+      {
+        objectType: "Partition",
+        objectName: "Budget",
+        location: { file: "inline.tmdl", line: 6, column: 15 },
+        detail: `query 'Budget', step 'Reader': ${what}`,
+      },
+      {
+        objectType: "Partition",
+        objectName: "Budget",
+        location: { file: "inline.tmdl", line: 7, column: 15 },
+        detail: `query 'Budget', step 'Option': ${what}`,
+      },
+    ]);
+  });
+  it("reads true in parentheses, and leaves alone a value it would have to follow", async () => {
+    const tmdl = table(
+      "Budget",
+      "let",
+      "\tHeaders = true,",
+      `\tWrapped = Excel.Workbook(${book}, (true)),`,
+      `\tNamed = Excel.Workbook(${book}, Headers)`,
+      "in",
+      "\tNamed",
+    );
+    expect((await mFindings(rule, tmdl)).map((f) => f.detail)).toEqual([
+      "query 'Budget', step 'Wrapped': Excel.Workbook promotes headers in the refreshing machine's culture",
+    ]);
   });
 });

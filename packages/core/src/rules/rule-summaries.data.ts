@@ -65,6 +65,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   ENSURE_THEME_COLOURS:
     "Visuals other than text boxes with a colour property set to a hex value instead of a theme colour, including a hex value inside a conditional formatting rule or a gradient.",
   EVALUATEANDLOG_SHOULD_NOT_BE_USED_IN_PRODUCTION_MODELS: "Measures that call EVALUATEANDLOG.",
+  EXCEL_USE_HEADERS:
+    "Excel.Workbook calls that ask the workbook reader to promote headers: `true` as the second argument, or `UseHeaders = true` in its options record.",
   EXPRESSION_RELIANT_OBJECTS_MUST_HAVE_AN_EXPRESSION:
     "Measures, calculated columns, and calculation items whose expression is empty.",
   FILTER_COLUMN_VALUES:

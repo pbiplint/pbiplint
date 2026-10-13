@@ -357,9 +357,9 @@ test("lints a model as heavy to parse as the corpus's slowest within its engine'
   page,
   browserName,
 }) => {
-  // Longer than the heading's 30-second wait, so a slow Firefox run fails on its budget, not on
-  // Playwright's default 30-second test timeout.
-  test.setTimeout(60_000);
+  // Above the largest budget (Firefox's 65 seconds) plus setup, so a slow run fails on its
+  // budget, not on Playwright's test timeout.
+  test.setTimeout(120_000);
   // Every frame's status line, read in requestAnimationFrame, which runs just before the browser
   // paints: lint holds the main thread for seconds, so a status set but never painted would be
   // set in vain.
@@ -382,15 +382,22 @@ test("lints a model as heavy to parse as the corpus's slowest within its engine'
   expect(painted).toContain("Reading files...");
   const ms = Number(await results.getAttribute("data-lint-ms"));
   test.info().annotations.push({ type: "lint-ms", description: String(ms) });
+  console.log(`big model lint-ms (${browserName}): ${ms}`);
   expect(ms).toBeGreaterThan(0);
-  // Measured on October 13, 2026, as this test reads it (the whole lint, data-lint-ms, one worker),
-  // on Michael's Mac: the lint takes about 0.85 s in Chromium, 1.1 s in WebKit, and 6.2 s in
-  // Firefox. Firefox's parse stays linear in size (600 rows 70 ms, 3,000 rows 375 ms), a constant
-  // factor of about 7.5 over Chromium, most likely because the parser awaits at nearly every node.
-  // The guard is here to catch a parser that has turned quadratic, which the 5-second engines
-  // still do, so Firefox gets 20 seconds (pb-coord). These per-engine budgets replace the spec's
-  // earlier rule of two seconds, or else three times CI's measurement.
-  expect(ms).toBeLessThan(browserName === "firefox" ? 20_000 : 5000);
+  // Each budget is three times CI's measured time, rounded up to the next 5 s (v3 spec, section
+  // 11.5). On GitHub's ubuntu runners on October 13, 2026, the lint (the whole run, data-lint-ms,
+  // one worker) took 20.6 s in Firefox, and the whole test, setup included and so an upper bound on
+  // the lint, took 2.9 s in Chromium and 5.3 s in WebKit. On Michael's Mac the lint takes about
+  // 0.85 s in Chromium, 1.1 s in WebKit and 6.2 s in Firefox. Firefox's parse stays linear in size
+  // (600 rows 70 ms, 3,000 rows 375 ms), a constant factor of about 7.5 over Chromium, most likely
+  // because the parser awaits at nearly every node. A parser that turned quadratic would still
+  // blow every budget.
+  const budgetMs: Record<typeof browserName, number> = {
+    chromium: 10_000,
+    webkit: 20_000,
+    firefox: 65_000,
+  };
+  expect(ms).toBeLessThan(budgetMs[browserName]);
 });
 
 test("the Choose a folder button opens the browser's file chooser where there is no folder picker", async ({

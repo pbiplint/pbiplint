@@ -7,9 +7,11 @@ import { tempDir } from "../../tests/support/temp-dir.js";
 import { bigModelFiles, makeBigModel, PARTITIONS } from "../make-big-model.mjs";
 
 // The parse-time guard (v3 spec, section 11.5): a model as heavy to parse as the corpus's slowest,
-// about 400,000 tokens of M that Microsoft's parser read in 656 ms on October 13, 2026. Five
-// seconds leaves room for a slow runner and none for a parser that has turned quadratic.
-const BUDGET_MS = 5000;
+// about 400,000 tokens of M. CI measured its lint at 6.4 s on Node 20 and 3.6 s on Node 22 on
+// October 13, 2026 (Node 20 runs this parser about 1.75 times slower than 22); Michael's Mac takes
+// about 1.2 s. The budget is three times CI's slowest, rounded up to the next 5 s, so a slow runner
+// does not flake it, while a parser that turned quadratic on 400,000 tokens would take minutes.
+const BUDGET_MS = 20_000;
 
 describe("the big model", () => {
   it("writes 8 M partitions to a definition folder", () => {
@@ -30,5 +32,5 @@ describe("the big model", () => {
     const ms = performance.now() - started;
     expect(result.findings.filter((f) => f.ruleId === "PARSE_ISSUE")).toEqual([]);
     expect(ms).toBeLessThan(BUDGET_MS);
-  }, 30_000);
+  }, 60_000);
 });

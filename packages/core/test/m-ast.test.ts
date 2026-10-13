@@ -54,6 +54,10 @@ describe("calls", () => {
     const q = await query('let f = (x) => x, #"My Fn" = f in @f(1) + #"My Fn"(2)');
     expect(calls(q).map((c) => c.name)).toEqual(["f", "My Fn"]);
   });
+  it("lists nested calls in text order, the outer call first", async () => {
+    const q = await query("f(g(1), h(2))");
+    expect(calls(q).map((c) => c.name)).toEqual(["f", "g", "h"]);
+  });
 });
 
 describe("stepOf", () => {

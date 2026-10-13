@@ -8,7 +8,10 @@ const Kind = Language.Ast.NodeKind;
 export const identifierName = (literal: string): string =>
   literal.startsWith('#"') ? literal.slice(2, -1).replace(/""/g, '"') : literal;
 
-/** A text literal's value, without its quotes and with doubled quotes undone; undefined for any other node. */
+/**
+ * A text literal's value, without its quotes and with doubled quotes undone; undefined for any
+ * other node. M escapes such as `#(lf)` are left as written.
+ */
 export function textValue(node: Node | undefined): string | undefined {
   return node?.kind === Kind.LiteralExpression && node.literalKind === Language.Ast.LiteralKind.Text
     ? node.literal.slice(1, -1).replace(/""/g, '"')

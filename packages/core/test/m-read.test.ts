@@ -149,7 +149,7 @@ describe("readM", () => {
       "table Sales", //                                              1
       "\tpartition Sales = m", //                                    2
       "\t\tsource =", //                                             3
-      '\t\t\t\tlet a = "x y z",', //                      4, M line 0
+      '\t\t\t\tlet a = "x\u2028y\u2029z",', //                       4, M line 0
       "\t\t\t\t    b =", //                                          5, M line 1
       "\t\t\t\tin", //                                               6, M line 2
       "\t\t\t\t    a", //                                            7

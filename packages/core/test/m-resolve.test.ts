@@ -259,4 +259,12 @@ describe("origin of a field or item", () => {
       await originOf('let J = Json.Document(File.Contents("c:/a.json"))[url] in Web.Contents(J)'),
     ).toBe("row");
   });
+  it("is unknown for a field of a function's parameter, as the parameter is", async () => {
+    expect(await originOf("let f = (cfg) => Web.Contents(cfg[Url]) in f")).toBe("unknown");
+  });
+  it("is row for a field of _ inside each", async () => {
+    expect(await originOf('Table.AddColumn(#table({}, {}), "R", each Web.Contents(_[url]))')).toBe(
+      "row",
+    );
+  });
 });

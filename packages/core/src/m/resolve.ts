@@ -177,6 +177,9 @@ export function origin(m: MIndex, q: MQuery, node: Node, seen: Set<string> = new
         else if (r.kind === "query" && r.query.ast) {
           cq = r.query;
           container = unwrap(r.query.ast);
+        } else if (r.kind === "parameter") {
+          // A custom function's parameter is unknown (spec 9.3), and so is any field of it.
+          return "unknown";
         } else break;
       }
       return isLiteralContainer(container) ? "unknown" : "row";

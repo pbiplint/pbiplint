@@ -78,6 +78,7 @@ When the connector cannot reach the database the way the driver does: an authent
 ## Related rules
 
 - `MINIMIZE_POWER_QUERY_TRANSFORMATIONS` reports `Odbc.Query` and `OleDb.Query`, the native query functions of the same two sources.
+- `HARDCODED_SECRET_IN_QUERY` reports a password written into the same connection strings.
 
 ## Links
 

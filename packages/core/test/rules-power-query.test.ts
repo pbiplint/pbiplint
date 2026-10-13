@@ -6,6 +6,7 @@ import {
   DYNAMIC_DATA_SOURCE,
   EXCEL_USE_HEADERS,
   FIXED_DATE_IN_ROW_FILTER,
+  HARDCODED_SECRET_IN_QUERY,
   INCREMENTAL_REFRESH_RANGE_BOUNDS,
   KEEP_FIRST_ROWS_LEFT_IN,
   LOCAL_DRIVE_PATH,
@@ -858,5 +859,129 @@ describe("DYNAMIC_DATA_SOURCE (v3 spec, section 9.3)", () => {
       "\tUnknown",
     );
     expect(await mFindings(rule, tmdl)).toEqual([]);
+  });
+});
+
+describe("HARDCODED_SECRET_IN_QUERY (v3 spec, sections 9.5 and 11.3)", () => {
+  const rule = HARDCODED_SECRET_IN_QUERY;
+  /** A model parameter holding text, as Desktop writes one. */
+  const parameter = (name: string, value: string): string =>
+    `expression ${name} = "${value}" meta [IsParameterQuery = true, Type = "Text", IsParameterQueryRequired = true]\n\n`;
+  it("is a built-in Power Query error on a query's owner", () => {
+    isPowerQueryRule(rule, 3, "Error Prevention");
+    expect(rule.name).toBe("Secret written into a query");
+    expect(rule.scope).toEqual(["Partition", "NamedExpression", "Table"]);
+  });
+  it("reports an Authorization header on its text, once, though it is a Bearer token too", async () => {
+    const tmdl = table(
+      "Orders API",
+      "let",
+      '\tSource = Web.Contents("https://api.example.com/v1/orders", [Headers = [Authorization = "Bearer pbiplint-fixture-token-0101-notreal"]])',
+      "in",
+      "\tSource",
+    );
+    expect(await mFindings(rule, tmdl)).toEqual([
+      {
+        objectType: "Partition",
+        objectName: "Orders API",
+        location: { file: "inline.tmdl", line: 6, column: 93 },
+        detail:
+          "query 'Orders API', step 'Source': the Authorization header in Web.Contents holds a credential written into the query (value not shown)",
+      },
+    ]);
+  });
+  it("reads every place spec 9.5 names, with names in any case", async () => {
+    const tmdl = table(
+      "Orders API",
+      "let",
+      '\tHeader = Web.Contents("https://api.example.com/v1", [Headers = [#"X-API-Key" = "pbiplint-fixture-key-0102-notreal"]]),',
+      '\tField = Web.Contents("https://api.example.com/v1", [Query = [access_token = "pbiplint-fixture-token-0103-notreal"]]),',
+      '\tAddress = Web.Contents("https://api.example.com/v1?format=json&Sig=pbiplint-fixture-sig-0104-notreal"),',
+      '\tFeedHeaders = OData.Feed("https://odata.example.com", [#"Ocp-Apim-Subscription-Key" = "pbiplint-fixture-key-0105-notreal"]),',
+      '\tFeedOptions = OData.Feed("https://odata.example.com", null, [Headers = [#"x-functions-key" = "pbiplint-fixture-key-0106-notreal"]]),',
+      '\tToken = "Bearer pbiplint-fixture-token-0107-notreal",',
+      '\tConnection = OleDb.DataSource("Provider=SQLOLEDB;Data Source=sql.example;User ID=reader;Password={pbiplint-fixture-pwd-0108-notreal}")',
+      "in",
+      "\tConnection",
+    );
+    expect((await mFindings(rule, tmdl)).map((f) => f.detail)).toEqual([
+      "query 'Orders API', step 'Header': the X-API-Key header in Web.Contents holds a credential written into the query (value not shown)",
+      "query 'Orders API', step 'Field': the access_token field of the Query record in Web.Contents holds a credential written into the query (value not shown)",
+      "query 'Orders API', step 'FeedHeaders': the Ocp-Apim-Subscription-Key header in OData.Feed holds a credential written into the query (value not shown)",
+      "query 'Orders API', step 'FeedOptions': the x-functions-key header in OData.Feed holds a credential written into the query (value not shown)",
+      "query 'Orders API', step 'Connection': the password in OleDb.DataSource's connection string holds a credential written into the query (value not shown)",
+      "query 'Orders API', step 'Address': the sig parameter of the web address holds a credential written into the query (value not shown)",
+      "query 'Orders API', step 'Token': the Bearer token holds a credential written into the query (value not shown)",
+    ]);
+  });
+  it("follows a name to the step or parameter that holds the text, and reports a parameter once however many queries read it", async () => {
+    const tmdl =
+      parameter("ServiceToken", "pbiplint-fixture-token-0109-notreal") +
+      table(
+        "Customers",
+        "let",
+        '\tSource = Web.Contents("https://api.example.com/v1/customers", [Headers = [#"x-api-key" = ServiceToken]])',
+        "in",
+        "\tSource",
+      ) +
+      table(
+        "Orders",
+        "let",
+        '\tKey = "pbiplint-fixture-key-0110-notreal",',
+        '\tSource = Web.Contents("https://api.example.com/v1/orders", [Headers = [Authorization = "Bearer " & Key, #"x-api-key" = ServiceToken]])',
+        "in",
+        "\tSource",
+      );
+    expect(await mFindings(rule, tmdl)).toEqual([
+      {
+        objectType: "NamedExpression",
+        objectName: "ServiceToken",
+        location: { file: "inline.tmdl", line: 1, column: 27 },
+        detail:
+          "query 'ServiceToken': the x-api-key header in Web.Contents reads a credential written here (value not shown)",
+      },
+      {
+        objectType: "Partition",
+        objectName: "Orders",
+        location: { file: "inline.tmdl", line: 17, column: 12 },
+        detail:
+          "query 'Orders', step 'Key': the Authorization header in Web.Contents reads a credential written here (value not shown)",
+      },
+    ]);
+  });
+  it("leaves alone placeholders, short values, prose, ApiKeyName, comments, and other headers and fields", async () => {
+    const tmdl = table(
+      "Orders API",
+      "let",
+      "\t// The old key was pbiplint-fixture-key-0111-notreal.",
+      '\tA = Web.Contents("https://api.example.com/v1", [Headers = [Authorization = "<your key>"]]),',
+      '\tB = Web.Contents("https://api.example.com/v1", [Headers = [Authorization = "Bearer {token}"]]),',
+      '\tC = Web.Contents("https://api.example.com/v1", [Headers = [#"x-api-key" = "xxxxxxxxxxxx"]]),',
+      '\tD = Web.Contents("https://api.example.com/v1", [Headers = [#"x-api-key" = "YOUR_API_KEY"]]),',
+      '\tE = Web.Contents("https://api.example.com/v1", [Query = [key = "Enter your key here"]]),',
+      '\tF = Web.Contents("https://api.example.com/v1", [Query = [token = "short"]]),',
+      '\tG = Web.Contents("https://api.example.com/v1", [ApiKeyName = "api_key"]),',
+      '\tH = Web.Contents("https://api.example.com/v1", [Headers = [Accept = "application/json; charset=utf-8"], Query = [page = "pbiplint-fixture-page-0112-notreal"]]),',
+      '\tI = Web.Contents("https://api.example.com/v1?api_key=&format=json"),',
+      '\tJ = Odbc.DataSource("dsn=Sales;Pwd=***", [HierarchicalNavigation = true]),',
+      '\tK = Web.Contents("https://api.example.com/v1", [Headers = [Authorization = "Bearer " & Text.From(Number.Random())]])',
+      "in",
+      "\tK",
+    );
+    expect(await mFindings(rule, tmdl)).toEqual([]);
+  });
+  it("writes no part of a value into a detail: only the rule's words and M's own names", async () => {
+    const tmdl =
+      parameter("ServiceToken", "pbiplint-fixture-token-0113-notreal") +
+      table(
+        "Orders API",
+        "let",
+        '\tSource = Web.Contents("https://api.example.com/v1?api_key=pbiplint-fixture-key-0114-notreal", [Headers = [#"x-api-key" = ServiceToken]])',
+        "in",
+        "\tSource",
+      );
+    const details = (await mFindings(rule, tmdl)).map((f) => f.detail ?? "");
+    expect(details).toHaveLength(2);
+    for (const d of details) expect(d).not.toMatch(/fixture|notreal|0113|0114/);
   });
 });

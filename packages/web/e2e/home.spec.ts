@@ -357,6 +357,9 @@ test("lints a model as heavy to parse as the corpus's slowest within its engine'
   page,
   browserName,
 }) => {
+  // Longer than the heading's 30-second wait, so a slow Firefox run fails on its budget, not on
+  // Playwright's default 30-second test timeout.
+  test.setTimeout(60_000);
   // Every frame's status line, read in requestAnimationFrame, which runs just before the browser
   // paints: lint holds the main thread for seconds, so a status set but never painted would be
   // set in vain.
@@ -380,11 +383,13 @@ test("lints a model as heavy to parse as the corpus's slowest within its engine'
   const ms = Number(await results.getAttribute("data-lint-ms"));
   test.info().annotations.push({ type: "lint-ms", description: String(ms) });
   expect(ms).toBeGreaterThan(0);
-  // Measured on October 13, 2026: on this model Microsoft's parser takes about 0.8 s in Chromium,
-  // 1.0 s in WebKit, and 6.2 s in Firefox. Firefox's parse stays linear in size (600 rows 70 ms,
-  // 3,000 rows 375 ms), a constant factor of about 7.5 over Chromium, most likely because the
-  // parser awaits at nearly every node. The guard is here to catch a parser that has turned
-  // quadratic, which the 5-second engines still do, so Firefox gets 20 seconds (pb-coord).
+  // Measured on October 13, 2026, as this test reads it (the whole lint, data-lint-ms, one worker),
+  // on Michael's Mac: the lint takes about 0.85 s in Chromium, 1.1 s in WebKit, and 6.2 s in
+  // Firefox. Firefox's parse stays linear in size (600 rows 70 ms, 3,000 rows 375 ms), a constant
+  // factor of about 7.5 over Chromium, most likely because the parser awaits at nearly every node.
+  // The guard is here to catch a parser that has turned quadratic, which the 5-second engines
+  // still do, so Firefox gets 20 seconds (pb-coord). These per-engine budgets replace the spec's
+  // earlier rule of two seconds, or else three times CI's measurement.
   expect(ms).toBeLessThan(browserName === "firefox" ? 20_000 : 5000);
 });
 

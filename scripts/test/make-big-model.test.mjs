@@ -1,4 +1,4 @@
-import { readdirSync } from "node:fs";
+import { readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { performance } from "node:perf_hooks";
 import { describe, expect, it } from "vitest";
@@ -17,6 +17,12 @@ describe("the big model", () => {
     expect(makeBigModel(out)).toBe(PARTITIONS);
     const tables = readdirSync(join(out, "big-model.SemanticModel", "definition", "tables"));
     expect(tables).toHaveLength(PARTITIONS);
+  });
+  it("refuses a folder that holds anything but an earlier big model, and leaves it alone", () => {
+    const out = tempDir("big-model");
+    writeFileSync(join(out, "keep.txt"), "Not the big model.\n");
+    expect(() => makeBigModel(out)).toThrow(/holds more than an earlier big model/);
+    expect(readdirSync(out)).toEqual(["keep.txt"]);
   });
   it(`lints in under ${BUDGET_MS / 1000} seconds, every M expression read`, async () => {
     const started = performance.now();

@@ -145,6 +145,8 @@ async function run({
   absent,
   unreadPaths,
 }: Run): Promise<void> {
+  // Every caller has claimed its token just before calling, so the newest token is this run's.
+  const token = latestRun;
   try {
     let raw: unknown;
     if (config) {
@@ -161,6 +163,9 @@ async function run({
     // never be painted. One frame and one task first let the browser paint the status line.
     await new Promise((done) => requestAnimationFrame(done));
     await new Promise((done) => setTimeout(done, 0));
+    // An input made during that wait owns the page now; a lint here would hold the main thread for
+    // a result nobody will see.
+    if (superseded(token)) return;
     // The browser reads reports, so it lints with every default rule, as the CLI does. The time
     // is kept on the results for the performance test to read.
     const started = performance.now();

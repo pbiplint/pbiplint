@@ -159,10 +159,16 @@ export function origin(m: MIndex, q: MQuery, node: Node, seen: Set<string> = new
         ]);
       }
       // A field or an item: of a record or list written in place, or a name bound to one through
-      // variables and queries, it is known.
+      // variables, queries, and lets' results, it is known.
       let container = unwrap(node.head);
       let cq = q;
-      while (container.kind === Kind.IdentifierExpression) {
+      for (;;) {
+        // A let stands for what its `in` returns.
+        if (container.kind === Kind.LetExpression) {
+          container = unwrap(container.expression);
+          continue;
+        }
+        if (container.kind !== Kind.IdentifierExpression) break;
         const key = `${cq.kind}:${cq.name}:${container.id}`;
         if (seen.has(key)) return "unknown";
         seen.add(key);

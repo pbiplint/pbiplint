@@ -236,6 +236,14 @@ describe("origin of a field or item", () => {
       ),
     ).toBe("unknown");
   });
+  it("is unknown for a field of a shared expression whose let builds a record", async () => {
+    expect(
+      await originOf(
+        "Web.Contents(Settings[BaseUrl])",
+        'expression Settings = let Base = "https://a.example.com" in [BaseUrl = Base]\n',
+      ),
+    ).toBe("unknown");
+  });
   it("is unknown for a field of a record through an alias", async () => {
     expect(
       await originOf('let r = [Url = "https://a.example.com"], r2 = r in Web.Contents(r2[Url])'),

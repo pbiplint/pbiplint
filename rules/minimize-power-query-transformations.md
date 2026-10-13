@@ -5,7 +5,7 @@ category: Performance
 severity: warning
 scope: [Partition]
 status: ported
-layer: model
+layer: powerquery
 video:
 sources:
   - https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json
@@ -15,7 +15,7 @@ sources:
 
 ## What it checks
 
-Power Query partitions whose M text contains Table.Combine, Table.Join, Table.NestedJoin, Table.AddColumn, Table.Group, Table.Sort, Table.Pivot, Table.Unpivot, Table.UnpivotOtherColumns, Table.Distinct, a native SQL query, or an OLE DB or ODBC query.
+Power Query partitions whose M names Table.Combine, Table.Join, Table.NestedJoin, Table.AddColumn, Table.Group, Table.Sort, Table.Pivot, Table.Unpivot, Table.UnpivotOtherColumns, Table.Distinct, Value.NativeQuery, OleDb.Query, or Odbc.Query, or gives a database connector a native SQL query in its `Query` option.
 
 Each finding names the partition, as `Sales`, and carries its table beside it, as `table 'Sales'`. Which of the names matched is not in the line, so search the query's M for them.
 
@@ -69,14 +69,14 @@ Where there is no upstream to move to, the finding is noise. A folder of CSV exp
 
 ## Quirks
 
-- The check is a case-sensitive substring match on the M text, so a function name inside a comment counts too, and a lower-case `table.group(` does not.
-- Each of the Table function patterns includes the opening parenthesis, so `Table.Group (` written with a space is not matched. The native-query names carry no parenthesis and match wherever they appear.
 - Only partitions whose source type is M are read. A calculated table's expression is never checked, even where it contains one of these names.
-- The native-query patterns are `[Query="SELECT`, `Value.NativeQuery`, `OleDb.Query`, and `Odbc.Query`. The first is matched literally, so `[Query = "SELECT` with spaces around the equals sign passes, and so does a lower-case `select`.
+- pbiplint reads the partition's M with Microsoft's Power Query parser, so a native SQL query in a database connector's `Query` option counts however it is written (in lower case, after a comment or a line break, as `WITH`, `DECLARE`, or `EXEC`, or with spaces around the equals sign), and a function name counts only where the M names it, never inside a comment or a text literal. Tabular Editor matches the M text, so it misses such a native query and reports a partition whose only match is in a comment.
+- The connectors whose `Query` option counts are `Sql.Database`, `Sql.Databases`, `Oracle.Database`, `PostgreSQL.Database`, `MySQL.Database`, `Snowflake.Databases`, `DB2.Database`, `Teradata.Database`, `SapHana.Database`, and `GoogleBigQuery.Database`. `Web.Contents` has a `Query` option of its own, which holds a web request's parameters, and `AnalysisServices.Database`'s holds DAX or MDX; neither counts.
+- A partition whose M does not parse is not read, so this rule does not report it; it gets a `PARSE_ISSUE` finding instead, where Tabular Editor's text match may still report it.
 
 ## Related rules
 
-- `UNPIVOT_PIVOTED_(MONTH)_DATA` asks for an unpivot, and `Table.UnpivotOtherColumns(` is one of the names this rule matches, so doing what that rule asks in Power Query creates a finding here.
+- `UNPIVOT_PIVOTED_(MONTH)_DATA` asks for an unpivot, and `Table.UnpivotOtherColumns` is one of the names this rule reads, so doing what that rule asks in Power Query creates a finding here.
 - `PARTITION_NAME_SHOULD_MATCH_TABLE_NAME_FOR_SINGLE_PARTITION_TABLES` reads the same partitions and reports the table when a single partition's name is not the table's name.
 
 ## Links

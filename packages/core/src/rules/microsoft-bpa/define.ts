@@ -80,7 +80,7 @@ type ModelCheck = (model: Model, ctx: RuleContext) => RuleFinding[];
 /**
  * A port of one Microsoft BPA rule: metadata from the ruleset, behavior from `check`, and what
  * stops it, when anything does, from the spec given before `check`. A port keeps the source's
- * quirks, apart from the eleven deviations named on the pages and in the rules' doc comments, and
+ * quirks, apart from the twelve deviations named on the pages and in the rules' doc comments, and
  * the thirteen rules that test a column's type leaving out a column whose TMDL names none (#164);
  * those a fixture shows are pinned by `ours` in the model expectation files, the others by the
  * rules' unit tests.

@@ -687,6 +687,13 @@ describe("generateSite", () => {
     expect(reportPages).toHaveLength(26);
     for (const slug of reportPages)
       expect(existsSync(join(out, `rules/${slug}/index.html`)), slug).toBe(true);
+    // The shipped rule is the first on the Power Query layer (v3 spec, section 10.1).
+    expect(metas.filter((m) => m.layer === "powerquery").map((m) => m.slug)).toEqual([
+      "minimize-power-query-transformations",
+    ]);
+    expect(
+      readFileSync(join(out, "rules/minimize-power-query-transformations/index.html"), "utf8"),
+    ).toContain("· ported · Power Query layer · scope: Partition");
     expect(readFileSync(join(out, "rules/landing-page-not-set/index.html"), "utf8")).toContain(
       '<a href="/rules/opening-page-invalid/"><code>OPENING_PAGE_INVALID</code></a>',
     );

@@ -213,7 +213,8 @@ const runPbir = async (
  * Proves a page's Example section through the engine: one fires fence the rule flags and one
  * fixed fence it accepts. A model rule shows TMDL; a report or project rule shows the report JSON
  * the example stands for. PARSE_ISSUE spans both layers, so its page keeps the TMDL pair and may
- * add a JSON pair beside it; no other page mixes the two.
+ * add a JSON pair beside it; no other page mixes the two. A Power Query page's example is TMDL
+ * too, since its M lives in a model file.
  */
 async function checkExample(rule: Rule, example: string): Promise<void> {
   const check = (before: Finding[], after: Finding[]): void => {
@@ -240,7 +241,7 @@ async function checkExample(rule: Rule, example: string): Promise<void> {
     check(await runPbir(fires!, withModel, config), await runPbir(fixed!, withModel, config));
   };
   const infos = infoStrings(example);
-  if (rule.layer === "model" || rule.id === "PARSE_ISSUE") {
+  if (rule.layer === "model" || rule.layer === "powerquery" || rule.id === "PARSE_ISSUE") {
     const [fires, ...moreFires] = fences(example, "tmdl fires");
     const [fixed, ...moreFixed] = fences(example, "tmdl fixed");
     expect(fires, "one `tmdl fires` fence").toBeDefined();

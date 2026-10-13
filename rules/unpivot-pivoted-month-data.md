@@ -111,7 +111,7 @@ A coincidence is the case to check for first, though it takes six of them at onc
 
 ## Related rules
 
-- `MINIMIZE_POWER_QUERY_TRANSFORMATIONS` matches `Table.UnpivotOtherColumns(` and `Table.Unpivot(` in a partition's M, so doing this rule's fix in Power Query rather than in the source creates a finding there on the reshaped query.
+- `MINIMIZE_POWER_QUERY_TRANSFORMATIONS` reads `Table.UnpivotOtherColumns` and `Table.Unpivot` in a partition's M, so doing this rule's fix in Power Query rather than in the source creates a finding there on the reshaped query.
 - `MONTH_(AS_A_STRING)_MUST_BE_SORTED` reports a text column whose name contains month and that has no sort-by column, which is what an unpivot produces by default. The fixed example above gives the new column a Month Number to sort by for that reason.
 
 ## Links

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { buildIndexes } from "../src/index/build.js";
+import { readM } from "../src/m/read.js";
 import * as rules from "../src/rules/microsoft-bpa/tables.js";
-import { objectNames } from "./helpers.js";
+import { mObjectNames, modelFrom, objectNames } from "./helpers.js";
 
 const t = (
   name: string,
@@ -119,20 +121,93 @@ describe("column count, pivot, partition, and Power Query rules", () => {
       ),
     ).toEqual(["'Sales'"]);
   });
-  it("MINIMIZE_POWER_QUERY_TRANSFORMATIONS is a case-sensitive substring check on M partitions", () => {
-    const m =
-      t(
+  describe("MINIMIZE_POWER_QUERY_TRANSFORMATIONS reads the parsed M (v3 spec, section 9.7)", () => {
+    const rule = rules.MINIMIZE_POWER_QUERY_TRANSFORMATIONS;
+    const m = (name: string, source: string): string =>
+      t(name, "", `\tpartition ${name} = m\n\t\tmode: import\n\t\tsource = ${source}\n`);
+    it("is a ported rule on the Power Query layer that needs only the model", () => {
+      expect(rule.layer).toBe("powerquery");
+      expect(rule.needs).toEqual(["model"]);
+      expect(rule.status).toBe("ported");
+    });
+    it("reports a partition whose M names a transformation, called or passed as a value", async () => {
+      const tmdl =
+        m("A", 'let x = Table.AddColumn(s, "c", each 1) in x') +
+        m("B", "let x = table.addcolumn(s) in x") +
+        m("C", 'let x = Table.Group (s, {"k"}, {}) in x') +
+        m("D", "let x = List.Transform({}, Table.Distinct) in x") +
+        t(
+          "E",
+          "",
+          "\tpartition E = calculated\n\t\tmode: import\n\t\tsource = Table.Combine({})\n",
+        );
+      // M is case-sensitive, so table.addcolumn names nothing; a space before the parenthesis
+      // and a function passed as a value both count; a calculated partition is not M.
+      expect(await mObjectNames(rule, tmdl)).toEqual(["A", "C", "D"]);
+    });
+    it("does not count a name in a comment or a text literal", async () => {
+      const tmdl =
+        m("A", "let /* Table.Group(s) */ x = 1 in x") +
+        m("B", 'let x = "Table.Combine(" in x') +
+        m("C", 'let x = Value.NativeQuery(s, "select 1") in x');
+      expect(await mObjectNames(rule, tmdl)).toEqual(["C"]);
+    });
+    it("finds a database connector's native query however its SQL is written", async () => {
+      const tmdl =
+        m("A", 'Sql.Database("s", "d", [Query = "select 1"])') +
+        m(
+          "B",
+          'Sql.Database("s", "d", [Query="-- totals#(lf)WITH t AS (SELECT 1) SELECT * FROM t"])',
+        ) +
+        m("C", 'PostgreSQL.Database("s", "d", [Query = "EXEC dbo.Totals"])') +
+        m("D", 'Oracle.Database("s", [Query = "DECLARE x NUMBER; BEGIN NULL; END;"])') +
+        m("E", 'Sql.Database("s", "d", [CommandTimeout = #duration(0, 0, 5, 0)])');
+      expect(await mObjectNames(rule, tmdl)).toEqual(["A", "B", "C", "D"]);
+    });
+    it("leaves alone a Query option that is not a native query", async () => {
+      const tmdl =
+        m("A", 'Web.Contents("https://api.example.com", [Query = [page = "1"]])') +
+        m("B", 'AnalysisServices.Database("s", "d", [Query = "EVALUATE Sales"])') +
+        m("C", 'Odbc.Query("dsn=x", "select 1")');
+      expect(await mObjectNames(rule, tmdl)).toEqual(["C"]);
+    });
+    it("does not report a partition whose M does not parse: PARSE_ISSUE does", async () => {
+      const tmdl = m("A", "let x = Table.Combine({a, b} in x");
+      expect(await mObjectNames(rule, tmdl)).toEqual([]);
+      const { lint } = await import("../src/engine/lint.js");
+      const result = await lint([{ path: "definition/tables/A.tmdl", text: tmdl }]);
+      expect(result.findings.filter((f) => f.ruleId === "PARSE_ISSUE")).toHaveLength(1);
+      expect(result.findings.filter((f) => f.ruleId === rule.id)).toEqual([]);
+    });
+    it("reads only partitions, not shared expressions", async () => {
+      const tmdl = "expression Combined = Table.Combine({})\n\n" + m("A", "1");
+      expect(await mObjectNames(rule, tmdl)).toEqual([]);
+    });
+    it("keeps the finding it always had: the partition, its location, and its table", async () => {
+      const model = modelFrom(m("Sales", "Table.Combine({})"));
+      const index = await readM(model, [
+        { path: "inline.tmdl", text: m("Sales", "Table.Combine({})") },
+      ]);
+      const [f] = rule.check({ model }, { indexes: buildIndexes({ model }, index), options: {} });
+      expect(f).toMatchObject({
+        objectType: "Partition",
+        objectName: "Sales",
+        detail: "table 'Sales'",
+        location: model.tables[0]!.partitions[0]!.location,
+      });
+    });
+    it("names what it found, sorted", async () => {
+      const text = m(
         "A",
-        "",
-        '\tpartition A = m\n\t\tmode: import\n\t\tsource = let x = Table.AddColumn(s, "c", each 1) in x\n',
-      ) +
-      t(
-        "B",
-        "",
-        "\tpartition B = m\n\t\tmode: import\n\t\tsource = let x = table.addcolumn(s) in x\n",
-      ) +
-      t("C", "", "\tpartition C = calculated\n\t\tmode: import\n\t\tsource = Table.Combine(\n");
-    expect(objectNames(rules.MINIMIZE_POWER_QUERY_TRANSFORMATIONS, m)).toEqual(["A"]);
+        'let s = Sql.Database("s", "d", [Query = "select 1"]), j = Table.NestedJoin(s, {}, s, {}, "x") in Table.Sort(j, {})',
+      );
+      const index = await readM(modelFrom(text), [{ path: "inline.tmdl", text }]);
+      expect(rules.powerQueryTransformations(index.queries[0]!)).toEqual([
+        "Sql.Database Query",
+        "Table.NestedJoin",
+        "Table.Sort",
+      ]);
+    });
   });
 });
 

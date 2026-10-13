@@ -15,6 +15,7 @@ const PAGES = [
   "/rules/broken-field-reference/", // the first published native rule page
   "/rules/filters-pane-state/", // a report page whose example runs under a config
   "/rules/ensure-alttext/", // a report page with a visual.json figure
+  "/rules/minimize-power-query-transformations/", // the first Power Query page
   "/about/",
   "/privacy/",
   "/cli/",

@@ -32,17 +32,24 @@ export function isModelParameter(q: MQuery): Node | undefined {
     : undefined;
 }
 
-/** The variables a let binds, the fields a record's other fields see, a function's parameters. */
-function bindingIn(scope: Node, name: string): Resolution | undefined {
+/**
+ * The variables a let binds, the fields a record's other fields see, a function's parameters.
+ * `skip` names a pair to leave out: the one whose initializer holds the name being resolved.
+ */
+function bindingIn(
+  scope: Node,
+  name: string,
+  skip: (pair: Node) => boolean,
+): Resolution | undefined {
   if (scope.kind === Kind.LetExpression) {
     const pair = scope.variableList.elements.find(
-      (csv) => identifierName(csv.node.key.literal) === name,
+      (csv) => identifierName(csv.node.key.literal) === name && !skip(csv.node),
     );
     return pair ? { kind: "value", node: pair.node.value } : undefined;
   }
   if (scope.kind === Kind.RecordExpression) {
     const field = scope.content.elements.find(
-      (csv) => identifierName(csv.node.key.literal) === name,
+      (csv) => identifierName(csv.node.key.literal) === name && !skip(csv.node),
     );
     return field ? { kind: "value", node: field.node.value } : undefined;
   }
@@ -65,18 +72,24 @@ function bindingIn(scope: Node, name: string): Resolution | undefined {
 export function resolve(m: MIndex, q: MQuery, node: Node): Resolution {
   if (node.kind !== Kind.IdentifierExpression) return { kind: "unknown" };
   const name = identifierName(node.identifier.literal);
+  // M's exclusive identifier leaves a binding out of its own initializer; only `@name` sees it.
+  const path = new Set<number>([node.id]);
+  const skip = (pair: Node) => !node.inclusiveConstant && path.has(pair.id);
   for (let scope = parentOf(q, node); scope; scope = parentOf(q, scope)) {
-    const found = bindingIn(scope, name);
+    const found = bindingIn(scope, name, skip);
     if (found) return found;
+    path.add(scope.id);
   }
-  const shared = m.queries.find((x) => x.kind === "expression" && x.name === name);
+  const shared = m.queries.find((x) => x.kind === "expression" && x.name === name && x !== q);
   if (shared) {
     const value = isModelParameter(shared);
     return value
       ? { kind: "modelParameter", query: shared, value }
       : { kind: "query", query: shared };
   }
-  const table = m.queries.find((x) => x.kind !== "expression" && x.name === name && x !== q);
+  // Every query of a table carries the table's name; none resolves to its own table.
+  const own = q.kind !== "expression" ? q.name : undefined;
+  const table = m.queries.find((x) => x.kind !== "expression" && x.name === name && x.name !== own);
   if (table) return { kind: "query", query: table };
   return name.includes(".") ? { kind: "library" } : { kind: "unknown" };
 }

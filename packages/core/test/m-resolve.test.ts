@@ -103,3 +103,75 @@ describe("resolve", () => {
     expect(named("RangeStart").map((n) => resolve(m, q, n).kind)).toEqual(["modelParameter"]);
   });
 });
+
+/** Every use of a name in a query, in text order. */
+function named(q: MQuery, name: string): Language.Ast.TNode[] {
+  const ids = q.nodeIdMapCollection!.idsByNodeKind.get(Language.Ast.NodeKind.IdentifierExpression)!;
+  return [...ids]
+    .sort((a, b) => a - b)
+    .map((id) => nodeOf(q, id)!)
+    .filter(
+      (n) =>
+        n.kind === Language.Ast.NodeKind.IdentifierExpression &&
+        identifierName(n.identifier.literal) === name,
+    );
+}
+
+/** The M index of these files, as the model reads them. */
+async function indexOf(files: LintFile[]): Promise<MIndex> {
+  return readM(buildModel(files.map((f) => parseTmdl(f.path, f.text))), files);
+}
+
+describe("resolve leaves a binding out of its own initializer", () => {
+  it("reads a field's own name in its value as the let's variable outside", async () => {
+    const { m, q } = await index('let a = "outer", r = [a = a] in r');
+    const r = named(q, "a").map((n) => resolve(m, q, n));
+    expect(r.map((x) => x.kind === "value" && textValue(x.node))).toEqual(["outer"]);
+  });
+  it("lets @name see the binding being initialized", async () => {
+    const { m, q } = await index('let a = "outer", r = [a = @a] in r');
+    const [use] = named(q, "a");
+    const r = resolve(m, q, use!);
+    expect(r.kind).toBe("value");
+    expect(r.kind === "value" && r.node).toBe(use);
+  });
+  it("reads a let variable's own name in its value as the outer let's variable", async () => {
+    const { m, q } = await index('let x = "outer", y = let x = x & "/v1" in x in y');
+    const r = named(q, "x").map((n) => resolve(m, q, n));
+    expect(r[0]!.kind === "value" && textValue(r[0]!.node)).toBe("outer");
+    expect(r[1]!.kind === "value" && r[1]!.node.kind).toBe(
+      Language.Ast.NodeKind.ArithmeticExpression,
+    );
+  });
+  it("reads a let variable's own name in its value as the model's query of that name", async () => {
+    const { m, q } = await index("let x = x in x", 'expression x = "shared"\n');
+    expect(named(q, "x").map((n) => resolve(m, q, n).kind)).toEqual(["query", "value"]);
+  });
+  it("reads apikey in Query = [apikey = apikey] as the let step", async () => {
+    const { m, q } = await index(
+      'let apikey = "k", Source = Web.Contents("https://api.example.com", [Query = [apikey = apikey]]) in Source',
+    );
+    const r = named(q, "apikey").map((n) => resolve(m, q, n));
+    expect(r.map((x) => x.kind === "value" && textValue(x.node))).toEqual(["k"]);
+  });
+});
+
+describe("resolve never names the query asking", () => {
+  it("does not resolve a table's name to another of that table's queries", async () => {
+    const m = await indexOf([
+      {
+        path: "definition/tables/T.tmdl",
+        text: 'table T\n\tpartition P1 = m\n\t\tmode: import\n\t\tsource = Web.Contents(T)\n\n\tpartition P2 = m\n\t\tmode: import\n\t\tsource = "x"\n',
+      },
+    ]);
+    const q = m.queries.find((x) => x.kind === "partition" && x.text.includes("Web.Contents"))!;
+    expect(argOf(m, q).kind).toBe("unknown");
+  });
+  it("does not resolve a shared expression's name to itself", async () => {
+    const m = await indexOf([
+      { path: "definition/expressions.tmdl", text: "expression Helper = Web.Contents(Helper)\n" },
+    ]);
+    const q = m.queries.find((x) => x.name === "Helper")!;
+    expect(argOf(m, q).kind).toBe("unknown");
+  });
+});

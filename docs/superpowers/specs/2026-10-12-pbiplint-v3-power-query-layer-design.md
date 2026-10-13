@@ -1,6 +1,6 @@
 # pbiplint v3: the Power Query layer
 
-Issue [#78](https://github.com/pbiplint/pbiplint/issues/78), milestone v3, released as 0.3.0. Written October 12, 2026, for Michael's review; updated October 13, 2026 with the 15 rules he approved that day. Spec only: the plan follows his approval of the spec.
+Issue [#78](https://github.com/pbiplint/pbiplint/issues/78), milestone v3, released as 0.3.0. Written October 12, 2026; updated October 13, 2026 with the 15 rules Michael approved that day. **Approved by Michael on October 13, 2026** ([issuecomment-6144834846](https://github.com/pbiplint/pbiplint/issues/78#issuecomment-6144834846)), with two notes folded in: Power Query as a rule family of its own (section 10.1) and one public release from one branch (section 12). Plans follow, one per pull request.
 
 ## 1. Sources and decisions
 
@@ -10,16 +10,18 @@ Issue [#78](https://github.com/pbiplint/pbiplint/issues/78), milestone v3, relea
   - M is read with Microsoft's parser, `@microsoft/powerquery-parser`, not a reader of pbiplint's own.
   - The parser loads with the page, never when a folder is dropped.
   - No Tabular Editor parity for the new M rules: committed fixtures pin them.
-  - On October 13, 2026 ([issuecomment-6143569646](https://github.com/pbiplint/pbiplint/issues/78#issuecomment-6143569646)): 15 new rules and their severities (section 9.1), drawn from both research passes (`report.md` and `report-2.md` in the research folder), with the severity test in section 9.1. The IDs are working names until this spec settles them.
   - `MINIMIZE_POWER_QUERY_TRANSFORMATIONS` moves onto the parser as a recorded deviation.
   - M that does not parse is a `PARSE_ISSUE`.
   - Michael's design idea: messages name the query as Power Query's Queries pane shows it.
+- **Decided by Michael, October 13, 2026:**
+  - The rules ([issuecomment-6143569646](https://github.com/pbiplint/pbiplint/issues/78#issuecomment-6143569646)): 15 new rules and their severities, drawn from both research passes (`report.md` and `report-2.md` in the research folder), with the severity test (section 9.1).
+  - The spec approved ([issuecomment-6144834846](https://github.com/pbiplint/pbiplint/issues/78#issuecomment-6144834846)), with two notes. "Let's add the filter on the rules index for 'Power Query' like there is for model and report" (section 10.1). And "I want to release the Power Query (i.e., v0.3.0) in one release to the public, meaning our first v0.3.x release should be in one branch merged into main once when ready for release, including bug fixes and, possibly, other various fixes" (section 12).
 - **Michael's bar** (September 30, 2026): the smallest change that meets the boxes; complexity is a cost; a shape handled only when real files show it or Desktop writes it.
 - **The deadline that shapes the order.** Tabular Editor CLI 0.7.1.2 stops working after October 31, 2026. The shipped rule's deviation (section 9.7) needs a fixture that `te` captures, so that capture is the first pull request (section 12).
 
 ## 2. What v3 is
 
-v3 parses the M that the model layer already holds as text, and runs rules on the syntax tree. It adds no file family and no layer: every M finding lands on a `.tmdl` file and belongs to the model layer.
+v3 parses the M that the model layer already holds as text, and runs rules on the syntax tree. It adds no file family: every M finding lands on a `.tmdl` file, and the finding's own `layer`, the file family a reader opens to fix it, stays `model`. It does add a rule family: the Power Query rules carry the rule layer `powerquery`, shown as "Power Query" wherever the site and the outputs name a rule's layer, so a reader can find and filter them as they can the model and report rules (section 10.1).
 
 Not in v3:
 
@@ -119,7 +121,7 @@ The page cannot interleave two runs: since a parse waits on no timer or I/O, a r
 
 ### 4.4 Is it breaking for 0.3.0?
 
-- **For the CLI, the MCP server, the pipelines, the plugin, and the site:** no. Flags, exit codes, and output formats are unchanged; output gains a column where a finding has one (section 6.2).
+- **For the CLI, the MCP server, the pipelines, the plugin, and the site:** no. Flags and exit codes are unchanged. The output formats keep their shape and gain two things: a column where a finding has one (section 6.2), and a fourth rule layer value, `powerquery` (section 10.1). Under "What can change in your results", the notes say that `MINIMIZE_POWER_QUERY_TRANSFORMATIONS`' `rule.layer` moves from `model` to `powerquery` in JSON, SARIF (`properties.layer`), `list_rules`, and the text tag, so a script that selects model rules by `rule.layer == "model"` stops seeing it; its findings' own `layer` stays `model`. Neither the GitHub Action nor the Azure Pipelines task reads `rule.layer` (searched October 13, 2026: only their SARIF test fixtures mention it).
 - **For code that imports `@pbiplint/core`:** yes. `lint()` returns a Promise, and a caller that does not await it gets a Promise where it expected a result. Before 1.0, a minor release may break the API, so this ships as 0.3.0 with the change first under "For code that uses `@pbiplint/core`" in the release notes and the core README. `buildIndexes` gains an optional second argument (additive), and `SourceLocation` an optional `column` (additive).
 
 ## 5. Where M comes from
@@ -207,7 +209,7 @@ Power Query's Queries pane lists a table's query under the table's name; Desktop
 - A step's name is the `let` variable's name, unquoted from M's `#"..."` form: `step 'Removed Duplicates'`.
 - Names are written as pbiplint writes a table's (`tableRef`, `packages/core/src/model/names.ts`): in single quotes when they need them.
 
-The finding's object stays what it is in every other rule: `objectType` `Partition` with the partition's name, or `NamedExpression` with the expression's, or `Table` for a `sourceExpression`. So `pbiplint.ignore` annotations, SARIF, and the JSON's object fields work as they do today. Example: `Sales-4f1c9 (query 'Sales', step 'Removed Duplicates': ...)`.
+The finding's object stays what it is in every other rule: `objectType` `Partition` with the partition's name, or `NamedExpression` with the expression's, or `Table` for a `sourceExpression`. So `pbiplint.ignore` annotations, SARIF, and the JSON's object fields work as they do today. Example: `Sales-4f1c9 (query 'Sales', step 'Removed Duplicates': ...)`. The finding's `layer` is `model`, its file family; its rule's layer is `powerquery`, which is what the site's tag and the results filter show (section 10.1).
 
 ## 7. M that does not parse
 
@@ -262,7 +264,7 @@ Michael approved 15 new rules on October 13, 2026 ([issuecomment-6143569646](htt
 | Info | `EXCEL_USE_HEADERS` (9.12), `DEFAULT_STEP_NAMES` (9.13), `HARDCODED_SERVER_NAME` (9.14), `ODBC_WHERE_CONNECTOR_EXISTS` (9.15), `FIXED_DATE_IN_ROW_FILTER` (9.16), `LEGACY_EXCEL_FILE` (9.17) |
 
 - **The severity test** (Michael, October 13, 2026). An error fails a pipeline by default (`--fail-on error`), so an error means the query text alone shows a broken model or unreliable data, and nobody writes it on purpose. A warning is likely trouble that a setting can fix, or that might be deliberate. Info is an improvement worth making.
-- **Layer:** `model`. **Scope:** `Partition`, `NamedExpression`, and `Table` (a `sourceExpression`), except `PRIVACY_LEVELS_IGNORED`, which reports the `Model`. **Status:** `builtin`, through `pbiplintRule` (`packages/core/src/rules/pbiplint/define.ts`).
+- **Layer:** `powerquery` (section 10.1), for all fifteen and for the shipped `MINIMIZE_POWER_QUERY_TRANSFORMATIONS`; `PRIVACY_LEVELS_IGNORED` reads no M but is a Power Query setting, so a reader filtering on Power Query expects it. Their findings' `layer` is `model`. **Scope:** `Partition`, `NamedExpression`, and `Table` (a `sourceExpression`), except `PRIVACY_LEVELS_IGNORED`, which reports the `Model`. **Status:** `builtin`, through `pbiplintRule` (`packages/core/src/rules/pbiplint/define.ts`).
 - **One finding per occurrence**, at its own TMDL line and column, so a query with two problems has two findings. `DEFAULT_STEP_NAMES` and `HARDCODED_SERVER_NAME` are the exceptions: each reports once per query, on its first occurrence, with the count in the detail, since a common shape reported per step or per call would bury everything else.
 - **Detail:** query and step first (section 6.3), then what was found, in pbiplint's own words.
 - **Pages:** from the rule-page template, in pbiplint's own words, with the fix route in Power BI Desktop's Power Query editor first (no third-party tool), then `scripts/sync-rule-pages.mjs`.
@@ -499,12 +501,37 @@ The shipped rule (`packages/core/src/rules/microsoft-bpa/tables.ts:106`) matches
 
 ## 10. The site
 
-- **No new `SITE_LAYERS` gate.** The gate (`packages/web/src/build/pages.ts:289`) publishes pages by the layer their findings land in, and every M finding lands on a `.tmdl` file in the model layer, which the site already publishes. The pages carry `layer: model`. The site deploys the core from main on merge, so each rule's code and its page arrive in the same pull request, and nothing half-built shows on the site.
+### 10.1 Power Query as a rule family
+
+Michael, October 13, 2026: "Let's add the filter on the rules index for 'Power Query' like there is for model and report." Today a rule's layer shows in three places on the site: the rules index tags each row `model`, `report`, or `project` (`layerBadge`, `packages/web/src/build/pages.ts:652`, styled by `.layer` at `packages/web/src/styles.css:603`); a rule page's meta line names it (`pages.ts:576`); and the results' Show filter has a box per layer (`LAYERS` and `filterBoxes`, `packages/web/src/results/render.ts:122` and `:293`).
+
+**The design: a fourth value of `Rule.layer`, `powerquery`.** `Layer` (`packages/core/src/rules/types.ts:65`) becomes `"model" | "report" | "project" | "powerquery"`. `LayerName`, the file families, stays `"model" | "report"`, and so do `Finding.layer` (`layerOf`, `types.ts:78`) and `result.layers`, since M lives in model files. This is the smallest design: `Rule.layer` already means "the part of the project a rule reads", every place that shows a rule's layer already reads that one field, and a reader who meets `powerquery` in it needs no second field to understand it. A separate field (say `family`) was weighed and set aside: every display would read two fields to pick one word, and the JSON would carry two answers to one question.
+
+What follows from it:
+
+- **`needs`.** `pbiplintRule` derives a rule's needs from its layer (`packages/core/src/rules/pbiplint/define.ts:45`); `powerquery` needs `["model"]`. `MINIMIZE_POWER_QUERY_TRANSFORMATIONS`, made by `bpaRule`, sets `layer: "powerquery"` and keeps `needs: ["model"]`.
+- **Ranking.** `summarizeRule` narrows only a `project` rule's group to its findings' shared layer (`packages/core/src/engine/rank.ts:45`), so a `powerquery` group keeps `powerquery`.
+- **The JSON contract** (`packages/web/content/cli.md:166`): `rule.layer` gains the value `powerquery`; a finding's `layer` keeps `model` and `report`. The CLI page says both, in one sentence each.
+- **SARIF:** `rules[].properties.layer` (`packages/core/src/format/sarif.ts:64`) reads `powerquery`; artifact paths are built from the finding's `layer` (`sarif.ts:79`), so they do not move.
+- **Text and Markdown:** the tag reads `[powerquery]` (`layerTag`, `packages/core/src/format/text.ts:98`), and the fixed width for it (`padEnd(9)`, `text.ts:155`) grows to fit it, which shifts the text format's columns by three characters on every line; Markdown's heading and fix-first line print `powerquery` (`markdown.ts:162` and `:168`).
+- **The CLI's rule list and `list_rules`:** the layer column (`packages/cli/src/main.ts:42`, `padEnd(7)`) widens to fit `powerquery`; `list_rules` (`packages/cli/src/mcp.ts:132`) returns the value as is. `--rule` takes rule ids and is unchanged. `pbiplint explain` prints `powerquery layer` (`packages/cli/src/explain.ts:130`).
+- **Tests that pick rules by layer.** `parity.test.ts:30` runs the ported rules whose layer is `model`; it widens to `model` or `powerquery`, so `MINIMIZE_POWER_QUERY_TRANSFORMATIONS` stays checked against Tabular Editor. `rule-pages.test.ts:240` expects TMDL examples on `model` pages, and widens the same way, since a Power Query page's examples are TMDL too.
+
+On the site, the machine value `powerquery` is shown as "Power Query", through one label map beside `RULE_LAYERS` that the badge, the meta line, the results tag, and the filter box all read; `model`, `report`, and `project` show as they do today.
+
+- **`RULE_LAYERS` and `SITE_LAYERS`.** `RuleLayer` (`pages.ts:261`) gains `powerquery`, and `RULE_LAYERS` (`pages.ts:264`) lists it, so `pageLayer` (`pages.ts:307`) accepts `layer: powerquery` in a page's front matter. `SITE_LAYERS` (`pages.ts:289`) stays `["model", "report"]`: it gates the file families the site publishes, and `publishesLayer` (`pages.ts:326`) publishes a `powerquery` page whenever `model` is published, as it publishes a `project` page whenever either is. `CHECK_LABEL` (`pages.ts:42`) gives `powerquery` "Check a model for this", since the button takes a model.
+- **Front matter.** The 16 pages (the 15 new rules and `minimize-power-query-transformations.md`) carry `layer: powerquery`; `rule-pages.test.ts` already holds each page's layer equal to its rule's.
+- **The rules index count** (`rulesIndex`, `pages.ts:615` to `:634`, which fails the build on a page no clause claims). The ported clause for Microsoft's rules becomes "ported, layer `model` or `powerquery`", so `MINIMIZE_POWER_QUERY_TRANSFORMATIONS` stays counted with Microsoft's ruleset. The 15 new rules are `builtin`, which the existing clause counts at any layer. No new clause.
+- **The rules index badge and the meta line** show "Power Query" (`showsLayers` is already true, with two families published). `.layer.powerquery` gets its own outline in `styles.css`, as the report and project tags have theirs, told apart by its word as well as its colour.
+- **The results filter.** Today the layer boxes show only when the run has groups on both model and report (`render.ts:449`). The rule becomes: the boxes show when the groups span two or more of `model`, `report`, and `powerquery`, one box each for those present ("Model", "Report", "Power Query"). A `project` group's rule generalizes from "shown while either layer is checked" (`render.ts:480`) to "shown while the Model or the Report box is checked, or when neither is present"; `reveal` (`render.ts:284`) checks the Model and Report boxes present when none of them is checked. A `powerquery` group shows only while the Power Query box is checked, as a model group shows only while Model is.
+- **Results tag.** `layerTag` in `render.ts:298` shows the label, so a Power Query group's row reads "Power Query".
+
+### 10.2 Pages and counts
+
+- **No new gate while v3 is built.** Everything ships in one release from `release/0.3.0` (section 12), and `pages.yml` deploys only from main, so nothing half-built reaches the site; no rule needs a gate of its own.
 - **Rule pages:** fifteen new pages from the template (fourteen if the Desktop check drops `EXTENSION_FILTER_CASE`), and changes to `parse-issue.md` and `minimize-power-query-transformations.md`. Each new page's example is a `tmdl fires` and `tmdl fixed` pair that `rule-pages.test.ts` lints, as for every page, so each example must parse and fire.
 - **The rules index** counts its rules itself. The rule counts in the root, CLI, and core READMEs and the About page move from 106 rules (24 built in) to 121 (39 built in), or 120 (38 built in) without `EXTENSION_FILTER_CASE`. The About page and the READMEs name Power Query as a part pbiplint reads.
 - **Privacy page:** no change. Its statements hold as written (section 3.3).
-
-A suggestion, not in scope: a "Power Query" filter on the rules index, once the M rules number more than a handful.
 
 ## 11. Testing
 
@@ -582,33 +609,64 @@ The largest corpus model parses in 680 ms (Node, Michael's Mac, research of Octo
 
 - The e2e test "once the page has loaded, linting makes no request" (`packages/web/e2e/home.spec.ts:165`) lints a model with M and still sees no request.
 - A results test shows an M finding's `file:line:column` and its query and step.
+- The Power Query family (section 10.1): unit tests in `packages/web/test` for the label map, the index badge and meta line, the count clause, and the filter's box rules (boxes shown for two or more families; a project group shown while Model or Report is checked; `reveal` on a hidden Power Query group); an e2e check that the sample's results show a Power Query box and that unchecking it hides only Power Query groups.
 - The axe scan covers the new pages through the existing site checks.
 
 ## 12. Delivery
 
-Pull requests in order, each with CI and e2e green and one Opus review of the branch:
+Michael, October 13, 2026: "I want to release the Power Query (i.e., v0.3.0) in one release to the public, meaning our first v0.3.x release should be in one branch merged into main once when ready for release, including bug fixes and, possibly, other various fixes."
 
-1. **The m-zoo fixture and its captures** (needs `te`, so by October 31, 2026). The fixture, its three captures, `CAPTURED`, and nothing else: on main it changes no result, since today's text-match rule is what Tabular Editor runs, so the capture records no deviation yet.
+### 12.1 One integration branch
+
+- **The branch:** `release/0.3.0`, created from main by the coordinator right after this spec's pull request (#224) merges.
+- **What targets it:** every v3 pull request below, and any bug fix or other change meant for 0.3.0, uses `release/0.3.0` as its base, not main.
+- **CI runs on those pull requests.** `.github/workflows/ci.yml`'s trigger is `pull_request:` with no branch filter (`ci.yml:6`), so its test job (lint, typecheck, tests, `check:browser`, build, `check:network`, `check:pack`, `test:bundle`) and its e2e job run on a pull request into `release/0.3.0` as they do into main. Its `push` trigger is limited to main (`ci.yml:4` to `:5`), so a merge into the release branch runs nothing further; the pull request's own run is the check.
+- **Nothing reaches users before the one merge.**
+  - The site deploys only on a push to main (`.github/workflows/pages.yml:3` to `:6`: `push: branches: [main]`, plus `workflow_dispatch`, which nobody runs from the release branch).
+  - npm publishing runs only on a `v*` tag (`.github/workflows/release.yml:3` to `:5`), which the coordinator pushes only after the release merge.
+  - The Action, the Azure Pipelines task, and the Claude plugin pin a published version, so they move only after that.
+- **No interim gating.** Since nothing deploys from the release branch, no rule needs a page that arrives with its code or a gate while v3 is half built (section 10.2).
+- **Keeping it current.** Main takes only an urgent fix that cannot wait for 0.3.0, through its own pull request. The coordinator then merges main into `release/0.3.0` (a merge commit, never a rebase: the branch is shared, and rebasing it would rewrite what every open v3 pull request is based on). A v3 pull request that falls behind merges `release/0.3.0` into itself, or rebases its own unshared branch onto it.
+
+### 12.2 The pull requests into `release/0.3.0`
+
+Each with CI and e2e green and one Opus review of the branch, merged by the coordinator:
+
+1. **The m-zoo fixture and its captures** (needs `te`, so by October 31, 2026). The fixture, its three captures, `CAPTURED`, and nothing else. It changes no result, since today's text-match rule is what Tabular Editor runs, so the capture records no deviation yet.
 2. **The reader.** The parser pinned; the two build changes in all three bundlers; the budgets and bundle checks; `lint()` async with every caller; `readM`, `Indexes.m`, `refreshPolicy`, the `expression =` fallback; locations with columns in every output; `PARSE_ISSUE` for M; the resolver with its unit tests; `make-big-model.mjs` and both parse-time guards. No new rule, so the corpus diff must show only the 1 new `PARSE_ISSUE`.
-3. **The shipped rule on the parser**, with the deviation in m-zoo's capture, the page, and the deviation counts.
+3. **The Power Query family and the shipped rule on the parser.** The `powerquery` rule layer through core, the CLI, and the site (section 10.1), with `MINIMIZE_POWER_QUERY_TRANSFORMATIONS` as its first member: moved onto the parser, its layer changed, its deviation in m-zoo's capture, its page, and the deviation counts. They go together because the shipped rule is the first rule with the new layer, and the parity and rule-page tests widen in the same change.
 4. **Calls and literals:** `LOCAL_DRIVE_PATH`, `SCRIPT_IN_QUERY`, `EXCEL_USE_HEADERS`, `ODBC_WHERE_CONNECTOR_EXISTS`, and `PRIVACY_LEVELS_IGNORED` (which reads `model.tmdl` and needs only `Model.dataAccessOptions`). Each reads a call or a literal where it stands, so none needs the resolver beyond a step's name. This pull request also starts `tests/expectations/pbiplint/m-zoo.json` and moves the sample and fixture counts.
 5. **Steps:** `SORT_NOT_HELD_FOR_REMOVE_DUPLICATES`, `KEEP_FIRST_ROWS_LEFT_IN`, `INCREMENTAL_REFRESH_RANGE_BOUNDS`, `FIXED_DATE_IN_ROW_FILTER`, and `DEFAULT_STEP_NAMES`. Each reads a step, its table argument, or a filter's comparisons, through the resolver's `let` scopes.
 6. **The resolver's full reach:** `DYNAMIC_DATA_SOURCE`, `HARDCODED_SECRET_IN_QUERY` with the secret guard (section 11.3), `HARDCODED_SERVER_NAME`, `LEGACY_EXCEL_FILE`, and `EXTENSION_FILTER_CASE` if the Desktop check keeps it. These follow names into model parameters and other queries. If the check has not happened when the rest is ready, `EXTENSION_FILTER_CASE` waits for a pull request of its own and the others go ahead.
 
-Pull requests 4, 5, and 6 depend only on 2 and may go in any order; 6 is last only because it is the largest and carries the guard. Then:
+Pull requests 4, 5, and 6 depend on 2 and 3 and may go in any order; 6 is last only because it is the largest and carries the guard. Bug fixes and other changes for 0.3.0 go in alongside, each its own pull request into `release/0.3.0`.
 
-- **Release 0.3.0**, from the coordinator, with its release issue's boxes: the notes lead with the Power Query layer and its fifteen rules (three errors, six warnings, six info), list what can change in results (new findings, the sample's count, the shipped rule's deviation, columns in locations), and say under "For code that uses `@pbiplint/core`" that `lint()` now returns a Promise (section 4.4). The Action, the Azure Pipelines task, and the Claude plugin follow with their pins.
-- **#70**, the Fabric Stack catalog submission, once 0.3.0 is on npm and live at pbiplint.com.
+### 12.3 The release
+
+- **One pull request,** `release/0.3.0` into main, merged with a merge commit, so main's history shows the release as one step and each v3 pull request's commits stay intact under it. Its description carries the release issue's boxes and the release notes: they lead with the Power Query layer and its fifteen rules (three errors, six warnings, six info), list what can change in results (new findings, the sample's count, the shipped rule's deviation and its move to the `powerquery` layer, columns in locations), and say under "For code that uses `@pbiplint/core`" that `lint()` now returns a Promise (section 4.4).
+- **Michael previews the site first.** Before the merge, Michael builds and previews the site from the release branch on his Mac, in a checkout that is not home (home stays on main and clean), for example a worktree made for the purpose:
+
+  ```bash
+  cd ~/Projects/pbiplint/pbiplint
+  git fetch origin
+  git worktree add .claude/worktrees/preview-0.3.0 origin/release/0.3.0
+  cd .claude/worktrees/preview-0.3.0
+  npm ci
+  npm run build -w @pbiplint/web
+  npm run preview -w @pbiplint/web
+  ```
+
+  Then open the address `vite preview` prints (`http://localhost:4173/` by default): drop a model with M, check the Power Query tags and filter, and read a few rule pages. Afterwards, from home: `git worktree remove .claude/worktrees/preview-0.3.0`. The release pull request carries this as a box that only Michael ticks.
+- **Then the coordinator** merges, tags `v0.3.0` on the merge commit, and lets `release.yml` publish. The GitHub Action, the Azure Pipelines task, and the Claude plugin follow with their pins.
+- **Then #70,** the Fabric Stack catalog submission, once 0.3.0 is on npm and live at pbiplint.com.
 
 ## 13. For Michael
 
-The rule list and severities are decided (Michael, October 13, 2026). Still open:
+Michael approved this spec on October 13, 2026 ([issuecomment-6144834846](https://github.com/pbiplint/pbiplint/issues/78#issuecomment-6144834846)), with the rule list and severities decided the same day and two notes folded in (sections 10.1 and 12). Only the Desktop check is open: three tests in the Windows VM, none of which holds up m-zoo's capture (section 11.1).
 
-- **Approve this spec,** including the IDs and names in section 9. The IDs are Michael's working names; the one this spec proposes beyond them is the name "Sort may not decide which duplicate is kept" for `SORT_NOT_HELD_FOR_REMOVE_DUPLICATES`. Pull request 1 needs approval of section 11.1 in time to capture before October 31, 2026; the rest of the spec can still change after that.
-- **The Desktop check,** three tests in the Windows VM, none of which holds up m-zoo's capture (section 11.1):
-  1. A web address chosen with `if ... then ... else` over a parameter: does **Data source settings**, **Data sources in current file**, show the dynamic source warning? (Section 9.3.)
-  2. A web address passed in as a custom function's parameter: the same question. (Section 9.3.)
-  3. A folder holding `a.csv` and `B.CSV`, read with **Folder**: does the **Extension** column show `.CSV`? If it shows `.csv`, `EXTENSION_FILTER_CASE` is dropped. (Section 9.10.)
+1. A web address chosen with `if ... then ... else` over a parameter: does **Data source settings**, **Data sources in current file**, show the dynamic source warning? (Section 9.3.)
+2. A web address passed in as a custom function's parameter: the same question. (Section 9.3.)
+3. A folder holding `a.csv` and `B.CSV`, read with **Folder**: does the **Extension** column show `.CSV`? If it shows `.csv`, `EXTENSION_FILTER_CASE` is dropped. (Section 9.10.)
 
 ## 14. Left out
 

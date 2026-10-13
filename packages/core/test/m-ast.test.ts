@@ -1,9 +1,12 @@
 import { Language } from "@microsoft/powerquery-parser";
 import { describe, expect, it } from "vitest";
 import {
+  callOf,
   calls,
   identifierName,
+  isWithin,
   nodeOf,
+  nodesOfKind,
   stepOf,
   textLiterals,
   textValue,
@@ -101,5 +104,49 @@ describe("stepOf", () => {
   it("is undefined outside any step, and for M with no let", async () => {
     const q = await query('Web.Contents("https://api.example.com")');
     expect(stepOf(q, calls(q)[0]!.node)).toBeUndefined();
+  });
+});
+
+describe("callOf, nodesOfKind, and isWithin", () => {
+  it("reads a node as a call to a named function, and nothing else as one", async () => {
+    const q = await query('let a = Table.Sort(S, {"x"}), b = (Table.Sort)(S, {}), c = S{0} in a');
+    const nodes = nodesOfKind(q, Language.Ast.NodeKind.RecursivePrimaryExpression);
+    expect(nodes.map((n) => callOf(n)?.name)).toEqual(["Table.Sort", undefined, undefined]);
+    expect(callOf(nodes[0])?.args).toHaveLength(2);
+    expect(callOf(undefined)).toBeUndefined();
+  });
+  it("lists the nodes of several kinds in text order, and none for M that did not parse", async () => {
+    const q = await query("each [a] < 1 and [b] = 2 and [c] >= 3");
+    const kinds = nodesOfKind(
+      q,
+      Language.Ast.NodeKind.EqualityExpression,
+      Language.Ast.NodeKind.RelationalExpression,
+    ).map((n) => n.kind);
+    expect(kinds).toEqual([
+      Language.Ast.NodeKind.RelationalExpression,
+      Language.Ast.NodeKind.EqualityExpression,
+      Language.Ast.NodeKind.RelationalExpression,
+    ]);
+    expect(
+      nodesOfKind(
+        {
+          kind: "expression",
+          name: "Q",
+          owner: { name: "Q" } as never,
+          text: "",
+          file: "q.tmdl",
+          valueLine: 1,
+        },
+        Language.Ast.NodeKind.RelationalExpression,
+      ),
+    ).toEqual([]);
+  });
+  it("tells whether a node sits inside another", async () => {
+    const q = await query("Table.SelectRows(S, each [a] < 1)");
+    const [select] = calls(q);
+    const [comparison] = nodesOfKind(q, Language.Ast.NodeKind.RelationalExpression);
+    expect(isWithin(q, comparison!, select!.args[1]!)).toBe(true);
+    expect(isWithin(q, comparison!, comparison!)).toBe(true);
+    expect(isWithin(q, select!.args[0]!, select!.args[1]!)).toBe(false);
   });
 });

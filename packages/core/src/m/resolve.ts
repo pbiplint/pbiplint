@@ -195,3 +195,23 @@ export function origin(m: MIndex, q: MQuery, node: Node, seen: Set<string> = new
     }
   }
 }
+
+/**
+ * What a node stands for through `let` and record bindings: a name bound to a step is followed to
+ * the step's value while that value is itself a name, with parentheses and `meta` taken off.
+ * `step` is the last name followed, the step whose value `node` is; undefined when `node` is
+ * written in place. Model parameters and other queries are not followed.
+ */
+export function boundValue(m: MIndex, q: MQuery, node: Node): { node: Node; step?: string } {
+  let n = unwrap(node);
+  let step: string | undefined;
+  const seen = new Set<number>();
+  while (n.kind === Kind.IdentifierExpression && !seen.has(n.id)) {
+    seen.add(n.id);
+    const r = resolve(m, q, n);
+    if (r.kind !== "value") break;
+    step = identifierName(n.identifier.literal);
+    n = unwrap(r.node);
+  }
+  return { node: n, step };
+}

@@ -46,24 +46,48 @@ export interface MCall {
   node: Node;
 }
 
+/** A node as an invocation of a function named by an identifier; undefined for any other node. */
+export function callOf(n: Node | undefined): MCall | undefined {
+  if (n?.kind !== Kind.RecursivePrimaryExpression || n.head.kind !== Kind.IdentifierExpression)
+    return undefined;
+  const first = n.recursiveExpressions.elements[0];
+  if (first?.kind !== Kind.InvokeExpression) return undefined;
+  return {
+    name: identifierName(n.head.identifier.literal),
+    args: first.content.elements.map((csv) => csv.node),
+    node: n,
+  };
+}
+
 /** Every invocation in a query whose function is named by an identifier, in text order. */
 export function calls(q: MQuery): MCall[] {
   const ids =
     q.nodeIdMapCollection?.idsByNodeKind.get(Kind.RecursivePrimaryExpression) ?? new Set<number>();
   const out: MCall[] = [];
   for (const id of [...ids].sort((a, b) => a - b)) {
-    const n = nodeOf(q, id);
-    if (n?.kind !== Kind.RecursivePrimaryExpression || n.head.kind !== Kind.IdentifierExpression)
-      continue;
-    const first = n.recursiveExpressions.elements[0];
-    if (first?.kind !== Kind.InvokeExpression) continue;
-    out.push({
-      name: identifierName(n.head.identifier.literal),
-      args: first.content.elements.map((csv) => csv.node),
-      node: n,
-    });
+    const c = callOf(nodeOf(q, id));
+    if (c) out.push(c);
   }
   return out;
+}
+
+/** Every node of the given kinds in a query, in text order. */
+export function nodesOfKind(q: MQuery, ...kinds: Language.Ast.NodeKind[]): Node[] {
+  return kinds
+    .flatMap((k) => [...(q.nodeIdMapCollection?.idsByNodeKind.get(k) ?? [])])
+    .map((id) => nodeOf(q, id))
+    .filter((n): n is Node => n !== undefined)
+    .sort(
+      (a, b) =>
+        a.tokenRange.tokenIndexStart - b.tokenRange.tokenIndexStart ||
+        b.tokenRange.tokenIndexEnd - a.tokenRange.tokenIndexEnd,
+    );
+}
+
+/** Whether `node` is `ancestor` or sits inside it. */
+export function isWithin(q: MQuery, node: Node, ancestor: Node): boolean {
+  for (let n: Node | undefined = node; n; n = parentOf(q, n)) if (n.id === ancestor.id) return true;
+  return false;
 }
 
 /** Every text literal in a query, in text order, with its value as `textValue` reads it. */

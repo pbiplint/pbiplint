@@ -164,6 +164,20 @@ describe("column count, pivot, partition, and Power Query rules", () => {
         m("E", 'Sql.Database("s", "d", [CommandTimeout = #duration(0, 0, 5, 0)])');
       expect(await mObjectNames(rule, tmdl)).toEqual(["A", "B", "C", "D"]);
     });
+    it("follows a named options record to its native query", async () => {
+      const tmdl =
+        m("A", 'let o = [Query = "SELECT 1"], s = Sql.Database("s", "d", o) in s') +
+        m("B", 'Sql.Database("s", "d", SharedOptions)') +
+        'expression SharedOptions = [Query = "select 1"]\n\n' +
+        m("C", 'let f = (o) => Sql.Database("s", "d", o) in f') +
+        m("D", 'Sql.Database("s", "d", NoSuchOptions)') +
+        m(
+          "E",
+          'let o = [CommandTimeout = #duration(0, 0, 5, 0)], s = Sql.Database("s", "d", o) in s',
+        );
+      // A function's parameter, a name nothing defines, and a record with no Query stay silent.
+      expect(await mObjectNames(rule, tmdl)).toEqual(["A", "B"]);
+    });
     it("leaves alone a Query option that is not a native query", async () => {
       const tmdl =
         m("A", 'Web.Contents("https://api.example.com", [Query = [page = "1"]])') +

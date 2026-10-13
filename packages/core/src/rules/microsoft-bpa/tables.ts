@@ -1,6 +1,8 @@
 import { Language } from "@microsoft/powerquery-parser";
 import { calls, identifierName, nodeOf, unwrap } from "../../m/ast.js";
-import type { MQuery } from "../../m/types.js";
+import { emptyMIndex } from "../../m/read.js";
+import { resolve } from "../../m/resolve.js";
+import type { MIndex, MQuery } from "../../m/types.js";
 import { isAutoDateTable } from "../../model/names.js";
 import type { Partition, Table } from "../../model/types.js";
 import {
@@ -142,21 +144,44 @@ const NATIVE_QUERY_CONNECTORS: ReadonlySet<string> = new Set([
   "GoogleBigQuery.Database",
 ]);
 
-/** A record written in place with a `Query` field. */
-function hasQueryField(node: Language.Ast.TNode): boolean {
+/**
+ * An options argument that is, or names, a record written in place with a `Query` field. A name is
+ * followed to its value through `let` steps, record fields, and the model's other queries, a `let`
+ * standing for what its `in` returns; a function's parameter, a name nothing defines, and anything
+ * computed are not followed. Each node is visited once, so a cycle ends the search.
+ */
+function hasQueryField(
+  m: MIndex,
+  q: MQuery,
+  node: Language.Ast.TNode,
+  seen: Set<string> = new Set(),
+): boolean {
   const n = unwrap(node);
-  if (n.kind !== Kind.RecordExpression && n.kind !== Kind.RecordLiteral) return false;
-  return n.content.elements.some((csv) => identifierName(csv.node.key.literal) === "Query");
+  const key = `${q.kind}:${q.name}:${n.id}`;
+  if (seen.has(key)) return false;
+  seen.add(key);
+  if (n.kind === Kind.RecordExpression || n.kind === Kind.RecordLiteral)
+    return n.content.elements.some((csv) => identifierName(csv.node.key.literal) === "Query");
+  if (n.kind === Kind.LetExpression) return hasQueryField(m, q, n.expression, seen);
+  if (n.kind !== Kind.IdentifierExpression) return false;
+  const r = resolve(m, q, n);
+  if (r.kind === "value") return hasQueryField(m, q, r.node, seen);
+  if (r.kind === "query" && r.query.ast) return hasQueryField(m, r.query, r.query.ast, seen);
+  return false;
 }
 
 /**
  * What makes a partition's query one MINIMIZE_POWER_QUERY_TRANSFORMATIONS reports, sorted: each
  * transformation the M names, called or passed as a function value, and `<connector> Query` for a
  * database connector given a native query in its options record. Empty when the M has neither, or
- * did not parse. Read from the parsed M, so a name in a comment or a text literal does not count:
+ * did not parse. `m` is the model's M, so a named options record held in another query is found;
+ * without it only the query's own names are followed. Read from the parsed M, so a name in a comment or a text literal does not count:
  * a documented deviation from Tabular Editor's text match (v3 spec, section 9.7).
  */
-export function powerQueryTransformations(q: MQuery): string[] {
+export function powerQueryTransformations(
+  q: MQuery,
+  m: MIndex = { ...emptyMIndex(), queries: [q] },
+): string[] {
   const found = new Set<string>();
   for (const id of q.nodeIdMapCollection?.idsByNodeKind.get(Kind.IdentifierExpression) ?? []) {
     const n = nodeOf(q, id);
@@ -165,7 +190,7 @@ export function powerQueryTransformations(q: MQuery): string[] {
     if (TRANSFORMATIONS.has(name)) found.add(name);
   }
   for (const c of calls(q))
-    if (NATIVE_QUERY_CONNECTORS.has(c.name) && c.args.some(hasQueryField))
+    if (NATIVE_QUERY_CONNECTORS.has(c.name) && c.args.some((a) => hasQueryField(m, q, a)))
       found.add(`${c.name} Query`);
   return [...found].sort();
 }
@@ -178,7 +203,9 @@ export const MINIMIZE_POWER_QUERY_TRANSFORMATIONS = bpaRule(
   { layer: "powerquery" },
   (_model, ctx) =>
     ctx.indexes.m.queries
-      .filter((q) => q.kind === "partition" && powerQueryTransformations(q).length > 0)
+      .filter(
+        (q) => q.kind === "partition" && powerQueryTransformations(q, ctx.indexes.m).length > 0,
+      )
       .map((q) => finding.partition(q.owner as Partition)),
 );
 

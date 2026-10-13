@@ -134,6 +134,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Names that start or end with a space, for the model, tables, measures, hierarchies, perspectives, partitions, data columns, and calculated columns.",
   OBJECTS_WITH_NO_DESCRIPTION:
     "Visible tables, columns, measures, and calculation groups with no description. Visibility is the object's own flag.",
+  ODBC_WHERE_CONNECTOR_EXISTS:
+    "ODBC and OLE DB sources whose connection string names the driver or provider of a database Power BI has its own connector for: Amazon Redshift, PostgreSQL, SQL Server, MySQL, Oracle, or Snowflake.",
   OPENING_PAGE_INVALID:
     "A pages.json whose landing page names a page the report does not have, or, when no landing page is set, whose active page names a page the report does not have or a page hidden from readers.",
   PARSE_ISSUE:

@@ -4,6 +4,7 @@ import { buildIndexes } from "../src/index/build.js";
 import {
   EXCEL_USE_HEADERS,
   LOCAL_DRIVE_PATH,
+  ODBC_WHERE_CONNECTOR_EXISTS,
   PRIVACY_LEVELS_IGNORED,
   SCRIPT_IN_QUERY,
 } from "../src/rules/pbiplint/power-query.js";
@@ -243,5 +244,77 @@ describe("PRIVACY_LEVELS_IGNORED (v3 spec, section 9.8)", () => {
     expect(result.findings.filter((f) => f.ruleId === rule.id)).toEqual([]);
     const before = await lint([{ path: "definition/model.tmdl", text: block("fastCombine") }]);
     expect(before.findings.filter((f) => f.ruleId === rule.id)).toHaveLength(1);
+  });
+});
+
+describe("ODBC_WHERE_CONNECTOR_EXISTS (v3 spec, section 9.15)", () => {
+  const rule = ODBC_WHERE_CONNECTOR_EXISTS;
+  it("is a built-in Power Query info rule on a query's owner", () => {
+    isPowerQueryRule(rule, 1, "Performance");
+    expect(rule.name).toBe("ODBC or OLE DB where Power BI has a connector");
+    expect(rule.scope).toEqual(["Partition", "NamedExpression", "Table"]);
+  });
+  it("reports an ODBC driver Power BI has a connector for, at the call", async () => {
+    const tmdl = table(
+      "Orders",
+      "let",
+      '\tSource = Odbc.DataSource("Driver={Amazon Redshift (x64)};Server=redshift.example;Database=dev", [HierarchicalNavigation = true])',
+      "in",
+      "\tSource",
+    );
+    expect(await mFindings(rule, tmdl)).toEqual([
+      {
+        objectType: "Partition",
+        objectName: "Orders",
+        location: { file: "inline.tmdl", line: 6, column: 15 },
+        detail:
+          "query 'Orders', step 'Source': the ODBC connection names the Amazon Redshift driver; Power BI has an Amazon Redshift connector",
+      },
+    ]);
+  });
+  it("reads a connection string held by a step or a parameter, and an OLE DB provider", async () => {
+    const tmdl =
+      'expression OrdersDsn = "Driver={PostgreSQL Unicode(x64)};Server=pg.example;Database=sales" meta [IsParameterQuery = true, Type = "Text", IsParameterQueryRequired = true]\n\n' +
+      table(
+        "Orders",
+        "let",
+        '\tConnection = "Provider=MSOLEDBSQL;Data Source=sql.example;Initial Catalog=Sales",',
+        "\tFromStep = OleDb.DataSource(Connection),",
+        "\tFromParameter = Odbc.DataSource(OrdersDsn)",
+        "in",
+        "\tFromStep",
+      );
+    expect((await mFindings(rule, tmdl)).map((f) => [f.location, f.detail])).toEqual([
+      [
+        { file: "inline.tmdl", line: 9, column: 17 },
+        "query 'Orders', step 'FromStep': the OLE DB connection names the SQL Server provider; Power BI has a SQL Server connector",
+      ],
+      [
+        { file: "inline.tmdl", line: 10, column: 22 },
+        "query 'Orders', step 'FromParameter': the ODBC connection names the PostgreSQL driver; Power BI has a PostgreSQL connector",
+      ],
+    ]);
+  });
+  it("reads the driver part however its key is written", async () => {
+    const tmdl = table(
+      "Orders",
+      'Odbc.DataSource("DRIVER = {MySQL ODBC 8.0 Unicode Driver}; SERVER=mysql.example")',
+    );
+    expect((await mFindings(rule, tmdl)).map((f) => f.detail)).toEqual([
+      "query 'Orders': the ODBC connection names the MySQL driver; Power BI has a MySQL connector",
+    ]);
+  });
+  it("leaves alone a DSN, a driver with no connector, a server's name, and a string built at refresh", async () => {
+    const tmdl = table(
+      "Orders",
+      "let",
+      '\tDsn = Odbc.DataSource("dsn=Sales"),',
+      '\tOther = Odbc.DataSource("Driver={SQLite3 ODBC Driver};Database=orders.db"),',
+      '\tServerOnly = Odbc.DataSource("dsn=Sales;Server=sqlserver.example"),',
+      '\tBuilt = Odbc.DataSource("Driver={" & "PostgreSQL" & "}")',
+      "in",
+      "\tDsn",
+    );
+    expect(await mFindings(rule, tmdl)).toEqual([]);
   });
 });

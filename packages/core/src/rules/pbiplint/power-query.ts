@@ -1,5 +1,7 @@
 import { Language } from "@microsoft/powerquery-parser";
-import { calls, identifierName, textLiterals, unwrap } from "../../m/ast.js";
+import { calls, identifierName, textLiterals, textValue, unwrap } from "../../m/ast.js";
+import { resolve } from "../../m/resolve.js";
+import type { MIndex, MQuery } from "../../m/types.js";
 import { finding } from "../helpers.js";
 import { mFinding } from "../m-helpers.js";
 import type { Rule } from "../types.js";
@@ -112,6 +114,85 @@ export const EXCEL_USE_HEADERS = pbiplintRule({
     ),
 });
 
+/**
+ * The databases Power BI has a connector for, by what an ODBC driver's or an OLE DB provider's
+ * name holds, any case (v3 spec, section 9.15). Kept small on purpose.
+ */
+const NATIVE_CONNECTORS: readonly { pattern: RegExp; name: string; article: "a" | "an" }[] = [
+  { pattern: /amazon redshift/i, name: "Amazon Redshift", article: "an" },
+  { pattern: /postgresql/i, name: "PostgreSQL", article: "a" },
+  { pattern: /sql server|sqlncli|msoledbsql/i, name: "SQL Server", article: "a" },
+  { pattern: /mysql/i, name: "MySQL", article: "a" },
+  { pattern: /oracle/i, name: "Oracle", article: "an" },
+  { pattern: /snowflake/i, name: "Snowflake", article: "a" },
+];
+
+/** The generic sources: what each calls its connection, and the part of it that names the driver. */
+const GENERIC_SOURCES: ReadonlyMap<string, { kind: string; part: string }> = new Map([
+  ["Odbc.DataSource", { kind: "ODBC", part: "driver" }],
+  ["OleDb.DataSource", { kind: "OLE DB", part: "provider" }],
+]);
+
+/** The value of a connection string's `Driver=` or `Provider=` part, its key in any case, braces taken off. */
+function driverOf(connection: string): string | undefined {
+  for (const part of connection.split(";")) {
+    const eq = part.indexOf("=");
+    if (eq < 0) continue;
+    const key = part.slice(0, eq).trim().toLowerCase();
+    if (key === "driver" || key === "provider")
+      return part
+        .slice(eq + 1)
+        .trim()
+        .replace(/^\{|\}$/g, "");
+  }
+  return undefined;
+}
+
+/**
+ * A connection string written in the call, or held as text by the `let` step or the model
+ * parameter a name resolves to. Nothing further is followed, and a record is not read.
+ */
+function connectionText(m: MIndex, q: MQuery, arg: Node | undefined): string | undefined {
+  if (arg === undefined) return undefined;
+  const a = unwrap(arg);
+  if (a.kind !== Kind.IdentifierExpression) return textValue(a);
+  const r = resolve(m, q, a);
+  if (r.kind === "value") return textValue(unwrap(r.node));
+  if (r.kind === "modelParameter") return textValue(unwrap(r.value));
+  return undefined;
+}
+
+// A connection string that names only a DSN says nothing of the driver behind it, and is left
+// alone (v3 spec, section 9.15).
+export const ODBC_WHERE_CONNECTOR_EXISTS = pbiplintRule({
+  id: "ODBC_WHERE_CONNECTOR_EXISTS",
+  name: "ODBC or OLE DB where Power BI has a connector",
+  category: "Performance",
+  severity: 1,
+  scope: ["Partition", "NamedExpression", "Table"],
+  layer: "powerquery",
+  check: (_project, { indexes: { m } }) =>
+    m.queries.flatMap((q) =>
+      calls(q).flatMap((c) => {
+        const source = GENERIC_SOURCES.get(c.name);
+        if (!source) return [];
+        const driver = driverOf(connectionText(m, q, c.args[0]) ?? "");
+        const native =
+          driver === undefined ? undefined : NATIVE_CONNECTORS.find((n) => n.pattern.test(driver));
+        return native
+          ? [
+              mFinding(
+                m,
+                q,
+                c.node,
+                `the ${source.kind} connection names the ${native.name} ${source.part}; Power BI has ${native.article} ${native.name} connector`,
+              ),
+            ]
+          : [];
+      }),
+    ),
+});
+
 // Reads no M: Ignore the Privacy Levels is a Power Query option, saved in model.tmdl (v3 spec,
 // section 9.8). legacyRedirects and returnErrorValuesAsNull, which Desktop writes by default, are
 // left alone.
@@ -144,5 +225,6 @@ export const powerQueryRules: Rule[] = [
   LOCAL_DRIVE_PATH,
   SCRIPT_IN_QUERY,
   EXCEL_USE_HEADERS,
+  ODBC_WHERE_CONNECTOR_EXISTS,
   PRIVACY_LEVELS_IGNORED,
 ];

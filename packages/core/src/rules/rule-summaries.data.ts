@@ -58,6 +58,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Pages whose display name in page.json has the shape `Page <n>`, `Duplicate of <name>`, or `<name> (copy)`: the names English Power BI Desktop gives a new page and a duplicated one, and a name marked as a copy. The rule also matches the forms Desktop-saved files show for a new or duplicated page in other languages, such as `Seite <n>` and `Doublon de <name>`.",
   DEFAULT_STEP_NAMES:
     "Power Query queries whose steps keep the names Power BI Desktop gives them, such as Changed Type, Added Custom1, or Removed Other Columns, reported once per query.",
+  DYNAMIC_DATA_SOURCE:
+    "Data sources whose address is read from a table's rows or built by a function call: a call such as `Web.Contents`, `File.Contents`, or `Sql.Database` whose first argument the Power BI service cannot know before the query runs.",
   ENSURE_ALTTEXT:
     "Visuals other than shapes whose alt text is missing or empty. A visual group is checked by its own alt text, the one set on the group rather than on the visuals inside it.",
   ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY:
@@ -87,6 +89,10 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Visible columns whose name starts with Is and whose type is whole number, and visible columns whose name ends with the word Flag after a space and whose type is not text.",
   HARDCODED_PERIOD_IN_DAX:
     "Measures, calculated columns, and calculation items whose DAX fixes a year or a date, and date tables whose CALENDAR ends on a fixed date.",
+  HARDCODED_SECRET_IN_QUERY:
+    "Credentials written into Power Query queries as text: a key, token, or password in a web request's headers or `Query` record, in a web address, as a Bearer token, or in an ODBC or OLE DB connection string.",
+  HARDCODED_SERVER_NAME:
+    "Power Query queries that name a database server as text in a connector such as `Sql.Database`, rather than reading it from a parameter, reported once per query.",
   HARDCODED_YEAR_IN_FILTER:
     "Filters in the Filters pane, on a visual, a page, or all pages, that hold a year column to fixed years: years picked in Basic filtering, a year set with Advanced filtering's is, years kept up to one with is less than or is less than or equal to, and a range between two years.",
   HIDDEN_VISUAL_WITH_FIELDS:
@@ -110,6 +116,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "A report whose pages.json sets no landing page, so it opens on the page that was active when it was last saved, or, when pages.json records no active page either, on the first page.",
   LARGE_TABLES_SHOULD_BE_PARTITIONED:
     "Tables with more than 25 million rows and a single partition. The row count is a statistic of the loaded data, not of the model files, so pbiplint lists this rule but does not run it: it needs statistics that only a live model carries.",
+  LEGACY_EXCEL_FILE:
+    "Power Query queries that read an `.xls` or `.xlsb` workbook, which Power Query opens through the Access Database Engine rather than reading the file itself.",
   "LIMIT_ROW_LEVEL_SECURITY_(RLS)_LOGIC":
     "Tables whose row-level security filter, in any role, calls RIGHT, LEFT, UPPER, LOWER, or FIND.",
   LOCAL_DRIVE_PATH:

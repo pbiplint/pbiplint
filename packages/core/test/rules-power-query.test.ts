@@ -3,10 +3,14 @@ import { lint } from "../src/engine/lint.js";
 import { buildIndexes } from "../src/index/build.js";
 import {
   DEFAULT_STEP_NAMES,
+  DYNAMIC_DATA_SOURCE,
   EXCEL_USE_HEADERS,
   FIXED_DATE_IN_ROW_FILTER,
+  HARDCODED_SECRET_IN_QUERY,
+  HARDCODED_SERVER_NAME,
   INCREMENTAL_REFRESH_RANGE_BOUNDS,
   KEEP_FIRST_ROWS_LEFT_IN,
+  LEGACY_EXCEL_FILE,
   LOCAL_DRIVE_PATH,
   ODBC_WHERE_CONNECTOR_EXISTS,
   PRIVACY_LEVELS_IGNORED,
@@ -763,6 +767,370 @@ describe("DEFAULT_STEP_NAMES (v3 spec, section 9.13)", () => {
         "in",
         "\tInner",
       );
+    expect(await mFindings(rule, tmdl)).toEqual([]);
+  });
+});
+
+describe("DYNAMIC_DATA_SOURCE (v3 spec, section 9.3)", () => {
+  const rule = DYNAMIC_DATA_SOURCE;
+  const base =
+    'expression ApiBase = "https://api.example.com" meta [IsParameterQuery = true, Type = "Text", IsParameterQueryRequired = true]\n\nexpression DataFolder = "C:\\Demo\\Data\\" meta [IsParameterQuery = true, Type = "Text", IsParameterQueryRequired = true]\n\n';
+  it("is a built-in Power Query error on a query's owner", () => {
+    isPowerQueryRule(rule, 3, "Error Prevention");
+    expect(rule.name).toBe("Data source the service can't refresh");
+    expect(rule.scope).toEqual(["Partition", "NamedExpression", "Table"]);
+  });
+  it("reports an address read from the rows, on the call", async () => {
+    const tmdl = table(
+      "Orders",
+      "let",
+      '\tSource = #table(type table [url = text], {{"https://api.example.com/v1/orders/1"}}),',
+      '\t#"Added Custom" = Table.AddColumn(Source, "Body", each Web.Contents([url]))',
+      "in",
+      '\t#"Added Custom"',
+    );
+    expect(await mFindings(rule, tmdl)).toEqual([
+      {
+        objectType: "Partition",
+        objectName: "Orders",
+        location: { file: "inline.tmdl", line: 7, column: 61 },
+        detail: "query 'Orders', step 'Added Custom': Web.Contents's address is read from the rows",
+      },
+    ]);
+  });
+  it("reports an address built by a function call, naming what each function calls its address", async () => {
+    const tmdl =
+      base +
+      table(
+        "Orders",
+        "let",
+        '\tBuilt = File.Contents(Text.Combine({DataFolder, "orders.csv"})),',
+        "\tListed = Folder.Files(Text.Lower(DataFolder)),",
+        '\tServer = Sql.Database(Text.Upper("sql.example"), "Warehouse"),',
+        '\tOdbc = Odbc.DataSource(Text.Combine({"dsn=", "Sales"})),',
+        '\tWeb = Web.Contents(Uri.Combine(ApiBase, "v1"))',
+        "in",
+        "\tWeb",
+      );
+    expect((await mFindings(rule, tmdl)).map((f) => f.detail)).toEqual([
+      "query 'Orders', step 'Built': File.Contents's path is built by a function call",
+      "query 'Orders', step 'Listed': Folder.Files's path is built by a function call",
+      "query 'Orders', step 'Server': Sql.Database's server is built by a function call",
+      "query 'Orders', step 'Odbc': Odbc.DataSource's connection string is built by a function call",
+      "query 'Orders', step 'Web': Web.Contents's address is built by a function call",
+    ]);
+  });
+  it("leaves alone literals, parameters, joins of them, steps that hold them, and RelativePath and Query", async () => {
+    const tmdl =
+      base +
+      table(
+        "Orders",
+        "let",
+        '\tArchive = "C:\\Demo\\Data\\orders.csv",',
+        "\tNested = let Inner = let Read = File.Contents(Archive) in Read in Inner,",
+        '\tJoined = Web.Contents(ApiBase & "/v1/orders"),',
+        '\tRelative = Web.Contents(ApiBase, [RelativePath = "v1/orders/" & Text.From(1), Query = [page = Text.From(2)]]),',
+        '\tFolder = Folder.Files(DataFolder & "Sales")',
+        "in",
+        "\tFolder",
+      );
+    expect(await mFindings(rule, tmdl)).toEqual([]);
+  });
+  it("leaves alone the two shapes awaiting the Desktop check: if over a parameter, and a function's parameter", async () => {
+    const tmdl =
+      base +
+      "expression GetPage = (address as text) => Web.Contents(address)\n\n" +
+      table(
+        "Orders",
+        "let",
+        '\tAddress = if ApiBase = "" then "https://test.example.com" else ApiBase,',
+        "\tChosen = Web.Contents(Address),",
+        '\tThroughFunction = GetPage("https://api.example.com/v1/customers")',
+        "in",
+        "\tThroughFunction",
+      );
+    expect(await mFindings(rule, tmdl)).toEqual([]);
+  });
+  it("leaves alone a function that is not a data source, and an address it cannot follow", async () => {
+    const tmdl = table(
+      "Orders",
+      "let",
+      '\tSource = Json.Document(Text.Combine({"{", "}"})),',
+      "\tUnknown = Web.Contents(Nowhere)",
+      "in",
+      "\tUnknown",
+    );
+    expect(await mFindings(rule, tmdl)).toEqual([]);
+  });
+});
+
+describe("HARDCODED_SECRET_IN_QUERY (v3 spec, sections 9.5 and 11.3)", () => {
+  const rule = HARDCODED_SECRET_IN_QUERY;
+  /** A model parameter holding text, as Desktop writes one. */
+  const parameter = (name: string, value: string): string =>
+    `expression ${name} = "${value}" meta [IsParameterQuery = true, Type = "Text", IsParameterQueryRequired = true]\n\n`;
+  it("is a built-in Power Query error on a query's owner", () => {
+    isPowerQueryRule(rule, 3, "Error Prevention");
+    expect(rule.name).toBe("Secret written into a query");
+    expect(rule.scope).toEqual(["Partition", "NamedExpression", "Table"]);
+  });
+  it("reports an Authorization header on its text, once, though it is a Bearer token too", async () => {
+    const tmdl = table(
+      "Orders API",
+      "let",
+      '\tSource = Web.Contents("https://api.example.com/v1/orders", [Headers = [Authorization = "Bearer pbiplint-fixture-token-0101-notreal"]])',
+      "in",
+      "\tSource",
+    );
+    expect(await mFindings(rule, tmdl)).toEqual([
+      {
+        objectType: "Partition",
+        objectName: "Orders API",
+        location: { file: "inline.tmdl", line: 6, column: 93 },
+        detail:
+          "query 'Orders API', step 'Source': the Authorization header in Web.Contents holds a credential written into the query (value not shown)",
+      },
+    ]);
+  });
+  it("reads every place spec 9.5 names, with names in any case", async () => {
+    const tmdl = table(
+      "Orders API",
+      "let",
+      '\tHeader = Web.Contents("https://api.example.com/v1", [Headers = [#"X-API-Key" = "pbiplint-fixture-key-0102-notreal"]]),',
+      '\tField = Web.Contents("https://api.example.com/v1", [Query = [access_token = "pbiplint-fixture-token-0103-notreal"]]),',
+      '\tAddress = Web.Contents("https://api.example.com/v1?format=json&Sig=pbiplint-fixture-sig-0104-notreal"),',
+      '\tFeedHeaders = OData.Feed("https://odata.example.com", [#"Ocp-Apim-Subscription-Key" = "pbiplint-fixture-key-0105-notreal"]),',
+      '\tFeedOptions = OData.Feed("https://odata.example.com", null, [Headers = [#"x-functions-key" = "pbiplint-fixture-key-0106-notreal"]]),',
+      '\tToken = "Bearer pbiplint-fixture-token-0107-notreal",',
+      '\tConnection = OleDb.DataSource("Provider=SQLOLEDB;Data Source=sql.example;User ID=reader;Password={pbiplint-fixture-pwd-0108-notreal}")',
+      "in",
+      "\tConnection",
+    );
+    expect((await mFindings(rule, tmdl)).map((f) => f.detail)).toEqual([
+      "query 'Orders API', step 'Header': the X-API-Key header in Web.Contents holds a credential written into the query (value not shown)",
+      "query 'Orders API', step 'Field': the access_token field of the Query record in Web.Contents holds a credential written into the query (value not shown)",
+      "query 'Orders API', step 'FeedHeaders': the Ocp-Apim-Subscription-Key header in OData.Feed holds a credential written into the query (value not shown)",
+      "query 'Orders API', step 'FeedOptions': the x-functions-key header in OData.Feed holds a credential written into the query (value not shown)",
+      "query 'Orders API', step 'Connection': the password in OleDb.DataSource's connection string holds a credential written into the query (value not shown)",
+      "query 'Orders API', step 'Address': the sig parameter of the web address holds a credential written into the query (value not shown)",
+      "query 'Orders API', step 'Token': the Bearer token holds a credential written into the query (value not shown)",
+    ]);
+  });
+  it("follows a name to the step or parameter that holds the text, and reports a parameter once however many queries read it", async () => {
+    const tmdl =
+      parameter("ServiceToken", "pbiplint-fixture-token-0109-notreal") +
+      table(
+        "Customers",
+        "let",
+        '\tSource = Web.Contents("https://api.example.com/v1/customers", [Headers = [#"x-api-key" = ServiceToken]])',
+        "in",
+        "\tSource",
+      ) +
+      table(
+        "Orders",
+        "let",
+        '\tKey = "pbiplint-fixture-key-0110-notreal",',
+        '\tSource = Web.Contents("https://api.example.com/v1/orders", [Headers = [Authorization = "Bearer " & Key, #"x-api-key" = ServiceToken]])',
+        "in",
+        "\tSource",
+      );
+    expect(await mFindings(rule, tmdl)).toEqual([
+      {
+        objectType: "NamedExpression",
+        objectName: "ServiceToken",
+        location: { file: "inline.tmdl", line: 1, column: 27 },
+        detail:
+          "query 'ServiceToken': the x-api-key header in Web.Contents reads a credential written here (value not shown)",
+      },
+      {
+        objectType: "Partition",
+        objectName: "Orders",
+        location: { file: "inline.tmdl", line: 17, column: 12 },
+        detail:
+          "query 'Orders', step 'Key': the Authorization header in Web.Contents reads a credential written here (value not shown)",
+      },
+    ]);
+  });
+  it("leaves alone placeholders, short values, prose, ApiKeyName, comments, and other headers and fields", async () => {
+    const tmdl = table(
+      "Orders API",
+      "let",
+      "\t// The old key was pbiplint-fixture-key-0111-notreal.",
+      '\tA = Web.Contents("https://api.example.com/v1", [Headers = [Authorization = "<your key>"]]),',
+      '\tB = Web.Contents("https://api.example.com/v1", [Headers = [Authorization = "Bearer {token}"]]),',
+      '\tC = Web.Contents("https://api.example.com/v1", [Headers = [#"x-api-key" = "xxxxxxxxxxxx"]]),',
+      '\tD = Web.Contents("https://api.example.com/v1", [Headers = [#"x-api-key" = "YOUR_API_KEY"]]),',
+      '\tE = Web.Contents("https://api.example.com/v1", [Query = [key = "Enter your key here"]]),',
+      '\tF = Web.Contents("https://api.example.com/v1", [Query = [token = "short"]]),',
+      '\tG = Web.Contents("https://api.example.com/v1", [ApiKeyName = "api_key"]),',
+      '\tH = Web.Contents("https://api.example.com/v1", [Headers = [Accept = "application/json; charset=utf-8"], Query = [page = "pbiplint-fixture-page-0112-notreal"]]),',
+      '\tI = Web.Contents("https://api.example.com/v1?api_key=&format=json"),',
+      '\tJ = Odbc.DataSource("dsn=Sales;Pwd=***", [HierarchicalNavigation = true]),',
+      '\tK = Web.Contents("https://api.example.com/v1", [Headers = [Authorization = "Bearer " & Text.From(Number.Random())]]),',
+      '\tL = Web.Contents("https://api.example.com/v1", [Headers = [Authorization = "Bearer YOUR_ACCESS_TOKEN_HERE"]]),',
+      '\tM = Web.Contents("https://api.example.com/v1", [Headers = [Authorization = "Bearer xxxxxxxxxxxxxxxxxxxxxxxx"]])',
+      "in",
+      "\tM",
+    );
+    expect(await mFindings(rule, tmdl)).toEqual([]);
+  });
+  it("writes no part of a value into a detail: only the rule's words and M's own names", async () => {
+    const tmdl =
+      parameter("ServiceToken", "pbiplint-fixture-token-0113-notreal") +
+      table(
+        "Orders API",
+        "let",
+        '\tSource = Web.Contents("https://api.example.com/v1?api_key=pbiplint-fixture-key-0114-notreal", [Headers = [#"x-api-key" = ServiceToken]])',
+        "in",
+        "\tSource",
+      );
+    const details = (await mFindings(rule, tmdl)).map((f) => f.detail ?? "");
+    expect(details).toHaveLength(2);
+    for (const d of details) expect(d).not.toMatch(/fixture|notreal|0113|0114/);
+  });
+});
+
+describe("HARDCODED_SERVER_NAME (v3 spec, section 9.14)", () => {
+  const rule = HARDCODED_SERVER_NAME;
+  it("is a built-in Power Query info rule on a query's owner", () => {
+    isPowerQueryRule(rule, 1, "Maintenance");
+    expect(rule.name).toBe("Server name written into the query");
+    expect(rule.scope).toEqual(["Partition", "NamedExpression", "Table"]);
+  });
+  it("reports a query once, on its first call, with the number of calls", async () => {
+    const tmdl = table(
+      "Sales",
+      "let",
+      '\tSource = Sql.Database("finance-sql.example", "Warehouse"),',
+      '\tArchive = Sql.Database("finance-sql.example", "Archive"),',
+      '\tOrders = Table.Combine({Source{[Schema = "dbo", Item = "Orders"]}[Data], Archive{[Schema = "dbo", Item = "Orders"]}[Data]})',
+      "in",
+      "\tOrders",
+    );
+    expect(await mFindings(rule, tmdl)).toEqual([
+      {
+        objectType: "Partition",
+        objectName: "Sales",
+        location: { file: "inline.tmdl", line: 6, column: 15 },
+        detail:
+          "query 'Sales', step 'Source': Sql.Database names its server as text (2 calls in this query); a parameter would hold it",
+      },
+    ]);
+  });
+  it("reads a server held by a step, and every connector spec 9.14 names", async () => {
+    const tmdl = [
+      [
+        "A",
+        'let Server = "finance-sql.example", Source = Sql.Database(Server, "Warehouse") in Source',
+      ],
+      ["B", 'Sql.Databases("finance-sql.example")'],
+      ["C", 'PostgreSQL.Database("pg.example", "sales")'],
+      ["D", 'MySQL.Database("mysql.example", "sales")'],
+      ["E", 'Oracle.Database("oracle.example")'],
+      ["F", 'Snowflake.Databases("account.example", "WAREHOUSE")'],
+      ["G", 'AnalysisServices.Database("powerbi://api.example.com/v1.0/myorg/Sales", "Sales")'],
+      ["H", 'AnalysisServices.Databases("as.example")'],
+      ["I", 'DB2.Database("db2.example", "SALES")'],
+      ["J", 'Teradata.Database("teradata.example")'],
+    ]
+      .map(([name, m]) => table(name!, m!))
+      .join("");
+    expect((await mFindings(rule, tmdl)).map((f) => f.detail)).toEqual([
+      "query 'A', step 'Source': Sql.Database names its server as text; a parameter would hold it",
+      "query 'B': Sql.Databases names its server as text; a parameter would hold it",
+      "query 'C': PostgreSQL.Database names its server as text; a parameter would hold it",
+      "query 'D': MySQL.Database names its server as text; a parameter would hold it",
+      "query 'E': Oracle.Database names its server as text; a parameter would hold it",
+      "query 'F': Snowflake.Databases names its server as text; a parameter would hold it",
+      "query 'G': AnalysisServices.Database names its server as text; a parameter would hold it",
+      "query 'H': AnalysisServices.Databases names its server as text; a parameter would hold it",
+      "query 'I': DB2.Database names its server as text; a parameter would hold it",
+      "query 'J': Teradata.Database names its server as text; a parameter would hold it",
+    ]);
+  });
+  it("leaves alone a server from a parameter or a call, the database argument, and other connectors", async () => {
+    const tmdl =
+      'expression ServerName = "finance-sql.example" meta [IsParameterQuery = true, Type = "Text", IsParameterQueryRequired = true]\n\n' +
+      table(
+        "Sales",
+        "let",
+        '\tSource = Sql.Database(ServerName, "Warehouse"),',
+        '\tBuilt = Sql.Database(Text.Lower(ServerName), "Warehouse"),',
+        '\tHana = SapHana.Database("hana.example"),',
+        '\tOdbc = Odbc.DataSource("dsn=Sales")',
+        "in",
+        "\tOdbc",
+      );
+    expect(await mFindings(rule, tmdl)).toEqual([]);
+  });
+  it("never prints the server's name", async () => {
+    const tmdl = table("Sales", 'Sql.Database("finance-sql.example", "Warehouse")');
+    const [f] = await mFindings(rule, tmdl);
+    expect(f?.detail).not.toContain("finance-sql");
+  });
+});
+
+describe("LEGACY_EXCEL_FILE (v3 spec, section 9.17)", () => {
+  const rule = LEGACY_EXCEL_FILE;
+  it("is a built-in Power Query info rule on a query's owner", () => {
+    isPowerQueryRule(rule, 1, "Error Prevention");
+    expect(rule.name).toBe("Legacy Excel workbook");
+    expect(rule.scope).toEqual(["Partition", "NamedExpression", "Table"]);
+  });
+  it("reports an .xls path, on the path", async () => {
+    const tmdl = table(
+      "Budget",
+      "let",
+      '\tSource = Excel.Workbook(File.Contents("C:\\Demo\\Data\\Budget.xls"), null, true)',
+      "in",
+      "\tSource",
+    );
+    expect(await mFindings(rule, tmdl)).toEqual([
+      {
+        objectType: "Partition",
+        objectName: "Budget",
+        location: { file: "inline.tmdl", line: 6, column: 44 },
+        detail:
+          "query 'Budget', step 'Source': the workbook is a legacy .xls file, read through the Access Database Engine",
+      },
+    ]);
+  });
+  it("reads .xlsb in any case, a path held by a step, and one in a parameter once however many queries read it", async () => {
+    const tmdl =
+      'expression BudgetFile = "C:\\Demo\\Data\\Budget.XLS" meta [IsParameterQuery = true, Type = "Text", IsParameterQueryRequired = true]\n\n' +
+      table("A", "Excel.Workbook(File.Contents(BudgetFile), null, true)") +
+      table("B", "Excel.Workbook(File.Contents(BudgetFile), null, true)") +
+      table(
+        "C",
+        "let",
+        '\tPath = "C:\\Demo\\Data\\Forecast.xlsb",',
+        "\tBinary = File.Contents(Path),",
+        "\tSource = Excel.Workbook(Binary, null, true)",
+        "in",
+        "\tSource",
+      );
+    expect((await mFindings(rule, tmdl)).map((f) => [f.objectName, f.detail])).toEqual([
+      [
+        "BudgetFile",
+        "query 'BudgetFile': the workbook is a legacy .xls file, read through the Access Database Engine",
+      ],
+      [
+        "C",
+        "query 'C', step 'Path': the workbook is a legacy .xlsb file, read through the Access Database Engine",
+      ],
+    ]);
+  });
+  it("leaves alone .xlsx and .xlsm, a workbook from the web, and a path built at run time", async () => {
+    const tmdl = table(
+      "Budget",
+      "let",
+      '\tA = Excel.Workbook(File.Contents("C:\\Demo\\Data\\Budget.xlsx"), null, true),',
+      '\tB = Excel.Workbook(File.Contents("C:\\Demo\\Data\\Budget.xlsm"), null, true),',
+      '\tC = Excel.Workbook(Web.Contents("https://files.example.com/Budget.xls"), null, true),',
+      '\tD = Excel.Workbook(File.Contents(Text.Combine({"C:\\Demo\\Data\\", "Budget.xls"})), null, true)',
+      "in",
+      "\tD",
+    );
     expect(await mFindings(rule, tmdl)).toEqual([]);
   });
 });

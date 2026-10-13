@@ -212,6 +212,26 @@ describe("origin", () => {
       "row",
     ],
     ["_ in each", 'Table.AddColumn(S, "c", each Web.Contents(_))', "row"],
+    [
+      "if whose condition calls a function, between static branches",
+      'Web.Contents(if Text.EndsWith(ApiBase, "/") then ApiBase else ApiBase & "/")',
+      "static",
+    ],
+    [
+      "if with a branch that raises an error",
+      'Web.Contents(if ApiBase = "" then error Error.Record("Missing", "Set ApiBase") else ApiBase)',
+      "static",
+    ],
+    [
+      "if with a branch built by a function call",
+      'Web.Contents(if Environment = "Prod" then ApiBase else Text.Lower(ApiBase))',
+      "computed",
+    ],
+    [
+      "if with a branch read from the rows",
+      'Table.AddColumn(S, "c", each Web.Contents(if [u] = null then ApiBase else [u]))',
+      "row",
+    ],
     ["a cycle", "let a = b, b = a in Web.Contents(a)", "unknown"],
     ["an @name self-reference", 'let a = @a & "x" in Web.Contents(a)', "unknown"],
   ];

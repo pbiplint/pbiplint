@@ -10,7 +10,7 @@ import {
   textValue,
   unwrap,
 } from "../../m/ast.js";
-import { boundValue, resolve } from "../../m/resolve.js";
+import { boundValue, origin, resolve } from "../../m/resolve.js";
 import type { MIndex, MQuery } from "../../m/types.js";
 import { tableRef } from "../../model/names.js";
 import type { Partition } from "../../model/types.js";
@@ -622,6 +622,283 @@ export const DEFAULT_STEP_NAMES = pbiplintRule({
 });
 
 /**
+ * The functions whose first argument is the address of a data source (v3 spec, section 9.3), and
+ * what each calls it: a path, an address, a connection string, or a server.
+ */
+const DATA_SOURCE =
+  /^(?:(File\.Contents|Folder\.(?:Files|Contents))|(Web\.Contents|OData\.Feed|SharePoint\.(?:Files|Contents|Tables)|AzureStorage\.(?:Blobs|DataLake))|((?:Odbc|OleDb)\.(?:DataSource|Query))|Sql\.Databases?|Oracle\.Database|PostgreSQL\.Database|MySQL\.Database|Snowflake\.Databases|AnalysisServices\.Databases?|Databricks\.Catalogs|DB2\.Database|Teradata\.Database|SapHana\.Database)$/;
+
+// A data source whose address is read from the rows or built by a function call cannot refresh in
+// the service (v3 spec, section 9.3). Only the first argument is read, so Web.Contents' RelativePath
+// and Query options, Microsoft's route for a dynamic request to a static address, are left alone,
+// as are literals, parameters, joins of them, and a custom function's parameter.
+export const DYNAMIC_DATA_SOURCE = pbiplintRule({
+  id: "DYNAMIC_DATA_SOURCE",
+  name: "Data source the service can't refresh",
+  category: "Error Prevention",
+  severity: 3,
+  scope: ["Partition", "NamedExpression", "Table"],
+  layer: "powerquery",
+  check: (_project, { indexes: { m } }) =>
+    m.queries.flatMap((q) =>
+      calls(q).flatMap((c) => {
+        const source = DATA_SOURCE.exec(c.name);
+        const o = source && c.args[0] ? origin(m, q, c.args[0]) : "static";
+        if (o !== "row" && o !== "computed") return [];
+        const noun = source![1]
+          ? "path"
+          : source![2]
+            ? "address"
+            : source![3]
+              ? "connection string"
+              : "server";
+        const how = o === "row" ? "is read from the rows" : "is built by a function call";
+        return [mFinding(m, q, c.node, `${c.name}'s ${noun} ${how}`)];
+      }),
+    ),
+});
+
+/** A text literal a value stands for: written in place, or held by a step or a model parameter. */
+interface HeldText {
+  node: Node;
+  query: MQuery;
+  value: string;
+  /** Reached through a name, so the literal sits in a step or a parameter of its own. */
+  named: boolean;
+}
+
+/**
+ * The text a value holds: a literal written in place, or the literal a name stands for through
+ * `let` steps or a model parameter. Nothing further is followed.
+ */
+function heldText(m: MIndex, q: MQuery, node: Node): HeldText | undefined {
+  const v = boundValue(m, q, node).node;
+  const named = v !== unwrap(node);
+  const text = textValue(v);
+  if (text !== undefined) return { node: v, query: q, value: text, named };
+  const r = resolve(m, q, v);
+  const p = r.kind === "modelParameter" ? unwrap(r.value) : undefined;
+  const value = textValue(p);
+  return p && value !== undefined && r.kind === "modelParameter"
+    ? { node: p, query: r.query, value, named: true }
+    : undefined;
+}
+
+/** The parts of a value joined with `&`, in order; the value itself when it is not a join. */
+function joined(n: Node): Node[] {
+  const v = unwrap(n);
+  return v.kind === Kind.ArithmeticExpression && v.operatorConstant.constantKind === "&"
+    ? [...joined(v.left), ...joined(v.right)]
+    : [v];
+}
+
+/**
+ * The texts a header's or a field's value holds. A value joined with `&` is read as its literals
+ * joined, located on the first of them, and each name in it as the text that name holds.
+ */
+function heldTexts(m: MIndex, q: MQuery, node: Node): HeldText[] {
+  const parts = joined(node);
+  const literals = parts.filter((p) => textValue(p) !== undefined);
+  const out: HeldText[] = literals[0]
+    ? [{ node: literals[0], query: q, value: literals.map(textValue).join(""), named: false }]
+    : [];
+  for (const p of parts)
+    if (p.kind === Kind.IdentifierExpression) {
+      const held = heldText(m, q, p);
+      if (held) out.push(held);
+    }
+  return out;
+}
+
+/** A placeholder written where a credential would go (v3 spec, section 9.5). */
+const PLACEHOLDER = /^(<.*>|\{.*\}|x{3,}.*|\*{3,}.*|your.*|placeholder|null|none|test|demo)$/i;
+/**
+ * Whether text holds a credential: 8 characters or more once a scheme word before it, such as
+ * `Bearer `, is left off; no space left in it, which prose such as `Enter your key here` has; and
+ * no placeholder.
+ */
+const isCredential = (value: string): boolean => {
+  const v = value.trim().replace(/^\S+ (?=\S+$)/, "");
+  return v.length >= 8 && !/\s/.test(v) && !PLACEHOLDER.test(v);
+};
+
+/** The headers that carry a credential, in any case. */
+const SECRET_HEADER =
+  /^(?:authorization|x-api-key|api-?key|ocp-apim-subscription-key|x-auth-token|x-functions-key)$/i;
+/** The `Query` record's fields that carry one, in any case. */
+const SECRET_FIELD =
+  /^(?:api_?key|key|access_token|token|client_secret|secret|password|code|subscription-key)$/i;
+/** A web address's parameters that carry one: the same names, and a signature's. */
+const SECRET_PARAMETER =
+  /[?&](api_?key|key|access_token|token|client_secret|secret|password|code|subscription-key|sig|signature)=([^&#]*)/gi;
+/** The functions whose connection string's `Password=` or `Pwd=` part is read. */
+const CONNECTION_STRING = /^(?:Odbc|OleDb)\.(?:DataSource|Query)$/;
+
+/** The fields of a record written in place, or held by a step, by their M names. */
+function recordFields(
+  m: MIndex,
+  q: MQuery,
+  node: Node | undefined,
+): { name: string; value: Node }[] {
+  const v = node && boundValue(m, q, node).node;
+  return v?.kind === Kind.RecordExpression
+    ? v.content.elements.map((csv) => ({
+        name: identifierName(csv.node.key.literal),
+        value: csv.node.value,
+      }))
+    : [];
+}
+
+/** A credential and where a finding says it is. The words never hold any part of the value. */
+interface Credential {
+  held: HeldText;
+  where: string;
+}
+
+/**
+ * The credentials a query writes into a web request's headers or `Query` record, a connection
+ * string, a web address, or a Bearer token, in that order, so a literal found twice keeps the
+ * first place it was found.
+ */
+function credentialsIn(m: MIndex, q: MQuery): Credential[] {
+  const out: Credential[] = [];
+  const add = (value: Node, where: string): void => {
+    for (const held of heldTexts(m, q, value))
+      if (isCredential(held.value)) out.push({ held, where });
+  };
+  for (const c of calls(q)) {
+    if (c.name === "Web.Contents" || c.name === "OData.Feed") {
+      // OData.Feed takes its headers as its second argument, and its options as its third.
+      const options = recordFields(m, q, c.args[c.name === "OData.Feed" ? 2 : 1]);
+      const field = (name: string) => options.find((f) => f.name === name)?.value;
+      for (const h of [
+        ...(c.name === "OData.Feed" ? recordFields(m, q, c.args[1]) : []),
+        ...recordFields(m, q, field("Headers")),
+      ])
+        if (SECRET_HEADER.test(h.name)) add(h.value, `the ${h.name} header in ${c.name}`);
+      for (const f of recordFields(m, q, field("Query")))
+        if (SECRET_FIELD.test(f.name))
+          add(f.value, `the ${f.name} field of the Query record in ${c.name}`);
+    }
+    const held =
+      CONNECTION_STRING.test(c.name) && c.args[0] ? heldText(m, q, c.args[0]) : undefined;
+    for (const part of held?.value.split(";") ?? []) {
+      const [key = "", ...rest] = part.split("=");
+      const k = key.trim().toLowerCase();
+      if ((k === "password" || k === "pwd") && isCredential(rest.join("=").replace(/[{}]/g, "")))
+        out.push({ held: held!, where: `the password in ${c.name}'s connection string` });
+    }
+  }
+  for (const { node, value } of textLiterals(q)) {
+    const held = { node, query: q, value, named: false };
+    if (/^https?:\/\//i.test(value))
+      for (const [, name = "", v = ""] of value.matchAll(SECRET_PARAMETER))
+        if (isCredential(v))
+          out.push({ held, where: `the ${name.toLowerCase()} parameter of the web address` });
+    if (/^bearer [\w.~+/-]{16}/i.test(value) && isCredential(value))
+      out.push({ held, where: "the Bearer token" });
+  }
+  return out;
+}
+
+// A credential written into a query (v3 spec, section 9.5). The finding is on the literal that
+// holds it, once however many places read it, and its detail names only where the credential is:
+// no output prints any part of the value, its length, or a hash of it (spec 11.3).
+export const HARDCODED_SECRET_IN_QUERY = pbiplintRule({
+  id: "HARDCODED_SECRET_IN_QUERY",
+  name: "Secret written into a query",
+  category: "Error Prevention",
+  severity: 3,
+  scope: ["Partition", "NamedExpression", "Table"],
+  layer: "powerquery",
+  check: (_project, { indexes: { m } }) => {
+    const reported = new Set<string>();
+    return m.queries.flatMap((q) =>
+      credentialsIn(m, q).flatMap(({ held, where }) => {
+        const key = `${held.query.kind}:${held.query.name}:${held.node.id}`;
+        if (reported.has(key)) return [];
+        reported.add(key);
+        const what = held.named
+          ? `${where} reads a credential written here (value not shown)`
+          : `${where} holds a credential written into the query (value not shown)`;
+        return [mFinding(m, held.query, held.node, what)];
+      }),
+    );
+  },
+});
+
+/** The database connectors whose first argument names the server (v3 spec, section 9.14). */
+const SERVER_CONNECTOR =
+  /^(?:Sql\.Databases?|PostgreSQL\.Database|MySQL\.Database|Oracle\.Database|Snowflake\.Databases|AnalysisServices\.Databases?|DB2\.Database|Teradata\.Database)$/;
+
+// Once per query, on its first connector that names its server as text, written in place or held
+// by a step (v3 spec, section 9.14). A server from a model parameter is the fix. The server's name
+// is not printed: an internal host name need not travel with an export.
+export const HARDCODED_SERVER_NAME = pbiplintRule({
+  id: "HARDCODED_SERVER_NAME",
+  name: "Server name written into the query",
+  category: "Maintenance",
+  severity: 1,
+  scope: ["Partition", "NamedExpression", "Table"],
+  layer: "powerquery",
+  check: (_project, { indexes: { m } }) =>
+    m.queries.flatMap((q) => {
+      const named = calls(q).filter(
+        (c) =>
+          SERVER_CONNECTOR.test(c.name) &&
+          c.args[0] !== undefined &&
+          textValue(boundValue(m, q, c.args[0]).node) !== undefined,
+      );
+      const [first] = named;
+      if (!first) return [];
+      const count = named.length > 1 ? ` (${named.length} calls in this query)` : "";
+      return [
+        mFinding(
+          m,
+          q,
+          first.node,
+          `${first.name} names its server as text${count}; a parameter would hold it`,
+        ),
+      ];
+    }),
+});
+
+// An .xls or .xlsb workbook, read through the Access Database Engine, which the service's cloud
+// cannot install (v3 spec, section 9.17). Only a path the resolver can read is checked.
+export const LEGACY_EXCEL_FILE = pbiplintRule({
+  id: "LEGACY_EXCEL_FILE",
+  name: "Legacy Excel workbook",
+  category: "Error Prevention",
+  severity: 1,
+  scope: ["Partition", "NamedExpression", "Table"],
+  layer: "powerquery",
+  check: (_project, { indexes: { m } }) => {
+    const reported = new Set<string>();
+    return m.queries.flatMap((q) =>
+      calls(q).flatMap((c) => {
+        const file =
+          c.name === "Excel.Workbook" && c.args[0] && callOf(boundValue(m, q, c.args[0]).node);
+        const path =
+          file && file.name === "File.Contents" && file.args[0] && heldText(m, q, file.args[0]);
+        const ext = path && /\.(xlsb?)$/i.exec(path.value.trim());
+        if (!path || !ext) return [];
+        const key = `${path.query.kind}:${path.query.name}:${path.node.id}`;
+        if (reported.has(key)) return [];
+        reported.add(key);
+        return [
+          mFinding(
+            m,
+            path.query,
+            path.node,
+            `the workbook is a legacy .${ext[1]!.toLowerCase()} file, read through the Access Database Engine`,
+          ),
+        ];
+      }),
+    );
+  },
+});
+
+/**
  * pbiplint's own Power Query rules (v3 spec, section 9): each reads the M a model's queries hold,
  * or the file's Power Query options, and reports on the model's files.
  */
@@ -636,4 +913,8 @@ export const powerQueryRules: Rule[] = [
   INCREMENTAL_REFRESH_RANGE_BOUNDS,
   FIXED_DATE_IN_ROW_FILTER,
   DEFAULT_STEP_NAMES,
+  DYNAMIC_DATA_SOURCE,
+  HARDCODED_SECRET_IN_QUERY,
+  HARDCODED_SERVER_NAME,
+  LEGACY_EXCEL_FILE,
 ];

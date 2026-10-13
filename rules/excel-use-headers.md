@@ -77,6 +77,7 @@ When every header in the sheet is plain text, there is nothing for the culture t
 ## Related rules
 
 - `LOCAL_DRIVE_PATH` reports the workbook's path when it is on a local drive, as a workbook read with File.Contents often is.
+- `LEGACY_EXCEL_FILE` reports a workbook in the legacy format, whose reading also depends on the machine that refreshes it.
 
 ## Links
 

@@ -253,6 +253,8 @@ On top of it, `origin(q, expression)` classifies a value, for the data source ru
 
 Order: `static` < `unknown` < `computed` < `row`. Each name is followed once per classification (a visited set of node ids), so a cycle reads as `unknown`.
 
+Amended October 13, 2026 (the coordinator's decision, pull request 6, from the corpus spot check): an `if ... then ... else` is read by its two branches only, since its condition chooses between them and builds neither, and an `error` expression is `static`, since it stops the query before any source is read. As first written, a function call in the condition made the value `computed`, which reported 3 custom functions whose address is a parameter either way (`if Text.EndsWith(DataFolder, "\") then DataFolder else DataFolder & "\"`, and an `error` when a parameter is empty). `DYNAMIC_DATA_SOURCE`'s corpus count was 19 findings in 11 models (8 repositories) as written, and is 16 in 8 models (6 repositories) after. An `if` over a parameter stays `static`, pending the Desktop check (section 9.3).
+
 ## 9. The rules
 
 ### 9.1 Common to all fifteen
@@ -354,6 +356,7 @@ Michael approved 15 new rules on October 13, 2026 ([issuecomment-6143569646](htt
   3. **For a model that is never published,** `ApiKeyName` with a **Web API** credential keeps the key out of the files, as Example 3 shows; the page quotes the Web connector's note that the service does not support it, so nobody relies on it for a published model.
 - **Fixtures:** an `Authorization` header with a fake token (fires); an `api_key` in a URL (fires); a `Query` record's `apikey` (fires); an ODBC connection string with `Pwd=` (fires); a header value that is a parameter holding a literal (fires once, on the parameter); `ApiKeyName` (does not); a placeholder `<your key>` (does not); a key in a comment (does not). Every fake value is built so it matches no real provider's key format (no `sk-`, `ghp_`, `AKIA`, or JWT shape), so GitHub's push protection and secret scanning stay quiet.
 - **Corpus:** 60 occurrences in 2 models (2 repositories): 57 `Authorization` headers and 3 URL keys, before the parameter-literal shape, which the corpus diff counts.
+- **Amended October 13, 2026** (the coordinator's decision, pull request 6, from the corpus spot check): a scheme word before the token, any word and not only `Bearer ` or `Basic `, is left off before the length test, since 57 of the corpus's headers start with a vendor's own scheme word, as in `<Scheme> <token>`; text with a space left in it after that is prose, not a credential, which leaves out two parameters holding `Enter your key here`-style text; a name inside an `&` join is followed as a whole value's name is, so `"Bearer " & Token` reports the step or parameter that holds `Token`; and `OData.Feed`'s second argument, its headers record, is read as headers. A literal is reported once, on the literal, however many places read it. The corpus count was 74 findings in 7 models as written, and is 72 in 6 models (6 repositories) after: 59 vendor-scheme `Authorization` headers in one model (57 written in place, 2 held by steps), 7 `key` and 3 `apikey` web address parameters, and 3 credentials reached through `&` joins or parameters.
 
 ### 9.6 `LOCAL_DRIVE_PATH`
 
@@ -467,6 +470,7 @@ The shipped rule (`packages/core/src/rules/microsoft-bpa/tables.ts:106`) matches
 - **Fix route** in Desktop: **Transform data**, **Manage Parameters**, **New Parameter**, type **Text**, the server as its current value; then select the query's **Source** step, open its settings (the gear), and choose **Parameter** for **Server**.
 - **Fixtures:** `Sql.Database("finance-sql.example", "Warehouse")` twice in one query (fires once); `Sql.Database(ServerName, "Warehouse")` with `ServerName` a parameter (does not); a `let` step holding the literal (fires).
 - **Corpus:** 2,463 calls in 465 models (166 repositories), counted per call; once per query lowers the occurrences, which the corpus diff measures.
+- **Amended October 13, 2026** (pull request 6, the corpus diff): 2,462 queries in 466 models (166 repositories), every one naming its server as text in the call itself.
 
 ### 9.15 `ODBC_WHERE_CONNECTOR_EXISTS`
 
@@ -503,6 +507,7 @@ The shipped rule (`packages/core/src/rules/microsoft-bpa/tables.ts:106`) matches
 - **Fix route:** open the workbook in Excel and save it as an Excel Workbook (`.xlsx`); then in Desktop, **Transform data**, select the query's **Source** step, open its settings, and point it at the new file.
 - **Fixtures:** `Excel.Workbook(File.Contents("C:\Demo\Data\Budget.xls"), null, true)` (fires, and `LOCAL_DRIVE_PATH` fires on the same literal); a `.xlsx` path (does not).
 - **Corpus:** 8 calls in 1 model (1 repository).
+- **Amended October 13, 2026** (the coordinator's decision, pull request 6): the finding is on the path, once however many workbook calls read it, as `HARDCODED_SECRET_IN_QUERY` reports a parameter (section 9.5). The corpus's 8 calls read one parameter's path, so the corpus count is 1 finding in 1 model (1 repository).
 
 ## 10. The site
 
@@ -583,6 +588,8 @@ One test, `packages/core/test/secret-masking.test.ts` with a web and a CLI count
 - the CLI's output in every format, and the MCP server's lint tool, through `packages/cli/test`.
 
 It reads the values from the fixture, so a new fake secret is covered when it is added.
+
+Amended October 13, 2026 (the coordinator's decision, pull request 6): the guard looks for every 8-character run of a value that takes in at least one character of its distinctive part, not only runs inside that part, so a leak of a value's end such as `0002-notreal` fails it too; runs inside the prefix or suffix every value shares are not looked for. The helper is `tests/support/fake-secrets.ts`; the MCP check sits in `packages/cli/test/mcp.test.ts`, beside its client, and an e2e test holds the site in a real browser to it: the page, both downloads, and, in Chromium, the copy for an AI assistant.
 
 ### 11.4 The corpus diff
 

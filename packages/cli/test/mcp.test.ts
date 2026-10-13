@@ -3,6 +3,7 @@ import { PassThrough } from "node:stream";
 import { join } from "node:path";
 import { defaultRules } from "@pbiplint/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { fakeSecrets, leaks, SECRETS_FIXTURE } from "../../../tests/support/fake-secrets.js";
 import { tempDir } from "../../../tests/support/temp-dir.js";
 import { main } from "../src/main.js";
 import { lintArgv, serveMcp, TOOL_ANNOTATIONS, type McpHandle } from "../src/mcp.js";
@@ -145,6 +146,17 @@ describe("pbiplint mcp", () => {
     });
     const expected = await cli([sample, "--quiet", "--rule", "ENSURE_ALTTEXT"]);
     expect(got).toEqual({ isError: false, text: expected.stdout });
+  });
+
+  it("keeps every part of m-zoo's made-up credentials out of the lint tool's answers (v3 spec, section 11.3)", async () => {
+    const secrets = fakeSecrets();
+    expect(secrets.length).toBeGreaterThanOrEqual(6);
+    const client = await connect();
+    const json = await client.call("lint", { path: SECRETS_FIXTURE });
+    const quiet = await client.call("lint", { path: SECRETS_FIXTURE, quiet: true });
+    expect(json.text).toContain("HARDCODED_SECRET_IN_QUERY");
+    expect(quiet.text).toContain("HARDCODED_SECRET_IN_QUERY");
+    expect(leaks(json.text + quiet.text + client.lines.join("\n"), secrets)).toEqual([]);
   });
 
   it("returns the CLI's message as an error for a path it cannot read", async () => {

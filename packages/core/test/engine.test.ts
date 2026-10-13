@@ -1608,4 +1608,26 @@ describe("lint", () => {
     const result = await pending;
     expect(result.layers.model.present).toBe(true);
   });
+
+  it("reports M that does not parse as a PARSE_ISSUE at its TMDL line and column", async () => {
+    const result = await lint([
+      {
+        path: "definition/tables/Sales.tmdl",
+        text: "table Sales\n\tpartition Sales = m\n\t\tmode: import\n\t\tsource =\n\t\t\t\tlet\n\t\t\t\t    a = 1,\n\t\t\t\t    b = \n\t\t\t\tin\n\t\t\t\t    a\n",
+      },
+    ]);
+    const issues = result.findings.filter((f) => f.ruleId === "PARSE_ISSUE");
+    expect(issues).toEqual([
+      {
+        ruleId: "PARSE_ISSUE",
+        layer: "model",
+        objectType: "File",
+        objectName: "definition/tables/Sales.tmdl",
+        location: { file: "definition/tables/Sales.tmdl", line: 8, column: 5 },
+        detail: expect.stringMatching(
+          /^M could not be parsed: Expected to find one of the following.*: in$/,
+        ),
+      },
+    ]);
+  });
 });

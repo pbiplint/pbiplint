@@ -554,7 +554,7 @@ Michael, October 13, 2026: "Please add the clickable filter on the rules index."
 ### 11.1 Fixtures
 
 - **`tests/fixtures/m-zoo.SemanticModel`**, hand-written and sanitized: no real names, servers, or paths, and the project's `C:\Demo\Data\` convention for file paths (the Desktop checks rewrite it for the Windows VM). It holds:
-  - Every fixture shape sections 9.2 to 9.17 name, each in its own table or shared expression, named for what it shows.
+  - Every fixture shape sections 9.2 to 9.17 name, grouped per rule in tables and shared expressions named for what they show. The shapes of each rule that reports once per query (`DEFAULT_STEP_NAMES`, `HARDCODED_SERVER_NAME`) and of `INCREMENTAL_REFRESH_RANGE_BOUNDS` sit in tables of their own, so each finding is unambiguous.
   - All three ways TMDL stores M (inline, block, fence), an `expression 'Name'` written with an `expression =` line, and a table with a `refreshPolicy` whose `sourceExpression` matches its partition.
   - `RangeStart` and `RangeEnd` parameters, and a parameter that holds a fake key.
   - Nothing unparsable: the parity test requires a captured fixture to read with no `PARSE_ISSUE`.
@@ -571,7 +571,7 @@ The committed fixtures with M (`tvw-baseline`, `udf-sales`, `shelfmart`, `rule-z
 
 ### 11.3 The secret guard
 
-One test, `packages/core/test/secret-masking.test.ts` with a web and a CLI counterpart, lints m-zoo and asserts that none of its fake secret values, nor any 8-character run of them, appears in:
+One test, `packages/core/test/secret-masking.test.ts` with a web and a CLI counterpart, lints m-zoo and asserts that none of its fake secret values appears whole, nor any 8-character run of a value's distinctive part (the text between `pbiplint-fixture-` and `-notreal`, for example `key-0002`), in:
 
 - `formatText`, `formatJson`, `formatSarif`, and `formatMarkdown`;
 - the site's rendered results and its exported report, with the preamble for an AI assistant;

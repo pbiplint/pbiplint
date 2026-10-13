@@ -124,9 +124,9 @@ describe("bundled sample", () => {
     expect(SAMPLE_TREE.modelFolders).toEqual(modelFolders.sort(byName));
     expect(SAMPLE_TREE.reportFolders).toEqual(reportFolders.sort(byName));
   });
-  it("lints to the numbers the CLI gives for examples/messy-sales", () => {
+  it("lints to the numbers the CLI gives for examples/messy-sales", async () => {
     // packages/cli/test/cli.test.ts pins the same totals for `pbiplint examples/messy-sales`.
-    const result = lint(SAMPLE_FILES, { config: resolveConfig(JSON.parse(SAMPLE_CONFIG)) });
+    const result = await lint(SAMPLE_FILES, { config: resolveConfig(JSON.parse(SAMPLE_CONFIG)) });
     const { summary } = result;
     expect([summary.findings, summary.errors, summary.warnings, summary.infos]).toEqual([
       266, 19, 77, 170,

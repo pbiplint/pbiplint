@@ -12,7 +12,7 @@ import { JUDGMENT, RULE_GUIDANCE } from "../src/results/rule-guidance.data.js";
 import { SAMPLE_CONFIG, SAMPLE_FILES } from "../src/sample.js";
 
 /** The sample as the page lints it: both parts, under the sample's own config. */
-const result = lint(SAMPLE_FILES, { config: resolveConfig(JSON.parse(SAMPLE_CONFIG)) });
+const result = await lint(SAMPLE_FILES, { config: resolveConfig(JSON.parse(SAMPLE_CONFIG)) });
 const file = { name: "x.md", type: "text/markdown", text: "# x" };
 
 /** Replaces navigator.clipboard for one test. `undefined` shadows whatever happy-dom provides. */

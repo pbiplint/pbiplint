@@ -1,4 +1,5 @@
 import { buildIndexes } from "../index/build.js";
+import { emptyMIndex, readM } from "../m/read.js";
 import { buildModel } from "../model/build.js";
 import type { Model } from "../model/types.js";
 import { buildReport } from "../pbir/build.js";
@@ -91,8 +92,12 @@ export interface LintResult {
   failed: boolean;
 }
 
-/** The one call the web app and the CLI both make. Pure: no I/O, no network. */
-export function lint(files: LintFile[], options: LintOptions = {}): LintResult {
+/**
+ * The one call the web app and the CLI both make. Pure: no I/O, no network. Async because it reads
+ * M with Microsoft's parser, whose parse returns a Promise; it waits on no timer or I/O, so a run's
+ * promise settles before the caller handles another event.
+ */
+export async function lint(files: LintFile[], options: LintOptions = {}): Promise<LintResult> {
   const rules = options.rules ?? defaultRules;
   const { config, unknownRules } = bindConfig(
     isResolvedConfig(options.config) ? options.config : resolveConfig(options.config),
@@ -126,7 +131,10 @@ export function lint(files: LintFile[], options: LintOptions = {}): LintResult {
       : { present: false, reason: options.absent?.report ?? "no report in the input" },
   };
   const diagnostics = [...(options.diagnostics ?? []), ...(built?.diagnostics ?? [])];
-  const indexes = buildIndexes(project);
+  // M is read after the model and before the indexes, so every rule reads the parsed M from
+  // ctx.indexes.m and stays synchronous (v3 spec, section 4.2).
+  const m = model ? await readM(model, routed.model) : emptyMIndex();
+  const indexes = buildIndexes(project, m);
   const run = runRules(project, indexes, rules, config);
   const groups = rank(run.findings, rules, config);
   // Only the rules that ran: a fact never links the page of a rule turned off or skipped. Their

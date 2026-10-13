@@ -6,6 +6,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { GERMAN_PROBE } from "../../core/build/m-parser-build.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const bundle = process.argv[2] ?? join(here, "../dist/pbiplint.mjs");
@@ -30,7 +31,14 @@ const SPECIFIERS = [
   /\b(?:import|require|__require)\s*\(\s*["']([^"']+)["']\s*\)/g,
 ];
 const imports = new Set(SPECIFIERS.flatMap((re) => [...code.matchAll(re)].map((m) => m[1])));
-const computed = /\b(?:import|require|__require)\s*\(\s*(?!["'][^"']+["']\s*\))/.test(code);
+// esbuild wraps each bundled CommonJS module (the M parser is one) in its __commonJS helper, whose
+// definition names an inner function `__require()` with no argument. That declaration is not a call,
+// so its exact text is removed before the computed-name test; every real call site, `__require(x)`
+// included, is still tested.
+const COMMONJS_HELPER = "var __commonJS = (cb, mod) => function __require() {";
+const computed = /\b(?:import|require|__require)\s*\(\s*(?!["'][^"']+["']\s*\))/.test(
+  code.replaceAll(COMMONJS_HELPER, ""),
+);
 const notAllowed = [
   ...[...imports].filter((s) => !ALLOWED.has(s)).sort(),
   ...(computed ? ["a dynamic import or require of a computed name"] : []),
@@ -48,5 +56,9 @@ if (notAllowed.length) {
   );
 }
 if (globals.length) console.error(`CLI bundle references network APIs: ${globals.join(", ")}`);
-if (notAllowed.length || globals.length) process.exit(1);
+// Not a network check, but this is the one check that reads the built CLI: the M parser ships with
+// its English messages only (v3 spec, section 3.2).
+const german = code.includes(GERMAN_PROBE);
+if (german) console.error("CLI bundle holds the M parser's German messages");
+if (notAllowed.length || globals.length || german) process.exit(1);
 console.log("CLI bundle makes no network request");

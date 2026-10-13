@@ -49,15 +49,17 @@ function fixtureConfig(fixture: string): PbiplintConfig {
 
 /** One lint per fixture, shared by the parity and native checks: the files, the run, and its ids per rule. */
 const runs = new Map(
-  expectations.map((exp) => {
-    const files = readProjectFiles(repoRoot + exp.fixture);
-    const result = lint([...files.model, ...files.report], {
-      config: { ...fixtureConfig(exp.fixture), failOn: "none" },
-    });
-    const ours: Record<string, string[]> = {};
-    for (const f of result.findings) (ours[f.ruleId] ??= []).push(f.objectId ?? f.objectName);
-    return [exp.name, { files, result, ours }] as const;
-  }),
+  await Promise.all(
+    expectations.map(async (exp) => {
+      const files = readProjectFiles(repoRoot + exp.fixture);
+      const result = await lint([...files.model, ...files.report], {
+        config: { ...fixtureConfig(exp.fixture), failOn: "none" },
+      });
+      const ours: Record<string, string[]> = {};
+      for (const f of result.findings) (ours[f.ruleId] ??= []).push(f.objectId ?? f.objectName);
+      return [exp.name, { files, result, ours }] as const;
+    }),
+  ),
 );
 
 /** What the oracle says fails, as object ids: a list rule's names, a count rule's page (or `report`). */

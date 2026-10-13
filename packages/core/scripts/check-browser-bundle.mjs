@@ -4,6 +4,7 @@ import { gzipSync } from "node:zlib";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
+import { GERMAN_PROBE, mParserEsbuild } from "../build/m-parser-build.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const result = await build({
@@ -13,6 +14,8 @@ const result = await build({
   format: "esm",
   minify: true,
   write: false,
+  metafile: true,
+  plugins: [mParserEsbuild],
   logLevel: "silent",
 });
 const code = result.outputFiles[0].text;
@@ -37,19 +40,49 @@ const hits = FORBIDDEN.filter(([, tokens]) => tokens.some((t) => code.includes(t
   ([label]) => label,
 );
 const kb = (n) => (n / 1024).toFixed(1);
+// The parser and its two dependencies (grapheme-splitter, and performance-now as the stub) apart
+// from the core's own code, each against its own budget (v3 spec, section 3.4). They are matched
+// by name, so any other dependency the core takes on counts against the core's own budget.
+const PARSER_INPUT =
+  /node_modules[\\/](?:@microsoft[\\/]powerquery-parser|grapheme-splitter)[\\/]|^pbiplint-performance-now:/;
+const [output] = Object.values(result.metafile.outputs);
+let parserBytes = 0;
+let ownBytes = 0;
+for (const [path, input] of Object.entries(output.inputs))
+  if (PARSER_INPUT.test(path)) parserBytes += input.bytesInOutput;
+  else ownBytes += input.bytesInOutput;
 console.log(
-  `core browser bundle: ${kb(size)} KB minified, ${kb(gzipSync(code).length)} KB gzipped`,
+  `core browser bundle: ${kb(size)} KB minified, ${kb(gzipSync(code).length)} KB gzipped; ` +
+    `core's own code ${kb(ownBytes)} KB, the M parser ${kb(parserBytes)} KB`,
 );
 
-// The site loads the core on every visit; 210 KB minified is the budget the v2 spec sets
-// (200 KB until #208, October 4, 2026). A tripwire for conscious growth: raise it on purpose.
-const LIMIT_KB = 210;
-if (size > LIMIT_KB * 1024) {
-  console.error(`core bundle is ${kb(size)} KB minified, over the ${LIMIT_KB} KB budget`);
-  process.exit(1);
+// Tripwires for conscious growth, raised on purpose: the core's own code at 210 KB (the v2 spec's
+// amendment of October 4, 2026) and the parser at 385 KB, measured at 376.0 KB on October 13, 2026.
+// The parser moves only when its pinned version does.
+const OWN_LIMIT_KB = 210;
+const PARSER_LIMIT_KB = 385;
+let failed = false;
+if (ownBytes > OWN_LIMIT_KB * 1024) {
+  console.error(
+    `the core's own code is ${kb(ownBytes)} KB minified, over the ${OWN_LIMIT_KB} KB budget`,
+  );
+  failed = true;
+}
+if (parserBytes > PARSER_LIMIT_KB * 1024) {
+  console.error(
+    `the M parser is ${kb(parserBytes)} KB minified, over the ${PARSER_LIMIT_KB} KB budget`,
+  );
+  failed = true;
+}
+if (code.includes(GERMAN_PROBE)) {
+  console.error(
+    "core bundle holds the parser's German messages: the English-only alias did not apply",
+  );
+  failed = true;
 }
 if (hits.length) {
   console.error(`core bundle references forbidden APIs: ${hits.join(", ")}`);
-  process.exit(1);
+  failed = true;
 }
-console.log("core bundle is browser-pure");
+if (failed) process.exit(1);
+console.log("core bundle is browser-pure, English only, and within budget");

@@ -76,7 +76,10 @@ export function formatSarif(result: LintResult, options: FormatOptions = {}): st
               {
                 physicalLocation: {
                   artifactLocation: { uri: uri(f.location.file, f.layer) },
-                  region: { startLine: f.location.line },
+                  region: {
+                    startLine: f.location.line,
+                    ...(f.location.column !== undefined ? { startColumn: f.location.column } : {}),
+                  },
                 },
               },
             ],

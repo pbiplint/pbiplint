@@ -82,7 +82,8 @@ const isTmdlExampleInfo = (info: string): boolean => /^tmdl (fires|fixed)$/.test
 
 const bullets = (s: string): string[] => s.split("\n").filter((l) => l.startsWith("- "));
 
-const run = (tmdl: string): Finding[] => lint([{ path: "example.tmdl", text: tmdl }]).findings;
+const run = async (tmdl: string): Promise<Finding[]> =>
+  (await lint([{ path: "example.tmdl", text: tmdl }])).findings;
 const hits = (findings: Finding[], id: string): Finding[] =>
   findings.filter((f) => f.ruleId === id);
 
@@ -197,14 +198,16 @@ function pbirFiles(doc: { file: string; text: string }): LintFile[] {
   return [...files, { path, text: doc.text }];
 }
 
-const runPbir = (
+const runPbir = async (
   doc: { file: string; text: string },
   withModel: boolean,
   config: unknown,
-): Finding[] =>
-  lint([...pbirFiles(doc), ...(withModel ? [STOCK_MODEL] : [])], {
-    config: resolveConfig(config),
-  }).findings;
+): Promise<Finding[]> =>
+  (
+    await lint([...pbirFiles(doc), ...(withModel ? [STOCK_MODEL] : [])], {
+      config: resolveConfig(config),
+    })
+  ).findings;
 
 /**
  * Proves a page's Example section through the engine: one fires fence the rule flags and one
@@ -212,7 +215,7 @@ const runPbir = (
  * the example stands for. PARSE_ISSUE spans both layers, so its page keeps the TMDL pair and may
  * add a JSON pair beside it; no other page mixes the two.
  */
-function checkExample(rule: Rule, example: string): void {
+async function checkExample(rule: Rule, example: string): Promise<void> {
   const check = (before: Finding[], after: Finding[]): void => {
     expect(hits(before, rule.id).length, "the fires snippet produces a finding").toBeGreaterThan(0);
     if (rule.id !== "PARSE_ISSUE")
@@ -223,7 +226,7 @@ function checkExample(rule: Rule, example: string): void {
     ).toEqual([]);
     expect(hits(after, "PARSE_ISSUE").map((f) => f.detail)).toEqual([]);
   };
-  const pbirPair = (): void => {
+  const pbirPair = async (): Promise<void> => {
     const [fires, ...moreFires] = pbirFences(example, "fires");
     const [fixed, ...moreFixed] = pbirFences(example, "fixed");
     expect(fires, "one `pbir fires <file>` fence").toBeDefined();
@@ -234,7 +237,7 @@ function checkExample(rule: Rule, example: string): void {
     expect(`${fires!.text}${fixed!.text}`).not.toContain("pbiplint.ignore");
     const config = configFence(example);
     const withModel = rule.needs.includes("model");
-    check(runPbir(fires!, withModel, config), runPbir(fixed!, withModel, config));
+    check(await runPbir(fires!, withModel, config), await runPbir(fixed!, withModel, config));
   };
   const infos = infoStrings(example);
   if (rule.layer === "model" || rule.id === "PARSE_ISSUE") {
@@ -246,13 +249,13 @@ function checkExample(rule: Rule, example: string): void {
     expect(moreFixed).toEqual([]);
     // A fix is a fix, not a suppression.
     expect(`${fires}${fixed}`).not.toContain("pbiplint.ignore");
-    check(run(fires!), run(fixed!));
-    if (rule.id === "PARSE_ISSUE" && infos.some(isPbirInfo)) pbirPair();
+    check(await run(fires!), await run(fixed!));
+    if (rule.id === "PARSE_ISSUE" && infos.some(isPbirInfo)) await pbirPair();
     else expect(infos.filter(isPbirInfo), "pbir fences on a model page").toEqual([]);
     return;
   }
   expect(infos.filter(isTmdlExampleInfo), "tmdl example fences on a report page").toEqual([]);
-  pbirPair();
+  await pbirPair();
 }
 
 describe.each(defaultRules.map((r) => [r.id, r] as const))("rule page for %s", (_id, rule) => {
@@ -323,8 +326,8 @@ describe.each(defaultRules.map((r) => [r.id, r] as const))("rule page for %s", (
 
     it.runIf(rule.status !== "needsLiveModel")(
       "shows an example the engine flags and a fix it accepts",
-      () => {
-        checkExample(rule, section(readFileSync(path, "utf8"), "Example"));
+      async () => {
+        await checkExample(rule, section(readFileSync(path, "utf8"), "Example"));
       },
     );
 
@@ -407,8 +410,8 @@ describe("the pbir example hook", () => {
   });
   const altText = ruleById("ENSURE_ALTTEXT");
 
-  it("places a visual.json on the stock page and proves the pair", () => {
-    checkExample(
+  it("places a visual.json on the stock page and proves the pair", async () => {
+    await checkExample(
       altText,
       example(
         fence("pbir fires visual.json", card("salesCard")),
@@ -416,7 +419,7 @@ describe("the pbir example hook", () => {
       ),
     );
     // The pair is checked, not only read: a fixed document that still fires fails.
-    expect(() =>
+    await expect(
       checkExample(
         altText,
         example(
@@ -424,10 +427,10 @@ describe("the pbir example hook", () => {
           fence("pbir fixed visual.json", card("salesCard")),
         ),
       ),
-    ).toThrow("the fixed snippet is clean for this rule");
+    ).rejects.toThrow("the fixed snippet is clean for this rule");
   });
 
-  it("places a page.json under its own name, in place of the stock page", () => {
+  it("places a page.json under its own name, in place of the stock page", async () => {
     const detail = (height: number) => ({
       name: "detail",
       displayName: "Detail",
@@ -435,7 +438,7 @@ describe("the pbir example hook", () => {
       height,
       width: 1280,
     });
-    checkExample(
+    await checkExample(
       ruleById("ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY"),
       example(
         fence("pbir fires page.json", detail(1440)),
@@ -450,7 +453,7 @@ describe("the pbir example hook", () => {
     ]);
   });
 
-  it("writes each entry of a tree.json as its own file and applies the config fence to both runs", () => {
+  it("writes each entry of a tree.json as its own file and applies the config fence to both runs", async () => {
     const visuals = (...names: string[]) =>
       Object.fromEntries(
         names.map((n) => [`definition/pages/${STOCK_PAGE}/visuals/${n}/visual.json`, card(n, n)]),
@@ -463,14 +466,14 @@ describe("the pbir example hook", () => {
     const config = fence("json pbiplint.config.json", {
       rules: { REDUCE_VISUALS_ON_PAGE: { max: 1 } },
     });
-    checkExample(rule, example(config, ...pair));
+    await checkExample(rule, example(config, ...pair));
     // Without the config the default of 20 holds and the fires tree is clean, so the fence is what fired it.
-    expect(() => checkExample(rule, example(...pair))).toThrow(
+    await expect(checkExample(rule, example(...pair))).rejects.toThrow(
       "the fires snippet produces a finding",
     );
   });
 
-  it("places a malformed document for PARSE_ISSUE and runs it beside the TMDL pair", () => {
+  it("places a malformed document for PARSE_ISSUE and runs it beside the TMDL pair", async () => {
     const rule = ruleById("PARSE_ISSUE");
     // The page's own JSON pair is left out, so the pair below is the only one.
     const tmdl = section(readFileSync(`${rulesDir}parse-issue.md`, "utf8"), "Example").replace(
@@ -482,7 +485,7 @@ describe("the pbir example hook", () => {
       fence("pbir fires visual.json", malformed),
       fence("pbir fixed visual.json", card("salesCard", "Total sales")),
     ];
-    checkExample(rule, `${tmdl}\n${json.join("\n\n")}\n`);
+    await checkExample(rule, `${tmdl}\n${json.join("\n\n")}\n`);
     // A document that cannot be read has no name to place it by, so it goes under x.
     expect(pbirFiles({ file: "visual.json", text: malformed }).at(-1)!.path).toBe(
       `definition/pages/${STOCK_PAGE}/visuals/x/visual.json`,
@@ -490,21 +493,21 @@ describe("the pbir example hook", () => {
     // A tree names its files itself, so it has to parse.
     expect(() => pbirFiles({ file: "tree.json", text: malformed })).toThrow();
     // Half a pair is refused, as on a report page.
-    expect(() => checkExample(rule, `${tmdl}\n${json[0]}\n`)).toThrow(
+    await expect(checkExample(rule, `${tmdl}\n${json[0]}\n`)).rejects.toThrow(
       "one `pbir fixed <file>` fence",
     );
   });
 
-  it("refuses pbir fences on a model page and tmdl example fences on a report page", () => {
+  it("refuses pbir fences on a model page and tmdl example fences on a report page", async () => {
     const hideForeignKeys = section(
       readFileSync(`${rulesDir}hide-foreign-keys.md`, "utf8"),
       "Example",
     );
     const json = fence("pbir fires visual.json", card("salesCard"));
-    expect(() =>
+    await expect(
       checkExample(ruleById("HIDE_FOREIGN_KEYS"), `${hideForeignKeys}\n${json}\n`),
-    ).toThrow("pbir fences on a model page");
-    expect(() =>
+    ).rejects.toThrow("pbir fences on a model page");
+    await expect(
       checkExample(
         altText,
         example(
@@ -513,6 +516,6 @@ describe("the pbir example hook", () => {
           fence("tmdl fires", "table Sales"),
         ),
       ),
-    ).toThrow("tmdl example fences on a report page");
+    ).rejects.toThrow("tmdl example fences on a report page");
   });
 });

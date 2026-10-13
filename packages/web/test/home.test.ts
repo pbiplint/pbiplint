@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { LEARN_HELP_URLS, legacyReportNotice, pbixRefusal } from "@pbiplint/core";
+import { LEARN_HELP_URLS, legacyReportNotice, lint, pbixRefusal } from "@pbiplint/core";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 // happy-dom resolves a relative URL against the page's http base, so the file path is built
@@ -12,7 +12,18 @@ const body = html
   .slice(html.indexOf("<body>") + 6, html.indexOf("</body>"))
   .replace(/<script[\s\S]*?<\/script>/, "");
 const notFound = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../404.html"), "utf8");
-const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
+// lint, counted but otherwise core's own, so a test can say which runs reached it.
+vi.mock("@pbiplint/core", async (importOriginal) => {
+  const core = await importOriginal<typeof import("@pbiplint/core")>();
+  return { ...core, lint: vi.fn(core.lint) };
+});
+// main.ts waits one frame and one task before it lints, so the status line is painted first; a
+// tick waits that out and then the task a run used to need.
+const tick = async (): Promise<void> => {
+  await new Promise((r) => requestAnimationFrame(r));
+  await new Promise((r) => setTimeout(r, 0));
+  await new Promise((r) => setTimeout(r, 0));
+};
 
 /** The hidden words a link that opens in a new tab ends with, in its text. */
 const NOTE = " (opens in a new tab)";
@@ -118,7 +129,7 @@ describe("home page", () => {
     expect(status.hidden).toBe(false);
     expect(status.textContent).toBe("Paste some TMDL first.");
   });
-  it("unhides the results before it renders into them", () => {
+  it("unhides the results before it renders into them", async () => {
     const results = document.getElementById("results")!;
     results.hidden = true;
     const order: string[] = [];
@@ -138,6 +149,7 @@ describe("home page", () => {
     }) as typeof results.replaceChildren;
     try {
       document.getElementById("try-sample")!.click();
+      await tick();
     } finally {
       Reflect.deleteProperty(results, "hidden");
       Reflect.deleteProperty(results, "replaceChildren");
@@ -568,6 +580,21 @@ describe("home page", () => {
     const description = (page: string): string =>
       /<meta\s+name="description"\s+content="([^"]*)"/.exec(page)?.[1] ?? "";
     expect(description(notFound)).toBe(description(html));
+  });
+  it("skips the lint of a run an input superseded while it waited to paint", async () => {
+    vi.mocked(lint).mockClear();
+    (document.getElementById("paste") as HTMLTextAreaElement).value = "table Older\n";
+    document.getElementById("lint-paste")!.click();
+    // Before the paste's frame has passed, the sample is asked for and owns the page.
+    document.getElementById("try-sample")!.click();
+    await tick();
+    await tick();
+    expect(document.querySelector("#results h2")!.textContent).toBe(
+      "Results for the sample project (model, 14 files · report, 78 files)",
+    );
+    // Only the sample was linted: the paste returned before its lint, not after it.
+    expect(vi.mocked(lint)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(lint).mock.calls[0]![0].map((f) => f.path)).not.toContain("pasted.tmdl");
   });
   it("lets the newest input win when two reads finish out of order", async () => {
     const input = document.getElementById("folder-input") as HTMLInputElement;

@@ -164,7 +164,7 @@ describe("resolveProject", () => {
     expect(p.report).toBeUndefined();
     expect(p.absent).toEqual({});
   });
-  it("walks a model's folders in name order, tables before a tables.old beside it (tracked in #101)", () => {
+  it("walks a model's folders in name order, tables before a tables.old beside it (tracked in #101)", async () => {
     // project-files.test.ts gives the browser the same backup. As whole paths, tables.old sorts
     // first; the walk goes through tables first, and core reads the files in that order.
     const root = pbip({ model: true });
@@ -185,7 +185,7 @@ describe("resolveProject", () => {
       "definition/tables/T.tmdl",
       "definition/tables.old/Sales.tmdl",
     ]);
-    const sales = lint(p.model!.files).model.tables.find((t) => t.name === "Sales")!;
+    const sales = (await lint(p.model!.files)).model.tables.find((t) => t.name === "Sales")!;
     expect(sales.columns.map((c) => c.name)).toEqual(["Amount", "Old Amount"]);
   });
   it("reads a whole PBIP folder, its .pbip file, and both parts with part-relative paths, never StaticResources or .pbi", () => {
@@ -383,7 +383,7 @@ describe("resolveProject on a .pbip that names its report (#86)", () => {
       new Error(`No semantic model or report found in Empty.Report, which ${gone} names`),
     );
   });
-  it("reads a .pbip that names no report as its folder, as before", () => {
+  it("reads a .pbip that names no report as its folder, as before", async () => {
     const root = pbip({ model: true, report: true });
     const file = join(root, "Demo.pbip");
     for (const text of [
@@ -403,7 +403,7 @@ describe("resolveProject on a .pbip that names its report (#86)", () => {
     // Core still reports a .pbip that is not valid JSON.
     writeFileSync(file, "{ not json");
     const broken = resolveProject(file);
-    const parse = lint([...broken.model!.files, ...broken.report!.files]).findings.filter(
+    const parse = (await lint([...broken.model!.files, ...broken.report!.files])).findings.filter(
       (f) => f.ruleId === "PARSE_ISSUE",
     );
     expect(parse.map((f) => f.location?.file)).toEqual(["../Demo.pbip"]);

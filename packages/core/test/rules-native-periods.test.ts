@@ -185,16 +185,18 @@ describe("HARDCODED_PERIOD_IN_DAX", () => {
       expect(run(tmdl), tmdl).toEqual([]);
   });
 
-  it("stays silent on an object that ignores it", () => {
+  it("stays silent on an object that ignores it", async () => {
     const text = sales(
       "\tmeasure Stale = CALCULATE([Total], 'Sales'[Year] = 2025)\n\t\tannotation pbiplint.ignore = HARDCODED_PERIOD_IN_DAX\n",
     );
-    const ids = (t: string) =>
-      lint([{ path: "definition/tables/Sales.tmdl", text: t }], {
-        rules: [HARDCODED_PERIOD_IN_DAX],
-      }).findings.map((f) => f.ruleId);
-    expect(ids(text)).toEqual([]);
-    expect(ids(text.replace(/\t\tannotation .*\n/, ""))).toEqual(["HARDCODED_PERIOD_IN_DAX"]);
+    const ids = async (t: string) =>
+      (
+        await lint([{ path: "definition/tables/Sales.tmdl", text: t }], {
+          rules: [HARDCODED_PERIOD_IN_DAX],
+        })
+      ).findings.map((f) => f.ruleId);
+    expect(await ids(text)).toEqual([]);
+    expect(await ids(text.replace(/\t\tannotation .*\n/, ""))).toEqual(["HARDCODED_PERIOD_IN_DAX"]);
   });
 
   it("finds nothing in the sample's and the fixtures' models", () => {

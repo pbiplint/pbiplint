@@ -264,9 +264,9 @@ describe("HARDCODED_YEAR_IN_FILTER", () => {
     expect(reportFindings(rule, files).map((f) => f.objectId)).toEqual(["other"]);
   });
 
-  it("honours an ignore annotation on the page or the visual", () => {
+  it("honours an ignore annotation on the page or the visual", async () => {
     const ignore = { annotations: [{ name: "pbiplint.ignore", value: rule.id }] };
-    const r = lint(
+    const r = await lint(
       [
         page("p", { ...filtered(entry(kept("Year", "2025L"))), ...ignore }),
         visual("p", "v1", "card", { ...filtered(entry(kept("Year", "2025L"))), ...ignore }),

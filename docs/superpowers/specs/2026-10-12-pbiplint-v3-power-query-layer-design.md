@@ -611,7 +611,7 @@ A throwaway script in the plan's folder (not committed; the corpus is not pbipli
 The largest corpus model parses in 680 ms (Node, Michael's Mac, research of October 12, 2026): its partitions embed their data as M literals, the largest 4.2 MB. A script, `scripts/make-big-model.mjs`, writes a model of the same shape and size into `tests/generated/` (git-ignored, as `make-big-report.mjs` does for reports): the same number of M partitions and the same total M size, filled with generated `#table` literals. Two guards read it:
 
 - **Node:** `packages/core/test` lints it, and the whole lint must finish within a budget set in the plan at three times the time measured on CI's runners, so a slow runner does not flake it but a parser that grows quadratic does.
-- **Browser:** the e2e suite drops it and holds the lint to the same two-second budget the 300-visual report has, if the plan's measurement in Chromium on CI shows room; otherwise to a budget set the same way as Node's.
+- **Browser:** the e2e suite drops it and holds the lint to a budget per engine. Every budget, Node's and each engine's, is three times the time measured on CI's runners, rounded up to the next 5 s. Measured on CI on October 13, 2026, that gives 20 s for Node (6.4 s on Node 20), 10 s for Chromium, 20 s for WebKit and 65 s for Firefox (20.6 s), whose parse stays linear in size but runs about 7.5 times slower than Chromium's.
 
 ### 11.6 Bundle checks
 

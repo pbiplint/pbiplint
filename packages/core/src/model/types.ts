@@ -3,6 +3,8 @@ import type { ParsedFile, TmdlNode } from "../tmdl/types.js";
 export interface SourceLocation {
   file: string;
   line: number;
+  /** 1-based, in UTF-16 code units, as SARIF counts columns; set only where a finding has one (M findings). */
+  column?: number;
 }
 
 /** Fields shared by every model object. */
@@ -56,6 +58,11 @@ export interface Table extends Named {
    * by hand against an earlier version still type-checks; buildModel always sets it.
    */
   calendars?: Calendar[];
+  /**
+   * The table's incremental refresh policy, when it has a `refreshPolicy` block. Optional, so a
+   * `Table` built by hand against an earlier version still type-checks.
+   */
+  refreshPolicy?: RefreshPolicy;
 }
 
 /**
@@ -67,6 +74,15 @@ export interface Table extends Named {
 export interface Calendar extends Named {
   table: Table;
   columns: string[];
+}
+
+/**
+ * A table's `refreshPolicy` block, named after its table. `sourceExpression` is the M Desktop keeps
+ * there for the table's query (v3 spec, section 5.1); the block's other lines stay on `node`.
+ */
+export interface RefreshPolicy extends Named {
+  table: Table;
+  sourceExpression?: string;
 }
 
 export interface Variation {

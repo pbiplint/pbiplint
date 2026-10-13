@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "./fixtures.js";
+import { setFolder } from "./folder-input.js";
 
 // The home page in a real browser: the inputs, the results, and the behaviours the happy-dom unit
 // tests can only approximate (drag events, a folder input, downloads, focus). Every test also ends
@@ -34,6 +35,10 @@ const sample = fileURLToPath(new URL("../../../examples/messy-sales", import.met
 const rulesDir = fileURLToPath(new URL("../../../rules", import.meta.url));
 // Written by scripts/make-big-report.mjs, which the web server command runs before the build.
 const big = fileURLToPath(new URL("../../../tests/generated/big-report", import.meta.url));
+// Written by scripts/make-big-model.mjs, which the web server command runs before the build.
+const bigModel = fileURLToPath(
+  new URL("../../../tests/generated/big-model/big-model.SemanticModel", import.meta.url),
+);
 
 /** A folder under the OS temp directory, built by `fill` for one test and removed after it. */
 async function withTempFolder(
@@ -181,11 +186,11 @@ test("once the page has loaded, linting makes no request, whatever alphabet the 
       mkdirSync(tables, { recursive: true });
       writeFileSync(
         join(tables, "Продажи.tmdl"),
-        "table Продажи\n\tcolumn Ποσό\n\t\tdataType: double\n\t\tsourceColumn: Ποσό\n",
+        'table Продажи\n\tcolumn Ποσό\n\t\tdataType: double\n\t\tsourceColumn: Ποσό\n\n\tpartition Продажи = m\n\t\tmode: import\n\t\tsource = #table({"Ποσό"}, {{1}})\n',
       );
     },
     async (dir) => {
-      await page.locator("#folder-input").setInputFiles(join(dir, `${name}.SemanticModel`));
+      await setFolder(page.locator("#folder-input"), join(dir, `${name}.SemanticModel`));
       await expect(page.locator("#results h2")).toContainText(name);
     },
   );
@@ -205,7 +210,7 @@ test("once the page has loaded, linting makes no request, whatever alphabet the 
 test("reads a whole model from the folder input, including a file whose name starts with a space", async ({
   page,
 }) => {
-  await page.locator("#folder-input").setInputFiles(zoo);
+  await setFolder(page.locator("#folder-input"), zoo);
   const results = page.locator("#results");
   await expect(results.locator("h2")).toHaveText(
     "Results for rule-zoo.SemanticModel (model, 17 files)",
@@ -220,7 +225,7 @@ test("reads a whole model from the folder input, including a file whose name sta
 test("lints a whole PBIP from the folder input: both layers, the facts panel, and the layer filter", async ({
   page,
 }) => {
-  await page.locator("#folder-input").setInputFiles(shelfmart);
+  await setFolder(page.locator("#folder-input"), shelfmart);
   const results = page.locator("#results");
   await expect(results.locator("h2")).toHaveText(
     /^Results for shelfmart \(model, \d+ files · report, \d+ files\)$/,
@@ -234,7 +239,7 @@ test("lints a whole PBIP from the folder input: both layers, the facts panel, an
 });
 
 test("lints a report alone and names the model it reads", async ({ page }) => {
-  await page.locator("#folder-input").setInputFiles(join(demo, "PBIP and GitHub Demo.Report"));
+  await setFolder(page.locator("#folder-input"), join(demo, "PBIP and GitHub Demo.Report"));
   await expect(page.locator("#results h2")).toHaveText(
     /^Results for PBIP and GitHub Demo\.Report \(report, \d+ files\)$/,
   );
@@ -254,7 +259,7 @@ test("refuses a folder with two reports and names them", async ({ page }) => {
       }
     },
     async (dir) => {
-      await page.locator("#folder-input").setInputFiles(dir);
+      await setFolder(page.locator("#folder-input"), dir);
       await expect(page.locator("#status")).toHaveText(
         /contains 2 reports; drop one of them: A\.Report, B\.Report/,
       );
@@ -270,7 +275,7 @@ test("lints the one project below a folder and names it, and refuses a folder wi
     "below-",
     (dir) => cpSync(sample, join(dir, "sub", "messy-sales"), { recursive: true }),
     async (dir) => {
-      await page.locator("#folder-input").setInputFiles(dir);
+      await setFolder(page.locator("#folder-input"), dir);
       const results = page.locator("#results");
       await expect(results.locator("h2")).toHaveText(
         /^Results for below-\w+\/sub\/messy-sales \(model, \d+ files · report, \d+ files\)$/,
@@ -287,7 +292,7 @@ test("lints the one project below a folder and names it, and refuses a folder wi
         cpSync(sample, join(dir, at, "messy-sales"), { recursive: true });
     },
     async (dir) => {
-      await page.locator("#folder-input").setInputFiles(dir);
+      await setFolder(page.locator("#folder-input"), dir);
       await expect(page.locator("#status")).toHaveText(
         /contains 2 projects; drop one of them: a\/messy-sales, b\/messy-sales$/,
       );
@@ -307,7 +312,7 @@ test("refuses a folder with nothing to lint from the folder input and suggests d
     "nothing-",
     (dir) => writeFileSync(join(dir, "notes.txt"), "Not a model or a report.\n"),
     async (dir) => {
-      await page.locator("#folder-input").setInputFiles(dir);
+      await setFolder(page.locator("#folder-input"), dir);
       await expect(page.locator("#status")).toHaveText(
         "No model or report found. Drop a PBIP folder, a .SemanticModel or .Report folder, or a .tmdl file. If the folder you chose holds a model or report, your browser may not have been able to open a folder inside it; drag the folder onto the page instead.",
       );
@@ -328,7 +333,7 @@ test("a folder deeper than the cap produces a notice, not silence", async ({ pag
       writeFileSync(join(dir, "Deep.tmdl"), "table Deep\n");
     },
     async (root) => {
-      await page.locator("#folder-input").setInputFiles(root);
+      await setFolder(page.locator("#folder-input"), root);
       await expect(page.locator("#results .notice")).toContainText(
         /the walk stopped 64 folders deep at .*, so files below it were not read/,
       );
@@ -337,7 +342,7 @@ test("a folder deeper than the cap produces a notice, not silence", async ({ pag
 });
 
 test("lints a 300-visual report in under two seconds", async ({ page }) => {
-  await page.locator("#folder-input").setInputFiles(big);
+  await setFolder(page.locator("#folder-input"), big);
   const results = page.locator("#results");
   await expect(results.locator("h2")).toHaveText(/report, \d+ files/);
   // The run the budget holds read the whole report: the facts panel counts all 300 visuals.
@@ -347,6 +352,53 @@ test("lints a 300-visual report in under two seconds", async ({ page }) => {
   test.info().annotations.push({ type: "lint-ms", description: String(ms) });
   expect(ms).toBeGreaterThan(0);
   expect(ms).toBeLessThan(2000);
+});
+
+test("lints a model as heavy to parse as the corpus's slowest within its engine's budget, the status painted first", async ({
+  page,
+  browserName,
+}) => {
+  // Above the largest budget (Firefox's 65 seconds) plus setup, so a slow run fails on its
+  // budget, not on Playwright's test timeout.
+  test.setTimeout(120_000);
+  // Every frame's status line, read in requestAnimationFrame, which runs just before the browser
+  // paints: lint holds the main thread for seconds, so a status set but never painted would be
+  // set in vain.
+  await page.evaluate(() => {
+    const seen: string[] = [];
+    (window as unknown as { painted: string[] }).painted = seen;
+    const status = document.getElementById("status")!;
+    const frame = (): void => {
+      if (!status.hidden) seen.push(status.textContent ?? "");
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  });
+  await setFolder(page.locator("#folder-input"), bigModel);
+  const results = page.locator("#results");
+  await expect(results.locator("h2")).toHaveText(/model, 10 files/, { timeout: 30_000 });
+  // PARSE_ISSUE's name, as the results list it: no M in the model failed to parse.
+  await expect(results).not.toContainText("File could not be fully parsed");
+  const painted = await page.evaluate(() => (window as unknown as { painted: string[] }).painted);
+  expect(painted).toContain("Reading files...");
+  const ms = Number(await results.getAttribute("data-lint-ms"));
+  test.info().annotations.push({ type: "lint-ms", description: String(ms) });
+  console.log(`big model lint-ms (${browserName}): ${ms}`);
+  expect(ms).toBeGreaterThan(0);
+  // Each budget is three times CI's measured time, rounded up to the next 5 s (v3 spec, section
+  // 11.5). On GitHub's ubuntu runners on October 13, 2026, the lint (the whole run, data-lint-ms,
+  // one worker) took 20.6 s in Firefox, and the whole test, setup included and so an upper bound on
+  // the lint, took 2.9 s in Chromium and 5.3 s in WebKit. On Michael's Mac the lint takes about
+  // 0.85 s in Chromium, 1.1 s in WebKit and 6.2 s in Firefox. Firefox's parse stays linear in size
+  // (600 rows 70 ms, 3,000 rows 375 ms), a constant factor of about 7.5 over Chromium, most likely
+  // because the parser awaits at nearly every node. A parser that turned quadratic would still
+  // blow every budget.
+  const budgetMs: Record<typeof browserName, number> = {
+    chromium: 10_000,
+    webkit: 20_000,
+    firefox: 65_000,
+  };
+  expect(ms).toBeLessThan(budgetMs[browserName]);
 });
 
 test("the Choose a folder button opens the browser's file chooser where there is no folder picker", async ({
@@ -361,7 +413,10 @@ test("the Choose a folder button opens the browser's file chooser where there is
     page.waitForEvent("filechooser"),
     page.getByRole("button", { name: "Choose a folder" }).click(),
   ]);
-  await chooser.setFiles(zoo);
+  // The chooser is the folder input's, which is given the folder through setFolder rather than
+  // chooser.setFiles: both reach the same Playwright race setFolder explains.
+  expect(await chooser.element().evaluate((el) => (el as Element).id)).toBe("folder-input");
+  await setFolder(page.locator("#folder-input"), zoo);
   await expect(page.locator("#results h2")).toHaveText(
     "Results for rule-zoo.SemanticModel (model, 17 files)",
   );
@@ -498,7 +553,7 @@ test("a clean run offers nothing to copy", async ({ page }) => {
       );
     },
     async (dir) => {
-      await page.locator("#folder-input").setInputFiles(join(dir, "Clean.SemanticModel"));
+      await setFolder(page.locator("#folder-input"), join(dir, "Clean.SemanticModel"));
       await expect(page.locator("#results .clean")).toHaveText("No findings.");
       await expect(page.getByRole("button", { name: "Copy for an AI assistant" })).toHaveCount(0);
       await expect(page.locator(".export-note")).toHaveCount(0);

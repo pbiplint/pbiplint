@@ -1,6 +1,7 @@
 import {
   CATEGORY_ORDER,
   LEARN_HELP_URLS,
+  locationOf,
   plural,
   SEVERITY_LABEL,
   showControls,
@@ -494,7 +495,7 @@ function renderGroup(g: RankedGroup): HTMLElement {
       {},
       h("td", { class: "mono" }, f.objectName),
       h("td", {}, f.objectType),
-      h("td", { class: "mono" }, f.location ? `${f.location.file}:${f.location.line}` : ""),
+      h("td", { class: "mono" }, locationOf(f)),
       h("td", {}, f.detail ?? ""),
     ),
   );

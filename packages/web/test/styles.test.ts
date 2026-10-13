@@ -40,13 +40,13 @@ function contrast(fg: string, bg: string): number {
 }
 
 describe("styles.css", () => {
-  it("has a rule for every class the results and the home page use", () => {
+  it("has a rule for every class the results and the home page use", async () => {
     document.body.innerHTML = indexHtml
       .slice(indexHtml.indexOf("<body>") + 6, indexHtml.indexOf("</body>"))
       .replace(/<script[\s\S]*?<\/script>/, "");
     const container = document.createElement("section");
     document.body.append(container);
-    const sample = lint(SAMPLE_FILES, { config: resolveConfig(JSON.parse(SAMPLE_CONFIG)) });
+    const sample = await lint(SAMPLE_FILES, { config: resolveConfig(JSON.parse(SAMPLE_CONFIG)) });
     renderResults(container, sample, {
       source: "the sample project",
       files: SAMPLE_FILES.map((f) => f.path),
@@ -63,9 +63,13 @@ describe("styles.css", () => {
       { source: "the sample project" },
     );
     const project = classesIn(document.body);
-    renderResults(container, lint([{ path: "m.tmdl", text: "model Model\n" }], { rules: [] }), {
-      source: "pasted TMDL",
-    });
+    renderResults(
+      container,
+      await lint([{ path: "m.tmdl", text: "model Model\n" }], { rules: [] }),
+      {
+        source: "pasted TMDL",
+      },
+    );
     const used = [...new Set([...withFindings, ...project, ...classesIn(document.body)])].sort();
     for (const c of ["facts", "fact", "flag", "detail", "layer", "model", "report", "project"])
       expect(used).toContain(c);

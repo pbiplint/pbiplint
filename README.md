@@ -171,13 +171,11 @@ to 2025. "Report at a glance" states what the report will do whether or not anyt
 
 The Power Query layer: the M behind each table's partitions, the shared expressions, and incremental
 refresh policies, read with Microsoft's Power Query parser, and the file's Power Query options. 6
-rules check it: Microsoft's `MINIMIZE_POWER_QUERY_TRANSFORMATIONS` and 5 of pbiplint's own, for a
-path on a local drive, a Python or R script, Excel headers promoted by the workbook reader, ODBC or
-OLE DB where Power BI has a connector, and a file set to ignore privacy levels. A finding in M names
-the query and the step as Power Query's editor shows them, at the line and column in the TMDL file,
-and M that does not parse gets a `PARSE_ISSUE` error where the parser stopped. 111 rules in all, 29
-of them built into pbiplint; the [rules index](https://pbiplint.com/rules/?layer=powerquery) filters
-to the Power Query ones.
+rules check it: Microsoft's `MINIMIZE_POWER_QUERY_TRANSFORMATIONS` and 5 of pbiplint's own. A
+finding in M names the query and the step as Power Query's editor shows them, at the line and column
+in the TMDL file, and M that does not parse gets a `PARSE_ISSUE` error where the parser stopped. 111
+rules in all, 29 of them built into pbiplint; the
+[rules index](https://pbiplint.com/rules/?layer=powerquery) filters to the Power Query ones.
 
 ## Links
 

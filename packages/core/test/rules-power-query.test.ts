@@ -238,6 +238,9 @@ describe("PRIVACY_LEVELS_IGNORED (v3 spec, section 9.8)", () => {
     expect(run(block("legacyRedirects", "returnErrorValuesAsNull"))).toEqual([]);
     expect(run("model Model\n\tculture: en-US\n")).toEqual([]);
   });
+  it("leaves alone fastCombine written with the value false", () => {
+    expect(run(block("fastCombine: false"))).toEqual([]);
+  });
   it("is silenced by an ignore annotation on the model", async () => {
     const tmdl = `${block("fastCombine")}\n\tannotation pbiplint.ignore = PRIVACY_LEVELS_IGNORED\n`;
     const result = await lint([{ path: "definition/model.tmdl", text: tmdl }]);

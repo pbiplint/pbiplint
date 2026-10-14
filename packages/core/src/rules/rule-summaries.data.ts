@@ -73,6 +73,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Excel.Workbook calls that ask the workbook reader to promote headers: `true` as the second argument, or `UseHeaders = true` in its options record.",
   EXPRESSION_RELIANT_OBJECTS_MUST_HAVE_AN_EXPRESSION:
     "Measures, calculated columns, and calculation items whose expression is empty.",
+  EXTENSION_FILTER_CASE:
+    'Power Query filters on a folder\'s files that compare the `Extension` column with text such as `".csv"` as written, so a file whose extension is in other capitals, such as `.CSV`, is left out.',
   FILTER_COLUMN_VALUES:
     "CALCULATE or CALCULATETABLE whose first filter argument is `FILTER('Table', 'Table'[Column] ...)`.",
   FILTER_MEASURE_VALUES_BY_COLUMNS:

@@ -82,6 +82,7 @@ A model that is never published needs no refresh in the service, and one refresh
 - `DYNAMIC_DATA_SOURCE` reports a path the service cannot know before the query runs (read from the rows, built by a function call, chosen with `if`, or a custom function's parameter), which it cannot refresh at all.
 - `HARDCODED_SERVER_NAME` reports a database server written into a query, which a parameter holds in the same way.
 - `LEGACY_EXCEL_FILE` reports an `.xls` or `.xlsb` workbook, often one read from a local path.
+- `EXTENSION_FILTER_CASE` reports a filter on a folder's files that misses an extension written in other capitals, often over a local folder.
 
 ## Links
 

@@ -104,6 +104,10 @@
       "Sample File",
       "Transform Sample File",
       "Weather Data"
+    ],
+    "EXTENSION_FILTER_CASE": [
+      "Sample File",
+      "Weather Data"
     ]
   },
   "results": {

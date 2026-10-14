@@ -3,6 +3,7 @@ import {
   callOf,
   calls,
   identifierName,
+  type MCall,
   isWithin,
   nodesOfKind,
   parentOf,
@@ -904,6 +905,71 @@ export const LEGACY_EXCEL_FILE = pbiplintRule({
   },
 });
 
+/** The functions that list a folder's files, with an Extension column. */
+const FILE_LISTING = /^(?:Folder|SharePoint)\.(?:Files|Contents)$/;
+
+/**
+ * Extensions left alone in any case, since the programs that write them keep one case: a log
+ * file's (Michael, October 13, 2026). One alternative per extension.
+ */
+const ONE_CASE_EXTENSION = /^\.(?:log)$/i;
+
+/**
+ * Whether a table is a file listing whose Extension column keeps its case: followed back through
+ * each step's first argument to one of the listing functions, with no Table.TransformColumns on the
+ * way that names the Extension column, which may lowercase it.
+ */
+function listingKeepsCase(m: MIndex, q: MQuery, table: Node): boolean {
+  const transformsExtension = (c: MCall): boolean =>
+    c.name === "Table.TransformColumns" &&
+    textLiterals(q).some((t) => t.value === "Extension" && isWithin(q, t.node, c.node));
+  for (let c = callOf(boundValue(m, q, table).node), depth = 0; c && depth < 50; depth++) {
+    if (FILE_LISTING.test(c.name)) return true;
+    if (transformsExtension(c) || !c.args[0]) return false;
+    c = callOf(boundValue(m, q, c.args[0]).node);
+  }
+  return false;
+}
+
+/** `[Extension]`, the file listing's column, as a row filter reads it. */
+const isExtension = (n: Node): boolean => {
+  const v = unwrap(n);
+  return v.kind === Kind.FieldSelector && identifierName(v.content.literal) === "Extension";
+};
+
+// A row filter over a file listing that compares [Extension] with text as written, so ".csv" misses
+// "B.CSV" (v3 spec, section 9.10). A comparison through Text.Lower, Text.Upper, or
+// Comparer.OrdinalIgnoreCase, a listing whose Extension column a Table.TransformColumns step
+// changes first, and a log file's extension are left alone.
+export const EXTENSION_FILTER_CASE = pbiplintRule({
+  id: "EXTENSION_FILTER_CASE",
+  name: "File extension filter misses other cases",
+  category: "Error Prevention",
+  severity: 2,
+  scope: ["Partition", "NamedExpression", "Table"],
+  layer: "powerquery",
+  check: (_project, { indexes: { m } }) =>
+    m.queries.flatMap((q) =>
+      calls(q).flatMap((c) => {
+        const [table, condition] = c.args;
+        if (c.name !== "Table.SelectRows" || !table || !condition || !listingKeepsCase(m, q, table))
+          return [];
+        return nodesOfKind(q, Kind.EqualityExpression).flatMap((node) => {
+          if (node.kind !== Kind.EqualityExpression || !isWithin(q, node, condition)) return [];
+          const text = isExtension(node.left)
+            ? textValue(unwrap(node.right))
+            : isExtension(node.right)
+              ? textValue(unwrap(node.left))
+              : undefined;
+          if (text === undefined || !/[a-z]/i.test(text) || ONE_CASE_EXTENSION.test(text))
+            return [];
+          const other = text === text.toLowerCase() ? text.toUpperCase() : text.toLowerCase();
+          return [mFinding(m, q, node, `the extension test matches "${text}" but not "${other}"`)];
+        });
+      }),
+    ),
+});
+
 /**
  * pbiplint's own Power Query rules (v3 spec, section 9): each reads the M a model's queries hold,
  * or the file's Power Query options, and reports on the model's files.
@@ -923,4 +989,5 @@ export const powerQueryRules: Rule[] = [
   HARDCODED_SECRET_IN_QUERY,
   HARDCODED_SERVER_NAME,
   LEGACY_EXCEL_FILE,
+  EXTENSION_FILTER_CASE,
 ];

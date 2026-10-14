@@ -5,6 +5,7 @@ import {
   DEFAULT_STEP_NAMES,
   DYNAMIC_DATA_SOURCE,
   EXCEL_USE_HEADERS,
+  EXTENSION_FILTER_CASE,
   FIXED_DATE_IN_ROW_FILTER,
   HARDCODED_SECRET_IN_QUERY,
   HARDCODED_SERVER_NAME,
@@ -1162,5 +1163,84 @@ describe("LEGACY_EXCEL_FILE (v3 spec, section 9.17)", () => {
       "\tD",
     );
     expect(await mFindings(rule, tmdl)).toEqual([]);
+  });
+});
+
+describe("EXTENSION_FILTER_CASE (v3 spec, section 9.10)", () => {
+  const rule = EXTENSION_FILTER_CASE;
+  it("is a built-in Power Query warning on a query's owner", () => {
+    isPowerQueryRule(rule, 2, "Error Prevention");
+    expect(rule.name).toBe("File extension filter misses other cases");
+    expect(rule.scope).toEqual(["Partition", "NamedExpression", "Table"]);
+  });
+  it("reports an extension compared as written over a folder listing, on the comparison", async () => {
+    const tmdl = table(
+      "Sales Files",
+      "let",
+      '\tSource = Folder.Files("C:\\Demo\\Data\\Sales"),',
+      '\t#"Filtered Rows" = Table.SelectRows(Source, each [Extension] = ".csv")',
+      "in",
+      '\t#"Filtered Rows"',
+    );
+    expect(await mFindings(rule, tmdl)).toEqual([
+      {
+        objectType: "Partition",
+        objectName: "Sales Files",
+        location: { file: "inline.tmdl", line: 7, column: 55 },
+        detail:
+          "query 'Sales Files', step 'Filtered Rows': the extension test matches \".csv\" but not \".CSV\"",
+      },
+    ]);
+  });
+  it("reads <>, the text first, an upper-case extension, steps between, and every listing function", async () => {
+    const tmdl = table(
+      "Files",
+      "let",
+      '\tA = Table.SelectRows(SharePoint.Files("https://example.sharepoint.com/sites/s"), each ".XLSX" = [Extension]),',
+      '\tB = Table.SelectRows(Table.RemoveColumns(Folder.Contents("C:\\Demo\\Data"), {"Attributes"}), each [Extension] <> ".tmp"),',
+      '\tListed = SharePoint.Contents("https://example.sharepoint.com/sites/s"),',
+      "\tKept = Listed,",
+      '\tC = Table.SelectRows(Kept, each [Name] <> "x" and [Extension] = ".Json")',
+      "in",
+      "\tC",
+    );
+    expect((await mFindings(rule, tmdl)).map((f) => f.detail)).toEqual([
+      "query 'Files', step 'A': the extension test matches \".XLSX\" but not \".xlsx\"",
+      "query 'Files', step 'B': the extension test matches \".tmp\" but not \".TMP\"",
+      "query 'Files', step 'C': the extension test matches \".Json\" but not \".json\"",
+    ]);
+  });
+  it("leaves alone a comparison that folds case, a lowercased column, another source, and text with no letter", async () => {
+    const tmdl = table(
+      "Files",
+      "let",
+      '\tSource = Folder.Files("C:\\Demo\\Data\\Sales"),',
+      '\tA = Table.SelectRows(Source, each Comparer.OrdinalIgnoreCase([Extension], ".csv") = 0),',
+      '\tB = Table.SelectRows(Source, each Text.Lower([Extension]) = ".csv"),',
+      '\tLowercased = Table.TransformColumns(Source, {{"Extension", Text.Lower, type text}}),',
+      '\tC = Table.SelectRows(Lowercased, each [Extension] = ".csv"),',
+      '\tD = Table.SelectRows(Lakehouse.Contents(null), each [Extension] = ".csv"),',
+      '\tE = Table.SelectRows(Source, each [Extension] = ".7"),',
+      '\tF = Table.SelectRows(Source, each [Name] = "a.csv")',
+      "in",
+      "\tF",
+    );
+    expect(await mFindings(rule, tmdl)).toEqual([]);
+  });
+  it("leaves a log file's extension alone in any case, and reports any other extension in capitals", async () => {
+    const tmdl = table(
+      "Gateway Logs",
+      "let",
+      '\tSource = Folder.Files("C:\\Demo\\Data\\Logs"),',
+      '\tLower = Table.SelectRows(Source, each [Extension] = ".log"),',
+      '\tUpper = Table.SelectRows(Source, each [Extension] = ".LOG"),',
+      '\tMixed = Table.SelectRows(Source, each ".Log" = [Extension]),',
+      '\tCsv = Table.SelectRows(Source, each [Extension] = ".CSV")',
+      "in",
+      "\tCsv",
+    );
+    expect((await mFindings(rule, tmdl)).map((f) => f.detail)).toEqual([
+      "query 'Gateway Logs', step 'Csv': the extension test matches \".CSV\" but not \".csv\"",
+    ]);
   });
 });

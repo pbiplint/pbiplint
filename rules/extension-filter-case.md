@@ -64,7 +64,7 @@ In Power BI Desktop, choose Transform data, select the query, and select the fil
 
 ## When to ignore it
 
-When the files come from one system that always writes the extension in the same case, the filter cannot miss one. A comparison that does not change case says so to the next reader too.
+When the files come from one system that always writes the extension in the same case, the filter cannot miss one. A comparison that ignores case also tells the next reader that case does not matter.
 
 ## Quirks
 

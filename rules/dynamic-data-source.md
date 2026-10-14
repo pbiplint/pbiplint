@@ -79,13 +79,14 @@ A model that is never published, or never refreshed in the service, can build it
 - An address held by a parameter, a fixed text, a step that holds one, or text joined with `&` from those, is left alone, however deeply the steps nest.
 - An address chosen with `if ... then ... else` is reported whatever its branches hold, because Power BI Desktop reports it: in [a check on October 13, 2026](https://github.com/pbiplint/pbiplint/issues/78#issuecomment-6158143617), Data source settings showed its dynamic source warning for a web address chosen between two fixed texts by a parameter. It counts even when one branch raises an `error`, since Desktop does not evaluate the condition.
 - An address that is a custom function's own parameter, or a field of one, is reported, as Desktop reported it in the same check, even when every call passes fixed text.
+- A function written in place as an argument, such as `(r) => Web.Contents(r[Url])` in `Table.AddColumn`, is reported as a custom function's parameter, though the address comes from the rows.
 - A name nothing in the model defines is left alone.
 - Each call is its own finding.
 - A query whose M does not parse is not read; it gets a `PARSE_ISSUE` finding instead.
 
 ## Related rules
 
-- `LOCAL_DRIVE_PATH` reports a fixed path on a local drive; this rule reports an address read from the rows or built at run time.
+- `LOCAL_DRIVE_PATH` reports a fixed path on a local drive; this rule reports an address the service cannot know before the query runs: read from the rows, built by a function call, chosen with `if`, or a custom function's parameter.
 - `HARDCODED_SERVER_NAME` reports a server written as text; a parameter is the fix for both rules.
 - `HARDCODED_SECRET_IN_QUERY` reads the same `Web.Contents` calls for a credential; a key moved into the `Query` record keeps the address static but is still written into the query.
 

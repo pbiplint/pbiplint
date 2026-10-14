@@ -259,7 +259,7 @@ On top of it, `origin(q, expression)` classifies a value, for the data source ru
 
 Order: `static` < `unknown` < `chosen` < `parameter` < `computed` < `row`. Each name is followed once per classification (a visited set of node ids), so a cycle reads as `unknown`.
 
-Amended October 13, 2026 (the coordinator's decision, pull request 6, from the corpus spot check): an `if ... then ... else` is read by its two branches only, since its condition chooses between them and builds neither, and an `error` expression is `static`, since it stops the query before any source is read. As first written, a function call in the condition made the value `computed`, which reported 3 custom functions whose address is a parameter either way (`if Text.EndsWith(DataFolder, "\") then DataFolder else DataFolder & "\"`, and an `error` when a parameter is empty). `DYNAMIC_DATA_SOURCE`'s corpus count was 19 findings in 11 models (8 repositories) as written, and is 16 in 8 models (6 repositories) after. An `if` over a parameter stays `static`, pending the Desktop check (section 9.3).
+Amended October 13, 2026 (the coordinator's decision, pull request 6, from the corpus spot check): an `if ... then ... else` is read by its two branches only, since its condition chooses between them and builds neither, and an `error` expression is `static`, since it stops the query before any source is read. As first written, a function call in the condition made the value `computed`, which reported 3 custom functions whose address is a parameter either way (`if Text.EndsWith(DataFolder, "\") then DataFolder else DataFolder & "\"`, and an `error` when a parameter is empty). `DYNAMIC_DATA_SOURCE`'s corpus count was 19 findings in 11 models (8 repositories) as written, and is 16 in 8 models (6 repositories) after. An `if` over a parameter stays `static`, pending the Desktop check (section 9.3; superseded below).
 
 Amended October 13, 2026 ([Michael's Desktop check](https://github.com/pbiplint/pbiplint/issues/78#issuecomment-6158143617), pull request 8): Power BI Desktop's Data source settings showed its dynamic source warning for a web address chosen with `if ... then ... else` over a parameter between two fixed texts, and for a web address that is a custom function's parameter called with fixed text. So an `if` is `chosen` whatever its branches, and the worst of that and its branches; its condition still adds nothing, and a branch that raises an `error` no longer leaves the value `static`. An `if` with a literal condition (`if true then`) counts too: Desktop does not evaluate the condition, and one rule is simpler to state and test. A function's parameter, and a field of one, is `parameter`. Both sit below `computed`, so an address that is also built by a call or read from the rows keeps that detail.
 
@@ -272,7 +272,7 @@ Michael approved 15 new rules on October 13, 2026 ([issuecomment-6143569646](htt
 | Severity | Rules |
 | --- | --- |
 | Error | `DYNAMIC_DATA_SOURCE` (9.3), `INCREMENTAL_REFRESH_RANGE_BOUNDS` (9.4), `HARDCODED_SECRET_IN_QUERY` (9.5) |
-| Warning | `SORT_NOT_HELD_FOR_REMOVE_DUPLICATES` (9.2), `LOCAL_DRIVE_PATH` (9.6), `PRIVACY_LEVELS_IGNORED` (9.8), `SCRIPT_IN_QUERY` (9.9), `EXTENSION_FILTER_CASE` (9.10, if the Desktop check keeps it), `KEEP_FIRST_ROWS_LEFT_IN` (9.11) |
+| Warning | `SORT_NOT_HELD_FOR_REMOVE_DUPLICATES` (9.2), `LOCAL_DRIVE_PATH` (9.6), `PRIVACY_LEVELS_IGNORED` (9.8), `SCRIPT_IN_QUERY` (9.9), `EXTENSION_FILTER_CASE` (9.10, kept by the Desktop check), `KEEP_FIRST_ROWS_LEFT_IN` (9.11) |
 | Info | `EXCEL_USE_HEADERS` (9.12), `DEFAULT_STEP_NAMES` (9.13), `HARDCODED_SERVER_NAME` (9.14), `ODBC_WHERE_CONNECTOR_EXISTS` (9.15), `FIXED_DATE_IN_ROW_FILTER` (9.16), `LEGACY_EXCEL_FILE` (9.17) |
 
 - **The severity test** (Michael, October 13, 2026). An error fails a pipeline by default (`--fail-on error`), so an error means the query text alone shows a broken model or unreliable data, and nobody writes it on purpose. A warning is likely trouble that a setting can fix, or that might be deliberate. Info is an improvement worth making.
@@ -422,7 +422,7 @@ The shipped rule (`packages/core/src/rules/microsoft-bpa/tables.ts:106`) matches
 ### 9.10 `EXTENSION_FILTER_CASE`
 
 - **Name:** "File extension filter misses other cases". **Category:** Error Prevention. **Severity:** warning.
-- **Conditional:** kept only if Michael's Windows VM check shows that `Folder.Files` keeps an extension's case (a folder holding `a.csv` and `B.CSV`; read the **Extension** column). If it lowercases, the rule is dropped before its pull request, its page is not written, and its m-zoo shapes stay as harmless data.
+- **Conditional:** kept only if Michael's Windows VM check shows that `Folder.Files` keeps an extension's case (a folder holding `a.csv` and `B.CSV`; read the **Extension** column). If it lowercases, the rule is dropped before its pull request, its page is not written, and its m-zoo shapes stay as harmless data. Settled October 13, 2026: kept (see the amendment below).
 - **Flags:** a `Table.SelectRows` over a file listing (`Folder.Files`, `Folder.Contents`, `SharePoint.Files`, `SharePoint.Contents`, followed back through earlier steps with the resolver) whose condition compares `[Extension]` with a text literal, with no case folding. Located on the comparison.
 - **Leaves alone:** a condition with `Text.Lower`, `Text.Upper`, or `Comparer.OrdinalIgnoreCase`; a listing whose **Extension** column an earlier step lowercases or uppercases; a listing the resolver cannot follow back to one of the four functions (10 corpus filters over lakehouse and storage listings).
 - **Detail:** `query 'Sales Files', step 'Filtered Rows': the extension test matches ".csv" but not ".CSV"`.
@@ -430,7 +430,7 @@ The shipped rule (`packages/core/src/rules/microsoft-bpa/tables.ts:106`) matches
   - Microsoft, [SharePoint.Files, Example 2](https://learn.microsoft.com/en-us/powerquery-m/sharepoint-files#example-2), whose filter is `Comparer.OrdinalIgnoreCase([Extension], ".xlsx") = 0`: "The extension comparison is case-insensitive, so it also matches `.XLSX`."
   - Gašper Kamenšek, [Making Importing from Folder in Power Query (or Power BI) Bulletproof](https://excelunplugged.com/2018/02/13/making-importing-from-folder-in-power-query-or-power-bi-bulletproof/) (February 13, 2018), as the second research pass quotes it.
 - **Fix route** in Desktop: **Transform data**, select the query, select the filter step, and in the formula bar change `[Extension] = ".csv"` to `Comparer.OrdinalIgnoreCase([Extension], ".csv") = 0`, as Microsoft's example writes it. Without editing the formula: before the filter, select the **Extension** column and choose **Transform**, **Format**, **lowercase**.
-- **Fixtures:** `each [Extension] = ".csv"` over `Folder.Files` (fires, if kept); the same with `Comparer.OrdinalIgnoreCase` (does not); the same after a lowercase step (does not).
+- **Fixtures:** `each [Extension] = ".csv"` over `Folder.Files` (fires); the same with `Comparer.OrdinalIgnoreCase` (does not); the same after a lowercase step (does not).
 - **Corpus:** 54 filters over `Folder.Files` in at most 12 models (10 repositories).
 - **Amended October 13, 2026:** [Michael's Desktop check](https://github.com/pbiplint/pbiplint/issues/78#issuecomment-6158143617) showed `Folder.Files` keeps an extension's case (`B.CSV` lists as `.CSV`), so the rule ships. Michael, the same day: "Leave .log alone." A filter on `.log`, in any case, is left alone, since the programs that write log files keep one case for them. Corpus: 54 filters in 6 models (6 repositories) as first written, 52 of them on `.log`; 2 in 2 models (2 repositories) after.
 
@@ -565,8 +565,8 @@ Michael, October 13, 2026: "Please add the clickable filter on the rules index."
 ### 10.3 Pages and counts
 
 - **No new gate while v3 is built.** Everything ships in one release from `release/0.3.0` (section 12), and `pages.yml` deploys only from main, so nothing half-built reaches the site; no rule needs a gate of its own.
-- **Rule pages:** fifteen new pages from the template (fourteen if the Desktop check drops `EXTENSION_FILTER_CASE`), and changes to `parse-issue.md` and `minimize-power-query-transformations.md`. Each new page's example is a `tmdl fires` and `tmdl fixed` pair that `rule-pages.test.ts` lints, as for every page, so each example must parse and fire.
-- **The rules index** counts its rules itself. The rule counts in the root, CLI, and core READMEs and the About page move from 106 rules (24 built in) to 121 (39 built in), or 120 (38 built in) without `EXTENSION_FILTER_CASE`. The About page and the READMEs name Power Query as a part pbiplint reads.
+- **Rule pages:** fifteen new pages from the template, and changes to `parse-issue.md` and `minimize-power-query-transformations.md`. Each new page's example is a `tmdl fires` and `tmdl fixed` pair that `rule-pages.test.ts` lints, as for every page, so each example must parse and fire.
+- **The rules index** counts its rules itself. The rule counts in the root, CLI, and core READMEs and the About page move from 106 rules (24 built in) to 121 (39 built in). The About page and the READMEs name Power Query as a part pbiplint reads.
 - **Privacy page:** no change. Its statements hold as written (section 3.3).
 
 ## 11. Testing
@@ -580,7 +580,7 @@ Michael, October 13, 2026: "Please add the clickable filter on the rules index."
   - Nothing unparsable: the parity test requires a captured fixture to read with no `PARSE_ISSUE`.
   - A `model.tmdl` with a `dataAccessOptions` block holding `fastCombine` (section 9.8).
   - A `C:\Demo\Data\` `.xls` path for `LEGACY_EXCEL_FILE`; it has no file behind it, as no fixture path does.
-- **The Desktop check does not hold up the capture.** Michael's Windows VM check can move the two dynamic-source shapes (section 9.3) into `row` or `computed`, and keep or drop `EXTENSION_FILTER_CASE` (section 9.10). All three shapes are in m-zoo from the start, so the check's answer changes only pbiplint's own `tests/expectations/pbiplint/m-zoo.json`, never the Tabular Editor captures, which hold no M rule. Nobody waits on the check to capture.
+- **The Desktop check did not hold up the capture.** [Michael's Windows VM check](https://github.com/pbiplint/pbiplint/issues/78#issuecomment-6158143617) on October 13, 2026 moved the two dynamic-source shapes (section 9.3) into `origin`'s `chosen` and `parameter` classes, and kept `EXTENSION_FILTER_CASE` (section 9.10). All three shapes were in m-zoo from the start, so the check's answers changed only pbiplint's own `tests/expectations/pbiplint/m-zoo.json`, not the Tabular Editor captures, which hold no M rule.
 - **Captured before October 31, 2026,** all three ways with `te` 0.7.1.2 (Microsoft's ruleset, the built-in rules, and the survey's files) and added to `CAPTURED` in `scripts/test/te-captures.test.mjs`, as te3-zoo was. After that date it cannot change; a later shape goes in a new fixture whose expectations are pbiplint's own.
 - **The new rules' expectations** are pinned in `tests/expectations/pbiplint/m-zoo.json` (rule, object, line, column, detail; a folder of its own, since `parity.test.ts:23` reads every `.json` file at the top level as a Tabular Editor capture), read by a new `packages/core/test/rules-m.test.ts`. The M rules have no Tabular Editor oracle (Michael, October 12, 2026), so the file is pbiplint's own, reviewed by hand once.
 - **Unit tests** for what a fixture cannot hold: M that does not parse (`PARSE_ISSUE` with line and column, the 120-character cut), a lex error, a `sourceExpression` that differs from its partition, the resolver's scopes one by one, and the column formula on each storage style with tabs and spaces.
@@ -613,13 +613,13 @@ A throwaway script in the plan's folder (not committed; the corpus is not pbipli
   | Rule | Expected | Moves because |
   | --- | --- | --- |
   | `SORT_NOT_HELD_FOR_REMOVE_DUPLICATES` | 19 or fewer, 10 or fewer | The one-argument exception; measured 10, 5 after the sort-on-keys exception (section 9.2, amended) |
-  | `DYNAMIC_DATA_SOURCE` | 18, 13 or fewer | Function parameters left out |
+  | `DYNAMIC_DATA_SOURCE` | 18, 13 or fewer | Function parameters left out; measured 22 in 13 models after pull request 8, which counts function parameters (section 9.3, amended) |
   | `INCREMENTAL_REFRESH_RANGE_BOUNDS` | 4, 4 | |
   | `HARDCODED_SECRET_IN_QUERY` | 60 or more, 2 or more | The parameter-literal shape |
   | `LOCAL_DRIVE_PATH` | 1,083, 303 or fewer | |
   | `PRIVACY_LEVELS_IGNORED` | 44, 44 | |
   | `SCRIPT_IN_QUERY` | 7, 3 | |
-  | `EXTENSION_FILTER_CASE` | 54, 12 or fewer | Unresolved listings left out |
+  | `EXTENSION_FILTER_CASE` | 54, 12 or fewer | Unresolved listings left out; measured 2 in 2 models, with `.log` left alone (section 9.10, amended) |
   | `KEEP_FIRST_ROWS_LEFT_IN` | 2, 1 | |
   | `EXCEL_USE_HEADERS` | 26, 21 | |
   | `DEFAULT_STEP_NAMES` | 3,274 or more, 517 or more | Shared expressions added |
@@ -679,7 +679,7 @@ Each with CI and e2e green and one Opus review of the branch, merged by the coor
 3. **The Power Query family and the shipped rule on the parser.** The `powerquery` rule layer through core, the CLI, and the site (section 10.1), the clickable filter on the rules index (section 10.2), with `MINIMIZE_POWER_QUERY_TRANSFORMATIONS` as its first member: moved onto the parser, its layer changed, its deviation in m-zoo's capture, its page, and the deviation counts. They go together because the shipped rule is the first rule with the new layer, and the parity and rule-page tests widen in the same change.
 4. **Calls and literals:** `LOCAL_DRIVE_PATH`, `SCRIPT_IN_QUERY`, `EXCEL_USE_HEADERS`, `ODBC_WHERE_CONNECTOR_EXISTS`, and `PRIVACY_LEVELS_IGNORED` (which reads `model.tmdl` and needs only `Model.dataAccessOptions`). Each reads a call or a literal where it stands, so none needs the resolver beyond a step's name. This pull request also starts `tests/expectations/pbiplint/m-zoo.json` and moves the sample and fixture counts.
 5. **Steps:** `SORT_NOT_HELD_FOR_REMOVE_DUPLICATES`, `KEEP_FIRST_ROWS_LEFT_IN`, `INCREMENTAL_REFRESH_RANGE_BOUNDS`, `FIXED_DATE_IN_ROW_FILTER`, and `DEFAULT_STEP_NAMES`. Each reads a step, its table argument, or a filter's comparisons, through the resolver's `let` scopes.
-6. **The resolver's full reach:** `DYNAMIC_DATA_SOURCE`, `HARDCODED_SECRET_IN_QUERY` with the secret guard (section 11.3), `HARDCODED_SERVER_NAME`, `LEGACY_EXCEL_FILE`, and `EXTENSION_FILTER_CASE` if the Desktop check keeps it. These follow names into model parameters and other queries. If the check has not happened when the rest is ready, `EXTENSION_FILTER_CASE` waits for a pull request of its own and the others go ahead.
+6. **The resolver's full reach:** `DYNAMIC_DATA_SOURCE`, `HARDCODED_SECRET_IN_QUERY` with the secret guard (section 11.3), `HARDCODED_SERVER_NAME`, and `LEGACY_EXCEL_FILE`. These follow names into model parameters and other queries. `EXTENSION_FILTER_CASE` landed in pull request 8, after the Desktop check kept it, with `DYNAMIC_DATA_SOURCE`'s two new shapes.
 
 Pull requests 4, 5, and 6 depend on 2 and 3 and may go in any order; 6 is last only because it is the largest and carries the guard. Bug fixes and other changes for 0.3.0 go in alongside, each its own pull request into `release/0.3.0`.
 
@@ -704,11 +704,11 @@ Pull requests 4, 5, and 6 depend on 2 and 3 and may go in any order; 6 is last o
 
 ## 13. For Michael
 
-Michael approved this spec on October 13, 2026 ([issuecomment-6144834846](https://github.com/pbiplint/pbiplint/issues/78#issuecomment-6144834846)), with the rule list and severities decided the same day and two notes folded in (sections 10.1 and 12). Only the Desktop check is open: three tests in the Windows VM, none of which holds up m-zoo's capture (section 11.1).
+Michael approved this spec on October 13, 2026 ([issuecomment-6144834846](https://github.com/pbiplint/pbiplint/issues/78#issuecomment-6144834846)), with the rule list and severities decided the same day and two notes folded in (sections 10.1 and 12). The Desktop check was the last open item: three tests in the Windows VM, none of which held up m-zoo's capture (section 11.1). [Michael answered all three on October 13, 2026](https://github.com/pbiplint/pbiplint/issues/78#issuecomment-6158143617), and pull request 8 carries the answers, so nothing from the check is open.
 
-1. A web address chosen with `if ... then ... else` over a parameter: does **Data source settings**, **Data sources in current file**, show the dynamic source warning? (Section 9.3.)
-2. A web address passed in as a custom function's parameter: the same question. (Section 9.3.)
-3. A folder holding `a.csv` and `B.CSV`, read with **Folder**: does the **Extension** column show `.CSV`? If it shows `.csv`, `EXTENSION_FILTER_CASE` is dropped. (Section 9.10.)
+1. A web address chosen with `if ... then ... else` over a parameter: does **Data source settings**, **Data sources in current file**, show the dynamic source warning? (Section 9.3.) Answer: yes, so the address is `chosen` and fires.
+2. A web address passed in as a custom function's parameter: the same question. (Section 9.3.) Answer: yes, so the address is `parameter` and fires.
+3. A folder holding `a.csv` and `B.CSV`, read with **Folder**: does the **Extension** column show `.CSV`? If it shows `.csv`, `EXTENSION_FILTER_CASE` is dropped. (Section 9.10.) Answer: yes, `B.CSV` lists as `.CSV`, so the rule ships, with `.log` left alone at Michael's word.
 
 ## 14. Left out
 

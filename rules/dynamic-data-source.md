@@ -76,7 +76,7 @@ A model that is never published, or never refreshed in the service, can build it
 ## Quirks
 
 - Only the first argument, the address, is read. `Web.Contents`' `RelativePath` and `Query` options are left alone whatever they hold, since they are Microsoft's route for a request that changes.
-- An address held by a parameter, a fixed text, a step that holds one, or text joined with `&` from those, is left alone, however deeply the steps nest.
+- An address held by a Power Query parameter, a fixed text, a step that holds one, or text joined with `&` from those, is left alone, however deeply the steps nest.
 - An address chosen with `if ... then ... else` is reported whatever its branches hold, because Power BI Desktop reports it: in [a check on October 13, 2026](https://github.com/pbiplint/pbiplint/issues/78#issuecomment-6158143617), Data source settings showed its dynamic source warning for a web address chosen between two fixed texts by a parameter. It counts even when one branch raises an `error`, since Desktop does not evaluate the condition.
 - An address that is a custom function's own parameter, or a field of one, is reported, as Desktop reported it in the same check, even when every call passes fixed text.
 - A function written in place as an argument, such as `(r) => Web.Contents(r[Url])` in `Table.AddColumn`, is reported as a custom function's parameter, though the address comes from the rows.

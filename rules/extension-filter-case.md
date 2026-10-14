@@ -72,7 +72,6 @@ When the files come from one system that always writes the extension in the same
 - A comparison through `Text.Lower`, `Text.Upper`, or `Comparer.OrdinalIgnoreCase` is left alone. So is a listing with a `Table.TransformColumns` step on its Extension column before the filter, whatever that step does, since lowercasing the column there is one of the fixes above.
 - A listing the rule cannot follow back to one of the four functions, such as a lakehouse's or a storage account's, is not read.
 - A listing held in another query, such as `Source = #"Files"`, is not followed, so a filter on it is not read.
-- A comparison with `<>` is read the same way as one with `=`.
 - Text with no letter in it, such as `".7"`, cannot miss a case and is left alone.
 - A filter on `".log"`, in any case, is left alone: the programs that write log files, such as a gateway, keep one case for them.
 - Each comparison is its own finding.

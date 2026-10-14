@@ -59,7 +59,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   DEFAULT_STEP_NAMES:
     "Power Query queries whose steps keep the names Power BI Desktop gives them, such as Changed Type, Added Custom1, or Removed Other Columns, reported once per query.",
   DYNAMIC_DATA_SOURCE:
-    "Data sources whose address is read from a table's rows or built by a function call: a call such as `Web.Contents`, `File.Contents`, or `Sql.Database` whose first argument the Power BI service cannot know before the query runs.",
+    "Data sources whose address the Power BI service cannot know before the query runs: a call such as `Web.Contents`, `File.Contents`, or `Sql.Database` whose first argument is read from a table's rows, built by a function call, chosen with `if ... then ... else`, or a custom function's parameter.",
   ENSURE_ALTTEXT:
     "Visuals other than shapes whose alt text is missing or empty. A visual group is checked by its own alt text, the one set on the group rather than on the visuals inside it.",
   ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY:
@@ -73,6 +73,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Excel.Workbook calls that ask the workbook reader to promote headers: `true` as the second argument, or `UseHeaders = true` in its options record.",
   EXPRESSION_RELIANT_OBJECTS_MUST_HAVE_AN_EXPRESSION:
     "Measures, calculated columns, and calculation items whose expression is empty.",
+  EXTENSION_FILTER_CASE:
+    'Power Query filters on a folder\'s files that compare the `Extension` column with text such as `".csv"` as written, so a file whose extension is in other capitals, such as `.CSV`, is left out.',
   FILTER_COLUMN_VALUES:
     "CALCULATE or CALCULATETABLE whose first filter argument is `FILTER('Table', 'Table'[Column] ...)`.",
   FILTER_MEASURE_VALUES_BY_COLUMNS:

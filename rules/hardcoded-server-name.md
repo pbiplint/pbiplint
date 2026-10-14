@@ -78,7 +78,7 @@ A model with one query on one server that will never move gains little from a pa
 ## Related rules
 
 - `LOCAL_DRIVE_PATH` reports a file path written into a query, which a parameter holds in the same way.
-- `DYNAMIC_DATA_SOURCE` reports a server built at run time, which the service cannot refresh; a parameter is the fix for both rules.
+- `DYNAMIC_DATA_SOURCE` reports a server the service cannot know before the query runs, and so cannot refresh; a parameter is the fix for both rules.
 
 ## Links
 

@@ -95,9 +95,16 @@ export function resolve(m: MIndex, q: MQuery, node: Node): Resolution {
 }
 
 /** Where a value comes from, as the data source rule reads it (v3 spec, section 8). */
-export type Origin = "static" | "unknown" | "computed" | "row";
+export type Origin = "static" | "unknown" | "chosen" | "parameter" | "computed" | "row";
 /** Worst last: a value is as bad as the worst thing it reaches. */
-export const ORIGIN_ORDER: readonly Origin[] = ["static", "unknown", "computed", "row"];
+export const ORIGIN_ORDER: readonly Origin[] = [
+  "static",
+  "unknown",
+  "chosen",
+  "parameter",
+  "computed",
+  "row",
+];
 const worst = (origins: Origin[]): Origin =>
   origins.reduce<Origin>(
     (w, o) => (ORIGIN_ORDER.indexOf(o) > ORIGIN_ORDER.indexOf(w) ? o : w),
@@ -112,12 +119,13 @@ const isLiteralContainer = (n: Node): boolean =>
   n.kind === Kind.ListLiteral;
 
 /**
- * Where a value comes from: `static` for literals, model parameters, and what joins or chooses
- * among them; `unknown` for a function's parameter, a name nothing defines, a field or item of a
- * record or list written in place, or a cycle; `computed` for a function call anywhere in it;
- * `row` for `_` or a field or item of anything else. A value is the worst of what it reaches.
- * An `if` is read by its two branches, since its condition only chooses, and an `error` is static,
- * since it reaches no source. Each node is followed once, so a cycle reads as unknown.
+ * Where a value comes from: `static` for literals, model parameters, and what joins them; `unknown`
+ * for a name nothing defines, a field or item of a record or list written in place, or a cycle;
+ * `chosen` for an `if ... then ... else`, whatever its branches, as Power BI Desktop reads it;
+ * `parameter` for a custom function's parameter or a field of one; `computed` for a function call
+ * anywhere in it; `row` for `_` or a field or item of anything else. A value is the worst of what
+ * it reaches. An `if`'s condition adds nothing beyond `chosen`, and an `error` is static, since it
+ * reaches no source. Each node is followed once, so a cycle reads as unknown.
  */
 export function origin(m: MIndex, q: MQuery, node: Node, seen: Set<string> = new Set()): Origin {
   const key = `${q.kind}:${q.name}:${node.id}`;
@@ -132,6 +140,7 @@ export function origin(m: MIndex, q: MQuery, node: Node, seen: Set<string> = new
       if (r.kind === "row") return "row";
       if (r.kind === "value") return origin(m, q, r.node, seen);
       if (r.kind === "modelParameter" || r.kind === "library") return "static";
+      if (r.kind === "parameter") return "parameter";
       if (r.kind === "query") {
         const body = r.query.ast && unwrap(r.query.ast);
         if (!body || body.kind === Kind.FunctionExpression) return "unknown";
@@ -144,9 +153,10 @@ export function origin(m: MIndex, q: MQuery, node: Node, seen: Set<string> = new
       return "row";
     case Kind.LetExpression:
       return origin(m, q, node.expression, seen);
-    // The condition only chooses: the value is one of the two branches.
+    // Desktop reads any if as dynamic, whatever its branches; the condition adds nothing more.
     case Kind.IfExpression:
       return worst([
+        "chosen",
         origin(m, q, node.trueExpression, seen),
         origin(m, q, node.falseExpression, seen),
       ]);
@@ -188,8 +198,8 @@ export function origin(m: MIndex, q: MQuery, node: Node, seen: Set<string> = new
           cq = r.query;
           container = unwrap(r.query.ast);
         } else if (r.kind === "parameter") {
-          // A custom function's parameter is unknown (spec 9.3), and so is any field of it.
-          return "unknown";
+          // A custom function's parameter is dynamic (spec 9.3), and so is any field of it.
+          return "parameter";
         } else break;
       }
       return isLiteralContainer(container) ? "unknown" : "row";

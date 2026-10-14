@@ -836,20 +836,50 @@ describe("DYNAMIC_DATA_SOURCE (v3 spec, section 9.3)", () => {
       );
     expect(await mFindings(rule, tmdl)).toEqual([]);
   });
-  it("leaves alone the two shapes awaiting the Desktop check: if over a parameter, and a function's parameter", async () => {
+  it("reports an address chosen with if, whatever its branches, and a custom function's parameter, as Desktop does", async () => {
     const tmdl =
       base +
       "expression GetPage = (address as text) => Web.Contents(address)\n\n" +
+      "expression GetFile = (settings as record) => File.Contents(settings[Path])\n\n" +
       table(
         "Orders",
         "let",
         '\tAddress = if ApiBase = "" then "https://test.example.com" else ApiBase,',
         "\tChosen = Web.Contents(Address),",
+        '\tGuarded = Web.Contents(if ApiBase = "" then error Error.Record("Missing", "Set ApiBase") else ApiBase),',
+        '\tAlways = Web.Contents(if true then "https://api.example.com" else "https://test.example.com"),',
+        '\tJoined = Folder.Files(DataFolder & (if ApiBase = "" then "Test" else "Prod")),',
+        '\tRelative = Web.Contents(ApiBase, [RelativePath = if ApiBase = "" then "test" else "v1"]),',
         '\tThroughFunction = GetPage("https://api.example.com/v1/customers")',
         "in",
         "\tThroughFunction",
       );
-    expect(await mFindings(rule, tmdl)).toEqual([]);
+    expect(
+      (await mFindings(rule, tmdl)).map((f) => [f.objectName, f.location?.line, f.detail]),
+    ).toEqual([
+      [
+        "Orders",
+        15,
+        "query 'Orders', step 'Chosen': Web.Contents's address is chosen with if ... then ... else",
+      ],
+      [
+        "Orders",
+        16,
+        "query 'Orders', step 'Guarded': Web.Contents's address is chosen with if ... then ... else",
+      ],
+      [
+        "Orders",
+        17,
+        "query 'Orders', step 'Always': Web.Contents's address is chosen with if ... then ... else",
+      ],
+      [
+        "Orders",
+        18,
+        "query 'Orders', step 'Joined': Folder.Files's path is chosen with if ... then ... else",
+      ],
+      ["GetPage", 5, "query 'GetPage': Web.Contents's address is a custom function's parameter"],
+      ["GetFile", 7, "query 'GetFile': File.Contents's path is a custom function's parameter"],
+    ]);
   });
   it("leaves alone a function that is not a data source, and an address it cannot follow", async () => {
     const tmdl = table(

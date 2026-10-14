@@ -189,14 +189,29 @@ describe("origin", () => {
       "static",
     ],
     [
-      "if over a parameter (until the Desktop check)",
+      "if over a parameter between literals, as Desktop reads it",
       'Web.Contents(if Environment = "Prod" then "https://a.example.com" else "https://b.example.com")',
-      "static",
+      "chosen",
     ],
     [
-      "a function's parameter (until the Desktop check)",
+      "if with a literal condition",
+      'Web.Contents(if true then "https://a.example.com" else "https://b.example.com")',
+      "chosen",
+    ],
+    [
+      "an if inside an & join",
+      'Web.Contents(ApiBase & (if Environment = "Prod" then "/v1" else "/test"))',
+      "chosen",
+    ],
+    [
+      "a function's parameter, as Desktop reads it",
       "let f = (u) => Web.Contents(u) in f",
-      "unknown",
+      "parameter",
+    ],
+    [
+      "if over a function's parameter",
+      'let f = (u) => Web.Contents(if u = "" then ApiBase else u) in f',
+      "parameter",
     ],
     ["a name nothing defines", "Web.Contents(Nowhere)", "unknown"],
     [
@@ -215,12 +230,12 @@ describe("origin", () => {
     [
       "if whose condition calls a function, between static branches",
       'Web.Contents(if Text.EndsWith(ApiBase, "/") then ApiBase else ApiBase & "/")',
-      "static",
+      "chosen",
     ],
     [
       "if with a branch that raises an error",
       'Web.Contents(if ApiBase = "" then error Error.Record("Missing", "Set ApiBase") else ApiBase)',
-      "static",
+      "chosen",
     ],
     [
       "if with a branch built by a function call",
@@ -279,8 +294,8 @@ describe("origin of a field or item", () => {
       await originOf('let J = Json.Document(File.Contents("c:/a.json"))[url] in Web.Contents(J)'),
     ).toBe("row");
   });
-  it("is unknown for a field of a function's parameter, as the parameter is", async () => {
-    expect(await originOf("let f = (cfg) => Web.Contents(cfg[Url]) in f")).toBe("unknown");
+  it("is parameter for a field of a function's parameter, as the parameter is", async () => {
+    expect(await originOf("let f = (cfg) => Web.Contents(cfg[Url]) in f")).toBe("parameter");
   });
   it("is row for a field of _ inside each", async () => {
     expect(await originOf('Table.AddColumn(#table({}, {}), "R", each Web.Contents(_[url]))')).toBe(

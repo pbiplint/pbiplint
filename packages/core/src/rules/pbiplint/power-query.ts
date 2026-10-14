@@ -628,10 +628,11 @@ export const DEFAULT_STEP_NAMES = pbiplintRule({
 const DATA_SOURCE =
   /^(?:(File\.Contents|Folder\.(?:Files|Contents))|(Web\.Contents|OData\.Feed|SharePoint\.(?:Files|Contents|Tables)|AzureStorage\.(?:Blobs|DataLake))|((?:Odbc|OleDb)\.(?:DataSource|Query))|Sql\.Databases?|Oracle\.Database|PostgreSQL\.Database|MySQL\.Database|Snowflake\.Databases|AnalysisServices\.Databases?|Databricks\.Catalogs|DB2\.Database|Teradata\.Database|SapHana\.Database)$/;
 
-// A data source whose address is read from the rows or built by a function call cannot refresh in
-// the service (v3 spec, section 9.3). Only the first argument is read, so Web.Contents' RelativePath
-// and Query options, Microsoft's route for a dynamic request to a static address, are left alone,
-// as are literals, parameters, joins of them, and a custom function's parameter.
+// A data source whose address is read from the rows, built by a function call, chosen with an if,
+// or a custom function's parameter cannot refresh in the service (v3 spec, section 9.3; the last two
+// from Michael's Desktop check of October 13, 2026). Only the first argument is read, so
+// Web.Contents' RelativePath and Query options, Microsoft's route for a dynamic request to a static
+// address, are left alone, as are literals, parameters, and joins of them.
 export const DYNAMIC_DATA_SOURCE = pbiplintRule({
   id: "DYNAMIC_DATA_SOURCE",
   name: "Data source the service can't refresh",
@@ -644,7 +645,7 @@ export const DYNAMIC_DATA_SOURCE = pbiplintRule({
       calls(q).flatMap((c) => {
         const source = DATA_SOURCE.exec(c.name);
         const o = source && c.args[0] ? origin(m, q, c.args[0]) : "static";
-        if (o !== "row" && o !== "computed") return [];
+        if (o === "static" || o === "unknown") return [];
         const noun = source![1]
           ? "path"
           : source![2]
@@ -652,7 +653,12 @@ export const DYNAMIC_DATA_SOURCE = pbiplintRule({
             : source![3]
               ? "connection string"
               : "server";
-        const how = o === "row" ? "is read from the rows" : "is built by a function call";
+        const how = {
+          row: "is read from the rows",
+          computed: "is built by a function call",
+          parameter: "is a custom function's parameter",
+          chosen: "is chosen with if ... then ... else",
+        }[o];
         return [mFinding(m, q, c.node, `${c.name}'s ${noun} ${how}`)];
       }),
     ),

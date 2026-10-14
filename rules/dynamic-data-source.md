@@ -14,9 +14,9 @@ sources:
 
 ## What it checks
 
-Data sources whose address is read from a table's rows or built by a function call: a call such as `Web.Contents`, `File.Contents`, or `Sql.Database` whose first argument the Power BI service cannot know before the query runs.
+Data sources whose address the Power BI service cannot know before the query runs: a call such as `Web.Contents`, `File.Contents`, or `Sql.Database` whose first argument is read from a table's rows, built by a function call, chosen with `if ... then ... else`, or a custom function's parameter.
 
-Each finding names the partition, the shared expression, or, for an incremental refresh policy's own query, the table. Its detail names the query and the step, then the function and where its address comes from, as `query 'Orders', step 'Added Custom': Web.Contents's address is read from the rows`. The location is the line and column of the call in the TMDL file.
+Each finding names the partition, the shared expression, or, for an incremental refresh policy's own query, the table. Its detail names the query and the step, then the function and where its address comes from, as `query 'Orders', step 'Added Custom': Web.Contents's address is read from the rows`. The other endings, in the order the detail prefers them when more than one applies, are `is built by a function call`, `is a custom function's parameter`, and `is chosen with if ... then ... else`. The location is the line and column of the call in the TMDL file.
 
 ## Example
 
@@ -65,6 +65,7 @@ In Power BI Desktop, choose Transform data, then Data source settings, and selec
 - For a web source, keep the first argument of `Web.Contents` a fixed address or a parameter, and move the part that changes into its `RelativePath` and `Query` options in the formula bar, as the fixed example does. Microsoft's reference says of them: "These options can be used to dynamically query a static base URL." ([Web.Contents, Example 1](https://learn.microsoft.com/powerquery-m/web-contents#example-1)).
 - For files and folders, point the source at a parameter (Home, Manage Parameters) holding the path, or read the whole folder once with the Folder or SharePoint folder connector and combine its files, rather than opening one path per row.
 - For a database, read the server and database from parameters rather than from another query's data.
+- For an address chosen with `if ... then ... else`, hold the address in a parameter and change the parameter's current value (Home, Manage Parameters) instead of choosing in the query. For a custom function, keep the address a fixed text or a parameter inside the function, and pass in only what goes into `RelativePath` and `Query`.
 
 In the TMDL file, the call is in the partition's `source` block.
 
@@ -76,8 +77,9 @@ A model that is never published, or never refreshed in the service, can build it
 
 - Only the first argument, the address, is read. `Web.Contents`' `RelativePath` and `Query` options are left alone whatever they hold, since they are Microsoft's route for a request that changes.
 - An address held by a parameter, a fixed text, a step that holds one, or text joined with `&` from those, is left alone, however deeply the steps nest.
-- An address chosen with `if ... then ... else` between fixed texts or parameters is left alone, and so is a branch that raises an error. Nothing in the condition counts, since it only chooses between the branches.
-- An address that is a custom function's own parameter is left alone, since the query that calls the function decides it. A name nothing in the model defines is left alone too.
+- An address chosen with `if ... then ... else` is reported whatever its branches hold, because Power BI Desktop reports it: in [a check on October 13, 2026](https://github.com/pbiplint/pbiplint/issues/78#issuecomment-6158143617), Data source settings showed its dynamic source warning for a web address chosen between two fixed texts by a parameter. It counts even when one branch raises an `error`, since Desktop does not evaluate the condition.
+- An address that is a custom function's own parameter, or a field of one, is reported, as Desktop reported it in the same check, even when every call passes fixed text.
+- A name nothing in the model defines is left alone.
 - Each call is its own finding.
 - A query whose M does not parse is not read; it gets a `PARSE_ISSUE` finding instead.
 

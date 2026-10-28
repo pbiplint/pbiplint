@@ -1319,10 +1319,7 @@ describe("renderSeveral (#237)", () => {
         .map((n) => n.textContent!)
         .filter((t) => t.includes("names no rule"));
     expect(sections().map(unknown)).toEqual([
-      [
-        `${shared} names no rule called "NOPE".`,
-        `${shared} names no rule called "TYPOED".`,
-      ],
+      [`${shared} names no rule called "NOPE".`, `${shared} names no rule called "TYPOED".`],
       [],
       [`${own} names no rule called "OTHER".`],
     ]);

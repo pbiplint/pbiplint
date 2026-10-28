@@ -780,8 +780,9 @@ describe("home page", () => {
     ]);
     await tick();
     await tick();
+    // Named by its path in the drop: each project of several can have its own.
     expect(document.getElementById("status")!.textContent).toMatch(
-      /^pbiplint\.config\.json is not valid JSON: /,
+      /^Drop\/b\/pbiplint\.config\.json is not valid JSON: /,
     );
     expect(document.getElementById("results")!.hidden).toBe(true);
   });

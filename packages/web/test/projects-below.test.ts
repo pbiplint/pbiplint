@@ -173,10 +173,10 @@ describe("a folder with projects below it, in the CLI and the browser (#174)", (
     fill(root);
     expect(browser(root)).toEqual(cli(root));
   });
-  it("finds the same one project where a thin report's model sits outside its folder, which the CLI names", () => {
+  it("finds the same one project where a thin report's model sits elsewhere in the folder named, which only the CLI follows", () => {
     // The browser has no .pbip route (spec section 12): it reads the .pbip's folder, the report
-    // alone, and says which model the report reads. The CLI follows a reference only inside the
-    // project folder, so it reads the report alone too and names the model's folder.
+    // alone, and says which model the report reads. The CLI follows the reference, which stays
+    // inside the folder named.
     const root = tempDir("both-apart");
     mkdirSync(join(root, "reports"));
     writeFileSync(
@@ -186,10 +186,7 @@ describe("a folder with projects below it, in the CLI and the browser (#174)", (
     reportAt(join(root, "reports", "Thin.Report"), "../../models/Shared.SemanticModel");
     modelAt(join(root, "models", "Shared.SemanticModel"), "Shared");
     const notice: [string, string] = ["project-below-input", "reports/Thin.pbip"];
-    expect(cli(root)).toMatchObject({
-      absent: { model: "the model this report reads is outside the project folder" },
-      diagnostics: [notice, ["unread-file", "../models/Shared.SemanticModel"]],
-    });
+    expect(cli(root)).toMatchObject({ absent: {}, diagnostics: [notice] });
     expect(browser(root)).toMatchObject({
       absent: {
         model:

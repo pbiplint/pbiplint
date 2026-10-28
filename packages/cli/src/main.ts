@@ -3,6 +3,7 @@ import { basename, dirname, relative, resolve } from "node:path";
 import {
   ConfigError,
   defaultRules,
+  errorKind,
   formatResult,
   lint,
   resolveConfig,
@@ -181,21 +182,33 @@ export async function main(argv: string[], given: Io): Promise<number> {
   }
 }
 
+/** True for an error Node itself raised: it carries a string `code` (`ENOENT`, `EACCES`). */
+const isNodeError = (e: unknown): e is Error & { code: string } =>
+  e instanceof Error && typeof (e as { code?: unknown }).code === "string";
+
 /**
- * An unexpected error as lines for stderr: its name and message, then each frame of its stack. The
- * message can hold a line break of its own, so the stack is split only after the message, and the
- * name and message stay one line, where `showControls` shows the break as `\u000a` and no message
- * can write a line that reads as the CLI's. The stack starts with what `String(e)` gives, or with
- * the name and message where a stack formatter writes those alone (as the test runner's does); a
- * stack that starts with neither is shown whole on the one line.
+ * An unexpected error as lines for stderr, then each frame of its stack. Node's own error keeps its
+ * name and message, which describe the system and the path the user typed. Any other error, such
+ * as one out of `lint`, can carry the model's text in its message, so it gives only its class,
+ * through `errorKind`, and a request to report it (v3 spec, section 11.3; pb-coord, October 28,
+ * 2026). The message can hold a line break of its own, so the stack is split only after the
+ * message: Node's name and message stay one line, where `showControls` shows the break as
+ * `\u000a` and no message can write a line that reads as the CLI's. The stack starts with what
+ * `String(e)` gives, or with the name and message where a stack formatter writes those alone (as
+ * the test runner's does). A stack that starts with neither is shown whole on the one line for
+ * Node's error, and left out for any other.
  */
 function unexpectedLines(e: unknown): string[] {
-  const head = String(e);
+  const node = isNodeError(e);
+  const head = node
+    ? String(e)
+    : `${errorKind(e)}. Please report this at https://github.com/pbiplint/pbiplint/issues.`;
   if (!(e instanceof Error) || typeof e.stack !== "string") return [head];
   const stack = e.stack;
-  const header = [head, `${e.name}: ${e.message}`].find(
+  const header = [String(e), `${e.name}: ${e.message}`].find(
     (h) => stack === h || stack.startsWith(`${h}\n`),
   );
-  if (header === undefined) return [stack];
-  return stack === header ? [header] : [header, ...stack.slice(header.length + 1).split("\n")];
+  if (header === undefined) return node ? [stack] : [head];
+  const first = node ? header : head;
+  return stack === header ? [first] : [first, ...stack.slice(header.length + 1).split("\n")];
 }

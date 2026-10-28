@@ -156,6 +156,7 @@ export {
 } from "./rules/microsoft-bpa/define.js";
 export { microsoftBpaRules } from "./rules/microsoft-bpa/index.js";
 export { PARSE_ISSUE } from "./rules/parse-issue.js";
+export { RULE_COULD_NOT_FINISH } from "./rules/rule-could-not-finish.js";
 export {
   INSPECTOR_RULES,
   type InspectorRuleMeta,

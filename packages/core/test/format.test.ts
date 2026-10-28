@@ -215,13 +215,32 @@ describe("a rule that could not finish, in every format", () => {
     const run = JSON.parse(formatSarif(crashed)).runs[0];
     expect(run.invocations).toEqual([
       {
-        executionSuccessful: true,
+        executionSuccessful: false,
         toolExecutionNotifications: [
           {
             level: "error",
             descriptor: { id: "rule-error" },
             associatedRule: { id: "THROWING_RULE" },
             message: { text: "The rule THROWING_RULE could not finish: Error" },
+          },
+        ],
+      },
+    ]);
+  });
+  it("keeps SARIF's run successful when its only notice is a file it could not read", () => {
+    const unread: LintResult = {
+      ...crashed,
+      summary: { ...crashed.summary, ruleErrors: [] },
+      diagnostics: [{ kind: "unread-file", path: "x", message: "x could not be read" }],
+    };
+    expect(JSON.parse(formatSarif(unread)).runs[0].invocations).toEqual([
+      {
+        executionSuccessful: true,
+        toolExecutionNotifications: [
+          {
+            level: "warning",
+            descriptor: { id: "unread-file" },
+            message: { text: "x could not be read" },
           },
         ],
       },

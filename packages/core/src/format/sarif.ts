@@ -106,12 +106,13 @@ export function formatSarif(result: LintResult, options: FormatOptions = {}): st
       },
     },
     // A rule that could not finish is an error notification on the rule, so its missing results
-    // are not mistaken for clean either. The run still counts as successful: the other rules ran.
+    // are not mistaken for clean either, and a run in which a rule could not finish is not
+    // successful. A run with only files it could not read still is: every rule finished.
     ...(incomplete.length || result.summary.ruleErrors.length
       ? {
           invocations: [
             {
-              executionSuccessful: true,
+              executionSuccessful: result.summary.ruleErrors.length === 0,
               toolExecutionNotifications: [
                 ...incomplete.map((d) => ({
                   level: "warning",

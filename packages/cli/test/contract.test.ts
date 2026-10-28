@@ -41,6 +41,13 @@ function sampleBelow(): string {
   return root;
 }
 
+/** A folder holding two copies of the sample, Finance and Sales, so one run lints both (#237). */
+function severalProjects(): string {
+  const root = tempDir("contract-several");
+  for (const name of ["Finance", "Sales"]) cpSync(sample, join(root, name), { recursive: true });
+  return root;
+}
+
 /** The keys of an object, sorted. */
 const keys = (o: object): string[] => Object.keys(o).sort();
 
@@ -137,6 +144,11 @@ describe("the CLI's contract", () => {
       mkdirSync(join(dir, "none", at, "Old.SemanticModel"), { recursive: true });
       writeFileSync(join(dir, "none", at, "Old.SemanticModel", "model.bim"), "{}");
     }
+    for (let i = 0; i <= 200; i++) {
+      const def = join(dir, "many", `m${i}.SemanticModel`, "definition");
+      mkdirSync(def, { recursive: true });
+      writeFileSync(join(def, "model.tmdl"), "model Model\n");
+    }
     // A skill copy that differs from the one --install would write, in its own folder.
     const skillDir = join(dir, "skill-differs");
     mkdirSync(join(skillDir, ".claude/skills/pbiplint"), { recursive: true });
@@ -153,6 +165,7 @@ describe("the CLI's contract", () => {
       ["a model folder with no .tmdl files", [join(dir, "Empty.SemanticModel")]],
       ["a run that reads nothing it can lint", [join(dir, "legacy")]],
       ["a folder holding several projects, none of which it can read", [join(dir, "none")]],
+      ["a folder holding more than 200 projects", [join(dir, "many")]],
       ["options with no path", ["--format", "json"]],
       ["an unexpected error", ["a\u0000b"]],
       ["a skill copy that differs, without --force", ["skill", "--install", "claude"], skillDir],
@@ -163,6 +176,29 @@ describe("the CLI's contract", () => {
       expect(r.out, what).toBe("");
       expect(r.err, what).toMatch(/^pbiplint: /);
     }
+  });
+
+  it("2a. in a run over several projects, a project it cannot read is a PARSE_ISSUE error, and the gate counts it (from 0.3.0)", async () => {
+    const root = severalProjects();
+    mkdirSync(join(root, "Old", "Old.SemanticModel"), { recursive: true });
+    writeFileSync(join(root, "Old", "Old.SemanticModel", "model.bim"), "{}");
+    const r = await run([root, "--format", "json", "--fail-on", "none"]);
+    expect(r.code).toBe(0);
+    const doc = JSON.parse(r.out);
+    expect(doc.projects.map((p: { path: string }) => p.path)).toEqual([
+      "Finance",
+      "Old/Old.SemanticModel",
+      "Sales",
+    ]);
+    const old = doc.projects[1];
+    expect(old.groups.map((g: { rule: { id: string; severity: number } }) => g.rule)).toEqual([
+      expect.objectContaining({ id: "PARSE_ISSUE", severity: 3 }),
+    ]);
+    expect((await run([root, "--quiet"])).code).toBe(1);
+    const off = join(tempDir("contract-parse-off"), "pbiplint.config.json");
+    writeFileSync(off, JSON.stringify({ rules: { PARSE_ISSUE: "off" } }));
+    const quiet = await run([root, "--quiet", "--config", off]);
+    expect(quiet.out).toMatch(/^project Old\/Old\.SemanticModel: 0 findings/m);
   });
 
   it("3. the JSON document has version 1 and the fields the page lists, at every level", async () => {
@@ -235,6 +271,28 @@ describe("the CLI's contract", () => {
     expect(new Set(pq.findings.map((f: { layer: string }) => f.layer))).toEqual(new Set(["model"]));
   });
 
+  it("3b. a run over several projects prints version 2: the tool, the run's summary, and each project's document with its path (from 0.3.0)", async () => {
+    const root = severalProjects();
+    const doc = JSON.parse((await run([root, "--format", "json"])).out);
+    hasFields(doc, ["version", "tool", "summary", "projects"]);
+    expect(doc.version).toBe(2);
+    hasFields(doc.tool, ["name", "version"]);
+    const counts = ["projects", "files", "findings", "errors", "warnings", "infos", "ignored"];
+    hasFields(doc.summary, [...counts, "ruleErrors"], ["shown"]);
+    expect(doc.summary.shown).toBeUndefined();
+    expect(doc.summary.projects).toBe(2);
+    expect(doc.projects.map((p: { path: string }) => p.path)).toEqual(["Finance", "Sales"]);
+    const one = JSON.parse((await run([sample, "--format", "json"])).out);
+    for (const p of doc.projects) {
+      hasFields(p, ["path", "summary", "layers", "facts", "diagnostics", "groups"]);
+      hasFields(p.summary, Object.keys(one.summary));
+    }
+    const filtered = JSON.parse(
+      (await run([root, "--format", "json", "--rule", "HIDE_FOREIGN_KEYS"])).out,
+    );
+    hasFields(filtered.summary.shown, ["rules", "findings", "errors", "warnings", "infos"]);
+  });
+
   it("4. the quiet output: the summary first, rule lines of three fields, and the Next line last", async () => {
     const lines = (await run([sampleBelow(), "--quiet"])).out.trimEnd().split("\n");
     expect(lines[0]).toMatch(/^pbiplint: /);
@@ -251,6 +309,20 @@ describe("the CLI's contract", () => {
     }
     // A rule id holds no whitespace, so a rule line always splits into three fields.
     expect(defaultRules.filter((r) => /\s/.test(r.id))).toEqual([]);
+  });
+
+  it("4a. the quiet output of several projects: a line that starts `project ` opens each, its rule lines after it (from 0.3.0)", async () => {
+    const lines = (await run([severalProjects(), "--quiet"])).out.trimEnd().split("\n");
+    expect(lines[0]).toMatch(/^pbiplint: 2 projects, /);
+    expect(lines.at(-1)).toMatch(/^Next: /);
+    const opens = lines.flatMap((l, i) => (l.startsWith("project ") ? [i] : []));
+    expect(opens.map((i) => lines[i]!.split(":")[0])).toEqual(["project Finance", "project Sales"]);
+    // Each project's rule lines sit between its line and the next project's.
+    const rules = (from: number, to: number) =>
+      lines.slice(from, to).filter((l) => /^(error|warning|info) /.test(l));
+    expect(rules(opens[0]!, opens[1]!)).toEqual(rules(opens[1]!, lines.length - 1));
+    expect(rules(opens[0]!, opens[1]!).length).toBeGreaterThan(0);
+    expect(rules(0, opens[0]!)).toEqual([]);
   });
 
   it("5. explain --format json has version 1, the tool, the rule, and its sections, for every rule", async () => {

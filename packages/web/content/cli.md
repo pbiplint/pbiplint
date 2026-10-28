@@ -36,7 +36,9 @@ npx pbiplint --help          # every option, in one screen
 npx pbiplint --version
 ```
 
-The path can be a PBIP folder, a `.pbip` file, a `.SemanticModel` folder, a `.Report` folder, a `definition` folder, or one `.tmdl` file. Given a folder that is not a project but holds one in a folder below it, as a repository often does, pbiplint lints that project and names it in a notice; a folder that holds several is refused with a list of them, each with the command that lints it.
+The path can be a PBIP folder, a `.pbip` file, a `.SemanticModel` folder, a `.Report` folder, a `definition` folder, or one `.tmdl` file. Given a folder that is not a project but holds one in a folder below it, as a repository often does, pbiplint lints that project and names it in a notice.
+
+From 0.3.0, given a folder that holds several projects, pbiplint lints every one in one run, whether they sit in folders below it or side by side in it, as Power BI Desktop saves two projects into one folder, and gives one exit code for them all. Each project is linted as a run naming it would lint it, with the nearest `pbiplint.config.json` from its own folder up, or the one `--config` names, and a report's reference to its model is followed anywhere inside the folder you named. A project pbiplint cannot read, such as a model stored as `model.bim`, is listed with one [`PARSE_ISSUE`](/rules/parse-issue/) error that says why, and the others are linted. The report opens with the run's counts and a line for each project, then each project's findings under its path. A model several of the projects' reports read is linted with each of them, and its findings are listed once, under the first of them, and [`NOT_REACHED_FROM_REPORT`](/rules/not-reached-from-report/) counts a field as reached when any of those reports reaches it. One run lints at most 200 projects; above that it is refused with a list of the folders below that hold them, so you can lint each. A folder that is itself a project lints that project only, as before, even when more projects sit deeper.
 
 These are the options `pbiplint --help` lists:
 
@@ -138,25 +140,28 @@ Scripts, pipelines, and AI assistants read what the CLI prints, so these parts o
 
 - With `--format json`, `sarif`, or `markdown`, stdout carries exactly one document and nothing else, so it can be piped straight into a parser or a file. So does `pbiplint explain --format json` (from 0.2.5).
 - Notices (`pbiplint: notice: ...`), the one-line summary `--output` prints, a config's unknown rule ids, and every error go to stderr. The text and Markdown reports also list each notice in the report.
+- In a run over several projects (from 0.3.0), each notice and each line for a rule that could not finish names its project first, as its path relative to the folder named, since the paths in it are relative to that project: `pbiplint: notice: <path>: ...` and `<path>: rule <RULE_ID> failed: ...`. The path runs up to the first `: ` only when the path holds none, so a script that must tell the path from the message when paths may hold `: ` reads the JSON document, where each project's notices sit under its own `path`.
 - `--help` and `--version` print text, whatever the format. `pbiplint` alone prints the help and exits `0`; options with no path and no `--sample` exit `2` (from 0.2.5), so an empty path in a script never passes as a clean run.
 - With `--output`, stdout is empty: the report goes to the file and the one-line summary to stderr.
 
 ### Exit codes
 
 - `0`: nothing at or above `--fail-on`. With `--rule` (from 0.2.5), only the findings shown count. `pbiplint rules`, `pbiplint explain` with a rule it knows, `pbiplint skill` (from 0.2.5) when it prints, shows, or installs the skill, `pbiplint mcp` (from 0.2.5) when the app closes its input, `--help`, and `--version` exit `0` too.
-- `1`: something at or above `--fail-on`. From 0.3.0 that includes a rule that could not finish, through its [`RULE_COULD_NOT_FINISH`](/rules/rule-could-not-finish/) error finding, which the rule's page says how to keep from failing a gate while a fix ships.
+- `1`: something at or above `--fail-on`. From 0.3.0 that includes a rule that could not finish, through its [`RULE_COULD_NOT_FINISH`](/rules/rule-could-not-finish/) error finding, which the rule's page says how to keep from failing a gate while a fix ships. In a run over several projects (from 0.3.0), the run exits `1` when any project has something at or above its gate, and a project pbiplint cannot read is a [`PARSE_ISSUE`](/rules/parse-issue/) error finding of that project's, so it fails the default gate, unless the project's config turns `PARSE_ISSUE` off or lowers it below `--fail-on`.
 - `2`, with nothing on stdout and the reason on stderr:
   - a usage error, such as an unknown option, an option with no value or a value it does not take, two paths, or options with no path; from 0.2.5 also an unknown rule id given to `explain` or `--rule`, or `--quiet` with a format other than text;
   - a config file it cannot use;
   - an input it cannot read, such as a path that is not there, a `.pbix` file, or a model folder with no `.tmdl` files;
   - a run that reads nothing it can lint, such as a report stored only as `report.json`;
-  - a folder that holds several projects or parts, naming each;
+  - a `.pbip` file that names several reports, naming each;
+  - a folder that holds more than 200 projects (from 0.3.0), naming the folders below it that hold them and how many each holds;
+  - a folder of several projects none of which can be read (from 0.3.0), naming each and why;
   - `pbiplint skill --install` finding a copy that differs from the one it would write, without `--force` (from 0.2.5);
   - an unexpected error.
 
 ### The JSON document
 
-`--format json` prints one object. `version` is `1`. Its fields:
+`--format json` prints one object. For a run over one project, `version` is `1`, and its fields are:
 
 - `tool`: `name` and `version`.
 - `summary`: the number of `files` read, and of `findings`, `errors`, `warnings`, and `infos`; `rulesRun`, the number of rules that ran; `rulesSkipped`, each with `id` and `reason`; `ruleErrors`, each with `id` and `message`, for a rule that could not finish (from 0.3.0, the `message` names the kind of error and, for a Power Query rule's error in one query, the query, as in `query 'Sales': TypeError`, never the error's own message, and the rule's findings on its other queries stand; each entry is also a [`RULE_COULD_NOT_FINISH`](/rules/rule-could-not-finish/) finding unless the config or an annotation says otherwise; the summary line and the text and Markdown notices name each one too); `ignored`, the number of findings an annotation ignored; and `unknownRules`, the config's rule ids that match no rule. Under `--rule` (from 0.2.5), `shown` holds `rules`, `findings`, `errors`, `warnings`, and `infos` for what is shown, while the other counts stay the whole run's.
@@ -165,11 +170,19 @@ Scripts, pipelines, and AI assistants read what the CLI prints, so these parts o
 - `diagnostics`: the notices, each with `kind`, `message`, and an optional `path`.
 - `groups`: the findings by rule, errors first. Each has `rule` (`id`, `name`, `category`, `severity` from `1` for info to `3` for error, `layer`, `slug`, `url`, and `status`), `count`, and `findings`, each with `layer`, `objectType`, `objectName`, and an optional `objectId`, `file`, `line`, `column` (1-based, from 0.3.0, where the finding has one), and `detail`. A rule's `layer` is `model`, `report`, `project` (a rule that reads both), or, from 0.3.0, `powerquery` (a rule that reads the Power Query M in a model's files). A finding's `layer` is the file family that holds it, `model` or `report`, so a Power Query rule's findings are `model`.
 
-A new field is additive and keeps `version` at `1`, so a reader should ignore fields it does not know. One planned addition is a message id and parameters for each finding. New values can appear in a field that names one of a set, such as a skipped rule's `reason`, a notice's `kind`, or a rule's `category` and `status`, also without a version change. A field removed or renamed, or one whose meaning changes, raises `version`.
+A run over a folder that holds several projects prints `version` `2` (from 0.3.0), whose fields are:
+
+- `tool`: `name` and `version`.
+- `summary`: the whole run's counts: `projects`, the number of projects; `files`, the number of files read, a model several projects read counted once; `findings`, `errors`, `warnings`, and `infos`; `ignored`, the number of findings an annotation ignored; and `ruleErrors`, the number of rules that could not finish, counted once for each project they failed in (a number here, where each project's `ruleErrors` lists them). Under `--rule`, `shown` holds `rules`, `findings`, `errors`, `warnings`, and `infos` for what is shown across the projects.
+- `projects`: one entry for each project, in the order the report lists them, each the version `1` document's fields without `version` and `tool`, plus `path`, the project's path relative to the folder named, with forward slashes. A model several projects' reports read is linted with each of them, and its findings are listed under the first only; each of those projects says so in a `diagnostics` entry of kind `shared-model`. A project pbiplint cannot read has one `PARSE_ISSUE` finding, no layer present, and `files` `0`.
+
+A reader checks `version` before anything else. A new field is additive and keeps `version` where it is, so a reader should ignore fields it does not know. One planned addition is a message id and parameters for each finding. New values can appear in a field that names one of a set, such as a skipped rule's `reason`, a notice's `kind`, or a rule's `category` and `status`, also without a version change. A field removed or renamed, or one whose meaning changes, raises `version`.
 
 ### The quiet output (from 0.2.5)
 
 `--quiet` prints the summary on the first line, which starts `pbiplint: `. Each line that starts with `error `, `warning `, or `info ` is a rule line: the severity, the rule id, and the number of findings, separated by single spaces. A rule id holds no spaces. When there are findings, the last line starts `Next: `. The lines between, what was read and any notices, are for reading, and their wording is not promised.
+
+In a run over several projects (from 0.3.0), the first line gives the whole run's counts, and a line that starts `project ` opens each project: `project <path>: ` and that project's summary, its path relative to the folder named. The rule lines after it, up to the next `project ` line or the `Next: ` line, are that project's. A run over one project prints no such line. The path runs up to the first `: ` only when the path holds none, so when paths may hold `: `, a script reads the JSON document instead.
 
 ### pbiplint explain --format json (from 0.2.5)
 
@@ -183,7 +196,7 @@ The text format's layout and wording, which are for people and may change; the M
 
 This is the command line's part of [the pbiplint Privacy Promise](/privacy/), in detail.
 
-- **It reads** the files that describe a project, under the path you give it: the `.pbip` file, the model's `.tmdl` files, and the report's `definition.pbir`, `.platform`, and JSON files, along with the report or model folder a `.pbip` file or a report's `definition.pbir` points to inside the folder you name, or the project folder (the folder that holds the `.pbip`); a reference that leads outside both, by its path or through a link, is not read, and the run says so in a notice. So a report whose model sits in a shared folder beside its own, such as `../models`, is linted with its model when you name the folder that holds both. That folder must hold no other project: when several reports share one model folder, pbiplint does not yet lint the model with any of them, and the notice says so. It also reads the nearest `pbiplint.config.json`, or the one `--config` names. It lists folders to find those files, and opens nothing else: it never enters the `.pbi` folder, where Power BI Desktop keeps the model's local data cache, nor `.git`, `node_modules`, or a report's `StaticResources` and `CustomVisuals` folders, and it does not follow a symbolic link below the path you give. `pbiplint skill` reads the skill file it ships with, and any copy already installed below the current folder. `pbiplint mcp` reads what its `lint` tool is given, as `pbiplint <path>` does.
+- **It reads** the files that describe a project, under the path you give it: the `.pbip` file, the model's `.tmdl` files, and the report's `definition.pbir`, `.platform`, and JSON files, along with the report or model folder a `.pbip` file or a report's `definition.pbir` points to inside the folder you name, or the project folder (the folder that holds the `.pbip`); a reference that leads outside both, by its path or through a link, is not read, and the run says so in a notice. So a report whose model sits in a shared folder beside its own, such as `../models`, is linted with its model when you name the folder that holds both. From 0.3.0, when several reports share one model folder, naming the folder that holds them all lints the model with each of them, and it is read from disk once. It also reads the nearest `pbiplint.config.json`, or the one `--config` names. It lists folders to find those files, and opens nothing else: it never enters the `.pbi` folder, where Power BI Desktop keeps the model's local data cache, nor `.git`, `node_modules`, or a report's `StaticResources` and `CustomVisuals` folders, and it does not follow a symbolic link below the path you give. `pbiplint skill` reads the skill file it ships with, and any copy already installed below the current folder. `pbiplint mcp` reads what its `lint` tool is given, as `pbiplint <path>` does.
 - **It writes** the report to your terminal, or to the file `--output` names (creating its folder if needed). Notices, and with `--output` a one-line summary, go to stderr. `pbiplint skill --install` writes the skill's `SKILL.md` into the folder the assistant reads, below the current folder, when you ask it to. `pbiplint mcp` writes only its MCP messages, to stdout, for the app that started it. Nothing else: no cache, no settings file, no log.
 - **It sends** nothing. It makes no network request: no telemetry, no update check, no call home.
 

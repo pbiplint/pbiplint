@@ -792,6 +792,10 @@ describe("generateSite", () => {
       '<a href="https://marketplace.visualstudio.com/items?itemName=pbiplint.pbiplint" target="_blank"',
     );
     expect(pipelines).not.toContain("goes on the Visual Studio Marketplace");
+    // One step lints every project in a repository (#237); a step for each is the choice, not the
+    // need, in both pipelines' sections.
+    expect(pipelines).not.toContain("add a step for each");
+    expect(pipelines.match(/Separate steps still work/g)).toHaveLength(2);
     expect(pipelines).toContain('<a href="/cli/#reads">');
     expect(pipelines).toContain('<a href="/privacy/#in-the-github-action">');
     expect(cli).toContain('<a href="/pipelines/">Pipelines</a>');

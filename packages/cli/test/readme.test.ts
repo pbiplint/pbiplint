@@ -49,4 +49,9 @@ describe.each([
     ]);
     expect(paths.filter((p) => !readme.includes(p))).toEqual([]);
   });
+
+  it("says a folder that holds several projects is linted in one run, not refused (#237)", () => {
+    expect(readme).toContain("holds several projects, pbiplint lints every one in one run");
+    expect(readme).not.toMatch(/holds several (exits 2|is refused)/);
+  });
 });

@@ -81,6 +81,9 @@ afterEach(async () => {
   handle = undefined;
 });
 
+/** The instructions the server gave in its answer to the last connect's initialize. */
+let instructions: string | undefined;
+
 async function connect(): Promise<Client> {
   const client = new Client();
   handle = await serveMcp((argv) => cli(argv), {
@@ -93,6 +96,7 @@ async function connect(): Promise<Client> {
     clientInfo: { name: "test", version: "0" },
   });
   expect(init.error).toBeUndefined();
+  instructions = (init.result as { instructions?: string }).instructions;
   client.notify("notifications/initialized");
   return client;
 }
@@ -233,5 +237,34 @@ describe("pbiplint mcp", () => {
     const got = await client.call("lint", { path: project, quiet: true });
     expect(got.isError).toBe(false);
     expect(got.text).toContain('no rule named "NO_SUCH_RULE"');
+  });
+
+  it("lints every project in a folder that holds several, as the CLI does (#237)", async () => {
+    const root = tempDir("mcp-several");
+    for (const name of ["Finance", "Sales", "Stock"])
+      cpSync(sample, join(root, name), { recursive: true });
+    const client = await connect();
+    const json = await client.call("lint", { path: root });
+    expect(json.isError).toBe(false);
+    const doc = JSON.parse(json.text) as { version: number; projects: { path: string }[] };
+    expect(doc.version).toBe(2);
+    expect(doc.projects.map((p) => p.path)).toEqual(["Finance", "Sales", "Stock"]);
+    expect(doc).toEqual(JSON.parse((await cli([root, "--format", "json"])).stdout));
+    const quiet = await client.call("lint", { path: root, quiet: true });
+    expect(quiet.text).toBe((await cli([root, "--quiet"])).stdout);
+    expect(quiet.text).toMatch(/^project Sales: /m);
+  });
+
+  it("says, in the lint tool's description and the server's instructions, that a folder of several projects lints whole (#237)", async () => {
+    const client = await connect();
+    const list = await client.request("tools/list");
+    const lint = (list.result!.tools as { name: string; description: string }[]).find(
+      (t) => t.name === "lint",
+    )!;
+    for (const words of [lint.description, instructions ?? ""]) {
+      expect(words).toContain("several projects");
+      expect(words).toContain("version 2");
+      expect(words).toContain("`project `");
+    }
   });
 });

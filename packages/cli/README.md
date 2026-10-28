@@ -57,8 +57,11 @@ such as a report saved as a single `report.json` (PBIR-Legacy) with no model bes
 and says why, rather than passing with no findings.
 
 Pointed at a folder that is not a project but holds one in a folder below it, as a repository
-often does, pbiplint lints that project and names it in a notice. A folder that holds several exits
-`2` and lists them, each with the command that lints it.
+often does, pbiplint lints that project and names it in a notice. Given a folder that holds several
+projects, pbiplint lints every one in one run, each under its own path, with one exit code; the
+findings of a model several of their reports share are listed once. One run lints at most 200
+projects. The JSON document of such a run is `version` `2`, and the quiet output opens each
+project with a `project ` line.
 
 ## Configuration
 

@@ -1,0 +1,17 @@
+/// M that does not parse on a line that ends in a comment holding a made-up key: a bracket too many.
+table Archive
+	lineageTag: 6c0f5a1e-0007-4000-8000-000000000004
+
+	column Content
+		dataType: binary
+		summarizeBy: none
+		sourceColumn: Content
+
+	partition Archive = m
+		mode: import
+		source =
+				let
+					Source = Web.Contents("https://api.example.com/v1/archive", [Headers = [#"x-api-key" = ApiKey]])), // old key: pbiplint-fixture-key-0010-notreal
+					Contents = #table(type table [Content = binary], {{Source}})
+				in
+					Contents

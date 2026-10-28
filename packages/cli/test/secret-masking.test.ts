@@ -54,16 +54,16 @@ describe("the secret guard, in the CLI (v3 spec, section 11.3)", () => {
 describe("the secret guard, on lines PARSE_ISSUE quotes, in the CLI (v3 spec, sections 7 and 11.3)", () => {
   const planted = fakeSecrets(PARSE_SECRETS_FIXTURE);
   it.each(["text", "json", "markdown", "sarif"])(
-    "keeps every part of both values out of --format %s and stderr",
+    "keeps every part of every value out of --format %s and stderr",
     async (format) => {
-      expect(planted).toHaveLength(2);
+      expect(planted).toHaveLength(4);
       const r = await run([PARSE_SECRETS_FIXTURE, "--format", format]);
       expect(r.code).toBe(1);
       expect(r.out).toContain("PARSE_ISSUE");
       expect(leaks(r.out + r.err, planted)).toEqual([]);
     },
   );
-  it("keeps every part of both values out of the quiet text and a report written with --output", async () => {
+  it("keeps every part of every value out of the quiet text and a report written with --output", async () => {
     const quiet = await run([PARSE_SECRETS_FIXTURE, "--quiet"]);
     expect(quiet.out).toContain("PARSE_ISSUE");
     const file = join(tempDir("parse-secret-output"), "report.sarif");

@@ -60,8 +60,8 @@ describe("the secret guard, on the site (v3 spec, section 11.3)", () => {
 describe("the secret guard, on lines PARSE_ISSUE quotes, on the site (v3 spec, sections 7 and 11.3)", async () => {
   const planted = fakeSecrets(PARSE_SECRETS_FIXTURE);
   const parsed = await lint(folder(PARSE_SECRETS_FIXTURE));
-  it("keeps every part of both values out of the rendered results", () => {
-    expect(planted).toHaveLength(2);
+  it("keeps every part of every value out of the rendered results", () => {
+    expect(planted).toHaveLength(4);
     document.body.innerHTML = '<section id="results"></section>';
     const container = document.getElementById("results")!;
     renderResults(container, parsed, { source: "parse-secrets.SemanticModel" });
@@ -72,7 +72,7 @@ describe("the secret guard, on lines PARSE_ISSUE quotes, on the site (v3 spec, s
     ["the Markdown download", exportMarkdown],
     ["the JSON download", exportJson],
     ["the copy for an AI assistant", exportForAssistant],
-  ] as const)("keeps every part of both values out of %s", (_name, exported) => {
+  ] as const)("keeps every part of every value out of %s", (_name, exported) => {
     const text = exported(parsed).text;
     expect(text).toContain("PARSE_ISSUE");
     expect(leaks(text, planted)).toEqual([]);

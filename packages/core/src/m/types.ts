@@ -31,4 +31,10 @@ export interface MIndex {
   issues: MParseIssue[];
   /** The TMDL file, line, and 1-based column of a place in a query's M. */
   locate(q: MQuery, at: MPosition): SourceLocation;
+  /**
+   * `text`, the TMDL file's line `line`, with every code unit hidden that masking the whole file or
+   * the line alone would hide (v3 spec, section 7, amended October 27, 2026). When `text` is not
+   * that line of the file, only the line's own masking applies.
+   */
+  maskedLine(file: string, line: number, text: string): string;
 }

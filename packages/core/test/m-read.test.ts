@@ -8,6 +8,8 @@ import { fixturesDir, readModelFiles } from "./helpers.js";
 const read = (files: LintFile[]) =>
   readM(buildModel(files.map((f) => parseTmdl(f.path, f.text))), files);
 const file = (text: string): LintFile => ({ path: "definition/tables/Sales.tmdl", text });
+/** A made-up value in the fixtures' form (v3 spec, section 11.3). */
+const fake = (kind: string, n: string): string => `pbiplint-fixture-${kind}-${n}-notreal`;
 
 describe("readM", () => {
   it("reads m-zoo's 38 M expressions: 27 partitions, Sales's policy is not read again, 10 shared expressions", async () => {
@@ -187,6 +189,27 @@ describe("readM", () => {
       line: 5,
       column: 9,
     });
+  });
+});
+
+describe("MIndex.maskedLine (v3 spec, section 7, amended October 27, 2026)", () => {
+  it("hides each line of a multi-line literal, by the whole file and by the line alone", async () => {
+    const text = [
+      "table T",
+      '    measure Q = "SELECT 1',
+      `    FROM x WHERE k = '${fake("pwd", "0203")}'`,
+      '    AND y = ""say ""hi""',
+      '    "',
+    ].join("\n");
+    const m = await read([{ path: "definition/tables/T.tmdl", text }]);
+    const lines = text.split("\n");
+    expect(
+      [2, 3, 4, 5].map((n) => m.maskedLine("definition/tables/T.tmdl", n, lines[n - 1]!).trim()),
+    ).toEqual(['measure Q = "…', "…", "…", '…"']);
+  });
+  it("masks a line by itself when the text is not the file's line", async () => {
+    const m = await read([file("table Sales\n")]);
+    expect(m.maskedLine("definition/tables/Sales.tmdl", 1, 'x = "a"')).toBe('x = "…"');
   });
 });
 

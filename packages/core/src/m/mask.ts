@@ -28,44 +28,112 @@ function tmdlNameEnd(text: string, open: number): number {
   return pair < 0 ? -1 : pair + 1;
 }
 
-/** A comment, or a run of anything but a quote, `#`, or `/`, or one other character. */
-const OTHER = /\/\/[^\n]*|\/\*[\s\S]*?(?:\*\/|$)|[^"#/]+|[\s\S]/y;
-/** The same, stopping at a TMDL name's `'` too. */
-const TMDL_OTHER = /\/\/[^\n]*|\/\*[\s\S]*?(?:\*\/|$)|[^"#/']+|[\s\S]/y;
+/** Where a `//` comment whose text starts at `from` ends: at a line break as M's lexer reads one. */
+function lineCommentEnd(text: string, from: number): number {
+  for (let i = from; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    if (c === 0x0a || c === 0x2028 || c === 0x2029) return i;
+  }
+  return text.length;
+}
+
+/** Whether only tabs and spaces come before `at` on its line. */
+function atLineStart(text: string, at: number): boolean {
+  for (let i = at - 1; i >= 0; i--) {
+    const c = text[i];
+    if (c === "\n") return true;
+    if (c !== "\t" && c !== " ") return false;
+  }
+  return true;
+}
 
 /**
- * Text with every text literal's text hidden, for a line PARSE_ISSUE quotes (v3 spec, section 7,
- * amended October 13, 2026): inside each `"..."` each line of text becomes `…`, and the quotes and
- * line breaks stay. A literal left open runs to the end. A `#"..."` name is kept. A comment is read
- * as one, so a quote in it never pairs with a literal's, and quoted text inside it is hidden too.
- * With `tmdl`, a `'...'` name is kept too, so a double quote inside it never pairs with a literal's;
- * in M an apostrophe delimits nothing.
+ * Which code units of `text` PARSE_ISSUE hides (v3 spec, section 7, amended October 13 and 27,
+ * 2026), 1 for each: a text literal's text between its quotes (a literal left open runs to the end;
+ * a `#"..."` name is kept), and a comment's text after `//` or between `/*` and `*\/` (an open one
+ * runs to the end). A line comment ends where M's lexer ends it, at a line feed, U+2028, or U+2029.
+ * A line feed is never hidden, so each line of a literal or comment shows its own `…`. With `tmdl`,
+ * a `'...'` name is kept, so a double quote inside it never pairs with a literal's, and a `///`
+ * description at a line's start keeps its words, with the text inside each `"..."` on it hidden; in
+ * M an apostrophe delimits nothing and `///` is a line comment. Scanned by hand, not with a regex,
+ * so text of any length is read in linear time (the pre-release security review, October 27, 2026).
  */
-export function maskLiterals(text: string, { tmdl = false }: { tmdl?: boolean } = {}): string {
-  const other = tmdl ? TMDL_OTHER : OTHER;
-  let out = "";
+export function hiddenLiterals(
+  text: string,
+  { tmdl = false }: { tmdl?: boolean } = {},
+): Uint8Array {
+  const hidden = new Uint8Array(text.length);
+  const hide = (from: number, to: number): void => {
+    for (let k = from; k < to; k++) if (text.charCodeAt(k) !== 0x0a) hidden[k] = 1;
+  };
   for (let i = 0; i < text.length;) {
-    const name = text[i] === "#" && text[i + 1] === '"';
-    if (name || text[i] === '"') {
+    const c = text[i];
+    const name = c === "#" && text[i + 1] === '"';
+    if (name || c === '"') {
       const open = name ? i + 1 : i;
       const close = closingQuote(text, open);
       const end = close < 0 ? text.length : close + 1;
-      out += name
-        ? text.slice(i, end)
-        : `"${text.slice(open + 1, close < 0 ? end : close).replace(/[^\n]+/g, "…")}${close < 0 ? "" : '"'}`;
+      if (!name) hide(open + 1, close < 0 ? end : close);
       i = end;
       continue;
     }
-    const nameEnd = tmdl && text[i] === "'" ? tmdlNameEnd(text, i) : -1;
-    if (nameEnd > 0) {
-      out += text.slice(i, nameEnd);
-      i = nameEnd;
+    if (c === "'" && tmdl) {
+      const nameEnd = tmdlNameEnd(text, i);
+      if (nameEnd > 0) {
+        i = nameEnd;
+        continue;
+      }
+    }
+    if (c === "/" && text[i + 1] === "/") {
+      if (tmdl && text[i + 2] === "/" && atLineStart(text, i)) {
+        // A description: the text inside each pair of double quotes on its line.
+        let end = text.indexOf("\n", i);
+        if (end < 0) end = text.length;
+        for (let q = text.indexOf('"', i); q >= 0 && q < end; q = text.indexOf('"', q + 1)) {
+          const close = text.indexOf('"', q + 1);
+          if (close < 0 || close >= end) break;
+          hide(q + 1, close);
+          q = close;
+        }
+        i = end;
+        continue;
+      }
+      const end = lineCommentEnd(text, i + 2);
+      hide(i + 2, end);
+      i = end;
       continue;
     }
-    other.lastIndex = i;
-    const token = other.exec(text)![0];
-    out += token[0] === "/" ? token.replace(/"[^"\n]*"/g, '"…"') : token;
-    i += token.length;
+    if (c === "/" && text[i + 1] === "*") {
+      const close = text.indexOf("*/", i + 2);
+      hide(i + 2, close < 0 ? text.length : close);
+      i = close < 0 ? text.length : close + 2;
+      continue;
+    }
+    i++;
   }
-  return out;
+  return hidden;
+}
+
+/** `text` with each run of the code units `hidden` marks as one `…`. */
+export function renderMasked(text: string, hidden: ArrayLike<number>): string {
+  let out = "";
+  let from = 0;
+  for (let i = 0; i < text.length; i++) {
+    if (!hidden[i]) continue;
+    out += `${text.slice(from, i)}…`;
+    while (i + 1 < text.length && hidden[i + 1]) i++;
+    from = i + 1;
+  }
+  return out + text.slice(from);
+}
+
+/**
+ * Text with every text literal's text and every comment's text hidden, for a line PARSE_ISSUE
+ * quotes (v3 spec, section 7): each line of text inside a `"..."`, after `//`, or between `/*` and
+ * `*\/` becomes `…`, and the quotes, comment marks, and line breaks stay. A comment is hidden whole;
+ * with `tmdl`, a `///` description keeps its words and hides only its quoted text. See
+ * `hiddenLiterals` for what is kept.
+ */
+export function maskLiterals(text: string, options: { tmdl?: boolean } = {}): string {
+  return renderMasked(text, hiddenLiterals(text, options));
 }

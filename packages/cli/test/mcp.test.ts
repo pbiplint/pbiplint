@@ -166,7 +166,7 @@ describe("pbiplint mcp", () => {
 
   it("keeps every part of the made-up values on lines PARSE_ISSUE quotes out of the lint tool's answers (v3 spec, sections 7 and 11.3)", async () => {
     const planted = fakeSecrets(PARSE_SECRETS_FIXTURE);
-    expect(planted).toHaveLength(2);
+    expect(planted).toHaveLength(4);
     const client = await connect();
     const json = await client.call("lint", { path: PARSE_SECRETS_FIXTURE });
     const quiet = await client.call("lint", { path: PARSE_SECRETS_FIXTURE, quiet: true });

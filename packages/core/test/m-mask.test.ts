@@ -22,14 +22,21 @@ describe("maskLiterals (v3 spec, section 7)", () => {
     [
       "a quote in a block comment",
       `x = 1 /* 5" */, k = "${fake("key", "0104")}"`,
-      'x = 1 /* 5" */, k = "…"',
+      'x = 1 /*…*/, k = "…"',
     ],
-    ["quoted text in a line comment", `// old key "${fake("key", "0105")}"`, '// old key "…"'],
+    ["quoted text in a line comment", `// old key "${fake("key", "0105")}"`, "//…"],
     [
       "a literal over two lines",
       `a = "${fake("key", "0106").replace("key-", "key-\n")}", b = "x"`,
       'a = "…\n…", b = "…"',
     ],
+    ["a block comment over two lines", "/* a\nb */ c", "/*…\n…*/ c"],
+    [
+      "a line comment ended by U+2028",
+      `1 // c\u2028 k = "${fake("key", "0202")}"`,
+      '1 //…\u2028 k = "…"',
+    ],
+    ["an empty line comment, kept", "x = 1 //", "x = 1 //"],
     [
       "text with no quote, unchanged",
       "Expected to find a comma <','>",
@@ -58,9 +65,21 @@ describe("maskLiterals (v3 spec, section 7)", () => {
     expect(maskLiterals(`x = 'a"b' & "plain note"`, { tmdl: true })).toBe(`x = 'a"b' & "…"`);
   });
 
-  it("leaves a value in a line comment showing when its quote is unpaired (a stated limit)", () => {
-    expect(maskLiterals('// old size 5" was a sample note, k = 1')).toBe(
-      '// old size 5" was a sample note, k = 1',
-    );
+  it("hides a line comment whole, even when its quote is unpaired", () => {
+    expect(maskLiterals('// old size 5" was a sample note, k = 1')).toBe("//…");
+  });
+
+  it.each([
+    [
+      "a description keeps its words, its quoted text hidden",
+      '\t/// A "quoted" description',
+      '\t/// A "…" description',
+    ],
+  ])("in TMDL, %s", (_name, text, masked) => {
+    expect(maskLiterals(text, { tmdl: true })).toBe(masked);
+  });
+
+  it("reads `///` in M as a line comment, its text hidden after `//`", () => {
+    expect(maskLiterals('\t/// A "quoted" description')).toBe("\t//…");
   });
 });

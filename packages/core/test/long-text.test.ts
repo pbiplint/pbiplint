@@ -4,6 +4,7 @@ import { formatMarkdown } from "../src/format/markdown.js";
 import { splitQualifiedName } from "../src/model/build.js";
 import { pairingDecision } from "../src/project/route.js";
 import * as rules from "../src/rules/microsoft-bpa/measures.js";
+import * as tableRules from "../src/rules/microsoft-bpa/tables.js";
 import { parseTmdl } from "../src/tmdl/parse.js";
 import { objectNames } from "./helpers.js";
 
@@ -91,5 +92,50 @@ describe("long runs a regex once backtracked over", () => {
   it("AVOID_USING_1_X_Y_SYNTAX reads a long run of digits quickly", () => {
     const tmdl = `table T\n\tmeasure A = ${"1".repeat(LONG)}\n`;
     expect(within(1_000, () => objectNames(rules.AVOID_USING_1_X_Y_SYNTAX, tmdl))).toEqual([]);
+  });
+});
+
+// The DAX scans (October 27, 2026): a search for `CALCULATE\s*\([^,]+,` or `USERELATIONSHIP\s*\(\s*.+?\]`
+// started again at every function name and read on to the same comma or bracket each time, so
+// these shapes took 13 to 47 seconds. A matcher written by hand reads each one once. The bound is
+// three times the slowest CI run.
+const MEGABYTE = 1_000_000;
+const BOUND_MS = 10_000;
+const measure = (dax: string) => `table T\n\tmeasure A = ${dax}\n`;
+const rls = "role R\n\tmodelPermission: read\n\ttablePermission T = TRUE()\n";
+const run = (piece: string, size: number) => piece.repeat(Math.ceil(size / piece.length));
+
+describe("DAX scans that restarted at every function name", () => {
+  it.each([
+    ["FILTER_COLUMN_VALUES", "CALCULATE(", "x, FILTER(T, T[a])"],
+    ["FILTER_COLUMN_VALUES", "CALCULATETABLE(", "x, FILTER(T, T[a])"],
+    ["FILTER_MEASURE_VALUES_BY_COLUMNS", "CALCULATE(", "x, FILTER(T, [a])"],
+    ["FILTER_MEASURE_VALUES_BY_COLUMNS", "CALCULATETABLE(", "x, FILTER(T, [a])"],
+    ["FILTER_MEASURE_VALUES_BY_COLUMNS", "CALCULATE(x, FILTER(T, [", "a]"],
+  ] as const)("%s reads 1 MB of %j quickly, and finds a match at its end", (rule, piece, end) => {
+    const dax = run(piece, MEGABYTE);
+    expect(within(BOUND_MS, () => objectNames(rules[rule], measure(dax)))).toEqual([]);
+    expect(within(BOUND_MS, () => objectNames(rules[rule], measure(dax + end)))).toEqual(["[A]"]);
+  });
+  it("AVOID_THE_USERELATIONSHIP_FUNCTION_AND_RLS_AGAINST_THE_SAME_TABLE reads 900 KB of USERELATIONSHIP(a] quickly", () => {
+    const rule = tableRules.AVOID_THE_USERELATIONSHIP_FUNCTION_AND_RLS_AGAINST_THE_SAME_TABLE;
+    const dax = run("USERELATIONSHIP(a]", 0.9 * MEGABYTE);
+    expect(within(BOUND_MS, () => objectNames(rule, measure(dax) + rls))).toEqual([]);
+    expect(within(BOUND_MS, () => objectNames(rule, measure(`${dax}, T[`) + rls))).toEqual(["'T'"]);
+  });
+  it("reads each shape at 16 MB quickly", () => {
+    const shapes = [
+      [rules.FILTER_COLUMN_VALUES, "CALCULATE("],
+      [rules.FILTER_COLUMN_VALUES, "CALCULATETABLE("],
+      [rules.FILTER_MEASURE_VALUES_BY_COLUMNS, "CALCULATE(x, FILTER(T, ["],
+      [
+        tableRules.AVOID_THE_USERELATIONSHIP_FUNCTION_AND_RLS_AGAINST_THE_SAME_TABLE,
+        "USERELATIONSHIP(a]",
+      ],
+    ] as const;
+    for (const [rule, piece] of shapes) {
+      const tmdl = measure(run(piece, SIXTEEN_MB)) + rls;
+      expect(within(BOUND_MS, () => objectNames(rule, tmdl))).toEqual([]);
+    }
   });
 });

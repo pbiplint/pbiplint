@@ -10,7 +10,6 @@ import {
   allMeasures,
   allTablePermissions,
   dataType,
-  escapeRegExp,
   expressionObjects,
   finding,
   isBlank,
@@ -22,6 +21,7 @@ import {
   typeKnown,
 } from "../helpers.js";
 import { eachQuery } from "../m-helpers.js";
+import { useRelationshipWith } from "./dax-scan.js";
 import { bpaRule } from "./define.js";
 
 // A key column with no dataType line counts: its type is unknown (#164), and a marked date table's
@@ -331,11 +331,10 @@ export const AVOID_THE_USERELATIONSHIP_FUNCTION_AND_RLS_AGAINST_THE_SAME_TABLE =
     return tablesInScope(m)
       .filter((t) => {
         if (!permissions.some((tp) => tp.table === t.name && tp.filter !== undefined)) return false;
-        const re = new RegExp(
-          `USERELATIONSHIP\\s*\\(\\s*.+?(?=\\])\\]\\s*,\\s*'*${escapeRegExp(t.name)}'*\\[`,
-          "i",
-        );
-        return measures.some((x) => re.test(x.expression));
+        // As a regex: USERELATIONSHIP\s*\(\s*.+?(?=\])\]\s*,\s*'*<escaped name>'*\[ (case-insensitive),
+        // which started again at every USERELATIONSHIP and read on to the same brackets.
+        const used = useRelationshipWith(t.name);
+        return measures.some((x) => used.test(x.expression));
       })
       .map(finding.table);
   },

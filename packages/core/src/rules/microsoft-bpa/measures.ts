@@ -9,6 +9,7 @@ import {
 } from "../helpers.js";
 import type { Measure } from "../../model/types.js";
 import type { Rule } from "../types.js";
+import { type Matcher, opening } from "./dax-scan.js";
 import { bpaRule } from "./define.js";
 
 const M: ExpressionKind = "measure";
@@ -16,7 +17,7 @@ const CC: ExpressionKind = "calculatedColumn";
 const CI: ExpressionKind = "calculationItem";
 
 /** A rule that flags every object in `kinds` whose expression matches any pattern. */
-const patternRule = (id: string, kinds: ExpressionKind[], patterns: RegExp[]): Rule =>
+const patternRule = (id: string, kinds: ExpressionKind[], patterns: Matcher[]): Rule =>
   bpaRule(id, (m) =>
     expressionObjects(m, kinds)
       .filter((o) => patterns.some((p) => p.test(o.expression)))
@@ -149,15 +150,21 @@ const NAME = String.raw`(?:\s*'+|(?:\s*[^\S ])?)[A-Za-z0-9 _]+`;
 const NAME_END = String.raw`(?:'+\s*|[^\S ]\s*)?`;
 const COLUMN = String.raw`'*\[[A-Za-z0-9 _]+\]`;
 const pattern = (source: string): RegExp => new RegExp(source, "i");
+// The four CALCULATE patterns are read by `opening` (dax-scan.ts): as a regex, a search started
+// again at every CALCULATE and read on to the same comma, the square of a run with none.
+const CALCULATE = /CALCULATE\s*\(/gi;
+const CALCULATETABLE = /CALCULATETABLE\s*\(/gi;
 
 export const FILTER_COLUMN_VALUES = patternRule(
   "FILTER_COLUMN_VALUES",
   [M, CC, CI],
   [
     // CALCULATE\s*\(\s*[^,]+,\s*FILTER\s*\(\s*'*[A-Za-z0-9 _]+'*\s*,\s*'*[A-Za-z0-9 _]+'*\[[A-Za-z0-9 _]+\]
-    pattern(String.raw`CALCULATE\s*\([^,]+,\s*FILTER\s*\(${NAME}${NAME_END},${NAME}${COLUMN}`),
+    // As a regex: CALCULATE\s*\([^,]+,\s*FILTER\s*\(${NAME}${NAME_END},${NAME}${COLUMN}
+    opening(CALCULATE, false, String.raw`\s*FILTER\s*\(${NAME}${NAME_END},${NAME}${COLUMN}`),
     // CALCULATETABLE\s*\([^,]*,\s*FILTER\s*\(\s*'*[A-Za-z0-9 _]+'*,\s*'*[A-Za-z0-9 _]+'*\[[A-Za-z0-9 _]+\]
-    pattern(String.raw`CALCULATETABLE\s*\([^,]*,\s*FILTER\s*\(${NAME}'*,${NAME}${COLUMN}`),
+    // As a regex: CALCULATETABLE\s*\([^,]*,\s*FILTER\s*\(${NAME}'*,${NAME}${COLUMN}
+    opening(CALCULATETABLE, true, String.raw`\s*FILTER\s*\(${NAME}'*,${NAME}${COLUMN}`),
   ],
 );
 
@@ -166,9 +173,11 @@ export const FILTER_MEASURE_VALUES_BY_COLUMNS = patternRule(
   [M, CC, CI],
   [
     // CALCULATE\s*\(\s*[^,]+,\s*FILTER\s*\(\s*'*[A-Za-z0-9 _]+'*\s*,\s*\[[^\]]+\]
-    pattern(String.raw`CALCULATE\s*\([^,]+,\s*FILTER\s*\(${NAME}${NAME_END},\s*\[[^\]]+\]`),
+    // As a regex: CALCULATE\s*\([^,]+,\s*FILTER\s*\(${NAME}${NAME_END},\s*\[[^\]]+\]
+    opening(CALCULATE, false, String.raw`\s*FILTER\s*\(${NAME}${NAME_END},\s*\[`, true),
     // CALCULATETABLE\s*\([^,]*,\s*FILTER\s*\(\s*'*[A-Za-z0-9 _]+'*,\s*\[
-    pattern(String.raw`CALCULATETABLE\s*\([^,]*,\s*FILTER\s*\(${NAME}'*,\s*\[`),
+    // As a regex: CALCULATETABLE\s*\([^,]*,\s*FILTER\s*\(${NAME}'*,\s*\[
+    opening(CALCULATETABLE, true, String.raw`\s*FILTER\s*\(${NAME}'*,\s*\[`),
   ],
 );
 

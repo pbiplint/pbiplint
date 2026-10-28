@@ -1,33 +1,44 @@
 import { mkdirSync, writeFileSync } from "node:fs";
-import { basename, dirname, relative, resolve } from "node:path";
+import { basename, dirname, resolve } from "node:path";
 import {
   ConfigError,
   defaultRules,
   errorKind,
   formatResult,
-  lint,
-  resolveConfig,
+  runSummary,
+  runSummaryLine,
   SEVERITY_LABEL,
   showControls,
   showOnly,
   summaryLine,
 } from "@pbiplint/core";
-import { HELP, parseArgs, UsageError } from "./args.js";
-import { CONFIG_FILE, findConfig } from "./config.js";
+import { HELP, parseArgs, UsageError, type CliOptions } from "./args.js";
+import { CONFIG_FILE } from "./config.js";
 import { explainJson, explainRule, explainText, findRule, noRuleLines } from "./explain.js";
-import { quietText } from "./quiet.js";
+import { EXPLAIN_HINT, quietText } from "./quiet.js";
+import {
+  configFor,
+  lintProject,
+  lintSeveral,
+  prefixesOf,
+  severalJson,
+  severalMarkdown,
+  severalQuiet,
+  severalSarif,
+  severalText,
+  type RunOptions,
+} from "./several.js";
 import { runSkill } from "./skill.js";
 import { logSafe } from "./log-safe.js";
 import { sampleDir } from "./sample.js";
 import { RULE_HELP } from "./rule-help.data.js";
-import { resolveProject } from "./walk.js";
+import { resolveInput, type NamedProject } from "./walk.js";
 
 declare const __PBIPLINT_VERSION__: string | undefined;
 export const VERSION =
   typeof __PBIPLINT_VERSION__ === "string" ? __PBIPLINT_VERSION__ : "0.0.0-dev";
 
-/** The text report's last line when it has findings. */
-export const EXPLAIN_HINT = "Run pbiplint explain <RULE_ID> for a rule's guidance, offline.";
+export { EXPLAIN_HINT };
 
 export interface Io {
   stdout(text: string): void;
@@ -109,38 +120,26 @@ export async function main(argv: string[], given: Io): Promise<number> {
       if (!shownIds.includes(rule.id)) shownIds.push(rule.id);
     }
     const target = opts.sample ? sampleDir() : resolve(io.cwd(), opts.path!);
-    const project = resolveProject(target);
-    const found = findConfig(
-      project.root,
-      opts.config ? resolve(io.cwd(), opts.config) : undefined,
-    );
-    const config = resolveConfig({
-      ...found.config,
-      ...(opts.failOn ? { failOn: opts.failOn } : {}),
-    });
-    const files = [...(project.model?.files ?? []), ...(project.report?.files ?? [])];
-    const linted = await lint(files, {
-      config,
-      diagnostics: project.diagnostics,
-      absent: project.absent,
-      // Each part's own list, relative to its root, so what the walk could not read reaches the
-      // layer it belongs to.
-      unreadPaths: {
-        ...(project.model ? { model: project.model.unread } : {}),
-        ...(project.report ? { report: project.report.unread } : {}),
-      },
-    });
+    const input = resolveInput(target);
+    const options: RunOptions = {
+      cwd: io.cwd(),
+      config: opts.config,
+      failOn: opts.failOn,
+      ...(opts.rules ? { shownIds } : {}),
+    };
+    if (input.kind === "several")
+      return await several(target, input.projects, opts, options, io, stderrLine);
+    const { project } = input;
+    const { found, config } = configFor(project.root, options);
+    const linted = await lintProject(project, config);
     const result = opts.rules ? showOnly(linted, shownIds, config) : linted;
-    // SARIF artifact URIs are resolved from where the tool ran, so each part's root, relative to
-    // the cwd, goes in front of that part's finding paths.
-    const prefix = (root: string | undefined): string | undefined =>
-      root === undefined ? undefined : relative(io.cwd(), root).split("\\").join("/");
+    const prefix = prefixesOf(io.cwd(), project);
     const formatted = opts.quiet
       ? quietText(result)
       : formatResult(opts.format, result, {
           toolVersion: VERSION,
-          pathPrefix: prefix(project.model?.root) ?? prefix(project.report?.root) ?? "",
-          reportPathPrefix: prefix(project.report?.root),
+          pathPrefix: prefix.model ?? prefix.report ?? "",
+          reportPathPrefix: prefix.report,
           help: RULE_HELP,
         });
     // The text format is for a person or an assistant reading a terminal, so with findings it
@@ -180,6 +179,58 @@ export async function main(argv: string[], given: Io): Promise<number> {
       stderrLine(i === 0 ? `pbiplint: unexpected error: ${line}` : line);
     return 2;
   }
+}
+
+/**
+ * A run over a folder that holds several projects (#237): each linted as its own run would be,
+ * the report of them all on stdout or in --output, then stderr's lines, in a one-project run's
+ * order, each naming its project, since a path in one is relative to that project. A config's
+ * unknown rule ids are named once per config file, by its path from the cwd, as several files
+ * can share one name. The exit code is 1 when any project fails its gate.
+ */
+async function several(
+  folder: string,
+  projects: NamedProject[],
+  opts: CliOptions,
+  options: RunOptions,
+  io: Io,
+  stderrLine: (line: string) => void,
+): Promise<number> {
+  const { run, found } = await lintSeveral(folder, projects, options);
+  const formats = {
+    text: () => severalText(run),
+    json: () => severalJson(run, VERSION),
+    markdown: () => severalMarkdown(run),
+    sarif: () => severalSarif(run, { toolVersion: VERSION, help: RULE_HELP }),
+  };
+  const report = opts.quiet ? severalQuiet(run) : formats[opts.format]();
+  const { runs } = run;
+  if (opts.output) {
+    const out = resolve(io.cwd(), opts.output);
+    mkdirSync(dirname(out), { recursive: true });
+    writeFileSync(out, report);
+    stderrLine(`pbiplint: ${runSummaryLine(runSummary(runs))}, wrote ${opts.output}`);
+  } else {
+    io.stdout(report);
+  }
+  for (const { path, result } of runs)
+    for (const e of result.summary.ruleErrors)
+      stderrLine(`${path}: rule ${e.id} failed: ${e.message}`);
+  // Each config file's unknown ids, gathered from every project that used it: a project that
+  // could not be read binds only PARSE_ISSUE, so it names none of its config's.
+  const unknown = new Map<string | undefined, { name: string; ids: Set<string> }>();
+  runs.forEach(({ result, configPath }, i) => {
+    const file = found[i]!.path;
+    const entry = unknown.get(file) ?? { name: configPath ?? CONFIG_FILE, ids: new Set() };
+    unknown.set(file, entry);
+    for (const id of result.summary.unknownRules) entry.ids.add(id);
+  });
+  for (const { name, ids } of unknown.values())
+    for (const id of ids)
+      stderrLine(`pbiplint: ${name}: no rule named "${id}" (run pbiplint rules for the list)`);
+  for (const { path, result } of runs)
+    for (const d of result.diagnostics) stderrLine(`pbiplint: notice: ${path}: ${d.message}`);
+  return runs.some((r) => r.result.failed) ? 1 : 0;
 }
 
 /** True for an error Node itself raised: it carries a string `code` (`ENOENT`, `EACCES`). */

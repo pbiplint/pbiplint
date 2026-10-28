@@ -1,6 +1,6 @@
 import type { LintResult } from "../engine/lint.js";
 import { formatJson } from "./json.js";
-import { formatMarkdown } from "./markdown.js";
+import { formatMarkdown, markdownText } from "./markdown.js";
 import { formatSarif } from "./sarif.js";
 import {
   countsLine,
@@ -57,6 +57,7 @@ export {
   layersLine,
   layerTag,
   locationOf,
+  markdownText,
   noticeLines,
   plural,
   ruleErrorNotices,

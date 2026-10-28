@@ -8,6 +8,12 @@ import {
   type LintResult,
 } from "@pbiplint/core";
 
+/**
+ * The text report's last line when it has findings. It lives here, with the quiet report's, so
+ * the several-project formats in several.ts end the same way without importing main.
+ */
+export const EXPLAIN_HINT = "Run pbiplint explain <RULE_ID> for a rule's guidance, offline.";
+
 /** The quiet report's last line when it has findings. */
 export const QUIET_NEXT =
   "Next: pbiplint <path> --rule <RULE_ID> for a rule's findings, pbiplint explain <RULE_ID> for how to fix it.";

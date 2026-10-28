@@ -3,15 +3,25 @@
 // section's order, so a change that breaks one fails here. Change a promise here and on the page
 // together; a new JSON field is additive and keeps version 1, a removed or renamed one raises it.
 import { cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { defaultRules } from "@pbiplint/core";
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { tempDir } from "../../../tests/support/temp-dir.js";
 import { HELP } from "../src/args.js";
-import { main } from "../src/main.js";
+import { main, VERSION } from "../src/main.js";
+
+// VERSION as the build sets it, from the package's version (build.mjs), so this file's runs print
+// what the built CLI prints and the one-project goldens compare whole. Set before main loads.
+vi.hoisted(() => {
+  const { readFileSync } = process.getBuiltinModule("node:fs");
+  const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+  vi.stubGlobal("__PBIPLINT_VERSION__", pkg.version);
+});
+afterAll(() => vi.unstubAllGlobals());
 
 const repo = new URL("../../../", import.meta.url).pathname;
 const sample = join(repo, "examples/messy-sales");
+const goldens = join(repo, "packages/cli/test/fixtures/one-project");
 
 async function run(argv: string[], cwd = repo) {
   let out = "";
@@ -41,6 +51,39 @@ function hasFields(o: object, required: string[], optional: string[] = []): void
 }
 
 describe("the CLI's contract", () => {
+  it("0. a one-project run prints byte for byte what release/0.3.0 printed (#237)", async () => {
+    const golden = (file: string): string => readFileSync(join(goldens, file), "utf8");
+    // The goldens hold the version they were recorded at, which a version bump changes.
+    const recorded = JSON.parse(golden("sample-json.out")).tool.version;
+    expect(
+      VERSION,
+      `the one-project goldens hold version ${recorded} and the CLI is ${VERSION}; they are release/0.3.0's output (fixtures/one-project/README.md), so this test needs its version changed, not the goldens re-recorded`,
+    ).toBe(recorded);
+    const cases: { name: string; argv: string[]; code: number; file?: string }[] = JSON.parse(
+      golden("cases.json"),
+    );
+    expect(cases.length).toBe(14);
+    for (const c of cases) {
+      // Each case has fresh folders, as it was recorded with.
+      const tmp = c.name.startsWith("below-") ? sampleBelow() : "<TMP>";
+      const out = tempDir("contract-golden-out");
+      const fill = (s: string): string =>
+        s
+          .replaceAll("<TMPREL>", relative(repo, tmp))
+          .replaceAll("<TMP>", tmp)
+          .replaceAll("<OUT>", out);
+      const r = await run(c.argv.map(fill));
+      expect(r.out, `${c.name} stdout`).toBe(fill(golden(`${c.name}.out`)));
+      expect(r.err, `${c.name} stderr`).toBe(fill(golden(`${c.name}.err`)));
+      expect(r.code, `${c.name} exit code`).toBe(c.code);
+      expect(String(r.code), `${c.name} exit code`).toBe(golden(`${c.name}.code`).trim());
+      if (c.file)
+        expect(readFileSync(join(out, "report.txt"), "utf8"), `${c.name} file`).toBe(
+          fill(golden(c.file)),
+        );
+    }
+  });
+
   it("1. stdout carries exactly one document in json, sarif, and markdown; the rest goes to stderr", async () => {
     const below = sampleBelow();
     for (const format of ["json", "sarif"]) {
@@ -90,7 +133,10 @@ describe("the CLI's contract", () => {
     mkdirSync(join(dir, "Empty.SemanticModel", "definition"), { recursive: true });
     mkdirSync(join(dir, "legacy", "Demo.Report"), { recursive: true });
     writeFileSync(join(dir, "legacy", "Demo.Report", "report.json"), "{}");
-    for (const at of ["a", "b"]) cpSync(sample, join(dir, "two", at), { recursive: true });
+    for (const at of ["a", "b"]) {
+      mkdirSync(join(dir, "none", at, "Old.SemanticModel"), { recursive: true });
+      writeFileSync(join(dir, "none", at, "Old.SemanticModel", "model.bim"), "{}");
+    }
     // A skill copy that differs from the one --install would write, in its own folder.
     const skillDir = join(dir, "skill-differs");
     mkdirSync(join(skillDir, ".claude/skills/pbiplint"), { recursive: true });
@@ -106,7 +152,7 @@ describe("the CLI's contract", () => {
       ["a .pbix", [join(dir, "Sales.pbix")]],
       ["a model folder with no .tmdl files", [join(dir, "Empty.SemanticModel")]],
       ["a run that reads nothing it can lint", [join(dir, "legacy")]],
-      ["a folder holding several projects", [join(dir, "two")]],
+      ["a folder holding several projects, none of which it can read", [join(dir, "none")]],
       ["options with no path", ["--format", "json"]],
       ["an unexpected error", ["a\u0000b"]],
       ["a skill copy that differs, without --force", ["skill", "--install", "claude"], skillDir],

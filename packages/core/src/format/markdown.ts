@@ -114,6 +114,15 @@ function spanned(w: string, table: boolean): string {
 const cell = (s: string): string => text(oneLine(s), true);
 
 /**
+ * Text from the input as this format writes it: in a table cell (`table`), a line break shown as
+ * a space, else on a line of its own, such as a heading, a line break shown as the text format
+ * shows it. For a caller that sets the report inside a larger document, such as the CLI's
+ * several-project run, whose headings and table name each project's path.
+ */
+export const markdownText = (s: string, table = false): string =>
+  table ? cell(s) : text(s, false);
+
+/**
  * A name from the input as a code span in a table cell, showing the whole name, or a word of text
  * as one anywhere. A code span shows its `<` and `&` as written, so nothing is entity-escaped
  * here. Its fence is one backtick longer than the longest run of backticks in the name. CommonMark

@@ -48,6 +48,7 @@ export {
   layersLine,
   layerTag,
   locationOf,
+  markdownText,
   noticeLines,
   plural,
   ruleErrorNotices,

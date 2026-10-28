@@ -105,7 +105,7 @@ Before any code changes, on the branch rebased onto #238's merge: build (`npm ru
   - `one project below a folder is still one`: `kind: "one"`, byte-equal to today's `resolveProject` (the `project-below-input` notice first).
   - `a folder that is itself a project stays one, whatever lies deeper`.
   - `more than 200 projects is refused`: 201 empty-ish model folders (`m000.SemanticModel/definition/model.tmdl` holding `model Model`) under `x/` and `y/`; `UsageError` message `${root} contains 201 projects, more than the 200 one run lints; point at a folder that holds fewer:` with lines `  x: 101 projects: pbiplint ${root}/x` and `  y: 100 projects: pbiplint ${root}/y`.
-  - `a project that cannot be read refuses the whole run`: one project's model folder holds no `.tmdl` files; `UsageError` message `${root}/b/messy-sales could not be linted: <that project's own refusal>`, lines listing each other project's command as #174's list does (`  a/messy-sales: pbiplint ${root}/a/messy-sales`). (Spec 3.3; if Michael picks the alternative, this test changes in the plan's amendment.)
+  - `a project that cannot be read refuses the whole run`: one project's model folder holds no `.tmdl` files; `UsageError` message `${root}/b/messy-sales could not be linted: <that project's own refusal>`, lines listing each other project's command as #174's list does (`  a/messy-sales: pbiplint ${root}/a/messy-sales`). (Spec 3.3 as written. Task 2a replaces this test if Michael picks the alternative pb-coord recommends.)
   - `the outside-reference hint points at the folder that holds both`: naming `reports/Sales/Sales.pbip` of the monorepo gives the hint `lint the folder that holds both (../.. from the project folder) to include it`; the `SHARED` constant and its tests go.
   - A project path with a space and one with `\n` in it: the refusal's command lines quote and show them as #174's do.
 
@@ -116,6 +116,34 @@ Before any code changes, on the branch rebased onto #238's merge: build (`npm ru
 - [ ] **Step 4: Run the walk tests and the CLI suite.** `npx vitest run packages/cli` passes, except main's tests for "contains 2 projects", fixed in Task 3.
 
 - [ ] **Step 5: Commit.** `git commit -m "feat(cli): find and read every project in a folder (#237)"`
+
+### Task 2a (option, pending Michael on item 5): an unreadable project is a `PARSE_ISSUE`, not a refusal
+
+pb-coord recommends this to Michael: in the corpus, refusing the whole run would refuse 10 of 148 multi-project repositories (6.8%) and leave 22 readable projects unlinted, every cause a legacy `model.bim`. Build this task only if Michael picks it; otherwise Task 2's refusal stands.
+
+**Why `PARSE_ISSUE` and no new rule:** it is already the built-in, error-severity finding for a file pbiplint could not read, a config can lower it, and it already has a page, an `explain` entry, and SARIF help. A new rule would add a page, a summary in core's bundle, help text, and a parity entry. One caveat: its name is "File could not be fully parsed", and a `model.bim` is not parsed at all; the detail says why, and the page gains a section, so the name can stay. A `lint()` cannot produce this finding itself, since the walk reads nothing from such a project, so core gains a small constructor.
+
+**Files:** `packages/core/src/engine/projects.ts`, `packages/cli/src/walk.ts`, `packages/web/src/input/project-files.ts`, the `PARSE_ISSUE` page `rules/parse-issue.md`, and its `rule-help` and `rule-guidance` data, regenerated with `scripts/generate-rule-pages.mjs`. Tests: `packages/core/test/projects.test.ts`, `packages/cli/test/walk.test.ts`, `packages/cli/test/several.test.ts`, `packages/web/test/project-files.test.ts`.
+
+**Interfaces:**
+
+- Produces:
+  ```ts
+  // core, projects.ts
+  export interface Unreadable { message: string; layer: LayerName; root?: string; file?: string }
+  export function unreadProject(unreadable: Unreadable, config: ResolvedConfig): LintResult;
+  // walk.ts: NamedProject gains `unreadable?: Unreadable` in place of `project` for a project whose own resolution threw a UsageError.
+  ```
+
+- [ ] **Step 1: Write the failing tests.**
+  - core: `unreadProject` on `{ message: "Sales.SemanticModel is stored as model.bim, which pbiplint cannot read; save it in the TMDL format from Power BI Desktop", layer: "model", file: "model.bim" }` gives one `PARSE_ISSUE` group with one finding (`objectType: "File"`, `objectName: "model.bim"`, `layer: "model"`, `location: { file: "model.bim", line: 1 }`, `detail` the message), both layers `present: false` with the model's reason `LEGACY_MODEL_REASON`, `summary.files` 0, and `failed: true` under the default config; with `resolveConfig({ rules: { PARSE_ISSUE: "warning" } })` it is a warning and `failed` is false.
+  - walk: the two-project folder with one project's model replaced by a `model.bim` gives `kind: "several"`, the readable project resolved, and the other `unreadable` with the legacy message, `layer: "model"`, `root` its model folder, `file: "model.bim"`; a `report.json` report likewise with `LEGACY_REPORT_REASON` and `file: "report.json"`; a project refused for another reason (a model folder with no `.tmdl` files) carries the refusal message and no `file`.
+  - CLI: that folder exits `1`, lints the readable project in full, and shows the unreadable one as its own project with the one `PARSE_ISSUE` finding; the SARIF result for it points at `<prefix>/model.bim`, line 1; with `--fail-on none` it exits `0`. A folder where every project is unreadable is still refused (exit 2), as #175 asks for a run that reads nothing.
+  - site: the same layouts give the same projects and findings.
+- [ ] **Step 2: Run them and see them fail.**
+- [ ] **Step 3: Implement.** `resolveInput` catches `UsageError` per project and records the refusal; the legacy cases are recognized where `legacyPart` records them (`w.legacy`), which already has the layer and the folder. `unreadProject` builds the finding and passes it through `rank` with the config, so severity overrides and `failed` work as for any finding. The page's new section, "A project pbiplint cannot read", says what the finding means and how to save the project in TMDL and PBIR from Power BI Desktop, in the words the legacy notices already use.
+- [ ] **Step 4: Run the core, CLI, and web suites, and measure core.** Expected growth about 0.4 KB.
+- [ ] **Step 5: Commit.** `feat: an unreadable project in a several-project run is a PARSE_ISSUE (#237)`
 
 ### Task 3: The CLI run and its outputs
 
@@ -175,19 +203,41 @@ Before any code changes, on the branch rebased onto #238's merge: build (`npm ru
 - [ ] **Step 1: Write the failing tests.**
   - `project-files.test.ts`: the CLI's three layouts from Task 2 (two below, side by side, the monorepo) give `kind: "several"` with the same paths; the refusal "contains N projects; drop one of them" is gone; over 200 is refused as `${base} contains 201 projects, more than the 200 one run lints; drop a folder that holds fewer`.
   - `projects-below.test.ts`: the test that holds the CLI and the site to the same answer covers the several case (same paths).
-  - The monorepo on the site: the site has no `.pbip` route (each `.pbip` is read as its folder), so each report lints without the model. The shared model is still linted, as a project of its own, so nothing goes unlinted (see the open point below).
+  - The monorepo on the site lints as the CLI lints it: each report with the shared model (Task 4a's route), the model's findings once, and `projects-below.test.ts` holds the two to the same project list and, for this layout, the same finding counts per project.
   - `render.test.ts`: `renderSeveral` writes the combined summary line, a list of links to `#project-1` ... `#project-N`, then a `<section id="project-N">` per project with an `h2` `Project N of M: <path>` and that project's results as `renderResults` renders them, export bar included; the announcer reads `<N> projects: <runSummaryLine>.`
   - e2e: dropping the monorepo shows three sections; "Copy for an AI assistant" in the second copies that project's Markdown.
 
 - [ ] **Step 2: Run them and see them fail.** `npx vitest run packages/web`.
 
-- [ ] **Step 3: Implement.** `selectProjects` reuses `selectProject` on each path (each as a sub-drop rooted at that path, the way the one project below is read today). A model that `projectsBelow` folds into a `.pbip` the site reads without it is added as a project of its own. `runEntries` lints each project in turn, with the same frame wait before the first, then `shareModels` and `renderSeveral`.
+- [ ] **Step 3: Implement.** `selectProjects` reuses `selectProject` on each path (each as a sub-drop rooted at that path, the way the one project below is read today). A `.pbip` path goes through Task 4a's route. `runEntries` lints each project in turn, with the same frame wait before the first, then `shareModels` and `renderSeveral`.
 
 - [ ] **Step 4: Run the web suite and e2e.** `npx vitest run packages/web && npm run test:e2e`.
 
 - [ ] **Step 5: Commit.** `git commit -m "feat(web): lint every project in a dropped folder (#237)"`
 
-**Open point for pb-coord (found while planning, not in the spec):** the site cannot follow a report's `byPath` to a model outside the report's folder; that is the spec section 12 of the PBIP work, unchanged here. So in the monorepo, the site lints each report without its model, while the CLI lints them with it. The plan's step above keeps the shared model linted on its own, so nothing goes unlinted, but the CLI and the site disagree for this layout. Giving the site the `.pbip` route closes that gap, and it is a bigger change: the web's `readNamed` equivalent and the #236 boundary inside a drop.
+### Task 4a: The site follows `.pbip` and `byPath` references inside the drop
+
+pb-coord's call (October 28, 2026): the site and the CLI must agree on the shared-model monorepo. Today the site reads a `.pbip` as its folder and pairs a report only with a model beside it (`pairingDecision`'s sibling check), so a report reading `../../models/Shared.SemanticModel` lints without it. This task gives the site the CLI's `.pbip` route, with the drop as the boundary where the CLI has the folder named. It is web code only, so core's budget is untouched. Build it before Task 4, which uses it.
+
+**Size estimate:** about 80 to 120 lines in `project-files.ts` and 150 to 200 lines of tests. The browser has no links and no real paths, so none of the CLI's `realpath` checks carry over: a reference is followed when it resolves, `.` and `..` taken, to a folder inside the drop, and otherwise gets the CLI's outside notice in the CLI's words.
+
+**What changes for an input the site lints today:** a drop with one project below it whose report reads a model elsewhere in the drop now lints that model with the report, as the CLI already does. The site's output for that drop changes, toward the CLI's; the release notes line in spec 10 covers it. The CLI's output does not change.
+
+**Files:** `packages/web/src/input/project-files.ts`. Tests: `packages/web/test/project-files.test.ts`, `packages/web/test/projects-below.test.ts`.
+
+**Interfaces:**
+
+- Produces: `readFolder`'s result for a project given as a `.pbip` path (from `projectsBelow`) or as a folder holding one `.pbip`: the report its `artifacts` name, resolved inside the drop, and the model that report's `definition.pbir` names `byPath`, resolved inside the drop, read with the same `tmdlRead` and `readPart` as a model beside it. `SelectedProject.root` stays the `.pbip`'s folder; the model's files stay relative to the model's root, as the CLI gives them.
+
+- [ ] **Step 1: Write the failing tests.**
+  - `project-files.test.ts`: the monorepo dropped whole (after Task 4, as several projects; before it, test through a drop holding one report and the shared model, which lints as one project below) gives each report with the model: `absent` has no model reason, `files` hold the model's `.tmdl` files, and `read` lists them as `../../models/Shared.SemanticModel/...`.
+  - A `.pbip` whose `artifacts` name `../Other/Sales.Report` inside the drop reads that report.
+  - A reference that climbs out of the drop (`../../../elsewhere.SemanticModel` from a report at depth 2) is not followed, and the notice is the CLI's `outside` notice in its words.
+  - `projects-below.test.ts`: for the monorepo, the CLI (`resolveInput`) and the site (`selectProjects`) give the same project paths and, per project, the same set of model files and report files.
+- [ ] **Step 2: Run them and see them fail.**
+- [ ] **Step 3: Implement.** Port the shape of `resolvePbip` and `readNamed` from `packages/cli/src/walk.ts` onto the drop's `dirs` and `entries`, with `resolveIn`'s rule (`packages/core/src/project/below.ts`) for paths. Keep the PBIP-folder route for a folder whose parts sit beside each other, so Desktop's own layout reads exactly as today.
+- [ ] **Step 4: Run the web suite.** `npx vitest run packages/web`.
+- [ ] **Step 5: Commit.** `feat(web): follow .pbip and byPath references inside the drop (#237)`
 
 ### Task 5: The MCP server, the skill, the docs, and the budget
 

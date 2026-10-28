@@ -2,7 +2,7 @@ import type { Indexes } from "../index/build.js";
 import type { Project } from "../project/types.js";
 import { finding } from "../rules/helpers.js";
 import { reportFinding } from "../rules/report-helpers.js";
-import { RULE_COULD_NOT_FINISH } from "../rules/rule-could-not-finish.js";
+import { failureDetail, RULE_COULD_NOT_FINISH } from "../rules/rule-could-not-finish.js";
 import {
   layerOf,
   type Finding,
@@ -176,11 +176,7 @@ export function runRules(
       const key = JSON.stringify([id, f.objectType, f.objectName, f.objectId]);
       if (seen.has(key)) continue;
       seen.add(key);
-      keep(
-        RULE_COULD_NOT_FINISH.id,
-        { ...f, detail: `${id} could not finish on ${label}: ${kind}` },
-        id,
-      );
+      keep(RULE_COULD_NOT_FINISH.id, { ...f, detail: failureDetail(id, label, kind) }, id);
     }
   }
   return result;

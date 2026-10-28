@@ -140,6 +140,32 @@ describe("RULE_COULD_NOT_FINISH", () => {
     expect(r.summary.ruleErrors).toHaveLength(2);
   });
 
+  it("gives a finding for each query a rule fails on and for the model it then throws out of", async () => {
+    const BOTH_THEN_THROWS: Rule = {
+      ...base,
+      id: "BOTH_THEN_THROWS",
+      layer: "powerquery",
+      needs: ["model"],
+      check: (_project, ctx) => {
+        eachQuery(ctx, ctx.indexes.m.queries, () => {
+          throw new TypeError("a message");
+        });
+        throw new RangeError("a message");
+      },
+    };
+    const r = await lintWith([RULE_COULD_NOT_FINISH, BOTH_THEN_THROWS]);
+    expect(own(r).map((f) => [f.objectType, f.objectName, f.detail])).toEqual([
+      ["Partition", "Sales", "BOTH_THEN_THROWS could not finish on query 'Sales': TypeError"],
+      ["Partition", "Stock", "BOTH_THEN_THROWS could not finish on query 'Stock': TypeError"],
+      ["Model", "Model", "BOTH_THEN_THROWS could not finish on the model: RangeError"],
+    ]);
+    expect(r.summary.ruleErrors).toEqual([
+      { id: "BOTH_THEN_THROWS", message: "query 'Sales': TypeError" },
+      { id: "BOTH_THEN_THROWS", message: "query 'Stock': TypeError" },
+      { id: "BOTH_THEN_THROWS", message: "RangeError" },
+    ]);
+  });
+
   it("writes the findings in the order the errors happened", async () => {
     const r = await lintWith([RULE_COULD_NOT_FINISH, WHOLE, PER_QUERY]);
     expect(own(r).map((f) => f.detail)).toEqual([

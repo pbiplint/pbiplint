@@ -23,7 +23,16 @@ export const RULE_COULD_NOT_FINISH: Rule = {
   check: () => [],
 };
 
+/** How every finding's detail begins: the failed rule's id, then where it could not finish. */
+const failurePrefix = (ruleId: string): string => `${ruleId} could not finish on `;
+
+/**
+ * A finding's detail: the rule `ruleId` could not finish on `label` (`query 'Sales'`, `the model`)
+ * with an error of class `kind`. Written only here, so `isFailureOf` reads what `runRules` writes.
+ */
+export const failureDetail = (ruleId: string, label: string, kind: string): string =>
+  `${failurePrefix(ruleId)}${label}: ${kind}`;
+
 /** True when `f` is a RULE_COULD_NOT_FINISH finding about the rule `ruleId`, which failed. */
 export const isFailureOf = (f: Finding, ruleId: string): boolean =>
-  f.ruleId === RULE_COULD_NOT_FINISH.id &&
-  (f.detail?.startsWith(`${ruleId} could not finish on `) ?? false);
+  f.ruleId === RULE_COULD_NOT_FINISH.id && (f.detail?.startsWith(failurePrefix(ruleId)) ?? false);

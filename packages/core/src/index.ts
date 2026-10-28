@@ -16,6 +16,7 @@ export {
   type LintSummary,
   type ShownSummary,
 } from "./engine/lint.js";
+export { errorKind } from "./engine/rule-error.js";
 export { showOnly } from "./engine/show-only.js";
 export {
   effectiveSeverity,

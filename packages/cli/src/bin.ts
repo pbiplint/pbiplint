@@ -1,4 +1,4 @@
-import { showControls } from "@pbiplint/core";
+import { errorKind } from "@pbiplint/core";
 import { logSafe } from "./log-safe.js";
 import { main } from "./main.js";
 
@@ -17,10 +17,12 @@ main(process.argv.slice(2), {
     process.exitCode = code;
   })
   .catch((e: unknown) => {
-    // As main does for every line it writes to stderr, the message's control characters are shown
-    // and CI log command sequences escaped.
+    // Only the class: a message can hold the model's text (v3 spec, section 11.3). The line is
+    // fixed text, escaped for CI logs as every line main writes to stderr is.
     process.stderr.write(
-      logSafe(`${showControls(`pbiplint: ${e instanceof Error ? e.message : String(e)}`)}\n`),
+      logSafe(
+        `pbiplint: something went wrong: ${errorKind(e)}. Please report this at https://github.com/pbiplint/pbiplint/issues.\n`,
+      ),
     );
     process.exitCode = 2;
   });

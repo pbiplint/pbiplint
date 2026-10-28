@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import { resolveConfig } from "../src/engine/config.js";
 import { lint, type LintFile, type LintResult } from "../src/engine/lint.js";
 import { runSummary, runSummaryLine, shareModels, type ProjectRun } from "../src/index.js";
+import { showOnly } from "../src/engine/show-only.js";
 import { defaultRules } from "../src/rules/index.js";
+import { allVisuals } from "../src/rules/report-helpers.js";
 import type { Rule } from "../src/rules/types.js";
 import { bound, j, measure, column, page } from "./report-helpers.js";
 
@@ -36,6 +38,17 @@ const counts = (r: LintResult) => {
     r.groups.filter((g) => g.rule.severity === severity).reduce((k, g) => k + g.findings.length, 0);
   return { findings: r.findings.length, errors: n(3), warnings: n(2), infos: n(1) };
 };
+/** A test rule: `spec` gives its id, layer, needs, and check. */
+const testRule = (spec: Pick<Rule, "id" | "layer" | "needs" | "check">): Rule => ({
+  name: "Test rule",
+  category: "Maintenance",
+  severity: 2,
+  scope: [],
+  description: "",
+  references: [],
+  status: "ported",
+  ...spec,
+});
 const notReached = (r: LintResult) =>
   r.findings.filter((f) => f.ruleId === "NOT_REACHED_FROM_REPORT").map((f) => f.objectName);
 
@@ -51,9 +64,10 @@ describe("shareModels", () => {
   });
 
   it("lists a shared model's findings once, under the first run", () => {
+    const modelPath = "models/Shared.SemanticModel";
     const [first, second] = shareModels([
-      run("reports/Finance/Finance.pbip", finance, { modelKey: "m" }),
-      run("reports/Sales/Sales.pbip", sales, { modelKey: "m" }),
+      run("reports/Finance/Finance.pbip", finance, { modelKey: "m", modelPath }),
+      run("reports/Sales/Sales.pbip", sales, { modelKey: "m", modelPath }),
     ]);
     // The sample has model findings and report findings in each run, or the test proves nothing.
     expect(sales.findings.some((f) => f.layer === "model")).toBe(true);
@@ -70,12 +84,12 @@ describe("shareModels", () => {
     expect(first!.result.diagnostics.at(-1)).toEqual({
       kind: "shared-model",
       message:
-        "the model is shared with reports/Sales/Sales.pbip; NOT_REACHED_FROM_REPORT counts a field as reached when any of these reports reaches it",
+        "the model at models/Shared.SemanticModel is shared with reports/Sales/Sales.pbip; NOT_REACHED_FROM_REPORT counts a field as reached when any of these reports reaches it",
     });
     expect(s.diagnostics.at(-1)).toEqual({
       kind: "shared-model",
       message:
-        "the model is shared with reports/Finance/Finance.pbip; its findings are listed there",
+        "the model at models/Shared.SemanticModel is shared with reports/Finance/Finance.pbip; its findings are listed there",
     });
     // The input is not changed.
     expect(sales.findings.some((f) => f.layer === "model")).toBe(true);
@@ -90,26 +104,24 @@ describe("shareModels", () => {
     ]);
     expect(notReached(first!.result)).toEqual(["[B]"]);
     expect(notReached(second!.result)).toEqual([]);
+    // Without a model path, the notices say "the model" alone.
+    expect(first!.result.diagnostics.at(-1)!.message).toMatch(/^the model is shared with /);
+    expect(second!.result.diagnostics.at(-1)!.message).toBe(
+      "the model is shared with reports/Finance/Finance.pbip; its findings are listed there",
+    );
     const { findings, errors, warnings, infos } = first!.result.summary;
     expect({ findings, errors, warnings, infos }).toEqual(counts(first!.result));
   });
 
   it("lists a rule that could not finish on the shared model once, under the first run", async () => {
-    const WHOLE: Rule = {
+    const WHOLE = testRule({
       id: "WHOLE",
-      name: "Test rule",
-      category: "Maintenance",
-      severity: 2,
-      scope: [],
-      description: "",
-      references: [],
-      status: "ported",
       layer: "model",
       needs: ["model"],
       check: () => {
         throw new Error("a message");
       },
-    };
+    });
     const rules = [...defaultRules, WHOLE];
     const a = await lint([...model, ...report(measure("Sales", "A"))], { config, rules });
     const b = await lint([...model, ...report(column("Sales", "Amount"))], { config, rules });
@@ -121,6 +133,40 @@ describe("shareModels", () => {
     expect(first!.result.summary.ruleErrors).toEqual([{ id: "WHOLE", message: "Error" }]);
     expect(second!.result.summary.ruleErrors).toEqual([]);
     expect(second!.result.findings.some((f) => f.ruleId === "RULE_COULD_NOT_FINISH")).toBe(false);
+  });
+
+  it("keeps a failure on the model that happened only with a later run's report", async () => {
+    // A rule over both layers that cannot finish when the report binds Amount, as Sales does. Its
+    // failure is labeled on the model, but the first run's report never made it fail.
+    const WITH_AMOUNT = testRule({
+      id: "WITH_AMOUNT",
+      layer: "project",
+      needs: ["model", "report"],
+      check: (project) => {
+        if (allVisuals(project.report!).some((v) => v.text.includes('"Amount"')))
+          throw new TypeError("a message");
+        return [];
+      },
+    });
+    const rules = [...defaultRules, WITH_AMOUNT];
+    const a = await lint([...model, ...report(measure("Sales", "A"))], { config, rules });
+    const b = await lint([...model, ...report(column("Sales", "Amount"))], { config, rules });
+    expect(a.summary.ruleErrors).toEqual([]);
+    const failure = b.findings.find((f) => f.ruleId === "RULE_COULD_NOT_FINISH");
+    expect(failure).toMatchObject({
+      layer: "model",
+      detail: "WITH_AMOUNT could not finish on the model: TypeError",
+    });
+    const [, second] = shareModels([
+      run("a/A.pbip", a, { modelKey: "m" }),
+      run("b/B.pbip", b, { modelKey: "m" }),
+    ]);
+    const s = second!.result;
+    expect(s.summary.ruleErrors).toEqual([{ id: "WITH_AMOUNT", message: "TypeError" }]);
+    expect(s.findings).toContain(failure);
+    expect(s.groups.flatMap((g) => g.findings)).toContain(failure);
+    const { findings, errors, warnings, infos } = s.summary;
+    expect({ findings, errors, warnings, infos }).toEqual(counts(s));
   });
 
   it("says which config a shared model's findings follow when the configs differ", () => {
@@ -136,6 +182,73 @@ describe("shareModels", () => {
       run("b/B.pbip", sales, { modelKey: "m", configPath: "pbiplint.config.json" }),
     ]);
     expect(same!.result.diagnostics.at(-1)!.message).not.toContain("its findings follow");
+  });
+});
+
+describe("shareModels and showOnly", () => {
+  // A model rule and a report rule that both fire in the Sales run.
+  const only = (layer: string) =>
+    sales.groups.find(
+      (g) => g.rule.id !== "NOT_REACHED_FROM_REPORT" && g.findings.every((f) => f.layer === layer),
+    )!;
+  const modelGroup = only("model");
+  const reportGroup = only("report");
+  const ids = [modelGroup.rule.id, reportGroup.rule.id];
+  const totals = (r: LintResult) => {
+    const { findings, errors, warnings, infos } = r.summary;
+    return { findings, errors, warnings, infos };
+  };
+  const pair = (a: LintResult, b: LintResult) => [
+    run("a/A.pbip", a, { modelKey: "m" }),
+    run("b/B.pbip", b, { modelKey: "m" }),
+  ];
+  const sharedFirst = shareModels(pair(finance, sales)).map((r) => ({
+    ...r,
+    result: showOnly(r.result, ids, config),
+  }));
+  const shownFirst = shareModels(
+    pair(showOnly(finance, ids, config), showOnly(sales, ids, config)),
+  );
+
+  it("shows the same findings in either order", () => {
+    for (const i of [0, 1]) {
+      expect(shownFirst[i]!.result.summary.shown).toEqual(sharedFirst[i]!.result.summary.shown);
+      expect(shownFirst[i]!.result.groups).toEqual(sharedFirst[i]!.result.groups);
+      expect(shownFirst[i]!.result.failed).toBe(sharedFirst[i]!.result.failed);
+    }
+    const n = reportGroup.findings.length;
+    const sev = reportGroup.rule.severity;
+    expect(shownFirst[1]!.result.summary.shown).toEqual({
+      rules: ids,
+      findings: n,
+      errors: sev === 3 ? n : 0,
+      warnings: sev === 2 ? n : 0,
+      infos: sev === 1 ? n : 0,
+    });
+  });
+
+  it("keeps the whole run's totals less what it drops, in either order", () => {
+    // Listed first, every model finding a later run drops is counted out of its totals.
+    const reportOnly = sales.groups.filter((g) => g.findings.every((f) => f.layer === "report"));
+    const n = (gs: typeof reportOnly, severity?: number) =>
+      gs
+        .filter((g) => severity === undefined || g.rule.severity === severity)
+        .reduce((k, g) => k + g.findings.length, 0);
+    expect(totals(sharedFirst[1]!.result)).toEqual({
+      findings: n(reportOnly),
+      errors: n(reportOnly, 3),
+      warnings: n(reportOnly, 2),
+      infos: n(reportOnly, 1),
+    });
+    // Shown first, only the dropped findings it still holds can be counted out: the model rule's.
+    const less = (severity: number) =>
+      modelGroup.rule.severity === severity ? modelGroup.findings.length : 0;
+    expect(totals(shownFirst[1]!.result)).toEqual({
+      findings: sales.summary.findings - modelGroup.findings.length,
+      errors: sales.summary.errors - less(3),
+      warnings: sales.summary.warnings - less(2),
+      infos: sales.summary.infos - less(1),
+    });
   });
 });
 

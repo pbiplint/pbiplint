@@ -26,6 +26,10 @@ const tick = async (): Promise<void> => {
   await new Promise((r) => setTimeout(r, 0));
 };
 
+/** The note under Choose a folder, word for word as Michael approved it. */
+const PICKER_NOTE =
+  "Chrome and Edge ask first whether this page may view the folder; that wording is the browser's own. pbiplint only reads the files, in this tab: nothing is uploaded and nothing is saved. Dragging the folder onto the page skips the question.";
+
 /** The hidden words a link that opens in a new tab ends with, in its text. */
 const NOTE = " (opens in a new tab)";
 /** A message as the page shows it, where each of core's Learn URLs is a link ending in NOTE. */
@@ -68,6 +72,18 @@ describe("home page", () => {
   beforeAll(async () => {
     document.body.innerHTML = body;
     await import("../src/main.js");
+  });
+  it("ships the note on the browser's folder question hidden, and leaves it so with no folder picker", () => {
+    // The note answers the question Chrome and Edge ask before their folder picker opens. The page
+    // ships it hidden, so Firefox, Safari, and a page without JavaScript never show it, and the
+    // button is tied to it only once it shows: a screen reader reads a description it reaches
+    // through aria-describedby even while the note is hidden.
+    expect(body).toMatch(/<p id="picker-note"[^>]*\shidden[\s>]/);
+    expect(body).not.toMatch(/aria-describedby="picker-note"/);
+    const note = document.getElementById("picker-note")!;
+    expect(note.hidden).toBe(true);
+    expect(note.textContent!.replace(/\s+/g, " ").trim()).toBe(PICKER_NOTE);
+    expect(document.getElementById("choose-folder")!.hasAttribute("aria-describedby")).toBe(false);
   });
   it("lints the sample project from its button", async () => {
     document.getElementById("try-sample")!.click();
@@ -576,7 +592,7 @@ describe("home page", () => {
     expect(text("#drop p")).toBe(
       "Drop a PBIP folder, a .SemanticModel or .Report folder, or a single .tmdl file here.",
     );
-    expect(text(".panel .hint")).toMatch(
+    expect(text(".panel > .hint")).toMatch(
       /^Only \.tmdl files, the report's JSON under its definition folder, \.platform, definition\.pbir, the \.pbip file, and pbiplint\.config\.json are read\. Nothing else in the folder is opened\. /,
     );
     expect(text(".actions .hint")).toBe(

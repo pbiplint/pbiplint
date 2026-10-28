@@ -348,7 +348,16 @@ dropZone.addEventListener("drop", (event) => {
 });
 
 const picker = directoryPicker();
-byId("choose-folder", HTMLButtonElement).addEventListener("click", () => {
+const chooseFolder = byId("choose-folder", HTMLButtonElement);
+// Chrome and Edge ask, in their own words, whether the page may "view and copy" the folder before
+// the picker opens; the note under the button says what the page really does. It ships hidden, and
+// the button is tied to it only here, since a screen reader reads a description it reaches through
+// aria-describedby even while the note is hidden.
+if (picker) {
+  byId("picker-note", HTMLParagraphElement).hidden = false;
+  chooseFolder.setAttribute("aria-describedby", "picker-note");
+}
+chooseFolder.addEventListener("click", () => {
   if (!picker) {
     folderInput.click();
     return;

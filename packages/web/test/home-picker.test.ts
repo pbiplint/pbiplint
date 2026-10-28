@@ -27,6 +27,16 @@ describe("home page with a folder picker", () => {
     Object.assign(window, { showDirectoryPicker: () => pick() });
     await import("../src/main.js");
   });
+  it("shows the note on the browser's folder question, tied to the button", () => {
+    const note = document.getElementById("picker-note")!;
+    expect(note.hidden).toBe(false);
+    expect(note.textContent!.replace(/\s+/g, " ").trim()).toBe(
+      "Chrome and Edge ask first whether this page may view the folder; that wording is the browser's own. pbiplint only reads the files, in this tab: nothing is uploaded and nothing is saved. Dragging the folder onto the page skips the question.",
+    );
+    expect(document.getElementById("choose-folder")!.getAttribute("aria-describedby")).toBe(
+      "picker-note",
+    );
+  });
   it("says it is reading files once a folder is chosen, then shows the results", async () => {
     const seen: string[] = [];
     pick = async () => {

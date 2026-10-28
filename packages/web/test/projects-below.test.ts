@@ -1,5 +1,5 @@
 import { cpSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { tempDir } from "../../../tests/support/temp-dir.js";
@@ -222,5 +222,136 @@ describe("a folder with projects below it, in the CLI and the browser (#174)", (
     expect(b.diagnostics.map((d) => d.message)).toEqual(
       c.diagnostics.map((d) => asDropped(d.message)),
     );
+  });
+});
+
+describe("a .pbip below the folder, followed by the CLI and the browser alike (#237)", () => {
+  // Each layout below changed what the site gives, toward the CLI's: the two give the same files,
+  // absent reasons, notices, or refusal. The CLI names its paths from the folder named, which the
+  // drop names by that folder's name, and says "the path you named" where the site says "the
+  // folder you dropped".
+  type Answer = { files: string[]; absent: object; said: string[] } | { refused: string };
+  const answer = (
+    read: () => ReturnType<typeof selectProject> | ReturnType<typeof resolveProject>,
+  ) => {
+    try {
+      const p = read();
+      const files =
+        "files" in p ? p.files : [...(p.model?.files ?? []), ...(p.report?.files ?? [])];
+      return {
+        files: files.map((f) => f.path).sort(byName),
+        absent: p.absent,
+        said: p.diagnostics.map((d) => d.message),
+      } as Answer;
+    } catch (e) {
+      if (!(e instanceof UsageError) && !(e instanceof InputError)) throw e;
+      return { refused: e.message } as Answer;
+    }
+  };
+  function same(fill: (root: string) => void): Answer {
+    const root = tempDir("both-pbip");
+    fill(root);
+    const asDropped = (s: string): string =>
+      s
+        .split(`${dirname(root)}/`)
+        .join("")
+        .replaceAll("the path you named", "the folder you dropped")
+        .replaceAll("; lint ", "; drop ");
+    const c = JSON.parse(asDropped(JSON.stringify(answer(() => resolveProject(root)))));
+    const b = answer(() => selectProject(dropOf(root)));
+    expect(b).toEqual(c);
+    return b;
+  }
+  const pbipAt = (file: string, ...reports: string[]): void => {
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(
+      file,
+      j({ version: "1.0", artifacts: reports.map((path) => ({ report: { path } })) }),
+    );
+  };
+
+  it("says the model a report reads is not there", () => {
+    const b = same((r) => {
+      pbipAt(join(r, "reports", "Thin.pbip"), "Thin.Report");
+      reportAt(join(r, "reports", "Thin.Report"), "../../models/Nope.SemanticModel");
+    });
+    expect(b).toMatchObject({
+      absent: {
+        model: "this report reads a model that is not there (../../models/Nope.SemanticModel)",
+      },
+    });
+  });
+  it("gives a model outside the folder the outside notice and reason", () => {
+    const b = same((r) => {
+      pbipAt(join(r, "reports", "Thin.pbip"), "Thin.Report");
+      reportAt(join(r, "reports", "Thin.Report"), "../../../elsewhere.SemanticModel");
+    });
+    expect(b).toMatchObject({
+      absent: {
+        model:
+          "the model this report reads is outside the folder you dropped and the project folder",
+      },
+    });
+  });
+  it("refuses a .pbip naming a report that is not there", () => {
+    const b = same((r) => pbipAt(join(r, "reports", "Thin.pbip"), "Nope.Report"));
+    expect(b).toEqual({
+      refused: expect.stringMatching(/Thin\.pbip names Nope\.Report, which does not exist$/),
+    });
+  });
+  it("lints a report in the .pbip's own subfolder, with its model", () => {
+    const b = same((r) => {
+      pbipAt(join(r, "proj", "Sales.pbip"), "sub/Sales.Report");
+      reportAt(join(r, "proj", "sub", "Sales.Report"), "../Sales.SemanticModel");
+      modelAt(join(r, "proj", "sub", "Sales.SemanticModel"), "Sales");
+    });
+    expect(b).toMatchObject({ absent: {} });
+    expect((b as { files: string[] }).files).toContain("definition/Sales.tmdl");
+  });
+  it("follows a byPath written with Windows backslashes, and says when its model is not there", () => {
+    const found = same((r) => {
+      pbipAt(join(r, "reports", "Sales", "Sales.pbip"), "Sales.Report");
+      reportAt(
+        join(r, "reports", "Sales", "Sales.Report"),
+        "..\\..\\..\\models\\Shared.SemanticModel",
+      );
+      modelAt(join(r, "models", "Shared.SemanticModel"), "Shared");
+    });
+    expect((found as { files: string[] }).files).toContain("definition/Shared.tmdl");
+    const missing = same((r) => {
+      pbipAt(join(r, "reports", "Thin.pbip"), "Thin.Report");
+      reportAt(join(r, "reports", "Thin.Report"), "..\\..\\models\\Nope.SemanticModel");
+    });
+    expect(missing).toMatchObject({
+      absent: {
+        model: "this report reads a model that is not there (..\\..\\models\\Nope.SemanticModel)",
+      },
+    });
+  });
+  it("names a legacy model the report reads by its path from the project root", () => {
+    const b = same((r) => {
+      pbipAt(join(r, "Proj", "Thin.pbip"), "Thin.Report");
+      reportAt(join(r, "Proj", "Thin.Report"), "../../Models/M.SemanticModel");
+      mkdirSync(join(r, "Models", "M.SemanticModel"), { recursive: true });
+      writeFileSync(join(r, "Models", "M.SemanticModel", "model.bim"), "{}");
+    });
+    expect(b).toMatchObject({
+      said: [
+        expect.stringContaining("is the only project"),
+        expect.stringMatching(/^\.\.\/Models\/M\.SemanticModel is stored as model\.bim/),
+      ],
+    });
+  });
+  it("refuses a .pbip whose report folder holds nothing to read", () => {
+    const b = same((r) => {
+      pbipAt(join(r, "Proj", "Thin.pbip"), "../Other/Thin.Report");
+      mkdirSync(join(r, "Other", "Thin.Report"), { recursive: true });
+      writeFileSync(join(r, "Other", "Thin.Report", "notes.txt"), "");
+    });
+    expect(b).toEqual({
+      refused: expect.stringMatching(
+        /^No semantic model or report found in \.\.\/Other\/Thin\.Report, which .*Proj\/Thin\.pbip names$/,
+      ),
+    });
   });
 });

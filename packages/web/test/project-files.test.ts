@@ -1133,6 +1133,28 @@ describe("selectProject on a folder with projects below it (#174)", () => {
     ]);
     expect(p.diagnostics).toEqual([below("Proj/Sales.pbip")]);
   });
+  it("says which model is unknown when a followed report's definition.pbir could not be read (#237)", () => {
+    // The CLI's PBIR_UNREAD_REASON, and its notice named from the project root, as walk.test.ts
+    // has the CLI give it; the drop's walker is the only reader that can hand over such a file.
+    const pbir = "Drop/Other/Thin.Report/definition.pbir";
+    const tree = treeOf(
+      { entries: [e("Drop/Proj/Thin.pbip", pbipText("../Other/Thin.Report"))] },
+      reportIn("Drop/Other/Thin.Report", "unused"),
+    );
+    const p = selectProject({
+      ...tree,
+      entries: tree.entries.filter((x) => x.path !== pbir),
+      diagnostics: [unreadAt(pbir)],
+      refusal: { path: pbir, reason: "locked" },
+    });
+    expect(p.files.map((f) => f.path)).toContain("definition/report.json");
+    expect(p.absent).toEqual({ model: "the report's definition.pbir could not be read" });
+    expect(p.diagnostics).toEqual([
+      below("Proj/Thin.pbip"),
+      unreadAt("../Other/Thin.Report/definition.pbir"),
+    ]);
+    expect(p.unreadPaths.report).toEqual(["definition.pbir"]);
+  });
   it("does not follow a reference out of the drop, and names it in the CLI's outside notice (#237)", () => {
     // The CLI's words, with the drop where the CLI has the path the user named.
     const says = "is outside the folder you dropped and the project folder";

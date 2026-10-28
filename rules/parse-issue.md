@@ -78,6 +78,7 @@ Not on purpose. A parse issue means the model pbiplint checked is not the model 
 
 ## Quirks
 
+- M that is too large or too complex to read within pbiplint's limit is reported at the query's first line instead of being parsed, as `M is too large or complex to read (over pbiplint's limit for one query)`, or `for one model's M` when the model's queries together pass it. The limit is counted from the M's text before Microsoft's parser runs, and is set well above the largest query and model in a survey of 1,321 real models, so a query written by hand or by Power BI Desktop stays far under it; a crafted one cannot hold a run up. The M rules then do not read that query, as with M that does not parse.
 - A TMDL line that continues a multi-line text literal from the line above is masked on its own, so its quotes can pair the wrong way round and show the literal's text while hiding the code after it.
 - A value written outside quotes, in a comment or as a bare word, is not hidden.
 

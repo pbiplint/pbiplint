@@ -1,8 +1,9 @@
+import { Language } from "@microsoft/powerquery-parser";
 import { describe, expect, it } from "vitest";
 import { type LintFile, lint } from "../src/engine/lint.js";
-import { calls } from "../src/m/ast.js";
+import { calls, identifierName, nodesOfKind } from "../src/m/ast.js";
 import { readM } from "../src/m/read.js";
-import { origin } from "../src/m/resolve.js";
+import { boundValue, origin } from "../src/m/resolve.js";
 import { buildModel } from "../src/model/build.js";
 import { parseTmdl } from "../src/tmdl/parse.js";
 
@@ -111,14 +112,31 @@ describe("the resolver on 2,000 chained steps", () => {
   }, 120_000);
 });
 
-/** The origin of the address of the one `Web.Contents` call in a partition of these M lines. */
-async function addressOrigin(m: string[]): Promise<string> {
+/** The M index of a partition of these M lines, and its query. */
+async function indexed(m: string[]) {
   const files = [table("T", m)];
   const index = await readM(buildModel(files.map((f) => parseTmdl(f.path, f.text))), files);
-  const q = index.queries.find((x) => x.kind === "partition")!;
+  return { index, q: index.queries.find((x) => x.kind === "partition")! };
+}
+
+/** The origin of the address of the first `Web.Contents` call in a partition of these M lines. */
+async function addressOrigin(m: string[]): Promise<string> {
+  const { index, q } = await indexed(m);
   const call = calls(q).find((c) => c.name === "Web.Contents")!;
   return origin(index, q, call.args[0]!);
 }
+
+/** Lint one table of these M lines, timed, and count its findings by rule. */
+async function timedLint(m: string[]) {
+  const started = performance.now();
+  const result = await lint([table("T", m)], { config: { failOn: "none" } });
+  const ms = performance.now() - started;
+  const count = (id: string) => result.findings.filter((f) => f.ruleId === id).length;
+  return { result, ms, count };
+}
+
+/** Steps `a0 = a1` to `a<n-1> = a0`: a cycle of `n` names. */
+const cycle = (n: number): string[] => range(n, (i) => `a${i} = a${(i + 1) % n}`);
 
 describe("the resolver on a cycle under steps each read twice", () => {
   // Each step reads the one before twice, and the first reads a cycle: 2^30 paths, one answer.
@@ -136,26 +154,79 @@ describe("the resolver on a cycle under steps each read twice", () => {
   }, 120_000);
 });
 
-describe("the resolver past its depth cap", () => {
-  // Deeper than one walk goes (500 nodes): the walk starts again from where the cap stopped it.
+describe("the resolver on long chains and cycles", () => {
   const chain = (step: (i: number) => string) =>
     letOf(
-      ['s0 = Text.Combine({"https://", "api.example.com"})', ...range(4999, step)],
-      "Web.Contents(s4999)",
+      ['s0 = Text.Combine({"https://", "api.example.com"})', ...range(9999, step)],
+      "Web.Contents(s9999)",
     );
   it.each([
     ["each naming the one before", (i: number) => `s${i + 1} = s${i}`],
     ["each joining the one before to a text", (i: number) => `s${i + 1} = s${i} & "/"`],
   ])(
-    "reads 5,000 steps %s as a short chain reads them, with no rule error",
+    "reads 10,000 steps %s as a short chain reads them, with no rule error",
     async (_, step) => {
       const m = chain(step);
-      const result = await lint([table("T", m)], { config: { failOn: "none" } });
+      const { result, ms, count } = await timedLint(m);
       expect(result.summary.ruleErrors).toEqual([]);
-      expect(result.findings.filter((f) => f.ruleId === "PARSE_ISSUE")).toEqual([]);
-      expect(result.findings.filter((f) => f.ruleId === "DYNAMIC_DATA_SOURCE")).toHaveLength(1);
+      expect(count("PARSE_ISSUE")).toBe(0);
+      expect(count("DYNAMIC_DATA_SOURCE")).toBe(1);
       expect(await addressOrigin(m)).toBe("computed");
+      expect(ms).toBeLessThan(BOUND_MS);
     },
     120_000,
   );
+  it("reads a cycle of 10,000 names as unknown, with no rule error", async () => {
+    const m = letOf(cycle(10_000), "Web.Contents(a5)");
+    const { result, ms, count } = await timedLint(m);
+    expect(result.summary.ruleErrors).toEqual([]);
+    expect(count("PARSE_ISSUE")).toBe(0);
+    expect(await addressOrigin(m)).toBe("unknown");
+    expect(ms).toBeLessThan(BOUND_MS);
+  }, 120_000);
+  it(`reads a cycle of 501 names for 1,000 calls in under ${BOUND_MS / 1000} seconds`, async () => {
+    const m = letOf(
+      [...cycle(501), ...range(1000, (i) => `c${i} = Web.Contents(a${i % 501})`)],
+      "c0",
+    );
+    const { result, ms, count } = await timedLint(m);
+    expect(result.summary.ruleErrors).toEqual([]);
+    expect(count("DYNAMIC_DATA_SOURCE")).toBe(0);
+    expect(ms).toBeLessThan(BOUND_MS);
+  }, 120_000);
+  it("keeps a value's own call beside a cycle of 501 names it reads", async () => {
+    const m = letOf(cycle(501), "Web.Contents(Text.From(1) & a5)");
+    const { count } = await timedLint(m);
+    expect(count("DYNAMIC_DATA_SOURCE")).toBe(1);
+    expect(await addressOrigin(m)).toBe("computed");
+  });
+  it(`reads a field at the end of 4,000 names for 4,000 calls in under ${BOUND_MS / 1000} seconds`, async () => {
+    const m = letOf(
+      [
+        'r0 = Sql.Database("sql.example.com", "Config")',
+        ...range(3999, (i) => `r${i + 1} = r${i}`),
+        ...range(4000, (i) => `c${i} = Web.Contents(r3999{0}[a])`),
+      ],
+      "c0",
+    );
+    const { result, ms, count } = await timedLint(m);
+    expect(result.summary.ruleErrors).toEqual([]);
+    expect(count("DYNAMIC_DATA_SOURCE")).toBe(4000);
+    expect(ms).toBeLessThan(BOUND_MS);
+  }, 120_000);
+  it(`follows every name of a cycle of 4,000 in under ${BOUND_MS / 1000} seconds, each to itself`, async () => {
+    const { index, q } = await indexed(letOf(cycle(4000), "Web.Contents(a5)"));
+    const names = nodesOfKind(q, Language.Ast.NodeKind.IdentifierExpression);
+    const started = performance.now();
+    for (const n of names) boundValue(index, q, n);
+    const ms = performance.now() - started;
+    const call = calls(q).find((c) => c.name === "Web.Contents")!;
+    const found = boundValue(index, q, call.args[0]!);
+    expect(found.step).toBe("a5");
+    expect(
+      found.node.kind === Language.Ast.NodeKind.IdentifierExpression &&
+        identifierName(found.node.identifier.literal),
+    ).toBe("a6");
+    expect(ms).toBeLessThan(BOUND_MS);
+  }, 120_000);
 });

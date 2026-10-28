@@ -162,120 +162,112 @@ const isLiteralContainer = (n: Node): boolean =>
  * `parameter` for a custom function's parameter or a field of one; `computed` for a function call
  * anywhere in it; `row` for `_` or a field or item of anything else. A value is the worst of what
  * it reaches. An `if`'s condition adds nothing beyond `chosen`, and an `error` is static, since it
- * reaches no source. A node met again while it is being classified is a cycle, and reads as
- * unknown.
+ * reaches no source. A cycle reads as unknown, and every value in it has one answer: the worst of
+ * the cycle's own parts, what they reach, and unknown.
  */
 export function origin(m: MIndex, q: MQuery, node: Node): Origin {
-  // A value too deep to follow on one stack: the node the cap stopped at is classified first, from
-  // a fresh stack, so its answer is remembered, and the walk above it is tried again.
-  const pending = [{ q, node }];
-  for (;;) {
-    const top = pending[pending.length - 1]!;
-    const w: Walk = { path: new Map(), answers: new Map(), low: Infinity };
-    const answer = originOf(m, top.q, top.node, w);
-    const deep = w.deep;
-    if (!deep) {
-      pending.pop();
-      if (!pending.length) return answer;
-    } else if (pending.some((p) => p.node === deep.node)) {
-      // A cycle longer than the cap.
-      return "unknown";
-    } else pending.push(deep);
+  const known = origins.get(node);
+  if (known) return known;
+  // Tarjan's strongly connected components, with a stack of frames instead of recursion, so no
+  // chain is too long to follow: each node's own class and the nodes it reaches, a cycle's nodes
+  // answered together once all are seen.
+  const order = new Map<Node, number>();
+  const low = new Map<Node, number>();
+  const own = new Map<Node, Origin>();
+  const open: Node[] = [];
+  const frames: { node: Node; next: Reached[]; i: number }[] = [];
+  // Nodes that reach themselves directly.
+  const loops = new Set<Node>();
+  const enter = (n: Node, nq: MQuery) => {
+    const s = step(m, nq, n);
+    order.set(n, order.size);
+    low.set(n, order.size - 1);
+    own.set(n, s.own);
+    open.push(n);
+    frames.push({ node: n, next: s.next, i: 0 });
+  };
+  const add = (n: Node, o: Origin) => own.set(n, worst([own.get(n)!, o]));
+  enter(node, q);
+  while (frames.length) {
+    const f = frames[frames.length - 1]!;
+    const next = f.next[f.i++];
+    if (next) {
+      const done = origins.get(next.node);
+      if (done) add(f.node, done);
+      else if (!order.has(next.node)) enter(next.node, next.q);
+      else {
+        // Still open: the node is in a cycle with it.
+        low.set(f.node, Math.min(low.get(f.node)!, order.get(next.node)!));
+        if (next.node === f.node) loops.add(f.node);
+      }
+      continue;
+    }
+    frames.pop();
+    if (low.get(f.node) === order.get(f.node)) {
+      const members = open.splice(open.lastIndexOf(f.node));
+      const answer = worst([
+        ...members.map((n) => own.get(n)!),
+        members.length > 1 || loops.has(f.node) ? "unknown" : "static",
+      ]);
+      for (const n of members) origins.set(n, answer);
+    }
+    const parent = frames[frames.length - 1];
+    if (parent) {
+      const done = origins.get(f.node);
+      if (done) add(parent.node, done);
+      else low.set(parent.node, Math.min(low.get(parent.node)!, low.get(f.node)!));
+    }
   }
-}
-
-/** How deep one walk of `origin` goes before it starts again from there, so the stack holds. */
-const MAX_DEPTH = 500;
-
-/** Each node's answer for the run, kept only when it does not depend on how the node was reached. */
-const origins = new WeakMap<Node, Origin>();
-
-/** One walk of `origin`. */
-interface Walk {
-  /** The nodes being classified, each with its depth. */
-  path: Map<Node, number>;
-  /** This walk's answers that depend on the path above them, which hold only within it. */
-  answers: Map<Node, Origin>;
-  /** The shallowest depth a cycle under the node being classified returned to. */
-  low: number;
-  /** The node the depth cap stopped at, which ends the walk. */
-  deep?: { q: MQuery; node: Node };
+  return origins.get(node)!;
 }
 
 /**
- * `origin` within one walk. A node's answer is remembered for the run when every cycle cut under it
- * returned to the node or below it, so it does not depend on the path above; otherwise it holds for
- * this walk only, so a node read many times is still classified once in it. MQuery and MIndex: a
- * query's nodes belong to one index, since the answers depend on the index's other queries; an
- * `MQuery` must never be shared between two `MIndex`es.
+ * Each node's answer for the run. It depends on the index's other queries, so an `MQuery` must
+ * never be shared between two `MIndex`es.
  */
-function originOf(m: MIndex, q: MQuery, node: Node, w: Walk): Origin {
-  if (w.deep) return "unknown";
-  const known = origins.get(node);
-  if (known) return known;
-  const local = w.answers.get(node);
-  if (local) {
-    w.low = Math.min(w.low, 0);
-    return local;
-  }
-  const at = w.path.get(node);
-  if (at !== undefined) {
-    w.low = Math.min(w.low, at);
-    return "unknown";
-  }
-  const depth = w.path.size;
-  if (depth >= MAX_DEPTH) {
-    w.deep = { q, node };
-    w.low = -1;
-    return "unknown";
-  }
-  const outer = w.low;
-  w.low = Infinity;
-  w.path.set(node, depth);
-  const answer = classify(m, q, node, w);
-  w.path.delete(node);
-  if (w.low >= depth) origins.set(node, answer);
-  else w.answers.set(node, answer);
-  w.low = Math.min(outer, w.low);
-  return answer;
+const origins = new WeakMap<Node, Origin>();
+
+/** A node `origin` reads, in the query that holds it. */
+interface Reached {
+  q: MQuery;
+  node: Node;
 }
 
-function classify(m: MIndex, q: MQuery, node: Node, w: Walk): Origin {
+/** A node's own class, and the nodes whose classes it takes the worst of. */
+function step(m: MIndex, q: MQuery, node: Node): { own: Origin; next: Reached[] } {
+  const leaf = (own: Origin) => ({ own, next: [] });
+  const of = (own: Origin, ...nodes: Node[]) => ({ own, next: nodes.map((n) => ({ q, node: n })) });
   switch (node.kind) {
     case Kind.LiteralExpression:
     case Kind.Constant:
-      return "static";
+      return leaf("static");
     case Kind.IdentifierExpression: {
       const r = resolve(m, q, node);
-      if (r.kind === "row") return "row";
-      if (r.kind === "value") return originOf(m, q, r.node, w);
-      if (r.kind === "modelParameter" || r.kind === "library") return "static";
-      if (r.kind === "parameter") return "parameter";
+      if (r.kind === "row") return leaf("row");
+      if (r.kind === "value") return of("static", r.node);
+      if (r.kind === "modelParameter" || r.kind === "library") return leaf("static");
+      if (r.kind === "parameter") return leaf("parameter");
       if (r.kind === "query") {
         const body = r.query.ast && unwrap(r.query.ast);
-        if (!body || body.kind === Kind.FunctionExpression) return "unknown";
-        return originOf(m, r.query, body, w);
+        if (!body || body.kind === Kind.FunctionExpression) return leaf("unknown");
+        return { own: "static", next: [{ q: r.query, node: body }] };
       }
-      return "unknown";
+      return leaf("unknown");
     }
     case Kind.FieldSelector:
     case Kind.FieldProjection:
-      return "row";
+      return leaf("row");
     case Kind.LetExpression:
-      return originOf(m, q, node.expression, w);
+      return of("static", node.expression);
     // Desktop reads any if as dynamic, whatever its branches; the condition adds nothing more.
     case Kind.IfExpression:
-      return worst([
-        "chosen",
-        originOf(m, q, node.trueExpression, w),
-        originOf(m, q, node.falseExpression, w),
-      ]);
+      return of("chosen", node.trueExpression, node.falseExpression);
     // An error stops the query, so it reaches no source.
     case Kind.ErrorRaisingExpression:
-      return "static";
+      return leaf("static");
     case Kind.FunctionExpression:
     case Kind.EachExpression:
-      return "unknown";
+      return leaf("unknown");
     case Kind.RecursivePrimaryExpression: {
       const steps = node.recursiveExpressions.elements;
       const at = steps.findIndex((s) => s.kind === Kind.InvokeExpression);
@@ -283,47 +275,58 @@ function classify(m: MIndex, q: MQuery, node: Node, w: Walk): Origin {
       if (invoke && invoke.kind === Kind.InvokeExpression) {
         // A field or an item of what a call returns is data the call read.
         const read = steps.slice(at + 1).some((s) => s.kind !== Kind.InvokeExpression);
-        return worst([
-          read ? "row" : "computed",
-          ...invoke.content.elements.map((csv) => originOf(m, q, csv.node, w)),
-        ]);
+        return of(read ? "row" : "computed", ...invoke.content.elements.map((csv) => csv.node));
       }
-      // A field or an item: of a record or list written in place, or a name bound to one through
-      // variables, queries, and lets' results, it is known.
-      let container = unwrap(node.head);
-      let cq = q;
-      const followed = new Set<Node>();
-      for (;;) {
-        // A let stands for what its `in` returns.
-        if (container.kind === Kind.LetExpression) {
-          container = unwrap(container.expression);
-          continue;
-        }
-        if (container.kind !== Kind.IdentifierExpression) break;
-        if (followed.has(container)) return "unknown";
-        followed.add(container);
-        const r = resolve(m, cq, container);
-        if (r.kind === "value") container = unwrap(r.node);
-        else if (r.kind === "query" && r.query.ast) {
-          cq = r.query;
-          container = unwrap(r.query.ast);
-        } else if (r.kind === "parameter") {
-          // A custom function's parameter is dynamic (spec 9.3), and so is any field of it.
-          return "parameter";
-        } else break;
-      }
-      return isLiteralContainer(container) ? "unknown" : "row";
+      return leaf(fieldOf(m, q, unwrap(node.head)));
     }
-    default: {
-      const children = q.nodeIdMapCollection?.childIdsById.get(node.id) ?? [];
-      return worst(
-        children
+    default:
+      return of(
+        "static",
+        ...(q.nodeIdMapCollection?.childIdsById.get(node.id) ?? [])
           .map((id) => nodeOf(q, id))
-          .filter((n): n is Node => n !== undefined)
-          .map((n) => originOf(m, q, n, w)),
+          .filter((n): n is Node => n !== undefined),
       );
-    }
   }
+}
+
+/** Each name's answer as `fieldOf` reads it, for the run. */
+const fields = new WeakMap<Node, Origin>();
+
+/**
+ * A field or an item of `head`: of a record or list written in place, or a name bound to one through
+ * variables, queries, and lets' results, it is known (`unknown`); of a custom function's parameter
+ * it is `parameter`; of anything else, `row`. A cycle is unknown.
+ */
+function fieldOf(m: MIndex, q: MQuery, head: Node): Origin {
+  let container = head;
+  let cq = q;
+  const followed = new Set<Node>();
+  let answer: Origin | undefined;
+  for (;;) {
+    // A let stands for what its `in` returns.
+    if (container.kind === Kind.LetExpression) {
+      container = unwrap(container.expression);
+      continue;
+    }
+    if (container.kind !== Kind.IdentifierExpression) break;
+    answer = fields.get(container) ?? (followed.has(container) ? "unknown" : undefined);
+    if (answer) break;
+    followed.add(container);
+    const r = resolve(m, cq, container);
+    if (r.kind === "value") container = unwrap(r.node);
+    else if (r.kind === "query" && r.query.ast) {
+      cq = r.query;
+      container = unwrap(r.query.ast);
+    } else if (r.kind === "parameter") {
+      // A custom function's parameter is dynamic (spec 9.3), and so is any field of it.
+      answer = "parameter";
+      break;
+    } else break;
+  }
+  answer ??= isLiteralContainer(container) ? "unknown" : "row";
+  // Every name followed reaches the same end, or the same cycle.
+  for (const n of followed) fields.set(n, answer);
+  return answer;
 }
 
 const bound = new WeakMap<Node, { node: Node; step?: string }>();
@@ -333,7 +336,7 @@ const bound = new WeakMap<Node, { node: Node; step?: string }>();
  * the step's value while that value is itself a name, with parentheses and `meta` taken off.
  * `step` is the last name followed, the step whose value `node` is; undefined when `node` is
  * written in place. Model parameters and other queries are not followed. Each name's answer is
- * remembered for the run, except the names of a cycle that ended the walk.
+ * remembered for the run.
  */
 export function boundValue(m: MIndex, q: MQuery, node: Node): { node: Node; step?: string } {
   let n = unwrap(node);
@@ -359,8 +362,17 @@ export function boundValue(m: MIndex, q: MQuery, node: Node): { node: Node; step
     n = unwrap(r.node);
   }
   answer ??= { node: n, step };
-  // Every name followed stands for the same node, through the same last step; a cycle's own names
-  // stop at a different place in it, and are not remembered.
-  for (const f of followed.slice(0, cycle)) bound.set(f, answer);
+  // Every name followed stands for the same node, through the same last step, but a cycle's own
+  // names: each stops at itself, the value of the name before it in the cycle.
+  followed.forEach((f, i) => {
+    const before =
+      i > cycle ? followed[i - 1] : i === cycle ? followed[followed.length - 1] : undefined;
+    bound.set(
+      f,
+      before?.kind === Kind.IdentifierExpression
+        ? { node: f, step: identifierName(before.identifier.literal) }
+        : answer,
+    );
+  });
   return answer;
 }

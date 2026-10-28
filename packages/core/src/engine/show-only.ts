@@ -32,7 +32,9 @@ export function showOnly(
     summary: {
       ...result.summary,
       shown: {
-        rules: [...keep],
+        // A kept failure belongs to a rule named here, but sits in RULE_COULD_NOT_FINISH's group, so
+        // that id is listed too whenever such a group is shown.
+        rules: [...new Set([...keep, ...groups.map((g) => g.rule.id)])],
         findings: groups.reduce((n, g) => n + g.findings.length, 0),
         errors: count(3),
         warnings: count(2),

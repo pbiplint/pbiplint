@@ -254,7 +254,7 @@ describe("showOnly, with a rule that could not finish", () => {
       ["RULE_COULD_NOT_FINISH", 1],
     ]);
     expect(kept.summary.shown).toEqual({
-      rules: ["PER_QUERY"],
+      rules: ["PER_QUERY", "RULE_COULD_NOT_FINISH"],
       findings: 1,
       errors: 1,
       warnings: 0,

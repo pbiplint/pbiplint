@@ -19,6 +19,13 @@ export {
 export { errorKind } from "./engine/rule-error.js";
 export { showOnly } from "./engine/show-only.js";
 export {
+  runSummary,
+  runSummaryLine,
+  shareModels,
+  type ProjectRun,
+  type RunSummary,
+} from "./engine/projects.js";
+export {
   effectiveSeverity,
   rank,
   summarizeRule,
@@ -26,8 +33,9 @@ export {
   type RuleSummary,
 } from "./engine/rank.js";
 export { runRules, type RuleError, type RunResult, type SkippedRule } from "./engine/run.js";
-export { showControls } from "./format/controls.js";
+export { escapeJsonControls, showControls } from "./format/controls.js";
 export {
+  countsLine,
   factsLines,
   FORMATS,
   formatResult,
@@ -44,6 +52,7 @@ export {
   skippedLine,
   summaryLine,
   topGroups,
+  type CountedRun,
   type FormatName,
   type FormatOptions,
   type RuleHelp,

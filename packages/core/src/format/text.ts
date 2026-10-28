@@ -1,4 +1,4 @@
-import type { LintResult } from "../engine/lint.js";
+import type { LintResult, ShownSummary } from "../engine/lint.js";
 import type { RankedGroup } from "../engine/rank.js";
 import type { SkippedRule } from "../engine/run.js";
 import type { LayerStatus } from "../project/types.js";
@@ -29,6 +29,11 @@ export interface FormatOptions {
   pathPrefix?: string;
   /** The report's prefix, joined in front of a report finding's SARIF artifact URI; falls back to pathPrefix. */
   reportPathPrefix?: string;
+  /**
+   * The Markdown format's top heading level, 1 by default; every heading below it moves down with
+   * it, so a report can sit as one section of a larger document. The other formats ignore it.
+   */
+  headingLevel?: number;
 }
 
 const SEVERITY_TAG = { 3: "ERROR", 2: "WARN ", 1: "INFO " } as const;
@@ -46,9 +51,28 @@ export const plural = (n: number, noun: string): string => `${n} ${noun}${n === 
  * Summary sentence shared by the text and markdown formats and the site. A run where a rule could
  * not finish says so here, so a count missing that rule's findings never reads as the whole lint.
  */
-export function summaryLine(result: LintResult): string {
-  const s = result.summary;
-  const failed = new Set(s.ruleErrors.map((e) => e.id)).size;
+export const summaryLine = (result: LintResult): string =>
+  countsLine(result.summary, failedRules(result));
+
+/** How many rules could not finish in the run, each counted once however often it failed. */
+export const failedRules = (result: LintResult): number =>
+  new Set(result.summary.ruleErrors.map((e) => e.id)).size;
+
+/** What a summary sentence counts: findings by severity, files, and what a filtered run shows. */
+export interface CountedRun {
+  findings: number;
+  errors: number;
+  warnings: number;
+  infos: number;
+  files: number;
+  shown?: ShownSummary;
+}
+
+/**
+ * `summaryLine`'s sentence from the counts alone, for a caller that adds up several runs: `failed`
+ * is how many rules could not finish.
+ */
+export function countsLine(s: CountedRun, failed: number): string {
   const unfinished = failed ? `, ${plural(failed, "rule")} could not finish` : "";
   // A result kept to some rules says so, so a filtered run never reads as the whole lint.
   if (s.shown) {

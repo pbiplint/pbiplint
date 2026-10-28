@@ -303,6 +303,17 @@ describe("formatMarkdown", () => {
     expect(md).toContain("| Object | Type | Location | Detail |");
     expect(md).toContain("| `'Sales'[Amount]` | Column | definition/tables/Sales.tmdl:2 |  |");
   });
+
+  it("formatMarkdown with headingLevel 2 moves every heading down one level", () => {
+    const md = formatMarkdown(result);
+    const lower = formatMarkdown(result, { headingLevel: 2 });
+    expect(lower.startsWith("## pbiplint report\n")).toBe(true);
+    expect(lower).toContain("\n### Fix these first\n");
+    expect(lower).toContain("\n### WARNING: Do not use floating point data types (1) · model\n");
+    // Only the headings move: dropping one # from each heading line gives the default output.
+    expect(lower.replace(/^#(#+ )/gm, "$1")).toBe(md);
+    expect(formatMarkdown(result, { headingLevel: 1 })).toBe(md);
+  });
 });
 
 describe("formatSarif", () => {

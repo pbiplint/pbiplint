@@ -84,11 +84,12 @@ export function rank(findings: Finding[], rules: Rule[], config: ResolvedConfig)
     rule: summarizeRule(byId.get(id)!, config, fs),
     findings: fs,
   }));
-  return groups.sort(
-    (a, b) =>
-      b.rule.severity - a.rule.severity ||
-      CATEGORY_ORDER.indexOf(a.rule.category) - CATEGORY_ORDER.indexOf(b.rule.category) ||
-      b.findings.length - a.findings.length ||
-      a.rule.id.localeCompare(b.rule.id, "en"),
-  );
+  return groups.sort(byRank);
 }
+
+/** The order `rank` gives groups, for a caller that changes how many findings a group holds. */
+export const byRank = (a: RankedGroup, b: RankedGroup): number =>
+  b.rule.severity - a.rule.severity ||
+  CATEGORY_ORDER.indexOf(a.rule.category) - CATEGORY_ORDER.indexOf(b.rule.category) ||
+  b.findings.length - a.findings.length ||
+  a.rule.id.localeCompare(b.rule.id, "en");

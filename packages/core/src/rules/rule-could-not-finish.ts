@@ -36,3 +36,14 @@ export const failureDetail = (ruleId: string, label: string, kind: string): stri
 /** True when `f` is a RULE_COULD_NOT_FINISH finding about the rule `ruleId`, which failed. */
 export const isFailureOf = (f: Finding, ruleId: string): boolean =>
   f.ruleId === RULE_COULD_NOT_FINISH.id && (f.detail?.startsWith(failurePrefix(ruleId)) ?? false);
+
+/**
+ * True when `f` is the finding `runRules` wrote for the rule error `e`: the error's message is the
+ * label and class (`query 'Sales': TypeError`), or the class alone when the whole check threw, on
+ * the model or the report.
+ */
+export const isFindingFor = (f: Finding, e: { id: string; message: string }): boolean =>
+  f.ruleId === RULE_COULD_NOT_FINISH.id &&
+  (f.detail === `${failurePrefix(e.id)}${e.message}` ||
+    f.detail === failureDetail(e.id, "the model", e.message) ||
+    f.detail === failureDetail(e.id, "the report", e.message));

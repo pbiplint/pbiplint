@@ -140,9 +140,11 @@ function code(name: string, table: boolean): string {
   return `${fence}${pad}${shown}${pad}${fence}`;
 }
 
-export function formatMarkdown(result: LintResult, _options: FormatOptions = {}): string {
+export function formatMarkdown(result: LintResult, options: FormatOptions = {}): string {
+  // Every heading starts with this, so a report set under a heading of its own keeps its outline.
+  const h = "#".repeat((options.headingLevel ?? 1) - 1);
   const out: string[] = [
-    "# pbiplint report",
+    `${h}# pbiplint report`,
     "",
     `${summaryLine(result)}. ${text([layersLine(result), skippedLine(result)].filter(Boolean).join(" "), false)}.`,
     "",
@@ -150,7 +152,7 @@ export function formatMarkdown(result: LintResult, _options: FormatOptions = {})
   for (const m of [...result.diagnostics.map((d) => d.message), ...ruleErrorNotices(result)])
     out.push(`> Notice: ${text(m, false)}`, "");
   if (result.facts.length) {
-    out.push("## Report at a glance", "", "| Fact | Value | Rule |", "|---|---|---|");
+    out.push(`${h}## Report at a glance`, "", "| Fact | Value | Rule |", "|---|---|---|");
     for (const f of result.facts)
       out.push(
         `| ${cell(f.label)} | ${cell(f.detail ? `${f.value} (${f.detail})` : f.value)} | ${f.ruleId ? `[${f.ruleId}](${ruleUrl(f.ruleId)})` : ""} |`,
@@ -161,7 +163,7 @@ export function formatMarkdown(result: LintResult, _options: FormatOptions = {})
     out.push("No findings.", "");
     return out.join("\n");
   }
-  out.push("## Fix these first", "");
+  out.push(`${h}## Fix these first`, "");
   topGroups(result).forEach((g, i) =>
     out.push(
       `${i + 1}. **${g.rule.name}** (${g.findings.length}) [${g.rule.id}](${g.rule.url}) · ${g.rule.layer}`,
@@ -170,7 +172,7 @@ export function formatMarkdown(result: LintResult, _options: FormatOptions = {})
   out.push("");
   for (const g of result.groups) {
     out.push(
-      `## ${SEVERITY_LABEL[g.rule.severity].toUpperCase()}: ${g.rule.name} (${g.findings.length}) · ${g.rule.layer}`,
+      `${h}## ${SEVERITY_LABEL[g.rule.severity].toUpperCase()}: ${g.rule.name} (${g.findings.length}) · ${g.rule.layer}`,
       "",
     );
     out.push(`[${g.rule.id}](${g.rule.url}) · ${g.rule.category}`, "");

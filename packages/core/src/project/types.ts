@@ -15,7 +15,8 @@ export type DiagnosticKind =
   | "legacy-model-format"
   | "model-reference-mismatch"
   | "schema-newer-than-known"
-  | "project-below-input";
+  | "project-below-input"
+  | "shared-model";
 
 /** Something about the input that a reader must know so nothing unread is mistaken for clean. */
 export interface Diagnostic {

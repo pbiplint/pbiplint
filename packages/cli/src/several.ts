@@ -1,5 +1,6 @@
 import { relative, resolve } from "node:path";
 import {
+  ConfigError,
   escapeJsonControls,
   formatJson,
   formatMarkdown,
@@ -59,12 +60,15 @@ export function configFor(
     start,
     options.config ? resolve(options.cwd, options.config) : undefined,
   );
-  const config = resolveConfig({
+  return { found, config: resolvedFor(found, options) };
+}
+
+/** The config `found` holds, with --fail-on over it. */
+const resolvedFor = (found: FoundConfig, options: RunOptions): ResolvedConfig =>
+  resolveConfig({
     ...found.config,
     ...(options.failOn ? { failOn: options.failOn } : {}),
   });
-  return { found, config };
-}
 
 /** The lint of a project the walk read, with what the walk could not read on its layers. */
 export function lintProject(project: ResolvedProject, config: ResolvedConfig): Promise<LintResult> {
@@ -116,16 +120,30 @@ export async function lintSeveral(
   for (const named of projects) {
     const { path, project, unreadable, modelKey, modelPath } = named;
     // A project that could not be read has no root, so its config is searched from its path.
-    const own = configFor(project?.root ?? resolve(folder, path), options);
-    found.push(own.found);
-    const configPath =
-      own.found.path === undefined ? undefined : fromCwd(options.cwd, own.found.path);
+    const file = findConfig(
+      project?.root ?? resolve(folder, path),
+      options.config ? resolve(options.cwd, options.config) : undefined,
+    );
+    found.push(file);
+    const configPath = file.path === undefined ? undefined : fromCwd(options.cwd, file.path);
+    // Several projects can each have a pbiplint.config.json, and core's refusal of one names none,
+    // so it is named by its path from the cwd. Core checks a rule's options as lint binds them, so
+    // the lint is inside too.
+    let config: ResolvedConfig;
+    let result: LintResult;
+    try {
+      config = resolvedFor(file, options);
+      result = project ? await lintProject(project, config) : unreadProject(unreadable!, config);
+    } catch (e) {
+      if (!(e instanceof ConfigError) || configPath === undefined) throw e;
+      throw new ConfigError(`${configPath}: ${e.message.replace(/^pbiplint\.config\.json: /, "")}`);
+    }
     if (project) {
       prefixes.push(prefixesOf(options.cwd, project));
       linted.push({
         path,
-        result: await lintProject(project, own.config),
-        config: own.config,
+        result,
+        config,
         ...(modelKey === undefined ? {} : { modelKey }),
         ...(modelPath === undefined ? {} : { modelPath }),
         ...(configPath === undefined ? {} : { configPath }),
@@ -135,8 +153,8 @@ export async function lintSeveral(
       prefixes.push(root === undefined ? {} : { [unreadable!.layer]: fromCwd(options.cwd, root) });
       linted.push({
         path,
-        result: unreadProject(unreadable!, own.config),
-        config: own.config,
+        result,
+        config,
         ...(configPath === undefined ? {} : { configPath }),
       });
     }

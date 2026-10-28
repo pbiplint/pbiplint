@@ -473,6 +473,22 @@ describe("a folder that holds several projects", () => {
     expect(without.projects.map(has)).toEqual([false, true, true]);
   });
 
+  it("a config core rejects stops the run, naming which file, relative to the cwd", async () => {
+    // Several projects can each have a pbiplint.config.json, so core's own "pbiplint.config.json:"
+    // would not say which one.
+    const root = monorepo("several-bad-config");
+    writeFileSync(join(root, "reports", "Sales", "pbiplint.config.json"), j({ bogus: 1 }));
+    const r = await run(["."], root);
+    expect(r.code).toBe(2);
+    expect(r.out).toBe("");
+    expect(r.err).toBe('pbiplint: reports/Sales/pbiplint.config.json: unknown key "bogus"\n');
+    // One named by --config is named as given, from the cwd, too.
+    writeFileSync(join(root, "x.json"), j({ rules: { BROKEN_FIELD_REFERENCE: "loud" } }));
+    const given = await run([".", "--config", "x.json"], root);
+    expect(given.code).toBe(2);
+    expect(given.err).toMatch(/^pbiplint: x\.json: rules\["BROKEN_FIELD_REFERENCE"\]/);
+  });
+
   it("a project that cannot be read is its own project, with one PARSE_ISSUE, in every format", async () => {
     const root = oneUnreadable();
     const text = await run(["."], root);

@@ -378,7 +378,8 @@ describe("a folder that holds several projects, in the CLI and the browser (#237
     // The message is compared as the CLI writes it, which names the project from the folder
     // named, as the page names it from the drop. Only the root, a path on disk the CLI reads
     // SARIF locations from, is made the drop's.
-    const message = (s: string): string => s.replace("; point at one of them", "; drop one of them");
+    const message = (s: string): string =>
+      s.replace("; point at one of them", "; drop one of them");
     const dropped = (s: string): string => s.split(`${dirname(root)}/`).join("");
     return input.projects.map(({ path, project, unreadable }) => ({
       path,
@@ -521,6 +522,27 @@ describe("a folder that holds several projects, in the CLI and the browser (#237
       ["C.pbip", [noTmdlNote([`${basename(root)}/C.SemanticModel`])]],
       ["Loose.SemanticModel", undefined],
     ]);
+  });
+
+  it("names the config file the page refuses, by its path in the drop", async () => {
+    // Each project of several can have its own pbiplint.config.json, so the refusal says which.
+    const root = tempDir("both-several-bad-config");
+    monorepo(root);
+    const sales = join(root, "reports", "Sales", "pbiplint.config.json");
+    const lintDrop = async () => {
+      const selected = selectProjects(dropOf(root));
+      if (selected.kind !== "several") throw new Error("the browser read one project");
+      return lintProjects(selected.projects);
+    };
+    const at = `${basename(root)}/reports/Sales/pbiplint.config.json`;
+    writeFileSync(sales, j({ bogus: 1 }));
+    await expect(lintDrop()).rejects.toThrow(new Error(`${at}: unknown key "bogus"`));
+    writeFileSync(sales, j({ rules: { BROKEN_FIELD_REFERENCE: "loud" } }));
+    await expect(lintDrop()).rejects.toThrow(
+      new RegExp(`^${at}: rules\\["BROKEN_FIELD_REFERENCE"\\]`),
+    );
+    writeFileSync(sales, "{");
+    await expect(lintDrop()).rejects.toThrow(new RegExp(`^${at} is not valid JSON: `));
   });
 
   it("caps a run at the same number of projects", () => {

@@ -97,9 +97,10 @@ function chainModel(n: number): LintFile[] {
 // The resolver's guard (v3 spec, section 11.5, amended October 27, 2026). The review measured the
 // first shape at 0.9 s, 6.5 s, and 46 s for 500, 1,000, and 2,000 steps. All four now lint in
 // 0.54 s on Michael's Mac, most of it in the parser. The bound is three times CI's time rounded up
-// to the next 5 s, CI estimated at 5.3 times Michael's Mac (Node 20, spec 11.5): 3 x 5.3 x 0.54 s
-// is 8.6 s, so 10 s; to be confirmed on CI.
-const BOUND_MS = 10_000;
+// to the next 5 s (spec 11.5). Measured on CI on October 28, 2026, the slowest guard in this file
+// took 5.7 s on Node 20 (a field at the end of 8,000 names), so 3 x 5.7 s is 17.1 s: 20 s. The
+// code before this fix took 40 s or more on every guard here, so each still catches a regression.
+const BOUND_MS = 20_000;
 
 describe("the resolver on 2,000 chained steps", () => {
   it(`lints four long chains in under ${BOUND_MS / 1000} seconds, each rule reading them`, async () => {

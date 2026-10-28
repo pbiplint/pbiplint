@@ -198,8 +198,9 @@ relationship r
   });
 
   // Each column was once compared with every column: 30,000 columns took 6.2 s, and these
-  // 60,000 about 25 s.
-  const BOUND_MS = 10_000;
+  // 60,000 about 25 s. The bound is three times CI's time rounded up to the next 5 s (spec 11.5):
+  // 4.0 s on Node 20 on October 28, 2026, so 15 s.
+  const BOUND_MS = 15_000;
   it(`REMOVE_REDUNDANT_COLUMNS_IN_RELATED_TABLES reads 60,000 columns in under ${BOUND_MS / 1000} seconds`, () => {
     const count = 30_000;
     const columns = Array.from(

@@ -160,6 +160,34 @@ describe("a folder with projects below it, in the CLI and the browser (#174)", (
       },
     ],
     [
+      // The monorepo of #236 with one report: both follow the .pbip to the shared model (#237).
+      "a .pbip whose report reads a shared model elsewhere in the folder",
+      (r) => {
+        mkdirSync(join(r, "reports", "Sales"), { recursive: true });
+        writeFileSync(
+          join(r, "reports", "Sales", "Sales.pbip"),
+          j({ version: "1.0", artifacts: [{ report: { path: "Sales.Report" } }] }),
+        );
+        reportAt(
+          join(r, "reports", "Sales", "Sales.Report"),
+          "../../../models/Shared.SemanticModel",
+        );
+        modelAt(join(r, "models", "Shared.SemanticModel"), "Shared");
+      },
+    ],
+    [
+      "a .pbip whose artifacts name a report in another folder",
+      (r) => {
+        mkdirSync(join(r, "Proj"));
+        writeFileSync(
+          join(r, "Proj", "Sales.pbip"),
+          j({ version: "1.0", artifacts: [{ report: { path: "../Other/Sales.Report" } }] }),
+        );
+        reportAt(join(r, "Other", "Sales.Report"), "../Sales.SemanticModel");
+        modelAt(join(r, "Other", "Sales.SemanticModel"), "Sales");
+      },
+    ],
+    [
       "loose .tmdl files and no project, as v1 read them",
       (r) => {
         mkdirSync(join(r, "a", "b"), { recursive: true });
@@ -173,26 +201,26 @@ describe("a folder with projects below it, in the CLI and the browser (#174)", (
     fill(root);
     expect(browser(root)).toEqual(cli(root));
   });
-  it("finds the same one project where a thin report's model sits elsewhere in the folder named, which only the CLI follows", () => {
-    // The browser has no .pbip route (spec section 12): it reads the .pbip's folder, the report
-    // alone, and says which model the report reads. The CLI follows the reference, which stays
-    // inside the folder named.
-    const root = tempDir("both-apart");
+  it("gives a reference out of the folder the CLI's outside notice, with the drop for the path named (#237)", () => {
+    // The CLI's words, but for what the browser was given: a folder dropped, not a path named.
+    const asDropped = (cli: string): string =>
+      cli.replace("the path you named", "the folder you dropped").replace("; lint ", "; drop ");
+    const root = tempDir("both-outside");
     mkdirSync(join(root, "reports"));
     writeFileSync(
       join(root, "reports", "Thin.pbip"),
       j({ version: "1.0", artifacts: [{ report: { path: "Thin.Report" } }] }),
     );
-    reportAt(join(root, "reports", "Thin.Report"), "../../models/Shared.SemanticModel");
-    modelAt(join(root, "models", "Shared.SemanticModel"), "Shared");
-    const notice: [string, string] = ["project-below-input", "reports/Thin.pbip"];
-    expect(cli(root)).toMatchObject({ absent: {}, diagnostics: [notice] });
+    reportAt(join(root, "reports", "Thin.Report"), "../../../elsewhere.SemanticModel");
+    const c = resolveProject(root);
+    const b = selectProject(dropOf(root));
     expect(browser(root)).toMatchObject({
-      absent: {
-        model:
-          "this report reads ../../models/Shared.SemanticModel, which this run did not include",
-      },
-      diagnostics: [notice],
+      files: (cli(root) as { files: string[] }).files,
+      diagnostics: c.diagnostics.map((d) => [d.kind, d.path]),
     });
+    expect(b.absent).toEqual({ model: asDropped(c.absent.model!) });
+    expect(b.diagnostics.map((d) => d.message)).toEqual(
+      c.diagnostics.map((d) => asDropped(d.message)),
+    );
   });
 });

@@ -1058,7 +1058,7 @@ describe("selectProject on a folder with projects below it (#174)", () => {
     );
     expect(p.diagnostics).toEqual([below("sub")]);
   });
-  it("lints a thin report's .pbip below the folder with the model beside it, and reads one whose model is elsewhere as its folder", () => {
+  it("lints a thin report's .pbip below the folder with the model beside it", () => {
     const beside = selectProject(
       treeOf(
         { entries: [e("Drop/sub/Thin.pbip", pbipText("Thin.Report"))] },
@@ -1071,21 +1071,96 @@ describe("selectProject on a folder with projects below it (#174)", () => {
     expect(beside.files.map((f) => f.path)).toContain("definition/report.json");
     expect(beside.absent).toEqual({});
     expect(beside.diagnostics).toEqual([below("sub")]);
-    // The browser has no .pbip route (spec section 12), so a .pbip whose model sits elsewhere is
-    // read as its folder, the report alone, where the CLI follows the .pbip to the model too.
-    const elsewhere = selectProject(
+  });
+  it("follows a .pbip below the folder to the shared model its report reads elsewhere in the drop (#237)", () => {
+    // The monorepo of #236 with one report: the CLI's .pbip route, with the drop as the folder
+    // named. The project stays rooted at the .pbip's folder, and the model's files relative to the
+    // model's root.
+    const p = selectProject(
       treeOf(
-        { entries: [e("Drop/reports/Thin.pbip", pbipText("Thin.Report"))] },
-        reportIn("Drop/reports/Thin.Report", "../../models/Shared.SemanticModel"),
+        { entries: [e("Drop/reports/Sales/Sales.pbip", pbipText("Sales.Report"))] },
+        reportIn("Drop/reports/Sales/Sales.Report", "../../../models/Shared.SemanticModel"),
         modelIn("Drop/models/Shared.SemanticModel", "Shared"),
       ),
     );
-    expect(elsewhere.root).toBe("Drop/reports");
-    expect(elsewhere.files.map((f) => f.path)).not.toContain("definition/tables/Shared.tmdl");
-    expect(elsewhere.absent).toEqual({
-      model: "this report reads ../../models/Shared.SemanticModel, which this run did not include",
-    });
-    expect(elsewhere.diagnostics).toEqual([below("reports/Thin.pbip")]);
+    expect(p.root).toBe("Drop/reports/Sales");
+    expect(p.absent).toEqual({});
+    expect(p.files.map((f) => f.path)).toEqual([
+      "definition/model.tmdl",
+      "definition/tables/Shared.tmdl",
+      "../Sales.pbip",
+      "definition.pbir",
+      "definition/pages/p/page.json",
+      "definition/report.json",
+    ]);
+    expect(p.read).toEqual([
+      "../../models/Shared.SemanticModel/definition/model.tmdl",
+      "../../models/Shared.SemanticModel/definition/tables/Shared.tmdl",
+      "Sales.pbip (report)",
+      "Sales.Report/definition.pbir (report)",
+      "Sales.Report/definition/pages/p/page.json (report)",
+      "Sales.Report/definition/report.json (report)",
+    ]);
+    expect(p.diagnostics).toEqual([below("reports/Sales/Sales.pbip")]);
+    // A path written in another case finds the model, as projectsBelow and the CLI on Windows and
+    // macOS find it.
+    const cased = selectProject(
+      treeOf(
+        { entries: [e("Drop/reports/Sales/Sales.pbip", pbipText("sales.report"))] },
+        reportIn("Drop/reports/Sales/Sales.Report", "../../../Models/shared.SemanticModel"),
+        modelIn("Drop/models/Shared.SemanticModel", "Shared"),
+      ),
+    );
+    expect(cased.files.map((f) => f.path)).toEqual(p.files.map((f) => f.path));
+  });
+  it("reads the report a .pbip's artifacts name in another folder of the drop (#237)", () => {
+    const p = selectProject(
+      treeOf(
+        { entries: [e("Drop/Proj/Sales.pbip", pbipText("../Other/Sales.Report"))] },
+        reportIn("Drop/Other/Sales.Report", "../Sales.SemanticModel"),
+        modelIn("Drop/Other/Sales.SemanticModel", "Sales"),
+      ),
+    );
+    expect(p.root).toBe("Drop/Proj");
+    expect(p.absent).toEqual({});
+    expect(p.files.map((f) => f.path)).toEqual([
+      "definition/model.tmdl",
+      "definition/tables/Sales.tmdl",
+      "../../Proj/Sales.pbip",
+      "definition.pbir",
+      "definition/pages/p/page.json",
+      "definition/report.json",
+    ]);
+    expect(p.diagnostics).toEqual([below("Proj/Sales.pbip")]);
+  });
+  it("does not follow a reference out of the drop, and names it in the CLI's outside notice (#237)", () => {
+    // The CLI's words, with the drop where the CLI has the path the user named.
+    const says = "is outside the folder you dropped and the project folder";
+    const hint = "drop the folder that holds both (../.. from the project folder) to include it";
+    const p = selectProject(
+      treeOf(
+        { entries: [e("Drop/reports/Thin.pbip", pbipText("Thin.Report"))] },
+        reportIn("Drop/reports/Thin.Report", "../../../elsewhere.SemanticModel"),
+      ),
+    );
+    expect(p.root).toBe("Drop/reports");
+    expect(p.files.map((f) => f.path)).toContain("definition/report.json");
+    expect(p.absent).toEqual({ model: `the model this report reads ${says}` });
+    expect(p.diagnostics).toEqual([
+      below("reports/Thin.pbip"),
+      {
+        kind: "unread-file",
+        path: "../../elsewhere.SemanticModel",
+        message: `../../elsewhere.SemanticModel ${says}, so it was not linted; ${hint}`,
+      },
+    ]);
+    // A report out of the drop is not looked up, and a run that reads nothing else is refused
+    // naming it.
+    expect(() =>
+      selectProject(
+        treeOf({ entries: [e("Drop/reports/Thin.pbip", pbipText("../../Thin.Report"))] }),
+      ),
+    ).toThrow(new InputError(`Could not read Thin.Report: it ${says}; ${hint}`));
   });
   it("lints a report and its model with no .pbip as their folder, and lists each part where the folder holds more", () => {
     const pairIn = (name: string): Partial<InputTree> =>

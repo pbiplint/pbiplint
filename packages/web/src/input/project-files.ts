@@ -10,6 +10,7 @@ import {
   pbixRefusal,
   projectBelowNotice,
   projectsBelow,
+  reportsNamed,
   type DatasetReference,
   type Diagnostic,
   type FoundBelow,
@@ -235,16 +236,21 @@ interface Selection {
    * the order the reads met them: a drop that reads nothing else is refused with their notices.
    */
   legacy: Map<string, LayerName>;
+  /** The folder dropped, "" for several items: the boundary a .pbip's references stay inside. */
+  drop: string;
+  /** The first reference that left the drop, for the refusal of a run that reads nothing else. */
+  outside?: { path: string; reason: string };
 }
 
 const LEGACY_NOTICE = { model: legacyModel, report: legacyReport } as const;
 
 /**
  * The part folder `dir`, saved in a legacy format pbiplint cannot read, as the CLI's legacyPart:
- * its notice, named by its folder's name, and its layer absent with the reason.
+ * its notice, named by its folder's name or, on the .pbip route, by its path from the project
+ * root, and its layer absent with the reason.
  */
-function legacyPart(s: Selection, layer: LayerName, dir: string): void {
-  s.said.push(LEGACY_NOTICE[layer](nameOf(dir)));
+function legacyPart(s: Selection, layer: LayerName, dir: string, shown = nameOf(dir)): void {
+  s.said.push(LEGACY_NOTICE[layer](shown));
   s.absent[layer] = layer === "model" ? LEGACY_MODEL_REASON : LEGACY_REPORT_REASON;
   s.legacy.set(dir, layer);
 }
@@ -504,9 +510,8 @@ function readFolder(s: Selection, base: string): Parts {
 
   // A plain folder, neither a part nor a PBIP folder and holding no .pbip, may hold projects in
   // folders below it, as the CLI's readFolder finds them (#174): the one found is read as if it
-  // had been dropped alone, and several are refused with a list, to be dropped one at a time. The
-  // browser takes folders and has no .pbip route (spec section 12), so a project given by its .pbip
-  // is read as the .pbip's folder.
+  // had been dropped alone, and several are refused with a list, to be dropped one at a time. A
+  // project given by its .pbip is read as the CLI reads a .pbip (readNamed), rooted at its folder.
   if (
     !isModelFolder(name) &&
     !isReportFolder(name) &&
@@ -523,13 +528,14 @@ function readFolder(s: Selection, base: string): Parts {
       );
     const path = below[0];
     if (path !== undefined) {
-      const folder = found.pbips.some((p) => p.path === path) ? parent(path) : path;
-      const root = join(base, folder);
+      const pbip = found.pbips.some((p) => p.path === path) ? join(base, path) : undefined;
+      const root = pbip ? parent(pbip) : join(base, path);
       // The project's reads are the run's, as the CLI's walk of it is its own: what this folder's
       // reads met (a definition folder that could not be listed, say) is outside the project and
       // neither refuses nor is named.
       s.reads.length = 0;
-      return { ...readFolder(s, root), below: { path, root } };
+      const parts = (pbip && readNamed(s, pbip)) || readFolder(s, root);
+      return { ...parts, below: { path, root } };
     }
   }
 
@@ -604,6 +610,132 @@ function readPbip(s: Selection, base: string, report: Part): void {
   }
 }
 
+/** Where a path a project file writes leads: a drop-relative path, `above` folders over the drop's top. */
+interface Resolved {
+  path: string;
+  above: number;
+}
+
+/**
+ * The path `to`, which a project file writes relative to the folder `from`, with its `.` and `..`
+ * taken and either slash read as one, as core's resolveIn (packages/core/src/project/below.ts)
+ * takes it, counting the folders it climbs above the top of the drop rather than giving up there,
+ * so a notice can name where it leads.
+ */
+function resolveFrom(from: string, to: string): Resolved {
+  const out = from === "" ? [] : from.split("/");
+  let above = 0;
+  for (const segment of to.split(/[\\/]/)) {
+    if (segment === "" || segment === ".") continue;
+    if (segment !== "..") out.push(segment);
+    else if (out.pop() === undefined) above++;
+  }
+  return { path: out.join("/"), above };
+}
+
+/** Whether a reference leads inside the drop, the boundary where the CLI has the folder named. */
+const inDrop = (s: Selection, r: Resolved): boolean => r.above === 0 && atOrWithin(r.path, s.drop);
+
+/**
+ * The folder in the drop at `path`, or failing that one whose path differs from it only in case,
+ * as projectsBelow matches it and as Windows and macOS find it for the CLI.
+ */
+const dirAt = (s: Selection, path: string): string | undefined =>
+  s.dirs.has(path) ? path : [...s.dirs].find((d) => d.toLowerCase() === path.toLowerCase());
+
+// The CLI's outside notice (packages/cli/src/walk.ts) in its words, with the folder dropped where
+// the CLI has the path named, and dropping where it has linting: the page is given a drop.
+const OUTSIDE_SAYS = "is outside the folder you dropped and the project folder";
+const OUTSIDE_MODEL = `the model this report reads ${OUTSIDE_SAYS}`;
+
+/**
+ * A reference from the project at `root` that leaves the drop, as the CLI's outside gives one that
+ * leaves the folder named: a notice naming it from the project root, with the hint to drop the
+ * folder that holds both, which is always above the drop's top. The first is kept for the refusal
+ * of a run that reads nothing else, named as a drop-relative path.
+ */
+function outside(s: Selection, root: string, r: Resolved): void {
+  const up = (n: number): string => Array<string>(n).fill("..").join("/");
+  const depth = root === "" ? 0 : root.split("/").length;
+  const climbed = (n: number): string => [up(n), r.path].filter(Boolean).join("/");
+  const path = r.above ? climbed(depth + r.above) : relativeToRoot(root, r.path);
+  const hint = `drop the folder that holds both (${up(depth + r.above)} from the project folder) to include it`;
+  s.said.push({
+    kind: "unread-file",
+    path,
+    message: `${path} ${OUTSIDE_SAYS}, so it was not linted; ${hint}`,
+  });
+  s.outside ??= { path: climbed(r.above), reason: `it ${OUTSIDE_SAYS}; ${hint}` };
+}
+
+/**
+ * The project the .pbip at `pbip` names, as the CLI's resolvePbip and readNamed read it: the one
+ * report its `artifacts` name, and the model that report's definition.pbir names by path, each
+ * followed while it stays inside the drop, and given the CLI's outside notice where it leaves.
+ * The .pbip's folder stays the project root. Undefined for a .pbip naming no report, or several,
+ * which is read as its folder, as every .pbip was before (the CLI refuses several).
+ */
+function readNamed(s: Selection, pbip: string): Parts | undefined {
+  const folder = parent(pbip);
+  const text = s.tree.entries.find((e) => e.path === pbip)?.text;
+  // Each report once, as first written, counted by where it leads.
+  const reports = new Map<string, [Resolved, string]>();
+  for (const written of text === undefined ? [] : reportsNamed(text)) {
+    const r = resolveFrom(folder, written);
+    if (!reports.has(`${r.above}/${r.path}`)) reports.set(`${r.above}/${r.path}`, [r, written]);
+  }
+  if (reports.size !== 1) return undefined;
+  const [[at, written]] = [...reports.values()] as [[Resolved, string]];
+  if (!inDrop(s, at)) {
+    outside(s, folder, at);
+    return {};
+  }
+  const dir = dirAt(s, at.path);
+  if (dir === undefined) throw new InputError(`${pbip} names ${written}, which does not exist`);
+  const shown = (d: string): string => relativeToRoot(folder, d);
+  const report = readPart(s, "report", dir, () => reportRead(s, dir));
+  if (!report && !s.absent.report && hasMarker(s, join(dir, "report.json"), "legacy-report"))
+    legacyPart(s, "report", dir, shown(dir));
+  if (report && text !== undefined) {
+    s.reads.push({ part: report, covers: (p, isFolder) => !isFolder && p === pbip });
+    report.files.push({ path: relativeToRoot(dir, pbip), text });
+    report.sources.add(pbip);
+  }
+  // A report not read still names its model in its definition.pbir, unless a folder on the way
+  // to it could not be listed, as the CLI's pbirOf looks it up.
+  const pbirPath = join(dir, "definition.pbir");
+  const blocked = s.unread.some((u) => u.folder && atOrWithin(dir, u.path));
+  if (!report && !blocked) s.reads.push({ covers: (p, isFolder) => !isFolder && p === pbirPath });
+  const pbir = blocked ? undefined : s.tree.entries.find((e) => e.path === pbirPath)?.text;
+  const ref: DatasetReference = pbir === undefined ? { kind: "none" } : datasetReference(pbir);
+  let model: Part | undefined;
+  if (ref.kind === "byPath") {
+    const m = resolveFrom(dir, ref.path);
+    const modelDir = inDrop(s, m) ? dirAt(s, m.path) : undefined;
+    if (!inDrop(s, m)) {
+      outside(s, folder, m);
+      s.absent.model = OUTSIDE_MODEL;
+    } else if (modelDir !== undefined) {
+      model = readPart(s, "model", modelDir, () =>
+        tmdlRead(s, modelDir, join(modelDir, "definition")),
+      );
+      if (!model && !s.absent.model && hasMarker(s, join(modelDir, "model.bim"), "legacy-model"))
+        legacyPart(s, "model", modelDir, shown(modelDir));
+    } else s.absent.model = `this report reads a model that is not there (${ref.path})`;
+  } else if (!blocked && s.unread.some((u) => !u.folder && u.path === pbirPath)) {
+    s.absent.model = "the report's definition.pbir could not be read";
+  }
+  // A model folder holding no .tmdl files, or a report bound to a published model or naming none,
+  // says so on the skipped line, as from a folder.
+  if (!model && !s.absent.model) {
+    const { reason } = pairingDecision(ref, undefined, nameOf(dir));
+    if (reason) s.absent.model = reason;
+  }
+  if (!model && !report && !s.said.length && !firstRefused(s))
+    throw new InputError(`No semantic model or report found in ${written}, which ${pbip} names`);
+  return { model, report };
+}
+
 /**
  * The nearest config at or above `root`, walking up to the drop root, as the CLI walks up to the
  * filesystem root. One the walk could not read refuses the run, as the CLI's readConfig refuses
@@ -668,12 +800,14 @@ function reasonOf(tree: InputTree, u: Unread): string {
  * was not linted`, or the depth cap's `the walk stopped 64 folders deep at <path>, so files below
  * it were not read`. The walkers write paths relative to the drop, so with the root "" nothing
  * changes; the root itself, which has no path relative to itself, keeps its name, as the CLI
- * names its input.
+ * names its input. A path in a part a .pbip followed out of the root (`followed`) is named from
+ * the root by its `../` path, as the CLI names it.
  */
-function rebased(d: Diagnostic, root: string): Diagnostic {
-  if (root === "" || d.path === undefined || !within(d.path, root)) return d;
+function rebased(d: Diagnostic, root: string, followed: string[]): Diagnostic {
   const from = d.path;
-  const path = relativeTo(from, root);
+  if (root === "" || from === undefined) return d;
+  if (!within(from, root) && !followed.some((f) => atOrWithin(from, f))) return d;
+  const path = relativeToRoot(root, from);
   const m = d.message;
   const unreadTail = "), so it was not linted";
   const capTail = ", so files below it were not read";
@@ -716,6 +850,10 @@ function rebased(d: Diagnostic, root: string): Diagnostic {
 export function selectProject(tree: InputTree): SelectedProject {
   const { dirs, files: filePaths, folders } = foldersOf(tree);
   const unreadFolders = new Set(tree.unreadFolders);
+  // The dropped folder is the first path segment of everything; a lone file has no folder, and
+  // several items dropped side by side have no one folder above them.
+  const firsts = new Set([...filePaths, ...folders].map((p) => p.split("/")[0]!));
+  const base = firsts.size === 1 && filePaths.every((p) => p.includes("/")) ? [...firsts][0]! : "";
   const s: Selection = {
     tree,
     dirs,
@@ -729,12 +867,8 @@ export function selectProject(tree: InputTree): SelectedProject {
     absent: {},
     said: [],
     legacy: new Map(),
+    drop: base,
   };
-
-  // The dropped folder is the first path segment of everything; a lone file has no folder, and
-  // several items dropped side by side have no one folder above them.
-  const firsts = new Set([...filePaths, ...folders].map((p) => p.split("/")[0]!));
-  const base = firsts.size === 1 && filePaths.every((p) => p.includes("/")) ? [...firsts][0]! : "";
   const { model, report, below } = readFolder(s, base);
   const root = below?.root ?? base;
 
@@ -747,15 +881,19 @@ export function selectProject(tree: InputTree): SelectedProject {
       const rel = relativeToRoot(r.part.root, u.path) + (u.folder ? "/" : "");
       if (!r.part.unread.includes(rel)) r.part.unread.push(rel);
     }
-  // The walk's notices this run met, and every depth cap, each rebased onto the root; then what
-  // this selection has to say, already written relative to it.
+  // The walk's notices this run met, and every depth cap, each rebased onto the root, with what
+  // lies in a part a .pbip followed out of it; then what this selection has to say, already
+  // written relative to it.
+  const followed = [model?.root, report?.root].filter(
+    (r): r is string => r !== undefined && !atOrWithin(r, root),
+  );
   const diagnostics = [
     ...tree.diagnostics
       .filter((d) => {
         const u = s.unread.find((x) => x.diagnostic === d);
         return u === undefined || covered(s, u);
       })
-      .map((d) => rebased(d, root)),
+      .map((d) => rebased(d, root, followed)),
     ...s.said,
   ];
 
@@ -774,6 +912,8 @@ export function selectProject(tree: InputTree): SelectedProject {
     // joins it to the dropped folder as the CLI joins it to its input.
     const refused = firstRefused(s);
     if (refused) throw new InputError(`Could not read ${refused.path}: ${reasonOf(tree, refused)}`);
+    // Else a reference a .pbip followed out of the drop, as the CLI's refusal names it.
+    if (s.outside) throw new InputError(`Could not read ${s.outside.path}: ${s.outside.reason}`);
     // Else a legacy part's notice, and a second's after it, in the order the reads met them,
     // each named by its path in the drop as the CLI names it by its path joined to its input.
     // The status line is one paragraph, so the two are one message.

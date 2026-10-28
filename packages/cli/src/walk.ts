@@ -9,7 +9,7 @@ import {
   type Dirent,
   type Stats,
 } from "node:fs";
-import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import {
   datasetReference,
   isPbix,
@@ -140,6 +140,34 @@ const LINK: Unread = {
 };
 
 /**
+ * A report or model a project file names outside the project folder, the folder that holds the
+ * .pbip: references are followed only inside it.
+ */
+const OUTSIDE: Unread = {
+  reason: "it is outside the project folder, where references are not followed",
+  says: "is outside the project folder, where references are not followed",
+};
+
+const OUTSIDE_MODEL = "the model this report reads is outside the project folder";
+
+/**
+ * Whether `p` is `root` or below it, by where each really is, so a path that leads out through a
+ * link counts as outside. When either is not there, or the operating system will not resolve it,
+ * both are judged as written.
+ */
+function insideProject(root: string, p: string): boolean {
+  let [r, q] = [resolve(root), resolve(p)];
+  try {
+    [r, q] = [realpathSync.native(r), realpathSync.native(q)];
+  } catch (e) {
+    // Both as written, so a root reached through a link is not set against a real path.
+    if (!isSystemError(e)) throw e;
+  }
+  const way = relative(r, q);
+  return !isAbsolute(way) && way !== ".." && !way.startsWith(`..${sep}`);
+}
+
+/**
  * The `unread-file` notice (spec section 4) for a file or folder below the input that was not
  * read, and why. A part given on its own is walked once for the model and once for the report, so
  * each path is named once. The path is also recorded on `part`, the part being read, as `p`
@@ -182,7 +210,8 @@ function linked(w: Walk, p: string, part?: ResolvedPart, folder = false): boolea
  * The first link on the way from the walk's base to `to`, a folder a project file names by a path
  * that may pass through others (`../Shared/Sales.SemanticModel`): each folder below the one the two
  * share, down to `to` itself. The folders the base sits in are where the project is, and are
- * followed, as the input is.
+ * followed, as the input is. On a .pbip's route `to` is inside the project folder by then
+ * (insideProject), so the way never climbs above the base there.
  */
 function linkOnWay(w: Walk, to: string): string | undefined {
   const way = relative(w.base, to);
@@ -472,8 +501,10 @@ function walked(input: string, base: string, read: (w: Walk) => ResolvedProject)
 
 /**
  * A .pbip the user named (#86): the one report its `artifacts` name, its path relative to the
- * .pbip's folder, and the model that report's definition.pbir names, wherever each sits, so a
- * project beside others in one folder lints with both parts. Nothing else in the .pbip's folder
+ * .pbip's folder, and the model that report's definition.pbir names, inside the project folder,
+ * the folder that holds the .pbip, by where each really is, so a link that leads out is caught
+ * too; a reference outside it is a notice and is not followed. So a project beside others in one
+ * folder lints with both parts. Nothing else in the .pbip's folder
  * is read or refused, and that folder stays the project root: the config search's start and the
  * base of every notice's path. A .pbip naming more than one report is refused as a folder holding
  * more than one is; one naming none is read as its folder, as every .pbip was before.
@@ -497,6 +528,13 @@ function resolvePbip(input: string, path: string): ResolvedProject {
     );
   }
   const [reportFolder, written] = [...named][0]!;
+  // A report outside the project folder is not looked up, and a run that reads nothing else is
+  // refused naming it.
+  if (!insideProject(folder, reportFolder))
+    return walked(folder, folder, (w) => {
+      unread(w, reportFolder, OUTSIDE);
+      return w.project;
+    });
   const kind = folderAt(reportFolder);
   if (kind === undefined) throw new UsageError(`${input} names ${written}, which does not exist`);
   if (!kind) throw new UsageError(`${input} names ${written}, which is not a folder`);
@@ -527,8 +565,10 @@ const PBIR_UNREAD_REASON = "the report's definition.pbir could not be read";
 
 /**
  * The report at `reportFolder`, which the .pbip at `pbip` names as `written`, and the model its
- * definition.pbir names by path, relative to the report folder. The path is followed rather than
- * compared with a folder beside the report, so model-reference-mismatch does not arise here.
+ * definition.pbir names by path, relative to the report folder, inside the project folder, the
+ * folder that holds the .pbip, by where each really is, so a link that leads out is caught too; a
+ * reference outside it is a notice and is not followed. The path is followed rather than compared
+ * with a folder beside the report, so model-reference-mismatch does not arise here.
  */
 function readNamed(
   w: Walk,
@@ -559,7 +599,11 @@ function readNamed(
   let model: ResolvedPart | undefined;
   if (ref.kind === "byPath") {
     const modelFolder = resolve(reportFolder, toPosix(ref.path));
-    if (folderAt(modelFolder)) {
+    if (!insideProject(w.base, modelFolder)) {
+      // Not followed, and nothing in it is looked up.
+      unread(w, modelFolder, OUTSIDE);
+      out.absent.model = OUTSIDE_MODEL;
+    } else if (folderAt(modelFolder)) {
       model = readPart(w, "model", modelFolder, modelPart);
       if (!model && !out.absent.model && isFile(join(modelFolder, "model.bim")))
         legacyPart(w, "model", modelFolder);

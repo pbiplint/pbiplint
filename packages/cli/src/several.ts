@@ -321,8 +321,13 @@ export function severalSarif(
     }
   });
   const [first] = docs;
+  // The first project's run is the base, so a field formatSarif writes on a run and this does not
+  // merge is kept rather than dropped. Its invocations and results are every project's, set below
+  // in the order formatSarif writes them, whether or not the first project has invocations.
+  const { invocations: _invocations, results: _results, ...base } = first!.runs[0]!;
   const run = {
-    tool: { driver: { ...first!.runs[0]!.tool.driver, rules } },
+    ...base,
+    tool: { driver: { ...base.tool.driver, rules } },
     ...(invoked
       ? {
           invocations: [

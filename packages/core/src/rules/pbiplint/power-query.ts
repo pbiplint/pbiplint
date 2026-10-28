@@ -829,18 +829,23 @@ export const HARDCODED_SECRET_IN_QUERY = pbiplintRule({
   scope: ["Partition", "NamedExpression", "Table"],
   layer: "powerquery",
   check: (_project, { indexes: { m }, ...ctx }) => {
+    // A query's keys join `reported` only once its work returns, so a query that fails partway
+    // does not hide a shared value from the next query that reads it.
     const reported = new Set<string>();
-    return eachQuery(ctx, m.queries, (q) =>
-      credentialsIn(m, q).flatMap(({ held, where }) => {
+    return eachQuery(ctx, m.queries, (q) => {
+      const added = new Set<string>();
+      const found = credentialsIn(m, q).flatMap(({ held, where }) => {
         const key = `${held.query.kind}:${held.query.name}:${held.node.id}`;
-        if (reported.has(key)) return [];
-        reported.add(key);
+        if (reported.has(key) || added.has(key)) return [];
+        added.add(key);
         const what = held.named
           ? `${where} reads a credential written here (value not shown)`
           : `${where} holds a credential written into the query (value not shown)`;
         return [mFinding(m, held.query, held.node, what)];
-      }),
-    );
+      });
+      for (const key of added) reported.add(key);
+      return found;
+    });
   },
 });
 
@@ -890,9 +895,11 @@ export const LEGACY_EXCEL_FILE = pbiplintRule({
   scope: ["Partition", "NamedExpression", "Table"],
   layer: "powerquery",
   check: (_project, { indexes: { m }, ...ctx }) => {
+    // As in HARDCODED_SECRET_IN_QUERY, a query's keys join `reported` once its work returns.
     const reported = new Set<string>();
-    return eachQuery(ctx, m.queries, (q) =>
-      calls(q).flatMap((c) => {
+    return eachQuery(ctx, m.queries, (q) => {
+      const added = new Set<string>();
+      const found = calls(q).flatMap((c) => {
         const file =
           c.name === "Excel.Workbook" && c.args[0] && callOf(boundValue(m, q, c.args[0]).node);
         const path =
@@ -900,8 +907,8 @@ export const LEGACY_EXCEL_FILE = pbiplintRule({
         const ext = path && /\.(xlsb?)$/i.exec(path.value.trim());
         if (!path || !ext) return [];
         const key = `${path.query.kind}:${path.query.name}:${path.node.id}`;
-        if (reported.has(key)) return [];
-        reported.add(key);
+        if (reported.has(key) || added.has(key)) return [];
+        added.add(key);
         return [
           mFinding(
             m,
@@ -910,8 +917,10 @@ export const LEGACY_EXCEL_FILE = pbiplintRule({
             `the workbook is a legacy .${ext[1]!.toLowerCase()} file, read through the Access Database Engine`,
           ),
         ];
-      }),
-    );
+      });
+      for (const key of added) reported.add(key);
+      return found;
+    });
   },
 });
 

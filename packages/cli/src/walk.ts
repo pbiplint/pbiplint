@@ -503,11 +503,11 @@ function walked(input: string, base: string, read: (w: Walk) => ResolvedProject)
  * A .pbip the user named (#86): the one report its `artifacts` name, its path relative to the
  * .pbip's folder, and the model that report's definition.pbir names, inside the project folder,
  * the folder that holds the .pbip, by where each really is, so a link that leads out is caught
- * too; a reference outside it is a notice and is not followed. So a project beside others in one
- * folder lints with both parts. Nothing else in the .pbip's folder
- * is read or refused, and that folder stays the project root: the config search's start and the
- * base of every notice's path. A .pbip naming more than one report is refused as a folder holding
- * more than one is; one naming none is read as its folder, as every .pbip was before.
+ * too; a reference outside it is a notice and is not followed. A project beside others in one
+ * folder lints with both parts. Nothing else in the .pbip's folder is read or refused, and that
+ * folder stays the project root: the config search's start and the base of every notice's path. A
+ * .pbip naming more than one report is refused as a folder holding more than one is; one naming
+ * none is read as its folder, as every .pbip was before.
  */
 function resolvePbip(input: string, path: string): ResolvedProject {
   const folder = dirname(path);

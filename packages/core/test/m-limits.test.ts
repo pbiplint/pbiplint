@@ -3,9 +3,11 @@ import { describe, expect, it } from "vitest";
 import { type LintFile, lint } from "../src/engine/lint.js";
 import { calls, identifierName, nodesOfKind } from "../src/m/ast.js";
 import { readM } from "../src/m/read.js";
+import { buildIndexes } from "../src/index/build.js";
 import { boundValue, origin } from "../src/m/resolve.js";
 import { buildModel } from "../src/model/build.js";
 import { eachQuery, mFinding } from "../src/rules/m-helpers.js";
+import { HARDCODED_SECRET_IN_QUERY, LEGACY_EXCEL_FILE } from "../src/rules/pbiplint/power-query.js";
 import type { Rule } from "../src/rules/types.js";
 import { parseTmdl } from "../src/tmdl/parse.js";
 import { mObjectNames } from "./helpers.js";
@@ -203,22 +205,24 @@ describe("the resolver on long chains and cycles", () => {
     expect(count("DYNAMIC_DATA_SOURCE")).toBe(1);
     expect(await addressOrigin(m)).toBe("computed");
   });
-  it(`reads a field at the end of 4,000 names for 4,000 calls in under ${BOUND_MS / 1000} seconds`, async () => {
+  // Sized so the quadratic resolver of a005e4b fails clearly: 40 s here (8.1 s at 4,000), and 51 s
+  // for the 10,000-name cycle below (8.0 s at 4,000), against 0.8 s and 0.2 s now on Michael's Mac.
+  it(`reads a field at the end of 8,000 names for 8,000 calls in under ${BOUND_MS / 1000} seconds`, async () => {
     const m = letOf(
       [
         'r0 = Sql.Database("sql.example.com", "Config")',
-        ...range(3999, (i) => `r${i + 1} = r${i}`),
-        ...range(4000, (i) => `c${i} = Web.Contents(r3999{0}[a])`),
+        ...range(7999, (i) => `r${i + 1} = r${i}`),
+        ...range(8000, (i) => `c${i} = Web.Contents(r7999{0}[a])`),
       ],
       "c0",
     );
     const { result, ms, count } = await timedLint(m);
     expect(result.summary.ruleErrors).toEqual([]);
-    expect(count("DYNAMIC_DATA_SOURCE")).toBe(4000);
+    expect(count("DYNAMIC_DATA_SOURCE")).toBe(8000);
     expect(ms).toBeLessThan(BOUND_MS);
   }, 120_000);
-  it(`follows every name of a cycle of 4,000 in under ${BOUND_MS / 1000} seconds, each to itself`, async () => {
-    const { index, q } = await indexed(letOf(cycle(4000), "Web.Contents(a5)"));
+  it(`follows every name of a cycle of 10,000 in under ${BOUND_MS / 1000} seconds, each to itself`, async () => {
+    const { index, q } = await indexed(letOf(cycle(10_000), "Web.Contents(a5)"));
     const names = nodesOfKind(q, Language.Ast.NodeKind.IdentifierExpression);
     const started = performance.now();
     for (const n of names) boundValue(index, q, n);
@@ -242,6 +246,9 @@ const model = (...tables: LintFile[]): LintFile[] => [
 
 /** A fixture credential: the shape the secret rule reads, marked as not real. */
 const fake = (kind: string, n: string): string => `pbiplint-fixture-${kind}-${n}-notreal`;
+
+/** The meta record Desktop writes after a text parameter's value. */
+const textMeta = ' meta [IsParameterQuery = true, Type = "Text", IsParameterQueryRequired = true]';
 
 /** A rule that throws on query 'A' and reports every other query, run per query. */
 const throwsOnA: Rule = {
@@ -346,6 +353,55 @@ describe("a deep tree in one query (v3 spec, section 8, amended October 27, 2026
       { id: "TEST_EACH_QUERY", message: "query 'A': Maximum call stack size exceeded" },
     ]);
   });
+  it.each([
+    [
+      "HARDCODED_SECRET_IN_QUERY",
+      HARDCODED_SECRET_IN_QUERY,
+      "Key",
+      `expression Key = "${fake("key", "0202")}"${textMeta}\n\n`,
+      'Web.Contents("https://api.example.com", [Headers = [#"x-api-key" = Key]])',
+    ],
+    [
+      "LEGACY_EXCEL_FILE",
+      LEGACY_EXCEL_FILE,
+      "Workbook",
+      `expression Workbook = "C:\\Data\\Sales.xls"${textMeta}\n\n`,
+      "Excel.Workbook(File.Contents(Workbook))",
+    ],
+  ])(
+    "keeps %s's finding on a shared value when the first query reading it fails partway",
+    async (_, rule, holder, expression, reads) => {
+      const files = [
+        ...model(table("A", [reads]), table("B", [reads])),
+        { path: "definition/expressions.tmdl", text: expression },
+      ];
+      const built = buildModel(files.map((f) => parseTmdl(f.path, f.text)));
+      const read = await readM(built, files);
+      // The first finding's location throws: its query fails after it has seen the shared value.
+      let failed = false;
+      const m = {
+        ...read,
+        locate: (...args: Parameters<typeof read.locate>) => {
+          if (!failed) {
+            failed = true;
+            throw new RangeError("Maximum call stack size exceeded");
+          }
+          return read.locate(...args);
+        },
+      };
+      const errors: string[] = [];
+      const findings = rule.check(
+        { model: built },
+        {
+          indexes: buildIndexes({ model: built }, m),
+          options: {},
+          reportError: (e) => errors.push(e),
+        },
+      );
+      expect(errors).toEqual(["query 'A': Maximum call stack size exceeded"]);
+      expect(findings.map((f) => f.objectName)).toEqual([holder]);
+    },
+  );
   it("throws one query's error from a rule run without the engine, as before", async () => {
     const tmdl = table("A", ["1"]).text;
     await expect(mObjectNames(throwsOnA, tmdl)).rejects.toThrow("Maximum call stack size exceeded");

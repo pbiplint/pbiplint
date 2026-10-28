@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { tempDir } from "../../../tests/support/temp-dir.js";
 import { UsageError } from "../../cli/src/args.js";
-import { runSummary, type ProjectRun } from "@pbiplint/core";
+import { noTmdlNote, runSummary, type ProjectRun } from "@pbiplint/core";
 import { lintSeveral } from "../../cli/src/several.js";
 import { lintProjects } from "../src/lint-projects.js";
 import {
@@ -497,6 +497,30 @@ describe("a folder that holds several projects, in the CLI and the browser (#237
     const root = tempDir("both-several");
     fill(root);
     expect(browserSeveral(root)).toEqual(cliSeveral(root));
+  });
+
+  it("notes no model folder that is another project's, side by side", () => {
+    // B's and Loose's models are their own projects' (B lints its report with its legacy model's
+    // notice, Loose is listed with its PARSE_ISSUE), so A's notes do not name them as models A
+    // left unlinted, as the CLI's run of A does not. C's model, empty, is C's to name.
+    const root = tempDir("both-several-notes");
+    for (const name of ["A", "B", "C"]) {
+      pbipNaming(join(root, `${name}.pbip`), `${name}.Report`);
+      reportAt(join(root, `${name}.Report`), `../${name}.SemanticModel`);
+    }
+    modelAt(join(root, "A.SemanticModel"), "A");
+    mkdirSync(join(root, "B.SemanticModel"));
+    writeFileSync(join(root, "B.SemanticModel", "model.bim"), "{}");
+    mkdirSync(join(root, "C.SemanticModel"));
+    mkdirSync(join(root, "Loose.SemanticModel"));
+    const selected = selectProjects(dropOf(root));
+    if (selected.kind !== "several") throw new Error("the browser read one project");
+    expect(selected.projects.map((p) => [p.path, p.project?.notes])).toEqual([
+      ["A.pbip", []],
+      ["B.pbip", []],
+      ["C.pbip", [noTmdlNote([`${basename(root)}/C.SemanticModel`])]],
+      ["Loose.SemanticModel", undefined],
+    ]);
   });
 
   it("caps a run at the same number of projects", () => {

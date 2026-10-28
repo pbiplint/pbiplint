@@ -288,6 +288,11 @@ interface Selection {
    * the order the reads met them: a drop that reads nothing else is refused with their notices.
    */
   legacy: Map<string, LayerName>;
+  /**
+   * The model folders a .pbip's report named by path, read or not: on the route of several, each
+   * is that project's, so another project's notes do not name it as one left unlinted.
+   */
+  named: Set<string>;
   /** The folder dropped, "" for several items: the boundary a .pbip's references stay inside. */
   drop: string;
   /** The first reference that left the drop, for the refusal of a run that reads nothing else. */
@@ -819,6 +824,7 @@ function readNamed(s: Selection, pbip: string): Parts | undefined {
   if (ref.kind === "byPath") {
     const m = resolveFrom(dir, ref.path);
     const modelDir = inDrop(s, m) ? dirAt(s, m.path) : undefined;
+    if (modelDir !== undefined) s.named.add(modelDir);
     if (!inDrop(s, m)) {
       outside(s, folder, m);
       s.absent.model = OUTSIDE_MODEL;
@@ -987,6 +993,7 @@ const selection = (tree: InputTree, seen: Seen, top: boolean, ofSeveral: boolean
   absent: {},
   said: [],
   legacy: new Map(),
+  named: new Set(),
   top,
   ofSeveral,
 });
@@ -1013,6 +1020,8 @@ interface Settled {
   report?: Part;
   diagnostics: Diagnostic[];
   notes: string[];
+  /** The model folders the notes name, which selectProjects narrows to those no other project has. */
+  unlintable: string[];
 }
 
 /**
@@ -1096,7 +1105,7 @@ function settle(s: Selection, { model, report }: Parts, root: string): Settled {
     throw new InputError(tree.directoryInput ? `${NOTHING_FOUND} ${DRAG_INSTEAD}` : NOTHING_FOUND);
   }
   const notes = unlintable.length ? [noTmdlNote(unlintable)] : [];
-  return { model, report, diagnostics, notes };
+  return { model, report, diagnostics, notes, unlintable };
 }
 
 /**
@@ -1190,6 +1199,21 @@ export function selectProjects(tree: InputTree): Selected {
       return { path, s, root: join(base, path), refused: e };
     }
   });
+  // The model folders each project has: the folder its path names, or, for a .pbip, the model its
+  // report names and any legacy part it met. Side by side, these sit in every project's folder,
+  // and the CLI's run of one project names none of another's as left unlinted.
+  const has = read.map(({ path, s, settled }) =>
+    pbips.includes(path)
+      ? [...s.named, ...s.legacy.keys(), ...(settled?.model ? [settled.model.root] : [])]
+      : [join(base, path)],
+  );
+  const othersHave = (i: number, dir: string): boolean =>
+    has.some((dirs, j) => j !== i && dirs.some((d) => atOrWithin(dir, d)));
+  for (const [i, r] of read.entries()) {
+    if (!r.settled) continue;
+    const left = r.settled.unlintable.filter((d) => !othersHave(i, d));
+    r.settled = { ...r.settled, unlintable: left, notes: left.length ? [noTmdlNote(left)] : [] };
+  }
   const refused = read.flatMap((r) => (r.refused ? [r.refused] : []));
   if (refused.length === read.length)
     throw new InputError(

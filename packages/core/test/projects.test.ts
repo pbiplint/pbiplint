@@ -410,10 +410,24 @@ describe("unreadProject", () => {
     expect(r.groups[0]!.rule.severity).toBe(2);
     expect(r.summary).toMatchObject({ errors: 0, warnings: 1 });
     expect(r.failed).toBe(false);
-    // Turned off, the finding still stands: nothing of the project was read, and a run must not
-    // pass over a project it never linted without saying so (#175).
-    const off = unreadProject(legacy, resolveConfig({ rules: { PARSE_ISSUE: "off" } }));
-    expect(off.summary).toMatchObject({ findings: 1, errors: 1 });
+    // A rule id in another case names the same rule, as it does for lint.
+    const lower = unreadProject(legacy, resolveConfig({ rules: { parse_issue: "warning" } }));
+    expect(lower.groups[0]!.rule.severity).toBe(2);
+    expect(lower.summary.unknownRules).toEqual([]);
+  });
+  it("is skipped as disabled when the config turns PARSE_ISSUE off, its layers still absent", () => {
+    for (const id of ["PARSE_ISSUE", "parse_issue"]) {
+      const off = unreadProject(legacy, resolveConfig({ rules: { [id]: "off" } }));
+      expect(off.findings).toEqual([]);
+      expect(off.groups).toEqual([]);
+      expect(off.summary).toMatchObject({
+        findings: 0,
+        errors: 0,
+        rulesSkipped: [{ id: "PARSE_ISSUE", reason: "disabled" }],
+      });
+      expect(off.failed).toBe(false);
+      expect(off.layers.model).toEqual({ present: false, reason: LEGACY_MODEL_REASON });
+    }
   });
   it("gives a legacy report's reason, and a refusal's own words where no file is named", () => {
     const report = unreadProject(
@@ -421,12 +435,15 @@ describe("unreadProject", () => {
       resolveConfig({}),
     );
     expect(report.layers.report).toEqual({ present: false, reason: LEGACY_REPORT_REASON });
-    const other = unreadProject({ message: "No .tmdl files", layer: "model" }, resolveConfig({}));
+    const other = unreadProject(
+      { message: "No .tmdl files", layer: "model", name: "b/Empty.SemanticModel" },
+      resolveConfig({}),
+    );
     expect(other.findings).toEqual([
       {
         ruleId: "PARSE_ISSUE",
         objectType: "File",
-        objectName: "",
+        objectName: "b/Empty.SemanticModel",
         layer: "model",
         detail: "No .tmdl files",
       },

@@ -1947,6 +1947,7 @@ describe("resolveInput and a folder that holds several projects (#237)", () => {
       unreadable: {
         message: noTmdlRefusal([`${root}/b/Empty.SemanticModel`]),
         layer: "model",
+        name: "b/Empty.SemanticModel",
       },
     });
   });

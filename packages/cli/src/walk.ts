@@ -608,12 +608,17 @@ export function resolveInput(input: string): ResolvedInput {
 
 /**
  * The project at `path`, refused with `e`: on the legacy file when a legacy part is the cause
- * (walked records it), else on the part the path names, a .pbip's being its report's.
+ * (walked records it), else named by its path, on the part the path names, a .pbip's being its
+ * report's.
  */
 function unreadableOf(path: string, e: UsageError): Unreadable {
   const cause = LEGACY_CAUSE.get(e);
   if (cause) return { message: e.message, ...cause };
-  return { message: e.message, layer: path.endsWith(".SemanticModel") ? "model" : "report" };
+  return {
+    message: e.message,
+    layer: path.endsWith(".SemanticModel") ? "model" : "report",
+    name: path,
+  };
 }
 
 /**

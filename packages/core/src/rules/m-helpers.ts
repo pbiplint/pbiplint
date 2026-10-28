@@ -4,7 +4,7 @@ import type { MIndex, MQuery } from "../m/types.js";
 import { tableRef } from "../model/names.js";
 import type { NamedExpression, Partition, Table } from "../model/types.js";
 import { finding } from "./helpers.js";
-import type { RuleFinding } from "./types.js";
+import type { RuleContext, RuleFinding } from "./types.js";
 
 /**
  * The query as Power Query's Queries pane names it (v3 spec, section 6.3): `query 'Sales'`, with
@@ -43,4 +43,30 @@ export function mFinding(
     location: m.locate(q, node.tokenRange.positionStart),
     detail: `${queryLabel(q)}${step === undefined ? "" : `, step ${tableRef(step)}`}: ${what}`,
   };
+}
+
+/**
+ * The findings of `check` for each query, in order (v3 spec, section 8). An error thrown for one
+ * query goes to `ctx.reportError` as `query 'Sales': <message>`, and the next query runs, so one
+ * query's error does not take the rule's findings off the others. With no `reportError` (a rule
+ * called without the engine) the error is thrown, as before.
+ */
+export function eachQuery(
+  ctx: Pick<RuleContext, "reportError">,
+  queries: readonly MQuery[],
+  check: (q: MQuery) => RuleFinding[],
+): RuleFinding[] {
+  const out: RuleFinding[] = [];
+  for (const q of queries) {
+    let found: RuleFinding[];
+    try {
+      found = check(q);
+    } catch (e) {
+      if (!ctx.reportError) throw e;
+      ctx.reportError(`${queryLabel(q)}: ${e instanceof Error ? e.message : String(e)}`);
+      continue;
+    }
+    for (const f of found) out.push(f);
+  }
+  return out;
 }

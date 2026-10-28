@@ -10,7 +10,6 @@ import {
   allMeasures,
   allTablePermissions,
   dataType,
-  escapeRegExp,
   expressionObjects,
   finding,
   isBlank,
@@ -21,6 +20,8 @@ import {
   tablesPartlyRead,
   typeKnown,
 } from "../helpers.js";
+import { eachQuery } from "../m-helpers.js";
+import { useRelationshipWith } from "./dax-scan.js";
 import { bpaRule } from "./define.js";
 
 // A key column with no dataType line counts: its type is unknown (#164), and a marked date table's
@@ -148,26 +149,31 @@ const NATIVE_QUERY_CONNECTORS: ReadonlySet<string> = new Set([
  * An options argument that is, or names, a record written in place with a `Query` field. A name is
  * followed to its value through `let` steps, record fields, and the model's other queries, a `let`
  * standing for what its `in` returns; a function's parameter, a name nothing defines, and anything
- * computed are not followed. Each node is visited once, so a cycle ends the search.
+ * computed are not followed. Each node is visited once, so a cycle ends the search. Followed in a
+ * loop, since a chain of thousands of names would overflow the stack (v3 spec, section 8).
  */
-function hasQueryField(
-  m: MIndex,
-  q: MQuery,
-  node: Language.Ast.TNode,
-  seen: Set<string> = new Set(),
-): boolean {
-  const n = unwrap(node);
-  const key = `${q.kind}:${q.name}:${n.id}`;
-  if (seen.has(key)) return false;
-  seen.add(key);
-  if (n.kind === Kind.RecordExpression || n.kind === Kind.RecordLiteral)
-    return n.content.elements.some((csv) => identifierName(csv.node.key.literal) === "Query");
-  if (n.kind === Kind.LetExpression) return hasQueryField(m, q, n.expression, seen);
-  if (n.kind !== Kind.IdentifierExpression) return false;
-  const r = resolve(m, q, n);
-  if (r.kind === "value") return hasQueryField(m, q, r.node, seen);
-  if (r.kind === "query" && r.query.ast) return hasQueryField(m, r.query, r.query.ast, seen);
-  return false;
+function hasQueryField(m: MIndex, query: MQuery, node: Language.Ast.TNode): boolean {
+  const seen = new Set<string>();
+  let q = query;
+  let n = unwrap(node);
+  for (;;) {
+    const key = `${q.kind}:${q.name}:${n.id}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    if (n.kind === Kind.RecordExpression || n.kind === Kind.RecordLiteral)
+      return n.content.elements.some((csv) => identifierName(csv.node.key.literal) === "Query");
+    if (n.kind === Kind.LetExpression) {
+      n = unwrap(n.expression);
+      continue;
+    }
+    if (n.kind !== Kind.IdentifierExpression) return false;
+    const r = resolve(m, q, n);
+    if (r.kind === "value") n = unwrap(r.node);
+    else if (r.kind === "query" && r.query.ast) {
+      q = r.query;
+      n = unwrap(r.query.ast);
+    } else return false;
+  }
 }
 
 /**
@@ -203,11 +209,14 @@ export const MINIMIZE_POWER_QUERY_TRANSFORMATIONS = bpaRule(
   "MINIMIZE_POWER_QUERY_TRANSFORMATIONS",
   { layer: "powerquery" },
   (_model, ctx) =>
-    ctx.indexes.m.queries
-      .filter(
-        (q) => q.kind === "partition" && powerQueryTransformations(q, ctx.indexes.m).length > 0,
-      )
-      .map((q) => finding.partition(q.owner as Partition)),
+    eachQuery(
+      ctx,
+      ctx.indexes.m.queries.filter((q) => q.kind === "partition"),
+      (q) =>
+        powerQueryTransformations(q, ctx.indexes.m).length > 0
+          ? [finding.partition(q.owner as Partition)]
+          : [],
+    ),
 );
 
 // A model file pbiplint could not fully read may hold the aggregation table.
@@ -322,11 +331,10 @@ export const AVOID_THE_USERELATIONSHIP_FUNCTION_AND_RLS_AGAINST_THE_SAME_TABLE =
     return tablesInScope(m)
       .filter((t) => {
         if (!permissions.some((tp) => tp.table === t.name && tp.filter !== undefined)) return false;
-        const re = new RegExp(
-          `USERELATIONSHIP\\s*\\(\\s*.+?(?=\\])\\]\\s*,\\s*'*${escapeRegExp(t.name)}'*\\[`,
-          "i",
-        );
-        return measures.some((x) => re.test(x.expression));
+        // As a regex: USERELATIONSHIP\s*\(\s*.+?(?=\])\]\s*,\s*'*<escaped name>'*\[ (case-insensitive),
+        // which started again at every USERELATIONSHIP and read on to the same brackets.
+        const used = useRelationshipWith(t.name);
+        return measures.some((x) => used.test(x.expression));
       })
       .map(finding.table);
   },

@@ -71,17 +71,36 @@ export function calls(q: MQuery): MCall[] {
   return out;
 }
 
+/** Nodes in text order, an outer node before an inner one that starts with it. */
+const inTextOrder = (nodes: Node[]): Node[] =>
+  nodes.sort(
+    (a, b) =>
+      a.tokenRange.tokenIndexStart - b.tokenRange.tokenIndexStart ||
+      b.tokenRange.tokenIndexEnd - a.tokenRange.tokenIndexEnd,
+  );
+
 /** Every node of the given kinds in a query, in text order. */
 export function nodesOfKind(q: MQuery, ...kinds: Language.Ast.NodeKind[]): Node[] {
-  return kinds
-    .flatMap((k) => [...(q.nodeIdMapCollection?.idsByNodeKind.get(k) ?? [])])
-    .map((id) => nodeOf(q, id))
-    .filter((n): n is Node => n !== undefined)
-    .sort(
-      (a, b) =>
-        a.tokenRange.tokenIndexStart - b.tokenRange.tokenIndexStart ||
-        b.tokenRange.tokenIndexEnd - a.tokenRange.tokenIndexEnd,
-    );
+  return inTextOrder(
+    kinds
+      .flatMap((k) => [...(q.nodeIdMapCollection?.idsByNodeKind.get(k) ?? [])])
+      .map((id) => nodeOf(q, id))
+      .filter((n): n is Node => n !== undefined),
+  );
+}
+
+/** `root` and every node below it, of the given kinds, in text order. */
+export function nodesWithin(q: MQuery, root: Node, ...kinds: Language.Ast.NodeKind[]): Node[] {
+  const out: Node[] = [];
+  for (const stack = [root]; stack.length;) {
+    const n = stack.pop()!;
+    if (kinds.includes(n.kind)) out.push(n);
+    for (const id of q.nodeIdMapCollection?.childIdsById.get(n.id) ?? []) {
+      const child = nodeOf(q, id);
+      if (child) stack.push(child);
+    }
+  }
+  return inTextOrder(out);
 }
 
 /** Whether `node` is `ancestor` or sits inside it. */

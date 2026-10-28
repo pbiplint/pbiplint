@@ -200,62 +200,137 @@ function opensBlock(tokens: readonly DaxToken[], k: number): boolean {
  * first token or directly follows a nested `VAR name =` or a `RETURN`, a `RETURN` there closes
  * one, and only a `VAR` or `RETURN` there outside every nested block ends the definition. A `VAR`
  * inside a nested block that opens nothing is a sibling in that block.
+ *
+ * One pass from the right reads every definition at once. Tokens at one depth with nothing
+ * shallower between them form a run, and each run keeps a count of the blocks its `VAR`s open
+ * less those its `RETURN`s close, from the right: a definition ends at the nearest `RETURN` or
+ * closing `VAR` to its right where that count is what it is at the definition's start.
  */
 export function daxVariables(tokens: readonly DaxToken[]): DaxVariable[] {
+  const n = tokens.length;
+  /** Per index, the first comma at the token's own depth or token shallower than it, from there. */
+  const ends: number[] = [];
+  const to: number[] = [];
+  /** Indexes of tokens, each shallower than the one above it: the nearest shallower token. */
+  const shallower: number[] = [];
+  /** Per depth, its run: where the run ends, its count, the nearest comma, and each count's end. */
+  const runs: { end: number; count: number; comma: number; stops: Map<number, number> }[] = [];
+  for (let k = n - 1; k >= 0; k--) {
+    const t = tokens[k]!;
+    while (shallower.length > 0 && tokens[shallower.at(-1)!]!.depth >= t.depth) shallower.pop();
+    const end = shallower.at(-1) ?? n;
+    shallower.push(k);
+    let run = runs[t.depth];
+    if (run?.end !== end) runs[t.depth] = run = { end, count: 0, comma: end, stops: new Map() };
+    if (isPunctuation(t, ",")) run.comma = k;
+    ends[k] = run.comma;
+    // At `VAR name =`'s `=`, the run holds what lies after it: the definition.
+    const v = tokens[k - 2];
+    if (isWord(v, "VAR") && tokens[k - 1]?.kind === "identifier" && t.kind === "operator")
+      if (t.text === "=") to[k - 2] = run.stops.get(run.count) ?? end;
+    if (isWord(t, "RETURN")) run.stops.set(--run.count, k);
+    else if (isWord(t, "VAR"))
+      if (opensBlock(tokens, k)) run.count++;
+      else run.stops.set(run.count, k);
+  }
   const out: DaxVariable[] = [];
-  tokens.forEach((t, k) => {
-    const name = tokens[k + 1];
-    const eq = tokens[k + 2];
-    if (!isWord(t, "VAR") || name?.kind !== "identifier" || eq?.kind !== "operator") return;
-    if (eq.text !== "=") return;
-    const from = k + 3;
-    let to = from;
-    let nested = 0;
-    for (; to < tokens.length; to++) {
-      const x = tokens[to]!;
-      if (x.depth < t.depth) break;
-      if (x.depth !== t.depth) continue;
-      if (isWord(x, "VAR")) {
-        if (opensBlock(tokens, to)) nested++;
-        else if (nested === 0) break;
-      } else if (isWord(x, "RETURN")) {
-        if (nested === 0) break;
-        nested--;
+  /** The definitions holding the current `VAR`, innermost on top. */
+  const holding: DaxVariable[] = [];
+  to.forEach((stop, at) => {
+    const t = tokens[at]!;
+    const blockEnd = stop < n && tokens[stop]!.depth === t.depth ? ends[stop]! : stop;
+    const v = { name: tokens[at + 1]!.text, at, from: at + 3, to: stop, blockEnd };
+    // A block nested in a definition ends where the definition does. Definitions nest, so the
+    // innermost one holding the `VAR` ends first.
+    while (holding.length > 0 && holding.at(-1)!.to <= at) holding.pop();
+    const d = holding.at(-1);
+    if (d && d.to < v.blockEnd) v.blockEnd = d.to;
+    holding.push(v);
+    out.push(v);
+  });
+  return out;
+}
+
+/** Per array of variables, each name's scopes: where the name's meaning changes, and to what. */
+const SCOPES = new WeakMap<
+  readonly DaxVariable[],
+  Map<string, { from: number[]; v: (DaxVariable | undefined)[] }>
+>();
+
+/** The scopes of each name, upper-cased: a sweep over the token ranges each variable covers. */
+function scopesOf(
+  vars: readonly DaxVariable[],
+): Map<string, { from: number[]; v: (DaxVariable | undefined)[] }> {
+  const known = SCOPES.get(vars);
+  if (known) return known;
+  // The uses a variable covers: after its `VAR`, before its block's end, outside its definition.
+  const ranges = new Map<string, [number, number, number][]>();
+  vars.forEach((v, i) => {
+    const key = v.name.toUpperCase();
+    const list = ranges.get(key) ?? [];
+    ranges.set(key, list);
+    list.push(
+      [v.at + 1, Math.min(v.from, v.blockEnd), i],
+      [Math.max(v.to, v.at + 1), v.blockEnd, i],
+    );
+  });
+  const scopes = new Map<string, { from: number[]; v: (DaxVariable | undefined)[] }>();
+  for (const [key, list] of ranges) {
+    const live = list.filter(([lo, hi]) => lo < hi).sort((a, b) => a[0] - b[0]);
+    const points = [...new Set(live.flatMap(([lo, hi]) => [lo, hi]))].sort((a, b) => a - b);
+    const scope = { from: [] as number[], v: [] as (DaxVariable | undefined)[] };
+    // A heap of the ranges begun, the latest variable on top; a range is dropped once it ends.
+    const heap: [number, number, number][] = [];
+    const up = (a: number, b: number): boolean => heap[a]![2] > heap[b]![2];
+    const swap = (a: number, b: number): void => void ([heap[a], heap[b]] = [heap[b]!, heap[a]!]);
+    let next = 0;
+    for (const p of points) {
+      for (; next < live.length && live[next]![0] <= p; next++) {
+        let c = heap.push(live[next]!) - 1;
+        for (; c > 0 && up(c, (c - 1) >> 1); c = (c - 1) >> 1) swap(c, (c - 1) >> 1);
+      }
+      while (heap.length > 0 && heap[0]![1] <= p) {
+        swap(0, heap.length - 1);
+        heap.pop();
+        for (let c = 0; ;) {
+          const l = 2 * c + 1;
+          const top = l + 1 < heap.length && up(l + 1, l) ? l + 1 : l;
+          if (top >= heap.length || !up(top, c)) break;
+          swap(top, c);
+          c = top;
+        }
+      }
+      const v = heap[0] && vars[heap[0][2]];
+      if (scope.v.at(-1) !== v || scope.from.length === 0) {
+        scope.from.push(p);
+        scope.v.push(v);
       }
     }
-    let blockEnd = to;
-    for (; blockEnd < tokens.length; blockEnd++) {
-      const x = tokens[blockEnd]!;
-      if (x.depth < t.depth || (x.depth === t.depth && isPunctuation(x, ","))) break;
-    }
-    out.push({ name: name.text, at: k, from, to, blockEnd });
-  });
-  // A block nested in a definition ends where the definition does. Definitions nest, so the
-  // smallest end among those holding the `VAR` is the innermost one's.
-  for (const v of out)
-    for (const d of out) if (d.from <= v.at && v.at < d.to && d.to < v.blockEnd) v.blockEnd = d.to;
-  return out;
+    scopes.set(key, scope);
+  }
+  SCOPES.set(vars, scopes);
+  return scopes;
 }
 
 /**
  * The definition a variable's name refers to at token `use`, as DAX scopes a variable: the
  * nearest `VAR` of that name before the use whose block the use is still in, leaving out one whose
- * own definition holds the use.
+ * own definition holds the use. The first call for an array of variables indexes it, so the array
+ * is not to change after.
  */
 export function variableAt(
   vars: readonly DaxVariable[],
   name: string,
   use: number,
 ): DaxVariable | undefined {
-  const key = name.toUpperCase();
-  let found: DaxVariable | undefined;
-  for (const v of vars)
-    if (
-      v.name.toUpperCase() === key &&
-      v.at < use &&
-      use < v.blockEnd &&
-      !(v.from <= use && use < v.to)
-    )
-      found = v;
-  return found;
+  const scope = scopesOf(vars).get(name.toUpperCase());
+  if (!scope) return undefined;
+  // The last point at or before the use.
+  let [lo, hi] = [0, scope.from.length];
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (scope.from[mid]! <= use) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo > 0 ? scope.v[lo - 1] : undefined;
 }

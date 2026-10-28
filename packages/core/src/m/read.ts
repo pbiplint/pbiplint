@@ -1,9 +1,14 @@
 import type { LintFile } from "../engine/lint.js";
 import type { Model, NamedExpression, Partition, SourceLocation, Table } from "../model/types.js";
 import type { TmdlNode } from "../tmdl/types.js";
-import { maskLiterals } from "./mask.js";
+import { M_BUDGET, mWork, type MBudget } from "./budget.js";
+import { hiddenLiterals, maskLiterals, renderMasked } from "./mask.js";
 import { parseM, type MPosition } from "./parse.js";
 import type { MIndex, MParseIssue, MQuery } from "./types.js";
+
+const TOO_LARGE = "M is too large or complex to read (over pbiplint's limit for one query)";
+const MODEL_TOO_LARGE =
+  "M is too large or complex to read (over pbiplint's limit for one model's M)";
 
 /** Text with every run of whitespace as one space, to compare M as Desktop rewrites it. */
 const squash = (s: string): string => s.replace(/\s+/g, " ").trim();
@@ -22,6 +27,10 @@ const expressionSource = (x: NamedExpression): TmdlNode | undefined =>
 const policySource = (t: Table): TmdlNode | undefined =>
   t.refreshPolicy?.node?.children.find((c) => c.kind === "expr" && c.type === "sourceexpression");
 
+/** A file's text as parseTmdl reads it: the BOM off, and every line break a line feed. */
+const tmdlBody = (text: string): string =>
+  (text.charCodeAt(0) === 0xfeff ? text.slice(1) : text).replace(/\r\n?/g, "\n");
+
 /** Each file's lines, split as parseTmdl splits them, read only when a location needs one. */
 function lineReader(files: LintFile[]): (file: string, line: number) => string {
   const texts = new Map(files.map((f) => [f.path, f.text]));
@@ -29,12 +38,37 @@ function lineReader(files: LintFile[]): (file: string, line: number) => string {
   return (file, line) => {
     let lines = cache.get(file);
     if (!lines) {
-      const text = texts.get(file) ?? "";
-      const body = text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
-      lines = body.replace(/\r\n?/g, "\n").split("\n");
+      lines = tmdlBody(texts.get(file) ?? "").split("\n");
       cache.set(file, lines);
     }
     return lines[line - 1] ?? "";
+  };
+}
+
+/**
+ * `MIndex.maskedLine` over `files`: a TMDL line hidden wherever masking the whole file from its
+ * first line, or the line alone, would hide it (v3 spec, section 7, amended October 27, 2026), so a
+ * line inside a multi-line literal never shows its text. Each file is masked once, on first use.
+ */
+function lineMasker(files: LintFile[]): MIndex["maskedLine"] {
+  const texts = new Map(files.map((f) => [f.path, f.text]));
+  const cache = new Map<string, { body: string; hidden: Uint8Array; starts: number[] }>();
+  return (file, line, text) => {
+    const own = hiddenLiterals(text, { tmdl: true });
+    let f = cache.get(file);
+    if (!f && texts.has(file)) {
+      const body = tmdlBody(texts.get(file)!);
+      const starts = [0];
+      for (let i = body.indexOf("\n"); i >= 0; i = body.indexOf("\n", i + 1)) starts.push(i + 1);
+      cache.set(file, (f = { body, hidden: hiddenLiterals(body, { tmdl: true }), starts }));
+    }
+    const start = f?.starts[line - 1];
+    if (f && start !== undefined) {
+      const end = f.starts[line] !== undefined ? f.starts[line]! - 1 : f.body.length;
+      if (end - start === text.length && f.body.startsWith(text, start))
+        for (let k = 0; k < text.length; k++) own[k]! |= f.hidden[start + k]!;
+    }
+    return renderMasked(text, own);
   };
 }
 
@@ -74,6 +108,7 @@ export function emptyMIndex(): MIndex {
     queries: [],
     issues: [],
     locate: (q, at) => ({ file: q.file, line: q.valueLine + at.lineNumber }),
+    maskedLine: (_file, _line, text) => maskLiterals(text, { tmdl: true }),
   };
 }
 
@@ -82,9 +117,15 @@ export function emptyMIndex(): MIndex {
  * partition's source, each shared expression, and each refresh policy's source expression that is
  * not, whitespace aside, one of its table's M partitions, which Desktop writes to both. Empty M is
  * skipped. M that does not parse is an issue at the TMDL line and column the parser stopped at,
- * and its query keeps no tree.
+ * and its query keeps no tree. A query over the budget (`budget.ts`, v3 spec, section 7, amended
+ * October 27, 2026), alone or with the model's queries read before it, is an issue at its first
+ * line instead, and keeps no tree.
  */
-export async function readM(model: Model, files: LintFile[]): Promise<MIndex> {
+export async function readM(
+  model: Model,
+  files: LintFile[],
+  budget: MBudget = M_BUDGET,
+): Promise<MIndex> {
   const lineAt = lineReader(files);
   const mLines = new WeakMap<MQuery, MLines>();
   const locate = (q: MQuery, at: MPosition): SourceLocation => {
@@ -120,14 +161,7 @@ export async function readM(model: Model, files: LintFile[]): Promise<MIndex> {
   for (const x of model.expressions) add("expression", x.name, x, expressionSource(x));
 
   const issues: MParseIssue[] = [];
-  for (const q of queries) {
-    const parsed = await parseM(q.text);
-    if (parsed.ok) {
-      q.ast = parsed.ast;
-      q.nodeIdMapCollection = parsed.nodeIdMapCollection;
-      continue;
-    }
-    const at = locate(q, parsed.position ?? { lineNumber: 0, lineCodeUnit: 0 });
+  const issueAt = (q: MQuery, at: SourceLocation, reason: string) => {
     // The TMDL line with its M's text literals hidden (v3 spec, section 7): the M is masked whole,
     // since a literal may open on an earlier line, and its line put back after the TMDL line's head.
     const n = at.line - q.valueLine;
@@ -142,8 +176,34 @@ export async function readM(model: Model, files: LintFile[]): Promise<MIndex> {
       text: (line.slice(0, Math.max(0, head)) + (maskLiterals(q.text).split("\n")[n] ?? ""))
         .trim()
         .slice(0, 120),
-      reason: `M could not be parsed: ${maskLiterals(parsed.message)}`,
+      reason,
     });
+  };
+  let total = 0;
+  for (const q of queries) {
+    const work = mWork(q.text);
+    const over =
+      work.units > budget.query || work.depth > budget.depth
+        ? TOO_LARGE
+        : total + work.units > budget.model
+          ? MODEL_TOO_LARGE
+          : undefined;
+    if (over) {
+      issueAt(q, locate(q, { lineNumber: 0, lineCodeUnit: 0 }), over);
+      continue;
+    }
+    total += work.units;
+    const parsed = await parseM(q.text);
+    if (parsed.ok) {
+      q.ast = parsed.ast;
+      q.nodeIdMapCollection = parsed.nodeIdMapCollection;
+      continue;
+    }
+    issueAt(
+      q,
+      locate(q, parsed.position ?? { lineNumber: 0, lineCodeUnit: 0 }),
+      `M could not be parsed: ${maskLiterals(parsed.message)}`,
+    );
   }
-  return { queries, issues, locate };
+  return { queries, issues, locate, maskedLine: lineMasker(files) };
 }

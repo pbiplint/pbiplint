@@ -173,9 +173,10 @@ describe("a folder with projects below it, in the CLI and the browser (#174)", (
     fill(root);
     expect(browser(root)).toEqual(cli(root));
   });
-  it("finds the same one project where a thin report's model sits elsewhere, which only the CLI follows", () => {
+  it("finds the same one project where a thin report's model sits elsewhere in the folder named, which only the CLI follows", () => {
     // The browser has no .pbip route (spec section 12): it reads the .pbip's folder, the report
-    // alone, and says which model the report reads.
+    // alone, and says which model the report reads. The CLI follows the reference, which stays
+    // inside the folder named.
     const root = tempDir("both-apart");
     mkdirSync(join(root, "reports"));
     writeFileSync(

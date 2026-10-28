@@ -39,6 +39,7 @@ export {
   locationOf,
   noticeLines,
   plural,
+  ruleErrorNotices,
   skippedLine,
   summaryLine,
   topGroups,

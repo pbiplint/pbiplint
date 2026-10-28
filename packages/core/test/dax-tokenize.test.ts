@@ -225,4 +225,26 @@ describe("daxVariables", () => {
       "1",
     ]);
   });
+
+  // Each definition and each use was once read against every variable: 800 KB took 7.7 s. The
+  // bound is three times CI's time rounded up to the next 5 s (spec 11.5): 3.7 s on Node 20 on
+  // October 28, 2026, so 15 s.
+  const BOUND_MS = 15_000;
+  it(`reads and resolves 4 MB of chained variables in under ${BOUND_MS / 1000} seconds`, () => {
+    const count = 400_000;
+    const tokens = tokenizeDax("VAR x = 1 " + "VAR x = x ".repeat(count - 1) + "RETURN x");
+    const started = performance.now();
+    const vars = daxVariables(tokens);
+    let resolved = 0;
+    vars.forEach((v, i) => {
+      if (i > 0 && variableAt(vars, "X", v.from) === vars[i - 1]) resolved++;
+    });
+    const last = variableAt(vars, "x", tokens.length - 1);
+    const ms = performance.now() - started;
+    expect(vars).toHaveLength(count);
+    expect(resolved).toBe(count - 1);
+    expect(last).toBe(vars.at(-1));
+    expect(last?.blockEnd).toBe(tokens.length);
+    expect(ms).toBeLessThan(BOUND_MS);
+  }, 120_000);
 });

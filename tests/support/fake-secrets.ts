@@ -13,8 +13,9 @@ export const SECRETS_FIXTURE = join(
 );
 
 /**
- * parse-secrets, the fixture that plants a made-up key on an M line and a made-up token on a TMDL
- * line that do not parse, so PARSE_ISSUE quotes both lines (v3 spec, sections 7 and 11.3).
+ * parse-secrets, the fixture that plants made-up values on lines that do not parse, so PARSE_ISSUE
+ * quotes each line (v3 spec, sections 7 and 11.3): on M lines, a key in a literal and a key in a
+ * comment; on TMDL lines, a token in a literal and a password on a multi-line literal's middle line.
  */
 export const PARSE_SECRETS_FIXTURE = join(
   dirname(fileURLToPath(import.meta.url)),

@@ -8,11 +8,11 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { defaultRules } from "@pbiplint/core";
+import { defaultRules, lint, type Rule } from "@pbiplint/core";
 import { describe, expect, it } from "vitest";
 import { tempDir } from "../../../tests/support/temp-dir.js";
 import { EXPLAIN_HINT, main } from "../src/main.js";
-import { QUIET_NEXT } from "../src/quiet.js";
+import { QUIET_NEXT, quietText } from "../src/quiet.js";
 
 const repo = new URL("../../../", import.meta.url).pathname;
 // A control character a terminal would act on, as the CLI must never write one raw.
@@ -368,6 +368,21 @@ describe("pbiplint CLI", () => {
     const clean = await run([sample, "-q", "--config", noRules()]);
     expect(clean.out.trimEnd().split("\n").at(-1)).toBe("No findings.");
     expect(clean.out).not.toContain("Next:");
+    // A rule that threw is counted in the summary and named in a notice, in the text's words.
+    const boom: Rule = {
+      ...defaultRules[0]!,
+      id: "BOOM",
+      check: () => {
+        throw new Error("kaboom");
+      },
+    };
+    const broken = await lint([{ path: "definition/model.tmdl", text: "model Model\n" }], {
+      rules: [boom],
+      config: { failOn: "none" },
+    });
+    expect(quietText(broken)).toMatch(
+      /^pbiplint: [^\n]*, 1 rule could not finish\n[^\n]*\nNotice: The rule BOOM could not finish \(please report this\): kaboom\n/,
+    );
   });
   it("--rule shows only those rules' findings in every format, and gates on them (#178)", async () => {
     const all = JSON.parse((await run([sample, "--format", "json"])).out);

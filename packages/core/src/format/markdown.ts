@@ -5,6 +5,7 @@ import { showControls } from "./controls.js";
 import {
   layersLine,
   locationOf,
+  ruleErrorNotices,
   skippedLine,
   summaryLine,
   topGroups,
@@ -84,7 +85,10 @@ const count = (s: string, ch: string): number => s.split(ch).length - 1;
  * links or renders.
  */
 function spanned(w: string, table: boolean): string {
-  let after = /[.,;:!?]+$/.exec(w)?.[0] ?? "";
+  // A loop, not `/[.,;:!?]+$/`, which backtracked by the square of a run of punctuation.
+  let end = w.length;
+  while (end > 0 && ".,;:!?".includes(w[end - 1]!)) end--;
+  let after = w.slice(end);
   let core = w.slice(0, w.length - after.length);
   let before = "";
   if (core.endsWith(")") && count(core, ")") > count(core, "(")) {
@@ -143,7 +147,8 @@ export function formatMarkdown(result: LintResult, _options: FormatOptions = {})
     `${summaryLine(result)}. ${text([layersLine(result), skippedLine(result)].filter(Boolean).join(" "), false)}.`,
     "",
   ];
-  for (const d of result.diagnostics) out.push(`> Notice: ${text(d.message, false)}`, "");
+  for (const m of [...result.diagnostics.map((d) => d.message), ...ruleErrorNotices(result)])
+    out.push(`> Notice: ${text(m, false)}`, "");
   if (result.facts.length) {
     out.push("## Report at a glance", "", "| Fact | Value | Rule |", "|---|---|---|");
     for (const f of result.facts)

@@ -17,7 +17,11 @@ export interface SkippedRule {
     "disabled" | "needsLiveModel" | "noModel" | "noReport" | "reportFileUnread" | "modelFileUnread";
 }
 
-/** A rule whose check threw. It counts as run, and its message is the thrown error's. */
+/**
+ * A rule whose check threw, or that caught an error in one part of its work and reported it (an M
+ * rule's error in one query, which names the query). It counts as run, and its message is the
+ * error's.
+ */
 export interface RuleError {
   id: string;
   message: string;
@@ -47,7 +51,8 @@ export function optionsFor(rule: Rule, config: ResolvedConfig): RuleOptions {
  * Run each rule over the project, in the order given, and collect what it reports. A rule is
  * skipped, with its reason, when the config turns it off, when it needs a live model, when a layer
  * it needs is absent, or when its `skipWhenUnread` or `skipWhenModelUnread` holds. A rule that
- * throws is recorded in `ruleErrors` and the run goes on. `config` must already be bound to the
+ * throws is recorded in `ruleErrors` and the run goes on, as is each error a rule reports through
+ * `reportError`, its findings kept. `config` must already be bound to the
  * rules' ids (`bindConfig`), since ids are compared here as written. Most callers want `lint`,
  * which builds the project and indexes, runs this, and ranks the findings by severity.
  */
@@ -93,7 +98,11 @@ export function runRules(
     result.rulesRun.push(rule.id);
     let raw;
     try {
-      raw = rule.check(project, { indexes, options: optionsFor(rule, config) });
+      raw = rule.check(project, {
+        indexes,
+        options: optionsFor(rule, config),
+        reportError: (message) => result.ruleErrors.push({ id: rule.id, message }),
+      });
     } catch (e) {
       result.ruleErrors.push({ id: rule.id, message: e instanceof Error ? e.message : String(e) });
       continue;

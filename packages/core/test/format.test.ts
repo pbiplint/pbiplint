@@ -170,27 +170,80 @@ describe("summary wording", () => {
   });
 });
 
-describe("formatText with a crashing rule", () => {
-  it("still reports rule errors when nothing else fired", async () => {
-    const throwingRule: Rule = {
-      id: "THROWING_RULE",
-      name: "Rule that throws",
-      category: "Maintenance",
-      severity: 2,
-      scope: ["Table"],
-      layer: "model",
-      needs: ["model"],
-      description: "Only exists to blow up.",
-      references: [],
-      status: "ported",
-      check() {
-        throw new Error("kaboom");
+describe("a rule that could not finish, in every format", () => {
+  const throwingRule: Rule = {
+    id: "THROWING_RULE",
+    name: "Rule that throws",
+    category: "Maintenance",
+    severity: 2,
+    scope: ["Table"],
+    layer: "model",
+    needs: ["model"],
+    description: "Only exists to blow up.",
+    references: [],
+    status: "ported",
+    check() {
+      throw new Error("kaboom");
+    },
+  };
+  let crashed: LintResult;
+  beforeAll(async () => {
+    crashed = await lint(files.slice(1), { rules: [throwingRule] });
+  });
+  const notice = "The rule THROWING_RULE could not finish (please report this): kaboom";
+  it("says so in the text format's summary line and notices, when nothing else fired", () => {
+    const lines = formatText(crashed).split("\n");
+    expect(lines[0]).toBe(
+      "pbiplint: 0 findings (0 errors, 0 warnings, 0 info) in 1 file, 1 rule could not finish",
+    );
+    expect(lines).toContain(`Notice: ${notice}`);
+    expect(lines).toContain("No findings.");
+  });
+  it("says so in the Markdown format's summary and notices", () => {
+    const md = formatMarkdown(crashed);
+    expect(md).toContain("in 1 file, 1 rule could not finish.");
+    expect(md).toContain(
+      "> Notice: The rule THROWING\\_RULE could not finish (please report this): kaboom",
+    );
+  });
+  it("lists it in the JSON format's rule errors", () => {
+    expect(JSON.parse(formatJson(crashed)).summary.ruleErrors).toEqual([
+      { id: "THROWING_RULE", message: "kaboom" },
+    ]);
+  });
+  it("gives SARIF an error notification on the rule", () => {
+    const run = JSON.parse(formatSarif(crashed)).runs[0];
+    expect(run.invocations).toEqual([
+      {
+        executionSuccessful: true,
+        toolExecutionNotifications: [
+          {
+            level: "error",
+            descriptor: { id: "rule-error" },
+            associatedRule: { id: "THROWING_RULE" },
+            message: { text: "The rule THROWING_RULE could not finish: kaboom" },
+          },
+        ],
+      },
+    ]);
+  });
+  it("counts a rule once in the summary however many of its queries failed", () => {
+    const twice: LintResult = {
+      ...crashed,
+      summary: {
+        ...crashed.summary,
+        ruleErrors: [
+          { id: "R", message: "query 'A': x" },
+          { id: "R", message: "query 'B': x" },
+        ],
       },
     };
-    const text = formatText(await lint(files.slice(1), { rules: [throwingRule] }));
-    expect(text).toContain("No findings.");
-    expect(text).toContain("Rule errors");
-    expect(text).toContain("kaboom");
+    expect(formatText(twice).split("\n")[0]).toMatch(/, 1 rule could not finish$/);
+    expect(
+      formatText(twice)
+        .split("\n")
+        .filter((l) => l.startsWith("Notice: The rule R ")),
+    ).toHaveLength(2);
   });
 });
 
@@ -730,7 +783,9 @@ describe("control characters from the input", () => {
     expect(lines[1]).toContain(
       "1 rule skipped (this report reads a model outside the input (..\\u202e\\M))",
     );
-    expect(lines).toContain("  CRASHING: failed on \\u009b2J");
+    expect(lines).toContain(
+      "Notice: The rule CRASHING could not finish (please report this): failed on \\u009b2J",
+    );
   });
 
   it("shows them in a fact's value, and the rule column still lines up", async () => {

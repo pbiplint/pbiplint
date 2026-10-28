@@ -612,7 +612,7 @@ test("shows, downloads, and copies parse-secrets's results with no part of a mad
   if (browserName === "chromium")
     await context.grantPermissions(["clipboard-write", "clipboard-read"]);
   const planted = fakeSecrets(PARSE_SECRETS_FIXTURE);
-  expect(planted).toHaveLength(2);
+  expect(planted).toHaveLength(4);
   await setFolder(page.locator("#folder-input"), PARSE_SECRETS_FIXTURE);
   const results = page.locator("#results");
   await expect(results.locator("h2")).toContainText("parse-secrets.SemanticModel");

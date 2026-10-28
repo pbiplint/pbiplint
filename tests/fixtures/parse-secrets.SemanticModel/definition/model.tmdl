@@ -3,5 +3,7 @@ model Model
 	defaultPowerBIDataSourceVersion: powerBI_V3
 	sourceQueryCulture: en-US
 
+ref table Archive
+ref table Ledger
 ref table Orders
 ref table Settings

@@ -3,6 +3,7 @@ import {
   LEARN_HELP_URLS,
   locationOf,
   plural,
+  ruleErrorNotices,
   SEVERITY_LABEL,
   showControls,
   skippedLine,
@@ -183,16 +184,8 @@ export function renderResults(
     ),
     // Beside the other notices rather than below the groups: a rule that threw is worth reporting
     // whether or not the rules that ran found anything, and a clean run stops before the groups.
-    ...(result.summary.ruleErrors.length
-      ? [
-          h(
-            "p",
-            { class: "notice" },
-            "Rule errors (please report these): " +
-              result.summary.ruleErrors.map((e) => `${e.id}: ${e.message}`).join("; "),
-          ),
-        ]
-      : []),
+    // One notice per rule error, in the text and Markdown formats' words.
+    ...ruleErrorNotices(result).map((n) => h("p", { class: "notice" }, n)),
     // Right under the sentence that counts the files, so the heading's "(model, 14 files ·
     // report, 78 files)" expands into which ones.
     ...renderFilesRead(options.files),

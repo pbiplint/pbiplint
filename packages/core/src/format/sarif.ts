@@ -105,16 +105,26 @@ export function formatSarif(result: LintResult, options: FormatOptions = {}): st
         rules,
       },
     },
-    ...(incomplete.length
+    // A rule that could not finish is an error notification on the rule, so its missing results
+    // are not mistaken for clean either. The run still counts as successful: the other rules ran.
+    ...(incomplete.length || result.summary.ruleErrors.length
       ? {
           invocations: [
             {
               executionSuccessful: true,
-              toolExecutionNotifications: incomplete.map((d) => ({
-                level: "warning",
-                descriptor: { id: d.kind },
-                message: { text: d.message },
-              })),
+              toolExecutionNotifications: [
+                ...incomplete.map((d) => ({
+                  level: "warning",
+                  descriptor: { id: d.kind },
+                  message: { text: d.message },
+                })),
+                ...result.summary.ruleErrors.map((e) => ({
+                  level: "error",
+                  descriptor: { id: "rule-error" },
+                  associatedRule: { id: e.id },
+                  message: { text: `The rule ${e.id} could not finish: ${e.message}` },
+                })),
+              ],
             },
           ],
         }

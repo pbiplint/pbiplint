@@ -1,11 +1,44 @@
-import { unquoteName, unquoteValue } from "./quote.js";
+import { quoteEnd, unquoteName, unquoteValue } from "./quote.js";
 import { allowsChild, checksChildren } from "./child-types.js";
 import { isModelChildType, isNamedRootType, isRootType } from "./root-types.js";
 import type { ParsedFile, TmdlNode, TmdlParseIssue } from "./types.js";
 
-const HEADER = /^([A-Za-z_]\w*)(?:\s+(.+))?$/;
 const PROP = /^([A-Za-z_]\w*):(?:\s(.*))?$/;
-const REF = /^ref\s+([A-Za-z_]\w*)\s+(.+)$/;
+
+/**
+ * `\s+(.+)$` read by hand from the start of `s`: what follows the whitespace, or undefined. The
+ * regex backtracked by the square of a run of whitespace before a line separator, which `.` does
+ * not match (the pre-release security review, October 27, 2026).
+ */
+function afterSpace(s: string): string | undefined {
+  const ws = /^\s*/.exec(s)![0].length;
+  if (ws === 0 || (ws === s.length && ws < 2)) return undefined;
+  const rest = s.slice(ws === s.length ? ws - 1 : ws);
+  return /[\n\r\u2028\u2029]/.test(rest) ? undefined : rest;
+}
+
+/** A word and what follows it, as `/^(word)(?:\s+(.+))?$/` reads a line. */
+const HEADER = {
+  exec(s: string): [string, string, string | undefined] | null {
+    const type = /^[A-Za-z_]\w*/.exec(s)?.[0];
+    if (type === undefined) return null;
+    if (type.length === s.length) return [s, type, undefined];
+    const name = afterSpace(s.slice(type.length));
+    return name === undefined ? null : [s, type, name];
+  },
+};
+
+/** A `ref` line, as `/^ref\s+(word)\s+(.+)$/` reads one. */
+const REF = {
+  exec(s: string): [string, string, string] | null {
+    const m = /^ref\s+([A-Za-z_]\w*)/.exec(s);
+    const name = m ? afterSpace(s.slice(m[0].length)) : undefined;
+    return m && name !== undefined ? [s, m[1]!, name] : null;
+  },
+  test(s: string): boolean {
+    return REF.exec(s) !== null;
+  },
+};
 
 const tabIndent = (line: string): number => {
   let n = 0;
@@ -45,7 +78,7 @@ const HOLDS_TABLE = new Set(["model", "createorreplace"]);
  * quote is left open also swallows the `=` after it, so the expression reads as part of the name.
  */
 const nameReadable = (name: string): boolean =>
-  !name.includes("'") || /^'(?:[^']|'')*'$/.test(name);
+  !name.includes("'") || quoteEnd(name) === name.length - 1;
 
 /** Split `<type> <name> [= expr]` on the first `=` outside single quotes. */
 function splitHeader(
@@ -316,7 +349,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
       indent,
     };
     let node: TmdlNode;
-    let m: RegExpExecArray | null;
+    let m: (string | undefined)[] | null;
     /** The line's keyword as written, for a reason that names it; a `ref` line has none. */
     let word: string | undefined;
     /** Whether a declaration's name, if it has one, is written as TMDL can read it. */

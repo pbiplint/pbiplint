@@ -57,7 +57,8 @@ describe("inspectorRule", () => {
     ).toThrow(/NOPE/);
   });
   it("is in the default rule set after the model rules", () => {
-    const start = 1 + microsoftBpaRules.length;
+    // After PARSE_ISSUE and RULE_COULD_NOT_FINISH, then the model rules.
+    const start = 2 + microsoftBpaRules.length;
     expect(defaultRules.slice(start, start + pbiInspectorRules.length).map((r) => r.id)).toEqual(
       pbiInspectorRules.map((r) => r.id),
     );

@@ -1,5 +1,6 @@
 import {
   ConfigError,
+  errorKind,
   lint,
   resolveConfig,
   showControls,
@@ -104,7 +105,11 @@ function problem(message: string): void {
 
 function fail(e: unknown): void {
   if (e instanceof InputError || e instanceof ConfigError) problem(e.message);
-  else problem(`Something went wrong: ${e instanceof Error ? e.message : String(e)}`);
+  // Only the class: a message can hold the model's text (v3 spec, section 11.3).
+  else
+    problem(
+      `Something went wrong: ${errorKind(e)}. Please report this at https://github.com/pbiplint/pbiplint/issues.`,
+    );
 }
 
 /**

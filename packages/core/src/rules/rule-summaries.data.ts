@@ -198,6 +198,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Custom visuals from AppSource that the report registers in report.json and that no visual on any page uses.",
   REPORT_LEVEL_MEASURES:
     "Measures defined in the report's reportExtensions.json rather than in the model, reported when the model the report reads is in the input, so that each can move into it.",
+  RULE_COULD_NOT_FINISH:
+    "A rule that stopped partway through an object or query, because pbiplint met input it could not handle. Each finding names the rule, the object or query, and the kind of error. This is a bug in pbiplint, not a fault in the model, and the rule's findings on that object or query are missing.",
   SCRIPT_IN_QUERY:
     "Power Query queries that run a Python or R script: a `Python.Execute` or `R.Execute` call, which the Run Python script and Run R script steps write.",
   SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS:

@@ -190,7 +190,7 @@ describe("a rule that could not finish, in every format", () => {
   beforeAll(async () => {
     crashed = await lint(files.slice(1), { rules: [throwingRule] });
   });
-  const notice = "The rule THROWING_RULE could not finish (please report this): kaboom";
+  const notice = "The rule THROWING_RULE could not finish (please report this): Error";
   it("says so in the text format's summary line and notices, when nothing else fired", () => {
     const lines = formatText(crashed).split("\n");
     expect(lines[0]).toBe(
@@ -203,25 +203,44 @@ describe("a rule that could not finish, in every format", () => {
     const md = formatMarkdown(crashed);
     expect(md).toContain("in 1 file, 1 rule could not finish.");
     expect(md).toContain(
-      "> Notice: The rule THROWING\\_RULE could not finish (please report this): kaboom",
+      "> Notice: The rule THROWING\\_RULE could not finish (please report this): Error",
     );
   });
   it("lists it in the JSON format's rule errors", () => {
     expect(JSON.parse(formatJson(crashed)).summary.ruleErrors).toEqual([
-      { id: "THROWING_RULE", message: "kaboom" },
+      { id: "THROWING_RULE", message: "Error" },
     ]);
   });
   it("gives SARIF an error notification on the rule", () => {
     const run = JSON.parse(formatSarif(crashed)).runs[0];
     expect(run.invocations).toEqual([
       {
-        executionSuccessful: true,
+        executionSuccessful: false,
         toolExecutionNotifications: [
           {
             level: "error",
             descriptor: { id: "rule-error" },
             associatedRule: { id: "THROWING_RULE" },
-            message: { text: "The rule THROWING_RULE could not finish: kaboom" },
+            message: { text: "The rule THROWING_RULE could not finish: Error" },
+          },
+        ],
+      },
+    ]);
+  });
+  it("keeps SARIF's run successful when its only notice is a file it could not read", () => {
+    const unread: LintResult = {
+      ...crashed,
+      summary: { ...crashed.summary, ruleErrors: [] },
+      diagnostics: [{ kind: "unread-file", path: "x", message: "x could not be read" }],
+    };
+    expect(JSON.parse(formatSarif(unread)).runs[0].invocations).toEqual([
+      {
+        executionSuccessful: true,
+        toolExecutionNotifications: [
+          {
+            level: "warning",
+            descriptor: { id: "unread-file" },
+            message: { text: "x could not be read" },
           },
         ],
       },
@@ -784,7 +803,7 @@ describe("control characters from the input", () => {
       "1 rule skipped (this report reads a model outside the input (..\\u202e\\M))",
     );
     expect(lines).toContain(
-      "Notice: The rule CRASHING could not finish (please report this): failed on \\u009b2J",
+      "Notice: The rule CRASHING could not finish (please report this): Error",
     );
   });
 

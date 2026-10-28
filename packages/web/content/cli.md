@@ -159,7 +159,7 @@ Scripts, pipelines, and AI assistants read what the CLI prints, so these parts o
 `--format json` prints one object. `version` is `1`. Its fields:
 
 - `tool`: `name` and `version`.
-- `summary`: the number of `files` read, and of `findings`, `errors`, `warnings`, and `infos`; `rulesRun`, the number of rules that ran; `rulesSkipped`, each with `id` and `reason`; `ruleErrors`, each with `id` and `message`; `ignored`, the number of findings an annotation ignored; and `unknownRules`, the config's rule ids that match no rule. Under `--rule` (from 0.2.5), `shown` holds `rules`, `findings`, `errors`, `warnings`, and `infos` for what is shown, while the other counts stay the whole run's.
+- `summary`: the number of `files` read, and of `findings`, `errors`, `warnings`, and `infos`; `rulesRun`, the number of rules that ran; `rulesSkipped`, each with `id` and `reason`; `ruleErrors`, each with `id` and `message`, for a rule that could not finish (from 0.3.0, a Power Query rule's error in one query names the query, `query 'Sales': ...`, and the rule's findings on its other queries stand; the summary line and the text and Markdown notices name each one too); `ignored`, the number of findings an annotation ignored; and `unknownRules`, the config's rule ids that match no rule. Under `--rule` (from 0.2.5), `shown` holds `rules`, `findings`, `errors`, `warnings`, and `infos` for what is shown, while the other counts stay the whole run's.
 - `layers`: `model` and `report`, each `present: true` with `files`, the number read, or `present: false` with `reason`.
 - `facts`: what the report is at a glance, each with `layer`, `label`, `value`, and an optional `detail` and `ruleId`.
 - `diagnostics`: the notices, each with `kind`, `message`, and an optional `path`.

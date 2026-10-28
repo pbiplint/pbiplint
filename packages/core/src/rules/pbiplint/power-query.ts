@@ -16,7 +16,7 @@ import type { MIndex, MQuery } from "../../m/types.js";
 import { tableRef } from "../../model/names.js";
 import type { Partition } from "../../model/types.js";
 import { finding } from "../helpers.js";
-import { mFinding, queryLabel } from "../m-helpers.js";
+import { eachQuery, mFinding, queryLabel } from "../m-helpers.js";
 import type { Rule } from "../types.js";
 import { pbiplintRule } from "./define.js";
 import { longDate } from "./periods.js";
@@ -38,8 +38,8 @@ export const LOCAL_DRIVE_PATH = pbiplintRule({
   severity: 2,
   scope: ["Partition", "NamedExpression", "Table"],
   layer: "powerquery",
-  check: (_project, { indexes: { m } }) =>
-    m.queries.flatMap((q) =>
+  check: (_project, { indexes: { m }, ...ctx }) =>
+    eachQuery(ctx, m.queries, (q) =>
       textLiterals(q).flatMap(({ node, value }) => {
         const drive = DRIVE_PATH.exec(value);
         return drive
@@ -64,8 +64,8 @@ export const SCRIPT_IN_QUERY = pbiplintRule({
   severity: 2,
   scope: ["Partition", "NamedExpression", "Table"],
   layer: "powerquery",
-  check: (_project, { indexes: { m } }) =>
-    m.queries.flatMap((q) =>
+  check: (_project, { indexes: { m }, ...ctx }) =>
+    eachQuery(ctx, m.queries, (q) =>
       calls(q).flatMap((c) => {
         const language = SCRIPT_LANGUAGE.get(c.name);
         return language
@@ -113,8 +113,8 @@ export const EXCEL_USE_HEADERS = pbiplintRule({
   severity: 1,
   scope: ["Partition", "NamedExpression", "Table"],
   layer: "powerquery",
-  check: (_project, { indexes: { m } }) =>
-    m.queries.flatMap((q) =>
+  check: (_project, { indexes: { m }, ...ctx }) =>
+    eachQuery(ctx, m.queries, (q) =>
       calls(q)
         .filter((c) => c.name === "Excel.Workbook" && promotesHeaders(c.args[1]))
         .map((c) =>
@@ -185,8 +185,8 @@ export const ODBC_WHERE_CONNECTOR_EXISTS = pbiplintRule({
   severity: 1,
   scope: ["Partition", "NamedExpression", "Table"],
   layer: "powerquery",
-  check: (_project, { indexes: { m } }) =>
-    m.queries.flatMap((q) =>
+  check: (_project, { indexes: { m }, ...ctx }) =>
+    eachQuery(ctx, m.queries, (q) =>
       calls(q).flatMap((c) => {
         const source = GENERIC_SOURCES.get(c.name);
         if (!source) return [];
@@ -303,8 +303,8 @@ export const SORT_NOT_HELD_FOR_REMOVE_DUPLICATES = pbiplintRule({
   severity: 2,
   scope: ["Partition", "NamedExpression", "Table"],
   layer: "powerquery",
-  check: (_project, { indexes: { m } }) =>
-    m.queries.flatMap((q) =>
+  check: (_project, { indexes: { m }, ...ctx }) =>
+    eachQuery(ctx, m.queries, (q) =>
       calls(q).flatMap((c) => {
         const [table, columns] = c.args;
         if (c.name !== "Table.Distinct" || !table || !columns || isNull(columns)) return [];
@@ -357,10 +357,11 @@ export const KEEP_FIRST_ROWS_LEFT_IN = pbiplintRule({
   severity: 2,
   scope: ["Partition", "NamedExpression", "Table"],
   layer: "powerquery",
-  check: (_project, { indexes: { m } }) =>
-    m.queries
-      .filter((q) => q.kind !== "expression")
-      .flatMap((q) =>
+  check: (_project, { indexes: { m }, ...ctx }) =>
+    eachQuery(
+      ctx,
+      m.queries.filter((q) => q.kind !== "expression"),
+      (q) =>
         calls(q).flatMap((c) => {
           const [table, count] = c.args;
           if (c.name !== "Table.FirstN" || !table || !count) return [];
@@ -369,7 +370,7 @@ export const KEEP_FIRST_ROWS_LEFT_IN = pbiplintRule({
             return [];
           return [mFinding(m, q, c.node, `only the first ${n} rows load`)];
         }),
-      ),
+    ),
 });
 
 type RangeParameter = "RangeStart" | "RangeEnd";
@@ -409,8 +410,8 @@ export const INCREMENTAL_REFRESH_RANGE_BOUNDS = pbiplintRule({
   severity: 3,
   scope: ["Partition", "NamedExpression", "Table"],
   layer: "powerquery",
-  check: (_project, { indexes: { m } }) =>
-    m.queries.flatMap((q) => {
+  check: (_project, { indexes: { m }, ...ctx }) =>
+    eachQuery(ctx, m.queries, (q) => {
       const start = { inclusive: [] as Node[], exclusive: [] as Node[] };
       const end = { inclusive: [] as Node[], exclusive: [] as Node[] };
       for (const node of nodesOfKind(q, Kind.RelationalExpression)) {
@@ -516,10 +517,11 @@ export const FIXED_DATE_IN_ROW_FILTER = pbiplintRule({
   severity: 1,
   scope: ["Partition", "NamedExpression", "Table"],
   layer: "powerquery",
-  check: (_project, { indexes: { m } }) =>
-    m.queries
-      .filter((q) => !isHandPartition(q))
-      .flatMap((q) => {
+  check: (_project, { indexes: { m }, ...ctx }) =>
+    eachQuery(
+      ctx,
+      m.queries.filter((q) => !isHandPartition(q)),
+      (q) => {
         const reported = new Set<number>();
         return calls(q).flatMap((c) => {
           const condition = c.args[1];
@@ -543,7 +545,8 @@ export const FIXED_DATE_IN_ROW_FILTER = pbiplintRule({
             return [mFinding(m, q, date, `${use}, ${onRight ?? onLeft}`)];
           });
         });
-      }),
+      },
+    ),
 });
 
 /** Power BI Desktop's default step names in English, each with or without a number after it. */
@@ -603,8 +606,8 @@ export const DEFAULT_STEP_NAMES = pbiplintRule({
   severity: 1,
   scope: ["Partition", "NamedExpression", "Table"],
   layer: "powerquery",
-  check: (_project, { indexes: { m } }) =>
-    m.queries.flatMap((q) => {
+  check: (_project, { indexes: { m }, ...ctx }) =>
+    eachQuery(ctx, m.queries, (q) => {
       const root = q.ast && unwrap(q.ast);
       if (root?.kind !== Kind.LetExpression) return [];
       const steps = root.variableList.elements
@@ -640,8 +643,8 @@ export const DYNAMIC_DATA_SOURCE = pbiplintRule({
   severity: 3,
   scope: ["Partition", "NamedExpression", "Table"],
   layer: "powerquery",
-  check: (_project, { indexes: { m } }) =>
-    m.queries.flatMap((q) =>
+  check: (_project, { indexes: { m }, ...ctx }) =>
+    eachQuery(ctx, m.queries, (q) =>
       calls(q).flatMap((c) => {
         const source = DATA_SOURCE.exec(c.name);
         const o = source && c.args[0] ? origin(m, q, c.args[0]) : "static";
@@ -690,12 +693,20 @@ function heldText(m: MIndex, q: MQuery, node: Node): HeldText | undefined {
     : undefined;
 }
 
-/** The parts of a value joined with `&`, in order; the value itself when it is not a join. */
+/**
+ * The parts of a value joined with `&`, in order; the value itself when it is not a join. Read in a
+ * loop over a stack, since a join of thousands of parts is a tree as deep (v3 spec, section 8).
+ */
 function joined(n: Node): Node[] {
-  const v = unwrap(n);
-  return v.kind === Kind.ArithmeticExpression && v.operatorConstant.constantKind === "&"
-    ? [...joined(v.left), ...joined(v.right)]
-    : [v];
+  const out: Node[] = [];
+  const stack = [n];
+  while (stack.length > 0) {
+    const v = unwrap(stack.pop()!);
+    if (v.kind === Kind.ArithmeticExpression && v.operatorConstant.constantKind === "&")
+      stack.push(v.right, v.left);
+    else out.push(v);
+  }
+  return out;
 }
 
 /**
@@ -817,9 +828,9 @@ export const HARDCODED_SECRET_IN_QUERY = pbiplintRule({
   severity: 3,
   scope: ["Partition", "NamedExpression", "Table"],
   layer: "powerquery",
-  check: (_project, { indexes: { m } }) => {
+  check: (_project, { indexes: { m }, ...ctx }) => {
     const reported = new Set<string>();
-    return m.queries.flatMap((q) =>
+    return eachQuery(ctx, m.queries, (q) =>
       credentialsIn(m, q).flatMap(({ held, where }) => {
         const key = `${held.query.kind}:${held.query.name}:${held.node.id}`;
         if (reported.has(key)) return [];
@@ -847,8 +858,8 @@ export const HARDCODED_SERVER_NAME = pbiplintRule({
   severity: 1,
   scope: ["Partition", "NamedExpression", "Table"],
   layer: "powerquery",
-  check: (_project, { indexes: { m } }) =>
-    m.queries.flatMap((q) => {
+  check: (_project, { indexes: { m }, ...ctx }) =>
+    eachQuery(ctx, m.queries, (q) => {
       const named = calls(q).filter(
         (c) =>
           SERVER_CONNECTOR.test(c.name) &&
@@ -878,9 +889,9 @@ export const LEGACY_EXCEL_FILE = pbiplintRule({
   severity: 1,
   scope: ["Partition", "NamedExpression", "Table"],
   layer: "powerquery",
-  check: (_project, { indexes: { m } }) => {
+  check: (_project, { indexes: { m }, ...ctx }) => {
     const reported = new Set<string>();
-    return m.queries.flatMap((q) =>
+    return eachQuery(ctx, m.queries, (q) =>
       calls(q).flatMap((c) => {
         const file =
           c.name === "Excel.Workbook" && c.args[0] && callOf(boundValue(m, q, c.args[0]).node);
@@ -947,8 +958,8 @@ export const EXTENSION_FILTER_CASE = pbiplintRule({
   severity: 2,
   scope: ["Partition", "NamedExpression", "Table"],
   layer: "powerquery",
-  check: (_project, { indexes: { m } }) =>
-    m.queries.flatMap((q) =>
+  check: (_project, { indexes: { m }, ...ctx }) =>
+    eachQuery(ctx, m.queries, (q) =>
       calls(q).flatMap((c) => {
         const [table, condition] = c.args;
         if (c.name !== "Table.SelectRows" || !table || !condition || !listingKeepsCase(m, q, table))

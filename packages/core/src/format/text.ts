@@ -42,16 +42,27 @@ export const locationOf = (f: Finding): string =>
 /** "1 rule", "2 rules". Nouns that do not take an s ("info") are written out by the caller. */
 export const plural = (n: number, noun: string): string => `${n} ${noun}${n === 1 ? "" : "s"}`;
 
-/** Summary sentence shared by the text and markdown formats. */
+/**
+ * Summary sentence shared by the text and markdown formats and the site. A run where a rule could
+ * not finish says so here, so a count missing that rule's findings never reads as the whole lint.
+ */
 export function summaryLine(result: LintResult): string {
   const s = result.summary;
+  const failed = new Set(s.ruleErrors.map((e) => e.id)).size;
+  const unfinished = failed ? `, ${plural(failed, "rule")} could not finish` : "";
   // A result kept to some rules says so, so a filtered run never reads as the whole lint.
   if (s.shown) {
     const k = s.shown;
-    return `${k.findings} of ${plural(s.findings, "finding")} shown, ${plural(k.rules.length, "rule")} (${plural(k.errors, "error")}, ${plural(k.warnings, "warning")}, ${k.infos} info) in ${plural(s.files, "file")}`;
+    return `${k.findings} of ${plural(s.findings, "finding")} shown, ${plural(k.rules.length, "rule")} (${plural(k.errors, "error")}, ${plural(k.warnings, "warning")}, ${k.infos} info) in ${plural(s.files, "file")}${unfinished}`;
   }
-  return `${plural(s.findings, "finding")} (${plural(s.errors, "error")}, ${plural(s.warnings, "warning")}, ${s.infos} info) in ${plural(s.files, "file")}`;
+  return `${plural(s.findings, "finding")} (${plural(s.errors, "error")}, ${plural(s.warnings, "warning")}, ${s.infos} info) in ${plural(s.files, "file")}${unfinished}`;
 }
+
+/** Each rule error as a notice says it: the rule, that it could not finish, and the error's message. */
+export const ruleErrorNotices = (result: LintResult): string[] =>
+  result.summary.ruleErrors.map(
+    (e) => `rule ${e.id} could not finish (please report this): ${e.message}`,
+  );
 
 export function skippedLine(result: LintResult): string {
   const s = result.summary;
@@ -125,8 +136,11 @@ export function factsLines(result: LintResult): string[] {
   ];
 }
 
+/** The run's notices: what the reader could not read, then each rule that could not finish. */
 export const noticeLines = (result: LintResult): string[] =>
-  result.diagnostics.map((d) => `Notice: ${showControls(d.message)}`);
+  [...result.diagnostics.map((d) => d.message), ...ruleErrorNotices(result)].map(
+    (m) => `Notice: ${showControls(m)}`,
+  );
 
 export const topGroups = (result: LintResult, n = 5): RankedGroup[] => result.groups.slice(0, n);
 
@@ -174,12 +188,6 @@ export function formatText(result: LintResult, _options: FormatOptions = {}): st
       }
       out.push("");
     }
-  }
-  // Rule crashes are always reported, including on a run where nothing else fired.
-  if (result.summary.ruleErrors.length) {
-    out.push("Rule errors (please report these):");
-    for (const e of result.summary.ruleErrors) out.push(`  ${e.id}: ${showControls(e.message)}`);
-    out.push("");
   }
   return out.join("\n");
 }

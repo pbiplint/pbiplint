@@ -5,6 +5,7 @@ import { showControls } from "./controls.js";
 import {
   layersLine,
   locationOf,
+  ruleErrorNotices,
   skippedLine,
   summaryLine,
   topGroups,
@@ -146,7 +147,8 @@ export function formatMarkdown(result: LintResult, _options: FormatOptions = {})
     `${summaryLine(result)}. ${text([layersLine(result), skippedLine(result)].filter(Boolean).join(" "), false)}.`,
     "",
   ];
-  for (const d of result.diagnostics) out.push(`> Notice: ${text(d.message, false)}`, "");
+  for (const m of [...result.diagnostics.map((d) => d.message), ...ruleErrorNotices(result)])
+    out.push(`> Notice: ${text(m, false)}`, "");
   if (result.facts.length) {
     out.push("## Report at a glance", "", "| Fact | Value | Rule |", "|---|---|---|");
     for (const f of result.facts)

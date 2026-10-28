@@ -5,7 +5,10 @@ import { calls, identifierName, nodesOfKind } from "../src/m/ast.js";
 import { readM } from "../src/m/read.js";
 import { boundValue, origin } from "../src/m/resolve.js";
 import { buildModel } from "../src/model/build.js";
+import { eachQuery, mFinding } from "../src/rules/m-helpers.js";
+import type { Rule } from "../src/rules/types.js";
 import { parseTmdl } from "../src/tmdl/parse.js";
+import { mObjectNames } from "./helpers.js";
 
 /** A table whose one M partition holds `m`, as Desktop writes a block: four tabs before each M line. */
 const table = (name: string, m: string[]): LintFile => ({
@@ -229,4 +232,122 @@ describe("the resolver on long chains and cycles", () => {
     ).toBe("a6");
     expect(ms).toBeLessThan(BOUND_MS);
   }, 120_000);
+});
+
+/** A model of these tables. */
+const model = (...tables: LintFile[]): LintFile[] => [
+  { path: "definition/model.tmdl", text: "model Model\n\tculture: en-US\n" },
+  ...tables,
+];
+
+/** A fixture credential: the shape the secret rule reads, marked as not real. */
+const fake = (kind: string, n: string): string => `pbiplint-fixture-${kind}-${n}-notreal`;
+
+/** A rule that throws on query 'A' and reports every other query, run per query. */
+const throwsOnA: Rule = {
+  id: "TEST_EACH_QUERY",
+  name: "Throws on one query",
+  category: "Error Prevention",
+  severity: 2,
+  scope: ["Partition"],
+  layer: "powerquery",
+  needs: ["model"],
+  description: "Throws on query 'A'.",
+  references: [],
+  status: "builtin",
+  check: (_p, ctx) => {
+    const m = ctx.indexes.m;
+    return eachQuery(ctx, m.queries, (q) => {
+      if (q.name === "A") throw new RangeError("Maximum call stack size exceeded");
+      return q.ast ? [mFinding(m, q, q.ast, "reported")] : [];
+    });
+  },
+};
+
+describe("a deep tree in one query (v3 spec, section 8, amended October 27, 2026)", () => {
+  /**
+   * A header of `groups` bracketed runs of 1,000 calls each, joined with `&`, each call on its own
+   * line: one tree `groups` x 1,000 levels deep that stays inside the read budget (v3 spec, section
+   * 7), which charges a run of `&` by its square and a line by its tokens' square. Calls, not
+   * literals, so the joined header holds no text that could itself read as a credential.
+   */
+  const joinedHeader = (groups: number): string[] => {
+    const run = (k: number) => range(1000, (i) => `Text.From(${k * 1000 + i})`).join(" &\n");
+    const parts = [
+      "(".repeat(groups - 1) + run(0),
+      ...range(groups - 1, (k) => `) & ${run(k + 1)}`),
+    ];
+    return [
+      'Web.Contents("https://api.example.com", [Headers = [Authorization =',
+      ...parts.join("\n").split("\n"),
+      "]])",
+    ];
+  };
+  it.each([
+    ["12,000", 12],
+    ["100,000", 100],
+  ])(
+    "keeps HARDCODED_SECRET_IN_QUERY running past a header joined from %s parts",
+    async (_, groups) => {
+      const result = await lint(
+        model(
+          table("Joined", joinedHeader(groups)),
+          table("Keyed", [
+            `Web.Contents("https://api.example.com", [Headers = [#"x-api-key" = "${fake("key", "0201")}"]])`,
+          ]),
+        ),
+        { config: { failOn: "none" } },
+      );
+      expect(result.summary.ruleErrors).toEqual([]);
+      expect(
+        result.findings.filter((f) => f.ruleId === "PARSE_ISSUE").map((f) => f.detail),
+      ).toEqual([]);
+      expect(
+        result.findings
+          .filter((f) => f.ruleId === "HARDCODED_SECRET_IN_QUERY")
+          .map((f) => f.objectName),
+      ).toEqual(["Keyed"]);
+    },
+    120_000,
+  );
+  it("keeps DYNAMIC_DATA_SOURCE running past an address joined from 3,000 calls", async () => {
+    const parts = Array.from({ length: 3_000 }, () => "Text.From(1)").join(" & ");
+    const result = await lint(model(table("Deep", [`Web.Contents(${parts})`])), {
+      config: { failOn: "none" },
+    });
+    expect(result.summary.ruleErrors).toEqual([]);
+    expect(
+      result.findings.filter((f) => f.ruleId === "DYNAMIC_DATA_SOURCE").map((f) => f.detail),
+    ).toEqual(["query 'Deep': Web.Contents's address is built by a function call"]);
+  }, 120_000);
+  it("keeps MINIMIZE_POWER_QUERY_TRANSFORMATIONS running past 12,000 chained options steps", async () => {
+    const steps = [
+      'o0 = [Query = "select 1"]',
+      ...range(11_999, (i) => `o${i + 1} = o${i}`),
+      'src = Sql.Database("sql.example.com", "Sales", o11999)',
+    ];
+    const result = await lint(model(table("Native", letOf(steps, "src"))), {
+      config: { failOn: "none" },
+    });
+    expect(result.summary.ruleErrors).toEqual([]);
+    expect(
+      result.findings
+        .filter((f) => f.ruleId === "MINIMIZE_POWER_QUERY_TRANSFORMATIONS")
+        .map((f) => f.objectName),
+    ).toEqual(["Native"]);
+  }, 120_000);
+  it("records one query's error as a rule error naming the query, and keeps the other queries' findings", async () => {
+    const result = await lint(model(table("A", ["1"]), table("B", ["2"])), {
+      rules: [throwsOnA],
+      config: { failOn: "none" },
+    });
+    expect(result.findings.map((f) => f.objectName)).toEqual(["B"]);
+    expect(result.summary.ruleErrors).toEqual([
+      { id: "TEST_EACH_QUERY", message: "query 'A': Maximum call stack size exceeded" },
+    ]);
+  });
+  it("throws one query's error from a rule run without the engine, as before", async () => {
+    const tmdl = table("A", ["1"]).text;
+    await expect(mObjectNames(throwsOnA, tmdl)).rejects.toThrow("Maximum call stack size exceeded");
+  });
 });

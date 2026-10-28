@@ -100,6 +100,11 @@ export interface RuleContext {
   indexes: Indexes;
   /** The rule's options after config: every declared default, overridden by the config file. */
   options: RuleOptions;
+  /**
+   * Records an error the rule caught in one part of its work, so the rest still reports: `runRules`
+   * lists each as a `RuleError` with the rule's id. Absent when a rule is called without the engine.
+   */
+  reportError?: (message: string) => void;
 }
 
 /** Anything that can carry a pbiplint.ignore annotation: every model object and every page and visual. */

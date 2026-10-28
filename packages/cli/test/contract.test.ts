@@ -1,7 +1,8 @@
 // The CLI's contract, as the CLI page's "What a script can rely on" section states it
 // (packages/web/content/cli.md, https://pbiplint.com/cli/#contract). One test per promise, in the
 // section's order, so a change that breaks one fails here. Change a promise here and on the page
-// together; a new JSON field is additive and keeps version 1, a removed or renamed one raises it.
+// together; a new JSON field is additive and keeps the version where it is, a removed or renamed
+// one raises it.
 import { cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { defaultRules } from "@pbiplint/core";
@@ -45,6 +46,42 @@ function sampleBelow(): string {
 function severalProjects(): string {
   const root = tempDir("contract-several");
   for (const name of ["Finance", "Sales"]) cpSync(sample, join(root, name), { recursive: true });
+  return root;
+}
+
+/**
+ * #236's monorepo, from copies of the sample: reports/Finance/Finance.pbip and
+ * reports/Sales/Sales.pbip, each reading models/Shared.SemanticModel by path, so Sales's run says
+ * in a notice that the model is shared, and Old, a model stored as model.bim, which cannot be read.
+ */
+function sharedModel(): string {
+  const root = tempDir("contract-shared");
+  cpSync(
+    join(sample, "Messy Sales Demo.SemanticModel"),
+    join(root, "models", "Shared.SemanticModel"),
+    {
+      recursive: true,
+    },
+  );
+  for (const name of ["Finance", "Sales"]) {
+    const dir = join(root, "reports", name);
+    cpSync(join(sample, "Messy Sales Demo.Report"), join(dir, `${name}.Report`), {
+      recursive: true,
+    });
+    writeFileSync(
+      join(dir, `${name}.pbip`),
+      JSON.stringify({ version: "1.0", artifacts: [{ report: { path: `${name}.Report` } }] }),
+    );
+    writeFileSync(
+      join(dir, `${name}.Report`, "definition.pbir"),
+      JSON.stringify({
+        version: "4.0",
+        datasetReference: { byPath: { path: "../../../models/Shared.SemanticModel" } },
+      }),
+    );
+  }
+  mkdirSync(join(root, "Old", "Old.SemanticModel"), { recursive: true });
+  writeFileSync(join(root, "Old", "Old.SemanticModel", "model.bim"), "{}");
   return root;
 }
 
@@ -124,6 +161,21 @@ describe("the CLI's contract", () => {
     expect(() => JSON.parse(readFileSync(join(dir, "r.json"), "utf8"))).not.toThrow();
   });
 
+  it("1a. in a run over several projects, each notice names its project first (from 0.3.0)", async () => {
+    const r = await run([sharedModel(), "--format", "json"]);
+    const notices = r.err.split("\n").filter((l) => l.startsWith("pbiplint: notice: "));
+    expect(notices.length).toBeGreaterThan(0);
+    const paths = (JSON.parse(r.out).projects as { path: string }[]).map((p) => p.path);
+    for (const l of notices)
+      expect(
+        paths.some((p) => l.startsWith(`pbiplint: notice: ${p}: `)),
+        l,
+      ).toBe(true);
+    expect(notices).toContainEqual(
+      expect.stringMatching(/^pbiplint: notice: reports\/Sales\/Sales\.pbip: the model at /),
+    );
+  });
+
   it("2. exits 0 when nothing reaches --fail-on, 1 when something does, and 2 for each refusal", async () => {
     expect((await run([sample])).code).toBe(1);
     expect((await run([sample, "--fail-on", "none"])).code).toBe(0);
@@ -194,11 +246,17 @@ describe("the CLI's contract", () => {
     expect(old.groups.map((g: { rule: { id: string; severity: number } }) => g.rule)).toEqual([
       expect.objectContaining({ id: "PARSE_ISSUE", severity: 3 }),
     ]);
-    expect((await run([root, "--quiet"])).code).toBe(1);
+    // The sample's copies read whole, so under --rule PARSE_ISSUE only the unreadable project's
+    // finding can reach the gate.
+    const gated = await run([root, "--quiet", "--rule", "PARSE_ISSUE"]);
+    expect(gated.out).toMatch(/^project Finance: 0 of \d+ findings/m);
+    expect(gated.out).toMatch(/^error PARSE_ISSUE 1$/m);
+    expect(gated.code).toBe(1);
     const off = join(tempDir("contract-parse-off"), "pbiplint.config.json");
     writeFileSync(off, JSON.stringify({ rules: { PARSE_ISSUE: "off" } }));
-    const quiet = await run([root, "--quiet", "--config", off]);
-    expect(quiet.out).toMatch(/^project Old\/Old\.SemanticModel: 0 findings/m);
+    const quiet = await run([root, "--quiet", "--rule", "PARSE_ISSUE", "--config", off]);
+    expect(quiet.out).toMatch(/^project Old\/Old\.SemanticModel: 0 of 0 findings shown/m);
+    expect(quiet.code).toBe(0);
   });
 
   it("3. the JSON document has version 1 and the fields the page lists, at every level", async () => {
@@ -291,6 +349,22 @@ describe("the CLI's contract", () => {
       (await run([root, "--format", "json", "--rule", "HIDE_FOREIGN_KEYS"])).out,
     );
     hasFields(filtered.summary.shown, ["rules", "findings", "errors", "warnings", "infos"]);
+    // The run's ruleErrors is a count, where each project's lists the rules.
+    expect(typeof doc.summary.ruleErrors).toBe("number");
+    for (const p of doc.projects) expect(Array.isArray(p.summary.ruleErrors)).toBe(true);
+    const shared = JSON.parse((await run([sharedModel(), "--format", "json"])).out);
+    expect(shared.projects.map((p: { path: string }) => p.path)).toEqual([
+      "Old/Old.SemanticModel",
+      "reports/Finance/Finance.pbip",
+      "reports/Sales/Sales.pbip",
+    ]);
+    const [old, finance, sales] = shared.projects;
+    expect(old.summary.files).toBe(0);
+    expect(old.layers.model.present).toBe(false);
+    expect(old.layers.report.present).toBe(false);
+    // Each project that reads the shared model says so in a notice of kind shared-model.
+    for (const p of [finance, sales])
+      expect(p.diagnostics.map((d: { kind: string }) => d.kind)).toContain("shared-model");
   });
 
   it("4. the quiet output: the summary first, rule lines of three fields, and the Next line last", async () => {

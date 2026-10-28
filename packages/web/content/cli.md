@@ -147,15 +147,16 @@ Scripts, pipelines, and AI assistants read what the CLI prints, so these parts o
 ### Exit codes
 
 - `0`: nothing at or above `--fail-on`. With `--rule` (from 0.2.5), only the findings shown count. `pbiplint rules`, `pbiplint explain` with a rule it knows, `pbiplint skill` (from 0.2.5) when it prints, shows, or installs the skill, `pbiplint mcp` (from 0.2.5) when the app closes its input, `--help`, and `--version` exit `0` too.
-- `1`: something at or above `--fail-on`. From 0.3.0 that includes a rule that could not finish, through its [`RULE_COULD_NOT_FINISH`](/rules/rule-could-not-finish/) error finding, which the rule's page says how to keep from failing a gate while a fix ships. In a run over several projects (from 0.3.0), the run exits `1` when any project has something at or above its gate, and a project pbiplint cannot read is a [`PARSE_ISSUE`](/rules/parse-issue/) error finding of that project's, so it fails the default gate, unless the project's config turns `PARSE_ISSUE` off or lowers it below `--fail-on`.
+- `1`: something at or above `--fail-on`. From 0.3.0 that includes a rule that could not finish, through its [`RULE_COULD_NOT_FINISH`](/rules/rule-could-not-finish/) error finding, which the rule's page says how to keep from failing a gate while a fix ships. In a run over several projects (from 0.3.0), the run exits `1` when any project has something at or above its gate, and a project pbiplint cannot read is a [`PARSE_ISSUE`](/rules/parse-issue/) error finding of that project's, so it fails the default gate, unless the project's config turns `PARSE_ISSUE` off or lowers it below its gate.
 - `2`, with nothing on stdout and the reason on stderr:
   - a usage error, such as an unknown option, an option with no value or a value it does not take, two paths, or options with no path; from 0.2.5 also an unknown rule id given to `explain` or `--rule`, or `--quiet` with a format other than text;
   - a config file it cannot use;
   - an input it cannot read, such as a path that is not there, a `.pbix` file, or a model folder with no `.tmdl` files;
   - a run that reads nothing it can lint, such as a report stored only as `report.json`;
-  - a `.pbip` file that names several reports, naming each;
+  - a `.pbip` file, given as the path, that names several reports, naming each (in a run over several projects, such a `.pbip` is a project that cannot be read, a `PARSE_ISSUE` of its own);
   - a folder that holds more than 200 projects (from 0.3.0), naming the folders below it that hold them and how many each holds;
   - a folder of several projects none of which can be read (from 0.3.0), naming each and why;
+  - before 0.3.0, also a folder that holds several projects, naming each;
   - `pbiplint skill --install` finding a copy that differs from the one it would write, without `--force` (from 0.2.5);
   - an unexpected error.
 

@@ -102,9 +102,18 @@ export interface RuleContext {
   options: RuleOptions;
   /**
    * Records an error the rule caught in one part of its work, so the rest still reports: `runRules`
-   * lists each as a `RuleError` with the rule's id. Absent when a rule is called without the engine.
+   * lists each as a `RuleError` with the rule's id, its message the site's label and the error's
+   * class alone. Absent when a rule is called without the engine.
    */
-  reportError?: (message: string) => void;
+  reportError?: (error: unknown, site: ErrorSite) => void;
+}
+
+/** Where a rule caught an error: a label for the message, and the object it was working on. */
+export interface ErrorSite {
+  /** Names the part of the work, as `query 'Sales'`. */
+  label: string;
+  /** The object the failed part was about, as a finding on it would name it. */
+  finding: RuleFinding;
 }
 
 /** Anything that can carry a pbiplint.ignore annotation: every model object and every page and visual. */

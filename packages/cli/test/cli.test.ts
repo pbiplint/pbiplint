@@ -381,7 +381,7 @@ describe("pbiplint CLI", () => {
       config: { failOn: "none" },
     });
     expect(quietText(broken)).toMatch(
-      /^pbiplint: [^\n]*, 1 rule could not finish\n[^\n]*\nNotice: The rule BOOM could not finish \(please report this\): kaboom\n/,
+      /^pbiplint: [^\n]*, 1 rule could not finish\n[^\n]*\nNotice: The rule BOOM could not finish \(please report this\): Error\n/,
     );
   });
   it("--rule shows only those rules' findings in every format, and gates on them (#178)", async () => {

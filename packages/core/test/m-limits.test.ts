@@ -2,6 +2,7 @@ import { Language } from "@microsoft/powerquery-parser";
 import { describe, expect, it } from "vitest";
 import { type LintFile, lint } from "../src/engine/lint.js";
 import { calls, identifierName, nodesOfKind } from "../src/m/ast.js";
+import { errorKind } from "../src/engine/rule-error.js";
 import { readM } from "../src/m/read.js";
 import { buildIndexes } from "../src/index/build.js";
 import { boundValue, origin } from "../src/m/resolve.js";
@@ -351,7 +352,7 @@ describe("a deep tree in one query (v3 spec, section 8, amended October 27, 2026
     });
     expect(result.findings.map((f) => f.objectName)).toEqual(["B"]);
     expect(result.summary.ruleErrors).toEqual([
-      { id: "TEST_EACH_QUERY", message: "query 'A': Maximum call stack size exceeded" },
+      { id: "TEST_EACH_QUERY", message: "query 'A': RangeError (out of stack space)" },
     ]);
   });
   it.each([
@@ -396,10 +397,10 @@ describe("a deep tree in one query (v3 spec, section 8, amended October 27, 2026
         {
           indexes: buildIndexes({ model: built }, m),
           options: {},
-          reportError: (e) => errors.push(e),
+          reportError: (e, site) => errors.push(`${site.label}: ${errorKind(e)}`),
         },
       );
-      expect(errors).toEqual(["query 'A': Maximum call stack size exceeded"]);
+      expect(errors).toEqual(["query 'A': RangeError (out of stack space)"]);
       expect(findings.map((f) => f.objectName)).toEqual([holder]);
     },
   );

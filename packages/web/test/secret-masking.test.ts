@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
-import { lint } from "@pbiplint/core";
+import { defaultRules, lint } from "@pbiplint/core";
 import { describe, expect, it } from "vitest";
 import {
   fakeSecrets,
@@ -9,6 +9,7 @@ import {
   PARSE_SECRETS_FIXTURE,
   SECRETS_FIXTURE,
 } from "../../../tests/support/fake-secrets.js";
+import { plantedLeakRule } from "../../../tests/support/planted-rule.js";
 import { exportForAssistant, exportJson, exportMarkdown } from "../src/results/export.js";
 import { renderResults } from "../src/results/render.js";
 
@@ -76,5 +77,26 @@ describe("the secret guard, on lines PARSE_ISSUE quotes, on the site (v3 spec, s
     const text = exported(parsed).text;
     expect(text).toContain("PARSE_ISSUE");
     expect(leaks(text, planted)).toEqual([]);
+  });
+});
+
+describe("the secret guard, on a rule that could not finish, on the site (v3 spec, section 11.3)", async () => {
+  // PLANTED_LEAK throws with each query's M as its message, and then with all of it.
+  const crashed = await lint(folder(SECRETS_FIXTURE), {
+    rules: [...defaultRules, plantedLeakRule()],
+  });
+  it("keeps every part of every value out of the rendered results", () => {
+    document.body.innerHTML = '<section id="results"></section>';
+    const container = document.getElementById("results")!;
+    renderResults(container, crashed, { source: "m-zoo.SemanticModel" });
+    expect(container.textContent).toContain("PLANTED_LEAK");
+    expect(leaks(container.innerHTML, secrets)).toEqual([]);
+  });
+  it.each([
+    ["the Markdown download", exportMarkdown],
+    ["the JSON download", exportJson],
+    ["the copy for an AI assistant", exportForAssistant],
+  ] as const)("keeps every part of every value out of %s", (_name, exported) => {
+    expect(leaks(exported(crashed).text, secrets)).toEqual([]);
   });
 });

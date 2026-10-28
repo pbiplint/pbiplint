@@ -3,6 +3,7 @@ import type { Project } from "../project/types.js";
 import { layerOf, type Finding, type Rule, type RuleOptions } from "../rules/types.js";
 import type { ResolvedConfig } from "./config.js";
 import { isIgnored } from "./ignore.js";
+import { errorKind } from "./rule-error.js";
 
 /** A rule that did not run, and why. */
 export interface SkippedRule {
@@ -19,8 +20,10 @@ export interface SkippedRule {
 
 /**
  * A rule whose check threw, or that caught an error in one part of its work and reported it (an M
- * rule's error in one query, which names the query). It counts as run, and its message is the
- * error's.
+ * rule's error in one query, which names the query). It counts as run. Its message is the error's
+ * class alone, after the part's label when there is one (`query 'Sales': TypeError`), never the
+ * error's own message, which can hold the model's text (v3 spec, section 11.3, amended October 28,
+ * 2026).
  */
 export interface RuleError {
   id: string;
@@ -69,6 +72,11 @@ export function runRules(
     ruleErrors: [],
     ignored: 0,
   };
+  /** Records a rule's error, by its class alone: every `RuleError` is made here. */
+  const fail = (id: string, e: unknown, label?: string): void => {
+    const kind = errorKind(e);
+    result.ruleErrors.push({ id, message: label === undefined ? kind : `${label}: ${kind}` });
+  };
   for (const rule of rules) {
     if (config.disabled.has(rule.id)) {
       result.rulesSkipped.push({ id: rule.id, reason: "disabled" });
@@ -101,10 +109,10 @@ export function runRules(
       raw = rule.check(project, {
         indexes,
         options: optionsFor(rule, config),
-        reportError: (message) => result.ruleErrors.push({ id: rule.id, message }),
+        reportError: (e, site) => fail(rule.id, e, site.label),
       });
     } catch (e) {
-      result.ruleErrors.push({ id: rule.id, message: e instanceof Error ? e.message : String(e) });
+      fail(rule.id, e);
       continue;
     }
     for (const f of raw) {

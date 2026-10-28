@@ -58,7 +58,7 @@ export function summaryLine(result: LintResult): string {
   return `${plural(s.findings, "finding")} (${plural(s.errors, "error")}, ${plural(s.warnings, "warning")}, ${s.infos} info) in ${plural(s.files, "file")}${unfinished}`;
 }
 
-/** Each rule error as a notice says it: the rule, that it could not finish, and the error's message. */
+/** Each rule error as a notice says it: the rule, that it could not finish, and the error's class. */
 export const ruleErrorNotices = (result: LintResult): string[] =>
   result.summary.ruleErrors.map(
     (e) => `The rule ${e.id} could not finish (please report this): ${e.message}`,

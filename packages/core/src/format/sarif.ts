@@ -122,7 +122,7 @@ export function formatSarif(result: LintResult, options: FormatOptions = {}): st
                   level: "error",
                   descriptor: { id: "rule-error" },
                   associatedRule: { id: e.id },
-                  message: { text: `rule ${e.id} could not finish: ${e.message}` },
+                  message: { text: `The rule ${e.id} could not finish: ${e.message}` },
                 })),
               ],
             },

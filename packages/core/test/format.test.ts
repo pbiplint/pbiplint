@@ -190,7 +190,7 @@ describe("a rule that could not finish, in every format", () => {
   beforeAll(async () => {
     crashed = await lint(files.slice(1), { rules: [throwingRule] });
   });
-  const notice = "rule THROWING_RULE could not finish (please report this): kaboom";
+  const notice = "The rule THROWING_RULE could not finish (please report this): kaboom";
   it("says so in the text format's summary line and notices, when nothing else fired", () => {
     const lines = formatText(crashed).split("\n");
     expect(lines[0]).toBe(
@@ -203,7 +203,7 @@ describe("a rule that could not finish, in every format", () => {
     const md = formatMarkdown(crashed);
     expect(md).toContain("in 1 file, 1 rule could not finish.");
     expect(md).toContain(
-      "> Notice: rule THROWING\\_RULE could not finish (please report this): kaboom",
+      "> Notice: The rule THROWING\\_RULE could not finish (please report this): kaboom",
     );
   });
   it("lists it in the JSON format's rule errors", () => {
@@ -221,7 +221,7 @@ describe("a rule that could not finish, in every format", () => {
             level: "error",
             descriptor: { id: "rule-error" },
             associatedRule: { id: "THROWING_RULE" },
-            message: { text: "rule THROWING_RULE could not finish: kaboom" },
+            message: { text: "The rule THROWING_RULE could not finish: kaboom" },
           },
         ],
       },
@@ -242,7 +242,7 @@ describe("a rule that could not finish, in every format", () => {
     expect(
       formatText(twice)
         .split("\n")
-        .filter((l) => l.startsWith("Notice: rule R ")),
+        .filter((l) => l.startsWith("Notice: The rule R ")),
     ).toHaveLength(2);
   });
 });
@@ -784,7 +784,7 @@ describe("control characters from the input", () => {
       "1 rule skipped (this report reads a model outside the input (..\\u202e\\M))",
     );
     expect(lines).toContain(
-      "Notice: rule CRASHING could not finish (please report this): failed on \\u009b2J",
+      "Notice: The rule CRASHING could not finish (please report this): failed on \\u009b2J",
     );
   });
 

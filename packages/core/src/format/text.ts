@@ -61,7 +61,7 @@ export function summaryLine(result: LintResult): string {
 /** Each rule error as a notice says it: the rule, that it could not finish, and the error's message. */
 export const ruleErrorNotices = (result: LintResult): string[] =>
   result.summary.ruleErrors.map(
-    (e) => `rule ${e.id} could not finish (please report this): ${e.message}`,
+    (e) => `The rule ${e.id} could not finish (please report this): ${e.message}`,
   );
 
 export function skippedLine(result: LintResult): string {

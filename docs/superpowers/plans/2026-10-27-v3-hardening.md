@@ -1004,7 +1004,7 @@ Expected: all pass; the e2e suite in Chromium, Firefox, and WebKit with no retri
 One Opus review of the whole branch (`git diff origin/release/0.3.0...HEAD`) with this plan and spec sections 7, 8, 11.3, and 11.5. Then pb-coord pushes `v3/hardening` and opens a pull request into `release/0.3.0` titled `fix: hardening from the pre-release security review (v3 PR 9)`. Its body lists, counts only:
 
 - **The M work budget:** the unit, the three limits (2,000,000 per query, 4,000,000 per model, 128 brackets), why not the parser's cancellation token or its lexer, the corpus's largest query (847,457) and model (1,158,354), and that a query over budget is a `PARSE_ISSUE`.
-- **The resolver:** indexes and memos; the guard's 5 s bound, with CI's time from this run to confirm it.
+- **The resolver:** indexes and memos; the guard's 10 s bound, with CI's time from this run to confirm it.
 - **A deep tree:** loops, the 500-level cap, `eachQuery`, and the open question on rule errors and the exit code.
 - **Masking:** the whole file or the line alone, comments, U+2028; the corpus's 2 changed details.
 - **SECURITY.md**, and item 8(a)'s finding in a sentence.

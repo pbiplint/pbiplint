@@ -399,7 +399,7 @@ describe("renderResults", () => {
       source: "x",
     });
     const notice = container.querySelector(".notice")!;
-    expect(notice.textContent).toBe("rule BOOM could not finish (please report this): kaboom");
+    expect(notice.textContent).toBe("The rule BOOM could not finish (please report this): kaboom");
     // With the summary and the other notices, not below every group, where a reader who never
     // scrolls that far never learns a rule broke.
     expect(notice.previousElementSibling).toBe(container.querySelector(".summary"));
@@ -412,7 +412,7 @@ describe("renderResults", () => {
     expect(nothing.groups).toHaveLength(0);
     renderResults(container, nothing, { source: "x" });
     expect(container.querySelector(".notice")!.textContent).toBe(
-      "rule BOOM could not finish (please report this): kaboom",
+      "The rule BOOM could not finish (please report this): kaboom",
     );
   });
   it("sets its change handler on every render and leaves none behind on a clean one", async () => {
@@ -898,7 +898,7 @@ describe("control characters from the input", () => {
       `${SHOWN}.SemanticModel holds no .tmdl files and was not linted.`,
       `M/${SHOWN}.tmdl could not be read (locked), so it was not linted`,
       `pbiplint.config.json names no rule called "NOPE${SHOWN}".`,
-      `rule BOOM could not finish (please report this): kaboom at ${SHOWN}`,
+      `The rule BOOM could not finish (please report this): kaboom at ${SHOWN}`,
     ]);
     expect(container.querySelector(".summary")!.textContent).toContain(
       `skipped (the report sits at ${SHOWN})`,

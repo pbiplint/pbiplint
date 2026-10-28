@@ -39,6 +39,11 @@ const FORBIDDEN: Record<string, string[]> = {
   builtin: [],
   needsLiveModel: ["Example", "When to ignore it"],
 };
+/**
+ * Rules whose page has no Example. An input that makes a rule fail is a pbiplint bug, fixed when
+ * found, so no snippet could stand on RULE_COULD_NOT_FINISH's page.
+ */
+const NO_EXAMPLE = new Set(["RULE_COULD_NOT_FINISH"]);
 
 const normalize = (s: string): string =>
   s.toLowerCase().replace(/["'`]/g, "").replace(/\s+/g, " ").trim();
@@ -305,8 +310,11 @@ describe.each(defaultRules.map((r) => [r.id, r] as const))("rule page for %s", (
       expect(found).toEqual([...new Set(found)]);
       for (const h of found) expect(SECTION_ORDER, h).toContain(h);
       expect(found).toEqual(SECTION_ORDER.filter((h) => found.includes(h)));
-      for (const h of REQUIRED[rule.status]!) expect(found, h).toContain(h);
+      const noExample = NO_EXAMPLE.has(rule.id);
+      for (const h of REQUIRED[rule.status]!)
+        if (!(noExample && h === "Example")) expect(found, h).toContain(h);
       for (const h of FORBIDDEN[rule.status]!) expect(found, h).not.toContain(h);
+      if (noExample) expect(found).not.toContain("Example");
     });
 
     it("attributes its source and keeps further reading apart from it", () => {
@@ -325,7 +333,7 @@ describe.each(defaultRules.map((r) => [r.id, r] as const))("rule page for %s", (
       }
     });
 
-    it.runIf(rule.status !== "needsLiveModel")(
+    it.runIf(rule.status !== "needsLiveModel" && !NO_EXAMPLE.has(rule.id))(
       "shows an example the engine flags and a fix it accepts",
       async () => {
         await checkExample(rule, section(readFileSync(path, "utf8"), "Example"));

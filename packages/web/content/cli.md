@@ -48,7 +48,7 @@ These are the options `pbiplint --help` lists:
 | `--config <file>` | The `pbiplint.config.json` to use, instead of the nearest one above the project. |
 | `--output <file>` | Writes the report to a file instead of the terminal, with a one-line summary on stderr. |
 | `--quiet` | Prints the summary and what was read or skipped, any notices, then one line per rule with findings (its severity, id, and count), then the next step. Text only. |
-| `--rule <RULE_ID>` | Shows only that rule's findings, in any format; give it more than once for several. Every rule still runs, the summary says how many findings are shown of how many, and `--fail-on` counts only the ones shown. |
+| `--rule <RULE_ID>` | Shows only that rule's findings, in any format; give it more than once for several. Every rule still runs, the summary says how many findings are shown of how many, and `--fail-on` counts only the ones shown. From 0.3.0, a [`RULE_COULD_NOT_FINISH`](/rules/rule-could-not-finish/) finding about a rule you name is shown and counted too, since that rule's findings are incomplete; one about another rule is not. |
 | `--help`, `--version` | Prints the help text, or the version. |
 
 ### Choose a format

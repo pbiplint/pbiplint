@@ -10,3 +10,5 @@ rules/parse-issue.md conflict-marker-size=32
 # diff and leaves them out of the language stats.
 examples/** -text linguist-generated=true
 tests/fixtures/** -text linguist-generated=true
+# The CLI's goldens are compared byte for byte, so git must never rewrite their line endings.
+packages/cli/test/fixtures/** -text linguist-generated=true

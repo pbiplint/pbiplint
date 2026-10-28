@@ -1,0 +1,124 @@
+[
+  {
+    "name": "sample-text",
+    "argv": [
+      "examples/messy-sales"
+    ],
+    "code": 1
+  },
+  {
+    "name": "sample-quiet",
+    "argv": [
+      "examples/messy-sales",
+      "--quiet"
+    ],
+    "code": 1
+  },
+  {
+    "name": "sample-json",
+    "argv": [
+      "examples/messy-sales",
+      "--format",
+      "json"
+    ],
+    "code": 1
+  },
+  {
+    "name": "sample-markdown",
+    "argv": [
+      "examples/messy-sales",
+      "--format",
+      "markdown"
+    ],
+    "code": 1
+  },
+  {
+    "name": "sample-sarif",
+    "argv": [
+      "examples/messy-sales",
+      "--format",
+      "sarif"
+    ],
+    "code": 1
+  },
+  {
+    "name": "sample-output",
+    "argv": [
+      "examples/messy-sales",
+      "--output",
+      "<OUT>/report.txt"
+    ],
+    "code": 1,
+    "file": "sample-output.file"
+  },
+  {
+    "name": "sample-rule",
+    "argv": [
+      "examples/messy-sales",
+      "--rule",
+      "PROVIDE_FORMAT_STRING_FOR_MEASURES"
+    ],
+    "code": 1
+  },
+  {
+    "name": "below-text",
+    "argv": [
+      "<TMP>"
+    ],
+    "code": 1
+  },
+  {
+    "name": "below-quiet",
+    "argv": [
+      "<TMP>",
+      "--quiet"
+    ],
+    "code": 1
+  },
+  {
+    "name": "below-json",
+    "argv": [
+      "<TMP>",
+      "--format",
+      "json"
+    ],
+    "code": 1
+  },
+  {
+    "name": "below-markdown",
+    "argv": [
+      "<TMP>",
+      "--format",
+      "markdown"
+    ],
+    "code": 1
+  },
+  {
+    "name": "below-sarif",
+    "argv": [
+      "<TMP>",
+      "--format",
+      "sarif"
+    ],
+    "code": 1
+  },
+  {
+    "name": "below-output",
+    "argv": [
+      "<TMP>",
+      "--output",
+      "<OUT>/report.txt"
+    ],
+    "code": 1,
+    "file": "below-output.file"
+  },
+  {
+    "name": "below-rule",
+    "argv": [
+      "<TMP>",
+      "--rule",
+      "PROVIDE_FORMAT_STRING_FOR_MEASURES"
+    ],
+    "code": 1
+  }
+]

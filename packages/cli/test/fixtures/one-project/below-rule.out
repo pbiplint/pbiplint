@@ -1,0 +1,36 @@
+pbiplint: 14 of 280 findings shown, 1 rule (14 errors, 0 warnings, 0 info) in 92 files
+Model: 14 files. Report: 78 files. 117 rules run, 5 rules skipped (need a live model)
+Notice: sub/messy-sales is the only project found below the folder given, so it was linted as if given directly
+
+Report at a glance
+  Opens on         Scratch (hidden) (the page open when it was saved; no landing page set)                      OPENING_PAGE_INVALID
+  Filters pane     open                                                                                         FILTERS_PANE_STATE
+  Pages            11 (1 hidden, 1 tooltip)                                                                     HIDE_TOOLTIP_DRILLTROUGH_PAGES
+  Visuals          56 (4 hidden; 1 custom visual type registered, 0 used)                                       HIDDEN_VISUAL_WITH_FIELDS
+  Report measures  2 (defined in the report, not the model)                                                     REPORT_LEVEL_MEASURES
+  Slicers          2 (1 saved selection, 1 saved search term)                                                   SLICER_SELECTION_SAVED
+  Mobile layouts   none
+  Schema versions  report 3.2.0, page 2.1.0, visual 2.8.0
+  Model            8 tables, 73 columns, 14 measures (36 columns and 2 measures not reached from this report)   NOT_REACHED_FROM_REPORT
+
+Fix these first:
+  1. Provide format string for measures  (14 errors)   [model]
+
+ERROR  [model]       Provide format string for measures  PROVIDE_FORMAT_STRING_FOR_MEASURES  (14)
+       https://pbiplint.com/rules/provide-format-string-for-measures
+       [Total Sales]          definition/tables/Sales.tmdl:4
+       [Total Quantity]       definition/tables/Sales.tmdl:7
+       [Average Unit Price]   definition/tables/Sales.tmdl:10
+       [Total Cost]           definition/tables/Sales.tmdl:13
+       [Total Discount]       definition/tables/Sales.tmdl:16
+       [Net Sales]            definition/tables/Sales.tmdl:19
+       [Total Margin]         definition/tables/Sales.tmdl:22
+       [Margin %]             definition/tables/Sales.tmdl:25
+       [Order Count]          definition/tables/Sales.tmdl:28
+       [Average Order Value]  definition/tables/Sales.tmdl:31
+       [Distinct Customers]   definition/tables/Sales.tmdl:34
+       [Sales YTD]            definition/tables/Sales.tmdl:37
+       [Sales LY]             definition/tables/Sales.tmdl:40
+       [Sales YoY %]          definition/tables/Sales.tmdl:43
+
+Run pbiplint explain <RULE_ID> for a rule's guidance, offline.

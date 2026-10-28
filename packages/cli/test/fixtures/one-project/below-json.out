@@ -1,0 +1,3007 @@
+{
+  "version": 1,
+  "tool": {
+    "name": "pbiplint",
+    "version": "0.3.0"
+  },
+  "summary": {
+    "files": 92,
+    "findings": 280,
+    "errors": 19,
+    "warnings": 84,
+    "infos": 177,
+    "rulesRun": 117,
+    "rulesSkipped": [
+      {
+        "id": "AVOID_BI-DIRECTIONAL_RELATIONSHIPS_AGAINST_HIGH-CARDINALITY_COLUMNS",
+        "reason": "needsLiveModel"
+      },
+      {
+        "id": "REDUCE_USAGE_OF_LONG-LENGTH_COLUMNS_WITH_HIGH_CARDINALITY",
+        "reason": "needsLiveModel"
+      },
+      {
+        "id": "SPLIT_DATE_AND_TIME",
+        "reason": "needsLiveModel"
+      },
+      {
+        "id": "LARGE_TABLES_SHOULD_BE_PARTITIONED",
+        "reason": "needsLiveModel"
+      },
+      {
+        "id": "FIX_REFERENTIAL_INTEGRITY_VIOLATIONS",
+        "reason": "needsLiveModel"
+      }
+    ],
+    "ruleErrors": [],
+    "ignored": 0,
+    "unknownRules": []
+  },
+  "layers": {
+    "model": {
+      "present": true,
+      "files": 14
+    },
+    "report": {
+      "present": true,
+      "files": 78
+    }
+  },
+  "facts": [
+    {
+      "layer": "report",
+      "label": "Opens on",
+      "value": "Scratch (hidden)",
+      "detail": "the page open when it was saved; no landing page set",
+      "ruleId": "OPENING_PAGE_INVALID"
+    },
+    {
+      "layer": "report",
+      "label": "Filters pane",
+      "value": "open",
+      "ruleId": "FILTERS_PANE_STATE"
+    },
+    {
+      "layer": "report",
+      "label": "Pages",
+      "value": "11",
+      "detail": "1 hidden, 1 tooltip",
+      "ruleId": "HIDE_TOOLTIP_DRILLTROUGH_PAGES"
+    },
+    {
+      "layer": "report",
+      "label": "Visuals",
+      "value": "56",
+      "detail": "4 hidden; 1 custom visual type registered, 0 used",
+      "ruleId": "HIDDEN_VISUAL_WITH_FIELDS"
+    },
+    {
+      "layer": "report",
+      "label": "Report measures",
+      "value": "2",
+      "detail": "defined in the report, not the model",
+      "ruleId": "REPORT_LEVEL_MEASURES"
+    },
+    {
+      "layer": "report",
+      "label": "Slicers",
+      "value": "2",
+      "detail": "1 saved selection, 1 saved search term",
+      "ruleId": "SLICER_SELECTION_SAVED"
+    },
+    {
+      "layer": "report",
+      "label": "Mobile layouts",
+      "value": "none"
+    },
+    {
+      "layer": "report",
+      "label": "Schema versions",
+      "value": "report 3.2.0, page 2.1.0, visual 2.8.0"
+    },
+    {
+      "layer": "model",
+      "label": "Model",
+      "value": "8 tables, 73 columns, 14 measures",
+      "detail": "36 columns and 2 measures not reached from this report",
+      "ruleId": "NOT_REACHED_FROM_REPORT"
+    }
+  ],
+  "diagnostics": [
+    {
+      "kind": "project-below-input",
+      "path": "sub/messy-sales",
+      "message": "sub/messy-sales is the only project found below the folder given, so it was linted as if given directly"
+    }
+  ],
+  "groups": [
+    {
+      "rule": {
+        "id": "BROKEN_ACTION_TARGET",
+        "name": "Action points at nothing",
+        "category": "Error Prevention",
+        "severity": 3,
+        "layer": "report",
+        "slug": "broken-action-target",
+        "url": "https://pbiplint.com/rules/broken-action-target",
+        "status": "builtin"
+      },
+      "count": 1,
+      "findings": [
+        {
+          "layer": "report",
+          "objectType": "Visual",
+          "objectName": "\"Go to detail\" on \"Overview\"",
+          "objectId": "6500e9c3f9d74f2958c7",
+          "file": "definition/pages/3cea48e58036b1654474/visuals/6500e9c3f9d74f2958c7/visual.json",
+          "line": 272,
+          "detail": "Page navigation action points at page \"deadpage00000000000000\", which does not exist"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "BROKEN_FIELD_REFERENCE",
+        "name": "Field the model does not have",
+        "category": "Error Prevention",
+        "severity": 3,
+        "layer": "report",
+        "slug": "broken-field-reference",
+        "url": "https://pbiplint.com/rules/broken-field-reference",
+        "status": "builtin"
+      },
+      "count": 1,
+      "findings": [
+        {
+          "layer": "report",
+          "objectType": "Visual",
+          "objectName": "\"Sales by region\" on \"Overview\"",
+          "objectId": "88530bc0f64114317e2e",
+          "file": "definition/pages/3cea48e58036b1654474/visuals/88530bc0f64114317e2e/visual.json",
+          "line": 19,
+          "detail": "'Sales'[Region]: no column named \"Region\" on \"Sales\""
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "OPENING_PAGE_INVALID",
+        "name": "Opening page missing or hidden",
+        "category": "Error Prevention",
+        "severity": 3,
+        "layer": "report",
+        "slug": "opening-page-invalid",
+        "url": "https://pbiplint.com/rules/opening-page-invalid",
+        "status": "builtin"
+      },
+      "count": 1,
+      "findings": [
+        {
+          "layer": "report",
+          "objectType": "Report",
+          "objectName": "Report",
+          "objectId": "report",
+          "file": "definition/pages/pages.json",
+          "line": 16,
+          "detail": "active page \"Scratch\" is hidden from readers"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "DAX_COLUMNS_FULLY_QUALIFIED",
+        "name": "Column references should be fully qualified",
+        "category": "DAX Expressions",
+        "severity": 3,
+        "layer": "model",
+        "slug": "dax-columns-fully-qualified",
+        "url": "https://pbiplint.com/rules/dax-columns-fully-qualified",
+        "status": "ported"
+      },
+      "count": 2,
+      "findings": [
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Total Quantity]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 7
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Distinct Customers]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 34
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "PROVIDE_FORMAT_STRING_FOR_MEASURES",
+        "name": "Provide format string for measures",
+        "category": "Formatting",
+        "severity": 3,
+        "layer": "model",
+        "slug": "provide-format-string-for-measures",
+        "url": "https://pbiplint.com/rules/provide-format-string-for-measures",
+        "status": "ported"
+      },
+      "count": 14,
+      "findings": [
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Total Sales]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 4
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Total Quantity]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 7
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Average Unit Price]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 10
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Total Cost]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 13
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Total Discount]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 16
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Net Sales]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 19
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Total Margin]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 22
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Margin %]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 25
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Order Count]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 28
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Average Order Value]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 31
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Distinct Customers]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 34
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Sales YTD]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 37
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Sales LY]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 40
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Sales YoY %]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 43
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "AVOID_FLOATING_POINT_DATA_TYPES",
+        "name": "Do not use floating point data types",
+        "category": "Performance",
+        "severity": 2,
+        "layer": "model",
+        "slug": "avoid-floating-point-data-types",
+        "url": "https://pbiplint.com/rules/avoid-floating-point-data-types",
+        "status": "ported"
+      },
+      "count": 3,
+      "findings": [
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Promotion'[Discount Pct]",
+          "file": "definition/tables/Promotion.tmdl",
+          "line": 29
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Store'[Latitude]",
+          "file": "definition/tables/Store.tmdl",
+          "line": 72
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Store'[Longitude]",
+          "file": "definition/tables/Store.tmdl",
+          "line": 80
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE",
+        "name": "Date/calendar tables should be marked as a date table",
+        "category": "Performance",
+        "severity": 2,
+        "layer": "model",
+        "slug": "date-calendar-tables-should-be-marked-as-a-date-table",
+        "url": "https://pbiplint.com/rules/date-calendar-tables-should-be-marked-as-a-date-table",
+        "status": "ported"
+      },
+      "count": 3,
+      "findings": [
+        {
+          "layer": "model",
+          "objectType": "Table",
+          "objectName": "'Date'",
+          "file": "definition/tables/Date.tmdl",
+          "line": 1
+        },
+        {
+          "layer": "model",
+          "objectType": "CalculatedTable",
+          "objectName": "'DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92'",
+          "file": "definition/tables/DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92.tmdl",
+          "line": 1
+        },
+        {
+          "layer": "model",
+          "objectType": "CalculatedTable",
+          "objectName": "'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'",
+          "file": "definition/tables/LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d.tmdl",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "REDUCE_USAGE_OF_CALCULATED_TABLES",
+        "name": "Reduce usage of calculated tables",
+        "category": "Performance",
+        "severity": 2,
+        "layer": "model",
+        "slug": "reduce-usage-of-calculated-tables",
+        "url": "https://pbiplint.com/rules/reduce-usage-of-calculated-tables",
+        "status": "ported"
+      },
+      "count": 3,
+      "findings": [
+        {
+          "layer": "model",
+          "objectType": "CalculatedTable",
+          "objectName": "'DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92'",
+          "file": "definition/tables/DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92.tmdl",
+          "line": 1
+        },
+        {
+          "layer": "model",
+          "objectType": "CalculatedTable",
+          "objectName": "'Employee Grouping'",
+          "file": "definition/tables/Employee Grouping.tmdl",
+          "line": 1
+        },
+        {
+          "layer": "model",
+          "objectType": "CalculatedTable",
+          "objectName": "'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'",
+          "file": "definition/tables/LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d.tmdl",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "AVOID_SHOW_ITEMS_WITH_NO_DATA",
+        "name": "Avoid setting ‘Show items with no data’ on columns",
+        "category": "Performance",
+        "severity": 2,
+        "layer": "report",
+        "slug": "avoid-show-items-with-no-data",
+        "url": "https://pbiplint.com/rules/avoid-show-items-with-no-data",
+        "status": "ported"
+      },
+      "count": 2,
+      "findings": [
+        {
+          "layer": "report",
+          "objectType": "Visual",
+          "objectName": "\"Sales by brand\" on \"Duplicate of Overview\"",
+          "objectId": "1e7f28bf49e435b68c50",
+          "file": "definition/pages/27f668864829019f9251/visuals/1e7f28bf49e435b68c50/visual.json",
+          "line": 34,
+          "detail": "Show items with no data is on for Category"
+        },
+        {
+          "layer": "report",
+          "objectType": "Visual",
+          "objectName": "\"Sales by store location\" on \"Stores\"",
+          "objectId": "598cfda00746e83f4896",
+          "file": "definition/pages/5fbcb07dde4e4fada3f6/visuals/598cfda00746e83f4896/visual.json",
+          "line": 79,
+          "detail": "Show items with no data is on for Rows"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS",
+        "name": "Set IsAvailableInMdx to false on non-attribute columns",
+        "category": "Performance",
+        "severity": 2,
+        "layer": "model",
+        "slug": "isavailableinmdx-false-nonattribute-columns",
+        "url": "https://pbiplint.com/rules/isavailableinmdx-false-nonattribute-columns",
+        "status": "ported"
+      },
+      "count": 2,
+      "findings": [
+        {
+          "layer": "model",
+          "objectType": "CalculatedTableColumn",
+          "objectName": "'DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92'[Date]",
+          "file": "definition/tables/DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92.tmdl",
+          "line": 6
+        },
+        {
+          "layer": "model",
+          "objectType": "CalculatedTableColumn",
+          "objectName": "'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'[Date]",
+          "file": "definition/tables/LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d.tmdl",
+          "line": 6
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "REMOVE_AUTO-DATE_TABLE",
+        "name": "Remove auto-date table",
+        "category": "Performance",
+        "severity": 2,
+        "layer": "model",
+        "slug": "remove-auto-date-table",
+        "url": "https://pbiplint.com/rules/remove-auto-date-table",
+        "status": "ported"
+      },
+      "count": 2,
+      "findings": [
+        {
+          "layer": "model",
+          "objectType": "CalculatedTable",
+          "objectName": "'DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92'",
+          "file": "definition/tables/DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92.tmdl",
+          "line": 1
+        },
+        {
+          "layer": "model",
+          "objectType": "CalculatedTable",
+          "objectName": "'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'",
+          "file": "definition/tables/LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d.tmdl",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "MODEL_SHOULD_HAVE_A_DATE_TABLE",
+        "name": "Model should have a date table",
+        "category": "Performance",
+        "severity": 2,
+        "layer": "model",
+        "slug": "model-should-have-a-date-table",
+        "url": "https://pbiplint.com/rules/model-should-have-a-date-table",
+        "status": "ported"
+      },
+      "count": 1,
+      "findings": [
+        {
+          "layer": "model",
+          "objectType": "Model",
+          "objectName": "Model",
+          "file": "definition/model.tmdl",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "REDUCE_ADVANCED_FILTERS",
+        "name": "Reduce usage of Advanced filtering visuals by page",
+        "category": "Performance",
+        "severity": 2,
+        "layer": "report",
+        "slug": "reduce-advanced-filters",
+        "url": "https://pbiplint.com/rules/reduce-advanced-filters",
+        "status": "ported"
+      },
+      "count": 1,
+      "findings": [
+        {
+          "layer": "report",
+          "objectType": "Page",
+          "objectName": "Page \"Crowded\"",
+          "objectId": "9f2ae77d3572304756ae",
+          "file": "definition/pages/9f2ae77d3572304756ae/page.json",
+          "line": 1,
+          "detail": "5 visuals with an Advanced filter applied, more than 4"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "REDUCE_NUMBER_OF_CALCULATED_COLUMNS",
+        "name": "Reduce number of calculated columns",
+        "category": "Performance",
+        "severity": 2,
+        "layer": "model",
+        "slug": "reduce-number-of-calculated-columns",
+        "url": "https://pbiplint.com/rules/reduce-number-of-calculated-columns",
+        "status": "ported"
+      },
+      "count": 1,
+      "findings": [
+        {
+          "layer": "model",
+          "objectType": "Model",
+          "objectName": "Model",
+          "file": "definition/model.tmdl",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "REDUCE_OBJECTS_WITHIN_VISUALS",
+        "name": "Reduce the number of objects within visuals",
+        "category": "Performance",
+        "severity": 2,
+        "layer": "report",
+        "slug": "reduce-objects-within-visuals",
+        "url": "https://pbiplint.com/rules/reduce-objects-within-visuals",
+        "status": "ported"
+      },
+      "count": 1,
+      "findings": [
+        {
+          "layer": "report",
+          "objectType": "Visual",
+          "objectName": "\"Sales detail\" on \"Detail\"",
+          "objectId": "6e99982d842b0d962e16",
+          "file": "definition/pages/3485dcffc49d1608c370/visuals/6e99982d842b0d962e16/visual.json",
+          "line": 14,
+          "detail": "7 fields bound, more than 6"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "REDUCE_PAGES",
+        "name": "Reduce number of pages per report",
+        "category": "Performance",
+        "severity": 2,
+        "layer": "report",
+        "slug": "reduce-pages",
+        "url": "https://pbiplint.com/rules/reduce-pages",
+        "status": "ported"
+      },
+      "count": 1,
+      "findings": [
+        {
+          "layer": "report",
+          "objectType": "Report",
+          "objectName": "Report",
+          "objectId": "report",
+          "file": "definition/report.json",
+          "line": 1,
+          "detail": "11 pages, more than 10"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "REDUCE_TOPN_FILTERS",
+        "name": "Reduce usage of TopN filtering visuals by page",
+        "category": "Performance",
+        "severity": 2,
+        "layer": "report",
+        "slug": "reduce-topn-filters",
+        "url": "https://pbiplint.com/rules/reduce-topn-filters",
+        "status": "ported"
+      },
+      "count": 1,
+      "findings": [
+        {
+          "layer": "report",
+          "objectType": "Page",
+          "objectName": "Page \"Crowded\"",
+          "objectId": "9f2ae77d3572304756ae",
+          "file": "definition/pages/9f2ae77d3572304756ae/page.json",
+          "line": 1,
+          "detail": "5 visuals with a TopN filter, more than 4"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "REDUCE_VISUALS_ON_PAGE",
+        "name": "Reduce the number of visible visuals on the page",
+        "category": "Performance",
+        "severity": 2,
+        "layer": "report",
+        "slug": "reduce-visuals-on-page",
+        "url": "https://pbiplint.com/rules/reduce-visuals-on-page",
+        "status": "ported"
+      },
+      "count": 1,
+      "findings": [
+        {
+          "layer": "report",
+          "objectType": "Page",
+          "objectName": "Page \"Crowded\"",
+          "objectId": "9f2ae77d3572304756ae",
+          "file": "definition/pages/9f2ae77d3572304756ae/page.json",
+          "line": 1,
+          "detail": "21 visuals, more than 20"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "REMOVE_UNUSED_CUSTOM_VISUALS",
+        "name": "Remove custom visuals which are not used in the report",
+        "category": "Performance",
+        "severity": 2,
+        "layer": "report",
+        "slug": "remove-unused-custom-visuals",
+        "url": "https://pbiplint.com/rules/remove-unused-custom-visuals",
+        "status": "ported"
+      },
+      "count": 1,
+      "findings": [
+        {
+          "layer": "report",
+          "objectType": "Report",
+          "objectName": "Report",
+          "objectId": "ChicletSlicer1448559807354",
+          "file": "definition/report.json",
+          "line": 1,
+          "detail": "ChicletSlicer1448559807354 is registered but no visual uses it"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "SNOWFLAKE_SCHEMA_ARCHITECTURE",
+        "name": "Consider a star-schema instead of a snowflake architecture",
+        "category": "Performance",
+        "severity": 2,
+        "layer": "model",
+        "slug": "snowflake-schema-architecture",
+        "url": "https://pbiplint.com/rules/snowflake-schema-architecture",
+        "status": "ported"
+      },
+      "count": 1,
+      "findings": [
+        {
+          "layer": "model",
+          "objectType": "Table",
+          "objectName": "'Customer'",
+          "file": "definition/tables/Customer.tmdl",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "LOCAL_DRIVE_PATH",
+        "name": "Path on a local drive",
+        "category": "Error Prevention",
+        "severity": 2,
+        "layer": "powerquery",
+        "slug": "local-drive-path",
+        "url": "https://pbiplint.com/rules/local-drive-path",
+        "status": "builtin"
+      },
+      "count": 7,
+      "findings": [
+        {
+          "layer": "model",
+          "objectType": "Partition",
+          "objectName": "Customer",
+          "file": "definition/tables/Customer.tmdl",
+          "line": 105,
+          "column": 45,
+          "detail": "query 'Customer', step 'Source': the path is on a local drive (C:)"
+        },
+        {
+          "layer": "model",
+          "objectType": "Partition",
+          "objectName": "Date",
+          "file": "definition/tables/Date.tmdl",
+          "line": 92,
+          "column": 45,
+          "detail": "query 'Date', step 'Source': the path is on a local drive (C:)"
+        },
+        {
+          "layer": "model",
+          "objectType": "Partition",
+          "objectName": "Employee",
+          "file": "definition/tables/Employee.tmdl",
+          "line": 76,
+          "column": 45,
+          "detail": "query 'Employee', step 'Source': the path is on a local drive (C:)"
+        },
+        {
+          "layer": "model",
+          "objectType": "Partition",
+          "objectName": "Product",
+          "file": "definition/tables/Product.tmdl",
+          "line": 97,
+          "column": 45,
+          "detail": "query 'Product', step 'Source': the path is on a local drive (C:)"
+        },
+        {
+          "layer": "model",
+          "objectType": "Partition",
+          "objectName": "Promotion",
+          "file": "definition/tables/Promotion.tmdl",
+          "line": 63,
+          "column": 45,
+          "detail": "query 'Promotion', step 'Source': the path is on a local drive (C:)"
+        },
+        {
+          "layer": "model",
+          "objectType": "Partition",
+          "objectName": "Sales",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 158,
+          "column": 45,
+          "detail": "query 'Sales', step 'Source': the path is on a local drive (C:)"
+        },
+        {
+          "layer": "model",
+          "objectType": "Partition",
+          "objectName": "Store",
+          "file": "definition/tables/Store.tmdl",
+          "line": 115,
+          "column": 45,
+          "detail": "query 'Store', step 'Source': the path is on a local drive (C:)"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "BROKEN_BOOKMARK_REFERENCE",
+        "name": "Bookmark refers to a missing page or visual",
+        "category": "Error Prevention",
+        "severity": 2,
+        "layer": "report",
+        "slug": "broken-bookmark-reference",
+        "url": "https://pbiplint.com/rules/broken-bookmark-reference",
+        "status": "builtin"
+      },
+      "count": 1,
+      "findings": [
+        {
+          "layer": "report",
+          "objectType": "Bookmark",
+          "objectName": "Bookmark \"Reset\"",
+          "objectId": "f56cd9f5f68d30c0e4e3",
+          "file": "definition/bookmarks/f56cd9f5f68d30c0e4e3.bookmark.json",
+          "line": 14,
+          "detail": "captured visual \"deadvisual0000000000\" is not on page \"Overview\""
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "ENSURE_ALTTEXT",
+        "name": "Ensure alternativeText has been defined for all visuals",
+        "category": "Accessibility",
+        "severity": 2,
+        "layer": "report",
+        "slug": "ensure-alttext",
+        "url": "https://pbiplint.com/rules/ensure-alttext",
+        "status": "ported"
+      },
+      "count": 1,
+      "findings": [
+        {
+          "layer": "report",
+          "objectType": "Visual",
+          "objectName": "\"Scratch note\" on \"Scratch\"",
+          "objectId": "2a7e16428070011e60ec",
+          "file": "definition/pages/b52832c4d9f487868953/visuals/2a7e16428070011e60ec/visual.json",
+          "line": 32,
+          "detail": "no alt text"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "TAB_ORDER_FOLLOWS_LAYOUT",
+        "name": "Tab order disagrees with the layout",
+        "category": "Accessibility",
+        "severity": 2,
+        "layer": "report",
+        "slug": "tab-order-follows-layout",
+        "url": "https://pbiplint.com/rules/tab-order-follows-layout",
+        "status": "builtin"
+      },
+      "count": 1,
+      "findings": [
+        {
+          "layer": "report",
+          "objectType": "Page",
+          "objectName": "Page \"Detail\"",
+          "objectId": "3485dcffc49d1608c370",
+          "file": "definition/pages/3485dcffc49d1608c370/page.json",
+          "line": 1,
+          "detail": "tab order starts at \"Total Margin\" but the layout reads \"Net Sales\" first"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "USE_THE_DIVIDE_FUNCTION_FOR_DIVISION",
+        "name": "Use the DIVIDE function for division",
+        "category": "DAX Expressions",
+        "severity": 2,
+        "layer": "model",
+        "slug": "use-the-divide-function-for-division",
+        "url": "https://pbiplint.com/rules/use-the-divide-function-for-division",
+        "status": "ported"
+      },
+      "count": 5,
+      "findings": [
+        {
+          "layer": "model",
+          "objectType": "CalculatedColumn",
+          "objectName": "'DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92'[QuarterNo]",
+          "file": "definition/tables/DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92.tmdl",
+          "line": 54
+        },
+        {
+          "layer": "model",
+          "objectType": "CalculatedColumn",
+          "objectName": "'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'[QuarterNo]",
+          "file": "definition/tables/LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d.tmdl",
+          "line": 54
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Margin %]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 25
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Average Order Value]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 31
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Sales YoY %]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 43
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "REPORT_LEVEL_MEASURES",
+        "name": "Measure defined in the report",
+        "category": "Maintenance",
+        "severity": 2,
+        "layer": "report",
+        "slug": "report-level-measures",
+        "url": "https://pbiplint.com/rules/report-level-measures",
+        "status": "builtin"
+      },
+      "count": 2,
+      "findings": [
+        {
+          "layer": "report",
+          "objectType": "ReportMeasure",
+          "objectName": "[Net Margin] (report)",
+          "objectId": "Sales.Net Margin",
+          "file": "definition/reportExtensions.json",
+          "line": 8,
+          "detail": "defined in the report on table \"Sales\""
+        },
+        {
+          "layer": "report",
+          "objectType": "ReportMeasure",
+          "objectName": "[Margin % (report)] (report)",
+          "objectId": "Sales.Margin % (report)",
+          "file": "definition/reportExtensions.json",
+          "line": 25,
+          "detail": "defined in the report on table \"Sales\""
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "DEFAULT_PAGE_NAME",
+        "name": "Page keeps its default name",
+        "category": "Report Design",
+        "severity": 2,
+        "layer": "report",
+        "slug": "default-page-name",
+        "url": "https://pbiplint.com/rules/default-page-name",
+        "status": "builtin"
+      },
+      "count": 2,
+      "findings": [
+        {
+          "layer": "report",
+          "objectType": "Page",
+          "objectName": "Page \"Page 2\"",
+          "objectId": "52db6f0b218c638f8761",
+          "file": "definition/pages/52db6f0b218c638f8761/page.json",
+          "line": 4,
+          "detail": "\"Page 2\" is the name Power BI Desktop gives a new page"
+        },
+        {
+          "layer": "report",
+          "objectType": "Page",
+          "objectName": "Page \"Duplicate of Overview\"",
+          "objectId": "27f668864829019f9251",
+          "file": "definition/pages/27f668864829019f9251/page.json",
+          "line": 4,
+          "detail": "\"Duplicate of Overview\" is the name Power BI Desktop gives a duplicated page"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "VISUAL_OUTSIDE_PAGE",
+        "name": "Visual extends past the page",
+        "category": "Report Design",
+        "severity": 2,
+        "layer": "report",
+        "slug": "visual-outside-page",
+        "url": "https://pbiplint.com/rules/visual-outside-page",
+        "status": "builtin"
+      },
+      "count": 2,
+      "findings": [
+        {
+          "layer": "report",
+          "objectType": "Visual",
+          "objectName": "\"Notes\" on \"Overview\"",
+          "objectId": "49158e1e7dce5e8d37fd",
+          "file": "definition/pages/3cea48e58036b1654474/visuals/49158e1e7dce5e8d37fd/visual.json",
+          "line": 4,
+          "detail": "120 px past the right edge"
+        },
+        {
+          "layer": "report",
+          "objectType": "Visual",
+          "objectName": "Group \"Promotion notes\" on \"Promotions\"",
+          "objectId": "d2995ea3e9b9d9244bf6",
+          "file": "definition/pages/00e055aa522743f28a39/visuals/d2995ea3e9b9d9244bf6/visual.json",
+          "line": 4,
+          "detail": "40 px past the right edge"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "ACTION_WITHOUT_DESTINATION",
+        "name": "Action has no destination",
+        "category": "Report Design",
+        "severity": 2,
+        "layer": "report",
+        "slug": "action-without-destination",
+        "url": "https://pbiplint.com/rules/action-without-destination",
+        "status": "builtin"
+      },
+      "count": 1,
+      "findings": [
+        {
+          "layer": "report",
+          "objectType": "Visual",
+          "objectName": "\"Next page\" on \"Overview\"",
+          "objectId": "307e834045a168e7a394",
+          "file": "definition/pages/3cea48e58036b1654474/visuals/307e834045a168e7a394/visual.json",
+          "line": 257,
+          "detail": "Page navigation action has no destination"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY",
+        "name": "Ensure pages do not scroll vertically",
+        "category": "Report Design",
+        "severity": 2,
+        "layer": "report",
+        "slug": "ensure-pages-do-not-scroll-vertically",
+        "url": "https://pbiplint.com/rules/ensure-pages-do-not-scroll-vertically",
+        "status": "ported"
+      },
+      "count": 1,
+      "findings": [
+        {
+          "layer": "report",
+          "objectType": "Page",
+          "objectName": "Page \"Detail\"",
+          "objectId": "3485dcffc49d1608c370",
+          "file": "definition/pages/3485dcffc49d1608c370/page.json",
+          "line": 6,
+          "detail": "height 1080, more than 720"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "ENSURE_THEME_COLOURS",
+        "name": "Ensure charts use theme colours",
+        "category": "Report Design",
+        "severity": 2,
+        "layer": "report",
+        "slug": "ensure-theme-colours",
+        "url": "https://pbiplint.com/rules/ensure-theme-colours",
+        "status": "ported"
+      },
+      "count": 1,
+      "findings": [
+        {
+          "layer": "report",
+          "objectType": "Visual",
+          "objectName": "\"Total Quantity\" on \"Page 2\"",
+          "objectId": "8edac00805f721edc1c1",
+          "file": "definition/pages/52db6f0b218c638f8761/visuals/8edac00805f721edc1c1/visual.json",
+          "line": 86,
+          "detail": "1 colour set to a hex value instead of a theme colour"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "FILTERS_PANE_STATE",
+        "name": "Filters pane state differs from policy",
+        "category": "Report Design",
+        "severity": 2,
+        "layer": "report",
+        "slug": "filters-pane-state",
+        "url": "https://pbiplint.com/rules/filters-pane-state",
+        "status": "builtin"
+      },
+      "count": 1,
+      "findings": [
+        {
+          "layer": "report",
+          "objectType": "Report",
+          "objectName": "Report",
+          "objectId": "report",
+          "file": "definition/report.json",
+          "line": 31,
+          "detail": "saved open; the policy expects closed"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "HIDE_TOOLTIP_DRILLTROUGH_PAGES",
+        "name": "Tooltip and Drillthrough pages should be hidden",
+        "category": "Report Design",
+        "severity": 2,
+        "layer": "report",
+        "slug": "hide-tooltip-drilltrough-pages",
+        "url": "https://pbiplint.com/rules/hide-tooltip-drilltrough-pages",
+        "status": "ported"
+      },
+      "count": 1,
+      "findings": [
+        {
+          "layer": "report",
+          "objectType": "Page",
+          "objectName": "Page \"Product tooltip\"",
+          "objectId": "3b33a1ae720bb93d48b9",
+          "file": "definition/pages/3b33a1ae720bb93d48b9/page.json",
+          "line": 27,
+          "detail": "tooltip page is visible to readers"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "SLICER_SEARCH_SAVED",
+        "name": "Slicer saved with a search term",
+        "category": "Report Design",
+        "severity": 2,
+        "layer": "report",
+        "slug": "slicer-search-saved",
+        "url": "https://pbiplint.com/rules/slicer-search-saved",
+        "status": "builtin"
+      },
+      "count": 1,
+      "findings": [
+        {
+          "layer": "report",
+          "objectType": "Visual",
+          "objectName": "\"City\" on \"Stores\"",
+          "objectId": "6c71af13bcdb4c28cce8",
+          "file": "definition/pages/5fbcb07dde4e4fada3f6/visuals/6c71af13bcdb4c28cce8/visual.json",
+          "line": 61,
+          "detail": "opens with the search term \"spring\" saved"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "VISUAL_WITHOUT_FIELDS",
+        "name": "Data visual with no fields",
+        "category": "Report Design",
+        "severity": 2,
+        "layer": "report",
+        "slug": "visual-without-fields",
+        "url": "https://pbiplint.com/rules/visual-without-fields",
+        "status": "builtin"
+      },
+      "count": 1,
+      "findings": [
+        {
+          "layer": "report",
+          "objectType": "Visual",
+          "objectName": "\"Placeholder\" on \"Overview\"",
+          "objectId": "bda61916a7b1efdee3fe",
+          "file": "definition/pages/3cea48e58036b1654474/visuals/bda61916a7b1efdee3fe/visual.json",
+          "line": 13,
+          "detail": "no fields bound"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "INTEGER_FORMATTING",
+        "name": "Whole numbers should be formatted with thousands separators and no decimals",
+        "category": "Formatting",
+        "severity": 2,
+        "layer": "model",
+        "slug": "integer-formatting",
+        "url": "https://pbiplint.com/rules/integer-formatting",
+        "status": "ported"
+      },
+      "count": 14,
+      "findings": [
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Total Sales]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 4,
+          "detail": "no format string"
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Total Quantity]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 7,
+          "detail": "no format string"
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Average Unit Price]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 10,
+          "detail": "no format string"
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Total Cost]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 13,
+          "detail": "no format string"
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Total Discount]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 16,
+          "detail": "no format string"
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Net Sales]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 19,
+          "detail": "no format string"
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Total Margin]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 22,
+          "detail": "no format string"
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Margin %]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 25,
+          "detail": "no format string"
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Order Count]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 28,
+          "detail": "no format string"
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Average Order Value]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 31,
+          "detail": "no format string"
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Distinct Customers]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 34,
+          "detail": "no format string"
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Sales YTD]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 37,
+          "detail": "no format string"
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Sales LY]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 40,
+          "detail": "no format string"
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Sales YoY %]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 43,
+          "detail": "no format string"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "HIDE_FOREIGN_KEYS",
+        "name": "Hide foreign keys",
+        "category": "Formatting",
+        "severity": 2,
+        "layer": "model",
+        "slug": "hide-foreign-keys",
+        "url": "https://pbiplint.com/rules/hide-foreign-keys",
+        "status": "ported"
+      },
+      "count": 12,
+      "findings": [
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Customer'[Customer ID]",
+          "file": "definition/tables/Customer.tmdl",
+          "line": 4
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Customer'[Join Date]",
+          "file": "definition/tables/Customer.tmdl",
+          "line": 77
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Employee'[Employee ID]",
+          "file": "definition/tables/Employee.tmdl",
+          "line": 4
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Product'[Product ID]",
+          "file": "definition/tables/Product.tmdl",
+          "line": 4
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Promotion'[Promotion ID]",
+          "file": "definition/tables/Promotion.tmdl",
+          "line": 4
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Sale Date]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 55
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Product ID]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 66
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Customer ID]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 74
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Store ID]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 82
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Employee ID]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 90
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Promotion ID]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 98
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Store'[Store ID]",
+          "file": "definition/tables/Store.tmdl",
+          "line": 4
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "HIDE_FACT_TABLE_COLUMNS",
+        "name": "Hide fact table columns",
+        "category": "Formatting",
+        "severity": 2,
+        "layer": "model",
+        "slug": "hide-fact-table-columns",
+        "url": "https://pbiplint.com/rules/hide-fact-table-columns",
+        "status": "ported"
+      },
+      "count": 5,
+      "findings": [
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Sale ID]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 46
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Unit Price]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 114
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Unit Cost]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 122
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Discount Amount]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 130
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Total Amount]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 138
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "MONTH_(AS_A_STRING)_MUST_BE_SORTED",
+        "name": "Month (as a string) must be sorted",
+        "category": "Formatting",
+        "severity": 2,
+        "layer": "model",
+        "slug": "month-as-a-string-must-be-sorted",
+        "url": "https://pbiplint.com/rules/month-as-a-string-must-be-sorted",
+        "status": "ported"
+      },
+      "count": 1,
+      "findings": [
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Date'[Month]",
+          "file": "definition/tables/Date.tmdl",
+          "line": 40
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "OBJECTS_WITH_NO_DESCRIPTION",
+        "name": "Visible objects with no description",
+        "category": "Maintenance",
+        "severity": 1,
+        "layer": "model",
+        "slug": "objects-with-no-description",
+        "url": "https://pbiplint.com/rules/objects-with-no-description",
+        "status": "ported"
+      },
+      "count": 93,
+      "findings": [
+        {
+          "layer": "model",
+          "objectType": "Table",
+          "objectName": "'Customer'",
+          "file": "definition/tables/Customer.tmdl",
+          "line": 1
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Customer'[Customer ID]",
+          "file": "definition/tables/Customer.tmdl",
+          "line": 4
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Customer'[Customer Name]",
+          "file": "definition/tables/Customer.tmdl",
+          "line": 13
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Customer'[Segment]",
+          "file": "definition/tables/Customer.tmdl",
+          "line": 21
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Customer'[Region]",
+          "file": "definition/tables/Customer.tmdl",
+          "line": 29
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Customer'[City]",
+          "file": "definition/tables/Customer.tmdl",
+          "line": 37
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Customer'[State]",
+          "file": "definition/tables/Customer.tmdl",
+          "line": 45
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Customer'[Postal Code]",
+          "file": "definition/tables/Customer.tmdl",
+          "line": 53
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Customer'[Country]",
+          "file": "definition/tables/Customer.tmdl",
+          "line": 61
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Customer'[Email]",
+          "file": "definition/tables/Customer.tmdl",
+          "line": 69
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Customer'[Join Date]",
+          "file": "definition/tables/Customer.tmdl",
+          "line": 77
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Customer'[Loyalty Tier]",
+          "file": "definition/tables/Customer.tmdl",
+          "line": 93
+        },
+        {
+          "layer": "model",
+          "objectType": "Table",
+          "objectName": "'Date'",
+          "file": "definition/tables/Date.tmdl",
+          "line": 1
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Date'[Date]",
+          "file": "definition/tables/Date.tmdl",
+          "line": 4
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Date'[Year]",
+          "file": "definition/tables/Date.tmdl",
+          "line": 16
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Date'[Quarter]",
+          "file": "definition/tables/Date.tmdl",
+          "line": 24
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Date'[Quarter Number]",
+          "file": "definition/tables/Date.tmdl",
+          "line": 32
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Date'[Month]",
+          "file": "definition/tables/Date.tmdl",
+          "line": 40
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Date'[Month Number]",
+          "file": "definition/tables/Date.tmdl",
+          "line": 48
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Date'[Day of Week]",
+          "file": "definition/tables/Date.tmdl",
+          "line": 56
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Date'[Day Number]",
+          "file": "definition/tables/Date.tmdl",
+          "line": 64
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Date'[Week of Year]",
+          "file": "definition/tables/Date.tmdl",
+          "line": 72
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Date'[Is Weekend]",
+          "file": "definition/tables/Date.tmdl",
+          "line": 80
+        },
+        {
+          "layer": "model",
+          "objectType": "CalculatedTable",
+          "objectName": "'Employee Grouping'",
+          "file": "definition/tables/Employee Grouping.tmdl",
+          "line": 1
+        },
+        {
+          "layer": "model",
+          "objectType": "CalculatedTableColumn",
+          "objectName": "'Employee Grouping'[Employee Grouping]",
+          "file": "definition/tables/Employee Grouping.tmdl",
+          "line": 4
+        },
+        {
+          "layer": "model",
+          "objectType": "Table",
+          "objectName": "'Employee'",
+          "file": "definition/tables/Employee.tmdl",
+          "line": 1
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Employee'[Employee ID]",
+          "file": "definition/tables/Employee.tmdl",
+          "line": 4
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Employee'[Employee Name]",
+          "file": "definition/tables/Employee.tmdl",
+          "line": 13
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Employee'[Title]",
+          "file": "definition/tables/Employee.tmdl",
+          "line": 21
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Employee'[Department]",
+          "file": "definition/tables/Employee.tmdl",
+          "line": 29
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Employee'[Hire Date]",
+          "file": "definition/tables/Employee.tmdl",
+          "line": 37
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Employee'[Manager ID]",
+          "file": "definition/tables/Employee.tmdl",
+          "line": 48
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Employee'[Region]",
+          "file": "definition/tables/Employee.tmdl",
+          "line": 56
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Employee'[Email]",
+          "file": "definition/tables/Employee.tmdl",
+          "line": 64
+        },
+        {
+          "layer": "model",
+          "objectType": "Table",
+          "objectName": "'Product'",
+          "file": "definition/tables/Product.tmdl",
+          "line": 1
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Product'[Product ID]",
+          "file": "definition/tables/Product.tmdl",
+          "line": 4
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Product'[Product Name]",
+          "file": "definition/tables/Product.tmdl",
+          "line": 13
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Product'[Category]",
+          "file": "definition/tables/Product.tmdl",
+          "line": 21
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Product'[Subcategory]",
+          "file": "definition/tables/Product.tmdl",
+          "line": 29
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Product'[Brand]",
+          "file": "definition/tables/Product.tmdl",
+          "line": 37
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Product'[Color]",
+          "file": "definition/tables/Product.tmdl",
+          "line": 45
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Product'[Size]",
+          "file": "definition/tables/Product.tmdl",
+          "line": 53
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Product'[Standard Cost]",
+          "file": "definition/tables/Product.tmdl",
+          "line": 61
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Product'[List Price]",
+          "file": "definition/tables/Product.tmdl",
+          "line": 69
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Product'[Supplier Name]",
+          "file": "definition/tables/Product.tmdl",
+          "line": 77
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Product'[Discontinued]",
+          "file": "definition/tables/Product.tmdl",
+          "line": 85
+        },
+        {
+          "layer": "model",
+          "objectType": "Table",
+          "objectName": "'Promotion'",
+          "file": "definition/tables/Promotion.tmdl",
+          "line": 1
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Promotion'[Promotion ID]",
+          "file": "definition/tables/Promotion.tmdl",
+          "line": 4
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Promotion'[Promotion Name]",
+          "file": "definition/tables/Promotion.tmdl",
+          "line": 13
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Promotion'[Promotion Type]",
+          "file": "definition/tables/Promotion.tmdl",
+          "line": 21
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Promotion'[Discount Pct]",
+          "file": "definition/tables/Promotion.tmdl",
+          "line": 29
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Promotion'[Start Date]",
+          "file": "definition/tables/Promotion.tmdl",
+          "line": 37
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Promotion'[End Date]",
+          "file": "definition/tables/Promotion.tmdl",
+          "line": 48
+        },
+        {
+          "layer": "model",
+          "objectType": "Table",
+          "objectName": "'Sales'",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 1
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Sale ID]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 46
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Sale Date]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 55
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Product ID]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 66
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Customer ID]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 74
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Store ID]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 82
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Employee ID]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 90
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Promotion ID]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 98
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Quantity]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 106
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Unit Price]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 114
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Unit Cost]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 122
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Discount Amount]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 130
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Total Amount]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 138
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Net Amount]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 146
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Total Sales]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 4
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Total Quantity]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 7
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Average Unit Price]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 10
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Total Cost]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 13
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Total Discount]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 16
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Net Sales]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 19
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Total Margin]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 22
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Margin %]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 25
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Order Count]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 28
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Average Order Value]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 31
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Distinct Customers]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 34
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Sales YTD]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 37
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Sales LY]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 40
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Sales YoY %]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 43
+        },
+        {
+          "layer": "model",
+          "objectType": "Table",
+          "objectName": "'Store'",
+          "file": "definition/tables/Store.tmdl",
+          "line": 1
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Store'[Store ID]",
+          "file": "definition/tables/Store.tmdl",
+          "line": 4
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Store'[Store Name]",
+          "file": "definition/tables/Store.tmdl",
+          "line": 13
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Store'[Store Type]",
+          "file": "definition/tables/Store.tmdl",
+          "line": 21
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Store'[City]",
+          "file": "definition/tables/Store.tmdl",
+          "line": 29
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Store'[State]",
+          "file": "definition/tables/Store.tmdl",
+          "line": 37
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Store'[Region]",
+          "file": "definition/tables/Store.tmdl",
+          "line": 45
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Store'[Country]",
+          "file": "definition/tables/Store.tmdl",
+          "line": 53
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Store'[Open Date]",
+          "file": "definition/tables/Store.tmdl",
+          "line": 61
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Store'[Latitude]",
+          "file": "definition/tables/Store.tmdl",
+          "line": 72
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Store'[Longitude]",
+          "file": "definition/tables/Store.tmdl",
+          "line": 80
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Store'[Square Feet]",
+          "file": "definition/tables/Store.tmdl",
+          "line": 88
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "NOT_REACHED_FROM_REPORT",
+        "name": "Not reached from the report",
+        "category": "Maintenance",
+        "severity": 1,
+        "layer": "model",
+        "slug": "not-reached-from-report",
+        "url": "https://pbiplint.com/rules/not-reached-from-report",
+        "status": "builtin"
+      },
+      "count": 38,
+      "findings": [
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Sales LY]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 40,
+          "detail": "referenced only by [Sales YoY %], which nothing reaches either"
+        },
+        {
+          "layer": "model",
+          "objectType": "Measure",
+          "objectName": "[Sales YoY %]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 43,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Customer'[Customer Name]",
+          "file": "definition/tables/Customer.tmdl",
+          "line": 13,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Customer'[Segment]",
+          "file": "definition/tables/Customer.tmdl",
+          "line": 21,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Customer'[Region]",
+          "file": "definition/tables/Customer.tmdl",
+          "line": 29,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Customer'[City]",
+          "file": "definition/tables/Customer.tmdl",
+          "line": 37,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Customer'[State]",
+          "file": "definition/tables/Customer.tmdl",
+          "line": 45,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Customer'[Postal Code]",
+          "file": "definition/tables/Customer.tmdl",
+          "line": 53,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Customer'[Country]",
+          "file": "definition/tables/Customer.tmdl",
+          "line": 61,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Customer'[Email]",
+          "file": "definition/tables/Customer.tmdl",
+          "line": 69,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Customer'[Loyalty Tier]",
+          "file": "definition/tables/Customer.tmdl",
+          "line": 93,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Date'[Quarter]",
+          "file": "definition/tables/Date.tmdl",
+          "line": 24,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Date'[Quarter Number]",
+          "file": "definition/tables/Date.tmdl",
+          "line": 32,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Date'[Month Number]",
+          "file": "definition/tables/Date.tmdl",
+          "line": 48,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Date'[Day of Week]",
+          "file": "definition/tables/Date.tmdl",
+          "line": 56,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Date'[Day Number]",
+          "file": "definition/tables/Date.tmdl",
+          "line": 64,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Date'[Is Weekend]",
+          "file": "definition/tables/Date.tmdl",
+          "line": 80,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Employee'[Hire Date]",
+          "file": "definition/tables/Employee.tmdl",
+          "line": 37,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Employee'[Manager ID]",
+          "file": "definition/tables/Employee.tmdl",
+          "line": 48,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Employee'[Email]",
+          "file": "definition/tables/Employee.tmdl",
+          "line": 64,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Product'[Subcategory]",
+          "file": "definition/tables/Product.tmdl",
+          "line": 29,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Product'[Color]",
+          "file": "definition/tables/Product.tmdl",
+          "line": 45,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Product'[Size]",
+          "file": "definition/tables/Product.tmdl",
+          "line": 53,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Product'[Standard Cost]",
+          "file": "definition/tables/Product.tmdl",
+          "line": 61,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Product'[List Price]",
+          "file": "definition/tables/Product.tmdl",
+          "line": 69,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Product'[Supplier Name]",
+          "file": "definition/tables/Product.tmdl",
+          "line": 77,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Product'[Discontinued]",
+          "file": "definition/tables/Product.tmdl",
+          "line": 85,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Promotion'[Promotion Type]",
+          "file": "definition/tables/Promotion.tmdl",
+          "line": 21,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Promotion'[Discount Pct]",
+          "file": "definition/tables/Promotion.tmdl",
+          "line": 29,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Promotion'[Start Date]",
+          "file": "definition/tables/Promotion.tmdl",
+          "line": 37,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Promotion'[End Date]",
+          "file": "definition/tables/Promotion.tmdl",
+          "line": 48,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Net Amount]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 146,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Store'[Store Name]",
+          "file": "definition/tables/Store.tmdl",
+          "line": 13,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Store'[Region]",
+          "file": "definition/tables/Store.tmdl",
+          "line": 45,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Store'[Open Date]",
+          "file": "definition/tables/Store.tmdl",
+          "line": 61,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Store'[Latitude]",
+          "file": "definition/tables/Store.tmdl",
+          "line": 72,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Store'[Longitude]",
+          "file": "definition/tables/Store.tmdl",
+          "line": 80,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Store'[Square Feet]",
+          "file": "definition/tables/Store.tmdl",
+          "line": 88,
+          "detail": "nothing in the report reaches it, and no measure or column references it"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "DEFAULT_STEP_NAMES",
+        "name": "Steps keep Power Query's default names",
+        "category": "Maintenance",
+        "severity": 1,
+        "layer": "powerquery",
+        "slug": "default-step-names",
+        "url": "https://pbiplint.com/rules/default-step-names",
+        "status": "builtin"
+      },
+      "count": 7,
+      "findings": [
+        {
+          "layer": "model",
+          "objectType": "Partition",
+          "objectName": "Customer",
+          "file": "definition/tables/Customer.tmdl",
+          "line": 106,
+          "column": 9,
+          "detail": "query 'Customer': 2 steps keep default names, 'Promoted Headers' and 'Changed Type'"
+        },
+        {
+          "layer": "model",
+          "objectType": "Partition",
+          "objectName": "Date",
+          "file": "definition/tables/Date.tmdl",
+          "line": 93,
+          "column": 9,
+          "detail": "query 'Date': 2 steps keep default names, 'Promoted Headers' and 'Changed Type'"
+        },
+        {
+          "layer": "model",
+          "objectType": "Partition",
+          "objectName": "Employee",
+          "file": "definition/tables/Employee.tmdl",
+          "line": 77,
+          "column": 9,
+          "detail": "query 'Employee': 2 steps keep default names, 'Promoted Headers' and 'Changed Type'"
+        },
+        {
+          "layer": "model",
+          "objectType": "Partition",
+          "objectName": "Product",
+          "file": "definition/tables/Product.tmdl",
+          "line": 98,
+          "column": 9,
+          "detail": "query 'Product': 2 steps keep default names, 'Promoted Headers' and 'Changed Type'"
+        },
+        {
+          "layer": "model",
+          "objectType": "Partition",
+          "objectName": "Promotion",
+          "file": "definition/tables/Promotion.tmdl",
+          "line": 64,
+          "column": 9,
+          "detail": "query 'Promotion': 2 steps keep default names, 'Promoted Headers' and 'Changed Type'"
+        },
+        {
+          "layer": "model",
+          "objectType": "Partition",
+          "objectName": "Sales",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 159,
+          "column": 9,
+          "detail": "query 'Sales': 2 steps keep default names, 'Promoted Headers' and 'Changed Type'"
+        },
+        {
+          "layer": "model",
+          "objectType": "Partition",
+          "objectName": "Store",
+          "file": "definition/tables/Store.tmdl",
+          "line": 116,
+          "column": 9,
+          "detail": "query 'Store': 2 steps keep default names, 'Promoted Headers' and 'Changed Type'"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "HIDDEN_VISUAL_WITH_FIELDS",
+        "name": "Hidden visual with fields bound",
+        "category": "Maintenance",
+        "severity": 1,
+        "layer": "report",
+        "slug": "hidden-visual-with-fields",
+        "url": "https://pbiplint.com/rules/hidden-visual-with-fields",
+        "status": "builtin"
+      },
+      "count": 4,
+      "findings": [
+        {
+          "layer": "report",
+          "objectType": "Visual",
+          "objectName": "\"Debug table\" on \"Overview\"",
+          "objectId": "4457e97e02f61c8f609b",
+          "file": "definition/pages/3cea48e58036b1654474/visuals/4457e97e02f61c8f609b/visual.json",
+          "line": 175,
+          "detail": "6 fields bound"
+        },
+        {
+          "layer": "report",
+          "objectType": "Visual",
+          "objectName": "\"Sales trend (old)\" on \"Overview\"",
+          "objectId": "db47426e580241dac6b8",
+          "file": "definition/pages/3cea48e58036b1654474/visuals/db47426e580241dac6b8/visual.json",
+          "line": 103,
+          "detail": "2 fields bound"
+        },
+        {
+          "layer": "report",
+          "objectType": "Visual",
+          "objectName": "\"Employee cost\" on \"Employees\"",
+          "objectId": "3fa0fc35d2dd20b9b1f2",
+          "file": "definition/pages/bb1ea3ba2a1defa1979b/visuals/3fa0fc35d2dd20b9b1f2/visual.json",
+          "line": 1,
+          "detail": "1 field bound, hidden with Group \"Employee details\""
+        },
+        {
+          "layer": "report",
+          "objectType": "Visual",
+          "objectName": "\"Employee sales\" on \"Employees\"",
+          "objectId": "de6a17691cc952e6d7dd",
+          "file": "definition/pages/bb1ea3ba2a1defa1979b/visuals/de6a17691cc952e6d7dd/visual.json",
+          "line": 1,
+          "detail": "2 fields bound, hidden with Group \"Employee details\""
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "ENSURE_TABLES_HAVE_RELATIONSHIPS",
+        "name": "Ensure tables have relationships",
+        "category": "Maintenance",
+        "severity": 1,
+        "layer": "model",
+        "slug": "ensure-tables-have-relationships",
+        "url": "https://pbiplint.com/rules/ensure-tables-have-relationships",
+        "status": "ported"
+      },
+      "count": 2,
+      "findings": [
+        {
+          "layer": "model",
+          "objectType": "CalculatedTable",
+          "objectName": "'DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92'",
+          "file": "definition/tables/DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92.tmdl",
+          "line": 1
+        },
+        {
+          "layer": "model",
+          "objectType": "CalculatedTable",
+          "objectName": "'Employee Grouping'",
+          "file": "definition/tables/Employee Grouping.tmdl",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "HARDCODED_YEAR_IN_FILTER",
+        "name": "Hardcoded year in a filter",
+        "category": "Report Design",
+        "severity": 1,
+        "layer": "report",
+        "slug": "hardcoded-year-in-filter",
+        "url": "https://pbiplint.com/rules/hardcoded-year-in-filter",
+        "status": "builtin"
+      },
+      "count": 1,
+      "findings": [
+        {
+          "layer": "report",
+          "objectType": "Page",
+          "objectName": "Page filter on \"Overview\"",
+          "objectId": "3cea48e58036b1654474",
+          "file": "definition/pages/3cea48e58036b1654474/page.json",
+          "line": 52,
+          "detail": "fixed year 2025 on 'Date'[Year]"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "LANDING_PAGE_NOT_SET",
+        "name": "No landing page set",
+        "category": "Report Design",
+        "severity": 1,
+        "layer": "report",
+        "slug": "landing-page-not-set",
+        "url": "https://pbiplint.com/rules/landing-page-not-set",
+        "status": "builtin"
+      },
+      "count": 1,
+      "findings": [
+        {
+          "layer": "report",
+          "objectType": "Report",
+          "objectName": "Report",
+          "objectId": "report",
+          "file": "definition/pages/pages.json",
+          "line": 16,
+          "detail": "opens on \"Scratch\", the page open when it was saved"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "SLICER_SELECTION_SAVED",
+        "name": "Slicer saved with a selection",
+        "category": "Report Design",
+        "severity": 1,
+        "layer": "report",
+        "slug": "slicer-selection-saved",
+        "url": "https://pbiplint.com/rules/slicer-selection-saved",
+        "status": "builtin"
+      },
+      "count": 1,
+      "findings": [
+        {
+          "layer": "report",
+          "objectType": "Visual",
+          "objectName": "\"Category\" on \"Overview\"",
+          "objectId": "2b5386e9de3e1fbb1afa",
+          "file": "definition/pages/3cea48e58036b1654474/visuals/2b5386e9de3e1fbb1afa/visual.json",
+          "line": 54,
+          "detail": "opens with this selection applied"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "DECIMAL_COLUMN_WITHOUT_FORMAT_STRING",
+        "name": "Visible decimal column with no format string",
+        "category": "Formatting",
+        "severity": 1,
+        "layer": "model",
+        "slug": "decimal-column-without-format-string",
+        "url": "https://pbiplint.com/rules/decimal-column-without-format-string",
+        "status": "builtin"
+      },
+      "count": 10,
+      "findings": [
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Product'[Standard Cost]",
+          "file": "definition/tables/Product.tmdl",
+          "line": 61
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Product'[List Price]",
+          "file": "definition/tables/Product.tmdl",
+          "line": 69
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Promotion'[Discount Pct]",
+          "file": "definition/tables/Promotion.tmdl",
+          "line": 29
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Unit Price]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 114
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Unit Cost]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 122
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Discount Amount]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 130
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Total Amount]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 138
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Net Amount]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 146
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Store'[Latitude]",
+          "file": "definition/tables/Store.tmdl",
+          "line": 72
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Store'[Longitude]",
+          "file": "definition/tables/Store.tmdl",
+          "line": 80
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "DATECOLUMN_FORMATSTRING",
+        "name": "Provide format string for \"Date\" columns",
+        "category": "Formatting",
+        "severity": 1,
+        "layer": "model",
+        "slug": "datecolumn-formatstring",
+        "url": "https://pbiplint.com/rules/datecolumn-formatstring",
+        "status": "ported"
+      },
+      "count": 9,
+      "findings": [
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Customer'[Join Date]",
+          "file": "definition/tables/Customer.tmdl",
+          "line": 77
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Date'[Date]",
+          "file": "definition/tables/Date.tmdl",
+          "line": 4
+        },
+        {
+          "layer": "model",
+          "objectType": "CalculatedTableColumn",
+          "objectName": "'DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92'[Date]",
+          "file": "definition/tables/DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92.tmdl",
+          "line": 6
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Employee'[Hire Date]",
+          "file": "definition/tables/Employee.tmdl",
+          "line": 37
+        },
+        {
+          "layer": "model",
+          "objectType": "CalculatedTableColumn",
+          "objectName": "'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'[Date]",
+          "file": "definition/tables/LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d.tmdl",
+          "line": 6
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Promotion'[Start Date]",
+          "file": "definition/tables/Promotion.tmdl",
+          "line": 37
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Promotion'[End Date]",
+          "file": "definition/tables/Promotion.tmdl",
+          "line": 48
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Sale Date]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 55
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Store'[Open Date]",
+          "file": "definition/tables/Store.tmdl",
+          "line": 61
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "ADD_DATA_CATEGORY_FOR_COLUMNS",
+        "name": "Add data category for columns",
+        "category": "Formatting",
+        "severity": 1,
+        "layer": "model",
+        "slug": "add-data-category-for-columns",
+        "url": "https://pbiplint.com/rules/add-data-category-for-columns",
+        "status": "ported"
+      },
+      "count": 6,
+      "findings": [
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Customer'[City]",
+          "file": "definition/tables/Customer.tmdl",
+          "line": 37
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Customer'[Country]",
+          "file": "definition/tables/Customer.tmdl",
+          "line": 61
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Store'[City]",
+          "file": "definition/tables/Store.tmdl",
+          "line": 29
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Store'[Country]",
+          "file": "definition/tables/Store.tmdl",
+          "line": 53
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Store'[Latitude]",
+          "file": "definition/tables/Store.tmdl",
+          "line": 72
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Store'[Longitude]",
+          "file": "definition/tables/Store.tmdl",
+          "line": 80
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE",
+        "name": "Relationship columns should be of integer data type",
+        "category": "Formatting",
+        "severity": 1,
+        "layer": "model",
+        "slug": "relationship-columns-should-be-of-integer-data-type",
+        "url": "https://pbiplint.com/rules/relationship-columns-should-be-of-integer-data-type",
+        "status": "ported"
+      },
+      "count": 4,
+      "findings": [
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Customer'[Join Date]",
+          "file": "definition/tables/Customer.tmdl",
+          "line": 77
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Date'[Date]",
+          "file": "definition/tables/Date.tmdl",
+          "line": 4
+        },
+        {
+          "layer": "model",
+          "objectType": "CalculatedTableColumn",
+          "objectName": "'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'[Date]",
+          "file": "definition/tables/LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d.tmdl",
+          "line": 6
+        },
+        {
+          "layer": "model",
+          "objectType": "Column",
+          "objectName": "'Sales'[Sale Date]",
+          "file": "definition/tables/Sales.tmdl",
+          "line": 55
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "MARK_PRIMARY_KEYS",
+        "name": "Mark primary keys",
+        "category": "Formatting",
+        "severity": 1,
+        "layer": "model",
+        "slug": "mark-primary-keys",
+        "url": "https://pbiplint.com/rules/mark-primary-keys",
+        "status": "ported"
+      },
+      "count": 1,
+      "findings": [
+        {
+          "layer": "model",
+          "objectType": "CalculatedTableColumn",
+          "objectName": "'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'[Date]",
+          "file": "definition/tables/LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d.tmdl",
+          "line": 6
+        }
+      ]
+    }
+  ]
+}

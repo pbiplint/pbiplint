@@ -186,6 +186,44 @@ describe("the gate on a rule that could not finish, in the CLI", () => {
   });
 });
 
+/** A folder holding two copies of `fixture`, a and b, so one run lints both (#237). */
+function twoCopies(name: string, fixture: string): string {
+  const root = tempDir(name);
+  for (const at of ["a", "b"])
+    cpSync(fixture, join(root, at, "Model.SemanticModel"), { recursive: true });
+  return root;
+}
+
+describe("a rule that could not finish, in a run over several projects (#237)", () => {
+  it("names each project first on its stderr lines, `<path>: rule <id> failed: `", async () => {
+    // One project's run gives the lines each project's follow its path with: one for each of the
+    // fixture's two queries, and one for the throw out of check.
+    const one = (await run([CLEAN_FIXTURE, "--format", "json"])).err
+      .split("\n")
+      .filter((l) => l.startsWith("rule PLANTED_LEAK failed: "));
+    expect(one).toHaveLength(3);
+    const r = await run([twoCopies("rule-error-several", CLEAN_FIXTURE), "--format", "json"]);
+    expect(r.code).toBe(1);
+    const failed = r.err.split("\n").filter((l) => l.includes("rule PLANTED_LEAK failed: "));
+    expect(failed).toEqual([
+      ...one.map((l) => `a/Model.SemanticModel: ${l}`),
+      ...one.map((l) => `b/Model.SemanticModel: ${l}`),
+    ]);
+  });
+  it("keeps every part of every value out of each project's stderr line and the report", async () => {
+    for (const format of ["json", "text"]) {
+      const r = await run([
+        twoCopies("rule-error-several-secrets", SECRETS_FIXTURE),
+        "--format",
+        format,
+      ]);
+      expect(r.err).toMatch(/^a\/Model\.SemanticModel: rule PLANTED_LEAK failed: /m);
+      expect(r.err).toMatch(/^b\/Model\.SemanticModel: rule PLANTED_LEAK failed: /m);
+      expect(leaks(r.out + r.err, secrets)).toEqual([]);
+    }
+  });
+});
+
 interface Rpc {
   id?: number;
   result?: { content?: { text: string }[] };

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { LintFile } from "../src/engine/lint.js";
 import { mWork, type MBudget } from "../src/m/budget.js";
+import { maskLiterals } from "../src/m/mask.js";
 import { readM } from "../src/m/read.js";
 import { buildModel } from "../src/model/build.js";
 import { parseTmdl } from "../src/tmdl/parse.js";
@@ -97,5 +98,36 @@ describe("readM's budget (v3 spec, section 7, amended October 27, 2026)", () => 
       "M is too large or complex to read (over pbiplint's limit for one query)",
       "M is too large or complex to read (over pbiplint's limit for one model's M)",
     ]);
+  });
+});
+
+// The review's fix round 1: a text literal of millions of characters overflowed the regex stack.
+describe("long text literals, scanned without a regex", () => {
+  const SIXTEEN_MB = 16_000_000;
+  const TOO_LARGE = "M is too large or complex to read (over pbiplint's limit for one query)";
+  it.each([
+    ["a 16 MB literal", `"${"a".repeat(SIXTEEN_MB)}"`, '"…"'],
+    ["an unclosed 16 MB literal", `"${"a,".repeat(SIXTEEN_MB / 2)}`, '"…'],
+    ["16 MB of doubled quotes", `"${'""'.repeat(SIXTEEN_MB / 2)}"`, '"…"'],
+  ])("reads %s with mWork, readM, and maskLiterals", async (_shape, m, masked) => {
+    expect(mWork(m)).toEqual({ units: 3 + Math.floor(m.length / 8), depth: 0 });
+    expect(maskLiterals(m)).toBe(masked);
+    const read = await readPartition(m);
+    expect(read.issues).toEqual([
+      expect.objectContaining({
+        line: 4,
+        column: 12,
+        text: `source = ${masked}`,
+        reason: TOO_LARGE,
+      }),
+    ]);
+  });
+  it("keeps a 16 MB quoted name, and a 16 MB TMDL name of doubled apostrophes", () => {
+    const name = `#"${'""'.repeat(SIXTEEN_MB / 2)}" = 1`;
+    expect(maskLiterals(name)).toBe(name);
+    const tmdl = `measure '${"''".repeat(SIXTEEN_MB / 2)}' = "x"`;
+    expect(maskLiterals(tmdl, { tmdl: true })).toBe(`${tmdl.slice(0, -3)}"…"`);
+    const open = `measure '${"''".repeat(SIXTEEN_MB / 2)} = "x"`;
+    expect(maskLiterals(open, { tmdl: true })).toBe(`${open.slice(0, -3)}"…"`);
   });
 });

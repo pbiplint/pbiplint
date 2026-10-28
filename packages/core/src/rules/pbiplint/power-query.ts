@@ -4,7 +4,6 @@ import {
   calls,
   identifierName,
   type MCall,
-  isWithin,
   nodesOfKind,
   nodesWithin,
   parentOf,
@@ -922,7 +921,7 @@ const ONE_CASE_EXTENSION = /^\.(?:log)$/i;
 function listingKeepsCase(m: MIndex, q: MQuery, table: Node): boolean {
   const transformsExtension = (c: MCall): boolean =>
     c.name === "Table.TransformColumns" &&
-    textLiterals(q).some((t) => t.value === "Extension" && isWithin(q, t.node, c.node));
+    nodesWithin(q, c.node, Kind.LiteralExpression).some((n) => textValue(n) === "Extension");
   for (let c = callOf(boundValue(m, q, table).node), depth = 0; c && depth < 50; depth++) {
     if (FILE_LISTING.test(c.name)) return true;
     if (transformsExtension(c) || !c.args[0]) return false;
@@ -954,8 +953,8 @@ export const EXTENSION_FILTER_CASE = pbiplintRule({
         const [table, condition] = c.args;
         if (c.name !== "Table.SelectRows" || !table || !condition || !listingKeepsCase(m, q, table))
           return [];
-        return nodesOfKind(q, Kind.EqualityExpression).flatMap((node) => {
-          if (node.kind !== Kind.EqualityExpression || !isWithin(q, node, condition)) return [];
+        return nodesWithin(q, condition, Kind.EqualityExpression).flatMap((node) => {
+          if (node.kind !== Kind.EqualityExpression) return [];
           const text = isExtension(node.left)
             ? textValue(unwrap(node.right))
             : isExtension(node.right)

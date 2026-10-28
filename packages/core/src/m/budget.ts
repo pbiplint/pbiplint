@@ -1,3 +1,5 @@
+import { closingQuote } from "./mask.js";
+
 /** A query's work as `mWork` counts it, and its deepest bracket nesting. */
 export interface MWork {
   units: number;
@@ -19,12 +21,12 @@ export interface MBudget {
 export const M_BUDGET: MBudget = { query: 2_000_000, model: 4_000_000, depth: 128 };
 
 /**
- * M split as the budget counts it: a text literal or quoted name (`""` inside, open to the end),
+ * M split as the budget counts it, after text literals and quoted names, which `closingQuote` reads:
  * a comment (group 1), a word (2), a line break as M's lexer breaks lines (3), spaces (4), or one
  * other character. A line comment ends at \n, U+2028, or U+2029, as M's lexer ends it.
  */
 const SCAN =
-  /#?"(?:[^"]|"")*"?|(\/\/[^\n\u2028\u2029]*|\/\*[\s\S]*?(?:\*\/|$))|([\w.@]+)|([\n\u2028\u2029])|([^\S\n\u2028\u2029]+)|[\s\S]/g;
+  /(\/\/[^\n\u2028\u2029]*|\/\*[\s\S]*?(?:\*\/|$))|([\w.@]+)|([\n\u2028\u2029])|([^\S\n\u2028\u2029]+)|[\s\S]/y;
 const BREAKS = /[\n\u2028\u2029]/g;
 /** The words M reads as operators. */
 const WORD_OPERATORS = new Set(["and", "or", "not", "as", "is", "meta"]);
@@ -54,7 +56,21 @@ export function mWork(text: string): MWork {
     onLine = 0;
     lines++;
   };
-  for (const [t, comment, word, lineBreak, spaces] of text.matchAll(SCAN)) {
+  for (let i = 0; i < text.length;) {
+    // A text literal or a quoted name (`""` inside, open to the end), scanned by hand: a regex
+    // overflowed its stack on one of millions of characters.
+    const name = text[i] === "#" && text[i + 1] === '"';
+    const literal = name || text[i] === '"';
+    let t: string, comment: string | undefined, word: string | undefined;
+    let lineBreak: string | undefined, spaces: string | undefined;
+    if (literal) {
+      const close = closingQuote(text, name ? i + 1 : i);
+      t = text.slice(i, close < 0 ? text.length : close + 1);
+    } else {
+      SCAN.lastIndex = i;
+      [t, comment, word, lineBreak, spaces] = SCAN.exec(text)!;
+    }
+    i += t.length;
     if (spaces !== undefined) continue;
     if (lineBreak !== undefined) {
       endLine();
@@ -69,7 +85,7 @@ export function mWork(text: string): MWork {
       continue;
     }
     // A comment, a literal, or a quoted name: only the lines it spans count.
-    if (comment !== undefined || t.length > 1) {
+    if (comment !== undefined || literal) {
       for (const _ of t.matchAll(BREAKS)) endLine();
       continue;
     }

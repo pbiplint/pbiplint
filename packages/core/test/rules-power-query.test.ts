@@ -1243,4 +1243,26 @@ describe("EXTENSION_FILTER_CASE (v3 spec, section 9.10)", () => {
       "query 'Gateway Logs', step 'Csv': the extension test matches \".CSV\" but not \".csv\"",
     ]);
   });
+  it("reads 2,000 filters over one file listing, each by its own condition, within 2 seconds", async () => {
+    const n = 2000;
+    const tmdl = table(
+      "Many Filters",
+      "let",
+      '\tSource = Folder.Files("C:\\Demo\\Data"),',
+      ...Array.from(
+        { length: n },
+        (_, i) => `\tF${i} = Table.SelectRows(Source, each [Extension] = ".csv${i}"),`,
+      ),
+      "\tLast = F0",
+      "in",
+      "\tLast",
+    );
+    const started = performance.now();
+    const findings = await mFindings(rule, tmdl);
+    expect(performance.now() - started).toBeLessThan(2_000);
+    expect(findings).toHaveLength(n);
+    expect(findings[n - 1]!.detail).toBe(
+      `query 'Many Filters', step 'F${n - 1}': the extension test matches ".csv${n - 1}" but not ".CSV${n - 1}"`,
+    );
+  });
 });

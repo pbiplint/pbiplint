@@ -1300,6 +1300,33 @@ describe("renderSeveral (#237)", () => {
     expect(container.onchange).toBeNull();
     expect(container.onclick).toBeNull();
   });
+  it("names a config file's unknown rule ids once, under the first project that uses it", async () => {
+    // Two projects share the root config, the third has its own. Each file's ids are named once,
+    // gathered from every project that used it, by the file's path in the drop, as the CLI names
+    // them once per file by its path.
+    const typo = async (rules: Record<string, string>) =>
+      lint(bare, { config: resolveConfig({ rules }) });
+    const shared = "repo/pbiplint.config.json";
+    const own = "repo/c/pbiplint.config.json";
+    const configured: ProjectRun[] = [
+      { path: "a", result: await typo({ NOPE: "off" }), config, configPath: shared },
+      { path: "b", result: await typo({ NOPE: "off", TYPOED: "off" }), config, configPath: shared },
+      { path: "c", result: await typo({ OTHER: "off" }), config, configPath: own },
+    ];
+    renderSeveral(container, configured, [{ notes: [] }, { notes: [] }, { notes: [] }]);
+    const unknown = (section: HTMLElement) =>
+      [...section.querySelectorAll(".notice")]
+        .map((n) => n.textContent!)
+        .filter((t) => t.includes("names no rule"));
+    expect(sections().map(unknown)).toEqual([
+      [
+        `${shared} names no rule called "NOPE".`,
+        `${shared} names no rule called "TYPOED".`,
+      ],
+      [],
+      [`${own} names no rule called "OTHER".`],
+    ]);
+  });
   it("names each section's downloads by its project number, and one run's as always", () => {
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test");
     vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);

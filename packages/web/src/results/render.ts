@@ -50,6 +50,12 @@ export interface RenderOptions {
    * sections, and the headings sit a level below the section's own.
    */
   section?: string;
+  /**
+   * In a section of several, the config's unknown rule ids this section names, and the config's
+   * path in the drop to name them by, in place of the result's own: each config file's are named
+   * once on the page, under the first project that uses it, as the CLI names them once per file.
+   */
+  unknown?: { config: string; ids: string[] };
 }
 
 /** Heading levels, from the results' own: h2 for one run, a level deeper in a section. */
@@ -188,8 +194,12 @@ export function renderResults(
     // What the reader could not read, or read as a legacy part, follows the input's notes, so no
     // read failure is silent.
     ...result.diagnostics.map((d) => h("p", { class: "notice" }, ...withLearnLinks(d.message))),
-    ...result.summary.unknownRules.map((id) =>
-      h("p", { class: "notice" }, `pbiplint.config.json names no rule called "${id}".`),
+    ...(options.unknown?.ids ?? result.summary.unknownRules).map((id) =>
+      h(
+        "p",
+        { class: "notice" },
+        `${options.unknown?.config ?? "pbiplint.config.json"} names no rule called "${id}".`,
+      ),
     ),
     // Beside the other notices rather than below the groups: a rule that threw is worth reporting
     // whether or not the rules that ran found anything, and a clean run stops before the groups.
@@ -335,6 +345,20 @@ export function renderSeveral(
   // they go, as renderResults clears its own on every render.
   container.onchange = null;
   container.onclick = null;
+  // Each config file's unknown ids, gathered from every project that used it, for the first such
+  // project to name. A project with no config file uses pbiplint's defaults, which name none.
+  const unknown = new Map<string, { first: number; ids: Set<string> }>();
+  runs.forEach(({ configPath, result }, i) => {
+    if (configPath === undefined) return;
+    const entry = unknown.get(configPath) ?? { first: i, ids: new Set<string>() };
+    unknown.set(configPath, entry);
+    for (const ruleId of result.summary.unknownRules) entry.ids.add(ruleId);
+  });
+  const unknownAt = (i: number): RenderOptions["unknown"] => {
+    const config = runs[i]!.configPath;
+    const entry = config === undefined ? undefined : unknown.get(config);
+    return { config: config ?? "", ids: entry?.first === i ? [...entry.ids] : [] };
+  };
   container.replaceChildren(
     privacyLine(),
     h("p", { class: "summary" }, `${runSummaryLine(runSummary(runs))}.`),
@@ -354,6 +378,7 @@ export function renderSeveral(
         files: sources[i]?.files,
         notes: sources[i]?.notes,
         section: id(i),
+        unknown: unknownAt(i),
       });
       return h(
         "section",

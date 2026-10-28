@@ -1,4 +1,4 @@
-import { unquoteName } from "../tmdl/quote.js";
+import { quoteEnd, unquoteName } from "../tmdl/quote.js";
 import type { ParsedFile, TmdlNode } from "../tmdl/types.js";
 import type {
   AlternateOf,
@@ -50,11 +50,27 @@ function named(n: TmdlNode, name = n.name ?? ""): Named {
   };
 }
 
-/** Split `Table.Column` or `'Some Table'.'Some Column'` into its unquoted parts. */
+/** Whether `s` is a column as `('(?:[^']|'')*'|.+)$` reads one: a whole quoted name, or one line. */
+const columnPart = (s: string): boolean =>
+  s !== "" && (quoteEnd(s) === s.length - 1 || !/[\n\r\u2028\u2029]/.test(s));
+
+/**
+ * Split `Table.Column` or `'Some Table'.'Some Column'` into its unquoted parts, as
+ * `/^('(?:[^']|'')*'|[^.]+)\.('(?:[^']|'')*'|.+)$/` did, read by hand: the regex overflowed its
+ * stack on a name of millions of characters (the pre-release security review, October 27, 2026).
+ */
 export function splitQualifiedName(ref: string): { table: string; column: string } {
-  const m = /^('(?:[^']|'')*'|[^.]+)\.('(?:[^']|'')*'|.+)$/.exec(ref.trim());
-  return m
-    ? { table: unquoteName(m[1]!), column: unquoteName(m[2]!) }
+  const s = ref.trim();
+  const q = quoteEnd(s);
+  const dot = s.indexOf(".");
+  const end =
+    q > 0 && s[q + 1] === "." && columnPart(s.slice(q + 2))
+      ? q + 1
+      : dot > 0 && columnPart(s.slice(dot + 1))
+        ? dot
+        : -1;
+  return end > 0
+    ? { table: unquoteName(s.slice(0, end)), column: unquoteName(s.slice(end + 1)) }
     : { table: "", column: unquoteName(ref) };
 }
 

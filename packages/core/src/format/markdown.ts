@@ -84,7 +84,10 @@ const count = (s: string, ch: string): number => s.split(ch).length - 1;
  * links or renders.
  */
 function spanned(w: string, table: boolean): string {
-  let after = /[.,;:!?]+$/.exec(w)?.[0] ?? "";
+  // A loop, not `/[.,;:!?]+$/`, which backtracked by the square of a run of punctuation.
+  let end = w.length;
+  while (end > 0 && ".,;:!?".includes(w[end - 1]!)) end--;
+  let after = w.slice(end);
   let core = w.slice(0, w.length - after.length);
   let before = "";
   if (core.endsWith(")") && count(core, ")") > count(core, "(")) {

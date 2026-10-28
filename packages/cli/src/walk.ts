@@ -148,15 +148,80 @@ const LINK: Unread = {
 };
 
 /**
- * A report or model a project file names outside both the folder the user named and the project
- * folder, the folder that holds the .pbip: references are followed only inside one of them.
+ * A report or model at `p`, which the project at `base` names outside both the folder the user
+ * named (`named`) and the project folder: references are followed only inside one of them. Its
+ * notice says what the user can do (outsideHint).
  */
-const OUTSIDE: Unread = {
-  reason:
-    "it is outside the path you named and the project folder; lint a folder that holds both to include it",
-  says: "is outside the path you named and the project folder",
-  hint: "lint a folder that holds both to include it",
-};
+function outside(base: string, named: string | undefined, p: string): Unread {
+  const says = "is outside the path you named and the project folder";
+  const hint = outsideHint(resolve(base), named, resolve(p));
+  return { says, hint, reason: `it ${says}${hint ? `; ${hint}` : ""}` };
+}
+
+/** How many folders the search behind an outside reference's hint lists before it gives up. */
+const HINT_SEARCH_FOLDERS = 2_000;
+
+/**
+ * What the user can do about a reference to `p` the project at `base` was refused, by the folder
+ * nearest them that holds both by their paths as written: lint it, naming it relative to the
+ * project folder as the notice names `p`, when linting it reads this project alone, which then
+ * follows the reference; or nothing yet, when it holds more (a model several projects share, say),
+ * since it is refused as a folder holding several projects is, or read as a part. It is judged by
+ * the search that refusal makes (foundBelow and projectsBelow), so the two cannot disagree. None
+ * when the reference leads out only through a link, which no folder named would follow, or when
+ * the only folder holding both is the file system's root, which is never searched.
+ */
+function outsideHint(base: string, named: string | undefined, p: string): string | undefined {
+  if (within(base, p) || (named !== undefined && within(resolve(named), p))) return undefined;
+  let top = dirname(base);
+  while (!within(top, p)) {
+    if (dirname(top) === top) return undefined;
+    top = dirname(top);
+  }
+  if (dirname(top) === top || !reachedAsWritten(top, p)) return undefined;
+  const one = oneProjectAt(top);
+  if (one === undefined) return "lint a folder that holds both and no other project to include it";
+  if (!one)
+    return "pbiplint does not yet lint it with this project, since the folder that holds both holds more than this project";
+  return `lint the folder that holds both (${toPosix(relative(base, top))} from the project folder) to include it`;
+}
+
+/** Whether `p` really is where its path from `top` says, so no link on the way leads elsewhere. */
+function reachedAsWritten(top: string, p: string): boolean {
+  try {
+    return realpathSync.native(p) === join(realpathSync.native(top), relative(top, p));
+  } catch (e) {
+    // A path that is not there is judged as written, as insideProject judges it.
+    if (isSystemError(e)) return true;
+    throw e;
+  }
+}
+
+/**
+ * Whether linting the plain folder `dir` reads the one project found below it, as readFolder
+ * does: false when it is read some other way (as a part, or a PBIP folder) or lists several
+ * projects, and undefined when the search lists more than HINT_SEARCH_FOLDERS folders.
+ */
+function oneProjectAt(dir: string): boolean | undefined {
+  const name = basename(dir);
+  if (name.endsWith(".Report") || name.endsWith(".SemanticModel") || name === "definition")
+    return false;
+  let listed: Dirent[];
+  try {
+    listed = readdirSync(dir, { withFileTypes: true });
+  } catch (e) {
+    if (isSystemError(e)) return false;
+    throw e;
+  }
+  const part = (e: Dirent): boolean =>
+    (e.name.endsWith(".Report") || e.name.endsWith(".SemanticModel") || e.name === "definition") &&
+    (e.isDirectory() || (e.isSymbolicLink() && folderAt(join(dir, e.name)) === true));
+  if (listed.some((e) => part(e) || isPbipEntry(dir, e))) return false;
+  const budget = { left: HINT_SEARCH_FOLDERS };
+  const w: Walk = { base: dir, project: { root: dir, absent: {}, diagnostics: [] }, legacy: [] };
+  const found = foundBelow(w, dir, undefined, budget);
+  return budget.left < 0 ? undefined : projectsBelow(found).length === 1;
+}
 
 const OUTSIDE_MODEL =
   "the model this report reads is outside the path you named and the project folder";
@@ -174,6 +239,11 @@ function insideProject(root: string, p: string): boolean {
     // Both as written, so a root reached through a link is not set against a real path.
     if (!isSystemError(e)) throw e;
   }
+  return within(r, q);
+}
+
+/** Whether the path `q` is `r` or below it, as written. */
+function within(r: string, q: string): boolean {
   const way = relative(r, q);
   return !isAbsolute(way) && way !== ".." && !way.startsWith(`..${sep}`);
 }
@@ -574,7 +644,7 @@ function resolvePbip(input: string, path: string, named: string | undefined): Re
       folder,
       folder,
       (w) => {
-        unread(w, reportFolder, OUTSIDE);
+        unread(w, reportFolder, outside(folder, named, reportFolder));
         return w.project;
       },
       named,
@@ -650,7 +720,7 @@ function readNamed(
     const modelFolder = resolve(reportFolder, toPosix(ref.path));
     if (!followed(w.base, w.named, modelFolder)) {
       // Not followed, and nothing in it is looked up.
-      unread(w, modelFolder, OUTSIDE);
+      unread(w, modelFolder, outside(w.base, w.named, modelFolder));
       out.absent.model = OUTSIDE_MODEL;
     } else if (folderAt(modelFolder)) {
       model = readPart(w, "model", modelFolder, modelPart);
@@ -882,7 +952,10 @@ function foundBelow(
   w: Walk,
   dir: string,
   found: FoundBelow = { pbips: [], reports: [], models: [] },
+  budget?: { left: number },
 ): FoundBelow {
+  // A bounded search (outsideHint's) stops once it has listed its folders, its count below zero.
+  if (budget && --budget.left < 0) return found;
   let entries: Dirent[];
   try {
     entries = readdirSync(dir, { withFileTypes: true });
@@ -898,7 +971,7 @@ function foundBelow(
     else if (entry.name.endsWith(".Report"))
       found.reports.push({ path, pbir: textAt(join(p, "definition.pbir")) });
     else if (entry.name.endsWith(".SemanticModel")) found.models.push(path);
-    else foundBelow(w, p, found);
+    else foundBelow(w, p, found, budget);
   }
   return found;
 }

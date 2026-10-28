@@ -32,16 +32,25 @@ const linkNotice = (path: string) => ({
   path,
   message: `${path} is a symbolic link, which pbiplint does not follow, so it was not linted`,
 });
-/** The notice for a path a project file names outside both the path named and the project folder. */
-const outside = (path: string) => ({
+/** The hint for a path outside the project that linting the folder `up` from it would read. */
+const lintUp = (up: string) =>
+  `lint the folder that holds both (${up} from the project folder) to include it`;
+/** The hint for a path outside the project where the folder that holds both holds more. */
+const SHARED =
+  "pbiplint does not yet lint it with this project, since the folder that holds both holds more than this project";
+/**
+ * The notice for a path a project file names outside both the path named and the project folder,
+ * with its hint, or none for a path that leads out only through a link.
+ */
+const outside = (path: string, hint?: string) => ({
   kind: "unread-file",
   path,
-  message: `${path} is outside the path you named and the project folder, so it was not linted; lint a folder that holds both to include it`,
+  message: `${path} is outside the path you named and the project folder, so it was not linted${hint ? `; ${hint}` : ""}`,
 });
 const OUTSIDE_MODEL =
   "the model this report reads is outside the path you named and the project folder";
-const OUTSIDE_REASON =
-  "it is outside the path you named and the project folder; lint a folder that holds both to include it";
+const outsideReason = (hint?: string) =>
+  `it is outside the path you named and the project folder${hint ? `; ${hint}` : ""}`;
 
 /** A PBIP folder in a temp dir with the parts asked for. */
 function pbip(parts: {
@@ -497,7 +506,8 @@ describe("resolveProject on a .pbip that names its report (#86)", () => {
     expect(p.report!.files.map((f) => f.path)).toContain("../../Cost.pbip");
     expect(p.model).toBeUndefined();
     expect(p.absent).toEqual({ model: OUTSIDE_MODEL });
-    expect(p.diagnostics).toEqual([outside("../Shared/X.SemanticModel")]);
+    // The folder that holds both also holds the model beside the report, a project of its own.
+    expect(p.diagnostics).toEqual([outside("../Shared/X.SemanticModel", SHARED)]);
   });
   it("gives the legacy notices as the folder route does, and a legacy report still names its model", () => {
     const root = workspace();
@@ -722,7 +732,7 @@ describe("resolveProject on a folder with projects below it (#174)", () => {
     expect(p.report!.root).toBe(join(root, "sub", "Thin.Report"));
     expect(p.diagnostics).toEqual([
       below("sub/Thin.pbip"),
-      outside("../../Shared/Shared.SemanticModel"),
+      outside("../../Shared/Shared.SemanticModel", lintUp("../..")),
     ]);
   });
   it("lints a project in a folder named definition by its .pbip, never as a model's definition folder", () => {
@@ -1384,7 +1394,7 @@ describe("resolveProject and symbolic links (#59)", () => {
       modelAt(join(elsewhere, "Cost.SemanticModel"), "Cost");
       symlinkSync(elsewhere, join(viaReport, "Sub"));
       expect(() => resolveProject(join(viaReport, "Cost.pbip"))).toThrow(
-        new Error(`Could not read ${viaReport}/Sub/Cost.Report: ${OUTSIDE_REASON}`),
+        new Error(`Could not read ${viaReport}/Sub/Cost.Report: ${outsideReason()}`),
       );
       // Above the project folder too.
       const top = tempDir("above");
@@ -1397,6 +1407,7 @@ describe("resolveProject and symbolic links (#59)", () => {
       const above = resolveProject(join(projects, "Cost.pbip"));
       expect(above.model).toBeUndefined();
       expect(above.absent).toEqual({ model: OUTSIDE_MODEL });
+      // The folder that holds both by their paths does not hold where the link leads.
       expect(above.diagnostics).toEqual([outside("../Shared/X.SemanticModel")]);
     },
   );
@@ -1449,17 +1460,17 @@ describe("resolveProject follows a reference only inside the path named or the p
     expect(p.model).toBeUndefined();
     expect(p.report).toBeDefined();
     expect(p.absent).toEqual({ model: OUTSIDE_MODEL });
-    expect(p.diagnostics).toEqual([outside("../Shared/X.SemanticModel")]);
+    expect(p.diagnostics).toEqual([outside("../Shared/X.SemanticModel", lintUp(".."))]);
   });
   it("does not follow an absolute path outside the project folder", () => {
     const top = tempDir("refs-absolute");
     const p = resolveProject(project(top, join(top, "Shared", "X.SemanticModel")));
     expect(p.model).toBeUndefined();
-    expect(p.diagnostics).toEqual([outside("../Shared/X.SemanticModel")]);
+    expect(p.diagnostics).toEqual([outside("../Shared/X.SemanticModel", SHARED)]);
   });
   it("judges a path written with backslashes as the same path", () => {
     const p = resolveProject(project(tempDir("refs-backslash"), "..\\..\\Shared\\X.SemanticModel"));
-    expect(p.diagnostics).toEqual([outside("../Shared/X.SemanticModel")]);
+    expect(p.diagnostics).toEqual([outside("../Shared/X.SemanticModel", lintUp(".."))]);
   });
   it.skipIf(noLinks)("does not follow a link inside the project that leads out of it", () => {
     const top = tempDir("refs-link-out");
@@ -1485,7 +1496,9 @@ describe("resolveProject follows a reference only inside the path named or the p
     pbipAt(join(top, "Projects", "Cost.pbip"), ["../Other/Cost.Report"]);
     reportAt(join(top, "Other", "Cost.Report"), { byPath: { path: "../Cost.SemanticModel" } });
     expect(() => resolveProject(join(top, "Projects", "Cost.pbip"))).toThrow(
-      new Error(`Could not read ${join(top, "Other", "Cost.Report")}: ${OUTSIDE_REASON}`),
+      new Error(
+        `Could not read ${join(top, "Other", "Cost.Report")}: ${outsideReason(lintUp(".."))}`,
+      ),
     );
   });
   it.skipIf(noLinks)(
@@ -1534,19 +1547,74 @@ describe("resolveProject follows a reference only inside the path named or the p
     expect(alone.model).toBeUndefined();
     expect(alone.report).toBeDefined();
     expect(alone.absent).toEqual({ model: OUTSIDE_MODEL });
-    expect(alone.diagnostics).toEqual([outside("../models/Shared.SemanticModel")]);
+    expect(alone.diagnostics).toEqual([outside("../models/Shared.SemanticModel", lintUp(".."))]);
+  });
+  it("says when the folder that holds both holds other projects, which share the model", () => {
+    const repo = tempDir("refs-shared");
+    for (const name of ["X", "Y"]) {
+      mkdirSync(join(repo, "reports", name), { recursive: true });
+      pbipAt(join(repo, "reports", name, `${name}.pbip`), [`${name}.Report`]);
+      reportAt(join(repo, "reports", name, `${name}.Report`), {
+        byPath: { path: "../../../models/M.SemanticModel" },
+      });
+    }
+    modelAt(join(repo, "models", "M.SemanticModel"), "M");
+    // The folder that holds both is refused as one holding two projects, so the notice does not
+    // send the user there.
+    expect(() => resolveProject(repo)).toThrow(`${repo} contains 2 projects`);
+    const p = resolveProject(join(repo, "reports", "X", "X.pbip"));
+    expect(p.model).toBeUndefined();
+    expect(p.diagnostics).toEqual([outside("../../models/M.SemanticModel", SHARED)]);
+  });
+  it("names the folder that holds both when it holds this project alone", () => {
+    const repo = tempDir("refs-alone");
+    mkdirSync(join(repo, "reports", "X"), { recursive: true });
+    pbipAt(join(repo, "reports", "X", "X.pbip"), ["X.Report"]);
+    reportAt(join(repo, "reports", "X", "X.Report"), {
+      byPath: { path: "../../../models/M.SemanticModel" },
+    });
+    modelAt(join(repo, "models", "M.SemanticModel"), "M");
+    const p = resolveProject(join(repo, "reports", "X", "X.pbip"));
+    expect(p.diagnostics).toEqual([outside("../../models/M.SemanticModel", lintUp("../.."))]);
+    // And linting it reads the model, as the notice says.
+    expect(resolveProject(repo).model!.root).toBe(join(repo, "models", "M.SemanticModel"));
+  });
+  it("names no folder when the search for projects in the folder that holds both is too long", () => {
+    const repo = tempDir("refs-wide");
+    mkdirSync(join(repo, "reports", "X"), { recursive: true });
+    pbipAt(join(repo, "reports", "X", "X.pbip"), ["X.Report"]);
+    reportAt(join(repo, "reports", "X", "X.Report"), {
+      byPath: { path: "../../../models/M.SemanticModel" },
+    });
+    modelAt(join(repo, "models", "M.SemanticModel"), "M");
+    // More plain folders than the search lists (2,000), so it stops rather than walk on.
+    for (let i = 0; i < 2_000; i++) mkdirSync(join(repo, "wide", String(i)), { recursive: true });
+    const p = resolveProject(join(repo, "reports", "X", "X.pbip"));
+    expect(p.diagnostics).toEqual([
+      outside(
+        "../../models/M.SemanticModel",
+        "lint a folder that holds both and no other project to include it",
+      ),
+    ]);
   });
   it("refuses a path that leaves both the folder named and the project folder", () => {
-    const top = tempDir("refs-both");
-    modelAt(join(top, "Away", "X.SemanticModel"), "X");
-    for (const byPath of ["../../../Away/X.SemanticModel", join(top, "Away", "X.SemanticModel")]) {
-      const repo = monorepo(join(top, byPath.startsWith("..") ? "up" : "absolute"), byPath);
-      const p = resolveProject(repo);
+    // Written as a path that climbs, the folder above the one named holds the one project, and
+    // linting it reads the model. Written as an absolute path, the search for projects cannot place
+    // it, so the model is a project of its own there and that folder holds more than this one.
+    for (const [kind, hint] of [
+      ["up", lintUp("../..")],
+      ["absolute", SHARED],
+    ] as const) {
+      const top = tempDir(`refs-both-${kind}`);
+      modelAt(join(top, "Away", "X.SemanticModel"), "X");
+      const byPath =
+        kind === "up" ? "../../../Away/X.SemanticModel" : join(top, "Away", "X.SemanticModel");
+      const p = resolveProject(monorepo(join(top, "repo"), byPath));
       expect(p.model).toBeUndefined();
       expect(p.absent).toEqual({ model: OUTSIDE_MODEL });
       expect(p.diagnostics).toEqual([
         below("reports/Thin.pbip"),
-        outside("../../Away/X.SemanticModel"),
+        outside("../../Away/X.SemanticModel", hint),
       ]);
     }
   });

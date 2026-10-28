@@ -497,11 +497,12 @@ function pbipIn(
     .filter((e) => isPbipEntry(folder, e))
     .map((e) => e.name)
     .sort(byName);
-  if (found.length > 1) several();
-  if (found.length > 1)
+  if (found.length > 1) {
+    several();
     throw new UsageError(
       `${input} contains ${found.length} .pbip files; point at one of them: ${found.join(", ")}`,
     );
+  }
   return found[0];
 }
 

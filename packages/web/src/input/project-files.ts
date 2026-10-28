@@ -698,11 +698,12 @@ function pbipsIn(s: Selection, dir: string): string[] {
  */
 function readPbip(s: Selection, base: string, report: Part, several: () => void): void {
   const found = pbipsIn(s, base);
-  if (found.length > 1) several();
-  if (found.length > 1)
+  if (found.length > 1) {
+    several();
     throw new InputError(
       `${base || "The drop"} contains ${found.length} .pbip files; drop a folder that holds one of them: ${found.map(nameOf).join(", ")}`,
     );
+  }
   const path = found[0];
   if (path === undefined) return;
   s.reads.push({ part: report, covers: (p, folder) => !folder && p === path });

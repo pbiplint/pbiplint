@@ -16,11 +16,12 @@ import { withTempFolder } from "./temp-folder.js";
 // by proving no console error was written and no request left the origin (see fixtures.ts).
 //
 // Not covered here, and only checked by hand: the "Choose a folder" button in Chromium, which
-// takes the File System Access picker and its native dialog; a screen reader actually speaking
-// the live region (the test checks its text); a drop of real files from the desktop in
-// Chromium, where a synthetic File has no directory entry, so the drop test below takes the flat
-// file fallback there while Firefox and WebKit take the entries branch; and a folder the browser
-// cannot open inside one the folder input is given (see the refusal test that suggests dragging).
+// takes the File System Access picker and its native dialog (the note under the button is
+// covered); a screen reader actually speaking the live region (the test checks its text); a drop
+// of real files from the desktop in Chromium, where a synthetic File has no directory entry, so
+// the drop test below takes the flat file fallback there while Firefox and WebKit take the entries
+// branch; and a folder the browser cannot open inside one the folder input is given (see the
+// refusal test that suggests dragging).
 
 const zoo = fileURLToPath(
   new URL("../../../tests/fixtures/rule-zoo.SemanticModel", import.meta.url),
@@ -433,6 +434,25 @@ test("the Choose a folder button opens the browser's file chooser where there is
   );
 });
 
+test("the note on the browser's folder question shows only where the browser has a folder picker", async ({
+  page,
+  browserName,
+}) => {
+  // Chromium has showDirectoryPicker, whose permission prompt the note explains; Firefox and
+  // WebKit have no picker, so they ask nothing and the note stays hidden.
+  const button = page.getByRole("button", { name: "Choose a folder" });
+  const note = page.locator("#picker-note");
+  if (browserName === "chromium") {
+    await expect(note).toBeVisible();
+    await expect(button).toHaveAccessibleDescription(
+      "Chrome and Edge ask first whether this page may view the folder; that wording is the browser's own. pbiplint only reads the files, in this tab: nothing is uploaded and nothing is saved. Dragging the folder onto the page skips the question.",
+    );
+  } else {
+    await expect(note).toBeHidden();
+    await expect(button).toHaveAccessibleDescription("");
+  }
+});
+
 test("lints files dropped onto the drop zone", async ({ page }) => {
   const files: [string, string][] = ["model.tmdl", "tables/Sales.tmdl"].map((name) => [
     name.split("/").pop()!,
@@ -452,7 +472,7 @@ test("keeps the drop zone lit across its children and unlights it when the drag 
   page,
 }) => {
   const zone = page.locator("#drop");
-  const child = zone.locator("p");
+  const child = zone.locator("p").first();
   await zone.dispatchEvent("dragenter");
   await expect(zone).toHaveClass(/over/);
   // Entering the child fires dragenter on it and dragleave on the zone, in that order.

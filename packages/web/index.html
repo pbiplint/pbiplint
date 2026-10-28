@@ -80,6 +80,11 @@
               single <code>.tmdl</code> file here.
             </p>
             <button id="choose-folder" type="button" class="secondary">Choose a folder</button>
+            <p id="picker-note" class="hint picker-note" hidden>
+              Chrome and Edge ask first whether this page may view the folder; that wording is the
+              browser's own. pbiplint only reads the files, in this tab: nothing is uploaded and
+              nothing is saved. Dragging the folder onto the page skips the question.
+            </p>
             <input id="folder-input" type="file" webkitdirectory multiple hidden />
           </div>
           <p class="hint">

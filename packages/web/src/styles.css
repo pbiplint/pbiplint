@@ -414,6 +414,10 @@ pre:focus-visible {
 .drop p {
   margin: 0;
 }
+/* The note under Choose a folder: a quiet line, kept to a readable measure in the wide drop zone. */
+.drop .picker-note {
+  max-width: 46ch;
+}
 .drop.over {
   border-color: var(--brand-teal);
   background: rgba(0, 169, 165, 0.08);

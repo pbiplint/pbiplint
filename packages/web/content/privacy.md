@@ -21,7 +21,7 @@ pbiplint checks your Power BI project where it already is: in your browser tab, 
 
 ### On this site
 
-The linter is part of the page and runs in your browser tab. When you drop or choose a folder, the page opens only the files that describe a project: the `.tmdl` files, the report's JSON files, the `.pbip` file, `definition.pbir`, `.platform`, and `pbiplint.config.json`. Everything else in the folder, the `.pbi` folder included, stays unopened. The results are made in the tab, and a report you export goes only to your browser's downloads, or to your clipboard when you copy it.
+The linter is part of the page and runs in your browser tab. When you drop or choose a folder, the page opens only the files that describe a project: the `.tmdl` files, the report's JSON files, the `.pbip` file, `definition.pbir`, `.platform`, and `pbiplint.config.json`. Everything else in the folder, the `.pbi` folder included, stays unopened. In Chrome and Edge, choosing a folder makes the browser first ask whether this page may view it, in the browser's own words; the page asks only to read, and dragging the folder onto the page skips the question. The results are made in the tab, and a report you export goes only to your browser's downloads, or to your clipboard when you copy it.
 
 ### On the command line
 

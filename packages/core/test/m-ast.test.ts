@@ -7,6 +7,7 @@ import {
   isWithin,
   nodeOf,
   nodesOfKind,
+  nodesWithin,
   stepOf,
   textLiterals,
   textValue,
@@ -14,6 +15,8 @@ import {
 } from "../src/m/ast.js";
 import { parseM } from "../src/m/parse.js";
 import type { MQuery } from "../src/m/types.js";
+
+const Kind = Language.Ast.NodeKind;
 
 /** A query for one M text, parsed, as readM would make it. */
 async function query(text: string, name = "Q"): Promise<MQuery> {
@@ -148,5 +151,16 @@ describe("callOf, nodesOfKind, and isWithin", () => {
     expect(isWithin(q, comparison!, select!.args[1]!)).toBe(true);
     expect(isWithin(q, comparison!, comparison!)).toBe(true);
     expect(isWithin(q, select!.args[0]!, select!.args[1]!)).toBe(false);
+  });
+  it("nodesWithin finds a node's own descendants of a kind, in text order, and nothing outside it", async () => {
+    const q = await query("let a = 1 < 2, b = Table.SelectRows(t, each [x] < 3 and [y] = 4) in b");
+    const select = calls(q).find((c) => c.name === "Table.SelectRows")!;
+    const found = nodesWithin(
+      q,
+      select.args[1]!,
+      Kind.RelationalExpression,
+      Kind.EqualityExpression,
+    );
+    expect(found.map((n) => n.kind)).toEqual([Kind.RelationalExpression, Kind.EqualityExpression]);
   });
 });

@@ -32,6 +32,30 @@ export function isModelParameter(q: MQuery): Node | undefined {
     : undefined;
 }
 
+/** Each scope's bindings by name, in order: a `let`'s or a record's pairs, a function's parameters. */
+const names = new WeakMap<Node, Map<string, Node[]>>();
+function namesOf(scope: Node): Map<string, Node[]> {
+  let map = names.get(scope);
+  if (!map) {
+    const out = new Map<string, Node[]>();
+    const add = (name: string, n: Node) => {
+      const list = out.get(name);
+      if (list) list.push(n);
+      else out.set(name, [n]);
+    };
+    if (scope.kind === Kind.LetExpression)
+      for (const csv of scope.variableList.elements)
+        add(identifierName(csv.node.key.literal), csv.node);
+    else if (scope.kind === Kind.RecordExpression)
+      for (const csv of scope.content.elements) add(identifierName(csv.node.key.literal), csv.node);
+    else if (scope.kind === Kind.FunctionExpression)
+      for (const csv of scope.parameters.content.elements)
+        add(identifierName(csv.node.name.literal), csv.node);
+    names.set(scope, (map = out));
+  }
+  return map;
+}
+
 /**
  * The variables a let binds, the fields a record's other fields see, a function's parameters.
  * `skip` names a pair to leave out: the one whose initializer holds the name being resolved.
@@ -41,26 +65,38 @@ function bindingIn(
   name: string,
   skip: (pair: Node) => boolean,
 ): Resolution | undefined {
-  if (scope.kind === Kind.LetExpression) {
-    const pair = scope.variableList.elements.find(
-      (csv) => identifierName(csv.node.key.literal) === name && !skip(csv.node),
-    );
-    return pair ? { kind: "value", node: pair.node.value } : undefined;
-  }
-  if (scope.kind === Kind.RecordExpression) {
-    const field = scope.content.elements.find(
-      (csv) => identifierName(csv.node.key.literal) === name && !skip(csv.node),
-    );
-    return field ? { kind: "value", node: field.node.value } : undefined;
+  if (scope.kind === Kind.LetExpression || scope.kind === Kind.RecordExpression) {
+    const pair = namesOf(scope)
+      .get(name)
+      ?.find((p) => !skip(p)) as Language.Ast.IdentifierPairedExpression | undefined;
+    return pair ? { kind: "value", node: pair.value } : undefined;
   }
   if (scope.kind === Kind.FunctionExpression) {
-    const param = scope.parameters.content.elements.find(
-      (csv) => identifierName(csv.node.name.literal) === name,
-    );
-    return param ? { kind: "parameter", node: param.node } : undefined;
+    const param = namesOf(scope).get(name)?.[0];
+    return param ? { kind: "parameter", node: param } : undefined;
   }
   if (scope.kind === Kind.EachExpression && name === "_") return { kind: "row" };
   return undefined;
+}
+
+/** A model's queries by name, in query order: shared expressions, and tables' queries. */
+const queryNames = new WeakMap<
+  MIndex,
+  { shared: Map<string, MQuery[]>; tables: Map<string, MQuery[]> }
+>();
+function queriesNamed(m: MIndex): { shared: Map<string, MQuery[]>; tables: Map<string, MQuery[]> } {
+  let found = queryNames.get(m);
+  if (!found) {
+    found = { shared: new Map(), tables: new Map() };
+    for (const x of m.queries) {
+      const map = x.kind === "expression" ? found.shared : found.tables;
+      const list = map.get(x.name);
+      if (list) list.push(x);
+      else map.set(x.name, [x]);
+    }
+    queryNames.set(m, found);
+  }
+  return found;
 }
 
 /**
@@ -80,7 +116,8 @@ export function resolve(m: MIndex, q: MQuery, node: Node): Resolution {
     if (found) return found;
     path.add(scope.id);
   }
-  const shared = m.queries.find((x) => x.kind === "expression" && x.name === name && x !== q);
+  const named = queriesNamed(m);
+  const shared = named.shared.get(name)?.find((x) => x !== q);
   if (shared) {
     const value = isModelParameter(shared);
     return value
@@ -89,7 +126,7 @@ export function resolve(m: MIndex, q: MQuery, node: Node): Resolution {
   }
   // Every query of a table carries the table's name; none resolves to its own table.
   const own = q.kind !== "expression" ? q.name : undefined;
-  const table = m.queries.find((x) => x.kind !== "expression" && x.name === name && x.name !== own);
+  const table = named.tables.get(name)?.find((x) => x.name !== own);
   if (table) return { kind: "query", query: table };
   return name.includes(".") ? { kind: "library" } : { kind: "unknown" };
 }
@@ -125,12 +162,34 @@ const isLiteralContainer = (n: Node): boolean =>
  * `parameter` for a custom function's parameter or a field of one; `computed` for a function call
  * anywhere in it; `row` for `_` or a field or item of anything else. A value is the worst of what
  * it reaches. An `if`'s condition adds nothing beyond `chosen`, and an `error` is static, since it
- * reaches no source. Each node is followed once, so a cycle reads as unknown.
+ * reaches no source. A node met again while it is being classified is a cycle, and reads as
+ * unknown. Each node's answer is remembered for the run, unless a cycle shortened it.
  */
-export function origin(m: MIndex, q: MQuery, node: Node, seen: Set<string> = new Set()): Origin {
-  const key = `${q.kind}:${q.name}:${node.id}`;
-  if (seen.has(key)) return "unknown";
-  seen.add(key);
+export function origin(m: MIndex, q: MQuery, node: Node): Origin {
+  return originOf(m, q, node, new Set());
+}
+
+const origins = new WeakMap<Node, Origin>();
+/** How many times a cycle has cut a classification short. */
+let cuts = 0;
+
+/** `origin`, with `path` the nodes being classified above this one. */
+function originOf(m: MIndex, q: MQuery, node: Node, path: Set<Node>): Origin {
+  const known = origins.get(node);
+  if (known) return known;
+  if (path.has(node)) {
+    cuts++;
+    return "unknown";
+  }
+  path.add(node);
+  const before = cuts;
+  const answer = classify(m, q, node, path);
+  path.delete(node);
+  if (cuts === before) origins.set(node, answer);
+  return answer;
+}
+
+function classify(m: MIndex, q: MQuery, node: Node, path: Set<Node>): Origin {
   switch (node.kind) {
     case Kind.LiteralExpression:
     case Kind.Constant:
@@ -138,13 +197,13 @@ export function origin(m: MIndex, q: MQuery, node: Node, seen: Set<string> = new
     case Kind.IdentifierExpression: {
       const r = resolve(m, q, node);
       if (r.kind === "row") return "row";
-      if (r.kind === "value") return origin(m, q, r.node, seen);
+      if (r.kind === "value") return originOf(m, q, r.node, path);
       if (r.kind === "modelParameter" || r.kind === "library") return "static";
       if (r.kind === "parameter") return "parameter";
       if (r.kind === "query") {
         const body = r.query.ast && unwrap(r.query.ast);
         if (!body || body.kind === Kind.FunctionExpression) return "unknown";
-        return origin(m, r.query, body, seen);
+        return originOf(m, r.query, body, path);
       }
       return "unknown";
     }
@@ -152,13 +211,13 @@ export function origin(m: MIndex, q: MQuery, node: Node, seen: Set<string> = new
     case Kind.FieldProjection:
       return "row";
     case Kind.LetExpression:
-      return origin(m, q, node.expression, seen);
+      return originOf(m, q, node.expression, path);
     // Desktop reads any if as dynamic, whatever its branches; the condition adds nothing more.
     case Kind.IfExpression:
       return worst([
         "chosen",
-        origin(m, q, node.trueExpression, seen),
-        origin(m, q, node.falseExpression, seen),
+        originOf(m, q, node.trueExpression, path),
+        originOf(m, q, node.falseExpression, path),
       ]);
     // An error stops the query, so it reaches no source.
     case Kind.ErrorRaisingExpression:
@@ -175,13 +234,14 @@ export function origin(m: MIndex, q: MQuery, node: Node, seen: Set<string> = new
         const read = steps.slice(at + 1).some((s) => s.kind !== Kind.InvokeExpression);
         return worst([
           read ? "row" : "computed",
-          ...invoke.content.elements.map((csv) => origin(m, q, csv.node, seen)),
+          ...invoke.content.elements.map((csv) => originOf(m, q, csv.node, path)),
         ]);
       }
       // A field or an item: of a record or list written in place, or a name bound to one through
       // variables, queries, and lets' results, it is known.
       let container = unwrap(node.head);
       let cq = q;
+      const followed = new Set<Node>();
       for (;;) {
         // A let stands for what its `in` returns.
         if (container.kind === Kind.LetExpression) {
@@ -189,9 +249,8 @@ export function origin(m: MIndex, q: MQuery, node: Node, seen: Set<string> = new
           continue;
         }
         if (container.kind !== Kind.IdentifierExpression) break;
-        const key = `${cq.kind}:${cq.name}:${container.id}`;
-        if (seen.has(key)) return "unknown";
-        seen.add(key);
+        if (followed.has(container)) return "unknown";
+        followed.add(container);
         const r = resolve(m, cq, container);
         if (r.kind === "value") container = unwrap(r.node);
         else if (r.kind === "query" && r.query.ast) {
@@ -210,28 +269,44 @@ export function origin(m: MIndex, q: MQuery, node: Node, seen: Set<string> = new
         children
           .map((id) => nodeOf(q, id))
           .filter((n): n is Node => n !== undefined)
-          .map((n) => origin(m, q, n, seen)),
+          .map((n) => originOf(m, q, n, path)),
       );
     }
   }
 }
 
+const bound = new WeakMap<Node, { node: Node; step?: string }>();
+
 /**
  * What a node stands for through `let` and record bindings: a name bound to a step is followed to
  * the step's value while that value is itself a name, with parentheses and `meta` taken off.
  * `step` is the last name followed, the step whose value `node` is; undefined when `node` is
- * written in place. Model parameters and other queries are not followed.
+ * written in place. Model parameters and other queries are not followed. Each name's answer is
+ * remembered for the run, unless a cycle ended the walk.
  */
 export function boundValue(m: MIndex, q: MQuery, node: Node): { node: Node; step?: string } {
   let n = unwrap(node);
   let step: string | undefined;
   const seen = new Set<number>();
-  while (n.kind === Kind.IdentifierExpression && !seen.has(n.id)) {
+  const followed: Node[] = [];
+  let cycle = false;
+  let answer: { node: Node; step?: string } | undefined;
+  while (n.kind === Kind.IdentifierExpression) {
+    answer = bound.get(n);
+    if (answer) break;
+    if (seen.has(n.id)) {
+      cycle = true;
+      break;
+    }
     seen.add(n.id);
     const r = resolve(m, q, n);
     if (r.kind !== "value") break;
+    followed.push(n);
     step = identifierName(n.identifier.literal);
     n = unwrap(r.node);
   }
-  return { node: n, step };
+  answer ??= { node: n, step };
+  // Every name followed stands for the same node, through the same last step.
+  if (!cycle) for (const f of followed) bound.set(f, answer);
+  return answer;
 }

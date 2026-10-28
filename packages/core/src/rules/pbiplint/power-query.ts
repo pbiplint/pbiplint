@@ -6,6 +6,7 @@ import {
   type MCall,
   isWithin,
   nodesOfKind,
+  nodesWithin,
   parentOf,
   textLiterals,
   textValue,
@@ -491,8 +492,8 @@ const FIXED_DATE_USE: Readonly<Record<string, string>> = {
 
 /** Whether a filter's condition reads the model's RangeStart or RangeEnd anywhere. */
 function readsRange(m: MIndex, q: MQuery, condition: Node): boolean {
-  return nodesOfKind(q, Kind.IdentifierExpression).some(
-    (n) => isWithin(q, n, condition) && rangeParameterOf(m, q, n) !== undefined,
+  return nodesWithin(q, condition, Kind.IdentifierExpression).some(
+    (n) => rangeParameterOf(m, q, n) !== undefined,
   );
 }
 
@@ -524,25 +525,24 @@ export const FIXED_DATE_IN_ROW_FILTER = pbiplintRule({
         return calls(q).flatMap((c) => {
           const condition = c.args[1];
           if (c.name !== "Table.SelectRows" || !condition || readsRange(m, q, condition)) return [];
-          return nodesOfKind(q, Kind.RelationalExpression, Kind.EqualityExpression).flatMap(
-            (node) => {
-              if (
-                (node.kind !== Kind.RelationalExpression &&
-                  node.kind !== Kind.EqualityExpression) ||
-                !isWithin(q, node, condition)
-              )
-                return [];
-              const onLeft = fixedDate(node.left);
-              const onRight = fixedDate(node.right);
-              if ((onLeft === undefined) === (onRight === undefined)) return [];
-              const op = node.operatorConstant.constantKind as string;
-              const use = FIXED_DATE_USE[onRight ? op : (FLIPPED[op] ?? op)];
-              const date = unwrap(onRight ? node.right : node.left);
-              if (!use || reported.has(date.id)) return [];
-              reported.add(date.id);
-              return [mFinding(m, q, date, `${use}, ${onRight ?? onLeft}`)];
-            },
-          );
+          return nodesWithin(
+            q,
+            condition,
+            Kind.RelationalExpression,
+            Kind.EqualityExpression,
+          ).flatMap((node) => {
+            if (node.kind !== Kind.RelationalExpression && node.kind !== Kind.EqualityExpression)
+              return [];
+            const onLeft = fixedDate(node.left);
+            const onRight = fixedDate(node.right);
+            if ((onLeft === undefined) === (onRight === undefined)) return [];
+            const op = node.operatorConstant.constantKind as string;
+            const use = FIXED_DATE_USE[onRight ? op : (FLIPPED[op] ?? op)];
+            const date = unwrap(onRight ? node.right : node.left);
+            if (!use || reported.has(date.id)) return [];
+            reported.add(date.id);
+            return [mFinding(m, q, date, `${use}, ${onRight ?? onLeft}`)];
+          });
         });
       }),
 });

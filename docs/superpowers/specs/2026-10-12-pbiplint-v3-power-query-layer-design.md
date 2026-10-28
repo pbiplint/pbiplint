@@ -265,6 +265,8 @@ Amended October 13, 2026 (the coordinator's decision, pull request 6, from the c
 
 Amended October 13, 2026 ([Michael's Desktop check](https://github.com/pbiplint/pbiplint/issues/78#issuecomment-6158143617), pull request 8): Power BI Desktop's Data source settings showed its dynamic source warning for a web address chosen with `if ... then ... else` over a parameter between two fixed texts, and for a web address that is a custom function's parameter called with fixed text. So an `if` is `chosen` whatever its branches, and the worst of that and its branches; its condition still adds nothing, and a branch that raises an `error` no longer leaves the value `static`. An `if` with a literal condition (`if true then`) counts too: Desktop does not evaluate the condition, and one rule is simpler to state and test. A function's parameter, and a field of one, is `parameter`. Both sit below `computed`, so an address that is also built by a call or read from the rows keeps that detail.
 
+Amended October 27, 2026 (pull request 9, from the pre-release security review): the helper stays near linear. Each `let`, record, and function indexes its names, the model's queries are indexed by name, and `origin` and `boundValue` remember each node's answer for the run, so a step that many calls read is followed once. Measured before, through the whole lint: 2,000 steps each naming the one before, read by 2,000 calls, took 46 s. A cycle still reads as `unknown`, and an answer a cycle shortened is not remembered. One change of meaning: a node reached twice in one classification reads the same both times, where it read `unknown` the second time. `readsRange` and `FIXED_DATE_IN_ROW_FILTER` read only the filter condition's own nodes. Corpus: no finding changes.
+
 ## 9. The rules
 
 ### 9.1 Common to all fifteen
@@ -642,6 +644,8 @@ The largest corpus model parses in 680 ms (Node, Michael's Mac, research of Octo
 - **Browser:** the e2e suite drops it and holds the lint to a budget per engine. Every budget, Node's and each engine's, is three times the time measured on CI's runners, rounded up to the next 5 s. Measured on CI on October 13, 2026, that gives 20 s for Node (6.4 s on Node 20), 10 s for Chromium, 20 s for WebKit and 65 s for Firefox (20.6 s), whose parse stays linear in size but runs about 7.5 times slower than Chromium's.
 
 Amended October 27, 2026 (pull request 9): `packages/core/test/m-budget.test.ts` holds the budget to a chain of 80,000 terms (160 KB, 37.6 s in the parser alone), which must be reported within 5 s, as three times CI's time rounded up to the next 5 s; the big model must still be read whole.
+
+The resolver's guard, `packages/core/test/m-limits.test.ts`, lints four chains of 2,000 steps (a data source, the refresh range, fixed-date filters, a native query's options) within 10 s, three times CI's estimated time rounded up to the next 5 s (0.54 s on Michael's Mac, most of it in the parser), to be confirmed on CI.
 
 ### 11.6 Bundle checks
 

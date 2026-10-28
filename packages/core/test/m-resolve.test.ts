@@ -255,6 +255,16 @@ describe("origin", () => {
     const call = calls(q).find((c) => c.name === "Web.Contents")!;
     expect(origin(m, q, call.args[0]!)).toBe(expected);
   });
+  it("reads a cycle between steps as unknown, and returns", async () => {
+    const { m, q } = await index("let a = b, b = a in Web.Contents(a)");
+    const call = calls(q).find((c) => c.name === "Web.Contents")!;
+    expect(origin(m, q, call.args[0]!)).toBe("unknown");
+  });
+  it("gives a step read twice the same origin both times", async () => {
+    const { m, q } = await index("let u = Text.From(1), v = u in Web.Contents(u & v)");
+    const call = calls(q).find((c) => c.name === "Web.Contents")!;
+    expect(origin(m, q, call.args[0]!)).toBe("computed");
+  });
 });
 
 describe("origin of a field or item", () => {

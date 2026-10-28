@@ -114,6 +114,15 @@ function spanned(w: string, table: boolean): string {
 const cell = (s: string): string => text(oneLine(s), true);
 
 /**
+ * Text from the input as this format writes it: in a table cell (`table`), a line break shown as
+ * a space, else on a line of its own, such as a heading, a line break shown as the text format
+ * shows it. For a caller that sets the report inside a larger document, such as the CLI's
+ * several-project run, whose headings and table name each project's path.
+ */
+export const markdownText = (s: string, table = false): string =>
+  table ? cell(s) : text(s, false);
+
+/**
  * A name from the input as a code span in a table cell, showing the whole name, or a word of text
  * as one anywhere. A code span shows its `<` and `&` as written, so nothing is entity-escaped
  * here. Its fence is one backtick longer than the longest run of backticks in the name. CommonMark
@@ -140,9 +149,11 @@ function code(name: string, table: boolean): string {
   return `${fence}${pad}${shown}${pad}${fence}`;
 }
 
-export function formatMarkdown(result: LintResult, _options: FormatOptions = {}): string {
+export function formatMarkdown(result: LintResult, options: FormatOptions = {}): string {
+  // Every heading starts with this, so a report set under a heading of its own keeps its outline.
+  const h = "#".repeat((options.headingLevel ?? 1) - 1);
   const out: string[] = [
-    "# pbiplint report",
+    `${h}# pbiplint report`,
     "",
     `${summaryLine(result)}. ${text([layersLine(result), skippedLine(result)].filter(Boolean).join(" "), false)}.`,
     "",
@@ -150,7 +161,7 @@ export function formatMarkdown(result: LintResult, _options: FormatOptions = {})
   for (const m of [...result.diagnostics.map((d) => d.message), ...ruleErrorNotices(result)])
     out.push(`> Notice: ${text(m, false)}`, "");
   if (result.facts.length) {
-    out.push("## Report at a glance", "", "| Fact | Value | Rule |", "|---|---|---|");
+    out.push(`${h}## Report at a glance`, "", "| Fact | Value | Rule |", "|---|---|---|");
     for (const f of result.facts)
       out.push(
         `| ${cell(f.label)} | ${cell(f.detail ? `${f.value} (${f.detail})` : f.value)} | ${f.ruleId ? `[${f.ruleId}](${ruleUrl(f.ruleId)})` : ""} |`,
@@ -161,7 +172,7 @@ export function formatMarkdown(result: LintResult, _options: FormatOptions = {})
     out.push("No findings.", "");
     return out.join("\n");
   }
-  out.push("## Fix these first", "");
+  out.push(`${h}## Fix these first`, "");
   topGroups(result).forEach((g, i) =>
     out.push(
       `${i + 1}. **${g.rule.name}** (${g.findings.length}) [${g.rule.id}](${g.rule.url}) · ${g.rule.layer}`,
@@ -170,7 +181,7 @@ export function formatMarkdown(result: LintResult, _options: FormatOptions = {})
   out.push("");
   for (const g of result.groups) {
     out.push(
-      `## ${SEVERITY_LABEL[g.rule.severity].toUpperCase()}: ${g.rule.name} (${g.findings.length}) · ${g.rule.layer}`,
+      `${h}## ${SEVERITY_LABEL[g.rule.severity].toUpperCase()}: ${g.rule.name} (${g.findings.length}) · ${g.rule.layer}`,
       "",
     );
     out.push(`[${g.rule.id}](${g.rule.url}) · ${g.rule.category}`, "");

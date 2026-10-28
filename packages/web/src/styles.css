@@ -156,7 +156,8 @@ pre code {
 }
 h1,
 h2,
-h3 {
+h3,
+h4 {
   line-height: 1.2;
   letter-spacing: -0.01em;
 }
@@ -169,6 +170,11 @@ h2 {
   margin: 32px 0 8px;
 }
 h3 {
+  font-size: 18px;
+  margin: 24px 0 8px;
+}
+/* A project's results sit a level below its section's heading (#237) and read as one project's. */
+h4 {
   font-size: 18px;
   margin: 24px 0 8px;
 }
@@ -485,6 +491,18 @@ button.secondary:hover,
 .fix-first li {
   margin: 4px 0;
 }
+/* A run over several projects (#237): the list of projects, then a section for each. */
+.projects li {
+  margin: 4px 0;
+  overflow-wrap: anywhere;
+}
+.project {
+  border-top: 1px solid var(--line-1);
+  margin-top: 40px;
+}
+.project > h2 {
+  overflow-wrap: anywhere;
+}
 .filters {
   border: 1px solid var(--line-1);
   border-radius: var(--radius);
@@ -687,7 +705,8 @@ button.secondary:hover,
   padding: 12px 16px;
   margin: 16px 0 8px;
 }
-.facts h3 {
+.facts h3,
+.facts h4 {
   margin: 0 0 8px;
   font-size: 12px;
   color: var(--brand-teal-soft);

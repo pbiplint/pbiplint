@@ -1,0 +1,669 @@
+# pbiplint report
+
+280 findings (19 errors, 84 warnings, 177 info) in 92 files. Model: 14 files. Report: 78 files. 117 rules run, 5 rules skipped (need a live model).
+
+## Report at a glance
+
+| Fact | Value | Rule |
+|---|---|---|
+| Opens on | Scratch (hidden) (the page open when it was saved; no landing page set) | [OPENING_PAGE_INVALID](https://pbiplint.com/rules/opening-page-invalid) |
+| Filters pane | open | [FILTERS_PANE_STATE](https://pbiplint.com/rules/filters-pane-state) |
+| Pages | 11 (1 hidden, 1 tooltip) | [HIDE_TOOLTIP_DRILLTROUGH_PAGES](https://pbiplint.com/rules/hide-tooltip-drilltrough-pages) |
+| Visuals | 56 (4 hidden; 1 custom visual type registered, 0 used) | [HIDDEN_VISUAL_WITH_FIELDS](https://pbiplint.com/rules/hidden-visual-with-fields) |
+| Report measures | 2 (defined in the report, not the model) | [REPORT_LEVEL_MEASURES](https://pbiplint.com/rules/report-level-measures) |
+| Slicers | 2 (1 saved selection, 1 saved search term) | [SLICER_SELECTION_SAVED](https://pbiplint.com/rules/slicer-selection-saved) |
+| Mobile layouts | none |  |
+| Schema versions | report 3.2.0, page 2.1.0, visual 2.8.0 |  |
+| Model | 8 tables, 73 columns, 14 measures (36 columns and 2 measures not reached from this report) | [NOT_REACHED_FROM_REPORT](https://pbiplint.com/rules/not-reached-from-report) |
+
+## Fix these first
+
+1. **Action points at nothing** (1) [BROKEN_ACTION_TARGET](https://pbiplint.com/rules/broken-action-target) · report
+2. **Field the model does not have** (1) [BROKEN_FIELD_REFERENCE](https://pbiplint.com/rules/broken-field-reference) · report
+3. **Opening page missing or hidden** (1) [OPENING_PAGE_INVALID](https://pbiplint.com/rules/opening-page-invalid) · report
+4. **Column references should be fully qualified** (2) [DAX_COLUMNS_FULLY_QUALIFIED](https://pbiplint.com/rules/dax-columns-fully-qualified) · model
+5. **Provide format string for measures** (14) [PROVIDE_FORMAT_STRING_FOR_MEASURES](https://pbiplint.com/rules/provide-format-string-for-measures) · model
+
+## ERROR: Action points at nothing (1) · report
+
+[BROKEN_ACTION_TARGET](https://pbiplint.com/rules/broken-action-target) · Error Prevention
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `"Go to detail" on "Overview"` | Visual | definition/pages/3cea48e58036b1654474/visuals/6500e9c3f9d74f2958c7/visual.json:272 | Page navigation action points at page "deadpage00000000000000", which does not exist |
+
+## ERROR: Field the model does not have (1) · report
+
+[BROKEN_FIELD_REFERENCE](https://pbiplint.com/rules/broken-field-reference) · Error Prevention
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `"Sales by region" on "Overview"` | Visual | definition/pages/3cea48e58036b1654474/visuals/88530bc0f64114317e2e/visual.json:19 | 'Sales'\[Region\]: no column named "Region" on "Sales" |
+
+## ERROR: Opening page missing or hidden (1) · report
+
+[OPENING_PAGE_INVALID](https://pbiplint.com/rules/opening-page-invalid) · Error Prevention
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `Report` | Report | definition/pages/pages.json:16 | active page "Scratch" is hidden from readers |
+
+## ERROR: Column references should be fully qualified (2) · model
+
+[DAX_COLUMNS_FULLY_QUALIFIED](https://pbiplint.com/rules/dax-columns-fully-qualified) · DAX Expressions
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `[Total Quantity]` | Measure | definition/tables/Sales.tmdl:7 |  |
+| `[Distinct Customers]` | Measure | definition/tables/Sales.tmdl:34 |  |
+
+## ERROR: Provide format string for measures (14) · model
+
+[PROVIDE_FORMAT_STRING_FOR_MEASURES](https://pbiplint.com/rules/provide-format-string-for-measures) · Formatting
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `[Total Sales]` | Measure | definition/tables/Sales.tmdl:4 |  |
+| `[Total Quantity]` | Measure | definition/tables/Sales.tmdl:7 |  |
+| `[Average Unit Price]` | Measure | definition/tables/Sales.tmdl:10 |  |
+| `[Total Cost]` | Measure | definition/tables/Sales.tmdl:13 |  |
+| `[Total Discount]` | Measure | definition/tables/Sales.tmdl:16 |  |
+| `[Net Sales]` | Measure | definition/tables/Sales.tmdl:19 |  |
+| `[Total Margin]` | Measure | definition/tables/Sales.tmdl:22 |  |
+| `[Margin %]` | Measure | definition/tables/Sales.tmdl:25 |  |
+| `[Order Count]` | Measure | definition/tables/Sales.tmdl:28 |  |
+| `[Average Order Value]` | Measure | definition/tables/Sales.tmdl:31 |  |
+| `[Distinct Customers]` | Measure | definition/tables/Sales.tmdl:34 |  |
+| `[Sales YTD]` | Measure | definition/tables/Sales.tmdl:37 |  |
+| `[Sales LY]` | Measure | definition/tables/Sales.tmdl:40 |  |
+| `[Sales YoY %]` | Measure | definition/tables/Sales.tmdl:43 |  |
+
+## WARNING: Do not use floating point data types (3) · model
+
+[AVOID_FLOATING_POINT_DATA_TYPES](https://pbiplint.com/rules/avoid-floating-point-data-types) · Performance
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `'Promotion'[Discount Pct]` | Column | definition/tables/Promotion.tmdl:29 |  |
+| `'Store'[Latitude]` | Column | definition/tables/Store.tmdl:72 |  |
+| `'Store'[Longitude]` | Column | definition/tables/Store.tmdl:80 |  |
+
+## WARNING: Date/calendar tables should be marked as a date table (3) · model
+
+[DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE](https://pbiplint.com/rules/date-calendar-tables-should-be-marked-as-a-date-table) · Performance
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `'Date'` | Table | definition/tables/Date.tmdl:1 |  |
+| `'DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92'` | CalculatedTable | definition/tables/DateTableTemplate\_96ead6f8-eef3-4336-a020-6641aa278e92.tmdl:1 |  |
+| `'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'` | CalculatedTable | definition/tables/LocalDateTable\_b6c07c62-ecbc-4f14-b072-2fb027697b1d.tmdl:1 |  |
+
+## WARNING: Reduce usage of calculated tables (3) · model
+
+[REDUCE_USAGE_OF_CALCULATED_TABLES](https://pbiplint.com/rules/reduce-usage-of-calculated-tables) · Performance
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `'DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92'` | CalculatedTable | definition/tables/DateTableTemplate\_96ead6f8-eef3-4336-a020-6641aa278e92.tmdl:1 |  |
+| `'Employee Grouping'` | CalculatedTable | definition/tables/Employee Grouping.tmdl:1 |  |
+| `'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'` | CalculatedTable | definition/tables/LocalDateTable\_b6c07c62-ecbc-4f14-b072-2fb027697b1d.tmdl:1 |  |
+
+## WARNING: Avoid setting ‘Show items with no data’ on columns (2) · report
+
+[AVOID_SHOW_ITEMS_WITH_NO_DATA](https://pbiplint.com/rules/avoid-show-items-with-no-data) · Performance
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `"Sales by brand" on "Duplicate of Overview"` | Visual | definition/pages/27f668864829019f9251/visuals/1e7f28bf49e435b68c50/visual.json:34 | Show items with no data is on for Category |
+| `"Sales by store location" on "Stores"` | Visual | definition/pages/5fbcb07dde4e4fada3f6/visuals/598cfda00746e83f4896/visual.json:79 | Show items with no data is on for Rows |
+
+## WARNING: Set IsAvailableInMdx to false on non-attribute columns (2) · model
+
+[ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS](https://pbiplint.com/rules/isavailableinmdx-false-nonattribute-columns) · Performance
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `'DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92'[Date]` | CalculatedTableColumn | definition/tables/DateTableTemplate\_96ead6f8-eef3-4336-a020-6641aa278e92.tmdl:6 |  |
+| `'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'[Date]` | CalculatedTableColumn | definition/tables/LocalDateTable\_b6c07c62-ecbc-4f14-b072-2fb027697b1d.tmdl:6 |  |
+
+## WARNING: Remove auto-date table (2) · model
+
+[REMOVE_AUTO-DATE_TABLE](https://pbiplint.com/rules/remove-auto-date-table) · Performance
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `'DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92'` | CalculatedTable | definition/tables/DateTableTemplate\_96ead6f8-eef3-4336-a020-6641aa278e92.tmdl:1 |  |
+| `'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'` | CalculatedTable | definition/tables/LocalDateTable\_b6c07c62-ecbc-4f14-b072-2fb027697b1d.tmdl:1 |  |
+
+## WARNING: Model should have a date table (1) · model
+
+[MODEL_SHOULD_HAVE_A_DATE_TABLE](https://pbiplint.com/rules/model-should-have-a-date-table) · Performance
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `Model` | Model | definition/model.tmdl:1 |  |
+
+## WARNING: Reduce usage of Advanced filtering visuals by page (1) · report
+
+[REDUCE_ADVANCED_FILTERS](https://pbiplint.com/rules/reduce-advanced-filters) · Performance
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `Page "Crowded"` | Page | definition/pages/9f2ae77d3572304756ae/page.json:1 | 5 visuals with an Advanced filter applied, more than 4 |
+
+## WARNING: Reduce number of calculated columns (1) · model
+
+[REDUCE_NUMBER_OF_CALCULATED_COLUMNS](https://pbiplint.com/rules/reduce-number-of-calculated-columns) · Performance
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `Model` | Model | definition/model.tmdl:1 |  |
+
+## WARNING: Reduce the number of objects within visuals (1) · report
+
+[REDUCE_OBJECTS_WITHIN_VISUALS](https://pbiplint.com/rules/reduce-objects-within-visuals) · Performance
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `"Sales detail" on "Detail"` | Visual | definition/pages/3485dcffc49d1608c370/visuals/6e99982d842b0d962e16/visual.json:14 | 7 fields bound, more than 6 |
+
+## WARNING: Reduce number of pages per report (1) · report
+
+[REDUCE_PAGES](https://pbiplint.com/rules/reduce-pages) · Performance
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `Report` | Report | definition/report.json:1 | 11 pages, more than 10 |
+
+## WARNING: Reduce usage of TopN filtering visuals by page (1) · report
+
+[REDUCE_TOPN_FILTERS](https://pbiplint.com/rules/reduce-topn-filters) · Performance
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `Page "Crowded"` | Page | definition/pages/9f2ae77d3572304756ae/page.json:1 | 5 visuals with a TopN filter, more than 4 |
+
+## WARNING: Reduce the number of visible visuals on the page (1) · report
+
+[REDUCE_VISUALS_ON_PAGE](https://pbiplint.com/rules/reduce-visuals-on-page) · Performance
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `Page "Crowded"` | Page | definition/pages/9f2ae77d3572304756ae/page.json:1 | 21 visuals, more than 20 |
+
+## WARNING: Remove custom visuals which are not used in the report (1) · report
+
+[REMOVE_UNUSED_CUSTOM_VISUALS](https://pbiplint.com/rules/remove-unused-custom-visuals) · Performance
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `Report` | Report | definition/report.json:1 | ChicletSlicer1448559807354 is registered but no visual uses it |
+
+## WARNING: Consider a star-schema instead of a snowflake architecture (1) · model
+
+[SNOWFLAKE_SCHEMA_ARCHITECTURE](https://pbiplint.com/rules/snowflake-schema-architecture) · Performance
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `'Customer'` | Table | definition/tables/Customer.tmdl:1 |  |
+
+## WARNING: Path on a local drive (7) · powerquery
+
+[LOCAL_DRIVE_PATH](https://pbiplint.com/rules/local-drive-path) · Error Prevention
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `Customer` | Partition | definition/tables/Customer.tmdl:105:45 | query 'Customer', step 'Source': the path is on a local drive (C:) |
+| `Date` | Partition | definition/tables/Date.tmdl:92:45 | query 'Date', step 'Source': the path is on a local drive (C:) |
+| `Employee` | Partition | definition/tables/Employee.tmdl:76:45 | query 'Employee', step 'Source': the path is on a local drive (C:) |
+| `Product` | Partition | definition/tables/Product.tmdl:97:45 | query 'Product', step 'Source': the path is on a local drive (C:) |
+| `Promotion` | Partition | definition/tables/Promotion.tmdl:63:45 | query 'Promotion', step 'Source': the path is on a local drive (C:) |
+| `Sales` | Partition | definition/tables/Sales.tmdl:158:45 | query 'Sales', step 'Source': the path is on a local drive (C:) |
+| `Store` | Partition | definition/tables/Store.tmdl:115:45 | query 'Store', step 'Source': the path is on a local drive (C:) |
+
+## WARNING: Bookmark refers to a missing page or visual (1) · report
+
+[BROKEN_BOOKMARK_REFERENCE](https://pbiplint.com/rules/broken-bookmark-reference) · Error Prevention
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `Bookmark "Reset"` | Bookmark | definition/bookmarks/f56cd9f5f68d30c0e4e3.bookmark.json:14 | captured visual "deadvisual0000000000" is not on page "Overview" |
+
+## WARNING: Ensure alternativeText has been defined for all visuals (1) · report
+
+[ENSURE_ALTTEXT](https://pbiplint.com/rules/ensure-alttext) · Accessibility
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `"Scratch note" on "Scratch"` | Visual | definition/pages/b52832c4d9f487868953/visuals/2a7e16428070011e60ec/visual.json:32 | no alt text |
+
+## WARNING: Tab order disagrees with the layout (1) · report
+
+[TAB_ORDER_FOLLOWS_LAYOUT](https://pbiplint.com/rules/tab-order-follows-layout) · Accessibility
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `Page "Detail"` | Page | definition/pages/3485dcffc49d1608c370/page.json:1 | tab order starts at "Total Margin" but the layout reads "Net Sales" first |
+
+## WARNING: Use the DIVIDE function for division (5) · model
+
+[USE_THE_DIVIDE_FUNCTION_FOR_DIVISION](https://pbiplint.com/rules/use-the-divide-function-for-division) · DAX Expressions
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `'DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92'[QuarterNo]` | CalculatedColumn | definition/tables/DateTableTemplate\_96ead6f8-eef3-4336-a020-6641aa278e92.tmdl:54 |  |
+| `'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'[QuarterNo]` | CalculatedColumn | definition/tables/LocalDateTable\_b6c07c62-ecbc-4f14-b072-2fb027697b1d.tmdl:54 |  |
+| `[Margin %]` | Measure | definition/tables/Sales.tmdl:25 |  |
+| `[Average Order Value]` | Measure | definition/tables/Sales.tmdl:31 |  |
+| `[Sales YoY %]` | Measure | definition/tables/Sales.tmdl:43 |  |
+
+## WARNING: Measure defined in the report (2) · report
+
+[REPORT_LEVEL_MEASURES](https://pbiplint.com/rules/report-level-measures) · Maintenance
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `[Net Margin] (report)` | ReportMeasure | definition/reportExtensions.json:8 | defined in the report on table "Sales" |
+| `[Margin % (report)] (report)` | ReportMeasure | definition/reportExtensions.json:25 | defined in the report on table "Sales" |
+
+## WARNING: Page keeps its default name (2) · report
+
+[DEFAULT_PAGE_NAME](https://pbiplint.com/rules/default-page-name) · Report Design
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `Page "Page 2"` | Page | definition/pages/52db6f0b218c638f8761/page.json:4 | "Page 2" is the name Power BI Desktop gives a new page |
+| `Page "Duplicate of Overview"` | Page | definition/pages/27f668864829019f9251/page.json:4 | "Duplicate of Overview" is the name Power BI Desktop gives a duplicated page |
+
+## WARNING: Visual extends past the page (2) · report
+
+[VISUAL_OUTSIDE_PAGE](https://pbiplint.com/rules/visual-outside-page) · Report Design
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `"Notes" on "Overview"` | Visual | definition/pages/3cea48e58036b1654474/visuals/49158e1e7dce5e8d37fd/visual.json:4 | 120 px past the right edge |
+| `Group "Promotion notes" on "Promotions"` | Visual | definition/pages/00e055aa522743f28a39/visuals/d2995ea3e9b9d9244bf6/visual.json:4 | 40 px past the right edge |
+
+## WARNING: Action has no destination (1) · report
+
+[ACTION_WITHOUT_DESTINATION](https://pbiplint.com/rules/action-without-destination) · Report Design
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `"Next page" on "Overview"` | Visual | definition/pages/3cea48e58036b1654474/visuals/307e834045a168e7a394/visual.json:257 | Page navigation action has no destination |
+
+## WARNING: Ensure pages do not scroll vertically (1) · report
+
+[ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY](https://pbiplint.com/rules/ensure-pages-do-not-scroll-vertically) · Report Design
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `Page "Detail"` | Page | definition/pages/3485dcffc49d1608c370/page.json:6 | height 1080, more than 720 |
+
+## WARNING: Ensure charts use theme colours (1) · report
+
+[ENSURE_THEME_COLOURS](https://pbiplint.com/rules/ensure-theme-colours) · Report Design
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `"Total Quantity" on "Page 2"` | Visual | definition/pages/52db6f0b218c638f8761/visuals/8edac00805f721edc1c1/visual.json:86 | 1 colour set to a hex value instead of a theme colour |
+
+## WARNING: Filters pane state differs from policy (1) · report
+
+[FILTERS_PANE_STATE](https://pbiplint.com/rules/filters-pane-state) · Report Design
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `Report` | Report | definition/report.json:31 | saved open; the policy expects closed |
+
+## WARNING: Tooltip and Drillthrough pages should be hidden (1) · report
+
+[HIDE_TOOLTIP_DRILLTROUGH_PAGES](https://pbiplint.com/rules/hide-tooltip-drilltrough-pages) · Report Design
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `Page "Product tooltip"` | Page | definition/pages/3b33a1ae720bb93d48b9/page.json:27 | tooltip page is visible to readers |
+
+## WARNING: Slicer saved with a search term (1) · report
+
+[SLICER_SEARCH_SAVED](https://pbiplint.com/rules/slicer-search-saved) · Report Design
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `"City" on "Stores"` | Visual | definition/pages/5fbcb07dde4e4fada3f6/visuals/6c71af13bcdb4c28cce8/visual.json:61 | opens with the search term "spring" saved |
+
+## WARNING: Data visual with no fields (1) · report
+
+[VISUAL_WITHOUT_FIELDS](https://pbiplint.com/rules/visual-without-fields) · Report Design
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `"Placeholder" on "Overview"` | Visual | definition/pages/3cea48e58036b1654474/visuals/bda61916a7b1efdee3fe/visual.json:13 | no fields bound |
+
+## WARNING: Whole numbers should be formatted with thousands separators and no decimals (14) · model
+
+[INTEGER_FORMATTING](https://pbiplint.com/rules/integer-formatting) · Formatting
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `[Total Sales]` | Measure | definition/tables/Sales.tmdl:4 | no format string |
+| `[Total Quantity]` | Measure | definition/tables/Sales.tmdl:7 | no format string |
+| `[Average Unit Price]` | Measure | definition/tables/Sales.tmdl:10 | no format string |
+| `[Total Cost]` | Measure | definition/tables/Sales.tmdl:13 | no format string |
+| `[Total Discount]` | Measure | definition/tables/Sales.tmdl:16 | no format string |
+| `[Net Sales]` | Measure | definition/tables/Sales.tmdl:19 | no format string |
+| `[Total Margin]` | Measure | definition/tables/Sales.tmdl:22 | no format string |
+| `[Margin %]` | Measure | definition/tables/Sales.tmdl:25 | no format string |
+| `[Order Count]` | Measure | definition/tables/Sales.tmdl:28 | no format string |
+| `[Average Order Value]` | Measure | definition/tables/Sales.tmdl:31 | no format string |
+| `[Distinct Customers]` | Measure | definition/tables/Sales.tmdl:34 | no format string |
+| `[Sales YTD]` | Measure | definition/tables/Sales.tmdl:37 | no format string |
+| `[Sales LY]` | Measure | definition/tables/Sales.tmdl:40 | no format string |
+| `[Sales YoY %]` | Measure | definition/tables/Sales.tmdl:43 | no format string |
+
+## WARNING: Hide foreign keys (12) · model
+
+[HIDE_FOREIGN_KEYS](https://pbiplint.com/rules/hide-foreign-keys) · Formatting
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `'Customer'[Customer ID]` | Column | definition/tables/Customer.tmdl:4 |  |
+| `'Customer'[Join Date]` | Column | definition/tables/Customer.tmdl:77 |  |
+| `'Employee'[Employee ID]` | Column | definition/tables/Employee.tmdl:4 |  |
+| `'Product'[Product ID]` | Column | definition/tables/Product.tmdl:4 |  |
+| `'Promotion'[Promotion ID]` | Column | definition/tables/Promotion.tmdl:4 |  |
+| `'Sales'[Sale Date]` | Column | definition/tables/Sales.tmdl:55 |  |
+| `'Sales'[Product ID]` | Column | definition/tables/Sales.tmdl:66 |  |
+| `'Sales'[Customer ID]` | Column | definition/tables/Sales.tmdl:74 |  |
+| `'Sales'[Store ID]` | Column | definition/tables/Sales.tmdl:82 |  |
+| `'Sales'[Employee ID]` | Column | definition/tables/Sales.tmdl:90 |  |
+| `'Sales'[Promotion ID]` | Column | definition/tables/Sales.tmdl:98 |  |
+| `'Store'[Store ID]` | Column | definition/tables/Store.tmdl:4 |  |
+
+## WARNING: Hide fact table columns (5) · model
+
+[HIDE_FACT_TABLE_COLUMNS](https://pbiplint.com/rules/hide-fact-table-columns) · Formatting
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `'Sales'[Sale ID]` | Column | definition/tables/Sales.tmdl:46 |  |
+| `'Sales'[Unit Price]` | Column | definition/tables/Sales.tmdl:114 |  |
+| `'Sales'[Unit Cost]` | Column | definition/tables/Sales.tmdl:122 |  |
+| `'Sales'[Discount Amount]` | Column | definition/tables/Sales.tmdl:130 |  |
+| `'Sales'[Total Amount]` | Column | definition/tables/Sales.tmdl:138 |  |
+
+## WARNING: Month (as a string) must be sorted (1) · model
+
+[MONTH_(AS_A_STRING)_MUST_BE_SORTED](https://pbiplint.com/rules/month-as-a-string-must-be-sorted) · Formatting
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `'Date'[Month]` | Column | definition/tables/Date.tmdl:40 |  |
+
+## INFO: Visible objects with no description (93) · model
+
+[OBJECTS_WITH_NO_DESCRIPTION](https://pbiplint.com/rules/objects-with-no-description) · Maintenance
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `'Customer'` | Table | definition/tables/Customer.tmdl:1 |  |
+| `'Customer'[Customer ID]` | Column | definition/tables/Customer.tmdl:4 |  |
+| `'Customer'[Customer Name]` | Column | definition/tables/Customer.tmdl:13 |  |
+| `'Customer'[Segment]` | Column | definition/tables/Customer.tmdl:21 |  |
+| `'Customer'[Region]` | Column | definition/tables/Customer.tmdl:29 |  |
+| `'Customer'[City]` | Column | definition/tables/Customer.tmdl:37 |  |
+| `'Customer'[State]` | Column | definition/tables/Customer.tmdl:45 |  |
+| `'Customer'[Postal Code]` | Column | definition/tables/Customer.tmdl:53 |  |
+| `'Customer'[Country]` | Column | definition/tables/Customer.tmdl:61 |  |
+| `'Customer'[Email]` | Column | definition/tables/Customer.tmdl:69 |  |
+| `'Customer'[Join Date]` | Column | definition/tables/Customer.tmdl:77 |  |
+| `'Customer'[Loyalty Tier]` | Column | definition/tables/Customer.tmdl:93 |  |
+| `'Date'` | Table | definition/tables/Date.tmdl:1 |  |
+| `'Date'[Date]` | Column | definition/tables/Date.tmdl:4 |  |
+| `'Date'[Year]` | Column | definition/tables/Date.tmdl:16 |  |
+| `'Date'[Quarter]` | Column | definition/tables/Date.tmdl:24 |  |
+| `'Date'[Quarter Number]` | Column | definition/tables/Date.tmdl:32 |  |
+| `'Date'[Month]` | Column | definition/tables/Date.tmdl:40 |  |
+| `'Date'[Month Number]` | Column | definition/tables/Date.tmdl:48 |  |
+| `'Date'[Day of Week]` | Column | definition/tables/Date.tmdl:56 |  |
+| `'Date'[Day Number]` | Column | definition/tables/Date.tmdl:64 |  |
+| `'Date'[Week of Year]` | Column | definition/tables/Date.tmdl:72 |  |
+| `'Date'[Is Weekend]` | Column | definition/tables/Date.tmdl:80 |  |
+| `'Employee Grouping'` | CalculatedTable | definition/tables/Employee Grouping.tmdl:1 |  |
+| `'Employee Grouping'[Employee Grouping]` | CalculatedTableColumn | definition/tables/Employee Grouping.tmdl:4 |  |
+| `'Employee'` | Table | definition/tables/Employee.tmdl:1 |  |
+| `'Employee'[Employee ID]` | Column | definition/tables/Employee.tmdl:4 |  |
+| `'Employee'[Employee Name]` | Column | definition/tables/Employee.tmdl:13 |  |
+| `'Employee'[Title]` | Column | definition/tables/Employee.tmdl:21 |  |
+| `'Employee'[Department]` | Column | definition/tables/Employee.tmdl:29 |  |
+| `'Employee'[Hire Date]` | Column | definition/tables/Employee.tmdl:37 |  |
+| `'Employee'[Manager ID]` | Column | definition/tables/Employee.tmdl:48 |  |
+| `'Employee'[Region]` | Column | definition/tables/Employee.tmdl:56 |  |
+| `'Employee'[Email]` | Column | definition/tables/Employee.tmdl:64 |  |
+| `'Product'` | Table | definition/tables/Product.tmdl:1 |  |
+| `'Product'[Product ID]` | Column | definition/tables/Product.tmdl:4 |  |
+| `'Product'[Product Name]` | Column | definition/tables/Product.tmdl:13 |  |
+| `'Product'[Category]` | Column | definition/tables/Product.tmdl:21 |  |
+| `'Product'[Subcategory]` | Column | definition/tables/Product.tmdl:29 |  |
+| `'Product'[Brand]` | Column | definition/tables/Product.tmdl:37 |  |
+| `'Product'[Color]` | Column | definition/tables/Product.tmdl:45 |  |
+| `'Product'[Size]` | Column | definition/tables/Product.tmdl:53 |  |
+| `'Product'[Standard Cost]` | Column | definition/tables/Product.tmdl:61 |  |
+| `'Product'[List Price]` | Column | definition/tables/Product.tmdl:69 |  |
+| `'Product'[Supplier Name]` | Column | definition/tables/Product.tmdl:77 |  |
+| `'Product'[Discontinued]` | Column | definition/tables/Product.tmdl:85 |  |
+| `'Promotion'` | Table | definition/tables/Promotion.tmdl:1 |  |
+| `'Promotion'[Promotion ID]` | Column | definition/tables/Promotion.tmdl:4 |  |
+| `'Promotion'[Promotion Name]` | Column | definition/tables/Promotion.tmdl:13 |  |
+| `'Promotion'[Promotion Type]` | Column | definition/tables/Promotion.tmdl:21 |  |
+| `'Promotion'[Discount Pct]` | Column | definition/tables/Promotion.tmdl:29 |  |
+| `'Promotion'[Start Date]` | Column | definition/tables/Promotion.tmdl:37 |  |
+| `'Promotion'[End Date]` | Column | definition/tables/Promotion.tmdl:48 |  |
+| `'Sales'` | Table | definition/tables/Sales.tmdl:1 |  |
+| `'Sales'[Sale ID]` | Column | definition/tables/Sales.tmdl:46 |  |
+| `'Sales'[Sale Date]` | Column | definition/tables/Sales.tmdl:55 |  |
+| `'Sales'[Product ID]` | Column | definition/tables/Sales.tmdl:66 |  |
+| `'Sales'[Customer ID]` | Column | definition/tables/Sales.tmdl:74 |  |
+| `'Sales'[Store ID]` | Column | definition/tables/Sales.tmdl:82 |  |
+| `'Sales'[Employee ID]` | Column | definition/tables/Sales.tmdl:90 |  |
+| `'Sales'[Promotion ID]` | Column | definition/tables/Sales.tmdl:98 |  |
+| `'Sales'[Quantity]` | Column | definition/tables/Sales.tmdl:106 |  |
+| `'Sales'[Unit Price]` | Column | definition/tables/Sales.tmdl:114 |  |
+| `'Sales'[Unit Cost]` | Column | definition/tables/Sales.tmdl:122 |  |
+| `'Sales'[Discount Amount]` | Column | definition/tables/Sales.tmdl:130 |  |
+| `'Sales'[Total Amount]` | Column | definition/tables/Sales.tmdl:138 |  |
+| `'Sales'[Net Amount]` | Column | definition/tables/Sales.tmdl:146 |  |
+| `[Total Sales]` | Measure | definition/tables/Sales.tmdl:4 |  |
+| `[Total Quantity]` | Measure | definition/tables/Sales.tmdl:7 |  |
+| `[Average Unit Price]` | Measure | definition/tables/Sales.tmdl:10 |  |
+| `[Total Cost]` | Measure | definition/tables/Sales.tmdl:13 |  |
+| `[Total Discount]` | Measure | definition/tables/Sales.tmdl:16 |  |
+| `[Net Sales]` | Measure | definition/tables/Sales.tmdl:19 |  |
+| `[Total Margin]` | Measure | definition/tables/Sales.tmdl:22 |  |
+| `[Margin %]` | Measure | definition/tables/Sales.tmdl:25 |  |
+| `[Order Count]` | Measure | definition/tables/Sales.tmdl:28 |  |
+| `[Average Order Value]` | Measure | definition/tables/Sales.tmdl:31 |  |
+| `[Distinct Customers]` | Measure | definition/tables/Sales.tmdl:34 |  |
+| `[Sales YTD]` | Measure | definition/tables/Sales.tmdl:37 |  |
+| `[Sales LY]` | Measure | definition/tables/Sales.tmdl:40 |  |
+| `[Sales YoY %]` | Measure | definition/tables/Sales.tmdl:43 |  |
+| `'Store'` | Table | definition/tables/Store.tmdl:1 |  |
+| `'Store'[Store ID]` | Column | definition/tables/Store.tmdl:4 |  |
+| `'Store'[Store Name]` | Column | definition/tables/Store.tmdl:13 |  |
+| `'Store'[Store Type]` | Column | definition/tables/Store.tmdl:21 |  |
+| `'Store'[City]` | Column | definition/tables/Store.tmdl:29 |  |
+| `'Store'[State]` | Column | definition/tables/Store.tmdl:37 |  |
+| `'Store'[Region]` | Column | definition/tables/Store.tmdl:45 |  |
+| `'Store'[Country]` | Column | definition/tables/Store.tmdl:53 |  |
+| `'Store'[Open Date]` | Column | definition/tables/Store.tmdl:61 |  |
+| `'Store'[Latitude]` | Column | definition/tables/Store.tmdl:72 |  |
+| `'Store'[Longitude]` | Column | definition/tables/Store.tmdl:80 |  |
+| `'Store'[Square Feet]` | Column | definition/tables/Store.tmdl:88 |  |
+
+## INFO: Not reached from the report (38) · model
+
+[NOT_REACHED_FROM_REPORT](https://pbiplint.com/rules/not-reached-from-report) · Maintenance
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `[Sales LY]` | Measure | definition/tables/Sales.tmdl:40 | referenced only by \[Sales YoY %\], which nothing reaches either |
+| `[Sales YoY %]` | Measure | definition/tables/Sales.tmdl:43 | nothing in the report reaches it, and no measure or column references it |
+| `'Customer'[Customer Name]` | Column | definition/tables/Customer.tmdl:13 | nothing in the report reaches it, and no measure or column references it |
+| `'Customer'[Segment]` | Column | definition/tables/Customer.tmdl:21 | nothing in the report reaches it, and no measure or column references it |
+| `'Customer'[Region]` | Column | definition/tables/Customer.tmdl:29 | nothing in the report reaches it, and no measure or column references it |
+| `'Customer'[City]` | Column | definition/tables/Customer.tmdl:37 | nothing in the report reaches it, and no measure or column references it |
+| `'Customer'[State]` | Column | definition/tables/Customer.tmdl:45 | nothing in the report reaches it, and no measure or column references it |
+| `'Customer'[Postal Code]` | Column | definition/tables/Customer.tmdl:53 | nothing in the report reaches it, and no measure or column references it |
+| `'Customer'[Country]` | Column | definition/tables/Customer.tmdl:61 | nothing in the report reaches it, and no measure or column references it |
+| `'Customer'[Email]` | Column | definition/tables/Customer.tmdl:69 | nothing in the report reaches it, and no measure or column references it |
+| `'Customer'[Loyalty Tier]` | Column | definition/tables/Customer.tmdl:93 | nothing in the report reaches it, and no measure or column references it |
+| `'Date'[Quarter]` | Column | definition/tables/Date.tmdl:24 | nothing in the report reaches it, and no measure or column references it |
+| `'Date'[Quarter Number]` | Column | definition/tables/Date.tmdl:32 | nothing in the report reaches it, and no measure or column references it |
+| `'Date'[Month Number]` | Column | definition/tables/Date.tmdl:48 | nothing in the report reaches it, and no measure or column references it |
+| `'Date'[Day of Week]` | Column | definition/tables/Date.tmdl:56 | nothing in the report reaches it, and no measure or column references it |
+| `'Date'[Day Number]` | Column | definition/tables/Date.tmdl:64 | nothing in the report reaches it, and no measure or column references it |
+| `'Date'[Is Weekend]` | Column | definition/tables/Date.tmdl:80 | nothing in the report reaches it, and no measure or column references it |
+| `'Employee'[Hire Date]` | Column | definition/tables/Employee.tmdl:37 | nothing in the report reaches it, and no measure or column references it |
+| `'Employee'[Manager ID]` | Column | definition/tables/Employee.tmdl:48 | nothing in the report reaches it, and no measure or column references it |
+| `'Employee'[Email]` | Column | definition/tables/Employee.tmdl:64 | nothing in the report reaches it, and no measure or column references it |
+| `'Product'[Subcategory]` | Column | definition/tables/Product.tmdl:29 | nothing in the report reaches it, and no measure or column references it |
+| `'Product'[Color]` | Column | definition/tables/Product.tmdl:45 | nothing in the report reaches it, and no measure or column references it |
+| `'Product'[Size]` | Column | definition/tables/Product.tmdl:53 | nothing in the report reaches it, and no measure or column references it |
+| `'Product'[Standard Cost]` | Column | definition/tables/Product.tmdl:61 | nothing in the report reaches it, and no measure or column references it |
+| `'Product'[List Price]` | Column | definition/tables/Product.tmdl:69 | nothing in the report reaches it, and no measure or column references it |
+| `'Product'[Supplier Name]` | Column | definition/tables/Product.tmdl:77 | nothing in the report reaches it, and no measure or column references it |
+| `'Product'[Discontinued]` | Column | definition/tables/Product.tmdl:85 | nothing in the report reaches it, and no measure or column references it |
+| `'Promotion'[Promotion Type]` | Column | definition/tables/Promotion.tmdl:21 | nothing in the report reaches it, and no measure or column references it |
+| `'Promotion'[Discount Pct]` | Column | definition/tables/Promotion.tmdl:29 | nothing in the report reaches it, and no measure or column references it |
+| `'Promotion'[Start Date]` | Column | definition/tables/Promotion.tmdl:37 | nothing in the report reaches it, and no measure or column references it |
+| `'Promotion'[End Date]` | Column | definition/tables/Promotion.tmdl:48 | nothing in the report reaches it, and no measure or column references it |
+| `'Sales'[Net Amount]` | Column | definition/tables/Sales.tmdl:146 | nothing in the report reaches it, and no measure or column references it |
+| `'Store'[Store Name]` | Column | definition/tables/Store.tmdl:13 | nothing in the report reaches it, and no measure or column references it |
+| `'Store'[Region]` | Column | definition/tables/Store.tmdl:45 | nothing in the report reaches it, and no measure or column references it |
+| `'Store'[Open Date]` | Column | definition/tables/Store.tmdl:61 | nothing in the report reaches it, and no measure or column references it |
+| `'Store'[Latitude]` | Column | definition/tables/Store.tmdl:72 | nothing in the report reaches it, and no measure or column references it |
+| `'Store'[Longitude]` | Column | definition/tables/Store.tmdl:80 | nothing in the report reaches it, and no measure or column references it |
+| `'Store'[Square Feet]` | Column | definition/tables/Store.tmdl:88 | nothing in the report reaches it, and no measure or column references it |
+
+## INFO: Steps keep Power Query's default names (7) · powerquery
+
+[DEFAULT_STEP_NAMES](https://pbiplint.com/rules/default-step-names) · Maintenance
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `Customer` | Partition | definition/tables/Customer.tmdl:106:9 | query 'Customer': 2 steps keep default names, 'Promoted Headers' and 'Changed Type' |
+| `Date` | Partition | definition/tables/Date.tmdl:93:9 | query 'Date': 2 steps keep default names, 'Promoted Headers' and 'Changed Type' |
+| `Employee` | Partition | definition/tables/Employee.tmdl:77:9 | query 'Employee': 2 steps keep default names, 'Promoted Headers' and 'Changed Type' |
+| `Product` | Partition | definition/tables/Product.tmdl:98:9 | query 'Product': 2 steps keep default names, 'Promoted Headers' and 'Changed Type' |
+| `Promotion` | Partition | definition/tables/Promotion.tmdl:64:9 | query 'Promotion': 2 steps keep default names, 'Promoted Headers' and 'Changed Type' |
+| `Sales` | Partition | definition/tables/Sales.tmdl:159:9 | query 'Sales': 2 steps keep default names, 'Promoted Headers' and 'Changed Type' |
+| `Store` | Partition | definition/tables/Store.tmdl:116:9 | query 'Store': 2 steps keep default names, 'Promoted Headers' and 'Changed Type' |
+
+## INFO: Hidden visual with fields bound (4) · report
+
+[HIDDEN_VISUAL_WITH_FIELDS](https://pbiplint.com/rules/hidden-visual-with-fields) · Maintenance
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `"Debug table" on "Overview"` | Visual | definition/pages/3cea48e58036b1654474/visuals/4457e97e02f61c8f609b/visual.json:175 | 6 fields bound |
+| `"Sales trend (old)" on "Overview"` | Visual | definition/pages/3cea48e58036b1654474/visuals/db47426e580241dac6b8/visual.json:103 | 2 fields bound |
+| `"Employee cost" on "Employees"` | Visual | definition/pages/bb1ea3ba2a1defa1979b/visuals/3fa0fc35d2dd20b9b1f2/visual.json:1 | 1 field bound, hidden with Group "Employee details" |
+| `"Employee sales" on "Employees"` | Visual | definition/pages/bb1ea3ba2a1defa1979b/visuals/de6a17691cc952e6d7dd/visual.json:1 | 2 fields bound, hidden with Group "Employee details" |
+
+## INFO: Ensure tables have relationships (2) · model
+
+[ENSURE_TABLES_HAVE_RELATIONSHIPS](https://pbiplint.com/rules/ensure-tables-have-relationships) · Maintenance
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `'DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92'` | CalculatedTable | definition/tables/DateTableTemplate\_96ead6f8-eef3-4336-a020-6641aa278e92.tmdl:1 |  |
+| `'Employee Grouping'` | CalculatedTable | definition/tables/Employee Grouping.tmdl:1 |  |
+
+## INFO: Hardcoded year in a filter (1) · report
+
+[HARDCODED_YEAR_IN_FILTER](https://pbiplint.com/rules/hardcoded-year-in-filter) · Report Design
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `Page filter on "Overview"` | Page | definition/pages/3cea48e58036b1654474/page.json:52 | fixed year 2025 on 'Date'\[Year\] |
+
+## INFO: No landing page set (1) · report
+
+[LANDING_PAGE_NOT_SET](https://pbiplint.com/rules/landing-page-not-set) · Report Design
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `Report` | Report | definition/pages/pages.json:16 | opens on "Scratch", the page open when it was saved |
+
+## INFO: Slicer saved with a selection (1) · report
+
+[SLICER_SELECTION_SAVED](https://pbiplint.com/rules/slicer-selection-saved) · Report Design
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `"Category" on "Overview"` | Visual | definition/pages/3cea48e58036b1654474/visuals/2b5386e9de3e1fbb1afa/visual.json:54 | opens with this selection applied |
+
+## INFO: Visible decimal column with no format string (10) · model
+
+[DECIMAL_COLUMN_WITHOUT_FORMAT_STRING](https://pbiplint.com/rules/decimal-column-without-format-string) · Formatting
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `'Product'[Standard Cost]` | Column | definition/tables/Product.tmdl:61 |  |
+| `'Product'[List Price]` | Column | definition/tables/Product.tmdl:69 |  |
+| `'Promotion'[Discount Pct]` | Column | definition/tables/Promotion.tmdl:29 |  |
+| `'Sales'[Unit Price]` | Column | definition/tables/Sales.tmdl:114 |  |
+| `'Sales'[Unit Cost]` | Column | definition/tables/Sales.tmdl:122 |  |
+| `'Sales'[Discount Amount]` | Column | definition/tables/Sales.tmdl:130 |  |
+| `'Sales'[Total Amount]` | Column | definition/tables/Sales.tmdl:138 |  |
+| `'Sales'[Net Amount]` | Column | definition/tables/Sales.tmdl:146 |  |
+| `'Store'[Latitude]` | Column | definition/tables/Store.tmdl:72 |  |
+| `'Store'[Longitude]` | Column | definition/tables/Store.tmdl:80 |  |
+
+## INFO: Provide format string for "Date" columns (9) · model
+
+[DATECOLUMN_FORMATSTRING](https://pbiplint.com/rules/datecolumn-formatstring) · Formatting
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `'Customer'[Join Date]` | Column | definition/tables/Customer.tmdl:77 |  |
+| `'Date'[Date]` | Column | definition/tables/Date.tmdl:4 |  |
+| `'DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92'[Date]` | CalculatedTableColumn | definition/tables/DateTableTemplate\_96ead6f8-eef3-4336-a020-6641aa278e92.tmdl:6 |  |
+| `'Employee'[Hire Date]` | Column | definition/tables/Employee.tmdl:37 |  |
+| `'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'[Date]` | CalculatedTableColumn | definition/tables/LocalDateTable\_b6c07c62-ecbc-4f14-b072-2fb027697b1d.tmdl:6 |  |
+| `'Promotion'[Start Date]` | Column | definition/tables/Promotion.tmdl:37 |  |
+| `'Promotion'[End Date]` | Column | definition/tables/Promotion.tmdl:48 |  |
+| `'Sales'[Sale Date]` | Column | definition/tables/Sales.tmdl:55 |  |
+| `'Store'[Open Date]` | Column | definition/tables/Store.tmdl:61 |  |
+
+## INFO: Add data category for columns (6) · model
+
+[ADD_DATA_CATEGORY_FOR_COLUMNS](https://pbiplint.com/rules/add-data-category-for-columns) · Formatting
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `'Customer'[City]` | Column | definition/tables/Customer.tmdl:37 |  |
+| `'Customer'[Country]` | Column | definition/tables/Customer.tmdl:61 |  |
+| `'Store'[City]` | Column | definition/tables/Store.tmdl:29 |  |
+| `'Store'[Country]` | Column | definition/tables/Store.tmdl:53 |  |
+| `'Store'[Latitude]` | Column | definition/tables/Store.tmdl:72 |  |
+| `'Store'[Longitude]` | Column | definition/tables/Store.tmdl:80 |  |
+
+## INFO: Relationship columns should be of integer data type (4) · model
+
+[RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE](https://pbiplint.com/rules/relationship-columns-should-be-of-integer-data-type) · Formatting
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `'Customer'[Join Date]` | Column | definition/tables/Customer.tmdl:77 |  |
+| `'Date'[Date]` | Column | definition/tables/Date.tmdl:4 |  |
+| `'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'[Date]` | CalculatedTableColumn | definition/tables/LocalDateTable\_b6c07c62-ecbc-4f14-b072-2fb027697b1d.tmdl:6 |  |
+| `'Sales'[Sale Date]` | Column | definition/tables/Sales.tmdl:55 |  |
+
+## INFO: Mark primary keys (1) · model
+
+[MARK_PRIMARY_KEYS](https://pbiplint.com/rules/mark-primary-keys) · Formatting
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'[Date]` | CalculatedTableColumn | definition/tables/LocalDateTable\_b6c07c62-ecbc-4f14-b072-2fb027697b1d.tmdl:6 |  |

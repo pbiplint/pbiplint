@@ -1,13 +1,4 @@
-import {
-  cpSync,
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
-import { tmpdir } from "node:os";
+import { cpSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "./fixtures.js";
@@ -18,6 +9,7 @@ import {
   SECRETS_FIXTURE,
 } from "../../../tests/support/fake-secrets.js";
 import { setFolder } from "./folder-input.js";
+import { withTempFolder } from "./temp-folder.js";
 
 // The home page in a real browser: the inputs, the results, and the behaviours the happy-dom unit
 // tests can only approximate (drag events, a folder input, downloads, focus). Every test also ends
@@ -45,21 +37,6 @@ const big = fileURLToPath(new URL("../../../tests/generated/big-report", import.
 const bigModel = fileURLToPath(
   new URL("../../../tests/generated/big-model/big-model.SemanticModel", import.meta.url),
 );
-
-/** A folder under the OS temp directory, built by `fill` for one test and removed after it. */
-async function withTempFolder(
-  prefix: string,
-  fill: (dir: string) => void,
-  use: (dir: string) => Promise<void>,
-): Promise<void> {
-  const dir = mkdtempSync(join(tmpdir(), prefix));
-  try {
-    fill(dir);
-    await use(dir);
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
-}
 
 test("lints the sample project and announces the result", async ({ page }) => {
   await page.getByRole("button", { name: "Try the sample project" }).click();
@@ -281,7 +258,7 @@ test("lints a report alone and names the model it reads", async ({ page }) => {
   );
 });
 
-test("refuses a folder with two reports and names them", async ({ page }) => {
+test("lints a folder with two reports side by side as a project each (#237)", async ({ page }) => {
   await withTempFolder(
     "two-reports-",
     (dir) => {
@@ -292,15 +269,16 @@ test("refuses a folder with two reports and names them", async ({ page }) => {
     },
     async (dir) => {
       await setFolder(page.locator("#folder-input"), dir);
-      await expect(page.locator("#status")).toHaveText(
-        /contains 2 reports; drop one of them: A\.Report, B\.Report/,
-      );
-      await expect(page.locator("#results")).toBeHidden();
+      await expect(page.locator("#results section.project > h2")).toHaveText([
+        "Project 1 of 2: A.Report",
+        "Project 2 of 2: B.Report",
+      ]);
+      await expect(page.locator("#status")).toBeHidden();
     },
   );
 });
 
-test("lints the one project below a folder and names it, and refuses a folder with two (#174)", async ({
+test("lints the one project below a folder and names it, and each of two below a folder (#174, #237)", async ({
   page,
 }) => {
   await withTempFolder(
@@ -325,10 +303,11 @@ test("lints the one project below a folder and names it, and refuses a folder wi
     },
     async (dir) => {
       await setFolder(page.locator("#folder-input"), dir);
-      await expect(page.locator("#status")).toHaveText(
-        /contains 2 projects; drop one of them: a\/messy-sales, b\/messy-sales$/,
-      );
-      await expect(page.locator("#results")).toBeHidden();
+      await expect(page.locator("#results section.project > h2")).toHaveText([
+        "Project 1 of 2: a/messy-sales",
+        "Project 2 of 2: b/messy-sales",
+      ]);
+      await expect(page.locator("#status")).toBeHidden();
     },
   );
 });

@@ -1,8 +1,9 @@
 import type { LintResult } from "../engine/lint.js";
 import { formatJson } from "./json.js";
-import { formatMarkdown } from "./markdown.js";
+import { formatMarkdown, markdownText } from "./markdown.js";
 import { formatSarif } from "./sarif.js";
 import {
+  countsLine,
   factsLines,
   formatText,
   layersLine,
@@ -14,6 +15,7 @@ import {
   skippedLine,
   summaryLine,
   topGroups,
+  type CountedRun,
   type FormatOptions,
   type RuleHelp,
 } from "./text.js";
@@ -46,6 +48,7 @@ export function formatResult(
 }
 
 export {
+  countsLine,
   factsLines,
   formatJson,
   formatMarkdown,
@@ -54,6 +57,7 @@ export {
   layersLine,
   layerTag,
   locationOf,
+  markdownText,
   noticeLines,
   plural,
   ruleErrorNotices,
@@ -61,4 +65,4 @@ export {
   summaryLine,
   topGroups,
 };
-export type { FormatOptions, RuleHelp };
+export type { CountedRun, FormatOptions, RuleHelp };

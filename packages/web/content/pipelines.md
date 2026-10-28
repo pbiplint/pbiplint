@@ -54,7 +54,7 @@ The `permissions` block gives the job two things and nothing more. `contents: re
 
 The inputs a first run usually changes are `path`, what to lint; `fail-on`, the lowest severity that fails the check (`error` by default, `none` to report without failing); and `upload-sarif`, whether to send the report to code scanning. The README has [every input and output](https://github.com/pbiplint/action#inputs).
 
-For several projects in one repository, add a step for each, each with its own `path` and its own `sarif-category`, so one upload does not replace another.
+For several projects in one repository, one step lints them all from pbiplint 0.3.0: give `path` the folder that holds them, such as `.` for the whole repository, and the check, the annotations, the job summary, and the one code scanning upload cover every project, each finding at its own file. Separate steps still work, each with its own `path` and its own `sarif-category`, so one upload does not replace another.
 
 On a private repository, code scanning needs GitHub Code Security. Without it the upload fails, the step says why, and the run carries on; `upload-sarif: false` stops it trying.
 
@@ -108,7 +108,7 @@ steps:
       path: Sales.pbip
 ```
 
-The inputs are the Action's, spelled the way Azure Pipelines allows: `path`, `failOn`, and `publishSarif` are the ones a first run usually changes, and the README has [every input](https://github.com/pbiplint/azure-pipelines#inputs). For several projects in one repository, add a step for each with its own `path` and `sarifCategory`.
+The inputs are the Action's, spelled the way Azure Pipelines allows: `path`, `failOn`, and `publishSarif` are the ones a first run usually changes, and the README has [every input](https://github.com/pbiplint/azure-pipelines#inputs). For several projects in one repository, one step lints them all from pbiplint 0.3.0, with `path` set to the folder that holds them. Separate steps still work, each with its own `path` and `sarifCategory`.
 
 The plain YAML route is one `bash` step: copy [`examples/plain.yml`](https://github.com/pbiplint/azure-pipelines/blob/main/examples/plain.yml) to `azure-pipelines.yml` and set the path. It runs the same pinned CLI, attaches the same report to the run, publishes the same SARIF artifact, and fails the step the same way. It leaves out the build issues and the output variables, which need the task's script.
 

@@ -719,6 +719,73 @@ describe("home page", () => {
     );
     expect(document.getElementById("results")!.textContent).not.toMatch(RAW_CONTROL);
   });
+  it("lints every project in a folder that holds several, each under its own config (#237)", async () => {
+    const model = (dir: string): File[] => [
+      at(`${dir}/definition/model.tmdl`, "model Model\n"),
+      at(`${dir}/definition/tables/T.tmdl`, "table T\n"),
+    ];
+    feedFolder([
+      ...model("Drop/a/A.SemanticModel"),
+      ...model("Drop/b/B.SemanticModel"),
+      at("Drop/a/pbiplint.config.json", '{ "rules": { "NOPE": "warning" } }'),
+    ]);
+    await tick();
+    await tick();
+    const results = document.getElementById("results")!;
+    expect(results.hidden).toBe(false);
+    expect(document.getElementById("status")!.hidden).toBe(true);
+    const sections = [...results.querySelectorAll("section.project")];
+    expect(sections.map((s) => s.querySelector("h2")!.textContent)).toEqual([
+      "Project 1 of 2: a/A.SemanticModel",
+      "Project 2 of 2: b/B.SemanticModel",
+    ]);
+    // a's config names a rule there is none of; b has no config.
+    const unknown = (s: Element) =>
+      [...s.querySelectorAll(".notice")].filter((n) => n.textContent!.includes('"NOPE"')).length;
+    expect(sections.map(unknown)).toEqual([1, 0]);
+    const summary = results.querySelector(":scope > .summary")!.textContent!;
+    expect(summary).toMatch(/^2 projects, /);
+    expect(document.getElementById("announce")!.textContent).toBe(summary);
+    expect(results.dataset.lintMs).toMatch(/^\d+$/);
+  });
+  it("yields between the projects of several, so a newer input stops the run there (#237)", async () => {
+    vi.mocked(lint).mockClear();
+    feedFolder([
+      at("Drop/a/A.SemanticModel/definition/tables/A.tmdl", "table A\n"),
+      at("Drop/b/B.SemanticModel/definition/tables/B.tmdl", "table B\n"),
+    ]);
+    const status = document.getElementById("status")!;
+    // The run says which project it is on while it waits for the frame before each lint.
+    for (let i = 0; i < 100 && status.textContent !== "Linting project 2 of 2"; i++)
+      await new Promise((r) => setTimeout(r, 0));
+    expect(status.textContent).toBe("Linting project 2 of 2");
+    // Between the two lints, a paste owns the page.
+    (document.getElementById("paste") as HTMLTextAreaElement).value = "table Pasted\n";
+    document.getElementById("lint-paste")!.click();
+    await tick();
+    await tick();
+    expect(document.querySelector("#results h2")!.textContent).toBe(
+      "Results for pasted TMDL (model, 1 file)",
+    );
+    expect(document.querySelectorAll("#results section.project").length).toBe(0);
+    // The first project and the paste were linted; the second project never was.
+    const linted = vi.mocked(lint).mock.calls.map((c) => c[0].map((f) => f.path).join());
+    expect(linted).toEqual(["definition/tables/A.tmdl", "pasted.tmdl"]);
+  });
+  it("refuses a folder of several projects when one's config is not valid JSON", async () => {
+    feedFolder([
+      at("Drop/a/A.SemanticModel/definition/tables/T.tmdl", "table T\n"),
+      at("Drop/b/B.SemanticModel/definition/tables/T.tmdl", "table T\n"),
+      at("Drop/b/pbiplint.config.json", "{"),
+    ]);
+    await tick();
+    await tick();
+    // Named by its path in the drop: each project of several can have its own.
+    expect(document.getElementById("status")!.textContent).toMatch(
+      /^Drop\/b\/pbiplint\.config\.json is not valid JSON: /,
+    );
+    expect(document.getElementById("results")!.hidden).toBe(true);
+  });
 });
 
 // eslint-disable-next-line no-control-regex -- the characters showControls writes as escapes

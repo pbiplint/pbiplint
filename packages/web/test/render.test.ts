@@ -5,7 +5,11 @@ import {
   legacyReportNotice,
   lint,
   resolveConfig,
+  runSummary,
+  runSummaryLine,
+  unreadProject,
   type LintResult,
+  type ProjectRun,
   type Rule,
 } from "@pbiplint/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -16,6 +20,7 @@ import {
   heading,
   NEW_TAB_NOTE,
   renderResults,
+  renderSeveral,
   withLearnLinks,
 } from "../src/results/render.js";
 import { exportForAssistant } from "../src/results/export.js";
@@ -1175,6 +1180,189 @@ describe("a link to a finding group", () => {
     expect(container.onclick).not.toBe(first);
     renderResults(container, await lint(bare, { rules: [] }), { source: "x" });
     expect(container.onclick).toBeNull();
+  });
+});
+
+describe("renderSeveral (#237)", () => {
+  const config = resolveConfig(JSON.parse(SAMPLE_CONFIG));
+  const unread = unreadProject(
+    { message: "c/Old.SemanticModel is stored as model.bim", layer: "model", file: "model.bim" },
+    config,
+  );
+  const runs: ProjectRun[] = [
+    { path: "a/messy-sales", result, config },
+    { path: "b/messy-sales", result, config },
+    { path: "c/Old.SemanticModel", result: unread, config },
+  ];
+  const sources = [
+    { files: ["one.tmdl"], notes: ["a note"] },
+    { files: ["two.tmdl"], notes: [] },
+    { notes: [] },
+  ];
+  const sections = () => [...container.querySelectorAll<HTMLElement>(":scope > section")];
+
+  it("writes the combined summary, a link to each project, then a section per project", () => {
+    renderSeveral(container, runs, sources);
+    expect(container.querySelector(":scope > .privacy")!.textContent).toContain(
+      "Nothing was uploaded",
+    );
+    expect(container.querySelector(":scope > .summary")!.textContent).toBe(
+      `${runSummaryLine(runSummary(runs))}.`,
+    );
+    const links = [...container.querySelectorAll<HTMLAnchorElement>("nav a")];
+    expect(links.map((a) => [a.getAttribute("href"), a.textContent])).toEqual([
+      ["#project-1", "a/messy-sales"],
+      ["#project-2", "b/messy-sales"],
+      ["#project-3", "c/Old.SemanticModel"],
+    ]);
+    expect(sections().map((s) => [s.id, s.querySelector("h2")!.textContent])).toEqual([
+      ["project-1", "Project 1 of 3: a/messy-sales"],
+      ["project-2", "Project 2 of 3: b/messy-sales"],
+      ["project-3", "Project 3 of 3: c/Old.SemanticModel"],
+    ]);
+  });
+  it("renders each project as renderResults renders it, export bar included, but for the privacy line said once", () => {
+    renderSeveral(container, runs, sources);
+    const alone = document.createElement("section");
+    renderResults(alone, result, {
+      source: "a/messy-sales",
+      files: ["one.tmdl"],
+      notes: ["a note"],
+    });
+    const first = sections()[0]!;
+    expect(first.querySelectorAll(".privacy").length).toBe(0);
+    expect(container.querySelectorAll(".privacy").length).toBe(1);
+    expect(first.querySelector(".summary")!.textContent).toBe(
+      alone.querySelector(".summary")!.textContent,
+    );
+    expect(first.querySelector("h3")!.textContent).toBe(
+      "Results for a/messy-sales (model, 14 files · report, 78 files)",
+    );
+    expect(first.querySelectorAll(".group").length).toBe(alone.querySelectorAll(".group").length);
+    expect(first.querySelector(".notice")!.textContent).toBe("a note");
+    expect(first.querySelectorAll(".export button").length).toBe(4);
+    // The unreadable project shows its one PARSE_ISSUE finding.
+    const third = sections()[2]!;
+    expect([...third.querySelectorAll(".group")].map((g) => g.id)).toEqual([
+      "project-3-rule-parse-issue",
+    ]);
+    expect(third.querySelector(".files")).toBeNull();
+  });
+  it("gives every id on the page once, each section's links and descriptions its own", () => {
+    renderSeveral(container, runs, sources);
+    const ids = [...container.querySelectorAll("[id]")].map((el) => el.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const [i, section] of sections().entries()) {
+      for (const a of section.querySelectorAll("a[href^='#']"))
+        expect(
+          section.querySelector(a.getAttribute("href")!),
+          a.getAttribute("href")!,
+        ).not.toBeNull();
+      for (const el of section.querySelectorAll("[aria-describedby]")) {
+        const id = el.getAttribute("aria-describedby")!;
+        expect(id.startsWith(`project-${i + 1}-`)).toBe(true);
+        expect(section.querySelector(`#${id}`)).not.toBeNull();
+      }
+    }
+  });
+  it("opens a group in its own section from a fix-first link, and filters each section alone", () => {
+    renderSeveral(container, runs, sources);
+    const [first, second] = sections() as [HTMLElement, HTMLElement];
+    const slug = result.groups[0]!.rule.slug;
+    second
+      .querySelector<HTMLAnchorElement>(`.fix-first a[href="#project-2-rule-${slug}"]`)!
+      .click();
+    expect(second.querySelector<HTMLDetailsElement>(`#project-2-rule-${slug}`)!.open).toBe(true);
+    expect(first.querySelector<HTMLDetailsElement>(`#project-1-rule-${slug}`)!.open).toBe(false);
+    const box = first.querySelector<HTMLInputElement>('input[data-filter="severity"]')!;
+    box.checked = false;
+    box.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(first.querySelectorAll(".group[hidden]").length).toBeGreaterThan(0);
+    expect(second.querySelectorAll(".group[hidden]").length).toBe(0);
+  });
+  it("leaves no handler from a one-project run before it on the container", () => {
+    // A one-project run (the sample counts) sets handlers on #results that filter every box in it
+    // together; left in place, a section's box would be overruled by the same box in another.
+    renderResults(container, result, { source: "the sample project" });
+    renderSeveral(container, runs, sources);
+    const [first, second] = sections() as [HTMLElement, HTMLElement];
+    const severity = result.groups[0]!.rule.severity;
+    const box = second.querySelector<HTMLInputElement>(
+      `input[data-filter="severity"][value="${severity}"]`,
+    )!;
+    box.checked = false;
+    box.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(
+      second.querySelector<HTMLDetailsElement>(`#project-2-rule-${result.groups[0]!.rule.slug}`)!
+        .hidden,
+    ).toBe(true);
+    expect(first.querySelectorAll(".group[hidden]").length).toBe(0);
+    expect(container.onchange).toBeNull();
+    expect(container.onclick).toBeNull();
+  });
+  it("names a config file's unknown rule ids once, under the first project that uses it", async () => {
+    // Two projects share the root config, the third has its own. Each file's ids are named once,
+    // gathered from every project that used it, by the file's path in the drop, as the CLI names
+    // them once per file by its path.
+    const typo = async (rules: Record<string, string>) =>
+      lint(bare, { config: resolveConfig({ rules }) });
+    const shared = "repo/pbiplint.config.json";
+    const own = "repo/c/pbiplint.config.json";
+    const configured: ProjectRun[] = [
+      { path: "a", result: await typo({ NOPE: "off" }), config, configPath: shared },
+      { path: "b", result: await typo({ NOPE: "off", TYPOED: "off" }), config, configPath: shared },
+      { path: "c", result: await typo({ OTHER: "off" }), config, configPath: own },
+    ];
+    renderSeveral(container, configured, [{ notes: [] }, { notes: [] }, { notes: [] }]);
+    const unknown = (section: HTMLElement) =>
+      [...section.querySelectorAll(".notice")]
+        .map((n) => n.textContent!)
+        .filter((t) => t.includes("names no rule"));
+    expect(sections().map(unknown)).toEqual([
+      [`${shared} names no rule called "NOPE".`, `${shared} names no rule called "TYPOED".`],
+      [],
+      [`${own} names no rule called "OTHER".`],
+    ]);
+  });
+  it("names each section's downloads by its project number, and one run's as always", () => {
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    const names: string[] = [];
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      names.push(this.download);
+    });
+    const downloads = (root: ParentNode) =>
+      [...root.querySelectorAll<HTMLButtonElement>(".export button")].filter((b) =>
+        b.textContent!.startsWith("Download"),
+      );
+    try {
+      renderSeveral(container, runs, sources);
+      for (const b of downloads(sections()[1]!)) b.click();
+      renderResults(container, result, { source: "x" });
+      for (const b of downloads(container)) b.click();
+    } finally {
+      click.mockRestore();
+      vi.restoreAllMocks();
+    }
+    expect(names).toEqual([
+      "pbiplint-report-project-2.md",
+      "pbiplint-report-project-2.json",
+      "pbiplint-report.md",
+      "pbiplint-report.json",
+    ]);
+  });
+  it("copies the project's own report for an AI assistant", async () => {
+    const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    renderSeveral(container, runs, sources);
+    const button = [...sections()[2]!.querySelectorAll("button")].find(
+      (b) => b.textContent === "Copy for an AI assistant",
+    )!;
+    button.click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(writeText).toHaveBeenCalledWith(exportForAssistant(unread).text);
   });
 });
 

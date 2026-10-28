@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { type LintFile, lint } from "../src/engine/lint.js";
+import { calls } from "../src/m/ast.js";
+import { readM } from "../src/m/read.js";
+import { origin } from "../src/m/resolve.js";
+import { buildModel } from "../src/model/build.js";
+import { parseTmdl } from "../src/tmdl/parse.js";
 
 /** A table whose one M partition holds `m`, as Desktop writes a block: four tabs before each M line. */
 const table = (name: string, m: string[]): LintFile => ({
@@ -104,4 +109,53 @@ describe("the resolver on 2,000 chained steps", () => {
     expect(count("INCREMENTAL_REFRESH_RANGE_BOUNDS")).toBe(0);
     expect(ms).toBeLessThan(BOUND_MS);
   }, 120_000);
+});
+
+/** The origin of the address of the one `Web.Contents` call in a partition of these M lines. */
+async function addressOrigin(m: string[]): Promise<string> {
+  const files = [table("T", m)];
+  const index = await readM(buildModel(files.map((f) => parseTmdl(f.path, f.text))), files);
+  const q = index.queries.find((x) => x.kind === "partition")!;
+  const call = calls(q).find((c) => c.name === "Web.Contents")!;
+  return origin(index, q, call.args[0]!);
+}
+
+describe("the resolver on a cycle under steps each read twice", () => {
+  // Each step reads the one before twice, and the first reads a cycle: 2^30 paths, one answer.
+  const doubling = letOf(
+    ["a = b", "b = a", "s0 = a", ...range(30, (i) => `s${i + 1} = s${i} & s${i}`)],
+    "Web.Contents(s30)",
+  );
+  it(`reads 30 doubling steps as unknown, as before, in under ${BOUND_MS / 1000} seconds`, async () => {
+    const started = performance.now();
+    const result = await lint([table("T", doubling)], { config: { failOn: "none" } });
+    expect(await addressOrigin(doubling)).toBe("unknown");
+    const ms = performance.now() - started;
+    expect(result.summary.ruleErrors).toEqual([]);
+    expect(ms).toBeLessThan(BOUND_MS);
+  }, 120_000);
+});
+
+describe("the resolver past its depth cap", () => {
+  // Deeper than one walk goes (500 nodes): the walk starts again from where the cap stopped it.
+  const chain = (step: (i: number) => string) =>
+    letOf(
+      ['s0 = Text.Combine({"https://", "api.example.com"})', ...range(4999, step)],
+      "Web.Contents(s4999)",
+    );
+  it.each([
+    ["each naming the one before", (i: number) => `s${i + 1} = s${i}`],
+    ["each joining the one before to a text", (i: number) => `s${i + 1} = s${i} & "/"`],
+  ])(
+    "reads 5,000 steps %s as a short chain reads them, with no rule error",
+    async (_, step) => {
+      const m = chain(step);
+      const result = await lint([table("T", m)], { config: { failOn: "none" } });
+      expect(result.summary.ruleErrors).toEqual([]);
+      expect(result.findings.filter((f) => f.ruleId === "PARSE_ISSUE")).toEqual([]);
+      expect(result.findings.filter((f) => f.ruleId === "DYNAMIC_DATA_SOURCE")).toHaveLength(1);
+      expect(await addressOrigin(m)).toBe("computed");
+    },
+    120_000,
+  );
 });

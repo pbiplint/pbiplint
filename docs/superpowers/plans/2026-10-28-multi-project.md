@@ -8,14 +8,15 @@
 
 **Tech Stack:** TypeScript, Node 20.19+, vitest, Playwright, esbuild.
 
-**Spec:** `docs/superpowers/specs/2026-10-28-multi-project-design.md` (section numbers below are the spec's). Builds on #238's merge into `release/0.3.0`; rebase onto it before Task 1.
+**Spec:** `docs/superpowers/specs/2026-10-28-multi-project-design.md` (section numbers below are the spec's). Michael decided all seven of its choices on October 28, 2026 (spec 11). Builds on #238's merge into `release/0.3.0`; rebase onto it before Task 0. Task order: 0, 1, 2, 2a, 3, 4a, 4, 5.
 
 ## Global constraints
 
 - Branch `v3/multi-project`, PR into `release/0.3.0`. No releases, tags, or publishing.
 - A one-project run's output, every format, stdout and stderr, stays byte for byte what `release/0.3.0` prints (spec 2). The several-project route starts only where today's run exits 2 with "contains N projects", "N semantic models", "N reports", or "N .pbip files".
 - Cap: `MAX_PROJECTS = 200` (spec 3.4). JSON `version: 2` only for a several-project run (6.5). SARIF stays one run (6.6).
-- Core stays browser-pure; `npm run check:browser` passes. Raise `OWN_LIMIT_KB` in `packages/core/scripts/check-browser-bundle.mjs` only to 245, with the measured size in its comment (spec 9).
+- A project that cannot be read, in a several-project run, is a project of its own with one `PARSE_ISSUE` finding; a run in which no project can be read is refused (spec 3.3, decided October 28, 2026).
+- Core stays browser-pure; `npm run check:browser` passes. #238 raises `OWN_LIMIT_KB` to 245, which covers this work (spec 9). If core measures past 245 KB, stop and tell pb-coord with the number rather than raising it.
 - House style in code comments, docs, and messages: no em dashes, long-form dates, every quote linked.
 - Commands: scratch only in `$CLAUDE_JOB_DIR/tmp`, `mktemp -d` per experiment, no `rm -rf` with a glob or variable path, no sudo, `git clean`, or `reset --hard`, nothing that prompts; never wait on a prompt. Copy these into every subagent dispatch. Every subagent on Opus 5.5.
 - Tests build monorepos from copies of `examples/messy-sales` in `tempDir(...)` (`tests/support/temp-dir.ts`), as #174's tests do. `examples/` does not change.
@@ -105,9 +106,10 @@ Before any code changes, on the branch rebased onto #238's merge: build (`npm ru
   - `one project below a folder is still one`: `kind: "one"`, byte-equal to today's `resolveProject` (the `project-below-input` notice first).
   - `a folder that is itself a project stays one, whatever lies deeper`.
   - `more than 200 projects is refused`: 201 empty-ish model folders (`m000.SemanticModel/definition/model.tmdl` holding `model Model`) under `x/` and `y/`; `UsageError` message `${root} contains 201 projects, more than the 200 one run lints; point at a folder that holds fewer:` with lines `  x: 101 projects: pbiplint ${root}/x` and `  y: 100 projects: pbiplint ${root}/y`.
-  - `a project that cannot be read refuses the whole run`: one project's model folder holds no `.tmdl` files; `UsageError` message `${root}/b/messy-sales could not be linted: <that project's own refusal>`, lines listing each other project's command as #174's list does (`  a/messy-sales: pbiplint ${root}/a/messy-sales`). (Spec 3.3 as written. Task 2a replaces this test if Michael picks the alternative pb-coord recommends.)
   - `the outside-reference hint points at the folder that holds both`: naming `reports/Sales/Sales.pbip` of the monorepo gives the hint `lint the folder that holds both (../.. from the project folder) to include it`; the `SHARED` constant and its tests go.
-  - A project path with a space and one with `\n` in it: the refusal's command lines quote and show them as #174's do.
+  - A project path with a space and one with `\n` in it: the cap refusal's command lines quote and show them as #174's do.
+
+  A project whose own resolution throws is Task 2a's; until then `resolveInput` lets that `UsageError` through.
 
 - [ ] **Step 2: Run them and see them fail.** `npx vitest run packages/cli/test/walk.test.ts`.
 
@@ -117,13 +119,13 @@ Before any code changes, on the branch rebased onto #238's merge: build (`npm ru
 
 - [ ] **Step 5: Commit.** `git commit -m "feat(cli): find and read every project in a folder (#237)"`
 
-### Task 2a (option, pending Michael on item 5): an unreadable project is a `PARSE_ISSUE`, not a refusal
+### Task 2a: An unreadable project is a `PARSE_ISSUE`, not a refusal
 
-pb-coord recommends this to Michael: in the corpus, refusing the whole run would refuse 10 of 148 multi-project repositories (6.8%) and leave 22 readable projects unlinted, every cause a legacy `model.bim`. Build this task only if Michael picks it; otherwise Task 2's refusal stands.
+Decided by Michael on October 28, 2026 (spec 3.3, item 5). In the corpus, refusing the whole run would refuse 10 of 148 multi-project repositories (6.8%) and leave 22 readable projects unlinted; every cause was a legacy `model.bim`.
 
 **Why `PARSE_ISSUE` and no new rule:** it is already the built-in, error-severity finding for a file pbiplint could not read, a config can lower it, and it already has a page, an `explain` entry, and SARIF help. A new rule would add a page, a summary in core's bundle, help text, and a parity entry. One caveat: its name is "File could not be fully parsed", and a `model.bim` is not parsed at all; the detail says why, and the page gains a section, so the name can stay. A `lint()` cannot produce this finding itself, since the walk reads nothing from such a project, so core gains a small constructor.
 
-**Files:** `packages/core/src/engine/projects.ts`, `packages/cli/src/walk.ts`, `packages/web/src/input/project-files.ts`, the `PARSE_ISSUE` page `rules/parse-issue.md`, and its `rule-help` and `rule-guidance` data, regenerated with `scripts/generate-rule-pages.mjs`. Tests: `packages/core/test/projects.test.ts`, `packages/cli/test/walk.test.ts`, `packages/cli/test/several.test.ts`, `packages/web/test/project-files.test.ts`.
+**Files:** `packages/core/src/engine/projects.ts`, `packages/cli/src/walk.ts`, the `PARSE_ISSUE` page `rules/parse-issue.md`, and its `rule-help` and `rule-guidance` data, regenerated with `scripts/generate-rule-pages.mjs`. Tests: `packages/core/test/projects.test.ts`, `packages/cli/test/walk.test.ts`.
 
 **Interfaces:**
 
@@ -138,11 +140,11 @@ pb-coord recommends this to Michael: in the corpus, refusing the whole run would
 - [ ] **Step 1: Write the failing tests.**
   - core: `unreadProject` on `{ message: "Sales.SemanticModel is stored as model.bim, which pbiplint cannot read; save it in the TMDL format from Power BI Desktop", layer: "model", file: "model.bim" }` gives one `PARSE_ISSUE` group with one finding (`objectType: "File"`, `objectName: "model.bim"`, `layer: "model"`, `location: { file: "model.bim", line: 1 }`, `detail` the message), both layers `present: false` with the model's reason `LEGACY_MODEL_REASON`, `summary.files` 0, and `failed: true` under the default config; with `resolveConfig({ rules: { PARSE_ISSUE: "warning" } })` it is a warning and `failed` is false.
   - walk: the two-project folder with one project's model replaced by a `model.bim` gives `kind: "several"`, the readable project resolved, and the other `unreadable` with the legacy message, `layer: "model"`, `root` its model folder, `file: "model.bim"`; a `report.json` report likewise with `LEGACY_REPORT_REASON` and `file: "report.json"`; a project refused for another reason (a model folder with no `.tmdl` files) carries the refusal message and no `file`.
-  - CLI: that folder exits `1`, lints the readable project in full, and shows the unreadable one as its own project with the one `PARSE_ISSUE` finding; the SARIF result for it points at `<prefix>/model.bim`, line 1; with `--fail-on none` it exits `0`. A folder where every project is unreadable is still refused (exit 2), as #175 asks for a run that reads nothing.
-  - site: the same layouts give the same projects and findings.
-- [ ] **Step 2: Run them and see them fail.**
+  - walk: a folder where every project is unreadable is refused (exit 2) with the first project's refusal, then `  <path>: <reason>` for each other, as #175 asks for a run that reads nothing.
+  - (The CLI's output for these lands in Task 3's tests and the site's in Task 4's, which list them.)
+- [ ] **Step 2: Run them and see them fail.** `npx vitest run packages/core/test/projects.test.ts packages/cli/test/walk.test.ts`.
 - [ ] **Step 3: Implement.** `resolveInput` catches `UsageError` per project and records the refusal; the legacy cases are recognized where `legacyPart` records them (`w.legacy`), which already has the layer and the folder. `unreadProject` builds the finding and passes it through `rank` with the config, so severity overrides and `failed` work as for any finding. The page's new section, "A project pbiplint cannot read", says what the finding means and how to save the project in TMDL and PBIR from Power BI Desktop, in the words the legacy notices already use.
-- [ ] **Step 4: Run the core, CLI, and web suites, and measure core.** Expected growth about 0.4 KB.
+- [ ] **Step 4: Run the core and CLI suites, and measure core.** Expected growth about 0.4 KB.
 - [ ] **Step 5: Commit.** `feat: an unreadable project in a several-project run is a PARSE_ISSUE (#237)`
 
 ### Task 3: The CLI run and its outputs
@@ -174,6 +176,7 @@ pb-coord recommends this to Michael: in the corpus, refusing the whole run would
     - stderr: each notice and rule-failure line names its project, `pbiplint: notice: reports/Sales/Sales.pbip: ...`; `--output` prints the combined line, `pbiplint: 3 projects, ..., wrote out.md`; an unknown rule id in one config file is named once.
     - exit code: `1` when only the second project has an error; `0` with `--fail-on none`; `--rule BROKEN_FIELD_REFERENCE` gives each project's `shown` and the combined `N of M findings shown`.
     - config: a `pbiplint.config.json` in `reports/Sales/` that turns a rule off applies to Sales only; `--config x.json` applies to all.
+    - an unreadable project (Task 2a): the two-project folder with one model replaced by a `model.bim` exits `1`, lints the readable project in full, and shows the other as its own project with the one `PARSE_ISSUE` finding in every format; its SARIF result points at `<prefix>/model.bim`, line 1; with `--fail-on none` the run exits `0`; a folder of unreadable projects only exits `2` with nothing on stdout.
   - `cli.test.ts`: rewrite the "exits 2 on a folder with two projects" test to expect a several-project run (exit 1, both projects linted); keep its control-character case on the text header.
   - `contract.test.ts`: the byte-identity golden: for `examples/messy-sales` and for a folder with one project below it, each of text, `--quiet`, json, markdown, sarif, `--output`, and `--rule DUPLICATE_MEASURE_DEFINITIONS` (or any id the sample fires), stdout, stderr, and the exit code equal the goldens Task 0 recorded.
 
@@ -192,7 +195,7 @@ pb-coord recommends this to Michael: in the corpus, refusing the whole run would
 - Test: `packages/web/test/project-files.test.ts`, `packages/web/test/projects-below.test.ts`, `packages/web/test/render.test.ts`, `packages/web/e2e/` (one new spec)
 
 **Interfaces:**
-- Consumes: `shareModels`, `runSummary`, `runSummaryLine` (Task 1).
+- Consumes: `shareModels`, `runSummary`, `runSummaryLine` (Task 1); `unreadProject`, `Unreadable` (Task 2a); Task 4a's route.
 - Produces:
   ```ts
   export type Selected = { kind: "one"; project: SelectedProject } | { kind: "several"; projects: (SelectedProject & { path: string; modelKey?: string })[] };
@@ -205,6 +208,7 @@ pb-coord recommends this to Michael: in the corpus, refusing the whole run would
   - `projects-below.test.ts`: the test that holds the CLI and the site to the same answer covers the several case (same paths).
   - The monorepo on the site lints as the CLI lints it: each report with the shared model (Task 4a's route), the model's findings once, and `projects-below.test.ts` holds the two to the same project list and, for this layout, the same finding counts per project.
   - `render.test.ts`: `renderSeveral` writes the combined summary line, a list of links to `#project-1` ... `#project-N`, then a `<section id="project-N">` per project with an `h2` `Project N of M: <path>` and that project's results as `renderResults` renders them, export bar included; the announcer reads `<N> projects: <runSummaryLine>.`
+  - An unreadable project (Task 2a) on the site: the same folder as Task 3's case gives the same projects, and the unreadable one renders as its own section with the one `PARSE_ISSUE` finding (`unreadProject` from core).
   - e2e: dropping the monorepo shows three sections; "Copy for an AI assistant" in the second copies that project's Markdown.
 
 - [ ] **Step 2: Run them and see them fail.** `npx vitest run packages/web`.
@@ -217,7 +221,7 @@ pb-coord recommends this to Michael: in the corpus, refusing the whole run would
 
 ### Task 4a: The site follows `.pbip` and `byPath` references inside the drop
 
-pb-coord's call (October 28, 2026): the site and the CLI must agree on the shared-model monorepo. Today the site reads a `.pbip` as its folder and pairs a report only with a model beside it (`pairingDecision`'s sibling check), so a report reading `../../models/Shared.SemanticModel` lints without it. This task gives the site the CLI's `.pbip` route, with the drop as the boundary where the CLI has the folder named. It is web code only, so core's budget is untouched. Build it before Task 4, which uses it.
+pb-coord's call, with Michael's item 7 (October 28, 2026): the site and the CLI must agree on the shared-model monorepo. Today the site reads a `.pbip` as its folder and pairs a report only with a model beside it (`pairingDecision`'s sibling check), so a report reading `../../models/Shared.SemanticModel` lints without it. This task gives the site the CLI's `.pbip` route, with the drop as the boundary where the CLI has the folder named. It is web code only, so core's budget is untouched. Build it before Task 4, which uses it.
 
 **Size estimate:** about 80 to 120 lines in `project-files.ts` and 150 to 200 lines of tests. The browser has no links and no real paths, so none of the CLI's `realpath` checks carry over: a reference is followed when it resolves, `.` and `..` taken, to a folder inside the drop, and otherwise gets the CLI's outside notice in the CLI's words.
 
@@ -239,15 +243,15 @@ pb-coord's call (October 28, 2026): the site and the CLI must agree on the share
 - [ ] **Step 4: Run the web suite.** `npx vitest run packages/web`.
 - [ ] **Step 5: Commit.** `feat(web): follow .pbip and byPath references inside the drop (#237)`
 
-### Task 5: The MCP server, the skill, the docs, and the budget
+### Task 5: The MCP server, the skill, and the docs
 
 **Files:**
-- Modify: `packages/cli/src/mcp.ts` (the lint tool's description and `INSTRUCTIONS`, one sentence each), `packages/cli/skill/SKILL.md` (line 23's "It lints one project per run..." becomes "Given a folder that holds several projects, it lints each in one run; the quiet output opens each with a `project ` line."), `packages/web/content/cli.md` (exit 2 list, the JSON section's version 2, the quiet section's `project ` line), `packages/web/content/pipelines.md` (lines 57 and 111), `packages/core/scripts/check-browser-bundle.mjs` (245 KB, only if over 240)
+- Modify: `packages/cli/src/mcp.ts` (the lint tool's description and `INSTRUCTIONS`, one sentence each), `packages/cli/skill/SKILL.md` (line 23's "It lints one project per run..." becomes "Given a folder that holds several projects, it lints each in one run; the quiet output opens each with a `project ` line."), `packages/web/content/cli.md` (exit 2 list, the JSON section's version 2, the quiet section's `project ` line), `packages/web/content/pipelines.md` (lines 57 and 111)
 - Test: `packages/cli/test/mcp.test.ts`, `packages/cli/test/skill.test.ts`, `packages/cli/test/readme.test.ts`, `packages/web/test/generate.test.ts` (whatever pins the pages)
 
 - [ ] **Step 1: Write the failing tests.** `mcp.test.ts`: the lint tool on the monorepo returns a document with `version: 2` and three `projects`. The skill and page tests that pin wording are updated to the new sentences.
 - [ ] **Step 2: Run them and see them fail.** `npx vitest run packages/cli/test/mcp.test.ts packages/cli/test/skill.test.ts`.
-- [ ] **Step 3: Implement** the wording. The CLI page's JSON section: "A run over a folder that holds several projects prints `version` `2` (from 0.3.0): `tool`; `summary` with `projects`, `files`, `findings`, `errors`, `warnings`, `infos`, and `ignored`, and `shown` under `--rule`; and `projects`, each the version 1 document's fields without `version` and `tool`, plus `path`, relative to the folder named." Measure core with `npm run check:browser`; if over 240 KB, set `OWN_LIMIT_KB = 245` and extend the comment with the date and the size measured.
+- [ ] **Step 3: Implement** the wording. The CLI page's JSON section: "A run over a folder that holds several projects prints `version` `2` (from 0.3.0): `tool`; `summary` with `projects`, `files`, `findings`, `errors`, `warnings`, `infos`, and `ignored`, and `shown` under `--rule`; and `projects`, each the version 1 document's fields without `version` and `tool`, plus `path`, relative to the folder named." The exit codes section says a project that cannot be read in a several-project run is a `PARSE_ISSUE`, and the exit 2 list gains "a folder of several projects none of which can be read" and "a folder that holds more than 200 projects". Measure core with `npm run check:browser`; past 245 KB, stop and tell pb-coord.
 - [ ] **Step 4: Run everything.** `npm run build && npm run typecheck && npm run lint && npm test && npm run check:browser && npm run test:e2e`.
 - [ ] **Step 5: Commit.** `git commit -m "docs: one run lints every project in a folder (#237)"`
 

@@ -2,7 +2,7 @@
 
 Issue [#237](https://github.com/pbiplint/pbiplint/issues/237), released with 0.3.0 (moved there by Michael on October 28, 2026). Written October 28, 2026, by pb-v3-multi-project, for pb-coord's review. Nothing is built until [#238](https://github.com/pbiplint/pbiplint/issues/238) merges into `release/0.3.0`.
 
-Each choice below is marked **Michael's** (a user would notice it in the output's shape or in what pbiplint accepts) or **technical** (pb-coord can settle it). Section 11 lists the Michael's choices in one place, with a recommendation for each.
+Each choice below is marked **Michael's** (a user would notice it in the output's shape or in what pbiplint accepts) or **technical** (pb-coord can settle it). Section 11 lists Michael's choices in one place. **Michael decided all seven on October 28, 2026** (section 11), and sections 3.3 and 7 are amended to match.
 
 ## 1. Sources
 
@@ -41,7 +41,11 @@ Each project is resolved as the one-project route resolves the one project below
 
 ### 3.3 A project that cannot be read (Michael's)
 
-**Recommended:** the whole run is refused (exit 2, nothing on stdout) and the message names the project and its reason, then lists the command that lints each of the others, as #174's list does. A partial run would either print a report with exit 2, breaking the contract ("`2`, with nothing on stdout"), or pass a gate with a project unlinted, which #175 rules out. Alternative: lint the rest and turn the unreadable project into an error finding. It is kinder to a repository with one legacy `report.json` project in it, and it is more code, more contract, and a new built-in finding; not recommended for 0.3.0.
+**Decided by Michael, October 28, 2026 (amended):** the readable projects are linted, and each project that cannot be read is a project of its own in the output with one `PARSE_ISSUE` finding, error severity, whose detail is the reason the one-project route gives (for a legacy model, "is stored as model.bim, which pbiplint cannot read; save it in the TMDL format from Power BI Desktop"). The finding points at `model.bim` or `report.json`, line 1, when that is the cause, so a pipeline's annotation lands on that file. So the default gate still fails, and the user sees every other project's findings and the fix. A config can lower `PARSE_ISSUE`, as for any file pbiplint could not read. A run in which no project can be read is still refused (exit 2), since a run that reads nothing must not pass (#175).
+
+Why: refusing the whole run would refuse 10 of the corpus's 148 multi-project repositories (6.8%) and leave 22 readable projects unlinted; every unreadable project there was a legacy `model.bim` (measured October 28, 2026). `PARSE_ISSUE` carries it, so no new rule: it is already the built-in finding for a file pbiplint could not read, with a page, an `explain` entry, and SARIF help. Its page gains a section on a project pbiplint cannot read. Its name, "File could not be fully parsed", stays, and the detail says why. `lint()` reads nothing from such a project, so core gains a small constructor for the finding (about 0.4 KB).
+
+The recommendation this replaces was to refuse the whole run.
 
 ### 3.4 The cap (Michael's: the number)
 
@@ -170,6 +174,8 @@ One run, as today, because the Action and the Azure task read `runs[0]` only (`a
 
 **Recommended:** yes, a dropped or chosen folder holding several projects is linted whole, as the CLI lints it: the same `projectsBelow`, the same shared-model step (core's, section 9), the same cap. The results show the combined summary line and a list of the projects, each linking to its section, then each project's results as today's page shows one project, export bar included, so "Copy for an AI assistant" and the downloads stay one project each. The refusal "drop one of them" goes, except above the cap. Alternative: one export bar for the whole run. It needs the multi-project formatters in core, about 2 KB more there (section 9); not recommended for 0.3.0.
 
+**Amended October 28, 2026 (pb-coord's call, with Michael's item 7):** the site follows a `.pbip`'s `artifacts` and a report's `definition.pbir` `byPath` inside the drop, the drop being the boundary where the CLI has the folder named, so a shared-model monorepo lints the same way on the site as in the CLI. Today the site reads a `.pbip` as its folder and pairs a report only with a model beside it. This is web code only (about 80 to 120 lines), nothing in core. One site change for an input that works today: a drop with one project below it whose report reads a model elsewhere in the drop now lints that model too, as the CLI already does.
+
 The Privacy Promise is unchanged: the page still reads only what was dropped, and only after the drop.
 
 ## 8. The pipelines and the MCP server (technical)
@@ -185,32 +191,30 @@ Measured on `release/0.3.0` (06012fb): core's own code 238.2 KB of 240 KB, 1.8 K
 
 To spend the least there, only what the site and the CLI must share goes into core: the shared-model step (section 5), the combined summary line, and `formatMarkdown`'s heading level. Comparable code measures 433 bytes minified for `showOnly` and 685 for `formatJson`, so these come to about 1.5 KB. The multi-project text, quiet, Markdown, JSON, and SARIF wrappers live in the CLI, which has no budget, and call core's one-project formatters.
 
-That alone fits in 1.8 KB, but #238 adds a built-in rule and its page summary first, so this PR likely crosses 240 KB. **Ask:** pb-coord raises the tripwire to 245 KB in this PR, with the measured number in the PR body and the script's comment, as its authorization allows. Moving the wrappers into core instead (needed only for a whole-run export on the site, section 7) would cost about 2 KB more.
+With 3.3's constructor, about 1.9 KB in all. **Settled October 28, 2026:** #238 raises the tripwire to 245 KB, which covers this; this PR raises it only if it measures past 245 KB. Moving the wrappers into core instead (needed only for a whole-run export on the site, section 7) would cost about 2 KB more.
 
 ## 10. Docs, tests, and release notes
 
-- **The CLI page:** the exit 2 list loses "a folder that holds several projects or parts" and gains "a folder that holds more than 200 projects" and "a project in a folder you named that cannot be read"; the JSON section gains version `2`; the quiet section gains the `project ` line.
+- **The CLI page:** the exit 2 list loses "a folder that holds several projects or parts" and gains "a folder that holds more than 200 projects" and "a folder of several projects none of which can be read"; the exit codes say a project that cannot be read in a several-project run is a `PARSE_ISSUE`; the JSON section gains version `2`; the quiet section gains the `project ` line.
 - **The pipelines page:** its two "For several projects in one repository, add a step for each" sentences say one step lints them all, and separate steps still work, each with its own category.
 - **The Privacy Promise:** unchanged; #236's wording ("inside the folder you name, or the project folder") already covers it.
-- **The release notes** (#233), "What can change in your results": a folder holding several projects is linted whole where it exited 2; a `.pbip` whose model is shared now points at the folder holding both.
+- **The release notes** (#233), "What can change in your results": a folder holding several projects is linted whole where it exited 2; a `.pbip` whose model is shared now points at the folder holding both; in a several-project run, a project pbiplint cannot read is a `PARSE_ISSUE`; on the site, a report whose model sits elsewhere in the drop is linted with it.
 - **Tests:** the CLI's walk, main, contract, and quiet tests; core's shared-model step; the site's `project-files` and results tests; a test that holds the CLI and the site to the same project list, as #174's does; and a byte-identity test that a one-project folder's output in every format matches today's.
 - **No new fixture:** the tests build their monorepos from copies of `examples/messy-sales` in a temporary folder, as #174's tests do, so `examples/` does not change.
 
 ## 11. The choices, in one place
 
-**Michael's** (each a recommendation; the work can start on all of them and adjust):
+**Michael's, decided October 28, 2026** ("Yes to all, with your recommendation on 5", relayed by pb-coord):
 
 1. **Lint several projects whole, below and side by side** (3.1): yes, both.
 2. **The output's shape** (6.1, 6.2, 6.4): projects one after another, each as today, under one combined summary; quiet output gains `project ` lines.
 3. **JSON** (6.5): version `2` only for a several-project run; one-project documents unchanged.
 4. **A shared model's findings** (5.2): once, under the first project in name order, with a notice on the others.
-5. **A project that cannot be read** (3.3): refuse the whole run, naming it.
+5. **A project that cannot be read** (3.3, amended): lint the readable projects and report each unreadable one as a `PARSE_ISSUE`, pb-coord's recommendation. A run in which no project can be read is still refused.
 6. **The cap** (3.4): 200 projects.
-7. **The site** (7): lint whole; per-project sections and exports.
+7. **The site** (7): lint whole; per-project sections and exports; and the site follows `.pbip` and `byPath` references inside the drop (7, amended), so it lints a shared-model monorepo as the CLI does.
 
-Items 1 to 3 shape everything else; 4 to 7 can go in one batch.
-
-**Technical** (pb-coord): the boundary (3.2), reading a shared model once (3.5), config, ignore, `--rule`, and gating (4), `NOT_REACHED_FROM_REPORT` across reports and the counts (5.3, 5.4), stderr (6.3), SARIF as one run (6.6), no code change in the pipelines or the MCP server (8), where the code lives and the 245 KB raise (9).
+**Technical** (pb-coord): the boundary (3.2), reading a shared model once (3.5), config, ignore, `--rule`, and gating (4), `NOT_REACHED_FROM_REPORT` across reports and the counts (5.3, 5.4), stderr (6.3), SARIF as one run (6.6), no code change in the pipelines or the MCP server (8), where the code lives (9). The core budget goes to 245 KB in #238, which covers this work, so this PR raises it only if it measures past 245 KB.
 
 ## 12. Not in this issue
 

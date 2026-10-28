@@ -207,6 +207,20 @@ describe("MIndex.maskedLine (v3 spec, section 7, amended October 27, 2026)", () 
       [2, 3, 4, 5].map((n) => m.maskedLine("definition/tables/T.tmdl", n, lines[n - 1]!).trim()),
     ).toEqual(['measure Q = "…', "…", "…", '…"']);
   });
+  it("reads a DAX `--` comment's stray quote as a comment, so a later literal stays hidden", async () => {
+    const text = [
+      "table T",
+      "    measure Y = 1 -- don't use \"old",
+      '    measure X = "SELECT 1',
+      `    WHERE k = '${fake("pwd", "0204")}'`,
+      '    AND 1"',
+    ].join("\n");
+    const m = await read([{ path: "definition/tables/T.tmdl", text }]);
+    const lines = text.split("\n");
+    expect(
+      [2, 3, 4, 5].map((n) => m.maskedLine("definition/tables/T.tmdl", n, lines[n - 1]!).trim()),
+    ).toEqual(["measure Y = 1 --…", 'measure X = "…', "…", '…"']);
+  });
   it("masks a line by itself when the text is not the file's line", async () => {
     const m = await read([file("table Sales\n")]);
     expect(m.maskedLine("definition/tables/Sales.tmdl", 1, 'x = "a"')).toBe('x = "…"');

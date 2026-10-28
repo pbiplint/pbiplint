@@ -31,11 +31,6 @@ describe("maskLiterals (v3 spec, section 7)", () => {
       'a = "…\n…", b = "…"',
     ],
     ["a block comment over two lines", "/* a\nb */ c", "/*…\n…*/ c"],
-    [
-      "a line comment ended by U+2028",
-      `1 // c\u2028 k = "${fake("key", "0202")}"`,
-      '1 //…\u2028 k = "…"',
-    ],
     ["an empty line comment, kept", "x = 1 //", "x = 1 //"],
     [
       "text with no quote, unchanged",
@@ -69,11 +64,34 @@ describe("maskLiterals (v3 spec, section 7)", () => {
     expect(maskLiterals('// old size 5" was a sample note, k = 1')).toBe("//…");
   });
 
+  it("ends an M line comment at U+2028, as M's lexer does", () => {
+    expect(maskLiterals(`1 // c\u2028 k = "${fake("key", "0202")}"`)).toBe('1 //…\u2028 k = "…"');
+  });
+
+  it("reads `--` in M as no comment", () => {
+    expect(maskLiterals("a = b --1")).toBe("a = b --1");
+  });
+
   it.each([
     [
       "a description keeps its words, its quoted text hidden",
       '\t/// A "quoted" description',
       '\t/// A "…" description',
+    ],
+    ["a description at the start of a line, kept", '/// A "quoted" one', '/// A "…" one'],
+    ["`///` after spaces, read as a comment", '    /// old key "x" k', "    //…"],
+    ["`///` after a tab and a space, read as a comment", "\t /// old key k", "\t //…"],
+    ["a DAX `--` comment", `measure X = 1 -- key ${fake("key", "0205")}`, "measure X = 1 --…"],
+    ["an empty DAX `--` comment, kept", "measure X = 1 --", "measure X = 1 --"],
+    [
+      "a line comment through U+2028 to the line's end, so a name after it hides nothing",
+      `x = 1 // c\u2028 'n "${fake("key", "0206")}"'`,
+      "x = 1 //…",
+    ],
+    [
+      "a line comment through U+2028, then a literal the next reading opens",
+      `x = 1 // c\u2028 k = "a\n${fake("key", "0207")}\nb"`,
+      'x = 1 //…\n…\n…"',
     ],
   ])("in TMDL, %s", (_name, text, masked) => {
     expect(maskLiterals(text, { tmdl: true })).toBe(masked);
@@ -81,5 +99,22 @@ describe("maskLiterals (v3 spec, section 7)", () => {
 
   it("reads `///` in M as a line comment, its text hidden after `//`", () => {
     expect(maskLiterals('\t/// A "quoted" description')).toBe("\t//…");
+  });
+});
+
+// The review of Task 4: a `///` line searched past its end for a quote, so 640,000 description
+// lines took 32 s.
+describe("masking stays linear (v3 spec, section 7, amended October 27, 2026)", () => {
+  it.each([
+    ["640,000 description lines", "\t/// d\n".repeat(640_000)],
+    ["640,000 description lines and a quote at the end", `${"\t/// d\n".repeat(640_000)}"`],
+    ["a line of 1,000,000 comments ended by U+2028", "//\u2028".repeat(1_000_000)],
+    ["a line of 1,000,000 DAX comments after U+2028", "--\u2028".repeat(1_000_000)],
+    ["1,000,000 lines of DAX comments", "x -- c\n".repeat(1_000_000)],
+  ])("masks %s within 10 s", (_shape, text) => {
+    const started = performance.now();
+    maskLiterals(text, { tmdl: true });
+    maskLiterals(text);
+    expect(performance.now() - started).toBeLessThan(10_000);
   });
 });

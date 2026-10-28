@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { lint } from "../src/engine/lint.js";
 import { formatMarkdown } from "../src/format/markdown.js";
 import { splitQualifiedName } from "../src/model/build.js";
@@ -7,6 +7,10 @@ import * as rules from "../src/rules/microsoft-bpa/measures.js";
 import * as tableRules from "../src/rules/microsoft-bpa/tables.js";
 import { parseTmdl } from "../src/tmdl/parse.js";
 import { objectNames } from "./helpers.js";
+
+// These tests read inputs of millions of characters. On CI a few take several seconds, past
+// Vitest's 5 s default, so each test here has a minute; the bounds the tests assert are their own.
+vi.setConfig({ testTimeout: 60_000 });
 
 // The review's fix round 2 (October 27, 2026): a regex whose quantified group holds an alternation
 // overflowed the stack on millions of characters, and one whose parts overlap backtracked by the
@@ -123,19 +127,24 @@ describe("DAX scans that restarted at every function name", () => {
     expect(within(BOUND_MS, () => objectNames(rule, measure(dax) + rls))).toEqual([]);
     expect(within(BOUND_MS, () => objectNames(rule, measure(`${dax}, T[`) + rls))).toEqual(["'T'"]);
   });
-  it("reads each shape at 16 MB quickly", () => {
-    const shapes = [
-      [rules.FILTER_COLUMN_VALUES, "CALCULATE("],
-      [rules.FILTER_COLUMN_VALUES, "CALCULATETABLE("],
-      [rules.FILTER_MEASURE_VALUES_BY_COLUMNS, "CALCULATE(x, FILTER(T, ["],
-      [
-        tableRules.AVOID_THE_USERELATIONSHIP_FUNCTION_AND_RLS_AGAINST_THE_SAME_TABLE,
-        "USERELATIONSHIP(a]",
-      ],
-    ] as const;
-    for (const [rule, piece] of shapes) {
-      const tmdl = measure(run(piece, SIXTEEN_MB)) + rls;
-      expect(within(BOUND_MS, () => objectNames(rule, tmdl))).toEqual([]);
-    }
-  });
+  it(
+    "reads each shape at 16 MB quickly",
+    () => {
+      const shapes = [
+        [rules.FILTER_COLUMN_VALUES, "CALCULATE("],
+        [rules.FILTER_COLUMN_VALUES, "CALCULATETABLE("],
+        [rules.FILTER_MEASURE_VALUES_BY_COLUMNS, "CALCULATE(x, FILTER(T, ["],
+        [
+          tableRules.AVOID_THE_USERELATIONSHIP_FUNCTION_AND_RLS_AGAINST_THE_SAME_TABLE,
+          "USERELATIONSHIP(a]",
+        ],
+      ] as const;
+      for (const [rule, piece] of shapes) {
+        const tmdl = measure(run(piece, SIXTEEN_MB)) + rls;
+        expect(within(BOUND_MS, () => objectNames(rule, tmdl))).toEqual([]);
+      }
+      // Four shapes, each held to its own bound, so the test's own timeout sits above all four.
+    },
+    4 * BOUND_MS + 20_000,
+  );
 });

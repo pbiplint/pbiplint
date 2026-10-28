@@ -1,10 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { LintFile } from "../src/engine/lint.js";
 import { mWork, type MBudget } from "../src/m/budget.js";
 import { maskLiterals } from "../src/m/mask.js";
 import { readM } from "../src/m/read.js";
 import { buildModel } from "../src/model/build.js";
 import { parseTmdl } from "../src/tmdl/parse.js";
+
+// These tests read inputs of millions of characters. On CI a few take several seconds, past
+// Vitest's 5 s default, so each test here has a minute; the bounds the tests assert are their own.
+vi.setConfig({ testTimeout: 60_000 });
 
 const read = (files: LintFile[], budget?: MBudget) =>
   readM(buildModel(files.map((f) => parseTmdl(f.path, f.text))), files, budget);

@@ -9,6 +9,7 @@ import {
 } from "../helpers.js";
 import type { Measure } from "../../model/types.js";
 import type { Rule } from "../types.js";
+import { type Matcher, opening } from "./dax-scan.js";
 import { bpaRule } from "./define.js";
 
 const M: ExpressionKind = "measure";
@@ -16,7 +17,7 @@ const CC: ExpressionKind = "calculatedColumn";
 const CI: ExpressionKind = "calculationItem";
 
 /** A rule that flags every object in `kinds` whose expression matches any pattern. */
-const patternRule = (id: string, kinds: ExpressionKind[], patterns: RegExp[]): Rule =>
+const patternRule = (id: string, kinds: ExpressionKind[], patterns: Matcher[]): Rule =>
   bpaRule(id, (m) =>
     expressionObjects(m, kinds)
       .filter((o) => patterns.some((p) => p.test(o.expression)))
@@ -139,12 +140,31 @@ export const USE_THE_TREATAS_FUNCTION_INSTEAD_OF_INTERSECT = patternRule(
   [/INTERSECT\s*\(/i],
 );
 
+// The source patterns below are rewritten so no two parts next to each other can match the same
+// space, and each matches the same text as its source pattern. As written, `\s*'*[A-Za-z0-9 _]+'*\s*`
+// backtracked by the cube of a run of spaces, and `[0-9]+` at the start by the square of a run of
+// digits (the pre-release security review, October 27, 2026).
+/** The source's `\s*'*[A-Za-z0-9 _]+`: a run of spaces is the name's, not the `\s*`'s. */
+const NAME = String.raw`(?:\s*'+|(?:\s*[^\S ])?)[A-Za-z0-9 _]+`;
+/** The source's `'*\s*` after `NAME`. */
+const NAME_END = String.raw`(?:'+\s*|[^\S ]\s*)?`;
+const COLUMN = String.raw`'*\[[A-Za-z0-9 _]+\]`;
+const pattern = (source: string): RegExp => new RegExp(source, "i");
+// The four CALCULATE patterns are read by `opening` (dax-scan.ts): as a regex, a search started
+// again at every CALCULATE and read on to the same comma, the square of a run with none.
+const CALCULATE = /CALCULATE\s*\(/gi;
+const CALCULATETABLE = /CALCULATETABLE\s*\(/gi;
+
 export const FILTER_COLUMN_VALUES = patternRule(
   "FILTER_COLUMN_VALUES",
   [M, CC, CI],
   [
-    /CALCULATE\s*\(\s*[^,]+,\s*FILTER\s*\(\s*'*[A-Za-z0-9 _]+'*\s*,\s*'*[A-Za-z0-9 _]+'*\[[A-Za-z0-9 _]+\]/i,
-    /CALCULATETABLE\s*\([^,]*,\s*FILTER\s*\(\s*'*[A-Za-z0-9 _]+'*,\s*'*[A-Za-z0-9 _]+'*\[[A-Za-z0-9 _]+\]/i,
+    // CALCULATE\s*\(\s*[^,]+,\s*FILTER\s*\(\s*'*[A-Za-z0-9 _]+'*\s*,\s*'*[A-Za-z0-9 _]+'*\[[A-Za-z0-9 _]+\]
+    // As a regex: CALCULATE\s*\([^,]+,\s*FILTER\s*\(${NAME}${NAME_END},${NAME}${COLUMN}
+    opening(CALCULATE, false, String.raw`\s*FILTER\s*\(${NAME}${NAME_END},${NAME}${COLUMN}`),
+    // CALCULATETABLE\s*\([^,]*,\s*FILTER\s*\(\s*'*[A-Za-z0-9 _]+'*,\s*'*[A-Za-z0-9 _]+'*\[[A-Za-z0-9 _]+\]
+    // As a regex: CALCULATETABLE\s*\([^,]*,\s*FILTER\s*\(${NAME}'*,${NAME}${COLUMN}
+    opening(CALCULATETABLE, true, String.raw`\s*FILTER\s*\(${NAME}'*,${NAME}${COLUMN}`),
   ],
 );
 
@@ -152,8 +172,12 @@ export const FILTER_MEASURE_VALUES_BY_COLUMNS = patternRule(
   "FILTER_MEASURE_VALUES_BY_COLUMNS",
   [M, CC, CI],
   [
-    /CALCULATE\s*\(\s*[^,]+,\s*FILTER\s*\(\s*'*[A-Za-z0-9 _]+'*\s*,\s*\[[^\]]+\]/i,
-    /CALCULATETABLE\s*\([^,]*,\s*FILTER\s*\(\s*'*[A-Za-z0-9 _]+'*,\s*\[/i,
+    // CALCULATE\s*\(\s*[^,]+,\s*FILTER\s*\(\s*'*[A-Za-z0-9 _]+'*\s*,\s*\[[^\]]+\]
+    // As a regex: CALCULATE\s*\([^,]+,\s*FILTER\s*\(${NAME}${NAME_END},\s*\[[^\]]+\]
+    opening(CALCULATE, false, String.raw`\s*FILTER\s*\(${NAME}${NAME_END},\s*\[`, true),
+    // CALCULATETABLE\s*\([^,]*,\s*FILTER\s*\(\s*'*[A-Za-z0-9 _]+'*,\s*\[
+    // As a regex: CALCULATETABLE\s*\([^,]*,\s*FILTER\s*\(${NAME}'*,\s*\[
+    opening(CALCULATETABLE, true, String.raw`\s*FILTER\s*\(${NAME}'*,\s*\[`),
   ],
 );
 
@@ -161,8 +185,12 @@ export const AVOID_USING_1_X_Y_SYNTAX = patternRule(
   "AVOID_USING_'1-(X/Y)'_SYNTAX",
   [M, CC, CI],
   [
-    /[0-9]+\s*[-+]\s*[(]*\s*SUM\s*\(\s*'*[A-Za-z0-9 _]+'*\s*\[[A-Za-z0-9 _]+\]\s*\)\s*\//i,
-    /[0-9]+\s*[-+]\s*DIVIDE\s*\(/i,
+    // [0-9]+\s*[-+]\s*[(]*\s*SUM\s*\(\s*'*[A-Za-z0-9 _]+'*\s*\[[A-Za-z0-9 _]+\]\s*\)\s*\/
+    pattern(
+      String.raw`[0-9]\s*[-+]\s*(?:\(+\s*)?SUM\s*\(${NAME}${NAME_END}\[[A-Za-z0-9 _]+\]\s*\)\s*\/`,
+    ),
+    // [0-9]+\s*[-+]\s*DIVIDE\s*\(
+    /[0-9]\s*[-+]\s*DIVIDE\s*\(/i,
   ],
 );
 

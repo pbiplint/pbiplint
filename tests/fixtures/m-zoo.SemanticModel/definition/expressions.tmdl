@@ -1,0 +1,38 @@
+expression RangeStart = #datetime(2024, 1, 1, 0, 0, 0) meta [IsParameterQuery=true, Type="DateTime", IsParameterQueryRequired=true]
+	lineageTag: 6c0f5a1e-0001-4000-8000-000000000001
+
+expression RangeEnd = #datetime(2025, 1, 1, 0, 0, 0) meta [IsParameterQuery=true, Type="DateTime", IsParameterQueryRequired=true]
+	lineageTag: 6c0f5a1e-0001-4000-8000-000000000002
+
+/// The server, a parameter whose M sits on an expression line under the declaration.
+expression ServerName
+	lineageTag: 6c0f5a1e-0001-4000-8000-000000000003
+	expression = "finance-sql.example" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+
+expression ApiBase = "https://api.example.com" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: 6c0f5a1e-0001-4000-8000-000000000004
+
+expression Environment = "Prod" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: 6c0f5a1e-0001-4000-8000-000000000005
+
+expression DataFolder = "C:\Demo\Data\" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: 6c0f5a1e-0001-4000-8000-000000000006
+
+expression ExportFolder = "D:/Exports/" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: 6c0f5a1e-0001-4000-8000-000000000007
+
+expression ServiceToken = "pbiplint-fixture-token-0005-notreal" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: 6c0f5a1e-0001-4000-8000-000000000008
+
+expression DateKey =
+		(x as datetime) => Date.Year(x) * 10000 + Date.Month(x) * 100 + Date.Day(x)
+	lineageTag: 6c0f5a1e-0001-4000-8000-000000000009
+
+expression GetPage = ```
+		(address as text) =>
+		let
+			Source = Web.Contents(address)
+		in
+			Source
+		```
+	lineageTag: 6c0f5a1e-0001-4000-8000-00000000000a

@@ -182,7 +182,11 @@ export function pairingDecision(
       ? { useModel: false, reason: `this report reads ${ref.path}, which this run did not include` }
       : { useModel: false };
   if (ref.kind === "none") return { useModel: true };
-  const named = ref.path.replace(/\\/g, "/").replace(/\/+$/, "").split("/").pop() ?? "";
+  const path = ref.path.replace(/\\/g, "/");
+  // A loop, not `/\/+$/`, which backtracked by the square of a run of slashes.
+  let end = path.length;
+  while (end > 0 && path[end - 1] === "/") end--;
+  const named = path.slice(0, end).split("/").pop() ?? "";
   // Windows and macOS file systems compare names without regard to case by default, so a path
   // written in another case still names the folder beside the report.
   if (named.toLowerCase() === siblingModelFolder.toLowerCase()) return { useModel: true };

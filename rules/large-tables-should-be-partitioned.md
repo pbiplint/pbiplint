@@ -36,6 +36,7 @@ Find the row count first. In Power BI Desktop's DAX query view, run a query such
 - `PARTITION_NAME_SHOULD_MATCH_TABLE_NAME_FOR_SINGLE_PARTITION_TABLES` reads the single-partition tables that are half of this rule's condition, and stops applying to a table as soon as it has more than one partition.
 - `MINIMIZE_POWER_QUERY_TRANSFORMATIONS` reads the M inside the same partition and reports that partition when its steps are the ones making a refresh slow for the other reason.
 - `REDUCE_USAGE_OF_LONG-LENGTH_COLUMNS_WITH_HIGH_CARDINALITY` is the other rule about what a large table costs, and pbiplint lists it without running it for the same reason: the numbers it needs are statistics of the loaded data.
+- `INCREMENTAL_REFRESH_RANGE_BOUNDS` checks the `RangeStart` and `RangeEnd` filter that incremental refresh depends on, so the partitions this rule asks for neither share nor lose a boundary row.
 
 ## Links
 

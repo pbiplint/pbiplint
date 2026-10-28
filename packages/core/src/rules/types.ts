@@ -61,8 +61,12 @@ export type ObjectType =
   | "Bookmark"
   | "ReportMeasure";
 
-/** Which part of a project a rule reads: one layer, or both (`project`). */
-export type Layer = "model" | "report" | "project";
+/**
+ * Which part of a project a rule reads: one file family, both (`project`), or the Power Query M
+ * that the model's files hold (`powerquery`, v3 spec, section 10.1). A Power Query rule's findings
+ * are on model files, so their own layer (`LayerName`) is `model`.
+ */
+export type Layer = "model" | "report" | "project" | "powerquery";
 /** The two parts a project can hold. */
 export type LayerName = "model" | "report";
 
@@ -96,6 +100,20 @@ export interface RuleContext {
   indexes: Indexes;
   /** The rule's options after config: every declared default, overridden by the config file. */
   options: RuleOptions;
+  /**
+   * Records an error the rule caught in one part of its work, so the rest still reports: `runRules`
+   * lists each as a `RuleError` with the rule's id, its message the site's label and the error's
+   * class alone. Absent when a rule is called without the engine.
+   */
+  reportError?: (error: unknown, site: ErrorSite) => void;
+}
+
+/** Where a rule caught an error: a label for the message, and the object it was working on. */
+export interface ErrorSite {
+  /** Names the part of the work, as `query 'Sales'`. */
+  label: string;
+  /** The object the failed part was about, as a finding on it would name it. */
+  finding: RuleFinding;
 }
 
 /** Anything that can carry a pbiplint.ignore annotation: every model object and every page and visual. */

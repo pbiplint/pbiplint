@@ -1,0 +1,2 @@
+pbiplint: 280 findings (19 errors, 84 warnings, 177 info) in 92 files, wrote <OUT>/report.txt
+pbiplint: notice: sub/messy-sales is the only project found below the folder given, so it was linted as if given directly

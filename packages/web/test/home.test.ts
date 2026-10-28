@@ -2,8 +2,9 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { LEARN_HELP_URLS, legacyReportNotice, pbixRefusal } from "@pbiplint/core";
+import { LEARN_HELP_URLS, legacyReportNotice, lint, pbixRefusal } from "@pbiplint/core";
 import { beforeAll, describe, expect, it, vi } from "vitest";
+import { fakeSecrets } from "../../../tests/support/fake-secrets.js";
 
 // happy-dom resolves a relative URL against the page's http base, so the file path is built
 // from import.meta.url instead of new URL(..., import.meta.url).
@@ -12,7 +13,22 @@ const body = html
   .slice(html.indexOf("<body>") + 6, html.indexOf("</body>"))
   .replace(/<script[\s\S]*?<\/script>/, "");
 const notFound = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../404.html"), "utf8");
-const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
+// lint, counted but otherwise core's own, so a test can say which runs reached it.
+vi.mock("@pbiplint/core", async (importOriginal) => {
+  const core = await importOriginal<typeof import("@pbiplint/core")>();
+  return { ...core, lint: vi.fn(core.lint) };
+});
+// main.ts waits one frame and one task before it lints, so the status line is painted first; a
+// tick waits that out and then the task a run used to need.
+const tick = async (): Promise<void> => {
+  await new Promise((r) => requestAnimationFrame(r));
+  await new Promise((r) => setTimeout(r, 0));
+  await new Promise((r) => setTimeout(r, 0));
+};
+
+/** The note under Choose a folder, word for word as Michael approved it. */
+const PICKER_NOTE =
+  "Chrome and Edge ask first whether this page may view the folder; that wording is the browser's own. pbiplint only reads the files, in this tab: nothing is uploaded and nothing is saved. Dragging the folder onto the page skips the question.";
 
 /** The hidden words a link that opens in a new tab ends with, in its text. */
 const NOTE = " (opens in a new tab)";
@@ -57,12 +73,24 @@ describe("home page", () => {
     document.body.innerHTML = body;
     await import("../src/main.js");
   });
+  it("ships the note on the browser's folder question hidden, and leaves it so with no folder picker", () => {
+    // The note answers the question Chrome and Edge ask before their folder picker opens. The page
+    // ships it hidden, so Firefox, Safari, and a page without JavaScript never show it, and the
+    // button is tied to it only once it shows: a screen reader reads a description it reaches
+    // through aria-describedby even while the note is hidden.
+    expect(body).toMatch(/<p id="picker-note"[^>]*\shidden[\s>]/);
+    expect(body).not.toMatch(/aria-describedby="picker-note"/);
+    const note = document.getElementById("picker-note")!;
+    expect(note.hidden).toBe(true);
+    expect(note.textContent!.replace(/\s+/g, " ").trim()).toBe(PICKER_NOTE);
+    expect(document.getElementById("choose-folder")!.hasAttribute("aria-describedby")).toBe(false);
+  });
   it("lints the sample project from its button", async () => {
     document.getElementById("try-sample")!.click();
     await tick();
     const results = document.getElementById("results")!;
     expect(results.hidden).toBe(false);
-    expect(results.querySelector(".summary")!.textContent).toContain("266 findings");
+    expect(results.querySelector(".summary")!.textContent).toContain("280 findings");
     expect(results.querySelector("h2")!.textContent).toBe(
       "Results for the sample project (model, 14 files · report, 78 files)",
     );
@@ -82,7 +110,7 @@ describe("home page", () => {
     document.getElementById("try-sample")!.click();
     await tick();
     expect(announcer.textContent).toBe(
-      "Results for the sample project (model, 14 files · report, 78 files): 266 findings (19 errors, 77 warnings, 170 info) in 92 files.",
+      "Results for the sample project (model, 14 files · report, 78 files): 280 findings (19 errors, 84 warnings, 177 info) in 92 files.",
     );
     expect(document.getElementById("results")!.hasAttribute("aria-live")).toBe(false);
     expect(document.querySelectorAll("#results [aria-live]").length).toBe(0);
@@ -106,6 +134,21 @@ describe("home page", () => {
     );
     expect(document.querySelector("#results .summary")!.textContent).toContain("in 1 file");
   });
+  // The secret guard (v3 spec, section 11.3): a message can hold the model's text, so a throw out
+  // of lint itself shows only the error's class and asks for a report.
+  it("names only the class of an error lint throws, never its message", async () => {
+    const secret = fakeSecrets()[0]!;
+    vi.mocked(lint).mockRejectedValueOnce(new TypeError(`source = "${secret}"`));
+    const paste = document.getElementById("paste") as HTMLTextAreaElement;
+    paste.value = "table Sales\n";
+    document.getElementById("lint-paste")!.click();
+    await tick();
+    const status = document.getElementById("status")!;
+    expect(status.textContent).toBe(
+      "Something went wrong: TypeError. Please report this at https://github.com/pbiplint/pbiplint/issues.",
+    );
+    expect(status.textContent).not.toContain(secret);
+  });
   it("unhides the status line before it writes the message", () => {
     const status = document.getElementById("status")!;
     status.hidden = true;
@@ -118,7 +161,7 @@ describe("home page", () => {
     expect(status.hidden).toBe(false);
     expect(status.textContent).toBe("Paste some TMDL first.");
   });
-  it("unhides the results before it renders into them", () => {
+  it("unhides the results before it renders into them", async () => {
     const results = document.getElementById("results")!;
     results.hidden = true;
     const order: string[] = [];
@@ -138,6 +181,7 @@ describe("home page", () => {
     }) as typeof results.replaceChildren;
     try {
       document.getElementById("try-sample")!.click();
+      await tick();
     } finally {
       Reflect.deleteProperty(results, "hidden");
       Reflect.deleteProperty(results, "replaceChildren");
@@ -145,7 +189,7 @@ describe("home page", () => {
     // The same rule the status line follows: a hidden block is out of the accessibility tree, so
     // content rendered into one arrives where nothing can reach it.
     expect(order).toEqual(["hidden=false", "render"]);
-    expect(results.querySelector(".summary")!.textContent).toContain("266 findings");
+    expect(results.querySelector(".summary")!.textContent).toContain("280 findings");
   });
   it("scrolls a problem message only as far as needed, so the textarea stays in view", () => {
     const status = document.getElementById("status")!;
@@ -548,7 +592,7 @@ describe("home page", () => {
     expect(text("#drop p")).toBe(
       "Drop a PBIP folder, a .SemanticModel or .Report folder, or a single .tmdl file here.",
     );
-    expect(text(".panel .hint")).toMatch(
+    expect(text(".panel > .hint")).toMatch(
       /^Only \.tmdl files, the report's JSON under its definition folder, \.platform, definition\.pbir, the \.pbip file, and pbiplint\.config\.json are read\. Nothing else in the folder is opened\. /,
     );
     expect(text(".actions .hint")).toBe(
@@ -568,6 +612,21 @@ describe("home page", () => {
     const description = (page: string): string =>
       /<meta\s+name="description"\s+content="([^"]*)"/.exec(page)?.[1] ?? "";
     expect(description(notFound)).toBe(description(html));
+  });
+  it("skips the lint of a run an input superseded while it waited to paint", async () => {
+    vi.mocked(lint).mockClear();
+    (document.getElementById("paste") as HTMLTextAreaElement).value = "table Older\n";
+    document.getElementById("lint-paste")!.click();
+    // Before the paste's frame has passed, the sample is asked for and owns the page.
+    document.getElementById("try-sample")!.click();
+    await tick();
+    await tick();
+    expect(document.querySelector("#results h2")!.textContent).toBe(
+      "Results for the sample project (model, 14 files · report, 78 files)",
+    );
+    // Only the sample was linted: the paste returned before its lint, not after it.
+    expect(vi.mocked(lint)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(lint).mock.calls[0]![0].map((f) => f.path)).not.toContain("pasted.tmdl");
   });
   it("lets the newest input win when two reads finish out of order", async () => {
     const input = document.getElementById("folder-input") as HTMLInputElement;
@@ -675,6 +734,73 @@ describe("home page", () => {
       /^Results for Proj\\u202e \(model, 1 file\): /,
     );
     expect(document.getElementById("results")!.textContent).not.toMatch(RAW_CONTROL);
+  });
+  it("lints every project in a folder that holds several, each under its own config (#237)", async () => {
+    const model = (dir: string): File[] => [
+      at(`${dir}/definition/model.tmdl`, "model Model\n"),
+      at(`${dir}/definition/tables/T.tmdl`, "table T\n"),
+    ];
+    feedFolder([
+      ...model("Drop/a/A.SemanticModel"),
+      ...model("Drop/b/B.SemanticModel"),
+      at("Drop/a/pbiplint.config.json", '{ "rules": { "NOPE": "warning" } }'),
+    ]);
+    await tick();
+    await tick();
+    const results = document.getElementById("results")!;
+    expect(results.hidden).toBe(false);
+    expect(document.getElementById("status")!.hidden).toBe(true);
+    const sections = [...results.querySelectorAll("section.project")];
+    expect(sections.map((s) => s.querySelector("h2")!.textContent)).toEqual([
+      "Project 1 of 2: a/A.SemanticModel",
+      "Project 2 of 2: b/B.SemanticModel",
+    ]);
+    // a's config names a rule there is none of; b has no config.
+    const unknown = (s: Element) =>
+      [...s.querySelectorAll(".notice")].filter((n) => n.textContent!.includes('"NOPE"')).length;
+    expect(sections.map(unknown)).toEqual([1, 0]);
+    const summary = results.querySelector(":scope > .summary")!.textContent!;
+    expect(summary).toMatch(/^2 projects, /);
+    expect(document.getElementById("announce")!.textContent).toBe(summary);
+    expect(results.dataset.lintMs).toMatch(/^\d+$/);
+  });
+  it("yields between the projects of several, so a newer input stops the run there (#237)", async () => {
+    vi.mocked(lint).mockClear();
+    feedFolder([
+      at("Drop/a/A.SemanticModel/definition/tables/A.tmdl", "table A\n"),
+      at("Drop/b/B.SemanticModel/definition/tables/B.tmdl", "table B\n"),
+    ]);
+    const status = document.getElementById("status")!;
+    // The run says which project it is on while it waits for the frame before each lint.
+    for (let i = 0; i < 100 && status.textContent !== "Linting project 2 of 2"; i++)
+      await new Promise((r) => setTimeout(r, 0));
+    expect(status.textContent).toBe("Linting project 2 of 2");
+    // Between the two lints, a paste owns the page.
+    (document.getElementById("paste") as HTMLTextAreaElement).value = "table Pasted\n";
+    document.getElementById("lint-paste")!.click();
+    await tick();
+    await tick();
+    expect(document.querySelector("#results h2")!.textContent).toBe(
+      "Results for pasted TMDL (model, 1 file)",
+    );
+    expect(document.querySelectorAll("#results section.project").length).toBe(0);
+    // The first project and the paste were linted; the second project never was.
+    const linted = vi.mocked(lint).mock.calls.map((c) => c[0].map((f) => f.path).join());
+    expect(linted).toEqual(["definition/tables/A.tmdl", "pasted.tmdl"]);
+  });
+  it("refuses a folder of several projects when one's config is not valid JSON", async () => {
+    feedFolder([
+      at("Drop/a/A.SemanticModel/definition/tables/T.tmdl", "table T\n"),
+      at("Drop/b/B.SemanticModel/definition/tables/T.tmdl", "table T\n"),
+      at("Drop/b/pbiplint.config.json", "{"),
+    ]);
+    await tick();
+    await tick();
+    // Named by its path in the drop: each project of several can have its own.
+    expect(document.getElementById("status")!.textContent).toMatch(
+      /^Drop\/b\/pbiplint\.config\.json is not valid JSON: /,
+    );
+    expect(document.getElementById("results")!.hidden).toBe(true);
   });
 });
 

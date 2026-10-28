@@ -56,6 +56,10 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Visible Decimal number and Fixed decimal number columns with no format string.",
   DEFAULT_PAGE_NAME:
     "Pages whose display name in page.json has the shape `Page <n>`, `Duplicate of <name>`, or `<name> (copy)`: the names English Power BI Desktop gives a new page and a duplicated one, and a name marked as a copy. The rule also matches the forms Desktop-saved files show for a new or duplicated page in other languages, such as `Seite <n>` and `Doublon de <name>`.",
+  DEFAULT_STEP_NAMES:
+    "Power Query queries whose steps keep the names Power BI Desktop gives them, such as Changed Type, Added Custom1, or Removed Other Columns, reported once per query.",
+  DYNAMIC_DATA_SOURCE:
+    "Data sources whose address the Power BI service cannot know before the query runs: a call such as `Web.Contents`, `File.Contents`, or `Sql.Database` whose first argument is read from a table's rows, built by a function call, chosen with `if ... then ... else`, or a custom function's parameter.",
   ENSURE_ALTTEXT:
     "Visuals other than shapes whose alt text is missing or empty. A visual group is checked by its own alt text, the one set on the group rather than on the visuals inside it.",
   ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY:
@@ -65,8 +69,12 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   ENSURE_THEME_COLOURS:
     "Visuals other than text boxes with a colour property set to a hex value instead of a theme colour, including a hex value inside a conditional formatting rule or a gradient.",
   EVALUATEANDLOG_SHOULD_NOT_BE_USED_IN_PRODUCTION_MODELS: "Measures that call EVALUATEANDLOG.",
+  EXCEL_USE_HEADERS:
+    "Excel.Workbook calls that ask the workbook reader to promote headers: `true` as the second argument, or `UseHeaders = true` in its options record.",
   EXPRESSION_RELIANT_OBJECTS_MUST_HAVE_AN_EXPRESSION:
     "Measures, calculated columns, and calculation items whose expression is empty.",
+  EXTENSION_FILTER_CASE:
+    'Power Query filters on a folder\'s files that compare the `Extension` column with text such as `".csv"` as written, so a file whose extension is in other capitals, such as `.CSV`, is left out.',
   FILTER_COLUMN_VALUES:
     "CALCULATE or CALCULATETABLE whose first filter argument is `FILTER('Table', 'Table'[Column] ...)`.",
   FILTER_MEASURE_VALUES_BY_COLUMNS:
@@ -77,10 +85,16 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Tables, measures, hierarchies, calculated columns, calculated tables, and calculation groups whose first character has an upper case form and is not upper case.",
   FIX_REFERENTIAL_INTEGRITY_VIOLATIONS:
     "Relationships where the many side holds key values that do not exist on the one side. The count of offending rows is a statistic of the loaded data, not of the model files, so pbiplint lists this rule but does not run it: it needs statistics that only a live model carries.",
+  FIXED_DATE_IN_ROW_FILTER:
+    "Power Query row filters that end at, or match, a date written into the query: a `Table.SelectRows` condition that compares a column with `<`, `<=`, or `=` to a `#date`, `#datetime`, or `#datetimezone` of fixed numbers.",
   "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS":
     "Visible columns whose name starts with Is and whose type is whole number, and visible columns whose name ends with the word Flag after a space and whose type is not text.",
   HARDCODED_PERIOD_IN_DAX:
     "Measures, calculated columns, and calculation items whose DAX fixes a year or a date, and date tables whose CALENDAR ends on a fixed date.",
+  HARDCODED_SECRET_IN_QUERY:
+    "Credentials written into Power Query queries as text: a key, token, or password in a web request's headers or `Query` record, in a web address, as a Bearer token, or in an ODBC or OLE DB connection string.",
+  HARDCODED_SERVER_NAME:
+    "Power Query queries that name a database server as text in a connector such as `Sql.Database`, rather than reading it from a parameter, reported once per query.",
   HARDCODED_YEAR_IN_FILTER:
     "Filters in the Filters pane, on a visual, a page, or all pages, that hold a year column to fixed years: years picked in Basic filtering, a year set with Advanced filtering's is, years kept up to one with is less than or is less than or equal to, and a range between two years.",
   HIDDEN_VISUAL_WITH_FIELDS:
@@ -92,16 +106,24 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   HIDE_TOOLTIP_DRILLTROUGH_PAGES: "Tooltip pages and drillthrough pages that are not hidden.",
   INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED:
     "Inactive relationships that no measure, calculation item, or user-defined function activates with USERELATIONSHIP.",
+  INCREMENTAL_REFRESH_RANGE_BOUNDS:
+    "Power Query queries that filter on both of the model's incremental refresh parameters, `RangeStart` and `RangeEnd`, and either include the boundary on both (`>= RangeStart` and `<= RangeEnd`) or on neither (`> RangeStart` and `< RangeEnd`).",
   INTEGER_FORMATTING:
     "Measures whose static format string is not a recognized whole-number, currency, or percentage format. The only format strings the rule accepts are `#,0`, `#,0.0`, and any string containing `$` or `%`. A measure with no format string at all fires too, and that is the common case: the rule reads only the format string, so it cannot tell an unformatted currency or ratio from an unformatted count.",
   ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS:
     "Hidden columns, or columns in hidden tables, that still have IsAvailableInMdx set to true and are not used to sort another column, in a hierarchy, in a variation, or in a calendar, and do not themselves sort by another column.",
+  KEEP_FIRST_ROWS_LEFT_IN:
+    "Power Query queries that load into the model and keep only their first rows: a `Table.FirstN` call with a number greater than 1, the Keep First Rows step, whose table is not sorted first.",
   LANDING_PAGE_NOT_SET:
     "A report whose pages.json sets no landing page, so it opens on the page that was active when it was last saved, or, when pages.json records no active page either, on the first page.",
   LARGE_TABLES_SHOULD_BE_PARTITIONED:
     "Tables with more than 25 million rows and a single partition. The row count is a statistic of the loaded data, not of the model files, so pbiplint lists this rule but does not run it: it needs statistics that only a live model carries.",
+  LEGACY_EXCEL_FILE:
+    "Power Query queries that read an `.xls` or `.xlsb` workbook, which Power Query opens through the Access Database Engine rather than reading the file itself.",
   "LIMIT_ROW_LEVEL_SECURITY_(RLS)_LOGIC":
     "Tables whose row-level security filter, in any role, calls RIGHT, LEFT, UPPER, LOWER, or FIND.",
+  LOCAL_DRIVE_PATH:
+    "Text in a Power Query query or parameter that starts with a path on a drive letter, such as `C:\\Demo\\Data\\Sales.csv` or `D:/Exports/`.",
   "MANY-TO-MANY_RELATIONSHIPS_SHOULD_BE_SINGLE-DIRECTION":
     "Many-to-many relationships with bi-directional cross filtering.",
   MARK_PRIMARY_KEYS:
@@ -111,7 +133,7 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
   MEASURES_USING_TIME_INTELLIGENCE_AND_MODEL_IS_USING_DIRECT_QUERY:
     "Measures and calculation items that call a time intelligence function, in a model where at least one table is in DirectQuery mode.",
   MINIMIZE_POWER_QUERY_TRANSFORMATIONS:
-    "Power Query partitions whose M text contains Table.Combine, Table.Join, Table.NestedJoin, Table.AddColumn, Table.Group, Table.Sort, Table.Pivot, Table.Unpivot, Table.UnpivotOtherColumns, Table.Distinct, a native SQL query, or an OLE DB or ODBC query.",
+    "Power Query partitions whose M names Table.Combine, Table.Join, Table.NestedJoin, Table.AddColumn, Table.Group, Table.Sort, Table.Pivot, Table.Unpivot, Table.UnpivotOtherColumns, Table.Distinct, Value.NativeQuery, OleDb.Query, or Odbc.Query, or gives a database connector a native SQL query in its `Query` option.",
   MODEL_SHOULD_HAVE_A_DATE_TABLE:
     "Models with no table that defines a calendar, and none that has the data category Time and a DateTime column marked as the key, which is what Mark as date table sets.",
   MODEL_USING_DIRECT_QUERY_AND_NO_AGGREGATIONS:
@@ -130,16 +152,20 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Names that start or end with a space, for the model, tables, measures, hierarchies, perspectives, partitions, data columns, and calculated columns.",
   OBJECTS_WITH_NO_DESCRIPTION:
     "Visible tables, columns, measures, and calculation groups with no description. Visibility is the object's own flag.",
+  ODBC_WHERE_CONNECTOR_EXISTS:
+    "ODBC and OLE DB sources whose connection string names the driver or provider of a database Power BI has its own connector for: Amazon Redshift, PostgreSQL, SQL Server, MySQL, Oracle, or Snowflake.",
   OPENING_PAGE_INVALID:
     "A pages.json whose landing page names a page the report does not have, or, when no landing page is set, whose active page names a page the report does not have or a page hidden from readers.",
   PARSE_ISSUE:
-    "Lines the TMDL parser could not use: space indentation, an unterminated code fence, a line at an impossible indentation, a line in no form the parser recognizes, a line at the root of a file that TMDL does not allow there (a misspelt `table`, a `column` or a property that lost its tabs, or an annotation with lines under it, for example), much the same directly under a model, where TMDL lets the model's tables, relationships, and other objects sit indented (a property that lost its tabs is reported there only when lines sit under it, and a flag such as `isHidden` only when a declaration does, since the model has properties and flags of its own), a declaration under a database other than its model, a `table` line under anything but a model, which a stray tab puts under the declaration above it, a declaration that its object does not hold, such as a misspelt `columm` under a table or a hierarchy's `level` that lost a tab, a declaration such as `table` or `role` written with no name, a name not enclosed in single quotes as TMDL requires, such as `table 'Date`, and a `///` description with a blank line between it and its declaration; a report JSON file that is not valid JSON, carries a merge conflict marker, or nests more than 256 levels deep; a report file Microsoft publishes a schema for, such as report.json or a page.json, whose content is not a JSON object; and a reportExtensions.json that lists no entity, or holds an entity with no measure, which Power BI Desktop does not open.",
+    "Lines the TMDL parser could not use: space indentation, an unterminated code fence, a line at an impossible indentation, a line in no form the parser recognizes, a line at the root of a file that TMDL does not allow there (a misspelt `table`, a `column` or a property that lost its tabs, or an annotation with lines under it, for example), much the same directly under a model, where TMDL lets the model's tables, relationships, and other objects sit indented (a property that lost its tabs is reported there only when lines sit under it, and a flag such as `isHidden` only when a declaration does, since the model has properties and flags of its own), a declaration under a database other than its model, a `table` line under anything but a model, which a stray tab puts under the declaration above it, a declaration that its object does not hold, such as a misspelt `columm` under a table or a hierarchy's `level` that lost a tab, a declaration such as `table` or `role` written with no name, a name not enclosed in single quotes as TMDL requires, such as `table 'Date`, and a `///` description with a blank line between it and its declaration; a report JSON file that is not valid JSON, carries a merge conflict marker, or nests more than 256 levels deep; a report file Microsoft publishes a schema for, such as report.json or a page.json, whose content is not a JSON object; and a reportExtensions.json that lists no entity, or holds an entity with no measure, which Power BI Desktop does not open. It also covers M that Microsoft's Power Query parser cannot read, in a partition's source, a shared expression, or an incremental refresh policy's source expression, at the line and column where the parser stopped.",
   PARTITION_NAME_SHOULD_MATCH_TABLE_NAME_FOR_SINGLE_PARTITION_TABLES:
     "Regular tables with exactly one partition whose name differs from the table name. Calculated tables and calculation groups are not checked.",
   PERCENTAGE_FORMATTING:
     "Measures with a percent format string other than `#,0.0%;-#,0.0%;#,0.0%`.",
   PERSPECTIVES_WITH_NO_OBJECTS:
     "Perspectives that contain no tables. The rule reads only a perspective's table entries, which is enough: each column, measure, and hierarchy a perspective includes sits under the entry for its table, so with no table entry it includes nothing.",
+  PRIVACY_LEVELS_IGNORED:
+    "A model whose Power Query options ignore privacy levels: the `fastCombine` flag in the `dataAccessOptions` block of `model.tmdl`, which Power BI Desktop writes when Ignore the Privacy Levels and potentially improve performance is chosen for the file.",
   PROVIDE_FORMAT_STRING_FOR_MEASURES:
     "Visible measures with no format string and no dynamic format string, other than those whose DAX plainly returns text.",
   REDUCE_ADVANCED_FILTERS:
@@ -172,6 +198,10 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Custom visuals from AppSource that the report registers in report.json and that no visual on any page uses.",
   REPORT_LEVEL_MEASURES:
     "Measures defined in the report's reportExtensions.json rather than in the model, reported when the model the report reads is in the input, so that each can move into it.",
+  RULE_COULD_NOT_FINISH:
+    "A rule that stopped partway through an object or query, because pbiplint met input it could not handle. Each finding names the rule, the object or query, and the kind of error. This is a bug in pbiplint, not a fault in the model, and the rule's findings on that object or query are missing.",
+  SCRIPT_IN_QUERY:
+    "Power Query queries that run a Python or R script: a `Python.Execute` or `R.Execute` call, which the Run Python script and Run R script steps write.",
   SET_ISAVAILABLEINMDX_TO_TRUE_ON_NECESSARY_COLUMNS:
     "Columns with IsAvailableInMdx set to false that are used to sort another column, appear in a hierarchy, a variation, or a calendar, or sort by another column.",
   SLICER_SEARCH_SAVED:
@@ -180,6 +210,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Slicers saved with a selection, so that the report opens with it applied: any visual whose visual.json holds a `filter` with a condition under `objects.general`, which is where Power BI Desktop saves the selection of a slicer, button slicer, list slicer, input slicer, or `filterSlicer`, and of a custom slicer from AppSource that filters through the Visual Filters API. It is info without a policy, and a warning when the project's policy expects no saved selections.",
   SNOWFLAKE_SCHEMA_ARCHITECTURE:
     "Tables that are on the from side of one relationship and the to side of another, which is what a dimension related to a sub-dimension looks like.",
+  SORT_NOT_HELD_FOR_REMOVE_DUPLICATES:
+    "Power Query queries that remove duplicates by some of their columns straight after a sort, with nothing holding the sort's order: a `Table.Distinct` call with a list of columns whose table is a `Table.Sort`, written in place or as the step it reads. Power BI Desktop writes this shape as a Sorted Rows step followed by Removed Duplicates.",
   SPECIAL_CHARS_IN_OBJECT_NAMES: "Names containing a tab, line feed, or carriage return.",
   SPLIT_DATE_AND_TIME:
     "DateTime columns holding values that are not at midnight. Whether any row carries a time is a statistic of the loaded data, not of the model files, so pbiplint lists this rule but does not run it: it needs statistics that only a live model carries.",

@@ -1,32 +1,44 @@
 import { mkdirSync, writeFileSync } from "node:fs";
-import { basename, dirname, relative, resolve } from "node:path";
+import { basename, dirname, resolve } from "node:path";
 import {
   ConfigError,
   defaultRules,
+  errorKind,
   formatResult,
-  lint,
-  resolveConfig,
+  runSummary,
+  runSummaryLine,
   SEVERITY_LABEL,
   showControls,
   showOnly,
   summaryLine,
 } from "@pbiplint/core";
-import { HELP, parseArgs, UsageError } from "./args.js";
-import { CONFIG_FILE, findConfig } from "./config.js";
+import { HELP, parseArgs, UsageError, type CliOptions } from "./args.js";
+import { CONFIG_FILE } from "./config.js";
 import { explainJson, explainRule, explainText, findRule, noRuleLines } from "./explain.js";
-import { quietText } from "./quiet.js";
+import { EXPLAIN_HINT, quietText } from "./quiet.js";
+import {
+  configFor,
+  lintProject,
+  lintSeveral,
+  prefixesOf,
+  severalJson,
+  severalMarkdown,
+  severalQuiet,
+  severalSarif,
+  severalText,
+  type RunOptions,
+} from "./several.js";
 import { runSkill } from "./skill.js";
 import { logSafe } from "./log-safe.js";
 import { sampleDir } from "./sample.js";
 import { RULE_HELP } from "./rule-help.data.js";
-import { resolveProject } from "./walk.js";
+import { resolveInput, type NamedProject } from "./walk.js";
 
 declare const __PBIPLINT_VERSION__: string | undefined;
 export const VERSION =
   typeof __PBIPLINT_VERSION__ === "string" ? __PBIPLINT_VERSION__ : "0.0.0-dev";
 
-/** The text report's last line when it has findings. */
-export const EXPLAIN_HINT = "Run pbiplint explain <RULE_ID> for a rule's guidance, offline.";
+export { EXPLAIN_HINT };
 
 export interface Io {
   stdout(text: string): void;
@@ -34,12 +46,13 @@ export interface Io {
   cwd(): string;
 }
 
+// The layer column fits the longest layer, powerquery.
 function listRules(): string {
   const width = Math.max(...defaultRules.map((r) => r.id.length));
   return defaultRules
     .map(
       (r) =>
-        `${r.id.padEnd(width)}  ${r.layer.padEnd(7)}  ${(r.status === "needsLiveModel" ? "needs live model" : r.status).padEnd(16)}  ${SEVERITY_LABEL[r.severity].padEnd(7)}  ${r.category.padEnd(18)}  ${r.name}`,
+        `${r.id.padEnd(width)}  ${r.layer.padEnd(10)}  ${(r.status === "needsLiveModel" ? "needs live model" : r.status).padEnd(16)}  ${SEVERITY_LABEL[r.severity].padEnd(7)}  ${r.category.padEnd(18)}  ${r.name}`,
     )
     .join("\n");
 }
@@ -107,38 +120,26 @@ export async function main(argv: string[], given: Io): Promise<number> {
       if (!shownIds.includes(rule.id)) shownIds.push(rule.id);
     }
     const target = opts.sample ? sampleDir() : resolve(io.cwd(), opts.path!);
-    const project = resolveProject(target);
-    const found = findConfig(
-      project.root,
-      opts.config ? resolve(io.cwd(), opts.config) : undefined,
-    );
-    const config = resolveConfig({
-      ...found.config,
-      ...(opts.failOn ? { failOn: opts.failOn } : {}),
-    });
-    const files = [...(project.model?.files ?? []), ...(project.report?.files ?? [])];
-    const linted = lint(files, {
-      config,
-      diagnostics: project.diagnostics,
-      absent: project.absent,
-      // Each part's own list, relative to its root, so what the walk could not read reaches the
-      // layer it belongs to.
-      unreadPaths: {
-        ...(project.model ? { model: project.model.unread } : {}),
-        ...(project.report ? { report: project.report.unread } : {}),
-      },
-    });
+    const input = resolveInput(target);
+    const options: RunOptions = {
+      cwd: io.cwd(),
+      config: opts.config,
+      failOn: opts.failOn,
+      ...(opts.rules ? { shownIds } : {}),
+    };
+    if (input.kind === "several")
+      return await several(target, input.projects, opts, options, io, stderrLine);
+    const { project } = input;
+    const { found, config } = configFor(project.root, options);
+    const linted = await lintProject(project, config);
     const result = opts.rules ? showOnly(linted, shownIds, config) : linted;
-    // SARIF artifact URIs are resolved from where the tool ran, so each part's root, relative to
-    // the cwd, goes in front of that part's finding paths.
-    const prefix = (root: string | undefined): string | undefined =>
-      root === undefined ? undefined : relative(io.cwd(), root).split("\\").join("/");
+    const prefix = prefixesOf(io.cwd(), project);
     const formatted = opts.quiet
       ? quietText(result)
       : formatResult(opts.format, result, {
           toolVersion: VERSION,
-          pathPrefix: prefix(project.model?.root) ?? prefix(project.report?.root) ?? "",
-          reportPathPrefix: prefix(project.report?.root),
+          pathPrefix: prefix.model ?? prefix.report ?? "",
+          reportPathPrefix: prefix.report,
           help: RULE_HELP,
         });
     // The text format is for a person or an assistant reading a terminal, so with findings it
@@ -181,20 +182,84 @@ export async function main(argv: string[], given: Io): Promise<number> {
 }
 
 /**
- * An unexpected error as lines for stderr: its name and message, then each frame of its stack. The
- * message can hold a line break of its own, so the stack is split only after the message, and the
- * name and message stay one line, where `showControls` shows the break as `\u000a` and no message
- * can write a line that reads as the CLI's. The stack starts with what `String(e)` gives, or with
- * the name and message where a stack formatter writes those alone (as the test runner's does); a
- * stack that starts with neither is shown whole on the one line.
+ * A run over a folder that holds several projects (#237): each linted as its own run would be,
+ * the report of them all on stdout or in --output, then stderr's lines, in a one-project run's
+ * order, each naming its project, since a path in one is relative to that project. A config's
+ * unknown rule ids are named once per config file, by its path from the cwd, as several files
+ * can share one name. The exit code is 1 when any project fails its gate.
+ */
+async function several(
+  folder: string,
+  projects: NamedProject[],
+  opts: CliOptions,
+  options: RunOptions,
+  io: Io,
+  stderrLine: (line: string) => void,
+): Promise<number> {
+  const { run, found } = await lintSeveral(folder, projects, options);
+  const formats = {
+    text: () => severalText(run),
+    json: () => severalJson(run, VERSION),
+    markdown: () => severalMarkdown(run),
+    sarif: () => severalSarif(run, { toolVersion: VERSION, help: RULE_HELP }),
+  };
+  const report = opts.quiet ? severalQuiet(run) : formats[opts.format]();
+  const { runs } = run;
+  if (opts.output) {
+    const out = resolve(io.cwd(), opts.output);
+    mkdirSync(dirname(out), { recursive: true });
+    writeFileSync(out, report);
+    stderrLine(`pbiplint: ${runSummaryLine(runSummary(runs))}, wrote ${opts.output}`);
+  } else {
+    io.stdout(report);
+  }
+  for (const { path, result } of runs)
+    for (const e of result.summary.ruleErrors)
+      stderrLine(`${path}: rule ${e.id} failed: ${e.message}`);
+  // Each config file's unknown ids, gathered from every project that used it: a project that
+  // could not be read binds only PARSE_ISSUE, so it names none of its config's.
+  const unknown = new Map<string | undefined, { name: string; ids: Set<string> }>();
+  runs.forEach(({ result, configPath }, i) => {
+    const file = found[i]!.path;
+    const entry = unknown.get(file) ?? { name: configPath ?? CONFIG_FILE, ids: new Set() };
+    unknown.set(file, entry);
+    for (const id of result.summary.unknownRules) entry.ids.add(id);
+  });
+  for (const { name, ids } of unknown.values())
+    for (const id of ids)
+      stderrLine(`pbiplint: ${name}: no rule named "${id}" (run pbiplint rules for the list)`);
+  for (const { path, result } of runs)
+    for (const d of result.diagnostics) stderrLine(`pbiplint: notice: ${path}: ${d.message}`);
+  return runs.some((r) => r.result.failed) ? 1 : 0;
+}
+
+/** True for an error Node itself raised: it carries a string `code` (`ENOENT`, `EACCES`). */
+const isNodeError = (e: unknown): e is Error & { code: string } =>
+  e instanceof Error && typeof (e as { code?: unknown }).code === "string";
+
+/**
+ * An unexpected error as lines for stderr, then each frame of its stack. Node's own error keeps its
+ * name and message, which describe the system and the path the user typed. Any other error, such
+ * as one out of `lint`, can carry the model's text in its message, so it gives only its class,
+ * through `errorKind`, and a request to report it (v3 spec, section 11.3; pb-coord, October 28,
+ * 2026). The message can hold a line break of its own, so the stack is split only after the
+ * message: Node's name and message stay one line, where `showControls` shows the break as
+ * `\u000a` and no message can write a line that reads as the CLI's. The stack starts with what
+ * `String(e)` gives, or with the name and message where a stack formatter writes those alone (as
+ * the test runner's does). A stack that starts with neither is shown whole on the one line for
+ * Node's error, and left out for any other.
  */
 function unexpectedLines(e: unknown): string[] {
-  const head = String(e);
+  const node = isNodeError(e);
+  const head = node
+    ? String(e)
+    : `${errorKind(e)}. Please report this at https://github.com/pbiplint/pbiplint/issues.`;
   if (!(e instanceof Error) || typeof e.stack !== "string") return [head];
   const stack = e.stack;
-  const header = [head, `${e.name}: ${e.message}`].find(
+  const header = [String(e), `${e.name}: ${e.message}`].find(
     (h) => stack === h || stack.startsWith(`${h}\n`),
   );
-  if (header === undefined) return [stack];
-  return stack === header ? [header] : [header, ...stack.slice(header.length + 1).split("\n")];
+  if (header === undefined) return node ? [stack] : [head];
+  const first = node ? header : head;
+  return stack === header ? [first] : [first, ...stack.slice(header.length + 1).split("\n")];
 }

@@ -9,7 +9,7 @@ import {
   type Dirent,
   type Stats,
 } from "node:fs";
-import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import {
   datasetReference,
   isPbix,
@@ -28,6 +28,7 @@ import {
   type FoundBelow,
   type LayerName,
   type LintFile,
+  type Unreadable,
 } from "@pbiplint/core";
 import { UsageError } from "./args.js";
 
@@ -115,6 +116,40 @@ interface Walk {
    * the base itself): a run that read nothing else is refused with their notices (#175).
    */
   legacy: { layer: LayerName; path: string }[];
+  /**
+   * The folder the user named, on the command line or in an MCP request, when what they named is a
+   * folder: a reference that stays inside it is followed even where it leaves the project folder.
+   * It is never taken from a file, so a .pbip named alone has none.
+   */
+  named?: string;
+  /** What the walks of one run share (Reach). */
+  reach: Reach;
+}
+
+/** What every walk of one resolveInput shares, and whether this walk is of the path named. */
+interface Reach {
+  /**
+   * Each model part read, by the real path of its folder, so a model several projects reach is
+   * read once and each project lints the same object, named by the path that reached it first
+   * (spec section 3.5). Kept only on resolveInput's several-project route: one project reads each
+   * model once anyway.
+   */
+  models?: Map<string, ResolvedPart>;
+  /**
+   * Whether the walk is of the folder the user named, where several projects are linted rather
+   * than refused (SeveralProjects). A project's own walk, below it, is not.
+   */
+  top?: boolean;
+}
+
+/**
+ * The projects below the folder named, each by its path from it (projectsBelow), where one
+ * project's route would refuse the folder: thrown up to resolveInput, which lints them all.
+ */
+class SeveralProjects extends Error {
+  constructor(readonly paths: string[]) {
+    super("several projects");
+  }
 }
 
 /** Why a path below the input was not read: the reason a refused run gives, and a notice's words. */
@@ -122,6 +157,8 @@ interface Unread {
   reason: string;
   /** What a notice says of the path, after naming it. */
   says: string;
+  /** What a notice says the user can do, after saying the path was not linted. */
+  hint?: string;
 }
 
 /** A file or folder the operating system refused. */
@@ -140,6 +177,76 @@ const LINK: Unread = {
 };
 
 /**
+ * A report or model at `p`, which the project at `base` names outside both the folder the user
+ * named (`named`) and the project folder: references are followed only inside one of them. Its
+ * notice says what the user can do (outsideHint).
+ */
+function outside(base: string, named: string | undefined, p: string): Unread {
+  const says = "is outside the path you named and the project folder";
+  const hint = outsideHint(resolve(base), named, resolve(p));
+  return { says, hint, reason: `it ${says}${hint ? `; ${hint}` : ""}` };
+}
+
+/**
+ * What the user can do about a reference to `p` the project at `base` was refused: lint the folder
+ * nearest them that holds both by their paths as written, naming it relative to the project folder
+ * as the notice names `p`. Linting that folder follows the reference, with every other project in
+ * it linted too (#237). None when the reference leads out only through a link, which no folder
+ * named would follow, or when the only folder holding both is the file system's root, which is
+ * never searched.
+ */
+function outsideHint(base: string, named: string | undefined, p: string): string | undefined {
+  if (within(base, p) || (named !== undefined && within(resolve(named), p))) return undefined;
+  let top = dirname(base);
+  while (!within(top, p)) {
+    if (dirname(top) === top) return undefined;
+    top = dirname(top);
+  }
+  if (dirname(top) === top || !reachedAsWritten(top, p)) return undefined;
+  return `lint the folder that holds both (${toPosix(relative(base, top))} from the project folder) to include it`;
+}
+
+/** Whether `p` really is where its path from `top` says, so no link on the way leads elsewhere. */
+function reachedAsWritten(top: string, p: string): boolean {
+  try {
+    return realpathSync.native(p) === join(realpathSync.native(top), relative(top, p));
+  } catch (e) {
+    // A path that is not there is judged as written, as insideProject judges it.
+    if (isSystemError(e)) return true;
+    throw e;
+  }
+}
+
+const OUTSIDE_MODEL =
+  "the model this report reads is outside the path you named and the project folder";
+
+/**
+ * Whether `p` is `root` or below it, by where each really is, so a path that leads out through a
+ * link counts as outside. When either is not there, or the operating system will not resolve it,
+ * both are judged as written.
+ */
+function insideProject(root: string, p: string): boolean {
+  let [r, q] = [resolve(root), resolve(p)];
+  try {
+    [r, q] = [realpathSync.native(r), realpathSync.native(q)];
+  } catch (e) {
+    // Both as written, so a root reached through a link is not set against a real path.
+    if (!isSystemError(e)) throw e;
+  }
+  return within(r, q);
+}
+
+/** Whether the path `q` is `r` or below it, as written. */
+function within(r: string, q: string): boolean {
+  const way = relative(r, q);
+  return !isAbsolute(way) && way !== ".." && !way.startsWith(`..${sep}`);
+}
+
+/** Whether a reference to `p` is followed: it stays inside the project folder or the folder named. */
+const followed = (base: string, named: string | undefined, p: string): boolean =>
+  insideProject(base, p) || (named !== undefined && insideProject(named, p));
+
+/**
  * The `unread-file` notice (spec section 4) for a file or folder below the input that was not
  * read, and why. A part given on its own is walked once for the model and once for the report, so
  * each path is named once. The path is also recorded on `part`, the part being read, as `p`
@@ -153,7 +260,7 @@ function unread(w: Walk, p: string, why: Unread, part?: ResolvedPart, folder = f
   w.project.diagnostics.push({
     kind: "unread-file",
     path,
-    message: `${path} ${why.says}, so it was not linted`,
+    message: `${path} ${why.says}, so it was not linted${why.hint ? `; ${why.hint}` : ""}`,
   });
 }
 
@@ -182,7 +289,9 @@ function linked(w: Walk, p: string, part?: ResolvedPart, folder = false): boolea
  * The first link on the way from the walk's base to `to`, a folder a project file names by a path
  * that may pass through others (`../Shared/Sales.SemanticModel`): each folder below the one the two
  * share, down to `to` itself. The folders the base sits in are where the project is, and are
- * followed, as the input is.
+ * followed, as the input is. On a .pbip's route `to` is inside the project folder or the folder
+ * named by then (followed), so the way climbs above the base only inside the folder named, and a
+ * link there is named as any link is.
  */
 function linkOnWay(w: Walk, to: string): string | undefined {
   const way = relative(w.base, to);
@@ -219,6 +328,14 @@ function attempt<T>(
 }
 
 const LEGACY_NOTICE = { model: legacyModel, report: legacyReport } as const;
+/** The file that makes a part folder legacy, which an unreadable project's finding points at. */
+const LEGACY_FILE = { model: "model.bim", report: "report.json" } as const;
+/**
+ * The legacy part that a refusal of a run that read nothing else names first, kept beside the
+ * error rather than on it, so a UsageError still compares equal to an Error with its message.
+ * resolveInput reads it to point an unreadable project's finding at the file (#237).
+ */
+const LEGACY_CAUSE = new WeakMap<UsageError, Omit<Unreadable, "message">>();
 
 /**
  * The part folder `folder`, saved in a legacy format pbiplint cannot read (model.bim, or a single
@@ -278,13 +395,22 @@ function readTree(
   }
 }
 
-/** The model part at `folder`: its definition folder's .tmdl files, or nothing. */
+/**
+ * The model part at `folder`: its definition folder's .tmdl files, or nothing. One another project
+ * of the run read already is that same part (Reach).
+ */
 function modelPart(w: Walk, folder: string): ResolvedPart | undefined {
+  const { models } = w.reach;
+  const key = models && realpathSync.native(folder);
+  const read = key === undefined ? undefined : models!.get(key);
+  if (read) return read;
   const def = join(folder, "definition");
   if (linked(w, def) || !isDir(def)) return undefined;
   const part = emptyPart(folder);
   readTree(w, part, def, (n) => n.endsWith(".tmdl"));
-  return part.files.length ? part : undefined;
+  if (!part.files.length) return undefined;
+  if (key !== undefined) models!.set(key, part);
+  return part;
 }
 
 /** The report part at `folder`: definition.pbir, .platform, and every JSON under definition, or nothing. */
@@ -358,18 +484,25 @@ const isPbipEntry = (folder: string, e: Dirent): boolean =>
 
 /**
  * The project's .pbip: the one the user pointed at, else the only one in the folder (isPbipEntry).
- * A folder holding several is refused rather than guessed at.
+ * A folder holding several is refused rather than guessed at, after `several` has had its say.
  */
-function pbipIn(input: string, folder: string, preferred: string | undefined): string | undefined {
+function pbipIn(
+  input: string,
+  folder: string,
+  preferred: string | undefined,
+  several: () => void,
+): string | undefined {
   if (preferred !== undefined) return preferred;
   const found = readdirSync(folder, { withFileTypes: true })
     .filter((e) => isPbipEntry(folder, e))
     .map((e) => e.name)
     .sort(byName);
-  if (found.length > 1)
+  if (found.length > 1) {
+    several();
     throw new UsageError(
       `${input} contains ${found.length} .pbip files; point at one of them: ${found.join(", ")}`,
     );
+  }
   return found[0];
 }
 
@@ -391,8 +524,156 @@ function loneReportAbsent(
   return !decision.useModel && decision.reason ? { model: decision.reason } : {};
 }
 
-/** Find the project at or under `input` and read its parts (spec section 4). */
+/**
+ * Find the project at or under `input`, the path the user named, and read its parts (spec section
+ * 4). A folder that holds several projects is refused, as it was before #237, with the message the
+ * one-project route gives (resolveInput lints them all).
+ */
 export function resolveProject(input: string): ResolvedProject {
+  return resolveAt(input, undefined, {});
+}
+
+/** The most projects one run lints (spec section 3.4); more is refused with where they are. */
+export const MAX_PROJECTS = 200;
+
+/**
+ * One project of a folder that holds several (#237): `project` when it was read, else
+ * `unreadable`, with the refusal its own run gives (spec section 3.3). Exactly one is set.
+ */
+export interface NamedProject {
+  /** The path that lints it, relative to the folder named, as projectsBelow gives it. */
+  path: string;
+  project?: ResolvedProject;
+  unreadable?: Unreadable;
+  /** The real path of the model folder it read, which projects reading one model share. */
+  modelKey?: string;
+  /** The model folder relative to the folder named, in forward slashes, for the shared-model notice. */
+  modelPath?: string;
+}
+
+export type ResolvedInput =
+  { kind: "one"; project: ResolvedProject } | { kind: "several"; projects: NamedProject[] };
+
+/**
+ * What the user named at `input`: the one project resolveProject reads, or, for a folder that holds
+ * several, each of them (spec section 3), in projectsBelow's name order, which the shared-model step
+ * takes as the order that decides which project's path names a model first. Several are read only
+ * where resolveProject would refuse the folder for holding them, so an input that lints today
+ * resolves as it did. Each is read as the one project below a folder is, under the folder named,
+ * which stays the #236 boundary for every one, and a model several reach is read once (Reach).
+ * A project whose own run would be refused is `unreadable`, with that refusal, and the others are
+ * read; a folder none of whose projects can be read is refused with the first one's refusal and a
+ * line for each other, since a run that reads nothing must not pass (#175).
+ */
+export function resolveInput(input: string): ResolvedInput {
+  let paths: string[];
+  try {
+    // No model is kept from this walk: on the way to finding several projects it may have read a
+    // model, whose notices go with the walk it was read in.
+    return { kind: "one", project: resolveAt(input, undefined, { top: true }) };
+  } catch (e) {
+    if (!(e instanceof SeveralProjects)) throw e;
+    paths = e.paths;
+  }
+  const at = (p: string): string => toPosix(join(input, p));
+  if (paths.length > MAX_PROJECTS) throw tooMany(input, paths, at);
+  // The folder named is the same for every project; a project's own walk does not look for more.
+  const named = resolve(input);
+  // A project's refusal names it by the path it was read at, which main made absolute. Its finding
+  // reaches every format and a pipeline's code scanning, so there it names the project from the
+  // folder named, that folder's own name first, as the site names it from the drop. The refusal of
+  // a run that reads nothing keeps the paths as given, as every refusal does.
+  const fromNamed = (text: string): string => fromFolderNamed(named, text);
+  const own: Reach = { models: new Map() };
+  const refusals: UsageError[] = [];
+  const projects = paths.map((path): NamedProject => {
+    let project: ResolvedProject;
+    try {
+      project = resolveAt(at(path), named, own);
+    } catch (e) {
+      if (!(e instanceof UsageError)) throw e;
+      refusals.push(e);
+      return { path, unreadable: unreadableOf(path, e, fromNamed) };
+    }
+    if (!project.model) return { path, project };
+    return {
+      path,
+      project,
+      modelKey: realpathSync.native(project.model.root),
+      modelPath: toPosix(relative(named, project.model.root)),
+    };
+  });
+  const [first] = refusals;
+  if (first !== undefined && refusals.length === projects.length)
+    throw new UsageError(first.message, [
+      ...first.lines,
+      ...refusals.slice(1).map((e, i) => `  ${projects[i + 1]!.path}: ${e.message}`),
+    ]);
+  return { kind: "several", projects };
+}
+
+/**
+ * `text` with the absolute path of `named`, the folder named, written as that folder's own name,
+ * so `/home/me/repo/b/F.SemanticModel` reads `repo/b/F.SemanticModel`, as the site names a project
+ * from the drop. Only the folder's whole path is replaced, never its parent's, so a folder right
+ * under the root (`/repo`, `C:\repo`) keeps every other slash; a root itself, which has no name,
+ * leaves the path below it. The walk writes paths with forward slashes, so `named` is compared so.
+ */
+export function fromFolderNamed(named: string, text: string): string {
+  const posix = toPosix(named);
+  const folder = posix.endsWith("/") ? posix : `${posix}/`;
+  const name = posix.split("/").filter(Boolean).pop();
+  const own = name === undefined || /^[A-Za-z]:$/.test(name) ? "" : `${name}/`;
+  // Only where a path starts: at the start of the text or after a space, quote, or bracket, so a
+  // root's "/" is not cut from inside the path below it.
+  const escaped = folder.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return text.replace(
+    new RegExp(`(^|[\\s"'(\\[,])${escaped}`, "g"),
+    (_, before: string) => before + own,
+  );
+}
+
+/**
+ * The project at `path`, refused with `e`, whose message `shown` rewrites: on the legacy file when
+ * a legacy part is the cause (walked records it), else named by its path, on the part the path
+ * names, a .pbip's being its report's.
+ */
+function unreadableOf(path: string, e: UsageError, shown: (text: string) => string): Unreadable {
+  const message = shown(e.message);
+  const cause = LEGACY_CAUSE.get(e);
+  if (cause) return { message, ...cause };
+  return {
+    message,
+    layer: path.endsWith(".SemanticModel") ? "model" : "report",
+    name: path,
+  };
+}
+
+/**
+ * The refusal of a folder holding more than MAX_PROJECTS projects: how many, and each folder at
+ * its top that holds some, with how many and the command that lints them, so a person or an
+ * assistant can split the run. A project at the top is a line of its own.
+ */
+function tooMany(input: string, paths: string[], at: (p: string) => string): UsageError {
+  const counts = new Map<string, number>();
+  for (const p of paths) {
+    const first = p.split("/")[0]!;
+    counts.set(first, (counts.get(first) ?? 0) + 1);
+  }
+  return new UsageError(
+    `${input} contains ${paths.length} projects, more than the ${MAX_PROJECTS} one run lints; point at a folder that holds fewer:`,
+    [...counts.keys()].sort(byName).map((first) => {
+      const n = counts.get(first)!;
+      return `  ${first}: ${n} project${n === 1 ? "" : "s"}: pbiplint ${shellWord(at(first))}`;
+    }),
+  );
+}
+
+/**
+ * resolveProject at `input`, below the folder the user named (`named`) when the walk got here from
+ * there, else the path the user named itself, which is the folder named when it is a folder.
+ */
+function resolveAt(input: string, named: string | undefined, reach: Reach): ResolvedProject {
   const path = resolve(input);
   try {
     const stat = statOf(path);
@@ -413,12 +694,12 @@ export function resolveProject(input: string): ResolvedProject {
         };
       // A .pbip is taken where it really sits, as the paths it writes are relative to its folder.
       if (path.endsWith(".pbip"))
-        return resolvePbip(input, isLink(path) ? realpathSync(path) : path);
+        return resolvePbip(input, isLink(path) ? realpathSync(path) : path, named, reach);
       // Named for what it is, by its name alone: a .pbix is never opened.
       if (isPbix(path)) throw new UsageError(pbixRefusal(input));
       throw new UsageError(`${input} is not a .tmdl file, a .pbip file, or a folder`);
     }
-    return resolveFolder(input, path);
+    return resolveFolder(input, path, undefined, named ?? path, reach);
   } catch (e) {
     // What cannot be read below the input is a notice (attempt and readPart), so what reaches
     // here is the input itself: its stat, its listing, or the one file it names. It is refused as
@@ -434,12 +715,19 @@ export function resolveProject(input: string): ResolvedProject {
  * .pbip's file name, so a project holding more than one is read as the user asked instead of
  * refused.
  */
-function resolveFolder(input: string, path: string, preferred?: string): ResolvedProject {
-  return walked(input, path, (w) => readFolder(w, input, path, preferred));
+function resolveFolder(
+  input: string,
+  path: string,
+  preferred: string | undefined,
+  named: string | undefined,
+  reach: Reach,
+): ResolvedProject {
+  return walked(input, path, (w) => readFolder(w, input, path, preferred), named, reach);
 }
 
 /**
- * One walk from the folder `base`, which is the project root, by `read`, unless the one project
+ * One walk from the folder `base`, which is the project root, by `read`, under the folder the user
+ * named (`named`, see Walk), unless the one project
  * below a plain folder is read in its place, by a walk of its own (readFolder, #174). `input`
  * names that folder in a refusal.
  *
@@ -451,17 +739,34 @@ function resolveFolder(input: string, path: string, preferred?: string): Resolve
  * a second's on a line of its own, in the order the walk met them, rather than the run's first
  * diagnostic, which for the one project below a plain folder is the notice naming it.
  */
-function walked(input: string, base: string, read: (w: Walk) => ResolvedProject): ResolvedProject {
-  const w: Walk = { base, project: { root: base, absent: {}, diagnostics: [] }, legacy: [] };
+function walked(
+  input: string,
+  base: string,
+  read: (w: Walk) => ResolvedProject,
+  named: string | undefined,
+  reach: Reach,
+): ResolvedProject {
+  const w: Walk = {
+    base,
+    project: { root: base, absent: {}, diagnostics: [] },
+    legacy: [],
+    named,
+    reach,
+  };
   const project = read(w);
   if (project.model || project.report) return project;
   // Each path joined to `input`, as the readers' messages name the folder, in the notices' forward
   // slashes. The folder itself is named by `input` alone.
-  const named = (below: string): string => (below === "" ? input : toPosix(join(input, below)));
+  const joined = (below: string): string => (below === "" ? input : toPosix(join(input, below)));
   if (w.refusal)
-    throw new UsageError(`Could not read ${named(w.refusal.path)}: ${w.refusal.reason}`);
-  const [first, ...rest] = w.legacy.map((l) => LEGACY_NOTICE[l.layer](named(l.path)).message);
-  if (first !== undefined) throw new UsageError(first, rest);
+    throw new UsageError(`Could not read ${joined(w.refusal.path)}: ${w.refusal.reason}`);
+  const [first, ...rest] = w.legacy.map((l) => LEGACY_NOTICE[l.layer](joined(l.path)).message);
+  if (first !== undefined) {
+    const e = new UsageError(first, rest);
+    const { layer, path } = w.legacy[0]!;
+    LEGACY_CAUSE.set(e, { layer, root: join(base, path), file: LEGACY_FILE[layer] });
+    throw e;
+  }
   // Not reached today: every unread path sets the refusal, and readFolder and readNamed throw
   // before returning neither part with nothing else to say. Kept so that a run that read nothing
   // can never go on, whatever a later reader returns.
@@ -472,35 +777,64 @@ function walked(input: string, base: string, read: (w: Walk) => ResolvedProject)
 
 /**
  * A .pbip the user named (#86): the one report its `artifacts` name, its path relative to the
- * .pbip's folder, and the model that report's definition.pbir names, wherever each sits, so a
- * project beside others in one folder lints with both parts. Nothing else in the .pbip's folder
- * is read or refused, and that folder stays the project root: the config search's start and the
- * base of every notice's path. A .pbip naming more than one report is refused as a folder holding
- * more than one is; one naming none is read as its folder, as every .pbip was before.
+ * .pbip's folder, and the model that report's definition.pbir names, inside the project folder
+ * (the folder that holds the .pbip) or the folder the user named (`named`), by where each really
+ * is, so a link that leads out is caught too; a reference outside both is a notice and is not
+ * followed. A project beside others in one
+ * folder lints with both parts. Nothing else in the .pbip's folder is read or refused, and that
+ * folder stays the project root: the config search's start and the base of every notice's path. A
+ * .pbip naming more than one report is refused as a folder holding more than one is; one naming
+ * none is read as its folder, as every .pbip was before.
  */
-function resolvePbip(input: string, path: string): ResolvedProject {
+function resolvePbip(
+  input: string,
+  path: string,
+  named: string | undefined,
+  { models }: Reach,
+): ResolvedProject {
   const folder = dirname(path);
+  // A .pbip names one project, so its folder is never read as holding several.
+  const reach: Reach = { models };
   // The input itself, refused by resolveProject when it cannot be read.
   const text = readFileSync(path, "utf8");
   // Each report folder once, as first written, counted by the path it resolves to: a report
   // named twice as `Cost.Report`, `./Cost.Report`, or `Cost.Report/` is one report.
-  const named = new Map<string, string>();
+  const reports = new Map<string, string>();
   for (const written of reportsNamed(text)) {
     const at = resolve(folder, toPosix(written));
-    if (!named.has(at)) named.set(at, written);
+    if (!reports.has(at)) reports.set(at, written);
   }
-  if (named.size === 0) return resolveFolder(folder, folder, basename(path));
-  if (named.size > 1) {
-    const names = [...named.values()].map((p) => basename(toPosix(p))).sort(byName);
+  if (reports.size === 0) return resolveFolder(folder, folder, basename(path), named, reach);
+  if (reports.size > 1) {
+    const names = [...reports.values()].map((p) => basename(toPosix(p))).sort(byName);
     throw new UsageError(
-      `${input} names ${named.size} reports; point at one of them: ${names.join(", ")}`,
+      `${input} names ${reports.size} reports; point at one of them: ${names.join(", ")}`,
     );
   }
-  const [reportFolder, written] = [...named][0]!;
+  const [reportFolder, written] = [...reports][0]!;
+  // A report outside both the project folder and the folder named is not looked up, and a run
+  // that reads nothing else is refused naming it.
+  if (!followed(folder, named, reportFolder))
+    return walked(
+      folder,
+      folder,
+      (w) => {
+        unread(w, reportFolder, outside(folder, named, reportFolder));
+        return w.project;
+      },
+      named,
+      reach,
+    );
   const kind = folderAt(reportFolder);
   if (kind === undefined) throw new UsageError(`${input} names ${written}, which does not exist`);
   if (!kind) throw new UsageError(`${input} names ${written}, which is not a folder`);
-  return walked(folder, folder, (w) => readNamed(w, input, path, text, reportFolder, written));
+  return walked(
+    folder,
+    folder,
+    (w) => readNamed(w, input, path, text, reportFolder, written),
+    named,
+    reach,
+  );
 }
 
 /**
@@ -527,8 +861,10 @@ const PBIR_UNREAD_REASON = "the report's definition.pbir could not be read";
 
 /**
  * The report at `reportFolder`, which the .pbip at `pbip` names as `written`, and the model its
- * definition.pbir names by path, relative to the report folder. The path is followed rather than
- * compared with a folder beside the report, so model-reference-mismatch does not arise here.
+ * definition.pbir names by path, relative to the report folder, inside the project folder (the
+ * folder that holds the .pbip) or the folder the user named, by where each really is, so a link
+ * that leads out is caught too; a reference outside both is a notice and is not followed. The path is followed rather than compared
+ * with a folder beside the report, so model-reference-mismatch does not arise here.
  */
 function readNamed(
   w: Walk,
@@ -559,7 +895,11 @@ function readNamed(
   let model: ResolvedPart | undefined;
   if (ref.kind === "byPath") {
     const modelFolder = resolve(reportFolder, toPosix(ref.path));
-    if (folderAt(modelFolder)) {
+    if (!followed(w.base, w.named, modelFolder)) {
+      // Not followed, and nothing in it is looked up.
+      unread(w, modelFolder, outside(w.base, w.named, modelFolder));
+      out.absent.model = OUTSIDE_MODEL;
+    } else if (folderAt(modelFolder)) {
       model = readPart(w, "model", modelFolder, modelPart);
       if (!model && !out.absent.model && isFile(join(modelFolder, "model.bim")))
         legacyPart(w, "model", modelFolder);
@@ -649,6 +989,15 @@ function readFolder(w: Walk, input: string, path: string, preferred?: string): R
     .map((e) => e.name);
   const models = dirs.filter((d) => d.endsWith(".SemanticModel")).sort(byName);
   const reports = dirs.filter((d) => d.endsWith(".Report")).sort(byName);
+  // Where one project's route refuses the folder named for holding several side by side, as Power
+  // BI Desktop saves two projects into one folder, the run lints each (#237). A folder below the
+  // one named, or a part, is refused as before.
+  const several = (): void => {
+    if (!w.reach.top || namedPart || name === "definition") return;
+    const below = projectsBelow(foundBelow(w, path));
+    if (below.length > 1) throw new SeveralProjects(below);
+  };
+  if (models.length > 1 || reports.length > 1) several();
   if (models.length > 1)
     throw new UsageError(
       `${input} contains ${models.length} semantic models; point at one of them: ${models.join(", ")}`,
@@ -665,7 +1014,7 @@ function readFolder(w: Walk, input: string, path: string, preferred?: string): R
   if (reports[0] && !report && !out.absent.report && isFile(join(path, reports[0], "report.json")))
     legacyPart(w, "report", join(path, reports[0]));
   if (report) {
-    const pbip = pbipIn(input, path, preferred);
+    const pbip = pbipIn(input, path, preferred, several);
     // The .pbip sits at the project root, one level above the report root every other path is
     // relative to, so it carries that relative path and a finding on it points at the real file.
     if (pbip !== undefined) {
@@ -701,7 +1050,8 @@ function readFolder(w: Walk, input: string, path: string, preferred?: string): R
   // folder of its own (#174). Read as loose files, one project's model would be linted without its
   // report, and two projects' models as one. So the one project found is linted as if it had been
   // given, its root the config search's start and the base of its notices' paths, with a notice
-  // that names it first; several are refused with a list, each with the command that lints it, and
+  // that names it first. Several below the folder named are each linted (#237, resolveInput); below
+  // any other folder they are refused with a list, each with the command that lints it, and
   // nothing is linted. The project's walk is its own: what this folder's read met (a definition
   // folder that could not be read, say) is outside the project and refuses nothing, and a refusal
   // of the project itself, such as a model folder that holds no .tmdl files, is the run's, naming
@@ -716,10 +1066,13 @@ function readFolder(w: Walk, input: string, path: string, preferred?: string): R
     const below = projectsBelow(foundBelow(w, path));
     const at = (p: string): string => toPosix(join(input, p));
     if (below.length === 1) {
-      const project = resolveProject(at(below[0]!));
+      // The folder named stays the user's, not the project's, so a reference that leaves the
+      // project but stays inside it is followed.
+      const project = resolveAt(at(below[0]!), w.named, { models: w.reach.models });
       w.refusal = undefined;
       return { ...project, diagnostics: [projectBelowNotice(below[0]!), ...project.diagnostics] };
     }
+    if (below.length > 1 && w.reach.top) throw new SeveralProjects(below);
     if (below.length > 1)
       throw new UsageError(
         `${input} contains ${below.length} projects; point at one of them:`,

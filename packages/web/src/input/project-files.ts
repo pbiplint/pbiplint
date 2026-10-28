@@ -10,11 +10,13 @@ import {
   pbixRefusal,
   projectBelowNotice,
   projectsBelow,
+  reportsNamed,
   type DatasetReference,
   type Diagnostic,
   type FoundBelow,
   type LayerName,
   type LintFile,
+  type Unreadable,
 } from "@pbiplint/core";
 
 /** One file read from a drop, a folder pick, or a directory input. Forward slashes, relative to the drop. */
@@ -127,12 +129,63 @@ export interface SelectedProject {
   diagnostics: Diagnostic[];
 }
 
+/**
+ * One project of a drop that holds several (#237), as the CLI's NamedProject: `project` when it
+ * was read, else `unreadable`, with the refusal a drop of it alone would give (spec section 3.3).
+ * Exactly one is set.
+ */
+export interface SeveralProject {
+  /** The path that names it, relative to the folder dropped, as projectsBelow gives it. */
+  path: string;
+  project?: SelectedProject;
+  unreadable?: Unreadable;
+  /**
+   * The nearest pbiplint.config.json at or above the project, the read one's `config` too: an
+   * unreadable project's result is bound to it as well, as its own run would be.
+   */
+  config?: SelectedProject["config"];
+  /** The model folder's path in the drop, which projects reading one model share (spec 5.1). */
+  modelKey?: string;
+  /** The model folder relative to the folder dropped, for the shared-model notice. */
+  modelPath?: string;
+}
+
+/** What a drop holds: one project, read as selectProject reads it, or several (#237). */
+export type Selected =
+  { kind: "one"; project: SelectedProject } | { kind: "several"; projects: SeveralProject[] };
+
+/** The most projects one drop lints, the CLI's MAX_PROJECTS (spec section 3.4). */
+export const MAX_PROJECTS = 200;
+
 /** A problem with what was dropped, in words meant for the status line. */
 export class InputError extends Error {
   // Error's own name otherwise, which says nothing in a console or a stack trace. The page matches
   // on the class, not on this.
   override name = "InputError";
 }
+
+/**
+ * The projects below the folder dropped, where one project's route would refuse it for holding
+ * several: thrown up to selectProjects, which reads them all, as the CLI's SeveralProjects is.
+ * `pbips` are the paths among them that name a .pbip.
+ */
+class SeveralFound extends Error {
+  constructor(
+    readonly base: string,
+    readonly paths: string[],
+    readonly pbips: string[],
+  ) {
+    super("several projects");
+  }
+}
+
+/** The file that makes a part folder legacy, which an unreadable project's finding points at. */
+const LEGACY_FILE = { model: "model.bim", report: "report.json" } as const;
+/**
+ * The legacy part a refusal of a project that read nothing else names first, kept beside the
+ * error, as the CLI's LEGACY_CAUSE is, so an unreadable project's finding lands on its file.
+ */
+const LEGACY_CAUSE = new WeakMap<InputError, Omit<Unreadable, "message">>();
 
 export const CONFIG_FILE = "pbiplint.config.json";
 const MODEL_SUFFIX = ".SemanticModel";
@@ -235,16 +288,38 @@ interface Selection {
    * the order the reads met them: a drop that reads nothing else is refused with their notices.
    */
   legacy: Map<string, LayerName>;
+  /**
+   * The model folders a .pbip's report named by path, read or not: on the route of several, each
+   * is that project's, so another project's notes do not name it as one left unlinted.
+   */
+  named: Set<string>;
+  /** The folder dropped, "" for several items: the boundary a .pbip's references stay inside. */
+  drop: string;
+  /** The first reference that left the drop, for the refusal of a run that reads nothing else. */
+  outside?: { path: string; reason: string };
+  /**
+   * Whether this is the read of the folder dropped on the page's route, where several projects
+   * are linted rather than refused (SeveralFound), as the CLI's Reach.top. The read of a project
+   * below it is not, and selectProject's never is.
+   */
+  top: boolean;
+  /**
+   * Whether this reads one project of several, as the CLI's resolveInput reads each: a .pbip
+   * naming several reports is refused as the CLI refuses it, and what the project lists and notes
+   * is its own, not the whole drop's.
+   */
+  ofSeveral: boolean;
 }
 
 const LEGACY_NOTICE = { model: legacyModel, report: legacyReport } as const;
 
 /**
  * The part folder `dir`, saved in a legacy format pbiplint cannot read, as the CLI's legacyPart:
- * its notice, named by its folder's name, and its layer absent with the reason.
+ * its notice, named by its folder's name or, on the .pbip route, by its path from the project
+ * root, and its layer absent with the reason.
  */
-function legacyPart(s: Selection, layer: LayerName, dir: string): void {
-  s.said.push(LEGACY_NOTICE[layer](nameOf(dir)));
+function legacyPart(s: Selection, layer: LayerName, dir: string, shown = nameOf(dir)): void {
+  s.said.push(LEGACY_NOTICE[layer](shown));
   s.absent[layer] = layer === "model" ? LEGACY_MODEL_REASON : LEGACY_REPORT_REASON;
   s.legacy.set(dir, layer);
 }
@@ -448,11 +523,21 @@ function readFolder(s: Selection, base: string): Parts {
     [...s.dirs].filter((d) => d !== base && parent(d) === base && is(nameOf(d))).sort(byName);
   const modelDirs = children(isModelFolder);
   const models = modelDirs.filter((d) => holdsModel(s, d));
+  // Where the folder dropped is refused for holding several side by side, as Power BI Desktop
+  // saves two projects into one folder, the page lints each (#237), as the CLI's several does. A
+  // folder below the one dropped, or a part, is refused as before.
+  const several = (): void => {
+    if (!s.top || isModelFolder(name) || isReportFolder(name) || name === "definition") return;
+    const found = foundBelow(s, base);
+    const below = projectsBelow(found);
+    if (below.length > 1) throw severalFound(base, below, found);
+  };
+  const reports = children(isReportFolder);
+  if (models.length > 1 || reports.length > 1) several();
   if (models.length > 1)
     throw new InputError(
       `${base || "The drop"} contains ${models.length} semantic models; drop one of them: ${models.map(nameOf).join(", ")}`,
     );
-  const reports = children(isReportFolder);
   if (reports.length > 1)
     throw new InputError(
       `${base || "The drop"} contains ${reports.length} reports; drop one of them: ${reports.map(nameOf).join(", ")}`,
@@ -481,7 +566,7 @@ function readFolder(s: Selection, base: string): Parts {
   )
     legacyPart(s, "report", reportDir);
   if (report && reportDir) {
-    readPbip(s, base, report);
+    readPbip(s, base, report, several);
     const pbir = report.files.find((f) => f.path === "definition.pbir");
     const ref: DatasetReference = pbir ? datasetReference(pbir.text) : { kind: "none" };
     const decision = pairingDecision(
@@ -504,9 +589,8 @@ function readFolder(s: Selection, base: string): Parts {
 
   // A plain folder, neither a part nor a PBIP folder and holding no .pbip, may hold projects in
   // folders below it, as the CLI's readFolder finds them (#174): the one found is read as if it
-  // had been dropped alone, and several are refused with a list, to be dropped one at a time. The
-  // browser takes folders and has no .pbip route (spec section 12), so a project given by its .pbip
-  // is read as the .pbip's folder.
+  // had been dropped alone. Several below the folder dropped are each linted on the page's route
+  // (#237, selectProjects); else they are refused with a list, to be dropped one at a time.
   if (
     !isModelFolder(name) &&
     !isReportFolder(name) &&
@@ -517,19 +601,15 @@ function readFolder(s: Selection, base: string): Parts {
   ) {
     const found = foundBelow(s, base);
     const below = projectsBelow(found);
+    if (below.length > 1 && s.top) throw severalFound(base, below, found);
     if (below.length > 1)
       throw new InputError(
         `${base || "The drop"} contains ${below.length} projects; drop one of them: ${below.join(", ")}`,
       );
     const path = below[0];
     if (path !== undefined) {
-      const folder = found.pbips.some((p) => p.path === path) ? parent(path) : path;
-      const root = join(base, folder);
-      // The project's reads are the run's, as the CLI's walk of it is its own: what this folder's
-      // reads met (a definition folder that could not be listed, say) is outside the project and
-      // neither refuses nor is named.
-      s.reads.length = 0;
-      return { ...readFolder(s, root), below: { path, root } };
+      const { parts, root } = readBelow(s, base, path, pbipPaths(found));
+      return { ...parts, below: { path, root } };
     }
   }
 
@@ -569,6 +649,33 @@ function foundBelow(s: Selection, base: string): FoundBelow {
   };
 }
 
+/** The paths projectsBelow may give that name a .pbip, relative to the folder searched. */
+const pbipPaths = (found: FoundBelow): string[] => found.pbips.map((p) => p.path);
+
+const severalFound = (base: string, paths: string[], found: FoundBelow): SeveralFound =>
+  new SeveralFound(base, paths, pbipPaths(found));
+
+/**
+ * The project at `path` below the folder `base`, read as if it had been dropped alone, rooted at
+ * its folder: a project given by its .pbip is read as the CLI reads a .pbip (readNamed). The
+ * project's reads are the run's, as the CLI's walk of it is its own: what the folder's reads met
+ * (a definition folder that could not be listed, say) is outside the project and neither refuses
+ * nor is named. Nothing below it is several projects of the drop's.
+ */
+function readBelow(
+  s: Selection,
+  base: string,
+  path: string,
+  pbips: string[],
+): { parts: Parts; root: string } {
+  const pbip = pbips.includes(path) ? join(base, path) : undefined;
+  const root = pbip ? parent(pbip) : join(base, path);
+  s.reads.length = 0;
+  s.top = false;
+  const parts = (pbip && readNamed(s, pbip)) || readFolder(s, root);
+  return { parts, root };
+}
+
 /**
  * The .pbip files directly in `dir`, read or refused, in name order: the one beside a report, or
  * the one that keeps a plain folder from being searched for projects below it.
@@ -586,14 +693,17 @@ function pbipsIn(s: Selection, dir: string): string[] {
 /**
  * The project's .pbip, at the project root beside the report, joins the report's files as
  * `../<name>.pbip`, the path the CLI gives it. Only a report brings it in, so a .pbip never makes
- * a report layer present on its own (tracked in #59). Two are refused rather than guessed at.
+ * a report layer present on its own (tracked in #59). Two are refused rather than guessed at,
+ * after `several` has had its say.
  */
-function readPbip(s: Selection, base: string, report: Part): void {
+function readPbip(s: Selection, base: string, report: Part, several: () => void): void {
   const found = pbipsIn(s, base);
-  if (found.length > 1)
+  if (found.length > 1) {
+    several();
     throw new InputError(
       `${base || "The drop"} contains ${found.length} .pbip files; drop a folder that holds one of them: ${found.map(nameOf).join(", ")}`,
     );
+  }
   const path = found[0];
   if (path === undefined) return;
   s.reads.push({ part: report, covers: (p, folder) => !folder && p === path });
@@ -602,6 +712,142 @@ function readPbip(s: Selection, base: string, report: Part): void {
     report.files.push({ path: relativeToRoot(report.root, path), text: entry.text });
     report.sources.add(path);
   }
+}
+
+/** Where a path a project file writes leads: a drop-relative path, `above` folders over the drop's top. */
+interface Resolved {
+  path: string;
+  above: number;
+}
+
+/**
+ * The path `to`, which a project file writes relative to the folder `from`, with its `.` and `..`
+ * taken and either slash read as one, as core's resolveIn (packages/core/src/project/below.ts)
+ * takes it, counting the folders it climbs above the top of the drop rather than giving up there,
+ * so a notice can name where it leads.
+ */
+function resolveFrom(from: string, to: string): Resolved {
+  const out = from === "" ? [] : from.split("/");
+  let above = 0;
+  for (const segment of to.split(/[\\/]/)) {
+    if (segment === "" || segment === ".") continue;
+    if (segment !== "..") out.push(segment);
+    else if (out.pop() === undefined) above++;
+  }
+  return { path: out.join("/"), above };
+}
+
+/** Whether a reference leads inside the drop, the boundary where the CLI has the folder named. */
+const inDrop = (s: Selection, r: Resolved): boolean => r.above === 0 && atOrWithin(r.path, s.drop);
+
+/**
+ * The folder in the drop at `path`, or failing that one whose path differs from it only in case,
+ * as projectsBelow matches it and as Windows and macOS find it for the CLI.
+ */
+const dirAt = (s: Selection, path: string): string | undefined =>
+  s.dirs.has(path) ? path : [...s.dirs].find((d) => d.toLowerCase() === path.toLowerCase());
+
+// The CLI's outside notice (packages/cli/src/walk.ts) in its words, with the folder dropped where
+// the CLI has the path named, and dropping where it has linting: the page is given a drop.
+const OUTSIDE_SAYS = "is outside the folder you dropped and the project folder";
+const OUTSIDE_MODEL = `the model this report reads ${OUTSIDE_SAYS}`;
+
+/**
+ * A reference from the project at `root` that leaves the drop, as the CLI's outside gives one that
+ * leaves the folder named: a notice naming it from the project root, with the hint to drop the
+ * folder that holds both, which is always above the drop's top. The first is kept for the refusal
+ * of a run that reads nothing else, named as a drop-relative path.
+ */
+function outside(s: Selection, root: string, r: Resolved): void {
+  const up = (n: number): string => Array<string>(n).fill("..").join("/");
+  const depth = root === "" ? 0 : root.split("/").length;
+  const climbed = (n: number): string => [up(n), r.path].filter(Boolean).join("/");
+  const path = r.above ? climbed(depth + r.above) : relativeToRoot(root, r.path);
+  const hint = `drop the folder that holds both (${up(depth + r.above)} from the project folder) to include it`;
+  s.said.push({
+    kind: "unread-file",
+    path,
+    message: `${path} ${OUTSIDE_SAYS}, so it was not linted; ${hint}`,
+  });
+  s.outside ??= { path: climbed(r.above), reason: `it ${OUTSIDE_SAYS}; ${hint}` };
+}
+
+/**
+ * The project the .pbip at `pbip` names, as the CLI's resolvePbip and readNamed read it: the one
+ * report its `artifacts` name, and the model that report's definition.pbir names by path, each
+ * followed while it stays inside the drop, and given the CLI's outside notice where it leaves.
+ * The .pbip's folder stays the project root. Undefined for a .pbip naming no report, or several,
+ * which is read as its folder, as every .pbip was before. One project of several refuses a .pbip
+ * naming several reports, in the CLI's words, since the CLI makes it an unreadable project there.
+ */
+function readNamed(s: Selection, pbip: string): Parts | undefined {
+  const folder = parent(pbip);
+  const text = s.tree.entries.find((e) => e.path === pbip)?.text;
+  // Each report once, as first written, counted by where it leads.
+  const reports = new Map<string, [Resolved, string]>();
+  for (const written of text === undefined ? [] : reportsNamed(text)) {
+    const r = resolveFrom(folder, written);
+    if (!reports.has(`${r.above}/${r.path}`)) reports.set(`${r.above}/${r.path}`, [r, written]);
+  }
+  if (reports.size > 1 && s.ofSeveral) {
+    const names = [...reports.values()]
+      .map(([, w]) => nameOf(w.replace(/[\\/]+$/, "").replaceAll("\\", "/")))
+      .sort(byName);
+    throw new InputError(
+      `${pbip} names ${reports.size} reports; drop one of them: ${names.join(", ")}`,
+    );
+  }
+  if (reports.size !== 1) return undefined;
+  const [[at, written]] = [...reports.values()] as [[Resolved, string]];
+  if (!inDrop(s, at)) {
+    outside(s, folder, at);
+    return {};
+  }
+  const dir = dirAt(s, at.path);
+  if (dir === undefined) throw new InputError(`${pbip} names ${written}, which does not exist`);
+  const shown = (d: string): string => relativeToRoot(folder, d);
+  const report = readPart(s, "report", dir, () => reportRead(s, dir));
+  if (!report && !s.absent.report && hasMarker(s, join(dir, "report.json"), "legacy-report"))
+    legacyPart(s, "report", dir, shown(dir));
+  if (report && text !== undefined) {
+    s.reads.push({ part: report, covers: (p, isFolder) => !isFolder && p === pbip });
+    report.files.push({ path: relativeToRoot(dir, pbip), text });
+    report.sources.add(pbip);
+  }
+  // A report not read still names its model in its definition.pbir, unless a folder on the way
+  // to it could not be listed, as the CLI's pbirOf looks it up.
+  const pbirPath = join(dir, "definition.pbir");
+  const blocked = s.unread.some((u) => u.folder && atOrWithin(dir, u.path));
+  if (!report && !blocked) s.reads.push({ covers: (p, isFolder) => !isFolder && p === pbirPath });
+  const pbir = blocked ? undefined : s.tree.entries.find((e) => e.path === pbirPath)?.text;
+  const ref: DatasetReference = pbir === undefined ? { kind: "none" } : datasetReference(pbir);
+  let model: Part | undefined;
+  if (ref.kind === "byPath") {
+    const m = resolveFrom(dir, ref.path);
+    const modelDir = inDrop(s, m) ? dirAt(s, m.path) : undefined;
+    if (modelDir !== undefined) s.named.add(modelDir);
+    if (!inDrop(s, m)) {
+      outside(s, folder, m);
+      s.absent.model = OUTSIDE_MODEL;
+    } else if (modelDir !== undefined) {
+      model = readPart(s, "model", modelDir, () =>
+        tmdlRead(s, modelDir, join(modelDir, "definition")),
+      );
+      if (!model && !s.absent.model && hasMarker(s, join(modelDir, "model.bim"), "legacy-model"))
+        legacyPart(s, "model", modelDir, shown(modelDir));
+    } else s.absent.model = `this report reads a model that is not there (${ref.path})`;
+  } else if (!blocked && s.unread.some((u) => !u.folder && u.path === pbirPath)) {
+    s.absent.model = "the report's definition.pbir could not be read";
+  }
+  // A model folder holding no .tmdl files, or a report bound to a published model or naming none,
+  // says so on the skipped line, as from a folder.
+  if (!model && !s.absent.model) {
+    const { reason } = pairingDecision(ref, undefined, nameOf(dir));
+    if (reason) s.absent.model = reason;
+  }
+  if (!model && !report && !s.said.length && !firstRefused(s))
+    throw new InputError(`No semantic model or report found in ${written}, which ${pbip} names`);
+  return { model, report };
 }
 
 /**
@@ -668,12 +914,14 @@ function reasonOf(tree: InputTree, u: Unread): string {
  * was not linted`, or the depth cap's `the walk stopped 64 folders deep at <path>, so files below
  * it were not read`. The walkers write paths relative to the drop, so with the root "" nothing
  * changes; the root itself, which has no path relative to itself, keeps its name, as the CLI
- * names its input.
+ * names its input. A path in a part a .pbip followed out of the root (`followed`) is named from
+ * the root by its `../` path, as the CLI names it.
  */
-function rebased(d: Diagnostic, root: string): Diagnostic {
-  if (root === "" || d.path === undefined || !within(d.path, root)) return d;
+function rebased(d: Diagnostic, root: string, followed: string[]): Diagnostic {
   const from = d.path;
-  const path = relativeTo(from, root);
+  if (root === "" || from === undefined) return d;
+  if (!within(from, root) && !followed.some((f) => atOrWithin(from, f))) return d;
+  const path = relativeToRoot(root, from);
   const m = d.message;
   const unreadTail = "), so it was not linted";
   const capTail = ", so files below it were not read";
@@ -714,10 +962,20 @@ function rebased(d: Diagnostic, root: string): Diagnostic {
  * the parts, as the CLI finds its config after the project.
  */
 export function selectProject(tree: InputTree): SelectedProject {
+  return selectOne(tree, seenIn(tree), false);
+}
+
+/** What the walk of one tree shows, the same for every selection made of it. */
+type Seen = Pick<Selection, "dirs" | "unread" | "capped" | "drop">;
+
+function seenIn(tree: InputTree): Seen {
   const { dirs, files: filePaths, folders } = foldersOf(tree);
   const unreadFolders = new Set(tree.unreadFolders);
-  const s: Selection = {
-    tree,
+  // The dropped folder is the first path segment of everything; a lone file has no folder, and
+  // several items dropped side by side have no one folder above them.
+  const firsts = new Set([...filePaths, ...folders].map((p) => p.split("/")[0]!));
+  const base = firsts.size === 1 && filePaths.every((p) => p.includes("/")) ? [...firsts][0]! : "";
+  return {
     dirs,
     unread: tree.diagnostics
       .filter((d) => d.kind === "unread-file" && d.path !== undefined)
@@ -725,19 +983,54 @@ export function selectProject(tree: InputTree): SelectedProject {
     capped: tree.diagnostics
       .filter((d) => d.kind === "depth-cap" && d.path !== undefined)
       .map((d) => ({ diagnostic: d, path: d.path!, folder: true })),
-    reads: [],
-    absent: {},
-    said: [],
-    legacy: new Map(),
+    drop: base,
   };
+}
 
-  // The dropped folder is the first path segment of everything; a lone file has no folder, and
-  // several items dropped side by side have no one folder above them.
-  const firsts = new Set([...filePaths, ...folders].map((p) => p.split("/")[0]!));
-  const base = firsts.size === 1 && filePaths.every((p) => p.includes("/")) ? [...firsts][0]! : "";
-  const { model, report, below } = readFolder(s, base);
-  const root = below?.root ?? base;
+const selection = (tree: InputTree, seen: Seen, top: boolean, ofSeveral: boolean): Selection => ({
+  tree,
+  ...seen,
+  reads: [],
+  absent: {},
+  said: [],
+  legacy: new Map(),
+  named: new Set(),
+  top,
+  ofSeveral,
+});
 
+/**
+ * selectProject, or, on the page's route (`top`), the first step of selectProjects, which a drop
+ * that holds several projects leaves by SeveralFound before anything is decided.
+ */
+function selectOne(tree: InputTree, seen: Seen, top: boolean): SelectedProject {
+  const s = selection(tree, seen, top, false);
+  const { model, report, below } = readFolder(s, s.drop);
+  const root = below?.root ?? s.drop;
+  const project = assemble(s, settle(s, { model, report }, root), root);
+  // The one project below the dropped folder is named first, as the CLI names it, once nothing
+  // above has refused the drop: it says nothing about why nothing was linted.
+  return below
+    ? { ...project, diagnostics: [projectBelowNotice(below.path), ...project.diagnostics] }
+    : project;
+}
+
+/** What a selection read and has to say, once nothing has refused it. */
+interface Settled {
+  model?: Part;
+  report?: Part;
+  diagnostics: Diagnostic[];
+  notes: string[];
+  /** The model folders the notes name, which selectProjects narrows to those no other project has. */
+  unlintable: string[];
+}
+
+/**
+ * The parts read for the project at `root`, with their unread paths filled in, the notices this
+ * run met, and its notes; or the refusal of a project of which nothing was read.
+ */
+function settle(s: Selection, { model, report }: Parts, root: string): Settled {
+  const { tree, dirs } = s;
   // What each part could not read, relative to its root, from the reads that were its own: the
   // files and folders that refused, and a folder the walk stopped in at the depth cap, which is
   // as unread as one that refused but refuses nothing.
@@ -747,23 +1040,30 @@ export function selectProject(tree: InputTree): SelectedProject {
       const rel = relativeToRoot(r.part.root, u.path) + (u.folder ? "/" : "");
       if (!r.part.unread.includes(rel)) r.part.unread.push(rel);
     }
-  // The walk's notices this run met, and every depth cap, each rebased onto the root; then what
-  // this selection has to say, already written relative to it.
+  // The walk's notices this run met, and every depth cap, each rebased onto the root, with what
+  // lies in a part a .pbip followed out of it; then what this selection has to say, already
+  // written relative to it.
+  const followed = [model?.root, report?.root].filter(
+    (r): r is string => r !== undefined && !atOrWithin(r, root),
+  );
   const diagnostics = [
     ...tree.diagnostics
       .filter((d) => {
         const u = s.unread.find((x) => x.diagnostic === d);
         return u === undefined || covered(s, u);
       })
-      .map((d) => rebased(d, root)),
+      .map((d) => rebased(d, root, followed)),
     ...s.said,
   ];
 
   // Model folders no one lints, and that nothing else here explains, are named in a note, or in
   // the refusal when nothing is linted, in name order by their drop-relative paths, as the CLI
   // lists them.
+  // One project of several names only the folders in it, as its own walk in the CLI would: the
+  // others are their own projects, or in them.
   const unlintable = [...dirs]
     .filter((d) => isModelFolder(nameOf(d)) && !s.legacy.has(d) && !holdsModel(s, d))
+    .filter((d) => !s.ofSeveral || atOrWithin(d, root))
     .sort(byName);
 
   if (!model && !report) {
@@ -774,11 +1074,20 @@ export function selectProject(tree: InputTree): SelectedProject {
     // joins it to the dropped folder as the CLI joins it to its input.
     const refused = firstRefused(s);
     if (refused) throw new InputError(`Could not read ${refused.path}: ${reasonOf(tree, refused)}`);
+    // Else a reference a .pbip followed out of the drop, as the CLI's refusal names it.
+    if (s.outside) throw new InputError(`Could not read ${s.outside.path}: ${s.outside.reason}`);
     // Else a legacy part's notice, and a second's after it, in the order the reads met them,
     // each named by its path in the drop as the CLI names it by its path joined to its input.
-    // The status line is one paragraph, so the two are one message.
+    // The status line is one paragraph, so the two are one message. The first part is kept beside
+    // the error, so one project of several that reads nothing else is a finding on its legacy
+    // file, whose detail is the first notice alone, as the CLI's is.
     const legacy = [...s.legacy].map(([dir, layer]) => LEGACY_NOTICE[layer](dir).message);
-    if (legacy.length) throw new InputError(legacy.join(" "));
+    if (legacy.length) {
+      const e = new InputError(s.ofSeveral ? legacy[0]! : legacy.join(" "));
+      const [[dir, layer]] = [...s.legacy] as [[string, LayerName]];
+      LEGACY_CAUSE.set(e, { layer, root: dir, file: LEGACY_FILE[layer] });
+      throw e;
+    }
     // Else a model folder holding no .tmdl files is named, in core's words, as the CLI names it.
     if (unlintable.length) throw new InputError(noTmdlRefusal(unlintable));
     // Else a walk stopped at the depth cap, which the CLI has no counterpart to, says why: what it
@@ -797,17 +1106,43 @@ export function selectProject(tree: InputTree): SelectedProject {
     throw new InputError(tree.directoryInput ? `${NOTHING_FOUND} ${DRAG_INSTEAD}` : NOTHING_FOUND);
   }
   const notes = unlintable.length ? [noTmdlNote(unlintable)] : [];
-  // The config after the parts, as the CLI finds it after resolveProject: a drop that is refused
-  // for what it holds is refused for that first.
-  const config = findConfig(s, root);
+  return { model, report, diagnostics, notes, unlintable };
+}
 
+/**
+ * The selected project at `root` once settled, with its config, which comes after the parts, as
+ * the CLI finds it after resolveProject: a drop that is refused for what it holds is refused for
+ * that first. `config` is found here unless the caller has found it already.
+ */
+function assemble(
+  s: Selection,
+  { model, report, diagnostics, notes }: Settled,
+  root: string,
+  config = findConfig(s, root),
+): SelectedProject {
   // The model's files in the CLI's walk order, and the report's by path, the orders core reads
   // each part's files in (buildModel and buildReport sort them whatever order they are given in).
   const files = [
     ...(model?.files ?? []).sort((a, b) => walkOrder(a.path, b.path)),
     ...(report?.files ?? []).sort(byPath),
   ];
-  const read = tree.entries
+  // One project of several lists what is its own, not every other project's files as not linted:
+  // what it read, its config, and what else lies in its folder, but for a .pbip or a part folder
+  // it did not read, which is a neighbour's when projects sit side by side.
+  const inOtherPart = (path: string): boolean => {
+    for (let d = parent(path); atOrWithin(d, root) && d !== root; d = parent(d))
+      if (isModelFolder(nameOf(d)) || isReportFolder(nameOf(d)))
+        return d !== model?.root && d !== report?.root;
+    return false;
+  };
+  const own = (path: string): boolean =>
+    !s.ofSeveral ||
+    path === config?.path ||
+    !!model?.sources.has(path) ||
+    !!report?.sources.has(path) ||
+    (within(path, root) && !path.endsWith(".pbip") && !inOtherPart(path));
+  const read = s.tree.entries
+    .filter((e) => own(e.path))
     .map((e) => {
       const rel = relativeToRoot(root, e.path);
       if (e.path === config?.path) return `${rel} (config)`;
@@ -828,8 +1163,112 @@ export function selectProject(tree: InputTree): SelectedProject {
     config,
     notes,
     read,
-    // The one project below the dropped folder is named first, as the CLI names it, once nothing
-    // above has refused the drop: it says nothing about why nothing was linted.
-    diagnostics: below ? [projectBelowNotice(below.path), ...diagnostics] : diagnostics,
+    diagnostics,
   };
+}
+
+/**
+ * What a drop holds, as the CLI's resolveInput decides it for the folder named: the one project
+ * selectProject reads, or, where selectProject would refuse the folder dropped for holding several
+ * projects below it or side by side, each of them (#237, spec section 7), in projectsBelow's order,
+ * which the shared-model step takes as the order that decides which project lists a shared model's
+ * findings. A drop that lints today reads as it did. Each project is read as the one project below
+ * a folder is, the folder dropped staying the boundary its references are followed inside, with
+ * its own nearest config. One whose own drop would be refused is `unreadable`, with that refusal,
+ * on its legacy file when that is the cause; a drop none of whose projects can be read is refused
+ * with the first one's refusal and each other's after it, since a run that reads nothing must not
+ * pass (#175). More than MAX_PROJECTS is refused. A config that cannot be read refuses the drop.
+ */
+export function selectProjects(tree: InputTree): Selected {
+  const seen = seenIn(tree);
+  let found: SeveralFound;
+  try {
+    return { kind: "one", project: selectOne(tree, seen, true) };
+  } catch (e) {
+    if (!(e instanceof SeveralFound)) throw e;
+    found = e;
+  }
+  const { base, paths, pbips } = found;
+  if (paths.length > MAX_PROJECTS) throw tooMany(base, paths);
+  const read = paths.map((path) => {
+    const s = selection(tree, seen, false, true);
+    try {
+      const { parts, root } = readBelow(s, base, path, pbips);
+      return { path, s, root, settled: settle(s, parts, root) };
+    } catch (e) {
+      if (!(e instanceof InputError)) throw e;
+      return { path, s, root: join(base, path), refused: e };
+    }
+  });
+  // The model folders each project has: the folder its path names, or, for a .pbip, the model its
+  // report names and any legacy part it met. Side by side, these sit in every project's folder,
+  // and the CLI's run of one project names none of another's as left unlinted.
+  const has = read.map(({ path, s, settled }) =>
+    pbips.includes(path)
+      ? [...s.named, ...s.legacy.keys(), ...(settled?.model ? [settled.model.root] : [])]
+      : [join(base, path)],
+  );
+  const othersHave = (i: number, dir: string): boolean =>
+    has.some((dirs, j) => j !== i && dirs.some((d) => atOrWithin(dir, d)));
+  for (const [i, r] of read.entries()) {
+    if (!r.settled) continue;
+    const left = r.settled.unlintable.filter((d) => !othersHave(i, d));
+    r.settled = { ...r.settled, unlintable: left, notes: left.length ? [noTmdlNote(left)] : [] };
+  }
+  const refused = read.flatMap((r) => (r.refused ? [r.refused] : []));
+  if (refused.length === read.length)
+    throw new InputError(
+      [refused[0]!.message, ...read.slice(1).map((r) => `${r.path}: ${r.refused!.message}`)].join(
+        " ",
+      ),
+    );
+  return {
+    kind: "several",
+    projects: read.map(({ path, s, root, settled, refused }): SeveralProject => {
+      // A project that could not be read has no root, so its config is searched from its path,
+      // as the CLI searches it.
+      const config = findConfig(s, root);
+      if (!settled) return { path, unreadable: unreadableOf(path, refused!), config };
+      const project = assemble(s, settled, root, config);
+      const model = settled.model?.root;
+      return {
+        path,
+        project,
+        config,
+        ...(model === undefined ? {} : { modelKey: model, modelPath: relativeTo(model, base) }),
+      };
+    }),
+  };
+}
+
+/**
+ * The refusal of a drop holding more than MAX_PROJECTS projects, as the CLI's tooMany: how many,
+ * and each folder at the drop's top that holds some, with how many, in name order, so a person can
+ * drop them a folder at a time. A project at the top is an entry of its own. The CLI gives each a
+ * line with the command that lints it; the status line is one paragraph, so they follow the
+ * sentence as a list.
+ */
+function tooMany(base: string, paths: string[]): InputError {
+  const counts = new Map<string, number>();
+  for (const p of paths) {
+    const first = p.split("/")[0]!;
+    counts.set(first, (counts.get(first) ?? 0) + 1);
+  }
+  const where = [...counts.keys()]
+    .sort(byName)
+    .map((first) => `${first}: ${counts.get(first)} project${counts.get(first) === 1 ? "" : "s"}`);
+  return new InputError(
+    `${base || "The drop"} contains ${paths.length} projects, more than the ${MAX_PROJECTS} one run lints; drop a folder that holds fewer: ${where.join(", ")}`,
+  );
+}
+
+/**
+ * The project at `path`, refused with `e`, as the CLI's unreadableOf: on the legacy file when a
+ * legacy part is the cause, else named by its path, on the part the path names, a .pbip's being
+ * its report's.
+ */
+function unreadableOf(path: string, e: InputError): Unreadable {
+  const cause = LEGACY_CAUSE.get(e);
+  if (cause) return { message: e.message, ...cause };
+  return { message: e.message, layer: isModelFolder(path) ? "model" : "report", name: path };
 }

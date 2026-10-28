@@ -76,16 +76,24 @@ export const REMOVE_REDUNDANT_COLUMNS_IN_RELATED_TABLES = bpaRule(
   { skipWhenModelUnread: modelPartlyRead },
   (m, { indexes: { relationships } }: RuleContext) => {
     const all = allColumns(m);
+    // The columns of each name, so a column is compared only with its namesakes.
+    const byName = new Map<string, typeof all>();
+    for (const c of all) {
+      const same = byName.get(c.name);
+      if (same) same.push(c);
+      else byName.set(c.name, [c]);
+    }
     return all
       .filter(
         (c) =>
           relationships.forColumn(c.table.name, c.name).length === 0 &&
-          all.some(
-            (o) =>
-              o.name === c.name &&
-              o.table !== c.table &&
-              relationships.forTable(o.table.name).some((r) => r.fromTable === c.table.name),
-          ),
+          byName
+            .get(c.name)!
+            .some(
+              (o) =>
+                o.table !== c.table &&
+                relationships.forTable(o.table.name).some((r) => r.fromTable === c.table.name),
+            ),
       )
       .map(finding.column);
   },

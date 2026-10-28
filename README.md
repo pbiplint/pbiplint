@@ -11,16 +11,18 @@ and how to check it.
 
 ## Status
 
-Version 0.2.5. It covers the semantic model layer (TMDL): every rule from the
+Version 0.3.0. It covers the semantic model layer (TMDL): every rule from the
 Microsoft best-practice ruleset, ported and verified against Tabular Editor,
 plus pbiplint's own rules for a year or a date fixed in DAX, for DAX
 user-defined functions, for translations, and for decimal columns' format
-strings; and the report layer (PBIR): the 11 base rules of PBI
-Inspector, ported and verified against it, plus pbiplint's own rules for what
-is broken, unfinished, or expensive in a report, for a filter held to a fixed
-year, and for what the model holds that the report never reaches. Power Query
-rules follow. The site at https://pbiplint.com runs the code on main; the
-command line runs the version npm gives you, and the
+strings; the report layer (PBIR): the 11 base rules of PBI Inspector, ported
+and verified against it, plus pbiplint's own rules for what is broken,
+unfinished, or expensive in a report, for a filter held to a fixed year, and
+for what the model holds that the report never reaches; and Power Query, the
+M behind the model's tables and shared expressions, read with Microsoft's
+Power Query parser: 16 rules, 15 of them pbiplint's own. 122 rules in all, 40 of
+them built into pbiplint. The site at https://pbiplint.com runs the code on
+main; the command line runs the version npm gives you, and the
 [releases page](https://github.com/pbiplint/pbiplint/releases) lists each
 version with the date it was published.
 
@@ -154,7 +156,7 @@ page.json or visual.json. Desktop keeps it, and its value is a list of ids or `*
 
 ## What it checks
 
-Every rule from Microsoft's Best Practice Analyzer ruleset, ported so the results match Tabular Editor on the same model, with eleven documented deviations where the source is noisier, or quieter, than it means to be; and pbiplint's own rules for a year or a date fixed in DAX, such as a measure filtered to 2025 or a date table that ends in 2026, for a DAX user-defined function that nothing calls, has a one-word name, or has no description, for a visible name that a translated culture gives no caption, and for a visible decimal column with no format string. Four of pbiplint's own model rules take their test from Tabular Editor's rules, from Tabular Editor 3's built-in set or the community's published rule files, and are checked against Tabular Editor on the same model. Five of the Microsoft rules need VertiPaq statistics and are listed but not run. A column whose TMDL names no type, as Power BI Desktop saves most calculated columns, is left out of the thirteen ported rules that test a column's type, where Tabular Editor reads the type from the column's DAX. A TMDL line the parser cannot place gets a `PARSE_ISSUE` error on that line rather than being dropped silently; that includes a declaration its object does not hold, such as a misspelt `columm` under a table or a hierarchy's `level` that lost its tab. Each rule has a page at https://pbiplint.com/rules (source under `rules/`) with what it checks, an example that fires it and the same example fixed, why it matters, how to fix it, when ignoring it is legitimate, known quirks, and related rules.
+Every rule from Microsoft's Best Practice Analyzer ruleset, ported so the results match Tabular Editor on the same model, with twelve documented deviations where the source is noisier, or quieter, than it means to be; and pbiplint's own rules for a year or a date fixed in DAX, such as a measure filtered to 2025 or a date table that ends in 2026, for a DAX user-defined function that nothing calls, has a one-word name, or has no description, for a visible name that a translated culture gives no caption, and for a visible decimal column with no format string. Four of pbiplint's own model rules take their test from Tabular Editor's rules, from Tabular Editor 3's built-in set or the community's published rule files, and are checked against Tabular Editor on the same model. Five of the Microsoft rules need VertiPaq statistics and are listed but not run. A column whose TMDL names no type, as Power BI Desktop saves most calculated columns, is left out of the thirteen ported rules that test a column's type, where Tabular Editor reads the type from the column's DAX. A TMDL line the parser cannot place gets a `PARSE_ISSUE` error on that line rather than being dropped silently; that includes a declaration its object does not hold, such as a misspelt `columm` under a table or a hierarchy's `level` that lost its tab. Each rule has a page at https://pbiplint.com/rules (source under `rules/`) with what it checks, an example that fires it and the same example fixed, why it matters, how to fix it, when ignoring it is legitimate, known quirks, and related rules.
 
 The report layer: the 11 base rules of [PBI Inspector](https://github.com/NatVanG/fab-inspector)
 by Nat Van Gulck, ported so the results match its command line on the same report, with six
@@ -166,6 +168,14 @@ report-level measures, actions that point at a missing page or bookmark, bookmar
 missing page or visual, actions with no destination, tab order against layout, saved slicer
 selections and search terms, and Filters pane filters held to a fixed year, such as a page filtered
 to 2025. "Report at a glance" states what the report will do whether or not anything fired.
+
+The Power Query layer: the M behind each table's partitions, the shared expressions, and incremental
+refresh policies, read with Microsoft's Power Query parser, and the file's Power Query options. 16
+rules check it: Microsoft's `MINIMIZE_POWER_QUERY_TRANSFORMATIONS` and 15 of pbiplint's own. A
+finding in M names the query and the step as Power Query's editor shows them, at the line and column
+in the TMDL file, and M that does not parse gets a `PARSE_ISSUE` error where the parser stopped. 122
+rules in all, 40 of them built into pbiplint; the
+[rules index](https://pbiplint.com/rules/?layer=powerquery) filters to the Power Query ones.
 
 ## Links
 

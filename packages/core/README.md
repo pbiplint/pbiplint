@@ -2,8 +2,13 @@
 
 The linter behind [pbiplint](https://pbiplint.com): parse TMDL and PBIR, build the semantic model
 and the report, run the best-practice rules, rank the findings, and format them. Pure TypeScript
-with no dependencies, no Node APIs, and no network access, so it runs in a browser tab as well as
-in Node 20.19 or later (or 22.12 or later).
+with no Node APIs and no network access, so it runs in a browser tab as well as in Node 20.19 or
+later (or 22.12 or later). It has one dependency, Microsoft's M parser
+([`@microsoft/powerquery-parser`](https://github.com/microsoft/powerquery-parser), MIT), and still
+makes no network call.
+
+Installing the core on Node 20 prints npm's `EBADENGINE` warning, because the parser declares Node
+22, and installs anyway; the parser uses nothing Node 22 added.
 
 `lint(files)` takes both parts of a Power BI project, `.tmdl` files for the model and the report's
 JSON (paths relative to each part's root), and returns findings for both, `layers` saying which
@@ -11,11 +16,13 @@ part was read, `facts` for "Report at a glance", and `diagnostics` for what a re
 must know about the input, such as a file that could not be read. Either part alone is valid
 input; with both parts, each is also checked against the other, for example the report for fields
 the model does not have and the model for columns and measures the report never reaches.
+From 0.3.0, `lint()` returns a Promise, because it reads M with Microsoft's Power Query parser,
+whose parse is async.
 
 ```ts
 import { formatText, lint } from "@pbiplint/core";
 
-const result = lint([
+const result = await lint([
   { path: "definition/model.tmdl", text: modelTmdl },
   { path: "definition/tables/Sales.tmdl", text: salesTmdl },
 ]);
@@ -31,7 +38,7 @@ points at it.
 `showOnly(result, ruleIds, config)` keeps a result to some rules' findings, as the command line's
 `--rule` does: every rule still ran, `result.summary.shown` counts what is kept (the rest of the
 summary stays the whole run's), `failed` follows the kept findings, `summaryLine` (and with it the
-text and Markdown formats) says the result is filtered ("3 of 266 findings shown, 1 rule ..."), and
+text and Markdown formats) says the result is filtered ("3 of 280 findings shown, 1 rule ..."), and
 the JSON format carries `summary.shown`. It is absent on an unfiltered result.
 
 The optional second argument, `lint(files, options)`, takes the config, the rules to run, and
@@ -53,11 +60,17 @@ for translations, and for decimal columns' format strings, four of them taking t
 Tabular Editor 3's built-in rules or Tabular Editor's community rule files and checked against
 Tabular Editor. The report rules are the 11 base rules of PBI Inspector by Nat Van Gulck, ported and
 verified against fab-inspector's command line, and pbiplint's own rules for the report and for the
-model and report together. A port keeps its source's quirks on purpose, apart from eleven documented
+model and report together. A port keeps its source's quirks on purpose, apart from twelve documented
 deviations from the Microsoft ruleset and six from PBI Inspector, and each rule's page documents
 them. A column whose TMDL names no type, as Power BI Desktop saves most calculated columns, is left
 out of the thirteen ported rules that test a column's type, where Tabular Editor reads the type
 from the column's DAX.
+
+The Power Query rules read the M behind each table's partitions, the shared expressions, and
+incremental refresh policies, parsed with Microsoft's Power Query parser, and the file's Power Query
+options: 16 rules, `MINIMIZE_POWER_QUERY_TRANSFORMATIONS` and 15 of pbiplint's own, each with
+`rule.layer` `powerquery` while its findings' `layer` stays `model`. A finding in M carries
+`location.column` as well as its line. 122 rules in all, 40 of them built into pbiplint.
 
 For the command line, install [`pbiplint`](https://www.npmjs.com/package/pbiplint). Source, issues,
 and contributing: https://github.com/pbiplint/pbiplint.

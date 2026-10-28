@@ -29,6 +29,20 @@
     "HARDCODED_YEAR_IN_FILTER": [
       "330004a0919de7ea8635",
       "3d9c80144abca427957c"
+    ],
+    "LOCAL_DRIVE_PATH": [
+      "Customer",
+      "Date",
+      "Product",
+      "Sales",
+      "User Region"
+    ],
+    "DEFAULT_STEP_NAMES": [
+      "Customer",
+      "Date",
+      "Product",
+      "Sales",
+      "User Region"
     ]
   },
   "results": {

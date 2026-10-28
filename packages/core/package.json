@@ -1,6 +1,6 @@
 {
   "name": "@pbiplint/core",
-  "version": "0.2.5",
+  "version": "0.3.0",
   "description": "Best-practice linter core for Power BI projects: the semantic model (TMDL) and the report (PBIR). Runs in the browser and in Node, makes no network calls.",
   "keywords": [
     "power-bi",
@@ -49,5 +49,8 @@
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
+  },
+  "dependencies": {
+    "@microsoft/powerquery-parser": "2.0.0"
   }
 }

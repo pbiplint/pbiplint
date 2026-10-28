@@ -25,7 +25,7 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   webServer: {
-    command: `node scripts/make-big-report.mjs tests/generated/big-report && npm run build -w @pbiplint/web && npm run preview -w @pbiplint/web -- --port ${port} --strictPort`,
+    command: `node scripts/make-big-report.mjs tests/generated/big-report && node scripts/make-big-model.mjs tests/generated/big-model && npm run build -w @pbiplint/web && npm run preview -w @pbiplint/web -- --port ${port} --strictPort`,
     cwd: repo,
     url: `http://localhost:${port}/`,
     // The command first writes the 300-visual report the two-second budget test reads (generated

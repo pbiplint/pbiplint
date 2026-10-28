@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
+import { mParserVite } from "../core/build/m-parser-build.mjs";
 import { buildInfoPlugin } from "./src/build/build-info.js";
 import { siteCheckPlugin } from "./src/build/check-site.js";
 import { cspPlugin } from "./src/build/csp.js";
@@ -12,7 +13,7 @@ const repo = fileURLToPath(new URL("../..", import.meta.url));
 export default defineConfig({
   root,
   base: "/",
-  plugins: [generatePlugin(), cspPlugin(), buildInfoPlugin(), siteCheckPlugin()],
+  plugins: [mParserVite(), generatePlugin(), cspPlugin(), buildInfoPlugin(), siteCheckPlugin()],
   resolve: {
     alias: { "@pbiplint/core": join(repo, "packages/core/src/index.ts") },
   },

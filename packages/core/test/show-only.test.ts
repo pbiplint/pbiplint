@@ -12,7 +12,7 @@ const files = [
   },
 ];
 const config = resolveConfig({ failOn: "info" });
-const result = lint(files, { config });
+const result = await lint(files, { config });
 
 describe("showOnly", () => {
   const [first, second] = result.groups;

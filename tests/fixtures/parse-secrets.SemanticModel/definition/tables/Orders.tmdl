@@ -1,0 +1,17 @@
+/// M that does not parse on the line that holds a made-up key: a bracket too many.
+table Orders
+	lineageTag: 6c0f5a1e-0007-4000-8000-000000000001
+
+	column Content
+		dataType: binary
+		summarizeBy: none
+		sourceColumn: Content
+
+	partition Orders = m
+		mode: import
+		source =
+				let
+					Source = Web.Contents("https://api.example.com/v1/orders", [Headers = [#"x-api-key" = "pbiplint-fixture-key-0007-notreal"]])),
+					Contents = #table(type table [Content = binary], {{Source}})
+				in
+					Contents

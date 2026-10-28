@@ -68,6 +68,11 @@ export interface BpaRuleSpec {
    * the table's declaration can say.
    */
   skipWhenModelUnread?: (model: Model) => boolean;
+  /**
+   * The rule's layer: `model`, the default, or `powerquery` for a rule that reads a partition's M
+   * (v3 spec, section 10.1). Either way the rule needs only the model.
+   */
+  layer?: "model" | "powerquery";
 }
 
 type ModelCheck = (model: Model, ctx: RuleContext) => RuleFinding[];
@@ -75,7 +80,7 @@ type ModelCheck = (model: Model, ctx: RuleContext) => RuleFinding[];
 /**
  * A port of one Microsoft BPA rule: metadata from the ruleset, behavior from `check`, and what
  * stops it, when anything does, from the spec given before `check`. A port keeps the source's
- * quirks, apart from the eleven deviations named on the pages and in the rules' doc comments, and
+ * quirks, apart from the twelve deviations named on the pages and in the rules' doc comments, and
  * the thirteen rules that test a column's type leaving out a column whose TMDL names none (#164);
  * those a fixture shows are pinned by `ours` in the model expectation files, the others by the
  * rules' unit tests.
@@ -83,9 +88,11 @@ type ModelCheck = (model: Model, ctx: RuleContext) => RuleFinding[];
  * ruleset description is read only for the reference URLs it carries.
  */
 export function bpaRule(id: string, check: ModelCheck): Rule;
+/** As above, with a spec that says what partly read model stops the rule. */
 export function bpaRule(id: string, spec: BpaRuleSpec, check: ModelCheck): Rule;
 export function bpaRule(id: string, ...args: [ModelCheck] | [BpaRuleSpec, ModelCheck]): Rule {
-  const [{ skipWhenModelUnread }, check] = args.length === 1 ? [{}, args[0]] : args;
+  const [{ skipWhenModelUnread, layer = "model" }, check] =
+    args.length === 1 ? [{}, args[0]] : args;
   const meta = metaOf(id);
   return {
     id,
@@ -93,7 +100,7 @@ export function bpaRule(id: string, ...args: [ModelCheck] | [BpaRuleSpec, ModelC
     category: meta.category as Category,
     severity: meta.severity as Severity,
     scope: mapScope(meta.scope),
-    layer: "model",
+    layer,
     needs: ["model"],
     ...(skipWhenModelUnread ? { skipWhenModelUnread } : {}),
     description: RULE_SUMMARIES[id] ?? stripCategory(meta.name),

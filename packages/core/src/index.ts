@@ -16,7 +16,17 @@ export {
   type LintSummary,
   type ShownSummary,
 } from "./engine/lint.js";
+export { errorKind } from "./engine/rule-error.js";
 export { showOnly } from "./engine/show-only.js";
+export {
+  runSummary,
+  runSummaryLine,
+  shareModels,
+  unreadProject,
+  type ProjectRun,
+  type RunSummary,
+  type Unreadable,
+} from "./engine/projects.js";
 export {
   effectiveSeverity,
   rank,
@@ -25,8 +35,9 @@ export {
   type RuleSummary,
 } from "./engine/rank.js";
 export { runRules, type RuleError, type RunResult, type SkippedRule } from "./engine/run.js";
-export { showControls } from "./format/controls.js";
+export { escapeJsonControls, showControls } from "./format/controls.js";
 export {
+  countsLine,
   factsLines,
   FORMATS,
   formatResult,
@@ -36,11 +47,15 @@ export {
   formatText,
   layersLine,
   layerTag,
+  locationOf,
+  markdownText,
   noticeLines,
   plural,
+  ruleErrorNotices,
   skippedLine,
   summaryLine,
   topGroups,
+  type CountedRun,
   type FormatName,
   type FormatOptions,
   type RuleHelp,
@@ -76,6 +91,9 @@ export {
   tableRef,
 } from "./model/names.js";
 export type * from "./model/types.js";
+export { parseM, type MParse, type MPosition } from "./m/parse.js";
+export { emptyMIndex, readM } from "./m/read.js";
+export type { MIndex, MParseIssue, MQuery } from "./m/types.js";
 export { buildReport, KNOWN_SCHEMAS, literal } from "./pbir/build.js";
 export {
   escapePointer,
@@ -151,6 +169,7 @@ export {
 } from "./rules/microsoft-bpa/define.js";
 export { microsoftBpaRules } from "./rules/microsoft-bpa/index.js";
 export { PARSE_ISSUE } from "./rules/parse-issue.js";
+export { RULE_COULD_NOT_FINISH } from "./rules/rule-could-not-finish.js";
 export {
   INSPECTOR_RULES,
   type InspectorRuleMeta,

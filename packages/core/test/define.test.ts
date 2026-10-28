@@ -65,6 +65,13 @@ describe("bpaRule", () => {
     ]);
     expect(r.check({}, { indexes: buildIndexes({}), options: {} })).toEqual([]);
   });
+  it("declares the Power Query layer when asked, and still needs only the model", () => {
+    const r = bpaRule("MINIMIZE_POWER_QUERY_TRANSFORMATIONS", { layer: "powerquery" }, () => []);
+    expect(r.layer).toBe("powerquery");
+    expect(r.needs).toEqual(["model"]);
+    expect(r.status).toBe("ported");
+    expect(bpaRule("HIDE_FOREIGN_KEYS", () => []).layer).toBe("model");
+  });
   it("declares the partly read model that stops a rule, given before the body", () => {
     const stop = (m: Model) => m.tables.length === 0;
     const r = bpaRule("MODEL_SHOULD_HAVE_A_DATE_TABLE", { skipWhenModelUnread: stop }, (m) => [

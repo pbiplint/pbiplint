@@ -14,3 +14,5 @@ packages/web/cli/
 packages/web/pipelines/
 packages/web/public/sitemap.xml
 packages/web/public/llms.txt
+# The CLI goldens are recorded output, compared byte for byte; a format pass would change them.
+packages/cli/test/fixtures

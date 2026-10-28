@@ -174,19 +174,21 @@ role R
     ).toEqual(["Time.YTD", "Plan.FreightVsBudget"]);
   });
 
-  it("stays silent on a function that ignores it", () => {
+  it("stays silent on a function that ignores it", async () => {
     const functions =
       "function 'Local.Kept' = () => 1\n\tannotation pbiplint.ignore = UDF_NOT_CALLED\n";
-    const ids = (text: string) =>
-      lint(
-        [
-          { path: "definition/tables/Sales.tmdl", text: sales },
-          { path: "definition/functions.tmdl", text },
-        ],
-        { rules: [UDF_NOT_CALLED] },
+    const ids = async (text: string) =>
+      (
+        await lint(
+          [
+            { path: "definition/tables/Sales.tmdl", text: sales },
+            { path: "definition/functions.tmdl", text },
+          ],
+          { rules: [UDF_NOT_CALLED] },
+        )
       ).findings.map((f) => f.ruleId);
-    expect(ids(functions)).toEqual([]);
-    expect(ids(functions.replace(/\tannotation .*\n/, ""))).toEqual(["UDF_NOT_CALLED"]);
+    expect(await ids(functions)).toEqual([]);
+    expect(await ids(functions.replace(/\tannotation .*\n/, ""))).toEqual(["UDF_NOT_CALLED"]);
   });
 });
 

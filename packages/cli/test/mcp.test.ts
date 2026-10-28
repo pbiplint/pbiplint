@@ -3,6 +3,12 @@ import { PassThrough } from "node:stream";
 import { join } from "node:path";
 import { defaultRules } from "@pbiplint/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  fakeSecrets,
+  leaks,
+  PARSE_SECRETS_FIXTURE,
+  SECRETS_FIXTURE,
+} from "../../../tests/support/fake-secrets.js";
 import { tempDir } from "../../../tests/support/temp-dir.js";
 import { main } from "../src/main.js";
 import { lintArgv, serveMcp, TOOL_ANNOTATIONS, type McpHandle } from "../src/mcp.js";
@@ -75,6 +81,9 @@ afterEach(async () => {
   handle = undefined;
 });
 
+/** The instructions the server gave in its answer to the last connect's initialize. */
+let instructions: string | undefined;
+
 async function connect(): Promise<Client> {
   const client = new Client();
   handle = await serveMcp((argv) => cli(argv), {
@@ -87,6 +96,7 @@ async function connect(): Promise<Client> {
     clientInfo: { name: "test", version: "0" },
   });
   expect(init.error).toBeUndefined();
+  instructions = (init.result as { instructions?: string }).instructions;
   client.notify("notifications/initialized");
   return client;
 }
@@ -147,6 +157,28 @@ describe("pbiplint mcp", () => {
     expect(got).toEqual({ isError: false, text: expected.stdout });
   });
 
+  it("keeps every part of m-zoo's made-up credentials out of the lint tool's answers (v3 spec, section 11.3)", async () => {
+    const secrets = fakeSecrets();
+    expect(secrets.length).toBeGreaterThanOrEqual(6);
+    const client = await connect();
+    const json = await client.call("lint", { path: SECRETS_FIXTURE });
+    const quiet = await client.call("lint", { path: SECRETS_FIXTURE, quiet: true });
+    expect(json.text).toContain("HARDCODED_SECRET_IN_QUERY");
+    expect(quiet.text).toContain("HARDCODED_SECRET_IN_QUERY");
+    expect(leaks(json.text + quiet.text + client.lines.join("\n"), secrets)).toEqual([]);
+  });
+
+  it("keeps every part of the made-up values on lines PARSE_ISSUE quotes out of the lint tool's answers (v3 spec, sections 7 and 11.3)", async () => {
+    const planted = fakeSecrets(PARSE_SECRETS_FIXTURE);
+    expect(planted).toHaveLength(4);
+    const client = await connect();
+    const json = await client.call("lint", { path: PARSE_SECRETS_FIXTURE });
+    const quiet = await client.call("lint", { path: PARSE_SECRETS_FIXTURE, quiet: true });
+    expect(json.text).toContain("PARSE_ISSUE");
+    expect(quiet.text).toContain("PARSE_ISSUE");
+    expect(leaks(json.text + quiet.text + client.lines.join("\n"), planted)).toEqual([]);
+  });
+
   it("returns the CLI's message as an error for a path it cannot read", async () => {
     const client = await connect();
     const got = await client.call("lint", { path: join(repo, "no-such-folder") });
@@ -177,6 +209,10 @@ describe("pbiplint mcp", () => {
       ["category", "id", "layer", "name", "severity", "status"].sort(),
     );
     expect(new Set(rules.map((r) => r.severity))).toEqual(new Set(["error", "warning", "info"]));
+    const pq = (JSON.parse(got.text) as { id: string; layer: string }[]).find(
+      (r) => r.id === "MINIMIZE_POWER_QUERY_TRANSFORMATIONS",
+    );
+    expect(pq?.layer).toBe("powerquery");
   });
 
   it("writes nothing to its stdout but protocol messages", async () => {
@@ -201,5 +237,34 @@ describe("pbiplint mcp", () => {
     const got = await client.call("lint", { path: project, quiet: true });
     expect(got.isError).toBe(false);
     expect(got.text).toContain('no rule named "NO_SUCH_RULE"');
+  });
+
+  it("lints every project in a folder that holds several, as the CLI does (#237)", async () => {
+    const root = tempDir("mcp-several");
+    for (const name of ["Finance", "Sales", "Stock"])
+      cpSync(sample, join(root, name), { recursive: true });
+    const client = await connect();
+    const json = await client.call("lint", { path: root });
+    expect(json.isError).toBe(false);
+    const doc = JSON.parse(json.text) as { version: number; projects: { path: string }[] };
+    expect(doc.version).toBe(2);
+    expect(doc.projects.map((p) => p.path)).toEqual(["Finance", "Sales", "Stock"]);
+    expect(doc).toEqual(JSON.parse((await cli([root, "--format", "json"])).stdout));
+    const quiet = await client.call("lint", { path: root, quiet: true });
+    expect(quiet.text).toBe((await cli([root, "--quiet"])).stdout);
+    expect(quiet.text).toMatch(/^project Sales: /m);
+  });
+
+  it("says, in the lint tool's description and the server's instructions, that a folder of several projects lints whole (#237)", async () => {
+    const client = await connect();
+    const list = await client.request("tools/list");
+    const lint = (list.result!.tools as { name: string; description: string }[]).find(
+      (t) => t.name === "lint",
+    )!;
+    for (const words of [lint.description, instructions ?? ""]) {
+      expect(words).toContain("several projects");
+      expect(words).toContain("version 2");
+      expect(words).toContain("`project `");
+    }
   });
 });

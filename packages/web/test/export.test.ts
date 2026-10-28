@@ -12,7 +12,7 @@ import { JUDGMENT, RULE_GUIDANCE } from "../src/results/rule-guidance.data.js";
 import { SAMPLE_CONFIG, SAMPLE_FILES } from "../src/sample.js";
 
 /** The sample as the page lints it: both parts, under the sample's own config. */
-const result = lint(SAMPLE_FILES, { config: resolveConfig(JSON.parse(SAMPLE_CONFIG)) });
+const result = await lint(SAMPLE_FILES, { config: resolveConfig(JSON.parse(SAMPLE_CONFIG)) });
 const file = { name: "x.md", type: "text/markdown", text: "# x" };
 
 /** Replaces navigator.clipboard for one test. `undefined` shadows whatever happy-dom provides. */
@@ -38,7 +38,7 @@ describe("export", () => {
     const json = exportJson(result);
     expect(json.name).toBe("pbiplint-report.json");
     const doc = JSON.parse(json.text);
-    expect(doc.summary.findings).toBe(266);
+    expect(doc.summary.findings).toBe(280);
     expect(doc.layers).toEqual({
       model: { present: true, files: 14 },
       report: { present: true, files: 78 },
@@ -143,7 +143,9 @@ describe("export for an AI assistant", () => {
 
   it("adds each rule's How to fix it and When to ignore it once, for the rules with findings only", () => {
     const fired = new Set(result.groups.map((g) => g.rule.id));
-    expect(new Set(result.groups.map((g) => g.rule.layer))).toEqual(new Set(["model", "report"]));
+    expect(new Set(result.groups.map((g) => g.rule.layer))).toEqual(
+      new Set(["model", "report", "powerquery"]),
+    );
     for (const g of result.groups) {
       const guidance = RULE_GUIDANCE[g.rule.id]!;
       expect(copied.split(`### ${g.rule.name} (${g.rule.id})`).length - 1, g.rule.id).toBe(1);

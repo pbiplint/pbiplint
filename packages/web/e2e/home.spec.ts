@@ -1,27 +1,27 @@
-import {
-  cpSync,
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
-import { tmpdir } from "node:os";
+import { cpSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "./fixtures.js";
+import {
+  fakeSecrets,
+  leaks,
+  PARSE_SECRETS_FIXTURE,
+  SECRETS_FIXTURE,
+} from "../../../tests/support/fake-secrets.js";
+import { setFolder } from "./folder-input.js";
+import { withTempFolder } from "./temp-folder.js";
 
 // The home page in a real browser: the inputs, the results, and the behaviours the happy-dom unit
 // tests can only approximate (drag events, a folder input, downloads, focus). Every test also ends
 // by proving no console error was written and no request left the origin (see fixtures.ts).
 //
 // Not covered here, and only checked by hand: the "Choose a folder" button in Chromium, which
-// takes the File System Access picker and its native dialog; a screen reader actually speaking
-// the live region (the test checks its text); a drop of real files from the desktop in
-// Chromium, where a synthetic File has no directory entry, so the drop test below takes the flat
-// file fallback there while Firefox and WebKit take the entries branch; and a folder the browser
-// cannot open inside one the folder input is given (see the refusal test that suggests dragging).
+// takes the File System Access picker and its native dialog (the note under the button is
+// covered); a screen reader actually speaking the live region (the test checks its text); a drop
+// of real files from the desktop in Chromium, where a synthetic File has no directory entry, so
+// the drop test below takes the flat file fallback there while Firefox and WebKit take the entries
+// branch; and a folder the browser cannot open inside one the folder input is given (see the
+// refusal test that suggests dragging).
 
 const zoo = fileURLToPath(
   new URL("../../../tests/fixtures/rule-zoo.SemanticModel", import.meta.url),
@@ -34,21 +34,10 @@ const sample = fileURLToPath(new URL("../../../examples/messy-sales", import.met
 const rulesDir = fileURLToPath(new URL("../../../rules", import.meta.url));
 // Written by scripts/make-big-report.mjs, which the web server command runs before the build.
 const big = fileURLToPath(new URL("../../../tests/generated/big-report", import.meta.url));
-
-/** A folder under the OS temp directory, built by `fill` for one test and removed after it. */
-async function withTempFolder(
-  prefix: string,
-  fill: (dir: string) => void,
-  use: (dir: string) => Promise<void>,
-): Promise<void> {
-  const dir = mkdtempSync(join(tmpdir(), prefix));
-  try {
-    fill(dir);
-    await use(dir);
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
-}
+// Written by scripts/make-big-model.mjs, which the web server command runs before the build.
+const bigModel = fileURLToPath(
+  new URL("../../../tests/generated/big-model/big-model.SemanticModel", import.meta.url),
+);
 
 test("lints the sample project and announces the result", async ({ page }) => {
   await page.getByRole("button", { name: "Try the sample project" }).click();
@@ -58,10 +47,10 @@ test("lints the sample project and announces the result", async ({ page }) => {
     "Results for the sample project (model, 14 files · report, 78 files)",
   );
   await expect(results.locator(".summary")).toContainText(
-    "266 findings (19 errors, 77 warnings, 170 info) in 92 files",
+    "280 findings (19 errors, 84 warnings, 177 info) in 92 files",
   );
   await expect(page.locator("#announce")).toHaveText(
-    /^Results for the sample project \(model, 14 files · report, 78 files\): 266 findings/,
+    /^Results for the sample project \(model, 14 files · report, 78 files\): 280 findings/,
   );
   await expect(results.locator("section.facts h3")).toHaveText("Report at a glance");
   await expect(results.locator(".fix-first li")).toHaveCount(5);
@@ -71,6 +60,22 @@ test("lints the sample project and announces the result", async ({ page }) => {
   await results.getByRole("checkbox", { name: "Report", exact: true }).uncheck();
   await expect(results.locator('.group[data-layer="report"]').first()).toBeHidden();
   await expect(results.locator('.group[data-layer="model"]').first()).toBeVisible();
+  // The sample reads its CSV files from C:\Demo\Data\, so it has a Power Query group (v3 spec,
+  // sections 9.6 and 11.7): a finding's column, its query, and its step show, and the Power Query
+  // box hides only that family.
+  await results.getByRole("checkbox", { name: "Report", exact: true }).check();
+  const powerQuery = results.getByRole("checkbox", { name: "Power Query", exact: true });
+  await expect(powerQuery).toBeChecked();
+  const local = page.locator("#rule-local-drive-path");
+  await local.locator("summary").click();
+  await expect(local).toContainText("definition/tables/Customer.tmdl:105:45");
+  await expect(local).toContainText(
+    "query 'Customer', step 'Source': the path is on a local drive (C:)",
+  );
+  await powerQuery.uncheck();
+  await expect(results.locator('.group[data-layer="powerquery"]:not([hidden])')).toHaveCount(0);
+  await expect(results.locator('.group[data-layer="model"]').first()).toBeVisible();
+  await expect(results.locator('.group[data-layer="report"]').first()).toBeVisible();
 });
 
 test("a link to a group the Show filter hid shows that group, opens it, and scrolls to it", async ({
@@ -181,11 +186,11 @@ test("once the page has loaded, linting makes no request, whatever alphabet the 
       mkdirSync(tables, { recursive: true });
       writeFileSync(
         join(tables, "Продажи.tmdl"),
-        "table Продажи\n\tcolumn Ποσό\n\t\tdataType: double\n\t\tsourceColumn: Ποσό\n",
+        'table Продажи\n\tcolumn Ποσό\n\t\tdataType: double\n\t\tsourceColumn: Ποσό\n\n\tpartition Продажи = m\n\t\tmode: import\n\t\tsource = #table({"Ποσό"}, {{1}})\n',
       );
     },
     async (dir) => {
-      await page.locator("#folder-input").setInputFiles(join(dir, `${name}.SemanticModel`));
+      await setFolder(page.locator("#folder-input"), join(dir, `${name}.SemanticModel`));
       await expect(page.locator("#results h2")).toContainText(name);
     },
   );
@@ -205,7 +210,7 @@ test("once the page has loaded, linting makes no request, whatever alphabet the 
 test("reads a whole model from the folder input, including a file whose name starts with a space", async ({
   page,
 }) => {
-  await page.locator("#folder-input").setInputFiles(zoo);
+  await setFolder(page.locator("#folder-input"), zoo);
   const results = page.locator("#results");
   await expect(results.locator("h2")).toHaveText(
     "Results for rule-zoo.SemanticModel (model, 17 files)",
@@ -220,21 +225,31 @@ test("reads a whole model from the folder input, including a file whose name sta
 test("lints a whole PBIP from the folder input: both layers, the facts panel, and the layer filter", async ({
   page,
 }) => {
-  await page.locator("#folder-input").setInputFiles(shelfmart);
+  await setFolder(page.locator("#folder-input"), shelfmart);
   const results = page.locator("#results");
   await expect(results.locator("h2")).toHaveText(
     /^Results for shelfmart \(model, \d+ files · report, \d+ files\)$/,
   );
   await expect(results.locator("section.facts h3")).toHaveText("Report at a glance");
   await expect(results.locator("section.facts dt").first()).toHaveText("Opens on");
-  await expect(results.locator('input[data-filter="layer"]')).toHaveCount(2);
+  await expect(results.locator('input[data-filter="layer"]')).toHaveCount(3);
+  await expect(
+    results.locator('input[data-filter="layer"][value="powerquery"]'),
+  ).toHaveAccessibleName("Power Query");
+  await expect(
+    results.locator('.group[data-layer="powerquery"] summary .layer').first(),
+  ).toHaveText("Power Query");
+  await results.locator('input[data-filter="layer"][value="powerquery"]').uncheck();
+  await expect(results.locator('.group[data-layer="powerquery"]:not([hidden])')).toHaveCount(0);
+  await expect(results.locator('.group[data-layer="model"]:not([hidden])').first()).toBeVisible();
+  await results.locator('input[data-filter="layer"][value="powerquery"]').check();
   await results.locator('input[data-filter="layer"][value="model"]').uncheck();
   await expect(results.locator(".group:not([hidden]) summary .layer.report").first()).toBeVisible();
   await expect(results.locator('.group[data-layer="model"]:not([hidden])')).toHaveCount(0);
 });
 
 test("lints a report alone and names the model it reads", async ({ page }) => {
-  await page.locator("#folder-input").setInputFiles(join(demo, "PBIP and GitHub Demo.Report"));
+  await setFolder(page.locator("#folder-input"), join(demo, "PBIP and GitHub Demo.Report"));
   await expect(page.locator("#results h2")).toHaveText(
     /^Results for PBIP and GitHub Demo\.Report \(report, \d+ files\)$/,
   );
@@ -244,7 +259,7 @@ test("lints a report alone and names the model it reads", async ({ page }) => {
   );
 });
 
-test("refuses a folder with two reports and names them", async ({ page }) => {
+test("lints a folder with two reports side by side as a project each (#237)", async ({ page }) => {
   await withTempFolder(
     "two-reports-",
     (dir) => {
@@ -254,23 +269,24 @@ test("refuses a folder with two reports and names them", async ({ page }) => {
       }
     },
     async (dir) => {
-      await page.locator("#folder-input").setInputFiles(dir);
-      await expect(page.locator("#status")).toHaveText(
-        /contains 2 reports; drop one of them: A\.Report, B\.Report/,
-      );
-      await expect(page.locator("#results")).toBeHidden();
+      await setFolder(page.locator("#folder-input"), dir);
+      await expect(page.locator("#results section.project > h2")).toHaveText([
+        "Project 1 of 2: A.Report",
+        "Project 2 of 2: B.Report",
+      ]);
+      await expect(page.locator("#status")).toBeHidden();
     },
   );
 });
 
-test("lints the one project below a folder and names it, and refuses a folder with two (#174)", async ({
+test("lints the one project below a folder and names it, and each of two below a folder (#174, #237)", async ({
   page,
 }) => {
   await withTempFolder(
     "below-",
     (dir) => cpSync(sample, join(dir, "sub", "messy-sales"), { recursive: true }),
     async (dir) => {
-      await page.locator("#folder-input").setInputFiles(dir);
+      await setFolder(page.locator("#folder-input"), dir);
       const results = page.locator("#results");
       await expect(results.locator("h2")).toHaveText(
         /^Results for below-\w+\/sub\/messy-sales \(model, \d+ files · report, \d+ files\)$/,
@@ -287,11 +303,12 @@ test("lints the one project below a folder and names it, and refuses a folder wi
         cpSync(sample, join(dir, at, "messy-sales"), { recursive: true });
     },
     async (dir) => {
-      await page.locator("#folder-input").setInputFiles(dir);
-      await expect(page.locator("#status")).toHaveText(
-        /contains 2 projects; drop one of them: a\/messy-sales, b\/messy-sales$/,
-      );
-      await expect(page.locator("#results")).toBeHidden();
+      await setFolder(page.locator("#folder-input"), dir);
+      await expect(page.locator("#results section.project > h2")).toHaveText([
+        "Project 1 of 2: a/messy-sales",
+        "Project 2 of 2: b/messy-sales",
+      ]);
+      await expect(page.locator("#status")).toBeHidden();
     },
   );
 });
@@ -307,7 +324,7 @@ test("refuses a folder with nothing to lint from the folder input and suggests d
     "nothing-",
     (dir) => writeFileSync(join(dir, "notes.txt"), "Not a model or a report.\n"),
     async (dir) => {
-      await page.locator("#folder-input").setInputFiles(dir);
+      await setFolder(page.locator("#folder-input"), dir);
       await expect(page.locator("#status")).toHaveText(
         "No model or report found. Drop a PBIP folder, a .SemanticModel or .Report folder, or a .tmdl file. If the folder you chose holds a model or report, your browser may not have been able to open a folder inside it; drag the folder onto the page instead.",
       );
@@ -328,7 +345,7 @@ test("a folder deeper than the cap produces a notice, not silence", async ({ pag
       writeFileSync(join(dir, "Deep.tmdl"), "table Deep\n");
     },
     async (root) => {
-      await page.locator("#folder-input").setInputFiles(root);
+      await setFolder(page.locator("#folder-input"), root);
       await expect(page.locator("#results .notice")).toContainText(
         /the walk stopped 64 folders deep at .*, so files below it were not read/,
       );
@@ -337,7 +354,7 @@ test("a folder deeper than the cap produces a notice, not silence", async ({ pag
 });
 
 test("lints a 300-visual report in under two seconds", async ({ page }) => {
-  await page.locator("#folder-input").setInputFiles(big);
+  await setFolder(page.locator("#folder-input"), big);
   const results = page.locator("#results");
   await expect(results.locator("h2")).toHaveText(/report, \d+ files/);
   // The run the budget holds read the whole report: the facts panel counts all 300 visuals.
@@ -347,6 +364,53 @@ test("lints a 300-visual report in under two seconds", async ({ page }) => {
   test.info().annotations.push({ type: "lint-ms", description: String(ms) });
   expect(ms).toBeGreaterThan(0);
   expect(ms).toBeLessThan(2000);
+});
+
+test("lints a model as heavy to parse as the corpus's slowest within its engine's budget, the status painted first", async ({
+  page,
+  browserName,
+}) => {
+  // Above the largest budget (Firefox's 65 seconds) plus setup, so a slow run fails on its
+  // budget, not on Playwright's test timeout.
+  test.setTimeout(120_000);
+  // Every frame's status line, read in requestAnimationFrame, which runs just before the browser
+  // paints: lint holds the main thread for seconds, so a status set but never painted would be
+  // set in vain.
+  await page.evaluate(() => {
+    const seen: string[] = [];
+    (window as unknown as { painted: string[] }).painted = seen;
+    const status = document.getElementById("status")!;
+    const frame = (): void => {
+      if (!status.hidden) seen.push(status.textContent ?? "");
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  });
+  await setFolder(page.locator("#folder-input"), bigModel);
+  const results = page.locator("#results");
+  await expect(results.locator("h2")).toHaveText(/model, 10 files/, { timeout: 30_000 });
+  // PARSE_ISSUE's name, as the results list it: no M in the model failed to parse.
+  await expect(results).not.toContainText("File could not be fully parsed");
+  const painted = await page.evaluate(() => (window as unknown as { painted: string[] }).painted);
+  expect(painted).toContain("Reading files...");
+  const ms = Number(await results.getAttribute("data-lint-ms"));
+  test.info().annotations.push({ type: "lint-ms", description: String(ms) });
+  console.log(`big model lint-ms (${browserName}): ${ms}`);
+  expect(ms).toBeGreaterThan(0);
+  // Each budget is three times CI's measured time, rounded up to the next 5 s (v3 spec, section
+  // 11.5). On GitHub's ubuntu runners on October 13, 2026, the lint (the whole run, data-lint-ms,
+  // one worker) took 20.6 s in Firefox, and the whole test, setup included and so an upper bound on
+  // the lint, took 2.9 s in Chromium and 5.3 s in WebKit. On Michael's Mac the lint takes about
+  // 0.85 s in Chromium, 1.1 s in WebKit and 6.2 s in Firefox. Firefox's parse stays linear in size
+  // (600 rows 70 ms, 3,000 rows 375 ms), a constant factor of about 7.5 over Chromium, most likely
+  // because the parser awaits at nearly every node. A parser that turned quadratic would still
+  // blow every budget.
+  const budgetMs: Record<typeof browserName, number> = {
+    chromium: 10_000,
+    webkit: 20_000,
+    firefox: 65_000,
+  };
+  expect(ms).toBeLessThan(budgetMs[browserName]);
 });
 
 test("the Choose a folder button opens the browser's file chooser where there is no folder picker", async ({
@@ -361,10 +425,32 @@ test("the Choose a folder button opens the browser's file chooser where there is
     page.waitForEvent("filechooser"),
     page.getByRole("button", { name: "Choose a folder" }).click(),
   ]);
-  await chooser.setFiles(zoo);
+  // The chooser is the folder input's, which is given the folder through setFolder rather than
+  // chooser.setFiles: both reach the same Playwright race setFolder explains.
+  expect(await chooser.element().evaluate((el) => (el as Element).id)).toBe("folder-input");
+  await setFolder(page.locator("#folder-input"), zoo);
   await expect(page.locator("#results h2")).toHaveText(
     "Results for rule-zoo.SemanticModel (model, 17 files)",
   );
+});
+
+test("the note on the browser's folder question shows only where the browser has a folder picker", async ({
+  page,
+  browserName,
+}) => {
+  // Chromium has showDirectoryPicker, whose permission prompt the note explains; Firefox and
+  // WebKit have no picker, so they ask nothing and the note stays hidden.
+  const button = page.getByRole("button", { name: "Choose a folder" });
+  const note = page.locator("#picker-note");
+  if (browserName === "chromium") {
+    await expect(note).toBeVisible();
+    await expect(button).toHaveAccessibleDescription(
+      "Chrome and Edge ask first whether this page may view the folder; that wording is the browser's own. pbiplint only reads the files, in this tab: nothing is uploaded and nothing is saved. Dragging the folder onto the page skips the question.",
+    );
+  } else {
+    await expect(note).toBeHidden();
+    await expect(button).toHaveAccessibleDescription("");
+  }
 });
 
 test("lints files dropped onto the drop zone", async ({ page }) => {
@@ -386,7 +472,7 @@ test("keeps the drop zone lit across its children and unlights it when the drag 
   page,
 }) => {
   const zone = page.locator("#drop");
-  const child = zone.locator("p");
+  const child = zone.locator("p").first();
   await zone.dispatchEvent("dragenter");
   await expect(zone).toHaveClass(/over/);
   // Entering the child fires dragenter on it and dragleave on the zone, in that order.
@@ -423,7 +509,7 @@ test("downloads the Markdown report", async ({ page }) => {
   ]);
   expect(download.suggestedFilename()).toMatch(/\.md$/);
   const text = readFileSync((await download.path())!, "utf8");
-  expect(text).toContain("266 findings");
+  expect(text).toContain("280 findings");
 });
 
 test("copies the Markdown report from the button beside the downloads", async ({
@@ -473,11 +559,81 @@ test("copies the report with each rule's guidance for an AI assistant, from the 
     const text = await page.evaluate(() => navigator.clipboard.readText());
     expect(text.startsWith("# For the AI assistant reading this")).toBe(true);
     expect(text).toContain("# pbiplint report");
-    expect(text).toContain("266 findings");
+    expect(text).toContain("280 findings");
     expect(text).toContain("## How to fix these findings");
     expect(text).toContain("(BROKEN_FIELD_REFERENCE)\n");
     expect(text).toContain("(AVOID_FLOATING_POINT_DATA_TYPES)\n");
     expect(text).not.toContain("**Fires the rule");
+  }
+});
+
+test("shows, downloads, and copies m-zoo's results with no part of a made-up credential (v3 spec, section 11.3)", async ({
+  page,
+  context,
+  browserName,
+}) => {
+  if (browserName === "chromium")
+    await context.grantPermissions(["clipboard-write", "clipboard-read"]);
+  const secrets = fakeSecrets();
+  expect(secrets.length).toBeGreaterThanOrEqual(6);
+  await setFolder(page.locator("#folder-input"), SECRETS_FIXTURE);
+  const results = page.locator("#results");
+  await expect(results.locator("h2")).toContainText("m-zoo.SemanticModel");
+  await expect(results).toContainText("HARDCODED_SECRET_IN_QUERY");
+  expect(leaks(await page.content(), secrets)).toEqual([]);
+  for (const name of ["Download Markdown", "Download JSON"]) {
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page.getByRole("button", { name }).click(),
+    ]);
+    const text = readFileSync((await download.path())!, "utf8");
+    expect(text).toContain("HARDCODED_SECRET_IN_QUERY");
+    expect(leaks(text, secrets)).toEqual([]);
+  }
+  // Only Chromium lets a test read the clipboard back; the unit test holds the copy's text in every
+  // engine.
+  const copy = page.locator(".export button").nth(1);
+  await expect(copy).toHaveText("Copy for an AI assistant");
+  await copy.click();
+  await expect(copy).toHaveText("Copied");
+  if (browserName === "chromium") {
+    const text = await page.evaluate(() => navigator.clipboard.readText());
+    expect(text).toContain("HARDCODED_SECRET_IN_QUERY");
+    expect(leaks(text, secrets)).toEqual([]);
+  }
+});
+
+test("shows, downloads, and copies parse-secrets's results with no part of a made-up value on a line PARSE_ISSUE quotes (v3 spec, sections 7 and 11.3)", async ({
+  page,
+  context,
+  browserName,
+}) => {
+  if (browserName === "chromium")
+    await context.grantPermissions(["clipboard-write", "clipboard-read"]);
+  const planted = fakeSecrets(PARSE_SECRETS_FIXTURE);
+  expect(planted).toHaveLength(4);
+  await setFolder(page.locator("#folder-input"), PARSE_SECRETS_FIXTURE);
+  const results = page.locator("#results");
+  await expect(results.locator("h2")).toContainText("parse-secrets.SemanticModel");
+  await expect(results).toContainText("PARSE_ISSUE");
+  expect(leaks(await page.content(), planted)).toEqual([]);
+  for (const name of ["Download Markdown", "Download JSON"]) {
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page.getByRole("button", { name }).click(),
+    ]);
+    const text = readFileSync((await download.path())!, "utf8");
+    expect(text).toContain("PARSE_ISSUE");
+    expect(leaks(text, planted)).toEqual([]);
+  }
+  const copy = page.locator(".export button").nth(1);
+  await expect(copy).toHaveText("Copy for an AI assistant");
+  await copy.click();
+  await expect(copy).toHaveText("Copied");
+  if (browserName === "chromium") {
+    const text = await page.evaluate(() => navigator.clipboard.readText());
+    expect(text).toContain("PARSE_ISSUE");
+    expect(leaks(text, planted)).toEqual([]);
   }
 });
 
@@ -498,7 +654,7 @@ test("a clean run offers nothing to copy", async ({ page }) => {
       );
     },
     async (dir) => {
-      await page.locator("#folder-input").setInputFiles(join(dir, "Clean.SemanticModel"));
+      await setFolder(page.locator("#folder-input"), join(dir, "Clean.SemanticModel"));
       await expect(page.locator("#results .clean")).toHaveText("No findings.");
       await expect(page.getByRole("button", { name: "Copy for an AI assistant" })).toHaveCount(0);
       await expect(page.locator(".export-note")).toHaveCount(0);

@@ -642,3 +642,66 @@ describe("buildModel and the order of its files (tracked in #101)", () => {
       expect(buildModel(files).tables.map((t) => t.name)).toEqual(["B", "A"]);
   });
 });
+
+describe("buildModel and v3's M sources", () => {
+  it("reads a table's refresh policy and its source expression", () => {
+    const m = modelFrom(
+      [
+        "table Sales",
+        "\tpartition Sales = m",
+        "\t\tmode: import",
+        '\t\tsource = Sql.Database(Server, "Warehouse")',
+        "",
+        "\trefreshPolicy",
+        "\t\tpolicyType: basic",
+        "\t\tsourceExpression =",
+        "\t\t\t\tlet",
+        '\t\t\t\t    Source = Sql.Database(Server, "Warehouse")',
+        "\t\t\t\tin",
+        "\t\t\t\t    Source",
+        "",
+      ].join("\n"),
+    );
+    const policy = m.tables[0]!.refreshPolicy!;
+    expect(policy.name).toBe("Sales");
+    expect(policy.table).toBe(m.tables[0]);
+    expect(policy.sourceExpression).toBe(
+      'let\n    Source = Sql.Database(Server, "Warehouse")\nin\n    Source',
+    );
+    expect(policy.location).toEqual({ file: "inline.tmdl", line: 6 });
+  });
+  it("leaves refreshPolicy unset on a table without one", () => {
+    expect(modelFrom("table Sales\n").tables[0]!.refreshPolicy).toBeUndefined();
+  });
+  it("reads a shared expression's M from an `expression =` line when its declaration has no =", () => {
+    const m = modelFrom(
+      'expression ServerName\n\tlineageTag: x\n\texpression = "finance-sql.example" meta [IsParameterQuery=true, Type="Text"]\n',
+    );
+    expect(m.expressions[0]!.expression).toBe(
+      '"finance-sql.example" meta [IsParameterQuery=true, Type="Text"]',
+    );
+  });
+  it("keeps a declaration's own M when it has one, and an empty expression empty", () => {
+    const m = modelFrom("expression A = 1\n\nexpression B\n\tlineageTag: y\n");
+    expect(m.expressions.map((x) => x.expression)).toEqual(["1", ""]);
+  });
+});
+
+describe("the model's data access options (v3 spec, section 9.8)", () => {
+  it("reads each flag under dataAccessOptions, lowercased, with its line", () => {
+    const m = modelFrom(
+      "model Model\n\tculture: en-US\n\tdataAccessOptions\n\t\tfastCombine\n\t\tlegacyRedirects\n\t\treturnErrorValuesAsNull\n",
+    );
+    expect(m.dataAccessOptions).toEqual({
+      location: { file: "inline.tmdl", line: 3 },
+      flags: [
+        { name: "fastcombine", location: { file: "inline.tmdl", line: 4 } },
+        { name: "legacyredirects", location: { file: "inline.tmdl", line: 5 } },
+        { name: "returnerrorvaluesasnull", location: { file: "inline.tmdl", line: 6 } },
+      ],
+    });
+  });
+  it("leaves dataAccessOptions unset on a model without the block", () => {
+    expect(modelFrom("model Model\n\tculture: en-US\n").dataAccessOptions).toBeUndefined();
+  });
+});

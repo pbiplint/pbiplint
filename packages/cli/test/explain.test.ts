@@ -87,6 +87,10 @@ describe("suggest", () => {
 });
 
 describe("explainText", () => {
+  it("names the Power Query layer by its value", () => {
+    const lines = explainText(found("MINIMIZE_POWER_QUERY_TRANSFORMATIONS")).split("\n");
+    expect(lines[1]).toBe("Warning, powerquery layer, Performance");
+  });
   it("leads with the id, the name, severity, layer, category, and the page link", () => {
     const lines = explainText(found("BROKEN_ACTION_TARGET")).split("\n");
     expect(lines.slice(0, 4)).toEqual([

@@ -8,11 +8,11 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { defaultRules } from "@pbiplint/core";
+import { defaultRules, lint, type Rule } from "@pbiplint/core";
 import { describe, expect, it } from "vitest";
 import { tempDir } from "../../../tests/support/temp-dir.js";
 import { EXPLAIN_HINT, main } from "../src/main.js";
-import { QUIET_NEXT } from "../src/quiet.js";
+import { QUIET_NEXT, quietText } from "../src/quiet.js";
 
 const repo = new URL("../../../", import.meta.url).pathname;
 // A control character a terminal would act on, as the CLI must never write one raw.
@@ -98,7 +98,7 @@ describe("pbiplint CLI", () => {
     const r = await run([sample]);
     expect(r.code).toBe(1);
     expect(r.out).toMatch(
-      /^pbiplint: 266 findings \(19 errors, 77 warnings, 170 info\) in 92 files/,
+      /^pbiplint: 280 findings \(19 errors, 84 warnings, 177 info\) in 92 files/,
     );
     expect(r.out).toContain("https://pbiplint.com/rules/provide-format-string-for-measures");
     expect(r.err).toBe("");
@@ -176,7 +176,7 @@ describe("pbiplint CLI", () => {
   it("--sample is the same as pointing at the bundled sample", async () => {
     const r = await run(["--sample", "--format", "json"]);
     expect(r.code).toBe(1);
-    expect(JSON.parse(r.out).summary.findings).toBe(266);
+    expect(JSON.parse(r.out).summary.findings).toBe(280);
   });
   it("--sample reads the bundled project, its model and its report, and prints no notice", async () => {
     const r = await run(["--sample", "--fail-on", "none"]);
@@ -216,7 +216,7 @@ describe("pbiplint CLI", () => {
     expect(r.code).toBe(1);
     expect(r.out).toBe("");
     expect(r.err).toBe(
-      "pbiplint: 266 findings (19 errors, 77 warnings, 170 info) in 92 files, wrote out/report.sarif\n",
+      "pbiplint: 280 findings (19 errors, 84 warnings, 177 info) in 92 files, wrote out/report.sarif\n",
     );
   });
   it("prefixes SARIF artifact URIs with the model root's path from the cwd", async () => {
@@ -368,6 +368,21 @@ describe("pbiplint CLI", () => {
     const clean = await run([sample, "-q", "--config", noRules()]);
     expect(clean.out.trimEnd().split("\n").at(-1)).toBe("No findings.");
     expect(clean.out).not.toContain("Next:");
+    // A rule that threw is counted in the summary and named in a notice, in the text's words.
+    const boom: Rule = {
+      ...defaultRules[0]!,
+      id: "BOOM",
+      check: () => {
+        throw new Error("kaboom");
+      },
+    };
+    const broken = await lint([{ path: "definition/model.tmdl", text: "model Model\n" }], {
+      rules: [boom],
+      config: { failOn: "none" },
+    });
+    expect(quietText(broken)).toMatch(
+      /^pbiplint: [^\n]*, 1 rule could not finish\n[^\n]*\nNotice: The rule BOOM could not finish \(please report this\): Error\n/,
+    );
   });
   it("--rule shows only those rules' findings in every format, and gates on them (#178)", async () => {
     const all = JSON.parse((await run([sample, "--format", "json"])).out);
@@ -545,10 +560,11 @@ describe("pbiplint CLI", () => {
     expect(r.out).toContain("the report is saved in the legacy report.json format");
     expect(r.out).toContain("Demo.Report is stored as a single report.json (PBIR-Legacy)");
   });
-  it("lints each project of a folder that holds two by its .pbip, and refuses the folder", async () => {
+  it("lints each project of a folder that holds two by its .pbip, and the folder as both (#237)", async () => {
     const root = workspace();
     // The model's files are model.tmdl and one per table; the report's are definition.pbir,
     // report.json, pages.json, page.json, and the project's .pbip.
+    const alone: Record<string, unknown>[] = [];
     for (const [name, modelFiles] of [
       ["Cost", 2],
       ["Sales", 3],
@@ -560,12 +576,16 @@ describe("pbiplint CLI", () => {
       expect(doc.layers.model).toEqual({ present: true, files: modelFiles });
       expect(doc.layers.report).toEqual({ present: true, files: 5 });
       expect(doc.diagnostics).toEqual([]);
+      const { version: _version, tool: _tool, ...own } = doc;
+      alone.push({ path: `${name}.pbip`, ...own });
     }
-    const folder = await run([root]);
-    expect(folder.code).toBe(2);
-    expect(folder.err).toBe(
-      `pbiplint: ${root} contains 2 semantic models; point at one of them: Cost.SemanticModel, Sales.SemanticModel\nRun pbiplint --help for usage.\n`,
-    );
+    // The folder lints each project as that project's .pbip does, each with its own model.
+    const folder = await run([root, "--format", "json", "--fail-on", "none"]);
+    expect(folder.code).toBe(0);
+    expect(folder.err).toBe("");
+    const doc = JSON.parse(folder.out);
+    expect(doc.version).toBe(2);
+    expect(doc.projects).toEqual(alone);
   });
   it("lints the one project below a folder as if pointed at it, its config included, and names it (#174)", async () => {
     // The sample, whose config sets the policies two of its report rules need, one folder down.
@@ -578,7 +598,7 @@ describe("pbiplint CLI", () => {
     expect(text.err).toBe(`pbiplint: notice: ${notice}\n`);
     expect(text.out).toBe((await run([sample])).out.replace("\n\n", `\nNotice: ${notice}\n\n`));
     const doc = JSON.parse((await run([root, "--format", "json"])).out);
-    expect(doc.summary.findings).toBe(266);
+    expect(doc.summary.findings).toBe(280);
     expect(doc.diagnostics).toEqual([
       { kind: "project-below-input", path: "sub/messy-sales", message: notice },
     ]);
@@ -592,23 +612,33 @@ describe("pbiplint CLI", () => {
     expect(header).toContain(`Notice: ${notice}\n`);
     expect(quiet.out.startsWith(header)).toBe(true);
   });
-  it("exits 2 on a folder with two projects below it, linting neither, and lists the command for each (#174)", async () => {
+  it("lints both projects of a folder with two below it in one run, each as it lints alone (#174, #237)", async () => {
     const root = tempDir("below-two");
     for (const at of ["b", "a"]) cpSync(sample, join(root, at, "messy-sales"), { recursive: true });
     const r = await run([root, "--format", "json"]);
-    expect(r.code).toBe(2);
-    expect(r.out).toBe("");
-    expect(r.err).toBe(
-      `pbiplint: ${root} contains 2 projects; point at one of them:\n` +
-        `  a/messy-sales: pbiplint ${root}/a/messy-sales\n` +
-        `  b/messy-sales: pbiplint ${root}/b/messy-sales\n` +
-        "Run pbiplint --help for usage.\n",
-    );
-    // Each line goes to stderr on its own, so a folder's name cannot write a line of its own.
+    expect(r.code).toBe(1);
+    expect(r.err).toBe("");
+    const doc = JSON.parse(r.out);
+    const {
+      version: _version,
+      tool: _tool,
+      ...alone
+    } = JSON.parse((await run([sample, "--format", "json"])).out);
+    expect(doc.projects).toEqual([
+      { path: "a/messy-sales", ...alone },
+      { path: "b/messy-sales", ...alone },
+    ]);
+    // A folder's name reaches the text header shown, so it cannot write a line of its own.
     cpSync(sample, join(root, "c\nRun\u001b[2J"), { recursive: true });
-    expect((await run([root])).err.split("\n")[3]).toBe(
-      `  c\\u000aRun\\u001b[2J: pbiplint "${root}/c\\u000aRun\\u001b[2J"`,
+    const text = await run([root]);
+    expect(text.code).toBe(1);
+    const lines = text.out.split("\n");
+    expect(lines.filter((l) => RAW_CONTROL.test(l))).toEqual([]);
+    expect(lines[0]).toMatch(/^pbiplint: 3 projects, 840 findings /);
+    expect(lines[3]).toBe(
+      "  c\\u000aRun\\u001b[2J  280 findings (19 errors, 84 warnings, 177 info)",
     );
+    expect(text.out).toContain("\nProject 3 of 3: c\\u000aRun\\u001b[2J\npbiplint: 280 findings ");
   });
   // These tests have the operating system refuse a read, as a POSIX system does for a user, or
   // put a symbolic link where the walk would read (CI runs them on Ubuntu). Root reads a folder
@@ -912,16 +942,19 @@ describe("pbiplint CLI", () => {
     const r = await run(["a\u0000b"]);
     expect(r.code).toBe(2);
     expect(r.err).toMatch(/^pbiplint: unexpected error: TypeError: .* without null bytes/);
-    expect(r.err).toMatch(/\n\s+at resolveProject /);
+    expect(r.err).toMatch(/\n\s+at resolveInput /);
     expect(r.err).not.toContain("Could not read");
     // A line break in the error's own message is shown, not written, so it cannot forge a line of
-    // its own; the stack's frames follow it, one to a line.
+    // its own; the stack's frames follow it, one to a line. Only Node's own error, with a string
+    // `code`, keeps its message (pb-coord, October 28, 2026), so this one carries a code.
     let err = "";
     const code = await main(["."], {
       stdout: () => {},
       stderr: (s) => (err += s),
       cwd: () => {
-        throw new Error("boom\npbiplint: 0 findings\n    at forged (x.js:1:1)");
+        throw Object.assign(new Error("boom\npbiplint: 0 findings\n    at forged (x.js:1:1)"), {
+          code: "EFORGED",
+        });
       },
     });
     expect(code).toBe(2);
@@ -1028,6 +1061,13 @@ describe("pbiplint CLI", () => {
     const r = await run(["rules"]);
     expect(r.out).toMatch(/^PARSE_ISSUE\s+project\s+builtin/m);
     expect(r.out).toMatch(/^HIDE_FOREIGN_KEYS\s+model\s+ported/m);
+    expect(r.out).toMatch(/^MINIMIZE_POWER_QUERY_TRANSFORMATIONS\s+powerquery {2}ported/m);
+    // The layer column fits powerquery, so every status starts in one column.
+    const statusAt = r.out
+      .trim()
+      .split("\n")
+      .map((l) => l.search(/ {2}(ported|builtin|needs live model) /));
+    expect(new Set(statusAt).size).toBe(1);
   });
 });
 
@@ -1092,13 +1132,11 @@ describe("the CLI's output and CI log command sequences", () => {
     }
   });
   it("writes none in a notice, a refusal, or a refusal's list on stderr", async () => {
-    // Two projects below a plain folder, named so the list's lines would start with ::.
+    // Two projects below a plain folder, neither of which can be read, so the run is refused with
+    // a list of them; named so the list's line would start with ::.
     const root = tempDir("log-commands-two");
-    for (const name of ["::warning::a ##vso[x]", "::error::b"]) {
-      const dir = join(root, name);
-      mkdirSync(join(dir, "Demo.SemanticModel", "definition"), { recursive: true });
-      writeFileSync(join(dir, "Demo.SemanticModel", "definition", "model.tmdl"), "model Model\n");
-    }
+    for (const name of ["::warning::a ##vso[x]", "::error::b"])
+      mkdirSync(join(root, name, "Demo.SemanticModel"), { recursive: true });
     const two = await run([root]);
     expect(two.code).toBe(2);
     expect(two.err).toContain("\\u003a:warning::a #\\u0023vso[x]");

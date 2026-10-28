@@ -23,14 +23,18 @@ describe("microsoft-bpa pack", () => {
   it("has unique slugs across the default rule set", () => {
     const slugs = defaultRules.map((r) => slug(r.id));
     expect(new Set(slugs).size).toBe(slugs.length);
-    expect(defaultRules.length).toBe(106);
+    expect(defaultRules.length).toBe(122);
   });
   it("gives every rule a scope, a name without the category prefix, and a category from the fixed list", () => {
     for (const r of microsoftBpaRules) {
       expect(r.scope.length, r.id).toBeGreaterThan(0);
       expect(r.name.startsWith("["), r.id).toBe(false);
       expect(CATEGORY_ORDER).toContain(r.category);
-      expect(r.layer, r.id).toBe("model");
+      // MINIMIZE_POWER_QUERY_TRANSFORMATIONS reads M, so it sits on the Power Query layer (v3 spec,
+      // section 9.7); it still needs only the model.
+      expect(r.layer, r.id).toBe(
+        r.id === "MINIMIZE_POWER_QUERY_TRANSFORMATIONS" ? "powerquery" : "model",
+      );
       expect(r.needs, r.id).toEqual(["model"]);
     }
   });

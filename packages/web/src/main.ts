@@ -1,17 +1,33 @@
 import {
   ConfigError,
+  errorKind,
   lint,
   resolveConfig,
+  runSummary,
+  runSummaryLine,
   showControls,
   summaryLine,
   type Diagnostic,
   type LayerName,
   type LintFile,
 } from "@pbiplint/core";
-import { InputError, selectProject, type InputTree } from "./input/project-files.js";
+import { lintProjects, parsedConfig } from "./lint-projects.js";
+import {
+  InputError,
+  selectProjects,
+  type InputTree,
+  type SeveralProject,
+} from "./input/project-files.js";
 import { directoryPicker, readDirectoryInput, readPickedDirectory } from "./input/pick-folder.js";
 import { readDataTransfer } from "./input/read-drop.js";
-import { heading, NEW_TAB, newTabNote, renderResults, withLearnLinks } from "./results/render.js";
+import {
+  heading,
+  NEW_TAB,
+  newTabNote,
+  renderResults,
+  renderSeveral,
+  withLearnLinks,
+} from "./results/render.js";
 import { SAMPLE_NAME, SAMPLE_TREE } from "./sample.js";
 
 /**
@@ -104,7 +120,11 @@ function problem(message: string): void {
 
 function fail(e: unknown): void {
   if (e instanceof InputError || e instanceof ConfigError) problem(e.message);
-  else problem(`Something went wrong: ${e instanceof Error ? e.message : String(e)}`);
+  // Only the class: a message can hold the model's text (v3 spec, section 11.3).
+  else
+    problem(
+      `Something went wrong: ${errorKind(e)}. Please report this at https://github.com/pbiplint/pbiplint/issues.`,
+    );
 }
 
 /**
@@ -134,23 +154,46 @@ interface Run {
   unreadPaths?: Partial<Record<LayerName, string[]>>;
 }
 
+/**
+ * Waits for the status line to be painted, and says whether the run holding `token` still owns the
+ * page. lint holds the main thread for as long as M takes to parse, about 6 s in Firefox on the
+ * slowest models, and reading files can finish inside one frame, so "Reading files..." would
+ * never be painted. One frame and one task first let the browser paint the status line. A browser
+ * does not run animation frames in a hidden tab, so a run started there lints when the tab is
+ * shown, which changes no result. An input made during that wait owns the page now; a lint after
+ * it would hold the main thread for a result nobody will see.
+ */
+async function painted(token: number): Promise<boolean> {
+  await new Promise((done) => requestAnimationFrame(done));
+  await new Promise((done) => setTimeout(done, 0));
+  return !superseded(token);
+}
+
 /** Every input ends up here: read the config if there is one, lint, render. Nothing touches the network. */
-function run({ files, source, config, read, notes, diagnostics, absent, unreadPaths }: Run): void {
+async function run({
+  files,
+  source,
+  config,
+  read,
+  notes,
+  diagnostics,
+  absent,
+  unreadPaths,
+}: Run): Promise<void> {
+  // Every caller has claimed its token just before calling, so the newest token is this run's.
+  const token = latestRun;
   try {
-    let raw: unknown;
-    if (config) {
-      try {
-        raw = JSON.parse(config.text);
-      } catch (e) {
-        throw new ConfigError(
-          `pbiplint.config.json is not valid JSON: ${e instanceof Error ? e.message : String(e)}`,
-        );
-      }
-    }
+    const raw = parsedConfig(config);
+    if (!(await painted(token))) return;
     // The browser reads reports, so it lints with every default rule, as the CLI does. The time
     // is kept on the results for the performance test to read.
     const started = performance.now();
-    const result = lint(files, { config: resolveConfig(raw), diagnostics, absent, unreadPaths });
+    const result = await lint(files, {
+      config: resolveConfig(raw),
+      diagnostics,
+      absent,
+      unreadPaths,
+    });
     results.dataset.lintMs = String(Math.round(performance.now() - started));
     // Unhidden before it is filled, as the status line is: a hidden block is out of the
     // accessibility tree, so anything rendered into one arrives where nothing can reach it. The
@@ -172,14 +215,54 @@ function run({ files, source, config, read, notes, diagnostics, absent, unreadPa
 }
 
 /**
+ * A drop that holds several projects (#237), linted by lintProjects, then shown a section per
+ * project. Before each project's lint the run yields to the browser as one run does before its
+ * lint (painted), with the status line saying which project is next: lint awaits only
+ * microtasks, so without the wait the tab would not paint or take an input until every project
+ * was done. A newer input made during a wait owns the page, and the run stops there.
+ */
+async function runSeveral(projects: SeveralProject[]): Promise<void> {
+  const token = latestRun;
+  try {
+    const linted = await lintProjects(projects, (i) => {
+      say(`Linting project ${i + 1} of ${projects.length}`);
+      return painted(token);
+    });
+    if (!linted) return;
+    const shared = linted.runs;
+    results.dataset.lintMs = String(Math.round(linted.ms));
+    // Unhidden before it is filled, as for one run.
+    results.hidden = false;
+    renderSeveral(
+      results,
+      shared,
+      projects.map((p) => ({ files: p.project?.read, notes: p.project?.notes ?? [] })),
+    );
+    keepResults(true);
+    say("");
+    // The summary line names the number of projects first.
+    announcer.textContent = `${runSummaryLine(runSummary(shared))}.`;
+    if (typeof results.scrollIntoView === "function")
+      results.scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (e) {
+    fail(e);
+  }
+}
+
+/**
  * A tree of files, from a drop, a folder pick, the directory input, or the bundled sample, linted
- * as the CLI would lint the folder. `name` is what the heading calls it; a drop is named by its
- * project folder.
+ * as the CLI would lint the folder: one project, or each of several (#237). `name` is what the
+ * heading calls one project; a drop is named by its project folder.
  */
 function runEntries(tree: InputTree, name?: string): void {
   try {
-    const project = selectProject(tree);
-    run({
+    const selected = selectProjects(tree);
+    if (selected.kind === "several") {
+      void runSeveral(selected.projects);
+      return;
+    }
+    const { project } = selected;
+    void run({
       files: project.files,
       source: name ?? (project.root || "the dropped file"),
       config: project.config,
@@ -202,7 +285,7 @@ byId("lint-paste", HTMLButtonElement).addEventListener("click", () => {
     problem("Paste some TMDL first.");
     return;
   }
-  run({ files: [{ path: "pasted.tmdl", text }], source: "pasted TMDL" });
+  void run({ files: [{ path: "pasted.tmdl", text }], source: "pasted TMDL" });
 });
 
 // The sample runs as a drop of examples/messy-sales runs, through selectProject, so its results
@@ -265,7 +348,16 @@ dropZone.addEventListener("drop", (event) => {
 });
 
 const picker = directoryPicker();
-byId("choose-folder", HTMLButtonElement).addEventListener("click", () => {
+const chooseFolder = byId("choose-folder", HTMLButtonElement);
+// Chrome and Edge ask, in their own words, whether the page may "view and copy" the folder before
+// the picker opens; the note under the button says what the page really does. It ships hidden, and
+// the button is tied to it only here, since a screen reader reads a description it reaches through
+// aria-describedby even while the note is hidden.
+if (picker) {
+  byId("picker-note", HTMLParagraphElement).hidden = false;
+  chooseFolder.setAttribute("aria-describedby", "picker-note");
+}
+chooseFolder.addEventListener("click", () => {
   if (!picker) {
     folderInput.click();
     return;

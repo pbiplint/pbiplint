@@ -33,6 +33,10 @@ The case worth thinking about is pbiplint running in CI against a pull request f
 do not trust, which puts attacker-controlled TMDL in front of the parser.
 
 - A crafted or malformed model that hangs the parser, crashes it, or exhausts memory.
+- M is read within a fixed work limit per query and per model, counted from the text before
+  Microsoft's Power Query parser runs, so a query past it is reported as a PARSE_ISSUE finding
+  instead of parsed. A query under that limit that still hangs the parser, crashes it, or exhausts
+  memory is in scope.
 - Path handling in `--output` and `--config`: reading or writing outside the paths the user named.
 - Model content that reaches SARIF output and is then ingested by a code scanning tool.
 - Model content rendered into the page at https://pbiplint.com. The site runs this same linter
@@ -51,5 +55,9 @@ do not trust, which puts attacker-controlled TMDL in front of the parser.
   pbiplint.
 - Vulnerabilities in Power BI, Tabular Editor, or other vendors' products. Report those to the
   vendor.
-- Development dependencies that never ship. `pbiplint` and `@pbiplint/core` have no runtime
-  dependencies.
+- Development dependencies that never ship. The `pbiplint` CLI ships one bundled file and has no
+  runtime dependencies. `@pbiplint/core` has one, Microsoft's Power Query parser
+  (`@microsoft/powerquery-parser`), pinned at exactly 2.0.0; the parser's own two dependencies,
+  `grapheme-splitter` and `performance-now`, use caret ranges, so npm can install a later 1.x or 2.x
+  of either, and the parser declares Node.js 22 or later, so npm warns on Node.js 20. A
+  vulnerability in the parser that pbiplint's use of it reaches is in scope.

@@ -31,7 +31,9 @@ const INSTRUCTIONS =
   "Everything runs on this machine; nothing is uploaded. Call lint with an absolute path to a " +
   "PBIP folder, a .pbip file, a .SemanticModel or .Report folder, or a .tmdl file. On a large " +
   "project, call it with quiet first for the counts per rule, then with rules for one rule's " +
-  "findings, and explain_rule for how to fix a rule's findings.";
+  "findings, and explain_rule for how to fix a rule's findings. A folder that holds several " +
+  "projects, such as a repository's root, is linted whole in one call: the JSON is version 2, " +
+  "with each project under projects, and the quiet text opens each project with a `project ` line.";
 
 export interface LintInput {
   path: string;
@@ -76,7 +78,9 @@ export function createServer(run: RunCli, version: string): McpServer {
       title: "Lint a Power BI project",
       description:
         "Lint a Power BI project on this machine and return the findings as the JSON document " +
-        "pbiplint --format json writes, or with quiet, a short summary with one line per rule.",
+        "pbiplint --format json writes, or with quiet, a short summary with one line per rule. " +
+        "Given a folder that holds several projects, it lints every one: the JSON is version 2, " +
+        "with each project under projects, and the quiet text opens each with a `project ` line.",
       inputSchema: z.object({
         path: z
           .string()

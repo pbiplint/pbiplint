@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import * as rules from "../src/rules/microsoft-bpa/relationships.js";
-import { objectNames } from "./helpers.js";
+import { buildIndexes } from "../src/index/build.js";
+import { modelFrom, objectNames } from "./helpers.js";
 
 const star = `table Sales
 	column 'Product ID'
@@ -195,4 +196,29 @@ relationship r
       ),
     ).toEqual(["'Security'"]);
   });
+
+  // Each column was once compared with every column: 30,000 columns took 6.2 s, and these
+  // 60,000 about 25 s. The bound is three times CI's time rounded up to the next 5 s (spec 11.5):
+  // 4.0 s on Node 20 on October 28, 2026, so 15 s.
+  const BOUND_MS = 15_000;
+  it(`REMOVE_REDUNDANT_COLUMNS_IN_RELATED_TABLES reads 60,000 columns in under ${BOUND_MS / 1000} seconds`, () => {
+    const count = 30_000;
+    const columns = Array.from(
+      { length: count },
+      (_, i) => `\tcolumn C${i}\n\t\tdataType: int64\n`,
+    ).join("");
+    const model = modelFrom(
+      `table Sales\n\tcolumn K\n\t\tdataType: int64\n${columns}\n` +
+        `table Product\n\tcolumn K\n\t\tdataType: int64\n${columns}\n` +
+        "relationship r\n\tfromColumn: Sales.K\n\ttoColumn: Product.K\n",
+    );
+    const context = { indexes: buildIndexes({ model }), options: {} };
+    const started = performance.now();
+    const found = rules.REMOVE_REDUNDANT_COLUMNS_IN_RELATED_TABLES.check({ model }, context);
+    const ms = performance.now() - started;
+    expect(found).toHaveLength(count);
+    expect(found[0]!.objectName).toBe("'Sales'[C0]");
+    expect(found.at(-1)!.objectName).toBe(`'Sales'[C${count - 1}]`);
+    expect(ms).toBeLessThan(BOUND_MS);
+  }, 120_000);
 });

@@ -57,6 +57,15 @@ describe("the skill file", () => {
     for (const name of [...tools, "quiet", "rules"]) expect(run).toContain(`\`${name}\``);
   });
 
+  it("says a folder that holds several projects lints whole, and how the quiet output names each (#237)", () => {
+    const flat = text.replace(/\s+/g, " ");
+    expect(flat).toContain(
+      "Given a folder that holds several projects, it lints each in one run; the quiet output opens each with a `project ` line.",
+    );
+    expect(flat).not.toContain("one project per run");
+    expect(flat).not.toContain("a folder with several projects");
+  });
+
   it("holds one judgment block a chat assistant can read with no CLI", () => {
     expect(judgment).not.toBeNull();
     expect(text.match(/<!-- judgment -->/g)).toHaveLength(1);

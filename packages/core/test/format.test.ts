@@ -1,7 +1,7 @@
 import { Window } from "happy-dom";
 import { marked } from "marked";
-import { describe, expect, it } from "vitest";
-import { lint, type LintOptions } from "../src/engine/lint.js";
+import { beforeAll, describe, expect, it } from "vitest";
+import { lint, type LintOptions, type LintResult } from "../src/engine/lint.js";
 import { finding, modelPartlyRead } from "../src/rules/helpers.js";
 import { fieldFileUnread } from "../src/rules/report-helpers.js";
 import type { Rule, RuleFinding } from "../src/rules/types.js";
@@ -14,6 +14,7 @@ import {
   formatText,
   FORMATS,
 } from "../src/format/index.js";
+import { locationOf } from "../src/format/text.js";
 import { showControls } from "../src/index.js";
 
 const files = [
@@ -23,7 +24,7 @@ const files = [
     text: "table Sales\n\tcolumn Amount\n\t\tdataType: double\n\t\tsourceColumn: Amount\n\tmeasure Total = SUM([Amount])\n\tpartition Sales = m\n\t\tmode: import\n\t\tsource = 1\n",
   },
 ];
-const result = lint(files);
+const result = await lint(files);
 
 describe("formatText", () => {
   const text = formatText(result, { toolVersion: "1.2.3" });
@@ -69,18 +70,18 @@ describe("summary wording", () => {
     severity: 1,
     check: ({ model }) => model!.tables.map((t) => finding.table(t)),
   };
-  it("uses singular nouns for counts of one", () => {
+  it("uses singular nouns for counts of one", async () => {
     const text = formatText(
-      lint([{ path: "a.tmdl", text: "table A\n\tcolumn X\n\t\tdataType: string\n" }], {
+      await lint([{ path: "a.tmdl", text: "table A\n\tcolumn X\n\t\tdataType: string\n" }], {
         rules: [oneColumn],
       }),
     );
     expect(text.split("\n")[0]).toBe("pbiplint: 1 finding (0 errors, 1 warning, 0 info) in 1 file");
     expect(text.split("\n")[1]).toBe("Model: 1 file. 1 rule run");
   });
-  it("uses singular nouns for one disabled rule and one ignored finding", () => {
+  it("uses singular nouns for one disabled rule and one ignored finding", async () => {
     const text = formatText(
-      lint(
+      await lint(
         [
           {
             path: "a.tmdl",
@@ -94,7 +95,7 @@ describe("summary wording", () => {
       "Model: 1 file. 1 rule run, 1 rule disabled by config, 1 finding ignored by annotation",
     );
   });
-  it("says a rule was skipped because a report file could not be read, in text, Markdown, and JSON", () => {
+  it("says a rule was skipped because a report file could not be read, in text, Markdown, and JSON", async () => {
     const wholeReport = (id: string): Rule => ({
       ...base,
       id,
@@ -106,8 +107,8 @@ describe("summary wording", () => {
       skipWhenUnread: fieldFileUnread,
       check: () => [],
     });
-    const run = (rules: Rule[]) =>
-      lint(
+    const run = async (rules: Rule[]) =>
+      await lint(
         [
           { path: "a.tmdl", text: "table A\n\tcolumn X\n\t\tdataType: string\n" },
           { path: "definition/pages/p/page.json", text: '{ "name": "p" }' },
@@ -115,7 +116,7 @@ describe("summary wording", () => {
         ],
         { rules: [oneColumn, ...rules] },
       );
-    const one = run([wholeReport("WHOLE_REPORT")]);
+    const one = await run([wholeReport("WHOLE_REPORT")]);
     expect(formatText(one).split("\n")[1]).toBe(
       "Model: 1 file. Report: 2 files. 1 rule run, 1 rule skipped (a report file could not be read)",
     );
@@ -127,11 +128,11 @@ describe("summary wording", () => {
     ]);
     // SARIF lists no skipped rule for any reason, so it gains nothing here.
     expect(JSON.parse(formatSarif(one)).runs[0].invocations).toBeUndefined();
-    expect(formatText(run([wholeReport("A"), wholeReport("B")])).split("\n")[1]).toBe(
+    expect(formatText(await run([wholeReport("A"), wholeReport("B")])).split("\n")[1]).toBe(
       "Model: 1 file. Report: 2 files. 1 rule run, 2 rules skipped (a report file could not be read)",
     );
   });
-  it("says a rule was skipped because a model file could not be fully read, in text, Markdown, and JSON", () => {
+  it("says a rule was skipped because a model file could not be fully read, in text, Markdown, and JSON", async () => {
     const wholeModel = (id: string): Rule => ({
       ...base,
       id,
@@ -143,15 +144,15 @@ describe("summary wording", () => {
       skipWhenModelUnread: modelPartlyRead,
       check: () => [],
     });
-    const run = (rules: Rule[]) =>
-      lint(
+    const run = async (rules: Rule[]) =>
+      await lint(
         [
           { path: "a.tmdl", text: "table A\n\tcolumn X\n\t\tdataType: string\n" },
           { path: "definition/pages/p/page.json", text: '{ "name": "p" }' },
         ],
         { rules: [oneColumn, ...rules], unreadPaths: { model: ["b.tmdl"] } },
       );
-    const one = run([wholeModel("WHOLE_MODEL")]);
+    const one = await run([wholeModel("WHOLE_MODEL")]);
     expect(formatText(one).split("\n")[1]).toBe(
       "Model: 1 file. Report: 1 file. 1 rule run, 1 rule skipped (a model file could not be fully read)",
     );
@@ -163,33 +164,105 @@ describe("summary wording", () => {
     ]);
     // SARIF lists no skipped rule for any reason, so it gains nothing here either.
     expect(JSON.parse(formatSarif(one)).runs[0].invocations).toBeUndefined();
-    expect(formatText(run([wholeModel("A"), wholeModel("B")])).split("\n")[1]).toBe(
+    expect(formatText(await run([wholeModel("A"), wholeModel("B")])).split("\n")[1]).toBe(
       "Model: 1 file. Report: 1 file. 1 rule run, 2 rules skipped (a model file could not be fully read)",
     );
   });
 });
 
-describe("formatText with a crashing rule", () => {
-  it("still reports rule errors when nothing else fired", () => {
-    const throwingRule: Rule = {
-      id: "THROWING_RULE",
-      name: "Rule that throws",
-      category: "Maintenance",
-      severity: 2,
-      scope: ["Table"],
-      layer: "model",
-      needs: ["model"],
-      description: "Only exists to blow up.",
-      references: [],
-      status: "ported",
-      check() {
-        throw new Error("kaboom");
+describe("a rule that could not finish, in every format", () => {
+  const throwingRule: Rule = {
+    id: "THROWING_RULE",
+    name: "Rule that throws",
+    category: "Maintenance",
+    severity: 2,
+    scope: ["Table"],
+    layer: "model",
+    needs: ["model"],
+    description: "Only exists to blow up.",
+    references: [],
+    status: "ported",
+    check() {
+      throw new Error("kaboom");
+    },
+  };
+  let crashed: LintResult;
+  beforeAll(async () => {
+    crashed = await lint(files.slice(1), { rules: [throwingRule] });
+  });
+  const notice = "The rule THROWING_RULE could not finish (please report this): Error";
+  it("says so in the text format's summary line and notices, when nothing else fired", () => {
+    const lines = formatText(crashed).split("\n");
+    expect(lines[0]).toBe(
+      "pbiplint: 0 findings (0 errors, 0 warnings, 0 info) in 1 file, 1 rule could not finish",
+    );
+    expect(lines).toContain(`Notice: ${notice}`);
+    expect(lines).toContain("No findings.");
+  });
+  it("says so in the Markdown format's summary and notices", () => {
+    const md = formatMarkdown(crashed);
+    expect(md).toContain("in 1 file, 1 rule could not finish.");
+    expect(md).toContain(
+      "> Notice: The rule THROWING\\_RULE could not finish (please report this): Error",
+    );
+  });
+  it("lists it in the JSON format's rule errors", () => {
+    expect(JSON.parse(formatJson(crashed)).summary.ruleErrors).toEqual([
+      { id: "THROWING_RULE", message: "Error" },
+    ]);
+  });
+  it("gives SARIF an error notification on the rule", () => {
+    const run = JSON.parse(formatSarif(crashed)).runs[0];
+    expect(run.invocations).toEqual([
+      {
+        executionSuccessful: false,
+        toolExecutionNotifications: [
+          {
+            level: "error",
+            descriptor: { id: "rule-error" },
+            associatedRule: { id: "THROWING_RULE" },
+            message: { text: "The rule THROWING_RULE could not finish: Error" },
+          },
+        ],
+      },
+    ]);
+  });
+  it("keeps SARIF's run successful when its only notice is a file it could not read", () => {
+    const unread: LintResult = {
+      ...crashed,
+      summary: { ...crashed.summary, ruleErrors: [] },
+      diagnostics: [{ kind: "unread-file", path: "x", message: "x could not be read" }],
+    };
+    expect(JSON.parse(formatSarif(unread)).runs[0].invocations).toEqual([
+      {
+        executionSuccessful: true,
+        toolExecutionNotifications: [
+          {
+            level: "warning",
+            descriptor: { id: "unread-file" },
+            message: { text: "x could not be read" },
+          },
+        ],
+      },
+    ]);
+  });
+  it("counts a rule once in the summary however many of its queries failed", () => {
+    const twice: LintResult = {
+      ...crashed,
+      summary: {
+        ...crashed.summary,
+        ruleErrors: [
+          { id: "R", message: "query 'A': x" },
+          { id: "R", message: "query 'B': x" },
+        ],
       },
     };
-    const text = formatText(lint(files.slice(1), { rules: [throwingRule] }));
-    expect(text).toContain("No findings.");
-    expect(text).toContain("Rule errors");
-    expect(text).toContain("kaboom");
+    expect(formatText(twice).split("\n")[0]).toMatch(/, 1 rule could not finish$/);
+    expect(
+      formatText(twice)
+        .split("\n")
+        .filter((l) => l.startsWith("Notice: The rule R ")),
+    ).toHaveLength(2);
   });
 });
 
@@ -229,6 +302,17 @@ describe("formatMarkdown", () => {
     );
     expect(md).toContain("| Object | Type | Location | Detail |");
     expect(md).toContain("| `'Sales'[Amount]` | Column | definition/tables/Sales.tmdl:2 |  |");
+  });
+
+  it("formatMarkdown with headingLevel 2 moves every heading down one level", () => {
+    const md = formatMarkdown(result);
+    const lower = formatMarkdown(result, { headingLevel: 2 });
+    expect(lower.startsWith("## pbiplint report\n")).toBe(true);
+    expect(lower).toContain("\n### Fix these first\n");
+    expect(lower).toContain("\n### WARNING: Do not use floating point data types (1) · model\n");
+    // Only the headings move: dropping one # from each heading line gives the default output.
+    expect(lower.replace(/^#(#+ )/gm, "$1")).toBe(md);
+    expect(formatMarkdown(result, { headingLevel: 1 })).toBe(md);
   });
 });
 
@@ -292,9 +376,12 @@ describe("formatSarif", () => {
 describe("a model with no model.tmdl", () => {
   // buildModel synthesizes a Model whose location has an empty file, so Model findings carry no
   // location at all rather than a bogus ":0" that SARIF consumers reject.
-  const single = lint([
-    { path: "tables/T.tmdl", text: "table T\n\tcolumn C\n\t\tdataType: string\n" },
-  ]);
+  let single: LintResult;
+  beforeAll(async () => {
+    single = await lint([
+      { path: "tables/T.tmdl", text: "table T\n\tcolumn C\n\t\tdataType: string\n" },
+    ]);
+  });
   const RULE = "MODEL_SHOULD_HAVE_A_DATE_TABLE";
 
   it("leaves the location off the Model finding", () => {
@@ -373,8 +460,8 @@ describe("formatSarif with a pathPrefix", () => {
 });
 
 describe("SARIF URIs", () => {
-  it("percent-encodes SARIF artifact URIs so a path with spaces is a valid URI", () => {
-    const spaced = lint([
+  it("percent-encodes SARIF artifact URIs so a path with spaces is a valid URI", async () => {
+    const spaced = await lint([
       {
         path: "definition/tables/ Spaced .tmdl",
         text: "table ' Spaced '\n\tcolumn 'A B'\n\t\tdataType: string\n\t\tsourceColumn: A B\n",
@@ -413,25 +500,28 @@ describe("a whole-project report", () => {
     { path: "definition/pages/pages.json", text: j({ pageOrder: ["p"], activePageName: "p" }) },
     { path: "definition/pages/p/page.json", text: j({ name: "p", displayName: "Overview" }) },
   ];
-  const project = lint(
-    [
-      ...files,
-      ...readable,
-      {
-        path: "definition/pages/p/visuals/v/visual.json",
-        text: '{\n  "name": "v",\n<<<<<<< HEAD\n}\n',
-      },
-    ],
-    {
-      diagnostics: [
+  let project: LintResult;
+  beforeAll(async () => {
+    project = await lint(
+      [
+        ...files,
+        ...readable,
         {
-          kind: "depth-cap",
-          message: "the walk stopped 64 folders deep inside Deep",
-          path: "Deep",
+          path: "definition/pages/p/visuals/v/visual.json",
+          text: '{\n  "name": "v",\n<<<<<<< HEAD\n}\n',
         },
       ],
-    },
-  );
+      {
+        diagnostics: [
+          {
+            kind: "depth-cap",
+            message: "the walk stopped 64 folders deep inside Deep",
+            path: "Deep",
+          },
+        ],
+      },
+    );
+  });
   it("prints the layers line, notices, the facts block, and a layer tag on every group in text", () => {
     const text = formatText(project);
     const lines = text.split("\n");
@@ -454,12 +544,12 @@ describe("a whole-project report", () => {
     expect(text).toMatch(/\n {2}1\. File could not be fully parsed {2}\(1 error\) {3}\[report\]\n/);
     expect(text).toMatch(/\n {2}\d\. .+ {3}\[model\]\n/);
     expect(text).toMatch(
-      /\nERROR {2}\[report\] {3}File could not be fully parsed {2}PARSE_ISSUE {2}\(1\)\n/,
+      /\nERROR {2}\[report\] {6}File could not be fully parsed {2}PARSE_ISSUE {2}\(1\)\n/,
     );
-    expect(text).toMatch(/\nERROR {2}\[model\] {4}Column references should be fully qualified/);
+    expect(text).toMatch(/\nERROR {2}\[model\] {7}Column references should be fully qualified/);
   });
-  it("prints the counted Model row with NOT_REACHED_FROM_REPORT in the margin when every report file was read", () => {
-    const text = formatText(lint([...files, ...readable]));
+  it("prints the counted Model row with NOT_REACHED_FROM_REPORT in the margin when every report file was read", async () => {
+    const text = formatText(await lint([...files, ...readable]));
     expect(text.split("\n")[1]).toMatch(
       /^Model: 2 files\. Report: 3 files\. \d+ rules run, 5 rules skipped \(need a live model\)$/,
     );
@@ -467,10 +557,10 @@ describe("a whole-project report", () => {
       /\n {2}Model {12}1 table, 1 column, 1 measure \(1 column and 1 measure not reached from this report\) {3}NOT_REACHED_FROM_REPORT\n/,
     );
   });
-  it("sets the rule margin by the rows that have a rule id, so a long row without one does not push it out (tracked in #88)", () => {
+  it("sets the rule margin by the rows that have a rule id, so a long row without one does not push it out (tracked in #88)", async () => {
     // Without a policy the Filters pane says how to have it checked, a detail most runs carry, and
     // links no rule; the margin stays where the rows with a rule id put it.
-    const lines = factsLines(lint([...files, ...readable]));
+    const lines = factsLines(await lint([...files, ...readable]));
     const opens = lines.find((l) => l.startsWith("  Opens on "))!;
     const model = lines.find((l) => l.startsWith("  Model "))!;
     const pane = lines.find((l) => l.startsWith("  Filters pane "))!;
@@ -483,30 +573,33 @@ describe("a whole-project report", () => {
       / \(1 column and 1 measure not reached from this report\) {3}NOT_REACHED/,
     );
   });
-  it("tags a parse-issue group spanning both layers as project in the text header", () => {
-    const spanning = lint([
+  it("tags a parse-issue group spanning both layers as project in the text header", async () => {
+    const spanning = await lint([
       { path: "definition/tables/Sales.tmdl", text: "table Sales\n  column Amount\n" },
       { path: "definition/pages/p/page.json", text: '{\n  "name": "p",\n<<<<<<< HEAD\n}\n' },
     ]);
-    expect(formatText(spanning)).toContain("ERROR  [project]  File could not be fully parsed");
+    expect(formatText(spanning)).toContain("ERROR  [project]     File could not be fully parsed");
   });
-  it("names present layers only and rides an absent layer's reason on the skipped line", () => {
-    const text = formatText(lint(files));
+  it("names present layers only and rides an absent layer's reason on the skipped line", async () => {
+    const text = formatText(await lint(files));
     expect(text.split("\n")[1]).toMatch(/^Model: 2 files\. \d+ rules run/);
     expect(text.split("\n")[1]).not.toContain("Report:");
     expect(text).not.toContain("Report at a glance");
     const reportOnly = formatText(
-      lint([{ path: "definition/pages/p/page.json", text: j({ name: "p", displayName: "P" }) }], {
-        absent: { model: "this report reads a published model" },
-      }),
+      await lint(
+        [{ path: "definition/pages/p/page.json", text: j({ name: "p", displayName: "P" }) }],
+        {
+          absent: { model: "this report reads a published model" },
+        },
+      ),
     );
     expect(reportOnly.split("\n")[1]).toMatch(
       /^Report: 1 file\. \d+ rules? run, \d+ rules skipped \(need a live model\), \d+ rules skipped \(this report reads a published model\)$/,
     );
     expect(reportOnly).toContain("\nReport at a glance\n");
   });
-  it("leaves no stray space on either line when neither layer is present", () => {
-    const nothing = lint([{ path: "README.md", text: "" }]);
+  it("leaves no stray space on either line when neither layer is present", async () => {
+    const nothing = await lint([{ path: "README.md", text: "" }]);
     const line = formatText(nothing).split("\n")[1];
     expect(line).toMatch(/^\d+ rules? run, /);
     expect(line).not.toMatch(/ {2}/);
@@ -559,7 +652,7 @@ describe("a whole-project report", () => {
       line: 3,
     });
   });
-  it("prefixes report paths separately in SARIF, tags rules with their layer, and notes an incomplete read", () => {
+  it("prefixes report paths separately in SARIF, tags rules with their layer, and notes an incomplete read", async () => {
     const sarif = JSON.parse(
       formatSarif(project, {
         pathPrefix: "proj/Demo.SemanticModel",
@@ -591,11 +684,11 @@ describe("a whole-project report", () => {
         ],
       },
     ]);
-    expect(JSON.parse(formatSarif(lint(files))).runs[0].invocations).toBeUndefined();
+    expect(JSON.parse(formatSarif(await lint(files))).runs[0].invocations).toBeUndefined();
     // The project's .pbip sits one level above the report root, so its path reaches lint as
     // ../Demo.pbip. The artifact URI names the file where it really is, and a prefix that itself
     // begins with .. keeps its leading segment.
-    const pbip = lint([{ path: "../Demo.pbip", text: "{" }]);
+    const pbip = await lint([{ path: "../Demo.pbip", text: "{" }]);
     const pbipUri = (reportPathPrefix: string): string => {
       const doc = JSON.parse(formatSarif(pbip, { reportPathPrefix })) as {
         runs: [
@@ -693,12 +786,15 @@ describe("control characters from the input", () => {
     name: "Needs report",
     needs: ["report"],
   };
-  const run = lint(files, {
-    rules: [hostile, crashing, needsReport],
-    diagnostics: [
-      { kind: "unread-file", path: "x", message: "Bad\u001b]0;title\u0007 could not be read" },
-    ],
-    absent: { report: "this report reads a model outside the input (..\u202e\\M)" },
+  let run: LintResult;
+  beforeAll(async () => {
+    run = await lint(files, {
+      rules: [hostile, crashing, needsReport],
+      diagnostics: [
+        { kind: "unread-file", path: "x", message: "Bad\u001b]0;title\u0007 could not be read" },
+      ],
+      absent: { report: "this report reads a model outside the input (..\u202e\\M)" },
+    });
   });
   const noRaw = (text: string) => text.split("\n").filter((line) => RAW_CONTROL.test(line));
 
@@ -717,13 +813,15 @@ describe("control characters from the input", () => {
     expect(lines[1]).toContain(
       "1 rule skipped (this report reads a model outside the input (..\\u202e\\M))",
     );
-    expect(lines).toContain("  CRASHING: failed on \\u009b2J");
+    expect(lines).toContain(
+      "Notice: The rule CRASHING could not finish (please report this): Error",
+    );
   });
 
-  it("shows them in a fact's value, and the rule column still lines up", () => {
+  it("shows them in a fact's value, and the rule column still lines up", async () => {
     const j = (v: unknown) => JSON.stringify(v);
     const text = formatText(
-      lint([
+      await lint([
         ...files,
         { path: "definition/report.json", text: j({}) },
         { path: "definition/pages/pages.json", text: j({ pageOrder: ["p"], activePageName: "p" }) },
@@ -740,7 +838,7 @@ describe("control characters from the input", () => {
     expect(opens.indexOf("LANDING_PAGE_NOT_SET")).toBe(model.indexOf("NOT_REACHED_FROM_REPORT"));
   });
 
-  it("escapes DEL, C1, and the bidirectional controls in JSON and SARIF, which parse to the same value", () => {
+  it("escapes DEL, C1, and the bidirectional controls in JSON and SARIF, which parse to the same value", async () => {
     const raw = "a\u001b\u007f\u0080\u009b\u009f\u202a\u202e\u2066\u2069\n\tz";
     const named: Rule = {
       ...hostile,
@@ -748,7 +846,7 @@ describe("control characters from the input", () => {
         { ruleId: "HOSTILE", layer: "model", objectType: "Measure", objectName: raw, detail: raw },
       ],
     };
-    const result = lint(files, { rules: [named] });
+    const result = await lint(files, { rules: [named] });
     const json = formatJson(result);
     const sarif = formatSarif(result);
     for (const out of [json, sarif]) expect(RAW_IN_JSON.test(out)).toBe(false);
@@ -797,9 +895,12 @@ describe("the Markdown export and what the input holds", () => {
    * The export of a run whose one model rule finds `finding` on a measure named M, unless it
    * names one.
    */
-  const exported = (finding: Partial<RuleFinding>, options: LintOptions = {}): string =>
+  const exported = async (
+    finding: Partial<RuleFinding>,
+    options: LintOptions = {},
+  ): Promise<string> =>
     formatMarkdown(
-      lint(files, {
+      await lint(files, {
         ...options,
         rules: [
           { ...one, check: () => [{ objectType: "Measure", objectName: "M", ...finding }] },
@@ -808,33 +909,33 @@ describe("the Markdown export and what the input holds", () => {
       }),
     );
 
-  it("writes HTML in a finding's detail and location as text, not as elements", () => {
+  it("writes HTML in a finding's detail and location as text, not as elements", async () => {
     const detail = "<script>alert(1)</script> & <b>bold</b> &amp; C:\\x\\<i>y</i> a\\|b";
     const file = "definition/tables/<i>Sales</i>.tmdl";
-    const doc = rendered(exported({ detail, location: { file, line: 2 } }));
+    const doc = rendered(await exported({ detail, location: { file, line: 2 } }));
     expect(doc.querySelectorAll("script, b, i")).toHaveLength(0);
     expect(rows(doc)).toEqual([["M", "Measure", `${file}:2`, detail]]);
   });
-  it("fences a name holding backticks so the whole name is one code span", () => {
+  it("fences a name holding backticks so the whole name is one code span", async () => {
     for (const name of ["a`b", "a``b", "`a", "a`", "a```b`", "``"]) {
-      const doc = rendered(exported({ objectName: name }));
+      const doc = rendered(await exported({ objectName: name }));
       expect(codes(doc), name).toEqual([name]);
       expect(rows(doc), name).toEqual([[name, "Measure", "", ""]]);
     }
   });
-  it("keeps the spaces at each end of a name in its code span", () => {
+  it("keeps the spaces at each end of a name in its code span", async () => {
     // CommonMark strips one space from each end of a code span that begins and ends with one and
     // is not all spaces; a name that is all spaces keeps them without help.
     for (const name of [" Sales ", "  Sales  ", " `a` ", " a", "a ", "  "]) {
-      const doc = rendered(exported({ objectName: name }));
+      const doc = rendered(await exported({ objectName: name }));
       expect(codes(doc), JSON.stringify(name)).toEqual([name]);
     }
   });
-  it("writes Markdown syntax in a detail and a location as text, not as a code span, link, image, or emphasis", () => {
+  it("writes Markdown syntax in a detail and a location as text, not as a code span, link, image, or emphasis", async () => {
     /** The location and detail cells of a finding whose detail, and file name, hold `input`. */
-    const cellsOf = (input: string) => {
+    const cellsOf = async (input: string) => {
       const file = `definition/tables/_${input}_.tmdl`;
-      const doc = rendered(exported({ detail: input, location: { file, line: 1 } }));
+      const doc = rendered(await exported({ detail: input, location: { file, line: 1 } }));
       const [, , location, detail] = [...doc.querySelectorAll("tbody td")];
       return { doc, file, location: location!, detail: detail! };
     };
@@ -844,7 +945,7 @@ describe("the Markdown export and what the input holds", () => {
       "[x](javascript:alert(1))",
       "*em* _em_ ~~s~~ ~s~ **strong** __strong__",
     ]) {
-      const { file, location, detail } = cellsOf(input);
+      const { file, location, detail } = await cellsOf(input);
       // Text alone: no element in either cell, and the text is what the input holds.
       expect(location.children, input).toHaveLength(0);
       expect(detail.children, input).toHaveLength(0);
@@ -852,12 +953,12 @@ describe("the Markdown export and what the input holds", () => {
       expect(detail.textContent, input).toBe(input);
     }
     // The URL inside is neither an image the viewer loads nor a link.
-    const image = cellsOf("![](https://example.com/t.png)");
+    const image = await cellsOf("![](https://example.com/t.png)");
     expect(image.doc.querySelectorAll("img, td a")).toHaveLength(0);
     expect(image.detail.textContent).toBe("![](https://example.com/t.png)");
     // A notice and the skipped line's reason are written the same way.
     const doc = rendered(
-      exported(
+      await exported(
         {},
         {
           diagnostics: [
@@ -874,7 +975,7 @@ describe("the Markdown export and what the input holds", () => {
     expect(summary.children).toHaveLength(0);
     expect(summary.textContent).toMatch(/ \(~~a~~ _b_\)\.$/);
   });
-  it("writes a URL, a www address, an email address, and a format string as written in marked, not as a link", () => {
+  it("writes a URL, a www address, an email address, and a format string as written in marked, not as a link", async () => {
     // marked's rendering: no cell holds a link, and each shows the input as written (an email
     // address and a format string with two $ in a code span, below).
     for (const input of [
@@ -884,13 +985,13 @@ describe("the Markdown export and what the input holds", () => {
       "mailto:first_last@example.com",
       "$#,0.00;($#,0.00)",
     ]) {
-      const md = exported({ detail: input });
+      const md = await exported({ detail: input });
       const doc = rendered(md);
       expect(doc.querySelectorAll("td a"), input).toHaveLength(0);
       expect(rows(doc), input).toEqual([["M", "Measure", "", input]]);
     }
   });
-  it("puts each word GitHub would link or render as math in a code span (#109)", () => {
+  it("puts each word GitHub would link or render as math in a code span (#109)", async () => {
     // GitHub ignores a backslash before @ and $: it links an email address, links an @name (and
     // notifies that user) or a #123 or GH-123 in an issue or comment, and renders text between two
     // $ on a line as math. A code span does none of these, in GitHub or in a plain CommonMark viewer.
@@ -905,7 +1006,7 @@ describe("the Markdown export and what the input holds", () => {
       ['format string "$#,0.00;($#,0.00)"', ["$#,0.00;($#,0.00)"]],
       ["from $1 to $2", ["$1", "$2"]],
     ] as const) {
-      const doc = rendered(exported({ detail }));
+      const doc = rendered(await exported({ detail }));
       expect(rows(doc), detail).toEqual([["M", "Measure", "", detail]]);
       const [, , , cell] = [...doc.querySelectorAll("tbody td")];
       expect(
@@ -914,31 +1015,34 @@ describe("the Markdown export and what the input holds", () => {
       ).toEqual(words);
     }
     // A lone $ is no math, so it stays text.
-    const lone = rendered(exported({ detail: "Sales $ by region" }));
+    const lone = rendered(await exported({ detail: "Sales $ by region" }));
     expect(codes(lone)).toEqual(["M"]);
     expect(rows(lone)).toEqual([["M", "Measure", "", "Sales $ by region"]]);
     // A location too, and a word holding a backquote or a | keeps its whole text in the span.
     const doc = rendered(
-      exported({ detail: "a`@b|c", location: { file: "definition/tables/a@b.tmdl", line: 3 } }),
+      await exported({
+        detail: "a`@b|c",
+        location: { file: "definition/tables/a@b.tmdl", line: 3 },
+      }),
     );
     expect(rows(doc)).toEqual([["M", "Measure", "definition/tables/a@b.tmdl:3", "a`@b|c"]]);
     expect(codes(doc)).toEqual(["M", "definition/tables/a@b.tmdl:3", "a`@b|c"]);
     // A word that begins or ends with a backquote keeps it in its span.
-    const ticks = rendered(exported({ detail: "`@x` and x`" }));
+    const ticks = rendered(await exported({ detail: "`@x` and x`" }));
     expect(codes(ticks)).toEqual(["M", "`@x`"]);
     expect(rows(ticks)).toEqual([["M", "Measure", "", "`@x` and x`"]]);
   });
-  it("leaves the punctuation around such a word outside its code span, as written", () => {
-    expect(exported({ detail: "(#123), see user@example.com." })).toContain(
+  it("leaves the punctuation around such a word outside its code span, as written", async () => {
+    expect(await exported({ detail: "(#123), see user@example.com." })).toContain(
       "| (`#123`), see `user@example.com`. |",
     );
-    expect(exported({ detail: `'@a'; "$1" and $2!` })).toContain(
+    expect(await exported({ detail: `'@a'; "$1" and $2!` })).toContain(
       `| '\`@a\`'; "\`$1\`" and \`$2\`! |`,
     );
   });
-  it("puts such a word in a code span outside a table too, where a | needs no backslash", () => {
+  it("puts such a word in a code span outside a table too, where a | needs no backslash", async () => {
     const doc = rendered(
-      exported(
+      await exported(
         {},
         {
           diagnostics: [{ kind: "unread-file", path: "x", message: "x@y.com a|b@c and $1 to $2" }],
@@ -955,31 +1059,36 @@ describe("the Markdown export and what the input holds", () => {
     ]);
     // A line break or a tab inside such a word is shown, as anywhere outside a table.
     const shown = rendered(
-      exported({}, { diagnostics: [{ kind: "unread-file", path: "x", message: "a@b\nc\td" }] }),
+      await exported(
+        {},
+        { diagnostics: [{ kind: "unread-file", path: "x", message: "a@b\nc\td" }] },
+      ),
     );
     expect(shown.querySelector("blockquote code")!.textContent).toBe("a@b\\u000ac\\u0009d");
     // The summary line's reasons too.
-    const summary = rendered(exported({}, { absent: { report: "see #12 and a@b.com" } }));
+    const summary = rendered(await exported({}, { absent: { report: "see #12 and a@b.com" } }));
     expect(
       [...summary.querySelector("p")!.querySelectorAll("code")].map((c) => c.textContent),
     ).toEqual(["#12", "a@b.com"]);
   });
-  it("keeps a name holding | in its cell, and in its code span, a backslash before it included", () => {
+  it("keeps a name holding | in its cell, and in its code span, a backslash before it included", async () => {
     for (const name of ["a|b", "a\\\\|b|"]) {
-      const doc = rendered(exported({ objectName: name, detail: "d" }));
+      const doc = rendered(await exported({ objectName: name, detail: "d" }));
       expect(rows(doc), name).toEqual([[name, "Measure", "", "d"]]);
     }
     // One backslash before a pipe cannot be written in a table's code span for every viewer: the
     // site's renderer reads `\\|` as a backslash and then a new cell. It shows doubled, and the
     // rest of the name stays in the code span, never reaching the page as HTML.
-    const doc = rendered(exported({ objectName: "a\\|<img src=x onerror=alert(1)>", detail: "d" }));
+    const doc = rendered(
+      await exported({ objectName: "a\\|<img src=x onerror=alert(1)>", detail: "d" }),
+    );
     expect(doc.querySelectorAll("img")).toHaveLength(0);
     expect(rows(doc)).toEqual([["a\\\\|<img src=x onerror=alert(1)>", "Measure", "", "d"]]);
   });
-  it("writes a notice, a fact's value, and an absent layer's reason holding < and & as text", () => {
+  it("writes a notice, a fact's value, and an absent layer's reason holding < and & as text", async () => {
     const j = (v: unknown) => JSON.stringify(v);
     const md = formatMarkdown(
-      lint(
+      await lint(
         [
           ...files,
           { path: "definition/report.json", text: j({}) },
@@ -1010,17 +1119,17 @@ describe("the Markdown export and what the input holds", () => {
       "LANDING_PAGE_NOT_SET",
     ]);
     const absent = rendered(
-      exported({}, { absent: { report: "this report reads <i>a model</i> & more" } }),
+      await exported({}, { absent: { report: "this report reads <i>a model</i> & more" } }),
     );
     expect(absent.querySelectorAll("i")).toHaveLength(0);
     expect(absent.querySelector("p")!.textContent).toMatch(
       / \(this report reads <i>a model<\/i> & more\)\.$/,
     );
   });
-  it("shows control characters, and a line break in a cell as a space, so nothing raw reaches the output", () => {
+  it("shows control characters, and a line break in a cell as a space, so nothing raw reaches the output", async () => {
     // eslint-disable-next-line no-control-regex -- finding control characters is what this is for
     const RAW = /[\u0000-\u0009\u000b-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/;
-    const md = exported(
+    const md = await exported(
       {
         objectName: "Evil\u001b[2J\u202e",
         detail: "one\r\ntwo\nthree\rfour\u0007",
@@ -1047,5 +1156,129 @@ describe("the Markdown export and what the input holds", () => {
       "Notice: Bad\\u001b]0;t\\u0007\\u000anext",
     );
     expect(doc.querySelector("p")!.textContent).toMatch(/ \(reason\\u000d\\u000awith a break\)\.$/);
+  });
+});
+
+describe("a finding's column", () => {
+  const withColumn = (r: LintResult): LintResult => {
+    const f = {
+      ...r.groups[0]!.findings[0]!,
+      location: { file: "definition/tables/Sales.tmdl", line: 12, column: 9 },
+    };
+    return {
+      ...r,
+      findings: [f, ...r.findings.slice(1)],
+      groups: [
+        { ...r.groups[0]!, findings: [f, ...r.groups[0]!.findings.slice(1)] },
+        ...r.groups.slice(1),
+      ],
+    };
+  };
+  it("is written file:line:column by locationOf, and file:line without one", () => {
+    expect(
+      locationOf({
+        ruleId: "X",
+        layer: "model",
+        objectType: "Partition",
+        objectName: "P",
+        location: { file: "a.tmdl", line: 3, column: 7 },
+      }),
+    ).toBe("a.tmdl:3:7");
+    expect(
+      locationOf({
+        ruleId: "X",
+        layer: "model",
+        objectType: "Partition",
+        objectName: "P",
+        location: { file: "a.tmdl", line: 3 },
+      }),
+    ).toBe("a.tmdl:3");
+  });
+  it("reaches the text, JSON, SARIF, and Markdown outputs", () => {
+    const r = withColumn(result);
+    expect(formatText(r)).toContain("definition/tables/Sales.tmdl:12:9");
+    expect(formatMarkdown(r)).toContain("definition/tables/Sales.tmdl:12:9");
+    const json = JSON.parse(formatJson(r));
+    expect(json.groups[0].findings[0]).toMatchObject({
+      file: "definition/tables/Sales.tmdl",
+      line: 12,
+      column: 9,
+    });
+    const sarif = JSON.parse(formatSarif(r));
+    expect(sarif.runs[0].results[0].locations[0].physicalLocation.region).toEqual({
+      startLine: 12,
+      startColumn: 9,
+    });
+  });
+  it("is absent from every output for a finding without one, as before", () => {
+    const json = JSON.parse(formatJson(result));
+    for (const g of json.groups) for (const f of g.findings) expect(f).not.toHaveProperty("column");
+    const sarif = JSON.parse(formatSarif(result));
+    for (const res of sarif.runs[0].results)
+      for (const l of res.locations ?? [])
+        expect(l.physicalLocation.region).not.toHaveProperty("startColumn");
+  });
+});
+
+describe("a Power Query rule in every format", () => {
+  const pq: Rule = {
+    id: "PQ_RULE",
+    name: "A Power Query rule",
+    category: "Performance",
+    severity: 2,
+    scope: ["Partition"],
+    layer: "powerquery",
+    needs: ["model"],
+    description: "Made up.",
+    references: [],
+    status: "builtin",
+    check: ({ model }) =>
+      model!.tables.flatMap((t) => t.partitions.map((p) => finding.partition(p))),
+  };
+  const wholeModel: Rule = {
+    ...pq,
+    id: "PROJECT_RULE",
+    name: "A project rule",
+    layer: "project",
+    needs: [],
+    check: ({ model }) => [finding.model(model!)],
+  };
+  let run: LintResult;
+  beforeAll(async () => {
+    run = await lint(files, { rules: [pq, wholeModel] });
+  });
+  it("keeps the rule's layer on its group, and the model layer on its findings (v3 spec, section 10.1)", () => {
+    const group = run.groups.find((g) => g.rule.id === "PQ_RULE")!;
+    expect(group.rule.layer).toBe("powerquery");
+    expect(group.findings.map((f) => f.layer)).toEqual(["model"]);
+    const doc = JSON.parse(formatJson(run));
+    const json = doc.groups.find((g: { rule: { id: string } }) => g.rule.id === "PQ_RULE");
+    expect(json.rule.layer).toBe("powerquery");
+    expect(json.findings[0].layer).toBe("model");
+  });
+  it("tags SARIF's rule with the layer and keeps the model path for its result", () => {
+    const sarif = JSON.parse(formatSarif(run, { pathPrefix: "proj/Demo.SemanticModel" }));
+    const rule = sarif.runs[0].tool.driver.rules.find((r: { id: string }) => r.id === "PQ_RULE");
+    expect(rule.properties.layer).toBe("powerquery");
+    const uris = sarif.runs[0].results
+      .filter((r: { ruleId: string }) => r.ruleId === "PQ_RULE")
+      .map(
+        (r: { locations: [{ physicalLocation: { artifactLocation: { uri: string } } }] }) =>
+          r.locations[0].physicalLocation.artifactLocation.uri,
+      );
+    expect(uris).toEqual(["proj/Demo.SemanticModel/definition/tables/Sales.tmdl"]);
+  });
+  it("prints powerquery in Markdown's list and heading", () => {
+    const md = formatMarkdown(run);
+    expect(md).toContain("\n## WARNING: A Power Query rule (1) · powerquery\n");
+  });
+  it("tags the text format's groups so every rule name starts in the same column", () => {
+    const text = formatText(run);
+    expect(text).toMatch(/\nWARN {3}\[powerquery\] {2}A Power Query rule {2}PQ_RULE {2}\(1\)\n/);
+    const heads = text.split("\n").filter((l) => /^(ERROR|WARN |INFO ) {2}\[/.test(l));
+    expect(heads.length).toBeGreaterThanOrEqual(2);
+    // Severity tag (5) and two spaces, then the tag padded to 12, then two spaces.
+    for (const line of heads) expect(line.charAt(21), line).not.toBe(" ");
+    for (const line of heads) expect(line.slice(19, 21), line).toBe("  ");
   });
 });

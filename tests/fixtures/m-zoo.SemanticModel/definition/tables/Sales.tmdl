@@ -1,0 +1,33 @@
+/// Incremental refresh whose filter includes both bounds. The refresh policy's source expression repeats the partition's M, as Desktop writes it.
+table Sales
+	lineageTag: 6c0f5a1e-0002-4000-8000-000000000007
+
+	column 'Order Date'
+		dataType: dateTime
+		formatString: General Date
+		summarizeBy: none
+		sourceColumn: OrderDate
+
+	partition Sales = m
+		mode: import
+		source =
+				let
+					Source = Sql.Database(ServerName, "Warehouse"),
+					Orders = Source{[Schema="dbo",Item="Orders"]}[Data],
+					#"Filtered Rows" = Table.SelectRows(Orders, each [OrderDate] >= RangeStart and [OrderDate] <= RangeEnd)
+				in
+					#"Filtered Rows"
+
+	refreshPolicy
+		policyType: basic
+		rollingWindowGranularity: year
+		rollingWindowPeriods: 3
+		incrementalGranularity: day
+		incrementalPeriods: 10
+		sourceExpression =
+				let
+					Source = Sql.Database(ServerName, "Warehouse"),
+					Orders = Source{[Schema="dbo",Item="Orders"]}[Data],
+					#"Filtered Rows" = Table.SelectRows(Orders, each [OrderDate] >= RangeStart and [OrderDate] <= RangeEnd)
+				in
+					#"Filtered Rows"

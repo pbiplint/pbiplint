@@ -76,7 +76,10 @@ export function formatSarif(result: LintResult, options: FormatOptions = {}): st
               {
                 physicalLocation: {
                   artifactLocation: { uri: uri(f.location.file, f.layer) },
-                  region: { startLine: f.location.line },
+                  region: {
+                    startLine: f.location.line,
+                    ...(f.location.column !== undefined ? { startColumn: f.location.column } : {}),
+                  },
                 },
               },
             ],
@@ -102,16 +105,27 @@ export function formatSarif(result: LintResult, options: FormatOptions = {}): st
         rules,
       },
     },
-    ...(incomplete.length
+    // A rule that could not finish is an error notification on the rule, so its missing results
+    // are not mistaken for clean either, and a run in which a rule could not finish is not
+    // successful. A run with only files it could not read still is: every rule finished.
+    ...(incomplete.length || result.summary.ruleErrors.length
       ? {
           invocations: [
             {
-              executionSuccessful: true,
-              toolExecutionNotifications: incomplete.map((d) => ({
-                level: "warning",
-                descriptor: { id: d.kind },
-                message: { text: d.message },
-              })),
+              executionSuccessful: result.summary.ruleErrors.length === 0,
+              toolExecutionNotifications: [
+                ...incomplete.map((d) => ({
+                  level: "warning",
+                  descriptor: { id: d.kind },
+                  message: { text: d.message },
+                })),
+                ...result.summary.ruleErrors.map((e) => ({
+                  level: "error",
+                  descriptor: { id: "rule-error" },
+                  associatedRule: { id: e.id },
+                  message: { text: `The rule ${e.id} could not finish: ${e.message}` },
+                })),
+              ],
             },
           ],
         }

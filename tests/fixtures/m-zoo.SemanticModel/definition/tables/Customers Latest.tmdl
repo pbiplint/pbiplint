@@ -1,0 +1,21 @@
+/// Keeps each customer's latest row: sorted newest first, then duplicates removed, with nothing holding the sort.
+table 'Customers Latest'
+	lineageTag: 6c0f5a1e-0002-4000-8000-000000000001
+
+	column 'Customer ID'
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Customer ID
+
+	partition 'Customers Latest' = m
+		mode: import
+		source =
+				let
+					Source = Csv.Document(File.Contents("C:\Demo\Data\Customers.csv"), [Delimiter=",", Columns=2, Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+					#"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+					#"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers", {{"Customer ID", type text}, {"Updated", type date}}),
+					#"Sorted Rows" = Table.Sort(#"Changed Type", {{"Updated", Order.Descending}}),
+					#"Removed Duplicates" = Table.Distinct(#"Sorted Rows", {"Customer ID"}),
+					#"Removed Other Columns" = Table.SelectColumns(#"Removed Duplicates", {"Customer ID"})
+				in
+					#"Removed Other Columns"

@@ -1,0 +1,23 @@
+/// Workbooks: headers promoted by the reader, two ways, beside Desktop's own call, and a legacy .xls file beside an .xlsx.
+table Budget
+	lineageTag: 6c0f5a1e-0002-4000-8000-000000000014
+
+	column Amount
+		dataType: double
+		formatString: #,0.00
+		summarizeBy: none
+		sourceColumn: Amount
+
+	partition Budget = m
+		mode: import
+		source =
+				let
+					ReaderHeaders = Excel.Workbook(File.Contents("C:\Demo\Data\Budget.xlsx"), true),
+					OptionHeaders = Excel.Workbook(File.Contents("C:\Demo\Data\Budget.xlsx"), [UseHeaders = true]),
+					Desktop = Excel.Workbook(File.Contents("C:\Demo\Data\Budget.xlsx"), null, true),
+					Legacy = Excel.Workbook(File.Contents("C:\Demo\Data\Budget.xls"), null, true),
+					Sheet = Desktop{[Item = "Budget", Kind = "Sheet"]}[Data],
+					#"Promoted Headers" = Table.PromoteHeaders(Sheet, [PromoteAllScalars = true]),
+					Combined = Table.Combine({#"Promoted Headers", ReaderHeaders{0}[Data], OptionHeaders{0}[Data], Legacy{0}[Data]})
+				in
+					Combined

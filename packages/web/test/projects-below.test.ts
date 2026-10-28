@@ -1,16 +1,25 @@
 import { cpSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { tempDir } from "../../../tests/support/temp-dir.js";
 import { UsageError } from "../../cli/src/args.js";
-import { resolveProject } from "../../cli/src/walk.js";
+import { noTmdlNote, runSummary, type ProjectRun } from "@pbiplint/core";
+import { lintSeveral } from "../../cli/src/several.js";
+import { lintProjects } from "../src/lint-projects.js";
+import {
+  MAX_PROJECTS as CLI_MAX_PROJECTS,
+  resolveInput,
+  resolveProject,
+} from "../../cli/src/walk.js";
 import {
   emptyTree,
   InputError,
   isModelFolder,
   isReportFolder,
+  MAX_PROJECTS,
   selectProject,
+  selectProjects,
   type InputTree,
 } from "../src/input/project-files.js";
 import { markerOf, SKIP_DIRS, wanted } from "../src/input/read-drop.js";
@@ -160,6 +169,34 @@ describe("a folder with projects below it, in the CLI and the browser (#174)", (
       },
     ],
     [
+      // The monorepo of #236 with one report: both follow the .pbip to the shared model (#237).
+      "a .pbip whose report reads a shared model elsewhere in the folder",
+      (r) => {
+        mkdirSync(join(r, "reports", "Sales"), { recursive: true });
+        writeFileSync(
+          join(r, "reports", "Sales", "Sales.pbip"),
+          j({ version: "1.0", artifacts: [{ report: { path: "Sales.Report" } }] }),
+        );
+        reportAt(
+          join(r, "reports", "Sales", "Sales.Report"),
+          "../../../models/Shared.SemanticModel",
+        );
+        modelAt(join(r, "models", "Shared.SemanticModel"), "Shared");
+      },
+    ],
+    [
+      "a .pbip whose artifacts name a report in another folder",
+      (r) => {
+        mkdirSync(join(r, "Proj"));
+        writeFileSync(
+          join(r, "Proj", "Sales.pbip"),
+          j({ version: "1.0", artifacts: [{ report: { path: "../Other/Sales.Report" } }] }),
+        );
+        reportAt(join(r, "Other", "Sales.Report"), "../Sales.SemanticModel");
+        modelAt(join(r, "Other", "Sales.SemanticModel"), "Sales");
+      },
+    ],
+    [
       "loose .tmdl files and no project, as v1 read them",
       (r) => {
         mkdirSync(join(r, "a", "b"), { recursive: true });
@@ -173,25 +210,366 @@ describe("a folder with projects below it, in the CLI and the browser (#174)", (
     fill(root);
     expect(browser(root)).toEqual(cli(root));
   });
-  it("finds the same one project where a thin report's model sits elsewhere, which only the CLI follows", () => {
-    // The browser has no .pbip route (spec section 12): it reads the .pbip's folder, the report
-    // alone, and says which model the report reads.
-    const root = tempDir("both-apart");
+  it("gives a reference out of the folder the CLI's outside notice, with the drop for the path named (#237)", () => {
+    // The CLI's words, but for what the browser was given: a folder dropped, not a path named.
+    const asDropped = (cli: string): string =>
+      cli.replace("the path you named", "the folder you dropped").replace("; lint ", "; drop ");
+    const root = tempDir("both-outside");
     mkdirSync(join(root, "reports"));
     writeFileSync(
       join(root, "reports", "Thin.pbip"),
       j({ version: "1.0", artifacts: [{ report: { path: "Thin.Report" } }] }),
     );
-    reportAt(join(root, "reports", "Thin.Report"), "../../models/Shared.SemanticModel");
-    modelAt(join(root, "models", "Shared.SemanticModel"), "Shared");
-    const notice: [string, string] = ["project-below-input", "reports/Thin.pbip"];
-    expect(cli(root)).toMatchObject({ absent: {}, diagnostics: [notice] });
+    reportAt(join(root, "reports", "Thin.Report"), "../../../elsewhere.SemanticModel");
+    const c = resolveProject(root);
+    const b = selectProject(dropOf(root));
     expect(browser(root)).toMatchObject({
+      files: (cli(root) as { files: string[] }).files,
+      diagnostics: c.diagnostics.map((d) => [d.kind, d.path]),
+    });
+    expect(b.absent).toEqual({ model: asDropped(c.absent.model!) });
+    expect(b.diagnostics.map((d) => d.message)).toEqual(
+      c.diagnostics.map((d) => asDropped(d.message)),
+    );
+  });
+});
+
+describe("a .pbip below the folder, followed by the CLI and the browser alike (#237)", () => {
+  // Each layout below changed what the site gives, toward the CLI's: the two give the same files,
+  // absent reasons, notices, or refusal. The CLI names its paths from the folder named, which the
+  // drop names by that folder's name, and says "the path you named" where the site says "the
+  // folder you dropped".
+  type Answer = { files: string[]; absent: object; said: string[] } | { refused: string };
+  const answer = (
+    read: () => ReturnType<typeof selectProject> | ReturnType<typeof resolveProject>,
+  ) => {
+    try {
+      const p = read();
+      const files =
+        "files" in p ? p.files : [...(p.model?.files ?? []), ...(p.report?.files ?? [])];
+      return {
+        files: files.map((f) => f.path).sort(byName),
+        absent: p.absent,
+        said: p.diagnostics.map((d) => d.message),
+      } as Answer;
+    } catch (e) {
+      if (!(e instanceof UsageError) && !(e instanceof InputError)) throw e;
+      return { refused: e.message } as Answer;
+    }
+  };
+  function same(fill: (root: string) => void): Answer {
+    const root = tempDir("both-pbip");
+    fill(root);
+    const asDropped = (s: string): string =>
+      s
+        .split(`${dirname(root)}/`)
+        .join("")
+        .replaceAll("the path you named", "the folder you dropped")
+        .replaceAll("; lint ", "; drop ");
+    const c = JSON.parse(asDropped(JSON.stringify(answer(() => resolveProject(root)))));
+    const b = answer(() => selectProject(dropOf(root)));
+    expect(b).toEqual(c);
+    return b;
+  }
+  const pbipAt = (file: string, ...reports: string[]): void => {
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(
+      file,
+      j({ version: "1.0", artifacts: reports.map((path) => ({ report: { path } })) }),
+    );
+  };
+
+  it("says the model a report reads is not there", () => {
+    const b = same((r) => {
+      pbipAt(join(r, "reports", "Thin.pbip"), "Thin.Report");
+      reportAt(join(r, "reports", "Thin.Report"), "../../models/Nope.SemanticModel");
+    });
+    expect(b).toMatchObject({
+      absent: {
+        model: "this report reads a model that is not there (../../models/Nope.SemanticModel)",
+      },
+    });
+  });
+  it("gives a model outside the folder the outside notice and reason", () => {
+    const b = same((r) => {
+      pbipAt(join(r, "reports", "Thin.pbip"), "Thin.Report");
+      reportAt(join(r, "reports", "Thin.Report"), "../../../elsewhere.SemanticModel");
+    });
+    expect(b).toMatchObject({
       absent: {
         model:
-          "this report reads ../../models/Shared.SemanticModel, which this run did not include",
+          "the model this report reads is outside the folder you dropped and the project folder",
       },
-      diagnostics: [notice],
     });
+  });
+  it("refuses a .pbip naming a report that is not there", () => {
+    const b = same((r) => pbipAt(join(r, "reports", "Thin.pbip"), "Nope.Report"));
+    expect(b).toEqual({
+      refused: expect.stringMatching(/Thin\.pbip names Nope\.Report, which does not exist$/),
+    });
+  });
+  it("lints a report in the .pbip's own subfolder, with its model", () => {
+    const b = same((r) => {
+      pbipAt(join(r, "proj", "Sales.pbip"), "sub/Sales.Report");
+      reportAt(join(r, "proj", "sub", "Sales.Report"), "../Sales.SemanticModel");
+      modelAt(join(r, "proj", "sub", "Sales.SemanticModel"), "Sales");
+    });
+    expect(b).toMatchObject({ absent: {} });
+    expect((b as { files: string[] }).files).toContain("definition/Sales.tmdl");
+  });
+  it("follows a byPath written with Windows backslashes, and says when its model is not there", () => {
+    const found = same((r) => {
+      pbipAt(join(r, "reports", "Sales", "Sales.pbip"), "Sales.Report");
+      reportAt(
+        join(r, "reports", "Sales", "Sales.Report"),
+        "..\\..\\..\\models\\Shared.SemanticModel",
+      );
+      modelAt(join(r, "models", "Shared.SemanticModel"), "Shared");
+    });
+    expect((found as { files: string[] }).files).toContain("definition/Shared.tmdl");
+    const missing = same((r) => {
+      pbipAt(join(r, "reports", "Thin.pbip"), "Thin.Report");
+      reportAt(join(r, "reports", "Thin.Report"), "..\\..\\models\\Nope.SemanticModel");
+    });
+    expect(missing).toMatchObject({
+      absent: {
+        model: "this report reads a model that is not there (..\\..\\models\\Nope.SemanticModel)",
+      },
+    });
+  });
+  it("names a legacy model the report reads by its path from the project root", () => {
+    const b = same((r) => {
+      pbipAt(join(r, "Proj", "Thin.pbip"), "Thin.Report");
+      reportAt(join(r, "Proj", "Thin.Report"), "../../Models/M.SemanticModel");
+      mkdirSync(join(r, "Models", "M.SemanticModel"), { recursive: true });
+      writeFileSync(join(r, "Models", "M.SemanticModel", "model.bim"), "{}");
+    });
+    expect(b).toMatchObject({
+      said: [
+        expect.stringContaining("is the only project"),
+        expect.stringMatching(/^\.\.\/Models\/M\.SemanticModel is stored as model\.bim/),
+      ],
+    });
+  });
+  it("refuses a .pbip whose report folder holds nothing to read", () => {
+    const b = same((r) => {
+      pbipAt(join(r, "Proj", "Thin.pbip"), "../Other/Thin.Report");
+      mkdirSync(join(r, "Other", "Thin.Report"), { recursive: true });
+      writeFileSync(join(r, "Other", "Thin.Report", "notes.txt"), "");
+    });
+    expect(b).toEqual({
+      refused: expect.stringMatching(
+        /^No semantic model or report found in \.\.\/Other\/Thin\.Report, which .*Proj\/Thin\.pbip names$/,
+      ),
+    });
+  });
+});
+
+describe("a folder that holds several projects, in the CLI and the browser (#237)", () => {
+  // The CLI's resolveInput and the page's selectProjects on the same folders on disk: the same
+  // projects in the same order, and per project the same model and report files, or the same
+  // project unreadable. The CLI names a path in a refusal from the folder above the one named,
+  // which the drop names by that folder's name, and says to point at what the page says to drop.
+  type Several = { path: string; model: string[]; report: string[]; unreadable?: object }[];
+  const names = (files: { path: string }[]): string[] => files.map((f) => f.path).sort(byName);
+  function cliSeveral(root: string): Several {
+    const input = resolveInput(root);
+    if (input.kind !== "several") throw new Error("the CLI read one project");
+    // The message is compared as the CLI writes it, which names the project from the folder
+    // named, as the page names it from the drop. Only the root, a path on disk the CLI reads
+    // SARIF locations from, is made the drop's.
+    const message = (s: string): string =>
+      s.replace("; point at one of them", "; drop one of them");
+    const dropped = (s: string): string => s.split(`${dirname(root)}/`).join("");
+    return input.projects.map(({ path, project, unreadable }) => ({
+      path,
+      model: names(project?.model?.files ?? []),
+      report: names(project?.report?.files ?? []),
+      ...(unreadable
+        ? {
+            unreadable: {
+              ...unreadable,
+              message: message(unreadable.message),
+              ...(unreadable.root === undefined ? {} : { root: dropped(unreadable.root) }),
+            },
+          }
+        : {}),
+    }));
+  }
+  function browserSeveral(root: string): Several {
+    const selected = selectProjects(dropOf(root));
+    if (selected.kind !== "several") throw new Error("the browser read one project");
+    // The page lists a project's files as one list: the model's are its .tmdl files.
+    return selected.projects.map(({ path, project, unreadable }) => {
+      const files = project?.files ?? [];
+      return {
+        path,
+        model: names(files.filter((f) => f.path.endsWith(".tmdl"))),
+        report: names(files.filter((f) => !f.path.endsWith(".tmdl"))),
+        ...(unreadable ? { unreadable } : {}),
+      };
+    });
+  }
+
+  /** #236's monorepo, as several.test.ts builds it: two reports read one model by path. */
+  function monorepo(r: string): void {
+    const model = join(sample, "Messy Sales Demo.SemanticModel");
+    cpSync(model, join(r, "models", "Shared.SemanticModel"), { recursive: true });
+    cpSync(model, join(r, "models", "Standalone.SemanticModel"), { recursive: true });
+    for (const name of ["Finance", "Sales"]) {
+      const dir = join(r, "reports", name);
+      cpSync(join(sample, "Messy Sales Demo.Report"), join(dir, `${name}.Report`), {
+        recursive: true,
+      });
+      writeFileSync(
+        join(dir, `${name}.pbip`),
+        j({ version: "1.0", artifacts: [{ report: { path: `${name}.Report` } }] }),
+      );
+      writeFileSync(
+        join(dir, `${name}.Report`, "definition.pbir"),
+        j({
+          version: "4.0",
+          datasetReference: { byPath: { path: "../../../models/Shared.SemanticModel" } },
+        }),
+      );
+    }
+    // Finance's report reaches [Sales YoY %], which the sample's report does not.
+    const visual = join(
+      r,
+      "reports/Finance/Finance.Report/definition/pages/27f668864829019f9251/visuals/1e7f28bf49e435b68c50/visual.json",
+    );
+    const text = readFileSync(visual, "utf8");
+    writeFileSync(visual, text.replace('"Property": "Total Sales"', '"Property": "Sales YoY %"'));
+  }
+  const pbipNaming = (file: string, ...reports: string[]): void =>
+    writeFileSync(
+      file,
+      j({ version: "1.0", artifacts: reports.map((path) => ({ report: { path } })) }),
+    );
+
+  const cases: [string, (root: string) => void][] = [
+    [
+      "two projects below",
+      (r) => {
+        cpSync(sample, join(r, "a", "messy-sales"), { recursive: true });
+        cpSync(sample, join(r, "b", "messy-sales"), { recursive: true });
+      },
+    ],
+    [
+      "two pairs side by side with no .pbip",
+      (r) => {
+        for (const name of ["A", "B"]) {
+          modelAt(join(r, `${name}.SemanticModel`), name);
+          reportAt(join(r, `${name}.Report`), `../${name}.SemanticModel`);
+        }
+      },
+    ],
+    [
+      "two projects side by side, as Power BI Desktop saves them",
+      (r) => {
+        for (const name of ["Finance", "Sales"]) {
+          pbipNaming(join(r, `${name}.pbip`), `${name}.Report`);
+          modelAt(join(r, `${name}.SemanticModel`), name);
+          reportAt(join(r, `${name}.Report`), `../${name}.SemanticModel`);
+        }
+      },
+    ],
+    ["#236's monorepo, two reports on one shared model", monorepo],
+    [
+      "a project beside one saved as model.bim",
+      (r) => {
+        modelAt(join(r, "a", "Sales.SemanticModel"), "Sales");
+        mkdirSync(join(r, "b", "Finance.SemanticModel"), { recursive: true });
+        writeFileSync(join(r, "b", "Finance.SemanticModel", "model.bim"), "{}");
+      },
+    ],
+    [
+      "a project beside a .pbip naming two reports",
+      (r) => {
+        cpSync(sample, join(r, "a", "messy-sales"), { recursive: true });
+        mkdirSync(join(r, "b"));
+        pbipNaming(join(r, "b", "Two.pbip"), "A.Report", "B.Report");
+        reportAt(join(r, "b", "A.Report"), "../M.SemanticModel");
+        reportAt(join(r, "b", "B.Report"), "../M.SemanticModel");
+      },
+    ],
+  ];
+  it.each(cases)("%s", (_, fill) => {
+    const root = tempDir("both-several");
+    fill(root);
+    expect(browserSeveral(root)).toEqual(cliSeveral(root));
+  });
+
+  it("notes no model folder that is another project's, side by side", () => {
+    // B's and Loose's models are their own projects' (B lints its report with its legacy model's
+    // notice, Loose is listed with its PARSE_ISSUE), so A's notes do not name them as models A
+    // left unlinted, as the CLI's run of A does not. C's model, empty, is C's to name.
+    const root = tempDir("both-several-notes");
+    for (const name of ["A", "B", "C"]) {
+      pbipNaming(join(root, `${name}.pbip`), `${name}.Report`);
+      reportAt(join(root, `${name}.Report`), `../${name}.SemanticModel`);
+    }
+    modelAt(join(root, "A.SemanticModel"), "A");
+    mkdirSync(join(root, "B.SemanticModel"));
+    writeFileSync(join(root, "B.SemanticModel", "model.bim"), "{}");
+    mkdirSync(join(root, "C.SemanticModel"));
+    mkdirSync(join(root, "Loose.SemanticModel"));
+    const selected = selectProjects(dropOf(root));
+    if (selected.kind !== "several") throw new Error("the browser read one project");
+    expect(selected.projects.map((p) => [p.path, p.project?.notes])).toEqual([
+      ["A.pbip", []],
+      ["B.pbip", []],
+      ["C.pbip", [noTmdlNote([`${basename(root)}/C.SemanticModel`])]],
+      ["Loose.SemanticModel", undefined],
+    ]);
+  });
+
+  it("names the config file the page refuses, by its path in the drop", async () => {
+    // Each project of several can have its own pbiplint.config.json, so the refusal says which.
+    const root = tempDir("both-several-bad-config");
+    monorepo(root);
+    const sales = join(root, "reports", "Sales", "pbiplint.config.json");
+    const lintDrop = async () => {
+      const selected = selectProjects(dropOf(root));
+      if (selected.kind !== "several") throw new Error("the browser read one project");
+      return lintProjects(selected.projects);
+    };
+    const at = `${basename(root)}/reports/Sales/pbiplint.config.json`;
+    writeFileSync(sales, j({ bogus: 1 }));
+    await expect(lintDrop()).rejects.toThrow(new Error(`${at}: unknown key "bogus"`));
+    writeFileSync(sales, j({ rules: { BROKEN_FIELD_REFERENCE: "loud" } }));
+    await expect(lintDrop()).rejects.toThrow(
+      new RegExp(`^${at}: rules\\["BROKEN_FIELD_REFERENCE"\\]`),
+    );
+    writeFileSync(sales, "{");
+    await expect(lintDrop()).rejects.toThrow(new RegExp(`^${at} is not valid JSON: `));
+  });
+
+  it("caps a run at the same number of projects", () => {
+    expect(MAX_PROJECTS).toBe(CLI_MAX_PROJECTS);
+  });
+
+  it("lints #236's monorepo to the same counts per project, the shared model's findings once", async () => {
+    const root = tempDir("both-several-lint");
+    monorepo(root);
+    const named = resolveInput(root);
+    if (named.kind !== "several") throw new Error("the CLI read one project");
+    const cli = (await lintSeveral(root, named.projects, { cwd: root })).run.runs;
+    const selected = selectProjects(dropOf(root));
+    if (selected.kind !== "several") throw new Error("the browser read one project");
+    // The page's own loop (main.ts runs it): each under its own config, then the shared-model step.
+    const site = (await lintProjects(selected.projects))!.runs;
+    const counts = (r: ProjectRun[]) =>
+      r.map((p) => [p.path, p.result.summary.findings, p.result.summary.errors, p.result.failed]);
+    expect(counts(site)).toEqual(counts(cli));
+    expect(runSummary(site)).toEqual(runSummary(cli));
+    const notices = (r: ProjectRun[]) =>
+      r.map((p) =>
+        p.result.diagnostics.filter((d) => d.kind === "shared-model").map((d) => d.message),
+      );
+    expect(notices(site)).toEqual(notices(cli));
+    expect(notices(site)[2]).toEqual([
+      "the model at models/Shared.SemanticModel is shared with reports/Finance/Finance.pbip; its findings are listed there",
+    ]);
   });
 });

@@ -1,4 +1,4 @@
-import { unquoteName } from "../tmdl/quote.js";
+import { quoteEnd, unquoteName } from "../tmdl/quote.js";
 import type { ParsedFile, TmdlNode } from "../tmdl/types.js";
 import type {
   AlternateOf,
@@ -16,6 +16,7 @@ import type {
   Named,
   Partition,
   Perspective,
+  RefreshPolicy,
   Relationship,
   Role,
   SourceLocation,
@@ -49,11 +50,27 @@ function named(n: TmdlNode, name = n.name ?? ""): Named {
   };
 }
 
-/** Split `Table.Column` or `'Some Table'.'Some Column'` into its unquoted parts. */
+/** Whether `s` is a column as `('(?:[^']|'')*'|.+)$` reads one: a whole quoted name, or one line. */
+const columnPart = (s: string): boolean =>
+  s !== "" && (quoteEnd(s) === s.length - 1 || !/[\n\r\u2028\u2029]/.test(s));
+
+/**
+ * Split `Table.Column` or `'Some Table'.'Some Column'` into its unquoted parts, as
+ * `/^('(?:[^']|'')*'|[^.]+)\.('(?:[^']|'')*'|.+)$/` did, read by hand: the regex overflowed its
+ * stack on a name of millions of characters (the pre-release security review, October 27, 2026).
+ */
 export function splitQualifiedName(ref: string): { table: string; column: string } {
-  const m = /^('(?:[^']|'')*'|[^.]+)\.('(?:[^']|'')*'|.+)$/.exec(ref.trim());
-  return m
-    ? { table: unquoteName(m[1]!), column: unquoteName(m[2]!) }
+  const s = ref.trim();
+  const q = quoteEnd(s);
+  const dot = s.indexOf(".");
+  const end =
+    q > 0 && s[q + 1] === "." && columnPart(s.slice(q + 2))
+      ? q + 1
+      : dot > 0 && columnPart(s.slice(dot + 1))
+        ? dot
+        : -1;
+  return end > 0
+    ? { table: unquoteName(s.slice(0, end)), column: unquoteName(s.slice(end + 1)) }
     : { table: "", column: unquoteName(ref) };
 }
 
@@ -221,6 +238,13 @@ function buildTable(r: TmdlNode, model: Model): void {
       t.hierarchies.push(buildHierarchy(c, t));
     else if (c.kind === "object" && c.type === "calendar")
       (t.calendars ??= []).push(buildCalendar(c, t));
+    else if (c.type === "refreshpolicy")
+      // The first part of the table that declares one decides it, as a calculation group's does.
+      t.refreshPolicy ??= {
+        ...named(c, t.name),
+        table: t,
+        sourceExpression: str(c.props.sourceexpression),
+      } satisfies RefreshPolicy;
     else if (c.type === "calculationgroup") {
       const group = buildCalculationGroup(c, t);
       const first = t.calculationGroup;
@@ -405,7 +429,12 @@ function readDeclaration(r: TmdlNode, model: Model): void {
       model.cultures.push(buildCulture(r));
       break;
     case "expression":
-      model.expressions.push({ ...named(r), expression: r.value ?? "" });
+      // A declaration with no `=` may write its M on an `expression =` line under it (v3 spec,
+      // section 5.1); one corpus repository does.
+      model.expressions.push({
+        ...named(r),
+        expression: r.value ?? str(r.props.expression) ?? "",
+      });
       break;
     case "function":
       model.functions.push({ ...named(r), expression: r.value ?? "" });
@@ -438,6 +467,14 @@ function readModel(r: TmdlNode, model: Model): void {
     annotations: model.annotations,
     props: { ...model.props, ...r.props },
   });
+  // A flag-style block of flags (tmdl/parse.ts keeps it so); a second declaration of the model
+  // adds its flags to the first's.
+  const block = r.children.find((c) => c.type === "dataaccessoptions");
+  if (block) {
+    model.dataAccessOptions ??= { location: loc(block), flags: [] };
+    for (const c of block.children)
+      if (c.kind === "flag") model.dataAccessOptions.flags.push({ name: c.type, location: loc(c) });
+  }
 }
 
 /**

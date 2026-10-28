@@ -1,4 +1,4 @@
-import type { LintResult } from "../engine/lint.js";
+import type { LintResult, ShownSummary } from "../engine/lint.js";
 import type { RankedGroup } from "../engine/rank.js";
 import type { SkippedRule } from "../engine/run.js";
 import type { LayerStatus } from "../project/types.js";
@@ -29,26 +29,64 @@ export interface FormatOptions {
   pathPrefix?: string;
   /** The report's prefix, joined in front of a report finding's SARIF artifact URI; falls back to pathPrefix. */
   reportPathPrefix?: string;
+  /**
+   * The Markdown format's top heading level, 1 by default; every heading below it moves down with
+   * it, so a report can sit as one section of a larger document. The other formats ignore it.
+   */
+  headingLevel?: number;
 }
 
 const SEVERITY_TAG = { 3: "ERROR", 2: "WARN ", 1: "INFO " } as const;
 
+/** Where a finding is, as editors and terminals link it: `file:line`, or `file:line:column`. */
 export const locationOf = (f: Finding): string =>
-  f.location ? `${f.location.file}:${f.location.line}` : "";
+  f.location
+    ? `${f.location.file}:${f.location.line}${f.location.column === undefined ? "" : `:${f.location.column}`}`
+    : "";
 
 /** "1 rule", "2 rules". Nouns that do not take an s ("info") are written out by the caller. */
 export const plural = (n: number, noun: string): string => `${n} ${noun}${n === 1 ? "" : "s"}`;
 
-/** Summary sentence shared by the text and markdown formats. */
-export function summaryLine(result: LintResult): string {
-  const s = result.summary;
+/**
+ * Summary sentence shared by the text and markdown formats and the site. A run where a rule could
+ * not finish says so here, so a count missing that rule's findings never reads as the whole lint.
+ */
+export const summaryLine = (result: LintResult): string =>
+  countsLine(result.summary, failedRules(result));
+
+/** How many rules could not finish in the run, each counted once however often it failed. */
+export const failedRules = (result: LintResult): number =>
+  new Set(result.summary.ruleErrors.map((e) => e.id)).size;
+
+/** What a summary sentence counts: findings by severity, files, and what a filtered run shows. */
+export interface CountedRun {
+  findings: number;
+  errors: number;
+  warnings: number;
+  infos: number;
+  files: number;
+  shown?: ShownSummary;
+}
+
+/**
+ * `summaryLine`'s sentence from the counts alone, for a caller that adds up several runs: `failed`
+ * is how many rules could not finish.
+ */
+export function countsLine(s: CountedRun, failed: number): string {
+  const unfinished = failed ? `, ${plural(failed, "rule")} could not finish` : "";
   // A result kept to some rules says so, so a filtered run never reads as the whole lint.
   if (s.shown) {
     const k = s.shown;
-    return `${k.findings} of ${plural(s.findings, "finding")} shown, ${plural(k.rules.length, "rule")} (${plural(k.errors, "error")}, ${plural(k.warnings, "warning")}, ${k.infos} info) in ${plural(s.files, "file")}`;
+    return `${k.findings} of ${plural(s.findings, "finding")} shown, ${plural(k.rules.length, "rule")} (${plural(k.errors, "error")}, ${plural(k.warnings, "warning")}, ${k.infos} info) in ${plural(s.files, "file")}${unfinished}`;
   }
-  return `${plural(s.findings, "finding")} (${plural(s.errors, "error")}, ${plural(s.warnings, "warning")}, ${s.infos} info) in ${plural(s.files, "file")}`;
+  return `${plural(s.findings, "finding")} (${plural(s.errors, "error")}, ${plural(s.warnings, "warning")}, ${s.infos} info) in ${plural(s.files, "file")}${unfinished}`;
 }
+
+/** Each rule error as a notice says it: the rule, that it could not finish, and the error's class. */
+export const ruleErrorNotices = (result: LintResult): string[] =>
+  result.summary.ruleErrors.map(
+    (e) => `The rule ${e.id} could not finish (please report this): ${e.message}`,
+  );
 
 export function skippedLine(result: LintResult): string {
   const s = result.summary;
@@ -122,8 +160,11 @@ export function factsLines(result: LintResult): string[] {
   ];
 }
 
+/** The run's notices: what the reader could not read, then each rule that could not finish. */
 export const noticeLines = (result: LintResult): string[] =>
-  result.diagnostics.map((d) => `Notice: ${showControls(d.message)}`);
+  [...result.diagnostics.map((d) => d.message), ...ruleErrorNotices(result)].map(
+    (m) => `Notice: ${showControls(m)}`,
+  );
 
 export const topGroups = (result: LintResult, n = 5): RankedGroup[] => result.groups.slice(0, n);
 
@@ -150,9 +191,10 @@ export function formatText(result: LintResult, _options: FormatOptions = {}): st
       ),
     );
     out.push("");
+    // The tag column fits the longest tag, `[powerquery]`, so every rule name starts in one column.
     for (const g of result.groups) {
       out.push(
-        `${SEVERITY_TAG[g.rule.severity]}  ${layerTag(g.rule.layer).padEnd(9)}  ${g.rule.name}  ${g.rule.id}  (${g.findings.length})`,
+        `${SEVERITY_TAG[g.rule.severity]}  ${layerTag(g.rule.layer).padEnd(12)}  ${g.rule.name}  ${g.rule.id}  (${g.findings.length})`,
       );
       out.push(`       ${g.rule.url}`);
       // The location column is always emitted, empty or not, so a finding without a location never
@@ -170,12 +212,6 @@ export function formatText(result: LintResult, _options: FormatOptions = {}): st
       }
       out.push("");
     }
-  }
-  // Rule crashes are always reported, including on a run where nothing else fired.
-  if (result.summary.ruleErrors.length) {
-    out.push("Rule errors (please report these):");
-    for (const e of result.summary.ruleErrors) out.push(`  ${e.id}: ${showControls(e.message)}`);
-    out.push("");
   }
   return out.join("\n");
 }

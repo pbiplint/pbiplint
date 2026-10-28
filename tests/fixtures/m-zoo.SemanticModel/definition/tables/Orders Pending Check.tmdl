@@ -1,0 +1,19 @@
+/// The two shapes awaiting Michael's Desktop check: an address chosen with if over a parameter, and one passed to a custom function.
+table 'Orders Pending Check'
+	lineageTag: 6c0f5a1e-0002-4000-8000-000000000006
+
+	column Content
+		dataType: binary
+		summarizeBy: none
+		sourceColumn: Content
+
+	partition 'Orders Pending Check' = m
+		mode: import
+		source =
+				let
+					Address = if Environment = "Prod" then "https://api.example.com/v1/orders" else "https://test.example.com/v1/orders",
+					Chosen = Web.Contents(Address),
+					ThroughFunction = GetPage("https://api.example.com/v1/customers"),
+					Contents = #table(type table [Content = binary], {{Chosen}, {ThroughFunction}})
+				in
+					Contents

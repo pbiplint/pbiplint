@@ -1,0 +1,11 @@
+/// A TMDL line that does not parse in the middle of a multi-line text literal holding a made-up password: a measure indented with spaces.
+table Ledger
+	lineageTag: 6c0f5a1e-0007-4000-8000-000000000003
+
+    measure 'Legacy Query' = "SELECT 1
+    FROM OPENROWSET('SQLNCLI', 'Server=legacy;Uid=sa;Pwd=pbiplint-fixture-pwd-0009-notreal', 'SELECT 1')
+    WHERE 1 = 1"
+
+	partition Ledger = m
+		mode: import
+		source = #table(type table [Name = text], {{"Ledger"}})

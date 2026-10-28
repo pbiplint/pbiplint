@@ -1,0 +1,20 @@
+/// A Python script step and an R script step, each reading nothing.
+table Scores
+	lineageTag: 6c0f5a1e-0002-4000-8000-000000000010
+
+	column Score
+		dataType: double
+		formatString: #,0.00
+		summarizeBy: none
+		sourceColumn: Score
+
+	partition Scores = m
+		mode: import
+		source =
+				let
+					Source = #table(type table [Score = number], {{1}, {2}}),
+					#"Run Python script" = Python.Execute("import pandas as pd#(lf)dataset[""Score""] = dataset[""Score""] * 2", [dataset = Source]),
+					#"Run R script" = R.Execute("output <- dataset", [dataset = Source]),
+					Combined = Table.Combine({#"Run Python script"{[Name = "dataset"]}[Value], #"Run R script"{[Name = "output"]}[Value]})
+				in
+					Combined

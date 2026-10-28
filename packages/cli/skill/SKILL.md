@@ -1,9 +1,9 @@
 ---
 name: pbiplint
-description: Lint a Power BI project (PBIP), its semantic model in TMDL and its report in PBIR, for best-practice problems, offline, with the pbiplint CLI. Use after creating or changing any TMDL or PBIR file, however the change was made (a script, an editor, an MCP server, or Power BI Desktop); when asked to check, review, or lint a Power BI project, model, or report, or whether one is right or ready; and before a commit or pull request that touches one. pbiplint 0.2.5.
+description: Lint a Power BI project (PBIP), its semantic model in TMDL and its report in PBIR, for best-practice problems, offline, with the pbiplint CLI. Use after creating or changing any TMDL or PBIR file, however the change was made (a script, an editor, an MCP server, or Power BI Desktop); when asked to check, review, or lint a Power BI project, model, or report, or whether one is right or ready; and before a commit or pull request that touches one. pbiplint 0.3.0.
 license: MIT
 metadata:
-  version: "0.2.5"
+  version: "0.3.0"
 ---
 
 # pbiplint
@@ -20,7 +20,7 @@ pbiplint checks a Power BI project's files against best-practice rules: the sema
 
 A PBIP folder, a `.pbip` file, a `.SemanticModel` folder, a `.Report` folder, a `definition` folder, or one `.tmdl` file. Either part alone is fine.
 
-It cannot read a `.pbix` file (the user saves it as a Power BI project first, with File > Save as in Desktop), a report in the older format (one `report.json` with no `definition` folder), or a model stored as `model.bim`. It lints one project per run: given a folder that holds several, it lists them and exits 2, so lint each one it names.
+It cannot read a `.pbix` file (the user saves it as a Power BI project first, with File > Save as in Desktop), a report in the older format (one `report.json` with no `definition` folder), or a model stored as `model.bim`. Given a folder that holds several projects, it lints each in one run; the quiet output opens each with a `project ` line.
 
 It runs on this machine. It reads the project's files and prints to the terminal, it never uses the network, and nothing has to be uploaded to lint a project.
 
@@ -51,8 +51,9 @@ Use `npx pbiplint` (or `pbiplint` where it is installed). If pbiplint's MCP tool
 
 ## Reading the results
 
-- Exit code 0: nothing at or above the gate (errors, by default). 1: something is. 2: nothing was linted: a usage error, an input it cannot read, a folder with several projects, or nothing it can lint. Read stderr for why. The full contract is at https://pbiplint.com/cli/#contract.
+- Exit code 0: nothing at or above the gate (errors, by default). 1: something is. 2: nothing was linted: a usage error, an input it cannot read, a folder with more than 200 projects, or nothing it can lint. Read stderr for why. The full contract is at https://pbiplint.com/cli/#contract.
 - A rule skipped because it needs a live model has not passed. It was not run.
+- A `RULE_COULD_NOT_FINISH` finding means a pbiplint rule failed on the input: a pbiplint bug, not something to fix in the model. Tell the user, and see `pbiplint explain RULE_COULD_NOT_FINISH` for what to do now and how to report it.
 - A summary that names a part it did not read (a report file it could not read, a model with no report) has not checked that part.
 - Notices (on stderr, and in the text report) say what the run did with the input, such as linting the one project found below the folder given. Pass them on to the user.
 - `--format json` prints the whole run as one document, for when you need every field.

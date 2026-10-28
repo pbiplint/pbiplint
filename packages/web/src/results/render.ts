@@ -1,7 +1,11 @@
 import {
   CATEGORY_ORDER,
   LEARN_HELP_URLS,
+  locationOf,
   plural,
+  ruleErrorNotices,
+  runSummary,
+  runSummaryLine,
   SEVERITY_LABEL,
   showControls,
   skippedLine,
@@ -11,6 +15,7 @@ import {
   type Fact,
   type LayerName,
   type LintResult,
+  type ProjectRun,
   type RankedGroup,
   type Severity,
 } from "@pbiplint/core";
@@ -22,6 +27,7 @@ import {
   exportMarkdown,
   type ExportFile,
 } from "./export.js";
+import { boxLabel, FILTER_LAYERS, LAYER_LABEL, layerShown } from "../layers.js";
 
 export interface RenderOptions {
   /**
@@ -37,7 +43,23 @@ export interface RenderOptions {
   files?: string[];
   /** Sentences about the input worth a notice under the summary, such as a model folder that was not linted. */
   notes?: string[];
+  /**
+   * The id of the section of several this run renders into (#237), such as "project-2". Every id
+   * the results give, and every link to one, then starts with it, so a group or the export note
+   * is named once on a page that shows several runs. The privacy line is said once above the
+   * sections, and the headings sit a level below the section's own.
+   */
+  section?: string;
+  /**
+   * In a section of several, the config's unknown rule ids this section names, and the config's
+   * path in the drop to name them by, in place of the result's own: each config file's are named
+   * once on the page, under the first project that uses it, as the CLI names them once per file.
+   */
+  unknown?: { config: string; ids: string[] };
 }
+
+/** Heading levels, from the results' own: h2 for one run, a level deeper in a section. */
+type Level = "h2" | "h3" | "h4";
 
 type Child = Node | string | null | undefined;
 
@@ -119,6 +141,7 @@ export function withLearnLinks(text: string): (string | HTMLAnchorElement)[] {
 }
 
 const SEVERITIES: readonly Severity[] = [3, 2, 1];
+/** The file families, for the heading's file counts. The filter's families are FILTER_LAYERS. */
 const LAYERS: readonly LayerName[] = ["model", "report"];
 const pagePath = (slug: string): string => `/rules/${slug}/`;
 
@@ -160,14 +183,10 @@ export function renderResults(
   result: LintResult,
   options: RenderOptions,
 ): void {
+  const ids: Ids = idsFor(options.section);
   container.replaceChildren(
-    h(
-      "p",
-      { class: "privacy" },
-      "Nothing was uploaded. The analysis ran in this browser tab. ",
-      newTabLink({ href: "/privacy/" }, "The pbiplint Privacy Promise"),
-    ),
-    h("h2", {}, heading(result, options.source)),
+    ...(options.section === undefined ? [privacyLine()] : []),
+    h(ids.top, {}, heading(result, options.source)),
     // The summary is not a live region: everything is rebuilt on each run, and a region inserted
     // with its text already set may not be announced. The page announces it through #announce.
     h("p", { class: "summary" }, `${summaryLine(result)}. ${skippedLine(result)}.`),
@@ -175,27 +194,23 @@ export function renderResults(
     // What the reader could not read, or read as a legacy part, follows the input's notes, so no
     // read failure is silent.
     ...result.diagnostics.map((d) => h("p", { class: "notice" }, ...withLearnLinks(d.message))),
-    ...result.summary.unknownRules.map((id) =>
-      h("p", { class: "notice" }, `pbiplint.config.json names no rule called "${id}".`),
+    ...(options.unknown?.ids ?? result.summary.unknownRules).map((id) =>
+      h(
+        "p",
+        { class: "notice" },
+        `${options.unknown?.config ?? "pbiplint.config.json"} names no rule called "${id}".`,
+      ),
     ),
     // Beside the other notices rather than below the groups: a rule that threw is worth reporting
     // whether or not the rules that ran found anything, and a clean run stops before the groups.
-    ...(result.summary.ruleErrors.length
-      ? [
-          h(
-            "p",
-            { class: "notice" },
-            "Rule errors (please report these): " +
-              result.summary.ruleErrors.map((e) => `${e.id}: ${e.message}`).join("; "),
-          ),
-        ]
-      : []),
+    // One notice per rule error, in the text and Markdown formats' words.
+    ...ruleErrorNotices(result).map((n) => h("p", { class: "notice" }, n)),
     // Right under the sentence that counts the files, so the heading's "(model, 14 files ·
     // report, 78 files)" expands into which ones.
     ...renderFilesRead(options.files),
     // What the report will do, whether or not anything fired: after everything that says what
     // was read, before what to fix. A run with no report has no facts and no panel.
-    ...renderFacts(result),
+    ...renderFacts(result, ids),
   );
   // Cleared on every render and set again below only when there are filters to change and groups
   // to link to, so a run with no findings cannot leave the previous run's handlers on the container.
@@ -206,7 +221,7 @@ export function renderResults(
     return;
   }
   container.append(
-    h("h3", {}, "Fix these first"),
+    h(ids.sub, {}, "Fix these first"),
     h(
       "ol",
       { class: "fix-first" },
@@ -217,7 +232,7 @@ export function renderResults(
         h(
           "li",
           {},
-          h("a", { href: `#rule-${g.rule.slug}` }, g.rule.name),
+          h("a", { href: `#${ids.group(g.rule.slug)}` }, g.rule.name),
           ` (${count(g.findings.length, g.rule.severity)}) `,
           layerTag(g),
           " · ",
@@ -225,9 +240,9 @@ export function renderResults(
         ),
       ),
     ),
-    ...renderExportBar(result),
+    ...renderExportBar(result, ids),
     renderFilters(result),
-    h("div", { class: "groups" }, ...result.groups.map(renderGroup)),
+    h("div", { class: "groups" }, ...result.groups.map((g) => renderGroup(g, ids))),
   );
   // One handler of each kind for the whole container, assigned rather than added, so re-rendering
   // replaces them instead of stacking a second one.
@@ -242,7 +257,8 @@ export function renderResults(
   container.onclick = (event) => {
     if (event.defaultPrevented || event.button !== 0) return;
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    const link = event.target instanceof Element ? event.target.closest("a[href^='#rule-']") : null;
+    const link =
+      event.target instanceof Element ? event.target.closest(`a[href^='#${ids.group("")}']`) : null;
     const id = link?.getAttribute("href")?.slice(1);
     const group = [...container.querySelectorAll<HTMLDetailsElement>("details.group")].find(
       (g) => g.id === id,
@@ -267,10 +283,118 @@ export function renderResults(
 }
 
 /**
+ * The ids, heading levels, and download names one run's results take: as they always were for the
+ * one run on the page, and in a section of several (#237) each id prefixed with the section's, so
+ * that the same rule's group in two projects, or two export notes, are not one id twice, and each
+ * download named by its section, so two projects' reports saved side by side do not collide.
+ */
+interface Ids {
+  top: Level;
+  sub: Level;
+  group: (slug: string) => string;
+  exportNote: string;
+  download: (file: ExportFile) => ExportFile;
+}
+
+function idsFor(section: string | undefined): Ids {
+  const prefix = section === undefined ? "" : `${section}-`;
+  return {
+    top: section === undefined ? "h2" : "h3",
+    sub: section === undefined ? "h3" : "h4",
+    group: (slug) => `${prefix}rule-${slug}`,
+    exportNote: `${prefix}export-note`,
+    // "pbiplint-report-project-2.md" in the second section.
+    download: (file) =>
+      section === undefined
+        ? file
+        : { ...file, name: file.name.replace(/^pbiplint-report/, `pbiplint-report-${section}`) },
+  };
+}
+
+/** The line that opens every results block: nothing left the tab. */
+const privacyLine = (): HTMLElement =>
+  h(
+    "p",
+    { class: "privacy" },
+    "Nothing was uploaded. The analysis ran in this browser tab. ",
+    newTabLink({ href: "/privacy/" }, "The pbiplint Privacy Promise"),
+  );
+
+/** What a project of several was read from, for under its results: as RenderOptions has them. */
+export interface SeveralSource {
+  /** The files read, relative to the project's root; none for a project that could not be read. */
+  files?: string[];
+  notes: string[];
+}
+
+/**
+ * Renders a run over several projects (#237, spec section 7): the privacy line, the combined
+ * summary in the CLI's words, a list of the projects, each linking to its section, then a section
+ * per project, `Project N of M: <path>`, holding that project's results as renderResults renders
+ * them, export bar included, so a copy or a download is one project's. `sources` are in the runs'
+ * order. A path comes from the drop, so `h` shows it through `showControls`.
+ */
+export function renderSeveral(
+  container: HTMLElement,
+  runs: ProjectRun[],
+  sources: SeveralSource[],
+): void {
+  const id = (i: number): string => `project-${i + 1}`;
+  // Each section's handlers live on its own body. A one-project run before this one (the sample
+  // counts) left handlers on the container that would filter every section's boxes together, so
+  // they go, as renderResults clears its own on every render.
+  container.onchange = null;
+  container.onclick = null;
+  // Each config file's unknown ids, gathered from every project that used it, for the first such
+  // project to name. A project with no config file uses pbiplint's defaults, which name none.
+  const unknown = new Map<string, { first: number; ids: Set<string> }>();
+  runs.forEach(({ configPath, result }, i) => {
+    if (configPath === undefined) return;
+    const entry = unknown.get(configPath) ?? { first: i, ids: new Set<string>() };
+    unknown.set(configPath, entry);
+    for (const ruleId of result.summary.unknownRules) entry.ids.add(ruleId);
+  });
+  const unknownAt = (i: number): RenderOptions["unknown"] => {
+    const config = runs[i]!.configPath;
+    const entry = config === undefined ? undefined : unknown.get(config);
+    return { config: config ?? "", ids: entry?.first === i ? [...entry.ids] : [] };
+  };
+  container.replaceChildren(
+    privacyLine(),
+    h("p", { class: "summary" }, `${runSummaryLine(runSummary(runs))}.`),
+    h(
+      "nav",
+      { class: "projects", "aria-label": "Projects" },
+      h(
+        "ol",
+        {},
+        ...runs.map((r, i) => h("li", {}, h("a", { class: "mono", href: `#${id(i)}` }, r.path))),
+      ),
+    ),
+    ...runs.map((r, i) => {
+      const body = h("div", {});
+      renderResults(body, r.result, {
+        source: r.path,
+        files: sources[i]?.files,
+        notes: sources[i]?.notes,
+        section: id(i),
+        unknown: unknownAt(i),
+      });
+      return h(
+        "section",
+        { id: id(i), class: "project" },
+        h("h2", {}, `Project ${i + 1} of ${runs.length}: ${r.path}`),
+        body,
+      );
+    }),
+  );
+}
+
+/**
  * Shows a group a filter hid and opens it. Only the boxes that hide it are checked again (its
  * severity, its category, and its layer when there are layer boxes) and every other box stays as
- * the reader set it. A project group shows while either layer is checked, so both layer boxes are
- * checked only when neither is.
+ * the reader set it. A project group shows while the Model or the Report box is checked, so those
+ * two are checked again only when neither is.
  */
 function reveal(container: HTMLElement, group: HTMLDetailsElement): void {
   if (group.hidden) {
@@ -282,7 +406,8 @@ function reveal(container: HTMLElement, group: HTMLDetailsElement): void {
     check(filterBoxes(container, "category").find((b) => b.value === category));
     const layers = filterBoxes(container, "layer");
     if (layer === "project") {
-      if (!layers.some((b) => b.checked)) layers.forEach(check);
+      const files = layers.filter((b) => b.value === "model" || b.value === "report");
+      if (!files.some((b) => b.checked)) files.forEach(check);
     } else check(layers.find((b) => b.value === layer));
     applyFilters(container);
   }
@@ -294,9 +419,12 @@ function filterBoxes(container: HTMLElement, kind: string): HTMLInputElement[] {
   return [...container.querySelectorAll<HTMLInputElement>(`input[data-filter="${kind}"]`)];
 }
 
-/** A group's layer, as the tag on its row and on its fix-first item: model, report, or project. */
+/**
+ * A group's layer, as the tag on its row and on its fix-first item: model, report, project, or
+ * Power Query.
+ */
 const layerTag = (g: RankedGroup): HTMLElement =>
-  h("span", { class: `layer ${g.rule.layer}` }, g.rule.layer);
+  h("span", { class: `layer ${g.rule.layer}` }, LAYER_LABEL[g.rule.layer]);
 
 /**
  * "How to fix it", on a fix-first item and in a group's panel: the rule's page. Up to ten of them
@@ -319,7 +447,7 @@ const fixLink = (g: RankedGroup): HTMLAnchorElement =>
  * in a new tab, when the rule found nothing. Every href is built from the rule id, never from report
  * text.
  */
-function renderFacts(result: LintResult): HTMLElement[] {
+function renderFacts(result: LintResult, ids: Ids): HTMLElement[] {
   if (result.facts.length === 0) return [];
   const onPage = new Map(result.groups.map((g) => [g.rule.id, g.rule.slug]));
   const value = (f: Fact): Node | string => {
@@ -327,13 +455,13 @@ function renderFacts(result: LintResult): HTMLElement[] {
     const here = onPage.get(f.ruleId);
     return here === undefined
       ? newTabLink({ class: "fact", href: pagePath(slug(f.ruleId)) }, f.value)
-      : h("a", { class: "fact flag", href: `#rule-${here}` }, f.value);
+      : h("a", { class: "fact flag", href: `#${ids.group(here)}` }, f.value);
   };
   return [
     h(
       "section",
       { class: "facts" },
-      h("h3", {}, "Report at a glance"),
+      h(ids.sub, {}, "Report at a glance"),
       h(
         "dl",
         {},
@@ -364,7 +492,7 @@ function renderFilesRead(files: string[] | undefined): HTMLElement[] {
   ];
 }
 
-function renderExportBar(result: LintResult): HTMLElement[] {
+function renderExportBar(result: LintResult, ids: Ids): HTMLElement[] {
   const button = (label: string, onClick: (b: HTMLButtonElement) => void): HTMLButtonElement => {
     const b = h("button", { type: "button", class: "secondary" }, label);
     b.addEventListener("click", () => onClick(b));
@@ -399,8 +527,9 @@ function renderExportBar(result: LintResult): HTMLElement[] {
     "Report and guidance copied to the clipboard",
   );
   // The note under the bar says what this copy holds, so a screen reader hears it on the button.
-  // One results block is on the page at a time, so the id is unique.
-  assistantButton.setAttribute("aria-describedby", "export-note");
+  // One results block is on the page at a time, and a section of several prefixes its own, so the
+  // id is unique.
+  assistantButton.setAttribute("aria-describedby", ids.exportNote);
   return [
     h(
       "div",
@@ -416,15 +545,15 @@ function renderExportBar(result: LintResult): HTMLElement[] {
       h(
         "div",
         { class: "export-pair" },
-        button("Download Markdown", () => download(exportMarkdown(result))),
-        button("Download JSON", () => download(exportJson(result))),
+        button("Download Markdown", () => download(ids.download(exportMarkdown(result)))),
+        button("Download JSON", () => download(ids.download(exportJson(result)))),
       ),
       announce,
     ),
     // Item 5 of the Promise, said where the copy is made: the paste, not pbiplint, sends it.
     h(
       "p",
-      { class: "export-note", id: "export-note" },
+      { class: "export-note", id: ids.exportNote },
       "Copy for an AI assistant adds each rule's guidance to the report. Like the report, it holds the names in your project, such as its tables, columns, measures, pages, and visuals, and its file paths. pbiplint sends nothing: what you paste goes to the service you paste it into. ",
       newTabLink({ href: "/privacy/" }, "The pbiplint Privacy Promise"),
       " covers pbiplint, not that service.",
@@ -444,16 +573,16 @@ function renderFilters(result: LintResult): HTMLElement {
   const categories = CATEGORY_ORDER.filter((c) => result.groups.some((g) => g.rule.category === c));
   // "Error", not "error": the category labels beside them are title case.
   const titleCase = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
-  // A Model and Report pair only when both layers have groups: with one, unchecking it would only
+  // Layer boxes only when the groups span two or more families: with one, unchecking it would only
   // hide everything, which the severity boxes already do.
-  const layers = LAYERS.filter((l) => result.groups.some((g) => g.rule.layer === l));
+  const layers = FILTER_LAYERS.filter((l) => result.groups.some((g) => g.rule.layer === l));
   return h(
     "fieldset",
     { class: "filters" },
     h("legend", {}, "Show"),
     ...severities.map((s) => box("severity", String(s), titleCase(SEVERITY_LABEL[s]))),
-    ...(layers.length === LAYERS.length
-      ? [h("span", { class: "gap" }), ...layers.map((l) => box("layer", l, titleCase(l)))]
+    ...(layers.length >= 2
+      ? [h("span", { class: "gap" }), ...layers.map((l) => box("layer", l, boxLabel(l)))]
       : []),
     h("span", { class: "gap" }),
     ...categories.map((c) => box("category", c, c)),
@@ -461,9 +590,9 @@ function renderFilters(result: LintResult): HTMLElement {
 }
 
 /**
- * Hides every group whose severity, category, or layer is unchecked. A project group, whose
- * findings fall on both layers, stays shown while either layer is checked. With no layer boxes,
- * a run with groups on one layer, the layer hides nothing.
+ * Hides every group whose severity, category, or layer is unchecked. A layer follows layerShown
+ * (layers.ts), the rule the rules index follows too: a project group stays shown while the Model or
+ * the Report box is checked. With no layer boxes, the layer hides nothing.
  */
 export function applyFilters(container: HTMLElement): void {
   const checked = (kind: string): Set<string> =>
@@ -474,19 +603,17 @@ export function applyFilters(container: HTMLElement): void {
     );
   const severities = checked("severity");
   const categories = checked("category");
-  const byLayer = filterBoxes(container, "layer").length > 0;
+  const present = filterBoxes(container, "layer").map((b) => b.value);
   const layers = checked("layer");
-  const layerShown = (layer: string): boolean =>
-    !byLayer || (layer === "project" ? layers.size > 0 : layers.has(layer));
   for (const group of container.querySelectorAll<HTMLElement>(".group"))
     group.hidden = !(
       severities.has(group.dataset.severity ?? "") &&
       categories.has(group.dataset.category ?? "") &&
-      layerShown(group.dataset.layer ?? "")
+      layerShown(group.dataset.layer ?? "", layers, present)
     );
 }
 
-function renderGroup(g: RankedGroup): HTMLElement {
+function renderGroup(g: RankedGroup, ids: Ids): HTMLElement {
   const label = SEVERITY_LABEL[g.rule.severity];
   const rows = g.findings.map((f) =>
     h(
@@ -494,7 +621,7 @@ function renderGroup(g: RankedGroup): HTMLElement {
       {},
       h("td", { class: "mono" }, f.objectName),
       h("td", {}, f.objectType),
-      h("td", { class: "mono" }, f.location ? `${f.location.file}:${f.location.line}` : ""),
+      h("td", { class: "mono" }, locationOf(f)),
       h("td", {}, f.detail ?? ""),
     ),
   );
@@ -502,7 +629,7 @@ function renderGroup(g: RankedGroup): HTMLElement {
     "details",
     {
       class: "group",
-      id: `rule-${g.rule.slug}`,
+      id: ids.group(g.rule.slug),
       "data-severity": String(g.rule.severity),
       "data-category": g.rule.category,
       "data-layer": g.rule.layer,

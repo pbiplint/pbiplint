@@ -27,12 +27,16 @@ interface Found {
   node: TmdlNode | undefined;
 }
 
+/** A day in long form, as a detail names it: `December 31, 2025`. `month` is 1 to 12. */
+export const longDate = (year: number, month: number, day: number): string =>
+  `${MONTHS[month - 1]} ${day}, ${year}`;
+
 /** How a detail names a period: a year as `2025`, a day in long form, an ambiguous string as written. */
 const shown = (p: Period): string =>
   p.ambiguous !== undefined
     ? `"${p.ambiguous}"`
     : p.date
-      ? `${MONTHS[p.date.month - 1]} ${p.date.day}, ${p.date.year}`
+      ? longDate(p.date.year, p.date.month, p.date.day)
       : String(p.year);
 
 /**

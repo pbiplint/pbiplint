@@ -7,6 +7,7 @@ import { measureRules } from "./measures.js";
 import { openingRules } from "./opening.js";
 import { pageRules } from "./pages.js";
 import { periodRules } from "./periods.js";
+import { powerQueryRules } from "./power-query.js";
 import { referenceRules } from "./references.js";
 import { tabOrderRules } from "./tab-order.js";
 import { translationRules } from "./translations.js";
@@ -15,7 +16,7 @@ import { visualRules } from "./visuals.js";
 /**
  * pbiplint's own rules, in the spec's order: references, opening, visuals, pages, measures,
  * periods in DAX, years in filters, user-defined functions, translations, format strings, actions
- * and bookmarks, tab order.
+ * and bookmarks, tab order, and Power Query.
  */
 export const pbiplintRules: Rule[] = [
   ...referenceRules,
@@ -30,4 +31,5 @@ export const pbiplintRules: Rule[] = [
   ...formattingRules,
   ...actionRules,
   ...tabOrderRules,
+  ...powerQueryRules,
 ];

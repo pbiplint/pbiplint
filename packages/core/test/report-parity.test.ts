@@ -49,15 +49,17 @@ function fixtureConfig(fixture: string): PbiplintConfig {
 
 /** One lint per fixture, shared by the parity and native checks: the files, the run, and its ids per rule. */
 const runs = new Map(
-  expectations.map((exp) => {
-    const files = readProjectFiles(repoRoot + exp.fixture);
-    const result = lint([...files.model, ...files.report], {
-      config: { ...fixtureConfig(exp.fixture), failOn: "none" },
-    });
-    const ours: Record<string, string[]> = {};
-    for (const f of result.findings) (ours[f.ruleId] ??= []).push(f.objectId ?? f.objectName);
-    return [exp.name, { files, result, ours }] as const;
-  }),
+  await Promise.all(
+    expectations.map(async (exp) => {
+      const files = readProjectFiles(repoRoot + exp.fixture);
+      const result = await lint([...files.model, ...files.report], {
+        config: { ...fixtureConfig(exp.fixture), failOn: "none" },
+      });
+      const ours: Record<string, string[]> = {};
+      for (const f of result.findings) (ours[f.ruleId] ??= []).push(f.objectId ?? f.objectName);
+      return [exp.name, { files, result, ours }] as const;
+    }),
+  ),
 );
 
 /** What the oracle says fails, as object ids: a list rule's names, a count rule's page (or `report`). */
@@ -150,18 +152,23 @@ describe("native expectations", () => {
 });
 
 /**
- * The sample plants every report rule (spec section 11), so each native rule outside the model
- * layer and each ported report rule has a non-empty list in its expectation: the native map for a
+ * The sample plants every report rule (spec section 11), so each native report or project rule
+ * and each ported report rule has a non-empty list in its expectation: the native map for a
  * native rule, the oracle's ids for a ported one, or `ours` for a deviating one. The checks above
  * hold the run to those lists. A native model rule, such as HARDCODED_PERIOD_IN_DAX, is not
  * planted: its own tests pin it, and the quiet check above still holds it to every fixture's
- * native map.
+ * native map. pbiplint's own Power Query rules are planted in m-zoo, and `rules-m.test.ts` pins
+ * them there. RULE_COULD_NOT_FINISH is not planted either: an input that makes a rule fail is a
+ * pbiplint bug, fixed when found, so no sample can hold one, and `rule-could-not-finish.test.ts`
+ * pins it with a rule made to fail.
  */
 describe("the sample", () => {
   const sample = expectations.find((exp) => exp.name === "messy-sales");
-  it("fires every native rule outside the model layer and every ported report rule", () => {
+  it("fires every native report and project rule and every ported report rule", () => {
     expect(sample, "tests/expectations/messy-sales.report.json").toBeDefined();
-    for (const r of native.filter((r) => r.layer !== "model"))
+    for (const r of native.filter(
+      (r) => (r.layer === "report" || r.layer === "project") && r.id !== "RULE_COULD_NOT_FINISH",
+    ))
       expect(sample!.native[r.id]?.length, r.id).toBeGreaterThan(0);
     for (const r of ported) expect(expectedIds(sample!, r.id).length, r.id).toBeGreaterThan(0);
   });

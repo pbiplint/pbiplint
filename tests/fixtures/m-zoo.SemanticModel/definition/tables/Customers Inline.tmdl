@@ -1,0 +1,12 @@
+/// The sort and the duplicate removal in one expression, written inline after the partition's source.
+table 'Customers Inline'
+	lineageTag: 6c0f5a1e-0002-4000-8000-000000000002
+
+	column 'Customer ID'
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Customer ID
+
+	partition 'Customers Inline' = m
+		mode: import
+		source = Table.Distinct(Table.Sort(#table(type table [#"Customer ID" = text, Updated = date], {{"C1", #date(2025, 1, 1)}, {"C1", #date(2025, 2, 1)}}), {{"Updated", Order.Descending}}), {"Customer ID"})

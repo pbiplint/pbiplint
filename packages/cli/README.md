@@ -57,8 +57,11 @@ such as a report saved as a single `report.json` (PBIR-Legacy) with no model bes
 and says why, rather than passing with no findings.
 
 Pointed at a folder that is not a project but holds one in a folder below it, as a repository
-often does, pbiplint lints that project and names it in a notice. A folder that holds several exits
-`2` and lists them, each with the command that lints it.
+often does, pbiplint lints that project and names it in a notice. Given a folder that holds several
+projects, pbiplint lints every one in one run, each under its own path, with one exit code; the
+findings of a model several of their reports share are listed once. One run lints at most 200
+projects. The JSON document of such a run is `version` `2`, and the quiet output opens each
+project with a `project ` line.
 
 ## Configuration
 
@@ -97,7 +100,7 @@ page.json or visual.json (Power BI Desktop keeps it there too):
 ## What it checks
 
 Every rule from the Microsoft Best Practice Analyzer ruleset, ported so the results match Tabular
-Editor on the same model, with eleven documented deviations where the source is noisier, or quieter,
+Editor on the same model, with twelve documented deviations where the source is noisier, or quieter,
 than it means to be; and pbiplint's own rules for a year or a date fixed in DAX, such as a measure
 filtered to 2025 or a date table that ends in 2026, for a DAX user-defined function that nothing
 calls, has a one-word name, or has no description, for a visible name that a translated culture
@@ -121,6 +124,13 @@ input has a report, the "Report at a glance" block states what the report will d
 opens it, whether or not anything fired. A notice names anything about the input a reader must
 know, such as a file that could not be read or a `definition.pbir` that points at a model other
 than the one beside it.
+
+The Power Query layer is read inside the model: the M behind each table's partitions, the shared
+expressions, and incremental refresh policies, with Microsoft's Power Query parser, and the file's
+Power Query options. 16 rules check it, `MINIMIZE_POWER_QUERY_TRANSFORMATIONS` and 15 of pbiplint's
+own; a finding in M names the query and the step as Power Query's editor shows them, at
+`file:line:column`. 122 rules in all, 40 of them built into pbiplint; `pbiplint rules` lists them
+with their layer.
 
 The same linter runs in the browser at https://pbiplint.com. Source, issues, and contributing:
 https://github.com/pbiplint/pbiplint.

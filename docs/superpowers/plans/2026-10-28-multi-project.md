@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript, Node 20.19+, vitest, Playwright, esbuild.
 
-**Spec:** `docs/superpowers/specs/2026-10-28-multi-project-design.md` (section numbers below are the spec's). Michael decided all seven of its choices on October 28, 2026 (spec 11). Builds on #238's merge into `release/0.3.0`; rebase onto it before Task 0. Task order: 0, 1, 2, 2a, 3, 4a, 4, 5.
+**Spec:** `docs/superpowers/specs/2026-10-28-multi-project-design.md` (section numbers below are the spec's). Michael decided all seven of its choices on October 28, 2026 (spec 11). Builds on #238's merge into `release/0.3.0`; merge `origin/release/0.3.0` into this branch (merge, not rebase: the branch is shared history) before Task 0. Task order: 0, 1, 2, 2a, 3, 4a, 4, 5.
 
 ## Global constraints
 
@@ -33,7 +33,7 @@
 
 ### Task 0: Record the one-project goldens
 
-Before any code changes, on the branch rebased onto #238's merge: build (`npm run build`), then write `packages/cli/test/fixtures/one-project/<case>.{out,err,code}` for each case Task 3's contract test lists (`examples/messy-sales` and a temp folder holding one copy of it below, in each format and option), with temp paths replaced by a placeholder the test fills in. Commit: `test(cli): one-project goldens before #237`.
+Before any code changes, with #238's merge merged into the branch: build (`npm run build`), then write `packages/cli/test/fixtures/one-project/<case>.{out,err,code}` for each case Task 3's contract test lists (`examples/messy-sales` and a temp folder holding one copy of it below, in each format and option), with temp paths replaced by a placeholder the test fills in. Commit: `test(cli): one-project goldens before #237`.
 
 ### Task 1: Core: the shared-model step and the combined summary
 

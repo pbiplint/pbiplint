@@ -48,14 +48,14 @@ These are the options `pbiplint --help` lists:
 | `--config <file>` | The `pbiplint.config.json` to use, instead of the nearest one above the project. |
 | `--output <file>` | Writes the report to a file instead of the terminal, with a one-line summary on stderr. |
 | `--quiet` | Prints the summary and what was read or skipped, any notices, then one line per rule with findings (its severity, id, and count), then the next step. Text only. |
-| `--rule <RULE_ID>` | Shows only that rule's findings, in any format; give it more than once for several. Every rule still runs, the summary says how many findings are shown of how many, and `--fail-on` counts only the ones shown. |
+| `--rule <RULE_ID>` | Shows only that rule's findings, in any format; give it more than once for several. Every rule still runs, the summary says how many findings are shown of how many, and `--fail-on` counts only the ones shown. From 0.3.0, a [`RULE_COULD_NOT_FINISH`](/rules/rule-could-not-finish/) finding about a rule you name is shown and counted too, since that rule's findings are incomplete; one about another rule is not. |
 | `--help`, `--version` | Prints the help text, or the version. |
 
 ### Choose a format
 
 - **text** is for reading in a terminal: the "Report at a glance" block when the input has a report, the five groups to fix first, then every finding with a link to its rule's page.
 - **markdown** is for pasting where Markdown renders: a pull request comment, a wiki page, or an issue.
-- **sarif** is for code scanning and editors. GitHub code scanning and the SARIF viewers for editors such as VS Code read it and put each finding on its line.
+- **sarif** is for code scanning and editors. GitHub code scanning and the SARIF viewers for editors such as VS Code read it and put each finding on its line. From 0.3.0, the run's `executionSuccessful` is `false` when a rule could not finish.
 - **json** is for scripts: the summary, the findings in their groups, the notices, and the report's facts, as data.
 
 ### Read a rule's guidance
@@ -144,7 +144,7 @@ Scripts, pipelines, and AI assistants read what the CLI prints, so these parts o
 ### Exit codes
 
 - `0`: nothing at or above `--fail-on`. With `--rule` (from 0.2.5), only the findings shown count. `pbiplint rules`, `pbiplint explain` with a rule it knows, `pbiplint skill` (from 0.2.5) when it prints, shows, or installs the skill, `pbiplint mcp` (from 0.2.5) when the app closes its input, `--help`, and `--version` exit `0` too.
-- `1`: something at or above `--fail-on`.
+- `1`: something at or above `--fail-on`. From 0.3.0 that includes a rule that could not finish, through its [`RULE_COULD_NOT_FINISH`](/rules/rule-could-not-finish/) error finding, which the rule's page says how to keep from failing a gate while a fix ships.
 - `2`, with nothing on stdout and the reason on stderr:
   - a usage error, such as an unknown option, an option with no value or a value it does not take, two paths, or options with no path; from 0.2.5 also an unknown rule id given to `explain` or `--rule`, or `--quiet` with a format other than text;
   - a config file it cannot use;
@@ -159,7 +159,7 @@ Scripts, pipelines, and AI assistants read what the CLI prints, so these parts o
 `--format json` prints one object. `version` is `1`. Its fields:
 
 - `tool`: `name` and `version`.
-- `summary`: the number of `files` read, and of `findings`, `errors`, `warnings`, and `infos`; `rulesRun`, the number of rules that ran; `rulesSkipped`, each with `id` and `reason`; `ruleErrors`, each with `id` and `message`, for a rule that could not finish (from 0.3.0, a Power Query rule's error in one query names the query, `query 'Sales': ...`, and the rule's findings on its other queries stand; the summary line and the text and Markdown notices name each one too); `ignored`, the number of findings an annotation ignored; and `unknownRules`, the config's rule ids that match no rule. Under `--rule` (from 0.2.5), `shown` holds `rules`, `findings`, `errors`, `warnings`, and `infos` for what is shown, while the other counts stay the whole run's.
+- `summary`: the number of `files` read, and of `findings`, `errors`, `warnings`, and `infos`; `rulesRun`, the number of rules that ran; `rulesSkipped`, each with `id` and `reason`; `ruleErrors`, each with `id` and `message`, for a rule that could not finish (from 0.3.0, the `message` names the kind of error and, for a Power Query rule's error in one query, the query, as in `query 'Sales': TypeError`, never the error's own message, and the rule's findings on its other queries stand; each entry is also a [`RULE_COULD_NOT_FINISH`](/rules/rule-could-not-finish/) finding unless the config or an annotation says otherwise; the summary line and the text and Markdown notices name each one too); `ignored`, the number of findings an annotation ignored; and `unknownRules`, the config's rule ids that match no rule. Under `--rule` (from 0.2.5), `shown` holds `rules`, `findings`, `errors`, `warnings`, and `infos` for what is shown, while the other counts stay the whole run's.
 - `layers`: `model` and `report`, each `present: true` with `files`, the number read, or `present: false` with `reason`.
 - `facts`: what the report is at a glance, each with `layer`, `label`, `value`, and an optional `detail` and `ruleId`.
 - `diagnostics`: the notices, each with `kind`, `message`, and an optional `path`.

@@ -381,7 +381,7 @@ describe("pbiplint CLI", () => {
       config: { failOn: "none" },
     });
     expect(quietText(broken)).toMatch(
-      /^pbiplint: [^\n]*, 1 rule could not finish\n[^\n]*\nNotice: The rule BOOM could not finish \(please report this\): kaboom\n/,
+      /^pbiplint: [^\n]*, 1 rule could not finish\n[^\n]*\nNotice: The rule BOOM could not finish \(please report this\): Error\n/,
     );
   });
   it("--rule shows only those rules' findings in every format, and gates on them (#178)", async () => {
@@ -930,13 +930,16 @@ describe("pbiplint CLI", () => {
     expect(r.err).toMatch(/\n\s+at resolveProject /);
     expect(r.err).not.toContain("Could not read");
     // A line break in the error's own message is shown, not written, so it cannot forge a line of
-    // its own; the stack's frames follow it, one to a line.
+    // its own; the stack's frames follow it, one to a line. Only Node's own error, with a string
+    // `code`, keeps its message (pb-coord, October 28, 2026), so this one carries a code.
     let err = "";
     const code = await main(["."], {
       stdout: () => {},
       stderr: (s) => (err += s),
       cwd: () => {
-        throw new Error("boom\npbiplint: 0 findings\n    at forged (x.js:1:1)");
+        throw Object.assign(new Error("boom\npbiplint: 0 findings\n    at forged (x.js:1:1)"), {
+          code: "EFORGED",
+        });
       },
     });
     expect(code).toBe(2);

@@ -158,13 +158,17 @@ describe("native expectations", () => {
  * hold the run to those lists. A native model rule, such as HARDCODED_PERIOD_IN_DAX, is not
  * planted: its own tests pin it, and the quiet check above still holds it to every fixture's
  * native map. pbiplint's own Power Query rules are planted in m-zoo, and `rules-m.test.ts` pins
- * them there.
+ * them there. RULE_COULD_NOT_FINISH is not planted either: an input that makes a rule fail is a
+ * pbiplint bug, fixed when found, so no sample can hold one, and `rule-could-not-finish.test.ts`
+ * pins it with a rule made to fail.
  */
 describe("the sample", () => {
   const sample = expectations.find((exp) => exp.name === "messy-sales");
   it("fires every native report and project rule and every ported report rule", () => {
     expect(sample, "tests/expectations/messy-sales.report.json").toBeDefined();
-    for (const r of native.filter((r) => r.layer === "report" || r.layer === "project"))
+    for (const r of native.filter(
+      (r) => (r.layer === "report" || r.layer === "project") && r.id !== "RULE_COULD_NOT_FINISH",
+    ))
       expect(sample!.native[r.id]?.length, r.id).toBeGreaterThan(0);
     for (const r of ported) expect(expectedIds(sample!, r.id).length, r.id).toBeGreaterThan(0);
   });

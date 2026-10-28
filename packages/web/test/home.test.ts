@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { LEARN_HELP_URLS, legacyReportNotice, lint, pbixRefusal } from "@pbiplint/core";
 import { beforeAll, describe, expect, it, vi } from "vitest";
+import { fakeSecrets } from "../../../tests/support/fake-secrets.js";
 
 // happy-dom resolves a relative URL against the page's http base, so the file path is built
 // from import.meta.url instead of new URL(..., import.meta.url).
@@ -116,6 +117,21 @@ describe("home page", () => {
       "Results for pasted TMDL (model, 1 file)",
     );
     expect(document.querySelector("#results .summary")!.textContent).toContain("in 1 file");
+  });
+  // The secret guard (v3 spec, section 11.3): a message can hold the model's text, so a throw out
+  // of lint itself shows only the error's class and asks for a report.
+  it("names only the class of an error lint throws, never its message", async () => {
+    const secret = fakeSecrets()[0]!;
+    vi.mocked(lint).mockRejectedValueOnce(new TypeError(`source = "${secret}"`));
+    const paste = document.getElementById("paste") as HTMLTextAreaElement;
+    paste.value = "table Sales\n";
+    document.getElementById("lint-paste")!.click();
+    await tick();
+    const status = document.getElementById("status")!;
+    expect(status.textContent).toBe(
+      "Something went wrong: TypeError. Please report this at https://github.com/pbiplint/pbiplint/issues.",
+    );
+    expect(status.textContent).not.toContain(secret);
   });
   it("unhides the status line before it writes the message", () => {
     const status = document.getElementById("status")!;

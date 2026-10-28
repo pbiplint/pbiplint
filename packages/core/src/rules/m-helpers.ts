@@ -20,7 +20,7 @@ export function queryLabel(q: MQuery): string {
 }
 
 /** The object a query's finding names: its partition, its shared expression, or the table whose refresh policy holds it. */
-function ownerFinding(q: MQuery): RuleFinding {
+export function ownerFinding(q: MQuery): RuleFinding {
   if (q.kind === "partition") return finding.partition(q.owner as Partition);
   if (q.kind === "expression") return finding.expression(q.owner as NamedExpression);
   return finding.table(q.owner as Table);
@@ -47,7 +47,7 @@ export function mFinding(
 
 /**
  * The findings of `check` for each query, in order (v3 spec, section 8). An error thrown for one
- * query goes to `ctx.reportError` as `query 'Sales': <message>`, and the next query runs, so one
+ * query goes to `ctx.reportError` with the query's label and owner, and the next query runs, so one
  * query's error does not take the rule's findings off the others. With no `reportError` (a rule
  * called without the engine) the error is thrown, as before.
  */
@@ -63,7 +63,7 @@ export function eachQuery(
       found = check(q);
     } catch (e) {
       if (!ctx.reportError) throw e;
-      ctx.reportError(`${queryLabel(q)}: ${e instanceof Error ? e.message : String(e)}`);
+      ctx.reportError(e, { label: queryLabel(q), finding: ownerFinding(q) });
       continue;
     }
     for (const f of found) out.push(f);

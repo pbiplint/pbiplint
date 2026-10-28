@@ -318,7 +318,7 @@ describe("runRules", () => {
       { id: "EVERY_TABLE", reason: "disabled" },
       { id: "LIVE", reason: "needsLiveModel" },
     ]);
-    expect(r.ruleErrors).toEqual([{ id: "BOOM", message: "kaboom" }]);
+    expect(r.ruleErrors).toEqual([{ id: "BOOM", message: "Error" }]);
   });
   it("takes no ignore from a root annotation with lines under it, which lost its tabs", () => {
     const lost = modelFrom(

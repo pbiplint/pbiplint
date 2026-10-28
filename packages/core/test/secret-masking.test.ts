@@ -5,8 +5,10 @@ import {
   PARSE_SECRETS_FIXTURE,
   SECRETS_FIXTURE,
 } from "../../../tests/support/fake-secrets.js";
+import { plantedLeakRule } from "../../../tests/support/planted-rule.js";
 import { lint } from "../src/engine/lint.js";
 import { formatJson, formatMarkdown, formatSarif, formatText } from "../src/format/index.js";
+import { defaultRules } from "../src/rules/index.js";
 import { readModelFiles } from "./helpers.js";
 
 // The secret guard (v3 spec, section 11.3): m-zoo plants made-up credentials, and no output pbiplint
@@ -72,5 +74,30 @@ describe("the secret guard, on lines PARSE_ISSUE quotes (v3 spec, sections 7 and
     ["SARIF", formatSarif],
   ] as const)("keeps every part of every value out of the %s format", (_name, format) => {
     expect(leaks(format(parsed, { toolVersion: "0.0.0" }), planted)).toEqual([]);
+  });
+});
+
+describe("the secret guard, on a rule that could not finish (v3 spec, section 11.3)", async () => {
+  // PLANTED_LEAK throws with each query's M as its message, and then with all of it, so every
+  // made-up credential is in a thrown message; none may reach the result or a format.
+  const crashed = await lint(readModelFiles(SECRETS_FIXTURE), {
+    rules: [...defaultRules, plantedLeakRule()],
+  });
+  it("records the planted rule's errors, one per query and one for the whole throw", () => {
+    expect(
+      crashed.summary.ruleErrors.filter((e) => e.id === "PLANTED_LEAK").length,
+    ).toBeGreaterThan(1);
+  });
+  it("keeps every part of every value out of the result, but for the model it was read from", () => {
+    const { model: _m, project: _p, ...printed } = crashed;
+    expect(leaks(JSON.stringify(printed), secrets)).toEqual([]);
+  });
+  it.each([
+    ["text", formatText],
+    ["JSON", formatJson],
+    ["Markdown", formatMarkdown],
+    ["SARIF", formatSarif],
+  ] as const)("keeps every part of every value out of the %s format", (_name, format) => {
+    expect(leaks(format(crashed, { toolVersion: "0.0.0" }), secrets)).toEqual([]);
   });
 });

@@ -53,6 +53,7 @@ Use `npx pbiplint` (or `pbiplint` where it is installed). If pbiplint's MCP tool
 
 - Exit code 0: nothing at or above the gate (errors, by default). 1: something is. 2: nothing was linted: a usage error, an input it cannot read, a folder with several projects, or nothing it can lint. Read stderr for why. The full contract is at https://pbiplint.com/cli/#contract.
 - A rule skipped because it needs a live model has not passed. It was not run.
+- A `RULE_COULD_NOT_FINISH` finding means a pbiplint rule failed on the input: a pbiplint bug, not something to fix in the model. Tell the user, and see `pbiplint explain RULE_COULD_NOT_FINISH` for what to do now and how to report it.
 - A summary that names a part it did not read (a report file it could not read, a model with no report) has not checked that part.
 - Notices (on stderr, and in the text report) say what the run did with the input, such as linting the one project found below the folder given. Pass them on to the user.
 - `--format json` prints the whole run as one document, for when you need every field.

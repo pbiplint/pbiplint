@@ -16,6 +16,7 @@ export {
   type LintSummary,
   type ShownSummary,
 } from "./engine/lint.js";
+export { errorKind } from "./engine/rule-error.js";
 export { showOnly } from "./engine/show-only.js";
 export {
   effectiveSeverity,
@@ -156,6 +157,7 @@ export {
 } from "./rules/microsoft-bpa/define.js";
 export { microsoftBpaRules } from "./rules/microsoft-bpa/index.js";
 export { PARSE_ISSUE } from "./rules/parse-issue.js";
+export { RULE_COULD_NOT_FINISH } from "./rules/rule-could-not-finish.js";
 export {
   INSPECTOR_RULES,
   type InspectorRuleMeta,

@@ -375,11 +375,11 @@ describe("a folder that holds several projects, in the CLI and the browser (#237
   function cliSeveral(root: string): Several {
     const input = resolveInput(root);
     if (input.kind !== "several") throw new Error("the CLI read one project");
-    const dropped = (s: string): string =>
-      s
-        .split(`${dirname(root)}/`)
-        .join("")
-        .replace("; point at one of them", "; drop one of them");
+    // The message is compared as the CLI writes it, which names the project from the folder
+    // named, as the page names it from the drop. Only the root, a path on disk the CLI reads
+    // SARIF locations from, is made the drop's.
+    const message = (s: string): string => s.replace("; point at one of them", "; drop one of them");
+    const dropped = (s: string): string => s.split(`${dirname(root)}/`).join("");
     return input.projects.map(({ path, project, unreadable }) => ({
       path,
       model: names(project?.model?.files ?? []),
@@ -388,7 +388,7 @@ describe("a folder that holds several projects, in the CLI and the browser (#237
         ? {
             unreadable: {
               ...unreadable,
-              message: dropped(unreadable.message),
+              message: message(unreadable.message),
               ...(unreadable.root === undefined ? {} : { root: dropped(unreadable.root) }),
             },
           }

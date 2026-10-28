@@ -1,12 +1,13 @@
 // A folder that holds several projects, linted in one run (#237), through main as a user runs it.
 import { cpSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import {
   defaultRules,
   formatJson,
   formatMarkdown,
   formatSarif,
   formatText,
+  legacyModelNotice,
   runSummary,
   runSummaryLine,
   summaryLine,
@@ -485,9 +486,13 @@ describe("a folder that holds several projects", () => {
         ruleId: "PARSE_ISSUE",
         objectName: "model.bim",
         location: { file: "model.bim", line: 1 },
-        detail: expect.stringContaining("is stored as model.bim"),
+        // The folder named's own name, then the path below it, as the site writes it, and never
+        // the machine's absolute path, which would reach code scanning through SARIF.
+        detail: legacyModelNotice(`${basename(root)}/b/Finance.SemanticModel`).message,
       }),
     ]);
+    for (const format of ["text", "json", "markdown", "sarif"])
+      expect((await run([".", "--format", format], root)).out).not.toContain(dirname(root));
     expect(text.out).toContain(`Project 2 of 2: b/Finance.SemanticModel\n${formatText(finance!)}`);
     expect(text.out.split("\n")[2]).toBe(
       "  b/Finance.SemanticModel    1 finding (1 error, 0 warnings, 0 info)",

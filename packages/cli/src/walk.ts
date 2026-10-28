@@ -578,6 +578,13 @@ export function resolveInput(input: string): ResolvedInput {
   if (paths.length > MAX_PROJECTS) throw tooMany(input, paths, at);
   // The folder named is the same for every project; a project's own walk does not look for more.
   const named = resolve(input);
+  // A project's refusal names it by the path it was read at, which main made absolute. Its finding
+  // reaches every format and a pipeline's code scanning, so there it names the project from the
+  // folder named, that folder's own name first, as the site names it from the drop. The refusal of
+  // a run that reads nothing keeps the paths as given, as every refusal does.
+  const above = toPosix(dirname(named));
+  const fromNamed = (text: string): string =>
+    text.split(above.endsWith("/") ? above : `${above}/`).join("");
   const own: Reach = { models: new Map() };
   const refusals: UsageError[] = [];
   const projects = paths.map((path): NamedProject => {
@@ -587,7 +594,7 @@ export function resolveInput(input: string): ResolvedInput {
     } catch (e) {
       if (!(e instanceof UsageError)) throw e;
       refusals.push(e);
-      return { path, unreadable: unreadableOf(path, e) };
+      return { path, unreadable: unreadableOf(path, e, fromNamed) };
     }
     if (!project.model) return { path, project };
     return {
@@ -601,21 +608,22 @@ export function resolveInput(input: string): ResolvedInput {
   if (first !== undefined && refusals.length === projects.length)
     throw new UsageError(first.message, [
       ...first.lines,
-      ...projects.slice(1).map((p) => `  ${p.path}: ${p.unreadable!.message}`),
+      ...refusals.slice(1).map((e, i) => `  ${projects[i + 1]!.path}: ${e.message}`),
     ]);
   return { kind: "several", projects };
 }
 
 /**
- * The project at `path`, refused with `e`: on the legacy file when a legacy part is the cause
- * (walked records it), else named by its path, on the part the path names, a .pbip's being its
- * report's.
+ * The project at `path`, refused with `e`, whose message `shown` rewrites: on the legacy file when
+ * a legacy part is the cause (walked records it), else named by its path, on the part the path
+ * names, a .pbip's being its report's.
  */
-function unreadableOf(path: string, e: UsageError): Unreadable {
+function unreadableOf(path: string, e: UsageError, shown: (text: string) => string): Unreadable {
+  const message = shown(e.message);
   const cause = LEGACY_CAUSE.get(e);
-  if (cause) return { message: e.message, ...cause };
+  if (cause) return { message, ...cause };
   return {
-    message: e.message,
+    message,
     layer: path.endsWith(".SemanticModel") ? "model" : "report",
     name: path,
   };

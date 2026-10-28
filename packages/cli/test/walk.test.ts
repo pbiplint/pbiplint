@@ -1919,7 +1919,9 @@ describe("resolveInput and a folder that holds several projects (#237)", () => {
     expect(finance).toEqual({
       path: "b/Finance.SemanticModel",
       unreadable: {
-        message: legacyModelNotice(`${root}/b/Finance.SemanticModel`).message,
+        // Relative to the folder named, after its own name, as the site writes it: the machine's
+        // path would reach every format and a pipeline's code scanning.
+        message: legacyModelNotice(`${basename(root)}/b/Finance.SemanticModel`).message,
         layer: "model",
         root: legacy,
         file: "model.bim",
@@ -1933,7 +1935,7 @@ describe("resolveInput and a folder that holds several projects (#237)", () => {
     expect(named(root)[1]).toEqual({
       path: "b/Finance.Report",
       unreadable: {
-        message: legacyReportNotice(`${root}/b/Finance.Report`).message,
+        message: legacyReportNotice(`${basename(root)}/b/Finance.Report`).message,
         layer: "report",
         root: report,
         file: "report.json",
@@ -1945,7 +1947,7 @@ describe("resolveInput and a folder that holds several projects (#237)", () => {
     expect(named(root)[1]).toEqual({
       path: "b/Empty.SemanticModel",
       unreadable: {
-        message: noTmdlRefusal([`${root}/b/Empty.SemanticModel`]),
+        message: noTmdlRefusal([`${basename(root)}/b/Empty.SemanticModel`]),
         layer: "model",
         name: "b/Empty.SemanticModel",
       },

@@ -28,6 +28,7 @@ import {
   type FoundBelow,
   type LayerName,
   type LintFile,
+  type Unreadable,
 } from "@pbiplint/core";
 import { UsageError } from "./args.js";
 
@@ -327,6 +328,14 @@ function attempt<T>(
 }
 
 const LEGACY_NOTICE = { model: legacyModel, report: legacyReport } as const;
+/** The file that makes a part folder legacy, which an unreadable project's finding points at. */
+const LEGACY_FILE = { model: "model.bim", report: "report.json" } as const;
+/**
+ * The legacy part that a refusal of a run that read nothing else names first, kept beside the
+ * error rather than on it, so a UsageError still compares equal to an Error with its message.
+ * resolveInput reads it to point an unreadable project's finding at the file (#237).
+ */
+const LEGACY_CAUSE = new WeakMap<UsageError, Omit<Unreadable, "message">>();
 
 /**
  * The part folder `folder`, saved in a legacy format pbiplint cannot read (model.bim, or a single
@@ -526,11 +535,15 @@ export function resolveProject(input: string): ResolvedProject {
 /** The most projects one run lints (spec section 3.4); more is refused with where they are. */
 export const MAX_PROJECTS = 200;
 
-/** One project of a folder that holds several (#237). */
+/**
+ * One project of a folder that holds several (#237): `project` when it was read, else
+ * `unreadable`, with the refusal its own run gives (spec section 3.3). Exactly one is set.
+ */
 export interface NamedProject {
   /** The path that lints it, relative to the folder named, as projectsBelow gives it. */
   path: string;
-  project: ResolvedProject;
+  project?: ResolvedProject;
+  unreadable?: Unreadable;
   /** The real path of the model folder it read, which projects reading one model share. */
   modelKey?: string;
   /** The model folder relative to the folder named, in forward slashes, for the shared-model notice. */
@@ -547,6 +560,9 @@ export type ResolvedInput =
  * where resolveProject would refuse the folder for holding them, so an input that lints today
  * resolves as it did. Each is read as the one project below a folder is, under the folder named,
  * which stays the #236 boundary for every one, and a model several reach is read once (Reach).
+ * A project whose own run would be refused is `unreadable`, with that refusal, and the others are
+ * read; a folder none of whose projects can be read is refused with the first one's refusal and a
+ * line for each other, since a run that reads nothing must not pass (#175).
  */
 export function resolveInput(input: string): ResolvedInput {
   let paths: string[];
@@ -563,19 +579,41 @@ export function resolveInput(input: string): ResolvedInput {
   // The folder named is the same for every project; a project's own walk does not look for more.
   const named = resolve(input);
   const own: Reach = { models: new Map() };
-  return {
-    kind: "several",
-    projects: paths.map((path) => {
-      const project = resolveAt(at(path), named, own);
-      if (!project.model) return { path, project };
-      return {
-        path,
-        project,
-        modelKey: realpathSync.native(project.model.root),
-        modelPath: toPosix(relative(named, project.model.root)),
-      };
-    }),
-  };
+  const refusals: UsageError[] = [];
+  const projects = paths.map((path): NamedProject => {
+    let project: ResolvedProject;
+    try {
+      project = resolveAt(at(path), named, own);
+    } catch (e) {
+      if (!(e instanceof UsageError)) throw e;
+      refusals.push(e);
+      return { path, unreadable: unreadableOf(path, e) };
+    }
+    if (!project.model) return { path, project };
+    return {
+      path,
+      project,
+      modelKey: realpathSync.native(project.model.root),
+      modelPath: toPosix(relative(named, project.model.root)),
+    };
+  });
+  const [first] = refusals;
+  if (first !== undefined && refusals.length === projects.length)
+    throw new UsageError(first.message, [
+      ...first.lines,
+      ...projects.slice(1).map((p) => `  ${p.path}: ${p.unreadable!.message}`),
+    ]);
+  return { kind: "several", projects };
+}
+
+/**
+ * The project at `path`, refused with `e`: on the legacy file when a legacy part is the cause
+ * (walked records it), else on the part the path names, a .pbip's being its report's.
+ */
+function unreadableOf(path: string, e: UsageError): Unreadable {
+  const cause = LEGACY_CAUSE.get(e);
+  if (cause) return { message: e.message, ...cause };
+  return { message: e.message, layer: path.endsWith(".SemanticModel") ? "model" : "report" };
 }
 
 /**
@@ -690,7 +728,12 @@ function walked(
   if (w.refusal)
     throw new UsageError(`Could not read ${joined(w.refusal.path)}: ${w.refusal.reason}`);
   const [first, ...rest] = w.legacy.map((l) => LEGACY_NOTICE[l.layer](joined(l.path)).message);
-  if (first !== undefined) throw new UsageError(first, rest);
+  if (first !== undefined) {
+    const e = new UsageError(first, rest);
+    const { layer, path } = w.legacy[0]!;
+    LEGACY_CAUSE.set(e, { layer, root: join(base, path), file: LEGACY_FILE[layer] });
+    throw e;
+  }
   // Not reached today: every unread path sets the refusal, and readFolder and readNamed throw
   // before returning neither part with nothing else to say. Kept so that a run that read nothing
   // can never go on, whatever a later reader returns.

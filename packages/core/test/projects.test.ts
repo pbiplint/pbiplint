@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { resolveConfig } from "../src/engine/config.js";
 import { lint, type LintFile, type LintResult } from "../src/engine/lint.js";
-import { runSummary, runSummaryLine, shareModels, type ProjectRun } from "../src/index.js";
+import {
+  LEGACY_MODEL_REASON,
+  LEGACY_REPORT_REASON,
+  runSummary,
+  runSummaryLine,
+  shareModels,
+  unreadProject,
+  type ProjectRun,
+} from "../src/index.js";
 import { showOnly } from "../src/engine/show-only.js";
 import { defaultRules } from "../src/rules/index.js";
 import { allVisuals } from "../src/rules/report-helpers.js";
@@ -366,5 +374,63 @@ describe("runSummaryLine", () => {
     ).toBe(
       "3 projects, 5 of 41 findings shown, 1 rule (5 errors, 0 warnings, 0 info) in 212 files",
     );
+  });
+});
+
+describe("unreadProject", () => {
+  const legacy = {
+    message:
+      "Sales.SemanticModel is stored as model.bim, which pbiplint cannot read; save it in the TMDL format from Power BI Desktop",
+    layer: "model" as const,
+    file: "model.bim",
+  };
+  it("is one PARSE_ISSUE finding on the file, both layers absent, with nothing read", () => {
+    const r = unreadProject(legacy, resolveConfig({}));
+    const finding = {
+      ruleId: "PARSE_ISSUE",
+      objectType: "File",
+      objectName: "model.bim",
+      layer: "model",
+      location: { file: "model.bim", line: 1 },
+      detail: legacy.message,
+    };
+    expect(r.findings).toEqual([finding]);
+    expect(r.groups.map((g) => [g.rule.id, g.rule.severity, g.findings])).toEqual([
+      ["PARSE_ISSUE", 3, [finding]],
+    ]);
+    expect(r.layers).toEqual({
+      model: { present: false, reason: LEGACY_MODEL_REASON },
+      report: { present: false, reason: "no report in the input" },
+    });
+    expect(r.summary).toMatchObject({ files: 0, findings: 1, errors: 1, warnings: 0, infos: 0 });
+    expect(r.failed).toBe(true);
+  });
+  it("takes its severity from the config, as any finding does", () => {
+    const r = unreadProject(legacy, resolveConfig({ rules: { PARSE_ISSUE: "warning" } }));
+    expect(r.groups[0]!.rule.severity).toBe(2);
+    expect(r.summary).toMatchObject({ errors: 0, warnings: 1 });
+    expect(r.failed).toBe(false);
+    // Turned off, the finding still stands: nothing of the project was read, and a run must not
+    // pass over a project it never linted without saying so (#175).
+    const off = unreadProject(legacy, resolveConfig({ rules: { PARSE_ISSUE: "off" } }));
+    expect(off.summary).toMatchObject({ findings: 1, errors: 1 });
+  });
+  it("gives a legacy report's reason, and a refusal's own words where no file is named", () => {
+    const report = unreadProject(
+      { message: "x is stored as report.json", layer: "report", file: "report.json" },
+      resolveConfig({}),
+    );
+    expect(report.layers.report).toEqual({ present: false, reason: LEGACY_REPORT_REASON });
+    const other = unreadProject({ message: "No .tmdl files", layer: "model" }, resolveConfig({}));
+    expect(other.findings).toEqual([
+      {
+        ruleId: "PARSE_ISSUE",
+        objectType: "File",
+        objectName: "",
+        layer: "model",
+        detail: "No .tmdl files",
+      },
+    ]);
+    expect(other.layers.model).toEqual({ present: false, reason: "No .tmdl files" });
   });
 });

@@ -26,6 +26,7 @@ import {
   resolveInput,
   resolveProject,
   type NamedProject,
+  type ResolvedProject,
 } from "../src/walk.js";
 
 const repo = new URL("../../../", import.meta.url).pathname;
@@ -180,11 +181,19 @@ function refusal(input: string): { message: string; lines: readonly string[] } {
   throw new Error(`${input} was not refused`);
 }
 
-/** The projects resolveInput finds at `input`, which must be several. */
-function several(input: string): NamedProject[] {
+/** The projects resolveInput finds at `input`, which must be several, read or not. */
+function named(input: string): NamedProject[] {
   const resolved = resolveInput(input);
   if (resolved.kind !== "several") throw new Error(`${input} resolved as one project`);
   return resolved.projects;
+}
+
+/** The projects resolveInput finds at `input`, which must be several, each of them read. */
+function several(input: string): (NamedProject & { project: ResolvedProject })[] {
+  return named(input).map((p) => {
+    if (!p.project) throw new Error(`${p.path} could not be read: ${p.unreadable?.message}`);
+    return { ...p, project: p.project };
+  });
 }
 
 const REPORT_FILES = [
@@ -1140,8 +1149,9 @@ describe("resolveProject and a model folder that holds no .tmdl files (tracked i
     mkdirSync(join(two, "Sales", "Sales.SemanticModel"), { recursive: true });
     mkdirSync(join(two, "Archive", "Old.SemanticModel"), { recursive: true });
     mkdirSync(join(two, "Archive 2024", "Older.SemanticModel"), { recursive: true });
-    // Read whole, the folder is several projects, resolved in that order: the first, which holds
-    // no .tmdl files, is refused as it is when named.
+    // Read whole, the folder is several projects, resolved in that order, none of which can be
+    // read: the run is refused with the first one's refusal, as it is when named, and each other
+    // after it (#237).
     expect(() => resolveInput(two)).toThrow(
       new Error(noTmdlRefusal([`${two}/Archive 2024/Older.SemanticModel`])),
     );
@@ -1894,6 +1904,64 @@ describe("resolveInput and a folder that holds several projects (#237)", () => {
           "../../models/Shared.SemanticModel is outside the path you named and the project folder, so it was not linted; lint the folder that holds both (../.. from the project folder) to include it",
       },
     ]);
+  });
+  it("a project that cannot be read is unreadable, and the others are read", () => {
+    // A model saved as model.bim: the refusal its own run gives, on the file, in its folder.
+    const root = tempDir("several-legacy");
+    modelAt(join(root, "a", "Sales.SemanticModel"), "Sales");
+    const legacy = join(root, "b", "Finance.SemanticModel");
+    mkdirSync(legacy, { recursive: true });
+    writeFileSync(join(legacy, "model.bim"), "{}");
+    const [sales, finance] = named(root);
+    expect(sales!.path).toBe("a/Sales.SemanticModel");
+    expect(sales!.project!.model!.root).toBe(join(root, "a", "Sales.SemanticModel"));
+    expect(sales!.unreadable).toBeUndefined();
+    expect(finance).toEqual({
+      path: "b/Finance.SemanticModel",
+      unreadable: {
+        message: legacyModelNotice(`${root}/b/Finance.SemanticModel`).message,
+        layer: "model",
+        root: legacy,
+        file: "model.bim",
+      },
+    });
+    // A report saved as report.json, likewise.
+    rmSync(legacy, { recursive: true });
+    const report = join(root, "b", "Finance.Report");
+    mkdirSync(report, { recursive: true });
+    writeFileSync(join(report, "report.json"), "{}");
+    expect(named(root)[1]).toEqual({
+      path: "b/Finance.Report",
+      unreadable: {
+        message: legacyReportNotice(`${root}/b/Finance.Report`).message,
+        layer: "report",
+        root: report,
+        file: "report.json",
+      },
+    });
+    // Refused for another reason, a model folder that holds no .tmdl files: its refusal, on no file.
+    rmSync(report, { recursive: true });
+    mkdirSync(join(root, "b", "Empty.SemanticModel"), { recursive: true });
+    expect(named(root)[1]).toEqual({
+      path: "b/Empty.SemanticModel",
+      unreadable: {
+        message: noTmdlRefusal([`${root}/b/Empty.SemanticModel`]),
+        layer: "model",
+      },
+    });
+  });
+  it("a folder none of whose projects can be read is refused, naming each", () => {
+    const root = tempDir("several-none");
+    mkdirSync(join(root, "a", "Empty.SemanticModel"), { recursive: true });
+    const legacy = join(root, "b", "Finance.SemanticModel");
+    mkdirSync(legacy, { recursive: true });
+    writeFileSync(join(legacy, "model.bim"), "{}");
+    expect(refused(root)).toEqual({
+      message: noTmdlRefusal([`${root}/a/Empty.SemanticModel`]),
+      lines: [
+        `  b/Finance.SemanticModel: ${legacyModelNotice(`${root}/b/Finance.SemanticModel`).message}`,
+      ],
+    });
   });
   it("one project below a folder is still one", () => {
     const root = tempDir("several-one");

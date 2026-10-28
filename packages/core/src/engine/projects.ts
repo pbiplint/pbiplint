@@ -1,9 +1,12 @@
 import { countsLine, plural } from "../format/text.js";
+import { buildModel } from "../model/build.js";
+import { LEGACY_MODEL_REASON, LEGACY_REPORT_REASON } from "../project/route.js";
+import { PARSE_ISSUE } from "../rules/parse-issue.js";
 import { isFindingFor, RULE_COULD_NOT_FINISH } from "../rules/rule-could-not-finish.js";
-import type { Finding } from "../rules/types.js";
+import type { Finding, LayerName } from "../rules/types.js";
 import type { ResolvedConfig } from "./config.js";
 import type { LintResult, ShownSummary } from "./lint.js";
-import { byRank, groupLayer, type RankedGroup } from "./rank.js";
+import { byRank, groupLayer, rank, type RankedGroup } from "./rank.js";
 import { countGroups, recount, type FindingCounts } from "./show-only.js";
 
 /** One project of a several-project run (#237), with what the shared-model step needs to know. */
@@ -29,6 +32,69 @@ export interface RunSummary extends FindingCounts {
   ruleErrors: number;
   /** What the projects show, added up, when the run shows only some rules. */
   shown?: ShownSummary;
+}
+
+/**
+ * A project of a several-project run that could not be read at all, with the refusal its own run
+ * gives (spec section 3.3). `file`, when set, is the legacy file that is the cause (`model.bim` or
+ * `report.json`), relative to `root`, the part folder that holds it.
+ */
+export interface Unreadable {
+  message: string;
+  layer: LayerName;
+  root?: string;
+  file?: string;
+}
+
+/**
+ * The result of a project that could not be read: one PARSE_ISSUE finding whose detail is the
+ * refusal, on the legacy file at line 1 when one is the cause, so a pipeline's annotation lands on
+ * it. `lint` cannot give this, as nothing of the project was read. The finding is ranked with the
+ * config, so a config that lowers PARSE_ISSUE lowers it, and `failed` follows failOn as for any
+ * finding. A config that turns PARSE_ISSUE off does not remove it, since a run must not pass over
+ * a project it read nothing of without saying so (#175). Both layers are absent: the one that could not be read with the legacy format's reason,
+ * or the refusal's words when no legacy file is named.
+ */
+export function unreadProject(unreadable: Unreadable, config: ResolvedConfig): LintResult {
+  const { message, layer, file } = unreadable;
+  const finding: Finding = {
+    ruleId: PARSE_ISSUE.id,
+    objectType: "File",
+    objectName: file ?? "",
+    layer,
+    ...(file === undefined ? {} : { location: { file, line: 1 } }),
+    detail: message,
+  };
+  const groups = rank([finding], [PARSE_ISSUE], config);
+  const severity = groups[0]!.rule.severity;
+  const reason =
+    file === undefined ? message : layer === "model" ? LEGACY_MODEL_REASON : LEGACY_REPORT_REASON;
+  const absent = (l: LayerName) => ({
+    present: false as const,
+    reason: l === layer ? reason : `no ${l} in the input`,
+  });
+  return {
+    project: {},
+    model: buildModel([]),
+    layers: { model: absent("model"), report: absent("report") },
+    facts: [],
+    diagnostics: [],
+    findings: [finding],
+    groups,
+    summary: {
+      files: 0,
+      findings: 1,
+      errors: +(severity === 3),
+      warnings: +(severity === 2),
+      infos: +(severity === 1),
+      rulesRun: 0,
+      rulesSkipped: [],
+      ruleErrors: [],
+      ignored: 0,
+      unknownRules: [],
+    },
+    failed: config.failOn !== null && severity >= config.failOn,
+  };
 }
 
 const NOT_REACHED = "NOT_REACHED_FROM_REPORT";

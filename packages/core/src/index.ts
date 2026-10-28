@@ -22,8 +22,10 @@ export {
   runSummary,
   runSummaryLine,
   shareModels,
+  unreadProject,
   type ProjectRun,
   type RunSummary,
+  type Unreadable,
 } from "./engine/projects.js";
 export {
   effectiveSeverity,

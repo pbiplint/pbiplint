@@ -1280,6 +1280,26 @@ describe("renderSeveral (#237)", () => {
     expect(first.querySelectorAll(".group[hidden]").length).toBeGreaterThan(0);
     expect(second.querySelectorAll(".group[hidden]").length).toBe(0);
   });
+  it("leaves no handler from a one-project run before it on the container", () => {
+    // A one-project run (the sample counts) sets handlers on #results that filter every box in it
+    // together; left in place, a section's box would be overruled by the same box in another.
+    renderResults(container, result, { source: "the sample project" });
+    renderSeveral(container, runs, sources);
+    const [first, second] = sections() as [HTMLElement, HTMLElement];
+    const severity = result.groups[0]!.rule.severity;
+    const box = second.querySelector<HTMLInputElement>(
+      `input[data-filter="severity"][value="${severity}"]`,
+    )!;
+    box.checked = false;
+    box.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(
+      second.querySelector<HTMLDetailsElement>(`#project-2-rule-${result.groups[0]!.rule.slug}`)!
+        .hidden,
+    ).toBe(true);
+    expect(first.querySelectorAll(".group[hidden]").length).toBe(0);
+    expect(container.onchange).toBeNull();
+    expect(container.onclick).toBeNull();
+  });
   it("names each section's downloads by its project number, and one run's as always", () => {
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test");
     vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);

@@ -330,6 +330,11 @@ export function renderSeveral(
   sources: SeveralSource[],
 ): void {
   const id = (i: number): string => `project-${i + 1}`;
+  // Each section's handlers live on its own body. A one-project run before this one (the sample
+  // counts) left handlers on the container that would filter every section's boxes together, so
+  // they go, as renderResults clears its own on every render.
+  container.onchange = null;
+  container.onclick = null;
   container.replaceChildren(
     privacyLine(),
     h("p", { class: "summary" }, `${runSummaryLine(runSummary(runs))}.`),

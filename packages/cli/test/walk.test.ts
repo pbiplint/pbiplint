@@ -36,8 +36,7 @@ const linkNotice = (path: string) => ({
 const lintUp = (up: string) =>
   `lint the folder that holds both (${up} from the project folder) to include it`;
 /** The hint for a path outside the project where the folder that holds both holds more. */
-const SHARED =
-  "pbiplint does not yet lint it with this project, since the folder that holds both holds more than this project";
+const SHARED = "pbiplint does not yet lint a model that several projects share";
 /**
  * The notice for a path a project file names outside both the path named and the project folder,
  * with its hint, or none for a path that leads out only through a link.

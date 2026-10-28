@@ -181,8 +181,7 @@ function outsideHint(base: string, named: string | undefined, p: string): string
   if (dirname(top) === top || !reachedAsWritten(top, p)) return undefined;
   const one = oneProjectAt(top);
   if (one === undefined) return "lint a folder that holds both and no other project to include it";
-  if (!one)
-    return "pbiplint does not yet lint it with this project, since the folder that holds both holds more than this project";
+  if (!one) return "pbiplint does not yet lint a model that several projects share";
   return `lint the folder that holds both (${toPosix(relative(base, top))} from the project folder) to include it`;
 }
 

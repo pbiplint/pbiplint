@@ -3,16 +3,33 @@ import {
   errorKind,
   lint,
   resolveConfig,
+  runSummary,
+  runSummaryLine,
+  shareModels,
   showControls,
   summaryLine,
+  unreadProject,
   type Diagnostic,
   type LayerName,
   type LintFile,
+  type ProjectRun,
 } from "@pbiplint/core";
-import { InputError, selectProject, type InputTree } from "./input/project-files.js";
+import {
+  InputError,
+  selectProjects,
+  type InputTree,
+  type SeveralProject,
+} from "./input/project-files.js";
 import { directoryPicker, readDirectoryInput, readPickedDirectory } from "./input/pick-folder.js";
 import { readDataTransfer } from "./input/read-drop.js";
-import { heading, NEW_TAB, newTabNote, renderResults, withLearnLinks } from "./results/render.js";
+import {
+  heading,
+  NEW_TAB,
+  newTabNote,
+  renderResults,
+  renderSeveral,
+  withLearnLinks,
+} from "./results/render.js";
 import { SAMPLE_NAME, SAMPLE_TREE } from "./sample.js";
 
 /**
@@ -139,6 +156,33 @@ interface Run {
   unreadPaths?: Partial<Record<LayerName, string[]>>;
 }
 
+/** A config file's text as resolveConfig takes it, refused in the page's words when it is not JSON. */
+function parsedConfig(config: { text: string } | undefined): unknown {
+  if (!config) return undefined;
+  try {
+    return JSON.parse(config.text);
+  } catch (e) {
+    throw new ConfigError(
+      `pbiplint.config.json is not valid JSON: ${e instanceof Error ? e.message : String(e)}`,
+    );
+  }
+}
+
+/**
+ * Waits for the status line to be painted, and says whether the run holding `token` still owns the
+ * page. lint holds the main thread for as long as M takes to parse, about 6 s in Firefox on the
+ * slowest models, and reading files can finish inside one frame, so "Reading files..." would
+ * never be painted. One frame and one task first let the browser paint the status line. A browser
+ * does not run animation frames in a hidden tab, so a run started there lints when the tab is
+ * shown, which changes no result. An input made during that wait owns the page now; a lint after
+ * it would hold the main thread for a result nobody will see.
+ */
+async function painted(token: number): Promise<boolean> {
+  await new Promise((done) => requestAnimationFrame(done));
+  await new Promise((done) => setTimeout(done, 0));
+  return !superseded(token);
+}
+
 /** Every input ends up here: read the config if there is one, lint, render. Nothing touches the network. */
 async function run({
   files,
@@ -153,26 +197,8 @@ async function run({
   // Every caller has claimed its token just before calling, so the newest token is this run's.
   const token = latestRun;
   try {
-    let raw: unknown;
-    if (config) {
-      try {
-        raw = JSON.parse(config.text);
-      } catch (e) {
-        throw new ConfigError(
-          `pbiplint.config.json is not valid JSON: ${e instanceof Error ? e.message : String(e)}`,
-        );
-      }
-    }
-    // lint holds the main thread for as long as M takes to parse, about 6 s in Firefox on the
-    // slowest models, and reading files can finish inside one frame, so "Reading files..." would
-    // never be painted. One frame and one task first let the browser paint the status line. A
-    // browser does not run animation frames in a hidden tab, so a run started there lints when the
-    // tab is shown, which changes no result.
-    await new Promise((done) => requestAnimationFrame(done));
-    await new Promise((done) => setTimeout(done, 0));
-    // An input made during that wait owns the page now; a lint here would hold the main thread for
-    // a result nobody will see.
-    if (superseded(token)) return;
+    const raw = parsedConfig(config);
+    if (!(await painted(token))) return;
     // The browser reads reports, so it lints with every default rule, as the CLI does. The time
     // is kept on the results for the performance test to read.
     const started = performance.now();
@@ -203,13 +229,73 @@ async function run({
 }
 
 /**
+ * A drop that holds several projects (#237), linted as the CLI lints the folder: each project in
+ * turn under its own config, after the same wait for the status line as one run, then the
+ * shared-model step, then a section per project. A project that could not be read is its one
+ * PARSE_ISSUE finding, under its config too. Every config is read before anything is linted, so
+ * one that is not valid JSON refuses the drop, as the CLI's refuses its run. A newer input stops
+ * the run between projects, since the rest would hold the main thread for nothing.
+ */
+async function runSeveral(projects: SeveralProject[]): Promise<void> {
+  const token = latestRun;
+  try {
+    const configs = projects.map((p) => resolveConfig(parsedConfig(p.config)));
+    if (!(await painted(token))) return;
+    const started = performance.now();
+    const runs: ProjectRun[] = [];
+    for (const [i, { path, project, unreadable, config: file, modelKey, modelPath }] of [
+      ...projects.entries(),
+    ]) {
+      const config = configs[i]!;
+      const result = project
+        ? await lint(project.files, {
+            config,
+            diagnostics: project.diagnostics,
+            absent: project.absent,
+            unreadPaths: project.unreadPaths,
+          })
+        : unreadProject(unreadable!, config);
+      if (superseded(token)) return;
+      runs.push({
+        path,
+        result,
+        config,
+        ...(modelKey === undefined ? {} : { modelKey, modelPath }),
+        ...(file === undefined ? {} : { configPath: file.path }),
+      });
+    }
+    const shared = shareModels(runs);
+    results.dataset.lintMs = String(Math.round(performance.now() - started));
+    // Unhidden before it is filled, as for one run.
+    results.hidden = false;
+    renderSeveral(
+      results,
+      shared,
+      projects.map((p) => ({ files: p.project?.read, notes: p.project?.notes ?? [] })),
+    );
+    keepResults(true);
+    say("");
+    announcer.textContent = `${shared.length} projects: ${runSummaryLine(runSummary(shared))}.`;
+    if (typeof results.scrollIntoView === "function")
+      results.scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (e) {
+    fail(e);
+  }
+}
+
+/**
  * A tree of files, from a drop, a folder pick, the directory input, or the bundled sample, linted
- * as the CLI would lint the folder. `name` is what the heading calls it; a drop is named by its
- * project folder.
+ * as the CLI would lint the folder: one project, or each of several (#237). `name` is what the
+ * heading calls one project; a drop is named by its project folder.
  */
 function runEntries(tree: InputTree, name?: string): void {
   try {
-    const project = selectProject(tree);
+    const selected = selectProjects(tree);
+    if (selected.kind === "several") {
+      void runSeveral(selected.projects);
+      return;
+    }
+    const { project } = selected;
     void run({
       files: project.files,
       source: name ?? (project.root || "the dropped file"),

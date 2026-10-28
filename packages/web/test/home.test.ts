@@ -719,6 +719,48 @@ describe("home page", () => {
     );
     expect(document.getElementById("results")!.textContent).not.toMatch(RAW_CONTROL);
   });
+  it("lints every project in a folder that holds several, each under its own config (#237)", async () => {
+    const model = (dir: string): File[] => [
+      at(`${dir}/definition/model.tmdl`, "model Model\n"),
+      at(`${dir}/definition/tables/T.tmdl`, "table T\n"),
+    ];
+    feedFolder([
+      ...model("Drop/a/A.SemanticModel"),
+      ...model("Drop/b/B.SemanticModel"),
+      at("Drop/a/pbiplint.config.json", '{ "rules": { "NOPE": "warning" } }'),
+    ]);
+    await tick();
+    await tick();
+    const results = document.getElementById("results")!;
+    expect(results.hidden).toBe(false);
+    expect(document.getElementById("status")!.hidden).toBe(true);
+    const sections = [...results.querySelectorAll("section.project")];
+    expect(sections.map((s) => s.querySelector("h2")!.textContent)).toEqual([
+      "Project 1 of 2: a/A.SemanticModel",
+      "Project 2 of 2: b/B.SemanticModel",
+    ]);
+    // a's config names a rule there is none of; b has no config.
+    const unknown = (s: Element) =>
+      [...s.querySelectorAll(".notice")].filter((n) => n.textContent!.includes('"NOPE"')).length;
+    expect(sections.map(unknown)).toEqual([1, 0]);
+    const summary = results.querySelector(":scope > .summary")!.textContent!;
+    expect(summary).toMatch(/^2 projects, /);
+    expect(document.getElementById("announce")!.textContent).toBe(`2 projects: ${summary}`);
+    expect(results.dataset.lintMs).toMatch(/^\d+$/);
+  });
+  it("refuses a folder of several projects when one's config is not valid JSON", async () => {
+    feedFolder([
+      at("Drop/a/A.SemanticModel/definition/tables/T.tmdl", "table T\n"),
+      at("Drop/b/B.SemanticModel/definition/tables/T.tmdl", "table T\n"),
+      at("Drop/b/pbiplint.config.json", "{"),
+    ]);
+    await tick();
+    await tick();
+    expect(document.getElementById("status")!.textContent).toMatch(
+      /^pbiplint\.config\.json is not valid JSON: /,
+    );
+    expect(document.getElementById("results")!.hidden).toBe(true);
+  });
 });
 
 // eslint-disable-next-line no-control-regex -- the characters showControls writes as escapes

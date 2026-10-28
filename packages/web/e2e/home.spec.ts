@@ -281,7 +281,7 @@ test("lints a report alone and names the model it reads", async ({ page }) => {
   );
 });
 
-test("refuses a folder with two reports and names them", async ({ page }) => {
+test("lints a folder with two reports side by side as a project each (#237)", async ({ page }) => {
   await withTempFolder(
     "two-reports-",
     (dir) => {
@@ -292,15 +292,16 @@ test("refuses a folder with two reports and names them", async ({ page }) => {
     },
     async (dir) => {
       await setFolder(page.locator("#folder-input"), dir);
-      await expect(page.locator("#status")).toHaveText(
-        /contains 2 reports; drop one of them: A\.Report, B\.Report/,
-      );
-      await expect(page.locator("#results")).toBeHidden();
+      await expect(page.locator("#results section.project > h2")).toHaveText([
+        "Project 1 of 2: A.Report",
+        "Project 2 of 2: B.Report",
+      ]);
+      await expect(page.locator("#status")).toBeHidden();
     },
   );
 });
 
-test("lints the one project below a folder and names it, and refuses a folder with two (#174)", async ({
+test("lints the one project below a folder and names it, and each of two below a folder (#174, #237)", async ({
   page,
 }) => {
   await withTempFolder(
@@ -325,10 +326,11 @@ test("lints the one project below a folder and names it, and refuses a folder wi
     },
     async (dir) => {
       await setFolder(page.locator("#folder-input"), dir);
-      await expect(page.locator("#status")).toHaveText(
-        /contains 2 projects; drop one of them: a\/messy-sales, b\/messy-sales$/,
-      );
-      await expect(page.locator("#results")).toBeHidden();
+      await expect(page.locator("#results section.project > h2")).toHaveText([
+        "Project 1 of 2: a/messy-sales",
+        "Project 2 of 2: b/messy-sales",
+      ]);
+      await expect(page.locator("#status")).toBeHidden();
     },
   );
 });

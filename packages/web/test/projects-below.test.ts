@@ -4,13 +4,28 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { tempDir } from "../../../tests/support/temp-dir.js";
 import { UsageError } from "../../cli/src/args.js";
-import { resolveProject } from "../../cli/src/walk.js";
+import {
+  lint,
+  resolveConfig,
+  runSummary,
+  shareModels,
+  unreadProject,
+  type ProjectRun,
+} from "@pbiplint/core";
+import { lintSeveral } from "../../cli/src/several.js";
+import {
+  MAX_PROJECTS as CLI_MAX_PROJECTS,
+  resolveInput,
+  resolveProject,
+} from "../../cli/src/walk.js";
 import {
   emptyTree,
   InputError,
   isModelFolder,
   isReportFolder,
+  MAX_PROJECTS,
   selectProject,
+  selectProjects,
   type InputTree,
 } from "../src/input/project-files.js";
 import { markerOf, SKIP_DIRS, wanted } from "../src/input/read-drop.js";
@@ -353,5 +368,186 @@ describe("a .pbip below the folder, followed by the CLI and the browser alike (#
         /^No semantic model or report found in \.\.\/Other\/Thin\.Report, which .*Proj\/Thin\.pbip names$/,
       ),
     });
+  });
+});
+
+describe("a folder that holds several projects, in the CLI and the browser (#237)", () => {
+  // The CLI's resolveInput and the page's selectProjects on the same folders on disk: the same
+  // projects in the same order, and per project the same model and report files, or the same
+  // project unreadable. The CLI names a path in a refusal from the folder above the one named,
+  // which the drop names by that folder's name, and says to point at what the page says to drop.
+  type Several = { path: string; model: string[]; report: string[]; unreadable?: object }[];
+  const names = (files: { path: string }[]): string[] => files.map((f) => f.path).sort(byName);
+  function cliSeveral(root: string): Several {
+    const input = resolveInput(root);
+    if (input.kind !== "several") throw new Error("the CLI read one project");
+    const dropped = (s: string): string =>
+      s
+        .split(`${dirname(root)}/`)
+        .join("")
+        .replace("; point at one of them", "; drop one of them");
+    return input.projects.map(({ path, project, unreadable }) => ({
+      path,
+      model: names(project?.model?.files ?? []),
+      report: names(project?.report?.files ?? []),
+      ...(unreadable
+        ? {
+            unreadable: {
+              ...unreadable,
+              message: dropped(unreadable.message),
+              ...(unreadable.root === undefined ? {} : { root: dropped(unreadable.root) }),
+            },
+          }
+        : {}),
+    }));
+  }
+  function browserSeveral(root: string): Several {
+    const selected = selectProjects(dropOf(root));
+    if (selected.kind !== "several") throw new Error("the browser read one project");
+    // The page lists a project's files as one list: the model's are its .tmdl files.
+    return selected.projects.map(({ path, project, unreadable }) => {
+      const files = project?.files ?? [];
+      return {
+        path,
+        model: names(files.filter((f) => f.path.endsWith(".tmdl"))),
+        report: names(files.filter((f) => !f.path.endsWith(".tmdl"))),
+        ...(unreadable ? { unreadable } : {}),
+      };
+    });
+  }
+
+  /** #236's monorepo, as several.test.ts builds it: two reports read one model by path. */
+  function monorepo(r: string): void {
+    const model = join(sample, "Messy Sales Demo.SemanticModel");
+    cpSync(model, join(r, "models", "Shared.SemanticModel"), { recursive: true });
+    cpSync(model, join(r, "models", "Standalone.SemanticModel"), { recursive: true });
+    for (const name of ["Finance", "Sales"]) {
+      const dir = join(r, "reports", name);
+      cpSync(join(sample, "Messy Sales Demo.Report"), join(dir, `${name}.Report`), {
+        recursive: true,
+      });
+      writeFileSync(
+        join(dir, `${name}.pbip`),
+        j({ version: "1.0", artifacts: [{ report: { path: `${name}.Report` } }] }),
+      );
+      writeFileSync(
+        join(dir, `${name}.Report`, "definition.pbir"),
+        j({
+          version: "4.0",
+          datasetReference: { byPath: { path: "../../../models/Shared.SemanticModel" } },
+        }),
+      );
+    }
+    // Finance's report reaches [Sales YoY %], which the sample's report does not.
+    const visual = join(
+      r,
+      "reports/Finance/Finance.Report/definition/pages/27f668864829019f9251/visuals/1e7f28bf49e435b68c50/visual.json",
+    );
+    const text = readFileSync(visual, "utf8");
+    writeFileSync(visual, text.replace('"Property": "Total Sales"', '"Property": "Sales YoY %"'));
+  }
+  const pbipNaming = (file: string, ...reports: string[]): void =>
+    writeFileSync(
+      file,
+      j({ version: "1.0", artifacts: reports.map((path) => ({ report: { path } })) }),
+    );
+
+  const cases: [string, (root: string) => void][] = [
+    [
+      "two projects below",
+      (r) => {
+        cpSync(sample, join(r, "a", "messy-sales"), { recursive: true });
+        cpSync(sample, join(r, "b", "messy-sales"), { recursive: true });
+      },
+    ],
+    [
+      "two pairs side by side with no .pbip",
+      (r) => {
+        for (const name of ["A", "B"]) {
+          modelAt(join(r, `${name}.SemanticModel`), name);
+          reportAt(join(r, `${name}.Report`), `../${name}.SemanticModel`);
+        }
+      },
+    ],
+    [
+      "two projects side by side, as Power BI Desktop saves them",
+      (r) => {
+        for (const name of ["Finance", "Sales"]) {
+          pbipNaming(join(r, `${name}.pbip`), `${name}.Report`);
+          modelAt(join(r, `${name}.SemanticModel`), name);
+          reportAt(join(r, `${name}.Report`), `../${name}.SemanticModel`);
+        }
+      },
+    ],
+    ["#236's monorepo, two reports on one shared model", monorepo],
+    [
+      "a project beside one saved as model.bim",
+      (r) => {
+        modelAt(join(r, "a", "Sales.SemanticModel"), "Sales");
+        mkdirSync(join(r, "b", "Finance.SemanticModel"), { recursive: true });
+        writeFileSync(join(r, "b", "Finance.SemanticModel", "model.bim"), "{}");
+      },
+    ],
+    [
+      "a project beside a .pbip naming two reports",
+      (r) => {
+        cpSync(sample, join(r, "a", "messy-sales"), { recursive: true });
+        mkdirSync(join(r, "b"));
+        pbipNaming(join(r, "b", "Two.pbip"), "A.Report", "B.Report");
+        reportAt(join(r, "b", "A.Report"), "../M.SemanticModel");
+        reportAt(join(r, "b", "B.Report"), "../M.SemanticModel");
+      },
+    ],
+  ];
+  it.each(cases)("%s", (_, fill) => {
+    const root = tempDir("both-several");
+    fill(root);
+    expect(browserSeveral(root)).toEqual(cliSeveral(root));
+  });
+
+  it("caps a run at the same number of projects", () => {
+    expect(MAX_PROJECTS).toBe(CLI_MAX_PROJECTS);
+  });
+
+  it("lints #236's monorepo to the same counts per project, the shared model's findings once", async () => {
+    const root = tempDir("both-several-lint");
+    monorepo(root);
+    const named = resolveInput(root);
+    if (named.kind !== "several") throw new Error("the CLI read one project");
+    const cli = (await lintSeveral(root, named.projects, { cwd: root })).run.runs;
+    const selected = selectProjects(dropOf(root));
+    if (selected.kind !== "several") throw new Error("the browser read one project");
+    // As the page lints them (main.ts): each under its own config, then the shared-model step.
+    const runs: ProjectRun[] = [];
+    for (const p of selected.projects) {
+      const config = resolveConfig(p.config ? JSON.parse(p.config.text) : undefined);
+      const result = p.project
+        ? await lint(p.project.files, {
+            config,
+            diagnostics: p.project.diagnostics,
+            absent: p.project.absent,
+            unreadPaths: p.project.unreadPaths,
+          })
+        : unreadProject(p.unreadable!, config);
+      runs.push({
+        path: p.path,
+        result,
+        config,
+        ...(p.modelKey === undefined ? {} : { modelKey: p.modelKey, modelPath: p.modelPath }),
+      });
+    }
+    const site = shareModels(runs);
+    const counts = (r: ProjectRun[]) =>
+      r.map((p) => [p.path, p.result.summary.findings, p.result.summary.errors, p.result.failed]);
+    expect(counts(site)).toEqual(counts(cli));
+    expect(runSummary(site)).toEqual(runSummary(cli));
+    const notices = (r: ProjectRun[]) =>
+      r.map((p) =>
+        p.result.diagnostics.filter((d) => d.kind === "shared-model").map((d) => d.message),
+      );
+    expect(notices(site)).toEqual(notices(cli));
+    expect(notices(site)[2]).toEqual([
+      "the model at models/Shared.SemanticModel is shared with reports/Finance/Finance.pbip; its findings are listed there",
+    ]);
   });
 });

@@ -13,6 +13,7 @@ import {
   InputError,
   relativeToRoot,
   selectProject,
+  selectProjects,
   type InputEntry,
   type InputMarker,
   type InputTree,
@@ -1678,5 +1679,200 @@ describe("selectProject and a drop that reads nothing but legacy parts (#175)", 
     expect(p.files.map((f) => f.path)).toEqual(["definition/model.tmdl"]);
     expect(p.absent).toEqual({ report: "the report is saved in the legacy report.json format" });
     expect(p.diagnostics.map((d) => d.kind)).toEqual(["legacy-report-format"]);
+  });
+});
+
+describe("selectProjects on a drop that holds several projects (#237)", () => {
+  // The CLI's resolveInput on the same layouts (walk.test.ts and several.test.ts);
+  // projects-below.test.ts holds the two to each other on disk.
+  const j = (v: unknown) => JSON.stringify(v);
+  const pbipText = (...reports: string[]): string =>
+    j({ version: "1.0", artifacts: reports.map((path) => ({ report: { path } })) });
+  const byPath = (path: string): string => j({ datasetReference: { byPath: { path } } });
+  const modelIn = (at: string, table: string): Partial<InputTree> => ({
+    entries: [
+      e(`${at}/definition/model.tmdl`, "model Model\n"),
+      e(`${at}/definition/tables/${table}.tmdl`, `table ${table}\n`),
+    ],
+    modelFolders: [at],
+  });
+  const reportIn = (at: string, model: string): Partial<InputTree> => ({
+    entries: [
+      e(`${at}/definition.pbir`, byPath(model)),
+      e(`${at}/definition/report.json`, "{}"),
+      e(`${at}/definition/pages/p/page.json`, j({ name: "p" })),
+    ],
+    reportFolders: [at],
+  });
+  const legacyIn = (at: string): Partial<InputTree> => ({
+    modelFolders: [at],
+    markers: [{ path: `${at}/model.bim`, kind: "legacy-model" }],
+  });
+  const treeOf = (...parts: Partial<InputTree>[]): InputTree => ({
+    ...emptyTree(),
+    entries: parts.flatMap((p) => p.entries ?? []),
+    modelFolders: parts.flatMap((p) => p.modelFolders ?? []),
+    reportFolders: parts.flatMap((p) => p.reportFolders ?? []),
+    markers: parts.flatMap((p) => p.markers ?? []),
+  });
+  const projectIn = (dir: string, name = "Demo"): Partial<InputTree> =>
+    treeOf(
+      { entries: [e(`${dir}/${name}.pbip`, pbipText(`${name}.Report`))] },
+      modelIn(`${dir}/${name}.SemanticModel`, name),
+      reportIn(`${dir}/${name}.Report`, `../${name}.SemanticModel`),
+    );
+  const several = (tree: InputTree) => {
+    const selected = selectProjects(tree);
+    if (selected.kind !== "several") throw new Error("read as one project");
+    return selected.projects;
+  };
+  const paths = (tree: InputTree) => several(tree).map((p) => p.path);
+  const models = (n: number) =>
+    treeOf(...Array.from({ length: n }, (_, i) => modelIn(`Drop/p${i}/M.SemanticModel`, "T")));
+
+  it("reads a drop of one project as selectProject does", () => {
+    for (const tree of [treeOf(projectIn("Demo")), treeOf(projectIn("Drop/sub"))])
+      expect(selectProjects(tree)).toEqual({ kind: "one", project: selectProject(tree) });
+  });
+  it("lints each project below the folder, each as it reads dropped alone, with no notice naming it", () => {
+    const tree = treeOf(projectIn("Drop/b/Sales"), projectIn("Drop/a/Sales"));
+    // selectProject keeps its refusal; the page takes selectProjects.
+    expect(() => selectProject(tree)).toThrow(/contains 2 projects; drop one of them/);
+    const projects = several(tree);
+    expect(projects.map((p) => p.path)).toEqual(["a/Sales", "b/Sales"]);
+    for (const { path, project } of projects) {
+      const alone = selectProject(treeOf(projectIn(`Drop/${path}`)));
+      expect(project).toEqual({ ...alone, diagnostics: [] });
+    }
+    // Two folders dropped together are the drop's projects.
+    expect(paths(treeOf(projectIn("b"), projectIn("a")))).toEqual(["a", "b"]);
+  });
+  it("lints projects saved side by side in the folder dropped, as Power BI Desktop saves them", () => {
+    const tree = treeOf(projectIn("ws", "Cost"), projectIn("ws", "Sales"));
+    expect(() => selectProject(tree)).toThrow(/contains 2 semantic models; drop one of them/);
+    const projects = several(tree);
+    expect(projects.map((p) => p.path)).toEqual(["Cost.pbip", "Sales.pbip"]);
+    for (const [i, name] of ["Cost", "Sales"].entries()) {
+      const p = projects[i]!.project!;
+      expect(p.root).toBe("ws");
+      expect(p.files.map((f) => f.path)).toEqual([
+        "definition/model.tmdl",
+        `definition/tables/${name}.tmdl`,
+        `../${name}.pbip`,
+        "definition.pbir",
+        "definition/pages/p/page.json",
+        "definition/report.json",
+      ]);
+      expect(projects[i]!.modelKey).toBe(`ws/${name}.SemanticModel`);
+    }
+    // Each project lists the files it read, not its neighbour's.
+    expect(projects[0]!.project!.read.some((r) => r.includes("Sales"))).toBe(false);
+  });
+  it("gives each report of #236's monorepo the shared model, under one model key", () => {
+    const shared = "../../../models/Shared.SemanticModel";
+    const tree = treeOf(
+      { entries: [e("Drop/reports/Sales/Sales.pbip", pbipText("Sales.Report"))] },
+      reportIn("Drop/reports/Sales/Sales.Report", shared),
+      { entries: [e("Drop/reports/Finance/Finance.pbip", pbipText("Finance.Report"))] },
+      reportIn("Drop/reports/Finance/Finance.Report", shared),
+      modelIn("Drop/models/Shared.SemanticModel", "Shared"),
+      modelIn("Drop/models/Standalone.SemanticModel", "Standalone"),
+    );
+    const projects = several(tree);
+    const standalone = "models/Standalone.SemanticModel";
+    expect(projects.map((p) => [p.path, p.modelKey, p.modelPath])).toEqual([
+      [standalone, `Drop/${standalone}`, standalone],
+      [
+        "reports/Finance/Finance.pbip",
+        "Drop/models/Shared.SemanticModel",
+        "models/Shared.SemanticModel",
+      ],
+      [
+        "reports/Sales/Sales.pbip",
+        "Drop/models/Shared.SemanticModel",
+        "models/Shared.SemanticModel",
+      ],
+    ]);
+    expect(projects[2]!.project!.files.map((f) => f.path)).toContain(
+      "definition/tables/Shared.tmdl",
+    );
+  });
+  it("refuses more than 200 projects, saying to drop a folder that holds fewer", () => {
+    expect(() => selectProjects(models(201))).toThrow(
+      new InputError(
+        "Drop contains 201 projects, more than the 200 one run lints; drop a folder that holds fewer",
+      ),
+    );
+    expect(paths(models(200))).toHaveLength(200);
+  });
+  it("makes a project it cannot read a project of its own, on the legacy file when that is the cause", () => {
+    const tree = treeOf(
+      modelIn("Drop/a/Sales.SemanticModel", "Sales"),
+      legacyIn("Drop/b/Finance.SemanticModel"),
+    );
+    const [a, b] = several(tree);
+    expect(a!.project?.files.map((f) => f.path)).toContain("definition/tables/Sales.tmdl");
+    expect(b).toEqual({
+      path: "b/Finance.SemanticModel",
+      unreadable: {
+        message: legacyModelNotice("Drop/b/Finance.SemanticModel").message,
+        layer: "model",
+        root: "Drop/b/Finance.SemanticModel",
+        file: "model.bim",
+      },
+    });
+  });
+  it("names an unreadable project by its path when no legacy file is the cause", () => {
+    const tree = treeOf(modelIn("Drop/a/Sales.SemanticModel", "Sales"), {
+      modelFolders: ["Drop/b/Empty.SemanticModel"],
+    });
+    expect(several(tree)[1]).toEqual({
+      path: "b/Empty.SemanticModel",
+      unreadable: {
+        message: noTmdlRefusal(["Drop/b/Empty.SemanticModel"]),
+        layer: "model",
+        name: "b/Empty.SemanticModel",
+      },
+    });
+    // The project that reads names only its own: no note on the other's empty folder.
+    expect(several(tree)[0]!.project!.notes).toEqual([]);
+  });
+  it("refuses a drop none of whose projects can be read, with the first one's refusal", () => {
+    const tree = treeOf(legacyIn("Drop/a/A.SemanticModel"), legacyIn("Drop/b/B.SemanticModel"));
+    expect(() => selectProjects(tree)).toThrow(
+      new InputError(
+        `${legacyModelNotice("Drop/a/A.SemanticModel").message} b/B.SemanticModel: ${legacyModelNotice("Drop/b/B.SemanticModel").message}`,
+      ),
+    );
+  });
+  it("makes a .pbip naming several reports an unreadable project, as the CLI does", () => {
+    const tree = treeOf(
+      projectIn("Drop/a"),
+      { entries: [e("Drop/b/Two.pbip", pbipText("A.Report", "B.Report"))] },
+      reportIn("Drop/b/A.Report", "../M.SemanticModel"),
+      reportIn("Drop/b/B.Report", "../M.SemanticModel"),
+    );
+    const projects = several(tree);
+    expect(projects.map((p) => p.path)).toEqual(["a", "b/Two.pbip"]);
+    expect(projects[1]!.unreadable).toEqual({
+      message: "Drop/b/Two.pbip names 2 reports; drop one of them: A.Report, B.Report",
+      layer: "report",
+      name: "b/Two.pbip",
+    });
+  });
+  it("gives each project the nearest config at or above it, an unreadable one too", () => {
+    const tree = treeOf(
+      projectIn("Drop/a"),
+      projectIn("Drop/b"),
+      legacyIn("Drop/c/Old.SemanticModel"),
+      { entries: [e("Drop/pbiplint.config.json", "{}"), e("Drop/a/pbiplint.config.json", "{}")] },
+    );
+    const projects = several(tree);
+    expect(projects.map((p) => p.config?.path)).toEqual([
+      "Drop/a/pbiplint.config.json",
+      "Drop/pbiplint.config.json",
+      "Drop/pbiplint.config.json",
+    ]);
+    expect(projects[0]!.project!.config?.path).toBe("Drop/a/pbiplint.config.json");
   });
 });

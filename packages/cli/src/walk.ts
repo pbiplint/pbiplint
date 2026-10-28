@@ -583,9 +583,7 @@ export function resolveInput(input: string): ResolvedInput {
   // reaches every format and a pipeline's code scanning, so there it names the project from the
   // folder named, that folder's own name first, as the site names it from the drop. The refusal of
   // a run that reads nothing keeps the paths as given, as every refusal does.
-  const above = toPosix(dirname(named));
-  const fromNamed = (text: string): string =>
-    text.split(above.endsWith("/") ? above : `${above}/`).join("");
+  const fromNamed = (text: string): string => fromFolderNamed(named, text);
   const own: Reach = { models: new Map() };
   const refusals: UsageError[] = [];
   const projects = paths.map((path): NamedProject => {
@@ -612,6 +610,27 @@ export function resolveInput(input: string): ResolvedInput {
       ...refusals.slice(1).map((e, i) => `  ${projects[i + 1]!.path}: ${e.message}`),
     ]);
   return { kind: "several", projects };
+}
+
+/**
+ * `text` with the absolute path of `named`, the folder named, written as that folder's own name,
+ * so `/home/me/repo/b/F.SemanticModel` reads `repo/b/F.SemanticModel`, as the site names a project
+ * from the drop. Only the folder's whole path is replaced, never its parent's, so a folder right
+ * under the root (`/repo`, `C:\repo`) keeps every other slash; a root itself, which has no name,
+ * leaves the path below it. The walk writes paths with forward slashes, so `named` is compared so.
+ */
+export function fromFolderNamed(named: string, text: string): string {
+  const posix = toPosix(named);
+  const folder = posix.endsWith("/") ? posix : `${posix}/`;
+  const name = posix.split("/").filter(Boolean).pop();
+  const own = name === undefined || /^[A-Za-z]:$/.test(name) ? "" : `${name}/`;
+  // Only where a path starts: at the start of the text or after a space, quote, or bracket, so a
+  // root's "/" is not cut from inside the path below it.
+  const escaped = folder.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return text.replace(
+    new RegExp(`(^|[\\s"'(\\[,])${escaped}`, "g"),
+    (_, before: string) => before + own,
+  );
 }
 
 /**

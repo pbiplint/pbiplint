@@ -22,6 +22,7 @@ import { tempDir } from "../../../tests/support/temp-dir.js";
 import { UsageError } from "../src/args.js";
 import {
   EXPECTED_INPUT,
+  fromFolderNamed,
   MAX_PROJECTS,
   resolveInput,
   resolveProject,
@@ -1952,6 +1953,34 @@ describe("resolveInput and a folder that holds several projects (#237)", () => {
         name: "b/Empty.SemanticModel",
       },
     });
+  });
+  it("names a project from the folder named, whatever that folder's parent", () => {
+    // A folder right under the root, as a CI container mounts one (pbiplint /repo): its parent is
+    // "/", and only the folder's own path is cut, so the other slashes stay.
+    const detail = (p: string) => `${p} is stored as model.bim`;
+    expect(fromFolderNamed("/repo", detail("/repo/x/c/Finance.SemanticModel"))).toBe(
+      detail("repo/x/c/Finance.SemanticModel"),
+    );
+    expect(fromFolderNamed("/home/me/repo", detail("/home/me/repo/b/F.SemanticModel"))).toBe(
+      detail("repo/b/F.SemanticModel"),
+    );
+    // A folder whose name begins another's is not cut out of it.
+    expect(fromFolderNamed("/repo", detail("/repo2/b/F.SemanticModel"))).toBe(
+      detail("/repo2/b/F.SemanticModel"),
+    );
+    // The root itself, which has no name: the path below it.
+    expect(fromFolderNamed("/", detail("/b/F.SemanticModel"))).toBe(detail("b/F.SemanticModel"));
+    // Windows: a folder on a drive, and a drive root, the message in forward slashes as the walk
+    // writes it.
+    expect(fromFolderNamed("C:\\work\\repo", detail("C:/work/repo/b/F.SemanticModel"))).toBe(
+      detail("repo/b/F.SemanticModel"),
+    );
+    expect(fromFolderNamed("D:\\repo", detail("D:/repo/b/F.SemanticModel"))).toBe(
+      detail("repo/b/F.SemanticModel"),
+    );
+    expect(fromFolderNamed("C:\\", detail("C:/b/F.SemanticModel"))).toBe(
+      detail("b/F.SemanticModel"),
+    );
   });
   it("a folder none of whose projects can be read is refused, naming each", () => {
     const root = tempDir("several-none");

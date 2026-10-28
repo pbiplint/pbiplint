@@ -5,15 +5,13 @@ import {
   resolveConfig,
   runSummary,
   runSummaryLine,
-  shareModels,
   showControls,
   summaryLine,
-  unreadProject,
   type Diagnostic,
   type LayerName,
   type LintFile,
-  type ProjectRun,
 } from "@pbiplint/core";
+import { lintProjects, parsedConfig } from "./lint-projects.js";
 import {
   InputError,
   selectProjects,
@@ -156,18 +154,6 @@ interface Run {
   unreadPaths?: Partial<Record<LayerName, string[]>>;
 }
 
-/** A config file's text as resolveConfig takes it, refused in the page's words when it is not JSON. */
-function parsedConfig(config: { text: string } | undefined): unknown {
-  if (!config) return undefined;
-  try {
-    return JSON.parse(config.text);
-  } catch (e) {
-    throw new ConfigError(
-      `pbiplint.config.json is not valid JSON: ${e instanceof Error ? e.message : String(e)}`,
-    );
-  }
-}
-
 /**
  * Waits for the status line to be painted, and says whether the run holding `token` still owns the
  * page. lint holds the main thread for as long as M takes to parse, about 6 s in Firefox on the
@@ -229,43 +215,22 @@ async function run({
 }
 
 /**
- * A drop that holds several projects (#237), linted as the CLI lints the folder: each project in
- * turn under its own config, after the same wait for the status line as one run, then the
- * shared-model step, then a section per project. A project that could not be read is its one
- * PARSE_ISSUE finding, under its config too. Every config is read before anything is linted, so
- * one that is not valid JSON refuses the drop, as the CLI's refuses its run. A newer input stops
- * the run between projects, since the rest would hold the main thread for nothing.
+ * A drop that holds several projects (#237), linted by lintProjects, then shown a section per
+ * project. Before each project's lint the run yields to the browser as one run does before its
+ * lint (painted), with the status line saying which project is next: lint awaits only
+ * microtasks, so without the wait the tab would not paint or take an input until every project
+ * was done. A newer input made during a wait owns the page, and the run stops there.
  */
 async function runSeveral(projects: SeveralProject[]): Promise<void> {
   const token = latestRun;
   try {
-    const configs = projects.map((p) => resolveConfig(parsedConfig(p.config)));
-    if (!(await painted(token))) return;
-    const started = performance.now();
-    const runs: ProjectRun[] = [];
-    for (const [i, { path, project, unreadable, config: file, modelKey, modelPath }] of [
-      ...projects.entries(),
-    ]) {
-      const config = configs[i]!;
-      const result = project
-        ? await lint(project.files, {
-            config,
-            diagnostics: project.diagnostics,
-            absent: project.absent,
-            unreadPaths: project.unreadPaths,
-          })
-        : unreadProject(unreadable!, config);
-      if (superseded(token)) return;
-      runs.push({
-        path,
-        result,
-        config,
-        ...(modelKey === undefined ? {} : { modelKey, modelPath }),
-        ...(file === undefined ? {} : { configPath: file.path }),
-      });
-    }
-    const shared = shareModels(runs);
-    results.dataset.lintMs = String(Math.round(performance.now() - started));
+    const linted = await lintProjects(projects, (i) => {
+      say(`Linting project ${i + 1} of ${projects.length}`);
+      return painted(token);
+    });
+    if (!linted) return;
+    const shared = linted.runs;
+    results.dataset.lintMs = String(Math.round(linted.ms));
     // Unhidden before it is filled, as for one run.
     results.hidden = false;
     renderSeveral(
@@ -275,7 +240,8 @@ async function runSeveral(projects: SeveralProject[]): Promise<void> {
     );
     keepResults(true);
     say("");
-    announcer.textContent = `${shared.length} projects: ${runSummaryLine(runSummary(shared))}.`;
+    // The summary line names the number of projects first.
+    announcer.textContent = `${runSummaryLine(runSummary(shared))}.`;
     if (typeof results.scrollIntoView === "function")
       results.scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (e) {

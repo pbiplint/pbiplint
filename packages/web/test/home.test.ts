@@ -745,8 +745,32 @@ describe("home page", () => {
     expect(sections.map(unknown)).toEqual([1, 0]);
     const summary = results.querySelector(":scope > .summary")!.textContent!;
     expect(summary).toMatch(/^2 projects, /);
-    expect(document.getElementById("announce")!.textContent).toBe(`2 projects: ${summary}`);
+    expect(document.getElementById("announce")!.textContent).toBe(summary);
     expect(results.dataset.lintMs).toMatch(/^\d+$/);
+  });
+  it("yields between the projects of several, so a newer input stops the run there (#237)", async () => {
+    vi.mocked(lint).mockClear();
+    feedFolder([
+      at("Drop/a/A.SemanticModel/definition/tables/A.tmdl", "table A\n"),
+      at("Drop/b/B.SemanticModel/definition/tables/B.tmdl", "table B\n"),
+    ]);
+    const status = document.getElementById("status")!;
+    // The run says which project it is on while it waits for the frame before each lint.
+    for (let i = 0; i < 100 && status.textContent !== "Linting project 2 of 2"; i++)
+      await new Promise((r) => setTimeout(r, 0));
+    expect(status.textContent).toBe("Linting project 2 of 2");
+    // Between the two lints, a paste owns the page.
+    (document.getElementById("paste") as HTMLTextAreaElement).value = "table Pasted\n";
+    document.getElementById("lint-paste")!.click();
+    await tick();
+    await tick();
+    expect(document.querySelector("#results h2")!.textContent).toBe(
+      "Results for pasted TMDL (model, 1 file)",
+    );
+    expect(document.querySelectorAll("#results section.project").length).toBe(0);
+    // The first project and the paste were linted; the second project never was.
+    const linted = vi.mocked(lint).mock.calls.map((c) => c[0].map((f) => f.path).join());
+    expect(linted).toEqual(["definition/tables/A.tmdl", "pasted.tmdl"]);
   });
   it("refuses a folder of several projects when one's config is not valid JSON", async () => {
     feedFolder([

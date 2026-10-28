@@ -1,10 +1,10 @@
 import { AxeBuilder } from "@axe-core/playwright";
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { cpSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "./fixtures.js";
 import { setFolder } from "./folder-input.js";
+import { withTempFolder } from "./temp-folder.js";
 
 // A folder that holds several projects, given to the page as a folder is (#237, spec section 7):
 // one section per project, each with its own export bar. The unit tests hold the sections' DOM;
@@ -48,9 +48,7 @@ test("lints a folder of several projects as a section each, and copies one proje
 }) => {
   if (browserName === "chromium")
     await context.grantPermissions(["clipboard-write", "clipboard-read"]);
-  const dir = mkdtempSync(join(tmpdir(), "pbiplint-several-"));
-  try {
-    monorepo(dir);
+  await withTempFolder("pbiplint-several-", monorepo, async (dir) => {
     await setFolder(page.locator("#folder-input"), dir);
     const results = page.locator("#results");
     const sections = results.locator("section.project");
@@ -61,7 +59,7 @@ test("lints a folder of several projects as a section each, and copies one proje
       "Project 3 of 3: reports/Sales/Sales.pbip",
     ]);
     await expect(results.locator(":scope > .summary")).toHaveText(/^3 projects, \d+ findings /);
-    await expect(page.locator("#announce")).toHaveText(/^3 projects: 3 projects, \d+ findings /);
+    await expect(page.locator("#announce")).toHaveText(/^3 projects, \d+ findings /);
     await expect(page.locator("#status")).toBeHidden();
     // The list of projects links each section.
     await results.locator("nav a").nth(2).click();
@@ -102,15 +100,14 @@ test("lints a folder of several projects as a section each, and copies one proje
     expect(scan.violations.map((v) => `${v.id} (${v.impact}): ${v.nodes.length} node(s)`)).toEqual(
       [],
     );
-    // The download is one project's too.
+    // The download is one project's too, named by its project's number.
     const [download] = await Promise.all([
       page.waitForEvent("download"),
       sections.nth(0).getByRole("button", { name: "Download Markdown" }).click(),
     ]);
+    expect(download.suggestedFilename()).toBe("pbiplint-report-project-1.md");
     const md = readFileSync((await download.path())!, "utf8");
     expect(md).toContain("# pbiplint report");
     expect(md).not.toContain("shared with");
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
+  });
 });

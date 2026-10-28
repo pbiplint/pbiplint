@@ -273,15 +273,17 @@ export function renderResults(
 }
 
 /**
- * The ids and heading levels one run's results take: as they always were for the one run on the
- * page, and in a section of several (#237) each id prefixed with the section's, so that the same
- * rule's group in two projects, or two export notes, are not one id twice.
+ * The ids, heading levels, and download names one run's results take: as they always were for the
+ * one run on the page, and in a section of several (#237) each id prefixed with the section's, so
+ * that the same rule's group in two projects, or two export notes, are not one id twice, and each
+ * download named by its section, so two projects' reports saved side by side do not collide.
  */
 interface Ids {
   top: Level;
   sub: Level;
   group: (slug: string) => string;
   exportNote: string;
+  download: (file: ExportFile) => ExportFile;
 }
 
 function idsFor(section: string | undefined): Ids {
@@ -291,6 +293,11 @@ function idsFor(section: string | undefined): Ids {
     sub: section === undefined ? "h3" : "h4",
     group: (slug) => `${prefix}rule-${slug}`,
     exportNote: `${prefix}export-note`,
+    // "pbiplint-report-project-2.md" in the second section.
+    download: (file) =>
+      section === undefined
+        ? file
+        : { ...file, name: file.name.replace(/^pbiplint-report/, `pbiplint-report-${section}`) },
   };
 }
 
@@ -508,8 +515,8 @@ function renderExportBar(result: LintResult, ids: Ids): HTMLElement[] {
       h(
         "div",
         { class: "export-pair" },
-        button("Download Markdown", () => download(exportMarkdown(result))),
-        button("Download JSON", () => download(exportJson(result))),
+        button("Download Markdown", () => download(ids.download(exportMarkdown(result)))),
+        button("Download JSON", () => download(ids.download(exportJson(result)))),
       ),
       announce,
     ),

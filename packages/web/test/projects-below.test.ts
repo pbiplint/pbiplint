@@ -4,15 +4,9 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { tempDir } from "../../../tests/support/temp-dir.js";
 import { UsageError } from "../../cli/src/args.js";
-import {
-  lint,
-  resolveConfig,
-  runSummary,
-  shareModels,
-  unreadProject,
-  type ProjectRun,
-} from "@pbiplint/core";
+import { runSummary, type ProjectRun } from "@pbiplint/core";
 import { lintSeveral } from "../../cli/src/several.js";
+import { lintProjects } from "../src/lint-projects.js";
 import {
   MAX_PROJECTS as CLI_MAX_PROJECTS,
   resolveInput,
@@ -517,26 +511,8 @@ describe("a folder that holds several projects, in the CLI and the browser (#237
     const cli = (await lintSeveral(root, named.projects, { cwd: root })).run.runs;
     const selected = selectProjects(dropOf(root));
     if (selected.kind !== "several") throw new Error("the browser read one project");
-    // As the page lints them (main.ts): each under its own config, then the shared-model step.
-    const runs: ProjectRun[] = [];
-    for (const p of selected.projects) {
-      const config = resolveConfig(p.config ? JSON.parse(p.config.text) : undefined);
-      const result = p.project
-        ? await lint(p.project.files, {
-            config,
-            diagnostics: p.project.diagnostics,
-            absent: p.project.absent,
-            unreadPaths: p.project.unreadPaths,
-          })
-        : unreadProject(p.unreadable!, config);
-      runs.push({
-        path: p.path,
-        result,
-        config,
-        ...(p.modelKey === undefined ? {} : { modelKey: p.modelKey, modelPath: p.modelPath }),
-      });
-    }
-    const site = shareModels(runs);
+    // The page's own loop (main.ts runs it): each under its own config, then the shared-model step.
+    const site = (await lintProjects(selected.projects))!.runs;
     const counts = (r: ProjectRun[]) =>
       r.map((p) => [p.path, p.result.summary.findings, p.result.summary.errors, p.result.failed]);
     expect(counts(site)).toEqual(counts(cli));

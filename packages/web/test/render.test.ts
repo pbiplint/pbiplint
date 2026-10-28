@@ -1280,6 +1280,35 @@ describe("renderSeveral (#237)", () => {
     expect(first.querySelectorAll(".group[hidden]").length).toBeGreaterThan(0);
     expect(second.querySelectorAll(".group[hidden]").length).toBe(0);
   });
+  it("names each section's downloads by its project number, and one run's as always", () => {
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    const names: string[] = [];
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      names.push(this.download);
+    });
+    const downloads = (root: ParentNode) =>
+      [...root.querySelectorAll<HTMLButtonElement>(".export button")].filter((b) =>
+        b.textContent!.startsWith("Download"),
+      );
+    try {
+      renderSeveral(container, runs, sources);
+      for (const b of downloads(sections()[1]!)) b.click();
+      renderResults(container, result, { source: "x" });
+      for (const b of downloads(container)) b.click();
+    } finally {
+      click.mockRestore();
+      vi.restoreAllMocks();
+    }
+    expect(names).toEqual([
+      "pbiplint-report-project-2.md",
+      "pbiplint-report-project-2.json",
+      "pbiplint-report.md",
+      "pbiplint-report.json",
+    ]);
+  });
   it("copies the project's own report for an AI assistant", async () => {
     const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });

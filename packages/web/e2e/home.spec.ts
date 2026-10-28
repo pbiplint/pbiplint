@@ -1,13 +1,4 @@
-import {
-  cpSync,
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
-import { tmpdir } from "node:os";
+import { cpSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "./fixtures.js";
@@ -18,6 +9,7 @@ import {
   SECRETS_FIXTURE,
 } from "../../../tests/support/fake-secrets.js";
 import { setFolder } from "./folder-input.js";
+import { withTempFolder } from "./temp-folder.js";
 
 // The home page in a real browser: the inputs, the results, and the behaviours the happy-dom unit
 // tests can only approximate (drag events, a folder input, downloads, focus). Every test also ends
@@ -45,21 +37,6 @@ const big = fileURLToPath(new URL("../../../tests/generated/big-report", import.
 const bigModel = fileURLToPath(
   new URL("../../../tests/generated/big-model/big-model.SemanticModel", import.meta.url),
 );
-
-/** A folder under the OS temp directory, built by `fill` for one test and removed after it. */
-async function withTempFolder(
-  prefix: string,
-  fill: (dir: string) => void,
-  use: (dir: string) => Promise<void>,
-): Promise<void> {
-  const dir = mkdtempSync(join(tmpdir(), prefix));
-  try {
-    fill(dir);
-    await use(dir);
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
-}
 
 test("lints the sample project and announces the result", async ({ page }) => {
   await page.getByRole("button", { name: "Try the sample project" }).click();

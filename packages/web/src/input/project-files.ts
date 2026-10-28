@@ -1179,10 +1179,7 @@ export function selectProjects(tree: InputTree): Selected {
     found = e;
   }
   const { base, paths, pbips } = found;
-  if (paths.length > MAX_PROJECTS)
-    throw new InputError(
-      `${base || "The drop"} contains ${paths.length} projects, more than the ${MAX_PROJECTS} one run lints; drop a folder that holds fewer`,
-    );
+  if (paths.length > MAX_PROJECTS) throw tooMany(base, paths);
   const read = paths.map((path) => {
     const s = selection(tree, seen, false, true);
     try {
@@ -1217,6 +1214,27 @@ export function selectProjects(tree: InputTree): Selected {
       };
     }),
   };
+}
+
+/**
+ * The refusal of a drop holding more than MAX_PROJECTS projects, as the CLI's tooMany: how many,
+ * and each folder at the drop's top that holds some, with how many, in name order, so a person can
+ * drop them a folder at a time. A project at the top is an entry of its own. The CLI gives each a
+ * line with the command that lints it; the status line is one paragraph, so they follow the
+ * sentence as a list.
+ */
+function tooMany(base: string, paths: string[]): InputError {
+  const counts = new Map<string, number>();
+  for (const p of paths) {
+    const first = p.split("/")[0]!;
+    counts.set(first, (counts.get(first) ?? 0) + 1);
+  }
+  const where = [...counts.keys()]
+    .sort(byName)
+    .map((first) => `${first}: ${counts.get(first)} project${counts.get(first) === 1 ? "" : "s"}`);
+  return new InputError(
+    `${base || "The drop"} contains ${paths.length} projects, more than the ${MAX_PROJECTS} one run lints; drop a folder that holds fewer: ${where.join(", ")}`,
+  );
 }
 
 /**

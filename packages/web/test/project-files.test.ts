@@ -1797,10 +1797,17 @@ describe("selectProjects on a drop that holds several projects (#237)", () => {
       "definition/tables/Shared.tmdl",
     );
   });
-  it("refuses more than 200 projects, saying to drop a folder that holds fewer", () => {
-    expect(() => selectProjects(models(201))).toThrow(
+  it("refuses more than 200 projects, saying to drop a folder that holds fewer and where they are", () => {
+    // As the CLI's refusal lists them: each folder at the drop's top that holds some, with how
+    // many, in name order.
+    const tree = treeOf(
+      ...Array.from({ length: 150 }, (_, i) => modelIn(`Drop/b/p${i}/M.SemanticModel`, "T")),
+      ...Array.from({ length: 50 }, (_, i) => modelIn(`Drop/a/p${i}/M.SemanticModel`, "T")),
+      modelIn("Drop/c/M.SemanticModel", "T"),
+    );
+    expect(() => selectProjects(tree)).toThrow(
       new InputError(
-        "Drop contains 201 projects, more than the 200 one run lints; drop a folder that holds fewer",
+        "Drop contains 201 projects, more than the 200 one run lints; drop a folder that holds fewer: a: 50 projects, b: 150 projects, c: 1 project",
       ),
     );
     expect(paths(models(200))).toHaveLength(200);

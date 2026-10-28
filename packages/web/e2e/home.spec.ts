@@ -17,11 +17,11 @@ import { withTempFolder } from "./temp-folder.js";
 //
 // Not covered here, and only checked by hand: the "Choose a folder" button in Chromium, which
 // takes the File System Access picker and its native dialog (the note under the button is
-// covered); a screen reader actually speaking
-// the live region (the test checks its text); a drop of real files from the desktop in
-// Chromium, where a synthetic File has no directory entry, so the drop test below takes the flat
-// file fallback there while Firefox and WebKit take the entries branch; and a folder the browser
-// cannot open inside one the folder input is given (see the refusal test that suggests dragging).
+// covered); a screen reader actually speaking the live region (the test checks its text); a drop
+// of real files from the desktop in Chromium, where a synthetic File has no directory entry, so
+// the drop test below takes the flat file fallback there while Firefox and WebKit take the entries
+// branch; and a folder the browser cannot open inside one the folder input is given (see the
+// refusal test that suggests dragging).
 
 const zoo = fileURLToPath(
   new URL("../../../tests/fixtures/rule-zoo.SemanticModel", import.meta.url),

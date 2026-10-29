@@ -45,7 +45,9 @@ async function waitFor(url) {
  */
 function run(url, browser) {
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, [script, url, "--browser", browser]);
+    // GitHub's Ubuntu runners refuse Chromium's sandbox, as Playwright's own launches know.
+    const sandbox = process.platform === "linux" ? ["--no-sandbox"] : [];
+    const child = spawn(process.execPath, [script, url, "--browser", browser, ...sandbox]);
     let output = "";
     child.stdout.on("data", (d) => (output += d));
     child.stderr.on("data", (d) => (output += d));

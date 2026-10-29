@@ -2,7 +2,10 @@
 // pbiplint egress check: proves that a copy of the pbiplint site makes no request beyond its own
 // address while a person uses it.
 //
-//   node egress-check.mjs <the site's address> [--browser <path to Chrome or Edge>]
+//   node egress-check.mjs <the site's address> [--browser <path to Chrome or Edge>] [--no-sandbox]
+//
+// --no-sandbox is for a Linux build agent that refuses the browser's sandbox; leave it off
+// anywhere the browser starts without it.
 //
 // It opens the address in a Chrome or Edge already on this machine, headless and with a fresh
 // profile, and watches every request the pages make from before the first one: the home page, a
@@ -36,15 +39,17 @@ export function leavesOrigin(url, origin) {
   return new URL(url).origin !== new URL(origin).origin;
 }
 
-const USAGE = "Usage: node egress-check.mjs <the site's address> [--browser <path>]";
+const USAGE = "Usage: node egress-check.mjs <the site's address> [--browser <path>] [--no-sandbox]";
 
 /** The address to check and, if given, the browser to check it with. */
 export function parseArgs(argv) {
   let url;
   let browser;
+  let noSandbox = false;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    if (arg === "--browser") {
+    if (arg === "--no-sandbox") noSandbox = true;
+    else if (arg === "--browser") {
       browser = argv[++i];
       if (!browser) throw new Error("--browser needs the path to Chrome or Edge");
     } else if (arg.startsWith("--")) throw new Error(`Unknown option ${arg}. ${USAGE}`);
@@ -59,7 +64,7 @@ export function parseArgs(argv) {
   }
   if (!parsed || !/^https?:$/.test(parsed.protocol))
     throw new Error(`The site's address must be an http or https URL, not "${url}"`);
-  return { url, browser };
+  return { url, browser, noSandbox };
 }
 
 /** Where Chrome and Edge are usually installed on `platform`, Edge first. */
@@ -97,7 +102,7 @@ const SETTLE = 1_000;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /** Starts the browser and resolves with its DevTools address, or rejects saying why it cannot. */
-function launch(browser, profile) {
+function launch(browser, profile, noSandbox) {
   const child = spawn(
     browser,
     [
@@ -110,6 +115,10 @@ function launch(browser, profile) {
       // firewall during the check would see it, so it is turned off where a switch allows.
       "--disable-background-networking",
       "--disable-component-update",
+      // A Linux build agent whose kernel refuses the browser's sandbox (Ubuntu 24.04 restricts the
+      // user namespaces it needs) cannot start it otherwise. The check loads only the site it is
+      // pointed at, so this is offered as an option, never the default.
+      ...(noSandbox ? ["--no-sandbox"] : []),
       "about:blank",
     ],
     { stdio: ["ignore", "ignore", "pipe"] },
@@ -143,7 +152,10 @@ function launch(browser, profile) {
     });
     child.on("exit", (code) => {
       clearTimeout(timer);
-      const said = stderr.trim().split("\n").slice(-5).join("\n  ");
+      // The reason is the browser's FATAL or ERROR line; a crash prints a stack dump after it.
+      const lines = stderr.trim().split("\n");
+      const reasons = lines.filter((l) => /FATAL|ERROR/.test(l));
+      const said = (reasons.length ? reasons : lines).slice(-5).join("\n  ");
       reject(
         new Error(
           `${browser} exited (code ${code}) before opening its DevTools port${said ? `. It said:\n  ${said}` : ""}`,
@@ -196,7 +208,7 @@ async function stop(child, profile) {
   }
 }
 
-async function check(url, browser) {
+async function check(url, browser, noSandbox) {
   const origin = new URL(url).origin;
   // A Set, so a request every page repeats is listed once. A connection the site's policy blocks
   // (connect-src 'none') never becomes a request at all; the browser reports it as a console
@@ -205,7 +217,7 @@ async function check(url, browser) {
   const errors = [];
   const visited = [];
   const profile = mkdtempSync(join(tmpdir(), "pbiplint-egress-"));
-  const { child, endpoint } = launch(browser, profile);
+  const { child, endpoint } = launch(browser, profile, noSandbox);
   // Interrupted (Ctrl+C, a cancelled pipeline), the browser and its profile still go.
   const interrupted = (signal) => {
     void stop(child, profile).then(() => process.exit(signal === "SIGINT" ? 130 : 143));
@@ -336,7 +348,7 @@ async function main() {
   }
   let result;
   try {
-    result = await check(args.url, browser);
+    result = await check(args.url, browser, args.noSandbox);
   } catch (e) {
     console.error(`The check could not finish: ${e.message}`);
     return 2;

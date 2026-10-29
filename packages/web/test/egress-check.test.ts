@@ -35,14 +35,18 @@ describe("leavesOrigin", () => {
 });
 
 describe("parseArgs", () => {
-  it("reads the site's address, and a browser to use", () => {
+  it("reads the site's address, a browser to use, and whether to run it without its sandbox", () => {
     expect(parseArgs(["https://lint.corp.example/"])).toEqual({
       url: "https://lint.corp.example/",
       browser: undefined,
+      noSandbox: false,
     });
-    expect(parseArgs(["https://lint.corp.example/", "--browser", "/opt/edge/msedge"])).toEqual({
+    expect(
+      parseArgs(["https://lint.corp.example/", "--browser", "/opt/edge/msedge", "--no-sandbox"]),
+    ).toEqual({
       url: "https://lint.corp.example/",
       browser: "/opt/edge/msedge",
+      noSandbox: true,
     });
   });
   it("refuses a missing or non-web address, a flag with no value, and a flag it does not know", () => {

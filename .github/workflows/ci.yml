@@ -37,6 +37,25 @@ jobs:
       # themselves (issue #93). Its site check also holds the two builds apart: no /latest/,
       # sitemap, or CNAME here, and the newer-version link on every page.
       - run: npm run build -w @pbiplint/web -- --mode self-host
+  # The Azure template for firms that host the site themselves (issue #93), checked with no Azure
+  # sign-in: the JSON the Deploy to Azure button runs must be exactly what main.bicep compiles to
+  # with the pinned Bicep, which writes its version and a hash into the JSON, and the Bicep must
+  # pass the linter rules in bicepconfig.json. That the JSON locks the site down is a unit test
+  # (packages/web/test/azure-template.test.ts), which the test job above runs with the rest.
+  template:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - run: az bicep install --version v0.48.1
+      - name: azuredeploy.json is what main.bicep compiles to
+        run: |
+          ~/.azure/bin/bicep build deploy/azure/main.bicep --stdout > "$RUNNER_TEMP/azuredeploy.json"
+          diff -u deploy/azure/azuredeploy.json "$RUNNER_TEMP/azuredeploy.json" || {
+            echo "::error::deploy/azure/azuredeploy.json is stale. Rebuild it as deploy/azure/README.md says."
+            exit 1
+          }
+      - run: ~/.azure/bin/bicep lint deploy/azure/main.bicep
   # The site in real browsers: the production build served by vite preview, driven by Playwright in
   # Chromium, Firefox, and WebKit, with an accessibility scan. Its own job, so the matrix above
   # stays quick and a browser download never slows the unit tests.

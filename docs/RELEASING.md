@@ -67,7 +67,13 @@ drafted from those comments.
    the tarballs, publishes both packages, and creates the GitHub release with generated notes. It
    does that in two jobs, so anything that fails once the checks are green failed in the second
    one: `verify` checks the tag and runs lint, types, tests, the browser check and the pack check,
-   then `publish` builds again, uploads both packages to npm and creates the release.
+   then `publish` builds again, packs the site archive for firms that host the site themselves,
+   uploads both packages to npm and creates the release. The release carries four files besides
+   the generated notes: `pbiplint-site-<version>.zip` (the self-hosting build of the tagged commit,
+   `npm run build -w @pbiplint/web -- --mode self-host`), `pbiplint-egress-check-<version>.mjs`,
+   `SHA256SUMS` over both, and `pbiplint-site-<version>.sigstore.json`, the build provenance
+   attestation for the first two, which lets a firm verify them without a GitHub sign-in. The archive
+   is packed before the npm publish, so a failure there publishes nothing.
    Watch it with `gh run watch --repo pbiplint/pbiplint`.
 5. Check the published build against the one you tagged, rather than against a number written
    here that drifts with every rule added:
@@ -84,6 +90,18 @@ drafted from those comments.
 
    The exit code is 1 and the two summary lines are identical. `npm test` pins those same totals,
    in `packages/cli/test/cli.test.ts`.
+
+   Then check the site archive the way a firm will:
+
+   ```bash
+   cd "$(mktemp -d)"
+   gh release download v0.2.0 --repo pbiplint/pbiplint
+   shasum -a 256 -c SHA256SUMS           # both files OK
+   gh attestation verify pbiplint-site-0.2.0.zip --repo pbiplint/pbiplint \
+     --bundle pbiplint-site-0.2.0.sigstore.json   # needs no sign-in with the bundle
+   unzip -p pbiplint-site-0.2.0.zip index.html | grep -o 'pbiplint-build" content="[^"]*"'
+   git rev-parse 'v0.2.0^{commit}' | cut -c1-7   # the same seven characters
+   ```
 
 6. Bump the GitHub Action's pin. In https://github.com/pbiplint/action, change the
    `pbiplint-version` default in `action.yml` and the version in the README's inputs table to the

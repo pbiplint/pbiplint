@@ -49,10 +49,19 @@ export default tseslint.config(
   },
   {
     // Plain Node scripts under scripts/ run on Node, not in a browser. Node has had a global
-    // fetch since 18; scripts/te-expectations.mjs fetches the survey's rule files with it.
+    // fetch since 18; scripts/te-expectations.mjs fetches the survey's rule files with it. The
+    // egress check (packages/web/egress) drives a browser with Node 22's global WebSocket.
     files: ["**/*.mjs"],
     languageOptions: {
-      globals: { console: "readonly", process: "readonly", fetch: "readonly" },
+      globals: {
+        console: "readonly",
+        process: "readonly",
+        fetch: "readonly",
+        URL: "readonly",
+        WebSocket: "readonly",
+        setTimeout: "readonly",
+        clearTimeout: "readonly",
+      },
     },
   },
   {

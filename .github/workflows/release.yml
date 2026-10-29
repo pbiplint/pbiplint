@@ -45,7 +45,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write # softprops/action-gh-release creates the release
-      id-token: write # npm trusted publishing
+      id-token: write # npm trusted publishing, and signing the site archive's attestation
+      attestations: write # the site archive's build provenance attestation
     steps:
       # Pinned to the SHA that triggered the run, because a tag is mutable: resolving the tag ref a
       # second time here could publish a commit the verify job never saw. persist-credentials:
@@ -67,7 +68,26 @@ jobs:
       # tarball that ships.
       - run: npm run check:network
       - run: npm run check:pack
+      # The site archive for firms that host pbiplint themselves (issue #93): the self-hosting
+      # build of this same commit, the egress check, and SHA256SUMS over both, with a build
+      # provenance attestation a firm checks with `gh attestation verify`. Built before anything
+      # reaches npm, so a failure here publishes nothing; publish.mjs skips what is already on
+      # the registry, so the job stays safe to rerun.
+      - run: npm run build -w @pbiplint/web -- --mode self-host
+      - run: node scripts/site-archive.mjs release-files
+      - id: attest
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            release-files/pbiplint-site-*.zip
+            release-files/pbiplint-egress-check-*.mjs
+      # The attestation itself, attached so a firm can verify with
+      # `gh attestation verify <file> --repo pbiplint/pbiplint --bundle <this>` and no GitHub sign-in.
+      - env:
+          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+        run: cp "$BUNDLE" "release-files/pbiplint-site-$(node -p "require('./packages/core/package.json').version").sigstore.json"
       - run: node scripts/publish.mjs
       - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           generate_release_notes: true
+          files: release-files/*

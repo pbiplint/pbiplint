@@ -1,4 +1,5 @@
 import { expect, test as base, type Page } from "@playwright/test";
+import { leavesOrigin } from "../egress/egress-check.mjs";
 
 /** Console errors and off-origin requests, collected from before the first navigation. */
 export interface Seen {
@@ -6,7 +7,11 @@ export interface Seen {
   offOrigin: string[];
 }
 
-function watch(page: Page): Seen {
+/**
+ * The rule is the egress check's own (egress/egress-check.mjs), so this suite and the check a firm
+ * runs against its own copy count the same requests as leaving.
+ */
+function watch(page: Page, origin: string): Seen {
   const seen: Seen = { errors: [], offOrigin: [] };
   page.on("console", (message) => {
     if (message.type() === "error") seen.errors.push(message.text());
@@ -14,7 +19,7 @@ function watch(page: Page): Seen {
   page.on("pageerror", (error) => seen.errors.push(error.message));
   page.on("request", (request) => {
     const url = request.url();
-    if (/^https?:/.test(url) && !url.startsWith("http://localhost:")) seen.offOrigin.push(url);
+    if (leavesOrigin(url, origin)) seen.offOrigin.push(url);
   });
   return seen;
 }
@@ -27,8 +32,8 @@ function watch(page: Page): Seen {
  */
 export const test = base.extend<{ seen: Seen }>({
   seen: [
-    async ({ page }, use) => {
-      const seen = watch(page);
+    async ({ page, baseURL }, use) => {
+      const seen = watch(page, baseURL!);
       await page.goto("/");
       await use(seen);
       expect(seen.errors).toEqual([]);

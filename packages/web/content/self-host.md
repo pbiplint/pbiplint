@@ -44,7 +44,7 @@ Then check them:
     --source-ref refs/tags/v{{version}}
   ```
 
-**Or build from source** at the release tag, on Node 20.19 or later 20, or 22.12 or later:
+**Or build from source** at the release tag, on Node 20.19 or a later 20.x, or Node 22.12 or later:
 
 ```bash
 git clone https://github.com/pbiplint/pbiplint.git
@@ -180,7 +180,7 @@ An Azure static website cannot set response headers. The policy that enforces th
 - `X-Content-Type-Options: nosniff`. The [upload](#upload) sets the script and stylesheet types explicitly for this reason.
 - Reports of policy violations, since a policy set in a page cannot send them.
 
-The risk is low for a tool that stores nothing, changes nothing, and runs only inside your network. A web server of your own could send those headers; that route is not covered here, so [comment on the issue](https://github.com/pbiplint/pbiplint/issues/93) if your firm needs it.
+The risk is low for a tool that stores nothing, changes nothing, and runs only inside your network. A web server of your own could send those headers. That route is not covered here; it is recorded with the other parked routes on [issue #93](https://github.com/pbiplint/pbiplint/issues/93), so [open an issue](https://github.com/pbiplint/pbiplint/issues/new) if your firm needs it.
 
 <h2 id="cli">The command line and the GitHub Action</h2>
 

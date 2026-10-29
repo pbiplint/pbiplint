@@ -23,6 +23,11 @@ describe("buildMarker", () => {
   it("is the short commit sha on CI", () => {
     expect(buildMarker({ GITHUB_SHA: SHA }, noGit)).toBe("6aa6f4e");
   });
+  it("prefers the commit checked out, so a firm's workflow building a pbiplint tag stamps the tag's commit", () => {
+    expect(buildMarker({ GITHUB_SHA: "f".repeat(40) }, git({ "rev-parse HEAD": SHA }))).toBe(
+      "6aa6f4e",
+    );
+  });
   it("reads the commit from git on a local build, cut to seven characters exactly as CI's is", () => {
     // Not `git rev-parse --short=7`, which lengthens the sha when seven characters are ambiguous,
     // and would then stamp a different marker from the one CI stamps for the same commit.
@@ -35,9 +40,9 @@ describe("buildMarker", () => {
 });
 
 describe("commitDate", () => {
-  it("is the date of the commit, long-form, in UTC, so every build of a commit shows the same date", () => {
+  it("is the committer's own calendar day, long-form, so every build of a commit shows the date its release has", () => {
     expect(commitDate(git({ "log -1 --format=%cI": "2026-10-04T23:30:00-05:00" }))).toBe(
-      "October 5, 2026",
+      "October 4, 2026",
     );
     expect(commitDate(git({ "log -1 --format=%cI": "2026-10-04T09:00:00Z" }))).toBe(
       "October 4, 2026",

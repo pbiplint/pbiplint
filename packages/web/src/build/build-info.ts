@@ -25,20 +25,23 @@ const git: Git = (args) => {
 };
 
 /**
- * The short commit sha the site was built from: GITHUB_SHA on CI, git on a local build, and "dev"
- * only when neither can say, as in a source download with no git. Both are cut to seven characters
- * the same way, so a firm building a tag stamps the marker pbiplint.com's build of it carries.
+ * The short commit sha the site was built from: the commit checked out, then GITHUB_SHA, and "dev"
+ * only when neither can say, as in a source download with no git. Git comes first because a firm's
+ * own workflow that checks out a pbiplint tag has its own commit in GITHUB_SHA. Both are cut to
+ * seven characters the same way, so a firm building a tag stamps the marker pbiplint.com's build
+ * of it carries.
  */
 export const buildMarker = (env: Record<string, string | undefined>, run: Git = git): string =>
-  (env.GITHUB_SHA || run(["rev-parse", "HEAD"]))?.slice(0, 7) || "dev";
+  (run(["rev-parse", "HEAD"]) || env.GITHUB_SHA)?.slice(0, 7) || "dev";
 
 /**
- * The date of the commit the site was built from, long-form, in UTC, so every build of a commit
- * shows the same date wherever it is built. Undefined when git cannot say.
+ * The date of the commit the site was built from, long-form: the calendar day the committer's own
+ * clock showed, as GitHub dates the release, and the same wherever the build runs. Undefined when
+ * git cannot say.
  */
 export function commitDate(run: Git = git): string | undefined {
-  const iso = run(["log", "-1", "--format=%cI"]);
-  const date = iso ? new Date(iso) : undefined;
+  const day = /^\d{4}-\d{2}-\d{2}(?=T)/.exec(run(["log", "-1", "--format=%cI"]) ?? "")?.[0];
+  const date = day ? new Date(`${day}T00:00:00Z`) : undefined;
   if (!date || Number.isNaN(date.getTime())) return undefined;
   return date.toLocaleDateString("en-US", {
     timeZone: "UTC",

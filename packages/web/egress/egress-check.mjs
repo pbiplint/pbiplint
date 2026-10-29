@@ -106,6 +106,10 @@ function launch(browser, profile) {
       `--user-data-dir=${profile}`,
       "--no-first-run",
       "--no-default-browser-check",
+      // The browser's own traffic is not the site's and is not counted, but a firm watching its
+      // firewall during the check would see it, so it is turned off where a switch allows.
+      "--disable-background-networking",
+      "--disable-component-update",
       "about:blank",
     ],
     { stdio: ["ignore", "ignore", "pipe"] },
@@ -139,7 +143,12 @@ function launch(browser, profile) {
     });
     child.on("exit", (code) => {
       clearTimeout(timer);
-      reject(new Error(`${browser} exited (code ${code}) before opening its DevTools port`));
+      const said = stderr.trim().split("\n").slice(-5).join("\n  ");
+      reject(
+        new Error(
+          `${browser} exited (code ${code}) before opening its DevTools port${said ? `. It said:\n  ${said}` : ""}`,
+        ),
+      );
     });
   });
   return { child, endpoint };
@@ -174,22 +183,44 @@ async function connect(endpoint, onEvent) {
   return { send, close: () => socket.close() };
 }
 
+const running = (child) => child.exitCode === null && child.signalCode === null;
+
+/** Ends the browser and removes its temporary profile; a profile it cannot remove is only reported. */
+async function stop(child, profile) {
+  if (running(child)) child.kill();
+  await new Promise((r) => (running(child) ? child.once("exit", r) : r()));
+  try {
+    rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  } catch (e) {
+    console.error(`Could not remove the temporary browser profile ${profile}: ${e.message}`);
+  }
+}
+
 async function check(url, browser) {
   const origin = new URL(url).origin;
-  const offOrigin = [];
+  // A Set, so a request every page repeats is listed once. A connection the site's policy blocks
+  // (connect-src 'none') never becomes a request at all; the browser reports it as a console
+  // error, which fails the check below.
+  const offOrigin = new Set();
   const errors = [];
   const visited = [];
   const profile = mkdtempSync(join(tmpdir(), "pbiplint-egress-"));
   const { child, endpoint } = launch(browser, profile);
+  // Interrupted (Ctrl+C, a cancelled pipeline), the browser and its profile still go.
+  const interrupted = (signal) => {
+    void stop(child, profile).then(() => process.exit(signal === "SIGINT" ? 130 : 143));
+  };
+  process.once("SIGINT", interrupted);
+  process.once("SIGTERM", interrupted);
   let cdp;
   try {
     let loaded = () => {};
     cdp = await connect(await endpoint, (event) => {
       const { method, params } = event;
       if (method === "Network.requestWillBeSent") {
-        if (leavesOrigin(params.request.url, origin)) offOrigin.push(params.request.url);
+        if (leavesOrigin(params.request.url, origin)) offOrigin.add(params.request.url);
       } else if (method === "Network.webSocketCreated") {
-        if (leavesOrigin(params.url, origin)) offOrigin.push(params.url);
+        if (leavesOrigin(params.url, origin)) offOrigin.add(params.url);
       } else if (method === "Runtime.consoleAPICalled" && params.type === "error") {
         errors.push(params.args.map((a) => a.value ?? a.description ?? "").join(" "));
       } else if (method === "Runtime.exceptionThrown") {
@@ -238,14 +269,20 @@ async function check(url, browser) {
       }
     };
     const open = async (address) => {
-      const load = new Promise((resolve) => (loaded = resolve));
-      await cdp.send("Page.navigate", { url: address }, page);
-      await Promise.race([
-        load,
-        sleep(STEP_TIMEOUT).then(() => {
-          throw new Error(`Timed out loading ${address}`);
-        }),
-      ]);
+      let timer;
+      const load = new Promise((resolve, reject) => {
+        loaded = resolve;
+        timer = setTimeout(() => reject(new Error(`Timed out loading ${address}`)), STEP_TIMEOUT);
+      });
+      try {
+        // A site that cannot be reached still loads, as the browser's error page, so the
+        // navigation's own error is what says so.
+        const { errorText } = await cdp.send("Page.navigate", { url: address }, page);
+        if (errorText) throw new Error(`Could not load ${address}: ${errorText}`);
+        await load;
+      } finally {
+        clearTimeout(timer);
+      }
       await sleep(SETTLE);
       visited.push(address);
     };
@@ -269,13 +306,11 @@ async function check(url, browser) {
     if (rule) await open(new URL(rule, url).href);
     await open(new URL("/privacy/", url).href);
     await open(new URL("/about/", url).href);
-    return { build, version, visited, offOrigin, errors };
+    return { build, version, visited, offOrigin: [...offOrigin], errors };
   } finally {
     await cdp?.send("Browser.close").catch(() => {});
     cdp?.close();
-    if (child.exitCode === null) child.kill();
-    await new Promise((r) => (child.exitCode === null ? child.once("exit", r) : r()));
-    rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+    await stop(child, profile);
   }
 }
 

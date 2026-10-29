@@ -68,10 +68,11 @@ drafted from those comments.
    does that in two jobs, so anything that fails once the checks are green failed in the second
    one: `verify` checks the tag and runs lint, types, tests, the browser check and the pack check,
    then `publish` builds again, packs the site archive for firms that host the site themselves,
-   uploads both packages to npm and creates the release. The release carries three files besides
+   uploads both packages to npm and creates the release. The release carries four files besides
    the generated notes: `pbiplint-site-<version>.zip` (the self-hosting build of the tagged commit,
    `npm run build -w @pbiplint/web -- --mode self-host`), `pbiplint-egress-check-<version>.mjs`,
-   and `SHA256SUMS` over both, with a build provenance attestation for the first two. The archive
+   `SHA256SUMS` over both, and `pbiplint-site-<version>.sigstore.json`, the build provenance
+   attestation for the first two, which lets a firm verify them without a GitHub sign-in. The archive
    is packed before the npm publish, so a failure there publishes nothing.
    Watch it with `gh run watch --repo pbiplint/pbiplint`.
 5. Check the published build against the one you tagged, rather than against a number written
@@ -96,7 +97,8 @@ drafted from those comments.
    cd "$(mktemp -d)"
    gh release download v0.2.0 --repo pbiplint/pbiplint
    shasum -a 256 -c SHA256SUMS           # both files OK
-   gh attestation verify pbiplint-site-0.2.0.zip --repo pbiplint/pbiplint
+   gh attestation verify pbiplint-site-0.2.0.zip --repo pbiplint/pbiplint \
+     --bundle pbiplint-site-0.2.0.sigstore.json   # needs no sign-in with the bundle
    unzip -p pbiplint-site-0.2.0.zip index.html | grep -o 'pbiplint-build" content="[^"]*"'
    git rev-parse 'v0.2.0^{commit}' | cut -c1-7   # the same seven characters
    ```

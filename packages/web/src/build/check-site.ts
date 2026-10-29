@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import type { Plugin } from "vite";
 import { GERMAN_PROBE } from "../../../core/build/m-parser-build.mjs";
@@ -225,8 +225,53 @@ function walk(dir: string): string[] {
   );
 }
 
-/** Runs the check on the finished build and fails it on any problem, so a deploy can never ship a page that phones home. */
-export function siteCheckPlugin(): Plugin {
+/** Which of the two builds of one commit a folder holds: pbiplint.com's, or the one a firm hosts. */
+export type BuildKind = "public" | "self-host";
+
+/** What only pbiplint.com serves: the page a self-hosted copy links to, the sitemap, and GitHub Pages' domain file. */
+const PUBLIC_ONLY = ["CNAME", "latest/index.html", "sitemap.xml"];
+const LATEST_LINK = 'href="https://pbiplint.com/latest/#';
+
+/**
+ * Holds the two builds apart: the public build carries /latest/, the sitemap, and CNAME, and no
+ * page links to /latest/ the way a self-hosted copy's footer does; the self-hosting build carries
+ * none of those three, keeps robots out, and has that link on every page. Both show the version.
+ */
+export function checkBuild(dir: string, kind: BuildKind): string[] {
+  const shape: string[] = [];
+  const pages: string[] = [];
+  const self = kind === "self-host";
+  for (const file of PUBLIC_ONLY) {
+    const present = existsSync(join(dir, file));
+    if (self && present) shape.push(`self-hosting build: carries ${file}`);
+    if (!self && !present) shape.push(`public build: no ${file}`);
+  }
+  if (self) {
+    const robots = existsSync(join(dir, "robots.txt"))
+      ? readFileSync(join(dir, "robots.txt"), "utf8")
+      : "";
+    if (!/^Disallow: \/$/m.test(robots))
+      shape.push("self-hosting build: robots.txt does not say Disallow: /");
+  }
+  for (const file of walk(dir).sort()) {
+    const rel = relative(dir, file).split("\\").join("/");
+    if (!rel.endsWith(".html")) continue;
+    const footer = /<footer[\s\S]*<\/footer>/.exec(readFileSync(file, "utf8"))?.[0] ?? "";
+    if (!footer.includes('class="site-version"'))
+      pages.push(`${rel}: no version line in the footer`);
+    else if (self && !footer.includes(LATEST_LINK))
+      pages.push(`${rel}: no link to /latest/ in the footer`);
+    else if (!self && footer.includes(LATEST_LINK))
+      pages.push(`${rel}: links to /latest/, which only a self-hosted copy does`);
+  }
+  return [...shape, ...pages.sort()];
+}
+
+/**
+ * Runs the check on the finished build and fails it on any problem, so a deploy can never ship a
+ * page that phones home. Told which build it is, it checks that build's shape as well.
+ */
+export function siteCheckPlugin({ build }: { build?: BuildKind } = {}): Plugin {
   let outDir = "";
   return {
     name: "pbiplint-check-site",
@@ -236,6 +281,7 @@ export function siteCheckPlugin(): Plugin {
     },
     closeBundle() {
       const report = checkSite(outDir);
+      if (build) report.problems.push(...checkBuild(outDir, build));
       console.log(`site: ${report.files} files, ${(report.bytes / 1024).toFixed(0)} KB`);
       if (report.problems.length)
         throw new Error(`site check failed:\n  ${report.problems.join("\n  ")}`);

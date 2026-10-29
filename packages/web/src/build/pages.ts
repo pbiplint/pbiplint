@@ -494,6 +494,12 @@ function header(path: string): string {
     </header>`;
 }
 
+/**
+ * Where the footer's version line goes. versionPlugin (build-info.ts) writes it into every page at
+ * build and in the dev server, from one place for the generated pages and the hand-written ones.
+ */
+export const VERSION_MARKER = "<!-- pbiplint-version -->";
+
 const FOOTER = `<footer class="site-footer">
       <div class="container">
         <p>Nothing you lint leaves your browser: <a href="/privacy/">the pbiplint Privacy Promise</a>.</p>
@@ -502,6 +508,7 @@ const FOOTER = `<footer class="site-footer">
           ${external("https://www.youtube.com/@TheDataPractitioner", "The Data Practitioner")}. pbiplint
           and its logo are trademarks of McKinley Consulting.
         </p>
+        ${VERSION_MARKER}
       </div>
     </footer>`;
 
@@ -710,6 +717,27 @@ export function contentPage(markdown: string, path: string, source: string): str
     description: str(data.description),
     path,
     main: `<article class="prose">\n${render(body)}\n</article>`,
+  });
+}
+
+/**
+ * The /latest/ page, on pbiplint.com only, where a self-hosted copy's footer link lands. Without a
+ * script it names the latest version; src/latest.ts compares it with the version in the fragment.
+ * It gives no date, for the reason the README gives none: pbiplint.com deploys at the release's
+ * merge, a few minutes before the tag publishes it.
+ */
+export function latestPage(version: string): string {
+  const v = escapeHtml(version);
+  return page({
+    title: "Is your pbiplint up to date?",
+    description: "Compare your copy of pbiplint with the latest version.",
+    path: "/latest/",
+    main: `<article class="prose">
+<h1>Is your pbiplint up to date?</h1>
+<p id="latest-answer" data-version="${v}" aria-live="polite">The latest pbiplint is ${v}.</p>
+<p>${external("https://github.com/pbiplint/pbiplint/releases", "The releases page")} lists every version and what changed in it.</p>
+</article>`,
+    scripts: ["/src/latest.ts"],
   });
 }
 

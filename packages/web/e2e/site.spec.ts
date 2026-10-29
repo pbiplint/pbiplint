@@ -21,6 +21,7 @@ const PAGES = [
   "/privacy/",
   "/cli/",
   "/pipelines/",
+  "/latest/",
   "/404.html",
 ];
 
@@ -44,6 +45,50 @@ test("every page carries the policy and the build marker", async ({ page }) => {
     // A link off the site that missed its rel still sends no Referer.
     await expect(page.locator('meta[name="referrer"]')).toHaveAttribute("content", "no-referrer");
   }
+});
+
+test("every page names the version in its footer, and pbiplint.com's links to no /latest/", async ({
+  page,
+}) => {
+  for (const path of PAGES) {
+    await page.goto(path);
+    await expect(page.locator(".site-footer .site-version"), path).toHaveText(
+      /^pbiplint \d+\.\d+\.\d+$/,
+    );
+    await expect(page.locator('.site-footer a[href*="/latest/"]'), path).toHaveCount(0);
+  }
+});
+
+test.describe("the /latest/ page", () => {
+  const answer = (page: import("@playwright/test").Page) => page.locator("#latest-answer");
+
+  test("says a copy at the latest version is up to date", async ({ page }) => {
+    await page.goto("/latest/");
+    const latest = await answer(page).getAttribute("data-version");
+    await page.goto(`/latest/#${latest}`);
+    await expect(answer(page)).toHaveText(
+      `You're up to date: your copy is ${latest}, the latest pbiplint.`,
+    );
+  });
+
+  test("tells an older copy to ask IT, and answers again when the fragment changes", async ({
+    page,
+  }) => {
+    await page.goto("/latest/#0.0.1");
+    await expect(answer(page)).toHaveText(
+      /^Your copy is 0\.0\.1; the latest is \d+\.\d+\.\d+\. Ask your IT team to update\.$/,
+    );
+    await page.goto("/latest/#nonsense");
+    await expect(answer(page)).toHaveText(
+      /^The latest pbiplint is \d+\.\d+\.\d+\. Compare it with the version in your copy's footer\.$/,
+    );
+  });
+
+  test("writes a fragment that looks like HTML as nothing but the fallback", async ({ page }) => {
+    await page.goto("/latest/#<img src=x onerror=alert(1)>");
+    await expect(answer(page)).toHaveText(/^The latest pbiplint is /);
+    await expect(answer(page).locator("img")).toHaveCount(0);
+  });
 });
 
 test("How to fix it opens the rule's page in a new tab, and the results stay put", async ({
@@ -71,7 +116,7 @@ test("a sentence copied from a page leaves out the note a link off the site carr
   page,
 }) => {
   await page.goto("/rules/hide-foreign-keys/");
-  const credit = page.locator(".site-footer p").last();
+  const credit = page.locator(".site-footer p", { hasText: "from the makers of" });
   // The note is still in the name a screen reader hears.
   await expect(
     credit.getByRole("link", { name: "The Data Practitioner (opens in a new tab)", exact: true }),

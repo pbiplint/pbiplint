@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { tempDir } from "../../../tests/support/temp-dir.js";
-import { checkSite, scanTags, siteCheckPlugin } from "../src/build/check-site.js";
+import { checkBuild, checkSite, scanTags, siteCheckPlugin } from "../src/build/check-site.js";
 import { CSP } from "../src/build/csp.js";
 
 const META = `<meta http-equiv="Content-Security-Policy" content="${CSP}">`;
@@ -257,8 +257,8 @@ describe("scanTags", () => {
 
 describe("siteCheckPlugin", () => {
   /** Runs the plugin over a built site the way Vite does: resolve the config, then close the bundle. */
-  function run(dir: string): { logs: string[]; error?: Error } {
-    const plugin = siteCheckPlugin();
+  function run(dir: string, build?: "public" | "self-host"): { logs: string[]; error?: Error } {
+    const plugin = siteCheckPlugin({ build });
     expect(plugin.apply).toBe("build");
     const configResolved = plugin.configResolved as unknown as (c: {
       root: string;
@@ -305,5 +305,65 @@ describe("siteCheckPlugin", () => {
     expect(error?.message).toContain("assets/a.js: references fetch(");
     // The size line is written before the check can fail, so a failing build still says what it read.
     expect(logs).toHaveLength(1);
+  });
+
+  it("checks the build's shape too when told which build it is", () => {
+    const dir = site({
+      "index.html": `<html><head>${META}</head><body><footer><p class="site-version">pbiplint 0.3.0</p></footer></body></html>`,
+    });
+    const { error } = run(dir, "public");
+    expect(error?.message).toContain("public build: no latest/index.html");
+  });
+});
+
+const LINK =
+  '<a href="https://pbiplint.com/latest/#0.3.0" target="_blank" rel="noopener noreferrer">Check for a newer version</a>';
+const publicPage = `<footer><p class="site-version">pbiplint 0.3.0</p></footer>`;
+const selfHostPage = `<footer><p class="site-version">pbiplint 0.3.0, from October 4, 2026. ${LINK}</p></footer>`;
+
+describe("checkBuild", () => {
+  it("passes a public build with /latest/, a sitemap, CNAME, and the version alone in every footer", () => {
+    const dir = site({
+      "index.html": publicPage,
+      "latest/index.html": publicPage,
+      "sitemap.xml": "<urlset/>",
+      CNAME: "pbiplint.com",
+      "robots.txt": "User-agent: *\nAllow: /\n",
+    });
+    expect(checkBuild(dir, "public")).toEqual([]);
+  });
+  it("names what a public build is missing, and any page carrying the self-hosted link", () => {
+    const dir = site({ "index.html": selfHostPage, "about/index.html": "<footer></footer>" });
+    expect(checkBuild(dir, "public")).toEqual([
+      "public build: no CNAME",
+      "public build: no latest/index.html",
+      "public build: no sitemap.xml",
+      "about/index.html: no version line in the footer",
+      "index.html: links to /latest/, which only a self-hosted copy does",
+    ]);
+  });
+  it("passes a self-hosting build with no /latest/, sitemap, or CNAME, robots kept out, and the link on every page", () => {
+    const dir = site({
+      "index.html": selfHostPage,
+      "rules/x/index.html": selfHostPage,
+      "robots.txt": "User-agent: *\nDisallow: /\n",
+    });
+    expect(checkBuild(dir, "self-host")).toEqual([]);
+  });
+  it("names everything a self-hosting build must not carry, and a page without the link", () => {
+    const dir = site({
+      "index.html": publicPage,
+      "latest/index.html": selfHostPage,
+      "sitemap.xml": "<urlset/>",
+      CNAME: "pbiplint.com",
+      "robots.txt": "User-agent: *\nAllow: /\n",
+    });
+    expect(checkBuild(dir, "self-host")).toEqual([
+      "self-hosting build: carries CNAME",
+      "self-hosting build: carries latest/index.html",
+      "self-hosting build: carries sitemap.xml",
+      "self-hosting build: robots.txt does not say Disallow: /",
+      "index.html: no link to /latest/ in the footer",
+    ]);
   });
 });

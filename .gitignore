@@ -21,6 +21,7 @@ packages/web/about/
 packages/web/privacy/
 packages/web/cli/
 packages/web/pipelines/
+packages/web/latest/
 packages/web/public/sitemap.xml
 packages/web/public/llms.txt
 

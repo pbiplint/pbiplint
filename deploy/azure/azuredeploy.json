@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.48.1.52935",
-      "templateHash": "11889881704076817707"
+      "templateHash": "14089948551686980878"
     }
   },
   "parameters": {
@@ -28,7 +28,7 @@
     "subnetId": {
       "type": "string",
       "metadata": {
-        "description": "Resource ID of an existing subnet the private endpoints join. It may be in another resource group."
+        "description": "Resource ID of an existing subnet in this subscription that the private endpoints join. It may be in another resource group."
       }
     },
     "networkLocation": {
@@ -177,10 +177,11 @@
       "condition": "[equals(parameters('dnsMode'), 'create')]",
       "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
       "apiVersion": "2024-06-01",
-      "name": "[format('{0}/{1}', format('privatelink.{0}.{1}', variables('services')[copyIndex()], environment().suffixes.storage), format('{0}-link', parameters('storageAccountName')))]",
+      "name": "[format('{0}/{1}', format('privatelink.{0}.{1}', variables('services')[copyIndex()], environment().suffixes.storage), format('{0}-link', variables('subnetParts')[8]))]",
       "location": "global",
       "properties": {
         "registrationEnabled": false,
+        "resolutionPolicy": "NxDomainRedirect",
         "virtualNetwork": {
           "id": "[variables('vnetId')]"
         }

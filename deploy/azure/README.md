@@ -10,8 +10,13 @@ private copy of pbiplint inside your own Azure network:
   uploads use.
 - Private DNS for both, created here, taken from zones you already have, or left to your own Azure
   Policy.
-- A delete lock, and optionally the account's blob write and delete events sent to a Log Analytics
+- A delete lock on the account (not on the files in it), and optionally the account's blob write and delete events sent to a Log Analytics
   workspace, and write access to the site's files for one Entra group.
+
+The lock keeps the account, its role assignments, and its diagnostic setting from being deleted;
+it does not stop anyone with write access from changing or deleting the files, which is what the
+log is for. To take the group's write access away, remove its members, or lift the lock, delete the
+role assignment, and put the lock back.
 
 It deploys no script, container, or virtual machine, and nothing about a pbiplint version: the
 site's files are uploaded afterwards from a machine inside the network, with the commands the page

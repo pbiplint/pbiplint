@@ -43,6 +43,7 @@ describe("the Azure template", () => {
       allowBlobPublicAccess: false,
       supportsHttpsTrafficOnly: true,
       defaultToOAuthAuthentication: true,
+      networkAcls: { defaultAction: "Deny", bypass: "None" },
     });
   });
 
@@ -80,9 +81,23 @@ describe("the Azure template", () => {
     expect(zones.condition).toBe("[equals(parameters('dnsMode'), 'create')]");
     const link = one("Microsoft.Network/privateDnsZones/virtualNetworkLinks");
     expect(link.condition).toBe("[equals(parameters('dnsMode'), 'create')]");
+    // To the subnet's own network, and without breaking names these zones do not hold.
+    expect(link.properties?.virtualNetwork).toEqual({ id: "[variables('vnetId')]" });
+    expect(template.variables.vnetId).toBe(
+      "[resourceId(variables('subnetParts')[2], variables('subnetParts')[4], 'Microsoft.Network/virtualNetworks', variables('subnetParts')[8])]",
+    );
+    expect(link.properties?.resolutionPolicy).toBe("NxDomainRedirect");
     const groups = one("Microsoft.Network/privateEndpoints/privateDnsZoneGroups");
     expect(groups.copy?.count).toBe(SERVICES);
     expect(groups.condition).toBe("[not(equals(parameters('dnsMode'), 'none'))]");
+    // The zone this mode made, or the existing one the firm picked for that service.
+    expect(JSON.stringify(groups.properties)).toContain(
+      "if(equals(parameters('dnsMode'), 'create'), resourceId('Microsoft.Network/privateDnsZones', format('privatelink.{0}.{1}', variables('services')[copyIndex()], environment().suffixes.storage)), variables('existingZones')[variables('services')[copyIndex()]])",
+    );
+    expect(template.variables.existingZones).toEqual({
+      web: "[parameters('webDnsZoneId')]",
+      blob: "[parameters('blobDnsZoneId')]",
+    });
     expect(template.parameters.dnsMode.allowedValues).toEqual(["create", "existing", "none"]);
     expect(template.parameters.dnsMode.defaultValue).toBe("create");
   });
@@ -90,6 +105,9 @@ describe("the Azure template", () => {
   it("puts a delete lock on the account", () => {
     const lock = one("Microsoft.Authorization/locks");
     expect(lock.properties?.level).toBe("CanNotDelete");
+    expect(lock.scope).toBe(
+      "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
+    );
   });
 
   it("sends blob writes and deletes to the firm's workspace, when it names one", () => {
@@ -147,8 +165,6 @@ describe("the Azure template", () => {
     const outputs = Object.keys(form.parameters.outputs).sort();
     const params = Object.keys(template.parameters).sort();
     expect(outputs).toEqual(params);
-    const required = params.filter((p) => template.parameters[p].defaultValue === undefined);
-    for (const p of required) expect(outputs).toContain(p);
   });
 
   it("says on the form who may assign the write group's role", () => {

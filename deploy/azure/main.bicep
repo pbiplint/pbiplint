@@ -13,7 +13,7 @@ param location string = resourceGroup().location
 @maxLength(24)
 param storageAccountName string = 'pbiplint${uniqueString(resourceGroup().id)}'
 
-@description('Resource ID of an existing subnet the private endpoints join. It may be in another resource group.')
+@description('Resource ID of an existing subnet in this subscription that the private endpoints join. It may be in another resource group.')
 param subnetId string
 
 @description('Region of that subnet\'s virtual network; private endpoints must be in it. The portal form fills it in.')
@@ -115,10 +115,15 @@ resource zones 'Microsoft.Network/privateDnsZones@2024-06-01' = [
 resource links 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2024-06-01' = [
   for (service, i) in services: if (dnsMode == 'create') {
     parent: zones[i]
-    name: '${storageAccountName}-link'
+    // Named for the network: a network links to a zone once, so a second site in this resource
+    // group reuses the link rather than failing on a second one.
+    name: '${subnetParts[8]}-link'
     location: 'global'
     properties: {
       registrationEnabled: false
+      // A name these new zones do not hold, such as another storage account whose records live
+      // in other zones, still resolves as it did before, rather than failing on this network.
+      resolutionPolicy: 'NxDomainRedirect'
       virtualNetwork: {
         id: vnetId
       }

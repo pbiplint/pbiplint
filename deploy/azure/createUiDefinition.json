@@ -66,7 +66,7 @@
             "toolTip": "The subnet the two private endpoints join.",
             "constraints": {
               "required": true,
-              "allowedValues": "[map(steps('network').subnetsApi.value, (item) => parse(concat('{\"label\":\"', item.name, '\",\"value\":\"', item.id, '\"}')))]"
+              "allowedValues": "[map(filter(steps('network').subnetsApi.value, (item) => not(contains(createArray('GatewaySubnet', 'AzureBastionSubnet', 'AzureFirewallSubnet', 'AzureFirewallManagementSubnet', 'RouteServerSubnet'), item.name))), (item) => parse(concat('{\"label\":\"', item.name, '\",\"value\":\"', item.id, '\"}')))]"
             }
           }
         ]
@@ -105,7 +105,7 @@
             "visible": "[equals(steps('dns').dnsMode, 'create')]",
             "options": {
               "style": "Info",
-              "text": "Linking the new zones to the network needs permission to join it (Microsoft.Network/virtualNetworks/join/action)."
+              "text": "Choose this only for a network that uses Azure-provided DNS: zones answer only queries that reach Azure DNS, so a network with its own DNS servers (a hub forwarder, say) or clients on premises need the existing zones or your own policy instead. Linking the new zones to the network needs permission to join it (Microsoft.Network/virtualNetworks/join/action)."
             }
           },
           {
@@ -140,7 +140,7 @@
             "visible": "[equals(steps('dns').dnsMode, 'existing')]",
             "options": {
               "style": "Info",
-              "text": "Adding records to existing zones needs permission to join them (Microsoft.Network/privateDnsZones/join/action)."
+              "text": "Both zones are required: privatelink.web.core.windows.net in the first box and privatelink.blob.core.windows.net in the second. Adding records to them needs permission to join them (Microsoft.Network/privateDnsZones/join/action)."
             }
           }
         ]
@@ -160,9 +160,6 @@
                 "subscription": "all",
                 "location": "all"
               }
-            },
-            "constraints": {
-              "required": false
             }
           },
           {

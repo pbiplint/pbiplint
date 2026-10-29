@@ -2,8 +2,10 @@ import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "nod
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Plugin } from "vite";
+import { VERSION } from "../../../core/src/version.js";
 import {
   contentPage,
+  latestPage,
   pageLayer,
   parseFrontmatter,
   publishesLayer,
@@ -29,14 +31,23 @@ export interface GenerateOptions {
   outDir?: string;
   /** The file families the site publishes: SITE_LAYERS, unless a test renders another site. */
   published?: readonly SiteLayer[];
+  /**
+   * The self-hosting build, the one a firm serves itself: no /latest/ page, which would only ever
+   * compare a copy with itself, and no sitemap, since a copy inside a firm is not for indexing.
+   */
+  selfHost?: boolean;
 }
 
-/** Writes rules/<slug>/index.html, rules/index.html, a page per CONTENT_PAGES entry, public/sitemap.xml, and public/llms.txt under outDir. */
+/**
+ * Writes rules/<slug>/index.html, rules/index.html, a page per CONTENT_PAGES entry, and
+ * public/llms.txt under outDir, and for pbiplint.com also latest/index.html and public/sitemap.xml.
+ */
 export function generateSite({
   rulesDir = RULES_DIR,
   contentDir = CONTENT_DIR,
   outDir = WEB_ROOT,
   published = SITE_LAYERS,
+  selfHost = false,
 }: GenerateOptions = {}): RuleMeta[] {
   // The delete below is derived from outDir while the sources are read from rulesDir, so a caller
   // that pointed outDir at the repo root would erase the very Markdown this is generating from.
@@ -80,15 +91,23 @@ export function generateSite({
     const markdown = readFileSync(join(contentDir, `${name}.md`), "utf8");
     write(join(outDir, name, "index.html"), contentPage(markdown, `/${name}/`, source));
   }
-  write(
-    join(outDir, "public", "sitemap.xml"),
-    sitemap([
-      "/",
-      ...CONTENT_PAGES.map((name) => `/${name}/`),
-      "/rules/",
-      ...metas.map((m) => `/rules/${m.slug}/`),
-    ]),
-  );
+  // Both are gitignored output in the source tree, so a self-hosting build removes the copies an
+  // earlier public build left there; otherwise it would pick them up and ship them.
+  if (selfHost) {
+    rmSync(join(outDir, "latest"), { recursive: true, force: true });
+    rmSync(join(outDir, "public", "sitemap.xml"), { force: true });
+  } else {
+    write(join(outDir, "latest", "index.html"), latestPage(VERSION));
+    write(
+      join(outDir, "public", "sitemap.xml"),
+      sitemap([
+        "/",
+        ...CONTENT_PAGES.map((name) => `/${name}/`),
+        "/rules/",
+        ...metas.map((m) => `/rules/${m.slug}/`),
+      ]),
+    );
+  }
   write(join(outDir, "public", "llms.txt"), llmsTxt());
   return metas;
 }
@@ -137,7 +156,7 @@ export function pageEntries(root: string): Record<string, string> {
 }
 
 /** Generates the pages before Vite reads its config, in dev and in build, and registers them as entries. */
-export function generatePlugin(): Plugin {
+export function generatePlugin({ selfHost = false }: { selfHost?: boolean } = {}): Plugin {
   return {
     name: "pbiplint-generate",
     // vite preview resolves the config the same way the dev server does, and this plugin writes
@@ -145,9 +164,9 @@ export function generatePlugin(): Plugin {
     // one it was asked to serve.
     apply: (_config, env) => !env.isPreview,
     config() {
-      const n = generateSite().length;
+      const n = generateSite({ selfHost }).length;
       console.log(
-        `generated ${n} rule pages, the rules index, the ${CONTENT_PAGES.join(" and ")} pages, and the sitemap`,
+        `generated ${n} rule pages, the rules index, and the ${CONTENT_PAGES.join(" and ")} pages${selfHost ? " for a self-hosted copy" : ", /latest/, and the sitemap"}`,
       );
       return { build: { rollupOptions: { input: pageEntries(WEB_ROOT) } } };
     },

@@ -13,6 +13,7 @@ import {
   ignoreHelp as coreIgnoreHelp,
 } from "@pbiplint/core";
 import { beforeAll, describe, expect, it, vi } from "vitest";
+import { VERSION } from "../../core/src/version.js";
 import { makeTempDir, removeTempDir, tempDir } from "../../../tests/support/temp-dir.js";
 import {
   CONTENT_DIR,
@@ -818,6 +819,7 @@ describe("generateSite", () => {
       [
         "about",
         "cli",
+        "latest",
         "pipelines",
         "privacy",
         "rules",
@@ -833,6 +835,28 @@ describe("generateSite", () => {
     expect(existsSync(join(out, "rules", "renamed-away", "index.html"))).toBe(false);
     expect(existsSync(join(out, "rules", "hide-foreign-keys", "index.html"))).toBe(true);
     expect(existsSync(join(out, "rules", "index.html"))).toBe(true);
+  });
+  it("writes /latest/ at the version being built, and leaves it out of the sitemap", () => {
+    const out = tempDir("latest");
+    generateSite({ outDir: out });
+    const latest = readFileSync(join(out, "latest", "index.html"), "utf8");
+    expect(latest).toContain(`data-version="${VERSION}"`);
+    expect(latest).toContain('<script type="module" src="/src/latest.ts"></script>');
+    const map = readFileSync(join(out, "public", "sitemap.xml"), "utf8");
+    expect(map).toContain("<loc>https://pbiplint.com/about/</loc>");
+    expect(map).not.toContain("/latest/");
+  });
+  it("writes no /latest/ and no sitemap for a self-hosted copy, and clears ones a public build left", () => {
+    // Both are gitignored output in the source tree, so a self-hosting build that follows a public
+    // one would otherwise pick them up and ship them.
+    const out = tempDir("selfhost");
+    generateSite({ outDir: out });
+    expect(existsSync(join(out, "latest", "index.html"))).toBe(true);
+    generateSite({ outDir: out, selfHost: true });
+    expect(existsSync(join(out, "latest"))).toBe(false);
+    expect(existsSync(join(out, "public", "sitemap.xml"))).toBe(false);
+    expect(existsSync(join(out, "about", "index.html"))).toBe(true);
+    expect(existsSync(join(out, "rules", "hide-foreign-keys", "index.html"))).toBe(true);
   });
   it("leaves the previous build alone when the index refuses a rule", () => {
     const out = tempDir("atomic");

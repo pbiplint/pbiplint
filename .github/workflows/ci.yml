@@ -33,6 +33,10 @@ jobs:
       - run: npm run check:network
       - run: npm run check:pack
       - run: npm run test:bundle -w pbiplint
+      # The self-hosting build, the one the release attaches for firms that serve the site
+      # themselves (issue #93). Its site check also holds the two builds apart: no /latest/,
+      # sitemap, or CNAME here, and the newer-version link on every page.
+      - run: npm run build -w @pbiplint/web -- --mode self-host
   # The site in real browsers: the production build served by vite preview, driven by Playwright in
   # Chromium, Firefox, and WebKit, with an accessibility scan. Its own job, so the matrix above
   # stays quick and a browser download never slows the unit tests.

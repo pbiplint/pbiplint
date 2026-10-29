@@ -7,13 +7,13 @@ description: For a security team, how to run a verified, pinned copy of pbiplint
 
 pbiplint.com uploads nothing: the [pbiplint Privacy Promise](/privacy/) says so and shows how to check it. A firm that uses it still takes two things on trust: that the site serves the same code tomorrow that it serves today, and that the site itself is never compromised. A copy you verify, pin to a version, and serve yourself removes both. This page is for the security team that has to approve that copy: what you are approving, how to deploy it into your own Azure subscription, how to lock it down, and how to prove that no model, report, or finding ever leaves your network.
 
-pbiplint ships one thing for this: the site's static files, the same ones that make up pbiplint.com, as an archive on every release. There is no server, container, or hosted service to run, and nothing to patch. A [printable checklist](/self-host/checklist/) records each check below for your approval ticket.
+pbiplint ships one thing for this: the site's static files, built from the same commit as pbiplint.com, as an archive on every release. There is no server, container, or hosted service to run, and nothing to patch. A [printable checklist](/self-host/checklist/) records each check below for your approval ticket.
 
 <h2 id="approve">What you are approving</h2>
 
 - **What the storage holds.** HTML pages, their scripts and stylesheet, the bundled font, a favicon, the JSON schema, and a few text files. No server-side code, no API, no database, and no account.
 - **What the browser does with it.** It reads only the files a person chooses, holds them in memory in the tab, and writes nothing except a download the person asks for. It stores nothing: no cookies, local storage, session storage, or IndexedDB. The sample project is built into the page, so trying it needs no request either.
-- **The threat model, in two lines.** The host holds no user data and runs nothing, so the risks to manage are the supply chain of the files themselves and who can replace them. And every page carries a Content-Security-Policy with `connect-src 'none'`, so the browser itself refuses to let the page open a connection of any kind.
+- **The threat model, in two lines.** The host holds no user data and runs nothing, so the risks to manage are the supply chain of the files themselves and who can replace them. And every page carries a Content-Security-Policy with `connect-src 'none'`, so the browser refuses any connection a script on the page tries to open, and loads scripts, styles, fonts, and images only from your copy.
 
 <h2 id="get">Get the files and verify them</h2>
 
@@ -34,12 +34,14 @@ gh release download v{{version}} --repo pbiplint/pbiplint
 
 Then check them:
 
-- **Required: the checksum.** `shasum -a 256 -c SHA256SUMS` (macOS and Linux) prints `OK` for both files. On Windows, `Get-FileHash pbiplint-site-{{version}}.zip -Algorithm SHA256` prints a hash that must equal the zip's line in `SHA256SUMS`.
-- **Stronger: the attestation.** It proves the files were built by pbiplint's own release workflow from the tagged commit, not merely that they match a checksum published beside them. With the [GitHub CLI](https://cli.github.com/), and no GitHub sign-in needed when it is given the bundle:
+- **Required: the checksum.** `shasum -a 256 -c SHA256SUMS` (macOS and Linux) prints `OK` for both files. On Windows, `Get-FileHash <file> -Algorithm SHA256` for the zip and the egress check prints each hash, which must match that file's line in `SHA256SUMS` (letter case aside).
+- **Stronger: the attestation.** It proves the files were built by pbiplint's own release workflow from the release's tag, not merely that they match a checksum published beside them. With the [GitHub CLI](https://cli.github.com/manual/gh_attestation_verify), and no GitHub sign-in needed when it is given the bundle, for the zip and then the same for `pbiplint-egress-check-{{version}}.mjs`:
 
   ```bash
   gh attestation verify pbiplint-site-{{version}}.zip --repo pbiplint/pbiplint \
-    --bundle pbiplint-site-{{version}}.sigstore.json
+    --bundle pbiplint-site-{{version}}.sigstore.json \
+    --signer-workflow pbiplint/pbiplint/.github/workflows/release.yml \
+    --source-ref refs/tags/v{{version}}
   ```
 
 **Or build from source** at the release tag, on Node 20.19 or later 20, or 22.12 or later:
@@ -54,7 +56,7 @@ npm run build -w @pbiplint/web -- --mode self-host
 
 The site is then in `packages/web/dist`, the same files the archive holds. `--mode self-host` is what makes it the self-hosting build: it leaves out what only pbiplint.com needs (its domain file, its sitemap, and the `/latest/` page), tells search engines to stay out, and adds a line to every page's footer naming the version and the date of its commit, with a link to check for a newer version.
 
-**Read the build marker.** Every page carries `<meta name="pbiplint-build" content="...">` with the first seven characters of the commit it was built from. View the source of any page of your copy and compare it with the tag's commit.
+**Read the build marker.** Every page carries `<meta name="pbiplint-build" content="...">` with the first seven characters of the commit it was built from. View the source of any page of your copy and compare it with the commit shown beside the tag on the [release page](https://github.com/pbiplint/pbiplint/releases/tag/v{{version}}).
 
 <h2 id="deploy">Deploy it in Azure</h2>
 
@@ -76,6 +78,7 @@ It creates no script, container, or virtual machine, and it takes no pbiplint ve
 
 | Field | What it means |
 | --- | --- |
+| Subscription and resource group | Where the storage account, endpoints, zones, and lock go. The group needs the roles listed below. |
 | Region | Where the storage account lives. The private endpoints go in your network's own region, whatever you pick here. |
 | Storage account name | 3 to 24 lowercase letters and digits, unique across Azure. It becomes part of the site's address. |
 | Virtual network and subnet | An existing network in this subscription, in any resource group. A new, unpeered network would reach no one, so the template does not create one. |
@@ -85,11 +88,11 @@ It creates no script, container, or virtual machine, and it takes no pbiplint ve
 
 **The permissions the deployment needs:**
 
-- Contributor on the resource group you deploy into.
+- Owner on the resource group you deploy into, or Contributor together with User Access Administrator. Contributor alone cannot create the delete lock ([who can create or delete locks](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/lock-resources#who-can-create-or-delete-locks)).
 - On the subnet, `Microsoft.Network/virtualNetworks/subnets/join/action`, which a network team often holds for a network in its own resource group.
 - With **Create** zones: `Microsoft.Network/virtualNetworks/join/action` on the network, to link the zones to it.
 - With **Use existing** zones: `Microsoft.Network/privateDnsZones/join/action` on each zone.
-- To assign the Entra group: Owner or User Access Administrator on the resource group. Without either, leave the group blank and ask whoever has it to assign Storage Blob Data Contributor on the `$web` container.
+- Assigning the Entra group needs the same roles. Left blank, the template assigns nothing, and whoever holds Owner or User Access Administrator can assign Storage Blob Data Contributor on the `$web` container later.
 
 **Preview before it runs.** The portal's last step lists every resource it will create. From the Azure CLI, `az deployment group what-if` shows the same without changing anything:
 
@@ -99,9 +102,11 @@ az deployment group what-if --resource-group <group> \
   --parameters storageAccountName=<name> subnetId=<subnet resource ID> networkLocation=<network region>
 ```
 
+For the other DNS choices, add `dnsMode=existing webDnsZoneId=<zone ID> blobDnsZoneId=<zone ID>`, or `dnsMode=none`.
+
 **The site's address** is the account's static website endpoint, shown on the deployment's Outputs tab as `siteUrl`: `https://<account>.z<number>.web.core.windows.net/`. HTTPS works on it with no certificate of your own, which the "Choose a folder" button needs. A friendlier name such as `pbiplint.corp.example` would need a gateway in front of the account, which this template does not cover.
 
-**What it costs.** About $16 a month, nearly all of it the two private endpoints at [$0.01 an hour each](https://azure.microsoft.com/en-us/pricing/details/private-link/). The two DNS zones are [$0.50 a month each](https://azure.microsoft.com/en-us/pricing/details/dns/), and storage and logging for a site this size cost cents.
+**What it costs.** About $16 a month, nearly all of it the two private endpoints at [$0.01 an hour each](https://azure.microsoft.com/en-us/pricing/details/private-link/). With **Create**, the two DNS zones add [$0.50 a month each](https://azure.microsoft.com/en-us/pricing/details/dns/), and storage and logging for a site this size cost cents.
 
 <h2 id="upload">Upload the files</h2>
 
@@ -117,7 +122,7 @@ az storage blob upload-batch --account-name <account> --destination '$web' --sou
   --pattern '*.css' --content-type 'text/css' --overwrite --auth-mode login
 ```
 
-On Windows, `Expand-Archive pbiplint-site-{{version}}.zip site` replaces `unzip`; the `az` commands are the same in PowerShell.
+On Windows, `Expand-Archive pbiplint-site-{{version}}.zip site` replaces `unzip`. In PowerShell the `az` commands are the same, but put each one on a single line, or end each line with a backtick in place of `\`. If you built from source, use `--source packages/web/dist` in place of `site`.
 
 - **Why empty `$web` first.** A release can remove a page, such as a retired rule's. Emptying the container first means no page from an older release is left behind. The copy is unavailable for the minute or so the upload takes, so update outside working hours.
 - **Why the last two commands.** Browsers refuse a module script or a stylesheet served with the wrong type, and the Azure CLI guesses types from the operating system's own table, which on some Windows machines maps `.js` to plain text. The last two commands set both types explicitly.

@@ -167,7 +167,10 @@ describe("the Azure template", () => {
     expect(outputs).toEqual(params);
   });
 
-  it("says on the form who may assign the write group's role", () => {
-    expect(JSON.stringify(form)).toMatch(/Owner or User Access Administrator/);
+  it("says on the form which roles the lock and the group's role need", () => {
+    // Creating a lock needs Microsoft.Authorization/locks/*, which Contributor lacks.
+    expect(JSON.stringify(form)).toMatch(
+      /Owner, or Contributor together with User Access Administrator.*Contributor alone cannot create the lock/,
+    );
   });
 });

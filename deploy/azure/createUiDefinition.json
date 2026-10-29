@@ -178,7 +178,7 @@
             "type": "Microsoft.Common.InfoBox",
             "options": {
               "style": "Warning",
-              "text": "Assigning the group's role needs Owner or User Access Administrator on this resource group. Without either, leave the group empty and ask whoever has it to assign the role."
+              "text": "Creating the delete lock, and assigning the group's role, need Owner, or Contributor together with User Access Administrator, on this resource group. Contributor alone cannot create the lock. Left empty, the group can be assigned later by whoever holds either role."
             }
           }
         ]

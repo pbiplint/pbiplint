@@ -735,7 +735,7 @@ export function latestPage(version: string): string {
     main: `<article class="prose">
 <h1>Is your pbiplint up to date?</h1>
 <p id="latest-answer" data-version="${v}" aria-live="polite">The latest pbiplint is ${v}.</p>
-<p>${external("https://github.com/pbiplint/pbiplint/releases", "The releases page")} lists every version and what changed in it.</p>
+<p>${external("https://github.com/pbiplint/pbiplint/releases", "The releases page")} lists every version and what changed in it. To update a copy your firm hosts, follow <a href="/self-host/#update">the update steps</a>.</p>
 </article>`,
     scripts: ["/src/latest.ts"],
   });

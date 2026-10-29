@@ -4,8 +4,9 @@
 //
 //   node egress-check.mjs <the site's address> [--browser <path to Chrome or Edge>] [--no-sandbox]
 //
-// --no-sandbox is for a Linux build agent that refuses the browser's sandbox; leave it off
-// anywhere the browser starts without it.
+// --no-sandbox is for a Linux build agent that refuses the browser's sandbox. It turns off
+// Chrome's own isolation of the page's process, so use it only where the sandbox cannot run, and
+// only against your own copy, which is all the check opens.
 //
 // It opens the address in a Chrome or Edge already on this machine, headless and with a fresh
 // profile, and watches every request the pages make from before the first one: the home page, a
@@ -39,7 +40,10 @@ export function leavesOrigin(url, origin) {
   return new URL(url).origin !== new URL(origin).origin;
 }
 
-const USAGE = "Usage: node egress-check.mjs <the site's address> [--browser <path>] [--no-sandbox]";
+const USAGE =
+  "Usage: node egress-check.mjs <the site's address> [--browser <path>] [--no-sandbox]\n" +
+  "  --no-sandbox turns off Chrome's own process isolation: use it only where the sandbox cannot\n" +
+  "  run, and only against your own copy, which is all the check opens.";
 
 /** The address to check and, if given, the browser to check it with. */
 export function parseArgs(argv) {

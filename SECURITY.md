@@ -4,7 +4,9 @@ pbiplint runs on your machine and makes no network calls. It reads the files you
 and writes to your terminal or to the file you name, and it uploads nothing.
 [The pbiplint Privacy Promise](https://pbiplint.com/privacy/) says this for the site, the command
 line, and the pipelines, with the checks that show it, and
-[the CLI page](https://pbiplint.com/cli/#check) has the command line's checks in detail. There is
+[the CLI page](https://pbiplint.com/cli/#check) has the command line's checks in detail. To run a
+verified copy of the site inside your own network, see
+[Host pbiplint yourself](https://pbiplint.com/self-host/). There is
 no service to attack, so the security surface is what happens when the linter is handed input it
 did not expect.
 

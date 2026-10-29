@@ -23,7 +23,22 @@ export const WEB_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 export const RULES_DIR = join(WEB_ROOT, "../../rules");
 export const CONTENT_DIR = join(WEB_ROOT, "content");
 /** The pages written from content/<name>.md to <name>/index.html. Each output folder is gitignored. */
-export const CONTENT_PAGES = ["about", "privacy", "cli", "pipelines"] as const;
+export const CONTENT_PAGES = [
+  "about",
+  "privacy",
+  "cli",
+  "pipelines",
+  "self-host",
+  "self-host/checklist",
+] as const;
+
+/**
+ * Where a content page names this release, as the self-hosting page does in its download and
+ * Deploy to Azure links, it writes `{{version}}`, so every build's copy of the page points at the
+ * release it was built from.
+ */
+export const withVersion = (markdown: string, version: string = VERSION): string =>
+  markdown.replaceAll("{{version}}", version);
 
 export interface GenerateOptions {
   rulesDir?: string;
@@ -88,7 +103,7 @@ export function generateSite({
   write(join(outDir, "rules", "index.html"), index);
   for (const name of CONTENT_PAGES) {
     const source = `content/${name}.md`;
-    const markdown = readFileSync(join(contentDir, `${name}.md`), "utf8");
+    const markdown = withVersion(readFileSync(join(contentDir, `${name}.md`), "utf8"));
     write(join(outDir, name, "index.html"), contentPage(markdown, `/${name}/`, source));
   }
   // Both are gitignored output in the source tree, so a self-hosting build removes the copies an

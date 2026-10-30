@@ -1753,8 +1753,8 @@ describe("the Power Query frame and the Power Query rules' messages (#98)", () =
         "in",
         "\tServer",
       );
-    const dynamic = (fn: string, noun: string, how: string) =>
-      msg("DYNAMIC_DATA_SOURCE", { function: fn, noun, how });
+    const dynamic = (fn: string, source: string, how: string) =>
+      msg("DYNAMIC_DATA_SOURCE", { function: fn, source, how });
     expect(await said(DYNAMIC_DATA_SOURCE, tmdl)).toEqual([
       [
         "query.stepFinding",
@@ -1900,12 +1900,12 @@ describe("the Power Query frame and the Power Query rules' messages (#98)", () =
       [
         "query.stepFinding",
         "query 'Budget', step 'Old': the workbook is a legacy .xls file, read through the Access Database Engine",
-        atStep(query("'Budget'"), "'Old'", msg("LEGACY_EXCEL_FILE", { extension: "xls" })),
+        atStep(query("'Budget'"), "'Old'", msg("LEGACY_EXCEL_FILE", { kind: "xls" })),
       ],
       [
         "query.stepFinding",
         "query 'Budget', step 'Binary': the workbook is a legacy .xlsb file, read through the Access Database Engine",
-        atStep(query("'Budget'"), "'Binary'", msg("LEGACY_EXCEL_FILE", { extension: "xlsb" })),
+        atStep(query("'Budget'"), "'Binary'", msg("LEGACY_EXCEL_FILE", { kind: "xlsb" })),
       ],
     ]);
   });

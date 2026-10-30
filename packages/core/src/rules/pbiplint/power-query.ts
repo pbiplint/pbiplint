@@ -660,7 +660,12 @@ export const DYNAMIC_DATA_SOURCE = pbiplintRule({
               ? "connectionString"
               : "server";
         return [
-          mFinding(m, q, c.node, msg("DYNAMIC_DATA_SOURCE", { function: c.name, noun, how: o })),
+          mFinding(
+            m,
+            q,
+            c.node,
+            msg("DYNAMIC_DATA_SOURCE", { function: c.name, source: noun, how: o }),
+          ),
         ];
       }),
     ),
@@ -931,7 +936,7 @@ export const LEGACY_EXCEL_FILE = pbiplintRule({
             m,
             path.query,
             path.node,
-            msg("LEGACY_EXCEL_FILE", { extension: ext[1] ? "xlsb" : "xls" }),
+            msg("LEGACY_EXCEL_FILE", { kind: ext[1] ? "xlsb" : "xls" }),
           ),
         ];
       });

@@ -116,6 +116,16 @@ describe("the secret guard, on findings' parameters (#98, v3 spec, section 11.3)
     for (const f of secretFindings) expect(f.params).toBeDefined();
     expect(parse!.findings.filter((f) => f.ruleId === "PARSE_ISSUE" && f.params)).toHaveLength(6);
   });
+  it("walks into nested messages, so a header's name is among the texts it checks", () => {
+    // The header's name sits two messages deep (the query frame, then where the credential is);
+    // a walk that stopped at the top would check nothing a nested message holds.
+    const texts = linted[0]!.findings.flatMap((f) =>
+      paramTexts(f.params ?? {}, `${f.ruleId} ${f.messageId}`),
+    );
+    expect(texts.some(([at, text]) => text === "Authorization" && at.endsWith(".header"))).toBe(
+      true,
+    );
+  });
   it.each(fixtures.map(([name]) => name))(
     "keeps every part of every value out of %s's parameters",
     (name) => {

@@ -51,7 +51,7 @@ export const EN = {
   "DEFAULT_STEP_NAMES.several":
     "{count, plural, =2 {# steps keep default names, {steps, list}} other {# steps keep default names, such as {steps, list}}}",
   DYNAMIC_DATA_SOURCE:
-    "{function}'s {noun, select, path {path} address {address} connectionString {connection string} other {server}} {how, select, row {is read from the rows} computed {is built by a function call} parameter {is a custom function's parameter} other {is chosen with if ... then ... else}}",
+    "{function}'s {source, select, path {path} address {address} connectionString {connection string} other {server}} {how, select, row {is read from the rows} computed {is built by a function call} parameter {is a custom function's parameter} other {is chosen with if ... then ... else}}",
   ENSURE_ALTTEXT: "no alt text",
   ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY: "height {height}, more than {max}",
   ENSURE_THEME_COLOURS:
@@ -100,7 +100,7 @@ export const EN = {
   "LANDING_PAGE_NOT_SET.opensOn":
     'opens on "{page}", {by, select, first {the first page} other {the page open when it was saved}}',
   LEGACY_EXCEL_FILE:
-    "the workbook is a legacy {extension, select, xlsb {.xlsb} other {.xls}} file, read through the Access Database Engine",
+    "the workbook is a legacy {kind, select, xlsb {.xlsb} other {.xls}} file, read through the Access Database Engine",
   LOCAL_DRIVE_PATH: "the path is on a local drive ({drive}:)",
   "NAME_WITHOUT_TRANSLATION.inContext": "{context}, {captions}",
   "NAME_WITHOUT_TRANSLATION.noCaption": "no caption in {cultures, list}",

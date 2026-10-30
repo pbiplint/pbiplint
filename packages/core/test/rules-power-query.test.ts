@@ -883,7 +883,7 @@ describe("DYNAMIC_DATA_SOURCE (v3 spec, section 9.3)", () => {
           step: "'Added Custom'",
           finding: msg("DYNAMIC_DATA_SOURCE", {
             function: "Web.Contents",
-            noun: "address",
+            source: "address",
             how: "row",
           }),
         },
@@ -1256,7 +1256,7 @@ describe("LEGACY_EXCEL_FILE (v3 spec, section 9.17)", () => {
         params: {
           query: query("'Budget'"),
           step: "'Source'",
-          finding: msg("LEGACY_EXCEL_FILE", { extension: "xls" }),
+          finding: msg("LEGACY_EXCEL_FILE", { kind: "xls" }),
         },
       },
     ]);

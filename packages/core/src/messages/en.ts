@@ -53,6 +53,11 @@ export const EN = {
     "{count, plural, one {# colour} other {# colours}} set to a hex value instead of a theme colour",
   FILTERS_PANE_STATE:
     "{source, select, saved {saved} other {not recorded, read as}} {state, select, open {open} closed {closed} other {hidden from readers}}; the policy expects {expect, select, open {open} other {closed}}",
+  "HARDCODED_PERIOD_IN_DAX.endsOn":
+    "{count, plural, one {ends on a fixed date, {dates, list}} other {ends on fixed dates {dates, list}}}",
+  "HARDCODED_PERIOD_IN_DAX.fixed":
+    "fixed {count, plural, one {{kind, select, year {year} date {date} other {period}}} other {{kind, select, year {years} date {dates} other {periods}}}} {periods, list}",
+  "HARDCODED_PERIOD_IN_DAX.inContext": "{own} in {context}",
   "HARDCODED_YEAR_IN_FILTER.fixedYears":
     "{count, plural, one {fixed year {years, list}} other {fixed years {years, list}}}",
   "HARDCODED_YEAR_IN_FILTER.onField": "{kept} on {field}",
@@ -70,6 +75,8 @@ export const EN = {
     'no landing page set; the active page "{page}" does not exist',
   "LANDING_PAGE_NOT_SET.opensOn":
     'opens on "{page}", {by, select, first {the first page} other {the page open when it was saved}}',
+  "NAME_WITHOUT_TRANSLATION.inContext": "{context}, {captions}",
+  "NAME_WITHOUT_TRANSLATION.noCaption": "no caption in {cultures, list}",
   "NOT_REACHED_FROM_REPORT.level": "level {level} of hierarchy {hierarchy}",
   "NOT_REACHED_FROM_REPORT.levels":
     "{why}; {levels, list} {count, plural, one {uses} other {use}} it",
@@ -101,6 +108,8 @@ export const EN = {
     "tab order starts at {tabVisual} but the layout reads {layoutVisual} first",
   "TAB_ORDER_FOLLOWS_LAYOUT.visits":
     "tab order visits {tabVisual} where the layout reads {layoutVisual}",
+  "UDF_NOT_CALLED.package":
+    "package {package}: {count, plural, =1 {its one function is not called} other {none of its # functions is called}}",
   "VISUAL_OUTSIDE_PAGE.both": "{right} px past the right edge, {bottom} px past the bottom edge",
   "VISUAL_OUTSIDE_PAGE.bottom": "{bottom} px past the bottom edge",
   "VISUAL_OUTSIDE_PAGE.right": "{right} px past the right edge",

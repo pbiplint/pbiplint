@@ -14,6 +14,8 @@ import {
   type Message,
   type MessageParam,
 } from "../src/messages/format.js";
+import { buildModel } from "../src/model/build.js";
+import type { Model } from "../src/model/types.js";
 import { eachQuery } from "../src/rules/m-helpers.js";
 import {
   ACTION_WITHOUT_DESTINATION,
@@ -32,8 +34,10 @@ import {
   BROKEN_FIELD_REFERENCE,
   NOT_REACHED_FROM_REPORT,
 } from "../src/rules/pbiplint/references.js";
-import { englishList, longDate } from "../src/rules/pbiplint/periods.js";
+import { UDF_NOT_CALLED } from "../src/rules/pbiplint/functions.js";
+import { englishList, HARDCODED_PERIOD_IN_DAX, longDate } from "../src/rules/pbiplint/periods.js";
 import { TAB_ORDER_FOLLOWS_LAYOUT } from "../src/rules/pbiplint/tab-order.js";
+import { NAME_WITHOUT_TRANSLATION } from "../src/rules/pbiplint/translations.js";
 import {
   HIDDEN_VISUAL_WITH_FIELDS,
   SLICER_SEARCH_SAVED,
@@ -43,6 +47,8 @@ import {
 } from "../src/rules/pbiplint/visuals.js";
 import { RULE_COULD_NOT_FINISH } from "../src/rules/rule-could-not-finish.js";
 import type { Finding, Rule, RuleFinding } from "../src/rules/types.js";
+import { parseTmdl } from "../src/tmdl/parse.js";
+import { modelFrom, rendered } from "./helpers.js";
 import { bound, column, j, lit, measure, page, reportFindings, visual } from "./report-helpers.js";
 
 // Test-only templates under made-up IDs, so these tests do not depend on the English catalog.
@@ -1085,6 +1091,244 @@ ${levels}`;
       expect(year!.detail).toBe(
         `${NONE}; level "Year" of hierarchy "Calendar"; level "FY" of hierarchy "Fiscal, Retail"; and level "Year" of hierarchy "Annual" use it`,
       );
+    });
+  });
+});
+
+describe("the period, translation, and function rules' messages (#98)", () => {
+  /** Each finding of a model rule, rendered as `runRules` renders it: ID, English, parameters. */
+  const said = (rule: Rule, model: Model) =>
+    rule
+      .check({ model }, { indexes: buildIndexes({ model }), options: {} })
+      .map(rendered)
+      .map((f) => [f.messageId, f.detail, f.params]);
+  const day = (date: string) => msg("date.long", { date });
+
+  describe("HARDCODED_PERIOD_IN_DAX", () => {
+    /** A Sales table with one measure, `Stale`, whose DAX is `dax`. */
+    const stale = (dax: string) =>
+      modelFrom(
+        `table Sales\n\tcolumn 'Order Date'\n\t\tdataType: dateTime\n\tmeasure Stale = ${dax}\n`,
+      );
+    const fixedIn = (dax: string) => said(HARDCODED_PERIOD_IN_DAX, stale(dax));
+    const on = (...days: string[]) =>
+      `CALCULATE([Total], ${days.map((d) => `'Sales'[Order Date] <> ${d}`).join(", ")})`;
+    /** A calculated table whose CALENDAR calls end on the days given. */
+    const ends = (...days: string[]) =>
+      modelFrom(
+        `table Date\n\tcolumn Date\n\t\tdataType: dateTime\n\tpartition Date = calculated\n\t\tsource = UNION(${days.map((d) => `CALENDAR(DATE(2000, 1, 1), ${d})`).join(", ")})\n`,
+      );
+
+    it("names one date, two joined with and, and three with semicolons, each a date.long item", () => {
+      expect(fixedIn(on("DATE(2024, 1, 1)"))).toEqual([
+        [
+          "HARDCODED_PERIOD_IN_DAX.fixed",
+          "fixed date January 1, 2024",
+          { kind: "date", count: 1, periods: [day("2024-01-01")] },
+        ],
+      ]);
+      expect(fixedIn(on("DATE(2024, 1, 1)", "DATE(2025, 3, 3)"))[0]![1]).toBe(
+        "fixed dates January 1, 2024 and March 3, 2025",
+      );
+      expect(fixedIn(on("DATE(2024, 1, 1)", "DATE(2025, 3, 3)", "DATE(2025, 5, 5)"))).toEqual([
+        [
+          "HARDCODED_PERIOD_IN_DAX.fixed",
+          "fixed dates January 1, 2024; March 3, 2025; and May 5, 2025",
+          {
+            kind: "date",
+            count: 3,
+            periods: [day("2024-01-01"), day("2025-03-03"), day("2025-05-05")],
+          },
+        ],
+      ]);
+    });
+
+    it("caps five years at three and the count of the rest, and names a mix as periods", () => {
+      expect(
+        fixedIn(`CALCULATE([Total], 'Sales'[Year] IN {2021, 2022, 2023, 2024, 2025})`),
+      ).toEqual([
+        [
+          "HARDCODED_PERIOD_IN_DAX.fixed",
+          "fixed years 2021, 2022, 2023, and 2 more",
+          {
+            kind: "year",
+            count: 5,
+            periods: ["2021", "2022", "2023", msg("list.more", { count: 2 })],
+          },
+        ],
+      ]);
+      expect(
+        fixedIn(`CALCULATE([Total], 'Sales'[Year] = 2025, 'Sales'[Year] = 2025)`)[0]!.slice(1),
+      ).toEqual(["fixed year 2025", { kind: "year", count: 1, periods: ["2025"] }]);
+      expect(
+        fixedIn(
+          `CALCULATE([Total], 'Sales'[Year] = 2025, 'Sales'[Order Date] <= DATE(2024, 12, 31))`,
+        ),
+      ).toEqual([
+        [
+          "HARDCODED_PERIOD_IN_DAX.fixed",
+          "fixed periods 2025 and December 31, 2024",
+          { kind: "mixed", count: 2, periods: ["2025", day("2024-12-31")] },
+        ],
+      ]);
+    });
+
+    it("names a date table's end, or ends, in one template with a plural, an ambiguous day quoted", () => {
+      expect(said(HARDCODED_PERIOD_IN_DAX, ends("DATE(2026, 12, 31)"))).toEqual([
+        [
+          "HARDCODED_PERIOD_IN_DAX.endsOn",
+          "ends on a fixed date, December 31, 2026",
+          { count: 1, dates: [day("2026-12-31")] },
+        ],
+      ]);
+      expect(
+        said(HARDCODED_PERIOD_IN_DAX, ends("DATE(2025, 12, 31)", "DATE(2026, 12, 31)")),
+      ).toEqual([
+        [
+          "HARDCODED_PERIOD_IN_DAX.endsOn",
+          "ends on fixed dates December 31, 2025 and December 31, 2026",
+          { count: 2, dates: [day("2025-12-31"), day("2026-12-31")] },
+        ],
+      ]);
+      expect(said(HARDCODED_PERIOD_IN_DAX, ends(`"01/02/2026"`))).toEqual([
+        [
+          "HARDCODED_PERIOD_IN_DAX.endsOn",
+          `ends on a fixed date, "01/02/2026"`,
+          { count: 1, dates: [msg("quoted", { name: "01/02/2026" })] },
+        ],
+      ]);
+    });
+
+    it("writes a three-digit year as an ISO day padded to four digits, and English as longDate does", () => {
+      expect(said(HARDCODED_PERIOD_IN_DAX, ends("DATE(999, 12, 31)"))).toEqual([
+        [
+          "HARDCODED_PERIOD_IN_DAX.endsOn",
+          `ends on a fixed date, ${longDate(999, 12, 31)}`,
+          { count: 1, dates: [day("0999-12-31")] },
+        ],
+      ]);
+      expect(said(HARDCODED_PERIOD_IN_DAX, ends("DATE(100, 1, 1)"))[0]![1]).toBe(
+        "ends on a fixed date, January 1, 100",
+      );
+    });
+
+    it("nests its own message in one naming the context, and stands alone without one", () => {
+      const model = modelFrom(
+        "table 'Time Calc'\n\tcalculationGroup\n\t\tcalculationItem 'This Year' = CALCULATE(SELECTEDMEASURE(), 'Date'[Year] = 2025)\n\tcolumn Name\n\t\tdataType: string\n",
+      );
+      const own = msg("HARDCODED_PERIOD_IN_DAX.fixed", {
+        kind: "year",
+        count: 1,
+        periods: ["2025"],
+      });
+      expect(said(HARDCODED_PERIOD_IN_DAX, model)).toEqual([
+        [
+          "HARDCODED_PERIOD_IN_DAX.inContext",
+          "fixed year 2025 in calculation group 'Time Calc'",
+          { own, context: msg("context.calculationGroup", { table: "'Time Calc'" }) },
+        ],
+      ]);
+      expect(fixedIn(`CALCULATE([Total], 'Sales'[Year] = 2025)`)).toEqual([
+        ["HARDCODED_PERIOD_IN_DAX.fixed", "fixed year 2025", own.params],
+      ]);
+    });
+  });
+
+  describe("NAME_WITHOUT_TRANSLATION", () => {
+    /** A model with a culture of its own, Sales with a hierarchy over a hidden column, and these cultures, which caption nothing. */
+    const translated = (...cultures: string[]) =>
+      buildModel([
+        parseTmdl("definition/model.tmdl", "model Model\n\tculture: en-US\n"),
+        parseTmdl(
+          "definition/tables/Sales.tmdl",
+          "table Sales\n\tcolumn Amount\n\t\tdataType: decimal\n\t\tisHidden\n\thierarchy Geography\n\t\tlevel Country\n\t\t\tcolumn: Amount\n",
+        ),
+        ...cultures.map((c) =>
+          parseTmdl(
+            `definition/cultures/${c}.tmdl`,
+            `cultureInfo ${c}\n\ttranslations\n\t\tmodel Model\n`,
+          ),
+        ),
+      ]);
+    const noCaption = (...cultures: string[]) =>
+      msg("NAME_WITHOUT_TRANSLATION.noCaption", { cultures });
+
+    it("names the cultures as a list, after the context when the object has one", () => {
+      expect(said(NAME_WITHOUT_TRANSLATION, translated("fr-FR"))).toEqual([
+        ["NAME_WITHOUT_TRANSLATION.noCaption", "no caption in fr-FR", { cultures: ["fr-FR"] }],
+        [
+          "NAME_WITHOUT_TRANSLATION.inContext",
+          "table 'Sales', no caption in fr-FR",
+          { context: msg("context.table", { table: "'Sales'" }), captions: noCaption("fr-FR") },
+        ],
+        [
+          "NAME_WITHOUT_TRANSLATION.inContext",
+          "hierarchy Geography in 'Sales', no caption in fr-FR",
+          {
+            context: msg("context.level", { hierarchy: "Geography", table: "'Sales'" }),
+            captions: noCaption("fr-FR"),
+          },
+        ],
+      ]);
+      const three = said(NAME_WITHOUT_TRANSLATION, translated("fr-FR", "de-DE", "es-ES"));
+      expect(three.map((f) => f[1])).toEqual([
+        "no caption in de-DE, es-ES, and fr-FR",
+        "table 'Sales', no caption in de-DE, es-ES, and fr-FR",
+        "hierarchy Geography in 'Sales', no caption in de-DE, es-ES, and fr-FR",
+      ]);
+    });
+
+    it("stands alone on an object with no context", () => {
+      const model = buildModel([
+        parseTmdl("definition/model.tmdl", "model Model\n\tculture: en-US\n"),
+        parseTmdl("definition/tables/Sales.tmdl", "table Sales\n\tmeasure Total = 1\n"),
+        parseTmdl(
+          "definition/cultures/fr-FR.tmdl",
+          "cultureInfo fr-FR\n\ttranslations\n\t\tmodel Model\n\t\t\ttable Sales\n\t\t\t\tcaption: Ventes\n",
+        ),
+        parseTmdl(
+          "definition/cultures/de-DE.tmdl",
+          "cultureInfo de-DE\n\ttranslations\n\t\tmodel Model\n\t\t\ttable Sales\n\t\t\t\tcaption: Verkauf\n",
+        ),
+      ]);
+      expect(said(NAME_WITHOUT_TRANSLATION, model)).toEqual([
+        [
+          "NAME_WITHOUT_TRANSLATION.noCaption",
+          "no caption in de-DE and fr-FR",
+          { cultures: ["de-DE", "fr-FR"] },
+        ],
+      ]);
+    });
+  });
+
+  describe("UDF_NOT_CALLED", () => {
+    const packaged = (name: string, pkg: string) =>
+      `function '${name}' = () => 1\n\tlineageTag: ${name}\n\n\tannotation DAXLIB_PackageId = ${pkg}\n\n`;
+
+    it("names an uncalled package with a plural over its functions, and a function of the model's own with no message", () => {
+      const model = buildModel([
+        parseTmdl("definition/tables/Sales.tmdl", "table Sales\n\tmeasure Total = 1\n"),
+        parseTmdl(
+          "definition/functions.tmdl",
+          packaged("Contoso.Tax.Rate", "Contoso.Tax") +
+            packaged("Contoso.Tax.Apply", "Contoso.Tax") +
+            packaged("Contoso.Round.Two", "Contoso.Round") +
+            "function 'Local.Unused' = () => 2\n",
+        ),
+      ]);
+      expect(said(UDF_NOT_CALLED, model)).toEqual([
+        [
+          "UDF_NOT_CALLED.package",
+          "package Contoso.Tax: none of its 2 functions is called",
+          { package: "Contoso.Tax", count: 2 },
+        ],
+        [
+          "UDF_NOT_CALLED.package",
+          "package Contoso.Round: its one function is not called",
+          { package: "Contoso.Round", count: 1 },
+        ],
+        [undefined, undefined, undefined],
+      ]);
     });
   });
 });

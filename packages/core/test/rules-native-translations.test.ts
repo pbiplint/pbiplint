@@ -3,6 +3,7 @@ import { buildIndexes } from "../src/index/build.js";
 import { buildModel } from "../src/model/build.js";
 import { NAME_WITHOUT_TRANSLATION } from "../src/rules/pbiplint/translations.js";
 import { parseTmdl } from "../src/tmdl/parse.js";
+import { rendered } from "./helpers.js";
 
 type File = [path: string, text: string];
 
@@ -12,7 +13,9 @@ const findings = (...files: File[]) => {
   return NAME_WITHOUT_TRANSLATION.check(
     { model },
     { indexes: buildIndexes({ model }), options: {} },
-  ).map((f) => [f.objectName, f.detail]);
+  )
+    .map(rendered)
+    .map((f) => [f.objectName, f.detail]);
 };
 
 const model = (culture?: string): File => [

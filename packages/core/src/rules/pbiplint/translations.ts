@@ -1,11 +1,8 @@
+import { msg } from "../../messages/format.js";
 import type { CultureTranslations, Model } from "../../model/types.js";
-import { finding, modelPartlyRead, withDetail } from "../helpers.js";
+import { finding, modelPartlyRead } from "../helpers.js";
 import type { RuleFinding } from "../types.js";
 import { pbiplintRule } from "./define.js";
-
-/** "fr-FR", "fr-FR and de-DE", "fr-FR, de-DE, and es-ES". */
-const listOf = (items: string[]): string =>
-  items.length <= 2 ? items.join(" and ") : `${items.slice(0, -1).join(", ")}, and ${items.at(-1)}`;
 
 /**
  * Every visible table (calculation groups included), column, measure, and hierarchy, and every
@@ -24,10 +21,15 @@ function namesWithoutTranslation(model: Model): RuleFinding[] {
   const report = (f: RuleFinding, captioned: (tr: CultureTranslations) => boolean): void => {
     const missing = cultures.filter((c) => !captioned(c.translations!)).map((c) => c.name);
     if (missing.length === 0) return;
-    const cultureDetail = `no caption in ${listOf(missing)}`;
-    out.push(
-      withDetail(f, (context) => (context ? `${context}, ${cultureDetail}` : cultureDetail)),
-    );
+    // Every culture is named: a model has few, and each is one a translator acts on.
+    const captions = msg("NAME_WITHOUT_TRANSLATION.noCaption", { cultures: missing });
+    const { message: context, ...rest } = f;
+    out.push({
+      ...rest,
+      message: context
+        ? msg("NAME_WITHOUT_TRANSLATION.inContext", { context, captions })
+        : captions,
+    });
   };
   for (const t of model.tables) {
     if (t.isHidden) continue;

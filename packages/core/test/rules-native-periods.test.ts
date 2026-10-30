@@ -7,17 +7,19 @@ import { buildModel } from "../src/model/build.js";
 import type { Model } from "../src/model/types.js";
 import { englishList, HARDCODED_PERIOD_IN_DAX, namesYear } from "../src/rules/pbiplint/periods.js";
 import { parseTmdl } from "../src/tmdl/parse.js";
-import { examplesDir, fixturesDir, modelFrom, parseModelDir } from "./helpers.js";
+import { examplesDir, fixturesDir, modelFrom, parseModelDir, rendered } from "./helpers.js";
 
 const check = (model: Model) =>
   HARDCODED_PERIOD_IN_DAX.check({ model }, { indexes: buildIndexes({ model }), options: {} });
 const run = (tmdl: string) =>
-  check(modelFrom(tmdl)).map((f) => ({
-    type: f.objectType,
-    name: f.objectName,
-    line: f.location?.line,
-    detail: f.detail,
-  }));
+  check(modelFrom(tmdl))
+    .map(rendered)
+    .map((f) => ({
+      type: f.objectType,
+      name: f.objectName,
+      line: f.location?.line,
+      detail: f.detail,
+    }));
 /** A Sales table, four lines long, before the lines given. */
 const sales = (lines: string) =>
   `table Sales\n\tcolumn 'Order Date'\n\t\tdataType: dateTime\n\t\tsourceColumn: Order Date\n${lines}`;

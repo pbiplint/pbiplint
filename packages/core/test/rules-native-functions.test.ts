@@ -10,7 +10,7 @@ import {
 } from "../src/rules/pbiplint/functions.js";
 import type { Rule } from "../src/rules/types.js";
 import { parseTmdl } from "../src/tmdl/parse.js";
-import { fixturesDir, modelFrom, objectNames, parseModelDir } from "./helpers.js";
+import { fixturesDir, modelFrom, objectNames, parseModelDir, rendered } from "./helpers.js";
 
 /** A model whose functions sit in definition/functions.tmdl, as Power BI Desktop saves them. */
 const withFunctions = (tables: string, functions: string) =>
@@ -22,6 +22,7 @@ const findings = (rule: Rule, tables: string, functions: string) => {
   const model = withFunctions(tables, functions);
   return rule
     .check({ model }, { indexes: buildIndexes({ model }), options: {} })
+    .map(rendered)
     .map((f) => ({ name: f.objectName, type: f.objectType, detail: f.detail, at: f.location }));
 };
 const sales = `table Sales

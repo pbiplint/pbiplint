@@ -1,7 +1,8 @@
+import { capped, msg, type Message } from "../../messages/format.js";
 import { isAutoDateTable } from "../../model/names.js";
 import type { Model, SourceLocation, Table } from "../../model/types.js";
 import type { TmdlNode } from "../../tmdl/types.js";
-import { finding, withDetail } from "../helpers.js";
+import { finding } from "../helpers.js";
 import type { RuleFinding } from "../types.js";
 import { pbiplintRule } from "./define.js";
 import { calendarEnds, expressionPeriods, type Period } from "./period-forms.js";
@@ -31,13 +32,31 @@ interface Found {
 export const longDate = (year: number, month: number, day: number): string =>
   `${MONTHS[month - 1]} ${day}, ${year}`;
 
-/** How a detail names a period: a year as `2025`, a day in long form, an ambiguous string as written. */
-const shown = (p: Period): string =>
-  p.ambiguous !== undefined
-    ? `"${p.ambiguous}"`
-    : p.date
-      ? longDate(p.date.year, p.date.month, p.date.day)
-      : String(p.year);
+/**
+ * A day as the date kind reads it, `2025-12-31`, its year padded to four digits, since DAX's
+ * DATE() gives years from 100.
+ */
+const isoDay = ({ year, month, day }: NonNullable<Period["date"]>): string =>
+  [
+    String(year).padStart(4, "0"),
+    String(month).padStart(2, "0"),
+    String(day).padStart(2, "0"),
+  ].join("-");
+
+/**
+ * The periods a detail names, each once, in the order found: a year as `2025`, a day in long form,
+ * an ambiguous string quoted as written.
+ */
+function shown(periods: readonly Period[]): (string | Message)[] {
+  const named = new Map<string, string | Message>();
+  for (const p of periods) {
+    if (p.ambiguous !== undefined)
+      named.set(`"${p.ambiguous}"`, msg("quoted", { name: p.ambiguous }));
+    else if (p.date) named.set(isoDay(p.date), msg("date.long", { date: isoDay(p.date) }));
+    else named.set(String(p.year), String(p.year));
+  }
+  return [...named.values()];
+}
 
 /**
  * A list as English writes one: `a and b`, or `a, b, and c`, with semicolons in place of commas
@@ -71,19 +90,21 @@ function lineAt(node: TmdlNode | undefined, offset: number): SourceLocation | un
 }
 
 /** A measure's, a column's, or a calculation item's detail: what it fixes, years, days, or both. */
-function fixesDetail(periods: readonly Period[]): string {
-  const names = [...new Set(periods.map(shown))];
+function fixesDetail(periods: readonly Period[]): Message {
+  const names = shown(periods);
   const days = periods.filter((p) => p.date !== undefined || p.ambiguous !== undefined).length;
-  const noun = days === 0 ? "year" : days === periods.length ? "date" : "period";
-  return `fixed ${noun}${names.length > 1 ? "s" : ""} ${englishList(names)}`;
+  const kind = days === 0 ? "year" : days === periods.length ? "date" : "mixed";
+  return msg("HARDCODED_PERIOD_IN_DAX.fixed", {
+    kind,
+    count: names.length,
+    periods: capped(names),
+  });
 }
 
 /** A date table's detail: the day, or days, its CALENDAR calls end on. */
-function endsDetail(periods: readonly Period[]): string {
-  const names = [...new Set(periods.map(shown))];
-  return names.length === 1
-    ? `ends on a fixed date, ${names[0]}`
-    : `ends on fixed dates ${englishList(names)}`;
+function endsDetail(periods: readonly Period[]): Message {
+  const names = shown(periods);
+  return msg("HARDCODED_PERIOD_IN_DAX.endsOn", { count: names.length, dates: capped(names) });
 }
 
 /**
@@ -95,15 +116,17 @@ function fixedFinding(
   base: RuleFinding,
   name: string,
   found: readonly Found[],
-  detail: (periods: readonly Period[]) => string,
+  detail: (periods: readonly Period[]) => Message,
 ): RuleFinding[] {
   const periods = found.map((f) => f.period);
   if (periods.length === 0 || periods.some((p) => namesYear(name, p.year))) return [];
   const where = lineAt(found[0]!.node, found[0]!.period.at);
   const own = detail(periods);
+  const { message: context, ...rest } = base;
   return [
     {
-      ...withDetail(base, (context) => (context === undefined ? own : `${own} in ${context}`)),
+      ...rest,
+      message: context ? msg("HARDCODED_PERIOD_IN_DAX.inContext", { own, context }) : own,
       ...(where ? { location: where } : {}),
     },
   ];

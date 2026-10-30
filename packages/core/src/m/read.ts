@@ -1,14 +1,15 @@
 import type { LintFile } from "../engine/lint.js";
+import { msg, type Message } from "../messages/format.js";
 import type { Model, NamedExpression, Partition, SourceLocation, Table } from "../model/types.js";
+import { parseIssue } from "../tmdl/issue.js";
 import type { TmdlNode } from "../tmdl/types.js";
 import { M_BUDGET, mWork, type MBudget } from "./budget.js";
 import { hiddenLiterals, maskLiterals, renderMasked } from "./mask.js";
 import { parseM, type MPosition } from "./parse.js";
 import type { MIndex, MParseIssue, MQuery } from "./types.js";
 
-const TOO_LARGE = "M is too large or complex to read (over pbiplint's limit for one query)";
-const MODEL_TOO_LARGE =
-  "M is too large or complex to read (over pbiplint's limit for one model's M)";
+const TOO_LARGE = msg("parse.m.tooLarge");
+const MODEL_TOO_LARGE = msg("parse.m.modelTooLarge");
 
 /** Text with every run of whitespace as one space, to compare M as Desktop rewrites it. */
 const squash = (s: string): string => s.replace(/\s+/g, " ").trim();
@@ -161,22 +162,24 @@ export async function readM(
   for (const x of model.expressions) add("expression", x.name, x, expressionSource(x));
 
   const issues: MParseIssue[] = [];
-  const issueAt = (q: MQuery, at: SourceLocation, reason: string) => {
+  const issueAt = (q: MQuery, at: SourceLocation, reason: Message) => {
     // The TMDL line with its M's text literals hidden (v3 spec, section 7): the M is masked whole,
     // since a literal may open on an earlier line, and its line put back after the TMDL line's head.
     const n = at.line - q.valueLine;
     const line = lineAt(at.file, at.line);
     const head = line.trimEnd().length - (mLines.get(q)!.lines[n] ?? "").trimEnd().length;
     issues.push({
-      file: at.file,
-      line: at.line,
+      ...parseIssue(
+        at.file,
+        at.line,
+        // Masked, then cut as a JSON issue's line is (readJson): a generated partition can hold
+        // lines of megabytes, and a literal the cut leaves open is already hidden.
+        (line.slice(0, Math.max(0, head)) + (maskLiterals(q.text).split("\n")[n] ?? ""))
+          .trim()
+          .slice(0, 120),
+        reason,
+      ),
       column: at.column!,
-      // Masked, then cut as a JSON issue's line is (readJson): a generated partition can hold
-      // lines of megabytes, and a literal the cut leaves open is already hidden.
-      text: (line.slice(0, Math.max(0, head)) + (maskLiterals(q.text).split("\n")[n] ?? ""))
-        .trim()
-        .slice(0, 120),
-      reason,
     });
   };
   let total = 0;
@@ -202,7 +205,7 @@ export async function readM(
     issueAt(
       q,
       locate(q, parsed.position ?? { lineNumber: 0, lineCodeUnit: 0 }),
-      `M could not be parsed: ${maskLiterals(parsed.message)}`,
+      msg("parse.m.notParsed", { message: maskLiterals(parsed.message) }),
     );
   }
   return { queries, issues, locate, maskedLine: lineMasker(files) };

@@ -77,13 +77,20 @@ describe("readJson", () => {
           line: 1,
           text,
           reason: `not a JSON object (the file holds ${kind})`,
+          message: { id: "parse.pbir.notAnObject", params: { kind: kind.replace(/^an? /, "") } },
         },
       ]);
     }
   });
   it("gives the line a document that is not an object starts on, past blank lines and a BOM", () => {
     expect(readJson("x.json", '\n[\n  "a"\n]\n').issues).toEqual([
-      { file: "x.json", line: 2, text: "[", reason: "not a JSON object (the file holds an array)" },
+      {
+        file: "x.json",
+        line: 2,
+        text: "[",
+        reason: "not a JSON object (the file holds an array)",
+        message: { id: "parse.pbir.notAnObject", params: { kind: "array" } },
+      },
     ]);
     expect(readJson("x.json", "\ufeff  \r\n\t null\r\n").issues).toEqual([
       {
@@ -91,6 +98,7 @@ describe("readJson", () => {
         line: 2,
         text: "\t null",
         reason: "not a JSON object (the file holds null)",
+        message: { id: "parse.pbir.notAnObject", params: { kind: "null" } },
       },
     ]);
   });
@@ -169,6 +177,7 @@ describe("readJson and how deep a document nests", () => {
         // whitespace, to 119 characters and an ellipsis.
         text: `"deep": ${"[".repeat(111)}…`,
         reason: "nested more than 256 levels deep",
+        message: { id: "parse.pbir.tooDeep", params: { depth: 256 } },
       },
     ]);
   });

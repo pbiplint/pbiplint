@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { resolveConfig } from "../src/engine/config.js";
+import { lint, type LintFile } from "../src/engine/lint.js";
 import { runRules } from "../src/engine/run.js";
 import { buildIndexes } from "../src/index/build.js";
 import type { MessageId } from "../src/messages/en.js";
@@ -9,9 +10,12 @@ import {
   msg,
   templateArgs,
   type Catalog,
+  type Message,
   type MessageParam,
 } from "../src/messages/format.js";
-import type { Rule, RuleFinding } from "../src/rules/types.js";
+import { eachQuery } from "../src/rules/m-helpers.js";
+import { RULE_COULD_NOT_FINISH } from "../src/rules/rule-could-not-finish.js";
+import type { Finding, Rule, RuleFinding } from "../src/rules/types.js";
 
 // Test-only templates under made-up IDs, so these tests do not depend on the English catalog.
 const catalog = {
@@ -153,5 +157,111 @@ describe("findingDetail", () => {
   it("returns the detail when the finding has no message", () => {
     expect(findingDetail({ detail: "x" })).toBe("x");
     expect(findingDetail({})).toBeUndefined();
+  });
+});
+
+describe("the shared messages (#98)", () => {
+  const parseIssues = async (files: LintFile[]) =>
+    (await lint(files)).findings.filter((f) => f.ruleId === "PARSE_ISSUE");
+  const reasonId = (f: Finding) => (f.params?.reason as Message | undefined)?.id;
+
+  it("gives a TMDL parse issue its reason as a nested message, rendering today's detail", async () => {
+    const [f] = await parseIssues([{ path: "definition/tables/T.tmdl", text: "table T\n    x\n" }]);
+    expect(f!.messageId).toBe("PARSE_ISSUE");
+    expect(reasonId(f!)).toBe("parse.tmdl.spaceIndentation");
+    expect(f!.detail).toBe("space indentation (TMDL requires tabs): x");
+  });
+
+  it("gives a PBIR JSON parse issue its reason as a nested message, the engine's text a parameter", async () => {
+    const [f] = await parseIssues([{ path: "definition/pages/p/page.json", text: "{\n  ]\n" }]);
+    expect(f!.messageId).toBe("PARSE_ISSUE");
+    expect(reasonId(f!)).toBe("parse.pbir.notValidJson");
+    expect(f!.detail).toMatch(/^not valid JSON \(.+\): \]$/);
+    expect(f!.detail).toBe(formatMessage(msg(f!.messageId!, f!.params)));
+  });
+
+  it("gives M that does not parse its reason as a nested message", async () => {
+    const [f] = await parseIssues([
+      {
+        path: "definition/tables/T.tmdl",
+        text: "table T\n\tpartition T = m\n\t\tmode: import\n\t\tsource = 1 2\n",
+      },
+    ]);
+    expect(f!.messageId).toBe("PARSE_ISSUE");
+    expect(reasonId(f!)).toBe("parse.m.notParsed");
+    expect(f!.detail).toBe(
+      "M could not be parsed: Finished parsing but more tokens remain: source = 1 2",
+    );
+  });
+
+  const throwing = (id: string, check: Rule["check"], layer: Rule["layer"] = "model"): Rule => ({
+    id,
+    name: "Test rule",
+    category: "Maintenance",
+    severity: 2,
+    scope: [],
+    layer,
+    needs: ["model"],
+    description: "",
+    references: [],
+    status: "ported",
+    check,
+  });
+  const failures = async (rule: Rule) =>
+    (
+      await lint(
+        [
+          {
+            path: "definition/tables/Sales.tmdl",
+            text: "table Sales\n\tpartition Sales = m\n\t\tmode: import\n\t\tsource = 1\n",
+          },
+        ],
+        { rules: [rule, RULE_COULD_NOT_FINISH] },
+      )
+    ).findings;
+
+  it("names the model as a nested message when a whole rule throws", async () => {
+    const [f] = await failures(
+      throwing("WHOLE", () => {
+        throw new RangeError("Maximum call stack size exceeded");
+      }),
+    );
+    expect(f!.messageId).toBe("RULE_COULD_NOT_FINISH");
+    expect((f!.params!.where as Message).id).toBe("ruleError.theModel");
+    expect((f!.params!.kind as Message).id).toBe("ruleError.outOfStack");
+    expect(f!.detail).toBe("WHOLE could not finish on the model: RangeError (out of stack space)");
+  });
+
+  it("names the query as a nested message when a Power Query rule throws on one", async () => {
+    const [f] = await failures(
+      throwing(
+        "PER_QUERY",
+        (_p, ctx) =>
+          eachQuery(ctx, ctx.indexes.m.queries, () => {
+            throw new TypeError("a message");
+          }),
+        "powerquery",
+      ),
+    );
+    expect((f!.params!.where as Message).id).toBe("query.name");
+    expect((f!.params!.kind as Message).id).toBe("ruleError.errorClass");
+    expect(f!.detail).toBe("PER_QUERY could not finish on query 'Sales': TypeError");
+  });
+
+  it("gives a table permission's finding its role as a message", async () => {
+    const r = await lint([
+      {
+        path: "definition/tables/T.tmdl",
+        text: "table T\n\tcolumn C\n\t\tdataType: int64\n\tpartition T = m\n\t\tmode: import\n\t\tsource = 1\n",
+      },
+      {
+        path: "definition/roles/R.tmdl",
+        text: "role R\n\tmodelPermission: read\n\ttablePermission T = [C] = 1\n",
+      },
+    ]);
+    const f = r.findings.find(
+      (x) => x.ruleId === "DAX_COLUMNS_FULLY_QUALIFIED" && x.objectType === "TablePermission",
+    );
+    expect(f).toMatchObject({ detail: "role R", messageId: "context.role", params: { role: "R" } });
   });
 });

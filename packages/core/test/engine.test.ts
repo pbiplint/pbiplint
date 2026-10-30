@@ -1629,6 +1629,14 @@ describe("lint", () => {
         detail: expect.stringMatching(
           /^M could not be parsed: Expected to find one of the following.*: in$/,
         ),
+        messageId: "PARSE_ISSUE",
+        params: {
+          reason: {
+            id: "parse.m.notParsed",
+            params: { message: expect.stringMatching(/^Expected to find one of the following/) },
+          },
+          text: "in",
+        },
       },
     ]);
   });

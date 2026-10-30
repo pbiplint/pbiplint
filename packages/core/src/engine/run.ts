@@ -1,9 +1,9 @@
 import type { Indexes } from "../index/build.js";
-import { formatMessage, msg } from "../messages/format.js";
+import { formatMessage, msg, type Message } from "../messages/format.js";
 import type { Project } from "../project/types.js";
 import { finding } from "../rules/helpers.js";
 import { reportFinding } from "../rules/report-helpers.js";
-import { failureDetail, RULE_COULD_NOT_FINISH } from "../rules/rule-could-not-finish.js";
+import { failureMessage, RULE_COULD_NOT_FINISH } from "../rules/rule-could-not-finish.js";
 import {
   layerOf,
   type ErrorSite,
@@ -14,7 +14,7 @@ import {
 } from "../rules/types.js";
 import type { ResolvedConfig } from "./config.js";
 import { isIgnored } from "./ignore.js";
-import { errorKind } from "./rule-error.js";
+import { errorKindMessage } from "./rule-error.js";
 
 /** A rule that did not run, and why. */
 export interface SkippedRule {
@@ -89,17 +89,18 @@ export function runRules(
     ignored: 0,
   };
   /** Each error's rule, where it happened, and the object it was about, for the findings. */
-  const failures: { id: string; label: string; finding: RuleFinding; kind: string }[] = [];
+  const failures: { id: string; label: Message; finding: RuleFinding; kind: Message }[] = [];
   /**
    * Records a rule's error, by its class alone: every `RuleError` is made here, its message in
    * English. A throw out of `check` is about the model, or the report for a report rule or a
    * project without a model.
    */
   const fail = (rule: Rule, e: unknown, site?: ErrorSite): void => {
-    const kind = errorKind(e);
+    const kind = errorKindMessage(e);
+    const kindText = formatMessage(kind);
     result.ruleErrors.push({
       id: rule.id,
-      message: site === undefined ? kind : `${formatMessage(site.label)}: ${kind}`,
+      message: site === undefined ? kindText : `${formatMessage(site.label)}: ${kindText}`,
     });
     const { model, report } = project;
     const { label, finding: f }: ErrorSite =
@@ -112,7 +113,7 @@ export function runRules(
               label: msg("ruleError.theModel"),
               finding: { objectType: "Model", objectName: "Model" },
             });
-    failures.push({ id: rule.id, kind, label: formatMessage(label), finding: f });
+    failures.push({ id: rule.id, kind, label, finding: f });
   };
   /** Adds a rule's finding, unless its object's `pbiplint.ignore` names the rule or `alsoIgnoredBy`. */
   const keep = (ruleId: string, f: RuleFinding, alsoIgnoredBy?: string): void => {
@@ -186,7 +187,7 @@ export function runRules(
       const key = JSON.stringify([id, f.objectType, f.objectName, f.objectId]);
       if (seen.has(key)) continue;
       seen.add(key);
-      keep(RULE_COULD_NOT_FINISH.id, { ...f, detail: failureDetail(id, label, kind) }, id);
+      keep(RULE_COULD_NOT_FINISH.id, { ...f, message: failureMessage(id, label, kind) }, id);
     }
   }
   return result;

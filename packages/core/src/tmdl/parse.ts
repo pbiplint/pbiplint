@@ -1,5 +1,7 @@
+import { msg, type Message } from "../messages/format.js";
 import { quoteEnd, unquoteName, unquoteValue } from "./quote.js";
 import { allowsChild, checksChildren } from "./child-types.js";
+import { parseIssue } from "./issue.js";
 import { isModelChildType, isNamedRootType, isRootType } from "./root-types.js";
 import type { ParsedFile, TmdlNode, TmdlParseIssue } from "./types.js";
 
@@ -238,10 +240,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
    */
   const orphanDescription = (pending: { line: number; text: string }): void => {
     issues.push({
-      file,
-      line: pending.line,
-      text: pending.text,
-      reason: "description is not followed by a declaration",
+      ...parseIssue(file, pending.line, pending.text, msg("parse.tmdl.orphanDescription")),
       canDropObjects: false,
       canDropTableLine: false,
     });
@@ -271,10 +270,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
     // The line is skipped, whatever it declared.
     if (/^\s/.test(content)) {
       issues.push({
-        file,
-        line: lineNo,
-        text: raw,
-        reason: "space indentation (TMDL requires tabs)",
+        ...parseIssue(file, lineNo, raw, msg("parse.tmdl.spaceIndentation")),
         canDropObjects: true,
         canDropTableLine: mayBeRootLine(raw) || namesTable(raw),
       });
@@ -329,10 +325,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
       const read = lines.slice(i + 1, end);
       // "code fence", the words rules/parse-issue.md uses, so the finding and the page agree.
       issues.push({
-        file,
-        line: lineNo,
-        text: raw,
-        reason: "unterminated code fence",
+        ...parseIssue(file, lineNo, raw, msg("parse.tmdl.unterminatedFence")),
         canDropObjects: true,
         canDropTableLine: read.some((l) => mayBeModelLevelLine(l, indent)),
       });
@@ -364,10 +357,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
       if (!h) {
         // Skipped, and it may have been a declaration the parser could not make out.
         issues.push({
-          file,
-          line: lineNo,
-          text: raw,
-          reason: "unrecognized line",
+          ...parseIssue(file, lineNo, raw, msg("parse.tmdl.unrecognizedLine")),
           canDropObjects: true,
           canDropTableLine: mayBeModelLevelLine(raw, indent),
         });
@@ -404,24 +394,21 @@ export function parseTmdl(file: string, text: string): ParsedFile {
     // on the first line of database.tmdl. Either way the line stays a generic root, which the model
     // does not read, so nothing under it reaches a rule. Only the header line is reported: an
     // expression's value block was read above as its value.
-    let rootIssue: string | undefined;
+    let rootIssue: Message | undefined;
     if (indent === 0 && word !== undefined) {
       const reason =
         node.kind === "prop" || node.kind === "expr"
-          ? `"${word}" is a property, which TMDL allows only under an object`
+          ? msg("parse.tmdl.propertyAtRoot", { word })
           : isRootType(word)
             ? undefined
-            : `"${word}" is not a type TMDL declares at the root of a file`;
+            : msg("parse.tmdl.notRootType", { word });
       // A misspelt word or a flag (`tableSales`, a lost space) may be a `table` line, as may a
       // property or an expression with no name whose word is `table`; no other property or
       // expression can be one, and the lines under it are indented.
       rootIssue = reason;
       if (reason !== undefined) {
         issues.push({
-          file,
-          line: lineNo,
-          text: raw,
-          reason,
+          ...parseIssue(file, lineNo, raw, reason),
           canDropObjects: true,
           canDropTableLine: node.kind === "object" || node.kind === "flag" || namesTable(raw),
         });
@@ -440,10 +427,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
     // a table's; an orphan after a line the parser skipped belongs to that line, whose issue says.
     if (indent > 0 && !parent) {
       issues.push({
-        file,
-        line: lineNo,
-        text: raw,
-        reason: "orphan indentation",
+        ...parseIssue(file, lineNo, raw, msg("parse.tmdl.orphanIndentation")),
         canDropObjects: true,
         canDropTableLine:
           namesTable(raw) || (roots.length === 0 && !issues.some((x) => x.canDropObjects)),
@@ -467,32 +451,32 @@ export function parseTmdl(file: string, text: string): ParsedFile {
     const level = parent && holders.get(parent);
     const declaration = node.kind === "object" || node.kind === "flag";
     const keyword = word?.toLowerCase();
-    let malformed: string | undefined;
+    let malformed: Message | undefined;
     // Whether the line may be a table's declaration: its word is `table`, or it is of a type TMDL
     // does not declare where it sits, which may be a misspelt `table`, as at the root.
     let mayBeTable = namesTable(raw);
-    if (rootIssue === undefined && keyword !== undefined) {
+    if (rootIssue === undefined && word !== undefined && keyword !== undefined) {
       if (!declaration) {
         // A property, or an expression with no name, under a model is one of the model's own, but
         // for a word TMDL declares there as an object, such as `table: Sales` for `table Sales` or
         // an expression's `queryGroup` that lost its tabs. No property of a model has such a word.
         if (level === "model" && isModelChildType(keyword))
-          malformed = `"${word}" is not a property TMDL allows under a model`;
+          malformed = msg("parse.tmdl.notModelProperty", { word });
       } else if (indent > 0 && keyword === "table" && !HOLDS_TABLE.has(parent?.type ?? "")) {
-        malformed = `"${word}" is a type TMDL declares only at the root of a file or under a model`;
+        malformed = msg("parse.tmdl.tableOnlyAtRoot", { word });
       } else if (
         level !== undefined &&
         !(level === "model" ? isModelChildType(keyword) : keyword === "model") &&
         (node.kind === "object" || isRootType(keyword))
       ) {
-        malformed = `"${word}" is not a type TMDL declares under a ${level}`;
+        malformed = msg("parse.tmdl.notChildType", { word, under: level });
         mayBeTable = true;
       } else if (
         (indent === 0 || level === "model") &&
         (node.kind === "flag" || node.name === "") &&
         isNamedRootType(keyword)
       ) {
-        malformed = `"${word}" is declared with no name`;
+        malformed = msg("parse.tmdl.noName", { word });
       } else if (
         node.kind === "object" &&
         (parent?.kind === "object" || parent?.kind === "flag") &&
@@ -506,17 +490,14 @@ export function parseTmdl(file: string, text: string): ParsedFile {
         // a word followed by a name is checked, the way TMDL declares an object; a lone word is a
         // flag and keeps today's reading. Both words are named as written.
         const under = /^\s*(\w+)/.exec(lines[parent.line - 1]!)?.[1] ?? parent.type;
-        malformed = `"${word}" is not a type TMDL declares under a ${under}`;
+        malformed = msg("parse.tmdl.notChildType", { word, under });
       } else if (!readableName) {
-        malformed = "the name is not enclosed in single quotes as TMDL requires";
+        malformed = msg("parse.tmdl.unquotedName");
       }
     }
     if (malformed !== undefined) {
       issues.push({
-        file,
-        line: lineNo,
-        text: raw,
-        reason: malformed,
+        ...parseIssue(file, lineNo, raw, malformed),
         canDropObjects: true,
         canDropTableLine: mayBeTable,
       });
@@ -575,13 +556,17 @@ export function parseTmdl(file: string, text: string): ParsedFile {
       !root && r.kind === "flag" && !noted && r.children.some((c) => c.kind === "object");
     if (!(valued ? !root : noted || holdsDeclaration)) continue;
     const text = lines[r.line - 1]!;
-    const where = root ? "at the root of a file" : "under a model";
-    const under = holdsDeclaration ? "a declaration" : "lines";
     const issue = {
-      file,
-      line: r.line,
-      text,
-      reason: `"${/^\w+/.exec(text.trimStart())![0]}" ${where} has ${under} under it, which TMDL does not allow`,
+      ...parseIssue(
+        file,
+        r.line,
+        text,
+        msg("parse.tmdl.linesUnder", {
+          word: /^\w+/.exec(text.trimStart())![0],
+          where: root ? "root" : "model",
+          under: holdsDeclaration ? "declaration" : "lines",
+        }),
+      ),
       canDropObjects: true,
       canDropTableLine: false,
     };

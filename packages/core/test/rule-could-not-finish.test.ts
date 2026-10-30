@@ -89,6 +89,12 @@ describe("RULE_COULD_NOT_FINISH", () => {
         objectName: "Sales",
         location: { file: "definition/tables/Sales.tmdl", line: 2 },
         detail: "PER_QUERY could not finish on query 'Sales': TypeError",
+        messageId: "RULE_COULD_NOT_FINISH",
+        params: {
+          rule: "PER_QUERY",
+          where: { id: "query.name", params: { query: "'Sales'" } },
+          kind: { id: "ruleError.errorClass", params: { class: "TypeError" } },
+        },
       },
     ]);
     expect(r.groups.find((g) => g.rule.id === "RULE_COULD_NOT_FINISH")!.rule.severity).toBe(3);
@@ -105,6 +111,12 @@ describe("RULE_COULD_NOT_FINISH", () => {
         objectName: "Model",
         location: { file: "definition/model.tmdl", line: 1 },
         detail: "WHOLE could not finish on the model: Error",
+        messageId: "RULE_COULD_NOT_FINISH",
+        params: {
+          rule: "WHOLE",
+          where: { id: "ruleError.theModel", params: {} },
+          kind: { id: "ruleError.errorClass", params: { class: "Error" } },
+        },
       },
     ]);
   });
@@ -130,6 +142,12 @@ describe("RULE_COULD_NOT_FINISH", () => {
         objectType: "Model",
         objectName: "Model",
         detail: "EMPTY could not finish on the model: Error",
+        messageId: "RULE_COULD_NOT_FINISH",
+        params: {
+          rule: "EMPTY",
+          where: { id: "ruleError.theModel", params: {} },
+          kind: { id: "ruleError.errorClass", params: { class: "Error" } },
+        },
       },
     ]);
   });

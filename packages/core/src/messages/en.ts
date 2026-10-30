@@ -9,9 +9,47 @@
  * writes ICU's doubled apostrophe.
  */
 export const EN = {
+  PARSE_ISSUE: "{reason}: {text}",
+  "PARSE_ISSUE.unreadableProject": "{reason}",
+  RULE_COULD_NOT_FINISH: "{rule} could not finish on {where}: {kind}",
+  "context.calculationGroup": "calculation group {table}",
+  "context.level": "hierarchy {hierarchy} in {table}",
+  "context.role": "role {role}",
   "context.table": "table {table}",
+  "parse.m.modelTooLarge":
+    "M is too large or complex to read (over pbiplint's limit for one model's M)",
+  "parse.m.notParsed": "M could not be parsed: {message}",
+  "parse.m.tooLarge": "M is too large or complex to read (over pbiplint's limit for one query)",
+  "parse.pbir.conflictMarker": "merge conflict marker",
+  "parse.pbir.emptyEntity":
+    'entity {entity} has {state, select, missing {no} other {an empty}} "measures" list: Power BI Desktop does not open a project whose reportExtensions.json holds an entity with no measure; remove the entity, or the file when it holds no report measure',
+  "parse.pbir.noEntities":
+    '"entities" is {state, select, missing {missing} other {empty}}: Power BI Desktop does not open a project whose reportExtensions.json lists no entity; delete the file when it holds no report measure',
+  "parse.pbir.notAnObject":
+    "not a JSON object (the file holds {kind, select, null {null} array {an array} string {a string} number {a number} other {a boolean}})",
+  "parse.pbir.notValidJson": "not valid JSON ({message})",
+  "parse.pbir.tooDeep": "nested more than {depth} levels deep",
+  "parse.pbir.unnamedEntity": "an entity",
+  "parse.tmdl.linesUnder":
+    '"{word}" {where, select, root {at the root of a file} other {under a model}} has {under, select, declaration {a declaration} other {lines}} under it, which TMDL does not allow',
+  "parse.tmdl.noName": '"{word}" is declared with no name',
+  "parse.tmdl.notChildType": '"{word}" is not a type TMDL declares under a {under}',
+  "parse.tmdl.notModelProperty": '"{word}" is not a property TMDL allows under a model',
+  "parse.tmdl.notRootType": '"{word}" is not a type TMDL declares at the root of a file',
+  "parse.tmdl.orphanDescription": "description is not followed by a declaration",
+  "parse.tmdl.orphanIndentation": "orphan indentation",
+  "parse.tmdl.propertyAtRoot": '"{word}" is a property, which TMDL allows only under an object',
+  "parse.tmdl.spaceIndentation": "space indentation (TMDL requires tabs)",
+  "parse.tmdl.tableOnlyAtRoot":
+    '"{word}" is a type TMDL declares only at the root of a file or under a model',
+  "parse.tmdl.unquotedName": "the name is not enclosed in single quotes as TMDL requires",
+  "parse.tmdl.unrecognizedLine": "unrecognized line",
+  "parse.tmdl.unterminatedFence": "unterminated code fence",
   "query.name": "query {query}",
   "query.partition": "query {query}, partition {partition}",
+  "ruleError.errorClass": "{class}",
+  "ruleError.notAnError": "a value that is not an Error",
+  "ruleError.outOfStack": "{class} (out of stack space)",
   "ruleError.theModel": "the model",
   "ruleError.theReport": "the report",
 } as const;

@@ -393,6 +393,8 @@ describe("unreadProject", () => {
       layer: "model",
       location: { file: "model.bim", line: 1 },
       detail: legacy.message,
+      messageId: "PARSE_ISSUE.unreadableProject",
+      params: { reason: legacy.message },
     };
     expect(r.findings).toEqual([finding]);
     expect(r.groups.map((g) => [g.rule.id, g.rule.severity, g.findings])).toEqual([
@@ -446,6 +448,8 @@ describe("unreadProject", () => {
         objectName: "b/Empty.SemanticModel",
         layer: "model",
         detail: "No .tmdl files",
+        messageId: "PARSE_ISSUE.unreadableProject",
+        params: { reason: "No .tmdl files" },
       },
     ]);
     expect(other.layers.model).toEqual({ present: false, reason: "No .tmdl files" });

@@ -1,3 +1,5 @@
+import { msg } from "../messages/format.js";
+import { parseIssue } from "../tmdl/issue.js";
 import type { ParseIssue } from "../tmdl/types.js";
 
 export interface JsonRead {
@@ -26,17 +28,17 @@ export interface ReadJsonOptions {
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
 
-/** What a parsed document holds when it is not an object, as a parse issue names it. */
+/** What a parsed document holds when it is not an object: the key parse.pbir.notAnObject selects on. */
 const kindOf = (v: unknown): string =>
   v === null
     ? "null"
     : Array.isArray(v)
-      ? "an array"
+      ? "array"
       : typeof v === "string"
-        ? "a string"
+        ? "string"
         : typeof v === "number"
-          ? "a number"
-          : "a boolean";
+          ? "number"
+          : "boolean";
 
 /** A git conflict marker at the start of a line: the file was saved mid-merge. */
 const CONFLICT_MARKER = /^(?:<{7}|={7}|>{7})(?:\s|$)/;
@@ -161,7 +163,7 @@ export function readJson(file: string, text: string, options: ReadJsonOptions = 
   const lines = body.split(LINE_BREAK);
   const issues: ParseIssue[] = lines.flatMap((line, i) =>
     CONFLICT_MARKER.test(line)
-      ? [{ file, line: i + 1, text: quoted(line), reason: "merge conflict marker" }]
+      ? [parseIssue(file, i + 1, quoted(line), msg("parse.pbir.conflictMarker"))]
       : [],
   );
   if (issues.length > 0) return { json: undefined, issues };
@@ -176,7 +178,14 @@ export function readJson(file: string, text: string, options: ReadJsonOptions = 
     const flat = message.replace(/\s+/g, " ");
     return {
       json: undefined,
-      issues: [{ file, line, text: quoted(lines[line - 1]), reason: `not valid JSON (${flat})` }],
+      issues: [
+        parseIssue(
+          file,
+          line,
+          quoted(lines[line - 1]),
+          msg("parse.pbir.notValidJson", { message: flat }),
+        ),
+      ],
     };
   }
   const deep = tooDeepAt(body);
@@ -185,12 +194,12 @@ export function readJson(file: string, text: string, options: ReadJsonOptions = 
     return {
       json: undefined,
       issues: [
-        {
+        parseIssue(
           file,
           line,
-          text: quoted(lines[line - 1]),
-          reason: `nested more than ${MAX_DEPTH} levels deep`,
-        },
+          quoted(lines[line - 1]),
+          msg("parse.pbir.tooDeep", { depth: MAX_DEPTH }),
+        ),
       ],
     };
   }
@@ -202,12 +211,12 @@ export function readJson(file: string, text: string, options: ReadJsonOptions = 
     return {
       json: undefined,
       issues: [
-        {
+        parseIssue(
           file,
-          line: start + 1,
-          text: quoted(lines[start]),
-          reason: `not a JSON object (the file holds ${kindOf(json)})`,
-        },
+          start + 1,
+          quoted(lines[start]),
+          msg("parse.pbir.notAnObject", { kind: kindOf(json) }),
+        ),
       ],
     };
   }

@@ -1200,6 +1200,7 @@ describe("reportExtensions.json with no entity (#208)", () => {
         line: 4,
         text: '  "entities": []',
         reason: `"entities" is empty: ${DESKTOP}`,
+        message: { id: "parse.pbir.noEntities", params: { state: "empty" } },
       },
     ]);
     expect(report.extensions).toBe("read");

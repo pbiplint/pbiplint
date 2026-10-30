@@ -4,7 +4,7 @@ import type { MIndex, MQuery } from "../m/types.js";
 import { formatMessage, msg, type Message } from "../messages/format.js";
 import { tableRef } from "../model/names.js";
 import type { NamedExpression, Partition, Table } from "../model/types.js";
-import { finding } from "./helpers.js";
+import { finding, withDetail } from "./helpers.js";
 import type { RuleContext, RuleFinding } from "./types.js";
 
 /**
@@ -45,9 +45,11 @@ export function mFinding(
 ): RuleFinding {
   const step = stepOf(q, node);
   return {
-    ...ownerFinding(q),
+    ...withDetail(
+      ownerFinding(q),
+      () => `${queryLabelText(q)}${step === undefined ? "" : `, step ${tableRef(step)}`}: ${what}`,
+    ),
     location: m.locate(q, node.tokenRange.positionStart),
-    detail: `${queryLabelText(q)}${step === undefined ? "" : `, step ${tableRef(step)}`}: ${what}`,
   };
 }
 

@@ -1,4 +1,5 @@
 import { countsLine, plural } from "../format/text.js";
+import { formatMessage, msg } from "../messages/format.js";
 import { buildModel } from "../model/build.js";
 import { LEGACY_MODEL_REASON, LEGACY_REPORT_REASON } from "../project/route.js";
 import { PARSE_ISSUE } from "../rules/parse-issue.js";
@@ -63,6 +64,8 @@ export function unreadProject(unreadable: Unreadable, given: ResolvedConfig): Li
   // The config's other rules are the project's to name as unknown, not this result's.
   const { config } = bindConfig(given, [PARSE_ISSUE]);
   const off = config.disabled.has(PARSE_ISSUE.id);
+  // The refusal is the CLI's or the site's English, a parameter as it stands (#98 spec, section 2).
+  const detail = msg("PARSE_ISSUE.unreadableProject", { reason: message });
   const findings: Finding[] = off
     ? []
     : [
@@ -72,7 +75,9 @@ export function unreadProject(unreadable: Unreadable, given: ResolvedConfig): Li
           objectName: file ?? name ?? "",
           layer,
           ...(file === undefined ? {} : { location: { file, line: 1 } }),
-          detail: message,
+          detail: formatMessage(detail),
+          messageId: detail.id,
+          params: detail.params,
         },
       ];
   const groups = rank(findings, [PARSE_ISSUE], config);

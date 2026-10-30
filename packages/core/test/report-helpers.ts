@@ -5,7 +5,7 @@ import { resolveConfig } from "../src/engine/config.js";
 import { buildReport } from "../src/pbir/build.js";
 import type { Project } from "../src/project/types.js";
 import type { Rule, RuleFinding } from "../src/rules/types.js";
-import { modelFrom } from "./helpers.js";
+import { modelFrom, rendered } from "./helpers.js";
 
 export const j = (v: unknown): string => JSON.stringify(v);
 /** Indented JSON, as Power BI Desktop writes it, so each key sits on a line of its own. */
@@ -77,7 +77,9 @@ export function reportFindings(
   // optionsFor reads the config's options by the rule's own id, so the map is set directly.
   const config = resolveConfig();
   if (Object.keys(options).length) config.options.set(rule.id, options);
-  return rule.check(project, { indexes: buildIndexes(project), options: optionsFor(rule, config) });
+  return rule
+    .check(project, { indexes: buildIndexes(project), options: optionsFor(rule, config) })
+    .map(rendered);
 }
 
 /** Run one rule and return the object ids it flags, in emission order. */

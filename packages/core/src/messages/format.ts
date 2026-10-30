@@ -5,7 +5,8 @@ import { EN, type MessageId } from "./en.js";
  * A value a template fills in: a name or text from the input (written as given, never read as a
  * template), a number (written as its digits, never grouped, so a year stays `2025`), a nested
  * message, rendered in the same catalog and language, or a list of names and messages, which
- * `{names, list}` joins as the language does (`{names, list, unit}` with no conjunction). A `{d, date}` parameter is an ISO day, `2025-12-31`.
+ * `{names, list}` joins as the language does, or `{names, list, unit}` as a unit list (in English,
+ * `a, b, c`). A `{d, date}` parameter is an ISO day, `2025-12-31`.
  */
 export type MessageParam = string | number | Message | readonly (string | Message)[];
 
@@ -197,8 +198,8 @@ const intl = (locale: string): LocaleIntl => {
 /**
  * A parameter as text: a name as written, a number as its digits, a message rendered, and a list
  * joined as the language does. English writes semicolons for the list's commas when an item holds
- * a comma, as `January 1, 2024; June 30, 2024; and December 31, 2024`. A `unit` list has no
- * conjunction (English writes `a, b, c`) and keeps its punctuation whatever the items hold.
+ * a comma, as `January 1, 2024; June 30, 2024; and December 31, 2024`. A `unit` list is the
+ * language's unit list (in English, `a, b, c`) and keeps its punctuation whatever the items hold.
  */
 function text(value: MessageParam, catalog: Catalog, locale: string, unit = false): string {
   if (typeof value === "string") return value;

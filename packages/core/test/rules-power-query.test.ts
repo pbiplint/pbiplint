@@ -19,11 +19,14 @@ import {
   SORT_NOT_HELD_FOR_REMOVE_DUPLICATES,
 } from "../src/rules/pbiplint/power-query.js";
 import type { Rule } from "../src/rules/types.js";
-import { mFindings, modelFrom, mObjectNames } from "./helpers.js";
+import { msg } from "../src/messages/format.js";
+import { mFindings, modelFrom, mObjectNames, rendered } from "./helpers.js";
 
 /** A table whose one M partition holds `m`, as Desktop writes a block: four tabs before each M line. */
 const table = (name: string, ...m: string[]): string =>
   `table '${name}'\n\tpartition '${name}' = m\n\t\tmode: import\n\t\tsource =\n${m.map((l) => `\t\t\t\t${l}`).join("\n")}\n\n`;
+/** A query's label in the frame's message, for a table with one M partition or an expression. */
+const query = (name: string) => msg("query.name", { query: name });
 
 /** What all of pbiplint's own Power Query rules share (v3 spec, section 9.1). */
 function isPowerQueryRule(rule: Rule, severity: 1 | 2 | 3, category: string): void {
@@ -55,6 +58,12 @@ describe("LOCAL_DRIVE_PATH (v3 spec, section 9.6)", () => {
         objectName: "Sales",
         location: { file: "inline.tmdl", line: 6, column: 42 },
         detail: "query 'Sales', step 'Source': the path is on a local drive (C:)",
+        messageId: "query.stepFinding",
+        params: {
+          query: query("'Sales'"),
+          step: "'Source'",
+          finding: msg("LOCAL_DRIVE_PATH", { drive: "C" }),
+        },
       },
     ]);
   });
@@ -67,6 +76,11 @@ describe("LOCAL_DRIVE_PATH (v3 spec, section 9.6)", () => {
         objectName: "ExportFolder",
         location: { file: "inline.tmdl", line: 1, column: 27 },
         detail: "query 'ExportFolder': the path is on a local drive (D:)",
+        messageId: "query.finding",
+        params: {
+          query: query("'ExportFolder'"),
+          finding: msg("LOCAL_DRIVE_PATH", { drive: "D" }),
+        },
       },
     ]);
   });
@@ -143,6 +157,12 @@ describe("SCRIPT_IN_QUERY (v3 spec, section 9.9)", () => {
         location: { file: "inline.tmdl", line: 7, column: 29 },
         detail:
           "query 'Scores', step 'Run Python script': Python.Execute refreshes only through a personal gateway on a machine with Python installed",
+        messageId: "query.stepFinding",
+        params: {
+          query: query("'Scores'"),
+          step: "'Run Python script'",
+          finding: msg("SCRIPT_IN_QUERY", { language: "python" }),
+        },
       },
       {
         objectType: "Partition",
@@ -150,6 +170,12 @@ describe("SCRIPT_IN_QUERY (v3 spec, section 9.9)", () => {
         location: { file: "inline.tmdl", line: 8, column: 24 },
         detail:
           "query 'Scores', step 'Run R script': R.Execute refreshes only through a personal gateway on a machine with R installed",
+        messageId: "query.stepFinding",
+        params: {
+          query: query("'Scores'"),
+          step: "'Run R script'",
+          finding: msg("SCRIPT_IN_QUERY", { language: "r" }),
+        },
       },
     ]);
   });
@@ -194,12 +220,16 @@ describe("EXCEL_USE_HEADERS (v3 spec, section 9.12)", () => {
         objectName: "Budget",
         location: { file: "inline.tmdl", line: 6, column: 15 },
         detail: `query 'Budget', step 'Reader': ${what}`,
+        messageId: "query.stepFinding",
+        params: { query: query("'Budget'"), step: "'Reader'", finding: msg("EXCEL_USE_HEADERS") },
       },
       {
         objectType: "Partition",
         objectName: "Budget",
         location: { file: "inline.tmdl", line: 7, column: 15 },
         detail: `query 'Budget', step 'Option': ${what}`,
+        messageId: "query.stepFinding",
+        params: { query: query("'Budget'"), step: "'Option'", finding: msg("EXCEL_USE_HEADERS") },
       },
     ]);
   });
@@ -225,6 +255,7 @@ describe("PRIVACY_LEVELS_IGNORED (v3 spec, section 9.8)", () => {
     const model = modelFrom(tmdl);
     return rule
       .check({ model }, { indexes: buildIndexes({ model }), options: {} })
+      .map(rendered)
       .map(({ object: _object, ...f }) => f);
   };
   const block = (...flags: string[]): string =>
@@ -241,6 +272,8 @@ describe("PRIVACY_LEVELS_IGNORED (v3 spec, section 9.8)", () => {
         objectName: "Model",
         location: { file: "inline.tmdl", line: 4 },
         detail: "Ignore the Privacy Levels is on for this file; the service does not honor it",
+        messageId: "PRIVACY_LEVELS_IGNORED",
+        params: {},
       },
     ]);
   });
@@ -282,6 +315,15 @@ describe("ODBC_WHERE_CONNECTOR_EXISTS (v3 spec, section 9.15)", () => {
         location: { file: "inline.tmdl", line: 6, column: 15 },
         detail:
           "query 'Orders', step 'Source': the ODBC connection names the Amazon Redshift driver; Power BI has an Amazon Redshift connector",
+        messageId: "query.stepFinding",
+        params: {
+          query: query("'Orders'"),
+          step: "'Source'",
+          finding: msg("ODBC_WHERE_CONNECTOR_EXISTS", {
+            kind: "odbc",
+            connector: "amazonRedshift",
+          }),
+        },
       },
     ]);
   });
@@ -367,6 +409,14 @@ describe("SORT_NOT_HELD_FOR_REMOVE_DUPLICATES (v3 spec, section 9.2)", () => {
         location: { file: "inline.tmdl", line: 8, column: 30 },
         detail:
           "query 'Customers', step 'Removed Duplicates': nothing holds the order of step 'Sorted Rows', so the sort may not decide which duplicate is kept",
+        messageId: "query.stepFinding",
+        params: {
+          query: query("'Customers'"),
+          step: "'Removed Duplicates'",
+          finding: msg("SORT_NOT_HELD_FOR_REMOVE_DUPLICATES", {
+            sort: msg("SORT_NOT_HELD_FOR_REMOVE_DUPLICATES.sortStep", { step: "'Sorted Rows'" }),
+          }),
+        },
       },
     ]);
   });
@@ -482,6 +532,12 @@ describe("KEEP_FIRST_ROWS_LEFT_IN (v3 spec, section 9.11)", () => {
         objectName: "Orders",
         location: { file: "inline.tmdl", line: 7, column: 27 },
         detail: "query 'Orders', step 'Kept First Rows': only the first 1000 rows load",
+        messageId: "query.stepFinding",
+        params: {
+          query: query("'Orders'"),
+          step: "'Kept First Rows'",
+          finding: msg("KEEP_FIRST_ROWS_LEFT_IN", { count: 1000 }),
+        },
       },
     ]);
   });
@@ -514,6 +570,11 @@ describe("KEEP_FIRST_ROWS_LEFT_IN (v3 spec, section 9.11)", () => {
         objectName: "'Orders'",
         location: { file: "inline.tmdl", line: 8, column: 22 },
         detail: "query 'Orders': only the first 1000 rows load",
+        messageId: "query.finding",
+        params: {
+          query: query("'Orders'"),
+          finding: msg("KEEP_FIRST_ROWS_LEFT_IN", { count: 1000 }),
+        },
       },
     ]);
   });
@@ -555,6 +616,12 @@ describe("INCREMENTAL_REFRESH_RANGE_BOUNDS (v3 spec, section 9.4)", () => {
         location: { file: "inline.tmdl", line: 11, column: 85 },
         detail:
           "query 'Sales', step 'Filtered Rows': both RangeStart and RangeEnd include the boundary, so a row on it lands in two partitions",
+        messageId: "query.stepFinding",
+        params: {
+          query: query("'Sales'"),
+          step: "'Filtered Rows'",
+          finding: msg("INCREMENTAL_REFRESH_RANGE_BOUNDS.bothInclude"),
+        },
       },
     ]);
   });

@@ -36,6 +36,16 @@ import {
 } from "../src/rules/pbiplint/references.js";
 import { UDF_NOT_CALLED } from "../src/rules/pbiplint/functions.js";
 import { HARDCODED_PERIOD_IN_DAX, longDate } from "../src/rules/pbiplint/periods.js";
+import {
+  EXCEL_USE_HEADERS,
+  INCREMENTAL_REFRESH_RANGE_BOUNDS,
+  KEEP_FIRST_ROWS_LEFT_IN,
+  LOCAL_DRIVE_PATH,
+  ODBC_WHERE_CONNECTOR_EXISTS,
+  PRIVACY_LEVELS_IGNORED,
+  SCRIPT_IN_QUERY,
+  SORT_NOT_HELD_FOR_REMOVE_DUPLICATES,
+} from "../src/rules/pbiplint/power-query.js";
 import { TAB_ORDER_FOLLOWS_LAYOUT } from "../src/rules/pbiplint/tab-order.js";
 import { NAME_WITHOUT_TRANSLATION } from "../src/rules/pbiplint/translations.js";
 import {
@@ -48,7 +58,7 @@ import {
 import { RULE_COULD_NOT_FINISH } from "../src/rules/rule-could-not-finish.js";
 import type { Finding, Rule, RuleFinding } from "../src/rules/types.js";
 import { parseTmdl } from "../src/tmdl/parse.js";
-import { modelFrom, rendered } from "./helpers.js";
+import { mFindings, modelFrom, rendered } from "./helpers.js";
 import { bound, column, j, lit, measure, page, reportFindings, visual } from "./report-helpers.js";
 
 // Test-only templates under made-up IDs, so these tests do not depend on the English catalog.
@@ -1354,6 +1364,273 @@ describe("the period, translation, and function rules' messages (#98)", () => {
         [undefined, undefined, undefined],
       ]);
     });
+  });
+});
+
+describe("the Power Query frame and the first Power Query rules' messages (#98)", () => {
+  /** A table whose one M partition holds `m`, as Desktop writes a block. */
+  const table = (name: string, ...m: string[]): string =>
+    `table '${name}'\n\tpartition '${name}' = m\n\t\tmode: import\n\t\tsource =\n${m.map((l) => `\t\t\t\t${l}`).join("\n")}\n\n`;
+  /** A query `name` whose one step, `step`, is `expression`. */
+  const oneStep = (name: string, step: string, expression: string): string =>
+    table(name, "let", `\t${step} = ${expression}`, "in", `\t${step}`);
+  /** Each finding of a Power Query rule, rendered as `runRules` renders it: ID, English, parameters. */
+  const said = async (rule: Rule, tmdl: string) =>
+    (await mFindings(rule, tmdl)).map((f) => [f.messageId, f.detail, f.params]);
+  const query = (name: string) => msg("query.name", { query: name });
+  /** The frame's parameters with a step: `query 'Sales', step 'Source': …`. */
+  const atStep = (q: Message, step: string, finding: Message) => ({ query: q, step, finding });
+
+  describe("the frame", () => {
+    it("names the query and the step that holds the node, the rule's message nested", async () => {
+      expect(
+        await said(LOCAL_DRIVE_PATH, oneStep("Sales", "Source", 'File.Contents("C:\\Sales.csv")')),
+      ).toEqual([
+        [
+          "query.stepFinding",
+          "query 'Sales', step 'Source': the path is on a local drive (C:)",
+          atStep(query("'Sales'"), "'Source'", msg("LOCAL_DRIVE_PATH", { drive: "C" })),
+        ],
+      ]);
+    });
+
+    it("names the query alone when no step holds the node", async () => {
+      expect(
+        await said(
+          LOCAL_DRIVE_PATH,
+          'expression ExportFolder = "d:/Exports/" meta [IsParameterQuery = true, Type = "Text", IsParameterQueryRequired = true]\n',
+        ),
+      ).toEqual([
+        [
+          "query.finding",
+          "query 'ExportFolder': the path is on a local drive (D:)",
+          { query: query("'ExportFolder'"), finding: msg("LOCAL_DRIVE_PATH", { drive: "D" }) },
+        ],
+      ]);
+    });
+
+    it("names the partition when the table has two M partitions, with a step and without", async () => {
+      const tmdl =
+        "table Sales\n" +
+        '\tpartition Current = m\n\t\tmode: import\n\t\tsource = File.Contents("C:\\Current.csv")\n\n' +
+        '\tpartition Archive = m\n\t\tmode: import\n\t\tsource =\n\t\t\t\tlet\n\t\t\t\t\tOld = File.Contents("E:\\Old.csv")\n\t\t\t\tin\n\t\t\t\t\tOld\n\n';
+      const partition = (p: string) =>
+        msg("query.partition", { query: "'Sales'", partition: `'${p}'` });
+      expect(await said(LOCAL_DRIVE_PATH, tmdl)).toEqual([
+        [
+          "query.finding",
+          "query 'Sales', partition 'Current': the path is on a local drive (C:)",
+          { query: partition("Current"), finding: msg("LOCAL_DRIVE_PATH", { drive: "C" }) },
+        ],
+        [
+          "query.stepFinding",
+          "query 'Sales', partition 'Archive', step 'Old': the path is on a local drive (E:)",
+          atStep(partition("Archive"), "'Old'", msg("LOCAL_DRIVE_PATH", { drive: "E" })),
+        ],
+      ]);
+    });
+  });
+
+  it("gives SCRIPT_IN_QUERY a language select, Python's and R's", async () => {
+    const tmdl = table(
+      "Scores",
+      "let",
+      '\tSource = #table({"Score"}, {{1}}),',
+      '\tPy = Python.Execute("x", [dataset = Source]),',
+      '\tR = R.Execute("x", [dataset = Source])',
+      "in",
+      "\tR",
+    );
+    expect(await said(SCRIPT_IN_QUERY, tmdl)).toEqual([
+      [
+        "query.stepFinding",
+        "query 'Scores', step 'Py': Python.Execute refreshes only through a personal gateway on a machine with Python installed",
+        atStep(query("'Scores'"), "'Py'", msg("SCRIPT_IN_QUERY", { language: "python" })),
+      ],
+      [
+        "query.stepFinding",
+        "query 'Scores', step 'R': R.Execute refreshes only through a personal gateway on a machine with R installed",
+        atStep(query("'Scores'"), "'R'", msg("SCRIPT_IN_QUERY", { language: "r" })),
+      ],
+    ]);
+  });
+
+  it("gives EXCEL_USE_HEADERS one message with no parameters", async () => {
+    expect(
+      await said(
+        EXCEL_USE_HEADERS,
+        oneStep(
+          "Budget",
+          "Reader",
+          'Excel.Workbook(Web.Contents("https://example.com/B.xlsx"), true)',
+        ),
+      ),
+    ).toEqual([
+      [
+        "query.stepFinding",
+        "query 'Budget', step 'Reader': Excel.Workbook promotes headers in the refreshing machine's culture",
+        atStep(query("'Budget'"), "'Reader'", msg("EXCEL_USE_HEADERS")),
+      ],
+    ]);
+  });
+
+  it("gives ODBC_WHERE_CONNECTOR_EXISTS the connection kind and the connector as selects, each article in the catalog", async () => {
+    const tmdl = table(
+      "Orders",
+      "let",
+      '\tRedshift = Odbc.DataSource("Driver={Amazon Redshift (x64)};Server=r.example"),',
+      '\tSqlServer = OleDb.DataSource("Provider=MSOLEDBSQL;Data Source=s.example"),',
+      '\tOracle = OleDb.DataSource("Provider=OraOLEDB.Oracle;Data Source=o.example"),',
+      '\tPostgres = Odbc.DataSource("Driver={PostgreSQL Unicode(x64)};Server=p.example"),',
+      '\tMy = Odbc.DataSource("Driver={MySQL ODBC 8.0 Unicode Driver};Server=m.example"),',
+      '\tSnow = Odbc.DataSource("Driver={SnowflakeDSIIDriver};Server=s.example")',
+      "in",
+      "\tSnow",
+    );
+    const odbc = (step: string, kind: string, connector: string, detail: string) => [
+      "query.stepFinding",
+      `query 'Orders', step '${step}': ${detail}`,
+      atStep(
+        query("'Orders'"),
+        `'${step}'`,
+        msg("ODBC_WHERE_CONNECTOR_EXISTS", { kind, connector }),
+      ),
+    ];
+    expect(await said(ODBC_WHERE_CONNECTOR_EXISTS, tmdl)).toEqual([
+      odbc(
+        "Redshift",
+        "odbc",
+        "amazonRedshift",
+        "the ODBC connection names the Amazon Redshift driver; Power BI has an Amazon Redshift connector",
+      ),
+      odbc(
+        "SqlServer",
+        "oleDb",
+        "sqlServer",
+        "the OLE DB connection names the SQL Server provider; Power BI has a SQL Server connector",
+      ),
+      odbc(
+        "Oracle",
+        "oleDb",
+        "oracle",
+        "the OLE DB connection names the Oracle provider; Power BI has an Oracle connector",
+      ),
+      odbc(
+        "Postgres",
+        "odbc",
+        "postgreSql",
+        "the ODBC connection names the PostgreSQL driver; Power BI has a PostgreSQL connector",
+      ),
+      odbc(
+        "My",
+        "odbc",
+        "mySql",
+        "the ODBC connection names the MySQL driver; Power BI has a MySQL connector",
+      ),
+      odbc(
+        "Snow",
+        "odbc",
+        "snowflake",
+        "the ODBC connection names the Snowflake driver; Power BI has a Snowflake connector",
+      ),
+    ]);
+  });
+
+  it("gives PRIVACY_LEVELS_IGNORED a model finding's message, with no frame", () => {
+    const model = modelFrom(
+      "model Model\n\tculture: en-US\n\tdataAccessOptions\n\t\tfastCombine\n",
+    );
+    expect(
+      PRIVACY_LEVELS_IGNORED.check({ model }, { indexes: buildIndexes({ model }), options: {} })
+        .map(rendered)
+        .map((f) => [f.messageId, f.detail, f.params]),
+    ).toEqual([
+      [
+        "PRIVACY_LEVELS_IGNORED",
+        "Ignore the Privacy Levels is on for this file; the service does not honor it",
+        {},
+      ],
+    ]);
+  });
+
+  it("gives SORT_NOT_HELD_FOR_REMOVE_DUPLICATES the sort as a nested message, a step's or the one inside", async () => {
+    const tmdl = table(
+      "Customers",
+      "let",
+      '\tSource = #table({"Customer ID", "Updated"}, {}),',
+      '\tInPlace = Table.Distinct(Table.Sort(Source, {{"Updated", Order.Descending}}), {"Customer ID"}),',
+      '\t#"Sorted Rows" = Table.Sort(Source, {{"Updated", Order.Descending}}),',
+      '\tKept = Table.Distinct(#"Sorted Rows", {"Customer ID"})',
+      "in",
+      "\tKept",
+    );
+    const sort = (s: Message) => msg("SORT_NOT_HELD_FOR_REMOVE_DUPLICATES", { sort: s });
+    expect(await said(SORT_NOT_HELD_FOR_REMOVE_DUPLICATES, tmdl)).toEqual([
+      [
+        "query.stepFinding",
+        "query 'Customers', step 'InPlace': nothing holds the order of the Table.Sort inside it, so the sort may not decide which duplicate is kept",
+        atStep(
+          query("'Customers'"),
+          "'InPlace'",
+          sort(msg("SORT_NOT_HELD_FOR_REMOVE_DUPLICATES.sortInside")),
+        ),
+      ],
+      [
+        "query.stepFinding",
+        "query 'Customers', step 'Kept': nothing holds the order of step 'Sorted Rows', so the sort may not decide which duplicate is kept",
+        atStep(
+          query("'Customers'"),
+          "'Kept'",
+          sort(msg("SORT_NOT_HELD_FOR_REMOVE_DUPLICATES.sortStep", { step: "'Sorted Rows'" })),
+        ),
+      ],
+    ]);
+  });
+
+  it("gives KEEP_FIRST_ROWS_LEFT_IN its count as a plural", async () => {
+    expect(
+      await said(KEEP_FIRST_ROWS_LEFT_IN, oneStep("Orders", "Top", "Table.FirstN(Source, 1000)")),
+    ).toEqual([
+      [
+        "query.stepFinding",
+        "query 'Orders', step 'Top': only the first 1000 rows load",
+        atStep(query("'Orders'"), "'Top'", msg("KEEP_FIRST_ROWS_LEFT_IN", { count: 1000 })),
+      ],
+    ]);
+  });
+
+  it("gives INCREMENTAL_REFRESH_RANGE_BOUNDS a message for each way the bounds are wrong", async () => {
+    const parameters =
+      'expression RangeStart = #datetime(2024, 1, 1, 0, 0, 0) meta [IsParameterQuery = true, Type = "DateTime", IsParameterQueryRequired = true]\n\n' +
+      'expression RangeEnd = #datetime(2025, 1, 1, 0, 0, 0) meta [IsParameterQuery = true, Type = "DateTime", IsParameterQueryRequired = true]\n\n';
+    const filtered = (condition: string) =>
+      parameters + oneStep("Sales", "Filtered", `Table.SelectRows(Source, each ${condition})`);
+    const bounds = (variant: "bothInclude" | "neitherIncludes") =>
+      atStep(query("'Sales'"), "'Filtered'", msg(`INCREMENTAL_REFRESH_RANGE_BOUNDS.${variant}`));
+    expect(
+      await said(
+        INCREMENTAL_REFRESH_RANGE_BOUNDS,
+        filtered("[OrderDate] >= RangeStart and [OrderDate] <= RangeEnd"),
+      ),
+    ).toEqual([
+      [
+        "query.stepFinding",
+        "query 'Sales', step 'Filtered': both RangeStart and RangeEnd include the boundary, so a row on it lands in two partitions",
+        bounds("bothInclude"),
+      ],
+    ]);
+    expect(
+      await said(
+        INCREMENTAL_REFRESH_RANGE_BOUNDS,
+        filtered("[OrderDate] > RangeStart and [OrderDate] < RangeEnd"),
+      ),
+    ).toEqual([
+      [
+        "query.stepFinding",
+        "query 'Sales', step 'Filtered': neither RangeStart nor RangeEnd includes the boundary, so a row on it lands in none",
+        bounds("neitherIncludes"),
+      ],
+    ]);
   });
 });
 

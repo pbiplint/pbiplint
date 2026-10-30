@@ -13,6 +13,7 @@ import {
 } from "../../m/ast.js";
 import { boundValue, origin, resolve } from "../../m/resolve.js";
 import type { MIndex, MQuery } from "../../m/types.js";
+import { msg } from "../../messages/format.js";
 import { tableRef } from "../../model/names.js";
 import type { Partition } from "../../model/types.js";
 import { finding } from "../helpers.js";
@@ -43,16 +44,16 @@ export const LOCAL_DRIVE_PATH = pbiplintRule({
       textLiterals(q).flatMap(({ node, value }) => {
         const drive = DRIVE_PATH.exec(value);
         return drive
-          ? [mFinding(m, q, node, `the path is on a local drive (${drive[1]!.toUpperCase()}:)`)]
+          ? [mFinding(m, q, node, msg("LOCAL_DRIVE_PATH", { drive: drive[1]!.toUpperCase() }))]
           : [];
       }),
     ),
 });
 
-/** The script functions, and the language each one runs. */
-const SCRIPT_LANGUAGE: ReadonlyMap<string, string> = new Map([
-  ["Python.Execute", "Python"],
-  ["R.Execute", "R"],
+/** The script functions, and the language each one runs, as SCRIPT_IN_QUERY's message selects it. */
+const SCRIPT_LANGUAGE: ReadonlyMap<string, "python" | "r"> = new Map([
+  ["Python.Execute", "python"],
+  ["R.Execute", "r"],
 ]);
 
 // A call, as the Run Python script and Run R script steps write it (v3 spec, section 9.9). Python
@@ -68,16 +69,7 @@ export const SCRIPT_IN_QUERY = pbiplintRule({
     eachQuery(ctx, m.queries, (q) =>
       calls(q).flatMap((c) => {
         const language = SCRIPT_LANGUAGE.get(c.name);
-        return language
-          ? [
-              mFinding(
-                m,
-                q,
-                c.node,
-                `${c.name} refreshes only through a personal gateway on a machine with ${language} installed`,
-              ),
-            ]
-          : [];
+        return language ? [mFinding(m, q, c.node, msg("SCRIPT_IN_QUERY", { language }))] : [];
       }),
     ),
 });
@@ -117,34 +109,31 @@ export const EXCEL_USE_HEADERS = pbiplintRule({
     eachQuery(ctx, m.queries, (q) =>
       calls(q)
         .filter((c) => c.name === "Excel.Workbook" && promotesHeaders(c.args[1]))
-        .map((c) =>
-          mFinding(
-            m,
-            q,
-            c.node,
-            "Excel.Workbook promotes headers in the refreshing machine's culture",
-          ),
-        ),
+        .map((c) => mFinding(m, q, c.node, msg("EXCEL_USE_HEADERS"))),
     ),
 });
 
 /**
  * The databases Power BI has a connector for, by what an ODBC driver's or an OLE DB provider's
- * name holds, any case (v3 spec, section 9.15). Kept small on purpose.
+ * name holds, any case (v3 spec, section 9.15), each as ODBC_WHERE_CONNECTOR_EXISTS's message
+ * selects it, which holds the connector's name and its article. Kept small on purpose.
  */
-const NATIVE_CONNECTORS: readonly { pattern: RegExp; name: string; article: "a" | "an" }[] = [
-  { pattern: /amazon redshift/i, name: "Amazon Redshift", article: "an" },
-  { pattern: /postgresql/i, name: "PostgreSQL", article: "a" },
-  { pattern: /sql server|sqlncli|sqloledb|msoledbsql/i, name: "SQL Server", article: "a" },
-  { pattern: /mysql/i, name: "MySQL", article: "a" },
-  { pattern: /oracle/i, name: "Oracle", article: "an" },
-  { pattern: /snowflake/i, name: "Snowflake", article: "a" },
+const NATIVE_CONNECTORS: readonly { pattern: RegExp; connector: string }[] = [
+  { pattern: /amazon redshift/i, connector: "amazonRedshift" },
+  { pattern: /postgresql/i, connector: "postgreSql" },
+  { pattern: /sql server|sqlncli|sqloledb|msoledbsql/i, connector: "sqlServer" },
+  { pattern: /mysql/i, connector: "mySql" },
+  { pattern: /oracle/i, connector: "oracle" },
+  { pattern: /snowflake/i, connector: "snowflake" },
 ];
 
-/** The generic sources: what each calls its connection, and the part of it that names the driver. */
-const GENERIC_SOURCES: ReadonlyMap<string, { kind: string; part: string }> = new Map([
-  ["Odbc.DataSource", { kind: "ODBC", part: "driver" }],
-  ["OleDb.DataSource", { kind: "OLE DB", part: "provider" }],
+/**
+ * The generic sources, as the message selects each: ODBC, whose connection names a driver, and
+ * OLE DB, whose connection names a provider.
+ */
+const GENERIC_SOURCES: ReadonlyMap<string, "odbc" | "oleDb"> = new Map([
+  ["Odbc.DataSource", "odbc"],
+  ["OleDb.DataSource", "oleDb"],
 ]);
 
 /** The value of a connection string's `Driver=` or `Provider=` part, its key in any case, braces taken off. */
@@ -188,8 +177,8 @@ export const ODBC_WHERE_CONNECTOR_EXISTS = pbiplintRule({
   check: (_project, { indexes: { m }, ...ctx }) =>
     eachQuery(ctx, m.queries, (q) =>
       calls(q).flatMap((c) => {
-        const source = GENERIC_SOURCES.get(c.name);
-        if (!source) return [];
+        const kind = GENERIC_SOURCES.get(c.name);
+        if (!kind) return [];
         const driver = driverOf(connectionText(m, q, c.args[0]) ?? "");
         const native =
           driver === undefined ? undefined : NATIVE_CONNECTORS.find((n) => n.pattern.test(driver));
@@ -199,7 +188,7 @@ export const ODBC_WHERE_CONNECTOR_EXISTS = pbiplintRule({
                 m,
                 q,
                 c.node,
-                `the ${source.kind} connection names the ${native.name} ${source.part}; Power BI has ${native.article} ${native.name} connector`,
+                msg("ODBC_WHERE_CONNECTOR_EXISTS", { kind, connector: native.connector }),
               ),
             ]
           : [];
@@ -224,7 +213,7 @@ export const PRIVACY_LEVELS_IGNORED = pbiplintRule({
           {
             ...finding.model(model),
             location: fastCombine.location,
-            detail: "Ignore the Privacy Levels is on for this file; the service does not honor it",
+            message: msg("PRIVACY_LEVELS_IGNORED"),
           },
         ]
       : [];
@@ -312,15 +301,12 @@ export const SORT_NOT_HELD_FOR_REMOVE_DUPLICATES = pbiplintRule({
         const sortCall = callOf(sorted.node);
         if (sortCall?.name !== "Table.Sort" || sortWithinKeys(sortCall.args[1], columns)) return [];
         const sort =
-          sorted.step === undefined ? "the Table.Sort inside it" : `step ${tableRef(sorted.step)}`;
-        return [
-          mFinding(
-            m,
-            q,
-            c.node,
-            `nothing holds the order of ${sort}, so the sort may not decide which duplicate is kept`,
-          ),
-        ];
+          sorted.step === undefined
+            ? msg("SORT_NOT_HELD_FOR_REMOVE_DUPLICATES.sortInside")
+            : msg("SORT_NOT_HELD_FOR_REMOVE_DUPLICATES.sortStep", {
+                step: tableRef(sorted.step),
+              });
+        return [mFinding(m, q, c.node, msg("SORT_NOT_HELD_FOR_REMOVE_DUPLICATES", { sort }))];
       }),
     ),
 });
@@ -368,7 +354,7 @@ export const KEEP_FIRST_ROWS_LEFT_IN = pbiplintRule({
           const n = numberLiteral(count);
           if (n === undefined || n <= 1 || isSorted(m, q, table) || inFunction(q, c.node))
             return [];
-          return [mFinding(m, q, c.node, `only the first ${n} rows load`)];
+          return [mFinding(m, q, c.node, msg("KEEP_FIRST_ROWS_LEFT_IN", { count: n }))];
         }),
     ),
 });
@@ -432,12 +418,7 @@ export const INCREMENTAL_REFRESH_RANGE_BOUNDS = pbiplintRule({
       if (!one(start) || !one(end)) return [];
       if (start.inclusive.length > 0 && end.inclusive.length > 0)
         return [
-          mFinding(
-            m,
-            q,
-            end.inclusive[0]!,
-            "both RangeStart and RangeEnd include the boundary, so a row on it lands in two partitions",
-          ),
+          mFinding(m, q, end.inclusive[0]!, msg("INCREMENTAL_REFRESH_RANGE_BOUNDS.bothInclude")),
         ];
       if (start.exclusive.length > 0 && end.exclusive.length > 0)
         return [
@@ -445,7 +426,7 @@ export const INCREMENTAL_REFRESH_RANGE_BOUNDS = pbiplintRule({
             m,
             q,
             start.exclusive[0]!,
-            "neither RangeStart nor RangeEnd includes the boundary, so a row on it lands in none",
+            msg("INCREMENTAL_REFRESH_RANGE_BOUNDS.neitherIncludes"),
           ),
         ];
       return [];

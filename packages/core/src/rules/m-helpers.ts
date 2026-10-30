@@ -35,22 +35,33 @@ export function ownerFinding(q: MQuery): RuleFinding {
 /**
  * A finding on one node of a query (v3 spec, sections 6 and 9.1): on the query's owner, at the
  * TMDL line and column of the node's first token, with a detail that names the query, the step
- * that holds the node when there is one, and then `what`.
+ * that holds the node when there is one, and then `what`. A message `what` nests in the frame's
+ * message, `query.stepFinding` or `query.finding`; text is written into a text detail, for the
+ * rules not yet moved to messages.
  */
 export function mFinding(
   m: MIndex,
   q: MQuery,
   node: Language.Ast.TNode,
-  what: string,
+  what: Message | string,
 ): RuleFinding {
   const step = stepOf(q, node);
-  return {
-    ...withDetail(
-      ownerFinding(q),
-      () => `${queryLabelText(q)}${step === undefined ? "" : `, step ${tableRef(step)}`}: ${what}`,
-    ),
-    location: m.locate(q, node.tokenRange.positionStart),
-  };
+  const location = m.locate(q, node.tokenRange.positionStart);
+  if (typeof what === "string")
+    return {
+      ...withDetail(
+        ownerFinding(q),
+        () =>
+          `${queryLabelText(q)}${step === undefined ? "" : `, step ${tableRef(step)}`}: ${what}`,
+      ),
+      location,
+    };
+  const { message: _context, ...owner } = ownerFinding(q);
+  const message =
+    step === undefined
+      ? msg("query.finding", { query: queryLabel(q), finding: what })
+      : msg("query.stepFinding", { query: queryLabel(q), step: tableRef(step), finding: what });
+  return { ...owner, message, location };
 }
 
 /**

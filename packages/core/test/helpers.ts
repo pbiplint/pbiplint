@@ -47,7 +47,10 @@ export async function mObjectNames(rule: Rule, tmdl: string): Promise<string[]> 
  * Run one rule on inline TMDL with its M read by Microsoft's parser, as `lint` reads it, and
  * return its findings without the object each carries for ignores, in emission order.
  */
-export async function mFindings(rule: Rule, tmdl: string): Promise<Omit<RuleFinding, "object">[]> {
+export async function mFindings(
+  rule: Rule,
+  tmdl: string,
+): Promise<Omit<ReturnType<typeof rendered>, "object">[]> {
   const model = modelFrom(tmdl);
   const m = await readM(model, [{ path: "inline.tmdl", text: tmdl }]);
   return rule

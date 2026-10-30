@@ -51,6 +51,7 @@ export const EN = {
   ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY: "height {height}, more than {max}",
   ENSURE_THEME_COLOURS:
     "{count, plural, one {# colour} other {# colours}} set to a hex value instead of a theme colour",
+  EXCEL_USE_HEADERS: "Excel.Workbook promotes headers in the refreshing machine's culture",
   FILTERS_PANE_STATE:
     "{source, select, saved {saved} other {not recorded, read as}} {state, select, open {open} closed {closed} other {hidden from readers}}; the policy expects {expect, select, open {open} other {closed}}",
   "HARDCODED_PERIOD_IN_DAX.endsOn":
@@ -68,13 +69,19 @@ export const EN = {
   "HIDDEN_VISUAL_WITH_FIELDS.visualHidden": "{count, plural, one {# field} other {# fields}} bound",
   HIDE_TOOLTIP_DRILLTROUGH_PAGES:
     "{kind, select, tooltip {tooltip} other {drillthrough}} page is visible to readers",
+  "INCREMENTAL_REFRESH_RANGE_BOUNDS.bothInclude":
+    "both RangeStart and RangeEnd include the boundary, so a row on it lands in two partitions",
+  "INCREMENTAL_REFRESH_RANGE_BOUNDS.neitherIncludes":
+    "neither RangeStart nor RangeEnd includes the boundary, so a row on it lands in none",
   "INTEGER_FORMATTING.dynamicOnly": "dynamic format string only",
   "INTEGER_FORMATTING.formatString": 'format string "{format}"',
   "INTEGER_FORMATTING.none": "no format string",
+  KEEP_FIRST_ROWS_LEFT_IN: "only the first {count, plural, one {# row loads} other {# rows load}}",
   "LANDING_PAGE_NOT_SET.activeMissing":
     'no landing page set; the active page "{page}" does not exist',
   "LANDING_PAGE_NOT_SET.opensOn":
     'opens on "{page}", {by, select, first {the first page} other {the page open when it was saved}}',
+  LOCAL_DRIVE_PATH: "the path is on a local drive ({drive}:)",
   "NAME_WITHOUT_TRANSLATION.inContext": "{context}, {captions}",
   "NAME_WITHOUT_TRANSLATION.noCaption": "no caption in {cultures, list}",
   "NOT_REACHED_FROM_REPORT.level": 'level "{level}" of hierarchy "{hierarchy}"',
@@ -84,11 +91,15 @@ export const EN = {
     "nothing in the report reaches it, and no measure or column references it",
   "NOT_REACHED_FROM_REPORT.referencedOnly":
     "referenced only by {referrers, list, unit}, which nothing reaches either",
+  ODBC_WHERE_CONNECTOR_EXISTS:
+    "the {kind, select, oleDb {OLE DB} other {ODBC}} connection names the {connector, select, amazonRedshift {Amazon Redshift} postgreSql {PostgreSQL} sqlServer {SQL Server} mySql {MySQL} oracle {Oracle} other {Snowflake}} {kind, select, oleDb {provider} other {driver}}; Power BI has {connector, select, amazonRedshift {an Amazon Redshift} postgreSql {a PostgreSQL} sqlServer {a SQL Server} mySql {a MySQL} oracle {an Oracle} other {a Snowflake}} connector",
   "OPENING_PAGE_INVALID.hidden": 'active page "{page}" is hidden from readers',
   "OPENING_PAGE_INVALID.missing":
     '{by, select, landing {landing} other {active}} page "{page}" does not exist',
   PARSE_ISSUE: "{reason}: {text}",
   "PARSE_ISSUE.unreadableProject": "{reason}",
+  PRIVACY_LEVELS_IGNORED:
+    "Ignore the Privacy Levels is on for this file; the service does not honor it",
   REDUCE_ADVANCED_FILTERS:
     "{count, plural, one {# visual} other {# visuals}} with an Advanced filter applied, more than {max}",
   REDUCE_OBJECTS_WITHIN_VISUALS:
@@ -100,9 +111,15 @@ export const EN = {
   REMOVE_UNUSED_CUSTOM_VISUALS: "{visual} is registered but no visual uses it",
   REPORT_LEVEL_MEASURES: 'defined in the report on table "{table}"',
   RULE_COULD_NOT_FINISH: "{rule} could not finish on {where}: {kind}",
+  SCRIPT_IN_QUERY:
+    "{language, select, python {Python.Execute} other {R.Execute}} refreshes only through a personal gateway on a machine with {language, select, python {Python} other {R}} installed",
   "SLICER_SEARCH_SAVED.term": 'opens with the search term "{term}" saved',
   "SLICER_SEARCH_SAVED.termUnread": "opens with a search term saved",
   SLICER_SELECTION_SAVED: "opens with this selection applied",
+  SORT_NOT_HELD_FOR_REMOVE_DUPLICATES:
+    "nothing holds the order of {sort}, so the sort may not decide which duplicate is kept",
+  "SORT_NOT_HELD_FOR_REMOVE_DUPLICATES.sortInside": "the Table.Sort inside it",
+  "SORT_NOT_HELD_FOR_REMOVE_DUPLICATES.sortStep": "step {step}",
   "TAB_ORDER_FOLLOWS_LAYOUT.inGroup": "in {group}, {disagreement}",
   "TAB_ORDER_FOLLOWS_LAYOUT.startsAt":
     "tab order starts at {tabVisual} but the layout reads {layoutVisual} first",
@@ -149,8 +166,10 @@ export const EN = {
   "parse.tmdl.unquotedName": "the name is not enclosed in single quotes as TMDL requires",
   "parse.tmdl.unrecognizedLine": "unrecognized line",
   "parse.tmdl.unterminatedFence": "unterminated code fence",
+  "query.finding": "{query}: {finding}",
   "query.name": "query {query}",
   "query.partition": "query {query}, partition {partition}",
+  "query.stepFinding": "{query}, step {step}: {finding}",
   quoted: '"{name}"',
   "ruleError.errorClass": "{class}",
   "ruleError.notAnError": "a value that is not an Error",

@@ -195,7 +195,7 @@ export function buildReachabilityIndex(
       referrers.length === 0
         ? msg("NOT_REACHED_FROM_REPORT.nothingReaches")
         : msg("NOT_REACHED_FROM_REPORT.referencedOnly", {
-            referrers: referrers.map(nameOf).join(", "),
+            referrers: referrers.map(nameOf),
           });
     const levels = isMeasure(n) ? [] : levelsOn(n);
     if (levels.length === 0) return why;

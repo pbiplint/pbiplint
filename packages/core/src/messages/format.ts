@@ -5,7 +5,7 @@ import { EN, type MessageId } from "./en.js";
  * A value a template fills in: a name or text from the input (written as given, never read as a
  * template), a number (written as its digits, never grouped, so a year stays `2025`), a nested
  * message, rendered in the same catalog and language, or a list of names and messages, which
- * `{names, list}` joins as the language does. A `{d, date}` parameter is an ISO day, `2025-12-31`.
+ * `{names, list}` joins as the language does (`{names, list, unit}` with no conjunction). A `{d, date}` parameter is an ISO day, `2025-12-31`.
  */
 export type MessageParam = string | number | Message | readonly (string | Message)[];
 
@@ -23,7 +23,7 @@ export type ArgKind =
   | { kind: "plain" }
   | { kind: "plural" }
   | { kind: "select"; keys: readonly string[] }
-  | { kind: "list" }
+  | { kind: "list"; style?: "unit" }
   | { kind: "date" };
 
 export const msg = (id: MessageId, params: Record<string, MessageParam> = {}): Message => ({
@@ -43,7 +43,7 @@ export const capped = (items: readonly (string | Message)[], max = 3): (string |
 type Node =
   | string
   | { readonly t: "arg"; readonly name: string }
-  | { readonly t: "list"; readonly name: string }
+  | { readonly t: "list"; readonly name: string; readonly unit?: true }
   | { readonly t: "date"; readonly name: string }
   | { readonly t: "pound" }
   | {
@@ -116,6 +116,13 @@ function parse(template: string): readonly Node[] {
     }
     expect(",");
     const t = token(NAME, "plural, select, list, or date");
+    if (t === "list" && template[i] === ",") {
+      i++;
+      const style = token(NAME, "a list style");
+      if (style !== "unit") fail(`unknown list style "${style}"`);
+      expect("}");
+      return { t, name, unit: true };
+    }
     if (t === "list" || t === "date") {
       expect("}");
       return { t, name };
@@ -157,10 +164,11 @@ const parsedTemplate = (template: string): readonly Node[] | null => {
   return nodes;
 };
 
-/** A locale's plural rules, list format, and long date format, built once. */
+/** A locale's plural rules, list formats, and long date format, built once. */
 interface LocaleIntl {
   readonly plural: Intl.PluralRules;
   readonly list: Intl.ListFormat;
+  readonly unit: Intl.ListFormat;
   readonly date: Intl.DateTimeFormat;
   readonly english: boolean;
 }
@@ -172,6 +180,7 @@ const intl = (locale: string): LocaleIntl => {
     const build = (tag: string): LocaleIntl => ({
       plural: new Intl.PluralRules(tag),
       list: new Intl.ListFormat(tag, { type: "conjunction" }),
+      unit: new Intl.ListFormat(tag, { type: "unit", style: "short" }),
       date: new Intl.DateTimeFormat(tag, { dateStyle: "long", timeZone: "UTC" }),
       english: tag.split("-")[0]?.toLowerCase() === "en",
     });
@@ -188,13 +197,15 @@ const intl = (locale: string): LocaleIntl => {
 /**
  * A parameter as text: a name as written, a number as its digits, a message rendered, and a list
  * joined as the language does. English writes semicolons for the list's commas when an item holds
- * a comma, as `January 1, 2024; June 30, 2024; and December 31, 2024`.
+ * a comma, as `January 1, 2024; June 30, 2024; and December 31, 2024`. A `unit` list has no
+ * conjunction (English writes `a, b, c`) and keeps its punctuation whatever the items hold.
  */
-function text(value: MessageParam, catalog: Catalog, locale: string): string {
+function text(value: MessageParam, catalog: Catalog, locale: string, unit = false): string {
   if (typeof value === "string") return value;
   if (typeof value === "number") return String(value);
   if (!Array.isArray(value)) return formatMessage(value as Message, catalog, locale);
   const items = (value as readonly (string | Message)[]).map((item) => text(item, catalog, locale));
+  if (unit) return intl(locale).unit.format(items);
   const { list, english } = intl(locale);
   if (!english || !items.some((s) => s.includes(","))) return list.format(items);
   return list
@@ -229,8 +240,10 @@ function render(
       const value = params[node.name];
       if (value === undefined) {
         out += `{${node.name}}`;
-      } else if (node.t === "arg" || node.t === "list") {
+      } else if (node.t === "arg") {
         out += text(value, catalog, locale);
+      } else if (node.t === "list") {
+        out += text(value, catalog, locale, node.unit);
       } else if (node.t === "date") {
         out += day(value, catalog, locale);
       } else if (node.t === "plural") {
@@ -294,17 +307,19 @@ export function templateArgs(template: string): ReadonlyMap<string, ArgKind> {
       const kind: ArgKind =
         node.t === "arg"
           ? { kind: "plain" }
-          : node.t !== "select"
-            ? { kind: node.t }
-            : {
-                kind: "select",
-                keys: [
-                  ...new Set([
-                    ...(seen?.kind === "select" ? seen.keys : []),
-                    ...node.branches.keys(),
-                  ]),
-                ],
-              };
+          : node.t === "list" && node.unit
+            ? { kind: "list", style: "unit" }
+            : node.t !== "select"
+              ? { kind: node.t }
+              : {
+                  kind: "select",
+                  keys: [
+                    ...new Set([
+                      ...(seen?.kind === "select" ? seen.keys : []),
+                      ...node.branches.keys(),
+                    ]),
+                  ],
+                };
       if (seen && seen.kind !== "plain" && kind.kind !== "plain" && seen.kind !== kind.kind) {
         throw new Error(
           `"${node.name}" is both a ${seen.kind} and a ${kind.kind} in template "${template}"`,

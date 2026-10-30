@@ -5,7 +5,7 @@
  * A template is written in a subset of ICU MessageFormat: `{name}` for a parameter,
  * `{n, plural, one {# field} other {# fields}}` (with `=0`-style exact matches),
  * `{k, select, a {...} other {...}}`, where `other` is required, `{names, list}` for a list the
- * language joins, and `{d, date}` for a day in the language's long form. There is no quoting: an
+ * language joins (`{names, list, unit}` for one with no "and", as `a, b, c`), and `{d, date}` for a day in the language's long form. There is no quoting: an
  * apostrophe is always itself, and there are no literal braces, so whoever adds a language never
  * writes ICU's doubled apostrophe.
  */
@@ -76,7 +76,7 @@ export const EN = {
   "NOT_REACHED_FROM_REPORT.nothingReaches":
     "nothing in the report reaches it, and no measure or column references it",
   "NOT_REACHED_FROM_REPORT.referencedOnly":
-    "referenced only by {referrers}, which nothing reaches either",
+    "referenced only by {referrers, list, unit}, which nothing reaches either",
   "OPENING_PAGE_INVALID.hidden": 'active page "{page}" is hidden from readers',
   "OPENING_PAGE_INVALID.missing":
     '{by, select, landing {landing} other {active}} page "{page}" does not exist',

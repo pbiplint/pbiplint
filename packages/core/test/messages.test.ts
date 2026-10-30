@@ -56,6 +56,7 @@ const catalog = {
   plain: "{a}",
   pound: "Q#1 {a}",
   list: "{names, list}",
+  unitList: "{names, list, unit}",
   date: "{d, date}",
   broken: "{a",
   countOrSelect: "{n, plural, other {#}} {k, select, other {x}}",
@@ -131,6 +132,17 @@ describe("list and date parameters", () => {
   });
 
   // The listOf style of translations.ts and reachability.ts, which names every item.
+  it("renders a unit list with no conjunction, and keeps its commas when an item holds one", () => {
+    const unit = (items: readonly (string | Message)[], locale?: string) =>
+      render("unitList", { names: items }, locale);
+    expect(unit(["[A]"])).toBe("[A]");
+    expect(unit(["[A]", "[B]"])).toBe("[A], [B]");
+    expect(unit(["[A]", "[B]", "[C]"])).toBe("[A], [B], [C]");
+    expect(unit(["[A]", "[B, EU]", "[C]"])).toBe("[A], [B, EU], [C]");
+    expect(unit(["[A]", msg("plain" as MessageId, { a: "[B]" })])).toBe("[A], [B]");
+    expect(unit(["a", "b", "c"], "xx-invalid-")).toBe("a, b, c");
+  });
+
   it("renders a list uncapped as listOf does", () => {
     expect(listed(["fr-FR"])).toBe("fr-FR");
     expect(listed(["de-DE", "fr-FR"])).toBe("de-DE and fr-FR");
@@ -209,6 +221,10 @@ describe("templateArgs", () => {
       names: { kind: "list" },
       d: { kind: "date" },
     });
+    expect(Object.fromEntries(templateArgs("{names, list, unit}"))).toEqual({
+      names: { kind: "list", style: "unit" },
+    });
+    expect(() => templateArgs("{names, list, short}")).toThrow(/unknown list style "short"/);
   });
 
   it("lists plain, plural, and select arguments, including those inside branches", () => {
@@ -966,6 +982,27 @@ ${levels}`;
         (f.params?.why as Message | undefined)?.id,
       ]);
 
+    it("names the referrers as a unit list, comma-joined as before, a comma in a name kept", () => {
+      const [base] = reportFindings(
+        NOT_REACHED_FROM_REPORT,
+        files,
+        `table Sales
+	column Amount
+		dataType: decimal
+	measure 'Total Sales' = SUM('Sales'[Amount])
+	measure Base = 1
+	measure A = [Base]
+	measure 'B, EU' = [Base] * 2
+	measure C = [Base] * 3
+`,
+      );
+      expect([base!.objectName, base!.detail, base!.params]).toEqual([
+        "[Base]",
+        "referenced only by [A], [B, EU], [C], which nothing reaches either",
+        { referrers: ["[A]", "[B, EU]", "[C]"] },
+      ]);
+    });
+
     it("gives each reason its own message, and nests it under the levels that use a column", () => {
       expect(
         reached(
@@ -1064,7 +1101,11 @@ function sameShape(other: Catalog): string[] {
       return new Map(
         [...args].map(([name, a]) => [
           name,
-          a.kind === "select" ? `select ${[...a.keys].sort().join(" ")}` : a.kind,
+          a.kind === "select"
+            ? `select ${[...a.keys].sort().join(" ")}`
+            : a.kind === "list" && a.style
+              ? `list ${a.style}`
+              : a.kind,
         ]),
       );
     } catch (e) {
@@ -1116,6 +1157,15 @@ describe("the English catalog", () => {
     ]);
     expect(sameShape({ ...EN, "date.long": "{date}" })).toEqual([
       "date.long: {date} is plain, English has date",
+    ]);
+    expect(
+      sameShape({
+        ...EN,
+        "NOT_REACHED_FROM_REPORT.referencedOnly":
+          "referenced only by {referrers, list}, which nothing reaches either",
+      }),
+    ).toEqual([
+      "NOT_REACHED_FROM_REPORT.referencedOnly: {referrers} is list, English has list unit",
     ]);
     expect(sameShape({ ...EN, "list.more": "{count, list} more" })).toEqual([
       "list.more: {count} is list, English has plain",

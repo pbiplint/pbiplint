@@ -158,7 +158,7 @@ function isYearFreeFormat(tokens: readonly DaxToken[], open: number): boolean {
 }
 
 /** Whether year, month, and day name a real day, with no rolling over. */
-const isRealDay = (year: number, month: number, day: number): boolean =>
+export const isRealDay = (year: number, month: number, day: number): boolean =>
   month >= 1 && month <= 12 && day >= 1 && day <= new Date(Date.UTC(year, month, 0)).getUTCDate();
 
 /**

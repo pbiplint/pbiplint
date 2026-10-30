@@ -315,7 +315,10 @@ describe("a finding with a message, in JSON and SARIF", () => {
     references: [],
     status: "builtin",
     check: ({ model }) => [
-      { ...finding.table(model!.tables[0]!), message: msg("context.table", { table: "'Sales'" }) },
+      {
+        ...finding.table(model!.tables[0]!),
+        message: msg("context.table", { tableRef: "'Sales'" }),
+      },
       { ...finding.model(model!), detail: "plain" },
     ],
   };
@@ -331,7 +334,7 @@ describe("a finding with a message, in JSON and SARIF", () => {
     expect(withMessage).toMatchObject({
       detail: "table 'Sales'",
       messageId: "context.table",
-      params: { table: "'Sales'" },
+      params: { tableRef: "'Sales'" },
     });
     expect(Object.keys(withMessage!).slice(-3)).toEqual(["detail", "messageId", "params"]);
     expect(Object.keys(without!)).not.toContain("messageId");
@@ -345,7 +348,7 @@ describe("a finding with a message, in JSON and SARIF", () => {
     expect(results[0].message.text).toBe("'Sales': A rule with messages (table 'Sales')");
     expect(results[0].properties).toEqual({
       messageId: "context.table",
-      params: { table: "'Sales'" },
+      params: { tableRef: "'Sales'" },
     });
     expect(results[1].message.text).toBe("Model: A rule with messages (plain)");
     expect(Object.keys(results[1])).not.toContain("properties");
@@ -958,10 +961,10 @@ describe("the Markdown export and what the input holds", () => {
   const needsReport: Rule = { ...one, id: "NEEDS_REPORT", needs: ["report"] };
   /**
    * The export of a run whose one model rule finds `finding` on a measure named M, unless it
-   * names one.
+   * names one. Its detail is text, as a rule written in JavaScript can still return it.
    */
   const exported = async (
-    finding: Partial<RuleFinding>,
+    finding: Partial<RuleFinding> & { detail?: string },
     options: LintOptions = {},
   ): Promise<string> =>
     formatMarkdown(

@@ -205,7 +205,9 @@ export async function readM(
     issueAt(
       q,
       locate(q, parsed.position ?? { lineNumber: 0, lineCodeUnit: 0 }),
-      msg("parse.m.notParsed", { message: maskLiterals(parsed.message) }),
+      msg("parse.m.notParsed", {
+        message: parsed.message ? maskLiterals(parsed.message) : msg("parse.m.noReason"),
+      }),
     );
   }
   return { queries, issues, locate, maskedLine: lineMasker(files) };

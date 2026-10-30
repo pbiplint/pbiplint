@@ -3,8 +3,13 @@ import { resolveConfig, type PbiplintConfig } from "../src/engine/config.js";
 import { lint, type LintFile, type LintResult } from "../src/engine/lint.js";
 import { showOnly } from "../src/engine/show-only.js";
 import { eachQuery } from "../src/rules/m-helpers.js";
-import { RULE_COULD_NOT_FINISH } from "../src/rules/rule-could-not-finish.js";
-import type { Rule } from "../src/rules/types.js";
+import { formatMessage, msg } from "../src/messages/format.js";
+import {
+  failureMessage,
+  isFailureOf,
+  RULE_COULD_NOT_FINISH,
+} from "../src/rules/rule-could-not-finish.js";
+import type { Finding, Rule } from "../src/rules/types.js";
 import { page } from "./report-helpers.js";
 
 const tableFile = (name: string, annotation = ""): LintFile => ({
@@ -297,5 +302,26 @@ describe("showOnly, with a rule that could not finish", () => {
   it("keeps every such finding when it shows RULE_COULD_NOT_FINISH itself", async () => {
     const r = await lintWith([RULE_COULD_NOT_FINISH, WHOLE, PER_QUERY]);
     expect(showOnly(r, ["RULE_COULD_NOT_FINISH"], config).findings).toHaveLength(2);
+  });
+});
+
+describe("isFailureOf", () => {
+  // isFailureOf matches on a literal prefix in English; the catalog's RULE_COULD_NOT_FINISH must
+  // render a detail that starts with it wherever the rule could not finish.
+  it.each([
+    ["a query", msg("query.name", { query: "'Sales'" })],
+    ["the model", msg("ruleError.theModel")],
+    ["the report", msg("ruleError.theReport")],
+  ])("reads the rendered message as a failure of its rule, on %s", (_where, where) => {
+    const kind = msg("ruleError.errorClass", { class: "TypeError" });
+    const f: Finding = {
+      ruleId: RULE_COULD_NOT_FINISH.id,
+      layer: "model",
+      objectType: "Model",
+      objectName: "Model",
+      detail: formatMessage(failureMessage("PER", where, kind)),
+    };
+    expect(isFailureOf(f, "PER")).toBe(true);
+    expect(isFailureOf(f, "PE")).toBe(false);
   });
 });

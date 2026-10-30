@@ -563,8 +563,8 @@ export function parseTmdl(file: string, text: string): ParsedFile {
         text,
         msg("parse.tmdl.linesUnder", {
           word: /^\w+/.exec(text.trimStart())![0],
-          where: root ? "root" : "model",
-          under: holdsDeclaration ? "declaration" : "lines",
+          at: root ? "root" : "model",
+          child: holdsDeclaration ? "declaration" : "lines",
         }),
       ),
       canDropObjects: true,

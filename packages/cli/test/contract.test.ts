@@ -117,7 +117,7 @@ function messageRule(withMessage: boolean): Rule {
     status: "builtin",
     check: ({ model }) => [
       withMessage
-        ? { ...finding.model(model!), message: msg("context.table", { table: "'Sales'" }) }
+        ? { ...finding.model(model!), message: msg("context.table", { tableRef: "'Sales'" }) }
         : { ...finding.model(model!), detail: "table 'Sales'" },
     ],
   };
@@ -456,7 +456,7 @@ describe("the CLI's contract", () => {
     const files = [{ path: "definition/model.tmdl", text: "model Model\n\tculture: en-US\n" }];
     const result = await lint(files, { rules: [messageRule(true)] });
     const one = JSON.parse(formatJson(result)).groups[0].findings[0];
-    expect(one).toMatchObject({ messageId: "context.table", params: { table: "'Sales'" } });
+    expect(one).toMatchObject({ messageId: "context.table", params: { tableRef: "'Sales'" } });
     const doc = JSON.parse(
       severalJson({ runs: [{ path: "a", result, config }], prefixes: [{}] }, VERSION),
     );

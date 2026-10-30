@@ -19,11 +19,14 @@ import {
   SORT_NOT_HELD_FOR_REMOVE_DUPLICATES,
 } from "../src/rules/pbiplint/power-query.js";
 import type { Rule } from "../src/rules/types.js";
-import { mFindings, modelFrom, mObjectNames } from "./helpers.js";
+import { msg } from "../src/messages/format.js";
+import { mFindings, modelFrom, mObjectNames, rendered } from "./helpers.js";
 
 /** A table whose one M partition holds `m`, as Desktop writes a block: four tabs before each M line. */
 const table = (name: string, ...m: string[]): string =>
   `table '${name}'\n\tpartition '${name}' = m\n\t\tmode: import\n\t\tsource =\n${m.map((l) => `\t\t\t\t${l}`).join("\n")}\n\n`;
+/** A query's label in the frame's message, for a table with one M partition or an expression. */
+const query = (name: string) => msg("query.name", { query: name });
 
 /** What all of pbiplint's own Power Query rules share (v3 spec, section 9.1). */
 function isPowerQueryRule(rule: Rule, severity: 1 | 2 | 3, category: string): void {
@@ -55,6 +58,12 @@ describe("LOCAL_DRIVE_PATH (v3 spec, section 9.6)", () => {
         objectName: "Sales",
         location: { file: "inline.tmdl", line: 6, column: 42 },
         detail: "query 'Sales', step 'Source': the path is on a local drive (C:)",
+        messageId: "query.stepFinding",
+        params: {
+          query: query("'Sales'"),
+          step: "'Source'",
+          finding: msg("LOCAL_DRIVE_PATH", { drive: "C" }),
+        },
       },
     ]);
   });
@@ -67,6 +76,11 @@ describe("LOCAL_DRIVE_PATH (v3 spec, section 9.6)", () => {
         objectName: "ExportFolder",
         location: { file: "inline.tmdl", line: 1, column: 27 },
         detail: "query 'ExportFolder': the path is on a local drive (D:)",
+        messageId: "query.finding",
+        params: {
+          query: query("'ExportFolder'"),
+          finding: msg("LOCAL_DRIVE_PATH", { drive: "D" }),
+        },
       },
     ]);
   });
@@ -143,6 +157,12 @@ describe("SCRIPT_IN_QUERY (v3 spec, section 9.9)", () => {
         location: { file: "inline.tmdl", line: 7, column: 29 },
         detail:
           "query 'Scores', step 'Run Python script': Python.Execute refreshes only through a personal gateway on a machine with Python installed",
+        messageId: "query.stepFinding",
+        params: {
+          query: query("'Scores'"),
+          step: "'Run Python script'",
+          finding: msg("SCRIPT_IN_QUERY", { language: "python" }),
+        },
       },
       {
         objectType: "Partition",
@@ -150,6 +170,12 @@ describe("SCRIPT_IN_QUERY (v3 spec, section 9.9)", () => {
         location: { file: "inline.tmdl", line: 8, column: 24 },
         detail:
           "query 'Scores', step 'Run R script': R.Execute refreshes only through a personal gateway on a machine with R installed",
+        messageId: "query.stepFinding",
+        params: {
+          query: query("'Scores'"),
+          step: "'Run R script'",
+          finding: msg("SCRIPT_IN_QUERY", { language: "r" }),
+        },
       },
     ]);
   });
@@ -194,12 +220,16 @@ describe("EXCEL_USE_HEADERS (v3 spec, section 9.12)", () => {
         objectName: "Budget",
         location: { file: "inline.tmdl", line: 6, column: 15 },
         detail: `query 'Budget', step 'Reader': ${what}`,
+        messageId: "query.stepFinding",
+        params: { query: query("'Budget'"), step: "'Reader'", finding: msg("EXCEL_USE_HEADERS") },
       },
       {
         objectType: "Partition",
         objectName: "Budget",
         location: { file: "inline.tmdl", line: 7, column: 15 },
         detail: `query 'Budget', step 'Option': ${what}`,
+        messageId: "query.stepFinding",
+        params: { query: query("'Budget'"), step: "'Option'", finding: msg("EXCEL_USE_HEADERS") },
       },
     ]);
   });
@@ -225,6 +255,7 @@ describe("PRIVACY_LEVELS_IGNORED (v3 spec, section 9.8)", () => {
     const model = modelFrom(tmdl);
     return rule
       .check({ model }, { indexes: buildIndexes({ model }), options: {} })
+      .map(rendered)
       .map(({ object: _object, ...f }) => f);
   };
   const block = (...flags: string[]): string =>
@@ -241,6 +272,8 @@ describe("PRIVACY_LEVELS_IGNORED (v3 spec, section 9.8)", () => {
         objectName: "Model",
         location: { file: "inline.tmdl", line: 4 },
         detail: "Ignore the Privacy Levels is on for this file; the service does not honor it",
+        messageId: "PRIVACY_LEVELS_IGNORED",
+        params: {},
       },
     ]);
   });
@@ -282,6 +315,15 @@ describe("ODBC_WHERE_CONNECTOR_EXISTS (v3 spec, section 9.15)", () => {
         location: { file: "inline.tmdl", line: 6, column: 15 },
         detail:
           "query 'Orders', step 'Source': the ODBC connection names the Amazon Redshift driver; Power BI has an Amazon Redshift connector",
+        messageId: "query.stepFinding",
+        params: {
+          query: query("'Orders'"),
+          step: "'Source'",
+          finding: msg("ODBC_WHERE_CONNECTOR_EXISTS", {
+            kind: "odbc",
+            connector: "amazonRedshift",
+          }),
+        },
       },
     ]);
   });
@@ -367,6 +409,14 @@ describe("SORT_NOT_HELD_FOR_REMOVE_DUPLICATES (v3 spec, section 9.2)", () => {
         location: { file: "inline.tmdl", line: 8, column: 30 },
         detail:
           "query 'Customers', step 'Removed Duplicates': nothing holds the order of step 'Sorted Rows', so the sort may not decide which duplicate is kept",
+        messageId: "query.stepFinding",
+        params: {
+          query: query("'Customers'"),
+          step: "'Removed Duplicates'",
+          finding: msg("SORT_NOT_HELD_FOR_REMOVE_DUPLICATES", {
+            sort: msg("SORT_NOT_HELD_FOR_REMOVE_DUPLICATES.sortStep", { step: "'Sorted Rows'" }),
+          }),
+        },
       },
     ]);
   });
@@ -482,6 +532,12 @@ describe("KEEP_FIRST_ROWS_LEFT_IN (v3 spec, section 9.11)", () => {
         objectName: "Orders",
         location: { file: "inline.tmdl", line: 7, column: 27 },
         detail: "query 'Orders', step 'Kept First Rows': only the first 1000 rows load",
+        messageId: "query.stepFinding",
+        params: {
+          query: query("'Orders'"),
+          step: "'Kept First Rows'",
+          finding: msg("KEEP_FIRST_ROWS_LEFT_IN", { count: 1000 }),
+        },
       },
     ]);
   });
@@ -514,6 +570,11 @@ describe("KEEP_FIRST_ROWS_LEFT_IN (v3 spec, section 9.11)", () => {
         objectName: "'Orders'",
         location: { file: "inline.tmdl", line: 8, column: 22 },
         detail: "query 'Orders': only the first 1000 rows load",
+        messageId: "query.finding",
+        params: {
+          query: query("'Orders'"),
+          finding: msg("KEEP_FIRST_ROWS_LEFT_IN", { count: 1000 }),
+        },
       },
     ]);
   });
@@ -555,6 +616,12 @@ describe("INCREMENTAL_REFRESH_RANGE_BOUNDS (v3 spec, section 9.4)", () => {
         location: { file: "inline.tmdl", line: 11, column: 85 },
         detail:
           "query 'Sales', step 'Filtered Rows': both RangeStart and RangeEnd include the boundary, so a row on it lands in two partitions",
+        messageId: "query.stepFinding",
+        params: {
+          query: query("'Sales'"),
+          step: "'Filtered Rows'",
+          finding: msg("INCREMENTAL_REFRESH_RANGE_BOUNDS.bothInclude"),
+        },
       },
     ]);
   });
@@ -650,6 +717,12 @@ describe("FIXED_DATE_IN_ROW_FILTER (v3 spec, section 9.16)", () => {
         objectName: "Sales",
         location: { file: "inline.tmdl", line: 7, column: 71 },
         detail: "query 'Sales', step 'Filtered Rows': rows end at a fixed date, December 31, 2025",
+        messageId: "query.stepFinding",
+        params: {
+          query: query("'Sales'"),
+          step: "'Filtered Rows'",
+          finding: msg("FIXED_DATE_IN_ROW_FILTER", { use: "endsAt", date: "2025-12-31" }),
+        },
       },
     ]);
   });
@@ -682,6 +755,14 @@ describe("FIXED_DATE_IN_ROW_FILTER (v3 spec, section 9.16)", () => {
         filtered("[Order Date] >= RangeStart and [Order Date] < #date(2030, 1, 1)", parameters),
       ),
     ).toEqual([]);
+  });
+  it("leaves alone a comparison of two dates, one of them a day M refuses", async () => {
+    // A refused day still counts as a date here, so neither side is read as a column.
+    expect(await mFindings(rule, filtered("#date(2025, 2, 30) < #date(2025, 12, 31)"))).toEqual([]);
+    expect(await mFindings(rule, filtered("#date(2025, 12, 31) >= #date(2025, 2, 30)"))).toEqual(
+      [],
+    );
+    expect(await mFindings(rule, filtered("[Order Date] <= #date(2025, 2, 30)"))).toEqual([]);
   });
   it("leaves alone a fixed date outside a row filter, and a table partitioned by hand", async () => {
     const column = table(
@@ -725,6 +806,14 @@ describe("DEFAULT_STEP_NAMES (v3 spec, section 9.13)", () => {
         location: { file: "inline.tmdl", line: 7, column: 6 },
         detail:
           "query 'Sales': 4 steps keep default names, such as 'Changed Type' and 'Added Custom1'",
+        messageId: "query.finding",
+        params: {
+          query: query("'Sales'"),
+          finding: msg("DEFAULT_STEP_NAMES.several", {
+            count: 4,
+            steps: ["'Changed Type'", "'Added Custom1'"],
+          }),
+        },
       },
     ]);
   });
@@ -796,6 +885,16 @@ describe("DYNAMIC_DATA_SOURCE (v3 spec, section 9.3)", () => {
         objectName: "Orders",
         location: { file: "inline.tmdl", line: 7, column: 61 },
         detail: "query 'Orders', step 'Added Custom': Web.Contents's address is read from the rows",
+        messageId: "query.stepFinding",
+        params: {
+          query: query("'Orders'"),
+          step: "'Added Custom'",
+          finding: msg("DYNAMIC_DATA_SOURCE", {
+            function: "Web.Contents",
+            source: "address",
+            how: "row",
+          }),
+        },
       },
     ]);
   });
@@ -920,6 +1019,17 @@ describe("HARDCODED_SECRET_IN_QUERY (v3 spec, sections 9.5 and 11.3)", () => {
         location: { file: "inline.tmdl", line: 6, column: 93 },
         detail:
           "query 'Orders API', step 'Source': the Authorization header in Web.Contents holds a credential written into the query (value not shown)",
+        messageId: "query.stepFinding",
+        params: {
+          query: query("'Orders API'"),
+          step: "'Source'",
+          finding: msg("HARDCODED_SECRET_IN_QUERY.holds", {
+            where: msg("HARDCODED_SECRET_IN_QUERY.header", {
+              header: "Authorization",
+              function: "Web.Contents",
+            }),
+          }),
+        },
       },
     ]);
   });
@@ -972,6 +1082,16 @@ describe("HARDCODED_SECRET_IN_QUERY (v3 spec, sections 9.5 and 11.3)", () => {
         location: { file: "inline.tmdl", line: 1, column: 27 },
         detail:
           "query 'ServiceToken': the x-api-key header in Web.Contents reads a credential written here (value not shown)",
+        messageId: "query.finding",
+        params: {
+          query: query("'ServiceToken'"),
+          finding: msg("HARDCODED_SECRET_IN_QUERY.reads", {
+            where: msg("HARDCODED_SECRET_IN_QUERY.header", {
+              header: "x-api-key",
+              function: "Web.Contents",
+            }),
+          }),
+        },
       },
       {
         objectType: "Partition",
@@ -979,6 +1099,17 @@ describe("HARDCODED_SECRET_IN_QUERY (v3 spec, sections 9.5 and 11.3)", () => {
         location: { file: "inline.tmdl", line: 17, column: 12 },
         detail:
           "query 'Orders', step 'Key': the Authorization header in Web.Contents reads a credential written here (value not shown)",
+        messageId: "query.stepFinding",
+        params: {
+          query: query("'Orders'"),
+          step: "'Key'",
+          finding: msg("HARDCODED_SECRET_IN_QUERY.reads", {
+            where: msg("HARDCODED_SECRET_IN_QUERY.header", {
+              header: "Authorization",
+              function: "Web.Contents",
+            }),
+          }),
+        },
       },
     ]);
   });
@@ -1045,6 +1176,12 @@ describe("HARDCODED_SERVER_NAME (v3 spec, section 9.14)", () => {
         location: { file: "inline.tmdl", line: 6, column: 15 },
         detail:
           "query 'Sales', step 'Source': Sql.Database names its server as text (2 calls in this query); a parameter would hold it",
+        messageId: "query.stepFinding",
+        params: {
+          query: query("'Sales'"),
+          step: "'Source'",
+          finding: msg("HARDCODED_SERVER_NAME", { function: "Sql.Database", count: 2 }),
+        },
       },
     ]);
   });
@@ -1123,6 +1260,12 @@ describe("LEGACY_EXCEL_FILE (v3 spec, section 9.17)", () => {
         location: { file: "inline.tmdl", line: 6, column: 44 },
         detail:
           "query 'Budget', step 'Source': the workbook is a legacy .xls file, read through the Access Database Engine",
+        messageId: "query.stepFinding",
+        params: {
+          query: query("'Budget'"),
+          step: "'Source'",
+          finding: msg("LEGACY_EXCEL_FILE", { kind: "xls" }),
+        },
       },
     ]);
   });
@@ -1189,6 +1332,12 @@ describe("EXTENSION_FILTER_CASE (v3 spec, section 9.10)", () => {
         location: { file: "inline.tmdl", line: 7, column: 55 },
         detail:
           "query 'Sales Files', step 'Filtered Rows': the extension test matches \".csv\" but not \".CSV\"",
+        messageId: "query.stepFinding",
+        params: {
+          query: query("'Sales Files'"),
+          step: "'Filtered Rows'",
+          finding: msg("EXTENSION_FILTER_CASE", { extension: ".csv", otherCase: ".CSV" }),
+        },
       },
     ]);
   });

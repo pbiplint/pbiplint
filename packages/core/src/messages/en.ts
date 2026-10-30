@@ -47,17 +47,36 @@ export const EN = {
   "BROKEN_FIELD_REFERENCE.unreadModelFile": "{reason}, and a model file could not be fully read",
   DEFAULT_PAGE_NAME:
     '"{name}" {pattern, select, new {is the name Power BI Desktop gives a new page} duplicate {is the name Power BI Desktop gives a duplicated page} other {is named as a copy}}',
+  "DEFAULT_STEP_NAMES.one": "1 step keeps its default name, {step}",
+  "DEFAULT_STEP_NAMES.several":
+    "{count, plural, =2 {# steps keep default names, {steps, list}} other {# steps keep default names, such as {steps, list}}}",
+  DYNAMIC_DATA_SOURCE:
+    "{function}'s {source, select, path {path} address {address} connectionString {connection string} other {server}} {how, select, row {is read from the rows} computed {is built by a function call} parameter {is a custom function's parameter} other {is chosen with if ... then ... else}}",
   ENSURE_ALTTEXT: "no alt text",
   ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY: "height {height}, more than {max}",
   ENSURE_THEME_COLOURS:
     "{count, plural, one {# colour} other {# colours}} set to a hex value instead of a theme colour",
+  EXCEL_USE_HEADERS: "Excel.Workbook promotes headers in the refreshing machine's culture",
+  EXTENSION_FILTER_CASE: 'the extension test matches "{extension}" but not "{otherCase}"',
   FILTERS_PANE_STATE:
-    "{source, select, saved {saved} other {not recorded, read as}} {state, select, open {open} closed {closed} other {hidden from readers}}; the policy expects {expect, select, open {open} other {closed}}",
+    "{basis, select, saved {saved} other {not recorded, read as}} {state, select, open {open} closed {closed} other {hidden from readers}}; the policy expects {expect, select, open {open} other {closed}}",
+  FIXED_DATE_IN_ROW_FILTER:
+    "{use, select, endsAt {rows end at a fixed date} other {rows match a fixed date}}, {date, date}",
   "HARDCODED_PERIOD_IN_DAX.endsOn":
     "{count, plural, one {ends on a fixed date, {dates, list}} other {ends on fixed dates {dates, list}}}",
   "HARDCODED_PERIOD_IN_DAX.fixed":
     "fixed {count, plural, one {{kind, select, year {year} date {date} other {period}}} other {{kind, select, year {years} date {dates} other {periods}}}} {periods, list}",
   "HARDCODED_PERIOD_IN_DAX.inContext": "{fixed} in {context}",
+  "HARDCODED_SECRET_IN_QUERY.addressParameter": "the {parameter} parameter of the web address",
+  "HARDCODED_SECRET_IN_QUERY.bearerToken": "the Bearer token",
+  "HARDCODED_SECRET_IN_QUERY.connectionString": "the password in {function}'s connection string",
+  "HARDCODED_SECRET_IN_QUERY.header": "the {header} header in {function}",
+  "HARDCODED_SECRET_IN_QUERY.holds":
+    "{where} holds a credential written into the query (value not shown)",
+  "HARDCODED_SECRET_IN_QUERY.queryField": "the {field} field of the Query record in {function}",
+  "HARDCODED_SECRET_IN_QUERY.reads": "{where} reads a credential written here (value not shown)",
+  HARDCODED_SERVER_NAME:
+    "{function} names its server as text{count, plural, =1 {} other { (# calls in this query)}}; a parameter would hold it",
   "HARDCODED_YEAR_IN_FILTER.fixedYears":
     "{count, plural, one {fixed year {years, list}} other {fixed years {years, list}}}",
   "HARDCODED_YEAR_IN_FILTER.onField": "{kept} on {field}",
@@ -68,13 +87,21 @@ export const EN = {
   "HIDDEN_VISUAL_WITH_FIELDS.visualHidden": "{count, plural, one {# field} other {# fields}} bound",
   HIDE_TOOLTIP_DRILLTROUGH_PAGES:
     "{kind, select, tooltip {tooltip} other {drillthrough}} page is visible to readers",
+  "INCREMENTAL_REFRESH_RANGE_BOUNDS.bothInclude":
+    "both RangeStart and RangeEnd include the boundary, so a row on it lands in two partitions",
+  "INCREMENTAL_REFRESH_RANGE_BOUNDS.neitherIncludes":
+    "neither RangeStart nor RangeEnd includes the boundary, so a row on it lands in none",
   "INTEGER_FORMATTING.dynamicOnly": "dynamic format string only",
   "INTEGER_FORMATTING.formatString": 'format string "{format}"',
   "INTEGER_FORMATTING.none": "no format string",
+  KEEP_FIRST_ROWS_LEFT_IN: "only the first {count, plural, one {# row loads} other {# rows load}}",
   "LANDING_PAGE_NOT_SET.activeMissing":
     'no landing page set; the active page "{page}" does not exist',
   "LANDING_PAGE_NOT_SET.opensOn":
     'opens on "{page}", {by, select, first {the first page} other {the page open when it was saved}}',
+  LEGACY_EXCEL_FILE:
+    "the workbook is a legacy {kind, select, xlsb {.xlsb} other {.xls}} file, read through the Access Database Engine",
+  LOCAL_DRIVE_PATH: "the path is on a local drive ({drive}:)",
   "NAME_WITHOUT_TRANSLATION.inContext": "{context}, {captions}",
   "NAME_WITHOUT_TRANSLATION.noCaption": "no caption in {cultures, list}",
   "NOT_REACHED_FROM_REPORT.level": 'level "{level}" of hierarchy "{hierarchy}"',
@@ -84,11 +111,15 @@ export const EN = {
     "nothing in the report reaches it, and no measure or column references it",
   "NOT_REACHED_FROM_REPORT.referencedOnly":
     "referenced only by {referrers, list, unit}, which nothing reaches either",
+  ODBC_WHERE_CONNECTOR_EXISTS:
+    "the {kind, select, oleDb {OLE DB} other {ODBC}} connection names the {connector, select, amazonRedshift {Amazon Redshift} postgreSql {PostgreSQL} sqlServer {SQL Server} mySql {MySQL} oracle {Oracle} other {Snowflake}} {kind, select, oleDb {provider} other {driver}}; Power BI has {connector, select, amazonRedshift {an Amazon Redshift} postgreSql {a PostgreSQL} sqlServer {a SQL Server} mySql {a MySQL} oracle {an Oracle} other {a Snowflake}} connector",
   "OPENING_PAGE_INVALID.hidden": 'active page "{page}" is hidden from readers',
   "OPENING_PAGE_INVALID.missing":
     '{by, select, landing {landing} other {active}} page "{page}" does not exist',
   PARSE_ISSUE: "{reason}: {text}",
   "PARSE_ISSUE.unreadableProject": "{reason}",
+  PRIVACY_LEVELS_IGNORED:
+    "Ignore the Privacy Levels is on for this file; the service does not honor it",
   REDUCE_ADVANCED_FILTERS:
     "{count, plural, one {# visual} other {# visuals}} with an Advanced filter applied, more than {max}",
   REDUCE_OBJECTS_WITHIN_VISUALS:
@@ -100,9 +131,15 @@ export const EN = {
   REMOVE_UNUSED_CUSTOM_VISUALS: "{visual} is registered but no visual uses it",
   REPORT_LEVEL_MEASURES: 'defined in the report on table "{table}"',
   RULE_COULD_NOT_FINISH: "{rule} could not finish on {where}: {kind}",
+  SCRIPT_IN_QUERY:
+    "{language, select, python {Python.Execute} other {R.Execute}} refreshes only through a personal gateway on a machine with {language, select, python {Python} other {R}} installed",
   "SLICER_SEARCH_SAVED.term": 'opens with the search term "{term}" saved',
   "SLICER_SEARCH_SAVED.termUnread": "opens with a search term saved",
   SLICER_SELECTION_SAVED: "opens with this selection applied",
+  SORT_NOT_HELD_FOR_REMOVE_DUPLICATES:
+    "nothing holds the order of {sort}, so the sort may not decide which duplicate is kept",
+  "SORT_NOT_HELD_FOR_REMOVE_DUPLICATES.sortInside": "the Table.Sort inside it",
+  "SORT_NOT_HELD_FOR_REMOVE_DUPLICATES.sortStep": "step {step}",
   "TAB_ORDER_FOLLOWS_LAYOUT.inGroup": "in {group}, {disagreement}",
   "TAB_ORDER_FOLLOWS_LAYOUT.startsAt":
     "tab order starts at {tabVisual} but the layout reads {layoutVisual} first",
@@ -114,14 +151,15 @@ export const EN = {
   "VISUAL_OUTSIDE_PAGE.bottom": "{bottom} px past the bottom edge",
   "VISUAL_OUTSIDE_PAGE.right": "{right} px past the right edge",
   VISUAL_WITHOUT_FIELDS: "no fields bound",
-  "context.calculationGroup": "calculation group {table}",
-  "context.level": "hierarchy {hierarchy} in {table}",
+  "context.calculationGroup": "calculation group {tableRef}",
+  "context.level": "hierarchy {hierarchy} in {tableRef}",
   "context.role": "role {role}",
-  "context.table": "table {table}",
+  "context.table": "table {tableRef}",
   "date.long": "{date, date}",
   "list.more": "{count} more",
   "parse.m.modelTooLarge":
     "M is too large or complex to read (over pbiplint's limit for one model's M)",
+  "parse.m.noReason": "the parser gave no reason",
   "parse.m.notParsed": "M could not be parsed: {message}",
   "parse.m.tooLarge": "M is too large or complex to read (over pbiplint's limit for one query)",
   "parse.pbir.conflictMarker": "merge conflict marker",
@@ -135,7 +173,7 @@ export const EN = {
   "parse.pbir.tooDeep": "nested more than {depth} levels deep",
   "parse.pbir.unnamedEntity": "an entity",
   "parse.tmdl.linesUnder":
-    '"{word}" {where, select, root {at the root of a file} other {under a model}} has {under, select, declaration {a declaration} other {lines}} under it, which TMDL does not allow',
+    '"{word}" {at, select, root {at the root of a file} other {under a model}} has {child, select, declaration {a declaration} other {lines}} under it, which TMDL does not allow',
   "parse.tmdl.noName": '"{word}" is declared with no name',
   "parse.tmdl.notChildType": '"{word}" is not a type TMDL declares under a {under}',
   "parse.tmdl.notModelProperty": '"{word}" is not a property TMDL allows under a model',
@@ -149,8 +187,10 @@ export const EN = {
   "parse.tmdl.unquotedName": "the name is not enclosed in single quotes as TMDL requires",
   "parse.tmdl.unrecognizedLine": "unrecognized line",
   "parse.tmdl.unterminatedFence": "unterminated code fence",
+  "query.finding": "{query}: {finding}",
   "query.name": "query {query}",
   "query.partition": "query {query}, partition {partition}",
+  "query.stepFinding": "{query}, step {step}: {finding}",
   quoted: '"{name}"',
   "ruleError.errorClass": "{class}",
   "ruleError.notAnError": "a value that is not an Error",

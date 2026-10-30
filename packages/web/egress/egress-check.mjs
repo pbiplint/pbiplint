@@ -181,7 +181,7 @@ function launch(browser, profile, noSandbox) {
     child.on("exit", (code) => {
       clearTimeout(timer);
       if (isWindowsSystem(process.platform, account())) {
-        reject(new Error(RUN_AS_USER));
+        reject(new Error(`${RUN_AS_USER} (The browser exited with code ${code}.)`));
         return;
       }
       // The reason is the browser's FATAL or ERROR line; a crash prints a stack dump after it.

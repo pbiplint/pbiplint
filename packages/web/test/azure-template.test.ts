@@ -192,7 +192,8 @@ describe("the Azure template", () => {
     expect(expressions.length).toBeGreaterThan(5);
     // A name directly before an opening bracket is a call; a lambda's parameter list is not.
     const called = expressions.flatMap((e) =>
-      [...e.matchAll(/([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)].map((m) => m[1]!),
+      // Quoted text is a literal, so a word followed by a bracket inside it is not a call.
+      [...e.replace(/'[^']*'/g, "''").matchAll(/([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)].map((m) => m[1]!),
     );
     expect(called.filter((name) => !documented.has(name))).toEqual([]);
   });

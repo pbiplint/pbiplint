@@ -97,6 +97,12 @@ describe("isWindowsSystem", () => {
         homedir: "C:\\Windows\\system32\\config\\systemprofile",
       }),
     ).toBe(true);
+    expect(
+      isWindowsSystem("win32", {
+        username: "",
+        homedir: "C:\\Windows\\System32\\config\\systemprofile\\",
+      }),
+    ).toBe(true);
   });
   it("leaves an ordinary user, and every other platform, alone", () => {
     expect(isWindowsSystem("win32", { username: "alex", homedir: "C:\\Users\\alex" })).toBe(false);

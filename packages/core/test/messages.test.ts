@@ -961,6 +961,19 @@ table Product
     );
   });
 
+  it("keeps `table` the table the reference names when the measure sits on another", () => {
+    const files = [page("p"), bound("p", "v", "tableEx", [measure("Product", "Total Sales")])];
+    const [f] = reportFindings(BROKEN_FIELD_REFERENCE, files, tmdl);
+    expect(f!.params!.reason).toEqual(
+      msg("BROKEN_FIELD_REFERENCE.measureElsewhere", {
+        measure: "Total Sales",
+        measureTable: "Sales",
+        table: "Product",
+      }),
+    );
+    expect(f!.detail).toBe(`[Total Sales]: [Total Sales] is on "Sales", not "Product"`);
+  });
+
   it("keeps one finding per object and field, now that the detail is a message", () => {
     // The same missing column in the visual's role and again in its own filter.
     const files = [
@@ -1002,7 +1015,7 @@ ${levels}`;
         f.objectName,
         f.messageId,
         f.detail,
-        (f.params?.why as Message | undefined)?.id,
+        (f.params?.reason as Message | undefined)?.id,
       ]);
 
     it("names the referrers as a unit list, comma-joined as before, a comma in a name kept", () => {
@@ -1053,7 +1066,7 @@ ${levels}`;
       ]);
     });
 
-    it("takes a plural over the levels, each a message with its names quoted", () => {
+    it("takes a plural over the levels, each a message that quotes its names", () => {
       const [year] = reportFindings(
         NOT_REACHED_FROM_REPORT,
         files,
@@ -1071,16 +1084,10 @@ ${levels}`;
         `${NONE}; level "Year" of hierarchy "Calendar" and level "FY" of hierarchy "Fiscal" use it`,
       );
       expect(year!.params).toEqual({
-        why: msg("NOT_REACHED_FROM_REPORT.nothingReaches"),
+        reason: msg("NOT_REACHED_FROM_REPORT.nothingReaches"),
         levels: [
-          msg("NOT_REACHED_FROM_REPORT.level", {
-            level: msg("quoted", { name: "Year" }),
-            hierarchy: msg("quoted", { name: "Calendar" }),
-          }),
-          msg("NOT_REACHED_FROM_REPORT.level", {
-            level: msg("quoted", { name: "FY" }),
-            hierarchy: msg("quoted", { name: "Fiscal" }),
-          }),
+          msg("NOT_REACHED_FROM_REPORT.level", { level: "Year", hierarchy: "Calendar" }),
+          msg("NOT_REACHED_FROM_REPORT.level", { level: "FY", hierarchy: "Fiscal" }),
         ],
         count: 2,
       });

@@ -508,12 +508,12 @@ describe("a reference that names the report's extension schema", () => {
     ).refs.map((r) => r.resolution);
     expect(both.map((x) => ("message" in x ? x.message : undefined))).toEqual([
       msg("BROKEN_FIELD_REFERENCE.extensionMeasuresOnly", {
-        what: "column",
+        kind: "column",
         name: "Amount",
         table: "Sales",
       }),
       msg("BROKEN_FIELD_REFERENCE.extensionMeasuresOnly", {
-        what: "hierarchy",
+        kind: "hierarchy",
         name: "Calendar",
         table: "Sales",
       }),

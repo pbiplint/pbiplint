@@ -191,20 +191,20 @@ export function buildReachabilityIndex(
     );
   const reasonMessageFor = (n: Column | Measure): Message => {
     const referrers = referrersOf(n).filter((r) => r !== n);
-    const why =
+    const reason =
       referrers.length === 0
         ? msg("NOT_REACHED_FROM_REPORT.nothingReaches")
         : msg("NOT_REACHED_FROM_REPORT.referencedOnly", {
             referrers: referrers.map(nameOf),
           });
     const levels = isMeasure(n) ? [] : levelsOn(n);
-    if (levels.length === 0) return why;
+    if (levels.length === 0) return reason;
     return msg("NOT_REACHED_FROM_REPORT.levels", {
-      why,
+      reason,
       levels: levels.map((l) =>
         msg("NOT_REACHED_FROM_REPORT.level", {
-          level: msg("quoted", { name: l.name }),
-          hierarchy: msg("quoted", { name: l.hierarchy.name }),
+          level: l.name,
+          hierarchy: l.hierarchy.name,
         }),
       ),
       count: levels.length,

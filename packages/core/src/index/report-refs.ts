@@ -242,7 +242,7 @@ export function buildReportReferenceIndex(
       );
     return unresolved(
       msg("BROKEN_FIELD_REFERENCE.extensionMeasuresOnly", {
-        what: ref.kind === "hierarchyLevel" ? "hierarchy" : "column",
+        kind: ref.kind === "hierarchyLevel" ? "hierarchy" : "column",
         name: ref.name,
         table: ref.table,
       }),
@@ -295,8 +295,8 @@ export function buildReportReferenceIndex(
         return unresolved(
           msg("BROKEN_FIELD_REFERENCE.measureElsewhere", {
             measure: elsewhere.name,
-            table: elsewhere.table.name,
-            namedTable: t.name,
+            measureTable: elsewhere.table.name,
+            table: t.name,
           }),
         );
       return missingOn(

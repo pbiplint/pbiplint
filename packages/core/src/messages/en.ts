@@ -21,9 +21,9 @@ export const EN = {
   "BROKEN_BOOKMARK_REFERENCE.targetVisuals":
     '{count, plural, one {target visual {visuals, list} is} other {target visuals {visuals, list} are}} not on page "{page}"',
   BROKEN_FIELD_REFERENCE: "{field}: {reason}",
-  "BROKEN_FIELD_REFERENCE.extensionMeasuresOnly": `the report's extension defines only measures, so no {what, select, hierarchy {hierarchy} other {column}} named "{name}" on "{table}"`,
+  "BROKEN_FIELD_REFERENCE.extensionMeasuresOnly": `the report's extension defines only measures, so no {kind, select, hierarchy {hierarchy} other {column}} named "{name}" on "{table}"`,
   "BROKEN_FIELD_REFERENCE.extensionUnread": "reportExtensions.json could not be read",
-  "BROKEN_FIELD_REFERENCE.measureElsewhere": '[{measure}] is on "{table}", not "{namedTable}"',
+  "BROKEN_FIELD_REFERENCE.measureElsewhere": '[{measure}] is on "{measureTable}", not "{table}"',
   "BROKEN_FIELD_REFERENCE.measureNotColumn": '"{measure}" is a measure on "{table}", not a column',
   "BROKEN_FIELD_REFERENCE.noColumn": 'no column named "{column}" on "{table}"',
   "BROKEN_FIELD_REFERENCE.noDefaultHierarchy":
@@ -77,9 +77,9 @@ export const EN = {
     'opens on "{page}", {by, select, first {the first page} other {the page open when it was saved}}',
   "NAME_WITHOUT_TRANSLATION.inContext": "{context}, {captions}",
   "NAME_WITHOUT_TRANSLATION.noCaption": "no caption in {cultures, list}",
-  "NOT_REACHED_FROM_REPORT.level": "level {level} of hierarchy {hierarchy}",
+  "NOT_REACHED_FROM_REPORT.level": 'level "{level}" of hierarchy "{hierarchy}"',
   "NOT_REACHED_FROM_REPORT.levels":
-    "{why}; {levels, list} {count, plural, one {uses} other {use}} it",
+    "{reason}; {levels, list} {count, plural, one {uses} other {use}} it",
   "NOT_REACHED_FROM_REPORT.nothingReaches":
     "nothing in the report reaches it, and no measure or column references it",
   "NOT_REACHED_FROM_REPORT.referencedOnly":

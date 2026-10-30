@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { basename, join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 import { resolveConfig } from "../src/engine/config.js";
 import { lint, type LintFile } from "../src/engine/lint.js";
@@ -65,7 +67,16 @@ import {
 import { RULE_COULD_NOT_FINISH } from "../src/rules/rule-could-not-finish.js";
 import type { Finding, Rule, RuleFinding } from "../src/rules/types.js";
 import { parseTmdl } from "../src/tmdl/parse.js";
-import { mFindings, modelFrom, rendered } from "./helpers.js";
+import {
+  checkParams,
+  examplesDir,
+  fixturesDir,
+  mFindings,
+  modelFrom,
+  readModelFiles,
+  readProjectFiles,
+  rendered,
+} from "./helpers.js";
 import { bound, column, j, lit, measure, page, reportFindings, visual } from "./report-helpers.js";
 
 // Test-only templates under made-up IDs, so these tests do not depend on the English catalog.
@@ -2017,5 +2028,135 @@ describe("the English catalog", () => {
       "context.role: missing",
       "extra: not an English message ID",
     ]);
+  });
+});
+
+describe("every finding's params match its template (#98)", () => {
+  it("passes a finding whose params fit, nested messages and list items included", () => {
+    expect(() =>
+      checkParams({
+        messageId: "BROKEN_BOOKMARK_REFERENCE.targetVisuals",
+        params: { count: 4, visuals: capped(["a", "b", "c", "d"]), page: "Sales" },
+      }),
+    ).not.toThrow();
+    expect(() => checkParams({})).not.toThrow();
+  });
+
+  it("fails a finding with an extra param, a missing param, or a param of the wrong kind", () => {
+    const fails = (f: Pick<Finding, "messageId" | "params">, problem: string) =>
+      expect(() => checkParams(f)).toThrow(problem);
+    const page = "BROKEN_BOOKMARK_REFERENCE.activePage" as const;
+    fails(
+      { messageId: page, params: { page: "Sales", extra: "x" } },
+      "{extra} is not in the template",
+    );
+    fails({ messageId: page, params: {} }, `${page}: {page} is missing`);
+    fails({ params: { page: "Sales" } }, "params without a messageId");
+    const visuals = "BROKEN_BOOKMARK_REFERENCE.targetVisuals" as const;
+    fails(
+      { messageId: visuals, params: { count: 2, visuals: 2, page: "Sales" } },
+      "{visuals} is a list and takes an array",
+    );
+    fails(
+      { messageId: visuals, params: { count: "2", visuals: ["a", "b"], page: "Sales" } },
+      "{count} is a plural and takes a number",
+    );
+    fails(
+      {
+        messageId: visuals,
+        params: { count: 2, visuals: ["a", 3 as unknown as string], page: "Sales" },
+      },
+      "{visuals}[1] is neither a string nor a message",
+    );
+    fails(
+      {
+        messageId: visuals,
+        params: { count: 5, visuals: ["a", msg("list.more", { n: 4 })], page: "Sales" },
+      },
+      "{visuals}[1] list.more: {n} is not in the template",
+    );
+    fails(
+      { messageId: "date.long", params: { date: "December 31, 2025" } },
+      "{date} is a date and takes an ISO day",
+    );
+    fails(
+      { messageId: "ACTION_WITHOUT_DESTINATION", params: { action: 1 } },
+      "{action} is a select and takes a string",
+    );
+  });
+
+  it("fails a nested message with a wrong param", () => {
+    expect(() =>
+      checkParams({
+        messageId: "BROKEN_FIELD_REFERENCE",
+        params: {
+          field: "'Sales'[Amount]",
+          reason: msg("BROKEN_FIELD_REFERENCE.noColumn", { column: "Amount", tabel: "Sales" }),
+        },
+      }),
+    ).toThrow(
+      /\{reason\} BROKEN_FIELD_REFERENCE\.noColumn: \{tabel\} is not in the template[^]*\{table\} is missing/,
+    );
+  });
+
+  /** Every project and model under tests/fixtures, and the example, as `lint` reads them. */
+  const projects = [
+    ...readdirSync(fixturesDir).map((name) => join(fixturesDir, name)),
+    join(examplesDir, "messy-sales"),
+  ];
+  const filesOf = (path: string): LintFile[] => {
+    if (path.endsWith(".tmdl"))
+      return [{ path: `definition/tables/${basename(path)}`, text: readFileSync(path, "utf8") }];
+    if (path.endsWith(".SemanticModel")) return readModelFiles(path);
+    const files = readProjectFiles(path);
+    return [...files.model, ...files.report];
+  };
+
+  it("reads fifteen projects: tests/fixtures' fourteen and the example", () => {
+    expect(projects).toHaveLength(15);
+  });
+
+  it.each(projects.map((p) => [relative(join(fixturesDir, "../.."), p), p]))(
+    "every finding on %s fits its template",
+    async (_name, path) => {
+      const result = await lint(filesOf(path));
+      expect(result.findings.some((f) => f.messageId !== undefined)).toBe(true);
+      for (const f of result.findings) expect(() => checkParams(f), f.ruleId).not.toThrow();
+    },
+  );
+});
+
+describe("every English entry is emitted (#98)", () => {
+  /**
+   * The IDs no source file names as a string literal, each with how it is built instead. Keep this
+   * short: an entry belongs here only when its ID is computed, never because nothing uses it.
+   */
+  const builtAnotherWay: Record<string, string> = {};
+
+  const srcDir = new URL("../src/", import.meta.url).pathname;
+  const enFile = join(srcDir, "messages", "en.ts");
+  const sources = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+      e.isDirectory()
+        ? sources(join(dir, e.name))
+        : e.name.endsWith(".ts") && join(dir, e.name) !== enFile
+          ? [readFileSync(join(dir, e.name), "utf8")]
+          : [],
+    );
+  const source = sources(srcDir).join("\n");
+
+  it("each English key is named in the source, or built another way for a stated reason", () => {
+    const named = (id: string) => source.includes(`"${id}"`) || source.includes(`'${id}'`);
+    const dead = Object.keys(EN).filter((id) => !named(id) && !(id in builtAnotherWay));
+    expect(dead).toEqual([]);
+    for (const [id, reason] of Object.entries(builtAnotherWay)) {
+      expect(EN, id).toHaveProperty([id]);
+      expect(named(id), `${id} is named in source, so it need not be listed`).toBe(false);
+      expect(reason.length, id).toBeGreaterThan(0);
+    }
+  });
+
+  it("does not count English's own file as a reference", () => {
+    expect(source).not.toContain("export const EN = {");
   });
 });

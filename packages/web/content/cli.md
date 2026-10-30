@@ -179,7 +179,7 @@ A run over a folder that holds several projects prints `version` `2` (from 0.3.0
 
 A reader checks `version` before anything else. A new field is additive and keeps `version` where it is, so a reader should ignore fields it does not know. New values can appear in a field that names one of a set, such as a skipped rule's `reason`, a notice's `kind`, or a rule's `category` and `status`, also without a version change. A field removed or renamed, or one whose meaning changes, raises `version`.
 
-SARIF results carry the same two fields in their `properties`.
+SARIF results carry `messageId` and `params` in each result's `properties`.
 
 ### The quiet output (from 0.2.5)
 

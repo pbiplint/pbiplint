@@ -197,14 +197,16 @@ export function formatMessage(m: Message, catalog: Catalog = EN, locale = "en"):
 
 /**
  * A finding's detail in the catalog's language: its message when it has one, else its `detail`
- * as the rule wrote it, which is English.
+ * as the rule wrote it, which is English. A message neither the catalog nor English knows (as in
+ * JSON from a newer pbiplint) also takes the `detail`.
  */
 export function findingDetail(
   f: Pick<Finding, "detail" | "messageId" | "params">,
   catalog: Catalog = EN,
   locale = "en",
 ): string | undefined {
-  return f.messageId === undefined
+  return f.messageId === undefined ||
+    (catalog[f.messageId] === undefined && EN[f.messageId] === undefined)
     ? f.detail
     : formatMessage(msg(f.messageId, f.params), catalog, locale);
 }

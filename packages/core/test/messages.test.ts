@@ -169,6 +169,11 @@ describe("findingDetail", () => {
     expect(findingDetail({ detail: "x" })).toBe("x");
     expect(findingDetail({})).toBeUndefined();
   });
+
+  it("returns the detail when no catalog knows the message, as from a newer pbiplint", () => {
+    const f = { detail: "as written", messageId: "rule.fromTheFuture" as MessageId, params: {} };
+    expect(findingDetail(f)).toBe("as written");
+  });
 });
 
 describe("the shared messages (#98)", () => {

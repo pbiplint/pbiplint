@@ -711,7 +711,9 @@ export function buildReport(
           const missing = measures === undefined || measures === null;
           if (!missing && !(Array.isArray(measures) && measures.length === 0)) return;
           const name =
-            typeof entity.name === "string" ? `"${entity.name}"` : msg("parse.pbir.unnamedEntity");
+            typeof entity.name === "string"
+              ? msg("parse.pbir.namedEntity", { name: entity.name })
+              : msg("parse.pbir.unnamedEntity");
           report.issues.push(
             issueAt(
               lineOfPointer(f.text, missing ? `/entities/${ei}` : `/entities/${ei}/measures`),

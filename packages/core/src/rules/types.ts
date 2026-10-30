@@ -1,4 +1,6 @@
 import type { Indexes } from "../index/build.js";
+import type { MessageId } from "../messages/en.js";
+import type { Message, MessageParam } from "../messages/format.js";
 import type { Model, SourceLocation } from "../model/types.js";
 import type { Report } from "../pbir/types.js";
 import type { Project } from "../project/types.js";
@@ -110,8 +112,8 @@ export interface RuleContext {
 
 /** Where a rule caught an error: a label for the message, and the object it was working on. */
 export interface ErrorSite {
-  /** Names the part of the work, as `query 'Sales'`. */
-  label: string;
+  /** Names the part of the work, as `query 'Sales'` in English. */
+  label: Message;
   /** The object the failed part was about, as a finding on it would name it. */
   finding: RuleFinding;
 }
@@ -130,7 +132,11 @@ export interface RuleFinding {
   /** Which part the finding belongs to, when the object type alone cannot say: a File is in either. Defaults to layerOf(objectType). */
   layer?: LayerName;
   location?: SourceLocation;
-  detail?: string;
+  /**
+   * The detail as a message, which `runRules` renders into the finding's `detail`. A rule never
+   * writes the English itself.
+   */
+  message?: Message;
   object?: Ignorable;
 }
 
@@ -141,7 +147,12 @@ export interface Finding {
   objectName: string;
   objectId?: string;
   location?: SourceLocation;
+  /** The detail in English, rendered from the message when the rule gave one. */
   detail?: string;
+  /** The detail's message ID, set exactly when `detail` was rendered from a message. */
+  messageId?: MessageId;
+  /** The detail's message parameters, set exactly when `messageId` is. */
+  params?: Readonly<Record<string, MessageParam>>;
 }
 
 export interface Rule {

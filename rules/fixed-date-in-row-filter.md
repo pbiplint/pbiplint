@@ -73,6 +73,7 @@ When the fixed end is the point: an archive table that holds a closed period, a 
 - A table with more than one M partition, each filtered to its own range, is partitioned by hand, and its fixed ranges are the point, so its partitions are not reported.
 - A filter whose condition also reads the model's `RangeStart` or `RangeEnd` parameter is incremental refresh's own, and is not reported.
 - Only a date of fixed numbers counts. A date built from a parameter, from `DateTime.LocalNow()`, or from another column is not reported.
+- A date M itself refuses, a day its month does not have such as `#date(2025, 2, 30)` or a year outside 1 to 9999, is not reported: such a filter fails at refresh rather than going quietly stale.
 - A date held in another step, such as `Cutoff = #date(2025, 12, 31)` then `[Date] <= Cutoff`, is not read.
 - Only `Table.SelectRows` conditions are read. A fixed date compared elsewhere, such as in a custom column, is not.
 - The date is named in long form, without the time of a `#datetime` or the offset of a `#datetimezone`.

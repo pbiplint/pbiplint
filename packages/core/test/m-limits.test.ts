@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { type LintFile, lint } from "../src/engine/lint.js";
 import { calls, identifierName, nodesOfKind } from "../src/m/ast.js";
 import { errorKind } from "../src/engine/rule-error.js";
+import { formatMessage, msg } from "../src/messages/format.js";
 import { readM } from "../src/m/read.js";
 import { buildIndexes } from "../src/index/build.js";
 import { boundValue, origin } from "../src/m/resolve.js";
@@ -11,7 +12,7 @@ import { eachQuery, mFinding } from "../src/rules/m-helpers.js";
 import { HARDCODED_SECRET_IN_QUERY, LEGACY_EXCEL_FILE } from "../src/rules/pbiplint/power-query.js";
 import type { Rule } from "../src/rules/types.js";
 import { parseTmdl } from "../src/tmdl/parse.js";
-import { mObjectNames } from "./helpers.js";
+import { mObjectNames, rendered } from "./helpers.js";
 
 /** A table whose one M partition holds `m`, as Desktop writes a block: four tabs before each M line. */
 const table = (name: string, m: string[]): LintFile => ({
@@ -268,7 +269,7 @@ const throwsOnA: Rule = {
     const m = ctx.indexes.m;
     return eachQuery(ctx, m.queries, (q) => {
       if (q.name === "A") throw new RangeError("Maximum call stack size exceeded");
-      return q.ast ? [mFinding(m, q, q.ast, "reported")] : [];
+      return q.ast ? [mFinding(m, q, q.ast, msg("ruleError.theModel"))] : [];
     });
   },
 };
@@ -397,11 +398,11 @@ describe("a deep tree in one query (v3 spec, section 8, amended October 27, 2026
         {
           indexes: buildIndexes({ model: built }, m),
           options: {},
-          reportError: (e, site) => errors.push(`${site.label}: ${errorKind(e)}`),
+          reportError: (e, site) => errors.push(`${formatMessage(site.label)}: ${errorKind(e)}`),
         },
       );
       expect(errors).toEqual(["query 'A': RangeError (out of stack space)"]);
-      expect(findings.map((f) => f.objectName)).toEqual([holder]);
+      expect(findings.map(rendered).map((f) => f.objectName)).toEqual([holder]);
     },
   );
   it("throws one query's error from a rule run without the engine, as before", async () => {

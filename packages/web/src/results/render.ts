@@ -1,5 +1,6 @@
 import {
   CATEGORY_ORDER,
+  findingDetail,
   LEARN_HELP_URLS,
   locationOf,
   plural,
@@ -622,7 +623,7 @@ function renderGroup(g: RankedGroup, ids: Ids): HTMLElement {
       h("td", { class: "mono" }, f.objectName),
       h("td", {}, f.objectType),
       h("td", { class: "mono" }, locationOf(f)),
-      h("td", {}, f.detail ?? ""),
+      h("td", {}, findingDetail(f) ?? ""),
     ),
   );
   return h(

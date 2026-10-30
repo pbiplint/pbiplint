@@ -1,3 +1,4 @@
+import { capped, msg, type Message } from "../../messages/format.js";
 import { fieldLabel } from "../../pbir/names.js";
 import type { Report, ReportFilter } from "../../pbir/types.js";
 import { reportFinding } from "../report-helpers.js";
@@ -5,16 +6,16 @@ import type { RuleFinding } from "../types.js";
 import { pbiplintRule } from "./define.js";
 import { inYearRange } from "./period-forms.js";
 import { nameClass } from "./period-words.js";
-import { englishList, namesYear } from "./periods.js";
+import { namesYear } from "./periods.js";
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
 
-/** What one condition keeps of a year column: the words for it, and where its year is written. */
+/** What one condition keeps of a year column: the message for it, and where its year is written. */
 interface Kept {
   /** The years it names, which a page or visual named for one of them makes deliberate. */
   years: number[];
-  detail: string;
+  message: Message;
   /** The pointer of the literal a reader edits, where the finding points. */
   at: string;
 }
@@ -38,8 +39,11 @@ function isYearColumn(e: unknown): boolean {
   return typeof name === "string" && nameClass(name) === "year";
 }
 
-const fixed = (years: number[]): string =>
-  `fixed year${years.length > 1 ? "s" : ""} ${englishList(years.map(String))}`;
+const fixed = (years: number[]): Message =>
+  msg("HARDCODED_YEAR_IN_FILTER.fixedYears", {
+    count: years.length,
+    years: capped(years.map(String)),
+  });
 
 /**
  * The years a condition keeps, when it keeps only years it names (spec section 4.1): `In` of a
@@ -62,12 +66,12 @@ function keptYears(condition: unknown, at: string): Kept | undefined {
     });
     if (found.length === 0) return undefined;
     const years = [...new Set(found.map((f) => f.year))];
-    return { years, detail: fixed(years), at: found[0]!.at };
+    return { years, message: fixed(years), at: found[0]!.at };
   }
   if (isRecord(compared) && compared.ComparisonKind === 0 && isYearColumn(compared.Left)) {
     const year = yearOf(compared.Right);
     if (year === undefined) return undefined;
-    return { years: [year], detail: fixed([year]), at: `${at}/Comparison/Right/Literal/Value` };
+    return { years: [year], message: fixed([year]), at: `${at}/Comparison/Right/Literal/Value` };
   }
   return undefined;
 }
@@ -107,7 +111,11 @@ function bound(condition: unknown, at: string): Bound | undefined {
 function yearsUpTo(condition: unknown, at: string): Kept | undefined {
   const alone = bound(condition, at);
   if (alone?.side === "upper")
-    return { years: [alone.year], detail: `years up to ${alone.year}`, at: alone.at };
+    return {
+      years: [alone.year],
+      message: msg("HARDCODED_YEAR_IN_FILTER.yearsUpTo", { year: alone.year }),
+      at: alone.at,
+    };
   const both = isRecord(condition) ? condition.And : undefined;
   if (!isRecord(both)) return undefined;
   const sides = [bound(both.Left, `${at}/And/Left`), bound(both.Right, `${at}/And/Right`)];
@@ -116,7 +124,7 @@ function yearsUpTo(condition: unknown, at: string): Kept | undefined {
   if (!lower || !upper) return undefined;
   return {
     years: [lower.year, upper.year],
-    detail: `years ${lower.year} to ${upper.year}`,
+    message: msg("HARDCODED_YEAR_IN_FILTER.yearRange", { from: lower.year, to: upper.year }),
     at: upper.at,
   };
 }
@@ -129,7 +137,7 @@ function yearsUpTo(condition: unknown, at: string): Kept | undefined {
 function yearFinding(
   f: ReportFilter,
   names: (string | undefined)[],
-  make: (pointer: string, detail: string) => RuleFinding,
+  make: (pointer: string, message: Message) => RuleFinding,
 ): RuleFinding[] {
   // Drillthrough and drill-down save the last value passed or drilled into; the author set neither.
   if (f.howCreated === "Drillthrough" || f.howCreated === "Drill") return [];
@@ -145,20 +153,30 @@ function yearFinding(
   // The column is named as the filter's card names it, by the entry's field: for Desktop's auto
   // date/time hierarchy that is the date column's Year level, where the condition reads the hidden
   // LocalDateTable_ table behind it.
-  return [make(kept.at, f.field ? `${kept.detail} on ${fieldLabel(f.field)}` : kept.detail)];
+  return [
+    make(
+      kept.at,
+      f.field
+        ? msg("HARDCODED_YEAR_IN_FILTER.onField", {
+            kept: kept.message,
+            field: fieldLabel(f.field),
+          })
+        : kept.message,
+    ),
+  ];
 }
 
 function yearFindings(report: Report): RuleFinding[] {
   const out = report.filters.flatMap((f) =>
-    yearFinding(f, [], (at, detail) => reportFinding.reportFilter(report, at, detail)),
+    yearFinding(f, [], (at, message) => reportFinding.reportFilter(report, at, message)),
   );
   for (const p of report.pages) {
     for (const f of p.filters)
-      out.push(...yearFinding(f, [p.displayName], (at, d) => reportFinding.pageFilter(p, at, d)));
+      out.push(...yearFinding(f, [p.displayName], (at, m) => reportFinding.pageFilter(p, at, m)));
     for (const v of p.visuals)
       for (const f of v.filters)
         out.push(
-          ...yearFinding(f, [p.displayName, v.title], (at, d) => reportFinding.visual(v, at, d)),
+          ...yearFinding(f, [p.displayName, v.title], (at, m) => reportFinding.visual(v, at, m)),
         );
   }
   return out;

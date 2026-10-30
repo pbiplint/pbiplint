@@ -20,12 +20,20 @@ const parseIssues = (r: LintResult) =>
     .map((f) => [f.location?.file, f.location?.line, f.detail]);
 
 /** A report-level finding as the opening rules build it: no `object`, so config switches it off. */
-const onReport = (file: string, line: number, detail: string) => ({
+const onReport = (
+  file: string,
+  line: number,
+  detail: string,
+  messageId: string,
+  params: Record<string, unknown>,
+) => ({
   objectType: "Report",
   objectName: "Report",
   objectId: "report",
   location: { file, line },
   detail,
+  messageId,
+  params,
 });
 
 describe("LANDING_PAGE_NOT_SET", () => {
@@ -47,12 +55,20 @@ describe("LANDING_PAGE_NOT_SET", () => {
         "definition/pages/pages.json",
         line,
         'opens on "Page p", the page open when it was saved',
+        "LANDING_PAGE_NOT_SET.opensOn",
+        { page: "Page p", by: "active" },
       ),
     ]);
   });
   it("opens on the first page when pages.json names no active page, and is quiet with no pages", () => {
     expect(reportFindings(LANDING_PAGE_NOT_SET, pages({}))).toEqual([
-      onReport("definition/pages/pages.json", 1, 'opens on "Page p", the first page'),
+      onReport(
+        "definition/pages/pages.json",
+        1,
+        'opens on "Page p", the first page',
+        "LANDING_PAGE_NOT_SET.opensOn",
+        { page: "Page p", by: "first" },
+      ),
     ]);
     // pageOrder decides which page is first, not the folder names.
     expect(reportFindings(LANDING_PAGE_NOT_SET, pages({ pageOrder: ["h", "p"] }))[0]!.detail).toBe(
@@ -114,6 +130,8 @@ describe("LANDING_PAGE_NOT_SET", () => {
         "definition/pages/pages.json",
         1,
         'no landing page set; the active page "gone" does not exist',
+        "LANDING_PAGE_NOT_SET.activeMissing",
+        { page: "gone" },
       ),
     ]);
   });
@@ -151,7 +169,13 @@ describe("OPENING_PAGE_INVALID", () => {
     const landing = lineOf(text, '"landingPageName"');
     expect(landing).toBeGreaterThan(1);
     expect(reportFindings(OPENING_PAGE_INVALID, [header, ...rest])).toEqual([
-      onReport("definition/pages/pages.json", landing, 'landing page "gone" does not exist'),
+      onReport(
+        "definition/pages/pages.json",
+        landing,
+        'landing page "gone" does not exist',
+        "OPENING_PAGE_INVALID.missing",
+        { by: "landing", page: "gone" },
+      ),
     ]);
     const activeText = pretty({ pageOrder: ["p", "h"], activePageName: "h" });
     expect(
@@ -161,10 +185,18 @@ describe("OPENING_PAGE_INVALID", () => {
         "definition/pages/pages.json",
         lineOf(activeText, '"activePageName"'),
         'active page "Page h" is hidden from readers',
+        "OPENING_PAGE_INVALID.hidden",
+        { page: "Page h" },
       ),
     ]);
     expect(reportFindings(OPENING_PAGE_INVALID, pages({ activePageName: "gone" }))).toEqual([
-      onReport("definition/pages/pages.json", 1, 'active page "gone" does not exist'),
+      onReport(
+        "definition/pages/pages.json",
+        1,
+        'active page "gone" does not exist',
+        "OPENING_PAGE_INVALID.missing",
+        { by: "active", page: "gone" },
+      ),
     ]);
   });
 });
@@ -187,11 +219,25 @@ describe("an opening page whose page.json could not be read", () => {
     // A page no folder holds is still missing.
     expect(
       reportFindings(OPENING_PAGE_INVALID, files({ activePageName: "u", landingPageName: "gone" })),
-    ).toEqual([onReport("definition/pages/pages.json", 1, 'landing page "gone" does not exist')]);
+    ).toEqual([
+      onReport(
+        "definition/pages/pages.json",
+        1,
+        'landing page "gone" does not exist',
+        "OPENING_PAGE_INVALID.missing",
+        { by: "landing", page: "gone" },
+      ),
+    ]);
   });
   it("is named by LANDING_PAGE_NOT_SET as pages.json names it, as a page whose visuals were read is", () => {
     const opensOnU = [
-      onReport("definition/pages/pages.json", 1, 'opens on "u", the page open when it was saved'),
+      onReport(
+        "definition/pages/pages.json",
+        1,
+        'opens on "u", the page open when it was saved',
+        "LANDING_PAGE_NOT_SET.opensOn",
+        { page: "u", by: "active" },
+      ),
     ];
     expect(reportFindings(LANDING_PAGE_NOT_SET, files({ activePageName: "u" }))).toEqual(opensOnU);
     // The same page with a visual that was read is a stub page named by its folder.
@@ -315,7 +361,13 @@ describe("FILTERS_PANE_STATE", () => {
     const line = lineOf(expanded, '"expanded"');
     expect(line).toBeGreaterThan(1);
     expect(run(expanded, "closed")).toEqual([
-      onReport("definition/report.json", line, "saved open; the policy expects closed"),
+      onReport(
+        "definition/report.json",
+        line,
+        "saved open; the policy expects closed",
+        "FILTERS_PANE_STATE",
+        { basis: "saved", state: "open", expect: "closed" },
+      ),
     ]);
     // `visible: false` hides the pane whatever `expanded` says, so it is the line that decides.
     const hidden = text({ expanded: lit("true"), visible: lit("false") });

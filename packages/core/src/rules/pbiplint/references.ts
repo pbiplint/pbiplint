@@ -1,3 +1,4 @@
+import { formatMessage, msg } from "../../messages/format.js";
 import { fieldLabel } from "../../pbir/names.js";
 import { finding, modelPartlyRead } from "../helpers.js";
 import { fieldFileUnread, reportFinding } from "../report-helpers.js";
@@ -10,12 +11,14 @@ import { pbiplintRule } from "./define.js";
  * entry or sort entry repeats a role binding, a bookmark's state can repeat it. The index keeps
  * every reference; the rule reports the field once, at its earliest reference. The key holds the
  * file, so two objects that share a label and an id in different files, such as visuals with the
- * same id on two pages with the same name, are not taken for one.
+ * same id on two pages with the same name, are not taken for one. The field and its reason are
+ * the finding's message, read in English.
  */
 const firstPerObjectAndField = (findings: RuleFinding[]): RuleFinding[] => {
   const seen = new Set<string>();
   return findings.filter((f) => {
-    const key = [f.location?.file, f.objectType, f.objectId, f.objectName, f.detail].join("\u0000");
+    const detail = f.message && formatMessage(f.message);
+    const key = [f.location?.file, f.objectType, f.objectId, f.objectName, detail].join("\u0000");
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -37,7 +40,10 @@ export const BROKEN_FIELD_REFERENCE = pbiplintRule({
     firstPerObjectAndField(
       ctx.indexes.reportRefs!.unresolved().flatMap((r): RuleFinding[] => {
         if (r.resolution.kind !== "unresolved") return [];
-        const detail = `${fieldLabel(r.ref)}: ${r.resolution.reason}`;
+        const detail = msg("BROKEN_FIELD_REFERENCE", {
+          field: fieldLabel(r.ref),
+          reason: r.resolution.message,
+        });
         const o = r.owner;
         switch (o.kind) {
           case "visualField":
@@ -81,8 +87,8 @@ export const NOT_REACHED_FROM_REPORT = pbiplintRule({
     // Measures before columns, so a column that only an unreached measure used is listed after that
     // measure; within each list, fields keep the order pbiplint read them from the model's files.
     return [
-      ...measures.map((m) => ({ ...finding.measure(m), detail: reach.reasonFor(m) })),
-      ...columns.map((c) => ({ ...finding.column(c), detail: reach.reasonFor(c) })),
+      ...measures.map((m) => ({ ...finding.measure(m), message: reach.reasonMessageFor(m) })),
+      ...columns.map((c) => ({ ...finding.column(c), message: reach.reasonMessageFor(c) })),
     ];
   },
 });

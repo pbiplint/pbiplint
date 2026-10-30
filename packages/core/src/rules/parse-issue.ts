@@ -1,3 +1,4 @@
+import { msg } from "../messages/format.js";
 import type { ParseIssue } from "../tmdl/types.js";
 import { RULE_SUMMARIES } from "./rule-summaries.data.js";
 import type { Rule, RuleFinding } from "./types.js";
@@ -26,7 +27,7 @@ export const PARSE_ISSUE: Rule = {
           line: i.line,
           ...(i.column !== undefined ? { column: i.column } : {}),
         },
-        detail: `${i.reason}: ${i.text.trim()}`,
+        message: msg("PARSE_ISSUE", { reason: i.message, text: i.text.trim() }),
       });
     return [
       // A TMDL line with its literals' and comments' text hidden wherever the whole file's masking

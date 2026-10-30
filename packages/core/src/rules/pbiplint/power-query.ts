@@ -13,13 +13,15 @@ import {
 } from "../../m/ast.js";
 import { boundValue, origin, resolve } from "../../m/resolve.js";
 import type { MIndex, MQuery } from "../../m/types.js";
+import { msg, type Message } from "../../messages/format.js";
 import { tableRef } from "../../model/names.js";
 import type { Partition } from "../../model/types.js";
 import { finding } from "../helpers.js";
 import { eachQuery, mFinding, queryLabel } from "../m-helpers.js";
 import type { Rule } from "../types.js";
 import { pbiplintRule } from "./define.js";
-import { longDate } from "./periods.js";
+import { isRealDay } from "./period-forms.js";
+import { isoDay } from "./periods.js";
 
 type Node = Language.Ast.TNode;
 const Kind = Language.Ast.NodeKind;
@@ -43,16 +45,16 @@ export const LOCAL_DRIVE_PATH = pbiplintRule({
       textLiterals(q).flatMap(({ node, value }) => {
         const drive = DRIVE_PATH.exec(value);
         return drive
-          ? [mFinding(m, q, node, `the path is on a local drive (${drive[1]!.toUpperCase()}:)`)]
+          ? [mFinding(m, q, node, msg("LOCAL_DRIVE_PATH", { drive: drive[1]!.toUpperCase() }))]
           : [];
       }),
     ),
 });
 
-/** The script functions, and the language each one runs. */
-const SCRIPT_LANGUAGE: ReadonlyMap<string, string> = new Map([
-  ["Python.Execute", "Python"],
-  ["R.Execute", "R"],
+/** The script functions, and the language each one runs, as SCRIPT_IN_QUERY's message selects it. */
+const SCRIPT_LANGUAGE: ReadonlyMap<string, "python" | "r"> = new Map([
+  ["Python.Execute", "python"],
+  ["R.Execute", "r"],
 ]);
 
 // A call, as the Run Python script and Run R script steps write it (v3 spec, section 9.9). Python
@@ -68,16 +70,7 @@ export const SCRIPT_IN_QUERY = pbiplintRule({
     eachQuery(ctx, m.queries, (q) =>
       calls(q).flatMap((c) => {
         const language = SCRIPT_LANGUAGE.get(c.name);
-        return language
-          ? [
-              mFinding(
-                m,
-                q,
-                c.node,
-                `${c.name} refreshes only through a personal gateway on a machine with ${language} installed`,
-              ),
-            ]
-          : [];
+        return language ? [mFinding(m, q, c.node, msg("SCRIPT_IN_QUERY", { language }))] : [];
       }),
     ),
 });
@@ -117,34 +110,34 @@ export const EXCEL_USE_HEADERS = pbiplintRule({
     eachQuery(ctx, m.queries, (q) =>
       calls(q)
         .filter((c) => c.name === "Excel.Workbook" && promotesHeaders(c.args[1]))
-        .map((c) =>
-          mFinding(
-            m,
-            q,
-            c.node,
-            "Excel.Workbook promotes headers in the refreshing machine's culture",
-          ),
-        ),
+        .map((c) => mFinding(m, q, c.node, msg("EXCEL_USE_HEADERS"))),
     ),
 });
 
 /**
  * The databases Power BI has a connector for, by what an ODBC driver's or an OLE DB provider's
- * name holds, any case (v3 spec, section 9.15). Kept small on purpose.
+ * name holds, any case (v3 spec, section 9.15), each as ODBC_WHERE_CONNECTOR_EXISTS's message
+ * selects it, which holds the connector's name and its article. Kept small on purpose.
  */
-const NATIVE_CONNECTORS: readonly { pattern: RegExp; name: string; article: "a" | "an" }[] = [
-  { pattern: /amazon redshift/i, name: "Amazon Redshift", article: "an" },
-  { pattern: /postgresql/i, name: "PostgreSQL", article: "a" },
-  { pattern: /sql server|sqlncli|sqloledb|msoledbsql/i, name: "SQL Server", article: "a" },
-  { pattern: /mysql/i, name: "MySQL", article: "a" },
-  { pattern: /oracle/i, name: "Oracle", article: "an" },
-  { pattern: /snowflake/i, name: "Snowflake", article: "a" },
+const NATIVE_CONNECTORS: readonly {
+  pattern: RegExp;
+  connector: "amazonRedshift" | "postgreSql" | "sqlServer" | "mySql" | "oracle" | "snowflake";
+}[] = [
+  { pattern: /amazon redshift/i, connector: "amazonRedshift" },
+  { pattern: /postgresql/i, connector: "postgreSql" },
+  { pattern: /sql server|sqlncli|sqloledb|msoledbsql/i, connector: "sqlServer" },
+  { pattern: /mysql/i, connector: "mySql" },
+  { pattern: /oracle/i, connector: "oracle" },
+  { pattern: /snowflake/i, connector: "snowflake" },
 ];
 
-/** The generic sources: what each calls its connection, and the part of it that names the driver. */
-const GENERIC_SOURCES: ReadonlyMap<string, { kind: string; part: string }> = new Map([
-  ["Odbc.DataSource", { kind: "ODBC", part: "driver" }],
-  ["OleDb.DataSource", { kind: "OLE DB", part: "provider" }],
+/**
+ * The generic sources, as the message selects each: ODBC, whose connection names a driver, and
+ * OLE DB, whose connection names a provider.
+ */
+const GENERIC_SOURCES: ReadonlyMap<string, "odbc" | "oleDb"> = new Map([
+  ["Odbc.DataSource", "odbc"],
+  ["OleDb.DataSource", "oleDb"],
 ]);
 
 /** The value of a connection string's `Driver=` or `Provider=` part, its key in any case, braces taken off. */
@@ -188,8 +181,8 @@ export const ODBC_WHERE_CONNECTOR_EXISTS = pbiplintRule({
   check: (_project, { indexes: { m }, ...ctx }) =>
     eachQuery(ctx, m.queries, (q) =>
       calls(q).flatMap((c) => {
-        const source = GENERIC_SOURCES.get(c.name);
-        if (!source) return [];
+        const kind = GENERIC_SOURCES.get(c.name);
+        if (!kind) return [];
         const driver = driverOf(connectionText(m, q, c.args[0]) ?? "");
         const native =
           driver === undefined ? undefined : NATIVE_CONNECTORS.find((n) => n.pattern.test(driver));
@@ -199,7 +192,7 @@ export const ODBC_WHERE_CONNECTOR_EXISTS = pbiplintRule({
                 m,
                 q,
                 c.node,
-                `the ${source.kind} connection names the ${native.name} ${source.part}; Power BI has ${native.article} ${native.name} connector`,
+                msg("ODBC_WHERE_CONNECTOR_EXISTS", { kind, connector: native.connector }),
               ),
             ]
           : [];
@@ -224,7 +217,7 @@ export const PRIVACY_LEVELS_IGNORED = pbiplintRule({
           {
             ...finding.model(model),
             location: fastCombine.location,
-            detail: "Ignore the Privacy Levels is on for this file; the service does not honor it",
+            message: msg("PRIVACY_LEVELS_IGNORED"),
           },
         ]
       : [];
@@ -312,15 +305,12 @@ export const SORT_NOT_HELD_FOR_REMOVE_DUPLICATES = pbiplintRule({
         const sortCall = callOf(sorted.node);
         if (sortCall?.name !== "Table.Sort" || sortWithinKeys(sortCall.args[1], columns)) return [];
         const sort =
-          sorted.step === undefined ? "the Table.Sort inside it" : `step ${tableRef(sorted.step)}`;
-        return [
-          mFinding(
-            m,
-            q,
-            c.node,
-            `nothing holds the order of ${sort}, so the sort may not decide which duplicate is kept`,
-          ),
-        ];
+          sorted.step === undefined
+            ? msg("SORT_NOT_HELD_FOR_REMOVE_DUPLICATES.sortInside")
+            : msg("SORT_NOT_HELD_FOR_REMOVE_DUPLICATES.sortStep", {
+                step: tableRef(sorted.step),
+              });
+        return [mFinding(m, q, c.node, msg("SORT_NOT_HELD_FOR_REMOVE_DUPLICATES", { sort }))];
       }),
     ),
 });
@@ -368,7 +358,7 @@ export const KEEP_FIRST_ROWS_LEFT_IN = pbiplintRule({
           const n = numberLiteral(count);
           if (n === undefined || n <= 1 || isSorted(m, q, table) || inFunction(q, c.node))
             return [];
-          return [mFinding(m, q, c.node, `only the first ${n} rows load`)];
+          return [mFinding(m, q, c.node, msg("KEEP_FIRST_ROWS_LEFT_IN", { count: n }))];
         }),
     ),
 });
@@ -432,12 +422,7 @@ export const INCREMENTAL_REFRESH_RANGE_BOUNDS = pbiplintRule({
       if (!one(start) || !one(end)) return [];
       if (start.inclusive.length > 0 && end.inclusive.length > 0)
         return [
-          mFinding(
-            m,
-            q,
-            end.inclusive[0]!,
-            "both RangeStart and RangeEnd include the boundary, so a row on it lands in two partitions",
-          ),
+          mFinding(m, q, end.inclusive[0]!, msg("INCREMENTAL_REFRESH_RANGE_BOUNDS.bothInclude")),
         ];
       if (start.exclusive.length > 0 && end.exclusive.length > 0)
         return [
@@ -445,7 +430,7 @@ export const INCREMENTAL_REFRESH_RANGE_BOUNDS = pbiplintRule({
             m,
             q,
             start.exclusive[0]!,
-            "neither RangeStart nor RangeEnd includes the boundary, so a row on it lands in none",
+            msg("INCREMENTAL_REFRESH_RANGE_BOUNDS.neitherIncludes"),
           ),
         ];
       return [];
@@ -468,26 +453,41 @@ function wholeNumber(n: Node): number | undefined {
   return value !== undefined && Number.isInteger(value) ? value : undefined;
 }
 
-/** A `#date`, `#datetime`, or `#datetimezone` of numbers written in place, as the day it names. */
-function fixedDate(n: Node): string | undefined {
+/**
+ * A `#date`, `#datetime`, or `#datetimezone` of whole numbers written in place, as its year, month,
+ * and day, whether or not M accepts the day.
+ */
+function writtenDate(n: Node): [number, number, number] | undefined {
   const c = callOf(unwrap(n));
   if (!c || !DATE_CONSTRUCTORS.has(c.name) || c.args.length < 3) return undefined;
   const parts = c.args.map(wholeNumber);
   if (parts.some((p) => p === undefined)) return undefined;
-  const [year, month, day] = parts as number[];
-  return month! >= 1 && month! <= 12 && day! >= 1 && day! <= 31
-    ? longDate(year!, month!, day!)
+  return parts.slice(0, 3) as [number, number, number];
+}
+
+/**
+ * A written date (`writtenDate`) as the ISO day it names (`2025-12-31`). A day M refuses, past its
+ * month's end or in a year outside 1 to 9999, names none: such a query fails to refresh rather than
+ * going stale.
+ */
+function fixedDate(n: Node): string | undefined {
+  const parts = writtenDate(n);
+  if (!parts) return undefined;
+  const [year, month, day] = parts;
+  return year >= 1 && year <= 9999 && isRealDay(year, month, day)
+    ? isoDay({ year, month, day })
     : undefined;
 }
 
 /**
- * What a filter does with a fixed date, by the operator read as "column, operator, date". A date
- * left out with `<>`, such as a placeholder or a holiday, does not go stale and is not read.
+ * What a filter does with a fixed date, by the operator read as "column, operator, date", as
+ * FIXED_DATE_IN_ROW_FILTER's message selects it. A date left out with `<>`, such as a placeholder
+ * or a holiday, does not go stale and is not read.
  */
-const FIXED_DATE_USE: Readonly<Record<string, string>> = {
-  "<": "rows end at a fixed date",
-  "<=": "rows end at a fixed date",
-  "=": "rows match a fixed date",
+const FIXED_DATE_USE: Readonly<Record<string, "endsAt" | "matches">> = {
+  "<": "endsAt",
+  "<=": "endsAt",
+  "=": "matches",
 };
 
 /** Whether a filter's condition reads the model's RangeStart or RangeEnd anywhere. */
@@ -534,15 +534,17 @@ export const FIXED_DATE_IN_ROW_FILTER = pbiplintRule({
           ).flatMap((node) => {
             if (node.kind !== Kind.RelationalExpression && node.kind !== Kind.EqualityExpression)
               return [];
-            const onLeft = fixedDate(node.left);
-            const onRight = fixedDate(node.right);
-            if ((onLeft === undefined) === (onRight === undefined)) return [];
+            // A day M refuses still counts as a date here, so a comparison of two dates is left
+            // alone, and a refused day is never itself reported.
+            const onRight = writtenDate(node.right) !== undefined;
+            if ((writtenDate(node.left) !== undefined) === onRight) return [];
+            const date = unwrap(onRight ? node.right : node.left);
+            const day = fixedDate(date);
             const op = node.operatorConstant.constantKind as string;
             const use = FIXED_DATE_USE[onRight ? op : (FLIPPED[op] ?? op)];
-            const date = unwrap(onRight ? node.right : node.left);
-            if (!use || reported.has(date.id)) return [];
+            if (day === undefined || !use || reported.has(date.id)) return [];
             reported.add(date.id);
-            return [mFinding(m, q, date, `${use}, ${onRight ?? onLeft}`)];
+            return [mFinding(m, q, date, msg("FIXED_DATE_IN_ROW_FILTER", { use, date: day }))];
           });
         });
       },
@@ -617,10 +619,15 @@ export const DEFAULT_STEP_NAMES = pbiplintRule({
       const [a, b] = steps.map((pair) => tableRef(identifierName(pair.key.literal)));
       const what =
         steps.length === 1
-          ? `1 step keeps its default name, ${a}`
-          : `${steps.length} steps keep default names, ${steps.length > 2 ? "such as " : ""}${a} and ${b}`;
-      // The detail names the query only: the steps it lists say where.
-      return [{ ...mFinding(m, q, steps[0]!, what), detail: `${queryLabel(q)}: ${what}` }];
+          ? msg("DEFAULT_STEP_NAMES.one", { step: a! })
+          : msg("DEFAULT_STEP_NAMES.several", { count: steps.length, steps: [a!, b!] });
+      // The message names the query only: the steps it lists say where.
+      return [
+        {
+          ...mFinding(m, q, steps[0]!, what),
+          message: msg("query.finding", { query: queryLabel(q), finding: what }),
+        },
+      ];
     }),
 });
 
@@ -649,20 +656,22 @@ export const DYNAMIC_DATA_SOURCE = pbiplintRule({
         const source = DATA_SOURCE.exec(c.name);
         const o = source && c.args[0] ? origin(m, q, c.args[0]) : "static";
         if (o === "static" || o === "unknown") return [];
-        const noun = source![1]
+        // What the function calls its source, and how it is made, as the message selects each.
+        const sourceKind = source![1]
           ? "path"
           : source![2]
             ? "address"
             : source![3]
-              ? "connection string"
+              ? "connectionString"
               : "server";
-        const how = {
-          row: "is read from the rows",
-          computed: "is built by a function call",
-          parameter: "is a custom function's parameter",
-          chosen: "is chosen with if ... then ... else",
-        }[o];
-        return [mFinding(m, q, c.node, `${c.name}'s ${noun} ${how}`)];
+        return [
+          mFinding(
+            m,
+            q,
+            c.node,
+            msg("DYNAMIC_DATA_SOURCE", { function: c.name, source: sourceKind, how: o }),
+          ),
+        ];
       }),
     ),
 });
@@ -766,10 +775,13 @@ function recordFields(
     : [];
 }
 
-/** A credential and where a finding says it is. The words never hold any part of the value. */
+/**
+ * A credential and where a finding says it is, as a message whose parameters are M's own names
+ * and the query's names for headers, fields, and parameters, never any part of the value.
+ */
 interface Credential {
   held: HeldText;
-  where: string;
+  where: Message;
 }
 
 /**
@@ -779,7 +791,7 @@ interface Credential {
  */
 function credentialsIn(m: MIndex, q: MQuery): Credential[] {
   const out: Credential[] = [];
-  const add = (value: Node, where: string): void => {
+  const add = (value: Node, where: Message): void => {
     for (const held of heldTexts(m, q, value))
       if (isCredential(held.value)) out.push({ held, where });
   };
@@ -792,10 +804,17 @@ function credentialsIn(m: MIndex, q: MQuery): Credential[] {
         ...(c.name === "OData.Feed" ? recordFields(m, q, c.args[1]) : []),
         ...recordFields(m, q, field("Headers")),
       ])
-        if (SECRET_HEADER.test(h.name)) add(h.value, `the ${h.name} header in ${c.name}`);
+        if (SECRET_HEADER.test(h.name))
+          add(
+            h.value,
+            msg("HARDCODED_SECRET_IN_QUERY.header", { header: h.name, function: c.name }),
+          );
       for (const f of recordFields(m, q, field("Query")))
         if (SECRET_FIELD.test(f.name))
-          add(f.value, `the ${f.name} field of the Query record in ${c.name}`);
+          add(
+            f.value,
+            msg("HARDCODED_SECRET_IN_QUERY.queryField", { field: f.name, function: c.name }),
+          );
     }
     const held =
       CONNECTION_STRING.test(c.name) && c.args[0] ? heldText(m, q, c.args[0]) : undefined;
@@ -803,7 +822,10 @@ function credentialsIn(m: MIndex, q: MQuery): Credential[] {
       const [key = "", ...rest] = part.split("=");
       const k = key.trim().toLowerCase();
       if ((k === "password" || k === "pwd") && isCredential(rest.join("=").replace(/[{}]/g, "")))
-        out.push({ held: held!, where: `the password in ${c.name}'s connection string` });
+        out.push({
+          held: held!,
+          where: msg("HARDCODED_SECRET_IN_QUERY.connectionString", { function: c.name }),
+        });
     }
   }
   for (const { node, value } of textLiterals(q)) {
@@ -811,9 +833,14 @@ function credentialsIn(m: MIndex, q: MQuery): Credential[] {
     if (/^https?:\/\//i.test(value))
       for (const [, name = "", v = ""] of value.matchAll(SECRET_PARAMETER))
         if (isCredential(v))
-          out.push({ held, where: `the ${name.toLowerCase()} parameter of the web address` });
+          out.push({
+            held,
+            where: msg("HARDCODED_SECRET_IN_QUERY.addressParameter", {
+              parameter: name.toLowerCase(),
+            }),
+          });
     if (/^bearer [\w.~+/-]{16}/i.test(value) && isCredential(value))
-      out.push({ held, where: "the Bearer token" });
+      out.push({ held, where: msg("HARDCODED_SECRET_IN_QUERY.bearerToken") });
   }
   return out;
 }
@@ -838,9 +865,10 @@ export const HARDCODED_SECRET_IN_QUERY = pbiplintRule({
         const key = `${held.query.kind}:${held.query.name}:${held.node.id}`;
         if (reported.has(key) || added.has(key)) return [];
         added.add(key);
-        const what = held.named
-          ? `${where} reads a credential written here (value not shown)`
-          : `${where} holds a credential written into the query (value not shown)`;
+        const what = msg(
+          held.named ? "HARDCODED_SECRET_IN_QUERY.reads" : "HARDCODED_SECRET_IN_QUERY.holds",
+          { where },
+        );
         return [mFinding(m, held.query, held.node, what)];
       });
       for (const key of added) reported.add(key);
@@ -873,13 +901,12 @@ export const HARDCODED_SERVER_NAME = pbiplintRule({
       );
       const [first] = named;
       if (!first) return [];
-      const count = named.length > 1 ? ` (${named.length} calls in this query)` : "";
       return [
         mFinding(
           m,
           q,
           first.node,
-          `${first.name} names its server as text${count}; a parameter would hold it`,
+          msg("HARDCODED_SERVER_NAME", { function: first.name, count: named.length }),
         ),
       ];
     }),
@@ -904,7 +931,7 @@ export const LEGACY_EXCEL_FILE = pbiplintRule({
           c.name === "Excel.Workbook" && c.args[0] && callOf(boundValue(m, q, c.args[0]).node);
         const path =
           file && file.name === "File.Contents" && file.args[0] && heldText(m, q, file.args[0]);
-        const ext = path && /\.(xlsb?)$/i.exec(path.value.trim());
+        const ext = path && /\.xls(b?)$/i.exec(path.value.trim());
         if (!path || !ext) return [];
         const key = `${path.query.kind}:${path.query.name}:${path.node.id}`;
         if (reported.has(key) || added.has(key)) return [];
@@ -914,7 +941,7 @@ export const LEGACY_EXCEL_FILE = pbiplintRule({
             m,
             path.query,
             path.node,
-            `the workbook is a legacy .${ext[1]!.toLowerCase()} file, read through the Access Database Engine`,
+            msg("LEGACY_EXCEL_FILE", { kind: ext[1] ? "xlsb" : "xls" }),
           ),
         ];
       });
@@ -983,7 +1010,14 @@ export const EXTENSION_FILTER_CASE = pbiplintRule({
           if (text === undefined || !/[a-z]/i.test(text) || ONE_CASE_EXTENSION.test(text))
             return [];
           const other = text === text.toLowerCase() ? text.toUpperCase() : text.toLowerCase();
-          return [mFinding(m, q, node, `the extension test matches "${text}" but not "${other}"`)];
+          return [
+            mFinding(
+              m,
+              q,
+              node,
+              msg("EXTENSION_FILTER_CASE", { extension: text, otherCase: other }),
+            ),
+          ];
         });
       }),
     ),

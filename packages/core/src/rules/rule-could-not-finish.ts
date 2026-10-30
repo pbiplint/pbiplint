@@ -1,3 +1,4 @@
+import { formatMessage, msg, type Message } from "../messages/format.js";
 import { RULE_SUMMARIES } from "./rule-summaries.data.js";
 import type { Finding, Rule } from "./types.js";
 
@@ -23,15 +24,19 @@ export const RULE_COULD_NOT_FINISH: Rule = {
   check: () => [],
 };
 
-/** How every finding's detail begins: the failed rule's id, then where it could not finish. */
-const failurePrefix = (ruleId: string): string => `${ruleId} could not finish on `;
-
 /**
- * A finding's detail: the rule `ruleId` could not finish on `label` (`query 'Sales'`, `the model`)
+ * A finding's message: the rule `ruleId` could not finish on `where` (`query 'Sales'`, `the model`)
  * with an error of class `kind`. Written only here, so `isFailureOf` reads what `runRules` writes.
  */
-export const failureDetail = (ruleId: string, label: string, kind: string): string =>
-  `${failurePrefix(ruleId)}${label}: ${kind}`;
+export const failureMessage = (ruleId: string, where: Message, kind: Message): Message =>
+  msg("RULE_COULD_NOT_FINISH", { rule: ruleId, where, kind });
+
+/** A finding's detail in English, as `runRules` renders `failureMessage`, its kind as text. */
+const failureDetail = (ruleId: string, where: Message, kind: string): string =>
+  formatMessage(msg("RULE_COULD_NOT_FINISH", { rule: ruleId, where, kind }));
+
+/** How every finding's detail begins in English: the failed rule's id, then where it could not finish. */
+const failurePrefix = (ruleId: string): string => `${ruleId} could not finish on `;
 
 /** True when `f` is a RULE_COULD_NOT_FINISH finding about the rule `ruleId`, which failed. */
 export const isFailureOf = (f: Finding, ruleId: string): boolean =>
@@ -45,5 +50,5 @@ export const isFailureOf = (f: Finding, ruleId: string): boolean =>
 export const isFindingFor = (f: Finding, e: { id: string; message: string }): boolean =>
   f.ruleId === RULE_COULD_NOT_FINISH.id &&
   (f.detail === `${failurePrefix(e.id)}${e.message}` ||
-    f.detail === failureDetail(e.id, "the model", e.message) ||
-    f.detail === failureDetail(e.id, "the report", e.message));
+    f.detail === failureDetail(e.id, msg("ruleError.theModel"), e.message) ||
+    f.detail === failureDetail(e.id, msg("ruleError.theReport"), e.message));

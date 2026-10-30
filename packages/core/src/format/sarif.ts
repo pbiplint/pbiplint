@@ -85,6 +85,11 @@ export function formatSarif(result: LintResult, options: FormatOptions = {}): st
             ],
           }
         : {}),
+      // The detail's message, for a consumer that writes it in another language. A result with no
+      // message gets no properties, so it reads as it did before messages.
+      ...(f.messageId !== undefined
+        ? { properties: { messageId: f.messageId, params: f.params } }
+        : {}),
     })),
   );
   // A run that could not read everything says so where a SARIF consumer looks for it, so nothing

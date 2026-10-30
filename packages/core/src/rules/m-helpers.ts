@@ -1,6 +1,7 @@
 import type { Language } from "@microsoft/powerquery-parser";
 import { stepOf } from "../m/ast.js";
 import type { MIndex, MQuery } from "../m/types.js";
+import { msg, type Message } from "../messages/format.js";
 import { tableRef } from "../model/names.js";
 import type { NamedExpression, Partition, Table } from "../model/types.js";
 import { finding } from "./helpers.js";
@@ -11,12 +12,14 @@ import type { RuleContext, RuleFinding } from "./types.js";
  * the partition's name after it when its table has more than one M partition, which Desktop does
  * not write but a hand-edited model can hold.
  */
-export function queryLabel(q: MQuery): string {
-  const query = `query ${tableRef(q.name)}`;
-  if (q.kind !== "partition") return query;
+export function queryLabel(q: MQuery): Message {
+  const query = tableRef(q.name);
+  if (q.kind !== "partition") return msg("query.name", { query });
   const p = q.owner as Partition;
   const mPartitions = p.table.partitions.filter((x) => x.sourceType === "m");
-  return mPartitions.length > 1 ? `${query}, partition ${tableRef(p.name)}` : query;
+  return mPartitions.length > 1
+    ? msg("query.partition", { query, partition: tableRef(p.name) })
+    : msg("query.name", { query });
 }
 
 /** The object a query's finding names: its partition, its shared expression, or the table whose refresh policy holds it. */
@@ -29,20 +32,23 @@ export function ownerFinding(q: MQuery): RuleFinding {
 /**
  * A finding on one node of a query (v3 spec, sections 6 and 9.1): on the query's owner, at the
  * TMDL line and column of the node's first token, with a detail that names the query, the step
- * that holds the node when there is one, and then `what`.
+ * that holds the node when there is one, and then `what`, which nests in the frame's message,
+ * `query.stepFinding` or `query.finding`.
  */
 export function mFinding(
   m: MIndex,
   q: MQuery,
   node: Language.Ast.TNode,
-  what: string,
+  what: Message,
 ): RuleFinding {
   const step = stepOf(q, node);
-  return {
-    ...ownerFinding(q),
-    location: m.locate(q, node.tokenRange.positionStart),
-    detail: `${queryLabel(q)}${step === undefined ? "" : `, step ${tableRef(step)}`}: ${what}`,
-  };
+  const location = m.locate(q, node.tokenRange.positionStart);
+  const { message: _context, ...owner } = ownerFinding(q);
+  const message =
+    step === undefined
+      ? msg("query.finding", { query: queryLabel(q), finding: what })
+      : msg("query.stepFinding", { query: queryLabel(q), step: tableRef(step), finding: what });
+  return { ...owner, message, location };
 }
 
 /**

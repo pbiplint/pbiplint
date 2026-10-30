@@ -1,4 +1,5 @@
 import type { ReferenceIndex } from "../../index/references.js";
+import { msg } from "../../messages/format.js";
 import type { DaxFunction, Model } from "../../model/types.js";
 import { finding, isBlank, modelPartlyRead } from "../helpers.js";
 import type { RuleFinding } from "../types.js";
@@ -34,11 +35,10 @@ function notCalled(model: Model, references: ReferenceIndex): RuleFinding[] {
       calledBy(g).some((o) => !(o.kind === "function" && members.includes(o.object))),
     );
     if (fromOutside) continue;
-    const detail =
-      members.length === 1
-        ? `package ${pkg}: its one function is not called`
-        : `package ${pkg}: none of its ${members.length} functions is called`;
-    out.push({ ...finding.function(f), detail });
+    out.push({
+      ...finding.function(f),
+      message: msg("UDF_NOT_CALLED.package", { package: pkg, count: members.length }),
+    });
   }
   return out;
 }

@@ -5,19 +5,21 @@ import { lint } from "../src/engine/lint.js";
 import { buildIndexes } from "../src/index/build.js";
 import { buildModel } from "../src/model/build.js";
 import type { Model } from "../src/model/types.js";
-import { englishList, HARDCODED_PERIOD_IN_DAX, namesYear } from "../src/rules/pbiplint/periods.js";
+import { HARDCODED_PERIOD_IN_DAX, namesYear } from "../src/rules/pbiplint/periods.js";
 import { parseTmdl } from "../src/tmdl/parse.js";
-import { examplesDir, fixturesDir, modelFrom, parseModelDir } from "./helpers.js";
+import { examplesDir, fixturesDir, modelFrom, parseModelDir, rendered } from "./helpers.js";
 
 const check = (model: Model) =>
   HARDCODED_PERIOD_IN_DAX.check({ model }, { indexes: buildIndexes({ model }), options: {} });
 const run = (tmdl: string) =>
-  check(modelFrom(tmdl)).map((f) => ({
-    type: f.objectType,
-    name: f.objectName,
-    line: f.location?.line,
-    detail: f.detail,
-  }));
+  check(modelFrom(tmdl))
+    .map(rendered)
+    .map((f) => ({
+      type: f.objectType,
+      name: f.objectName,
+      line: f.location?.line,
+      detail: f.detail,
+    }));
 /** A Sales table, four lines long, before the lines given. */
 const sales = (lines: string) =>
   `table Sales\n\tcolumn 'Order Date'\n\t\tdataType: dateTime\n\t\tsourceColumn: Order Date\n${lines}`;
@@ -224,19 +226,5 @@ describe("namesYear", () => {
     expect(namesYear("Top 125 Sales", 2025)).toBe(false);
     expect(namesYear("Sales 2024", 2025)).toBe(false);
     expect(namesYear("Anything", 50)).toBe(false);
-  });
-});
-
-describe("englishList", () => {
-  it("lists as English does, with semicolons between items that hold commas, and names three at most", () => {
-    expect(englishList(["2025"])).toBe("2025");
-    expect(englishList(["2024", "2025"])).toBe("2024 and 2025");
-    expect(englishList(["2024", "2025", "2026"])).toBe("2024, 2025, and 2026");
-    expect(englishList(["January 1, 2024", "June 30, 2024", "December 31, 2024"])).toBe(
-      "January 1, 2024; June 30, 2024; and December 31, 2024",
-    );
-    expect(englishList(["2020", "2021", "2022", "2023", "2024", "2025"])).toBe(
-      "2020, 2021, 2022, and 3 more",
-    );
   });
 });

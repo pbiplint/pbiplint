@@ -1,3 +1,5 @@
+import type { Message } from "../messages/format.js";
+
 export type TmdlNodeKind = "object" | "prop" | "flag" | "ref" | "expr";
 
 /** One line of TMDL and everything indented beneath it. `type` and `props` keys are lowercased. */
@@ -36,7 +38,10 @@ export interface ParseIssue {
    * JSON issue at most 120 characters of it, since a minified document is one line (readJson).
    */
   text: string;
+  /** Why the line could not be used, in English: `message` rendered (`parseIssue`). */
   reason: string;
+  /** Why the line could not be used, as a message, which PARSE_ISSUE's finding nests. */
+  message: Message;
 }
 
 /** A line of a TMDL file the parser could not use. */

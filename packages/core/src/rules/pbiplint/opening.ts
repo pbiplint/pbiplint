@@ -1,3 +1,4 @@
+import { msg } from "../../messages/format.js";
 import {
   filtersPaneState,
   landingPageNotSet,
@@ -24,15 +25,20 @@ export const LANDING_PAGE_NOT_SET = pbiplintRule({
         reportFinding.pagesHeader(
           report,
           pointer,
-          `no landing page set; the active page "${opens.name}" does not exist`,
+          msg("LANDING_PAGE_NOT_SET.activeMissing", { page: opens.name }),
         ),
       ];
     // A page whose page.json could not be read goes by the name pages.json gives it, the same
     // name a stub page (one whose page.json was not read but a visual of which was) takes from
     // its folder.
-    const name = opens.page?.displayName ?? opens.name;
-    const which = opens.by === "first" ? "the first page" : "the page open when it was saved";
-    return [reportFinding.pagesHeader(report, pointer, `opens on "${name}", ${which}`)];
+    const page = opens.page?.displayName ?? opens.name;
+    return [
+      reportFinding.pagesHeader(
+        report,
+        pointer,
+        msg("LANDING_PAGE_NOT_SET.opensOn", { page, by: opens.by }),
+      ),
+    ];
   },
 });
 
@@ -48,11 +54,11 @@ export const OPENING_PAGE_INVALID = pbiplintRule({
     if (!report || !opens || !openingPageInvalid(opens)) return [];
     const pointer = opens.by === "landing" ? "/landingPageName" : "/activePageName";
     // A page that exists and is still invalid is a hidden active page.
-    const detail =
+    const message =
       opens.page === undefined
-        ? `${opens.by} page "${opens.name}" does not exist`
-        : `active page "${opens.page.displayName}" is hidden from readers`;
-    return [reportFinding.pagesHeader(report, pointer, detail)];
+        ? msg("OPENING_PAGE_INVALID.missing", { by: opens.by, page: opens.name })
+        : msg("OPENING_PAGE_INVALID.hidden", { page: opens.page.displayName });
+    return [reportFinding.pagesHeader(report, pointer, message)];
   },
 });
 
@@ -73,10 +79,12 @@ export const FILTERS_PANE_STATE = pbiplintRule({
     const { state, recordedAt } = pane;
     // Without the property pbiplint reads the pane as open, and says that is its reading of a
     // state the file does not record, not a saved state.
-    const saved = recordedAt === undefined ? `not recorded, read as ${state}` : `saved ${state}`;
-    return [
-      reportFinding.report(report, `${saved}; the policy expects ${expect}`, "report", recordedAt),
-    ];
+    const message = msg("FILTERS_PANE_STATE", {
+      basis: recordedAt === undefined ? "assumed" : "saved",
+      state: state === "hidden from readers" ? "hidden" : state,
+      expect,
+    });
+    return [reportFinding.report(report, message, "report", recordedAt)];
   },
 });
 

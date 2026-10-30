@@ -27,6 +27,7 @@ export function formatJson(result: LintResult, options: FormatOptions = {}): str
             }
           : {}),
         ...(f.detail !== undefined ? { detail: f.detail } : {}),
+        ...(f.messageId !== undefined ? { messageId: f.messageId, params: f.params } : {}),
       })),
     })),
   };

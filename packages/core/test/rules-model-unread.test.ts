@@ -3,6 +3,7 @@ import { lint } from "../src/engine/lint.js";
 import { buildIndexes } from "../src/index/build.js";
 import { modelPartlyRead, tablesPartlyRead } from "../src/rules/helpers.js";
 import { defaultRules } from "../src/rules/index.js";
+import { rendered } from "./helpers.js";
 
 type File = { path: string; text: string };
 
@@ -267,6 +268,7 @@ function itSkipsWhilePartlyRead({ rule, whole, partly, wouldReport }: Case): voi
     expect(
       ruleNamed(rule)
         .check({ model }, { indexes: buildIndexes({ model }), options: {} })
+        .map(rendered)
         .map((f) => f.objectName),
     ).toEqual(wouldReport);
     expect(reported(r, rule)).toEqual([]);

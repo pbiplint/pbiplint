@@ -135,6 +135,10 @@ describe("readM", () => {
         reason: expect.stringMatching(
           /^M could not be parsed: Expected to find one of the following/,
         ),
+        message: {
+          id: "parse.m.notParsed",
+          params: { message: expect.stringMatching(/^Expected to find one of the following/) },
+        },
       },
       {
         file: "definition/tables/Sales.tmdl",
@@ -142,6 +146,10 @@ describe("readM", () => {
         column: 215,
         text: `source = ${long}`.slice(0, 120),
         reason: "M could not be parsed: Finished parsing but more tokens remain",
+        message: {
+          id: "parse.m.notParsed",
+          params: { message: "Finished parsing but more tokens remain" },
+        },
       },
     ]);
     expect(m.queries.find((q) => q.name === "Sales")!.ast).toBeUndefined();

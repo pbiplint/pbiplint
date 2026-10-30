@@ -200,3 +200,16 @@ describe("REDUCE_PAGES", () => {
     ]);
   });
 });
+
+describe("REDUCE_VISUALS_ON_PAGE and REDUCE_PAGES", () => {
+  it("a count of one reads as one (#98)", () => {
+    expect(
+      reportFindings(rules.REDUCE_VISUALS_ON_PAGE, [page("p"), ...many("p", 1)], undefined, {
+        max: 0,
+      }).map((f) => f.detail),
+    ).toEqual(["1 visual, more than 0"]);
+    expect(
+      reportFindings(rules.REDUCE_PAGES, pages(1), undefined, { max: 0 }).map((f) => f.detail),
+    ).toEqual(["1 page, more than 0"]);
+  });
+});

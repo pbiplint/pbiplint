@@ -366,7 +366,7 @@ describe("FILTERS_PANE_STATE", () => {
         line,
         "saved open; the policy expects closed",
         "FILTERS_PANE_STATE",
-        { source: "saved", state: "open", expect: "closed" },
+        { basis: "saved", state: "open", expect: "closed" },
       ),
     ]);
     // `visible: false` hides the pane whatever `expanded` says, so it is the line that decides.

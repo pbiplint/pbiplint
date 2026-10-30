@@ -756,6 +756,14 @@ describe("FIXED_DATE_IN_ROW_FILTER (v3 spec, section 9.16)", () => {
       ),
     ).toEqual([]);
   });
+  it("leaves alone a comparison of two dates, one of them a day M refuses", async () => {
+    // A refused day still counts as a date here, so neither side is read as a column.
+    expect(await mFindings(rule, filtered("#date(2025, 2, 30) < #date(2025, 12, 31)"))).toEqual([]);
+    expect(await mFindings(rule, filtered("#date(2025, 12, 31) >= #date(2025, 2, 30)"))).toEqual(
+      [],
+    );
+    expect(await mFindings(rule, filtered("[Order Date] <= #date(2025, 2, 30)"))).toEqual([]);
+  });
   it("leaves alone a fixed date outside a row filter, and a table partitioned by hand", async () => {
     const column = table(
       "Sales",

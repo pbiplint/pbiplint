@@ -338,6 +338,26 @@ describe("runRules", () => {
     expect(r.findings[0]).not.toHaveProperty("messageId");
     expect(r.findings[0]).not.toHaveProperty("params");
   });
+  it("keeps a JavaScript rule's plain detail over the message its helper sets (#98)", () => {
+    // finding.partition sets a message naming the table; a rule written without types that spreads
+    // it and adds its own detail means that detail, so the message is dropped.
+    const sales = modelFrom(
+      "table Sales\n\tpartition Sales = m\n\t\tmode: import\n\t\tsource = 1\n",
+    );
+    const plain = {
+      ...base,
+      id: "PLAIN",
+      name: "Plain",
+      category: "Maintenance",
+      severity: 1,
+      check: () => [{ ...finding.partition(sales.tables[0]!.partitions[0]!), detail: "x" }],
+    } as unknown as Rule;
+    const r = runRules({ model: sales }, buildIndexes({ model: sales }), [plain], resolveConfig());
+    expect(r.findings).toHaveLength(1);
+    expect(r.findings[0]).toMatchObject({ ruleId: "PLAIN", objectType: "Partition", detail: "x" });
+    expect(r.findings[0]).not.toHaveProperty("messageId");
+    expect(r.findings[0]).not.toHaveProperty("params");
+  });
   it("takes no ignore from a root annotation with lines under it, which lost its tabs", () => {
     const lost = modelFrom(
       "table A\n\tcolumn X\nannotation pbiplint.ignore = MODEL_RULE\n\tcolumn Y\n\t\tdataType: string\n",

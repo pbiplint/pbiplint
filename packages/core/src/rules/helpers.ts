@@ -123,7 +123,7 @@ export const finding = {
     objectType: "Partition",
     objectName: p.name,
     location: p.location,
-    message: msg("context.table", { table: tableRef(p.table.name) }),
+    message: msg("context.table", { tableRef: tableRef(p.table.name) }),
     object: p,
   }),
   relationship: (r: Relationship): RuleFinding => ({
@@ -155,7 +155,7 @@ export const finding = {
     objectType: "Hierarchy",
     objectName: h.name,
     location: h.location,
-    message: msg("context.table", { table: tableRef(h.table.name) }),
+    message: msg("context.table", { tableRef: tableRef(h.table.name) }),
     object: h,
   }),
   level: (l: Level): RuleFinding => ({
@@ -164,7 +164,7 @@ export const finding = {
     location: l.location,
     message: msg("context.level", {
       hierarchy: l.hierarchy.name,
-      table: tableRef(l.hierarchy.table.name),
+      tableRef: tableRef(l.hierarchy.table.name),
     }),
     object: l,
   }),
@@ -172,7 +172,7 @@ export const finding = {
     objectType: "CalculationItem",
     objectName: i.name,
     location: i.location,
-    message: msg("context.calculationGroup", { table: tableRef(i.table.name) }),
+    message: msg("context.calculationGroup", { tableRef: tableRef(i.table.name) }),
     object: i,
   }),
   expression: (e: NamedExpression): RuleFinding => ({

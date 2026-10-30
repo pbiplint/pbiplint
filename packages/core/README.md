@@ -78,8 +78,11 @@ language: `findingDetail(finding, catalog?, locale?)` renders it from a catalog 
 one, by default) and takes `detail` for a finding without one, and `formatMessage(message, catalog?,
 locale?)` renders any message. A message ID is the rule's ID, or the rule's ID and a variant, such
 as `BROKEN_BOOKMARK_REFERENCE.activePage`, and the IDs and their params are stable, so a catalog
-written for one release keeps working. A Power Query finding's `messageId` is the frame that names
-the query, `query.finding` or `query.stepFinding`, with the rule's own message in `params.finding`.
+written for one release keeps working. A finding's `messageId` can also be a message shared across
+rules: `context.table`, `context.role`, `context.level`, or `context.calculationGroup`, the object's
+context on some Microsoft BPA findings; `query.finding` or `query.stepFinding`, the frame that names
+the query on a Power Query finding, with the rule's own message in `params.finding`; or
+`PARSE_ISSUE`, with the reason nested in `params.reason`.
 
 For the command line, install [`pbiplint`](https://www.npmjs.com/package/pbiplint). Source, issues,
 and contributing: https://github.com/pbiplint/pbiplint.

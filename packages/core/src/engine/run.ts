@@ -56,13 +56,15 @@ export interface RunResult {
 /**
  * A finding's detail as `runRules` writes it: the rule's message rendered into `detail` and kept as
  * `messageId` and `params`. A rule written in JavaScript, which no type stops, may still return its
- * detail as text; that is passed through as written, with no message ID or params.
+ * detail as text; that is passed through as written, with no message ID or params, and wins over a
+ * message the finding also carries, such as the one `finding.partition` sets.
  */
 export function renderFinding(f: RuleFinding): Pick<Finding, "detail" | "messageId" | "params"> {
+  const detail: unknown = (f as { detail?: unknown }).detail;
+  if (typeof detail === "string") return { detail };
   if (f.message !== undefined)
     return { detail: formatMessage(f.message), messageId: f.message.id, params: f.message.params };
-  const detail: unknown = (f as { detail?: unknown }).detail;
-  return typeof detail === "string" ? { detail } : {};
+  return {};
 }
 
 /** The rule's declared defaults with the config file's values laid over them. */

@@ -59,7 +59,7 @@ export const EN = {
   EXCEL_USE_HEADERS: "Excel.Workbook promotes headers in the refreshing machine's culture",
   EXTENSION_FILTER_CASE: 'the extension test matches "{extension}" but not "{otherCase}"',
   FILTERS_PANE_STATE:
-    "{source, select, saved {saved} other {not recorded, read as}} {state, select, open {open} closed {closed} other {hidden from readers}}; the policy expects {expect, select, open {open} other {closed}}",
+    "{basis, select, saved {saved} other {not recorded, read as}} {state, select, open {open} closed {closed} other {hidden from readers}}; the policy expects {expect, select, open {open} other {closed}}",
   FIXED_DATE_IN_ROW_FILTER:
     "{use, select, endsAt {rows end at a fixed date} other {rows match a fixed date}}, {date, date}",
   "HARDCODED_PERIOD_IN_DAX.endsOn":
@@ -151,10 +151,10 @@ export const EN = {
   "VISUAL_OUTSIDE_PAGE.bottom": "{bottom} px past the bottom edge",
   "VISUAL_OUTSIDE_PAGE.right": "{right} px past the right edge",
   VISUAL_WITHOUT_FIELDS: "no fields bound",
-  "context.calculationGroup": "calculation group {table}",
-  "context.level": "hierarchy {hierarchy} in {table}",
+  "context.calculationGroup": "calculation group {tableRef}",
+  "context.level": "hierarchy {hierarchy} in {tableRef}",
   "context.role": "role {role}",
-  "context.table": "table {table}",
+  "context.table": "table {tableRef}",
   "date.long": "{date, date}",
   "list.more": "{count} more",
   "parse.m.modelTooLarge":
@@ -173,7 +173,7 @@ export const EN = {
   "parse.pbir.tooDeep": "nested more than {depth} levels deep",
   "parse.pbir.unnamedEntity": "an entity",
   "parse.tmdl.linesUnder":
-    '"{word}" {where, select, root {at the root of a file} other {under a model}} has {under, select, declaration {a declaration} other {lines}} under it, which TMDL does not allow',
+    '"{word}" {at, select, root {at the root of a file} other {under a model}} has {child, select, declaration {a declaration} other {lines}} under it, which TMDL does not allow',
   "parse.tmdl.noName": '"{word}" is declared with no name',
   "parse.tmdl.notChildType": '"{word}" is not a type TMDL declares under a {under}',
   "parse.tmdl.notModelProperty": '"{word}" is not a property TMDL allows under a model',

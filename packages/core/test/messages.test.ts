@@ -145,7 +145,7 @@ describe("formatMessage", () => {
   });
 
   it("falls back to the English template for an ID the catalog lacks", () => {
-    expect(formatMessage(msg("context.table", { table: "Sales" }), {} as Catalog)).toBe(
+    expect(formatMessage(msg("context.table", { tableRef: "Sales" }), {} as Catalog)).toBe(
       "table Sales",
     );
   });
@@ -334,7 +334,7 @@ describe("runRules", () => {
     const [f] = run({
       objectType: "Model",
       objectName: "Model",
-      message: msg("context.table", { table: "'Sales'" }),
+      message: msg("context.table", { tableRef: "'Sales'" }),
     });
     expect(f).toEqual({
       ruleId: "TEST_RULE",
@@ -343,7 +343,7 @@ describe("runRules", () => {
       objectName: "Model",
       detail: "table 'Sales'",
       messageId: "context.table",
-      params: { table: "'Sales'" },
+      params: { tableRef: "'Sales'" },
     });
   });
 
@@ -358,9 +358,9 @@ describe("runRules", () => {
 
 describe("findingDetail", () => {
   it("renders the message when the finding has one, in the catalog given", () => {
-    const f = { detail: "stale", messageId: "context.table" as const, params: { table: "'S'" } };
+    const f = { detail: "stale", messageId: "context.table" as const, params: { tableRef: "'S'" } };
     expect(findingDetail(f)).toBe("table 'S'");
-    expect(findingDetail(f, { "context.table": "Tabelle {table}" } as Catalog, "de")).toBe(
+    expect(findingDetail(f, { "context.table": "Tabelle {tableRef}" } as Catalog, "de")).toBe(
       "Tabelle 'S'",
     );
   });
@@ -650,28 +650,28 @@ describe("the action, opening, and page rules' messages (#98)", () => {
       [
         "FILTERS_PANE_STATE",
         "not recorded, read as open; the policy expects closed",
-        { source: "assumed", state: "open", expect: "closed" },
+        { basis: "assumed", state: "open", expect: "closed" },
       ],
     ]);
     expect(pane({ expanded: lit("true") }, "closed")).toEqual([
       [
         "FILTERS_PANE_STATE",
         "saved open; the policy expects closed",
-        { source: "saved", state: "open", expect: "closed" },
+        { basis: "saved", state: "open", expect: "closed" },
       ],
     ]);
     expect(pane({ expanded: lit("false") }, "open")).toEqual([
       [
         "FILTERS_PANE_STATE",
         "saved closed; the policy expects open",
-        { source: "saved", state: "closed", expect: "open" },
+        { basis: "saved", state: "closed", expect: "open" },
       ],
     ]);
     expect(pane({ visible: lit("false") }, "open")).toEqual([
       [
         "FILTERS_PANE_STATE",
         "saved hidden from readers; the policy expects open",
-        { source: "saved", state: "hidden", expect: "open" },
+        { basis: "saved", state: "hidden", expect: "open" },
       ],
     ]);
   });
@@ -1281,7 +1281,7 @@ describe("the period, translation, and function rules' messages (#98)", () => {
         [
           "HARDCODED_PERIOD_IN_DAX.inContext",
           "fixed year 2025 in calculation group 'Time Calc'",
-          { fixed, context: msg("context.calculationGroup", { table: "'Time Calc'" }) },
+          { fixed, context: msg("context.calculationGroup", { tableRef: "'Time Calc'" }) },
         ],
       ]);
       expect(fixedIn(`CALCULATE([Total], 'Sales'[Year] = 2025)`)).toEqual([
@@ -1315,13 +1315,13 @@ describe("the period, translation, and function rules' messages (#98)", () => {
         [
           "NAME_WITHOUT_TRANSLATION.inContext",
           "table 'Sales', no caption in fr-FR",
-          { context: msg("context.table", { table: "'Sales'" }), captions: noCaption("fr-FR") },
+          { context: msg("context.table", { tableRef: "'Sales'" }), captions: noCaption("fr-FR") },
         ],
         [
           "NAME_WITHOUT_TRANSLATION.inContext",
           "hierarchy Geography in 'Sales', no caption in fr-FR",
           {
-            context: msg("context.level", { hierarchy: "Geography", table: "'Sales'" }),
+            context: msg("context.level", { hierarchy: "Geography", tableRef: "'Sales'" }),
             captions: noCaption("fr-FR"),
           },
         ],

@@ -454,16 +454,26 @@ function wholeNumber(n: Node): number | undefined {
 }
 
 /**
- * A `#date`, `#datetime`, or `#datetimezone` of numbers written in place, as the ISO day it names
- * (`2025-12-31`). A day M refuses, past its month's end or in a year outside 1 to 9999, names none:
- * such a query fails to refresh rather than going stale.
+ * A `#date`, `#datetime`, or `#datetimezone` of whole numbers written in place, as its year, month,
+ * and day, whether or not M accepts the day.
  */
-function fixedDate(n: Node): string | undefined {
+function writtenDate(n: Node): [number, number, number] | undefined {
   const c = callOf(unwrap(n));
   if (!c || !DATE_CONSTRUCTORS.has(c.name) || c.args.length < 3) return undefined;
   const parts = c.args.map(wholeNumber);
   if (parts.some((p) => p === undefined)) return undefined;
-  const [year, month, day] = parts as [number, number, number];
+  return parts.slice(0, 3) as [number, number, number];
+}
+
+/**
+ * A written date (`writtenDate`) as the ISO day it names (`2025-12-31`). A day M refuses, past its
+ * month's end or in a year outside 1 to 9999, names none: such a query fails to refresh rather than
+ * going stale.
+ */
+function fixedDate(n: Node): string | undefined {
+  const parts = writtenDate(n);
+  if (!parts) return undefined;
+  const [year, month, day] = parts;
   return year >= 1 && year <= 9999 && isRealDay(year, month, day)
     ? isoDay({ year, month, day })
     : undefined;
@@ -524,22 +534,17 @@ export const FIXED_DATE_IN_ROW_FILTER = pbiplintRule({
           ).flatMap((node) => {
             if (node.kind !== Kind.RelationalExpression && node.kind !== Kind.EqualityExpression)
               return [];
-            const onLeft = fixedDate(node.left);
-            const onRight = fixedDate(node.right);
-            if ((onLeft === undefined) === (onRight === undefined)) return [];
+            // A day M refuses still counts as a date here, so a comparison of two dates is left
+            // alone, and a refused day is never itself reported.
+            const onRight = writtenDate(node.right) !== undefined;
+            if ((writtenDate(node.left) !== undefined) === onRight) return [];
+            const date = unwrap(onRight ? node.right : node.left);
+            const day = fixedDate(date);
             const op = node.operatorConstant.constantKind as string;
             const use = FIXED_DATE_USE[onRight ? op : (FLIPPED[op] ?? op)];
-            const date = unwrap(onRight ? node.right : node.left);
-            if (!use || reported.has(date.id)) return [];
+            if (day === undefined || !use || reported.has(date.id)) return [];
             reported.add(date.id);
-            return [
-              mFinding(
-                m,
-                q,
-                date,
-                msg("FIXED_DATE_IN_ROW_FILTER", { use, date: (onRight ?? onLeft)! }),
-              ),
-            ];
+            return [mFinding(m, q, date, msg("FIXED_DATE_IN_ROW_FILTER", { use, date: day }))];
           });
         });
       },
@@ -652,7 +657,7 @@ export const DYNAMIC_DATA_SOURCE = pbiplintRule({
         const o = source && c.args[0] ? origin(m, q, c.args[0]) : "static";
         if (o === "static" || o === "unknown") return [];
         // What the function calls its source, and how it is made, as the message selects each.
-        const noun = source![1]
+        const sourceKind = source![1]
           ? "path"
           : source![2]
             ? "address"
@@ -664,7 +669,7 @@ export const DYNAMIC_DATA_SOURCE = pbiplintRule({
             m,
             q,
             c.node,
-            msg("DYNAMIC_DATA_SOURCE", { function: c.name, source: noun, how: o }),
+            msg("DYNAMIC_DATA_SOURCE", { function: c.name, source: sourceKind, how: o }),
           ),
         ];
       }),

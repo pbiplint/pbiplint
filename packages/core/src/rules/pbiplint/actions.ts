@@ -13,12 +13,15 @@ import { pbiplintRule } from "./define.js";
 
 /**
  * The action types whose destination names a page or a bookmark, keyed by the type in lower case,
- * which a finding's message selects its wording by, with the object each names.
+ * with the key a finding's message selects its wording by and the object each names.
  */
-const CHECKED: ReadonlyMap<string, "page" | "bookmark"> = new Map([
-  ["pagenavigation", "page"],
-  ["drillthrough", "page"],
-  ["bookmark", "bookmark"],
+const CHECKED: ReadonlyMap<
+  string,
+  { key: "pageNavigation" | "drillthrough" | "bookmark"; object: "page" | "bookmark" }
+> = new Map([
+  ["pagenavigation", { key: "pageNavigation", object: "page" }],
+  ["drillthrough", { key: "drillthrough", object: "page" }],
+  ["bookmark", { key: "bookmark", object: "bookmark" }],
 ] as const);
 
 export const BROKEN_ACTION_TARGET = pbiplintRule({
@@ -43,16 +46,15 @@ export const BROKEN_ACTION_TARGET = pbiplintRule({
     return allVisuals(report).flatMap((v) =>
       v.actions.flatMap((a): RuleFinding[] => {
         // Not checked: navigators' pages and bookmarks, tooltip pages, a drillthrough page's binding.
-        const action = a.type.toLowerCase();
-        const object = CHECKED.get(action);
+        const checked = CHECKED.get(a.type.toLowerCase());
         // Off or conditional: nothing to resolve. An empty destination is ACTION_WITHOUT_DESTINATION's.
-        if (!object || !a.on || a.target === undefined) return [];
-        if (exists[object](a.target)) return [];
+        if (!checked || !a.on || a.target === undefined) return [];
+        if (exists[checked.object](a.target)) return [];
         return [
           reportFinding.visual(
             v,
             a.pointer,
-            msg("BROKEN_ACTION_TARGET", { action, target: a.target }),
+            msg("BROKEN_ACTION_TARGET", { action: checked.key, target: a.target }),
           ),
         ];
       }),
@@ -73,10 +75,14 @@ export const ACTION_WITHOUT_DESTINATION = pbiplintRule({
     report
       ? allVisuals(report).flatMap((v) =>
           v.actions.flatMap((a): RuleFinding[] => {
-            const action = a.type.toLowerCase();
-            if (!CHECKED.has(action) || !a.on || a.target !== undefined || a.conditional) return [];
+            const checked = CHECKED.get(a.type.toLowerCase());
+            if (!checked || !a.on || a.target !== undefined || a.conditional) return [];
             return [
-              reportFinding.visual(v, a.pointer, msg("ACTION_WITHOUT_DESTINATION", { action })),
+              reportFinding.visual(
+                v,
+                a.pointer,
+                msg("ACTION_WITHOUT_DESTINATION", { action: checked.key }),
+              ),
             ];
           }),
         )

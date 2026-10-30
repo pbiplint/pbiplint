@@ -44,14 +44,14 @@ export const DEFAULT_PAGE_NAME = pbiplintRule({
     report
       ? report.pages.flatMap((p) => {
           const name = recordedName(p);
-          const match =
-            name === undefined ? undefined : DEFAULT_NAMES.find(([re]) => re.test(name));
+          if (name === undefined) return [];
+          const match = DEFAULT_NAMES.find(([re]) => re.test(name));
           return match
             ? [
                 reportFinding.page(
                   p,
                   "/displayName",
-                  msg("DEFAULT_PAGE_NAME", { name: name!, pattern: match[1] }),
+                  msg("DEFAULT_PAGE_NAME", { name, pattern: match[1] }),
                 ),
               ]
             : [];

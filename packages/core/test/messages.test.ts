@@ -467,6 +467,14 @@ describe("the action, opening, and page rules' messages (#98)", () => {
       ["ACTION_WITHOUT_DESTINATION", "Bookmark action has no destination"],
       ["ACTION_WITHOUT_DESTINATION", "Drillthrough action has no destination"],
     ]);
+    // The select key is the type in lower camel, whatever case the file writes it in.
+    const keys = (rule: Rule) => reportFindings(rule, files).map((f) => f.params!.action);
+    expect(keys(BROKEN_ACTION_TARGET)).toEqual(["pageNavigation", "bookmark", "drillthrough"]);
+    expect(keys(ACTION_WITHOUT_DESTINATION)).toEqual([
+      "pageNavigation",
+      "bookmark",
+      "drillthrough",
+    ]);
   });
 
   it("gives each of BROKEN_BOOKMARK_REFERENCE's findings its own message", () => {
@@ -553,18 +561,34 @@ describe("the action, opening, and page rules' messages (#98)", () => {
         ],
         undefined,
         { expect },
-      ).map((f) => [f.messageId, f.detail]);
+      ).map((f) => [f.messageId, f.detail, f.params]);
     expect(pane({}, "closed")).toEqual([
-      ["FILTERS_PANE_STATE", "not recorded, read as open; the policy expects closed"],
+      [
+        "FILTERS_PANE_STATE",
+        "not recorded, read as open; the policy expects closed",
+        { source: "assumed", state: "open", expect: "closed" },
+      ],
     ]);
     expect(pane({ expanded: lit("true") }, "closed")).toEqual([
-      ["FILTERS_PANE_STATE", "saved open; the policy expects closed"],
+      [
+        "FILTERS_PANE_STATE",
+        "saved open; the policy expects closed",
+        { source: "saved", state: "open", expect: "closed" },
+      ],
     ]);
     expect(pane({ expanded: lit("false") }, "open")).toEqual([
-      ["FILTERS_PANE_STATE", "saved closed; the policy expects open"],
+      [
+        "FILTERS_PANE_STATE",
+        "saved closed; the policy expects open",
+        { source: "saved", state: "closed", expect: "open" },
+      ],
     ]);
     expect(pane({ visible: lit("false") }, "open")).toEqual([
-      ["FILTERS_PANE_STATE", "saved hidden from readers; the policy expects open"],
+      [
+        "FILTERS_PANE_STATE",
+        "saved hidden from readers; the policy expects open",
+        { source: "saved", state: "hidden", expect: "open" },
+      ],
     ]);
   });
 

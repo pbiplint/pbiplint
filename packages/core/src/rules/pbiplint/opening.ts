@@ -80,7 +80,7 @@ export const FILTERS_PANE_STATE = pbiplintRule({
     // Without the property pbiplint reads the pane as open, and says that is its reading of a
     // state the file does not record, not a saved state.
     const message = msg("FILTERS_PANE_STATE", {
-      recorded: recordedAt === undefined ? "no" : "yes",
+      source: recordedAt === undefined ? "assumed" : "saved",
       state: state === "hidden from readers" ? "hidden" : state,
       expect,
     });

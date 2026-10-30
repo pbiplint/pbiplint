@@ -11,10 +11,10 @@
  */
 export const EN = {
   ACTION_WITHOUT_DESTINATION:
-    "{action, select, pagenavigation {Page navigation} drillthrough {Drillthrough} other {Bookmark}} action has no destination",
+    "{action, select, pageNavigation {Page navigation} drillthrough {Drillthrough} other {Bookmark}} action has no destination",
   AVOID_SHOW_ITEMS_WITH_NO_DATA: "Show items with no data is on for {roles}",
   BROKEN_ACTION_TARGET:
-    '{action, select, pagenavigation {Page navigation action points at page} drillthrough {Drillthrough action points at page} other {Bookmark action points at bookmark}} "{target}", which does not exist',
+    '{action, select, pageNavigation {Page navigation action points at page} drillthrough {Drillthrough action points at page} other {Bookmark action points at bookmark}} "{target}", which does not exist',
   "BROKEN_BOOKMARK_REFERENCE.activePage": 'active page "{page}" does not exist',
   "BROKEN_BOOKMARK_REFERENCE.capturedPage": 'captured page "{page}" does not exist',
   "BROKEN_BOOKMARK_REFERENCE.capturedVisual": 'captured visual "{visual}" is not on page "{page}"',
@@ -27,7 +27,7 @@ export const EN = {
   ENSURE_THEME_COLOURS:
     "{count, plural, one {# colour} other {# colours}} set to a hex value instead of a theme colour",
   FILTERS_PANE_STATE:
-    "{recorded, select, yes {saved} other {not recorded, read as}} {state, select, open {open} closed {closed} other {hidden from readers}}; the policy expects {expect, select, open {open} other {closed}}",
+    "{source, select, saved {saved} other {not recorded, read as}} {state, select, open {open} closed {closed} other {hidden from readers}}; the policy expects {expect, select, open {open} other {closed}}",
   HIDE_TOOLTIP_DRILLTROUGH_PAGES:
     "{kind, select, tooltip {tooltip} other {drillthrough}} page is visible to readers",
   "INTEGER_FORMATTING.dynamicOnly": "dynamic format string only",

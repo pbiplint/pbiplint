@@ -72,6 +72,15 @@ options: 16 rules, `MINIMIZE_POWER_QUERY_TRANSFORMATIONS` and 15 of pbiplint's o
 `rule.layer` `powerquery` while its findings' `layer` stays `model`. A finding in M carries
 `location.column` as well as its line. 122 rules in all, 40 of them built into pbiplint.
 
+A finding's `detail` is English. From 0.3.2, a built-in rule's finding also carries the message
+the detail was rendered from, `messageId` and `params`, so a caller can show it in another
+language: `findingDetail(finding, catalog?, locale?)` renders it from a catalog (`EN`, the English
+one, by default) and takes `detail` for a finding without one, and `formatMessage(message, catalog?,
+locale?)` renders any message. A message ID is the rule's ID, or the rule's ID and a variant, such
+as `BROKEN_BOOKMARK_REFERENCE.activePage`, and the IDs and their params are stable, so a catalog
+written for one release keeps working. A Power Query finding's `messageId` is the frame that names
+the query, `query.finding` or `query.stepFinding`, with the rule's own message in `params.finding`.
+
 For the command line, install [`pbiplint`](https://www.npmjs.com/package/pbiplint). Source, issues,
 and contributing: https://github.com/pbiplint/pbiplint.
 

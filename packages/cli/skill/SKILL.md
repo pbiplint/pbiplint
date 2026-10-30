@@ -1,9 +1,9 @@
 ---
 name: pbiplint
-description: Lint a Power BI project (PBIP), its semantic model in TMDL and its report in PBIR, for best-practice problems, offline, with the pbiplint CLI. Use after creating or changing any TMDL or PBIR file, however the change was made (a script, an editor, an MCP server, or Power BI Desktop); when asked to check, review, or lint a Power BI project, model, or report, or whether one is right or ready; and before a commit or pull request that touches one. pbiplint 0.3.0.
+description: Lint a Power BI project (PBIP), its semantic model in TMDL and its report in PBIR, for best-practice problems, offline, with the pbiplint CLI. Use after creating or changing any TMDL or PBIR file, however the change was made (a script, an editor, an MCP server, or Power BI Desktop); when asked to check, review, or lint a Power BI project, model, or report, or whether one is right or ready; and before a commit or pull request that touches one. pbiplint 0.3.1.
 license: MIT
 metadata:
-  version: "0.3.0"
+  version: "0.3.1"
 ---
 
 # pbiplint

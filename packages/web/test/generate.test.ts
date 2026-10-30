@@ -17,6 +17,7 @@ import { VERSION } from "../../core/src/version.js";
 import { makeTempDir, removeTempDir, tempDir } from "../../../tests/support/temp-dir.js";
 import {
   CONTENT_DIR,
+  CONTENT_PAGES,
   generatePlugin,
   generateSite,
   pageEntries,
@@ -808,7 +809,7 @@ describe("generateSite", () => {
     expect(sitemap).toContain("<loc>https://pbiplint.com/pipelines/</loc>");
     // The home page, the About, Privacy Promise, CLI, and pipelines pages, the rules index, and one
     // entry per rule page.
-    expect((sitemap.match(/<loc>/g) ?? []).length).toBe(6 + 122);
+    expect((sitemap.match(/<loc>/g) ?? []).length).toBe(8 + 122);
     // llms.txt points an assistant at the skill first, then at the pages.
     const llms = readFileSync(join(out, "public/llms.txt"), "utf8");
     expect(llms.startsWith("# pbiplint\n\n> ")).toBe(true);
@@ -821,6 +822,8 @@ describe("generateSite", () => {
         "cli",
         "latest",
         "pipelines",
+        "self-host",
+        "self-host/checklist",
         "privacy",
         "rules",
         ...metas.map((m) => `rules/${m.slug}`),
@@ -835,6 +838,31 @@ describe("generateSite", () => {
     expect(existsSync(join(out, "rules", "renamed-away", "index.html"))).toBe(false);
     expect(existsSync(join(out, "rules", "hide-foreign-keys", "index.html"))).toBe(true);
     expect(existsSync(join(out, "rules", "index.html"))).toBe(true);
+  });
+  it("writes the self-hosting page and its checklist, with this version wherever they name one", () => {
+    const out = tempDir("selfhostpage");
+    generateSite({ outDir: out });
+    const page = readFileSync(join(out, "self-host", "index.html"), "utf8");
+    const checklist = readFileSync(join(out, "self-host", "checklist", "index.html"), "utf8");
+    expect(page).toContain("<title>Host pbiplint yourself</title>");
+    // The release, the archive, and the template all at this build's own version.
+    expect(page).toContain(`pbiplint-site-${VERSION}.zip`);
+    expect(page).toContain(
+      `raw.githubusercontent.com%2Fpbiplint%2Fpbiplint%2Fv${VERSION}%2Fdeploy%2Fazure%2Fazuredeploy.json`,
+    );
+    expect(page).toContain('<a href="/self-host/checklist/">');
+    expect(checklist).toContain('<a href="/self-host/">');
+    // No placeholder survives into a page, here or on any other content page.
+    for (const name of CONTENT_PAGES)
+      expect(readFileSync(join(out, name, "index.html"), "utf8"), name).not.toContain("{{");
+  });
+  it("links the self-hosting page from the Privacy Promise, About, and the /latest/ page", () => {
+    const out = tempDir("selfhostlinks");
+    generateSite({ outDir: out });
+    for (const page of ["privacy", "about", "latest"])
+      expect(readFileSync(join(out, page, "index.html"), "utf8"), page).toContain(
+        'href="/self-host/',
+      );
   });
   it("writes /latest/ at the version being built, and leaves it out of the sitemap", () => {
     const out = tempDir("latest");

@@ -97,12 +97,15 @@ function hasFields(o: object, required: string[], optional: string[] = []): void
 describe("the CLI's contract", () => {
   it("0. a one-project run prints byte for byte what release/0.3.0 printed (#237)", async () => {
     const golden = (file: string): string => readFileSync(join(goldens, file), "utf8");
-    // The goldens hold the version they were recorded at, which a version bump changes.
+    // The goldens are release/0.3.0's output and are never re-recorded (fixtures/one-project/
+    // README.md), so they hold version 0.3.0 where the tool names itself: the JSON's tool.version,
+    // and SARIF's driver fullName and version. Those, and nothing else, take this build's version.
     const recorded = JSON.parse(golden("sample-json.out")).tool.version;
-    expect(
-      VERSION,
-      `the one-project goldens hold version ${recorded} and the CLI is ${VERSION}; they are release/0.3.0's output (fixtures/one-project/README.md), so this test needs its version changed, not the goldens re-recorded`,
-    ).toBe(recorded);
+    expect(recorded).toBe("0.3.0");
+    const versioned = (s: string): string =>
+      s
+        .replaceAll(`"version": "${recorded}"`, `"version": "${VERSION}"`)
+        .replaceAll(`"fullName": "pbiplint ${recorded}"`, `"fullName": "pbiplint ${VERSION}"`);
     const cases: { name: string; argv: string[]; code: number; file?: string }[] = JSON.parse(
       golden("cases.json"),
     );
@@ -112,7 +115,7 @@ describe("the CLI's contract", () => {
       const tmp = c.name.startsWith("below-") ? sampleBelow() : "<TMP>";
       const out = tempDir("contract-golden-out");
       const fill = (s: string): string =>
-        s
+        versioned(s)
           .replaceAll("<TMPREL>", relative(repo, tmp))
           .replaceAll("<TMP>", tmp)
           .replaceAll("<OUT>", out);

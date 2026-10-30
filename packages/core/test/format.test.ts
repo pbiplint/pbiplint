@@ -80,6 +80,20 @@ describe("summary wording", () => {
     expect(text.split("\n")[0]).toBe("pbiplint: 1 finding (0 errors, 1 warning, 0 info) in 1 file");
     expect(text.split("\n")[1]).toBe("Model: 1 file. 1 rule run");
   });
+  it("Fix these first counts info findings as info, not infos", async () => {
+    const tables = (n: number) =>
+      Array.from({ length: n }, (_, i) => ({ path: `t${i}.tmdl`, text: `table T${i}\n` }));
+    const twoErrors: Rule = { ...everyTable, id: "TWO_ERRORS", name: "Two errors", severity: 3 };
+    expect(formatText(await lint(tables(2), { rules: [everyTable] }))).toContain(
+      "  1. Every table  (2 info)   [model]",
+    );
+    expect(formatText(await lint(tables(1), { rules: [everyTable] }))).toContain(
+      "  1. Every table  (1 info)   [model]",
+    );
+    expect(formatText(await lint(tables(2), { rules: [twoErrors] }))).toContain(
+      "  1. Two errors  (2 errors)   [model]",
+    );
+  });
   it("uses singular nouns for one disabled rule and one ignored finding", async () => {
     const text = formatText(
       await lint(

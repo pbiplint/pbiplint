@@ -3,7 +3,7 @@ import type { RankedGroup } from "../engine/rank.js";
 import type { SkippedRule } from "../engine/run.js";
 import { findingDetail } from "../messages/format.js";
 import type { LayerStatus } from "../project/types.js";
-import { SEVERITY_LABEL, type Finding, type Layer } from "../rules/types.js";
+import { SEVERITY_LABEL, type Finding, type Layer, type Severity } from "../rules/types.js";
 import { showControls } from "./controls.js";
 
 /** Guidance for one rule in the two forms SARIF carries: plain text and Markdown. */
@@ -186,9 +186,12 @@ export function formatText(result: LintResult, _options: FormatOptions = {}): st
     out.push("No findings.", "");
   } else {
     out.push("Fix these first:");
+    // "info" takes no plural, as in the summary line: "2 info", never "2 infos".
+    const count = (n: number, severity: Severity) =>
+      severity === 1 ? `${n} info` : plural(n, SEVERITY_LABEL[severity]);
     topGroups(result).forEach((g, i) =>
       out.push(
-        `  ${i + 1}. ${g.rule.name}  (${plural(g.findings.length, SEVERITY_LABEL[g.rule.severity])})   ${layerTag(g.rule.layer)}`,
+        `  ${i + 1}. ${g.rule.name}  (${count(g.findings.length, g.rule.severity)})   ${layerTag(g.rule.layer)}`,
       ),
     );
     out.push("");

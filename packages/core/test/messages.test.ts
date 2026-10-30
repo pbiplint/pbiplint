@@ -664,7 +664,7 @@ describe("the visual, tab order, and year filter rules' messages (#98)", () => {
     ]);
   });
 
-  it("gives VISUAL_OUTSIDE_PAGE one message, which edges a select", () => {
+  it("gives VISUAL_OUTSIDE_PAGE a message for each set of edges, with only their overhangs", () => {
     const at = (name: string, x: number, y: number, width: number, height: number) =>
       visual("p", name, "cardVisual", { position: { x, y, z: 0, width, height, tabOrder: 0 } });
     const files = [
@@ -675,12 +675,12 @@ describe("the visual, tab order, and year filter rules' messages (#98)", () => {
     ];
     expect(said(VISUAL_OUTSIDE_PAGE, files)).toEqual([
       [
-        "VISUAL_OUTSIDE_PAGE",
+        "VISUAL_OUTSIDE_PAGE.both",
         "70 px past the right edge, 30 px past the bottom edge",
-        { edges: "both", right: 70, bottom: 30 },
+        { right: 70, bottom: 30 },
       ],
-      ["VISUAL_OUTSIDE_PAGE", "1 px past the bottom edge", { edges: "bottom", bottom: 1 }],
-      ["VISUAL_OUTSIDE_PAGE", "20 px past the right edge", { edges: "right", right: 20 }],
+      ["VISUAL_OUTSIDE_PAGE.bottom", "1 px past the bottom edge", { bottom: 1 }],
+      ["VISUAL_OUTSIDE_PAGE.right", "20 px past the right edge", { right: 20 }],
     ]);
   });
 

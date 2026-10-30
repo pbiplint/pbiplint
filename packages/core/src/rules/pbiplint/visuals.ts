@@ -107,17 +107,18 @@ export const VISUAL_OUTSIDE_PAGE = pbiplintRule({
           if (v.groupId !== undefined || width === undefined || height === undefined) return [];
           const right = v.position.x + v.position.width - width;
           const bottom = v.position.y + v.position.height - height;
-          // An edge counts from a whole pixel past it, so a fraction of a pixel is not reported, and
-          // the message carries the overhang of only the edges it names.
-          const pastRight = right >= 1;
-          const pastBottom = bottom >= 1;
-          if (!pastRight && !pastBottom) return [];
-          const message = msg("VISUAL_OUTSIDE_PAGE", {
-            edges: pastRight && pastBottom ? "both" : pastRight ? "right" : "bottom",
-            ...(pastRight && { right: Math.round(right) }),
-            ...(pastBottom && { bottom: Math.round(bottom) }),
-          });
-          return [reportFinding.visual(v, "/position", message)];
+          // An edge counts from a whole pixel past it, so a fraction of a pixel is not reported. Each
+          // set of edges has a message of its own, carrying the overhang of only the edges it names.
+          const past = { right: Math.round(right), bottom: Math.round(bottom) };
+          const message =
+            right >= 1 && bottom >= 1
+              ? msg("VISUAL_OUTSIDE_PAGE.both", past)
+              : right >= 1
+                ? msg("VISUAL_OUTSIDE_PAGE.right", { right: past.right })
+                : bottom >= 1
+                  ? msg("VISUAL_OUTSIDE_PAGE.bottom", { bottom: past.bottom })
+                  : undefined;
+          return message ? [reportFinding.visual(v, "/position", message)] : [];
         })
       : [],
 });

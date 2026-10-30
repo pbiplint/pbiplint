@@ -69,8 +69,9 @@ export const EN = {
     "tab order starts at {tabVisual} but the layout reads {layoutVisual} first",
   "TAB_ORDER_FOLLOWS_LAYOUT.visits":
     "tab order visits {tabVisual} where the layout reads {layoutVisual}",
-  VISUAL_OUTSIDE_PAGE:
-    "{edges, select, right {{right} px past the right edge} bottom {{bottom} px past the bottom edge} other {{right} px past the right edge, {bottom} px past the bottom edge}}",
+  "VISUAL_OUTSIDE_PAGE.both": "{right} px past the right edge, {bottom} px past the bottom edge",
+  "VISUAL_OUTSIDE_PAGE.bottom": "{bottom} px past the bottom edge",
+  "VISUAL_OUTSIDE_PAGE.right": "{right} px past the right edge",
   VISUAL_WITHOUT_FIELDS: "no fields bound",
   "context.calculationGroup": "calculation group {table}",
   "context.level": "hierarchy {hierarchy} in {table}",

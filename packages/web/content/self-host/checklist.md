@@ -21,10 +21,9 @@ For a copy of pbiplint hosted as [Host pbiplint yourself](/self-host/) describes
 | Check | Record |
 | --- | --- |
 | Subscription, resource group, and account name | |
-| Public network access: Disabled | |
-| Shared key access: Disabled | |
-| Minimum TLS version: 1.2 | |
+| Public network access and shared key access Disabled, minimum TLS 1.2 | |
 | Private endpoints `web` and `blob`: approved, on subnet | |
+| From outside the network: the site answers 404, the blob address 403 | |
 | Delete lock present | |
 | Diagnostic setting sends writes and deletes to workspace | |
 | Group with write access, and its members reviewed | |

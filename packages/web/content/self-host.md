@@ -133,6 +133,7 @@ Open the site's address from a machine on the network, then [run the egress chec
 
 - **The account as the template leaves it.** Public network access off, so it is reachable only through the private endpoints. Shared key access off, so only Entra identities can read or change the files. TLS 1.2 at minimum. To confirm: `az storage account show --name <account> --query "{publicNetworkAccess: publicNetworkAccess, allowSharedKeyAccess: allowSharedKeyAccess, minimumTlsVersion: minimumTlsVersion}"`.
 - **Who can change the files.** With no server, the one thing worth attacking is write access to the `$web` container. Grant it to one group only, keep that group small, and review its role assignment and membership as you review any other privileged access.
+- **What locked down looks like from outside.** From a machine outside your network, the site's address answers 404 "The requested content does not exist" for every page, and the account's blob address (`https://<account>.blob.core.windows.net/`) answers 403 "This request is not authorized". Both mean the firewall is working. A page that loads from outside means public access is on.
 - **What the lock does.** The delete lock keeps the account, its role assignments, and its diagnostic setting from being deleted by mistake. It does not protect the files themselves: anyone with write access can still change or delete them, which is what the log is for. To take the group's access away, remove its members, or lift the lock, delete the role assignment, and put the lock back.
 - **Logging.** With a workspace named, every write and delete of the files reaches it as `StorageWrite` and `StorageDelete` events. A normal update looks like a burst of deletes, then a burst of writes, from a member of the group, at a time you planned. Alert on any write or delete by anyone outside the group, or at any other time.
 
@@ -164,6 +165,7 @@ It opens your copy in a headless browser with a fresh profile and watches every 
 
 - **Which browser.** It looks for Edge and Chrome where Windows, macOS, and Linux install them; `--browser <path>` names one.
 - **A managed browser.** A browser whose policy turns remote debugging off (`RemoteDebuggingAllowed`) cannot be driven, and the check says so. Run it from any machine that can reach your copy and whose browser allows it, such as a build agent.
+- **Run it as a person, not as SYSTEM.** Chrome and Edge do not start as Windows' SYSTEM account, which is how remote command tools such as `az vm run-command` often run a command, and the check says so. Run it as an ordinary signed-in user.
 - **A Linux build agent.** Some refuse the browser's sandbox, and the browser then exits at once. `--no-sandbox` lets it start, by turning off Chrome's own isolation of the page's process. Use it only where the sandbox cannot run, and only against your own copy, which is all the check opens.
 
 ### What you will see, and why it is fine

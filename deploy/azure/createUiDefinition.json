@@ -66,7 +66,7 @@
             "toolTip": "The subnet the two private endpoints join.",
             "constraints": {
               "required": true,
-              "allowedValues": "[map(filter(steps('network').subnetsApi.value, (item) => not(contains(createArray('GatewaySubnet', 'AzureBastionSubnet', 'AzureFirewallSubnet', 'AzureFirewallManagementSubnet', 'RouteServerSubnet'), item.name))), (item) => parse(concat('{\"label\":\"', item.name, '\",\"value\":\"', item.id, '\"}')))]"
+              "allowedValues": "[map(filter(steps('network').subnetsApi.value, (item) => not(contains(split('GatewaySubnet,AzureBastionSubnet,AzureFirewallSubnet,AzureFirewallManagementSubnet,RouteServerSubnet', ','), item.name))), (item) => parse(concat('{\"label\":\"', item.name, '\",\"value\":\"', item.id, '\"}')))]"
             }
           }
         ]

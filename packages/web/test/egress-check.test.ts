@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   browserCandidates,
   DEBUGGING_DISALLOWED,
+  isWindowsSystem,
   leavesOrigin,
   parseArgs,
 } from "../egress/egress-check.mjs";
@@ -82,5 +83,23 @@ describe("DEBUGGING_DISALLOWED", () => {
     expect(
       DEBUGGING_DISALLOWED.test("DevTools remote debugging is disallowed by the system admin."),
     ).toBe(true);
+  });
+});
+
+describe("isWindowsSystem", () => {
+  // Chrome and Edge do not start as SYSTEM, which is how a remote command tool often runs a
+  // command, so the check names that rather than reporting the browser's bare exit code.
+  it("recognizes the LocalSystem account by its name or by its profile folder", () => {
+    expect(isWindowsSystem("win32", { username: "SYSTEM", homedir: "C:\\Users\\x" })).toBe(true);
+    expect(
+      isWindowsSystem("win32", {
+        username: "VM1$",
+        homedir: "C:\\Windows\\system32\\config\\systemprofile",
+      }),
+    ).toBe(true);
+  });
+  it("leaves an ordinary user, and every other platform, alone", () => {
+    expect(isWindowsSystem("win32", { username: "alex", homedir: "C:\\Users\\alex" })).toBe(false);
+    expect(isWindowsSystem("linux", { username: "SYSTEM", homedir: "/root" })).toBe(false);
   });
 });

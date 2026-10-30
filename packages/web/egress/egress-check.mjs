@@ -30,7 +30,7 @@
 
 import { spawn } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir, userInfo } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -97,6 +97,30 @@ export function browserCandidates(platform, env) {
 
 /** What Chrome and Edge print when policy turns remote debugging off. */
 export const DEBUGGING_DISALLOWED = /DevTools remote debugging is disallowed/;
+
+/**
+ * True when this runs as Windows' LocalSystem account, which Chrome and Edge do not start under
+ * (Edge 156 exits with code 1002, with or without --no-sandbox, and prints nothing), and which is
+ * how a remote command tool such as `az vm run-command` often runs a command. Node takes the name
+ * from GetUserNameW and the profile folder from the process token, so either one identifies it.
+ */
+export function isWindowsSystem(platform, { username, homedir }) {
+  if (platform !== "win32") return false;
+  return /^system$/i.test(username) || /\\config\\systemprofile\\?$/i.test(homedir);
+}
+
+export const RUN_AS_USER =
+  "Chrome and Edge do not start as Windows' SYSTEM account. Run the check as an ordinary signed-in user, not as SYSTEM.";
+
+/** This process's account, or blanks when Node cannot read it. */
+function account() {
+  try {
+    const info = userInfo();
+    return { username: info.username, homedir: info.homedir };
+  } catch {
+    return { username: "", homedir: homedir() };
+  }
+}
 const LISTENING = /DevTools listening on (ws:\/\/\S+)/;
 
 const STEP_TIMEOUT = 30_000;
@@ -156,6 +180,10 @@ function launch(browser, profile, noSandbox) {
     });
     child.on("exit", (code) => {
       clearTimeout(timer);
+      if (isWindowsSystem(process.platform, account())) {
+        reject(new Error(RUN_AS_USER));
+        return;
+      }
       // The reason is the browser's FATAL or ERROR line; a crash prints a stack dump after it.
       const lines = stderr.trim().split("\n");
       const reasons = lines.filter((l) => /FATAL|ERROR/.test(l));

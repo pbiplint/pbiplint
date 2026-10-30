@@ -1,3 +1,4 @@
+import { formatMessage, msg, type Message } from "../messages/format.js";
 import { modelDeclarations, splitQualifiedName } from "../model/build.js";
 import type {
   Column,
@@ -50,15 +51,15 @@ export type ReportRefOwnerKind = ReportRefOwner["kind"];
  * (`TmdlParseIssue.canDropObjects`) or a model path could not be read at all
  * (`Model.unreadPaths`). What it resolves to is unknown, so it is neither resolved nor
  * unresolved, no rule reports it, and the file's own PARSE_ISSUE finding, or the input reader's
- * notice, says why.
+ * notice, says why. A reason is a message, and `reason` its English.
  */
 export type Resolution =
   | { kind: "column"; column: Column; variationOf?: Column }
   | { kind: "measure"; measure: Measure; variationOf?: Column }
   | { kind: "reportMeasure"; measure: ReportMeasure }
   | { kind: "hierarchy"; hierarchy: Hierarchy; level?: Level; variationOf?: Column }
-  | { kind: "unresolved"; reason: string }
-  | { kind: "unread"; reason: string };
+  | { kind: "unresolved"; reason: string; message: Message }
+  | { kind: "unread"; reason: string; message: Message };
 
 export interface ReportRef {
   ref: FieldRef;
@@ -81,7 +82,12 @@ export interface ReportReferenceIndex {
 }
 
 const lower = (s: string): string => s.toLowerCase();
-const q = (s: string): string => `"${s}"`;
+/** A resolution that is not one, for the reason `message`, with `reason` its English. */
+const failed = (kind: "unresolved" | "unread", message: Message): Resolution => ({
+  kind,
+  reason: formatMessage(message),
+  message,
+});
 
 /**
  * Every field reference in the report with what it resolves to. Resolution is by name without
@@ -116,7 +122,7 @@ export function buildReportReferenceIndex(
   const measureOf = (t: Table, name: string): Measure | undefined =>
     t.measures.find((m) => lower(m.name) === lower(name));
 
-  const unresolved = (reason: string): Resolution => ({ kind: "unresolved", reason });
+  const unresolved = (reason: Message): Resolution => failed("unresolved", reason);
 
   /**
    * The model files pbiplint could not fully read: each has a parse issue that can take an object
@@ -126,29 +132,31 @@ export function buildReportReferenceIndex(
   const partlyRead = new Set(
     (model?.files ?? []).filter((f) => f.issues.some((i) => i.canDropObjects)).map((f) => f.file),
   );
-  const unread = (reason: string, file: string): Resolution => ({
-    kind: "unread",
-    reason: `${reason}, and ${file} could not be fully read`,
-  });
+  /** Unread for `reason` while `file` could not be fully read, or, with no file, any model file. */
+  const unread = (reason: Message, file?: string): Resolution =>
+    failed(
+      "unread",
+      file === undefined
+        ? msg("BROKEN_FIELD_REFERENCE.unreadModelFile", { reason })
+        : msg("BROKEN_FIELD_REFERENCE.unread", { reason, file }),
+    );
   /**
    * The first model path the input reader could not read at all, which counts as a file whose
    * issue can take an object and a `table` line with it: it could declare anything.
    */
   const neverRead = model?.unreadPaths[0];
-  const notRead = (reason: string, path: string): Resolution => ({
-    kind: "unread",
-    reason: `${reason}, and ${path} could not be read`,
-  });
+  const notRead = (reason: Message, path: string): Resolution =>
+    failed("unread", msg("BROKEN_FIELD_REFERENCE.notRead", { reason, path }));
   /**
    * Something the model does not have that any model file could declare: a table, or a bare name
    * in a report measure's DAX, which could be a measure on any table. A path never read is named
    * in place of "a model file", since it is a path the reader can find.
    */
-  const missing = (reason: string): Resolution =>
+  const missing = (reason: Message): Resolution =>
     neverRead !== undefined
       ? notRead(reason, neverRead)
       : partlyRead.size > 0
-        ? unread(reason, "a model file")
+        ? unread(reason)
         : unresolved(reason);
   /**
    * Something missing from table `t`: its columns, measures, hierarchies, and their variations and
@@ -160,7 +168,7 @@ export function buildReportReferenceIndex(
    * file holds for Sales, and so does a path never read, which could declare the table again. A
    * file that declares the table is named first, then a path never read.
    */
-  const missingOn = (t: Table, reason: string): Resolution => {
+  const missingOn = (t: Table, reason: Message): Resolution => {
     const files = model?.files ?? [];
     const declaring = files.find(
       (f) =>
@@ -174,11 +182,8 @@ export function buildReportReferenceIndex(
     const file = files.find((f) => f.issues.some((i) => i.canDropTableLine))?.file;
     return file === undefined ? unresolved(reason) : unread(reason, file);
   };
-  const NO_TABLE: Record<NonNullable<FieldRef["noTable"]>, string> = {
-    undeclaredAlias: "a filter alias that no From list declares",
-    nonTableAlias: "an alias whose From entry names no model table",
-    noSource: "a source that names no model table",
-  };
+  const noTable = (cause: NonNullable<FieldRef["noTable"]>): Resolution =>
+    unresolved(msg("BROKEN_FIELD_REFERENCE.noSourceTable", { cause }));
 
   /**
    * The table a date column's variation leads to, found through the table of the variation's
@@ -192,15 +197,26 @@ export function buildReportReferenceIndex(
     // The date column, its variation, and the variation's default hierarchy sit in table `t`'s
     // file; the target table could be declared in any file.
     const source = columnOf(t, via.column);
-    if (!source) return missingOn(t, `no column named ${q(via.column)} on ${q(t.name)}`);
+    if (!source)
+      return missingOn(
+        t,
+        msg("BROKEN_FIELD_REFERENCE.noColumn", { column: via.column, table: t.name }),
+      );
     const variation = source.variations.find((v) => lower(v.name) === lower(via.name));
-    const on = `column ${q(source.name)} of ${q(t.name)}`;
-    if (!variation) return missingOn(t, `no variation named ${q(via.name)} on ${on}`);
+    const on = { column: source.name, table: t.name };
+    if (!variation)
+      return missingOn(
+        t,
+        msg("BROKEN_FIELD_REFERENCE.noVariation", { variation: via.name, ...on }),
+      );
     if (variation.defaultHierarchy === undefined)
-      return missingOn(t, `variation ${q(variation.name)} on ${on} names no default hierarchy`);
+      return missingOn(
+        t,
+        msg("BROKEN_FIELD_REFERENCE.noDefaultHierarchy", { variation: variation.name, ...on }),
+      );
     const target = splitQualifiedName(variation.defaultHierarchy).table;
     const table = tables.get(lower(target));
-    if (!table) return missing(`no table named ${q(target)}`);
+    if (!table) return missing(msg("BROKEN_FIELD_REFERENCE.noTable", { table: target }));
     return { table, source };
   };
 
@@ -212,18 +228,24 @@ export function buildReportReferenceIndex(
    * shows it.
    */
   const notInExtension = (ref: FieldRef): Resolution => {
-    if (ref.noTable) return unresolved(NO_TABLE[ref.noTable]);
+    if (ref.noTable) return noTable(ref.noTable);
     if (report.extensions === "unread")
-      return { kind: "unread", reason: "reportExtensions.json could not be read" };
+      return failed("unread", msg("BROKEN_FIELD_REFERENCE.extensionUnread"));
     if (ref.kind === "measure")
       return unresolved(
-        report.extensions === "absent"
-          ? `no measure named ${q(ref.name)} on ${q(ref.table)}: the report defines no extension measures`
-          : `no measure named ${q(ref.name)} on ${q(ref.table)} in the report's extension`,
+        msg(
+          report.extensions === "absent"
+            ? "BROKEN_FIELD_REFERENCE.noExtensionMeasures"
+            : "BROKEN_FIELD_REFERENCE.notInExtension",
+          { measure: ref.name, table: ref.table },
+        ),
       );
-    const what = ref.kind === "hierarchyLevel" ? "hierarchy" : "column";
     return unresolved(
-      `the report's extension defines only measures, so no ${what} named ${q(ref.name)} on ${q(ref.table)}`,
+      msg("BROKEN_FIELD_REFERENCE.extensionMeasuresOnly", {
+        what: ref.kind === "hierarchyLevel" ? "hierarchy" : "column",
+        name: ref.name,
+        table: ref.table,
+      }),
     );
   };
 
@@ -235,10 +257,10 @@ export function buildReportReferenceIndex(
     // "extension", is looked up among the report's own measures only, which the line above did,
     // with or without a model: a model field of the same name is not the one it names.
     if (ref.schema !== undefined) return notInExtension(ref);
-    if (!model) return unresolved("no model in the input");
-    if (ref.noTable) return unresolved(NO_TABLE[ref.noTable]);
+    if (!model) return unresolved(msg("BROKEN_FIELD_REFERENCE.noModel"));
+    if (ref.noTable) return noTable(ref.noTable);
     const named = tables.get(lower(ref.table));
-    if (!named) return missing(`no table named ${q(ref.table)}`);
+    if (!named) return missing(msg("BROKEN_FIELD_REFERENCE.noTable", { table: ref.table }));
     let t = named;
     let variationOf: Column | undefined;
     if (ref.variation) {
@@ -254,11 +276,13 @@ export function buildReportReferenceIndex(
       // Certain whatever a file could not be read: a column cannot share a name with a measure on
       // its table (https://learn.microsoft.com/dax/best-practices/dax-column-measure-references).
       if (measureOf(t, ref.name))
-        return {
-          kind: "unresolved",
-          reason: `${q(ref.name)} is a measure on ${q(t.name)}, not a column`,
-        };
-      return missingOn(t, `no column named ${q(ref.name)} on ${q(t.name)}`);
+        return unresolved(
+          msg("BROKEN_FIELD_REFERENCE.measureNotColumn", { measure: ref.name, table: t.name }),
+        );
+      return missingOn(
+        t,
+        msg("BROKEN_FIELD_REFERENCE.noColumn", { column: ref.name, table: t.name }),
+      );
     }
     if (ref.kind === "measure") {
       const m = measureOf(t, ref.name);
@@ -268,20 +292,34 @@ export function buildReportReferenceIndex(
       // measure of that name sits on the table the reference names.
       const elsewhere = measuresByName.get(lower(ref.name));
       if (elsewhere)
-        return {
-          kind: "unresolved",
-          reason: `[${elsewhere.name}] is on ${q(elsewhere.table.name)}, not ${q(t.name)}`,
-        };
-      return missingOn(t, `no measure named ${q(ref.name)} on ${q(t.name)}`);
+        return unresolved(
+          msg("BROKEN_FIELD_REFERENCE.measureElsewhere", {
+            measure: elsewhere.name,
+            table: elsewhere.table.name,
+            namedTable: t.name,
+          }),
+        );
+      return missingOn(
+        t,
+        msg("BROKEN_FIELD_REFERENCE.noMeasure", { measure: ref.name, table: t.name }),
+      );
     }
     const h = t.hierarchies.find((x) => lower(x.name) === lower(ref.name));
-    if (!h) return missingOn(t, `no hierarchy named ${q(ref.name)} on ${q(t.name)}`);
+    if (!h)
+      return missingOn(
+        t,
+        msg("BROKEN_FIELD_REFERENCE.noHierarchy", { hierarchy: ref.name, table: t.name }),
+      );
     if (ref.level === undefined) return { kind: "hierarchy", hierarchy: h, ...via };
     const level = h.levels.find((l) => lower(l.name) === lower(ref.level!));
     if (!level)
       return missingOn(
         t,
-        `no level named ${q(ref.level)} in hierarchy ${q(h.name)} on ${q(t.name)}`,
+        msg("BROKEN_FIELD_REFERENCE.noLevel", {
+          level: ref.level,
+          hierarchy: h.name,
+          table: t.name,
+        }),
       );
     return { kind: "hierarchy", hierarchy: h, level, ...via };
   };
@@ -376,7 +414,7 @@ export function buildReportReferenceIndex(
           ref: { kind: "measure", table: m.table, name: raw.name, pointer: "" },
           owner,
           file: m.file,
-          resolution: missing(`no measure or column named ${q(raw.name)}`),
+          resolution: missing(msg("BROKEN_FIELD_REFERENCE.noMeasureOrColumn", { name: raw.name })),
         });
     }
   }

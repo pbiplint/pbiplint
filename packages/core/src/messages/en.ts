@@ -20,6 +20,31 @@ export const EN = {
   "BROKEN_BOOKMARK_REFERENCE.capturedVisual": 'captured visual "{visual}" is not on page "{page}"',
   "BROKEN_BOOKMARK_REFERENCE.targetVisuals":
     '{count, plural, one {target visual {visuals, list} is} other {target visuals {visuals, list} are}} not on page "{page}"',
+  BROKEN_FIELD_REFERENCE: "{field}: {reason}",
+  "BROKEN_FIELD_REFERENCE.extensionMeasuresOnly": `the report's extension defines only measures, so no {what, select, hierarchy {hierarchy} other {column}} named "{name}" on "{table}"`,
+  "BROKEN_FIELD_REFERENCE.extensionUnread": "reportExtensions.json could not be read",
+  "BROKEN_FIELD_REFERENCE.measureElsewhere": '[{measure}] is on "{table}", not "{namedTable}"',
+  "BROKEN_FIELD_REFERENCE.measureNotColumn": '"{measure}" is a measure on "{table}", not a column',
+  "BROKEN_FIELD_REFERENCE.noColumn": 'no column named "{column}" on "{table}"',
+  "BROKEN_FIELD_REFERENCE.noDefaultHierarchy":
+    'variation "{variation}" on column "{column}" of "{table}" names no default hierarchy',
+  "BROKEN_FIELD_REFERENCE.noExtensionMeasures":
+    'no measure named "{measure}" on "{table}": the report defines no extension measures',
+  "BROKEN_FIELD_REFERENCE.noHierarchy": 'no hierarchy named "{hierarchy}" on "{table}"',
+  "BROKEN_FIELD_REFERENCE.noLevel":
+    'no level named "{level}" in hierarchy "{hierarchy}" on "{table}"',
+  "BROKEN_FIELD_REFERENCE.noMeasure": 'no measure named "{measure}" on "{table}"',
+  "BROKEN_FIELD_REFERENCE.noMeasureOrColumn": 'no measure or column named "{name}"',
+  "BROKEN_FIELD_REFERENCE.noModel": "no model in the input",
+  "BROKEN_FIELD_REFERENCE.noSourceTable":
+    "{cause, select, undeclaredAlias {a filter alias that no From list declares} nonTableAlias {an alias whose From entry names no model table} other {a source that names no model table}}",
+  "BROKEN_FIELD_REFERENCE.noTable": 'no table named "{table}"',
+  "BROKEN_FIELD_REFERENCE.noVariation":
+    'no variation named "{variation}" on column "{column}" of "{table}"',
+  "BROKEN_FIELD_REFERENCE.notInExtension": `no measure named "{measure}" on "{table}" in the report's extension`,
+  "BROKEN_FIELD_REFERENCE.notRead": "{reason}, and {path} could not be read",
+  "BROKEN_FIELD_REFERENCE.unread": "{reason}, and {file} could not be fully read",
+  "BROKEN_FIELD_REFERENCE.unreadModelFile": "{reason}, and a model file could not be fully read",
   DEFAULT_PAGE_NAME:
     '"{name}" {pattern, select, new {is the name Power BI Desktop gives a new page} duplicate {is the name Power BI Desktop gives a duplicated page} other {is named as a copy}}',
   ENSURE_ALTTEXT: "no alt text",
@@ -45,6 +70,13 @@ export const EN = {
     'no landing page set; the active page "{page}" does not exist',
   "LANDING_PAGE_NOT_SET.opensOn":
     'opens on "{page}", {by, select, first {the first page} other {the page open when it was saved}}',
+  "NOT_REACHED_FROM_REPORT.level": "level {level} of hierarchy {hierarchy}",
+  "NOT_REACHED_FROM_REPORT.levels":
+    "{why}; {levels, list} {count, plural, one {uses} other {use}} it",
+  "NOT_REACHED_FROM_REPORT.nothingReaches":
+    "nothing in the report reaches it, and no measure or column references it",
+  "NOT_REACHED_FROM_REPORT.referencedOnly":
+    "referenced only by {referrers}, which nothing reaches either",
   "OPENING_PAGE_INVALID.hidden": 'active page "{page}" is hidden from readers',
   "OPENING_PAGE_INVALID.missing":
     '{by, select, landing {landing} other {active}} page "{page}" does not exist',

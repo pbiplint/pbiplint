@@ -23,7 +23,13 @@ import {
   reportObjectIds,
   visual,
 } from "./report-helpers.js";
-import { fixturesDir, parseModelDir, readModelFiles, readProjectFiles } from "./helpers.js";
+import {
+  fixturesDir,
+  parseModelDir,
+  readModelFiles,
+  readProjectFiles,
+  rendered,
+} from "./helpers.js";
 
 const tmdl = `table Sales
 	column Amount
@@ -82,7 +88,7 @@ describe("BROKEN_FIELD_REFERENCE", () => {
     const findings = BROKEN_FIELD_REFERENCE.check(project, {
       indexes: buildIndexes(project),
       options: {},
-    });
+    }).map(rendered);
     expect(findings.map((f) => [f.objectName, f.objectId, f.detail])).toEqual([
       ["Report filter", "report", `'Nowhere'[X]: no table named "Nowhere"`],
       ['Page filter on "Page p"', "p", `'Sales'[Nope]: no column named "Nope" on "Sales"`],
@@ -522,7 +528,7 @@ describe("BROKEN_FIELD_REFERENCE", () => {
     const findings = BROKEN_FIELD_REFERENCE.check(project, {
       indexes: buildIndexes(project),
       options: {},
-    });
+    }).map(rendered);
     const expected = [
       { file: "definition/report.json", line: lineOf(reportText, '"field"') },
       { file: "definition/bookmarks/b.bookmark.json", line: lineOf(bookmarkText, '"expression"') },
@@ -566,7 +572,7 @@ describe("BROKEN_FIELD_REFERENCE", () => {
     const findings = BROKEN_FIELD_REFERENCE.check(project, {
       indexes: buildIndexes(project),
       options: {},
-    });
+    }).map(rendered);
     expect(findings.map((f) => [f.objectName, f.detail, f.location])).toEqual([
       [
         'Page filter on "Page p"',
@@ -597,7 +603,7 @@ describe("BROKEN_FIELD_REFERENCE", () => {
     const findings = BROKEN_FIELD_REFERENCE.check(project, {
       indexes: buildIndexes(project),
       options: {},
-    });
+    }).map(rendered);
     const binding = lineOf(visualText, '"field"', visualText.indexOf('"projections"'));
     expect(binding).toBeGreaterThan(lineOf(visualText, '"field"'));
     expect(findings.map((f) => [f.objectId, f.detail, f.location])).toEqual([
@@ -632,7 +638,7 @@ describe("BROKEN_FIELD_REFERENCE", () => {
     const findings = BROKEN_FIELD_REFERENCE.check(project, {
       indexes: buildIndexes(project),
       options: {},
-    });
+    }).map(rendered);
     // The reference's pointer ends at the property's `expr`, so the finding sits on that line.
     const line = lineOf(visualText, '"expr"', visualText.indexOf('"objects"'));
     expect(line).toBeGreaterThan(lineOf(visualText, '"objects"'));
@@ -666,7 +672,7 @@ describe("BROKEN_FIELD_REFERENCE", () => {
     const findings = BROKEN_FIELD_REFERENCE.check(project, {
       indexes: buildIndexes(project),
       options: {},
-    });
+    }).map(rendered);
     const binding = lineOf(visualText, '"field"');
     expect(binding).toBeLessThan(lineOf(visualText, '"sortDefinition"'));
     expect(findings.map((f) => [f.objectId, f.detail, f.location])).toEqual([
@@ -698,7 +704,7 @@ describe("BROKEN_FIELD_REFERENCE", () => {
     const findings = BROKEN_FIELD_REFERENCE.check(project, {
       indexes: buildIndexes(project),
       options: {},
-    });
+    }).map(rendered);
     expect(findings.map((f) => f.detail)).toEqual([
       "[Region]: a filter alias that no From list declares",
     ]);
@@ -712,7 +718,7 @@ describe("NOT_REACHED_FROM_REPORT", () => {
     const findings = NOT_REACHED_FROM_REPORT.check(project, {
       indexes: buildIndexes(project),
       options: {},
-    });
+    }).map(rendered);
     expect(findings.map((f) => [f.objectName, f.detail])).toEqual([
       ["[Sales LY]", "referenced only by [Sales YoY %], which nothing reaches either"],
       ["[Sales YoY %]", "nothing in the report reaches it, and no measure or column references it"],
@@ -1135,8 +1141,8 @@ describe("Desktop's auto date/time hierarchy, on tvw-baseline's model", () => {
     const project = { model, report };
     const ctx = { indexes: buildIndexes(project), options: {} };
     return {
-      broken: BROKEN_FIELD_REFERENCE.check(project, ctx),
-      unreached: NOT_REACHED_FROM_REPORT.check(project, ctx),
+      broken: BROKEN_FIELD_REFERENCE.check(project, ctx).map(rendered),
+      unreached: NOT_REACHED_FROM_REPORT.check(project, ctx).map(rendered),
       reach: ctx.indexes.reachability!,
     };
   };

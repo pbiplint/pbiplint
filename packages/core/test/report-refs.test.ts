@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { buildReferenceIndex } from "../src/index/references.js";
 import { buildReportReferenceIndex, type Resolution } from "../src/index/report-refs.js";
+import { formatMessage, msg, type Message } from "../src/messages/format.js";
 import { buildModel } from "../src/model/build.js";
 import type { Model } from "../src/model/types.js";
 import { buildReport } from "../src/pbir/build.js";
@@ -9,6 +10,18 @@ import { parseTmdl } from "../src/tmdl/parse.js";
 import { fixturesDir, modelFrom } from "./helpers.js";
 
 const j = (v: unknown) => JSON.stringify(v);
+/** Any message that renders as `english`: a resolution's `message`, beside its `reason`. */
+const rendering = (english: string) => ({
+  asymmetricMatch: (m: Message) => formatMessage(m) === english,
+  toString: () => `a message rendering ${JSON.stringify(english)}`,
+});
+/** A reason's message as the IDs it nests, outermost first. */
+const idsOf = (res: Resolution): string[] => {
+  const ids: string[] = [];
+  let m = "message" in res ? res.message : undefined;
+  for (; m; m = m.params.reason as Message | undefined) ids.push(m.id);
+  return ids;
+};
 const column = (entity: string, property: string) => ({
   Column: { Expression: { SourceRef: { Entity: entity } }, Property: property },
 });
@@ -221,6 +234,7 @@ describe("buildReportReferenceIndex", () => {
     expect(without.unresolved()[0]!.resolution).toEqual({
       kind: "unresolved",
       reason: "no model in the input",
+      message: msg("BROKEN_FIELD_REFERENCE.noModel"),
     });
   });
 });
@@ -331,6 +345,32 @@ describe("a reference through a date column's variation (Desktop's auto date/tim
       `no level named "Week" in hierarchy "Date Hierarchy" on "${LDT}"`,
     ]);
   });
+  it("gives each missing step its own message, rendering the reason", () => {
+    const missing = resolutionsOf(
+      dateLevel("Nope", "Year"),
+      dateLevel("OrderDate", "Year", { variation: "Other" }),
+      dateLevel("ShipDate", "Year"),
+      dateLevel("DueDate", "Year"),
+      dateLevel("OrderDate", "Year", { hierarchy: "Fiscal" }),
+      dateLevel("OrderDate", "Week"),
+    );
+    expect(missing.map(idsOf)).toEqual([
+      ["BROKEN_FIELD_REFERENCE.noColumn"],
+      ["BROKEN_FIELD_REFERENCE.noVariation"],
+      ["BROKEN_FIELD_REFERENCE.noDefaultHierarchy"],
+      ["BROKEN_FIELD_REFERENCE.noTable"],
+      ["BROKEN_FIELD_REFERENCE.noHierarchy"],
+      ["BROKEN_FIELD_REFERENCE.noLevel"],
+    ]);
+    expect(missing[1]).toMatchObject({
+      message: { params: { variation: "Other", column: "OrderDate", table: "Sales" } },
+    });
+    expect(missing[5]).toMatchObject({
+      message: { params: { level: "Week", hierarchy: "Date Hierarchy", table: LDT } },
+    });
+    for (const res of missing)
+      if ("message" in res) expect(formatMessage(res.message)).toBe(res.reason);
+  });
   it("keeps the undeclared-alias reason for an undeclared alias, and names the other empty sources", () => {
     const aliased = (source: string) => ({
       Column: { Expression: { SourceRef: { Source: source } }, Property: "OrderDate" },
@@ -365,6 +405,13 @@ describe("a reference through a date column's variation (Desktop's auto date/tim
       "an alias whose From entry names no model table",
       "a source that names no model table",
     ]);
+    expect(buildReportReferenceIndex(r, dated).refs.map((x) => x.resolution)).toEqual(
+      ["undeclaredAlias", "nonTableAlias", "noSource"].map((cause) =>
+        expect.objectContaining({
+          message: msg("BROKEN_FIELD_REFERENCE.noSourceTable", { cause }),
+        }),
+      ),
+    );
   });
 });
 
@@ -443,6 +490,40 @@ describe("a reference that names the report's extension schema", () => {
     expect(index.refs.map((r) => reasonOf(r.resolution))).toEqual([
       `the report's extension defines only measures, so no column named "Amount" on "Sales"`,
     ]);
+    const hierarchy = {
+      HierarchyLevel: {
+        Expression: {
+          Hierarchy: {
+            Expression: { SourceRef: { Schema: "extension", Entity: "Sales" } },
+            Hierarchy: "Calendar",
+          },
+        },
+        Level: "Year",
+      },
+    };
+    const both = indexOf(
+      [inExtension("Column", "Sales", "Amount"), hierarchy, inExtension("Measure", "Sales", "X")],
+      ["Net Margin"],
+      moved,
+    ).refs.map((r) => r.resolution);
+    expect(both.map((x) => ("message" in x ? x.message : undefined))).toEqual([
+      msg("BROKEN_FIELD_REFERENCE.extensionMeasuresOnly", {
+        what: "column",
+        name: "Amount",
+        table: "Sales",
+      }),
+      msg("BROKEN_FIELD_REFERENCE.extensionMeasuresOnly", {
+        what: "hierarchy",
+        name: "Calendar",
+        table: "Sales",
+      }),
+      msg("BROKEN_FIELD_REFERENCE.notInExtension", { measure: "X", table: "Sales" }),
+    ]);
+    expect(both.map(reasonOf)).toEqual([
+      `the report's extension defines only measures, so no column named "Amount" on "Sales"`,
+      `the report's extension defines only measures, so no hierarchy named "Calendar" on "Sales"`,
+      `no measure named "X" on "Sales" in the report's extension`,
+    ]);
   });
   it("is unread, and not unresolved, while reportExtensions.json cannot be read", () => {
     // Both sides of the merge define Net Margin; pbiplint reads neither, so it cannot say either way.
@@ -462,7 +543,11 @@ describe("a reference that names the report's extension schema", () => {
       conflicted,
       moved,
     );
-    const unread = { kind: "unread", reason: "reportExtensions.json could not be read" };
+    const unread = {
+      kind: "unread",
+      reason: "reportExtensions.json could not be read",
+      message: msg("BROKEN_FIELD_REFERENCE.extensionUnread"),
+    };
     expect(index.refs.map((r) => r.resolution)).toEqual([
       unread,
       unread,
@@ -476,6 +561,10 @@ describe("a reference that names the report's extension schema", () => {
       {
         kind: "unresolved",
         reason: `no measure named "Net Margin" on "Sales": the report defines no extension measures`,
+        message: msg("BROKEN_FIELD_REFERENCE.noExtensionMeasures", {
+          measure: "Net Margin",
+          table: "Sales",
+        }),
       },
     ]);
   });
@@ -549,8 +638,10 @@ describe("a reference into a model file pbiplint could not fully read", () => {
   };
   const resolutions = (m: Model, ...fields: unknown[]): Resolution[] =>
     indexOf(m, fields).refs.map((r) => r.resolution);
-  const unread = (reason: string): Resolution => ({ kind: "unread", reason });
-  const unresolved = (reason: string): Resolution => ({ kind: "unresolved", reason });
+  const unread = (reason: string): Resolution =>
+    ({ kind: "unread", reason, message: rendering(reason) }) as unknown as Resolution;
+  const unresolved = (reason: string): Resolution =>
+    ({ kind: "unresolved", reason, message: rendering(reason) }) as unknown as Resolution;
   const partly = (what: string, file = "a model file") =>
     `${what}, and ${file} could not be fully read`;
 
@@ -563,6 +654,27 @@ describe("a reference into a model file pbiplint could not fully read", () => {
       unread(partly('no table named "Sales"')),
     ]);
     expect(index.unresolved()).toEqual([]);
+  });
+
+  it("wraps the reason in a message naming the file it could sit in, rendering today's English", () => {
+    const m = modelOf({ [SALES]: sales + spaced, [PRODUCT]: product + spaced });
+    const [store, nope] = resolutions(m, column("Store", "City"), column("Sales", "Nope"));
+    // No file declares Store, so any could: the reason says "a model file".
+    expect(store).toEqual({
+      kind: "unread",
+      reason: 'no table named "Store", and a model file could not be fully read',
+      message: msg("BROKEN_FIELD_REFERENCE.unreadModelFile", {
+        reason: msg("BROKEN_FIELD_REFERENCE.noTable", { table: "Store" }),
+      }),
+    });
+    expect(nope).toEqual({
+      kind: "unread",
+      reason: `no column named "Nope" on "Sales", and ${SALES} could not be fully read`,
+      message: msg("BROKEN_FIELD_REFERENCE.unread", {
+        reason: msg("BROKEN_FIELD_REFERENCE.noColumn", { column: "Nope", table: "Sales" }),
+        file: SALES,
+      }),
+    });
   });
 
   it("is unread when a missing field's table has, in its own file, a line indented with spaces", () => {
@@ -736,6 +848,21 @@ describe("a reference into a model file pbiplint could not fully read", () => {
           column("Store", "City"),
         ),
       ).toEqual([unread(never('no table named "Store"', "definition/tables/"))]);
+    });
+
+    it("wraps the reason in a message naming the path, rendering today's English", () => {
+      const m = modelBeside({ [SALES]: sales }, [STORE]);
+      const [missing] = indexOf(m, [], { "Net Margin": "[Missing]" })
+        .refs.filter((r) => r.owner.kind === "reportMeasure")
+        .map((r) => r.resolution);
+      expect(missing).toEqual({
+        kind: "unread",
+        reason: `no measure or column named "Missing", and ${STORE} could not be read`,
+        message: msg("BROKEN_FIELD_REFERENCE.notRead", {
+          reason: msg("BROKEN_FIELD_REFERENCE.noMeasureOrColumn", { name: "Missing" }),
+          path: STORE,
+        }),
+      });
     });
 
     it("still says a measure is not a column, and names the table a measure is on", () => {

@@ -1,3 +1,4 @@
+import { formatMessage, msg, type Message } from "../messages/format.js";
 import { columnRef, isHiddenAutoDateTable, measureRef, tableRef } from "../model/names.js";
 import type { Column, DaxFunction, Level, Measure, Model, Table } from "../model/types.js";
 import type { ReferenceIndex, RefOwner } from "./references.js";
@@ -22,15 +23,14 @@ export interface ReachabilityIndex {
    * hierarchy's level sits on also names each such level, so a reader deleting the column learns
    * that it changes that hierarchy.
    */
+  reasonMessageFor(object: Column | Measure): Message;
+  /** `reasonMessageFor` in English. */
   reasonFor(object: Column | Measure): string;
 }
 
 const isTable = (n: Node): n is Table => "columns" in n;
 /** A measure carries its table and no `kind`, where a column carries both and a function neither. */
 const isMeasure = (n: Node): n is Measure => "table" in n && !("kind" in n);
-/** "A", "A and B", "A, B, and C", the list style the site's index and the browser app use. */
-const listOf = (items: string[]): string =>
-  items.length <= 2 ? items.join(" and ") : `${items.slice(0, -1).join(", ")}, and ${items.at(-1)}`;
 
 /**
  * What the report reaches in the model, to a fixed point (spec section 6). Roots: every resolved
@@ -189,6 +189,27 @@ export function buildReachabilityIndex(
     c.table.hierarchies.flatMap((h) =>
       h.levels.filter((l) => l.column?.toLowerCase() === c.name.toLowerCase()),
     );
+  const reasonMessageFor = (n: Column | Measure): Message => {
+    const referrers = referrersOf(n).filter((r) => r !== n);
+    const why =
+      referrers.length === 0
+        ? msg("NOT_REACHED_FROM_REPORT.nothingReaches")
+        : msg("NOT_REACHED_FROM_REPORT.referencedOnly", {
+            referrers: referrers.map(nameOf).join(", "),
+          });
+    const levels = isMeasure(n) ? [] : levelsOn(n);
+    if (levels.length === 0) return why;
+    return msg("NOT_REACHED_FROM_REPORT.levels", {
+      why,
+      levels: levels.map((l) =>
+        msg("NOT_REACHED_FROM_REPORT.level", {
+          level: msg("quoted", { name: l.name }),
+          hierarchy: msg("quoted", { name: l.hierarchy.name }),
+        }),
+      ),
+      count: levels.length,
+    });
+  };
   return {
     reached: (n) => parent.has(n),
     pathTo: (n) => {
@@ -206,16 +227,7 @@ export function buildReachabilityIndex(
       );
       return { tables, columns, measures };
     },
-    reasonFor: (n) => {
-      const referrers = referrersOf(n).filter((r) => r !== n);
-      const why =
-        referrers.length === 0
-          ? "nothing in the report reaches it, and no measure or column references it"
-          : `referenced only by ${referrers.map(nameOf).join(", ")}, which nothing reaches either`;
-      const levels = isMeasure(n) ? [] : levelsOn(n);
-      if (levels.length === 0) return why;
-      const named = levels.map((l) => `level "${l.name}" of hierarchy "${l.hierarchy.name}"`);
-      return `${why}; ${listOf(named)} ${levels.length === 1 ? "uses" : "use"} it`;
-    },
+    reasonMessageFor,
+    reasonFor: (n) => formatMessage(reasonMessageFor(n)),
   };
 }

@@ -28,6 +28,10 @@ import {
 } from "../src/rules/pbiplint/opening.js";
 import { HARDCODED_YEAR_IN_FILTER } from "../src/rules/pbiplint/filters.js";
 import { DEFAULT_PAGE_NAME } from "../src/rules/pbiplint/pages.js";
+import {
+  BROKEN_FIELD_REFERENCE,
+  NOT_REACHED_FROM_REPORT,
+} from "../src/rules/pbiplint/references.js";
 import { englishList, longDate } from "../src/rules/pbiplint/periods.js";
 import { TAB_ORDER_FOLLOWS_LAYOUT } from "../src/rules/pbiplint/tab-order.js";
 import {
@@ -39,7 +43,7 @@ import {
 } from "../src/rules/pbiplint/visuals.js";
 import { RULE_COULD_NOT_FINISH } from "../src/rules/rule-could-not-finish.js";
 import type { Finding, Rule, RuleFinding } from "../src/rules/types.js";
-import { j, lit, page, reportFindings, visual } from "./report-helpers.js";
+import { bound, column, j, lit, measure, page, reportFindings, visual } from "./report-helpers.js";
 
 // Test-only templates under made-up IDs, so these tests do not depend on the English catalog.
 const catalog = {
@@ -835,6 +839,215 @@ describe("the visual, tab order, and year filter rules' messages (#98)", () => {
           },
         ],
       ]);
+    });
+  });
+});
+
+describe("the field reference and reachability messages (#98)", () => {
+  const tmdl = `table Sales
+	column Amount
+		dataType: decimal
+	measure 'Total Sales' = SUM('Sales'[Amount])
+
+table Product
+	column Name
+		dataType: string
+`;
+  const hierarchyLevel = (entity: string, hierarchy: string, level: string) => ({
+    HierarchyLevel: {
+      Expression: {
+        Hierarchy: { Expression: { SourceRef: { Entity: entity } }, Hierarchy: hierarchy },
+      },
+      Level: level,
+    },
+  });
+  /** Each finding as its message ID, the English it renders, and its nested reason's ID. */
+  const said = (rule: Rule, files: LintFile[], model?: string) =>
+    reportFindings(rule, files, model).map((f) => [
+      f.messageId,
+      f.detail,
+      (f.params?.reason as Message | undefined)?.id,
+    ]);
+
+  it("gives BROKEN_FIELD_REFERENCE one message, its reason nested under an ID per reason", () => {
+    const files = [
+      page("p"),
+      bound("p", "v", "tableEx", [
+        column("Nowhere", "X"),
+        column("Sales", "Nope"),
+        measure("Sales", "Profit"),
+        column("Sales", "Total Sales"),
+        measure("Product", "Total Sales"),
+        hierarchyLevel("Sales", "Calendar", "Year"),
+      ]),
+    ];
+    expect(said(BROKEN_FIELD_REFERENCE, files, tmdl)).toEqual([
+      [
+        "BROKEN_FIELD_REFERENCE",
+        `'Nowhere'[X]: no table named "Nowhere"`,
+        "BROKEN_FIELD_REFERENCE.noTable",
+      ],
+      [
+        "BROKEN_FIELD_REFERENCE",
+        `'Sales'[Nope]: no column named "Nope" on "Sales"`,
+        "BROKEN_FIELD_REFERENCE.noColumn",
+      ],
+      [
+        "BROKEN_FIELD_REFERENCE",
+        `[Profit]: no measure named "Profit" on "Sales"`,
+        "BROKEN_FIELD_REFERENCE.noMeasure",
+      ],
+      [
+        "BROKEN_FIELD_REFERENCE",
+        `'Sales'[Total Sales]: "Total Sales" is a measure on "Sales", not a column`,
+        "BROKEN_FIELD_REFERENCE.measureNotColumn",
+      ],
+      [
+        "BROKEN_FIELD_REFERENCE",
+        `[Total Sales]: [Total Sales] is on "Sales", not "Product"`,
+        "BROKEN_FIELD_REFERENCE.measureElsewhere",
+      ],
+      [
+        "BROKEN_FIELD_REFERENCE",
+        `'Sales'[Calendar].[Year]: no hierarchy named "Calendar" on "Sales"`,
+        "BROKEN_FIELD_REFERENCE.noHierarchy",
+      ],
+    ]);
+    expect(said(BROKEN_FIELD_REFERENCE, files)).toEqual(
+      Array.from({ length: 6 }, () => [
+        "BROKEN_FIELD_REFERENCE",
+        expect.stringMatching(/: no model in the input$/),
+        "BROKEN_FIELD_REFERENCE.noModel",
+      ]),
+    );
+  });
+
+  it("keeps one finding per object and field, now that the detail is a message", () => {
+    // The same missing column in the visual's role and again in its own filter.
+    const files = [
+      page("p"),
+      bound("p", "v", "tableEx", [column("Sales", "Nope")], {
+        filterConfig: {
+          filters: [{ name: "f", field: column("Sales", "Nope"), type: "Categorical" }],
+        },
+      }),
+    ];
+    expect(said(BROKEN_FIELD_REFERENCE, files, tmdl)).toEqual([
+      [
+        "BROKEN_FIELD_REFERENCE",
+        `'Sales'[Nope]: no column named "Nope" on "Sales"`,
+        "BROKEN_FIELD_REFERENCE.noColumn",
+      ],
+    ]);
+  });
+
+  describe("NOT_REACHED_FROM_REPORT", () => {
+    const NONE = "nothing in the report reaches it, and no measure or column references it";
+    const dates = (levels: string) => `table Sales
+	column Amount
+		dataType: decimal
+	measure 'Total Sales' = SUM('Sales'[Amount])
+	measure 'Sales LY' = CALCULATE([Total Sales])
+	measure 'Sales YoY %' = [Total Sales] - [Sales LY]
+
+table Date
+	column Date
+		dataType: dateTime
+	column Year
+		dataType: int64
+${levels}`;
+    const files = [page("p"), bound("p", "v", "cardVisual", [measure("Sales", "Total Sales")])];
+    /** Each finding as its object, message ID, English, and the ID of the reason it nests. */
+    const reached = (model: string) =>
+      reportFindings(NOT_REACHED_FROM_REPORT, files, model).map((f) => [
+        f.objectName,
+        f.messageId,
+        f.detail,
+        (f.params?.why as Message | undefined)?.id,
+      ]);
+
+    it("gives each reason its own message, and nests it under the levels that use a column", () => {
+      expect(
+        reached(
+          dates(`
+	hierarchy Calendar
+		level Year
+			column: Year
+`),
+        ),
+      ).toEqual([
+        [
+          "[Sales LY]",
+          "NOT_REACHED_FROM_REPORT.referencedOnly",
+          "referenced only by [Sales YoY %], which nothing reaches either",
+          undefined,
+        ],
+        ["[Sales YoY %]", "NOT_REACHED_FROM_REPORT.nothingReaches", NONE, undefined],
+        ["'Date'[Date]", "NOT_REACHED_FROM_REPORT.nothingReaches", NONE, undefined],
+        [
+          "'Date'[Year]",
+          "NOT_REACHED_FROM_REPORT.levels",
+          `${NONE}; level "Year" of hierarchy "Calendar" uses it`,
+          "NOT_REACHED_FROM_REPORT.nothingReaches",
+        ],
+      ]);
+    });
+
+    it("takes a plural over the levels, each a message with its names quoted", () => {
+      const [year] = reportFindings(
+        NOT_REACHED_FROM_REPORT,
+        files,
+        dates(`
+	hierarchy Calendar
+		level Year
+			column: Year
+
+	hierarchy Fiscal
+		level FY
+			column: Year
+`),
+      ).filter((f) => f.objectName === "'Date'[Year]");
+      expect(year!.detail).toBe(
+        `${NONE}; level "Year" of hierarchy "Calendar" and level "FY" of hierarchy "Fiscal" use it`,
+      );
+      expect(year!.params).toEqual({
+        why: msg("NOT_REACHED_FROM_REPORT.nothingReaches"),
+        levels: [
+          msg("NOT_REACHED_FROM_REPORT.level", {
+            level: msg("quoted", { name: "Year" }),
+            hierarchy: msg("quoted", { name: "Calendar" }),
+          }),
+          msg("NOT_REACHED_FROM_REPORT.level", {
+            level: msg("quoted", { name: "FY" }),
+            hierarchy: msg("quoted", { name: "Fiscal" }),
+          }),
+        ],
+        count: 2,
+      });
+    });
+
+    it("joins three levels with semicolons when one holds a comma, on purpose (spec section 4)", () => {
+      const [year] = reportFindings(
+        NOT_REACHED_FROM_REPORT,
+        files,
+        dates(`
+	hierarchy Calendar
+		level Year
+			column: Year
+
+	hierarchy 'Fiscal, Retail'
+		level FY
+			column: Year
+
+	hierarchy Annual
+		level Year
+			column: Year
+`),
+      ).filter((f) => f.objectName === "'Date'[Year]");
+      // Before, the list's own commas: `"Calendar", level "FY" of hierarchy "Fiscal, Retail", and`.
+      expect(year!.detail).toBe(
+        `${NONE}; level "Year" of hierarchy "Calendar"; level "FY" of hierarchy "Fiscal, Retail"; and level "Year" of hierarchy "Annual" use it`,
+      );
     });
   });
 });

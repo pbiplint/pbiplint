@@ -811,3 +811,36 @@ th {
   gap: 16px;
   align-items: center;
 }
+
+/* Print: the page's content without the site's header and footer, so a page such as the
+   self-hosting checklist prints as a form, with room to write in each empty cell. */
+@media print {
+  .site-header,
+  .site-footer {
+    display: none;
+  }
+  .prose,
+  .prose p,
+  .prose th,
+  .prose td,
+  .prose h1,
+  .prose h2 {
+    color: #000;
+  }
+  .prose h1 {
+    margin: 0 0 8px;
+    font-size: 24px;
+  }
+  .prose h2 {
+    margin: 14px 0 4px;
+  }
+  .prose th,
+  .prose td {
+    padding: 3px 8px;
+  }
+  .prose td:empty {
+    height: 1.7em;
+    width: 50%;
+    border-bottom: 1px solid #000;
+  }
+}

@@ -21,6 +21,8 @@ const PAGES = [
   "/privacy/",
   "/cli/",
   "/pipelines/",
+  "/self-host/",
+  "/self-host/checklist/",
   "/latest/",
   "/404.html",
 ];

@@ -41,4 +41,6 @@ The pbiplint Action in GitHub Actions and the pbiplint task in Azure Pipelines r
 4. **Look for stored data.** In the developer tools' Application tab (Storage in Firefox and Safari), the site has no cookies, and nothing in local storage, session storage, or IndexedDB.
 5. **Read the code.** The linter core has [a build check](https://github.com/pbiplint/pbiplint/blob/main/packages/core/scripts/check-browser-bundle.mjs) that fails if it references a network API, and the command line has [a check of its own](https://github.com/pbiplint/pbiplint/blob/main/packages/cli/scripts/check-network.mjs) that fails if its bundle reaches for a network module or API. Both run on every change, and the site build fails if any page references an external script, style, font, or image. The source is on [GitHub](https://github.com/pbiplint/pbiplint).
 
+These checks show what pbiplint.com does in your tab today. A verified copy your firm serves itself removes the need to trust that pbiplint.com serves the same code tomorrow: [Host pbiplint yourself](/self-host/) shows how. If your company must approve pbiplint before you use it, send your security team that page.
+
 If you ever find pbiplint breaking the Promise, that is a security bug. Report it privately, as [the security policy](https://github.com/pbiplint/pbiplint/blob/main/SECURITY.md) describes.

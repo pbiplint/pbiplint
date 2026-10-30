@@ -167,7 +167,41 @@ describe("the Azure template", () => {
     expect(outputs).toEqual(params);
   });
 
-  it("says on the form who may assign the write group's role", () => {
-    expect(JSON.stringify(form)).toMatch(/Owner or User Access Administrator/);
+  it("calls only functions the portal's form language has", () => {
+    // The functions Microsoft documents for CreateUiDefinition, on the overview page and its seven
+    // pages by kind (read October 29, 2026):
+    // https://learn.microsoft.com/en-us/azure/azure-resource-manager/managed-applications/create-uidefinition-functions
+    // A name outside it, such as createArray, which template expressions have and the form does
+    // not, left the Subnet list empty in the real deployment test of that day.
+    const documented = new Set([
+      ...["contains", "empty", "filter", "first", "last", "length", "map", "skip", "split", "take"],
+      ...["bool", "decodeBase64", "decodeUriComponent", "encodeBase64", "encodeUriComponent"],
+      ...["float", "int", "parse", "string", "addHours", "addMinutes", "addSeconds", "utcNow"],
+      ...["and", "coalesce", "equals", "greater", "greaterOrEquals", "if", "less", "lessOrEquals"],
+      ...["not", "or", "add", "ceil", "div", "floor", "max", "min", "mod", "mul", "rand", "range"],
+      ...["sub", "basics", "location", "resourceGroup", "steps", "subscription", "concat"],
+      ...["endsWith", "guid", "indexOf", "lastIndexOf", "replace", "startsWith", "substring"],
+      ...["toLower", "toUpper"],
+    ]);
+    const expressions: string[] = [];
+    const walk = (value: unknown): void => {
+      if (typeof value === "string" && value.startsWith("[")) expressions.push(value);
+      else if (value && typeof value === "object") Object.values(value).forEach(walk);
+    };
+    walk(form);
+    expect(expressions.length).toBeGreaterThan(5);
+    // A name directly before an opening bracket is a call; a lambda's parameter list is not.
+    const called = expressions.flatMap((e) =>
+      // Quoted text is a literal, so a word followed by a bracket inside it is not a call.
+      [...e.replace(/'[^']*'/g, "''").matchAll(/([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)].map((m) => m[1]!),
+    );
+    expect(called.filter((name) => !documented.has(name))).toEqual([]);
+  });
+
+  it("says on the form which roles the lock and the group's role need", () => {
+    // Creating a lock needs Microsoft.Authorization/locks/*, which Contributor lacks.
+    expect(JSON.stringify(form)).toMatch(
+      /Owner, or Contributor together with User Access Administrator.*Contributor alone cannot create the lock/,
+    );
   });
 });

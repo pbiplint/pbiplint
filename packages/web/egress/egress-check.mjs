@@ -4,8 +4,9 @@
 //
 //   node egress-check.mjs <the site's address> [--browser <path to Chrome or Edge>] [--no-sandbox]
 //
-// --no-sandbox is for a Linux build agent that refuses the browser's sandbox; leave it off
-// anywhere the browser starts without it.
+// --no-sandbox is for a Linux build agent that refuses the browser's sandbox. It turns off
+// Chrome's own isolation of the page's process, so use it only where the sandbox cannot run, and
+// only against your own copy, which is all the check opens.
 //
 // It opens the address in a Chrome or Edge already on this machine, headless and with a fresh
 // profile, and watches every request the pages make from before the first one: the home page, a
@@ -29,7 +30,7 @@
 
 import { spawn } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir, userInfo } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -39,7 +40,10 @@ export function leavesOrigin(url, origin) {
   return new URL(url).origin !== new URL(origin).origin;
 }
 
-const USAGE = "Usage: node egress-check.mjs <the site's address> [--browser <path>] [--no-sandbox]";
+const USAGE =
+  "Usage: node egress-check.mjs <the site's address> [--browser <path>] [--no-sandbox]\n" +
+  "  --no-sandbox turns off Chrome's own process isolation: use it only where the sandbox cannot\n" +
+  "  run, and only against your own copy, which is all the check opens.";
 
 /** The address to check and, if given, the browser to check it with. */
 export function parseArgs(argv) {
@@ -93,6 +97,30 @@ export function browserCandidates(platform, env) {
 
 /** What Chrome and Edge print when policy turns remote debugging off. */
 export const DEBUGGING_DISALLOWED = /DevTools remote debugging is disallowed/;
+
+/**
+ * True when this runs as Windows' LocalSystem account, which Chrome and Edge do not start under
+ * (Edge 156 exits with code 1002, with or without --no-sandbox, and prints nothing), and which is
+ * how a remote command tool such as `az vm run-command` often runs a command. Node takes the name
+ * from GetUserNameW and the profile folder from the process token, so either one identifies it.
+ */
+export function isWindowsSystem(platform, { username, homedir }) {
+  if (platform !== "win32") return false;
+  return /^system$/i.test(username) || /\\config\\systemprofile\\?$/i.test(homedir);
+}
+
+export const RUN_AS_USER =
+  "Chrome and Edge do not start as Windows' SYSTEM account. Run the check as an ordinary signed-in user, not as SYSTEM.";
+
+/** This process's account, or blanks when Node cannot read it. */
+function account() {
+  try {
+    const info = userInfo();
+    return { username: info.username, homedir: info.homedir };
+  } catch {
+    return { username: "", homedir: homedir() };
+  }
+}
 const LISTENING = /DevTools listening on (ws:\/\/\S+)/;
 
 const STEP_TIMEOUT = 30_000;
@@ -152,6 +180,10 @@ function launch(browser, profile, noSandbox) {
     });
     child.on("exit", (code) => {
       clearTimeout(timer);
+      if (isWindowsSystem(process.platform, account())) {
+        reject(new Error(`${RUN_AS_USER} (The browser exited with code ${code}.)`));
+        return;
+      }
       // The reason is the browser's FATAL or ERROR line; a crash prints a stack dump after it.
       const lines = stderr.trim().split("\n");
       const reasons = lines.filter((l) => /FATAL|ERROR/.test(l));

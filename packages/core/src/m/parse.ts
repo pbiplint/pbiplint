@@ -11,7 +11,10 @@ export interface MPosition {
   lineCodeUnit: number;
 }
 
-/** The parser's reading of one M expression: its tree, or why it has none and where. */
+/**
+ * The parser's reading of one M expression: its tree, or why it has none and where. The message is
+ * the parser's own, or empty when it gave none.
+ */
 export type MParse =
   | { ok: true; ast: Language.Ast.TNode; nodeIdMapCollection: Parser.NodeIdMap.Collection }
   | { ok: false; message: string; position?: MPosition };
@@ -69,7 +72,7 @@ export async function parseM(text: string): Promise<MParse> {
     inner?.foundToken?.token.positionStart ?? inner?.positionStart ?? inner?.graphemePosition;
   return {
     ok: false,
-    message: error?.message ?? "the parser gave no reason",
+    message: error?.message ?? "",
     ...(at ? { position: { lineNumber: at.lineNumber, lineCodeUnit: at.lineCodeUnit } } : {}),
   };
 }

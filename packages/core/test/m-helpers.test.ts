@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { textLiterals } from "../src/m/ast.js";
 import { readM } from "../src/m/read.js";
-import { msg } from "../src/messages/format.js";
-import { mFinding, queryLabel, queryLabelText } from "../src/rules/m-helpers.js";
+import { formatMessage, msg } from "../src/messages/format.js";
+import { mFinding, queryLabel } from "../src/rules/m-helpers.js";
 import { modelFrom } from "./helpers.js";
 
 /** The M index of inline TMDL, read as `lint` reads it. */
@@ -13,12 +13,16 @@ const indexOf = async (tmdl: string) =>
 const table = (name: string, ...m: string[]): string =>
   `table '${name}'\n\tpartition '${name}' = m\n\t\tmode: import\n\t\tsource =\n${m.map((l) => `\t\t\t\t${l}`).join("\n")}\n\n`;
 
-/** mFinding on a query's first text literal, without the object it carries for ignores. */
+/**
+ * mFinding on a query's first text literal, without the object it carries for ignores, its detail
+ * rendered. What it finds is a message whose English is its one parameter, `found`.
+ */
 async function onFirstLiteral(tmdl: string, query = 0) {
   const m = await indexOf(tmdl);
   const q = m.queries[query]!;
-  const { object: _object, ...f } = mFinding(m, q, textLiterals(q)[0]!.node, "found");
-  return f;
+  const found = msg("ruleError.errorClass", { class: "found" });
+  const { object: _object, message, ...f } = mFinding(m, q, textLiterals(q)[0]!.node, found);
+  return { ...f, detail: formatMessage(message!) };
 }
 
 describe("mFinding (v3 spec, section 6.3)", () => {
@@ -78,7 +82,7 @@ describe("mFinding (v3 spec, section 6.3)", () => {
       '\t\t\t\tlet\n\t\t\t\t\t#"Bob\'s Step" = "x"\n\t\t\t\tin\n\t\t\t\t\t#"Bob\'s Step"\n\n';
     const m = await indexOf(tmdl);
     expect(queryLabel(m.queries[0]!)).toEqual(msg("query.name", { query: "'Bob''s Sales'" }));
-    expect(queryLabelText(m.queries[0]!)).toBe("query 'Bob''s Sales'");
+    expect(formatMessage(queryLabel(m.queries[0]!))).toBe("query 'Bob''s Sales'");
     expect((await onFirstLiteral(tmdl)).detail).toBe(
       "query 'Bob''s Sales', step 'Bob''s Step': found",
     );

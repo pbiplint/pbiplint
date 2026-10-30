@@ -958,10 +958,10 @@ describe("the Markdown export and what the input holds", () => {
   const needsReport: Rule = { ...one, id: "NEEDS_REPORT", needs: ["report"] };
   /**
    * The export of a run whose one model rule finds `finding` on a measure named M, unless it
-   * names one.
+   * names one. Its detail is text, as a rule written in JavaScript can still return it.
    */
   const exported = async (
-    finding: Partial<RuleFinding>,
+    finding: Partial<RuleFinding> & { detail?: string },
     options: LintOptions = {},
   ): Promise<string> =>
     formatMarkdown(

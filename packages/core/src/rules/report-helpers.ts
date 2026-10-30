@@ -27,13 +27,9 @@ const at = (file: string, text: string, pointer?: string) => ({
   file,
   line: pointer ? lineOfPointer(text, pointer) : 1,
 });
-/** `f` with its detail: text goes to `detail`, a message to `message`. */
-const withDetail = (f: RuleFinding, detail?: string | Message): RuleFinding =>
-  detail === undefined
-    ? f
-    : typeof detail === "string"
-      ? { ...f, detail }
-      : { ...f, message: detail };
+/** `f` with its detail's message, when it has one. */
+const withMessage = (f: RuleFinding, detail?: Message): RuleFinding =>
+  detail === undefined ? f : { ...f, message: detail };
 /** A report-level finding's location in report.json, or none when report.json was not read. */
 const inReportJson = (r: Report, pointer?: string) =>
   r.file ? { location: at(r.file, r.text ?? "", pointer) } : {};
@@ -46,13 +42,8 @@ const inReportJson = (r: Report, pointer?: string) =>
  * since Microsoft's bookmark schema allows no annotation in a bookmark's file.
  */
 export const reportFinding = {
-  report: (
-    r: Report,
-    detail?: string | Message,
-    objectId = "report",
-    pointer?: string,
-  ): RuleFinding =>
-    withDetail(
+  report: (r: Report, detail?: Message, objectId = "report", pointer?: string): RuleFinding =>
+    withMessage(
       {
         objectType: "Report",
         objectName: REPORT_LABEL,
@@ -65,8 +56,8 @@ export const reportFinding = {
    * A finding on the report located in pages.json, where the opening page is set. Without a
    * pages.json in the input it sits where `report` puts it, never at a path the input lacks.
    */
-  pagesHeader: (r: Report, pointer?: string, detail?: string | Message): RuleFinding =>
-    withDetail(
+  pagesHeader: (r: Report, pointer?: string, detail?: Message): RuleFinding =>
+    withMessage(
       {
         objectType: "Report",
         objectName: REPORT_LABEL,
@@ -77,8 +68,8 @@ export const reportFinding = {
       },
       detail,
     ),
-  page: (p: Page, pointer?: string, detail?: string | Message): RuleFinding =>
-    withDetail(
+  page: (p: Page, pointer?: string, detail?: Message): RuleFinding =>
+    withMessage(
       {
         objectType: "Page",
         objectName: pageLabel(p),
@@ -88,8 +79,8 @@ export const reportFinding = {
       },
       detail,
     ),
-  visual: (v: Visual, pointer?: string, detail?: string | Message): RuleFinding =>
-    withDetail(
+  visual: (v: Visual, pointer?: string, detail?: Message): RuleFinding =>
+    withMessage(
       {
         objectType: "Visual",
         objectName: visualLabel(v),
@@ -99,8 +90,8 @@ export const reportFinding = {
       },
       detail,
     ),
-  pageFilter: (p: Page, pointer: string, detail?: string | Message): RuleFinding =>
-    withDetail(
+  pageFilter: (p: Page, pointer: string, detail?: Message): RuleFinding =>
+    withMessage(
       {
         objectType: "Page",
         objectName: pageFilterLabel(p),
@@ -110,8 +101,8 @@ export const reportFinding = {
       },
       detail,
     ),
-  reportFilter: (r: Report, pointer: string, detail?: string | Message): RuleFinding =>
-    withDetail(
+  reportFilter: (r: Report, pointer: string, detail?: Message): RuleFinding =>
+    withMessage(
       {
         objectType: "Report",
         objectName: REPORT_FILTER_LABEL,
@@ -120,8 +111,8 @@ export const reportFinding = {
       },
       detail,
     ),
-  bookmark: (b: Bookmark, detail?: string | Message, pointer?: string): RuleFinding =>
-    withDetail(
+  bookmark: (b: Bookmark, detail?: Message, pointer?: string): RuleFinding =>
+    withMessage(
       {
         objectType: "Bookmark",
         objectName: bookmarkLabel(b),
@@ -130,8 +121,8 @@ export const reportFinding = {
       },
       detail,
     ),
-  reportMeasure: (m: ReportMeasure, detail?: string | Message): RuleFinding =>
-    withDetail(
+  reportMeasure: (m: ReportMeasure, detail?: Message): RuleFinding =>
+    withMessage(
       {
         objectType: "ReportMeasure",
         objectName: reportMeasureLabel(m),

@@ -1,8 +1,8 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
+import { renderFinding } from "../src/engine/run.js";
 import { buildIndexes } from "../src/index/build.js";
 import { readM } from "../src/m/read.js";
-import { formatMessage } from "../src/messages/format.js";
 import { buildModel } from "../src/model/build.js";
 import type { Model } from "../src/model/types.js";
 import type { Finding, Rule, RuleFinding } from "../src/rules/types.js";
@@ -13,10 +13,11 @@ import type { ParsedFile } from "../src/tmdl/types.js";
  * A rule's finding with its detail as `runRules` writes it: a message is rendered into `detail`
  * and kept as `messageId` and `params`, so a test that runs `check` directly reads the same English.
  */
-export function rendered(f: RuleFinding): RuleFinding & Pick<Finding, "messageId" | "params"> {
-  if (f.message === undefined) return f;
-  const { message, ...rest } = f;
-  return { ...rest, detail: formatMessage(message), messageId: message.id, params: message.params };
+export function rendered(
+  f: RuleFinding,
+): Omit<RuleFinding, "message"> & Pick<Finding, "detail" | "messageId" | "params"> {
+  const { message: _message, ...rest } = f;
+  return { ...rest, ...renderFinding(f) };
 }
 
 export function modelFrom(tmdl: string): Model {

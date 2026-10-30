@@ -1,4 +1,4 @@
-import { formatMessage, msg } from "../messages/format.js";
+import { msg } from "../messages/format.js";
 import { columnRef, measureRef, relationshipName, tableRef } from "../model/names.js";
 import type {
   CalculationItem,
@@ -195,19 +195,6 @@ export const finding = {
     object: d,
   }),
 };
-
-/**
- * `f` with its detail written as text by `detail`, which is given the English of the context the
- * factory gave `f` (`table 'Sales'`), or undefined when it gave none. For the rules whose details
- * are still written as text: the context's message goes, so a finding never carries both.
- */
-export function withDetail(
-  f: RuleFinding,
-  detail: (context: string | undefined) => string,
-): RuleFinding {
-  const { message, ...rest } = f;
-  return { ...rest, detail: detail(message === undefined ? f.detail : formatMessage(message)) };
-}
 
 export interface NamedObject {
   finding: RuleFinding;

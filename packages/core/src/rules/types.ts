@@ -132,9 +132,10 @@ export interface RuleFinding {
   /** Which part the finding belongs to, when the object type alone cannot say: a File is in either. Defaults to layerOf(objectType). */
   layer?: LayerName;
   location?: SourceLocation;
-  /** The detail as English text. A finding carries this or `message`, never both. */
-  detail?: string;
-  /** The detail as a message, which `runRules` renders into the finding's `detail`. */
+  /**
+   * The detail as a message, which `runRules` renders into the finding's `detail`. A rule never
+   * writes the English itself.
+   */
   message?: Message;
   object?: Ignorable;
 }

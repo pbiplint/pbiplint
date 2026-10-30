@@ -334,7 +334,8 @@ describe("runRules", () => {
   });
 
   it("keeps a plain detail as it is, with no message ID or parameters", () => {
-    const [f] = run({ objectType: "Model", objectName: "Model", detail: "x" });
+    // A rule written in JavaScript, which no type stops from returning text.
+    const [f] = run({ objectType: "Model", objectName: "Model", detail: "x" } as RuleFinding);
     expect(f!.detail).toBe("x");
     expect(Object.keys(f!)).not.toContain("messageId");
     expect(Object.keys(f!)).not.toContain("params");

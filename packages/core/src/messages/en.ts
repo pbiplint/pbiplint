@@ -159,6 +159,7 @@ export const EN = {
   "list.more": "{count} more",
   "parse.m.modelTooLarge":
     "M is too large or complex to read (over pbiplint's limit for one model's M)",
+  "parse.m.noReason": "the parser gave no reason",
   "parse.m.notParsed": "M could not be parsed: {message}",
   "parse.m.tooLarge": "M is too large or complex to read (over pbiplint's limit for one query)",
   "parse.pbir.conflictMarker": "merge conflict marker",

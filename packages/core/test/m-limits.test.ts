@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { type LintFile, lint } from "../src/engine/lint.js";
 import { calls, identifierName, nodesOfKind } from "../src/m/ast.js";
 import { errorKind } from "../src/engine/rule-error.js";
-import { formatMessage } from "../src/messages/format.js";
+import { formatMessage, msg } from "../src/messages/format.js";
 import { readM } from "../src/m/read.js";
 import { buildIndexes } from "../src/index/build.js";
 import { boundValue, origin } from "../src/m/resolve.js";
@@ -269,7 +269,7 @@ const throwsOnA: Rule = {
     const m = ctx.indexes.m;
     return eachQuery(ctx, m.queries, (q) => {
       if (q.name === "A") throw new RangeError("Maximum call stack size exceeded");
-      return q.ast ? [mFinding(m, q, q.ast, "reported")] : [];
+      return q.ast ? [mFinding(m, q, q.ast, msg("ruleError.theModel"))] : [];
     });
   },
 };

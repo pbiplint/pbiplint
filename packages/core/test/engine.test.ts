@@ -320,6 +320,24 @@ describe("runRules", () => {
     ]);
     expect(r.ruleErrors).toEqual([{ id: "BOOM", message: "Error" }]);
   });
+  it("keeps the plain detail a JavaScript rule returns, with no message ID or params (#98)", () => {
+    // A rule written without types can still return its detail as text, which the type no longer
+    // allows a built-in rule; the engine passes it through as written and renders nothing.
+    const plain = {
+      ...base,
+      id: "PLAIN",
+      name: "Plain",
+      category: "Maintenance",
+      severity: 1,
+      check: () => [{ objectType: "Model", objectName: "Model", detail: "x" }],
+    } as unknown as Rule;
+    const r = runRules({ model: m }, idx, [plain], resolveConfig());
+    expect(r.findings).toEqual([
+      { ruleId: "PLAIN", layer: "model", objectType: "Model", objectName: "Model", detail: "x" },
+    ]);
+    expect(r.findings[0]).not.toHaveProperty("messageId");
+    expect(r.findings[0]).not.toHaveProperty("params");
+  });
   it("takes no ignore from a root annotation with lines under it, which lost its tabs", () => {
     const lost = modelFrom(
       "table A\n\tcolumn X\nannotation pbiplint.ignore = MODEL_RULE\n\tcolumn Y\n\t\tdataType: string\n",

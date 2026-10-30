@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { msg } from "../src/messages/format.js";
 import { buildReport } from "../src/pbir/build.js";
 import {
   bookmarkLabel,
@@ -11,6 +12,10 @@ import {
 } from "../src/pbir/names.js";
 import type { FieldRef } from "../src/pbir/types.js";
 import { reportFinding } from "../src/rules/report-helpers.js";
+
+/** Details for the factories to carry, which they attach as given. */
+const why = msg("ruleError.theModel");
+const unused = msg("ruleError.theReport");
 
 const j = (v: unknown) => JSON.stringify(v, null, 2);
 const { report } = buildReport([
@@ -77,12 +82,12 @@ describe("report finding names", () => {
   it("build findings with the object id, a line from the pointer, and the object for the ignore check", () => {
     const page = report.pages[0]!;
     const v = page.visuals[0]!;
-    expect(reportFinding.visual(v, "/position/y", "why")).toEqual({
+    expect(reportFinding.visual(v, "/position/y", why)).toEqual({
       objectType: "Visual",
       objectName: '"Top products" on "Overview"',
       objectId: "9f2e4c1a0000",
       location: { file: "definition/pages/p1/visuals/9f2e4c1a0000/visual.json", line: 5 },
-      detail: "why",
+      message: why,
       object: v,
     });
     expect(reportFinding.page(page)).toMatchObject({
@@ -95,9 +100,9 @@ describe("report finding names", () => {
       objectName: "Report",
       objectId: "report",
     });
-    expect(reportFinding.report(report, "unused", "ChicletSlicer")).toMatchObject({
+    expect(reportFinding.report(report, unused, "ChicletSlicer")).toMatchObject({
       objectId: "ChicletSlicer",
-      detail: "unused",
+      message: unused,
     });
     expect(reportFinding.bookmark(report.bookmarks[0]!)).toMatchObject({
       objectType: "Bookmark",
@@ -125,33 +130,33 @@ describe("report finding names", () => {
       { path: "definition/pages/p1/page.json", text: j({ name: "p1", displayName: "Overview" }) },
     ]);
     // pages.json read: the finding sits in it, at the pointer's line (line 1 without one).
-    expect(reportFinding.pagesHeader(whole, "/activePageName", "why")).toEqual({
+    expect(reportFinding.pagesHeader(whole, "/activePageName", why)).toEqual({
       objectType: "Report",
       objectName: "Report",
       objectId: "report",
       location: { file: "definition/pages/pages.json", line: 5 },
-      detail: "why",
+      message: why,
     });
     expect(reportFinding.pagesHeader(whole).location).toEqual({
       file: "definition/pages/pages.json",
       line: 1,
     });
     expect(
-      reportFinding.report(whole, "why", "report", "/objects/outspacePane/0/properties/expanded"),
+      reportFinding.report(whole, why, "report", "/objects/outspacePane/0/properties/expanded"),
     ).toEqual({
       objectType: "Report",
       objectName: "Report",
       objectId: "report",
       location: { file: "definition/report.json", line: 6 },
-      detail: "why",
+      message: why,
     });
     // pages.json not read: exactly what reportFinding.report gives, report.json line 1 or nothing.
     const { report: noHeader } = buildReport([
       { path: "definition/report.json", text: reportText },
       { path: "definition/pages/p1/page.json", text: j({ name: "p1", displayName: "Overview" }) },
     ]);
-    expect(reportFinding.pagesHeader(noHeader, "/activePageName", "why")).toEqual(
-      reportFinding.report(noHeader, "why"),
+    expect(reportFinding.pagesHeader(noHeader, "/activePageName", why)).toEqual(
+      reportFinding.report(noHeader, why),
     );
     expect(reportFinding.pagesHeader(noHeader, "/activePageName").location).toEqual({
       file: "definition/report.json",

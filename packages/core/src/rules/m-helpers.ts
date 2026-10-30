@@ -1,10 +1,10 @@
 import type { Language } from "@microsoft/powerquery-parser";
 import { stepOf } from "../m/ast.js";
 import type { MIndex, MQuery } from "../m/types.js";
-import { formatMessage, msg, type Message } from "../messages/format.js";
+import { msg, type Message } from "../messages/format.js";
 import { tableRef } from "../model/names.js";
 import type { NamedExpression, Partition, Table } from "../model/types.js";
-import { finding, withDetail } from "./helpers.js";
+import { finding } from "./helpers.js";
 import type { RuleContext, RuleFinding } from "./types.js";
 
 /**
@@ -22,9 +22,6 @@ export function queryLabel(q: MQuery): Message {
     : msg("query.name", { query });
 }
 
-/** `queryLabel` in English, for the details still written as text. */
-export const queryLabelText = (q: MQuery): string => formatMessage(queryLabel(q));
-
 /** The object a query's finding names: its partition, its shared expression, or the table whose refresh policy holds it. */
 export function ownerFinding(q: MQuery): RuleFinding {
   if (q.kind === "partition") return finding.partition(q.owner as Partition);
@@ -35,27 +32,17 @@ export function ownerFinding(q: MQuery): RuleFinding {
 /**
  * A finding on one node of a query (v3 spec, sections 6 and 9.1): on the query's owner, at the
  * TMDL line and column of the node's first token, with a detail that names the query, the step
- * that holds the node when there is one, and then `what`. A message `what` nests in the frame's
- * message, `query.stepFinding` or `query.finding`; text is written into a text detail, for the
- * rules not yet moved to messages.
+ * that holds the node when there is one, and then `what`, which nests in the frame's message,
+ * `query.stepFinding` or `query.finding`.
  */
 export function mFinding(
   m: MIndex,
   q: MQuery,
   node: Language.Ast.TNode,
-  what: Message | string,
+  what: Message,
 ): RuleFinding {
   const step = stepOf(q, node);
   const location = m.locate(q, node.tokenRange.positionStart);
-  if (typeof what === "string")
-    return {
-      ...withDetail(
-        ownerFinding(q),
-        () =>
-          `${queryLabelText(q)}${step === undefined ? "" : `, step ${tableRef(step)}`}: ${what}`,
-      ),
-      location,
-    };
   const { message: _context, ...owner } = ownerFinding(q);
   const message =
     step === undefined

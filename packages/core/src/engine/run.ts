@@ -53,6 +53,18 @@ export interface RunResult {
   ignored: number;
 }
 
+/**
+ * A finding's detail as `runRules` writes it: the rule's message rendered into `detail` and kept as
+ * `messageId` and `params`. A rule written in JavaScript, which no type stops, may still return its
+ * detail as text; that is passed through as written, with no message ID or params.
+ */
+export function renderFinding(f: RuleFinding): Pick<Finding, "detail" | "messageId" | "params"> {
+  if (f.message !== undefined)
+    return { detail: formatMessage(f.message), messageId: f.message.id, params: f.message.params };
+  const detail: unknown = (f as { detail?: unknown }).detail;
+  return typeof detail === "string" ? { detail } : {};
+}
+
 /** The rule's declared defaults with the config file's values laid over them. */
 export function optionsFor(rule: Rule, config: ResolvedConfig): RuleOptions {
   const out: Record<string, number | string> = {};
@@ -132,14 +144,7 @@ export function runRules(
     };
     if (f.objectId !== undefined) out.objectId = f.objectId;
     if (f.location) out.location = f.location;
-    if (f.message !== undefined) {
-      out.detail = formatMessage(f.message);
-      out.messageId = f.message.id;
-      out.params = f.message.params;
-    } else if (f.detail !== undefined) {
-      out.detail = f.detail;
-    }
-    result.findings.push(out);
+    result.findings.push(Object.assign(out, renderFinding(f)));
   };
   for (const rule of rules) {
     if (config.disabled.has(rule.id)) {

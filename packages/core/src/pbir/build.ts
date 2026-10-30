@@ -1,5 +1,8 @@
 import type { LintFile } from "../engine/lint.js";
+import { msg, type Message } from "../messages/format.js";
 import type { Diagnostic } from "../project/types.js";
+import { parseIssue } from "../tmdl/issue.js";
+import type { ParseIssue } from "../tmdl/types.js";
 import {
   escapePointer,
   issueLine,
@@ -690,30 +693,33 @@ export function buildReport(
       // reported by extension too, and an entity that is not an object is left alone.
       const entities = json.entities;
       const none = entities === undefined || entities === null;
+      const issueAt = (line: number | undefined, message: Message): ParseIssue => {
+        const at = issueLine(f.text, line);
+        return parseIssue(f.path, at.line, at.text, message);
+      };
       if (none || (Array.isArray(entities) && entities.length === 0))
-        report.issues.push({
-          file: f.path,
-          ...issueLine(
-            f.text,
+        report.issues.push(
+          issueAt(
             entities === undefined ? undefined : lineOfPointer(f.text, "/entities"),
+            msg("parse.pbir.noEntities", { state: none ? "missing" : "empty" }),
           ),
-          reason: `"entities" is ${none ? "missing" : "empty"}: Power BI Desktop does not open a project whose reportExtensions.json lists no entity; delete the file when it holds no report measure`,
-        });
+        );
       if (Array.isArray(entities))
         entities.forEach((entity, ei) => {
           if (!isRecord(entity)) return;
           const measures = entity.measures;
           const missing = measures === undefined || measures === null;
           if (!missing && !(Array.isArray(measures) && measures.length === 0)) return;
-          const name = typeof entity.name === "string" ? `"${entity.name}"` : "an entity";
-          report.issues.push({
-            file: f.path,
-            ...issueLine(
-              f.text,
+          const name =
+            typeof entity.name === "string"
+              ? msg("parse.pbir.namedEntity", { name: entity.name })
+              : msg("parse.pbir.unnamedEntity");
+          report.issues.push(
+            issueAt(
               lineOfPointer(f.text, missing ? `/entities/${ei}` : `/entities/${ei}/measures`),
+              msg("parse.pbir.emptyEntity", { entity: name, state: missing ? "missing" : "empty" }),
             ),
-            reason: `entity ${name} has ${missing ? "no" : "an empty"} "measures" list: Power BI Desktop does not open a project whose reportExtensions.json holds an entity with no measure; remove the entity, or the file when it holds no report measure`,
-          });
+          );
         });
     }
   }

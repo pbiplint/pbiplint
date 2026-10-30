@@ -1,3 +1,4 @@
+import { msg } from "../../messages/format.js";
 import {
   isDrillthroughPage,
   isHiddenPage,
@@ -33,7 +34,7 @@ export const HIDE_TOOLTIP_DRILLTROUGH_PAGES = inspectorRule(
         return reportFinding.page(
           p,
           byBinding ? "/pageBinding" : "/type",
-          `${kind.toLowerCase()} page is visible to readers`,
+          msg("HIDE_TOOLTIP_DRILLTROUGH_PAGES", { kind: kind.toLowerCase() }),
         );
       }),
 );
@@ -49,7 +50,14 @@ export const ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY = inspectorRule(
     visiblePages(report)
       .filter((p) => (p.height ?? 0) > Number(ctx.options.maxHeight))
       .map((p) =>
-        reportFinding.page(p, "/height", `height ${p.height}, more than ${ctx.options.maxHeight}`),
+        reportFinding.page(
+          p,
+          "/height",
+          msg("ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY", {
+            height: p.height!,
+            max: Number(ctx.options.maxHeight),
+          }),
+        ),
       ),
 );
 

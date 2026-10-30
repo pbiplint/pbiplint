@@ -16,6 +16,7 @@ import {
 } from "../src/format/index.js";
 import { locationOf } from "../src/format/text.js";
 import { showControls } from "../src/index.js";
+import { msg } from "../src/messages/format.js";
 
 const files = [
   { path: "definition/model.tmdl", text: "model Model\n\tculture: en-US\n" },
@@ -78,6 +79,20 @@ describe("summary wording", () => {
     );
     expect(text.split("\n")[0]).toBe("pbiplint: 1 finding (0 errors, 1 warning, 0 info) in 1 file");
     expect(text.split("\n")[1]).toBe("Model: 1 file. 1 rule run");
+  });
+  it("Fix these first counts info findings as info, not infos", async () => {
+    const tables = (n: number) =>
+      Array.from({ length: n }, (_, i) => ({ path: `t${i}.tmdl`, text: `table T${i}\n` }));
+    const twoErrors: Rule = { ...everyTable, id: "TWO_ERRORS", name: "Two errors", severity: 3 };
+    expect(formatText(await lint(tables(2), { rules: [everyTable] }))).toContain(
+      "  1. Every table  (2 info)   [model]",
+    );
+    expect(formatText(await lint(tables(1), { rules: [everyTable] }))).toContain(
+      "  1. Every table  (1 info)   [model]",
+    );
+    expect(formatText(await lint(tables(2), { rules: [twoErrors] }))).toContain(
+      "  1. Two errors  (2 errors)   [model]",
+    );
   });
   it("uses singular nouns for one disabled rule and one ignored finding", async () => {
     const text = formatText(
@@ -284,6 +299,56 @@ describe("formatJson", () => {
       line: 2,
     });
     expect(group.rule.url).toBe("https://pbiplint.com/rules/avoid-floating-point-data-types");
+  });
+});
+
+describe("a finding with a message, in JSON and SARIF", () => {
+  const rule: Rule = {
+    id: "MESSAGE_RULE",
+    name: "A rule with messages",
+    category: "Maintenance",
+    severity: 2,
+    scope: ["Table"],
+    layer: "model",
+    needs: ["model"],
+    description: "Made up.",
+    references: [],
+    status: "builtin",
+    check: ({ model }) => [
+      { ...finding.table(model!.tables[0]!), message: msg("context.table", { table: "'Sales'" }) },
+      { ...finding.model(model!), detail: "plain" },
+    ],
+  };
+  let run: LintResult;
+  beforeAll(async () => {
+    run = await lint(files, { rules: [rule] });
+  });
+  const findingsOf = (doc: { groups: { rule: { id: string }; findings: object[] }[] }) =>
+    doc.groups.find((g) => g.rule.id === "MESSAGE_RULE")!.findings;
+
+  it("writes messageId and params right after detail in JSON, and neither without a message", () => {
+    const [withMessage, without] = findingsOf(JSON.parse(formatJson(run)));
+    expect(withMessage).toMatchObject({
+      detail: "table 'Sales'",
+      messageId: "context.table",
+      params: { table: "'Sales'" },
+    });
+    expect(Object.keys(withMessage!).slice(-3)).toEqual(["detail", "messageId", "params"]);
+    expect(Object.keys(without!)).not.toContain("messageId");
+    expect(Object.keys(without!)).not.toContain("params");
+  });
+
+  it("puts messageId and params in a SARIF result's properties, and none without a message", () => {
+    const results = JSON.parse(formatSarif(run)).runs[0].results.filter(
+      (r: { ruleId: string }) => r.ruleId === "MESSAGE_RULE",
+    );
+    expect(results[0].message.text).toBe("'Sales': A rule with messages (table 'Sales')");
+    expect(results[0].properties).toEqual({
+      messageId: "context.table",
+      params: { table: "'Sales'" },
+    });
+    expect(results[1].message.text).toBe("Model: A rule with messages (plain)");
+    expect(Object.keys(results[1])).not.toContain("properties");
   });
 });
 

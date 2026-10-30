@@ -1200,6 +1200,7 @@ describe("reportExtensions.json with no entity (#208)", () => {
         line: 4,
         text: '  "entities": []',
         reason: `"entities" is empty: ${DESKTOP}`,
+        message: { id: "parse.pbir.noEntities", params: { state: "empty" } },
       },
     ]);
     expect(report.extensions).toBe("read");
@@ -1256,6 +1257,22 @@ describe("reportExtensions.json with no entity (#208)", () => {
     expect(report.issues.map((i) => [i.line, i.text.trim(), i.reason])).toEqual([
       [7, '"measures": []', `entity "Sales" has an empty "measures" list: ${ENTITY}`],
       [18, "{", `entity "Store" has no "measures" list: ${ENTITY}`],
+    ]);
+    expect(report.issues.map((i) => i.message)).toEqual([
+      {
+        id: "parse.pbir.emptyEntity",
+        params: {
+          entity: { id: "parse.pbir.namedEntity", params: { name: "Sales" } },
+          state: "empty",
+        },
+      },
+      {
+        id: "parse.pbir.emptyEntity",
+        params: {
+          entity: { id: "parse.pbir.namedEntity", params: { name: "Store" } },
+          state: "missing",
+        },
+      },
     ]);
     expect(report.measures.map((m) => m.name)).toEqual(["M"]);
     expect(report.extensions).toBe("read");

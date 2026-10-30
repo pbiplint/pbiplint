@@ -1,7 +1,7 @@
 import { isAutoDateTable } from "../../model/names.js";
 import type { Model, SourceLocation, Table } from "../../model/types.js";
 import type { TmdlNode } from "../../tmdl/types.js";
-import { finding } from "../helpers.js";
+import { finding, withDetail } from "../helpers.js";
 import type { RuleFinding } from "../types.js";
 import { pbiplintRule } from "./define.js";
 import { calendarEnds, expressionPeriods, type Period } from "./period-forms.js";
@@ -103,9 +103,8 @@ function fixedFinding(
   const own = detail(periods);
   return [
     {
-      ...base,
+      ...withDetail(base, (context) => (context === undefined ? own : `${own} in ${context}`)),
       ...(where ? { location: where } : {}),
-      detail: base.detail === undefined ? own : `${own} in ${base.detail}`,
     },
   ];
 }

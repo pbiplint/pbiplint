@@ -16,7 +16,7 @@ import type { MIndex, MQuery } from "../../m/types.js";
 import { tableRef } from "../../model/names.js";
 import type { Partition } from "../../model/types.js";
 import { finding } from "../helpers.js";
-import { eachQuery, mFinding, queryLabel } from "../m-helpers.js";
+import { eachQuery, mFinding, queryLabelText } from "../m-helpers.js";
 import type { Rule } from "../types.js";
 import { pbiplintRule } from "./define.js";
 import { longDate } from "./periods.js";
@@ -620,7 +620,7 @@ export const DEFAULT_STEP_NAMES = pbiplintRule({
           ? `1 step keeps its default name, ${a}`
           : `${steps.length} steps keep default names, ${steps.length > 2 ? "such as " : ""}${a} and ${b}`;
       // The detail names the query only: the steps it lists say where.
-      return [{ ...mFinding(m, q, steps[0]!, what), detail: `${queryLabel(q)}: ${what}` }];
+      return [{ ...mFinding(m, q, steps[0]!, what), detail: `${queryLabelText(q)}: ${what}` }];
     }),
 });
 

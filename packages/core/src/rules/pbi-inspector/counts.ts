@@ -1,3 +1,4 @@
+import { msg } from "../../messages/format.js";
 import type { Report } from "../../pbir/types.js";
 import { allVisuals, reportFinding } from "../report-helpers.js";
 import type { RuleContext } from "../types.js";
@@ -21,7 +22,13 @@ export const REDUCE_VISUALS_ON_PAGE = inspectorRule(
       // the detail does not call the count visible for that reason.
       const n = p.visuals.filter((v) => !v.isHidden && !NOT_COUNTED.has(v.type)).length;
       return n > max(ctx)
-        ? [reportFinding.page(p, undefined, `${n} visuals, more than ${max(ctx)}`)]
+        ? [
+            reportFinding.page(
+              p,
+              undefined,
+              msg("REDUCE_VISUALS_ON_PAGE", { count: n, max: max(ctx) }),
+            ),
+          ]
         : [];
     }),
 );
@@ -49,7 +56,7 @@ export const REDUCE_OBJECTS_WITHIN_VISUALS = inspectorRule(
             reportFinding.visual(
               v,
               "/visual/query",
-              `${v.projectionCount} fields bound, more than ${max(ctx)}`,
+              msg("REDUCE_OBJECTS_WITHIN_VISUALS", { count: v.projectionCount, max: max(ctx) }),
             ),
           ]
         : [],
@@ -60,12 +67,12 @@ const pagesWithFilteredVisuals = (
   report: Report,
   ctx: RuleContext,
   keep: (type: string | undefined, applied: boolean) => boolean,
-  what: string,
+  id: "REDUCE_TOPN_FILTERS" | "REDUCE_ADVANCED_FILTERS",
 ) =>
   report.pages.flatMap((p) => {
     const n = p.visuals.filter((v) => v.filters.some((f) => keep(f.type, f.applied))).length;
     return n > max(ctx)
-      ? [reportFinding.page(p, undefined, `${n} visuals with ${what}, more than ${max(ctx)}`)]
+      ? [reportFinding.page(p, undefined, msg(id, { count: n, max: max(ctx) }))]
       : [];
   });
 
@@ -77,7 +84,7 @@ export const REDUCE_TOPN_FILTERS = inspectorRule(
     options: [{ name: "max", type: "number", default: 4 }],
   },
   (report, ctx) =>
-    pagesWithFilteredVisuals(report, ctx, (type) => type === "TopN", "a TopN filter"),
+    pagesWithFilteredVisuals(report, ctx, (type) => type === "TopN", "REDUCE_TOPN_FILTERS"),
 );
 
 /** Deviation: only Advanced filters with a condition applied; one with nothing set, such as a slicer's or one Desktop writes for a visual's own fields, is not counted. */
@@ -93,7 +100,7 @@ export const REDUCE_ADVANCED_FILTERS = inspectorRule(
       report,
       ctx,
       (type, applied) => type === "Advanced" && applied,
-      "an Advanced filter applied",
+      "REDUCE_ADVANCED_FILTERS",
     ),
 );
 
@@ -106,7 +113,12 @@ export const REDUCE_PAGES = inspectorRule(
   },
   (report, ctx) =>
     report.pages.length > max(ctx)
-      ? [reportFinding.report(report, `${report.pages.length} pages, more than ${max(ctx)}`)]
+      ? [
+          reportFinding.report(
+            report,
+            msg("REDUCE_PAGES", { count: report.pages.length, max: max(ctx) }),
+          ),
+        ]
       : [],
 );
 

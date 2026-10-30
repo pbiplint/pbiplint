@@ -1,3 +1,4 @@
+import { msg } from "../../messages/format.js";
 import { allVisuals, customVisualUseUnknown, reportFinding } from "../report-helpers.js";
 import { inspectorRule } from "./define.js";
 
@@ -20,7 +21,7 @@ export const REMOVE_UNUSED_CUSTOM_VISUALS = inspectorRule(
     return report.publicCustomVisuals
       .filter((name) => !used.has(name))
       .map((name) =>
-        reportFinding.report(report, `${name} is registered but no visual uses it`, name),
+        reportFinding.report(report, msg("REMOVE_UNUSED_CUSTOM_VISUALS", { visual: name }), name),
       );
   },
 );

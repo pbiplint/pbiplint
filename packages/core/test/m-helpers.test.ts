@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { textLiterals } from "../src/m/ast.js";
 import { readM } from "../src/m/read.js";
-import { mFinding, queryLabel } from "../src/rules/m-helpers.js";
+import { msg } from "../src/messages/format.js";
+import { mFinding, queryLabel, queryLabelText } from "../src/rules/m-helpers.js";
 import { modelFrom } from "./helpers.js";
 
 /** The M index of inline TMDL, read as `lint` reads it. */
@@ -76,7 +77,8 @@ describe("mFinding (v3 spec, section 6.3)", () => {
       "table 'Bob''s Sales'\n\tpartition 'Bob''s Sales' = m\n\t\tmode: import\n\t\tsource =\n" +
       '\t\t\t\tlet\n\t\t\t\t\t#"Bob\'s Step" = "x"\n\t\t\t\tin\n\t\t\t\t\t#"Bob\'s Step"\n\n';
     const m = await indexOf(tmdl);
-    expect(queryLabel(m.queries[0]!)).toBe("query 'Bob''s Sales'");
+    expect(queryLabel(m.queries[0]!)).toEqual(msg("query.name", { query: "'Bob''s Sales'" }));
+    expect(queryLabelText(m.queries[0]!)).toBe("query 'Bob''s Sales'");
     expect((await onFirstLiteral(tmdl)).detail).toBe(
       "query 'Bob''s Sales', step 'Bob''s Step': found",
     );

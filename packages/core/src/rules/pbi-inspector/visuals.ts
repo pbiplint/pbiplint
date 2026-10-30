@@ -1,3 +1,4 @@
+import { msg } from "../../messages/format.js";
 import { escapePointer } from "../../pbir/json.js";
 import { literal } from "../../pbir/build.js";
 import { allVisuals, reportFinding } from "../report-helpers.js";
@@ -18,7 +19,7 @@ export const AVOID_SHOW_ITEMS_WITH_NO_DATA = inspectorRule(
         reportFinding.visual(
           v,
           `/visual/query/queryState/${escapePointer(v.showAllRoles[0]!)}/showAll`,
-          `Show items with no data is on for ${v.showAllRoles.join(", ")}`,
+          msg("AVOID_SHOW_ITEMS_WITH_NO_DATA", { roles: v.showAllRoles.join(", ") }),
         ),
       ),
 );
@@ -72,7 +73,7 @@ export const ENSURE_THEME_COLOURS = inspectorRule(
               reportFinding.visual(
                 v,
                 pointers[0],
-                `${pointers.length} colour${pointers.length === 1 ? "" : "s"} set to a hex value instead of a theme colour`,
+                msg("ENSURE_THEME_COLOURS", { count: pointers.length }),
               ),
             ]
           : [];
@@ -111,7 +112,7 @@ export const ENSURE_ALTTEXT = inspectorRule(
   (report) =>
     allVisuals(report)
       .filter((v) => v.type !== "shape" && v.altText === undefined)
-      .map((v) => reportFinding.visual(v, altTextPointer(v.json), "no alt text")),
+      .map((v) => reportFinding.visual(v, altTextPointer(v.json), msg("ENSURE_ALTTEXT"))),
 );
 
 export const visualRules = [AVOID_SHOW_ITEMS_WITH_NO_DATA, ENSURE_THEME_COLOURS, ENSURE_ALTTEXT];

@@ -2,11 +2,22 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { buildIndexes } from "../src/index/build.js";
 import { readM } from "../src/m/read.js";
+import { formatMessage } from "../src/messages/format.js";
 import { buildModel } from "../src/model/build.js";
 import type { Model } from "../src/model/types.js";
-import type { Rule, RuleFinding } from "../src/rules/types.js";
+import type { Finding, Rule, RuleFinding } from "../src/rules/types.js";
 import { parseTmdl } from "../src/tmdl/parse.js";
 import type { ParsedFile } from "../src/tmdl/types.js";
+
+/**
+ * A rule's finding with its detail as `runRules` writes it: a message is rendered into `detail`
+ * and kept as `messageId` and `params`, so a test that runs `check` directly reads the same English.
+ */
+export function rendered(f: RuleFinding): RuleFinding & Pick<Finding, "messageId" | "params"> {
+  if (f.message === undefined) return f;
+  const { message, ...rest } = f;
+  return { ...rest, detail: formatMessage(message), messageId: message.id, params: message.params };
+}
 
 export function modelFrom(tmdl: string): Model {
   return buildModel([parseTmdl("inline.tmdl", tmdl)]);
@@ -41,6 +52,7 @@ export async function mFindings(rule: Rule, tmdl: string): Promise<Omit<RuleFind
   const m = await readM(model, [{ path: "inline.tmdl", text: tmdl }]);
   return rule
     .check({ model }, { indexes: buildIndexes({ model }, m), options: {} })
+    .map(rendered)
     .map(({ object: _object, ...f }) => f);
 }
 

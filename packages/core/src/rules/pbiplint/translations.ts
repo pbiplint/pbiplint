@@ -1,5 +1,5 @@
 import type { CultureTranslations, Model } from "../../model/types.js";
-import { finding, modelPartlyRead } from "../helpers.js";
+import { finding, modelPartlyRead, withDetail } from "../helpers.js";
 import type { RuleFinding } from "../types.js";
 import { pbiplintRule } from "./define.js";
 
@@ -25,7 +25,9 @@ function namesWithoutTranslation(model: Model): RuleFinding[] {
     const missing = cultures.filter((c) => !captioned(c.translations!)).map((c) => c.name);
     if (missing.length === 0) return;
     const cultureDetail = `no caption in ${listOf(missing)}`;
-    out.push({ ...f, detail: f.detail ? `${f.detail}, ${cultureDetail}` : cultureDetail });
+    out.push(
+      withDetail(f, (context) => (context ? `${context}, ${cultureDetail}` : cultureDetail)),
+    );
   };
   for (const t of model.tables) {
     if (t.isHidden) continue;

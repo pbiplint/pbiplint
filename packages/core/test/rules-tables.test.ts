@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildIndexes } from "../src/index/build.js";
 import { readM } from "../src/m/read.js";
 import * as rules from "../src/rules/microsoft-bpa/tables.js";
-import { mObjectNames, modelFrom, objectNames } from "./helpers.js";
+import { mObjectNames, modelFrom, objectNames, rendered } from "./helpers.js";
 
 const t = (
   name: string,
@@ -207,7 +207,9 @@ describe("column count, pivot, partition, and Power Query rules", () => {
       const index = await readM(model, [
         { path: "inline.tmdl", text: m("Sales", "Table.Combine({})") },
       ]);
-      const [f] = rule.check({ model }, { indexes: buildIndexes({ model }, index), options: {} });
+      const [f] = rule
+        .check({ model }, { indexes: buildIndexes({ model }, index), options: {} })
+        .map(rendered);
       expect(f).toMatchObject({
         objectType: "Partition",
         objectName: "Sales",

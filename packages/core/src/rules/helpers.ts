@@ -1,3 +1,4 @@
+import { formatMessage, msg } from "../messages/format.js";
 import { columnRef, measureRef, relationshipName, tableRef } from "../model/names.js";
 import type {
   CalculationItem,
@@ -122,7 +123,7 @@ export const finding = {
     objectType: "Partition",
     objectName: p.name,
     location: p.location,
-    detail: `table ${tableRef(p.table.name)}`,
+    message: msg("context.table", { table: tableRef(p.table.name) }),
     object: p,
   }),
   relationship: (r: Relationship): RuleFinding => ({
@@ -141,7 +142,7 @@ export const finding = {
     objectType: "TablePermission",
     objectName: tp.table,
     location: tp.location,
-    detail: `role ${tp.role.name}`,
+    message: msg("context.role", { role: tp.role.name }),
     object: tp,
   }),
   perspective: (p: Perspective): RuleFinding => ({
@@ -154,21 +155,24 @@ export const finding = {
     objectType: "Hierarchy",
     objectName: h.name,
     location: h.location,
-    detail: `table ${tableRef(h.table.name)}`,
+    message: msg("context.table", { table: tableRef(h.table.name) }),
     object: h,
   }),
   level: (l: Level): RuleFinding => ({
     objectType: "Level",
     objectName: l.name,
     location: l.location,
-    detail: `hierarchy ${l.hierarchy.name} in ${tableRef(l.hierarchy.table.name)}`,
+    message: msg("context.level", {
+      hierarchy: l.hierarchy.name,
+      table: tableRef(l.hierarchy.table.name),
+    }),
     object: l,
   }),
   calculationItem: (i: CalculationItem): RuleFinding => ({
     objectType: "CalculationItem",
     objectName: i.name,
     location: i.location,
-    detail: `calculation group ${tableRef(i.table.name)}`,
+    message: msg("context.calculationGroup", { table: tableRef(i.table.name) }),
     object: i,
   }),
   expression: (e: NamedExpression): RuleFinding => ({
@@ -191,6 +195,19 @@ export const finding = {
     object: d,
   }),
 };
+
+/**
+ * `f` with its detail written as text by `detail`, which is given the English of the context the
+ * factory gave `f` (`table 'Sales'`), or undefined when it gave none. For the rules whose details
+ * are still written as text: the context's message goes, so a finding never carries both.
+ */
+export function withDetail(
+  f: RuleFinding,
+  detail: (context: string | undefined) => string,
+): RuleFinding {
+  const { message, ...rest } = f;
+  return { ...rest, detail: detail(message === undefined ? f.detail : formatMessage(message)) };
+}
 
 export interface NamedObject {
   finding: RuleFinding;

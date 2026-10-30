@@ -5,11 +5,25 @@
 // one raises it.
 import { cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
-import { defaultRules } from "@pbiplint/core";
+import {
+  defaultRules,
+  escapeJsonControls,
+  finding,
+  formatJson,
+  formatMessage,
+  formatSarif,
+  lint,
+  msg,
+  resolveConfig,
+  type Message,
+  type MessageId,
+  type Rule,
+} from "@pbiplint/core";
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { tempDir } from "../../../tests/support/temp-dir.js";
 import { HELP } from "../src/args.js";
 import { main, VERSION } from "../src/main.js";
+import { severalJson } from "../src/several.js";
 
 // VERSION as the build sets it, from the package's version (build.mjs), so this file's runs print
 // what the built CLI prints and the one-project goldens compare whole. Set before main loads.
@@ -85,6 +99,52 @@ function sharedModel(): string {
   return root;
 }
 
+/**
+ * A made-up rule with one finding on the model, its detail a message when `withMessage`, else the
+ * same English as plain text, so the two runs' output differs by the message fields alone.
+ */
+function messageRule(withMessage: boolean): Rule {
+  return {
+    id: "MESSAGE_RULE",
+    name: "A rule with messages",
+    category: "Maintenance",
+    severity: 2,
+    scope: ["Model"],
+    layer: "model",
+    needs: ["model"],
+    description: "Made up.",
+    references: [],
+    status: "builtin",
+    check: ({ model }) => [
+      withMessage
+        ? { ...finding.model(model!), message: msg("context.table", { table: "'Sales'" }) }
+        : { ...finding.model(model!), detail: "table 'Sales'" },
+    ],
+  };
+}
+
+/**
+ * A JSON (version 1) or SARIF document without the message fields #98 added from 0.3.2: each
+ * finding's `messageId` and `params`, and each SARIF result's `properties` of the same two, written
+ * back as the CLI writes it, so what is left compares byte for byte with 0.3.0's output.
+ */
+function withoutMessages(text: string): string {
+  const doc = JSON.parse(text);
+  for (const g of doc.groups ?? [])
+    for (const f of g.findings) {
+      delete f.messageId;
+      delete f.params;
+    }
+  for (const r of doc.runs ?? [])
+    for (const res of r.results) {
+      if (res.properties === undefined) continue;
+      delete res.properties.messageId;
+      delete res.properties.params;
+      if (Object.keys(res.properties).length === 0) delete res.properties;
+    }
+  return escapeJsonControls(JSON.stringify(doc, null, 2)) + "\n";
+}
+
 /** The keys of an object, sorted. */
 const keys = (o: object): string[] => Object.keys(o).sort();
 
@@ -120,7 +180,15 @@ describe("the CLI's contract", () => {
           .replaceAll("<TMP>", tmp)
           .replaceAll("<OUT>", out);
       const r = await run(c.argv.map(fill));
-      expect(r.out, `${c.name} stdout`).toBe(fill(golden(`${c.name}.out`)));
+      // From 0.3.2 a JSON or SARIF finding may carry a message id and its parameters (#98), which
+      // 0.3.0 did not write. Those fields are stripped before the comparison and nothing else is,
+      // and stripping the golden itself must give it back unchanged, so the rest still compares
+      // byte for byte. Test 0a shows the strip leaves exactly the output without messages.
+      const expected = fill(golden(`${c.name}.out`));
+      if (/-(json|sarif)$/.test(c.name)) {
+        expect(withoutMessages(expected), `${c.name} golden round trip`).toBe(expected);
+        expect(withoutMessages(r.out), `${c.name} stdout`).toBe(expected);
+      } else expect(r.out, `${c.name} stdout`).toBe(expected);
       expect(r.err, `${c.name} stderr`).toBe(fill(golden(`${c.name}.err`)));
       expect(r.code, `${c.name} exit code`).toBe(c.code);
       expect(String(r.code), `${c.name} exit code`).toBe(golden(`${c.name}.code`).trim());
@@ -129,6 +197,19 @@ describe("the CLI's contract", () => {
           fill(golden(c.file)),
         );
     }
+  });
+
+  it("0a. stripping the message fields gives back the document as it was without them (#98)", async () => {
+    const files = [{ path: "definition/model.tmdl", text: "model Model\n\tculture: en-US\n" }];
+    const [withMessage, without] = await Promise.all(
+      [true, false].map((m) => lint(files, { rules: [messageRule(m)] })),
+    );
+    const json = formatJson(withMessage!);
+    const sarif = formatSarif(withMessage!);
+    expect(json).toContain('"messageId": "context.table"');
+    expect(sarif).toContain('"messageId": "context.table"');
+    expect(withoutMessages(json)).toBe(formatJson(without!));
+    expect(withoutMessages(sarif)).toBe(formatSarif(without!));
   });
 
   it("1. stdout carries exactly one document in json, sarif, and markdown; the rest goes to stderr", async () => {
@@ -306,7 +387,7 @@ describe("the CLI's contract", () => {
         hasFields(
           f,
           ["layer", "objectType", "objectName"],
-          ["objectId", "file", "line", "column", "detail"],
+          ["objectId", "file", "line", "column", "detail", "messageId", "params"],
         );
     }
     // Groups are ranked, errors first.
@@ -368,6 +449,54 @@ describe("the CLI's contract", () => {
     // Each project that reads the shared model says so in a notice of kind shared-model.
     for (const p of [finance, sales])
       expect(p.diagnostics.map((d: { kind: string }) => d.kind)).toContain("shared-model");
+  });
+
+  it("3c. each project's findings in version 2 carry messageId and params as version 1's do (#98)", async () => {
+    const config = resolveConfig({});
+    const files = [{ path: "definition/model.tmdl", text: "model Model\n\tculture: en-US\n" }];
+    const result = await lint(files, { rules: [messageRule(true)] });
+    const one = JSON.parse(formatJson(result)).groups[0].findings[0];
+    expect(one).toMatchObject({ messageId: "context.table", params: { table: "'Sales'" } });
+    const doc = JSON.parse(
+      severalJson({ runs: [{ path: "a", result, config }], prefixes: [{}] }, VERSION),
+    );
+    expect(doc.projects[0].groups[0].findings[0]).toEqual(one);
+  });
+
+  it("3d. the JSON and SARIF findings carry messageId and params, which render to the detail (#98)", async () => {
+    type Found = { ruleId?: string; detail?: string; messageId?: MessageId; params?: object };
+    type Group = { rule: { id: string }; findings: Found[] };
+    const flat = (groups: Group[]): Found[] =>
+      groups.flatMap((g) => g.findings.map((f) => ({ ...f, ruleId: g.rule.id })));
+    // Every finding with a message ID has its parameters, and they render back to its detail.
+    const rendersBack = (findings: Found[]): void => {
+      const withMessage = findings.filter((f) => f.messageId !== undefined);
+      expect(withMessage.length).toBeGreaterThan(0);
+      for (const f of withMessage) {
+        expect(f.params, f.messageId).toBeDefined();
+        expect(formatMessage(msg(f.messageId!, f.params as Message["params"])), f.ruleId).toBe(
+          f.detail,
+        );
+      }
+    };
+    const json = flat(JSON.parse((await run([sample, "--format", "json"])).out).groups);
+    rendersBack(json);
+    // SARIF lists its results in the JSON's order: one carries the message fields exactly when
+    // its finding does.
+    const results: { ruleId: string; properties?: object }[] = JSON.parse(
+      (await run([sample, "--format", "sarif"])).out,
+    ).runs[0].results;
+    expect(results.map((r) => r.ruleId)).toEqual(json.map((f) => f.ruleId));
+    results.forEach((r, i) => {
+      const f = json[i]!;
+      expect(r.properties, f.ruleId).toEqual(
+        f.messageId === undefined ? undefined : { messageId: f.messageId, params: f.params },
+      );
+    });
+    // Version 2 holds the same inside each project's groups (Review Focus 4).
+    const several = JSON.parse((await run([severalProjects(), "--format", "json"])).out);
+    expect(several.projects.length).toBe(2);
+    for (const p of several.projects) rendersBack(flat(p.groups));
   });
 
   it("4. the quiet output: the summary first, rule lines of three fields, and the Next line last", async () => {

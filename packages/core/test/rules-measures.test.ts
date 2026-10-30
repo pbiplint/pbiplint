@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildIndexes } from "../src/index/build.js";
 import * as rules from "../src/rules/microsoft-bpa/measures.js";
-import { modelFrom, objectNames } from "./helpers.js";
+import { modelFrom, objectNames, rendered } from "./helpers.js";
 
 const measures = (body: string) =>
   `table T\n\tcolumn Amount\n\t\tdataType: decimal\n${body}\n\tpartition T = m\n\t\tmode: import\n\t\tsource = 1\n`;
@@ -60,7 +60,9 @@ describe("measure format rules", () => {
     const details = rules.INTEGER_FORMATTING.check(
       { model },
       { indexes: buildIndexes({ model }), options: {} },
-    ).map((f) => [f.objectName, f.detail]);
+    )
+      .map(rendered)
+      .map((f) => [f.objectName, f.detail]);
     expect(details).toEqual([
       ["[A]", "no format string"],
       ["[B]", 'format string "#,0.00"'],

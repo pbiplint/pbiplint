@@ -99,7 +99,7 @@ export const reportFinding = {
       },
       detail,
     ),
-  pageFilter: (p: Page, pointer: string, detail?: string): RuleFinding =>
+  pageFilter: (p: Page, pointer: string, detail?: string | Message): RuleFinding =>
     withDetail(
       {
         objectType: "Page",
@@ -110,7 +110,7 @@ export const reportFinding = {
       },
       detail,
     ),
-  reportFilter: (r: Report, pointer: string, detail?: string): RuleFinding =>
+  reportFilter: (r: Report, pointer: string, detail?: string | Message): RuleFinding =>
     withDetail(
       {
         objectType: "Report",

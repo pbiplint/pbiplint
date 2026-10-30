@@ -28,6 +28,14 @@ export const EN = {
     "{count, plural, one {# colour} other {# colours}} set to a hex value instead of a theme colour",
   FILTERS_PANE_STATE:
     "{source, select, saved {saved} other {not recorded, read as}} {state, select, open {open} closed {closed} other {hidden from readers}}; the policy expects {expect, select, open {open} other {closed}}",
+  "HARDCODED_YEAR_IN_FILTER.fixedYears":
+    "{count, plural, one {fixed year {years, list}} other {fixed years {years, list}}}",
+  "HARDCODED_YEAR_IN_FILTER.onField": "{kept} on {field}",
+  "HARDCODED_YEAR_IN_FILTER.yearRange": "years {from} to {to}",
+  "HARDCODED_YEAR_IN_FILTER.yearsUpTo": "years up to {year}",
+  "HIDDEN_VISUAL_WITH_FIELDS.groupHidden":
+    "{count, plural, one {# field} other {# fields}} bound, hidden with {group}",
+  "HIDDEN_VISUAL_WITH_FIELDS.visualHidden": "{count, plural, one {# field} other {# fields}} bound",
   HIDE_TOOLTIP_DRILLTROUGH_PAGES:
     "{kind, select, tooltip {tooltip} other {drillthrough}} page is visible to readers",
   "INTEGER_FORMATTING.dynamicOnly": "dynamic format string only",
@@ -53,6 +61,17 @@ export const EN = {
   REMOVE_UNUSED_CUSTOM_VISUALS: "{visual} is registered but no visual uses it",
   REPORT_LEVEL_MEASURES: 'defined in the report on table "{table}"',
   RULE_COULD_NOT_FINISH: "{rule} could not finish on {where}: {kind}",
+  "SLICER_SEARCH_SAVED.term": 'opens with the search term "{term}" saved',
+  "SLICER_SEARCH_SAVED.termUnread": "opens with a search term saved",
+  SLICER_SELECTION_SAVED: "opens with this selection applied",
+  "TAB_ORDER_FOLLOWS_LAYOUT.inGroup": "in {group}, {disagreement}",
+  "TAB_ORDER_FOLLOWS_LAYOUT.startsAt":
+    "tab order starts at {tabVisual} but the layout reads {layoutVisual} first",
+  "TAB_ORDER_FOLLOWS_LAYOUT.visits":
+    "tab order visits {tabVisual} where the layout reads {layoutVisual}",
+  VISUAL_OUTSIDE_PAGE:
+    "{edges, select, right {{right} px past the right edge} bottom {{bottom} px past the bottom edge} other {{right} px past the right edge, {bottom} px past the bottom edge}}",
+  VISUAL_WITHOUT_FIELDS: "no fields bound",
   "context.calculationGroup": "calculation group {table}",
   "context.level": "hierarchy {hierarchy} in {table}",
   "context.role": "role {role}",

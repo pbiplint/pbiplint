@@ -1,3 +1,4 @@
+import { msg, type Message } from "../../messages/format.js";
 import { visualName } from "../../pbir/names.js";
 import type { Visual } from "../../pbir/types.js";
 import { isTooltipPage, reportFinding } from "../report-helpers.js";
@@ -61,7 +62,7 @@ function firstDisagreement(
   scopes: ReadonlyMap<string | undefined, Visual[]>,
   seen: Set<Visual>,
   group?: Visual,
-): string | undefined {
+): Message | undefined {
   const members = scope.filter(compared);
   // A scope of fewer than two has no order to disagree with; its groups are still entered.
   const layout = members.length < 2 ? members : readingOrder(members);
@@ -74,11 +75,13 @@ function firstDisagreement(
   const tabs = inTabOrder(layout);
   const i = layout.findIndex((v, k) => v !== tabs[k]);
   if (i !== -1 && inTabOrder(strict).some((v, k) => v !== strict[k])) {
-    const detail =
-      i === 0
-        ? `tab order starts at ${visualName(tabs[0]!)} but the layout reads ${visualName(layout[0]!)} first`
-        : `tab order visits ${visualName(tabs[i]!)} where the layout reads ${visualName(layout[i]!)}`;
-    return group ? `in ${visualName(group)}, ${detail}` : detail;
+    const disagreement = msg(
+      i === 0 ? "TAB_ORDER_FOLLOWS_LAYOUT.startsAt" : "TAB_ORDER_FOLLOWS_LAYOUT.visits",
+      { tabVisual: visualName(tabs[i]!), layoutVisual: visualName(layout[i]!) },
+    );
+    return group
+      ? msg("TAB_ORDER_FOLLOWS_LAYOUT.inGroup", { group: visualName(group), disagreement })
+      : disagreement;
   }
   // The groups the tab sequence reaches, in its order, then the visible ones it does not reach (no
   // tabOrder, or a negative one), in reading order: their children still have an order of their
@@ -121,8 +124,8 @@ export const TAB_ORDER_FOLLOWS_LAYOUT = pbiplintRule({
         if (scope) scope.push(v);
         else scopes.set(v.groupId, [v]);
       }
-      const detail = firstDisagreement(scopes.get(undefined) ?? [], scopes, new Set());
-      return detail === undefined ? [] : [reportFinding.page(p, undefined, detail)];
+      const message = firstDisagreement(scopes.get(undefined) ?? [], scopes, new Set());
+      return message === undefined ? [] : [reportFinding.page(p, undefined, message)];
     });
   },
 });

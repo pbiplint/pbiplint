@@ -26,8 +26,17 @@ import {
   LANDING_PAGE_NOT_SET,
   OPENING_PAGE_INVALID,
 } from "../src/rules/pbiplint/opening.js";
+import { HARDCODED_YEAR_IN_FILTER } from "../src/rules/pbiplint/filters.js";
 import { DEFAULT_PAGE_NAME } from "../src/rules/pbiplint/pages.js";
 import { englishList, longDate } from "../src/rules/pbiplint/periods.js";
+import { TAB_ORDER_FOLLOWS_LAYOUT } from "../src/rules/pbiplint/tab-order.js";
+import {
+  HIDDEN_VISUAL_WITH_FIELDS,
+  SLICER_SEARCH_SAVED,
+  SLICER_SELECTION_SAVED,
+  VISUAL_OUTSIDE_PAGE,
+  VISUAL_WITHOUT_FIELDS,
+} from "../src/rules/pbiplint/visuals.js";
 import { RULE_COULD_NOT_FINISH } from "../src/rules/rule-could-not-finish.js";
 import type { Finding, Rule, RuleFinding } from "../src/rules/types.js";
 import { j, lit, page, reportFindings, visual } from "./report-helpers.js";
@@ -613,6 +622,220 @@ describe("the action, opening, and page rules' messages (#98)", () => {
     expect(said(REPORT_LEVEL_MEASURES, [measures], "table Sales\n")).toEqual([
       ["REPORT_LEVEL_MEASURES", 'defined in the report on table "Sales"'],
     ]);
+  });
+});
+
+describe("the visual, tab order, and year filter rules' messages (#98)", () => {
+  /** Each finding of a rule as its message ID, the English it renders, and its parameters. */
+  const said = (rule: Rule, files: LintFile[], options = {}) =>
+    reportFindings(rule, files, undefined, options).map((f) => [f.messageId, f.detail, f.params]);
+  const amount = { Column: { Expression: { SourceRef: { Entity: "Sales" } }, Property: "Amount" } };
+  const fields = (n: number) => ({
+    query: {
+      queryState: { Values: { projections: Array.from({ length: n }, () => ({ field: amount })) } },
+    },
+  });
+  const group = (name: string, displayName: string, container: Record<string, unknown> = {}) => ({
+    path: `definition/pages/p/visuals/${name}/visual.json`,
+    text: j({
+      name,
+      position: { x: 0, y: 0, z: 0, height: 300, width: 400, tabOrder: 0 },
+      visualGroup: { displayName, groupMode: "ScaleMode" },
+      ...container,
+    }),
+  });
+
+  it("gives HIDDEN_VISUAL_WITH_FIELDS a plural over the fields, the hiding group a second message", () => {
+    const files = [
+      page("p"),
+      visual("p", "one", "card", { isHidden: true }, fields(1)),
+      visual("p", "two", "card", { isHidden: true }, fields(2)),
+      group("g", "Filters", { isHidden: true }),
+      visual("p", "child", "card", { parentGroupName: "g" }, fields(3)),
+    ];
+    expect(said(HIDDEN_VISUAL_WITH_FIELDS, files)).toEqual([
+      [
+        "HIDDEN_VISUAL_WITH_FIELDS.groupHidden",
+        '3 fields bound, hidden with Group "Filters"',
+        { count: 3, group: 'Group "Filters"' },
+      ],
+      ["HIDDEN_VISUAL_WITH_FIELDS.visualHidden", "1 field bound", { count: 1 }],
+      ["HIDDEN_VISUAL_WITH_FIELDS.visualHidden", "2 fields bound", { count: 2 }],
+    ]);
+  });
+
+  it("gives VISUAL_OUTSIDE_PAGE one message, which edges a select", () => {
+    const at = (name: string, x: number, y: number, width: number, height: number) =>
+      visual("p", name, "cardVisual", { position: { x, y, z: 0, width, height, tabOrder: 0 } });
+    const files = [
+      page("p"),
+      at("right", 1200, 0, 100, 50),
+      at("bottom", 0, 621, 100, 100),
+      at("both", 1250, 700, 100, 50),
+    ];
+    expect(said(VISUAL_OUTSIDE_PAGE, files)).toEqual([
+      [
+        "VISUAL_OUTSIDE_PAGE",
+        "70 px past the right edge, 30 px past the bottom edge",
+        { edges: "both", right: 70, bottom: 30 },
+      ],
+      ["VISUAL_OUTSIDE_PAGE", "1 px past the bottom edge", { edges: "bottom", bottom: 1 }],
+      ["VISUAL_OUTSIDE_PAGE", "20 px past the right edge", { edges: "right", right: 20 }],
+    ]);
+  });
+
+  it("gives VISUAL_WITHOUT_FIELDS, SLICER_SELECTION_SAVED, and SLICER_SEARCH_SAVED their messages", () => {
+    const city = { Column: { Expression: { SourceRef: { Source: "s" } }, Property: "City" } };
+    const where = (condition: unknown) => ({
+      filter: {
+        Version: 2,
+        From: [{ Name: "s", Entity: "Store", Type: 0 }],
+        Where: [{ Condition: condition }],
+      },
+    });
+    const search = (value: string) =>
+      where({ Contains: { Left: city, Right: { Literal: { Value: value } } } });
+    const slicer = (name: string, properties: Record<string, unknown>) =>
+      visual("p", name, "slicer", {}, { ...fields(1), objects: { general: [{ properties }] } });
+    const files = [
+      page("p"),
+      visual("p", "empty", "card"),
+      slicer("picked", {
+        filter: where({ In: { Expressions: [city], Values: [[lit("'Leeds'").expr]] } }),
+      }),
+      slicer("termed", { selfFilter: search("'spring'") }),
+      slicer("unread", { selfFilter: search("12L") }),
+    ];
+    expect(said(VISUAL_WITHOUT_FIELDS, files)).toEqual([
+      ["VISUAL_WITHOUT_FIELDS", "no fields bound", {}],
+    ]);
+    expect(said(SLICER_SELECTION_SAVED, files)).toEqual([
+      ["SLICER_SELECTION_SAVED", "opens with this selection applied", {}],
+    ]);
+    expect(said(SLICER_SEARCH_SAVED, files)).toEqual([
+      ["SLICER_SEARCH_SAVED.term", 'opens with the search term "spring" saved', { term: "spring" }],
+      ["SLICER_SEARCH_SAVED.termUnread", "opens with a search term saved", {}],
+    ]);
+  });
+
+  it("gives TAB_ORDER_FOLLOWS_LAYOUT two messages, a group's nested in a third", () => {
+    const at = (name: string, x: number, y: number, tabOrder: number, container = {}) =>
+      visual("p", name, "cardVisual", {
+        position: { x, y, z: 0, width: 100, height: 50, tabOrder },
+        ...container,
+      });
+    const layout = { expect: "layout" };
+    // No group: the rule's own message alone.
+    expect(
+      said(TAB_ORDER_FOLLOWS_LAYOUT, [page("p"), at("a", 0, 0, 1), at("b", 0, 200, 0)], layout),
+    ).toEqual([
+      [
+        "TAB_ORDER_FOLLOWS_LAYOUT.startsAt",
+        "tab order starts at cardVisual (b) but the layout reads cardVisual (a) first",
+        { tabVisual: "cardVisual (b)", layoutVisual: "cardVisual (a)" },
+      ],
+    ]);
+    const visits = [page("p"), at("a", 0, 0, 0), at("b", 200, 0, 2), at("c", 400, 0, 1)];
+    expect(said(TAB_ORDER_FOLLOWS_LAYOUT, visits, layout)).toEqual([
+      [
+        "TAB_ORDER_FOLLOWS_LAYOUT.visits",
+        "tab order visits cardVisual (c) where the layout reads cardVisual (b)",
+        { tabVisual: "cardVisual (c)", layoutVisual: "cardVisual (b)" },
+      ],
+    ]);
+    const grouped = [
+      page("p"),
+      group("g", "Filters"),
+      at("s1", 0, 0, 1, { parentGroupName: "g" }),
+      at("s2", 0, 60, 0, { parentGroupName: "g" }),
+    ];
+    expect(said(TAB_ORDER_FOLLOWS_LAYOUT, grouped, layout)).toEqual([
+      [
+        "TAB_ORDER_FOLLOWS_LAYOUT.inGroup",
+        'in Group "Filters", tab order starts at cardVisual (s2) but the layout reads cardVisual (s1) first',
+        {
+          group: 'Group "Filters"',
+          disagreement: msg("TAB_ORDER_FOLLOWS_LAYOUT.startsAt", {
+            tabVisual: "cardVisual (s2)",
+            layoutVisual: "cardVisual (s1)",
+          }),
+        },
+      ],
+    ]);
+  });
+
+  describe("HARDCODED_YEAR_IN_FILTER", () => {
+    const col = { Column: { Expression: { SourceRef: { Source: "d" } }, Property: "Year" } };
+    const literal = (value: string) => ({ Literal: { Value: value } });
+    const year = (kind: number, value: string) => ({
+      Comparison: { ComparisonKind: kind, Left: col, Right: literal(value) },
+    });
+    const field = { Column: { Expression: { SourceRef: { Entity: "Date" } }, Property: "Year" } };
+    const onPage = (condition: unknown, named: boolean) =>
+      page("p", {
+        filterConfig: {
+          filters: [
+            {
+              name: "f1",
+              ...(named ? { field } : {}),
+              type: "Categorical",
+              filter: {
+                Version: 2,
+                From: [{ Name: "d", Entity: "Date", Type: 0 }],
+                Where: [{ Condition: condition }],
+              },
+              howCreated: "User",
+            },
+          ],
+        },
+      });
+    const kept = (...years: string[]) => ({
+      In: { Expressions: [col], Values: years.map((y) => [literal(y)]) },
+    });
+    const yearsOf = (condition: unknown, named = false) =>
+      said(HARDCODED_YEAR_IN_FILTER, [onPage(condition, named)]);
+
+    it("names fixed years as a capped list with a plural", () => {
+      expect(yearsOf(kept("2024L"))).toEqual([
+        ["HARDCODED_YEAR_IN_FILTER.fixedYears", "fixed year 2024", { count: 1, years: ["2024"] }],
+      ]);
+      expect(yearsOf(kept("2024L", "2025L"))[0]!.slice(0, 2)).toEqual([
+        "HARDCODED_YEAR_IN_FILTER.fixedYears",
+        "fixed years 2024 and 2025",
+      ]);
+      expect(yearsOf(kept("2021L", "2022L", "2023L", "2024L", "2025L"))).toEqual([
+        [
+          "HARDCODED_YEAR_IN_FILTER.fixedYears",
+          "fixed years 2021, 2022, 2023, and 2 more",
+          { count: 5, years: ["2021", "2022", "2023", msg("list.more", { count: 2 })] },
+        ],
+      ]);
+      // Advanced filtering's "is" keeps one year too.
+      expect(yearsOf(year(0, "2025L"))[0]![1]).toBe("fixed year 2025");
+    });
+
+    it("names years up to one, and a range, each in a message of its own", () => {
+      expect(yearsOf(year(3, "2026L"))).toEqual([
+        ["HARDCODED_YEAR_IN_FILTER.yearsUpTo", "years up to 2025", { year: 2025 }],
+      ]);
+      const range = { And: { Left: year(2, "2018L"), Right: year(4, "2025L") } };
+      expect(yearsOf(range)).toEqual([
+        ["HARDCODED_YEAR_IN_FILTER.yearRange", "years 2018 to 2025", { from: 2018, to: 2025 }],
+      ]);
+    });
+
+    it("nests what a filter keeps in a message naming its field, and stands alone without one", () => {
+      expect(yearsOf(kept("2024L"), true)).toEqual([
+        [
+          "HARDCODED_YEAR_IN_FILTER.onField",
+          "fixed year 2024 on 'Date'[Year]",
+          {
+            kept: msg("HARDCODED_YEAR_IN_FILTER.fixedYears", { count: 1, years: ["2024"] }),
+            field: "'Date'[Year]",
+          },
+        ],
+      ]);
+    });
   });
 });
 

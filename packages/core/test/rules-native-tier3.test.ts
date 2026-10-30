@@ -647,7 +647,7 @@ describe("TAB_ORDER_FOLLOWS_LAYOUT", () => {
     const [f] = TAB_ORDER_FOLLOWS_LAYOUT.check(project, {
       indexes: buildIndexes(project),
       options: LAYOUT,
-    });
+    }).map(rendered);
     expect(f!.detail).toBe(
       "tab order starts at cardVisual (c) but the layout reads cardVisual (a) first",
     );

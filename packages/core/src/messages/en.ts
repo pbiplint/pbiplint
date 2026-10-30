@@ -3,8 +3,9 @@
  * so a catalog for another language is the same keys with other strings.
  *
  * A template is written in a subset of ICU MessageFormat: `{name}` for a parameter,
- * `{n, plural, one {# field} other {# fields}}` (with `=0`-style exact matches), and
- * `{k, select, a {...} other {...}}`, where `other` is required. There is no quoting: an
+ * `{n, plural, one {# field} other {# fields}}` (with `=0`-style exact matches),
+ * `{k, select, a {...} other {...}}`, where `other` is required, `{names, list}` for a list the
+ * language joins, and `{d, date}` for a day in the language's long form. There is no quoting: an
  * apostrophe is always itself, and there are no literal braces, so whoever adds a language never
  * writes ICU's doubled apostrophe.
  */
@@ -35,6 +36,8 @@ export const EN = {
   "context.level": "hierarchy {hierarchy} in {table}",
   "context.role": "role {role}",
   "context.table": "table {table}",
+  "date.long": "{date, date}",
+  "list.more": "{count} more",
   "parse.m.modelTooLarge":
     "M is too large or complex to read (over pbiplint's limit for one model's M)",
   "parse.m.notParsed": "M could not be parsed: {message}",
@@ -67,6 +70,7 @@ export const EN = {
   "parse.tmdl.unterminatedFence": "unterminated code fence",
   "query.name": "query {query}",
   "query.partition": "query {query}, partition {partition}",
+  quoted: '"{name}"',
   "ruleError.errorClass": "{class}",
   "ruleError.notAnError": "a value that is not an Error",
   "ruleError.outOfStack": "{class} (out of stack space)",

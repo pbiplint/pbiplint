@@ -5,6 +5,7 @@ import { runRules } from "../src/engine/run.js";
 import { buildIndexes } from "../src/index/build.js";
 import { EN, type MessageId } from "../src/messages/en.js";
 import {
+  capped,
   findingDetail,
   formatMessage,
   msg,
@@ -14,6 +15,7 @@ import {
   type MessageParam,
 } from "../src/messages/format.js";
 import { eachQuery } from "../src/rules/m-helpers.js";
+import { englishList, longDate } from "../src/rules/pbiplint/periods.js";
 import { RULE_COULD_NOT_FINISH } from "../src/rules/rule-could-not-finish.js";
 import type { Finding, Rule, RuleFinding } from "../src/rules/types.js";
 
@@ -27,6 +29,10 @@ const catalog = {
   outer: "see {what}",
   plain: "{a}",
   pound: "Q#1 {a}",
+  list: "{names, list}",
+  date: "{d, date}",
+  broken: "{a",
+  countOrSelect: "{n, plural, other {#}} {k, select, other {x}}",
 } as unknown as Catalog;
 
 const render = (id: string, params: Record<string, MessageParam> = {}, locale?: string) =>
@@ -81,7 +87,104 @@ describe("formatMessage", () => {
   });
 });
 
+describe("list and date parameters", () => {
+  const listed = (items: readonly (string | Message)[], locale?: string) =>
+    formatMessage(msg("list" as MessageId, { names: items }), { ...EN, ...catalog }, locale);
+
+  // englishList's own cases, rendered through capped() and the list kind.
+  it.each([
+    [["2025"]],
+    [["2024", "2025"]],
+    [["2024", "2025", "2026"]],
+    [["2024", "2025", "2026", "2027"]],
+    [["January 1, 2024", "June 30, 2024", "December 31, 2024"]],
+    [["2020", "2021", "2022", "2023", "2024", "2025"]],
+    [["Sales, EU", "B", "C", "D"]],
+  ])("renders %j with capped() as englishList does", (items) => {
+    expect(listed(capped(items))).toBe(englishList(items));
+  });
+
+  // The listOf style of translations.ts and reachability.ts, which names every item.
+  it("renders a list uncapped as listOf does", () => {
+    expect(listed(["fr-FR"])).toBe("fr-FR");
+    expect(listed(["de-DE", "fr-FR"])).toBe("de-DE and fr-FR");
+    expect(listed(["fr-FR", "de-DE", "es-ES"])).toBe("fr-FR, de-DE, and es-ES");
+    expect(listed(["fr-FR", "de-DE", "es-ES", "it-IT"])).toBe("fr-FR, de-DE, es-ES, and it-IT");
+    expect(
+      listed([
+        'level "Year" of hierarchy "Calendar Hierarchy"',
+        'level "FY" of hierarchy "Fiscal"',
+        'level "Year" of hierarchy "Annual"',
+      ]),
+    ).toBe(
+      'level "Year" of hierarchy "Calendar Hierarchy", level "FY" of hierarchy "Fiscal", and level "Year" of hierarchy "Annual"',
+    );
+  });
+
+  it("uses semicolons in English when an item holds a comma, and Intl's punctuation elsewhere", () => {
+    expect(listed(["Sales, EU", "B", "C"])).toBe("Sales, EU; B; and C");
+    expect(listed(["Sales, EU", "B"])).toBe("Sales, EU and B");
+    expect(listed(["Sales, EU", "B", "C"], "en-GB")).toBe("Sales, EU; B and C");
+    expect(listed(["Sales, EU", "B", "C"], "EN-us")).toBe("Sales, EU; B; and C");
+    expect(listed(["Sales, EU", "B", "C"], "de")).toBe("Sales, EU, B und C");
+  });
+
+  it("renders message items, as quoted names and the count of the rest", () => {
+    const names = ["A", "B", "C", "D", "E"].map((name) => msg("quoted", { name }));
+    expect(listed(capped(names))).toBe('"A", "B", "C", and 2 more');
+    expect(listed(capped(names.slice(0, 3)))).toBe('"A", "B", and "C"');
+    expect(capped(names, 5)).toEqual(names);
+  });
+
+  it("writes an ISO day in the locale's long form, in UTC so no day shifts", () => {
+    const day = (date: string, locale?: string) =>
+      formatMessage(msg("date.long", { date }), EN, locale);
+    expect(day("2025-01-01")).toBe(longDate(2025, 1, 1));
+    expect(day("2025-12-31")).toBe(longDate(2025, 12, 31));
+    expect(day("2024-02-29")).toBe(longDate(2024, 2, 29));
+    expect(day("2025-01-05")).toBe("January 5, 2025");
+    expect(day("2025-12-31", "de")).toBe("31. Dezember 2025");
+    const days = ["2024-01-01", "2024-06-30", "2024-12-31"].map((date) =>
+      msg("date.long", { date }),
+    );
+    expect(listed(capped(days))).toBe(
+      englishList(["January 1, 2024", "June 30, 2024", "December 31, 2024"]),
+    );
+  });
+
+  it("writes a value that is not a day as given", () => {
+    expect(render("date", { d: "not a day" })).toBe("not a day");
+  });
+
+  it("falls back to English for a locale Intl refuses, without throwing", () => {
+    expect(listed(["a", "b", "c"], "xx-invalid-")).toBe("a, b, and c");
+    expect(render("fields", { n: 1 }, "xx-invalid-")).toBe("1 field bound");
+    expect(formatMessage(msg("date.long", { date: "2025-01-05" }), EN, "xx-invalid-")).toBe(
+      "January 5, 2025",
+    );
+  });
+});
+
+describe("formatMessage on a slip in a catalog", () => {
+  it("writes a template that does not parse as it stands, the second time too", () => {
+    expect(render("broken", { a: "x" })).toBe("{a");
+    expect(render("broken", { a: "x" })).toBe("{a");
+  });
+
+  it("writes a missing plural, select, or list parameter as its placeholder", () => {
+    expect(render("countOrSelect")).toBe("{n} {k}");
+    expect(render("list")).toBe("{names}");
+  });
+});
+
 describe("templateArgs", () => {
+  it("reports list and date arguments", () => {
+    expect(Object.fromEntries(templateArgs("{names, list} on {d, date}"))).toEqual({
+      names: { kind: "list" },
+      d: { kind: "date" },
+    });
+  });
+
   it("lists plain, plural, and select arguments, including those inside branches", () => {
     const args = templateArgs(
       "{a} {n, plural, one {# {b}} other {{k, select, x {X {c}} other {Y}}}}",
@@ -375,6 +478,12 @@ describe("the English catalog", () => {
       }),
     ).toEqual([
       "HIDE_TOOLTIP_DRILLTROUGH_PAGES: {kind} is select other tooltips, English has select other tooltip",
+    ]);
+    expect(sameShape({ ...EN, "date.long": "{date}" })).toEqual([
+      "date.long: {date} is plain, English has date",
+    ]);
+    expect(sameShape({ ...EN, "list.more": "{count, list} more" })).toEqual([
+      "list.more: {count} is list, English has plain",
     ]);
     const { "context.role": _, ...lacking } = EN;
     expect(sameShape({ ...lacking, extra: "x" } as unknown as Catalog)).toEqual([

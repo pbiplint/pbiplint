@@ -717,6 +717,12 @@ describe("FIXED_DATE_IN_ROW_FILTER (v3 spec, section 9.16)", () => {
         objectName: "Sales",
         location: { file: "inline.tmdl", line: 7, column: 71 },
         detail: "query 'Sales', step 'Filtered Rows': rows end at a fixed date, December 31, 2025",
+        messageId: "query.stepFinding",
+        params: {
+          query: query("'Sales'"),
+          step: "'Filtered Rows'",
+          finding: msg("FIXED_DATE_IN_ROW_FILTER", { use: "endsAt", date: "2025-12-31" }),
+        },
       },
     ]);
   });
@@ -792,6 +798,14 @@ describe("DEFAULT_STEP_NAMES (v3 spec, section 9.13)", () => {
         location: { file: "inline.tmdl", line: 7, column: 6 },
         detail:
           "query 'Sales': 4 steps keep default names, such as 'Changed Type' and 'Added Custom1'",
+        messageId: "query.finding",
+        params: {
+          query: query("'Sales'"),
+          finding: msg("DEFAULT_STEP_NAMES.several", {
+            count: 4,
+            steps: ["'Changed Type'", "'Added Custom1'"],
+          }),
+        },
       },
     ]);
   });
@@ -863,6 +877,16 @@ describe("DYNAMIC_DATA_SOURCE (v3 spec, section 9.3)", () => {
         objectName: "Orders",
         location: { file: "inline.tmdl", line: 7, column: 61 },
         detail: "query 'Orders', step 'Added Custom': Web.Contents's address is read from the rows",
+        messageId: "query.stepFinding",
+        params: {
+          query: query("'Orders'"),
+          step: "'Added Custom'",
+          finding: msg("DYNAMIC_DATA_SOURCE", {
+            function: "Web.Contents",
+            noun: "address",
+            how: "row",
+          }),
+        },
       },
     ]);
   });
@@ -987,6 +1011,17 @@ describe("HARDCODED_SECRET_IN_QUERY (v3 spec, sections 9.5 and 11.3)", () => {
         location: { file: "inline.tmdl", line: 6, column: 93 },
         detail:
           "query 'Orders API', step 'Source': the Authorization header in Web.Contents holds a credential written into the query (value not shown)",
+        messageId: "query.stepFinding",
+        params: {
+          query: query("'Orders API'"),
+          step: "'Source'",
+          finding: msg("HARDCODED_SECRET_IN_QUERY.holds", {
+            where: msg("HARDCODED_SECRET_IN_QUERY.header", {
+              header: "Authorization",
+              function: "Web.Contents",
+            }),
+          }),
+        },
       },
     ]);
   });
@@ -1039,6 +1074,16 @@ describe("HARDCODED_SECRET_IN_QUERY (v3 spec, sections 9.5 and 11.3)", () => {
         location: { file: "inline.tmdl", line: 1, column: 27 },
         detail:
           "query 'ServiceToken': the x-api-key header in Web.Contents reads a credential written here (value not shown)",
+        messageId: "query.finding",
+        params: {
+          query: query("'ServiceToken'"),
+          finding: msg("HARDCODED_SECRET_IN_QUERY.reads", {
+            where: msg("HARDCODED_SECRET_IN_QUERY.header", {
+              header: "x-api-key",
+              function: "Web.Contents",
+            }),
+          }),
+        },
       },
       {
         objectType: "Partition",
@@ -1046,6 +1091,17 @@ describe("HARDCODED_SECRET_IN_QUERY (v3 spec, sections 9.5 and 11.3)", () => {
         location: { file: "inline.tmdl", line: 17, column: 12 },
         detail:
           "query 'Orders', step 'Key': the Authorization header in Web.Contents reads a credential written here (value not shown)",
+        messageId: "query.stepFinding",
+        params: {
+          query: query("'Orders'"),
+          step: "'Key'",
+          finding: msg("HARDCODED_SECRET_IN_QUERY.reads", {
+            where: msg("HARDCODED_SECRET_IN_QUERY.header", {
+              header: "Authorization",
+              function: "Web.Contents",
+            }),
+          }),
+        },
       },
     ]);
   });
@@ -1112,6 +1168,12 @@ describe("HARDCODED_SERVER_NAME (v3 spec, section 9.14)", () => {
         location: { file: "inline.tmdl", line: 6, column: 15 },
         detail:
           "query 'Sales', step 'Source': Sql.Database names its server as text (2 calls in this query); a parameter would hold it",
+        messageId: "query.stepFinding",
+        params: {
+          query: query("'Sales'"),
+          step: "'Source'",
+          finding: msg("HARDCODED_SERVER_NAME", { function: "Sql.Database", count: 2 }),
+        },
       },
     ]);
   });
@@ -1190,6 +1252,12 @@ describe("LEGACY_EXCEL_FILE (v3 spec, section 9.17)", () => {
         location: { file: "inline.tmdl", line: 6, column: 44 },
         detail:
           "query 'Budget', step 'Source': the workbook is a legacy .xls file, read through the Access Database Engine",
+        messageId: "query.stepFinding",
+        params: {
+          query: query("'Budget'"),
+          step: "'Source'",
+          finding: msg("LEGACY_EXCEL_FILE", { extension: "xls" }),
+        },
       },
     ]);
   });
@@ -1256,6 +1324,12 @@ describe("EXTENSION_FILTER_CASE (v3 spec, section 9.10)", () => {
         location: { file: "inline.tmdl", line: 7, column: 55 },
         detail:
           "query 'Sales Files', step 'Filtered Rows': the extension test matches \".csv\" but not \".CSV\"",
+        messageId: "query.stepFinding",
+        params: {
+          query: query("'Sales Files'"),
+          step: "'Filtered Rows'",
+          finding: msg("EXTENSION_FILTER_CASE", { extension: ".csv", otherCase: ".CSV" }),
+        },
       },
     ]);
   });

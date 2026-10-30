@@ -47,18 +47,36 @@ export const EN = {
   "BROKEN_FIELD_REFERENCE.unreadModelFile": "{reason}, and a model file could not be fully read",
   DEFAULT_PAGE_NAME:
     '"{name}" {pattern, select, new {is the name Power BI Desktop gives a new page} duplicate {is the name Power BI Desktop gives a duplicated page} other {is named as a copy}}',
+  "DEFAULT_STEP_NAMES.one": "1 step keeps its default name, {step}",
+  "DEFAULT_STEP_NAMES.several":
+    "{count, plural, =2 {# steps keep default names, {steps, list}} other {# steps keep default names, such as {steps, list}}}",
+  DYNAMIC_DATA_SOURCE:
+    "{function}'s {noun, select, path {path} address {address} connectionString {connection string} other {server}} {how, select, row {is read from the rows} computed {is built by a function call} parameter {is a custom function's parameter} other {is chosen with if ... then ... else}}",
   ENSURE_ALTTEXT: "no alt text",
   ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY: "height {height}, more than {max}",
   ENSURE_THEME_COLOURS:
     "{count, plural, one {# colour} other {# colours}} set to a hex value instead of a theme colour",
   EXCEL_USE_HEADERS: "Excel.Workbook promotes headers in the refreshing machine's culture",
+  EXTENSION_FILTER_CASE: 'the extension test matches "{extension}" but not "{otherCase}"',
   FILTERS_PANE_STATE:
     "{source, select, saved {saved} other {not recorded, read as}} {state, select, open {open} closed {closed} other {hidden from readers}}; the policy expects {expect, select, open {open} other {closed}}",
+  FIXED_DATE_IN_ROW_FILTER:
+    "{use, select, endsAt {rows end at a fixed date} other {rows match a fixed date}}, {date, date}",
   "HARDCODED_PERIOD_IN_DAX.endsOn":
     "{count, plural, one {ends on a fixed date, {dates, list}} other {ends on fixed dates {dates, list}}}",
   "HARDCODED_PERIOD_IN_DAX.fixed":
     "fixed {count, plural, one {{kind, select, year {year} date {date} other {period}}} other {{kind, select, year {years} date {dates} other {periods}}}} {periods, list}",
   "HARDCODED_PERIOD_IN_DAX.inContext": "{fixed} in {context}",
+  "HARDCODED_SECRET_IN_QUERY.addressParameter": "the {parameter} parameter of the web address",
+  "HARDCODED_SECRET_IN_QUERY.bearerToken": "the Bearer token",
+  "HARDCODED_SECRET_IN_QUERY.connectionString": "the password in {function}'s connection string",
+  "HARDCODED_SECRET_IN_QUERY.header": "the {header} header in {function}",
+  "HARDCODED_SECRET_IN_QUERY.holds":
+    "{where} holds a credential written into the query (value not shown)",
+  "HARDCODED_SECRET_IN_QUERY.queryField": "the {field} field of the Query record in {function}",
+  "HARDCODED_SECRET_IN_QUERY.reads": "{where} reads a credential written here (value not shown)",
+  HARDCODED_SERVER_NAME:
+    "{function} names its server as text{count, plural, =1 {} other { (# calls in this query)}}; a parameter would hold it",
   "HARDCODED_YEAR_IN_FILTER.fixedYears":
     "{count, plural, one {fixed year {years, list}} other {fixed years {years, list}}}",
   "HARDCODED_YEAR_IN_FILTER.onField": "{kept} on {field}",
@@ -81,6 +99,8 @@ export const EN = {
     'no landing page set; the active page "{page}" does not exist',
   "LANDING_PAGE_NOT_SET.opensOn":
     'opens on "{page}", {by, select, first {the first page} other {the page open when it was saved}}',
+  LEGACY_EXCEL_FILE:
+    "the workbook is a legacy {extension, select, xlsb {.xlsb} other {.xls}} file, read through the Access Database Engine",
   LOCAL_DRIVE_PATH: "the path is on a local drive ({drive}:)",
   "NAME_WITHOUT_TRANSLATION.inContext": "{context}, {captions}",
   "NAME_WITHOUT_TRANSLATION.noCaption": "no caption in {cultures, list}",

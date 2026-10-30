@@ -8,6 +8,7 @@ import {
 import { plantedLeakRule } from "../../../tests/support/planted-rule.js";
 import { lint } from "../src/engine/lint.js";
 import { formatJson, formatMarkdown, formatSarif, formatText } from "../src/format/index.js";
+import type { Message, MessageParam } from "../src/messages/format.js";
 import { defaultRules } from "../src/rules/index.js";
 import { readModelFiles } from "./helpers.js";
 
@@ -75,6 +76,58 @@ describe("the secret guard, on lines PARSE_ISSUE quotes (v3 spec, sections 7 and
   ] as const)("keeps every part of every value out of the %s format", (_name, format) => {
     expect(leaks(format(parsed, { toolVersion: "0.0.0" }), planted)).toEqual([]);
   });
+});
+
+/**
+ * Every text a finding's parameters hold, nested messages' and list items' included, each as it
+ * would be written into the JSON or the SARIF, with the parameter's path for a failure to name.
+ */
+function paramTexts(params: Record<string, MessageParam>, path: string): [string, string][] {
+  return Object.entries(params).flatMap(([name, value]): [string, string][] => {
+    const at = `${path}.${name}`;
+    if (typeof value === "string") return [[at, value]];
+    if (typeof value === "number") return [[at, String(value)]];
+    if (Array.isArray(value))
+      return (value as readonly (string | Message)[]).flatMap((item, i) =>
+        paramTexts({ [i]: item }, at),
+      );
+    return paramTexts((value as Message).params, `${at}(${(value as Message).id})`);
+  });
+}
+
+describe("the secret guard, on findings' parameters (#98, v3 spec, section 11.3)", async () => {
+  // JSON and SARIF carry a finding's parameters into CI logs and artifacts: a parameter names where
+  // a credential is, never its value, and the M parser's message stays the masked one.
+  const fixtures = [
+    ["m-zoo", SECRETS_FIXTURE],
+    ["parse-secrets", PARSE_SECRETS_FIXTURE],
+  ] as const;
+  const linted = await Promise.all(
+    fixtures.map(async ([name, dir]) => ({
+      name,
+      planted: fakeSecrets(dir),
+      findings: (await lint(readModelFiles(dir))).findings,
+    })),
+  );
+  it("finds the credentials and parse issues whose parameters it reads", () => {
+    const [zoo, parse] = linted;
+    const secretFindings = zoo!.findings.filter((f) => f.ruleId === "HARDCODED_SECRET_IN_QUERY");
+    expect(secretFindings.length).toBeGreaterThanOrEqual(5);
+    for (const f of secretFindings) expect(f.params).toBeDefined();
+    expect(parse!.findings.filter((f) => f.ruleId === "PARSE_ISSUE" && f.params)).toHaveLength(6);
+  });
+  it.each(fixtures.map(([name]) => name))(
+    "keeps every part of every value out of %s's parameters",
+    (name) => {
+      const { planted, findings } = linted.find((l) => l.name === name)!;
+      const leaked = findings.flatMap((f) =>
+        paramTexts(f.params ?? {}, `${f.ruleId} ${f.messageId}`).filter(
+          ([, text]) => leaks(text, planted).length > 0,
+        ),
+      );
+      expect(leaked).toEqual([]);
+    },
+  );
 });
 
 describe("the secret guard, on a rule that could not finish (v3 spec, section 11.3)", async () => {

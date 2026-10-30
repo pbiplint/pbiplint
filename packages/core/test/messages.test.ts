@@ -35,11 +35,18 @@ import {
   NOT_REACHED_FROM_REPORT,
 } from "../src/rules/pbiplint/references.js";
 import { UDF_NOT_CALLED } from "../src/rules/pbiplint/functions.js";
-import { HARDCODED_PERIOD_IN_DAX, longDate } from "../src/rules/pbiplint/periods.js";
+import { HARDCODED_PERIOD_IN_DAX } from "../src/rules/pbiplint/periods.js";
 import {
+  DEFAULT_STEP_NAMES,
+  DYNAMIC_DATA_SOURCE,
   EXCEL_USE_HEADERS,
+  EXTENSION_FILTER_CASE,
+  FIXED_DATE_IN_ROW_FILTER,
+  HARDCODED_SECRET_IN_QUERY,
+  HARDCODED_SERVER_NAME,
   INCREMENTAL_REFRESH_RANGE_BOUNDS,
   KEEP_FIRST_ROWS_LEFT_IN,
+  LEGACY_EXCEL_FILE,
   LOCAL_DRIVE_PATH,
   ODBC_WHERE_CONNECTOR_EXISTS,
   PRIVACY_LEVELS_IGNORED,
@@ -197,9 +204,9 @@ describe("list and date parameters", () => {
   it("writes an ISO day in the locale's long form, in UTC so no day shifts", () => {
     const day = (date: string, locale?: string) =>
       formatMessage(msg("date.long", { date }), EN, locale);
-    expect(day("2025-01-01")).toBe(longDate(2025, 1, 1));
-    expect(day("2025-12-31")).toBe(longDate(2025, 12, 31));
-    expect(day("2024-02-29")).toBe(longDate(2024, 2, 29));
+    expect(day("2025-01-01")).toBe("January 1, 2025");
+    expect(day("2025-12-31")).toBe("December 31, 2025");
+    expect(day("2024-02-29")).toBe("February 29, 2024");
     expect(day("2025-01-05")).toBe("January 5, 2025");
     expect(day("2025-12-31", "de")).toBe("31. Dezember 2025");
     const days = ["2024-01-01", "2024-06-30", "2024-12-31"].map((date) =>
@@ -1233,11 +1240,11 @@ describe("the period, translation, and function rules' messages (#98)", () => {
       ]);
     });
 
-    it("writes a three-digit year as an ISO day padded to four digits, and English as longDate does", () => {
+    it("writes a three-digit year as an ISO day padded to four digits, and in English as written", () => {
       expect(said(HARDCODED_PERIOD_IN_DAX, ends("DATE(999, 12, 31)"))).toEqual([
         [
           "HARDCODED_PERIOD_IN_DAX.endsOn",
-          `ends on a fixed date, ${longDate(999, 12, 31)}`,
+          "ends on a fixed date, December 31, 999",
           { count: 1, dates: [day("0999-12-31")] },
         ],
       ]);
@@ -1367,7 +1374,7 @@ describe("the period, translation, and function rules' messages (#98)", () => {
   });
 });
 
-describe("the Power Query frame and the first Power Query rules' messages (#98)", () => {
+describe("the Power Query frame and the Power Query rules' messages (#98)", () => {
   /** A table whose one M partition holds `m`, as Desktop writes a block. */
   const table = (name: string, ...m: string[]): string =>
     `table '${name}'\n\tpartition '${name}' = m\n\t\tmode: import\n\t\tsource =\n${m.map((l) => `\t\t\t\t${l}`).join("\n")}\n\n`;
@@ -1629,6 +1636,295 @@ describe("the Power Query frame and the first Power Query rules' messages (#98)"
         "query.stepFinding",
         "query 'Sales', step 'Filtered': neither RangeStart nor RangeEnd includes the boundary, so a row on it lands in none",
         bounds("neitherIncludes"),
+      ],
+    ]);
+  });
+
+  describe("FIXED_DATE_IN_ROW_FILTER", () => {
+    const filtered = (condition: string) =>
+      oneStep("Sales", "Filtered", `Table.SelectRows(Source, each ${condition})`);
+    const fixed = (use: "endsAt" | "matches", date: string) =>
+      atStep(query("'Sales'"), "'Filtered'", msg("FIXED_DATE_IN_ROW_FILTER", { use, date }));
+
+    it("gives the use as a select and the day as a date", async () => {
+      expect(await said(FIXED_DATE_IN_ROW_FILTER, filtered("[Day] <= #date(2025, 1, 5)"))).toEqual([
+        [
+          "query.stepFinding",
+          "query 'Sales', step 'Filtered': rows end at a fixed date, January 5, 2025",
+          fixed("endsAt", "2025-01-05"),
+        ],
+      ]);
+      expect(
+        await said(FIXED_DATE_IN_ROW_FILTER, filtered("[Day] = #datetime(2026, 3, 31, 0, 0, 0)")),
+      ).toEqual([
+        [
+          "query.stepFinding",
+          "query 'Sales', step 'Filtered': rows match a fixed date, March 31, 2026",
+          fixed("matches", "2026-03-31"),
+        ],
+      ]);
+    });
+
+    it("writes a three-digit year as an ISO day padded to four digits, and in English as written", async () => {
+      expect(await said(FIXED_DATE_IN_ROW_FILTER, filtered("[Day] < #date(999, 12, 31)"))).toEqual([
+        [
+          "query.stepFinding",
+          "query 'Sales', step 'Filtered': rows end at a fixed date, December 31, 999",
+          fixed("endsAt", "0999-12-31"),
+        ],
+      ]);
+    });
+
+    it("leaves alone a day M refuses: one past its month's end, or a year outside 1 to 9999", async () => {
+      for (const date of [
+        "#date(2025, 2, 29)",
+        "#date(2025, 4, 31)",
+        "#date(0, 1, 1)",
+        "#date(-1, 1, 1)",
+        "#date(10000, 1, 1)",
+      ])
+        expect(await said(FIXED_DATE_IN_ROW_FILTER, filtered(`[Day] <= ${date}`))).toEqual([]);
+      expect(
+        (await said(FIXED_DATE_IN_ROW_FILTER, filtered("[Day] <= #date(2024, 2, 29)")))[0]![1],
+      ).toBe("query 'Sales', step 'Filtered': rows end at a fixed date, February 29, 2024");
+    });
+  });
+
+  describe("DEFAULT_STEP_NAMES", () => {
+    /** A query whose steps are `names`, each a default name. */
+    const steps = (...names: string[]) =>
+      table(
+        "Sales",
+        "let",
+        ...names.map((n, i) => `\t#"${n}" = ${i}${i < names.length - 1 ? "," : ""}`),
+        "in",
+        `\t#"${names.at(-1)}"`,
+      );
+
+    it("names the query alone, in query.finding, though the finding sits on the first step", async () => {
+      const [f] = await mFindings(DEFAULT_STEP_NAMES, steps("Filtered Rows"));
+      expect(f!.location).toEqual({ file: "inline.tmdl", line: 6, column: 6 });
+      expect([f!.messageId, f!.detail, f!.params]).toEqual([
+        "query.finding",
+        "query 'Sales': 1 step keeps its default name, 'Filtered Rows'",
+        {
+          query: query("'Sales'"),
+          finding: msg("DEFAULT_STEP_NAMES.one", { step: "'Filtered Rows'" }),
+        },
+      ]);
+    });
+
+    it("gives several steps their count and the first two names as a list, with such as past two", async () => {
+      const several = (count: number) =>
+        msg("DEFAULT_STEP_NAMES.several", {
+          count,
+          steps: ["'Promoted Headers'", "'Changed Type'"],
+        });
+      expect(await said(DEFAULT_STEP_NAMES, steps("Promoted Headers", "Changed Type"))).toEqual([
+        [
+          "query.finding",
+          "query 'Sales': 2 steps keep default names, 'Promoted Headers' and 'Changed Type'",
+          { query: query("'Sales'"), finding: several(2) },
+        ],
+      ]);
+      expect(
+        await said(DEFAULT_STEP_NAMES, steps("Promoted Headers", "Changed Type", "Added Custom")),
+      ).toEqual([
+        [
+          "query.finding",
+          "query 'Sales': 3 steps keep default names, such as 'Promoted Headers' and 'Changed Type'",
+          { query: query("'Sales'"), finding: several(3) },
+        ],
+      ]);
+    });
+  });
+
+  it("gives DYNAMIC_DATA_SOURCE the function as written, and what it calls its source and how it is made as selects", async () => {
+    const tmdl =
+      "expression GetPage = (address as text) => Web.Contents(address)\n\n" +
+      table(
+        "Orders",
+        "let",
+        '\tSource = #table(type table [url = text], {{"https://api.example.com"}}),',
+        '\tRows = Table.AddColumn(Source, "Body", each Web.Contents([url])),',
+        '\tBuilt = File.Contents(Text.Combine({"C:\\Data\\", "orders.csv"})),',
+        '\tOdbc = Odbc.DataSource(Text.Combine({"dsn=", "Sales"})),',
+        '\tServer = Sql.Database(if true then "a.example" else "b.example", "Warehouse")',
+        "in",
+        "\tServer",
+      );
+    const dynamic = (fn: string, noun: string, how: string) =>
+      msg("DYNAMIC_DATA_SOURCE", { function: fn, noun, how });
+    expect(await said(DYNAMIC_DATA_SOURCE, tmdl)).toEqual([
+      [
+        "query.stepFinding",
+        "query 'Orders', step 'Rows': Web.Contents's address is read from the rows",
+        atStep(query("'Orders'"), "'Rows'", dynamic("Web.Contents", "address", "row")),
+      ],
+      [
+        "query.stepFinding",
+        "query 'Orders', step 'Built': File.Contents's path is built by a function call",
+        atStep(query("'Orders'"), "'Built'", dynamic("File.Contents", "path", "computed")),
+      ],
+      [
+        "query.stepFinding",
+        "query 'Orders', step 'Odbc': Odbc.DataSource's connection string is built by a function call",
+        atStep(
+          query("'Orders'"),
+          "'Odbc'",
+          dynamic("Odbc.DataSource", "connectionString", "computed"),
+        ),
+      ],
+      [
+        "query.stepFinding",
+        "query 'Orders', step 'Server': Sql.Database's server is chosen with if ... then ... else",
+        atStep(query("'Orders'"), "'Server'", dynamic("Sql.Database", "server", "chosen")),
+      ],
+      [
+        "query.finding",
+        "query 'GetPage': Web.Contents's address is a custom function's parameter",
+        { query: query("'GetPage'"), finding: dynamic("Web.Contents", "address", "parameter") },
+      ],
+    ]);
+  });
+
+  describe("HARDCODED_SECRET_IN_QUERY", () => {
+    const holds = (where: Message) => msg("HARDCODED_SECRET_IN_QUERY.holds", { where });
+    const header = (name: string) =>
+      msg("HARDCODED_SECRET_IN_QUERY.header", { header: name, function: "Web.Contents" });
+
+    it("names each of the five places as a nested message, the names in it as the input writes them", async () => {
+      const tmdl = table(
+        "Api",
+        "let",
+        '\tHeader = Web.Contents("https://api.example.com/v1", [Headers = [#"X-API-Key" = "pbiplint-fixture-key-0201-notreal"]]),',
+        '\tField = Web.Contents("https://api.example.com/v1", [Query = [access_token = "pbiplint-fixture-token-0202-notreal"]]),',
+        '\tAddress = Web.Contents("https://api.example.com/v1?Sig=pbiplint-fixture-sig-0203-notreal"),',
+        '\tToken = "Bearer pbiplint-fixture-token-0204-notreal",',
+        '\tConnection = Odbc.DataSource("Driver={x};Pwd=pbiplint-fixture-pwd-0205-notreal")',
+        "in",
+        "\tConnection",
+      );
+      const at = (step: string, where: Message, detail: string) => [
+        "query.stepFinding",
+        `query 'Api', step '${step}': ${detail} holds a credential written into the query (value not shown)`,
+        atStep(query("'Api'"), `'${step}'`, holds(where)),
+      ];
+      expect(await said(HARDCODED_SECRET_IN_QUERY, tmdl)).toEqual([
+        at("Header", header("X-API-Key"), "the X-API-Key header in Web.Contents"),
+        at(
+          "Field",
+          msg("HARDCODED_SECRET_IN_QUERY.queryField", {
+            field: "access_token",
+            function: "Web.Contents",
+          }),
+          "the access_token field of the Query record in Web.Contents",
+        ),
+        at(
+          "Connection",
+          msg("HARDCODED_SECRET_IN_QUERY.connectionString", { function: "Odbc.DataSource" }),
+          "the password in Odbc.DataSource's connection string",
+        ),
+        at(
+          "Address",
+          msg("HARDCODED_SECRET_IN_QUERY.addressParameter", { parameter: "sig" }),
+          "the sig parameter of the web address",
+        ),
+        at("Token", msg("HARDCODED_SECRET_IN_QUERY.bearerToken"), "the Bearer token"),
+      ]);
+    });
+
+    it("says the place reads the credential where a name leads to the text", async () => {
+      const tmdl =
+        'expression Key = "pbiplint-fixture-key-0206-notreal" meta [IsParameterQuery = true, Type = "Text", IsParameterQueryRequired = true]\n\n' +
+        oneStep(
+          "Api",
+          "Source",
+          'Web.Contents("https://api.example.com/v1", [Headers = [#"x-api-key" = Key]])',
+        );
+      expect(await said(HARDCODED_SECRET_IN_QUERY, tmdl)).toEqual([
+        [
+          "query.finding",
+          "query 'Key': the x-api-key header in Web.Contents reads a credential written here (value not shown)",
+          {
+            query: query("'Key'"),
+            finding: msg("HARDCODED_SECRET_IN_QUERY.reads", { where: header("x-api-key") }),
+          },
+        ],
+      ]);
+    });
+  });
+
+  it("gives HARDCODED_SERVER_NAME the function as written and the count of calls as a plural", async () => {
+    const server = (count: number) =>
+      msg("HARDCODED_SERVER_NAME", { function: "Sql.Database", count });
+    expect(
+      await said(
+        HARDCODED_SERVER_NAME,
+        oneStep("Sales", "Source", 'Sql.Database("s.example", "W")'),
+      ),
+    ).toEqual([
+      [
+        "query.stepFinding",
+        "query 'Sales', step 'Source': Sql.Database names its server as text; a parameter would hold it",
+        atStep(query("'Sales'"), "'Source'", server(1)),
+      ],
+    ]);
+    const two = table(
+      "Sales",
+      "let",
+      '\tA = Sql.Database("s.example", "W"),',
+      '\tB = Sql.Database("s.example", "X")',
+      "in",
+      "\tB",
+    );
+    expect(await said(HARDCODED_SERVER_NAME, two)).toEqual([
+      [
+        "query.stepFinding",
+        "query 'Sales', step 'A': Sql.Database names its server as text (2 calls in this query); a parameter would hold it",
+        atStep(query("'Sales'"), "'A'", server(2)),
+      ],
+    ]);
+  });
+
+  it("gives LEGACY_EXCEL_FILE the extension as a select", async () => {
+    const tmdl = table(
+      "Budget",
+      "let",
+      '\tOld = Excel.Workbook(File.Contents("C:\\Data\\Budget.XLS"), null, true),',
+      '\tBinary = Excel.Workbook(File.Contents("C:\\Data\\Forecast.xlsb"), null, true)',
+      "in",
+      "\tBinary",
+    );
+    expect(await said(LEGACY_EXCEL_FILE, tmdl)).toEqual([
+      [
+        "query.stepFinding",
+        "query 'Budget', step 'Old': the workbook is a legacy .xls file, read through the Access Database Engine",
+        atStep(query("'Budget'"), "'Old'", msg("LEGACY_EXCEL_FILE", { extension: "xls" })),
+      ],
+      [
+        "query.stepFinding",
+        "query 'Budget', step 'Binary': the workbook is a legacy .xlsb file, read through the Access Database Engine",
+        atStep(query("'Budget'"), "'Binary'", msg("LEGACY_EXCEL_FILE", { extension: "xlsb" })),
+      ],
+    ]);
+  });
+
+  it("gives EXTENSION_FILTER_CASE the extension as written and in the other case", async () => {
+    const tmdl = oneStep(
+      "Files",
+      "Csv",
+      'Table.SelectRows(Folder.Files("C:\\Data"), each [Extension] = ".Csv")',
+    );
+    expect(await said(EXTENSION_FILTER_CASE, tmdl)).toEqual([
+      [
+        "query.stepFinding",
+        `query 'Files', step 'Csv': the extension test matches ".Csv" but not ".csv"`,
+        atStep(
+          query("'Files'"),
+          "'Csv'",
+          msg("EXTENSION_FILTER_CASE", { extension: ".Csv", otherCase: ".csv" }),
+        ),
       ],
     ]);
   });

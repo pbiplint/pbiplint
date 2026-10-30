@@ -7,36 +7,17 @@ import type { RuleFinding } from "../types.js";
 import { pbiplintRule } from "./define.js";
 import { calendarEnds, expressionPeriods, type Period } from "./period-forms.js";
 
-const MONTHS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-
 /** A period found in an object's DAX, with the node whose value holds that DAX. */
 interface Found {
   period: Period;
   node: TmdlNode | undefined;
 }
 
-/** A day in long form, as a detail names it: `December 31, 2025`. `month` is 1 to 12. */
-export const longDate = (year: number, month: number, day: number): string =>
-  `${MONTHS[month - 1]} ${day}, ${year}`;
-
 /**
  * A day as the date kind reads it, `2025-12-31`, its year padded to four digits, since DAX's
- * DATE() gives years from 100.
+ * DATE() gives years from 100 and M's #date from 1.
  */
-const isoDay = ({ year, month, day }: NonNullable<Period["date"]>): string =>
+export const isoDay = ({ year, month, day }: NonNullable<Period["date"]>): string =>
   [
     String(year).padStart(4, "0"),
     String(month).padStart(2, "0"),

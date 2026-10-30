@@ -1,4 +1,4 @@
-import { plural } from "../../format/text.js";
+import { msg } from "../../messages/format.js";
 import { visualName } from "../../pbir/names.js";
 import {
   allVisuals,
@@ -26,11 +26,19 @@ export const HIDDEN_VISUAL_WITH_FIELDS = pbiplintRule({
       ? allVisuals(report)
           .filter(hiddenVisualWithFields)
           .map((v) => {
-            const fields = `${plural(v.projectionCount, "field")} bound`;
+            const count = v.projectionCount;
             const group = v.isHidden ? undefined : hidingGroup(v);
             return group
-              ? reportFinding.visual(v, undefined, `${fields}, hidden with ${visualName(group)}`)
-              : reportFinding.visual(v, "/isHidden", fields);
+              ? reportFinding.visual(
+                  v,
+                  undefined,
+                  msg("HIDDEN_VISUAL_WITH_FIELDS.groupHidden", { count, group: visualName(group) }),
+                )
+              : reportFinding.visual(
+                  v,
+                  "/isHidden",
+                  msg("HIDDEN_VISUAL_WITH_FIELDS.visualHidden", { count }),
+                );
           })
       : [],
 });
@@ -78,7 +86,7 @@ export const VISUAL_WITHOUT_FIELDS = pbiplintRule({
               !NON_DATA.has(v.type) &&
               v.projectionCount === 0,
           )
-          .map((v) => reportFinding.visual(v, "/visual/visualType", "no fields bound"))
+          .map((v) => reportFinding.visual(v, "/visual/visualType", msg("VISUAL_WITHOUT_FIELDS")))
       : [],
 });
 
@@ -99,12 +107,18 @@ export const VISUAL_OUTSIDE_PAGE = pbiplintRule({
           if (v.groupId !== undefined || width === undefined || height === undefined) return [];
           const right = v.position.x + v.position.width - width;
           const bottom = v.position.y + v.position.height - height;
-          // An edge counts from a whole pixel past it, so a fraction of a pixel is not reported.
-          const parts = [
-            right >= 1 && `${Math.round(right)} px past the right edge`,
-            bottom >= 1 && `${Math.round(bottom)} px past the bottom edge`,
-          ].filter((part): part is string => typeof part === "string");
-          return parts.length ? [reportFinding.visual(v, "/position", parts.join(", "))] : [];
+          // An edge counts from a whole pixel past it, so a fraction of a pixel is not reported. Each
+          // set of edges has a message of its own, carrying the overhang of only the edges it names.
+          const past = { right: Math.round(right), bottom: Math.round(bottom) };
+          const message =
+            right >= 1 && bottom >= 1
+              ? msg("VISUAL_OUTSIDE_PAGE.both", past)
+              : right >= 1
+                ? msg("VISUAL_OUTSIDE_PAGE.right", { right: past.right })
+                : bottom >= 1
+                  ? msg("VISUAL_OUTSIDE_PAGE.bottom", { bottom: past.bottom })
+                  : undefined;
+          return message ? [reportFinding.visual(v, "/position", message)] : [];
         })
       : [],
 });
@@ -126,7 +140,7 @@ export const SLICER_SELECTION_SAVED = pbiplintRule({
           const selection = slicerSelection(v);
           return selection === undefined
             ? []
-            : [reportFinding.visual(v, selection, "opens with this selection applied")];
+            : [reportFinding.visual(v, selection, msg("SLICER_SELECTION_SAVED"))];
         })
       : [],
 });
@@ -146,11 +160,11 @@ export const SLICER_SEARCH_SAVED = pbiplintRule({
       ? allVisuals(report).flatMap((v) => {
           const search = slicerSearch(v);
           if (search === undefined) return [];
-          const detail =
+          const message =
             search.term === undefined
-              ? "opens with a search term saved"
-              : `opens with the search term "${search.term}" saved`;
-          return [reportFinding.visual(v, search.pointer, detail)];
+              ? msg("SLICER_SEARCH_SAVED.termUnread")
+              : msg("SLICER_SEARCH_SAVED.term", { term: search.term });
+          return [reportFinding.visual(v, search.pointer, message)];
         })
       : [],
 });

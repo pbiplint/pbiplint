@@ -56,16 +56,17 @@ console.log(
     `core's own code ${kb(ownBytes)} KB, the M parser ${kb(parserBytes)} KB`,
 );
 
-// Tripwires for conscious growth, raised on purpose: the core's own code at 255 KB and the parser at
+// Tripwires for conscious growth, raised on purpose: the core's own code at 265 KB and the parser at
 // 385 KB, measured at 376.0 KB on October 13, 2026; the parser moves only when its pinned version
 // does. The core's budget was 210 KB (the v2 spec's amendment of October 4, 2026), then 230 KB for
 // v3's first fifteen rules, Michael raised it to 240 KB on October 13, 2026, when the Desktop
 // check's two changes measured 230.1 KB, it was raised to 245 KB on October 28, 2026, when a
 // rule that cannot finish became a finding (#238) measured 239.9 KB, with 5 KB for 0.3.x (v3 spec,
-// section 3.4), and it was raised to 255 KB on October 29, 2026, when #98's PR 1 (message IDs)
-// measured 249.7 KB; PRs 2 and 3 move the rest of the rules' templates in. If a later change
-// crosses it, stop and tell the coordinator.
-const OWN_LIMIT_KB = 255;
+// section 3.4), it was raised to 255 KB on October 29, 2026, when #98's PR 1 (message IDs)
+// measured 249.7 KB, and it was raised to 265 KB on October 29, 2026, when #98's PR 2 (the native
+// rules' templates) measured 257.0 KB; PR 3 moves the Power Query rules' templates in. If a later
+// change crosses it, stop and tell the coordinator.
+const OWN_LIMIT_KB = 265;
 const PARSER_LIMIT_KB = 385;
 let failed = false;
 if (ownBytes > OWN_LIMIT_KB * 1024) {

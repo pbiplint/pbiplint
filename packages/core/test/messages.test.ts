@@ -5,6 +5,7 @@ import { runRules } from "../src/engine/run.js";
 import { buildIndexes } from "../src/index/build.js";
 import { EN, type MessageId } from "../src/messages/en.js";
 import {
+  capped,
   findingDetail,
   formatMessage,
   msg,
@@ -13,9 +14,42 @@ import {
   type Message,
   type MessageParam,
 } from "../src/messages/format.js";
+import { buildModel } from "../src/model/build.js";
+import type { Model } from "../src/model/types.js";
 import { eachQuery } from "../src/rules/m-helpers.js";
+import {
+  ACTION_WITHOUT_DESTINATION,
+  BROKEN_ACTION_TARGET,
+  BROKEN_BOOKMARK_REFERENCE,
+} from "../src/rules/pbiplint/actions.js";
+import { REPORT_LEVEL_MEASURES } from "../src/rules/pbiplint/measures.js";
+import {
+  FILTERS_PANE_STATE,
+  LANDING_PAGE_NOT_SET,
+  OPENING_PAGE_INVALID,
+} from "../src/rules/pbiplint/opening.js";
+import { HARDCODED_YEAR_IN_FILTER } from "../src/rules/pbiplint/filters.js";
+import { DEFAULT_PAGE_NAME } from "../src/rules/pbiplint/pages.js";
+import {
+  BROKEN_FIELD_REFERENCE,
+  NOT_REACHED_FROM_REPORT,
+} from "../src/rules/pbiplint/references.js";
+import { UDF_NOT_CALLED } from "../src/rules/pbiplint/functions.js";
+import { HARDCODED_PERIOD_IN_DAX, longDate } from "../src/rules/pbiplint/periods.js";
+import { TAB_ORDER_FOLLOWS_LAYOUT } from "../src/rules/pbiplint/tab-order.js";
+import { NAME_WITHOUT_TRANSLATION } from "../src/rules/pbiplint/translations.js";
+import {
+  HIDDEN_VISUAL_WITH_FIELDS,
+  SLICER_SEARCH_SAVED,
+  SLICER_SELECTION_SAVED,
+  VISUAL_OUTSIDE_PAGE,
+  VISUAL_WITHOUT_FIELDS,
+} from "../src/rules/pbiplint/visuals.js";
 import { RULE_COULD_NOT_FINISH } from "../src/rules/rule-could-not-finish.js";
 import type { Finding, Rule, RuleFinding } from "../src/rules/types.js";
+import { parseTmdl } from "../src/tmdl/parse.js";
+import { modelFrom, rendered } from "./helpers.js";
+import { bound, column, j, lit, measure, page, reportFindings, visual } from "./report-helpers.js";
 
 // Test-only templates under made-up IDs, so these tests do not depend on the English catalog.
 const catalog = {
@@ -27,6 +61,11 @@ const catalog = {
   outer: "see {what}",
   plain: "{a}",
   pound: "Q#1 {a}",
+  list: "{names, list}",
+  unitList: "{names, list, unit}",
+  date: "{d, date}",
+  broken: "{a",
+  countOrSelect: "{n, plural, other {#}} {k, select, other {x}}",
 } as unknown as Catalog;
 
 const render = (id: string, params: Record<string, MessageParam> = {}, locale?: string) =>
@@ -81,7 +120,121 @@ describe("formatMessage", () => {
   });
 });
 
+describe("list and date parameters", () => {
+  const listed = (items: readonly (string | Message)[], locale?: string) =>
+    formatMessage(msg("list" as MessageId, { names: items }), { ...EN, ...catalog }, locale);
+
+  // The cases of englishList, the list writer the list kind replaced, as it wrote them.
+  it.each([
+    [["2025"], "2025"],
+    [["2024", "2025"], "2024 and 2025"],
+    [["2024", "2025", "2026"], "2024, 2025, and 2026"],
+    [["2024", "2025", "2026", "2027"], "2024, 2025, 2026, and 1 more"],
+    [
+      ["January 1, 2024", "June 30, 2024", "December 31, 2024"],
+      "January 1, 2024; June 30, 2024; and December 31, 2024",
+    ],
+    [["2020", "2021", "2022", "2023", "2024", "2025"], "2020, 2021, 2022, and 3 more"],
+    [["Sales, EU", "B", "C", "D"], "Sales, EU; B; C; and 1 more"],
+  ])("renders %j with capped() as %j", (items, expected) => {
+    expect(listed(capped(items))).toBe(expected);
+  });
+
+  // The unit style, which names every item and joins them with no conjunction.
+  it("renders a unit list with no conjunction, and keeps its commas when an item holds one", () => {
+    const unit = (items: readonly (string | Message)[], locale?: string) =>
+      render("unitList", { names: items }, locale);
+    expect(unit(["[A]"])).toBe("[A]");
+    expect(unit(["[A]", "[B]"])).toBe("[A], [B]");
+    expect(unit(["[A]", "[B]", "[C]"])).toBe("[A], [B], [C]");
+    expect(unit(["[A]", "[B, EU]", "[C]"])).toBe("[A], [B, EU], [C]");
+    expect(unit(["[A]", msg("plain" as MessageId, { a: "[B]" })])).toBe("[A], [B]");
+    expect(unit(["a", "b", "c"], "xx-invalid-")).toBe("a, b, c");
+  });
+
+  // The listOf style of translations.ts and reachability.ts, which names every item.
+  it("renders a list uncapped as listOf does", () => {
+    expect(listed(["fr-FR"])).toBe("fr-FR");
+    expect(listed(["de-DE", "fr-FR"])).toBe("de-DE and fr-FR");
+    expect(listed(["fr-FR", "de-DE", "es-ES"])).toBe("fr-FR, de-DE, and es-ES");
+    expect(listed(["fr-FR", "de-DE", "es-ES", "it-IT"])).toBe("fr-FR, de-DE, es-ES, and it-IT");
+    expect(
+      listed([
+        'level "Year" of hierarchy "Calendar Hierarchy"',
+        'level "FY" of hierarchy "Fiscal"',
+        'level "Year" of hierarchy "Annual"',
+      ]),
+    ).toBe(
+      'level "Year" of hierarchy "Calendar Hierarchy", level "FY" of hierarchy "Fiscal", and level "Year" of hierarchy "Annual"',
+    );
+  });
+
+  it("uses semicolons in English when an item holds a comma, and Intl's punctuation elsewhere", () => {
+    expect(listed(["Sales, EU", "B", "C"])).toBe("Sales, EU; B; and C");
+    expect(listed(["Sales, EU", "B"])).toBe("Sales, EU and B");
+    expect(listed(["Sales, EU", "B", "C"], "en-GB")).toBe("Sales, EU; B and C");
+    expect(listed(["Sales, EU", "B", "C"], "EN-us")).toBe("Sales, EU; B; and C");
+    expect(listed(["Sales, EU", "B", "C"], "de")).toBe("Sales, EU, B und C");
+  });
+
+  it("renders message items, as quoted names and the count of the rest", () => {
+    const names = ["A", "B", "C", "D", "E"].map((name) => msg("quoted", { name }));
+    expect(listed(capped(names))).toBe('"A", "B", "C", and 2 more');
+    expect(listed(capped(names.slice(0, 3)))).toBe('"A", "B", and "C"');
+    expect(capped(names, 5)).toEqual(names);
+  });
+
+  it("writes an ISO day in the locale's long form, in UTC so no day shifts", () => {
+    const day = (date: string, locale?: string) =>
+      formatMessage(msg("date.long", { date }), EN, locale);
+    expect(day("2025-01-01")).toBe(longDate(2025, 1, 1));
+    expect(day("2025-12-31")).toBe(longDate(2025, 12, 31));
+    expect(day("2024-02-29")).toBe(longDate(2024, 2, 29));
+    expect(day("2025-01-05")).toBe("January 5, 2025");
+    expect(day("2025-12-31", "de")).toBe("31. Dezember 2025");
+    const days = ["2024-01-01", "2024-06-30", "2024-12-31"].map((date) =>
+      msg("date.long", { date }),
+    );
+    expect(listed(capped(days))).toBe("January 1, 2024; June 30, 2024; and December 31, 2024");
+  });
+
+  it("writes a value that is not a day as given", () => {
+    expect(render("date", { d: "not a day" })).toBe("not a day");
+  });
+
+  it("falls back to English for a locale Intl refuses, without throwing", () => {
+    expect(listed(["a", "b", "c"], "xx-invalid-")).toBe("a, b, and c");
+    expect(render("fields", { n: 1 }, "xx-invalid-")).toBe("1 field bound");
+    expect(formatMessage(msg("date.long", { date: "2025-01-05" }), EN, "xx-invalid-")).toBe(
+      "January 5, 2025",
+    );
+  });
+});
+
+describe("formatMessage on a slip in a catalog", () => {
+  it("writes a template that does not parse as it stands, the second time too", () => {
+    expect(render("broken", { a: "x" })).toBe("{a");
+    expect(render("broken", { a: "x" })).toBe("{a");
+  });
+
+  it("writes a missing plural, select, or list parameter as its placeholder", () => {
+    expect(render("countOrSelect")).toBe("{n} {k}");
+    expect(render("list")).toBe("{names}");
+  });
+});
+
 describe("templateArgs", () => {
+  it("reports list and date arguments", () => {
+    expect(Object.fromEntries(templateArgs("{names, list} on {d, date}"))).toEqual({
+      names: { kind: "list" },
+      d: { kind: "date" },
+    });
+    expect(Object.fromEntries(templateArgs("{names, list, unit}"))).toEqual({
+      names: { kind: "list", style: "unit" },
+    });
+    expect(() => templateArgs("{names, list, short}")).toThrow(/unknown list style "short"/);
+  });
+
   it("lists plain, plural, and select arguments, including those inside branches", () => {
     const args = templateArgs(
       "{a} {n, plural, one {# {b}} other {{k, select, x {X {c}} other {Y}}}}",
@@ -104,6 +257,21 @@ describe("templateArgs", () => {
     expect(() => templateArgs("{n, plural, other {#}} {n, select, a {A} other {O}}")).toThrow(
       /"n" is both a plural and a select/,
     );
+  });
+
+  it("refuses one name used as lists of two styles, and allows a list of one style twice", () => {
+    expect(() => templateArgs("{names, list} or {names, list, unit}")).toThrow(
+      /"names" is both a list and a unit list/,
+    );
+    expect(() => templateArgs("{names, list, unit} or {names, list}")).toThrow(
+      /"names" is both a unit list and a list/,
+    );
+    expect(Object.fromEntries(templateArgs("{names, list, unit} or {names, list, unit}"))).toEqual({
+      names: { kind: "list", style: "unit" },
+    });
+    expect(Object.fromEntries(templateArgs("{names, list} or {names}"))).toEqual({
+      names: { kind: "list" },
+    });
   });
 
   it.each(["{a", "a}", "{n, plural, one {x}}", "{n, frobnicate, x {y}}"])(
@@ -314,6 +482,881 @@ describe("the report rules' messages (#98)", () => {
   });
 });
 
+describe("the action, opening, and page rules' messages (#98)", () => {
+  /** Each finding of a rule as its message ID and the English it renders. */
+  const said = (rule: Rule, files: LintFile[], tmdl?: string, options = {}) =>
+    reportFindings(rule, files, tmdl, options).map((f) => [f.messageId, f.detail]);
+  const link = (props: Record<string, unknown>) => ({
+    visualContainerObjects: { visualLink: [{ properties: { show: lit("true"), ...props } }] },
+  });
+  const button = (name: string, props: Record<string, unknown>) =>
+    visual("p", name, "actionButton", {}, link(props));
+  const bookmark = (explorationState: Record<string, unknown>, options = {}) => ({
+    path: "definition/bookmarks/b.bookmark.json",
+    text: j({ name: "b", displayName: "B", options, explorationState }),
+  });
+
+  it("gives BROKEN_ACTION_TARGET and ACTION_WITHOUT_DESTINATION one message each", () => {
+    const files = [
+      page("p"),
+      button("a", { type: lit("'PageNavigation'"), navigationSection: lit("'gone'") }),
+      button("b", { type: lit("'Bookmark'"), bookmark: lit("'gone'") }),
+      button("c", { type: lit("'Drillthrough'"), drillthroughSection: lit("'gone'") }),
+      button("d", { type: lit("'pagenavigation'") }),
+      button("e", { type: lit("'Bookmark'") }),
+      button("f", { type: lit("'Drillthrough'") }),
+    ];
+    expect(said(BROKEN_ACTION_TARGET, files)).toEqual([
+      [
+        "BROKEN_ACTION_TARGET",
+        'Page navigation action points at page "gone", which does not exist',
+      ],
+      ["BROKEN_ACTION_TARGET", 'Bookmark action points at bookmark "gone", which does not exist'],
+      ["BROKEN_ACTION_TARGET", 'Drillthrough action points at page "gone", which does not exist'],
+    ]);
+    expect(said(ACTION_WITHOUT_DESTINATION, files)).toEqual([
+      ["ACTION_WITHOUT_DESTINATION", "Page navigation action has no destination"],
+      ["ACTION_WITHOUT_DESTINATION", "Bookmark action has no destination"],
+      ["ACTION_WITHOUT_DESTINATION", "Drillthrough action has no destination"],
+    ]);
+    // The select key is the type in lower camel, whatever case the file writes it in.
+    const keys = (rule: Rule) => reportFindings(rule, files).map((f) => f.params!.action);
+    expect(keys(BROKEN_ACTION_TARGET)).toEqual(["pageNavigation", "bookmark", "drillthrough"]);
+    expect(keys(ACTION_WITHOUT_DESTINATION)).toEqual([
+      "pageNavigation",
+      "bookmark",
+      "drillthrough",
+    ]);
+  });
+
+  it("gives each of BROKEN_BOOKMARK_REFERENCE's findings its own message", () => {
+    const broken = bookmark({
+      activeSection: "gone",
+      sections: { p: { visualContainers: { missing: {} } }, other: {} },
+    });
+    expect(said(BROKEN_BOOKMARK_REFERENCE, [page("p"), broken])).toEqual([
+      ["BROKEN_BOOKMARK_REFERENCE.activePage", 'active page "gone" does not exist'],
+      ["BROKEN_BOOKMARK_REFERENCE.capturedPage", 'captured page "other" does not exist'],
+      [
+        "BROKEN_BOOKMARK_REFERENCE.capturedVisual",
+        'captured visual "missing" is not on page "Page p"',
+      ],
+    ]);
+  });
+
+  it("names a bookmark's stale target visuals as a capped list of quoted names", () => {
+    const stale = (targetVisualNames: string[]) =>
+      reportFindings(BROKEN_BOOKMARK_REFERENCE, [
+        page("p"),
+        bookmark(
+          { activeSection: "p", sections: { p: { visualContainers: {} } } },
+          { applyOnlyToTargetVisuals: true, targetVisualNames },
+        ),
+      ]);
+    const [one] = stale(["A"]);
+    expect(one).toMatchObject({
+      messageId: "BROKEN_BOOKMARK_REFERENCE.targetVisuals",
+      detail: 'target visual "A" is not on page "Page p"',
+      params: { count: 1, visuals: [msg("quoted", { name: "A" })], page: "Page p" },
+    });
+    expect(stale(["A", "B"])[0]!.detail).toBe(
+      'target visuals "A" and "B" are not on page "Page p"',
+    );
+    const [five] = stale(["A", "B", "C", "D", "E"]);
+    expect(five!.detail).toBe('target visuals "A", "B", "C", and 2 more are not on page "Page p"');
+    expect((five!.params!.visuals as Message[]).map((m) => m.id)).toEqual([
+      "quoted",
+      "quoted",
+      "quoted",
+      "list.more",
+    ]);
+  });
+
+  it("gives the opening rules a message for each thing they say", () => {
+    const pages = (header: Record<string, unknown>) => [
+      { path: "definition/pages/pages.json", text: j({ pageOrder: ["p", "h"], ...header }) },
+      page("p"),
+      page("h", { visibility: "HiddenInViewMode" }),
+    ];
+    expect(said(LANDING_PAGE_NOT_SET, pages({}))).toEqual([
+      ["LANDING_PAGE_NOT_SET.opensOn", 'opens on "Page p", the first page'],
+    ]);
+    expect(said(LANDING_PAGE_NOT_SET, pages({ activePageName: "p" }))).toEqual([
+      ["LANDING_PAGE_NOT_SET.opensOn", 'opens on "Page p", the page open when it was saved'],
+    ]);
+    expect(said(LANDING_PAGE_NOT_SET, pages({ activePageName: "gone" }))).toEqual([
+      [
+        "LANDING_PAGE_NOT_SET.activeMissing",
+        'no landing page set; the active page "gone" does not exist',
+      ],
+    ]);
+    expect(said(OPENING_PAGE_INVALID, pages({ landingPageName: "gone" }))).toEqual([
+      ["OPENING_PAGE_INVALID.missing", 'landing page "gone" does not exist'],
+    ]);
+    expect(said(OPENING_PAGE_INVALID, pages({ activePageName: "gone" }))).toEqual([
+      ["OPENING_PAGE_INVALID.missing", 'active page "gone" does not exist'],
+    ]);
+    expect(said(OPENING_PAGE_INVALID, pages({ activePageName: "h" }))).toEqual([
+      ["OPENING_PAGE_INVALID.hidden", 'active page "Page h" is hidden from readers'],
+    ]);
+  });
+
+  it("gives FILTERS_PANE_STATE one message, its states and policy as selects", () => {
+    const pane = (properties: Record<string, unknown>, expect: string) =>
+      reportFindings(
+        FILTERS_PANE_STATE,
+        [
+          {
+            path: "definition/report.json",
+            text: j({ objects: { outspacePane: [{ properties }] } }),
+          },
+        ],
+        undefined,
+        { expect },
+      ).map((f) => [f.messageId, f.detail, f.params]);
+    expect(pane({}, "closed")).toEqual([
+      [
+        "FILTERS_PANE_STATE",
+        "not recorded, read as open; the policy expects closed",
+        { source: "assumed", state: "open", expect: "closed" },
+      ],
+    ]);
+    expect(pane({ expanded: lit("true") }, "closed")).toEqual([
+      [
+        "FILTERS_PANE_STATE",
+        "saved open; the policy expects closed",
+        { source: "saved", state: "open", expect: "closed" },
+      ],
+    ]);
+    expect(pane({ expanded: lit("false") }, "open")).toEqual([
+      [
+        "FILTERS_PANE_STATE",
+        "saved closed; the policy expects open",
+        { source: "saved", state: "closed", expect: "open" },
+      ],
+    ]);
+    expect(pane({ visible: lit("false") }, "open")).toEqual([
+      [
+        "FILTERS_PANE_STATE",
+        "saved hidden from readers; the policy expects open",
+        { source: "saved", state: "hidden", expect: "open" },
+      ],
+    ]);
+  });
+
+  it("gives DEFAULT_PAGE_NAME and REPORT_LEVEL_MEASURES one message each", () => {
+    const files = [
+      page("a", { displayName: "Page 2" }),
+      page("b", { displayName: 'Duplikat von "Overview"' }),
+      page("c", { displayName: "Overview (copy)" }),
+    ];
+    expect(said(DEFAULT_PAGE_NAME, files)).toEqual([
+      ["DEFAULT_PAGE_NAME", '"Page 2" is the name Power BI Desktop gives a new page'],
+      [
+        "DEFAULT_PAGE_NAME",
+        '"Duplikat von "Overview"" is the name Power BI Desktop gives a duplicated page',
+      ],
+      ["DEFAULT_PAGE_NAME", '"Overview (copy)" is named as a copy'],
+    ]);
+    const measures = {
+      path: "definition/reportExtensions.json",
+      text: j({ entities: [{ name: "Sales", measures: [{ name: "M", expression: "1" }] }] }),
+    };
+    expect(said(REPORT_LEVEL_MEASURES, [measures], "table Sales\n")).toEqual([
+      ["REPORT_LEVEL_MEASURES", 'defined in the report on table "Sales"'],
+    ]);
+  });
+});
+
+describe("the visual, tab order, and year filter rules' messages (#98)", () => {
+  /** Each finding of a rule as its message ID, the English it renders, and its parameters. */
+  const said = (rule: Rule, files: LintFile[], options = {}) =>
+    reportFindings(rule, files, undefined, options).map((f) => [f.messageId, f.detail, f.params]);
+  const amount = { Column: { Expression: { SourceRef: { Entity: "Sales" } }, Property: "Amount" } };
+  const fields = (n: number) => ({
+    query: {
+      queryState: { Values: { projections: Array.from({ length: n }, () => ({ field: amount })) } },
+    },
+  });
+  const group = (name: string, displayName: string, container: Record<string, unknown> = {}) => ({
+    path: `definition/pages/p/visuals/${name}/visual.json`,
+    text: j({
+      name,
+      position: { x: 0, y: 0, z: 0, height: 300, width: 400, tabOrder: 0 },
+      visualGroup: { displayName, groupMode: "ScaleMode" },
+      ...container,
+    }),
+  });
+
+  it("gives HIDDEN_VISUAL_WITH_FIELDS a plural over the fields, the hiding group a second message", () => {
+    const files = [
+      page("p"),
+      visual("p", "one", "card", { isHidden: true }, fields(1)),
+      visual("p", "two", "card", { isHidden: true }, fields(2)),
+      group("g", "Filters", { isHidden: true }),
+      visual("p", "child", "card", { parentGroupName: "g" }, fields(3)),
+    ];
+    expect(said(HIDDEN_VISUAL_WITH_FIELDS, files)).toEqual([
+      [
+        "HIDDEN_VISUAL_WITH_FIELDS.groupHidden",
+        '3 fields bound, hidden with Group "Filters"',
+        { count: 3, group: 'Group "Filters"' },
+      ],
+      ["HIDDEN_VISUAL_WITH_FIELDS.visualHidden", "1 field bound", { count: 1 }],
+      ["HIDDEN_VISUAL_WITH_FIELDS.visualHidden", "2 fields bound", { count: 2 }],
+    ]);
+  });
+
+  it("gives VISUAL_OUTSIDE_PAGE a message for each set of edges, with only their overhangs", () => {
+    const at = (name: string, x: number, y: number, width: number, height: number) =>
+      visual("p", name, "cardVisual", { position: { x, y, z: 0, width, height, tabOrder: 0 } });
+    const files = [
+      page("p"),
+      at("right", 1200, 0, 100, 50),
+      at("bottom", 0, 621, 100, 100),
+      at("both", 1250, 700, 100, 50),
+    ];
+    expect(said(VISUAL_OUTSIDE_PAGE, files)).toEqual([
+      [
+        "VISUAL_OUTSIDE_PAGE.both",
+        "70 px past the right edge, 30 px past the bottom edge",
+        { right: 70, bottom: 30 },
+      ],
+      ["VISUAL_OUTSIDE_PAGE.bottom", "1 px past the bottom edge", { bottom: 1 }],
+      ["VISUAL_OUTSIDE_PAGE.right", "20 px past the right edge", { right: 20 }],
+    ]);
+  });
+
+  it("gives VISUAL_WITHOUT_FIELDS, SLICER_SELECTION_SAVED, and SLICER_SEARCH_SAVED their messages", () => {
+    const city = { Column: { Expression: { SourceRef: { Source: "s" } }, Property: "City" } };
+    const where = (condition: unknown) => ({
+      filter: {
+        Version: 2,
+        From: [{ Name: "s", Entity: "Store", Type: 0 }],
+        Where: [{ Condition: condition }],
+      },
+    });
+    const search = (value: string) =>
+      where({ Contains: { Left: city, Right: { Literal: { Value: value } } } });
+    const slicer = (name: string, properties: Record<string, unknown>) =>
+      visual("p", name, "slicer", {}, { ...fields(1), objects: { general: [{ properties }] } });
+    const files = [
+      page("p"),
+      visual("p", "empty", "card"),
+      slicer("picked", {
+        filter: where({ In: { Expressions: [city], Values: [[lit("'Leeds'").expr]] } }),
+      }),
+      slicer("termed", { selfFilter: search("'spring'") }),
+      slicer("unread", { selfFilter: search("12L") }),
+    ];
+    expect(said(VISUAL_WITHOUT_FIELDS, files)).toEqual([
+      ["VISUAL_WITHOUT_FIELDS", "no fields bound", {}],
+    ]);
+    expect(said(SLICER_SELECTION_SAVED, files)).toEqual([
+      ["SLICER_SELECTION_SAVED", "opens with this selection applied", {}],
+    ]);
+    expect(said(SLICER_SEARCH_SAVED, files)).toEqual([
+      ["SLICER_SEARCH_SAVED.term", 'opens with the search term "spring" saved', { term: "spring" }],
+      ["SLICER_SEARCH_SAVED.termUnread", "opens with a search term saved", {}],
+    ]);
+  });
+
+  it("gives TAB_ORDER_FOLLOWS_LAYOUT two messages, a group's nested in a third", () => {
+    const at = (name: string, x: number, y: number, tabOrder: number, container = {}) =>
+      visual("p", name, "cardVisual", {
+        position: { x, y, z: 0, width: 100, height: 50, tabOrder },
+        ...container,
+      });
+    const layout = { expect: "layout" };
+    // No group: the rule's own message alone.
+    expect(
+      said(TAB_ORDER_FOLLOWS_LAYOUT, [page("p"), at("a", 0, 0, 1), at("b", 0, 200, 0)], layout),
+    ).toEqual([
+      [
+        "TAB_ORDER_FOLLOWS_LAYOUT.startsAt",
+        "tab order starts at cardVisual (b) but the layout reads cardVisual (a) first",
+        { tabVisual: "cardVisual (b)", layoutVisual: "cardVisual (a)" },
+      ],
+    ]);
+    const visits = [page("p"), at("a", 0, 0, 0), at("b", 200, 0, 2), at("c", 400, 0, 1)];
+    expect(said(TAB_ORDER_FOLLOWS_LAYOUT, visits, layout)).toEqual([
+      [
+        "TAB_ORDER_FOLLOWS_LAYOUT.visits",
+        "tab order visits cardVisual (c) where the layout reads cardVisual (b)",
+        { tabVisual: "cardVisual (c)", layoutVisual: "cardVisual (b)" },
+      ],
+    ]);
+    const grouped = [
+      page("p"),
+      group("g", "Filters"),
+      at("s1", 0, 0, 1, { parentGroupName: "g" }),
+      at("s2", 0, 60, 0, { parentGroupName: "g" }),
+    ];
+    expect(said(TAB_ORDER_FOLLOWS_LAYOUT, grouped, layout)).toEqual([
+      [
+        "TAB_ORDER_FOLLOWS_LAYOUT.inGroup",
+        'in Group "Filters", tab order starts at cardVisual (s2) but the layout reads cardVisual (s1) first',
+        {
+          group: 'Group "Filters"',
+          disagreement: msg("TAB_ORDER_FOLLOWS_LAYOUT.startsAt", {
+            tabVisual: "cardVisual (s2)",
+            layoutVisual: "cardVisual (s1)",
+          }),
+        },
+      ],
+    ]);
+  });
+
+  describe("HARDCODED_YEAR_IN_FILTER", () => {
+    const col = { Column: { Expression: { SourceRef: { Source: "d" } }, Property: "Year" } };
+    const literal = (value: string) => ({ Literal: { Value: value } });
+    const year = (kind: number, value: string) => ({
+      Comparison: { ComparisonKind: kind, Left: col, Right: literal(value) },
+    });
+    const field = { Column: { Expression: { SourceRef: { Entity: "Date" } }, Property: "Year" } };
+    const onPage = (condition: unknown, named: boolean) =>
+      page("p", {
+        filterConfig: {
+          filters: [
+            {
+              name: "f1",
+              ...(named ? { field } : {}),
+              type: "Categorical",
+              filter: {
+                Version: 2,
+                From: [{ Name: "d", Entity: "Date", Type: 0 }],
+                Where: [{ Condition: condition }],
+              },
+              howCreated: "User",
+            },
+          ],
+        },
+      });
+    const kept = (...years: string[]) => ({
+      In: { Expressions: [col], Values: years.map((y) => [literal(y)]) },
+    });
+    const yearsOf = (condition: unknown, named = false) =>
+      said(HARDCODED_YEAR_IN_FILTER, [onPage(condition, named)]);
+
+    it("names fixed years as a capped list with a plural", () => {
+      expect(yearsOf(kept("2024L"))).toEqual([
+        ["HARDCODED_YEAR_IN_FILTER.fixedYears", "fixed year 2024", { count: 1, years: ["2024"] }],
+      ]);
+      expect(yearsOf(kept("2024L", "2025L"))[0]!.slice(0, 2)).toEqual([
+        "HARDCODED_YEAR_IN_FILTER.fixedYears",
+        "fixed years 2024 and 2025",
+      ]);
+      expect(yearsOf(kept("2021L", "2022L", "2023L", "2024L", "2025L"))).toEqual([
+        [
+          "HARDCODED_YEAR_IN_FILTER.fixedYears",
+          "fixed years 2021, 2022, 2023, and 2 more",
+          { count: 5, years: ["2021", "2022", "2023", msg("list.more", { count: 2 })] },
+        ],
+      ]);
+      // Advanced filtering's "is" keeps one year too.
+      expect(yearsOf(year(0, "2025L"))[0]![1]).toBe("fixed year 2025");
+    });
+
+    it("names years up to one, and a range, each in a message of its own", () => {
+      expect(yearsOf(year(3, "2026L"))).toEqual([
+        ["HARDCODED_YEAR_IN_FILTER.yearsUpTo", "years up to 2025", { year: 2025 }],
+      ]);
+      const range = { And: { Left: year(2, "2018L"), Right: year(4, "2025L") } };
+      expect(yearsOf(range)).toEqual([
+        ["HARDCODED_YEAR_IN_FILTER.yearRange", "years 2018 to 2025", { from: 2018, to: 2025 }],
+      ]);
+    });
+
+    it("nests what a filter keeps in a message naming its field, and stands alone without one", () => {
+      expect(yearsOf(kept("2024L"), true)).toEqual([
+        [
+          "HARDCODED_YEAR_IN_FILTER.onField",
+          "fixed year 2024 on 'Date'[Year]",
+          {
+            kept: msg("HARDCODED_YEAR_IN_FILTER.fixedYears", { count: 1, years: ["2024"] }),
+            field: "'Date'[Year]",
+          },
+        ],
+      ]);
+    });
+  });
+});
+
+describe("the field reference and reachability messages (#98)", () => {
+  const tmdl = `table Sales
+	column Amount
+		dataType: decimal
+	measure 'Total Sales' = SUM('Sales'[Amount])
+
+table Product
+	column Name
+		dataType: string
+`;
+  const hierarchyLevel = (entity: string, hierarchy: string, level: string) => ({
+    HierarchyLevel: {
+      Expression: {
+        Hierarchy: { Expression: { SourceRef: { Entity: entity } }, Hierarchy: hierarchy },
+      },
+      Level: level,
+    },
+  });
+  /** Each finding as its message ID, the English it renders, and its nested reason's ID. */
+  const said = (rule: Rule, files: LintFile[], model?: string) =>
+    reportFindings(rule, files, model).map((f) => [
+      f.messageId,
+      f.detail,
+      (f.params?.reason as Message | undefined)?.id,
+    ]);
+
+  it("gives BROKEN_FIELD_REFERENCE one message, its reason nested under an ID per reason", () => {
+    const files = [
+      page("p"),
+      bound("p", "v", "tableEx", [
+        column("Nowhere", "X"),
+        column("Sales", "Nope"),
+        measure("Sales", "Profit"),
+        column("Sales", "Total Sales"),
+        measure("Product", "Total Sales"),
+        hierarchyLevel("Sales", "Calendar", "Year"),
+      ]),
+    ];
+    expect(said(BROKEN_FIELD_REFERENCE, files, tmdl)).toEqual([
+      [
+        "BROKEN_FIELD_REFERENCE",
+        `'Nowhere'[X]: no table named "Nowhere"`,
+        "BROKEN_FIELD_REFERENCE.noTable",
+      ],
+      [
+        "BROKEN_FIELD_REFERENCE",
+        `'Sales'[Nope]: no column named "Nope" on "Sales"`,
+        "BROKEN_FIELD_REFERENCE.noColumn",
+      ],
+      [
+        "BROKEN_FIELD_REFERENCE",
+        `[Profit]: no measure named "Profit" on "Sales"`,
+        "BROKEN_FIELD_REFERENCE.noMeasure",
+      ],
+      [
+        "BROKEN_FIELD_REFERENCE",
+        `'Sales'[Total Sales]: "Total Sales" is a measure on "Sales", not a column`,
+        "BROKEN_FIELD_REFERENCE.measureNotColumn",
+      ],
+      [
+        "BROKEN_FIELD_REFERENCE",
+        `[Total Sales]: [Total Sales] is on "Sales", not "Product"`,
+        "BROKEN_FIELD_REFERENCE.measureElsewhere",
+      ],
+      [
+        "BROKEN_FIELD_REFERENCE",
+        `'Sales'[Calendar].[Year]: no hierarchy named "Calendar" on "Sales"`,
+        "BROKEN_FIELD_REFERENCE.noHierarchy",
+      ],
+    ]);
+    expect(said(BROKEN_FIELD_REFERENCE, files)).toEqual(
+      Array.from({ length: 6 }, () => [
+        "BROKEN_FIELD_REFERENCE",
+        expect.stringMatching(/: no model in the input$/),
+        "BROKEN_FIELD_REFERENCE.noModel",
+      ]),
+    );
+  });
+
+  it("keeps `table` the table the reference names when the measure sits on another", () => {
+    const files = [page("p"), bound("p", "v", "tableEx", [measure("Product", "Total Sales")])];
+    const [f] = reportFindings(BROKEN_FIELD_REFERENCE, files, tmdl);
+    expect(f!.params!.reason).toEqual(
+      msg("BROKEN_FIELD_REFERENCE.measureElsewhere", {
+        measure: "Total Sales",
+        measureTable: "Sales",
+        table: "Product",
+      }),
+    );
+    expect(f!.detail).toBe(`[Total Sales]: [Total Sales] is on "Sales", not "Product"`);
+  });
+
+  it("keeps one finding per object and field, now that the detail is a message", () => {
+    // The same missing column in the visual's role and again in its own filter.
+    const files = [
+      page("p"),
+      bound("p", "v", "tableEx", [column("Sales", "Nope")], {
+        filterConfig: {
+          filters: [{ name: "f", field: column("Sales", "Nope"), type: "Categorical" }],
+        },
+      }),
+    ];
+    expect(said(BROKEN_FIELD_REFERENCE, files, tmdl)).toEqual([
+      [
+        "BROKEN_FIELD_REFERENCE",
+        `'Sales'[Nope]: no column named "Nope" on "Sales"`,
+        "BROKEN_FIELD_REFERENCE.noColumn",
+      ],
+    ]);
+  });
+
+  describe("NOT_REACHED_FROM_REPORT", () => {
+    const NONE = "nothing in the report reaches it, and no measure or column references it";
+    const dates = (levels: string) => `table Sales
+	column Amount
+		dataType: decimal
+	measure 'Total Sales' = SUM('Sales'[Amount])
+	measure 'Sales LY' = CALCULATE([Total Sales])
+	measure 'Sales YoY %' = [Total Sales] - [Sales LY]
+
+table Date
+	column Date
+		dataType: dateTime
+	column Year
+		dataType: int64
+${levels}`;
+    const files = [page("p"), bound("p", "v", "cardVisual", [measure("Sales", "Total Sales")])];
+    /** Each finding as its object, message ID, English, and the ID of the reason it nests. */
+    const reached = (model: string) =>
+      reportFindings(NOT_REACHED_FROM_REPORT, files, model).map((f) => [
+        f.objectName,
+        f.messageId,
+        f.detail,
+        (f.params?.reason as Message | undefined)?.id,
+      ]);
+
+    it("names the referrers as a unit list, comma-joined as before, a comma in a name kept", () => {
+      const [base] = reportFindings(
+        NOT_REACHED_FROM_REPORT,
+        files,
+        `table Sales
+	column Amount
+		dataType: decimal
+	measure 'Total Sales' = SUM('Sales'[Amount])
+	measure Base = 1
+	measure A = [Base]
+	measure 'B, EU' = [Base] * 2
+	measure C = [Base] * 3
+`,
+      );
+      expect([base!.objectName, base!.detail, base!.params]).toEqual([
+        "[Base]",
+        "referenced only by [A], [B, EU], [C], which nothing reaches either",
+        { referrers: ["[A]", "[B, EU]", "[C]"] },
+      ]);
+    });
+
+    it("gives each reason its own message, and nests it under the levels that use a column", () => {
+      expect(
+        reached(
+          dates(`
+	hierarchy Calendar
+		level Year
+			column: Year
+`),
+        ),
+      ).toEqual([
+        [
+          "[Sales LY]",
+          "NOT_REACHED_FROM_REPORT.referencedOnly",
+          "referenced only by [Sales YoY %], which nothing reaches either",
+          undefined,
+        ],
+        ["[Sales YoY %]", "NOT_REACHED_FROM_REPORT.nothingReaches", NONE, undefined],
+        ["'Date'[Date]", "NOT_REACHED_FROM_REPORT.nothingReaches", NONE, undefined],
+        [
+          "'Date'[Year]",
+          "NOT_REACHED_FROM_REPORT.levels",
+          `${NONE}; level "Year" of hierarchy "Calendar" uses it`,
+          "NOT_REACHED_FROM_REPORT.nothingReaches",
+        ],
+      ]);
+    });
+
+    it("takes a plural over the levels, each a message that quotes its names", () => {
+      const [year] = reportFindings(
+        NOT_REACHED_FROM_REPORT,
+        files,
+        dates(`
+	hierarchy Calendar
+		level Year
+			column: Year
+
+	hierarchy Fiscal
+		level FY
+			column: Year
+`),
+      ).filter((f) => f.objectName === "'Date'[Year]");
+      expect(year!.detail).toBe(
+        `${NONE}; level "Year" of hierarchy "Calendar" and level "FY" of hierarchy "Fiscal" use it`,
+      );
+      expect(year!.params).toEqual({
+        reason: msg("NOT_REACHED_FROM_REPORT.nothingReaches"),
+        levels: [
+          msg("NOT_REACHED_FROM_REPORT.level", { level: "Year", hierarchy: "Calendar" }),
+          msg("NOT_REACHED_FROM_REPORT.level", { level: "FY", hierarchy: "Fiscal" }),
+        ],
+        count: 2,
+      });
+    });
+
+    it("joins three levels with semicolons when one holds a comma, on purpose (spec section 4)", () => {
+      const [year] = reportFindings(
+        NOT_REACHED_FROM_REPORT,
+        files,
+        dates(`
+	hierarchy Calendar
+		level Year
+			column: Year
+
+	hierarchy 'Fiscal, Retail'
+		level FY
+			column: Year
+
+	hierarchy Annual
+		level Year
+			column: Year
+`),
+      ).filter((f) => f.objectName === "'Date'[Year]");
+      // Before, the list's own commas: `"Calendar", level "FY" of hierarchy "Fiscal, Retail", and`.
+      expect(year!.detail).toBe(
+        `${NONE}; level "Year" of hierarchy "Calendar"; level "FY" of hierarchy "Fiscal, Retail"; and level "Year" of hierarchy "Annual" use it`,
+      );
+    });
+  });
+});
+
+describe("the period, translation, and function rules' messages (#98)", () => {
+  /** Each finding of a model rule, rendered as `runRules` renders it: ID, English, parameters. */
+  const said = (rule: Rule, model: Model) =>
+    rule
+      .check({ model }, { indexes: buildIndexes({ model }), options: {} })
+      .map(rendered)
+      .map((f) => [f.messageId, f.detail, f.params]);
+  const day = (date: string) => msg("date.long", { date });
+
+  describe("HARDCODED_PERIOD_IN_DAX", () => {
+    /** A Sales table with one measure, `Stale`, whose DAX is `dax`. */
+    const stale = (dax: string) =>
+      modelFrom(
+        `table Sales\n\tcolumn 'Order Date'\n\t\tdataType: dateTime\n\tmeasure Stale = ${dax}\n`,
+      );
+    const fixedIn = (dax: string) => said(HARDCODED_PERIOD_IN_DAX, stale(dax));
+    const on = (...days: string[]) =>
+      `CALCULATE([Total], ${days.map((d) => `'Sales'[Order Date] <> ${d}`).join(", ")})`;
+    /** A calculated table whose CALENDAR calls end on the days given. */
+    const ends = (...days: string[]) =>
+      modelFrom(
+        `table Date\n\tcolumn Date\n\t\tdataType: dateTime\n\tpartition Date = calculated\n\t\tsource = UNION(${days.map((d) => `CALENDAR(DATE(2000, 1, 1), ${d})`).join(", ")})\n`,
+      );
+
+    it("names one date, two joined with and, and three with semicolons, each a date.long item", () => {
+      expect(fixedIn(on("DATE(2024, 1, 1)"))).toEqual([
+        [
+          "HARDCODED_PERIOD_IN_DAX.fixed",
+          "fixed date January 1, 2024",
+          { kind: "date", count: 1, periods: [day("2024-01-01")] },
+        ],
+      ]);
+      expect(fixedIn(on("DATE(2024, 1, 1)", "DATE(2025, 3, 3)"))[0]![1]).toBe(
+        "fixed dates January 1, 2024 and March 3, 2025",
+      );
+      expect(fixedIn(on("DATE(2024, 1, 1)", "DATE(2025, 3, 3)", "DATE(2025, 5, 5)"))).toEqual([
+        [
+          "HARDCODED_PERIOD_IN_DAX.fixed",
+          "fixed dates January 1, 2024; March 3, 2025; and May 5, 2025",
+          {
+            kind: "date",
+            count: 3,
+            periods: [day("2024-01-01"), day("2025-03-03"), day("2025-05-05")],
+          },
+        ],
+      ]);
+    });
+
+    it("caps five years at three and the count of the rest, and names a mix as periods", () => {
+      expect(
+        fixedIn(`CALCULATE([Total], 'Sales'[Year] IN {2021, 2022, 2023, 2024, 2025})`),
+      ).toEqual([
+        [
+          "HARDCODED_PERIOD_IN_DAX.fixed",
+          "fixed years 2021, 2022, 2023, and 2 more",
+          {
+            kind: "year",
+            count: 5,
+            periods: ["2021", "2022", "2023", msg("list.more", { count: 2 })],
+          },
+        ],
+      ]);
+      expect(
+        fixedIn(`CALCULATE([Total], 'Sales'[Year] = 2025, 'Sales'[Year] = 2025)`)[0]!.slice(1),
+      ).toEqual(["fixed year 2025", { kind: "year", count: 1, periods: ["2025"] }]);
+      expect(
+        fixedIn(
+          `CALCULATE([Total], 'Sales'[Year] = 2025, 'Sales'[Order Date] <= DATE(2024, 12, 31))`,
+        ),
+      ).toEqual([
+        [
+          "HARDCODED_PERIOD_IN_DAX.fixed",
+          "fixed periods 2025 and December 31, 2024",
+          { kind: "mixed", count: 2, periods: ["2025", day("2024-12-31")] },
+        ],
+      ]);
+    });
+
+    it("names a date table's end, or ends, in one template with a plural, an ambiguous day quoted", () => {
+      expect(said(HARDCODED_PERIOD_IN_DAX, ends("DATE(2026, 12, 31)"))).toEqual([
+        [
+          "HARDCODED_PERIOD_IN_DAX.endsOn",
+          "ends on a fixed date, December 31, 2026",
+          { count: 1, dates: [day("2026-12-31")] },
+        ],
+      ]);
+      expect(
+        said(HARDCODED_PERIOD_IN_DAX, ends("DATE(2025, 12, 31)", "DATE(2026, 12, 31)")),
+      ).toEqual([
+        [
+          "HARDCODED_PERIOD_IN_DAX.endsOn",
+          "ends on fixed dates December 31, 2025 and December 31, 2026",
+          { count: 2, dates: [day("2025-12-31"), day("2026-12-31")] },
+        ],
+      ]);
+      expect(said(HARDCODED_PERIOD_IN_DAX, ends(`"01/02/2026"`))).toEqual([
+        [
+          "HARDCODED_PERIOD_IN_DAX.endsOn",
+          `ends on a fixed date, "01/02/2026"`,
+          { count: 1, dates: [msg("quoted", { name: "01/02/2026" })] },
+        ],
+      ]);
+    });
+
+    it("writes a three-digit year as an ISO day padded to four digits, and English as longDate does", () => {
+      expect(said(HARDCODED_PERIOD_IN_DAX, ends("DATE(999, 12, 31)"))).toEqual([
+        [
+          "HARDCODED_PERIOD_IN_DAX.endsOn",
+          `ends on a fixed date, ${longDate(999, 12, 31)}`,
+          { count: 1, dates: [day("0999-12-31")] },
+        ],
+      ]);
+      expect(said(HARDCODED_PERIOD_IN_DAX, ends("DATE(100, 1, 1)"))[0]![1]).toBe(
+        "ends on a fixed date, January 1, 100",
+      );
+    });
+
+    it("nests its own message in one naming the context, and stands alone without one", () => {
+      const model = modelFrom(
+        "table 'Time Calc'\n\tcalculationGroup\n\t\tcalculationItem 'This Year' = CALCULATE(SELECTEDMEASURE(), 'Date'[Year] = 2025)\n\tcolumn Name\n\t\tdataType: string\n",
+      );
+      const fixed = msg("HARDCODED_PERIOD_IN_DAX.fixed", {
+        kind: "year",
+        count: 1,
+        periods: ["2025"],
+      });
+      expect(said(HARDCODED_PERIOD_IN_DAX, model)).toEqual([
+        [
+          "HARDCODED_PERIOD_IN_DAX.inContext",
+          "fixed year 2025 in calculation group 'Time Calc'",
+          { fixed, context: msg("context.calculationGroup", { table: "'Time Calc'" }) },
+        ],
+      ]);
+      expect(fixedIn(`CALCULATE([Total], 'Sales'[Year] = 2025)`)).toEqual([
+        ["HARDCODED_PERIOD_IN_DAX.fixed", "fixed year 2025", fixed.params],
+      ]);
+    });
+  });
+
+  describe("NAME_WITHOUT_TRANSLATION", () => {
+    /** A model with a culture of its own, Sales with a hierarchy over a hidden column, and these cultures, which caption nothing. */
+    const translated = (...cultures: string[]) =>
+      buildModel([
+        parseTmdl("definition/model.tmdl", "model Model\n\tculture: en-US\n"),
+        parseTmdl(
+          "definition/tables/Sales.tmdl",
+          "table Sales\n\tcolumn Amount\n\t\tdataType: decimal\n\t\tisHidden\n\thierarchy Geography\n\t\tlevel Country\n\t\t\tcolumn: Amount\n",
+        ),
+        ...cultures.map((c) =>
+          parseTmdl(
+            `definition/cultures/${c}.tmdl`,
+            `cultureInfo ${c}\n\ttranslations\n\t\tmodel Model\n`,
+          ),
+        ),
+      ]);
+    const noCaption = (...cultures: string[]) =>
+      msg("NAME_WITHOUT_TRANSLATION.noCaption", { cultures });
+
+    it("names the cultures as a list, after the context when the object has one", () => {
+      expect(said(NAME_WITHOUT_TRANSLATION, translated("fr-FR"))).toEqual([
+        ["NAME_WITHOUT_TRANSLATION.noCaption", "no caption in fr-FR", { cultures: ["fr-FR"] }],
+        [
+          "NAME_WITHOUT_TRANSLATION.inContext",
+          "table 'Sales', no caption in fr-FR",
+          { context: msg("context.table", { table: "'Sales'" }), captions: noCaption("fr-FR") },
+        ],
+        [
+          "NAME_WITHOUT_TRANSLATION.inContext",
+          "hierarchy Geography in 'Sales', no caption in fr-FR",
+          {
+            context: msg("context.level", { hierarchy: "Geography", table: "'Sales'" }),
+            captions: noCaption("fr-FR"),
+          },
+        ],
+      ]);
+      const three = said(NAME_WITHOUT_TRANSLATION, translated("fr-FR", "de-DE", "es-ES"));
+      expect(three.map((f) => f[1])).toEqual([
+        "no caption in de-DE, es-ES, and fr-FR",
+        "table 'Sales', no caption in de-DE, es-ES, and fr-FR",
+        "hierarchy Geography in 'Sales', no caption in de-DE, es-ES, and fr-FR",
+      ]);
+    });
+
+    it("stands alone on an object with no context", () => {
+      const model = buildModel([
+        parseTmdl("definition/model.tmdl", "model Model\n\tculture: en-US\n"),
+        parseTmdl("definition/tables/Sales.tmdl", "table Sales\n\tmeasure Total = 1\n"),
+        parseTmdl(
+          "definition/cultures/fr-FR.tmdl",
+          "cultureInfo fr-FR\n\ttranslations\n\t\tmodel Model\n\t\t\ttable Sales\n\t\t\t\tcaption: Ventes\n",
+        ),
+        parseTmdl(
+          "definition/cultures/de-DE.tmdl",
+          "cultureInfo de-DE\n\ttranslations\n\t\tmodel Model\n\t\t\ttable Sales\n\t\t\t\tcaption: Verkauf\n",
+        ),
+      ]);
+      expect(said(NAME_WITHOUT_TRANSLATION, model)).toEqual([
+        [
+          "NAME_WITHOUT_TRANSLATION.noCaption",
+          "no caption in de-DE and fr-FR",
+          { cultures: ["de-DE", "fr-FR"] },
+        ],
+      ]);
+    });
+  });
+
+  describe("UDF_NOT_CALLED", () => {
+    const packaged = (name: string, pkg: string) =>
+      `function '${name}' = () => 1\n\tlineageTag: ${name}\n\n\tannotation DAXLIB_PackageId = ${pkg}\n\n`;
+
+    it("names an uncalled package with a plural over its functions, and a function of the model's own with no message", () => {
+      const model = buildModel([
+        parseTmdl("definition/tables/Sales.tmdl", "table Sales\n\tmeasure Total = 1\n"),
+        parseTmdl(
+          "definition/functions.tmdl",
+          packaged("Contoso.Tax.Rate", "Contoso.Tax") +
+            packaged("Contoso.Tax.Apply", "Contoso.Tax") +
+            packaged("Contoso.Round.Two", "Contoso.Round") +
+            "function 'Local.Unused' = () => 2\n",
+        ),
+      ]);
+      expect(said(UDF_NOT_CALLED, model)).toEqual([
+        [
+          "UDF_NOT_CALLED.package",
+          "package Contoso.Tax: none of its 2 functions is called",
+          { package: "Contoso.Tax", count: 2 },
+        ],
+        [
+          "UDF_NOT_CALLED.package",
+          "package Contoso.Round: its one function is not called",
+          { package: "Contoso.Round", count: 1 },
+        ],
+        [undefined, undefined, undefined],
+      ]);
+    });
+  });
+});
+
 /**
  * How a catalog differs from English: an ID it lacks or adds, a template that does not parse, or
  * one whose parameters differ from English's in name, kind, or select keys. Empty when it matches.
@@ -326,7 +1369,11 @@ function sameShape(other: Catalog): string[] {
       return new Map(
         [...args].map(([name, a]) => [
           name,
-          a.kind === "select" ? `select ${[...a.keys].sort().join(" ")}` : a.kind,
+          a.kind === "select"
+            ? `select ${[...a.keys].sort().join(" ")}`
+            : a.kind === "list" && a.style
+              ? `list ${a.style}`
+              : a.kind,
         ]),
       );
     } catch (e) {
@@ -375,6 +1422,21 @@ describe("the English catalog", () => {
       }),
     ).toEqual([
       "HIDE_TOOLTIP_DRILLTROUGH_PAGES: {kind} is select other tooltips, English has select other tooltip",
+    ]);
+    expect(sameShape({ ...EN, "date.long": "{date}" })).toEqual([
+      "date.long: {date} is plain, English has date",
+    ]);
+    expect(
+      sameShape({
+        ...EN,
+        "NOT_REACHED_FROM_REPORT.referencedOnly":
+          "referenced only by {referrers, list}, which nothing reaches either",
+      }),
+    ).toEqual([
+      "NOT_REACHED_FROM_REPORT.referencedOnly: {referrers} is list, English has list unit",
+    ]);
+    expect(sameShape({ ...EN, "list.more": "{count, list} more" })).toEqual([
+      "list.more: {count} is list, English has plain",
     ]);
     const { "context.role": _, ...lacking } = EN;
     expect(sameShape({ ...lacking, extra: "x" } as unknown as Catalog)).toEqual([

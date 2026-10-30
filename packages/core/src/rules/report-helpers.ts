@@ -65,7 +65,7 @@ export const reportFinding = {
    * A finding on the report located in pages.json, where the opening page is set. Without a
    * pages.json in the input it sits where `report` puts it, never at a path the input lacks.
    */
-  pagesHeader: (r: Report, pointer?: string, detail?: string): RuleFinding =>
+  pagesHeader: (r: Report, pointer?: string, detail?: string | Message): RuleFinding =>
     withDetail(
       {
         objectType: "Report",
@@ -99,7 +99,7 @@ export const reportFinding = {
       },
       detail,
     ),
-  pageFilter: (p: Page, pointer: string, detail?: string): RuleFinding =>
+  pageFilter: (p: Page, pointer: string, detail?: string | Message): RuleFinding =>
     withDetail(
       {
         objectType: "Page",
@@ -110,7 +110,7 @@ export const reportFinding = {
       },
       detail,
     ),
-  reportFilter: (r: Report, pointer: string, detail?: string): RuleFinding =>
+  reportFilter: (r: Report, pointer: string, detail?: string | Message): RuleFinding =>
     withDetail(
       {
         objectType: "Report",
@@ -120,7 +120,7 @@ export const reportFinding = {
       },
       detail,
     ),
-  bookmark: (b: Bookmark, detail?: string, pointer?: string): RuleFinding =>
+  bookmark: (b: Bookmark, detail?: string | Message, pointer?: string): RuleFinding =>
     withDetail(
       {
         objectType: "Bookmark",
@@ -130,7 +130,7 @@ export const reportFinding = {
       },
       detail,
     ),
-  reportMeasure: (m: ReportMeasure, detail?: string): RuleFinding =>
+  reportMeasure: (m: ReportMeasure, detail?: string | Message): RuleFinding =>
     withDetail(
       {
         objectType: "ReportMeasure",

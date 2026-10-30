@@ -4,7 +4,7 @@ import { optionsFor } from "../src/engine/run.js";
 import { resolveConfig } from "../src/engine/config.js";
 import { buildReport } from "../src/pbir/build.js";
 import type { Project } from "../src/project/types.js";
-import type { Rule, RuleFinding } from "../src/rules/types.js";
+import type { Rule } from "../src/rules/types.js";
 import { modelFrom, rendered } from "./helpers.js";
 
 export const j = (v: unknown): string => JSON.stringify(v);
@@ -72,7 +72,7 @@ export function reportFindings(
   reportFiles: LintFile[],
   tmdl?: string,
   options: Record<string, unknown> = {},
-): RuleFinding[] {
+): ReturnType<typeof rendered>[] {
   const project = projectFrom(reportFiles, tmdl);
   // optionsFor reads the config's options by the rule's own id, so the map is set directly.
   const config = resolveConfig();

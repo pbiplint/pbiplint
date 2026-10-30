@@ -3,7 +3,7 @@ import { resolveConfig } from "../src/engine/config.js";
 import { lint, type LintFile } from "../src/engine/lint.js";
 import { runRules } from "../src/engine/run.js";
 import { buildIndexes } from "../src/index/build.js";
-import type { MessageId } from "../src/messages/en.js";
+import { EN, type MessageId } from "../src/messages/en.js";
 import {
   findingDetail,
   formatMessage,
@@ -93,6 +93,17 @@ describe("templateArgs", () => {
       k: { kind: "select", keys: ["x", "other"] },
       c: { kind: "plain" },
     });
+  });
+
+  it("merges the keys of a select used twice", () => {
+    const args = templateArgs("{k, select, a {A} other {O}} {k, select, b {B} other {O}}");
+    expect(args.get("k")).toEqual({ kind: "select", keys: ["a", "other", "b"] });
+  });
+
+  it("refuses one name used as both a plural and a select", () => {
+    expect(() => templateArgs("{n, plural, other {#}} {n, select, a {A} other {O}}")).toThrow(
+      /"n" is both a plural and a select/,
+    );
   });
 
   it.each(["{a", "a}", "{n, plural, one {x}}", "{n, frobnicate, x {y}}"])(
@@ -295,5 +306,75 @@ describe("the report rules' messages (#98)", () => {
       messageId: "REDUCE_PAGES",
       params: { count: 11, max: 10 },
     });
+  });
+});
+
+/**
+ * How a catalog differs from English: an ID it lacks or adds, a template that does not parse, or
+ * one whose parameters differ from English's in name, kind, or select keys. Empty when it matches.
+ */
+function sameShape(other: Catalog): string[] {
+  const problems: string[] = [];
+  const shape = (id: string, template: string) => {
+    try {
+      const args = templateArgs(template);
+      return new Map(
+        [...args].map(([name, a]) => [
+          name,
+          a.kind === "select" ? `select ${[...a.keys].sort().join(" ")}` : a.kind,
+        ]),
+      );
+    } catch (e) {
+      problems.push(`${id}: ${(e as Error).message}`);
+      return undefined;
+    }
+  };
+  const ids = new Set([...Object.keys(EN), ...Object.keys(other)]);
+  for (const id of [...ids].sort()) {
+    const en = (EN as Record<string, string>)[id];
+    const theirs = (other as Record<string, string>)[id];
+    if (en === undefined) problems.push(`${id}: not an English message ID`);
+    else if (theirs === undefined) problems.push(`${id}: missing`);
+    if (en === undefined || theirs === undefined) continue;
+    const want = shape(id, en);
+    const got = shape(id, theirs);
+    if (!want || !got) continue;
+    for (const name of new Set([...want.keys(), ...got.keys()])) {
+      if (!got.has(name)) problems.push(`${id}: {${name}} missing`);
+      else if (!want.has(name)) problems.push(`${id}: {${name}} not in English`);
+      else if (want.get(name) !== got.get(name)) {
+        problems.push(`${id}: {${name}} is ${got.get(name)}, English has ${want.get(name)}`);
+      }
+    }
+  }
+  return problems;
+}
+
+describe("the English catalog", () => {
+  it("every English template parses", () => {
+    for (const [id, template] of Object.entries(EN)) {
+      expect(() => templateArgs(template), id).not.toThrow();
+    }
+  });
+
+  it("a catalog has English's IDs and each template the same arguments", () => {
+    expect(sameShape(EN)).toEqual([]);
+    expect(
+      sameShape({ ...EN, REDUCE_PAGES: "{count, plural, one {# page} other {# pages}}" }),
+    ).toEqual(["REDUCE_PAGES: {max} missing"]);
+    expect(
+      sameShape({
+        ...EN,
+        HIDE_TOOLTIP_DRILLTROUGH_PAGES:
+          "{kind, select, tooltips {tooltip} other {drillthrough}} page is visible to readers",
+      }),
+    ).toEqual([
+      "HIDE_TOOLTIP_DRILLTROUGH_PAGES: {kind} is select other tooltips, English has select other tooltip",
+    ]);
+    const { "context.role": _, ...lacking } = EN;
+    expect(sameShape({ ...lacking, extra: "x" } as unknown as Catalog)).toEqual([
+      "context.role: missing",
+      "extra: not an English message ID",
+    ]);
   });
 });

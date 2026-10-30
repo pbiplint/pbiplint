@@ -211,21 +211,34 @@ export function findingDetail(
 
 /**
  * Every parameter a template uses and how, including those inside plural and select branches. A
- * name used both plainly and as a plural or select reports the latter. Throws an Error on a
- * template that does not parse.
+ * name used both plainly and as a plural or select reports the latter, and a select used twice
+ * reports the keys of both. Throws an Error on a template that does not parse, or that uses one
+ * name as both a plural and a select.
  */
 export function templateArgs(template: string): ReadonlyMap<string, ArgKind> {
   const args = new Map<string, ArgKind>();
   const walk = (nodes: readonly Node[]): void => {
     for (const node of nodes) {
       if (typeof node === "string" || node.t === "pound") continue;
+      const seen = args.get(node.name);
       const kind: ArgKind =
         node.t === "arg"
           ? { kind: "plain" }
           : node.t === "plural"
             ? { kind: "plural" }
-            : { kind: "select", keys: [...node.branches.keys()] };
-      if ((args.get(node.name)?.kind ?? "plain") === "plain") args.set(node.name, kind);
+            : {
+                kind: "select",
+                keys: [
+                  ...new Set([
+                    ...(seen?.kind === "select" ? seen.keys : []),
+                    ...node.branches.keys(),
+                  ]),
+                ],
+              };
+      if (seen && seen.kind !== "plain" && kind.kind !== "plain" && seen.kind !== kind.kind) {
+        throw new Error(`"${node.name}" is both a plural and a select in template "${template}"`);
+      }
+      if (kind.kind !== "plain" || !seen) args.set(node.name, kind);
       if (node.t !== "arg") node.branches.forEach(walk);
     }
   };

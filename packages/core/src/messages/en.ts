@@ -127,7 +127,6 @@ export const EN = {
   "parse.pbir.conflictMarker": "merge conflict marker",
   "parse.pbir.emptyEntity":
     'entity {entity} has {state, select, missing {no} other {an empty}} "measures" list: Power BI Desktop does not open a project whose reportExtensions.json holds an entity with no measure; remove the entity, or the file when it holds no report measure',
-  "parse.pbir.namedEntity": '"{name}"',
   "parse.pbir.noEntities":
     '"entities" is {state, select, missing {missing} other {empty}}: Power BI Desktop does not open a project whose reportExtensions.json lists no entity; delete the file when it holds no report measure',
   "parse.pbir.notAnObject":

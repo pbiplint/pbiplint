@@ -1262,14 +1262,14 @@ describe("reportExtensions.json with no entity (#208)", () => {
       {
         id: "parse.pbir.emptyEntity",
         params: {
-          entity: { id: "parse.pbir.namedEntity", params: { name: "Sales" } },
+          entity: { id: "quoted", params: { name: "Sales" } },
           state: "empty",
         },
       },
       {
         id: "parse.pbir.emptyEntity",
         params: {
-          entity: { id: "parse.pbir.namedEntity", params: { name: "Store" } },
+          entity: { id: "quoted", params: { name: "Store" } },
           state: "missing",
         },
       },

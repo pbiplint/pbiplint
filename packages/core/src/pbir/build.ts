@@ -712,7 +712,7 @@ export function buildReport(
           if (!missing && !(Array.isArray(measures) && measures.length === 0)) return;
           const name =
             typeof entity.name === "string"
-              ? msg("parse.pbir.namedEntity", { name: entity.name })
+              ? msg("quoted", { name: entity.name })
               : msg("parse.pbir.unnamedEntity");
           report.issues.push(
             issueAt(

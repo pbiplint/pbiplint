@@ -12,7 +12,7 @@ import { eachQuery, mFinding } from "../src/rules/m-helpers.js";
 import { HARDCODED_SECRET_IN_QUERY, LEGACY_EXCEL_FILE } from "../src/rules/pbiplint/power-query.js";
 import type { Rule } from "../src/rules/types.js";
 import { parseTmdl } from "../src/tmdl/parse.js";
-import { mObjectNames } from "./helpers.js";
+import { mObjectNames, rendered } from "./helpers.js";
 
 /** A table whose one M partition holds `m`, as Desktop writes a block: four tabs before each M line. */
 const table = (name: string, m: string[]): LintFile => ({
@@ -402,7 +402,7 @@ describe("a deep tree in one query (v3 spec, section 8, amended October 27, 2026
         },
       );
       expect(errors).toEqual(["query 'A': RangeError (out of stack space)"]);
-      expect(findings.map((f) => f.objectName)).toEqual([holder]);
+      expect(findings.map(rendered).map((f) => f.objectName)).toEqual([holder]);
     },
   );
   it("throws one query's error from a rule run without the engine, as before", async () => {

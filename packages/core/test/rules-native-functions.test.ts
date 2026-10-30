@@ -169,9 +169,9 @@ role R
   it("finds the two functions the UDF fixture leaves uncalled", () => {
     const model = buildModel(parseModelDir(`${fixturesDir}udf-sales.SemanticModel`));
     expect(
-      UDF_NOT_CALLED.check({ model }, { indexes: buildIndexes({ model }), options: {} }).map(
-        (f) => f.objectName,
-      ),
+      UDF_NOT_CALLED.check({ model }, { indexes: buildIndexes({ model }), options: {} })
+        .map(rendered)
+        .map((f) => f.objectName),
     ).toEqual(["Time.YTD", "Plan.FreightVsBudget"]);
   });
 
@@ -253,7 +253,9 @@ describe("UDF_WITHOUT_DESCRIPTION", () => {
     ).toEqual([]);
     const model = buildModel(parseModelDir(`${fixturesDir}udf-sales.SemanticModel`));
     for (const rule of [UDF_WITHOUT_DESCRIPTION, UDF_USE_COMPOUND_NAMES])
-      expect(rule.check({ model }, { indexes: buildIndexes({ model }), options: {} })).toEqual([]);
+      expect(
+        rule.check({ model }, { indexes: buildIndexes({ model }), options: {} }).map(rendered),
+      ).toEqual([]);
   });
 });
 
@@ -261,6 +263,8 @@ describe("the three function rules on a model with no functions", () => {
   it("report nothing", () => {
     const model = modelFrom(sales);
     for (const rule of [UDF_NOT_CALLED, UDF_USE_COMPOUND_NAMES, UDF_WITHOUT_DESCRIPTION])
-      expect(rule.check({ model }, { indexes: buildIndexes({ model }), options: {} })).toEqual([]);
+      expect(
+        rule.check({ model }, { indexes: buildIndexes({ model }), options: {} }).map(rendered),
+      ).toEqual([]);
   });
 });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import * as rules from "../src/rules/microsoft-bpa/relationships.js";
 import { buildIndexes } from "../src/index/build.js";
-import { modelFrom, objectNames } from "./helpers.js";
+import { modelFrom, objectNames, rendered } from "./helpers.js";
 
 const star = `table Sales
 	column 'Product ID'
@@ -216,6 +216,7 @@ relationship r
     const started = performance.now();
     const found = rules.REMOVE_REDUNDANT_COLUMNS_IN_RELATED_TABLES.check({ model }, context);
     const ms = performance.now() - started;
+    found.forEach(rendered);
     expect(found).toHaveLength(count);
     expect(found[0]!.objectName).toBe("'Sales'[C0]");
     expect(found.at(-1)!.objectName).toBe(`'Sales'[C${count - 1}]`);

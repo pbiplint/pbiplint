@@ -3,7 +3,10 @@ import { basename, join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 import { resolveConfig } from "../src/engine/config.js";
 import { lint, type LintFile } from "../src/engine/lint.js";
+import { unreadProject } from "../src/engine/projects.js";
 import { runRules } from "../src/engine/run.js";
+import type { MBudget } from "../src/m/budget.js";
+import { readM } from "../src/m/read.js";
 import { buildIndexes } from "../src/index/build.js";
 import { EN, type MessageId } from "../src/messages/en.js";
 import {
@@ -2124,6 +2127,198 @@ describe("every finding's params match its template (#98)", () => {
       for (const f of result.findings) expect(() => checkParams(f), f.ruleId).not.toThrow();
     },
   );
+});
+
+describe("every parse reason and rule error fits its template (#98)", () => {
+  type Checked = Pick<Finding, "messageId" | "params">;
+  const asChecked = (m: Message): Checked => ({ messageId: m.id, params: m.params });
+  /** Every message ID a finding names, its own and those nested in its params and lists. */
+  const idsIn = (f: Checked): string[] => {
+    const walk = (v: unknown): string[] =>
+      Array.isArray(v)
+        ? v.flatMap(walk)
+        : typeof v === "object" && v !== null && "id" in v && "params" in v
+          ? [(v as Message).id, ...Object.values((v as Message).params).flatMap(walk)]
+          : [];
+    return [...(f.messageId ? [f.messageId] : []), ...Object.values(f.params ?? {}).flatMap(walk)];
+  };
+  const findings = async (files: LintFile[], rules?: Rule[]): Promise<Checked[]> =>
+    (await lint(files, rules ? { rules } : {})).findings;
+  const tmdl = (text: string, path = "definition/tables/T.tmdl") => findings([{ path, text }]);
+  const json = (path: string, text: string) => findings([{ path, text }]);
+  const mOver = async (budget: MBudget): Promise<Checked[]> => {
+    const files = [{ path: "inline.tmdl", text: "table T\n\tpartition T = m\n\t\tsource = 1\n" }];
+    const read = await readM(modelFrom(files[0]!.text), files, budget);
+    return read.issues.map((i) => asChecked(i.message));
+  };
+  const throwing = (thrown: () => unknown, layer: Rule["layer"] = "model"): Rule => ({
+    id: "THROWS",
+    name: "Test rule",
+    category: "Maintenance",
+    severity: 2,
+    scope: [],
+    layer,
+    needs: [layer === "report" ? "report" : "model"],
+    description: "",
+    references: [],
+    status: "ported",
+    check: () => {
+      throw thrown();
+    },
+  });
+  const model = [{ path: "definition/tables/Sales.tmdl", text: "table Sales\n\tcolumn C\n" }];
+  const report = [{ path: "definition/report.json", text: "{}" }];
+  const failed = (rule: Rule, files: LintFile[] = model) =>
+    findings(files, [rule, RULE_COULD_NOT_FINISH]);
+  const nameThrows = Object.defineProperty(new Error("x"), "name", {
+    get: () => {
+      throw new Error("no name");
+    },
+  });
+
+  const cases: [string, string[], () => Promise<Checked[]>][] = [
+    [
+      "a TMDL file with six kinds of broken line",
+      [
+        "parse.tmdl.orphanDescription",
+        "parse.tmdl.spaceIndentation",
+        "parse.tmdl.unrecognizedLine",
+        "parse.tmdl.orphanIndentation",
+        "parse.tmdl.notRootType",
+        "parse.tmdl.unterminatedFence",
+      ],
+      () =>
+        tmdl(
+          [
+            "table T",
+            "\t/// Described",
+            "",
+            "    column Spaced",
+            "\t'Unit Price'",
+            "\t\t\t\tisHidden",
+            "tabel Sales",
+            "\tmeasure M = ```",
+            "\t\tx",
+          ].join("\n"),
+        ),
+    ],
+    ["a property at the root", ["parse.tmdl.propertyAtRoot"], () => tmdl("queryGroup: Support\n")],
+    [
+      "a model's property named as a type",
+      ["parse.tmdl.notModelProperty"],
+      () => tmdl("model Model\n\ttable: Sales\n", "definition/model.tmdl"),
+    ],
+    ["a table under a table", ["parse.tmdl.tableOnlyAtRoot"], () => tmdl("table T\n\ttable X\n")],
+    ["a misspelt child", ["parse.tmdl.notChildType"], () => tmdl("table T\n\tcolumm C\n")],
+    ["a table with no name", ["parse.tmdl.noName"], () => tmdl("table ''\n\tcolumn C\n")],
+    ["an unquoted name", ["parse.tmdl.unquotedName"], () => tmdl("table O'Brien\n")],
+    [
+      "a root annotation with lines under it",
+      ["parse.tmdl.linesUnder"],
+      () => tmdl("table Sales\n\tcolumn Amount\nannotation A = B\n\tcolumn Region\n"),
+    ],
+    [
+      "a merge conflict marker",
+      ["parse.pbir.conflictMarker"],
+      () => json("definition/report.json", "<<<<<<< HEAD\n{}\n"),
+    ],
+    [
+      "JSON that is not valid",
+      ["parse.pbir.notValidJson"],
+      () => json("definition/report.json", "{\n  ]\n"),
+    ],
+    [
+      "JSON nested too deep",
+      ["parse.pbir.tooDeep"],
+      () => json("definition/report.json", `{"a":${"[".repeat(300)}${"]".repeat(300)}}`),
+    ],
+    [
+      "JSON that is not an object",
+      ["parse.pbir.notAnObject"],
+      () => json("definition/report.json", "[]"),
+    ],
+    [
+      "report extensions with no entity",
+      ["parse.pbir.noEntities"],
+      () => json("definition/reportExtensions.json", '{"name":"extension","entities":[]}'),
+    ],
+    [
+      "report extensions with an unnamed, empty entity",
+      ["parse.pbir.emptyEntity", "parse.pbir.unnamedEntity"],
+      () =>
+        json(
+          "definition/reportExtensions.json",
+          '{"name":"extension","entities":[{"measures":[]}]}',
+        ),
+    ],
+    [
+      "M that does not parse",
+      ["parse.m.notParsed"],
+      () => tmdl("table T\n\tpartition T = m\n\t\tmode: import\n\t\tsource = 1 2\n"),
+    ],
+    [
+      "M over a query's budget",
+      ["parse.m.tooLarge"],
+      () => mOver({ query: 0, model: 1e9, depth: 128 }),
+    ],
+    [
+      "M over a model's budget",
+      ["parse.m.modelTooLarge"],
+      () => mOver({ query: 1e9, model: 0, depth: 128 }),
+    ],
+    [
+      "a model rule out of stack space",
+      ["RULE_COULD_NOT_FINISH", "ruleError.theModel", "ruleError.outOfStack"],
+      () => failed(throwing(() => new RangeError("Maximum call stack size exceeded"))),
+    ],
+    [
+      "a report rule that throws",
+      ["ruleError.theReport", "ruleError.errorClass"],
+      () =>
+        failed(
+          throwing(() => new TypeError("x"), "report"),
+          report,
+        ),
+    ],
+    ["a rule that throws a string", ["ruleError.notAnError"], () => failed(throwing(() => "x"))],
+    [
+      "a rule that throws an Error whose name cannot be read",
+      ["ruleError.errorClass"],
+      () => failed(throwing(() => nameThrows)),
+    ],
+    [
+      "a project that could not be read",
+      ["PARSE_ISSUE.unreadableProject"],
+      async () =>
+        unreadProject(
+          { message: "stored as model.bim", layer: "model", file: "model.bim" },
+          resolveConfig({}),
+        ).findings,
+    ],
+  ];
+
+  it.each(cases)("%s", async (_name, ids, produce) => {
+    const checked = await produce();
+    expect([...new Set(checked.flatMap(idsIn))]).toEqual(expect.arrayContaining(ids));
+    for (const f of checked) expect(() => checkParams(f), idsIn(f).join(" ")).not.toThrow();
+  });
+
+  /** The branches no cheap inline input reaches, each with its reason. */
+  const unreached: Record<string, string> = {
+    "parse.m.noReason":
+      "Microsoft's parser gives a message for every failure it reports; only a failure without one, which no input is known to give, takes this",
+  };
+
+  it("reaches every parse and rule-error message, or says why not", () => {
+    const shared = Object.keys(EN).filter(
+      (id) =>
+        /^(parse\.|ruleError\.)/.test(id) ||
+        id === "RULE_COULD_NOT_FINISH" ||
+        id === "PARSE_ISSUE.unreadableProject",
+    );
+    const reached = new Set(cases.flatMap(([, ids]) => ids));
+    expect(shared.filter((id) => !reached.has(id) && !(id in unreached))).toEqual([]);
+  });
 });
 
 describe("every English entry is emitted (#98)", () => {

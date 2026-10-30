@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { buildIndexes } from "../src/index/build.js";
 import * as rules from "../src/rules/microsoft-bpa/naming.js";
-import { modelFrom, objectNames } from "./helpers.js";
+import type { Rule } from "../src/rules/types.js";
+import { modelFrom, objectNames, rendered } from "./helpers.js";
 
 const zoo = `model ' Model'
 
@@ -98,15 +99,14 @@ describe("name rules by scope", () => {
     model.tables[0]!.measures[0]!.description = "line1\u0001line2";
     model.tables[0]!.name = "Tab\tName";
     const ctx = { indexes: buildIndexes({ model }), options: {} };
-    expect(
-      rules.AVOID_INVALID_NAME_CHARACTERS.check({ model }, ctx).map((f) => f.objectName),
-    ).toEqual(["'Tab\tName'[Bad\u0001Name]"]);
-    expect(
-      rules.AVOID_INVALID_DESCRIPTION_CHARACTERS.check({ model }, ctx).map((f) => f.objectName),
-    ).toEqual(["[M]"]);
-    expect(
-      rules.SPECIAL_CHARS_IN_OBJECT_NAMES.check({ model }, ctx).map((f) => f.objectName),
-    ).toEqual(["'Tab\tName'"]);
+    const names = (rule: Rule) =>
+      rule
+        .check({ model }, ctx)
+        .map(rendered)
+        .map((f) => f.objectName);
+    expect(names(rules.AVOID_INVALID_NAME_CHARACTERS)).toEqual(["'Tab\tName'[Bad\u0001Name]"]);
+    expect(names(rules.AVOID_INVALID_DESCRIPTION_CHARACTERS)).toEqual(["[M]"]);
+    expect(names(rules.SPECIAL_CHARS_IN_OBJECT_NAMES)).toEqual(["'Tab\tName'"]);
   });
 });
 

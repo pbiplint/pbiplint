@@ -96,6 +96,7 @@ export function objectNames(rule: Rule, tmdl: string): string[] {
   const model = modelFrom(tmdl);
   return rule
     .check({ model }, { indexes: buildIndexes({ model }), options: {} })
+    .map(rendered)
     .map((f) => f.objectName);
 }
 
@@ -108,6 +109,7 @@ export async function mObjectNames(rule: Rule, tmdl: string): Promise<string[]> 
   const m = await readM(model, [{ path: "inline.tmdl", text: tmdl }]);
   return rule
     .check({ model }, { indexes: buildIndexes({ model }, m), options: {} })
+    .map(rendered)
     .map((f) => f.objectName);
 }
 

@@ -1,16 +1,14 @@
+import { msg } from "../../messages/format.js";
 import type { Page } from "../../pbir/types.js";
 import { reportFinding } from "../report-helpers.js";
 import { pbiplintRule } from "./define.js";
 
-const NEW_PAGE = "is the name Power BI Desktop gives a new page";
-const DUPLICATE = "is the name Power BI Desktop gives a duplicated page";
-
 /**
  * The names Power BI Desktop gives a new or duplicated page (a duplicate of a duplicate nests), and
- * a name marked as a copy, each with what the finding says of it. Desktop names pages in the
- * language it runs in, and Microsoft publishes no list of those names, so the forms other than
- * English are exactly the ones Desktop-saved page.json files show, each with the language of the
- * reports it was seen in (their model's culture or their other page names): `Seite 1` (German),
+ * a name marked as a copy, each with the pattern the finding's message names. Desktop names pages
+ * in the language it runs in, and Microsoft publishes no list of those names, so the forms other
+ * than English are exactly the ones Desktop-saved page.json files show, each with the language of
+ * the reports it was seen in (their model's culture or their other page names): `Seite 1` (German),
  * `Página 1` (Spanish and Portuguese), `Pagina 1` (Italian), `ページ 1` (Japanese, with an ASCII
  * space), and duplicates named `Duplikat von "<name>"` (German, the name in straight double
  * quotes), `Duplicado de` (Spanish), `Doublon de` (French), `Duplicata de` (Portuguese), and
@@ -19,11 +17,11 @@ const DUPLICATE = "is the name Power BI Desktop gives a duplicated page";
  * numbers new pages from 1 without leading zeros, so `Page 0` and `Page 01` are not its names. The
  * detail names the pattern, never who typed the name, which pbiplint cannot read.
  */
-const DEFAULT_NAMES: [RegExp, string][] = [
-  [/^(?:Page|Seite|Página|Pagina|ページ) [1-9]\d*$/, NEW_PAGE],
-  [/^(?:Duplicate of|Duplicado de|Doublon de|Duplicata de|Duplikat av) .+$/, DUPLICATE],
-  [/^Duplikat von ".+"$/, DUPLICATE],
-  [/^.+ \(copy\)$/, "is named as a copy"],
+const DEFAULT_NAMES: [RegExp, "new" | "duplicate" | "copy"][] = [
+  [/^(?:Page|Seite|Página|Pagina|ページ) [1-9]\d*$/, "new"],
+  [/^(?:Duplicate of|Duplicado de|Doublon de|Duplicata de|Duplikat av) .+$/, "duplicate"],
+  [/^Duplikat von ".+"$/, "duplicate"],
+  [/^.+ \(copy\)$/, "copy"],
 ];
 
 /**
@@ -48,7 +46,15 @@ export const DEFAULT_PAGE_NAME = pbiplintRule({
           const name = recordedName(p);
           const match =
             name === undefined ? undefined : DEFAULT_NAMES.find(([re]) => re.test(name));
-          return match ? [reportFinding.page(p, "/displayName", `"${name}" ${match[1]}`)] : [];
+          return match
+            ? [
+                reportFinding.page(
+                  p,
+                  "/displayName",
+                  msg("DEFAULT_PAGE_NAME", { name: name!, pattern: match[1] }),
+                ),
+              ]
+            : [];
         })
       : [],
 });

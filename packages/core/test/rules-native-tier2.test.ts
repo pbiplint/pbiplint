@@ -389,6 +389,8 @@ describe("REPORT_LEVEL_MEASURES", () => {
       objectId: "Sales.Margin %",
       location: { file: "definition/reportExtensions.json", line },
       detail: 'defined in the report on table "Sales"',
+      messageId: "REPORT_LEVEL_MEASURES",
+      params: { table: "Sales" },
     });
     // A report rule that needs the model too: without it, the run skips the rule.
     expect(REPORT_LEVEL_MEASURES).toMatchObject({

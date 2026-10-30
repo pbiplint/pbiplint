@@ -15,9 +15,22 @@ import {
   type MessageParam,
 } from "../src/messages/format.js";
 import { eachQuery } from "../src/rules/m-helpers.js";
+import {
+  ACTION_WITHOUT_DESTINATION,
+  BROKEN_ACTION_TARGET,
+  BROKEN_BOOKMARK_REFERENCE,
+} from "../src/rules/pbiplint/actions.js";
+import { REPORT_LEVEL_MEASURES } from "../src/rules/pbiplint/measures.js";
+import {
+  FILTERS_PANE_STATE,
+  LANDING_PAGE_NOT_SET,
+  OPENING_PAGE_INVALID,
+} from "../src/rules/pbiplint/opening.js";
+import { DEFAULT_PAGE_NAME } from "../src/rules/pbiplint/pages.js";
 import { englishList, longDate } from "../src/rules/pbiplint/periods.js";
 import { RULE_COULD_NOT_FINISH } from "../src/rules/rule-could-not-finish.js";
 import type { Finding, Rule, RuleFinding } from "../src/rules/types.js";
+import { j, lit, page, reportFindings, visual } from "./report-helpers.js";
 
 // Test-only templates under made-up IDs, so these tests do not depend on the English catalog.
 const catalog = {
@@ -414,6 +427,168 @@ describe("the report rules' messages (#98)", () => {
       messageId: "REDUCE_PAGES",
       params: { count: 11, max: 10 },
     });
+  });
+});
+
+describe("the action, opening, and page rules' messages (#98)", () => {
+  /** Each finding of a rule as its message ID and the English it renders. */
+  const said = (rule: Rule, files: LintFile[], tmdl?: string, options = {}) =>
+    reportFindings(rule, files, tmdl, options).map((f) => [f.messageId, f.detail]);
+  const link = (props: Record<string, unknown>) => ({
+    visualContainerObjects: { visualLink: [{ properties: { show: lit("true"), ...props } }] },
+  });
+  const button = (name: string, props: Record<string, unknown>) =>
+    visual("p", name, "actionButton", {}, link(props));
+  const bookmark = (explorationState: Record<string, unknown>, options = {}) => ({
+    path: "definition/bookmarks/b.bookmark.json",
+    text: j({ name: "b", displayName: "B", options, explorationState }),
+  });
+
+  it("gives BROKEN_ACTION_TARGET and ACTION_WITHOUT_DESTINATION one message each", () => {
+    const files = [
+      page("p"),
+      button("a", { type: lit("'PageNavigation'"), navigationSection: lit("'gone'") }),
+      button("b", { type: lit("'Bookmark'"), bookmark: lit("'gone'") }),
+      button("c", { type: lit("'Drillthrough'"), drillthroughSection: lit("'gone'") }),
+      button("d", { type: lit("'pagenavigation'") }),
+      button("e", { type: lit("'Bookmark'") }),
+      button("f", { type: lit("'Drillthrough'") }),
+    ];
+    expect(said(BROKEN_ACTION_TARGET, files)).toEqual([
+      [
+        "BROKEN_ACTION_TARGET",
+        'Page navigation action points at page "gone", which does not exist',
+      ],
+      ["BROKEN_ACTION_TARGET", 'Bookmark action points at bookmark "gone", which does not exist'],
+      ["BROKEN_ACTION_TARGET", 'Drillthrough action points at page "gone", which does not exist'],
+    ]);
+    expect(said(ACTION_WITHOUT_DESTINATION, files)).toEqual([
+      ["ACTION_WITHOUT_DESTINATION", "Page navigation action has no destination"],
+      ["ACTION_WITHOUT_DESTINATION", "Bookmark action has no destination"],
+      ["ACTION_WITHOUT_DESTINATION", "Drillthrough action has no destination"],
+    ]);
+  });
+
+  it("gives each of BROKEN_BOOKMARK_REFERENCE's findings its own message", () => {
+    const broken = bookmark({
+      activeSection: "gone",
+      sections: { p: { visualContainers: { missing: {} } }, other: {} },
+    });
+    expect(said(BROKEN_BOOKMARK_REFERENCE, [page("p"), broken])).toEqual([
+      ["BROKEN_BOOKMARK_REFERENCE.activePage", 'active page "gone" does not exist'],
+      ["BROKEN_BOOKMARK_REFERENCE.capturedPage", 'captured page "other" does not exist'],
+      [
+        "BROKEN_BOOKMARK_REFERENCE.capturedVisual",
+        'captured visual "missing" is not on page "Page p"',
+      ],
+    ]);
+  });
+
+  it("names a bookmark's stale target visuals as a capped list of quoted names", () => {
+    const stale = (targetVisualNames: string[]) =>
+      reportFindings(BROKEN_BOOKMARK_REFERENCE, [
+        page("p"),
+        bookmark(
+          { activeSection: "p", sections: { p: { visualContainers: {} } } },
+          { applyOnlyToTargetVisuals: true, targetVisualNames },
+        ),
+      ]);
+    const [one] = stale(["A"]);
+    expect(one).toMatchObject({
+      messageId: "BROKEN_BOOKMARK_REFERENCE.targetVisuals",
+      detail: 'target visual "A" is not on page "Page p"',
+      params: { count: 1, visuals: [msg("quoted", { name: "A" })], page: "Page p" },
+    });
+    expect(stale(["A", "B"])[0]!.detail).toBe(
+      'target visuals "A" and "B" are not on page "Page p"',
+    );
+    const [five] = stale(["A", "B", "C", "D", "E"]);
+    expect(five!.detail).toBe('target visuals "A", "B", "C", and 2 more are not on page "Page p"');
+    expect((five!.params!.visuals as Message[]).map((m) => m.id)).toEqual([
+      "quoted",
+      "quoted",
+      "quoted",
+      "list.more",
+    ]);
+  });
+
+  it("gives the opening rules a message for each thing they say", () => {
+    const pages = (header: Record<string, unknown>) => [
+      { path: "definition/pages/pages.json", text: j({ pageOrder: ["p", "h"], ...header }) },
+      page("p"),
+      page("h", { visibility: "HiddenInViewMode" }),
+    ];
+    expect(said(LANDING_PAGE_NOT_SET, pages({}))).toEqual([
+      ["LANDING_PAGE_NOT_SET.opensOn", 'opens on "Page p", the first page'],
+    ]);
+    expect(said(LANDING_PAGE_NOT_SET, pages({ activePageName: "p" }))).toEqual([
+      ["LANDING_PAGE_NOT_SET.opensOn", 'opens on "Page p", the page open when it was saved'],
+    ]);
+    expect(said(LANDING_PAGE_NOT_SET, pages({ activePageName: "gone" }))).toEqual([
+      [
+        "LANDING_PAGE_NOT_SET.activeMissing",
+        'no landing page set; the active page "gone" does not exist',
+      ],
+    ]);
+    expect(said(OPENING_PAGE_INVALID, pages({ landingPageName: "gone" }))).toEqual([
+      ["OPENING_PAGE_INVALID.missing", 'landing page "gone" does not exist'],
+    ]);
+    expect(said(OPENING_PAGE_INVALID, pages({ activePageName: "gone" }))).toEqual([
+      ["OPENING_PAGE_INVALID.missing", 'active page "gone" does not exist'],
+    ]);
+    expect(said(OPENING_PAGE_INVALID, pages({ activePageName: "h" }))).toEqual([
+      ["OPENING_PAGE_INVALID.hidden", 'active page "Page h" is hidden from readers'],
+    ]);
+  });
+
+  it("gives FILTERS_PANE_STATE one message, its states and policy as selects", () => {
+    const pane = (properties: Record<string, unknown>, expect: string) =>
+      reportFindings(
+        FILTERS_PANE_STATE,
+        [
+          {
+            path: "definition/report.json",
+            text: j({ objects: { outspacePane: [{ properties }] } }),
+          },
+        ],
+        undefined,
+        { expect },
+      ).map((f) => [f.messageId, f.detail]);
+    expect(pane({}, "closed")).toEqual([
+      ["FILTERS_PANE_STATE", "not recorded, read as open; the policy expects closed"],
+    ]);
+    expect(pane({ expanded: lit("true") }, "closed")).toEqual([
+      ["FILTERS_PANE_STATE", "saved open; the policy expects closed"],
+    ]);
+    expect(pane({ expanded: lit("false") }, "open")).toEqual([
+      ["FILTERS_PANE_STATE", "saved closed; the policy expects open"],
+    ]);
+    expect(pane({ visible: lit("false") }, "open")).toEqual([
+      ["FILTERS_PANE_STATE", "saved hidden from readers; the policy expects open"],
+    ]);
+  });
+
+  it("gives DEFAULT_PAGE_NAME and REPORT_LEVEL_MEASURES one message each", () => {
+    const files = [
+      page("a", { displayName: "Page 2" }),
+      page("b", { displayName: 'Duplikat von "Overview"' }),
+      page("c", { displayName: "Overview (copy)" }),
+    ];
+    expect(said(DEFAULT_PAGE_NAME, files)).toEqual([
+      ["DEFAULT_PAGE_NAME", '"Page 2" is the name Power BI Desktop gives a new page'],
+      [
+        "DEFAULT_PAGE_NAME",
+        '"Duplikat von "Overview"" is the name Power BI Desktop gives a duplicated page',
+      ],
+      ["DEFAULT_PAGE_NAME", '"Overview (copy)" is named as a copy'],
+    ]);
+    const measures = {
+      path: "definition/reportExtensions.json",
+      text: j({ entities: [{ name: "Sales", measures: [{ name: "M", expression: "1" }] }] }),
+    };
+    expect(said(REPORT_LEVEL_MEASURES, [measures], "table Sales\n")).toEqual([
+      ["REPORT_LEVEL_MEASURES", 'defined in the report on table "Sales"'],
+    ]);
   });
 });
 

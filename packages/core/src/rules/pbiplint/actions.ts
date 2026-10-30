@@ -1,3 +1,4 @@
+import { capped, msg } from "../../messages/format.js";
 import { escapePointer } from "../../pbir/json.js";
 import {
   allVisuals,
@@ -9,16 +10,15 @@ import {
 import type { Page } from "../../pbir/types.js";
 import type { RuleFinding } from "../types.js";
 import { pbiplintRule } from "./define.js";
-import { englishList } from "./periods.js";
 
 /**
  * The action types whose destination names a page or a bookmark, keyed by the type in lower case,
- * with what a finding calls each.
+ * which a finding's message selects its wording by, with the object each names.
  */
-const CHECKED: ReadonlyMap<string, { action: string; object: "page" | "bookmark" }> = new Map([
-  ["pagenavigation", { action: "Page navigation", object: "page" }],
-  ["drillthrough", { action: "Drillthrough", object: "page" }],
-  ["bookmark", { action: "Bookmark", object: "bookmark" }],
+const CHECKED: ReadonlyMap<string, "page" | "bookmark"> = new Map([
+  ["pagenavigation", "page"],
+  ["drillthrough", "page"],
+  ["bookmark", "bookmark"],
 ] as const);
 
 export const BROKEN_ACTION_TARGET = pbiplintRule({
@@ -43,15 +43,16 @@ export const BROKEN_ACTION_TARGET = pbiplintRule({
     return allVisuals(report).flatMap((v) =>
       v.actions.flatMap((a): RuleFinding[] => {
         // Not checked: navigators' pages and bookmarks, tooltip pages, a drillthrough page's binding.
-        const checked = CHECKED.get(a.type.toLowerCase());
+        const action = a.type.toLowerCase();
+        const object = CHECKED.get(action);
         // Off or conditional: nothing to resolve. An empty destination is ACTION_WITHOUT_DESTINATION's.
-        if (!checked || !a.on || a.target === undefined) return [];
-        if (exists[checked.object](a.target)) return [];
+        if (!object || !a.on || a.target === undefined) return [];
+        if (exists[object](a.target)) return [];
         return [
           reportFinding.visual(
             v,
             a.pointer,
-            `${checked.action} action points at ${checked.object} "${a.target}", which does not exist`,
+            msg("BROKEN_ACTION_TARGET", { action, target: a.target }),
           ),
         ];
       }),
@@ -72,10 +73,10 @@ export const ACTION_WITHOUT_DESTINATION = pbiplintRule({
     report
       ? allVisuals(report).flatMap((v) =>
           v.actions.flatMap((a): RuleFinding[] => {
-            const checked = CHECKED.get(a.type.toLowerCase());
-            if (!checked || !a.on || a.target !== undefined || a.conditional) return [];
+            const action = a.type.toLowerCase();
+            if (!CHECKED.has(action) || !a.on || a.target !== undefined || a.conditional) return [];
             return [
-              reportFinding.visual(v, a.pointer, `${checked.action} action has no destination`),
+              reportFinding.visual(v, a.pointer, msg("ACTION_WITHOUT_DESTINATION", { action })),
             ];
           }),
         )
@@ -106,7 +107,7 @@ export const BROKEN_BOOKMARK_REFERENCE = pbiplintRule({
         out.push(
           reportFinding.bookmark(
             b,
-            `active page "${b.activePage}" does not exist`,
+            msg("BROKEN_BOOKMARK_REFERENCE.activePage", { page: b.activePage }),
             "/explorationState/activeSection",
           ),
         );
@@ -116,7 +117,7 @@ export const BROKEN_BOOKMARK_REFERENCE = pbiplintRule({
           out.push(
             reportFinding.bookmark(
               b,
-              `captured page "${id}" does not exist`,
+              msg("BROKEN_BOOKMARK_REFERENCE.capturedPage", { page: id }),
               `${SECTIONS}/${escapePointer(id)}`,
             ),
           );
@@ -126,7 +127,7 @@ export const BROKEN_BOOKMARK_REFERENCE = pbiplintRule({
           out.push(
             reportFinding.bookmark(
               b,
-              `captured visual "${visual}" is not on page "${p.displayName}"`,
+              msg("BROKEN_BOOKMARK_REFERENCE.capturedVisual", { visual, page: p.displayName }),
               pointer,
             ),
           );
@@ -138,12 +139,14 @@ export const BROKEN_BOOKMARK_REFERENCE = pbiplintRule({
       const active = b.activePage === undefined ? undefined : pages.get(b.activePage);
       const stale = active ? (b.targetVisuals ?? []).filter((t) => notOn(active, t.visual)) : [];
       if (active && stale.length > 0) {
-        const many = stale.length > 1;
-        const names = englishList(stale.map((t) => `"${t.visual}"`));
         out.push(
           reportFinding.bookmark(
             b,
-            `target visual${many ? "s" : ""} ${names} ${many ? "are" : "is"} not on page "${active.displayName}"`,
+            msg("BROKEN_BOOKMARK_REFERENCE.targetVisuals", {
+              count: stale.length,
+              visuals: capped(stale.map((t) => msg("quoted", { name: t.visual }))),
+              page: active.displayName,
+            }),
             stale[0]!.pointer,
           ),
         );

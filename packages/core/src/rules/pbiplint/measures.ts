@@ -1,3 +1,4 @@
+import { msg } from "../../messages/format.js";
 import { reportFinding, reportMeasuresToMove } from "../report-helpers.js";
 import { pbiplintRule } from "./define.js";
 
@@ -14,7 +15,7 @@ export const REPORT_LEVEL_MEASURES = pbiplintRule({
   // The detail says where the measure lives; the rule's page gives the fix.
   check: (project) =>
     reportMeasuresToMove(project).map((m) =>
-      reportFinding.reportMeasure(m, `defined in the report on table "${m.table}"`),
+      reportFinding.reportMeasure(m, msg("REPORT_LEVEL_MEASURES", { table: m.table })),
     ),
 });
 

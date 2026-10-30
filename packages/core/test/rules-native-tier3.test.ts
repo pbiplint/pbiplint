@@ -11,6 +11,7 @@ import {
   SLICER_SELECTION_SAVED,
   visualRules,
 } from "../src/rules/pbiplint/visuals.js";
+import { rendered } from "./helpers.js";
 import {
   column,
   j,
@@ -367,7 +368,7 @@ describe("BROKEN_BOOKMARK_REFERENCE", () => {
     const findings = BROKEN_BOOKMARK_REFERENCE.check(project, {
       indexes: buildIndexes(project),
       options: {},
-    });
+    }).map(rendered);
     expect(findings.map((f) => [f.detail, f.location!.line])).toEqual([
       ['active page "gone" does not exist', lineOf(broken.text, '"activeSection"')],
       ['captured page "other" does not exist', lineOf(broken.text, '"other"')],

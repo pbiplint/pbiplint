@@ -10,16 +10,36 @@
  * writes ICU's doubled apostrophe.
  */
 export const EN = {
+  ACTION_WITHOUT_DESTINATION:
+    "{action, select, pagenavigation {Page navigation} drillthrough {Drillthrough} other {Bookmark}} action has no destination",
   AVOID_SHOW_ITEMS_WITH_NO_DATA: "Show items with no data is on for {roles}",
+  BROKEN_ACTION_TARGET:
+    '{action, select, pagenavigation {Page navigation action points at page} drillthrough {Drillthrough action points at page} other {Bookmark action points at bookmark}} "{target}", which does not exist',
+  "BROKEN_BOOKMARK_REFERENCE.activePage": 'active page "{page}" does not exist',
+  "BROKEN_BOOKMARK_REFERENCE.capturedPage": 'captured page "{page}" does not exist',
+  "BROKEN_BOOKMARK_REFERENCE.capturedVisual": 'captured visual "{visual}" is not on page "{page}"',
+  "BROKEN_BOOKMARK_REFERENCE.targetVisuals":
+    '{count, plural, one {target visual {visuals, list} is} other {target visuals {visuals, list} are}} not on page "{page}"',
+  DEFAULT_PAGE_NAME:
+    '"{name}" {pattern, select, new {is the name Power BI Desktop gives a new page} duplicate {is the name Power BI Desktop gives a duplicated page} other {is named as a copy}}',
   ENSURE_ALTTEXT: "no alt text",
   ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY: "height {height}, more than {max}",
   ENSURE_THEME_COLOURS:
     "{count, plural, one {# colour} other {# colours}} set to a hex value instead of a theme colour",
+  FILTERS_PANE_STATE:
+    "{recorded, select, yes {saved} other {not recorded, read as}} {state, select, open {open} closed {closed} other {hidden from readers}}; the policy expects {expect, select, open {open} other {closed}}",
   HIDE_TOOLTIP_DRILLTROUGH_PAGES:
     "{kind, select, tooltip {tooltip} other {drillthrough}} page is visible to readers",
   "INTEGER_FORMATTING.dynamicOnly": "dynamic format string only",
   "INTEGER_FORMATTING.formatString": 'format string "{format}"',
   "INTEGER_FORMATTING.none": "no format string",
+  "LANDING_PAGE_NOT_SET.activeMissing":
+    'no landing page set; the active page "{page}" does not exist',
+  "LANDING_PAGE_NOT_SET.opensOn":
+    'opens on "{page}", {by, select, first {the first page} other {the page open when it was saved}}',
+  "OPENING_PAGE_INVALID.hidden": 'active page "{page}" is hidden from readers',
+  "OPENING_PAGE_INVALID.missing":
+    '{by, select, landing {landing} other {active}} page "{page}" does not exist',
   PARSE_ISSUE: "{reason}: {text}",
   "PARSE_ISSUE.unreadableProject": "{reason}",
   REDUCE_ADVANCED_FILTERS:
@@ -31,6 +51,7 @@ export const EN = {
     "{count, plural, one {# visual} other {# visuals}} with a TopN filter, more than {max}",
   REDUCE_VISUALS_ON_PAGE: "{count, plural, one {# visual} other {# visuals}}, more than {max}",
   REMOVE_UNUSED_CUSTOM_VISUALS: "{visual} is registered but no visual uses it",
+  REPORT_LEVEL_MEASURES: 'defined in the report on table "{table}"',
   RULE_COULD_NOT_FINISH: "{rule} could not finish on {where}: {kind}",
   "context.calculationGroup": "calculation group {table}",
   "context.level": "hierarchy {hierarchy} in {table}",

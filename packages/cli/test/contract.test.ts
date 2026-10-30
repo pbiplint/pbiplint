@@ -10,10 +10,13 @@ import {
   escapeJsonControls,
   finding,
   formatJson,
+  formatMessage,
   formatSarif,
   lint,
   msg,
   resolveConfig,
+  type Message,
+  type MessageId,
   type Rule,
 } from "@pbiplint/core";
 import { afterAll, describe, expect, it, vi } from "vitest";
@@ -384,7 +387,7 @@ describe("the CLI's contract", () => {
         hasFields(
           f,
           ["layer", "objectType", "objectName"],
-          ["objectId", "file", "line", "column", "detail"],
+          ["objectId", "file", "line", "column", "detail", "messageId", "params"],
         );
     }
     // Groups are ranked, errors first.
@@ -458,6 +461,42 @@ describe("the CLI's contract", () => {
       severalJson({ runs: [{ path: "a", result, config }], prefixes: [{}] }, VERSION),
     );
     expect(doc.projects[0].groups[0].findings[0]).toEqual(one);
+  });
+
+  it("3d. the JSON and SARIF findings carry messageId and params, which render to the detail (#98)", async () => {
+    type Found = { ruleId?: string; detail?: string; messageId?: MessageId; params?: object };
+    type Group = { rule: { id: string }; findings: Found[] };
+    const flat = (groups: Group[]): Found[] =>
+      groups.flatMap((g) => g.findings.map((f) => ({ ...f, ruleId: g.rule.id })));
+    // Every finding with a message ID has its parameters, and they render back to its detail.
+    const rendersBack = (findings: Found[]): void => {
+      const withMessage = findings.filter((f) => f.messageId !== undefined);
+      expect(withMessage.length).toBeGreaterThan(0);
+      for (const f of withMessage) {
+        expect(f.params, f.messageId).toBeDefined();
+        expect(formatMessage(msg(f.messageId!, f.params as Message["params"])), f.ruleId).toBe(
+          f.detail,
+        );
+      }
+    };
+    const json = flat(JSON.parse((await run([sample, "--format", "json"])).out).groups);
+    rendersBack(json);
+    // SARIF lists its results in the JSON's order: one carries the message fields exactly when
+    // its finding does.
+    const results: { ruleId: string; properties?: object }[] = JSON.parse(
+      (await run([sample, "--format", "sarif"])).out,
+    ).runs[0].results;
+    expect(results.map((r) => r.ruleId)).toEqual(json.map((f) => f.ruleId));
+    results.forEach((r, i) => {
+      const f = json[i]!;
+      expect(r.properties, f.ruleId).toEqual(
+        f.messageId === undefined ? undefined : { messageId: f.messageId, params: f.params },
+      );
+    });
+    // Version 2 holds the same inside each project's groups (Review Focus 4).
+    const several = JSON.parse((await run([severalProjects(), "--format", "json"])).out);
+    expect(several.projects.length).toBe(2);
+    for (const p of several.projects) rendersBack(flat(p.groups));
   });
 
   it("4. the quiet output: the summary first, rule lines of three fields, and the Next line last", async () => {

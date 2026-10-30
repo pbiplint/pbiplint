@@ -9,8 +9,27 @@
  * writes ICU's doubled apostrophe.
  */
 export const EN = {
+  AVOID_SHOW_ITEMS_WITH_NO_DATA: "Show items with no data is on for {roles}",
+  ENSURE_ALTTEXT: "no alt text",
+  ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY: "height {height}, more than {max}",
+  ENSURE_THEME_COLOURS:
+    "{count, plural, one {# colour} other {# colours}} set to a hex value instead of a theme colour",
+  HIDE_TOOLTIP_DRILLTROUGH_PAGES:
+    "{kind, select, tooltip {tooltip} other {drillthrough}} page is visible to readers",
+  "INTEGER_FORMATTING.dynamicOnly": "dynamic format string only",
+  "INTEGER_FORMATTING.formatString": 'format string "{format}"',
+  "INTEGER_FORMATTING.none": "no format string",
   PARSE_ISSUE: "{reason}: {text}",
   "PARSE_ISSUE.unreadableProject": "{reason}",
+  REDUCE_ADVANCED_FILTERS:
+    "{count, plural, one {# visual} other {# visuals}} with an Advanced filter applied, more than {max}",
+  REDUCE_OBJECTS_WITHIN_VISUALS:
+    "{count, plural, one {# field} other {# fields}} bound, more than {max}",
+  REDUCE_PAGES: "{count, plural, one {# page} other {# pages}}, more than {max}",
+  REDUCE_TOPN_FILTERS:
+    "{count, plural, one {# visual} other {# visuals}} with a TopN filter, more than {max}",
+  REDUCE_VISUALS_ON_PAGE: "{count, plural, one {# visual} other {# visuals}}, more than {max}",
+  REMOVE_UNUSED_CUSTOM_VISUALS: "{visual} is registered but no visual uses it",
   RULE_COULD_NOT_FINISH: "{rule} could not finish on {where}: {kind}",
   "context.calculationGroup": "calculation group {table}",
   "context.level": "hierarchy {hierarchy} in {table}",

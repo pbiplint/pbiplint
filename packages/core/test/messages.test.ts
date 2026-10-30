@@ -265,3 +265,35 @@ describe("the shared messages (#98)", () => {
     expect(f).toMatchObject({ detail: "role R", messageId: "context.role", params: { role: "R" } });
   });
 });
+
+describe("the report rules' messages (#98)", () => {
+  it("gives ENSURE_ALTTEXT and REDUCE_PAGES findings their message IDs", async () => {
+    const files: LintFile[] = [
+      { path: "definition/report.json", text: JSON.stringify({}) },
+      ...Array.from({ length: 11 }, (_, i) => ({
+        path: `definition/pages/p${i}/page.json`,
+        text: JSON.stringify({ name: `p${i}`, displayName: `Page ${i}`, height: 720, width: 1280 }),
+      })),
+      {
+        path: "definition/pages/p0/visuals/v/visual.json",
+        text: JSON.stringify({
+          name: "v",
+          position: { x: 0, y: 0, z: 0, height: 100, width: 100 },
+          visual: { visualType: "cardVisual" },
+        }),
+      },
+    ];
+    const { findings } = await lint(files);
+    const byRule = (id: string) => findings.find((f) => f.ruleId === id);
+    expect(byRule("ENSURE_ALTTEXT")).toMatchObject({
+      detail: "no alt text",
+      messageId: "ENSURE_ALTTEXT",
+      params: {},
+    });
+    expect(byRule("REDUCE_PAGES")).toMatchObject({
+      detail: "11 pages, more than 10",
+      messageId: "REDUCE_PAGES",
+      params: { count: 11, max: 10 },
+    });
+  });
+});

@@ -1,3 +1,4 @@
+import { msg, type Message } from "../../messages/format.js";
 import { isPunctuation, isWord, tokenizeDax } from "../../dax/tokenize.js";
 import {
   allMeasures,
@@ -99,10 +100,14 @@ export const PROVIDE_FORMAT_STRING_FOR_MEASURES = bpaRule(
 
 // The source rule reads only the static format string, so an unformatted currency or percentage
 // measure fires under a name that calls it a whole number. The detail says what the rule saw.
-const formatStringDetail = (x: Measure): string => {
+const formatStringDetail = (x: Measure): Message => {
   const fs = x.formatString ?? "";
-  if (fs.trim() !== "") return `format string "${fs}"`;
-  return isBlank(x.formatStringDefinition) ? "no format string" : "dynamic format string only";
+  if (fs.trim() !== "") return msg("INTEGER_FORMATTING.formatString", { format: fs });
+  return msg(
+    isBlank(x.formatStringDefinition)
+      ? "INTEGER_FORMATTING.none"
+      : "INTEGER_FORMATTING.dynamicOnly",
+  );
 };
 
 export const INTEGER_FORMATTING = bpaRule("INTEGER_FORMATTING", (m) =>
@@ -111,7 +116,7 @@ export const INTEGER_FORMATTING = bpaRule("INTEGER_FORMATTING", (m) =>
       const fs = x.formatString ?? "";
       return !fs.includes("$") && !fs.includes("%") && !(fs === "#,0" || fs === "#,0.0");
     })
-    .map((x) => ({ ...finding.measure(x), detail: formatStringDetail(x) })),
+    .map((x) => ({ ...finding.measure(x), message: formatStringDetail(x) })),
 );
 
 export const PERCENTAGE_FORMATTING = bpaRule("PERCENTAGE_FORMATTING", (m) =>

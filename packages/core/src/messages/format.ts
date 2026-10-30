@@ -297,10 +297,11 @@ export function findingDetail(
  * Every parameter a template uses and how, including those inside plural and select branches. A
  * name used both plainly and as a plural, select, list, or date reports the latter, and a select
  * used twice reports the keys of both. Throws an Error on a template that does not parse, or that
- * uses one name as two of plural, select, list, and date.
+ * uses one name as two of plural, select, list, unit list, and date.
  */
 export function templateArgs(template: string): ReadonlyMap<string, ArgKind> {
   const args = new Map<string, ArgKind>();
+  const named = (k: ArgKind): string => (k.kind === "list" && k.style ? `${k.style} list` : k.kind);
   const walk = (nodes: readonly Node[]): void => {
     for (const node of nodes) {
       if (typeof node === "string" || node.t === "pound") continue;
@@ -321,9 +322,9 @@ export function templateArgs(template: string): ReadonlyMap<string, ArgKind> {
                     ]),
                   ],
                 };
-      if (seen && seen.kind !== "plain" && kind.kind !== "plain" && seen.kind !== kind.kind) {
+      if (seen && seen.kind !== "plain" && kind.kind !== "plain" && named(seen) !== named(kind)) {
         throw new Error(
-          `"${node.name}" is both a ${seen.kind} and a ${kind.kind} in template "${template}"`,
+          `"${node.name}" is both a ${named(seen)} and a ${named(kind)} in template "${template}"`,
         );
       }
       if (kind.kind !== "plain" || !seen) args.set(node.name, kind);

@@ -259,6 +259,21 @@ describe("templateArgs", () => {
     );
   });
 
+  it("refuses one name used as lists of two styles, and allows a list of one style twice", () => {
+    expect(() => templateArgs("{names, list} or {names, list, unit}")).toThrow(
+      /"names" is both a list and a unit list/,
+    );
+    expect(() => templateArgs("{names, list, unit} or {names, list}")).toThrow(
+      /"names" is both a unit list and a list/,
+    );
+    expect(Object.fromEntries(templateArgs("{names, list, unit} or {names, list, unit}"))).toEqual({
+      names: { kind: "list", style: "unit" },
+    });
+    expect(Object.fromEntries(templateArgs("{names, list} or {names}"))).toEqual({
+      names: { kind: "list" },
+    });
+  });
+
   it.each(["{a", "a}", "{n, plural, one {x}}", "{n, frobnicate, x {y}}"])(
     "refuses %s",
     (template) => {

@@ -1,6 +1,7 @@
 import type { Language } from "@microsoft/powerquery-parser";
 import { stepOf } from "../m/ast.js";
 import type { MIndex, MQuery } from "../m/types.js";
+import { formatMessage, msg, type Message } from "../messages/format.js";
 import { tableRef } from "../model/names.js";
 import type { NamedExpression, Partition, Table } from "../model/types.js";
 import { finding } from "./helpers.js";
@@ -11,13 +12,18 @@ import type { RuleContext, RuleFinding } from "./types.js";
  * the partition's name after it when its table has more than one M partition, which Desktop does
  * not write but a hand-edited model can hold.
  */
-export function queryLabel(q: MQuery): string {
-  const query = `query ${tableRef(q.name)}`;
-  if (q.kind !== "partition") return query;
+export function queryLabel(q: MQuery): Message {
+  const query = tableRef(q.name);
+  if (q.kind !== "partition") return msg("query.name", { query });
   const p = q.owner as Partition;
   const mPartitions = p.table.partitions.filter((x) => x.sourceType === "m");
-  return mPartitions.length > 1 ? `${query}, partition ${tableRef(p.name)}` : query;
+  return mPartitions.length > 1
+    ? msg("query.partition", { query, partition: tableRef(p.name) })
+    : msg("query.name", { query });
 }
+
+/** `queryLabel` in English, for the details still written as text. */
+export const queryLabelText = (q: MQuery): string => formatMessage(queryLabel(q));
 
 /** The object a query's finding names: its partition, its shared expression, or the table whose refresh policy holds it. */
 export function ownerFinding(q: MQuery): RuleFinding {
@@ -41,7 +47,7 @@ export function mFinding(
   return {
     ...ownerFinding(q),
     location: m.locate(q, node.tokenRange.positionStart),
-    detail: `${queryLabel(q)}${step === undefined ? "" : `, step ${tableRef(step)}`}: ${what}`,
+    detail: `${queryLabelText(q)}${step === undefined ? "" : `, step ${tableRef(step)}`}: ${what}`,
   };
 }
 

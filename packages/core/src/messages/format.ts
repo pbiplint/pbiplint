@@ -1,3 +1,4 @@
+import type { Finding } from "../rules/types.js";
 import { EN, type MessageId } from "./en.js";
 
 /**
@@ -192,6 +193,20 @@ export function formatMessage(m: Message, catalog: Catalog = EN, locale = "en"):
     return template;
   }
   return render(nodes, m.params, catalog, locale, NaN);
+}
+
+/**
+ * A finding's detail in the catalog's language: its message when it has one, else its `detail`
+ * as the rule wrote it, which is English.
+ */
+export function findingDetail(
+  f: Pick<Finding, "detail" | "messageId" | "params">,
+  catalog: Catalog = EN,
+  locale = "en",
+): string | undefined {
+  return f.messageId === undefined
+    ? f.detail
+    : formatMessage(msg(f.messageId, f.params), catalog, locale);
 }
 
 /**

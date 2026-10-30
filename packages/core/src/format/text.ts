@@ -1,6 +1,7 @@
 import type { LintResult, ShownSummary } from "../engine/lint.js";
 import type { RankedGroup } from "../engine/rank.js";
 import type { SkippedRule } from "../engine/run.js";
+import { findingDetail } from "../messages/format.js";
 import type { LayerStatus } from "../project/types.js";
 import { SEVERITY_LABEL, type Finding, type Layer } from "../rules/types.js";
 import { showControls } from "./controls.js";
@@ -202,7 +203,7 @@ export function formatText(result: LintResult, _options: FormatOptions = {}): st
       const rows = g.findings.map((f) => ({
         name: showControls(f.objectName),
         location: showControls(locationOf(f)),
-        detail: showControls(f.detail ?? ""),
+        detail: showControls(findingDetail(f) ?? ""),
       }));
       const width = Math.max(...rows.map((r) => r.name.length));
       const locWidth = Math.max(...rows.map((r) => r.location.length));

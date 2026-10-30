@@ -1,4 +1,5 @@
 import type { LintResult } from "../engine/lint.js";
+import { findingDetail } from "../messages/format.js";
 import { ruleUrl } from "../model/names.js";
 import { SEVERITY_LABEL } from "../rules/types.js";
 import { showControls } from "./controls.js";
@@ -188,7 +189,7 @@ export function formatMarkdown(result: LintResult, options: FormatOptions = {}):
     out.push("| Object | Type | Location | Detail |", "|---|---|---|---|");
     for (const f of g.findings)
       out.push(
-        `| ${code(f.objectName, true)} | ${f.objectType} | ${cell(locationOf(f))} | ${cell(f.detail ?? "")} |`,
+        `| ${code(f.objectName, true)} | ${f.objectType} | ${cell(locationOf(f))} | ${cell(findingDetail(f) ?? "")} |`,
       );
     out.push("");
   }

@@ -1,12 +1,17 @@
 import { describe, expect, it } from "vitest";
+import { resolveConfig } from "../src/engine/config.js";
+import { runRules } from "../src/engine/run.js";
+import { buildIndexes } from "../src/index/build.js";
 import type { MessageId } from "../src/messages/en.js";
 import {
+  findingDetail,
   formatMessage,
   msg,
   templateArgs,
   type Catalog,
   type MessageParam,
 } from "../src/messages/format.js";
+import type { Rule, RuleFinding } from "../src/rules/types.js";
 
 // Test-only templates under made-up IDs, so these tests do not depend on the English catalog.
 const catalog = {
@@ -92,4 +97,61 @@ describe("templateArgs", () => {
       expect(() => templateArgs(template)).toThrow(Error);
     },
   );
+});
+
+describe("runRules", () => {
+  const returning = (f: RuleFinding): Rule => ({
+    id: "TEST_RULE",
+    name: "Test rule",
+    category: "Maintenance",
+    severity: 2,
+    scope: ["Model"],
+    layer: "model",
+    needs: [],
+    description: "Made up.",
+    references: [],
+    status: "builtin",
+    check: () => [f],
+  });
+  const run = (f: RuleFinding) =>
+    runRules({}, buildIndexes({}), [returning(f)], resolveConfig()).findings;
+
+  it("renders a finding's message into its detail and keeps the ID and parameters", () => {
+    const [f] = run({
+      objectType: "Model",
+      objectName: "Model",
+      message: msg("context.table", { table: "'Sales'" }),
+    });
+    expect(f).toEqual({
+      ruleId: "TEST_RULE",
+      layer: "model",
+      objectType: "Model",
+      objectName: "Model",
+      detail: "table 'Sales'",
+      messageId: "context.table",
+      params: { table: "'Sales'" },
+    });
+  });
+
+  it("keeps a plain detail as it is, with no message ID or parameters", () => {
+    const [f] = run({ objectType: "Model", objectName: "Model", detail: "x" });
+    expect(f!.detail).toBe("x");
+    expect(Object.keys(f!)).not.toContain("messageId");
+    expect(Object.keys(f!)).not.toContain("params");
+  });
+});
+
+describe("findingDetail", () => {
+  it("renders the message when the finding has one, in the catalog given", () => {
+    const f = { detail: "stale", messageId: "context.table" as const, params: { table: "'S'" } };
+    expect(findingDetail(f)).toBe("table 'S'");
+    expect(findingDetail(f, { "context.table": "Tabelle {table}" } as Catalog, "de")).toBe(
+      "Tabelle 'S'",
+    );
+  });
+
+  it("returns the detail when the finding has no message", () => {
+    expect(findingDetail({ detail: "x" })).toBe("x");
+    expect(findingDetail({})).toBeUndefined();
+  });
 });

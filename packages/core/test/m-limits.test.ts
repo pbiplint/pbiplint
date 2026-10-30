@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { type LintFile, lint } from "../src/engine/lint.js";
 import { calls, identifierName, nodesOfKind } from "../src/m/ast.js";
 import { errorKind } from "../src/engine/rule-error.js";
+import { formatMessage } from "../src/messages/format.js";
 import { readM } from "../src/m/read.js";
 import { buildIndexes } from "../src/index/build.js";
 import { boundValue, origin } from "../src/m/resolve.js";
@@ -397,7 +398,7 @@ describe("a deep tree in one query (v3 spec, section 8, amended October 27, 2026
         {
           indexes: buildIndexes({ model: built }, m),
           options: {},
-          reportError: (e, site) => errors.push(`${site.label}: ${errorKind(e)}`),
+          reportError: (e, site) => errors.push(`${formatMessage(site.label)}: ${errorKind(e)}`),
         },
       );
       expect(errors).toEqual(["query 'A': RangeError (out of stack space)"]);

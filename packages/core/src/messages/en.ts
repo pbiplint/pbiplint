@@ -10,6 +10,10 @@
  */
 export const EN = {
   "context.table": "table {table}",
+  "query.name": "query {query}",
+  "query.partition": "query {query}, partition {partition}",
+  "ruleError.theModel": "the model",
+  "ruleError.theReport": "the report",
 } as const;
 
 export type MessageId = keyof typeof EN;

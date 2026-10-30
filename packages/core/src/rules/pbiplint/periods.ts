@@ -59,18 +59,6 @@ function shown(periods: readonly Period[]): (string | Message)[] {
 }
 
 /**
- * A list as English writes one: `a and b`, or `a, b, and c`, with semicolons in place of commas
- * when an item holds a comma, as a long-form date does. At most three are named; the rest are
- * counted, as `and 3 more`.
- */
-export function englishList(items: readonly string[]): string {
-  const named = items.length > 3 ? [...items.slice(0, 3), `${items.length - 3} more`] : [...items];
-  if (named.length <= 2) return named.join(" and ");
-  const sep = named.some((s) => s.includes(",")) ? "; " : ", ";
-  return `${named.slice(0, -1).join(sep)}${sep}and ${named.at(-1)}`;
-}
-
-/**
  * Whether a name carries a year (spec section 4.5): its four digits anywhere (`Values2025`), or
  * its last two with no digit on either side (`Jan-24`, `19/20`). An object so named is almost
  * always meant to fix that year; all 87 in the research were.

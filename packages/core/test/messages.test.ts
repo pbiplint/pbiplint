@@ -35,7 +35,7 @@ import {
   NOT_REACHED_FROM_REPORT,
 } from "../src/rules/pbiplint/references.js";
 import { UDF_NOT_CALLED } from "../src/rules/pbiplint/functions.js";
-import { englishList, HARDCODED_PERIOD_IN_DAX, longDate } from "../src/rules/pbiplint/periods.js";
+import { HARDCODED_PERIOD_IN_DAX, longDate } from "../src/rules/pbiplint/periods.js";
 import { TAB_ORDER_FOLLOWS_LAYOUT } from "../src/rules/pbiplint/tab-order.js";
 import { NAME_WITHOUT_TRANSLATION } from "../src/rules/pbiplint/translations.js";
 import {
@@ -124,20 +124,23 @@ describe("list and date parameters", () => {
   const listed = (items: readonly (string | Message)[], locale?: string) =>
     formatMessage(msg("list" as MessageId, { names: items }), { ...EN, ...catalog }, locale);
 
-  // englishList's own cases, rendered through capped() and the list kind.
+  // The cases of englishList, the list writer the list kind replaced, as it wrote them.
   it.each([
-    [["2025"]],
-    [["2024", "2025"]],
-    [["2024", "2025", "2026"]],
-    [["2024", "2025", "2026", "2027"]],
-    [["January 1, 2024", "June 30, 2024", "December 31, 2024"]],
-    [["2020", "2021", "2022", "2023", "2024", "2025"]],
-    [["Sales, EU", "B", "C", "D"]],
-  ])("renders %j with capped() as englishList does", (items) => {
-    expect(listed(capped(items))).toBe(englishList(items));
+    [["2025"], "2025"],
+    [["2024", "2025"], "2024 and 2025"],
+    [["2024", "2025", "2026"], "2024, 2025, and 2026"],
+    [["2024", "2025", "2026", "2027"], "2024, 2025, 2026, and 1 more"],
+    [
+      ["January 1, 2024", "June 30, 2024", "December 31, 2024"],
+      "January 1, 2024; June 30, 2024; and December 31, 2024",
+    ],
+    [["2020", "2021", "2022", "2023", "2024", "2025"], "2020, 2021, 2022, and 3 more"],
+    [["Sales, EU", "B", "C", "D"], "Sales, EU; B; C; and 1 more"],
+  ])("renders %j with capped() as %j", (items, expected) => {
+    expect(listed(capped(items))).toBe(expected);
   });
 
-  // The listOf style of translations.ts and reachability.ts, which names every item.
+  // The unit style, which names every item and joins them with no conjunction.
   it("renders a unit list with no conjunction, and keeps its commas when an item holds one", () => {
     const unit = (items: readonly (string | Message)[], locale?: string) =>
       render("unitList", { names: items }, locale);
@@ -149,6 +152,7 @@ describe("list and date parameters", () => {
     expect(unit(["a", "b", "c"], "xx-invalid-")).toBe("a, b, c");
   });
 
+  // The listOf style of translations.ts and reachability.ts, which names every item.
   it("renders a list uncapped as listOf does", () => {
     expect(listed(["fr-FR"])).toBe("fr-FR");
     expect(listed(["de-DE", "fr-FR"])).toBe("de-DE and fr-FR");
@@ -191,9 +195,7 @@ describe("list and date parameters", () => {
     const days = ["2024-01-01", "2024-06-30", "2024-12-31"].map((date) =>
       msg("date.long", { date }),
     );
-    expect(listed(capped(days))).toBe(
-      englishList(["January 1, 2024", "June 30, 2024", "December 31, 2024"]),
-    );
+    expect(listed(capped(days))).toBe("January 1, 2024; June 30, 2024; and December 31, 2024");
   });
 
   it("writes a value that is not a day as given", () => {

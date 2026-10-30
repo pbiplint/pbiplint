@@ -1218,7 +1218,7 @@ describe("the period, translation, and function rules' messages (#98)", () => {
       const model = modelFrom(
         "table 'Time Calc'\n\tcalculationGroup\n\t\tcalculationItem 'This Year' = CALCULATE(SELECTEDMEASURE(), 'Date'[Year] = 2025)\n\tcolumn Name\n\t\tdataType: string\n",
       );
-      const own = msg("HARDCODED_PERIOD_IN_DAX.fixed", {
+      const fixed = msg("HARDCODED_PERIOD_IN_DAX.fixed", {
         kind: "year",
         count: 1,
         periods: ["2025"],
@@ -1227,11 +1227,11 @@ describe("the period, translation, and function rules' messages (#98)", () => {
         [
           "HARDCODED_PERIOD_IN_DAX.inContext",
           "fixed year 2025 in calculation group 'Time Calc'",
-          { own, context: msg("context.calculationGroup", { table: "'Time Calc'" }) },
+          { fixed, context: msg("context.calculationGroup", { table: "'Time Calc'" }) },
         ],
       ]);
       expect(fixedIn(`CALCULATE([Total], 'Sales'[Year] = 2025)`)).toEqual([
-        ["HARDCODED_PERIOD_IN_DAX.fixed", "fixed year 2025", own.params],
+        ["HARDCODED_PERIOD_IN_DAX.fixed", "fixed year 2025", fixed.params],
       ]);
     });
   });

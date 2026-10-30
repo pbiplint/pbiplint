@@ -109,12 +109,12 @@ function fixedFinding(
   const periods = found.map((f) => f.period);
   if (periods.length === 0 || periods.some((p) => namesYear(name, p.year))) return [];
   const where = lineAt(found[0]!.node, found[0]!.period.at);
-  const own = detail(periods);
+  const fixed = detail(periods);
   const { message: context, ...rest } = base;
   return [
     {
       ...rest,
-      message: context ? msg("HARDCODED_PERIOD_IN_DAX.inContext", { own, context }) : own,
+      message: context ? msg("HARDCODED_PERIOD_IN_DAX.inContext", { fixed, context }) : fixed,
       ...(where ? { location: where } : {}),
     },
   ];

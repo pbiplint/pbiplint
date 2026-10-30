@@ -57,7 +57,7 @@ export const EN = {
     "{count, plural, one {ends on a fixed date, {dates, list}} other {ends on fixed dates {dates, list}}}",
   "HARDCODED_PERIOD_IN_DAX.fixed":
     "fixed {count, plural, one {{kind, select, year {year} date {date} other {period}}} other {{kind, select, year {years} date {dates} other {periods}}}} {periods, list}",
-  "HARDCODED_PERIOD_IN_DAX.inContext": "{own} in {context}",
+  "HARDCODED_PERIOD_IN_DAX.inContext": "{fixed} in {context}",
   "HARDCODED_YEAR_IN_FILTER.fixedYears":
     "{count, plural, one {fixed year {years, list}} other {fixed years {years, list}}}",
   "HARDCODED_YEAR_IN_FILTER.onField": "{kept} on {field}",

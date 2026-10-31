@@ -59,7 +59,7 @@ do not trust, which puts attacker-controlled TMDL in front of the parser.
   vendor.
 - Development dependencies that never ship. The `pbiplint` CLI ships one bundled file and has no
   runtime dependencies. `@pbiplint/core` has one, Microsoft's Power Query parser
-  (`@microsoft/powerquery-parser`), pinned at exactly 2.0.0; the parser's own two dependencies,
+  (`@microsoft/powerquery-parser`), pinned at exactly 4.0.1; the parser's own two dependencies,
   `grapheme-splitter` and `performance-now`, use caret ranges, so npm can install a later 1.x or 2.x
   of either, and the parser declares Node.js 22 or later, so npm warns on Node.js 20. A
   vulnerability in the parser that pbiplint's use of it reaches is in scope.

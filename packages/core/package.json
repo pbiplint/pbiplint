@@ -51,6 +51,6 @@
     "node": "^20.19.0 || >=22.12.0"
   },
   "dependencies": {
-    "@microsoft/powerquery-parser": "2.0.0"
+    "@microsoft/powerquery-parser": "4.0.1"
   }
 }

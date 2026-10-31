@@ -1,6 +1,6 @@
 # A colour contrast rule for report text (#182): spec
 
-Issue: [#182](https://github.com/pbiplint/pbiplint/issues/182), size L. Written October 30, 2026, from main at `9656dce`. **Status: for review, not yet approved.** Decisions the maintainer has made are marked **(decided)**; calls made in writing the spec are marked **(design call)**; anything marked **(builder)** is left to whoever plans and builds it.
+Issue: [#182](https://github.com/pbiplint/pbiplint/issues/182), size L. Written October 30, 2026, from main at `9656dce`. **Status: approved October 31, 2026.** Decisions the maintainer has made are marked **(decided)**; calls made in writing the spec are marked **(design call)**; anything marked **(builder)** is left to whoever plans and builds it.
 
 Research behind it (October 30, 2026): a read of the codebase, a read of Microsoft's report and theme documentation and schemas, and a survey of 387 real PBIR reports in 259 public GitHub repositories (counts only; no copies kept).
 

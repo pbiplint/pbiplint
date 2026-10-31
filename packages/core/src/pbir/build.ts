@@ -13,6 +13,7 @@ import {
   schemaFamilyOf,
 } from "./json.js";
 import { collectFieldRefs } from "./refs.js";
+import { isThemeFile, readThemes } from "./themes.js";
 import type {
   Bookmark,
   DatasetReference,
@@ -512,6 +513,7 @@ export function buildReport(
   unreadPaths: readonly string[] = [],
 ): { report: Report; diagnostics: Diagnostic[] } {
   const report: Report = {
+    themes: {},
     publicCustomVisuals: [],
     filtersPane: {},
     filters: [],
@@ -532,6 +534,8 @@ export function buildReport(
   };
   const diagnostics: Diagnostic[] = [];
   const reportedFamilies = new Set<string>();
+  const themeFiles = new Map<string, LintFile>();
+  let reportJson: unknown;
   const pagesByFolder = new Map<string, Page>();
   const visuals: {
     pageId: string;
@@ -594,6 +598,11 @@ export function buildReport(
       continue;
     }
     report.files.push(f.path);
+    // Parsed after the loop, and only if report.json names it.
+    if (isThemeFile(f.path)) {
+      themeFiles.set(f.path, f);
+      continue;
+    }
     // Unread until it parses to an object below, so a file that fails on the way is not taken
     // for one that defines no measures.
     if (f.path === "definition/reportExtensions.json") report.extensions = "unread";
@@ -633,6 +642,7 @@ export function buildReport(
         report.displayName = str(json.metadata.displayName);
     } else if (f.path === "definition/report.json") {
       readReportJson(report, f.path, f.text, json, version);
+      reportJson = json;
     } else if (f.path === "definition/pages/pages.json") {
       report.pagesHeader = {
         file: f.path,
@@ -723,6 +733,7 @@ export function buildReport(
         });
     }
   }
+  report.themes = readThemes(reportJson, themeFiles, report.issues);
   for (const v of visuals) {
     let page = pagesByFolder.get(v.pageId);
     if (!page) {

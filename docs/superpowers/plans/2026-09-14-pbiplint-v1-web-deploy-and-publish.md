@@ -20,7 +20,7 @@
 - Tabular Editor is never required by users, by the CLI, or by CI. Task 1 uses it as a development-time oracle only; `te` 0.5.2 at `~/.local/bin/te` expires 2026-09-30, so do Task 1 first.
 - Rule pages are pbiplint's own prose: no ruleset text, no Tabular Editor C#. The generator only renders them; it never rewrites them.
 - No em dashes anywhere in the repo (code, HTML copy, comments, docs, commit messages). Commit messages are imperative and end with the attribution trailers Claude Code provides.
-- Do not create or edit files under OneDrive. Brand assets are copied from `~/Downloads/pbip-lint-spike/branding/`.
+- Do not edit the maintainer's own copy of any source. Brand assets are copied from the maintainer's research folder (`branding/`).
 - `gh` global account stays `michaelmckinleyconsulting`. Commands that need org rights run with `GH_TOKEN="$(gh auth token --user TheDataPractitioner)"` in front of the one command, never `gh auth switch`.
 - Product naming avoids Microsoft trademarks; "for Power BI projects" in descriptive text is fine.
 
@@ -60,7 +60,7 @@ Task 2 adds `skippedLine(result)` and `topGroups(result, n = 5)` to the exports 
 
 **npm facts:** `pbiplint`, `@pbiplint/core`, and `pbip-lint` are all unclaimed. No npm login exists on this Mac (`npm whoami` fails) and the `pbiplint` npm org does not exist. Trusted publishing (OIDC from GitHub Actions, no long-lived token, provenance attached automatically) is configured per package on npmjs.com and needs npm 11.5.1 or later in the workflow; it can only be configured on a package that already exists, so the first publish of each package is done by Michael by hand (Task 14) and every later version publishes from the tag workflow.
 
-**Brand:** dark theme is canonical. Canvas `#0A0E1A`, surfaces `#11172A` / `#18203A` / `#1F2A4A`, inset `#070A14`, text `#E6EDF6` / `#A9B4C7` / `#6B7894`, blue `#2D7DD2` (soft `#4F9DE8`), teal `#00A9A5` (soft `#3FC7C3`), warning `#F0B429`, danger `#E5484D`. Font Inter. The mark is `~/Downloads/pbip-lint-spike/branding/pbiplint-mark-only.svg` (800x800, navy square, teal ring, blue chevron, teal check).
+**Brand:** dark theme is canonical. Canvas `#0A0E1A`, surfaces `#11172A` / `#18203A` / `#1F2A4A`, inset `#070A14`, text `#E6EDF6` / `#A9B4C7` / `#6B7894`, blue `#2D7DD2` (soft `#4F9DE8`), teal `#00A9A5` (soft `#3FC7C3`), warning `#F0B429`, danger `#E5484D`. Font Inter. The mark is `branding/pbiplint-mark-only.svg` in the maintainer's research folder (800x800, navy square, teal ring, blue chevron, teal check).
 
 ## File structure
 
@@ -169,7 +169,7 @@ Edit `$S/zoo.SemanticModel/definition/tables/Customer.tmdl` so the first three c
 - [ ] **Step 2: Ask both tools which columns have no description**
 
 ```bash
-te bpa run "$S/zoo.SemanticModel/definition" -r ~/Downloads/pbip-lint-spike/ref/BPARules.json --no-defaults --no-model-rules --output-format json > "$S/te.json"
+te bpa run "$S/zoo.SemanticModel/definition" -r <research-folder>/ref/BPARules.json --no-defaults --no-model-rules --output-format json > "$S/te.json"
 node -e 'const r=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")).results.filter(x=>x.ruleId==="OBJECTS_WITH_NO_DESCRIPTION"&&/Customer/.test(x.objectName)).map(x=>x.objectName);console.log(r)' "$S/te.json"
 npm run build -w pbiplint >/dev/null
 node packages/cli/dist/pbiplint.mjs "$S/zoo.SemanticModel" --format json | node -e 'const d=JSON.parse(require("fs").readFileSync(0,"utf8"));const g=d.groups.find(g=>g.rule.id==="OBJECTS_WITH_NO_DESCRIPTION");console.log(g?g.findings.map(f=>f.objectName).filter(n=>/Customer/.test(n)):[])'
@@ -1167,7 +1167,7 @@ Allow: /
 Sitemap: https://pbiplint.com/sitemap.xml
 ```
 
-`packages/web/public/favicon.svg`: copy `~/Downloads/pbip-lint-spike/branding/pbiplint-mark-only.svg` verbatim (`cp`, not a rewrite).
+`packages/web/public/favicon.svg`: copy `<research-folder>/branding/pbiplint-mark-only.svg` verbatim (`cp`, not a rewrite).
 
 `packages/web/public/schema/pbiplint.config.schema.json`:
 

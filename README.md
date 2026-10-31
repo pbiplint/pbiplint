@@ -156,18 +156,18 @@ page.json or visual.json. Desktop keeps it, and its value is a list of ids or `*
 
 ## What it checks
 
-Every rule from Microsoft's Best Practice Analyzer ruleset, ported so the results match Tabular Editor on the same model, with twelve documented deviations where the source is noisier, or quieter, than it means to be; and pbiplint's own rules for a year or a date fixed in DAX, such as a measure filtered to 2025 or a date table that ends in 2026, for a DAX user-defined function that nothing calls, has a one-word name, or has no description, for a visible name that a translated culture gives no caption, and for a visible decimal column with no format string. Four of pbiplint's own model rules take their test from Tabular Editor's rules, from Tabular Editor 3's built-in set or the community's published rule files, and are checked against Tabular Editor on the same model. Five of the Microsoft rules need VertiPaq statistics and are listed but not run. A column whose TMDL names no type, as Power BI Desktop saves most calculated columns, is left out of the thirteen ported rules that test a column's type, where Tabular Editor reads the type from the column's DAX. A TMDL line the parser cannot place gets a `PARSE_ISSUE` error on that line rather than being dropped silently; that includes a declaration its object does not hold, such as a misspelt `columm` under a table or a hierarchy's `level` that lost its tab. Each rule has a page at https://pbiplint.com/rules (source under `rules/`) with what it checks, an example that fires it and the same example fixed, why it matters, how to fix it, when ignoring it is legitimate, known quirks, and related rules.
+Every rule from Microsoft's Best Practice Analyzer ruleset, each rebuilt in pbiplint and checked against Tabular Editor's findings on the same model, with twelve documented differences, each explained on its rule's page; and pbiplint's own rules for a year or a date fixed in DAX, such as a measure filtered to 2025 or a date table that ends in 2026, for a DAX user-defined function that nothing calls, has a one-word name, or has no description, for a visible name that a translated culture gives no caption, and for a visible decimal column with no format string. Four of pbiplint's own model rules take their test from Tabular Editor's rules, from Tabular Editor 3's built-in set or the community's published rule files, and are checked against Tabular Editor on the same model. Five of the Microsoft rules need VertiPaq statistics and are listed but not run. A column whose TMDL names no type, as Power BI Desktop saves most calculated columns, is left out of the thirteen ported rules that test a column's type, where Tabular Editor reads the type from the column's DAX. A TMDL line the parser cannot place gets a `PARSE_ISSUE` error on that line rather than being dropped silently; that includes a declaration its object does not hold, such as a misspelt `columm` under a table or a hierarchy's `level` that lost its tab. Each rule has a page at https://pbiplint.com/rules (source under `rules/`) with what it checks, an example that fires it and the same example fixed, why it matters, how to fix it, when ignoring it is legitimate, known quirks, and related rules.
 
 The report layer: the 11 base rules of [PBI Inspector](https://github.com/NatVanG/fab-inspector)
-by Nat Van Gulck, ported so the results match its command line on the same report, with six
-documented deviations where the source is noisier, or quieter, than it means to be; and pbiplint's
-own rules for a report's correctness and readiness: fields the model does not have, model objects
-the report never reaches, a landing page not set, the opening page, the Filters pane, hidden
-visuals left with fields bound, default page names, empty visuals, visuals past the page edge,
-report-level measures, actions that point at a missing page or bookmark, bookmarks that refer to a
-missing page or visual, actions with no destination, tab order against layout, saved slicer
-selections and search terms, and Filters pane filters held to a fixed year, such as a page filtered
-to 2025. "Report at a glance" states what the report will do whether or not anything fired.
+by Nat Van Gulck, each rebuilt in pbiplint and checked against its command line's findings on the
+same report, with six documented differences, each explained on its rule's page; and pbiplint's own
+rules for a report's correctness and readiness: fields the model does not have, model objects the
+report never reaches, a landing page not set, the opening page, the Filters pane, hidden visuals
+left with fields bound, default page names, empty visuals, visuals past the page edge, report-level
+measures, actions that point at a missing page or bookmark, bookmarks that refer to a missing page
+or visual, actions with no destination, tab order against layout, saved slicer selections and search
+terms, and Filters pane filters held to a fixed year, such as a page filtered to 2025. "Report at a
+glance" states what the report will do whether or not anything fired.
 
 The Power Query layer: the M behind each table's partitions, the shared expressions, and incremental
 refresh policies, read with Microsoft's Power Query parser, and the file's Power Query options. 16

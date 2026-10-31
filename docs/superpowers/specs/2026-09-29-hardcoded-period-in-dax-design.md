@@ -5,7 +5,7 @@ Issue #104, milestone 0.2.1. Written September 29, 2026.
 ## 1. Sources and decisions
 
 - **The issue.** #104 holds the decided scope, recorded on September 27, 2026 after the research pass and Michael's rulings. This spec follows it and does not reopen it.
-- **The research.** `.superpowers/research/2026-09-27-hardcoded-periods/report.md` (in a local checkout; git-ignored), with the corpus, the prototype and its outputs in `~/Downloads/pbip-lint-spike/research-104/`. The prototype is `daxlex.py` (the tokenizer) and `analyze.py` (the forms). Where this spec says "as the research did", it means those two files.
+- **The research.** `.superpowers/research/2026-09-27-hardcoded-periods/report.md` (in a local checkout; git-ignored), with the corpus, the prototype and its outputs in the maintainer's research folder (`research-104/`). The prototype is `daxlex.py` (the tokenizer) and `analyze.py` (the forms). Where this spec says "as the research did", it means those two files.
 - **Decided on September 29, 2026** (Michael approved the design in chat before this spec was written):
   - A finding points at the line of the fixed period itself, not at the object's declaration line, which needs the parser to record where each expression's text starts (section 7).
   - One finding per object, whose detail lists the periods the object fixes.
@@ -204,7 +204,7 @@ After the page is written, `scripts/sync-rule-pages.mjs` regenerates the summary
 
 ## 10. The corpus check
 
-Before the pull request, a scratch script (in the session's scratchpad, not committed) runs the built core over every model in `~/Downloads/pbip-lint-spike/research-104/corpus/`, grouped as `corpus-manifest.tsv` groups them, and compares the rule's findings on the 970 Desktop models with the prototype's:
+Before the pull request, a scratch script (in a scratch folder, not committed) runs the built core over every model in the corpus (`research-104/corpus/` in the maintainer's research folder), grouped as `corpus-manifest.tsv` groups them, and compares the rule's findings on the 970 Desktop models with the prototype's:
 
 - **The prototype's side**, rebuilt from `findings.jsonl` with the decided scope: the forms of section 4 (`B_full_date` `DATE-literal` and `A_year_context` `DATE-year-arg` outside date table bounds and year-free `FORMAT`; `A_year_context` `compare`, `compare-reversed` and `compare-string-year` with `=`, `==`, or `<>`; `in-list` and `in-list-string`; `var-assign` with a year name; `D_date_table` `CALENDAR` with a literal end), in measures, calculated columns, calculation items, and calculated tables for the date table form, less objects named for their period by section 4.5.
 - **Expected**: 74 objects in 23 repositories (81 counting copies) besides the date tables, and the 38 fixed `CALENDAR` ends.

@@ -24,13 +24,12 @@ Every code block, test, count, and byte figure in this plan was run in a scratch
 
 ## Global Constraints
 
-- **Base branch:** `release/0.3.0`, never main. Branch `v3/parse-issue-masking`, already cut from `release/0.3.0` at 5fac3ab (pull request 6 merged). Work in the worktree `~/Projects/pbiplint/pbiplint/.claude/worktrees/v3-spec`, never in home (`~/Projects/pbiplint/pbiplint` itself).
+- **Base branch:** `release/0.3.0`, never main. Branch `v3/parse-issue-masking`, already cut from `release/0.3.0` at 5fac3ab (pull request 6 merged). Work in a worktree, never in the main checkout.
 - **Secret hygiene:** never print or write any made-up or real secret value outside the fixture and test files that must hold it: not in `progress.md`, commit messages, the pull request, logs, or a scratch file. Refer to values by name (FIXTURE_KEY, FIXTURE_TOKEN). The corpus diff is piped straight into its summary `grep`, never saved, since the base core's details quote corpus lines unmasked.
 - **The secret guard (spec 11.3):** no output may carry any part of a made-up value: not the value, a prefix, a suffix, its length, or a hash of it. `leaks` from `tests/support/fake-secrets.ts` is the test, unchanged.
 - **No em dashes anywhere** (code, comments, docs, rule pages, commit messages; a hook blocks them and `rule-pages.test.ts` checks pages for U+2014). Restructure with a comma, colon, parentheses, or two sentences.
 - **Long-form dates in prose** ("October 13, 2026"), never `2026-10-13`, except in file names and front matter.
 - **Capitalized bullets** in every list this plan writes.
-- **Never name or cite any competing Power Query linter or its author**, in code, pages, commits, or the pull request.
 - **Fixtures and tests are sanitized:** `example.com` or `*.example` hosts, no real names or servers.
 - **Core stays browser-pure:** no Node built-in, no `process.`, no network API in `packages/core/src`.
 - **The core budget is 230 KB** (`packages/core/scripts/check-browser-bundle.mjs`). It stands at 228.1 KB; this plan adds 0.4 KB (see "The budget"). If a measurement crosses 228.8 KB, or a projection 230.0 KB, stop, do not commit, and report the breakdown to pb-coord. Nothing here raises the budget or trims other code.
@@ -42,12 +41,12 @@ Every code block, test, count, and byte figure in this plan was run in a scratch
 - **Subagents** run on Opus 5.5 and share the worktree, so one edits files at a time.
 - **Folder inputs in e2e** go through `setFolder` from `packages/web/e2e/folder-input.ts`, never `setInputFiles` on a directory.
 - **Command rules** (pb-coord, October 13, 2026). These are hard rules:
-  - Scratch space only under `/Users/michaelmckinley/.claude/jobs/cb7c83fd/tmp` (the executing session's `$CLAUDE_JOB_DIR/tmp`), never `/tmp`.
-  - For any experiment, make a fresh folder with `mktemp -d /Users/michaelmckinley/.claude/jobs/cb7c83fd/tmp/pr7.XXXX` and work by its printed literal path. Never `rm -rf` or `rm -r` with a glob or a variable path.
+  - Scratch space only in a scratch folder (`$CLAUDE_JOB_DIR/tmp`), never `/tmp`.
+  - For any experiment, make a fresh folder with `mktemp -d <scratch-folder>/pr7.XXXX` and work by its printed literal path. Never `rm -rf` or `rm -r` with a glob or a variable path.
   - No `sudo`, no deleting outside the worktree or that job folder, no `git clean`, `git reset --hard`, `git checkout -- .`, `git stash`, or any push (the Finish section's push is pb-coord's).
   - If a command might ask for permission, rewrite it so it cannot. Never wait on a prompt.
 - **The plan's workspace** is `.superpowers/sdd/2026-10-13-v3-parse-issue-masking/` (git-ignored; `.superpowers` links into home's copy, so scripts there import the worktree's code by `process.cwd()`). Pull request 6's `bytes.mjs` and the reader plan's `corpus-diff.mts` are reused from their folders.
-- **The corpus** (`~/Projects/pbiplint/assets/pbip-lint-spike/research-104`) is not pbiplint's: the pull request carries counts only.
+- **The corpus** (in the maintainer's research folder) is not pbiplint's: the pull request carries counts only.
 
 ## The budget
 
@@ -90,7 +89,6 @@ That leaves 1.5 KB of the 230 KB. The breakdown, if a stop needs one: `node .sup
 ## Before Task 1
 
 ```bash
-cd ~/Projects/pbiplint/pbiplint/.claude/worktrees/v3-spec
 git fetch origin
 git switch v3/parse-issue-masking
 git status --short          # expected: only this plan, untracked
@@ -619,7 +617,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - [ ] **Step 1: Unpack the base core**
 
 ```bash
-mktemp -d /Users/michaelmckinley/.claude/jobs/cb7c83fd/tmp/pr7.XXXX
+mktemp -d <scratch-folder>/pr7.XXXX
 ```
 
 It prints a path; call it `<base>` and type it out literally in each command. Then:
@@ -635,7 +633,7 @@ ln -s "$PWD/packages/core/node_modules" <base>/packages/core/node_modules
 Its examples quote the base core's unmasked details, so its output goes straight into `grep` and is never saved:
 
 ```bash
-npx tsx .superpowers/sdd/2026-10-13-v3-reader/corpus-diff.mts <base> ~/Projects/pbiplint/assets/pbip-lint-spike/research-104 2>&1 | grep -E "models linted|^[+-][0-9]|ERROR|no finding"
+npx tsx .superpowers/sdd/2026-10-13-v3-reader/corpus-diff.mts <base> <research-folder>/research-104 2>&1 | grep -E "models linted|^[+-][0-9]|ERROR|no finding"
 ```
 
 Expected, as the scratch run printed it:
@@ -739,7 +737,7 @@ console.log(`details changed: ${[...changed].map(([r, n]) => `${r} ${n}`).join("
 Run it:
 
 ```bash
-npx tsx .superpowers/sdd/2026-10-13-v3-parse-issue-masking/detail-diff.mts <base> ~/Projects/pbiplint/assets/pbip-lint-spike/research-104
+npx tsx .superpowers/sdd/2026-10-13-v3-parse-issue-masking/detail-diff.mts <base> <research-folder>/research-104
 ```
 
 Expected, in about a minute and a quarter, as the scratch run printed it:

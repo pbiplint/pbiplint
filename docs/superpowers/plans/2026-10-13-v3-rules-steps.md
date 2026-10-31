@@ -29,7 +29,7 @@ Every code block, page, and count in this plan was run in a scratch copy of the 
 
 ## Global Constraints
 
-- **Base branch:** `release/0.3.0`, never main. Branch `v3/rules-steps`, already cut from `release/0.3.0` at 267a1b4 (pull request 4 merged). Work in the worktree `~/Projects/pbiplint/pbiplint/.claude/worktrees/v3-spec`, never in home (`~/Projects/pbiplint/pbiplint` itself).
+- **Base branch:** `release/0.3.0`, never main. Branch `v3/rules-steps`, already cut from `release/0.3.0` at 267a1b4 (pull request 4 merged). Work in a worktree, never in the main checkout.
 - **The five rules** (spec 9.1): status `builtin` through `pbiplintRule`; layer `powerquery` (so `needs: ["model"]`); scope `["Partition", "NamedExpression", "Table"]`. Severity and category: `SORT_NOT_HELD_FOR_REMOVE_DUPLICATES` warning (2), Error Prevention; `KEEP_FIRST_ROWS_LEFT_IN` warning (2), Error Prevention; `INCREMENTAL_REFRESH_RANGE_BOUNDS` **error (3)**, Error Prevention (spec 9.4); `FIXED_DATE_IN_ROW_FILTER` info (1), Maintenance; `DEFAULT_STEP_NAMES` info (1), Maintenance.
 - **Names, verbatim:** "Sort may not decide which duplicate is kept", "Keep First Rows left in a loaded query", "Incremental refresh filter counts a boundary row twice or never", "Fixed date in a row filter", "Steps keep Power Query's default names".
 - **One finding per occurrence** through `mFinding(m, q, node, what)` (`packages/core/src/rules/m-helpers.ts`), except `DEFAULT_STEP_NAMES`, once per query (spec 9.1), and `INCREMENTAL_REFRESH_RANGE_BOUNDS`, once per query by its nature.
@@ -38,7 +38,6 @@ Every code block, page, and count in this plan was run in a scratch copy of the 
 - **Long-form dates in prose** ("October 13, 2026"), never `2026-10-13`, except in file names and front matter.
 - **Capitalized bullets** in every list this plan writes.
 - **Rule pages** are pbiplint's own prose, from the template (`CONTRIBUTING.md`, "Rule pages"). The fix route starts in Power BI Desktop's Power Query editor (Transform data, the query, the step in Applied steps), then the TMDL file. No third-party tool is required, never Tabular Editor for the fix, and no Tabular Editor C#. Every quote is linked to its source page, at the section anchor when there is one (each quote and anchor in this plan's pages was checked against the live page on October 13, 2026). Each page's `tmdl fires` and `tmdl fixed` examples must parse and fire (`rule-pages.test.ts`). Related rules links go both ways where this plan adds them.
-- **Never name or cite any competing Power Query linter or its author**, in code, pages, commits, or the pull request.
 - **Fixtures and tests are sanitized:** `example.com` or `*.example` hosts, the `C:\Demo\Data\` convention for paths, no real names or servers. Fake secrets, where a test needs one, use the `pbiplint-fixture-<kind>-<nnnn>-notreal` form, which matches no real provider's format. This plan adds none.
 - **Core stays browser-pure:** no Node built-in, no `process.`, no network API in `packages/core/src`.
 - **The core budget is 230 KB** (`packages/core/scripts/check-browser-bundle.mjs`, spec 3.4 as amended in pull request 4). Every rule task runs `npm run check:browser` and writes its line into `progress.md`. If the core's own code crosses 230 KB, the task stops and reports to pb-coord; nothing here changes the budget. The scratch run measured 211.8 KB before and 219.6 KB after all five rules.
@@ -49,13 +48,13 @@ Every code block, page, and count in this plan was run in a scratch copy of the 
 - **Commits:** one or more per task. Each message ends with `Part of #78.`, a blank line, and `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Never write a closing keyword next to an issue number.
 - **Subagents** run on Opus 5.5 and share the worktree, so one edits files at a time.
 - **Command rules** (pb-coord, October 13, 2026; a previous plan writer stalled for hours on a permission prompt). These are hard rules:
-  - Scratch space only under the executing session's job folder, `$CLAUDE_JOB_DIR/tmp` (for this plan's writer, `/Users/michaelmckinley/.claude/jobs/cb7c83fd/tmp`). Never use `/tmp`.
+  - Scratch space only in a scratch folder, `$CLAUDE_JOB_DIR/tmp`. Never use `/tmp`.
   - For any experiment, make a fresh folder with `mktemp -d "$CLAUDE_JOB_DIR/tmp/pr5.XXXX"` and work inside it by its printed literal path (shell variables do not survive between tool calls). Never run `rm -rf` or `rm -r` with a glob or a variable path; never `cd` somewhere and delete with `*`. Leaving scratch folders behind is fine.
   - No `sudo`, no deleting outside the worktree or that job folder, no `git clean`, `git reset --hard`, `git checkout -- .`, `git stash`, or any push (the Finish section's one push is pb-coord's, after review).
   - If a command might ask for permission, rewrite it so it cannot. Never wait on a prompt.
 - **The plan's workspace** is `.superpowers/sdd/2026-10-13-v3-rules-steps/` (git-ignored; `.superpowers` is a symlink into home's copy, so scripts there import the worktree's code by `process.cwd()`, never by a relative path). The reader plan's `corpus-diff.mts` is reused from `.superpowers/sdd/2026-10-13-v3-reader/`, and pull request 4's `rule-counts.mts` from `.superpowers/sdd/2026-10-13-v3-rules-calls/`.
 - **Folder inputs in e2e** go through `setFolder` from `packages/web/e2e/folder-input.ts`, never `setInputFiles` on a directory. This plan's browser checks use the sample button and need none.
-- **The corpus** (`~/Projects/pbiplint/assets/pbip-lint-spike/research-104`) is not pbiplint's: the pull request carries counts only, never a corpus path, line, or value.
+- **The corpus** (in the maintainer's research folder) is not pbiplint's: the pull request carries counts only, never a corpus path, line, or value.
 
 ## Review Focus
 
@@ -92,7 +91,6 @@ Every code block, page, and count in this plan was run in a scratch copy of the 
 ## Before Task 1
 
 ```bash
-cd ~/Projects/pbiplint/pbiplint/.claude/worktrees/v3-spec
 git fetch origin
 git switch v3/rules-steps
 git status --short          # expected: only this plan, untracked
@@ -2442,7 +2440,7 @@ ln -s "$PWD/packages/core/node_modules" <base>/packages/core/node_modules
 - [ ] **Step 2: Run the corpus diff**
 
 ```bash
-npx tsx .superpowers/sdd/2026-10-13-v3-reader/corpus-diff.mts <base> ~/Projects/pbiplint/assets/pbip-lint-spike/research-104 > "$CLAUDE_JOB_DIR/tmp/pr5-corpus-diff.txt" 2>&1
+npx tsx .superpowers/sdd/2026-10-13-v3-reader/corpus-diff.mts <base> <research-folder>/research-104 > "$CLAUDE_JOB_DIR/tmp/pr5-corpus-diff.txt" 2>&1
 grep -E "models linted|^[+-][0-9]|ERROR" "$CLAUDE_JOB_DIR/tmp/pr5-corpus-diff.txt"
 ```
 
@@ -2465,7 +2463,7 @@ Create `.superpowers/sdd/2026-10-13-v3-rules-steps/rule-counts.mts` as a copy of
 
 ```bash
 sed -e 's/const RULES = \[/const RULES = ["SORT_NOT_HELD_FOR_REMOVE_DUPLICATES", "KEEP_FIRST_ROWS_LEFT_IN", "INCREMENTAL_REFRESH_RANGE_BOUNDS", "FIXED_DATE_IN_ROW_FILTER", "DEFAULT_STEP_NAMES", "ODBC_WHERE_CONNECTOR_EXISTS"]; const PR4_RULES = [/' -e 's/s.examples.length < 5 || s.n % 50 === 0/s.examples.length < 60 || s.n % 200 === 0/' -e 's/The five rules of pull request 4/The rules of pull request 5/' .superpowers/sdd/2026-10-13-v3-rules-calls/rule-counts.mts > .superpowers/sdd/2026-10-13-v3-rules-steps/rule-counts.mts
-npx tsx .superpowers/sdd/2026-10-13-v3-rules-steps/rule-counts.mts ~/Projects/pbiplint/assets/pbip-lint-spike/research-104 > "$CLAUDE_JOB_DIR/tmp/pr5-rule-counts.txt" 2>&1
+npx tsx .superpowers/sdd/2026-10-13-v3-rules-steps/rule-counts.mts <research-folder>/research-104 > "$CLAUDE_JOB_DIR/tmp/pr5-rule-counts.txt" 2>&1
 grep -E "^[A-Z_]+:" "$CLAUDE_JOB_DIR/tmp/pr5-rule-counts.txt"
 ```
 

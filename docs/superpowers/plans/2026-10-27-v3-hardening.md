@@ -16,9 +16,9 @@ Every measurement below was taken on October 27, 2026 on Michael's Mac (Node 26.
 
 ### Item 1: the M work budget
 
-- **The parser's cancellation support, checked.** `Settings.cancellationToken` takes an `ICancellationToken` (`isCancelled`, `throwIfCancelled`, `cancel`), which the lexer and the parser both poll. The package ships `CounterCancellationToken` (cancels after N `isCancelled` calls; its own comment calls it "not really useful other than as an example") and `TimedCancellationToken` (wall clock, ruled out by the item). **A counter cannot bound the quadratic shapes:** the parser polls about 4.5 times per token whatever the shape, so the count is linear while the time is quadratic. A `1+1+...` chain of 40,000 terms makes 359,999 checks and takes 9.3 s; the corpus's largest query makes 1,105,431 checks and takes 0.44 s. Any count that admits the corpus admits a chain that runs for minutes.
-- **The synchronous lexer cannot be the guard either.** `TaskUtils.tryLex` is itself quadratic in the tokens on one line: 1,600,000 one-line tokens of `1+1+...` take 49.5 s to lex, 400,000 commas on one line 12.5 s. So the budget is pbiplint's own scan, one regular-expression pass over the text, before the lexer runs.
-- **What the parser does with each shape** (at the budget's unit, below; µs per unit at about 2,000,000 units): `1+1+...` 1.14, a 40,000-item list 1.14, 40,000 `let` steps 1.18, a generated `#table` 1.33, 25 lists of 1,000 `+` terms 1.29, 128 nested parentheses around a chain 1.20, 148,000 `else if` 0.97, a literal of 1,450,000 lines 0.33. Three shapes need terms of their own: **nesting** (an unclosed `(` costs memory by the square of its depth: 800 take 524 MB and 4,000 abort the process out of memory; 400 unclosed `{` overflow the parser's stack), **lines** (a literal of 2,000,000 lines parses in 1.0 s; one of 8,000,000 did not finish in 120 s), and **characters on the error path** (a parse error on a long line costs about 0.6 µs a character, linear: 4,000,000 characters 2.4 s, 16,000,000 9.6 s).
+- **The parser's cancellation support, checked.** `Settings.cancellationToken` takes an `ICancellationToken` (`isCancelled`, `throwIfCancelled`, `cancel`), which the lexer and the parser both poll. The package ships `CounterCancellationToken` (cancels after N `isCancelled` calls) and `TimedCancellationToken` (wall clock, ruled out by the item). **A counter cannot bound the quadratic shapes:** the parser polls about 4.5 times per token whatever the shape, so the count is linear while the time is quadratic. Any count that admits the corpus's largest query admits a crafted expression that takes far longer.
+- **The synchronous lexer cannot be the guard either.** Its time also grows faster than the number of tokens on one line. So the budget is pbiplint's own scan, one regular-expression pass over the text, before the lexer runs.
+- **What the parser does with each shape,** measured per unit of the budget below: the shapes tried cost about a microsecond a unit. Three need terms of their own: **nesting** (memory grows with the square of the depth, and deep enough nesting exhausts the parser's stack), **lines** (a literal of millions of lines), and **characters on the error path** (a parse error on a long line costs time in proportion to its length).
 - **The unit**, counted by `mWork` in one pass, with M's line breaks (`\n`, U+2028, U+2029) and comments read as the lexer reads them:
 
   `units = 2 × tokens + lines + ⌊characters / 8⌋ + ⌊Σ chain² / 256⌋ + ⌊Σ commas² / 1,024⌋ + ⌊Σ tokensOnLine² / 16,384⌋`
@@ -26,7 +26,7 @@ Every measurement below was taken on October 27, 2026 on Michael's Mac (Node 26.
   A chain is the operators between two commas or brackets in one bracket level (`+ - * / & = < > ?`, `and or not as is meta`); commas are counted per bracket level; a comment is no token. `depth` is the deepest bracket nesting.
 - **The budget:** a query is parsed when its `units` are at most **2,000,000**, its `depth` at most **128**, and the model's parsed M so far plus its `units` at most **4,000,000**. A query over its own limit does not use up the model's.
 - **Measured in the budget's own unit** over the corpus (1,321 models, 10,005 queries, read by `readM`): the largest query is **847,457 units** (2.4 times under the query budget), the largest model's M **1,158,354 units** in 8 queries (3.5 times under the model budget), the deepest nesting **15** (8.5 times under). The slowest model parses in 642 ms in all. The big model of spec 11.5 (`scripts/make-big-model.mjs`) is **1,328,152 units** in 8 queries, the largest 166,019 (3.0 times under).
-- **What it stops:** the review's 80,000-term chain (160 KB, 37.6 s) is 26,901,853 units and is reported in milliseconds without reaching the lexer. Just under the budget the slowest shapes parse in about 2.6 s per query and 5.3 s per model on the Mac (about 3 times that on CI's Node 22, and 1.75 times more on Node 20, spec 11.5), holding up to about 320 bytes of tree per unit (about 1.3 GB at the model budget for the worst shape, `else if` chains; a generated table holds 168). The error-path term is linear: at the query budget a 16,000,000-character line takes about 10 s on the Mac. **For pb-coord** (below): these are the costs the budget still allows.
+- **What it stops:** a query far over the budget is reported in milliseconds without reaching the lexer. Just under the budget, the slowest shapes still take a few seconds per query on a laptop, longer on slower runners, and hold more memory than a typical model; "The budget's costs" below says what halving the budgets would change.
 - **A query over budget is a `PARSE_ISSUE`, not a notice.** Michael decided on October 12, 2026 that M that cannot be read is a `PARSE_ISSUE` (spec 1 and 7), and a query over budget is M pbiplint did not read: no rule reads it, and the finding is how the user hears of that. It is an error, so a gated run fails closed: a crafted query cannot hide a secret or a dynamic source from the M rules by being large and still pass. The notices (`Diagnostic`) belong to the input reader and change no exit code. The finding sits at the query's first line and column, with the reason `M is too large or complex to read (over pbiplint's limit for one query)` or `M is too large or complex to read (over pbiplint's limit for one model's M)` and the first line masked and cut as every M issue's line is.
 - **Corpus diff:** zero changes expected.
 
@@ -74,11 +74,10 @@ The base is 235,654 bytes (230.1 KB) against `OWN_LIMIT_KB = 240` (245,760 bytes
 
 ## Global Constraints
 
-- **Base branch:** `release/0.3.0`, never main. Branch `v3/hardening`, from `release/0.3.0` at 23de9e3 (pull requests 1 to 8). Work in the worktree `~/Projects/pbiplint/pbiplint/.claude/worktrees/v3-spec`, never in home (`~/Projects/pbiplint/pbiplint` itself); the one file outside the worktree a task edits is the local release notes draft (Task 5), which the worktree reaches through its `.superpowers` link.
+- **Base branch:** `release/0.3.0`, never main. Branch `v3/hardening`, from `release/0.3.0` at 23de9e3 (pull requests 1 to 8). Work in a worktree, never in the main checkout; the one file outside the worktree a task edits is the local release notes draft (Task 5), which the worktree reaches through its `.superpowers` link.
 - **No em dashes anywhere** (code, comments, docs, pages, commit messages; `rule-pages.test.ts` checks pages for U+2014). Restructure with a comma, colon, parentheses, or two sentences.
 - **Long-form dates in prose** ("October 27, 2026"), except in file names and front matter. **Capitalized bullets** in every list.
-- **Item 9's wording:** in every text (code comments, tests, docs, the release notes, commits, the pull request), the change is an ordinary scope rule, "references are followed only inside the project folder". Never call it an exploit, an attack, or a vulnerability.
-- **Rule pages** are pbiplint's own prose. **Never name or cite any competing Power Query linter or its author**, in code, pages, commits, or the pull request.
+- **Rule pages** are pbiplint's own prose.
 - **Counts only from the corpus:** the pull request, the spec, and the release notes carry counts, never a corpus path, line, value, model or repository name, or vendor word.
 - **Secret hygiene:** never print a fake or real secret value. Fixture values are named here as `FIXTURE_PWD` (kind `pwd`, number `0009`) and `FIXTURE_COMMENT_KEY` (kind `key`, number `0010`), in m-zoo's form `pbiplint-fixture-<kind>-<nnnn>-notreal`; the executor writes them out only in the fixture files. Unit tests build their values with `fake(kind, n)` and numbers from `0201` up.
 - **Core stays browser-pure:** no Node built-in, no `process.`, no network API in `packages/core/src`. `realpathSync` lives in `packages/cli/src/walk.ts` only.
@@ -90,7 +89,7 @@ The base is 235,654 bytes (230.1 KB) against `OWN_LIMIT_KB = 240` (245,760 bytes
 - **Commits:** each message ends with `Part of #78.`, a blank line, and `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Never a closing keyword next to an issue number.
 - **Subagents** run on Opus 5.5 and share the worktree, so one edits files at a time.
 - **Command rules** (pb-coord, October 27, 2026; hard rules):
-  - Scratch only under the executing session's job folder, `$CLAUDE_JOB_DIR/tmp` (for this plan's writer, `/Users/michaelmckinley/.claude/jobs/cb7c83fd/tmp`). Never `/tmp`.
+  - Scratch only in a scratch folder, `$CLAUDE_JOB_DIR/tmp`. Never `/tmp`.
   - Every experiment in a fresh folder from `mktemp -d "$CLAUDE_JOB_DIR/tmp/pr9.XXXX"`, used by its printed literal path (shell variables do not survive between tool calls). Leaving scratch folders behind is fine.
   - Never `rm -rf` or `rm -r` with a glob or a variable path; never `cd` somewhere and delete with `*`.
   - No `sudo`, no `git clean`, `git reset --hard`, `git checkout -- .`, `git stash`, or any push (the Finish section's push is pb-coord's).
@@ -98,7 +97,7 @@ The base is 235,654 bytes (230.1 KB) against `OWN_LIMIT_KB = 240` (245,760 bytes
   - Any proof of concept that can take minutes or gigabytes runs under a hard time limit: `node .superpowers/sdd/2026-10-27-v3-hardening/timed.mjs <ms> <command> ...` (Before Task 1), a Node child process with a kill timer. `timeout` is not installed on this Mac.
   - `gh-pb` for GitHub calls, never `gh auth switch`.
 - **The plan's workspace** is `.superpowers/sdd/2026-10-27-v3-hardening/` (git-ignored; `.superpowers` links into home's copy, so scripts import the worktree's code by `process.cwd()`). Reused: `bytes.mjs` from `.superpowers/sdd/2026-10-13-v3-rules-resolver/`, and the reader plan's `corpus-diff.mts` from `.superpowers/sdd/2026-10-13-v3-reader/`.
-- **The corpus** (`~/Projects/pbiplint/assets/pbip-lint-spike/research-104`) is not pbiplint's.
+- **The corpus** (in the maintainer's research folder) is not pbiplint's.
 
 ## Review Focus
 
@@ -132,14 +131,13 @@ The base is 235,654 bytes (230.1 KB) against `OWN_LIMIT_KB = 240` (245,760 bytes
 | `packages/web/content/privacy.md`, `packages/web/content/cli.md` | 5 | "inside the project folder" |
 | `SECURITY.md` | 1 | Dependencies and limits |
 | The v3 spec, sections 7, 8, 11.5 | 1 to 4 | Dated amendments |
-| `~/Projects/pbiplint/pbiplint/.superpowers/sdd/2026-10-13-release-0.3.0/release-notes.md` (local, not committed) | 5 | One line |
+| `.superpowers/sdd/2026-10-13-release-0.3.0/release-notes.md` (local, not committed) | 5 | One line |
 
 ---
 
 ## Before Task 1
 
 ```bash
-cd ~/Projects/pbiplint/pbiplint/.claude/worktrees/v3-spec
 git switch v3/hardening
 git status --short          # expected: only this plan, untracked
 pb-worktree-setup
@@ -195,7 +193,7 @@ ln -s "$PWD/packages/core/node_modules" <base>/packages/core/node_modules
 Then run the diff once before any change (the branch is still the base), with its output kept, the form every task uses; it lints the corpus twice and takes minutes, never hours:
 
 ```bash
-npx --yes tsx .superpowers/sdd/2026-10-27-v3-hardening/corpus-diff.mts <base> ~/Projects/pbiplint/assets/pbip-lint-spike/research-104 > "$CLAUDE_JOB_DIR/tmp/pr9-corpus-diff-0.txt" 2>&1
+npx --yes tsx .superpowers/sdd/2026-10-27-v3-hardening/corpus-diff.mts <base> <research-folder>/research-104 > "$CLAUDE_JOB_DIR/tmp/pr9-corpus-diff-0.txt" 2>&1
 grep -E "models linted|^[+-][0-9]|ERROR|RULE ERRORS|rule errors:|no finding changed" "$CLAUDE_JOB_DIR/tmp/pr9-corpus-diff-0.txt"
 ```
 
@@ -386,13 +384,13 @@ In `SECURITY.md`:
 In the spec, section 7, after the last amendment, add:
 
 ```markdown
-Amended October 27, 2026 (pull request 9, from the pre-release security review): M is read within a work budget. Microsoft's parser is quadratic in some shapes (a chain of `+` or `&`, a long list, many `let` steps or call arguments, many tokens on one line), an unclosed `(` costs memory by the square of its depth, and its own cancellation token counts checks that grow linearly while the time grows quadratically, so it cannot bound them. Before the lexer runs, `mWork` (`packages/core/src/m/budget.ts`) counts a query's work from its text in one linear pass: 2 units a token, 1 a line, 1 per 8 characters, and the squares of each operator chain's length over 256, of each bracket's comma count over 1,024, and of each line's token count over 16,384; and the deepest bracket nesting. A query over 2,000,000 units or nested deeper than 128 brackets, or one that would take the model's parsed M past 4,000,000 units, is not parsed: it is a `PARSE_ISSUE` at its first line (`M is too large or complex to read (over pbiplint's limit for one query)`, or `for one model's M`), and no rule reads it. It is a finding rather than a notice for the reason M that does not parse is one (section 1): the user must hear that a query was not read, and a gated run fails closed. Measured on the corpus: the largest query is 847,457 units, the largest model's M 1,158,354 in 8 queries, the deepest nesting 15; the big model of section 11.5 is 1,328,152. Just under the budget, the slowest shapes parse in about 2.6 s per query on Michael's Mac. Corpus: no finding changes.
+Amended October 27, 2026 (pull request 9, from the pre-release security review): M is read within a work budget. Microsoft's parser is quadratic in some shapes (a chain of `+` or `&`, a long list, many `let` steps or call arguments, many tokens on one line), an unclosed `(` costs memory by the square of its depth, and its own cancellation token counts checks that grow linearly while the time grows quadratically, so it cannot bound them. Before the lexer runs, `mWork` (`packages/core/src/m/budget.ts`) counts a query's work from its text in one linear pass: 2 units a token, 1 a line, 1 per 8 characters, and the squares of each operator chain's length over 256, of each bracket's comma count over 1,024, and of each line's token count over 16,384; and the deepest bracket nesting. A query over 2,000,000 units or nested deeper than 128 brackets, or one that would take the model's parsed M past 4,000,000 units, is not parsed: it is a `PARSE_ISSUE` at its first line (`M is too large or complex to read (over pbiplint's limit for one query)`, or `for one model's M`), and no rule reads it. It is a finding rather than a notice for the reason M that does not parse is one (section 1): the user must hear that a query was not read, and a gated run fails closed. Measured on the corpus: the largest query is 847,457 units, the largest model's M 1,158,354 in 8 queries, the deepest nesting 15; the big model of section 11.5 is 1,328,152. Just under the budget, the slowest shapes still take a few seconds per query. Corpus: no finding changes.
 ```
 
 In section 11.5, after its last paragraph, add:
 
 ```markdown
-Amended October 27, 2026 (pull request 9): `packages/core/test/m-budget.test.ts` holds the budget to a chain of 80,000 terms (160 KB, 37.6 s in the parser alone), which must be reported within 5 s, as three times CI's time rounded up to the next 5 s; the big model must still be read whole.
+Amended October 27, 2026 (pull request 9): `packages/core/test/m-budget.test.ts` holds the budget to a chain of 80,000 terms (far over the budget), which must be reported within 5 s, as three times CI's time rounded up to the next 5 s; the big model must still be read whole.
 ```
 
 ```bash
@@ -407,7 +405,7 @@ Expected: `wrote 121 summaries ...`; PASS.
 ```bash
 npm run check:browser
 node .superpowers/sdd/2026-10-13-v3-rules-resolver/bytes.mjs "m/budget|m/read" 
-npx --yes tsx .superpowers/sdd/2026-10-27-v3-hardening/corpus-diff.mts <base> ~/Projects/pbiplint/assets/pbip-lint-spike/research-104 > "$CLAUDE_JOB_DIR/tmp/pr9-corpus-diff-1.txt" 2>&1
+npx --yes tsx .superpowers/sdd/2026-10-27-v3-hardening/corpus-diff.mts <base> <research-folder>/research-104 > "$CLAUDE_JOB_DIR/tmp/pr9-corpus-diff-1.txt" 2>&1
 grep -E "models linted|^[+-][0-9]|ERROR|RULE ERRORS|rule errors:|no finding changed" "$CLAUDE_JOB_DIR/tmp/pr9-corpus-diff-1.txt"
 ```
 
@@ -820,7 +818,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Modify: `packages/cli/src/walk.ts` (`resolvePbip`, `readNamed`, a new `insideProject`, their doc comments)
 - Modify: `packages/cli/test/walk.test.ts`
 - Modify: `packages/web/content/privacy.md`, `packages/web/content/cli.md`
-- Modify (local, not committed): `~/Projects/pbiplint/pbiplint/.superpowers/sdd/2026-10-13-release-0.3.0/release-notes.md`
+- Modify (local, not committed): `.superpowers/sdd/2026-10-13-release-0.3.0/release-notes.md`
 
 **Interfaces:**
 - Produces, in `walk.ts` (not exported):
@@ -936,7 +934,7 @@ In the release notes draft, "What can change in your results", after the `PARSE_
 - **The command line follows a reference only inside the project folder,** the folder that holds the `.pbip`. A report that a `.pbip` names, or a model that a report's `definition.pbir` names by path, outside that folder, directly or through a link, is no longer read: the run says so in a notice and lints the rest. A project laid out as Power BI Desktop saves it, with the model beside the report, is unchanged, and so is the site, which reads only the folder you drop.
 ```
 
-Check it: `perl -CSD -ne 'print "$.: $_" if /\x{2014}/' ~/Projects/pbiplint/pbiplint/.superpowers/sdd/2026-10-13-release-0.3.0/release-notes.md` prints nothing. The entry gets this pull request's number when pb-coord opens it; write `Task 5: release notes need PR 9's number on one entry` into `progress.md`.
+Check it: `perl -CSD -ne 'print "$.: $_" if /\x{2014}/' .superpowers/sdd/2026-10-13-release-0.3.0/release-notes.md` prints nothing. The entry gets this pull request's number when pb-coord opens it; write `Task 5: release notes need PR 9's number on one entry` into `progress.md`.
 
 - [ ] **Step 5: Commit**
 
@@ -965,7 +963,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - [ ] **Step 1: The corpus diff and the bundle**
 
 ```bash
-npx --yes tsx .superpowers/sdd/2026-10-27-v3-hardening/corpus-diff.mts <base> ~/Projects/pbiplint/assets/pbip-lint-spike/research-104 > "$CLAUDE_JOB_DIR/tmp/pr9-corpus-diff-6.txt" 2>&1
+npx --yes tsx .superpowers/sdd/2026-10-27-v3-hardening/corpus-diff.mts <base> <research-folder>/research-104 > "$CLAUDE_JOB_DIR/tmp/pr9-corpus-diff-6.txt" 2>&1
 grep -E "models linted|^[+-][0-9]|ERROR|RULE ERRORS|rule errors:" "$CLAUDE_JOB_DIR/tmp/pr9-corpus-diff-6.txt"
 node .superpowers/sdd/2026-10-13-v3-rules-resolver/bytes.mjs | tail -1
 ```
@@ -976,9 +974,9 @@ Expected: `1321 models linted`, `rule errors: 0 base, 0 head`, `+2 PARSE_ISSUE` 
 
 ```bash
 npm run build
-node .superpowers/sdd/2026-10-27-v3-hardening/timed.mjs 180000 node packages/cli/dist/pbiplint.mjs /Users/michaelmckinley/.claude/jobs/cb7c83fd/tmp/secreview.YgYt/poc-resolver-cubic.X7wx/chain3000 --format json
-node .superpowers/sdd/2026-10-27-v3-hardening/timed.mjs 180000 node packages/cli/dist/pbiplint.mjs /Users/michaelmckinley/.claude/jobs/cb7c83fd/tmp/secreview.YgYt/poc-parser-quadratic.IUjF/plus160k --format json
-node packages/cli/dist/pbiplint.mjs /Users/michaelmckinley/.claude/jobs/cb7c83fd/tmp/secreview.YgYt/poc-parser-quadratic.IUjF/plus160k --quiet
+node .superpowers/sdd/2026-10-27-v3-hardening/timed.mjs 180000 node packages/cli/dist/pbiplint.mjs <scratch-folder>/chain3000 --format json
+node .superpowers/sdd/2026-10-27-v3-hardening/timed.mjs 180000 node packages/cli/dist/pbiplint.mjs <scratch-folder>/plus160k --format json
+node packages/cli/dist/pbiplint.mjs <scratch-folder>/plus160k --quiet
 ```
 
 Expected: the resolver's (3,000 chained steps and 3,000 calls; 151 s and 200 MB before) ends `exit 0` or `exit 1` within a few seconds, not killed; the parser's (a 320 KB chain; 175 s and 1.33 GB before) ends `exit 1` in under 5 s, and its quiet run lists `error PARSE_ISSUE 1`. Write the times into `progress.md`. A run killed at 180 s stops the task.
@@ -1021,7 +1019,7 @@ CI and e2e must be green with no retries; pb-coord posts the guards' CI times as
 
 ## For pb-coord
 
-- **The budget's costs.** Under the budget, the slowest quadratic shapes parse in about 2.6 s per query and 5.3 s per model on Michael's Mac (roughly 3 times that on CI's Node 22), a parse error on a very long line costs about 10 s at the query budget (linear, 0.6 µs a character), and the worst shape can hold about 1.3 GB at the model budget. Halving both budgets (1,000,000 and 2,000,000) halves these and leaves 1.2 times room over the corpus's largest query (847,457) and 1.5 times over the big model (1,328,152). This plan uses 2,000,000 and 4,000,000.
+- **The budget's costs.** Under the budget, the slowest shapes still take a few seconds per query and per model, longer on CI's runners, and the worst can hold a large share of a runner's memory. Halving both budgets (1,000,000 and 2,000,000) halves these and leaves 1.2 times room over the corpus's largest query (847,457) and 1.5 times over the big model (1,328,152). This plan uses 2,000,000 and 4,000,000.
 - **Rule errors and the exit code** (item 3): stated in the Rulings; no change planned.
 - **Item 9 changes what users see** on a `.pbip` whose model sits in a folder above the project (five existing tests assert it is read today); the corpus has none. Three link notices become "outside the project folder", since the real-path test runs first.
 - **Not zero in the corpus diff:** items 4 and 5 change 2 `PARSE_ISSUE` details (a comment's text hidden).

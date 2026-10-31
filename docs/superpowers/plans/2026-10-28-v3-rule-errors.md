@@ -12,7 +12,7 @@
 
 ## Rulings
 
-Measured on October 28, 2026 against `v3/rule-errors` at 06012fb, with a prototype of Tasks 1 to 3 in `/Users/michaelmckinley/.claude/jobs/cb7c83fd/tmp/rule-errors.9MH0` (typechecked, and run through `lint` with a rule that throws per query and one that throws whole).
+Measured on October 28, 2026 against `v3/rule-errors` at 06012fb, with a prototype of Tasks 1 to 3 in a scratch folder (typechecked, and run through `lint` with a rule that throws per query and one that throws whole).
 
 ### The finding
 
@@ -64,10 +64,10 @@ Measured on October 28, 2026 against `v3/rule-errors` at 06012fb, with a prototy
 
 ## Global Constraints
 
-- **Base branch:** `release/0.3.0`, never main. Branch `v3/rule-errors` from `release/0.3.0` at 06012fb (pull requests 1 to 9). Work in the worktree `~/Projects/pbiplint/pbiplint/.claude/worktrees/v3-spec`, never in home (`~/Projects/pbiplint/pbiplint` itself); the one file outside the worktree a task edits is the local release notes draft (Task 4), reached through the worktree's `.superpowers` link.
+- **Base branch:** `release/0.3.0`, never main. Branch `v3/rule-errors` from `release/0.3.0` at 06012fb (pull requests 1 to 9). Work in a worktree, never in the main checkout; the one file outside the worktree a task edits is the local release notes draft (Task 4), reached through the worktree's `.superpowers` link.
 - **No em dashes anywhere** (code, comments, docs, pages, commits; `rule-pages.test.ts` checks pages for U+2014). Restructure with a comma, colon, parentheses, or two sentences.
 - **Long-form dates in prose** ("October 28, 2026"), except in file names and front matter. **Capitalized bullets** in every list.
-- **Rule pages** are pbiplint's own prose. **Never name or cite any competing Power Query linter or its author**, in code, pages, commits, or the pull request.
+- **Rule pages** are pbiplint's own prose.
 - **The Privacy Promise** and **the Promise** take a capital P. This plan does not change the Promise.
 - **Counts only from the corpus:** public text carries counts, never a corpus path, line, value, model or repository name.
 - **Secret hygiene:** never print a fake or real secret value. Tests refer to fixture values through `fakeSecrets()` and `leaks()`; a unit test that needs one builds it with m-zoo's form through a helper, and the plan names none.
@@ -80,15 +80,15 @@ Measured on October 28, 2026 against `v3/rule-errors` at 06012fb, with a prototy
 - **Commits:** each message ends with `Part of #78.`, a blank line, and `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Never a closing keyword next to an issue number.
 - **Subagents** run on Opus 5.5 and share the worktree, so one edits files at a time.
 - **Command rules** (pb-coord, October 28, 2026; hard rules):
-  - Scratch only under /Users/michaelmckinley/.claude/jobs/cb7c83fd/tmp, never /tmp.
-  - Every experiment goes in a fresh folder from `mktemp -d /Users/michaelmckinley/.claude/jobs/cb7c83fd/tmp/rule-errors.XXXX`, used by its printed literal path.
+  - Scratch only in a scratch folder, never /tmp.
+  - Every experiment goes in a fresh folder from `mktemp -d <scratch-folder>/rule-errors.XXXX`, used by its printed literal path.
   - Never `rm -rf` or `rm -r` with a glob or a variable path.
   - No sudo, no `git clean`, `git reset --hard`, `git checkout -- .`, `git stash`, or any push. Stage files by name.
   - If a command might ask for permission, rewrite it so it cannot. Never wait on a prompt. `npx --yes tsx` runs tsx without asking.
-  - `timeout` is not installed on this Mac. Anything that could run long goes through a Node wrapper that kills its process group (spawn with `detached: true`, then `process.kill(-pid)`). A working one is at /Users/michaelmckinley/.claude/jobs/cb7c83fd/tmp/pr9t6.56oZ/run.mjs (`node run.mjs <ms> <label> <outPrefix> -- <command> [args...]`).
+  - `timeout` is not installed on this Mac. Anything that could run long goes through a Node wrapper that kills its process group (spawn with `detached: true`, then `process.kill(-pid)`). A working one is `run.mjs` in a scratch folder (`node run.mjs <ms> <label> <outPrefix> -- <command> [args...]`).
   - Use `gh-pb` (never `gh auth switch`) for read-only GitHub calls.
 - **The plan's workspace** is `.superpowers/sdd/2026-10-28-v3-rule-errors/` (git-ignored). Reused: `bytes.mjs` from `.superpowers/sdd/2026-10-13-v3-rules-resolver/`, and pull request 9's `corpus-diff.mts` (which prints rule errors) from `.superpowers/sdd/2026-10-27-v3-hardening/`.
-- **The corpus** (`~/Projects/pbiplint/assets/pbip-lint-spike/research-104`) is not pbiplint's.
+- **The corpus** (in the maintainer's research folder) is not pbiplint's.
 
 ## Review Focus
 
@@ -118,14 +118,13 @@ Measured on October 28, 2026 against `v3/rule-errors` at 06012fb, with a prototy
 | `packages/core/scripts/check-browser-bundle.mjs`, spec 3.4 | 3 (the crossing task) | 245 KB |
 | READMEs, `packages/web/content/about.md`, `pack.test.ts`, `generate.test.ts` | 3 | 122 rules, 40 built in |
 | `packages/web/content/cli.md`, spec 9.1 and 11.3 | 4 | Contract, exit codes, amendments |
-| `~/Projects/pbiplint/pbiplint/.superpowers/sdd/2026-10-13-release-0.3.0/release-notes.md` (local) | 4 | Two lines |
+| `.superpowers/sdd/2026-10-13-release-0.3.0/release-notes.md` (local) | 4 | Two lines |
 
 ---
 
 ## Before Task 1
 
 ```bash
-cd ~/Projects/pbiplint/pbiplint/.claude/worktrees/v3-spec
 git switch v3/rule-errors
 git status --short          # expected: only this plan, untracked
 pb-worktree-setup
@@ -142,14 +141,14 @@ node .superpowers/sdd/2026-10-13-v3-rules-resolver/bytes.mjs | tail -1
 
 Expected: the suite passes; `bytes.mjs` prints `core's own code 243910 bytes, 238.2 KB`. Write it into `.superpowers/sdd/2026-10-28-v3-rule-errors/progress.md` as **the base measurement**; if anything differs, stop and report.
 
-Unpack the base core: run `mktemp -d /Users/michaelmckinley/.claude/jobs/cb7c83fd/tmp/rule-errors.XXXX`, call the printed path `<base>` and type it literally, then:
+Unpack the base core: run `mktemp -d <scratch-folder>/rule-errors.XXXX`, call the printed path `<base>` and type it literally, then:
 
 ```bash
 git archive 06012fb packages/core | tar -x -C <base>
 ln -s "$PWD/node_modules" <base>/node_modules
 ln -s "$PWD/packages/core/node_modules" <base>/packages/core/node_modules
-node /Users/michaelmckinley/.claude/jobs/cb7c83fd/tmp/pr9t6.56oZ/run.mjs 1800000 corpus-0 /Users/michaelmckinley/.claude/jobs/cb7c83fd/tmp/rule-errors-corpus-0 -- npx --yes tsx .superpowers/sdd/2026-10-27-v3-hardening/corpus-diff.mts <base> /Users/michaelmckinley/Projects/pbiplint/assets/pbip-lint-spike/research-104
-grep -E "models linted|^[+-][0-9]|ERROR|RULE ERRORS|rule errors:|no finding changed" /Users/michaelmckinley/.claude/jobs/cb7c83fd/tmp/rule-errors-corpus-0.out
+node <scratch-folder>/run.mjs 1800000 corpus-0 <scratch-folder>/rule-errors-corpus-0 -- npx --yes tsx .superpowers/sdd/2026-10-27-v3-hardening/corpus-diff.mts <base> <research-folder>/research-104
+grep -E "models linted|^[+-][0-9]|ERROR|RULE ERRORS|rule errors:|no finding changed" <scratch-folder>/rule-errors-corpus-0.out
 ```
 
 Expected: `1321 models linted`, `rule errors: 0 base, 0 head`, `no finding changed`. Write `<base>` and the lines into `progress.md`.
@@ -416,7 +415,7 @@ Dated amendments, "Amended October 28, 2026 (pull request 10, #238)": in section
 
 - [ ] **Step 3: The release notes**
 
-In `~/Projects/pbiplint/pbiplint/.superpowers/sdd/2026-10-13-release-0.3.0/release-notes.md`:
+In `.superpowers/sdd/2026-10-13-release-0.3.0/release-notes.md`:
 - **Amend** the #236 bullet "A rule that cannot finish is now visible": drop "The exit code is unchanged." (it no longer holds).
 - **Add**, under "What can change in your results", after it: "**A rule that cannot finish fails a gated workflow.** It is a [`RULE_COULD_NOT_FINISH`](https://pbiplint.com/rules/rule-could-not-finish/) error on the query or object, so the default `fail-on: error` exits 1, and SARIF's `executionSuccessful` is false. The rule's page says how to keep a gate passing while a fix ships and how to report it. A rule error's message now names only the kind of error, never its text, which can carry the model's. Over 1,321 real models, no rule failed. (#238)"
 - **Add** under "For code that uses `@pbiplint/core`": `RULE_COULD_NOT_FINISH` is exported; `RuleError.message` names the error's kind only; `RuleContext.reportError` takes the error and its site, `(error, { label, finding })`, a change within 0.3.0's own additions (#238).
@@ -424,8 +423,8 @@ In `~/Projects/pbiplint/pbiplint/.superpowers/sdd/2026-10-13-release-0.3.0/relea
 - [ ] **Step 4: The corpus diff**
 
 ```bash
-node /Users/michaelmckinley/.claude/jobs/cb7c83fd/tmp/pr9t6.56oZ/run.mjs 1800000 corpus-4 /Users/michaelmckinley/.claude/jobs/cb7c83fd/tmp/rule-errors-corpus-4 -- npx --yes tsx .superpowers/sdd/2026-10-27-v3-hardening/corpus-diff.mts <base> /Users/michaelmckinley/Projects/pbiplint/assets/pbip-lint-spike/research-104
-grep -E "models linted|^[+-][0-9]|ERROR|RULE ERRORS|rule errors:|no finding changed" /Users/michaelmckinley/.claude/jobs/cb7c83fd/tmp/rule-errors-corpus-4.out
+node <scratch-folder>/run.mjs 1800000 corpus-4 <scratch-folder>/rule-errors-corpus-4 -- npx --yes tsx .superpowers/sdd/2026-10-27-v3-hardening/corpus-diff.mts <base> <research-folder>/research-104
+grep -E "models linted|^[+-][0-9]|ERROR|RULE ERRORS|rule errors:|no finding changed" <scratch-folder>/rule-errors-corpus-4.out
 ```
 
 Expected: `1321 models linted`, `rule errors: 0 base, 0 head`, `no finding changed`. Any `RULE ERRORS` line, or any `RULE_COULD_NOT_FINISH` count, stops the task: report the rule ids and counts to pb-coord.
@@ -434,7 +433,7 @@ Expected: `1321 models linted`, `rule errors: 0 base, 0 head`, `no finding chang
 
 ```bash
 npm run lint && npm run typecheck && npm test && npm run check:browser && npm run check:network && npm run check:pack
-node /Users/michaelmckinley/.claude/jobs/cb7c83fd/tmp/pr9t6.56oZ/run.mjs 1800000 e2e /Users/michaelmckinley/.claude/jobs/cb7c83fd/tmp/rule-errors-e2e -- npm run test:e2e
+node <scratch-folder>/run.mjs 1800000 e2e <scratch-folder>/rule-errors-e2e -- npm run test:e2e
 grep -n "$(printf '\342\200\224')" rules/rule-could-not-finish.md .github/ISSUE_TEMPLATE/rule-could-not-finish.md packages/web/content/cli.md
 ```
 

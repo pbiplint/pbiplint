@@ -54,17 +54,17 @@ parser cannot place, including a declaration its object does not hold, such as a
 under a table, is a `PARSE_ISSUE` error finding on that line rather than being dropped
 silently.
 
-The model rules are ports of the Microsoft Best Practice Analyzer ruleset, verified against Tabular
-Editor, and pbiplint's own rules for a year or a date fixed in DAX, for DAX user-defined functions,
-for translations, and for decimal columns' format strings, four of them taking their test from
-Tabular Editor 3's built-in rules or Tabular Editor's community rule files and checked against
-Tabular Editor. The report rules are the 11 base rules of PBI Inspector by Nat Van Gulck, ported and
-verified against fab-inspector's command line, and pbiplint's own rules for the report and for the
-model and report together. A port keeps its source's quirks on purpose, apart from twelve documented
-deviations from the Microsoft ruleset and six from PBI Inspector, and each rule's page documents
-them. A column whose TMDL names no type, as Power BI Desktop saves most calculated columns, is left
-out of the thirteen ported rules that test a column's type, where Tabular Editor reads the type
-from the column's DAX.
+The model rules are the Microsoft Best Practice Analyzer ruleset, each rule rebuilt in pbiplint and
+checked against Tabular Editor's findings, and pbiplint's own rules for a year or a date fixed in
+DAX, for DAX user-defined functions, for translations, and for decimal columns' format strings, four
+of them taking their test from Tabular Editor 3's built-in rules or Tabular Editor's community rule
+files and checked against Tabular Editor. The report rules are the 11 base rules of PBI Inspector by
+Nat Van Gulck, each rebuilt in pbiplint and checked against fab-inspector's findings, and pbiplint's
+own rules for the report and for the model and report together. A rebuilt rule behaves as its source
+does, apart from twelve documented differences from the Microsoft ruleset and six from PBI
+Inspector, each explained on its rule's page. A column whose TMDL names no type, as Power BI Desktop
+saves most calculated columns, is left out of the thirteen ported rules that test a column's type,
+where Tabular Editor reads the type from the column's DAX.
 
 The Power Query rules read the M behind each table's partitions, the shared expressions, and
 incremental refresh policies, parsed with Microsoft's Power Query parser, and the file's Power Query

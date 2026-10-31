@@ -27,7 +27,7 @@ Every code block, page, test, pin, and count in this plan was run in a scratch c
 
 ## Global Constraints
 
-- **Base branch:** `release/0.3.0`, never main. Branch `v3/rules-resolver`, already cut from `release/0.3.0` at af69278 (pull request 5 merged). Work in the worktree `~/Projects/pbiplint/pbiplint/.claude/worktrees/v3-spec`, never in home (`~/Projects/pbiplint/pbiplint` itself).
+- **Base branch:** `release/0.3.0`, never main. Branch `v3/rules-resolver`, already cut from `release/0.3.0` at af69278 (pull request 5 merged). Work in a worktree, never in the main checkout.
 - **The rules** (spec 9.1): status `builtin` through `pbiplintRule`; layer `powerquery` (so `needs: ["model"]`); scope `["Partition", "NamedExpression", "Table"]`. Severity and category: `DYNAMIC_DATA_SOURCE` **error (3)**, Error Prevention; `HARDCODED_SECRET_IN_QUERY` **error (3)**, Error Prevention; `HARDCODED_SERVER_NAME` info (1), Maintenance; `LEGACY_EXCEL_FILE` info (1), Error Prevention; `EXTENSION_FILTER_CASE` warning (2), Error Prevention.
 - **Names, verbatim:** "Data source the service can't refresh", "Secret written into a query", "Server name written into the query", "Legacy Excel workbook", "File extension filter misses other cases".
 - **One finding per occurrence** through `mFinding(m, q, node, what)` (`packages/core/src/rules/m-helpers.ts`), except `HARDCODED_SERVER_NAME`, once per query (spec 9.1), and the secret and legacy workbook rules, once per literal.
@@ -37,7 +37,6 @@ Every code block, page, test, pin, and count in this plan was run in a scratch c
 - **Long-form dates in prose** ("October 13, 2026"), never `2026-10-13`, except in file names and front matter.
 - **Capitalized bullets** in every list this plan writes.
 - **Rule pages** are pbiplint's own prose, from the template (`CONTRIBUTING.md`, "Rule pages"). The fix route starts in Power BI Desktop's Power Query editor (Transform data, the query, the step in Applied steps), then the TMDL file. No third-party tool is required, never Tabular Editor for the fix, and no Tabular Editor C#. Every quote is linked to its source page, at the section anchor when there is one (each quote and anchor in this plan's pages was checked against the live page on October 13, 2026). "When to ignore it" gives judgment only, with no `pbiplint.ignore` text, and never tells the reader to delete what matters. Each page's `tmdl fires` and `tmdl fixed` examples must parse and fire (`rule-pages.test.ts`). Related rules links go both ways where this plan adds them.
-- **Never name or cite any competing Power Query linter or its author**, in code, pages, commits, or the pull request.
 - **Fixtures and tests are sanitized:** `example.com` or `*.example` hosts, the `C:\Demo\Data\` convention for paths, no real names or servers.
 - **Core stays browser-pure:** no Node built-in, no `process.`, no network API in `packages/core/src`.
 - **The core budget is 230 KB** (`packages/core/scripts/check-browser-bundle.mjs`; spec 3.4 says pull request 5 or 6 crossing it stops the work and goes to the coordinator, with no raise). It stands at 220.3 KB. Every task runs `npm run check:browser` and writes its line into `progress.md`. Each rule task compares its measurement with this plan's expected figure and projects the end (see "The budget, task by task" below); if the projection crosses 230 KB, the task stops and reports a measured breakdown. Nothing here changes the budget.
@@ -48,13 +47,13 @@ Every code block, page, test, pin, and count in this plan was run in a scratch c
 - **Commits:** one or more per task. Each message ends with `Part of #78.`, a blank line, and `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Never write a closing keyword next to an issue number.
 - **Subagents** run on Opus 5.5 and share the worktree, so one edits files at a time.
 - **Command rules** (pb-coord, October 13, 2026; a previous plan writer stalled for hours on a permission prompt). These are hard rules:
-  - Scratch space only under the executing session's job folder, `$CLAUDE_JOB_DIR/tmp` (for this plan's writer, `/Users/michaelmckinley/.claude/jobs/cb7c83fd/tmp`). Never use `/tmp`.
+  - Scratch space only in a scratch folder, `$CLAUDE_JOB_DIR/tmp`. Never use `/tmp`.
   - For any experiment, make a fresh folder with `mktemp -d "$CLAUDE_JOB_DIR/tmp/pr6.XXXX"` and work inside it by its printed literal path (shell variables do not survive between tool calls). Never run `rm -rf` or `rm -r` with a glob or a variable path; never `cd` somewhere and delete with `*`. Leaving scratch folders behind is fine.
   - No `sudo`, no deleting outside the worktree or that job folder, no `git clean`, `git reset --hard`, `git checkout -- .`, `git stash`, or any push (the Finish section's one push is pb-coord's, after review).
   - If a command might ask for permission, rewrite it so it cannot. Never wait on a prompt.
 - **The plan's workspace** is `.superpowers/sdd/2026-10-13-v3-rules-resolver/` (git-ignored; `.superpowers` is a symlink into home's copy, so scripts there import the worktree's code by `process.cwd()`, never by a relative path). The reader plan's `corpus-diff.mts` is reused from `.superpowers/sdd/2026-10-13-v3-reader/`.
 - **Folder inputs in e2e** go through `setFolder` from `packages/web/e2e/folder-input.ts`, never `setInputFiles` on a directory.
-- **The corpus** (`~/Projects/pbiplint/assets/pbip-lint-spike/research-104`) is not pbiplint's: the pull request carries counts only, never a corpus path, line, or value.
+- **The corpus** (in the maintainer's research folder) is not pbiplint's: the pull request carries counts only, never a corpus path, line, or value.
 
 ## The budget, task by task
 
@@ -115,7 +114,6 @@ That leaves 0.7 KB of the 230 KB with all five rules, and 1.9 KB without `EXTENS
 ## Before Task 1
 
 ```bash
-cd ~/Projects/pbiplint/pbiplint/.claude/worktrees/v3-spec
 git fetch origin
 git switch v3/rules-resolver
 git status --short          # expected: only this plan, untracked
@@ -2339,7 +2337,7 @@ ln -s "$PWD/packages/core/node_modules" <base>/packages/core/node_modules
 - [ ] **Step 2: Run the corpus diff**
 
 ```bash
-npx tsx .superpowers/sdd/2026-10-13-v3-reader/corpus-diff.mts <base> ~/Projects/pbiplint/assets/pbip-lint-spike/research-104 > "$CLAUDE_JOB_DIR/tmp/pr6-corpus-diff.txt" 2>&1
+npx tsx .superpowers/sdd/2026-10-13-v3-reader/corpus-diff.mts <base> <research-folder>/research-104 > "$CLAUDE_JOB_DIR/tmp/pr6-corpus-diff.txt" 2>&1
 grep -E "models linted|^[+-][0-9]|ERROR" "$CLAUDE_JOB_DIR/tmp/pr6-corpus-diff.txt"
 ```
 
@@ -2433,7 +2431,7 @@ for (const [id, s] of stats) {
 It prints a credential's line only as its shape: every text literal becomes `«…»`, comments are cut, and a text that runs past the line's end is cut from its quote, so no value is written to its output. Then:
 
 ```bash
-npx tsx .superpowers/sdd/2026-10-13-v3-rules-resolver/rule-counts.mts ~/Projects/pbiplint/assets/pbip-lint-spike/research-104 60 > "$CLAUDE_JOB_DIR/tmp/pr6-rule-counts.txt" 2>&1
+npx tsx .superpowers/sdd/2026-10-13-v3-rules-resolver/rule-counts.mts <research-folder>/research-104 60 > "$CLAUDE_JOB_DIR/tmp/pr6-rule-counts.txt" 2>&1
 grep -E "^[A-Z_]+:|^    [0-9]+ ×" "$CLAUDE_JOB_DIR/tmp/pr6-rule-counts.txt"
 ```
 
@@ -2879,9 +2877,9 @@ Expected: PASS; about 229.3 KB. Over 230.0 KB, or over 229.6 KB: do not commit; 
 - [ ] **Step 9: Count it on the corpus**
 
 ```bash
-npx tsx .superpowers/sdd/2026-10-13-v3-reader/corpus-diff.mts <base> ~/Projects/pbiplint/assets/pbip-lint-spike/research-104 > "$CLAUDE_JOB_DIR/tmp/pr6-corpus-diff-8.txt" 2>&1
+npx tsx .superpowers/sdd/2026-10-13-v3-reader/corpus-diff.mts <base> <research-folder>/research-104 > "$CLAUDE_JOB_DIR/tmp/pr6-corpus-diff-8.txt" 2>&1
 grep -E "models linted|^[+-][0-9]|ERROR" "$CLAUDE_JOB_DIR/tmp/pr6-corpus-diff-8.txt"
-npx tsx .superpowers/sdd/2026-10-13-v3-rules-resolver/rule-counts.mts ~/Projects/pbiplint/assets/pbip-lint-spike/research-104 60 > "$CLAUDE_JOB_DIR/tmp/pr6-rule-counts-8.txt" 2>&1
+npx tsx .superpowers/sdd/2026-10-13-v3-rules-resolver/rule-counts.mts <research-folder>/research-104 60 > "$CLAUDE_JOB_DIR/tmp/pr6-rule-counts-8.txt" 2>&1
 grep -E "^EXTENSION_FILTER_CASE:|^    [0-9]+ × the extension" "$CLAUDE_JOB_DIR/tmp/pr6-rule-counts-8.txt"
 ```
 

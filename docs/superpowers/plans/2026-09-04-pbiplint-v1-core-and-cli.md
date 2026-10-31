@@ -29,7 +29,7 @@
 
 ## Ground truth captured for this plan (read before starting)
 
-All of this lives in the spike folder `/Users/michaelmckinley/Downloads/pbip-lint-spike/` (referred to below as `$SPIKE`). Nothing in that folder is production code; the plan copies specific inputs from it.
+All of this lives in the maintainer's research folder (referred to below as `$SPIKE`). Nothing in that folder is production code; the plan copies specific inputs from it.
 
 **Oracle:** Tabular Editor CLI `te` 0.5.2.11639 (TE3 early preview, installed at `~/.local/bin/te`, preview expires 2026-09-30; after that update it from tabulareditor.com/downloads). Ruleset: `$SPIKE/ref/BPARules.json`, sha256 `ddb9cff4c2a0611a6467e2559d38319d9867381998066473ffa1e11c2d360392`, 71 rules, from `microsoft/Analysis-Services` (MIT). The exact oracle command, which points at the `definition` folder, is:
 
@@ -2667,7 +2667,7 @@ console.log(`${root}: rewrote ${rewritten} file(s), removed ${removed} junk file
 - [ ] **Step 2: Copy and sanitize the exported fixtures**
 
 ```bash
-SPIKE=/Users/michaelmckinley/Downloads/pbip-lint-spike
+SPIKE=<research-folder>
 mkdir -p examples tests/fixtures tests/expectations
 # Sample project (also a parity fixture)
 mkdir -p examples/messy-sales
@@ -3377,7 +3377,7 @@ console.log(`${outPath}: ${json.results.length} findings across ${Object.keys(so
 - [ ] **Step 6: Generate the expectation files from the captures**
 
 ```bash
-SPIKE=/Users/michaelmckinley/Downloads/pbip-lint-spike
+SPIKE=<research-folder>
 node scripts/te-expectations.mjs examples/messy-sales tests/expectations/messy-sales.json --from "$SPIKE/te-json/messy-sales.json"
 node scripts/te-expectations.mjs tests/fixtures/tvw-baseline.SemanticModel tests/expectations/tvw-baseline.json --from "$SPIKE/te-json/tvw-baseline.json"
 node scripts/te-expectations.mjs tests/fixtures/kitchen-sink.SemanticModel tests/expectations/kitchen-sink.json --from "$SPIKE/te-json/tmdlmaker-KitchenSinkDemo.json"
@@ -3539,7 +3539,7 @@ Run:
 
 ```bash
 mkdir -p packages/core/src/rules/microsoft-bpa
-node scripts/vendor-bpa-rules.mjs /Users/michaelmckinley/Downloads/pbip-lint-spike/ref/BPARules.json
+node scripts/vendor-bpa-rules.mjs <research-folder>/ref/BPARules.json
 ```
 
 Expected: `wrote 71 rules (sha256 ddb9cff4c2a0611a6467e2559d38319d9867381998066473ffa1e11c2d360392)`.

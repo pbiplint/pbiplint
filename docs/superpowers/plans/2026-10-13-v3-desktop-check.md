@@ -22,12 +22,11 @@ Every code block, page edit, test, pin, and count below was run in a scratch cop
 
 ## Global Constraints
 
-- **Base branch:** `release/0.3.0`, never main. Branch `v3/desktop-check`, cut from `release/0.3.0` at f51666c (pull requests 1 to 7 and the 0.3.0 version bump). Work in the worktree `~/Projects/pbiplint/pbiplint/.claude/worktrees/v3-spec`, never in home (`~/Projects/pbiplint/pbiplint` itself).
+- **Base branch:** `release/0.3.0`, never main. Branch `v3/desktop-check`, cut from `release/0.3.0` at f51666c (pull requests 1 to 7 and the 0.3.0 version bump). Work in a worktree, never in the main checkout.
 - **The rules** (spec 9.1): `DYNAMIC_DATA_SOURCE` error (3), Error Prevention, "Data source the service can't refresh"; `EXTENSION_FILTER_CASE` warning (2), Error Prevention, "File extension filter misses other cases". Both builtin through `pbiplintRule`, layer `powerquery`, scope `["Partition", "NamedExpression", "Table"]`, one finding per occurrence through `mFinding`.
 - **No em dashes anywhere** (code, comments, docs, pages, commit messages; `rule-pages.test.ts` checks pages for U+2014). Restructure with a comma, colon, parentheses, or two sentences.
 - **Long-form dates in prose** ("October 13, 2026"), except in file names and front matter. **Capitalized bullets** in every list.
 - **Rule pages** are pbiplint's own prose: the fix starts in Power BI Desktop's Power Query editor, then the TMDL line; no Tabular Editor; every quote linked to its section; "When to ignore it" gives judgment only. Each page's `tmdl fires` and `tmdl fixed` examples must parse and fire.
-- **Never name or cite any competing Power Query linter or its author**, in code, pages, commits, or the pull request.
 - **Counts only from the corpus:** the pull request, the spec, and the release notes carry counts, never a corpus path, line, value, or vendor word.
 - **Core stays browser-pure:** no Node built-in, no `process.`, no network API in `packages/core/src`.
 - **The core budget** is `OWN_LIMIT_KB` in `packages/core/scripts/check-browser-bundle.mjs`, compared in bytes. Crossing it stops the work and goes to pb-coord. Only Task 2's raise path changes it, and only on Michael's ledger line.
@@ -38,14 +37,14 @@ Every code block, page edit, test, pin, and count below was run in a scratch cop
 - **Commits:** each message ends with `Part of #78.`, a blank line, and `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Never a closing keyword next to an issue number.
 - **Subagents** run on Opus 5.5 and share the worktree, so one edits files at a time.
 - **Command rules** (pb-coord, October 13, 2026; hard rules):
-  - Scratch only under the executing session's job folder, `$CLAUDE_JOB_DIR/tmp` (for this plan's writer, `/Users/michaelmckinley/.claude/jobs/cb7c83fd/tmp`). Never `/tmp`.
+  - Scratch only in a scratch folder, `$CLAUDE_JOB_DIR/tmp`. Never `/tmp`.
   - Every experiment in a fresh folder from `mktemp -d "$CLAUDE_JOB_DIR/tmp/pr8.XXXX"`, used by its printed literal path (shell variables do not survive between tool calls). Leaving scratch folders behind is fine.
   - Never `rm -rf` or `rm -r` with a glob or a variable path; never `cd` somewhere and delete with `*`.
   - No `sudo`, no deleting outside the worktree or the job folder, no `git clean`, `git reset --hard`, `git checkout -- .`, `git stash`, or any push (the Finish section's push is pb-coord's).
   - If a command might ask for permission, rewrite it so it cannot. Never wait on a prompt.
   - `gh-pb` for GitHub calls, never `gh auth switch`.
 - **The plan's workspace** is `.superpowers/sdd/2026-10-13-v3-desktop-check/` (git-ignored; `.superpowers` links into home's copy, so scripts import the worktree's code by `process.cwd()`). Pull request 6's scripts are reused from `.superpowers/sdd/2026-10-13-v3-rules-resolver/` (`bytes.mjs`, `minsize.mjs`, `pin-m-zoo.mjs`, `rule-counts.mts`), and the reader plan's `corpus-diff.mts` from `.superpowers/sdd/2026-10-13-v3-reader/`.
-- **The corpus** (`~/Projects/pbiplint/assets/pbip-lint-spike/research-104`) is not pbiplint's.
+- **The corpus** (in the maintainer's research folder) is not pbiplint's.
 
 ## Review Focus
 
@@ -68,14 +67,13 @@ Every code block, page edit, test, pin, and count below was run in a scratch cop
 | `packages/core/test/pack.test.ts`, `packages/web/test/generate.test.ts`, `README.md`, `packages/cli/README.md`, `packages/core/README.md`, `packages/web/content/about.md` | 2 | Counts, 120 rules to 121 |
 | `packages/core/scripts/check-browser-bundle.mjs` | 2 (raise path) | The budget |
 | The v3 spec, sections 3.4, 8, 9.3, 9.10 | 1, 2 | Dated amendments |
-| `~/Projects/pbiplint/pbiplint/.superpowers/sdd/2026-10-13-release-0.3.0/release-notes.md` (local, not committed) | 4 | The release notes draft |
+| `.superpowers/sdd/2026-10-13-release-0.3.0/release-notes.md` (local, not committed) | 4 | The release notes draft |
 
 ---
 
 ## Before Task 1
 
 ```bash
-cd ~/Projects/pbiplint/pbiplint/.claude/worktrees/v3-spec
 git switch v3/desktop-check
 git status --short          # expected: only this plan, untracked
 pb-worktree-setup
@@ -402,14 +400,14 @@ It prints a path; call it `<base>` and type it out literally. Then:
 git archive f51666c packages/core | tar -x -C <base>
 ln -s "$PWD/node_modules" <base>/node_modules
 ln -s "$PWD/packages/core/node_modules" <base>/packages/core/node_modules
-npx tsx .superpowers/sdd/2026-10-13-v3-reader/corpus-diff.mts <base> ~/Projects/pbiplint/assets/pbip-lint-spike/research-104 > "$CLAUDE_JOB_DIR/tmp/pr8-corpus-diff-1.txt" 2>&1
+npx tsx .superpowers/sdd/2026-10-13-v3-reader/corpus-diff.mts <base> <research-folder>/research-104 > "$CLAUDE_JOB_DIR/tmp/pr8-corpus-diff-1.txt" 2>&1
 grep -E "models linted|^[+-][0-9]|ERROR" "$CLAUDE_JOB_DIR/tmp/pr8-corpus-diff-1.txt"
 ```
 
 Expected: `1321 models linted` and `+6 DYNAMIC_DATA_SOURCE`, nothing else (no `-` line, no other rule, no `ERROR`). Write `<base>` into `progress.md` (Tasks 2 and 3 reuse it). The diff prints only 5 examples per rule, so list all 6 with `rule-counts.mts`:
 
 ```bash
-npx tsx .superpowers/sdd/2026-10-13-v3-rules-resolver/rule-counts.mts ~/Projects/pbiplint/assets/pbip-lint-spike/research-104 60 > "$CLAUDE_JOB_DIR/tmp/pr8-rule-counts-1.txt" 2>&1
+npx tsx .superpowers/sdd/2026-10-13-v3-rules-resolver/rule-counts.mts <research-folder>/research-104 60 > "$CLAUDE_JOB_DIR/tmp/pr8-rule-counts-1.txt" 2>&1
 grep -E "^DYNAMIC_DATA_SOURCE:" "$CLAUDE_JOB_DIR/tmp/pr8-rule-counts-1.txt"
 grep -E "custom function's parameter|chosen with if" "$CLAUDE_JOB_DIR/tmp/pr8-rule-counts-1.txt"
 ```
@@ -844,7 +842,7 @@ Amended October 13, 2026 (Michael, pull request 8): the core's own code budget i
 - [ ] **Step 9: Spec 9.10, and the corpus count**
 
 ```bash
-npx tsx .superpowers/sdd/2026-10-13-v3-reader/corpus-diff.mts <base> ~/Projects/pbiplint/assets/pbip-lint-spike/research-104 > "$CLAUDE_JOB_DIR/tmp/pr8-corpus-diff-2.txt" 2>&1
+npx tsx .superpowers/sdd/2026-10-13-v3-reader/corpus-diff.mts <base> <research-folder>/research-104 > "$CLAUDE_JOB_DIR/tmp/pr8-corpus-diff-2.txt" 2>&1
 grep -E "models linted|^[+-][0-9]|ERROR" "$CLAUDE_JOB_DIR/tmp/pr8-corpus-diff-2.txt"
 ```
 
@@ -888,9 +886,9 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - [ ] **Step 1: The corpus diff**
 
 ```bash
-npx tsx .superpowers/sdd/2026-10-13-v3-reader/corpus-diff.mts <base> ~/Projects/pbiplint/assets/pbip-lint-spike/research-104 > "$CLAUDE_JOB_DIR/tmp/pr8-corpus-diff-3.txt" 2>&1
+npx tsx .superpowers/sdd/2026-10-13-v3-reader/corpus-diff.mts <base> <research-folder>/research-104 > "$CLAUDE_JOB_DIR/tmp/pr8-corpus-diff-3.txt" 2>&1
 grep -E "models linted|^[+-][0-9]|ERROR" "$CLAUDE_JOB_DIR/tmp/pr8-corpus-diff-3.txt"
-npx tsx .superpowers/sdd/2026-10-13-v3-rules-resolver/rule-counts.mts ~/Projects/pbiplint/assets/pbip-lint-spike/research-104 0 > "$CLAUDE_JOB_DIR/tmp/pr8-rule-counts-3.txt" 2>&1
+npx tsx .superpowers/sdd/2026-10-13-v3-rules-resolver/rule-counts.mts <research-folder>/research-104 0 > "$CLAUDE_JOB_DIR/tmp/pr8-rule-counts-3.txt" 2>&1
 grep -E "^(DYNAMIC_DATA_SOURCE|EXTENSION_FILTER_CASE):" "$CLAUDE_JOB_DIR/tmp/pr8-rule-counts-3.txt"
 ```
 
@@ -913,7 +911,7 @@ Expected: all pass; the e2e suite in Chromium, Firefox, and WebKit with no retri
 
 ### Task 4: The release notes draft (local; its extension entry depends on Task 2)
 
-**Files:** `~/Projects/pbiplint/pbiplint/.superpowers/sdd/2026-10-13-release-0.3.0/release-notes.md` only (git-ignored; never posted, never committed).
+**Files:** `.superpowers/sdd/2026-10-13-release-0.3.0/release-notes.md` only (git-ignored; never posted, never committed).
 
 - [ ] **Step 1: Read which path Task 2 took**
 
@@ -942,9 +940,9 @@ Delete the whole `**[Placeholder, to keep or delete at release.]**` bullet; ever
 - [ ] **Step 4: Check the draft**
 
 ```bash
-grep -n "Placeholder, to keep" ~/Projects/pbiplint/pbiplint/.superpowers/sdd/2026-10-13-release-0.3.0/release-notes.md
-perl -CSD -ne 'print "$.: $_" if /\x{2014}/' ~/Projects/pbiplint/pbiplint/.superpowers/sdd/2026-10-13-release-0.3.0/release-notes.md
-grep -n "120 rules\|121 rules\|new Power Query rules\|new rules" ~/Projects/pbiplint/pbiplint/.superpowers/sdd/2026-10-13-release-0.3.0/release-notes.md
+grep -n "Placeholder, to keep" .superpowers/sdd/2026-10-13-release-0.3.0/release-notes.md
+perl -CSD -ne 'print "$.: $_" if /\x{2014}/' .superpowers/sdd/2026-10-13-release-0.3.0/release-notes.md
+grep -n "120 rules\|121 rules\|new Power Query rules\|new rules" .superpowers/sdd/2026-10-13-release-0.3.0/release-notes.md
 ```
 
 Expected: no placeholder for this rule (the Action and Pipelines placeholder stays) and no em dash; the counts agree with each other and with Task 2's path. Write `Task 4: release notes updated (<ship | hold>)` into `progress.md`.

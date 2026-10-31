@@ -20,7 +20,7 @@
 - Human-facing copy uses long-form dates ("October 31, 2026"). Bullets start with a capital letter.
 - Match the surrounding code: doc comments in full sentences on exported and non-obvious functions; a rule's deviation is named in the rule's own comment.
 - TMDL in a test or a script is written with `\t` escapes in ordinary strings, never with literal tab characters.
-- Work on the branch `untyped-columns` in `~/Projects/pbiplint` (not a worktree). It holds the spec, this plan, and the spec's amendments. Commit after each task. Commit messages carry `Part of #164.` and end with these two lines, after a blank line:
+- Work on the branch `untyped-columns` (not a worktree). It holds the spec, this plan, and the spec's amendments. Commit after each task. Commit messages carry `Part of #164.` and end with these two lines, after a blank line:
 
   ```
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
@@ -30,7 +30,7 @@
   Never write a closing keyword (close, closes, fix, fixes, resolve, resolves) next to an issue number in a commit message or the pull request body.
 - Before each commit: `npx prettier --write <changed .ts and .mjs files>`, then `npm run lint`, `npm run typecheck`, and the task's tests. `*.md`, `tests/expectations/`, and `tests/fixtures/` are Prettier-ignored on purpose.
 - **Task 1 ends with the suite red by design**: the spec puts the captures first, before any rule changes, so after Task 1 the parity checks fail on exactly the eleven tests Task 1 lists, and nothing else. Tasks 2 and 3 end with `npm run build && npm test` passing.
-- Never edit anything under `~/Library/CloudStorage/OneDrive-McKinleyConsulting/`.
+- Never edit the maintainer's own copy of any source.
 - `$SCRATCH` in the commands below is a scratch folder outside the repository (the session scratchpad). Nothing in it is committed. Every command runs from the repository root.
 
 ## File Structure
@@ -420,10 +420,10 @@ If any type differs, stop and report it: the deviations in Task 2 depend on thes
 
 - [ ] **Step 4: Capture Microsoft's ruleset and the built-in rules**
 
-`BPARules.json` is Microsoft's ruleset with sha256 `ddb9cff4c2a0611a6467e2559d38319d9867381998066473ffa1e11c2d360392`; on this Mac it is at `~/Projects/pbiplint-assets/pbip-lint-spike/ref/BPARules.json` (check with `shasum -a 256`).
+`BPARules.json` is Microsoft's ruleset with sha256 `ddb9cff4c2a0611a6467e2559d38319d9867381998066473ffa1e11c2d360392`; it is at `ref/BPARules.json` in the maintainer's research folder (check with `shasum -a 256`).
 
 ```bash
-node scripts/te-expectations.mjs tests/fixtures/untyped-columns.SemanticModel tests/expectations/untyped-columns.json --rules ~/Projects/pbiplint-assets/pbip-lint-spike/ref/BPARules.json
+node scripts/te-expectations.mjs tests/fixtures/untyped-columns.SemanticModel tests/expectations/untyped-columns.json --rules <research-folder>/ref/BPARules.json
 node scripts/te-expectations.mjs tests/fixtures/untyped-columns.SemanticModel tests/expectations/te3/untyped-columns.json --built-in
 ```
 

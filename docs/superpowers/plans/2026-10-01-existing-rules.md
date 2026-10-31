@@ -20,7 +20,7 @@
 - Human-facing copy uses long-form dates ("October 31, 2026"). Bullets start with a capital letter.
 - Match the surrounding code: doc comments in full sentences on exported and non-obvious functions; a deviation is named in the rule's own comment, as `UNNECESSARY_COLUMNS`'s `groupByColumn` deviation is.
 - TMDL in a test is written with `\t` escapes in ordinary strings, never with literal tab characters, as the plan's test code does.
-- Work on the branch `existing-rules` in `~/Projects/pbiplint` (not a worktree). It holds this plan and the spec's amendments. Commit after each task. Commit messages carry `Part of #117.` and end with these two lines, after a blank line:
+- Work on the branch `existing-rules` (not a worktree). It holds this plan and the spec's amendments. Commit after each task. Commit messages carry `Part of #117.` and end with these two lines, after a blank line:
 
   ```
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
@@ -29,7 +29,7 @@
 
   Never write a closing keyword (close, closes, fix, fixes, resolve, resolves) next to an issue number in a commit message or the pull request body. This is pull request 2 of 3; #117 stays open.
 - Before each commit: `npx prettier --write <changed .ts and .mjs files>`, then `npm run lint`, `npm run typecheck`, and the task's tests. `*.md`, `tests/expectations/`, and `tests/fixtures/` are Prettier-ignored on purpose. At the end of each task, `npm test` must pass.
-- Never edit anything under `~/Library/CloudStorage/OneDrive-McKinleyConsulting/`.
+- Never edit the maintainer's own copy of any source.
 - `$SCRATCH` in the commands below is a scratch folder outside the repository (the session scratchpad). Nothing in it is committed.
 
 ## File Structure

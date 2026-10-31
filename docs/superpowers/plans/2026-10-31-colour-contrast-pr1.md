@@ -188,7 +188,7 @@ export function over(top: Rgba, bottom: Rgba): Rgba;   // source-over
 - [ ] **Step 1: Write the failing tests**
 
 - `parseHex`: `#FFF`, `#ffffff`, `#1F4E79` opaque; `#FFFFFF00` alpha 0 and `#00000080` alpha 128/255 (the last pair is alpha); undefined for `#FFFF`, `#GGGGGG`, `FFFFFF`, `red`, the empty string.
-- `contrastRatio`: black on white is exactly 21, in either order; a colour on itself is 1; `#767676` on white truncates to 4.54 and `#777777` on white to 4.47; `#A19F9D` on white to 2.57.
+- `contrastRatio`: black on white is exactly 21, in either order; a colour on itself is 1; `#767676` on white truncates to 4.54 and `#777777` on white to 4.47; `#A19F9D` on white to 2.63.
 - `relativeLuminance`: white 1, black 0, and a channel of `0.04045 * 255` takes the low branch, the threshold in WCAG 2.2's definition.
 - `truncateRatio`: 4.499 gives 4.49, 4.5 gives 4.5, 2.5799 gives 2.57.
 - `over`: an opaque top is the top; alpha 0 is the bottom; `#000000` at alpha 0.5 over white is 127.5 on each channel, and `toHex` rounds it to `#808080`.

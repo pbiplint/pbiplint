@@ -38,6 +38,8 @@ Not in v3:
 - **Call:** `TaskUtils.tryLexParse(DefaultSettings, text)`. `DefaultSettings` uses the locale `en-US`, so every message the parser writes is English.
 - **Node versions.** The package declares `"engines": { "node": ">=22" }`; pbiplint supports `^20.19.0 || >=22.12.0`. Its compiled code uses none of Node 22's additions (searched on October 12, 2026: no `Object.groupBy`, `Promise.withResolvers`, `Array.fromAsync`, new `Set` methods, or `structuredClone`), and the CLI bundles it, so CLI users see nothing. CI's Node 20 leg proves it on every change. Code that installs `@pbiplint/core` itself on Node 20 sees npm's `EBADENGINE` warning, which installs anyway; the core README says so.
 
+Amended October 31, 2026 (#258): the pin is now exactly `4.0.1`, which replaces `2.0.0` wherever this spec names the current version. The parser measures 353.6 KB (section 3.4's budget stays at 385 KB), its licence and two dependencies are unchanged, and its compiled code still uses none of the Node 22 additions listed above. A lex error now carries its own message and position, so `parseM` no longer reads a per-line error map.
+
 ### 3.2 English only, and `performance-now`
 
 Two build changes, the same in every bundler that ships the core:

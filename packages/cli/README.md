@@ -99,15 +99,15 @@ page.json or visual.json (Power BI Desktop keeps it there too):
 
 ## What it checks
 
-Every rule from the Microsoft Best Practice Analyzer ruleset, ported so the results match Tabular
-Editor on the same model, with twelve documented deviations where the source is noisier, or quieter,
-than it means to be; and pbiplint's own rules for a year or a date fixed in DAX, such as a measure
-filtered to 2025 or a date table that ends in 2026, for a DAX user-defined function that nothing
-calls, has a one-word name, or has no description, for a visible name that a translated culture
-gives no caption, and for a visible decimal column with no format string. Four of pbiplint's own
-model rules take their test from Tabular Editor's rules, from Tabular Editor 3's built-in set or the
-community's published rule files, and are checked against Tabular Editor on the same model. Five of
-the Microsoft rules need statistics only a live model has; they are listed but not run. A column
+Every rule from the Microsoft Best Practice Analyzer ruleset, each rebuilt in pbiplint and checked
+against Tabular Editor's findings on the same model, with twelve documented differences, each
+explained on its rule's page; and pbiplint's own rules for a year or a date fixed in DAX, such as a
+measure filtered to 2025 or a date table that ends in 2026, for a DAX user-defined function that
+nothing calls, has a one-word name, or has no description, for a visible name that a translated
+culture gives no caption, and for a visible decimal column with no format string. Four of pbiplint's
+own model rules take their test from Tabular Editor's rules, from Tabular Editor 3's built-in set or
+the community's published rule files, and are checked against Tabular Editor on the same model. Five
+of the Microsoft rules need statistics only a live model has; they are listed but not run. A column
 whose TMDL names no type, as Power BI Desktop saves most calculated columns, is left out of the
 thirteen ported rules that test a column's type, where Tabular Editor reads the type from the
 column's DAX. A TMDL line the parser cannot place gets a `PARSE_ISSUE` error on that line rather
@@ -117,13 +117,13 @@ https://pbiplint.com/rules with what it checks, why, how to fix it, and quirks.
 
 The report layer (PBIR) is read beside the model: a `.Report` folder alone is valid input, and with
 the model beside it the two are paired through `definition.pbir` and checked together. The report
-rules are the 11 base rules of PBI Inspector by Nat Van Gulck, ported so the results match its
-command line on the same report, with six documented deviations, and pbiplint's own rules for a
-report's correctness and readiness and for the model objects the report never reaches. When the
-input has a report, the "Report at a glance" block states what the report will do when someone
-opens it, whether or not anything fired. A notice names anything about the input a reader must
-know, such as a file that could not be read or a `definition.pbir` that points at a model other
-than the one beside it.
+rules are the 11 base rules of PBI Inspector by Nat Van Gulck, each rebuilt in pbiplint and checked
+against its command line's findings on the same report, with six documented differences, and
+pbiplint's own rules for a report's correctness and readiness and for the model objects the report
+never reaches. When the input has a report, the "Report at a glance" block states what the report
+will do when someone opens it, whether or not anything fired. A notice names anything about the
+input a reader must know, such as a file that could not be read or a `definition.pbir` that points
+at a model other than the one beside it.
 
 The Power Query layer is read inside the model: the M behind each table's partitions, the shared
 expressions, and incremental refresh policies, with Microsoft's Power Query parser, and the file's

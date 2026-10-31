@@ -133,12 +133,12 @@ slicer and four data visuals whose per-field entries Desktop writes)
   Every schema in them is 1.0.0. The `Example-rules-*` and
   `Inventory-sample-fails` fixtures carry `model.bim` models and are not
   usable as TMDL fixtures.
-- Michael's `PBIP and GitHub Demo.Report` (OneDrive, read-only; copy
+- `PBIP and GitHub Demo.Report`, the maintainer's own copy (read-only; copy
   and sanitise): 1 page, 19 visuals, current schemas (report 3.2.0,
   page 2.1.0, visual 2.8.0, pagesMetadata 1.0.0), Filters pane saved
   `expanded: true`, one registered PNG and the stock Fluent theme.
-- Michael's `ShelfMart Foot Traffic and Weather` project (OneDrive,
-  read-only; copy): a whole PBIP with a `.pbip` file, a TMDL model (20
+- The `ShelfMart Foot Traffic and Weather` project, the maintainer's own
+  copy (read-only; copy): a whole PBIP with a `.pbip` file, a TMDL model (20
   `.tmdl` files, no local paths in partition sources) and a report with
   1 page, 9 visuals each with `mobile.json`, theme CY24SU10, and a
   registered PNG and theme JSON under `StaticResources`. ShelfMart is a
@@ -146,7 +146,7 @@ slicer and four data visuals whose per-field entries Desktop writes)
   of it for use as a fixture, so it needs no sanitising beyond the
   standard script. `StaticResources` may be left out of the copy only
   because nothing reads them.
-- `examples/messy-sales` has no report. The OneDrive `Sales Demo.Report`
+- `examples/messy-sales` has no report. The maintainer's own `Sales Demo.Report`
   beside the demo model is one empty page.
 
 ### 3.4 PBIR shapes

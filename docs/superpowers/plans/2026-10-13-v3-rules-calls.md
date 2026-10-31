@@ -22,7 +22,7 @@
 
 ## Global Constraints
 
-- **Base branch:** `release/0.3.0`, never main. Branch `v3/rules-calls`, already cut from `release/0.3.0` at d2a18b8 (pull request 3 merged). Work in the worktree `~/Projects/pbiplint/pbiplint/.claude/worktrees/v3-spec`, never in home (`~/Projects/pbiplint/pbiplint` itself).
+- **Base branch:** `release/0.3.0`, never main. Branch `v3/rules-calls`, already cut from `release/0.3.0` at d2a18b8 (pull request 3 merged). Work in a worktree, never in the main checkout.
 - **The five rules** (spec 9.1): status `builtin` through `pbiplintRule`; layer `powerquery` (so `needs: ["model"]`); scope `["Partition", "NamedExpression", "Table"]`, except `PRIVACY_LEVELS_IGNORED`, `["Model"]`. Severity and category: `LOCAL_DRIVE_PATH` warning, Error Prevention; `PRIVACY_LEVELS_IGNORED` warning, Error Prevention; `SCRIPT_IN_QUERY` warning, Error Prevention; `EXCEL_USE_HEADERS` info, Error Prevention; `ODBC_WHERE_CONNECTOR_EXISTS` info, Performance.
 - **Names, verbatim:** "Path on a local drive", "Privacy levels ignored for this file", "Python or R script in a query", "Excel headers promoted by the workbook reader", "ODBC or OLE DB where Power BI has a connector".
 - **One finding per occurrence**, at the node's first token: `MIndex.locate(q, node.tokenRange.positionStart)`. Detail: `query '<query>'`, then `, partition '<partition>'` when the table has more than one M partition, then `, step '<step>'` when the node is in an outermost `let` step, then `: ` and what was found. Names through `tableRef` (always single-quoted, quotes doubled).
@@ -31,7 +31,6 @@
 - **Long-form dates in prose** ("October 13, 2026"), never `2026-10-13`, except in file names and front matter.
 - **Capitalized bullets** in every list this plan writes.
 - **Rule pages** are pbiplint's own prose, from the template. The fix route starts in Power BI Desktop's Power Query editor (Transform data, the query, the step in Applied steps), then the source, then the TMDL file. No third-party tool is required, never Tabular Editor for the fix, and no Tabular Editor C#. Every quote is linked to its source page, at the section anchor when there is one. Each page's `tmdl fires` and `tmdl fixed` examples must parse and fire (`rule-pages.test.ts`).
-- **Never name or cite any competing Power Query linter or its author**, in code, pages, commits, or the pull request.
 - **Fixtures and tests are sanitized:** the `C:\Demo\Data\` convention for file paths, `example.com` or `*.example` hosts, no real names or servers. Fake secrets, where a test needs one, use the `pbiplint-fixture-<kind>-<nnnn>-notreal` form, which matches no real provider's format. This plan adds none.
 - **Core stays browser-pure:** no Node built-in, no `process.`, no network API in `packages/core/src`.
 - **The core budget:** raised once, in Task 8, from measurement. The parser's 385 KB budget does not change. Until Task 8, `check:browser` may fail on the core's own budget; no task before it runs `check:browser`.
@@ -44,7 +43,7 @@
 - **Commands that cannot stall on a permission prompt** (pb-coord, October 13, 2026): temporary files only under `$CLAUDE_JOB_DIR/tmp`, never `/tmp`. Each experiment gets a fresh folder from `mktemp -d "$CLAUDE_JOB_DIR/tmp/<name>.XXXX"`, used by the literal path it prints (shell variables do not survive between tool calls). Never `rm -rf` or `rm -r` with a glob or a variable path; to remove a folder, name its full literal path, and leaving scratch folders behind is fine. No `sudo`, no deleting outside the worktree or the job folder, no `git clean`, `git reset --hard`, `git stash`, or force-push. A command that might ask for permission is rewritten so it cannot; never wait on a prompt.
 - **The plan's workspace** is `.superpowers/sdd/2026-10-13-v3-rules-calls/` (git-ignored; `.superpowers` is a symlink into home's copy, so scripts there import the worktree's code by `process.cwd()`, never by a relative path). The reader plan's `corpus-diff.mts` is reused from `.superpowers/sdd/2026-10-13-v3-reader/`.
 - **Folder inputs in e2e** go through `setFolder` from `packages/web/e2e/folder-input.ts`, never `setInputFiles` on a directory. This plan's browser checks use the sample button and need none, but any added later in this pull request follows the rule.
-- **The corpus** (`~/Projects/pbiplint/assets/pbip-lint-spike/research-104`) is not pbiplint's: the pull request carries counts only, never a corpus path, line, or value.
+- **The corpus** (in the maintainer's research folder) is not pbiplint's: the pull request carries counts only, never a corpus path, line, or value.
 
 ## Review Focus
 
@@ -82,7 +81,6 @@
 ## Before Task 1
 
 ```bash
-cd ~/Projects/pbiplint/pbiplint/.claude/worktrees/v3-spec
 git fetch origin
 git switch v3/rules-calls
 git status --short          # expected: clean apart from this plan
@@ -2294,7 +2292,7 @@ ln -s "$PWD/node_modules" "$BASE/node_modules"
 - [ ] **Step 2: Run the corpus diff**
 
 ```bash
-npx tsx .superpowers/sdd/2026-10-13-v3-reader/corpus-diff.mts "$BASE" ~/Projects/pbiplint/assets/pbip-lint-spike/research-104 2>&1 | tee "$SCRATCH/corpus-diff.txt" | grep -E "models linted|^[+-][0-9]"
+npx tsx .superpowers/sdd/2026-10-13-v3-reader/corpus-diff.mts "$BASE" <research-folder>/research-104 2>&1 | tee "$SCRATCH/corpus-diff.txt" | grep -E "models linted|^[+-][0-9]"
 ```
 
 Expected, in about a minute: `1321 models linted`, then only `+` lines, for `LOCAL_DRIVE_PATH` (about 1,083), `PRIVACY_LEVELS_IGNORED` (44), `SCRIPT_IN_QUERY` (7), and `EXCEL_USE_HEADERS` (26), and no `-` line. The diff's key leaves out the column, so two paths on one line with one detail count once there; Step 3's script is the count of record. **Any other rule, or any `-` line, stops the task:** report it with the five examples the script prints.
@@ -2367,7 +2365,7 @@ for (const [id, s] of stats)
 Run:
 
 ```bash
-npx tsx .superpowers/sdd/2026-10-13-v3-rules-calls/rule-counts.mts ~/Projects/pbiplint/assets/pbip-lint-spike/research-104 2>&1 | tee "$SCRATCH/rule-counts.txt" | grep -E "^[A-Z_]+:"
+npx tsx .superpowers/sdd/2026-10-13-v3-rules-calls/rule-counts.mts <research-folder>/research-104 2>&1 | tee "$SCRATCH/rule-counts.txt" | grep -E "^[A-Z_]+:"
 ```
 
 Expected, from a prototype run of the same logic on October 13, 2026 (spec 11.4's expectation in brackets):

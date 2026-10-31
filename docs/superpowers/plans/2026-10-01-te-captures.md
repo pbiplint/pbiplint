@@ -15,13 +15,13 @@
 - Tabular Editor is a development-time oracle only: no test runs `te`, CI never needs it, and users never do. Only the capture steps in Tasks 1, 3, and 4 run it.
 - `te` 0.7.1.2 stops working after October 31, 2026, and a later build needs a license. Every capture in this plan must be merged to `main` before then. If a step that runs `te` fails, stop and report; do not hand-write a capture.
 - The survey's rule files are never committed, not even in a fixture or a test: several carry no license. Only their list (`tests/expectations/survey/files.json`) and what `te` reports for them are committed.
-- Microsoft's ruleset is `~/Projects/pbiplint-assets/pbip-lint-spike/ref/BPARules.json`, sha256 `ddb9cff4c2a0611a6467e2559d38319d9867381998066473ffa1e11c2d360392`. Check the sha256 before the first capture.
+- Microsoft's ruleset is `ref/BPARules.json` in the maintainer's research folder, sha256 `ddb9cff4c2a0611a6467e2559d38319d9867381998066473ffa1e11c2d360392`. Check the sha256 before the first capture.
 - The core package is untouched: this pull request changes `scripts/`, `tests/`, `docs/`, `CONTRIBUTING.md`, and `eslint.config.js` only.
 - Sort with plain `.sort()`, as the existing script does, so a re-captured file keeps its order and its diff shows only what changed.
 - No em dashes anywhere (code, comments, JSON strings, docs, commit messages). A hook blocks them. Restructure the sentence instead.
 - Human-facing copy uses long-form dates ("October 31, 2026"); machine fields (`captured`) stay ISO. Bullets start with a capital letter. Every quote from a web page links to that page.
 - Match the surrounding code: doc comments in full sentences on exported and non-obvious functions, as `scripts/fab-expectations.mjs` has them.
-- Work on the branch `te3-captures` in `~/Projects/pbiplint` (not a worktree). It already holds the spec. Commit after each task. Commit messages carry `Part of #117.` and end with these two lines, after a blank line:
+- Work on the branch `te3-captures` (not a worktree). It already holds the spec. Commit after each task. Commit messages carry `Part of #117.` and end with these two lines, after a blank line:
 
   ```
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
@@ -30,7 +30,7 @@
 
   Never write a closing keyword (close, closes, fix, fixes, resolve, resolves) next to an issue number in a commit message or the pull request body. This is pull request 1 of 3; #117 stays open.
 - Before each commit: `npx prettier --write <changed .mjs files>`, then `npm run lint` and the task's tests. `tests/expectations/`, `tests/fixtures/`, `*.tmdl`, and `*.md` are Prettier-ignored on purpose; never format them.
-- Never edit anything under `~/Library/CloudStorage/OneDrive-McKinleyConsulting/`.
+- Never edit the maintainer's own copy of any source.
 - `$SCRATCH` in the commands below is a scratch folder outside the repository (the session scratchpad). Set it once per shell: nothing in it is committed.
 
 ## File Structure
@@ -569,7 +569,7 @@ Expected: 16 tests pass; lint and Prettier report nothing. Prettier should chang
 First check the ruleset and the build:
 
 ```bash
-shasum -a 256 ~/Projects/pbiplint-assets/pbip-lint-spike/ref/BPARules.json
+shasum -a 256 <research-folder>/ref/BPARules.json
 te --version
 ```
 
@@ -578,7 +578,7 @@ Expected: `ddb9cff4c2a0611a6467e2559d38319d9867381998066473ffa1e11c2d360392` and
 Then, from the repository root:
 
 ```bash
-RULES=~/Projects/pbiplint-assets/pbip-lint-spike/ref/BPARules.json
+RULES=<research-folder>/ref/BPARules.json
 for name in data-sources kitchen-sink messy-sales rule-zoo tvw-baseline udf-sales; do
   dir=$(node -p "require('./tests/expectations/$name.json').fixture")
   node scripts/te-expectations.mjs "$dir" "tests/expectations/$name.json" --rules "$RULES"
@@ -1183,7 +1183,7 @@ Expected: 5 tables (Budget hidden, with 1 column and 1 measure; Customer 3 colum
 - [ ] **Step 4: Capture Microsoft's ruleset on it**
 
 ```bash
-node scripts/te-expectations.mjs tests/fixtures/te3-zoo.SemanticModel tests/expectations/te3-zoo.json --rules ~/Projects/pbiplint-assets/pbip-lint-spike/ref/BPARules.json
+node scripts/te-expectations.mjs tests/fixtures/te3-zoo.SemanticModel tests/expectations/te3-zoo.json --rules <research-folder>/ref/BPARules.json
 node -e 'const f=require("./tests/expectations/te3-zoo.json").findings; for (const id of ["ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS","MODEL_SHOULD_HAVE_A_DATE_TABLE","DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE","PROVIDE_FORMAT_STRING_FOR_MEASURES"]) console.log(id, JSON.stringify(f[id]))'
 ```
 

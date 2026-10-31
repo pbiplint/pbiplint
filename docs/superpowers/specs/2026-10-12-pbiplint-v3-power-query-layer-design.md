@@ -707,7 +707,6 @@ Pull requests 4, 5, and 6 depend on 2 and 3 and may go in any order; 6 is last o
 - **Michael previews the site first.** Before the merge, Michael builds and previews the site from the release branch on his Mac, in a checkout that is not home (home stays on main and clean), for example a worktree made for the purpose:
 
   ```bash
-  cd ~/Projects/pbiplint/pbiplint
   git fetch origin
   git worktree add .claude/worktrees/preview-0.3.0 origin/release/0.3.0
   cd .claude/worktrees/preview-0.3.0

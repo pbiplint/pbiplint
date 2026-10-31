@@ -22,7 +22,7 @@
 - From pull request 3 on, every agent runs on Opus 5.5, never Sonnet, Haiku, or Fable: the primary agent and every subagent it dispatches (implementers, task reviewers, re-reviewers, and the final whole-branch review of each pull request), dispatched with the model `opus` (Michael, 2026-09-23). Pull requests 1 and 2 ran implementers and task reviewers on Opus 5 and their whole-branch reviews on Fable 5.1; task texts that say so are the record of those runs.
 - The site build (`packages/web/src/build/*.ts`) imports nothing from `@pbiplint/core`; its copies (`CATEGORY_ORDER`, `ignoreHelp`) are held equal to core's by `packages/web/test/generate.test.ts`.
 - Ported rule ids stay verbatim from `Base-rules.json`, including `HIDE_TOOLTIP_DRILLTROUGH_PAGES`, because parity compares on ids. All ported report rules are severity `warning`. Thresholds default to the source's values (20, 6, 4, 4, 10, 720).
-- Work from `~/Projects/pbiplint` on a branch, never inside a git worktree (the isolation guard fights the tooling). Never edit anything under OneDrive; copy from it.
+- Work on a branch, never inside a git worktree (the isolation guard fights the tooling). Never edit the maintainer's own copy of any source; copy from it.
 - After any rule page edit: `npm run build -w @pbiplint/core && node scripts/sync-rule-pages.mjs`, and commit the regenerated `packages/core/src/rules/rule-summaries.data.ts` and `packages/cli/src/rule-help.data.ts` with the page.
 - A run's findings, facts, and diagnostics are pure functions of the files given to `lint`; no formatter, the CLI, or the site computes anything the core did not.
 
@@ -88,7 +88,7 @@ Every pull request ends with the same closing task shape: run everything CI runs
   - `ENSURE_ALTTEXT` (Pages, `disabled: true` in the source): visuals whose `visualType` is not `shape` and for which none of `visual.visualContainerObjects.general[]` has `properties.altText.expr.Aggregation` truthy or `properties.altText.expr.Literal.Value != "''"`.
 - The oracle's JSON (`TestRun_<id>.json`, UTF-8 BOM) holds `Results[]` with `RuleId`, `ItemPath` (`/definition/pages/<id>/page.json` for page-level rules, `root` or `/definition/report.json` for report level), `ParentName`, `ParentDisplayName`, `Pass`, `Expected`, `Actual` (a list of names for the list rules, a number for the count rules), `LogType`, `Message`.
 - fab-inspector v3.4.0 (2026-06-29) ships `osx-arm64-CLI.zip` (13.6 MB). Homebrew .NET is at `/opt/homebrew/Cellar/dotnet/10.0.400`. The sparse clone that yields the fixtures and the ruleset: `git clone --filter=blob:none --sparse --no-checkout https://github.com/NatVanG/fab-inspector.git && cd fab-inspector && git sparse-checkout set FabInspector.Tests/Files/pbip Rules && git checkout cdaaeec3cca8e97b0fd493e080dfa264f9cd44f8`. The fixture folder holds `Base-rules-fails.Report`, `Base-rules-fails.SemanticModel`, `Base-rules-fails.pbip`, and the same three for `Base-rules-passes`. fab-inspector's LICENSE is MIT, "Copyright (c) 2024 Nat Van Gulck".
-- OneDrive sources (read-only; copy, never edit): `~/Library/CloudStorage/OneDrive-McKinleyConsulting/Documents/McKinley Consulting/Business Development/PowerBIDemos/PBIP and GitHub Demo/` (`PBIP and GitHub Demo.Report`, `.SemanticModel`, `.pbip`; the report has 1 page named "Page 1", 19 visuals of which 3 slicers, 6 cards, 4 text boxes, 1 shape, 1 image, no `visualLink`, no `altText`, no hidden visual; the Filters pane saved `expanded: true`; a registered PNG) and `.../Training/Dashboard in a Day/Archived/Power BI Project Files/` (`ShelfMart Foot Traffic and Weather.Report`, `.SemanticModel`, `.pbip`; 1 page, 9 visuals each with `mobile.json`, a report-level filter, roles Midwest/Northeast/Southeast/Southwest/West, a registered logo PNG and theme JSON, `cache.abf` and `diagramLayout.json` beside the model).
+- Sources, the maintainer's own copy (read-only; copy, never edit): one project (`PBIP and GitHub Demo.Report`, `.SemanticModel`, `.pbip`; the report has 1 page named "Page 1", 19 visuals of which 3 slicers, 6 cards, 4 text boxes, 1 shape, 1 image, no `visualLink`, no `altText`, no hidden visual; the Filters pane saved `expanded: true`; a registered PNG) and another (`ShelfMart Foot Traffic and Weather.Report`, `.SemanticModel`, `.pbip`; 1 page, 9 visuals each with `mobile.json`, a report-level filter, roles Midwest/Northeast/Southeast/Southwest/West, a registered logo PNG and theme JSON, `cache.abf` and `diagramLayout.json` beside the model).
 - marked 18: a renderer override that returns `false` falls back to the default; the default fence renders `<pre><code class="language-xxx">…\n</code></pre>\n`; the `code` override receives `{ text, lang, escaped }`.
 - Vitest aliases `@pbiplint/core` to `packages/core/src/index.ts`; `node scripts/*.mjs` resolves it to `packages/core/dist`, so build core first for the scripts. `.prettierignore` lists `*.md`. ESLint forbids `localeCompare` without a locale.
 
@@ -153,7 +153,7 @@ Recorded so a reviewer can see them as decisions rather than drift. None reopens
 Cut the branch first:
 
 ```bash
-cd ~/Projects/pbiplint && git switch main && git pull --ff-only && git switch -c v2-plumbing
+git switch main && git pull --ff-only && git switch -c v2-plumbing
 ```
 
 ### Task 1: Types for v2: rule interface, report object model, project
@@ -3926,7 +3926,7 @@ Report the pull request URL and stop. Michael reviews and merges.
 Cut the branch after pull request 1 merges:
 
 ```bash
-cd ~/Projects/pbiplint && git switch main && git pull --ff-only && git switch -c v2-ported-rules
+git switch main && git pull --ff-only && git switch -c v2-ported-rules
 ```
 
 Shared facts for this pull request:
@@ -4424,9 +4424,9 @@ mkdir -p "$FIX/base-rules-fails" "$FIX/base-rules-passes" "$FIX/pbip-and-github-
 P="$SCRATCH/fab-inspector/FabInspector.Tests/Files/pbip"
 cp -R "$P/Base-rules-fails.Report" "$P/Base-rules-fails.SemanticModel" "$P/Base-rules-fails.pbip" "$FIX/base-rules-fails/"
 cp -R "$P/Base-rules-passes.Report" "$P/Base-rules-passes.SemanticModel" "$P/Base-rules-passes.pbip" "$FIX/base-rules-passes/"
-D="$HOME/Library/CloudStorage/OneDrive-McKinleyConsulting/Documents/McKinley Consulting/Business Development/PowerBIDemos/PBIP and GitHub Demo"
+D="<the maintainer's own copy of the first project>"
 cp -R "$D/PBIP and GitHub Demo.Report" "$D/PBIP and GitHub Demo.SemanticModel" "$D/PBIP and GitHub Demo.pbip" "$FIX/pbip-and-github-demo/"
-S="$HOME/Library/CloudStorage/OneDrive-McKinleyConsulting/Documents/McKinley Consulting/Training/Dashboard in a Day/Archived/Power BI Project Files"
+S="<the maintainer's own copy of the second project>"
 cp -R "$S/ShelfMart Foot Traffic and Weather.Report" "$S/ShelfMart Foot Traffic and Weather.SemanticModel" "$S/ShelfMart Foot Traffic and Weather.pbip" "$FIX/shelfmart/"
 for d in base-rules-fails base-rules-passes pbip-and-github-demo shelfmart; do node scripts/sanitize-fixture.mjs "$FIX/$d"; done
 du -sh $FIX/*/ && find $FIX -name '.DS_Store' -o -name '*.pbix' -o -name 'cache.abf' | wc -l
@@ -5678,7 +5678,7 @@ Report the URL and stop.
 ## Pull request 3: native rules, tier 1 (branch `v2-native-tier-1`)
 
 ```bash
-cd ~/Projects/pbiplint && git switch main && git pull --ff-only && git switch -c v2-native-tier-1
+git switch main && git pull --ff-only && git switch -c v2-native-tier-1
 ```
 
 Shared facts for the three native pull requests:
@@ -6696,7 +6696,7 @@ As Task 25, branch `v2-native-tier-3`, title "v2 native rules, tier 3: actions, 
 ## Pull request 6: the sample project (branch `v2-sample-report`)
 
 ```bash
-cd ~/Projects/pbiplint && git switch main && git pull --ff-only && git switch -c v2-sample-report
+git switch main && git pull --ff-only && git switch -c v2-sample-report
 ```
 
 Shared facts for this pull request:
@@ -7032,7 +7032,7 @@ Next: pull request 7, the browser.
 ## Pull request 7: the browser (branch `v2-browser`)
 
 ```bash
-cd ~/Projects/pbiplint && git switch main && git pull --ff-only && git switch -c v2-browser
+git switch main && git pull --ff-only && git switch -c v2-browser
 ```
 
 Shared facts:
@@ -7519,7 +7519,7 @@ Next: pull request 8, docs and the 0.2.0 release.
 ## Pull request 8: docs and release (branch `v2-release`)
 
 ```bash
-cd ~/Projects/pbiplint && git switch main && git pull --ff-only && git switch -c v2-release
+git switch main && git pull --ff-only && git switch -c v2-release
 ```
 
 ### Task 42: README, CONTRIBUTING, core README
@@ -7630,7 +7630,7 @@ git commit -m "docs: the report layer in the README, CONTRIBUTING, and the core 
 
 ### Task 43: Version 0.2.0 and pull request 8
 
-Amended 2026-09-23 with Michael (release triage, B7): before Step 1's version bump, the session runs the built CLI over a few of Michael's own PBIP projects saved by Power BI Desktop: the ones he names in pull request 8's kickoff prompt, which the session that writes that prompt asks him for. At least one of them is saved in the PBIR format, because a PBIR-Legacy project (a `report.json`) gives only a notice and runs no report rule. Each is copied from OneDrive to a scratch folder outside the repository (read-only: nothing under OneDrive is edited in place, and no copy is ever committed). The session builds the CLI (`npm run build -w pbiplint`), runs `node packages/cli/dist/pbiplint.mjs <copy> --fail-on none` on each copy, and reads every finding, fact, and notice against the report itself. Any finding or notice that looks wrong is a bug to fix before the release, not a line to accept: the fix lands on this branch with a test of its own, and Step 2's whole-branch review covers it. Step 2's body says what the runs found, in terms that name nothing from the projects, because the body is public.
+Amended 2026-09-23 with Michael (release triage, B7): before Step 1's version bump, the session runs the built CLI over a few of Michael's own PBIP projects saved by Power BI Desktop: the ones he names in pull request 8's kickoff prompt, which the session that writes that prompt asks him for. At least one of them is saved in the PBIR format, because a PBIR-Legacy project (a `report.json`) gives only a notice and runs no report rule. Each is copied from the maintainer's own copy to a scratch folder outside the repository (read-only: nothing is edited in place, and no copy is ever committed). The session builds the CLI (`npm run build -w pbiplint`), runs `node packages/cli/dist/pbiplint.mjs <copy> --fail-on none` on each copy, and reads every finding, fact, and notice against the report itself. Any finding or notice that looks wrong is a bug to fix before the release, not a line to accept: the fix lands on this branch with a test of its own, and Step 2's whole-branch review covers it. Step 2's body says what the runs found, in terms that name nothing from the projects, because the body is public.
 
 - [ ] **Step 1: Bump, following docs/RELEASING.md step 1**
 

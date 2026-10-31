@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript (strict, `noUncheckedIndexedAccess`), Vitest, ESLint and Prettier, npm workspaces (`packages/core`, `packages/cli`, `packages/web`).
 
-**Spec:** `docs/superpowers/specs/2026-09-29-hardcoded-period-in-dax-design.md`. Read it before starting any task. The research it cites is at `.superpowers/research/2026-09-27-hardcoded-periods/report.md` (git-ignored, present in the checkout) with the corpus and prototype in `~/Downloads/pbip-lint-spike/research-104/`.
+**Spec:** `docs/superpowers/specs/2026-09-29-hardcoded-period-in-dax-design.md`. Read it before starting any task. The research it cites is at `.superpowers/research/2026-09-27-hardcoded-periods/report.md` (git-ignored, present in the checkout) with the corpus and prototype in the maintainer's research folder (`research-104/`).
 
 ## Global Constraints
 
@@ -18,7 +18,7 @@
 - Human-facing copy (the rule page, finding details) uses long-form dates ("December 31, 2026"). Bullets start with a capital letter.
 - Every quote from or claim about a web page carries a link to that page, with a section anchor when there is one.
 - Match the surrounding code's comment density and idiom: doc comments in full sentences on exported and non-obvious functions.
-- Work on the branch `hardcoded-period-in-dax` in `~/Projects/pbiplint` (not a worktree). Commit after each task. Commit messages end with these two lines, after a blank line:
+- Work on the branch `hardcoded-period-in-dax` (not a worktree). Commit after each task. Commit messages end with these two lines, after a blank line:
 
   ```
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
@@ -27,7 +27,7 @@
 
   and carry `Part of #104.` before them. Never write a closing keyword (close, closes, fix, fixes, resolve, resolves) next to an issue number anywhere in a commit message.
 - Before each commit: `npx prettier --write <changed files>`, then `npm run lint`, `npm run typecheck`, and the task's tests. At the end of Task 5 the whole suite (`npm test`) must pass.
-- Never edit anything under `~/Library/CloudStorage/OneDrive-McKinleyConsulting/`.
+- Never edit the maintainer's own copy of any source.
 
 ---
 
@@ -1960,13 +1960,13 @@ EOF
 
 ### Task 6: The corpus check (scratch work, nothing committed)
 
-Spec section 10. Everything here lives in the session scratchpad, `/private/tmp/claude-501/-Users-michaelmckinley-Projects-pbiplint/46f2480b-def4-4ddf-b00b-a29c696f8248/scratchpad/corpus104/`. Read the corpus and the research outputs only; write nothing under `~/Downloads/pbip-lint-spike/`.
+Spec section 10. Everything here lives in a scratch folder. Read the corpus and the research outputs only; write nothing under the maintainer's research folder.
 
 **Files:**
 - Create (scratch): `corpus104/models.py`, `corpus104/lint.mjs`, `corpus104/compare.py`, `corpus104/report.md`
 
 **Interfaces:**
-- Consumes: the built core (`packages/core/dist/index.js`: `parseTmdl`, `buildModel`, `buildIndexes`, `pbiplintRules`), and from `~/Downloads/pbip-lint-spike/research-104/`: `groups.py` (`repos()`, `models(repo)`, `model_group_ex(repo, model_dir)`, `CORPUS`), `findings.jsonl`, `review.txt`, `labels.tsv`.
+- Consumes: the built core (`packages/core/dist/index.js`: `parseTmdl`, `buildModel`, `buildIndexes`, `pbiplintRules`), and from the maintainer's research folder (`research-104/`): `groups.py` (`repos()`, `models(repo)`, `model_group_ex(repo, model_dir)`, `CORPUS`), `findings.jsonl`, `review.txt`, `labels.tsv`.
 
 - [ ] **Step 1: List the models with their groups**
 
@@ -1975,7 +1975,7 @@ Spec section 10. Everything here lives in the session scratchpad, `/private/tmp/
 ```python
 """Print one JSON line per model: repo, model (relative to the repo), group, and its folder."""
 import json, os, sys
-R = os.path.expanduser("~/Downloads/pbip-lint-spike/research-104")
+R = os.path.expanduser("<research-folder>/research-104")
 sys.path.insert(0, R)
 import groups as g
 
@@ -2024,7 +2024,7 @@ for (const line of readFileSync(new URL("./models.jsonl", import.meta.url), "utf
 }
 ```
 
-Run: `node corpus104/lint.mjs ~/Projects/pbiplint > corpus104/ours.jsonl` after `npm run build -w @pbiplint/core`. Expected: no line with `"error"`. A model that throws is a bug to report, whatever its group.
+Run: `node corpus104/lint.mjs <repo-root> > corpus104/ours.jsonl` after `npm run build -w @pbiplint/core`. Expected: no line with `"error"`. A model that throws is a bug to report, whatever its group.
 
 - [ ] **Step 3: Rebuild the prototype's side and compare**
 

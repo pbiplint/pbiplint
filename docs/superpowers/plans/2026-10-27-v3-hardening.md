@@ -74,11 +74,10 @@ The base is 235,654 bytes (230.1 KB) against `OWN_LIMIT_KB = 240` (245,760 bytes
 
 ## Global Constraints
 
-- **Base branch:** `release/0.3.0`, never main. Branch `v3/hardening`, from `release/0.3.0` at 23de9e3 (pull requests 1 to 8). Work in the worktree `~/Projects/pbiplint/pbiplint/.claude/worktrees/v3-spec`, never in home (`~/Projects/pbiplint/pbiplint` itself); the one file outside the worktree a task edits is the local release notes draft (Task 5), which the worktree reaches through its `.superpowers` link.
+- **Base branch:** `release/0.3.0`, never main. Branch `v3/hardening`, from `release/0.3.0` at 23de9e3 (pull requests 1 to 8). Work in a worktree, never in the main checkout; the one file outside the worktree a task edits is the local release notes draft (Task 5), which the worktree reaches through its `.superpowers` link.
 - **No em dashes anywhere** (code, comments, docs, pages, commit messages; `rule-pages.test.ts` checks pages for U+2014). Restructure with a comma, colon, parentheses, or two sentences.
 - **Long-form dates in prose** ("October 27, 2026"), except in file names and front matter. **Capitalized bullets** in every list.
-- **Item 9's wording:** in every text (code comments, tests, docs, the release notes, commits, the pull request), the change is an ordinary scope rule, "references are followed only inside the project folder". Never call it an exploit, an attack, or a vulnerability.
-- **Rule pages** are pbiplint's own prose. **Never name or cite any competing Power Query linter or its author**, in code, pages, commits, or the pull request.
+- **Rule pages** are pbiplint's own prose.
 - **Counts only from the corpus:** the pull request, the spec, and the release notes carry counts, never a corpus path, line, value, model or repository name, or vendor word.
 - **Secret hygiene:** never print a fake or real secret value. Fixture values are named here as `FIXTURE_PWD` (kind `pwd`, number `0009`) and `FIXTURE_COMMENT_KEY` (kind `key`, number `0010`), in m-zoo's form `pbiplint-fixture-<kind>-<nnnn>-notreal`; the executor writes them out only in the fixture files. Unit tests build their values with `fake(kind, n)` and numbers from `0201` up.
 - **Core stays browser-pure:** no Node built-in, no `process.`, no network API in `packages/core/src`. `realpathSync` lives in `packages/cli/src/walk.ts` only.
@@ -90,7 +89,7 @@ The base is 235,654 bytes (230.1 KB) against `OWN_LIMIT_KB = 240` (245,760 bytes
 - **Commits:** each message ends with `Part of #78.`, a blank line, and `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Never a closing keyword next to an issue number.
 - **Subagents** run on Opus 5.5 and share the worktree, so one edits files at a time.
 - **Command rules** (pb-coord, October 27, 2026; hard rules):
-  - Scratch only under the executing session's job folder, `$CLAUDE_JOB_DIR/tmp` (for this plan's writer, `/Users/michaelmckinley/.claude/jobs/cb7c83fd/tmp`). Never `/tmp`.
+  - Scratch only in a scratch folder, `$CLAUDE_JOB_DIR/tmp`. Never `/tmp`.
   - Every experiment in a fresh folder from `mktemp -d "$CLAUDE_JOB_DIR/tmp/pr9.XXXX"`, used by its printed literal path (shell variables do not survive between tool calls). Leaving scratch folders behind is fine.
   - Never `rm -rf` or `rm -r` with a glob or a variable path; never `cd` somewhere and delete with `*`.
   - No `sudo`, no `git clean`, `git reset --hard`, `git checkout -- .`, `git stash`, or any push (the Finish section's push is pb-coord's).
@@ -98,7 +97,7 @@ The base is 235,654 bytes (230.1 KB) against `OWN_LIMIT_KB = 240` (245,760 bytes
   - Any proof of concept that can take minutes or gigabytes runs under a hard time limit: `node .superpowers/sdd/2026-10-27-v3-hardening/timed.mjs <ms> <command> ...` (Before Task 1), a Node child process with a kill timer. `timeout` is not installed on this Mac.
   - `gh-pb` for GitHub calls, never `gh auth switch`.
 - **The plan's workspace** is `.superpowers/sdd/2026-10-27-v3-hardening/` (git-ignored; `.superpowers` links into home's copy, so scripts import the worktree's code by `process.cwd()`). Reused: `bytes.mjs` from `.superpowers/sdd/2026-10-13-v3-rules-resolver/`, and the reader plan's `corpus-diff.mts` from `.superpowers/sdd/2026-10-13-v3-reader/`.
-- **The corpus** (`~/Projects/pbiplint/assets/pbip-lint-spike/research-104`) is not pbiplint's.
+- **The corpus** (in the maintainer's research folder) is not pbiplint's.
 
 ## Review Focus
 
@@ -132,14 +131,13 @@ The base is 235,654 bytes (230.1 KB) against `OWN_LIMIT_KB = 240` (245,760 bytes
 | `packages/web/content/privacy.md`, `packages/web/content/cli.md` | 5 | "inside the project folder" |
 | `SECURITY.md` | 1 | Dependencies and limits |
 | The v3 spec, sections 7, 8, 11.5 | 1 to 4 | Dated amendments |
-| `~/Projects/pbiplint/pbiplint/.superpowers/sdd/2026-10-13-release-0.3.0/release-notes.md` (local, not committed) | 5 | One line |
+| `.superpowers/sdd/2026-10-13-release-0.3.0/release-notes.md` (local, not committed) | 5 | One line |
 
 ---
 
 ## Before Task 1
 
 ```bash
-cd ~/Projects/pbiplint/pbiplint/.claude/worktrees/v3-spec
 git switch v3/hardening
 git status --short          # expected: only this plan, untracked
 pb-worktree-setup
@@ -195,7 +193,7 @@ ln -s "$PWD/packages/core/node_modules" <base>/packages/core/node_modules
 Then run the diff once before any change (the branch is still the base), with its output kept, the form every task uses; it lints the corpus twice and takes minutes, never hours:
 
 ```bash
-npx --yes tsx .superpowers/sdd/2026-10-27-v3-hardening/corpus-diff.mts <base> ~/Projects/pbiplint/assets/pbip-lint-spike/research-104 > "$CLAUDE_JOB_DIR/tmp/pr9-corpus-diff-0.txt" 2>&1
+npx --yes tsx .superpowers/sdd/2026-10-27-v3-hardening/corpus-diff.mts <base> <research-folder>/research-104 > "$CLAUDE_JOB_DIR/tmp/pr9-corpus-diff-0.txt" 2>&1
 grep -E "models linted|^[+-][0-9]|ERROR|RULE ERRORS|rule errors:|no finding changed" "$CLAUDE_JOB_DIR/tmp/pr9-corpus-diff-0.txt"
 ```
 
@@ -407,7 +405,7 @@ Expected: `wrote 121 summaries ...`; PASS.
 ```bash
 npm run check:browser
 node .superpowers/sdd/2026-10-13-v3-rules-resolver/bytes.mjs "m/budget|m/read" 
-npx --yes tsx .superpowers/sdd/2026-10-27-v3-hardening/corpus-diff.mts <base> ~/Projects/pbiplint/assets/pbip-lint-spike/research-104 > "$CLAUDE_JOB_DIR/tmp/pr9-corpus-diff-1.txt" 2>&1
+npx --yes tsx .superpowers/sdd/2026-10-27-v3-hardening/corpus-diff.mts <base> <research-folder>/research-104 > "$CLAUDE_JOB_DIR/tmp/pr9-corpus-diff-1.txt" 2>&1
 grep -E "models linted|^[+-][0-9]|ERROR|RULE ERRORS|rule errors:|no finding changed" "$CLAUDE_JOB_DIR/tmp/pr9-corpus-diff-1.txt"
 ```
 
@@ -820,7 +818,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Modify: `packages/cli/src/walk.ts` (`resolvePbip`, `readNamed`, a new `insideProject`, their doc comments)
 - Modify: `packages/cli/test/walk.test.ts`
 - Modify: `packages/web/content/privacy.md`, `packages/web/content/cli.md`
-- Modify (local, not committed): `~/Projects/pbiplint/pbiplint/.superpowers/sdd/2026-10-13-release-0.3.0/release-notes.md`
+- Modify (local, not committed): `.superpowers/sdd/2026-10-13-release-0.3.0/release-notes.md`
 
 **Interfaces:**
 - Produces, in `walk.ts` (not exported):
@@ -936,7 +934,7 @@ In the release notes draft, "What can change in your results", after the `PARSE_
 - **The command line follows a reference only inside the project folder,** the folder that holds the `.pbip`. A report that a `.pbip` names, or a model that a report's `definition.pbir` names by path, outside that folder, directly or through a link, is no longer read: the run says so in a notice and lints the rest. A project laid out as Power BI Desktop saves it, with the model beside the report, is unchanged, and so is the site, which reads only the folder you drop.
 ```
 
-Check it: `perl -CSD -ne 'print "$.: $_" if /\x{2014}/' ~/Projects/pbiplint/pbiplint/.superpowers/sdd/2026-10-13-release-0.3.0/release-notes.md` prints nothing. The entry gets this pull request's number when pb-coord opens it; write `Task 5: release notes need PR 9's number on one entry` into `progress.md`.
+Check it: `perl -CSD -ne 'print "$.: $_" if /\x{2014}/' .superpowers/sdd/2026-10-13-release-0.3.0/release-notes.md` prints nothing. The entry gets this pull request's number when pb-coord opens it; write `Task 5: release notes need PR 9's number on one entry` into `progress.md`.
 
 - [ ] **Step 5: Commit**
 
@@ -965,7 +963,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - [ ] **Step 1: The corpus diff and the bundle**
 
 ```bash
-npx --yes tsx .superpowers/sdd/2026-10-27-v3-hardening/corpus-diff.mts <base> ~/Projects/pbiplint/assets/pbip-lint-spike/research-104 > "$CLAUDE_JOB_DIR/tmp/pr9-corpus-diff-6.txt" 2>&1
+npx --yes tsx .superpowers/sdd/2026-10-27-v3-hardening/corpus-diff.mts <base> <research-folder>/research-104 > "$CLAUDE_JOB_DIR/tmp/pr9-corpus-diff-6.txt" 2>&1
 grep -E "models linted|^[+-][0-9]|ERROR|RULE ERRORS|rule errors:" "$CLAUDE_JOB_DIR/tmp/pr9-corpus-diff-6.txt"
 node .superpowers/sdd/2026-10-13-v3-rules-resolver/bytes.mjs | tail -1
 ```
@@ -976,9 +974,9 @@ Expected: `1321 models linted`, `rule errors: 0 base, 0 head`, `+2 PARSE_ISSUE` 
 
 ```bash
 npm run build
-node .superpowers/sdd/2026-10-27-v3-hardening/timed.mjs 180000 node packages/cli/dist/pbiplint.mjs /Users/michaelmckinley/.claude/jobs/cb7c83fd/tmp/secreview.YgYt/poc-resolver-cubic.X7wx/chain3000 --format json
-node .superpowers/sdd/2026-10-27-v3-hardening/timed.mjs 180000 node packages/cli/dist/pbiplint.mjs /Users/michaelmckinley/.claude/jobs/cb7c83fd/tmp/secreview.YgYt/poc-parser-quadratic.IUjF/plus160k --format json
-node packages/cli/dist/pbiplint.mjs /Users/michaelmckinley/.claude/jobs/cb7c83fd/tmp/secreview.YgYt/poc-parser-quadratic.IUjF/plus160k --quiet
+node .superpowers/sdd/2026-10-27-v3-hardening/timed.mjs 180000 node packages/cli/dist/pbiplint.mjs <scratch-folder>/chain3000 --format json
+node .superpowers/sdd/2026-10-27-v3-hardening/timed.mjs 180000 node packages/cli/dist/pbiplint.mjs <scratch-folder>/plus160k --format json
+node packages/cli/dist/pbiplint.mjs <scratch-folder>/plus160k --quiet
 ```
 
 Expected: the resolver's (3,000 chained steps and 3,000 calls; 151 s and 200 MB before) ends `exit 0` or `exit 1` within a few seconds, not killed; the parser's (a 320 KB chain; 175 s and 1.33 GB before) ends `exit 1` in under 5 s, and its quiet run lists `error PARSE_ISSUE 1`. Write the times into `progress.md`. A run killed at 180 s stops the task.

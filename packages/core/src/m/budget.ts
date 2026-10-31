@@ -16,7 +16,7 @@ export interface MBudget {
 /**
  * The budget (v3 spec, section 7, amended October 27, 2026). On the corpus of 1,321 models the
  * largest query is 847,457 units, the largest model's M 1,158,354, the deepest nesting 15. Just
- * under 2,000,000 units, the slowest shapes parse in about 2.6 s on Michael's Mac.
+ * under 2,000,000 units, the slowest shapes still take a few seconds.
  */
 export const M_BUDGET: MBudget = { query: 2_000_000, model: 4_000_000, depth: 128 };
 

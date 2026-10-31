@@ -28,7 +28,7 @@ describe("parseM", () => {
       position: { lineNumber: 1, lineCodeUnit: 8 },
     });
   });
-  it("reports a line-level lex error with its own message and place", async () => {
+  it("reports a lex error inside a line with its own message and place", async () => {
     expect(await parseM("let a = 0xZZ in a")).toEqual({
       ok: false,
       message: "Expected a hex literal",
@@ -40,7 +40,7 @@ describe("parseM", () => {
       position: { lineNumber: 1, lineCodeUnit: 8 },
     });
   });
-  it("reports the first line when line-level lex errors are on several lines", async () => {
+  it("reports the first line when lex errors are on several lines", async () => {
     expect(await parseM("let\n  a = 0xZZ,\n  b = ^\nin a")).toEqual({
       ok: false,
       message: "Expected a hex literal",
@@ -55,8 +55,8 @@ describe("parseM", () => {
       position: { lineNumber: 0, lineCodeUnit: 2 },
     });
   });
-  it("pins the parser to exactly 2.0.0", () => {
+  it("pins the parser to exactly 4.0.1", () => {
     const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
-    expect(pkg.dependencies["@microsoft/powerquery-parser"]).toBe("2.0.0");
+    expect(pkg.dependencies["@microsoft/powerquery-parser"]).toBe("4.0.1");
   });
 });

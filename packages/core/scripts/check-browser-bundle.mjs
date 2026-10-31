@@ -57,9 +57,9 @@ console.log(
 );
 
 // Tripwires for conscious growth, raised on purpose: the core's own code at 265 KB and the parser at
-// 385 KB, measured at 376.0 KB on October 13, 2026; the parser moves only when its pinned version
-// does. The core's budget was 210 KB (the v2 spec's amendment of October 4, 2026), then 230 KB for
-// v3's first fifteen rules, Michael raised it to 240 KB on October 13, 2026, when the Desktop
+// 385 KB, measured at 353.6 KB on 4.0.1 on October 31, 2026 (376.0 KB on 2.0.0); the parser moves
+// only when its pinned version does. The core's budget was 210 KB (the v2 spec's amendment of
+// October 4, 2026), then 230 KB for v3's first fifteen rules, Michael raised it to 240 KB on October 13, 2026, when the Desktop
 // check's two changes measured 230.1 KB, it was raised to 245 KB on October 28, 2026, when a
 // rule that cannot finish became a finding (#238) measured 239.9 KB, with 5 KB for 0.3.x (v3 spec,
 // section 3.4), it was raised to 255 KB on October 29, 2026, when #98's PR 1 (message IDs)

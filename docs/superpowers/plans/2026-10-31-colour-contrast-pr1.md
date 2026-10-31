@@ -26,7 +26,7 @@
 
 1. A legacy report (`report.json` directly in the `.Report` folder) that also has a `StaticResources` folder: it reads as legacy, on the CLI and on all three site routes, and the theme files do not make it look like a PBIR report.
 2. Unrelated or broken JSON in `RegisteredResources` (a shape map, a half-written file): no `PARSE_ISSUE`, no change to any finding.
-3. A `.tmdl`, `.pbip`, `.pbix`, `pbiplint.config.json`, or image inside a theme folder: never opened and never recorded, on any route.
+3. A `.tmdl`, `.pbip`, `.pbix`, or image inside a theme folder: never opened and never recorded, on any route. A `pbiplint.config.json` there is only JSON in a theme folder, and the config search, which goes by folder, never takes it.
 4. A custom theme that is named but missing, with a base theme that sets the property: the answer is `theme-not-read`, not the base's colour.
 5. A real saved project with a base theme: its findings are byte for byte what they were before this PR, apart from the report's file count.
 
@@ -141,7 +141,7 @@ Expected: PASS, with any exact file list that holds the fixture's `theme.json` u
 
 - [ ] **Step 1: Write the failing tests**
 
-- `wanted`: true for `X.Report/StaticResources/SharedResources/BaseThemes/a.json` and the other two folders; false for `X.Report/StaticResources/x.json`, `.../RegisteredResources/sub/a.json`, `.../RegisteredResources/a.tmdl`, `.../RegisteredResources/a.pbip`, `.../RegisteredResources/pbiplint.config.json`, and `Other/StaticResources/RegisteredResources/a.json`.
+- `wanted`: true for `X.Report/StaticResources/SharedResources/BaseThemes/a.json` and the other two folders; false for `X.Report/StaticResources/x.json`, `.../RegisteredResources/sub/a.json`, `.../RegisteredResources/a.tmdl`, `.../RegisteredResources/a.pbip`, and `Other/StaticResources/RegisteredResources/a.json`.
 - `skipsFolder`: false for `X.Report/StaticResources`, `.../SharedResources`, `.../BaseThemes`, `.../BuiltInThemes`, `.../RegisteredResources`; true for `.../RegisteredResources/sub`, `.../SharedResources/other`, `.../StaticResources/definition`, `StaticResources`, `Other/StaticResources`, `.git`, `X.Report/CustomVisuals`.
 - `markerOf` is undefined for a `.pbix` under a report's `StaticResources`.
 - On each route (`walkEntry`, `walkHandle`, `readDirectoryInput`): a theme file is read; a file over the cap, by a fake `File.size`, has `text()` never called and raises no notice; `sub/` is never listed.

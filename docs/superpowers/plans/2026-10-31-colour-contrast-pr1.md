@@ -1,7 +1,5 @@
 # Colour contrast, PR 1: themes read, and the colour module
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-
 **Goal:** Every reader opens a report's theme JSON, `Report` carries the themes `report.json` names, and a browser-pure module works out a colour and a background stack as Power BI Desktop paints them. No new finding and no count moves on a project without theme files.
 
 **Architecture:** The readers decide by path alone (`isThemeFile`), as they do today. `buildReport` holds theme files back from its ordinary JSON pass, parses only the ones `report.json` names, and records each on `report.themes`. The colour module has three files: pure maths (`colour.ts`), reading one written colour (`read.ts`), and the cascade and background stack (`cascade.ts`). No rule calls it yet, so it stays out of the bundle until PR 2.

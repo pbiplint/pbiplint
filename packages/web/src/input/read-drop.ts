@@ -1,4 +1,4 @@
-import { isPbix, type Diagnostic } from "@pbiplint/core";
+import { isPbix, isThemeFile, MAX_THEME_BYTES, type Diagnostic } from "@pbiplint/core";
 import {
   CONFIG_FILE,
   emptyTree,
@@ -11,12 +11,16 @@ import {
 /** A report's JSON: anything under the definition folder directly inside a .Report folder. */
 const REPORT_JSON = /(^|\/)[^/]+\.Report\/definition\/.*\.json$/;
 
+/** Anything below a report's StaticResources folder, where only a theme file is ever opened. */
+const IN_REPORT_RESOURCES = /(^|\/)[^/]+\.Report\/StaticResources\//;
+
 /**
  * Only these are ever read; everything else in a dropped folder stays unopened. Takes the
  * drop-relative path, since a report's JSON is known by the folders it sits in: a lone dropped
  * visual.json has no folder, so it is not wanted, which is right, as it is not a report.
  */
 export const wanted = (path: string): boolean => {
+  if (IN_REPORT_RESOURCES.test(path)) return isThemeFile(path);
   const name = path.split("/").pop() ?? path;
   return (
     name.endsWith(".tmdl") ||
@@ -30,7 +34,8 @@ export const wanted = (path: string): boolean => {
 
 /**
  * Folders never read, as the CLI skips them: Desktop's cache, git, packages, and a report's
- * resources and custom visuals, which hold nothing pbiplint lints and can be huge.
+ * resources and custom visuals, which hold nothing pbiplint lints and can be huge. skipsFolder
+ * lets a walk through to a report's theme folders.
  */
 export const SKIP_DIRS: ReadonlySet<string> = new Set([
   ".git",
@@ -39,6 +44,23 @@ export const SKIP_DIRS: ReadonlySet<string> = new Set([
   "StaticResources",
   "CustomVisuals",
 ]);
+
+/** A report's StaticResources folder, or a folder on the way to a theme file in it. */
+const TO_THEME_FILES =
+  /(^|\/)[^/]+\.Report\/StaticResources(\/(SharedResources(\/(BaseThemes|BuiltInThemes))?|RegisteredResources))?$/;
+
+/**
+ * Whether a walk stays out of the folder at this drop-relative path: one of SKIP_DIRS, or anything
+ * in a report's StaticResources folder that does not lead to a theme file.
+ */
+export const skipsFolder = (path: string): boolean => {
+  if (TO_THEME_FILES.test(path)) return false;
+  return IN_REPORT_RESOURCES.test(path) || SKIP_DIRS.has(path.split("/").pop() ?? path);
+};
+
+/** A wanted file's text, or undefined for a theme folder's file over the size cap, not opened. */
+export const readWanted = async (path: string, file: File): Promise<string | undefined> =>
+  isThemeFile(path) && file.size > MAX_THEME_BYTES ? undefined : file.text();
 
 /**
  * How deep a folder walk goes. A drop or a picked folder is a tree today, since no browser follows
@@ -93,6 +115,7 @@ export function unread(tree: InputTree, path: string, e: unknown, folder = false
  * wherever it sits. Called on files only, so a folder named like a .pbix is not one.
  */
 export const markerOf = (path: string): InputMarker | undefined => {
+  if (IN_REPORT_RESOURCES.test(path)) return undefined;
   if (isPbix(path)) return { path, kind: "pbix" };
   const m = /(^|\/)([^/]+\.(Report|SemanticModel))\/(report\.json|model\.bim)$/.exec(path);
   if (!m) return undefined;
@@ -159,14 +182,15 @@ export async function walkEntry(entry: FileSystemEntry, tree: InputTree, depth =
       const file = await new Promise<File>((resolve, reject) =>
         (entry as FileSystemFileEntry).file(resolve, reject),
       );
-      tree.entries.push({ path, text: await file.text() });
+      const text = await readWanted(path, file);
+      if (text !== undefined) tree.entries.push({ path, text });
     } catch (e) {
       unread(tree, path, e);
     }
     return;
   }
   // The skip is tested before the cap, so a folder that is never read raises no notice about it.
-  if (!entry.isDirectory || SKIP_DIRS.has(entry.name)) return;
+  if (!entry.isDirectory || skipsFolder(path)) return;
   if (depth >= MAX_DEPTH) {
     tree.diagnostics.push(depthCap(path));
     return;

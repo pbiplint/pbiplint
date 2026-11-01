@@ -1595,6 +1595,47 @@ describe("relativeToRoot", () => {
   });
 });
 
+describe("selectProject and a report's theme files", () => {
+  const THEME = "Demo.Report/StaticResources/SharedResources/BaseThemes/Base.json";
+  it("carries them on the report part, by their path from its root, after its definition files", () => {
+    const { files, read } = selectProject({
+      ...emptyTree(),
+      reportFolders: ["Demo.Report"],
+      entries: [e(THEME), e("Demo.Report/definition/report.json", "{}")],
+    });
+    expect(files.map((f) => f.path)).toContain(
+      "StaticResources/SharedResources/BaseThemes/Base.json",
+    );
+    expect(read.join()).not.toContain("not linted");
+  });
+  it("records a theme file or folder that could not be read as the report's own", () => {
+    const { unreadPaths } = selectProject({
+      ...emptyTree(),
+      reportFolders: ["Demo.Report"],
+      entries: [e("Demo.Report/definition/report.json", "{}")],
+      diagnostics: [unreadAt(THEME), unreadAt("Demo.Report/StaticResources/RegisteredResources")],
+      unreadFolders: ["Demo.Report/StaticResources/RegisteredResources"],
+    });
+    expect([...unreadPaths.report!].sort()).toEqual([
+      "StaticResources/RegisteredResources/",
+      "StaticResources/SharedResources/BaseThemes/Base.json",
+    ]);
+  });
+  it("reads a legacy report as legacy, and a report holding only theme files as no report", () => {
+    expect(() =>
+      selectProject({
+        ...emptyTree(),
+        reportFolders: ["Demo.Report"],
+        markers: [{ path: "Demo.Report/report.json", kind: "legacy-report" }],
+        entries: [e(THEME)],
+      }),
+    ).toThrow(new InputError(legacyReportNotice("Demo.Report").message));
+    expect(() =>
+      selectProject({ ...emptyTree(), reportFolders: ["Demo.Report"], entries: [e(THEME)] }),
+    ).toThrow(InputError);
+  });
+});
+
 describe("selectProject and a drop that reads nothing but legacy parts (#175)", () => {
   // As the CLI's walk.test.ts has it: a run that reads nothing is refused, a legacy part's notice
   // the message, naming the part by its path in the drop as the CLI joins it to its input.

@@ -7,6 +7,7 @@ import {
   rmSync,
   statSync,
   symlinkSync,
+  truncateSync,
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, join } from "node:path";
@@ -14,6 +15,7 @@ import {
   legacyModelNotice,
   legacyReportNotice,
   lint,
+  MAX_THEME_BYTES,
   noTmdlRefusal,
   pbixRefusal,
 } from "@pbiplint/core";
@@ -238,7 +240,96 @@ describe("resolveProject", () => {
     const sales = (await lint(p.model!.files)).model.tables.find((t) => t.name === "Sales")!;
     expect(sales.columns.map((c) => c.name)).toEqual(["Amount", "Old Amount"]);
   });
-  it("reads a whole PBIP folder, its .pbip file, and both parts with part-relative paths, never StaticResources or .pbi", () => {
+  describe("a report's theme files", () => {
+    const BASE = join("StaticResources", "SharedResources", "BaseThemes");
+    const write = (root: string, below: string, name: string, text = "{}"): string => {
+      const dir = join(root, "Demo.Report", below);
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, name), text);
+      return join(dir, name);
+    };
+    const themes = (files: { path: string }[]): string[] =>
+      files.map((f) => f.path).filter((p) => p.startsWith("StaticResources"));
+
+    it("opens only JSON directly in the three theme folders", () => {
+      const root = pbip({ model: true, report: true });
+      write(root, BASE, "Base.json");
+      write(root, join("StaticResources", "SharedResources", "BuiltInThemes"), "Built.json");
+      write(root, join("StaticResources", "RegisteredResources"), "logo.png");
+      write(root, join("StaticResources", "RegisteredResources"), "x.tmdl");
+      write(root, join("StaticResources", "RegisteredResources"), "x.pbix");
+      write(root, join("StaticResources", "RegisteredResources", "sub"), "deep.json");
+      write(root, "StaticResources", "loose.json");
+      write(root, join("StaticResources", "SharedResources"), "loose.json");
+      mkdirSync(join(root, "Demo.Report", BASE, "folder.json"));
+      const p = resolveProject(root);
+      expect(themes(p.report!.files)).toEqual([
+        "StaticResources/SharedResources/BaseThemes/Base.json",
+        "StaticResources/SharedResources/BuiltInThemes/Built.json",
+        "StaticResources/RegisteredResources/theme.json",
+      ]);
+      expect(p.diagnostics).toEqual([]);
+      expect(p.model!.files.some((f) => f.path.includes("x.tmdl"))).toBe(false);
+    });
+    it("does not read a theme file over the size cap, and says nothing of it", () => {
+      const root = pbip({ report: true });
+      truncateSync(write(root, BASE, "AtCap.json"), MAX_THEME_BYTES);
+      truncateSync(write(root, BASE, "Over.json"), MAX_THEME_BYTES + 1);
+      const p = resolveProject(root);
+      expect(themes(p.report!.files)).toContain(
+        "StaticResources/SharedResources/BaseThemes/AtCap.json",
+      );
+      expect(themes(p.report!.files)).not.toContain(
+        "StaticResources/SharedResources/BaseThemes/Over.json",
+      );
+      expect(p.diagnostics).toEqual([]);
+    });
+    it.skipIf(noLinks)("does not follow a link on the way, or a file that is one", () => {
+      const outside = tempDir("theme-outside");
+      writeFileSync(join(outside, "out.json"), "{}");
+      const file = pbip({ report: true });
+      symlinkSync(join(outside, "out.json"), write(file, BASE, "real.json") + ".link.json");
+      const byFile = resolveProject(file);
+      expect(themes(byFile.report!.files)).toEqual([
+        "StaticResources/SharedResources/BaseThemes/real.json",
+        "StaticResources/RegisteredResources/theme.json",
+      ]);
+      expect(byFile.report!.unread).toEqual([
+        "StaticResources/SharedResources/BaseThemes/real.json.link.json",
+      ]);
+      const folder = pbip({ report: true });
+      mkdirSync(join(folder, "Demo.Report", "StaticResources", "SharedResources"));
+      symlinkSync(outside, join(folder, "Demo.Report", BASE));
+      const byFolder = resolveProject(folder);
+      expect(themes(byFolder.report!.files)).toEqual([
+        "StaticResources/RegisteredResources/theme.json",
+      ]);
+      expect(byFolder.report!.unread).toEqual(["StaticResources/SharedResources/BaseThemes/"]);
+      expect(byFolder.diagnostics.map((d) => d.kind)).toEqual(["unread-file"]);
+    });
+    it("reads them for a report given on its own, or by its definition folder", () => {
+      const root = pbip({ report: true });
+      write(root, BASE, "Base.json");
+      const want = "StaticResources/SharedResources/BaseThemes/Base.json";
+      for (const input of [join(root, "Demo.Report"), join(root, "Demo.Report", "definition")])
+        expect(themes(resolveProject(input).report!.files)).toContain(want);
+    });
+    it("reads a legacy report as legacy, whatever StaticResources holds", () => {
+      const root = tempDir("legacy-themes");
+      write(root, BASE, "Base.json");
+      writeFileSync(join(root, "Demo.Report", "report.json"), "{}");
+      writeFileSync(join(root, "Demo.Report", "definition.pbir"), "{}");
+      expect(() => resolveProject(root)).toThrow(/PBIR-Legacy/);
+    });
+    it("is refused as before when a report folder holds nothing but theme files", () => {
+      const root = tempDir("only-themes");
+      write(root, BASE, "Base.json");
+      expect(() => resolveProject(join(root, "Demo.Report"))).toThrow(
+        /No semantic model or report/,
+      );
+    });
+  });
+  it("reads a whole PBIP folder, its .pbip file, and both parts with part-relative paths, and in StaticResources only a theme file, never .pbi", () => {
     const root = pbip({ model: true, report: true });
     for (const input of [root, join(root, "Demo.pbip")]) {
       const p = resolveProject(input);
@@ -250,6 +341,7 @@ describe("resolveProject", () => {
       expect(p.report!.files.map((f) => f.path).sort()).toEqual([
         "../Demo.pbip",
         ".platform",
+        "StaticResources/RegisteredResources/theme.json",
         "definition.pbir",
         "definition/pages/p/page.json",
         "definition/pages/p/visuals/v/visual.json",
@@ -1250,6 +1342,7 @@ describe("resolveProject and symbolic links (#59)", () => {
       expect(p.report!.files.map((f) => f.path).sort()).toEqual([
         "../Demo.pbip",
         ".platform",
+        "StaticResources/RegisteredResources/theme.json",
         "definition.pbir",
         "definition/report.json",
       ]);
@@ -1379,7 +1472,7 @@ describe("resolveProject and symbolic links (#59)", () => {
     };
     const whole = resolveProject(linkTo(root));
     expect(whole.model!.files).toHaveLength(2);
-    expect(whole.report!.files).toHaveLength(7);
+    expect(whole.report!.files).toHaveLength(8);
     expect(whole.diagnostics).toEqual([]);
     for (const part of [join(root, "Demo.Report"), join(root, "Demo.Report", "definition")]) {
       const lone = resolveProject(linkTo(part));

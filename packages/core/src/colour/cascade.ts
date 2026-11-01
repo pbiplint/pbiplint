@@ -1,6 +1,7 @@
-import { literal } from "../pbir/build.js";
+import { literal, pageFolderOf } from "../pbir/build.js";
 import { escapePointer } from "../pbir/json.js";
 import type { Page, Report, Visual } from "../pbir/types.js";
+import { pageUnread, visualUnread } from "../rules/report-helpers.js";
 import { over, type Rgba } from "./colour.js";
 import {
   namedColour,
@@ -217,7 +218,7 @@ function readLayer(themes: Report["themes"], place: LayerPlace): LayerRead {
     read = namedColour(place.defaultColour, themes);
   } else {
     // Nothing paints this layer, unless it says how see-through a colour it does not name is.
-    return clear.found ? { why: "not-set" } : "none";
+    return clear.found || show.found ? { why: "not-set" } : "none";
   }
   if (!read.known) return { why: read.why };
   const { colour, from } = read;
@@ -229,11 +230,15 @@ function readLayer(themes: Report["themes"], place: LayerPlace): LayerRead {
   return { colour: { ...colour, a: colour.a * (1 - transparency / 100) }, ...where };
 }
 
-/** The groups around a visual, innermost first. */
-function groupsOf(page: Page, visual: Visual): Visual[] {
-  const groups: Visual[] = [];
+/**
+ * The groups around a visual, innermost first, ending in `"unread"` at a parent whose file could not
+ * be read, since what it paints is not known. A parent that is simply not there paints nothing.
+ */
+function groupsOf(report: Report, page: Page, visual: Visual): (Visual | "unread")[] {
+  const groups: (Visual | "unread")[] = [];
   for (let id = visual.groupId; id !== undefined;) {
     const group = page.visuals.find((v) => v.id === id && v.isGroup);
+    if (!group && visualUnread(report, page, id)) groups.push("unread");
     if (!group || groups.includes(group)) break;
     groups.push(group);
     id = group.groupId;
@@ -256,7 +261,9 @@ export function backgroundOf(
 ): Background {
   const objectsOf = (json: unknown, way: string[]): unknown =>
     way.reduce<unknown>((at, key) => member(at, key), json);
-  const places: LayerPlace[] = [
+  const pageNotRead =
+    page.json === undefined || pageUnread(report, pageFolderOf(page.file) ?? page.id);
+  const places: (LayerPlace | "unread")[] = [
     {
       kind: "visual",
       own: {
@@ -272,30 +279,38 @@ export function backgroundOf(
       showRequired: true,
       defaultColour: "background",
     },
-    ...groupsOf(page, visual).map((group): LayerPlace => ({
-      kind: "group",
-      own: {
-        entries: objectsOf(group.json, ["visualGroup", "objects", "background"]),
-        source: "group",
-        file: group.file,
-        pointer: "/visualGroup/objects/background",
-      },
-      visualType: "group",
-      object: "background",
-      wildcard: false,
-    })),
-    ...(["background", "outspace"] as const).map((object): LayerPlace => ({
-      kind: object === "background" ? "page" : "wallpaper",
-      own: {
-        entries: objectsOf(page.json, ["objects", object]),
-        source: "page",
-        file: page.file,
-        pointer: `/objects/${object}`,
-      },
-      visualType: "page",
-      object,
-      wildcard: false,
-    })),
+    ...groupsOf(report, page, visual).map((group): LayerPlace | "unread" =>
+      group === "unread"
+        ? group
+        : {
+            kind: "group",
+            own: {
+              entries: objectsOf(group.json, ["visualGroup", "objects", "background"]),
+              source: "group",
+              file: group.file,
+              pointer: "/visualGroup/objects/background",
+            },
+            visualType: "group",
+            object: "background",
+            wildcard: false,
+          },
+    ),
+    ...(["background", "outspace"] as const).map((object): LayerPlace | "unread" =>
+      pageNotRead
+        ? "unread"
+        : {
+            kind: object === "background" ? "page" : "wallpaper",
+            own: {
+              entries: objectsOf(page.json, ["objects", object]),
+              source: "page",
+              file: page.file,
+              pointer: `/objects/${object}`,
+            },
+            visualType: "page",
+            object,
+            wildcard: false,
+          },
+    ),
   ];
   const layers: StackLayer[] = [];
   const stack = (layer: StackLayer, kind: OpaqueAt): Background | undefined => {
@@ -319,6 +334,7 @@ export function backgroundOf(
     if (done) return done;
   }
   for (const place of places) {
+    if (place === "unread") return { known: false, why: "file-not-read" };
     const layer = readLayer(report.themes, place);
     if (layer === "none") continue;
     if ("why" in layer) return { known: false, why: layer.why };

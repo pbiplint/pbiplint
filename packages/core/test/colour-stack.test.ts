@@ -264,7 +264,111 @@ describe("backgroundOf and the element's own background", () => {
   });
 });
 
+describe("backgroundOf and a report file that could not be read", () => {
+  const CY = {
+    visualStyles: {
+      page: {
+        "*": {
+          outspace: [{ color: { solid: { color: "#FFFFFF" } } }],
+          background: [{ transparency: 100 }],
+        },
+      },
+    },
+  };
+  const NOT_READ = { known: false, why: "file-not-read" };
+  const VISUAL = "definition/pages/p/visuals/v/visual.json";
+  const stack = (files: LintFile[], unreadPaths: string[] = []): Background => {
+    const { report } = buildReport(files, unreadPaths);
+    const page = report.pages[0]!;
+    return backgroundOf(
+      report,
+      page,
+      page.visuals.find((v) => v.id === "v")!,
+    );
+  };
+  const withVisual = (json: object, parent?: string): LintFile => ({
+    path: VISUAL,
+    text: JSON.stringify({
+      name: "v",
+      ...(parent ? { parentGroupName: parent } : {}),
+      visual: {
+        visualType: "textbox",
+        visualContainerObjects: { background: background(json) },
+      },
+    }),
+  });
+  const pageFile = (text: string): LintFile => ({ path: "definition/pages/p/page.json", text });
+  const REPORT: LintFile = {
+    path: "definition/report.json",
+    text: JSON.stringify({
+      themeCollection: { baseTheme: { name: "B", type: "SharedResources" } },
+      resourcePackages: [
+        { name: "SharedResources", items: [{ name: "B", path: "BaseThemes/B.json" }] },
+      ],
+    }),
+  };
+  const THEME: LintFile = { path: BASE_FILE, text: JSON.stringify(CY) };
+
+  it("does not take the theme's word for a page whose page.json did not parse", () => {
+    const off = withVisual({ show: false });
+    expect(stack([REPORT, THEME, pageFile("{ not json"), off])).toEqual(NOT_READ);
+    expect(stack([REPORT, THEME, off], ["definition/pages/p/page.json"])).toEqual(NOT_READ);
+  });
+  it("still knows an opaque visual on such a page", () => {
+    expectColour(
+      stack([REPORT, THEME, pageFile("{ not json"), withVisual(OPAQUE)]),
+      "#102030",
+      "visual",
+    );
+  });
+  const PAGE = pageFile(
+    JSON.stringify({
+      name: "p",
+      objects: { background: background({ color: fill("#111111"), transparency: 0 }) },
+    }),
+  );
+  it("does not skip a parent group whose file could not be read", () => {
+    const inGroup = withVisual({ show: false }, "g");
+    const groupFile = "definition/pages/p/visuals/g/visual.json";
+    expect(stack([PAGE, inGroup, { path: groupFile, text: "{ not json" }])).toEqual(NOT_READ);
+    expect(stack([PAGE, inGroup], [groupFile])).toEqual(NOT_READ);
+    expect(stack([PAGE, inGroup], ["definition/pages/p/visuals/"])).toEqual(NOT_READ);
+  });
+  it("still knows an opaque visual in such a group, and passes over a parent that is simply absent", () => {
+    expectColour(
+      stack([PAGE, withVisual(OPAQUE, "g")], [VISUAL.replace("/v/", "/g/")]),
+      "#102030",
+      "visual",
+    );
+    expectColour(stack([PAGE, withVisual({ show: false }, "g")]), "#111111", "page");
+  });
+  it("counts the themes as not read when report.json could not be", () => {
+    const page = pageFile(
+      JSON.stringify({
+        name: "p",
+        objects: { background: background({ color: fill("#111111") }) },
+      }),
+    );
+    const off = withVisual({ show: false });
+    const broken = { path: "definition/report.json", text: "{ not json" };
+    expect(stack([broken, page, off])).toEqual({ known: false, why: "theme-not-read" });
+    expect(stack([page, off], ["definition/report.json"])).toEqual({
+      known: false,
+      why: "theme-not-read",
+    });
+    expect(stack([page, off], ["definition/"])).toEqual({ known: false, why: "file-not-read" });
+    expect(buildReport([broken]).report.issues).toHaveLength(1);
+  });
+});
+
 describe("backgroundOf when it cannot know", () => {
+  it("does not take a group that is on with no colour for one with no paint", () => {
+    const group = { show: true };
+    expect(backOf({ visual: { show: false }, groups: [group], page: PAGE_WHITE })).toEqual({
+      known: false,
+      why: "not-set",
+    });
+  });
   it("says a colour depends on the data", () => {
     expect(
       backOf({ visual: { show: true, color: { solid: { color: { expr: { FillRule: {} } } } } } }),

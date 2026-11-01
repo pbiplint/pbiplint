@@ -734,6 +734,12 @@ export function buildReport(
     }
   }
   report.themes = readThemes(reportJson, themeFiles, report.issues);
+  // A report.json that was not read may name themes, so what depends on them is not known.
+  if (
+    report.unreadDefinitionFiles.includes("definition/report.json") ||
+    report.unreadDefinitionFolders.some((f) => folderHolds(f, "definition"))
+  )
+    report.themes = { base: { name: "", state: "absent" } };
   for (const v of visuals) {
     let page = pagesByFolder.get(v.pageId);
     if (!page) {

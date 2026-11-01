@@ -5,9 +5,11 @@ import { parseHex, type Rgba } from "./colour.js";
 /**
  * Why a colour cannot be known from the project's files, so nothing is said about it: it depends on
  * the data; it has a Percent, whose formula Microsoft does not document; a theme it depends on was
- * not read; nothing sets it; or it is written in a form this does not read.
+ * not read; a report file it depends on was not read; nothing sets it; or it is written in a form
+ * this does not read.
  */
-export type NotKnown = "data-dependent" | "percent" | "theme-not-read" | "not-set" | "other-form";
+export type NotKnown =
+  "data-dependent" | "percent" | "theme-not-read" | "file-not-read" | "not-set" | "other-form";
 
 /** The line of a theme file that supplied a colour. */
 export interface ThemeSetting {

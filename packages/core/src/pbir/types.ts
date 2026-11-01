@@ -253,7 +253,10 @@ export interface Report {
   displayName?: string;
   schemaVersion?: string;
   themeName?: string;
-  /** The themes report.json names; the custom theme layers on top of the base theme. */
+  /**
+   * The themes report.json names; the custom theme layers on top of the base theme. A report.json
+   * that could not be read may name either, so it reads as a base theme of no name that is absent.
+   */
   themes: { base?: ThemeFile; custom?: ThemeFile };
   publicCustomVisuals: string[];
   filtersPane: { expanded?: boolean; visible?: boolean; hiddenInEditMode?: boolean };

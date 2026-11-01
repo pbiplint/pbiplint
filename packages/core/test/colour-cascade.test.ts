@@ -26,7 +26,10 @@ const own = (entries: unknown) => ({
 });
 
 describe("lookup, layer by layer", () => {
-  const base = read({ visualStyles: { card: { "*": { title: [{ fontColor: "b" }] } } } }, BASE_FILE);
+  const base = read(
+    { visualStyles: { card: { "*": { title: [{ fontColor: "b" }] } } } },
+    BASE_FILE,
+  );
   const custom = read(
     { visualStyles: { card: { "*": { title: [{ fontColor: "c" }] } } } },
     CUSTOM_FILE,
@@ -132,7 +135,10 @@ describe("lookup inside one theme", () => {
     });
   });
   it("takes only a theme's own keys", () => {
-    const base = read({ visualStyles: { card: { "*": { title: [{ fontColor: "x" }] } } } }, BASE_FILE);
+    const base = read(
+      { visualStyles: { card: { "*": { title: [{ fontColor: "x" }] } } } },
+      BASE_FILE,
+    );
     for (const key of ["__proto__", "constructor", "toString"]) {
       expect(lookup(query({ visualType: key, themes: { base } })), key).toEqual({
         found: false,

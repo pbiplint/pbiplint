@@ -54,7 +54,6 @@ export const truncateRatio = (ratio: number): number => Math.floor(ratio * 100) 
 export function over(top: Rgba, bottom: Rgba): Rgba {
   const a = top.a + bottom.a * (1 - top.a);
   if (a === 0) return { r: 0, g: 0, b: 0, a: 0 };
-  const mix = (t: number, b: number): number =>
-    (t * top.a + b * bottom.a * (1 - top.a)) / a;
+  const mix = (t: number, b: number): number => (t * top.a + b * bottom.a * (1 - top.a)) / a;
   return { r: mix(top.r, bottom.r), g: mix(top.g, bottom.g), b: mix(top.b, bottom.b), a };
 }

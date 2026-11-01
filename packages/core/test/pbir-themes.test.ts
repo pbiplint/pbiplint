@@ -96,7 +96,9 @@ describe("report.themes", () => {
     const { custom } = themes([
       reportJson({
         custom: "Mine.json",
-        packages: { RegisteredResources: [{ name: "Mine.json", path: "Mine.json", type: "Image" }] },
+        packages: {
+          RegisteredResources: [{ name: "Mine.json", path: "Mine.json", type: "Image" }],
+        },
       }),
       theme(CUSTOM),
     ]);
@@ -120,7 +122,10 @@ describe("report.themes", () => {
     const paths = ["../../definition/report.json", "/Mine.json", "a/../Mine.json", "..\\Mine.json"];
     for (const path of paths) {
       const { custom } = themes([
-        reportJson({ custom: "Mine.json", packages: { RegisteredResources: [{ name: "Mine.json", path }] } }),
+        reportJson({
+          custom: "Mine.json",
+          packages: { RegisteredResources: [{ name: "Mine.json", path }] },
+        }),
         theme(CUSTOM),
       ]);
       expect(custom, path).toEqual({ name: "Mine.json", state: "absent" });

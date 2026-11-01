@@ -46,7 +46,9 @@ function itemPath(packageName: string, path: string): string | undefined {
  * names is looked in first.
  */
 function themePath(json: Record<string, unknown>, name: string, type: unknown): string | undefined {
-  const packages = Array.isArray(json.resourcePackages) ? json.resourcePackages.filter(isRecord) : [];
+  const packages = Array.isArray(json.resourcePackages)
+    ? json.resourcePackages.filter(isRecord)
+    : [];
   const ordered = [
     ...packages.filter((p) => p.name === type),
     ...packages.filter((p) => p.name !== type),

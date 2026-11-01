@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseHex } from "../src/colour/colour.js";
-import {
-  namedColour,
-  readColour,
-  readLiteralBool,
-  readLiteralNumber,
-} from "../src/colour/read.js";
+import { namedColour, readColour, readLiteralBool, readLiteralNumber } from "../src/colour/read.js";
 import type { Report, ThemeFile } from "../src/pbir/types.js";
 
 const BASE_FILE = "StaticResources/SharedResources/BaseThemes/B.json";

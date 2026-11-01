@@ -460,7 +460,11 @@ describe("walkEntry", () => {
         dir("StaticResources", "/X.Report/StaticResources", [
           dir("SharedResources", "/X.Report/StaticResources/SharedResources", [
             dir("BaseThemes", "/X.Report/StaticResources/SharedResources/BaseThemes", [
-              file("Base.json", "/X.Report/StaticResources/SharedResources/BaseThemes/Base.json", "{}"),
+              file(
+                "Base.json",
+                "/X.Report/StaticResources/SharedResources/BaseThemes/Base.json",
+                "{}",
+              ),
               big,
             ]),
           ]),
@@ -468,7 +472,9 @@ describe("walkEntry", () => {
       ]),
       tree,
     );
-    expect(tree.entries.map((e) => e.path)).toEqual(["X.Report/StaticResources/SharedResources/BaseThemes/Base.json"]);
+    expect(tree.entries.map((e) => e.path)).toEqual([
+      "X.Report/StaticResources/SharedResources/BaseThemes/Base.json",
+    ]);
     expect(tree.diagnostics).toEqual([]);
   });
   it("never walks past a report's theme folders or into CustomVisuals, and says nothing about them at the cap", async () => {

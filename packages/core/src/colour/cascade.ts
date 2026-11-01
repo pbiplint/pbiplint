@@ -1,6 +1,15 @@
 import { literal } from "../pbir/build.js";
 import { escapePointer } from "../pbir/json.js";
-import type { Report } from "../pbir/types.js";
+import type { Page, Report, Visual } from "../pbir/types.js";
+import { over, type Rgba } from "./colour.js";
+import {
+  namedColour,
+  readColour,
+  readLiteralBool,
+  readLiteralNumber,
+  type ColourRead,
+  type NotKnown,
+} from "./read.js";
 
 export type ColourSource = "visual" | "group" | "page" | "customTheme" | "baseTheme";
 
@@ -144,6 +153,179 @@ export function lookup(q: Query): Lookup {
     }
   }
   return { found: false, why: "not-set" };
+}
+
+/** One colour in the stack behind some text: its alpha counts the layer's transparency. */
+export interface StackLayer {
+  colour: Rgba;
+  source: ColourSource;
+  file?: string;
+  pointer: string;
+}
+
+/** Which layer of the stack is opaque, so nothing behind it shows. */
+export type OpaqueAt = "element" | "visual" | "group" | "page" | "wallpaper";
+
+export type Background =
+  | { known: true; colour: Rgba; layers: StackLayer[]; opaqueAt: OpaqueAt }
+  | { known: false; why: NotKnown };
+
+/** Where one layer's settings are, and how much of the theme applies to it. */
+interface LayerPlace {
+  kind: OpaqueAt;
+  own: Own;
+  visualType: string;
+  preset?: string;
+  object: string;
+  wildcard: boolean;
+  /** Whether it has a `show` that must say so: a visual's. Others are on unless they say off. */
+  showRequired?: boolean;
+  /** The theme colour a layer that is on, with no colour set, takes. */
+  defaultColour?: string;
+}
+
+/** A layer as a stack, painted back to front, meets it: no paint, a colour, or not known. */
+type LayerRead = "none" | StackLayer | { why: NotKnown };
+
+function readLayer(themes: Report["themes"], place: LayerPlace): LayerRead {
+  const ask = (property: string): Lookup => lookup({ ...place, themes, property });
+  const show = ask("show");
+  if (show.found) {
+    const on = readLiteralBool(show.value);
+    if (on === undefined) return { why: "other-form" };
+    if (!on) return "none";
+  } else if (show.why === "theme-not-read" || place.showRequired) return { why: show.why };
+
+  const clear = ask("transparency");
+  let transparency = 0;
+  if (clear.found) {
+    const t = readLiteralNumber(clear.value);
+    if (t === undefined || t < 0 || t > 100) return { why: "other-form" };
+    if (t === 100) return "none";
+    transparency = t;
+  } else if (clear.why === "theme-not-read") return { why: clear.why };
+
+  const set = ask("color");
+  let read: ColourRead;
+  let at: Pick<StackLayer, "source" | "file" | "pointer"> | undefined;
+  if (set.found) {
+    read = readColour(set.value, themes);
+    at = { source: set.source, ...(set.file ? { file: set.file } : {}), pointer: set.pointer };
+  } else if (set.why === "theme-not-read") {
+    return { why: set.why };
+  } else if (place.defaultColour !== undefined) {
+    read = namedColour(place.defaultColour, themes);
+  } else {
+    // Nothing paints this layer, unless it says how see-through a colour it does not name is.
+    return clear.found ? { why: "not-set" } : "none";
+  }
+  if (!read.known) return { why: read.why };
+  const { colour, from } = read;
+  const where = at ?? {
+    source: from!.layer,
+    file: from!.file,
+    pointer: from!.pointer,
+  };
+  return { colour: { ...colour, a: colour.a * (1 - transparency / 100) }, ...where };
+}
+
+/** The groups around a visual, innermost first. */
+function groupsOf(page: Page, visual: Visual): Visual[] {
+  const groups: Visual[] = [];
+  for (let id = visual.groupId; id !== undefined;) {
+    const group = page.visuals.find((v) => v.id === id && v.isGroup);
+    if (!group || groups.includes(group)) break;
+    groups.push(group);
+    id = group.groupId;
+  }
+  return groups;
+}
+
+/**
+ * What sits behind a visual's text, from the top of the stack down: the element's own background,
+ * the visual's, each group's from the innermost out, the page's, and the wallpaper. The walk stops
+ * at the first opaque layer, so what is under it needs no knowing, and the layers combine by
+ * source-over blending (alpha = 1 - transparency / 100). The result is rounded to whole channels,
+ * once, so a ratio worked out from the hex a finding shows is the ratio it reports.
+ */
+export function backgroundOf(
+  report: Report,
+  page: Page,
+  visual: Visual,
+  element?: StackLayer,
+): Background {
+  const objectsOf = (json: unknown, way: string[]): unknown =>
+    way.reduce<unknown>((at, key) => member(at, key), json);
+  const places: LayerPlace[] = [
+    {
+      kind: "visual",
+      own: {
+        entries: objectsOf(visual.json, ["visual", "visualContainerObjects", "background"]),
+        source: "visual",
+        file: visual.file,
+        pointer: "/visual/visualContainerObjects/background",
+      },
+      visualType: visual.type,
+      ...(stylePresetOf(visual.json) !== undefined ? { preset: stylePresetOf(visual.json)! } : {}),
+      object: "background",
+      wildcard: true,
+      showRequired: true,
+      defaultColour: "background",
+    },
+    ...groupsOf(page, visual).map((group): LayerPlace => ({
+      kind: "group",
+      own: {
+        entries: objectsOf(group.json, ["visualGroup", "objects", "background"]),
+        source: "group",
+        file: group.file,
+        pointer: "/visualGroup/objects/background",
+      },
+      visualType: "group",
+      object: "background",
+      wildcard: false,
+    })),
+    ...(["background", "outspace"] as const).map((object): LayerPlace => ({
+      kind: object === "background" ? "page" : "wallpaper",
+      own: {
+        entries: objectsOf(page.json, ["objects", object]),
+        source: "page",
+        file: page.file,
+        pointer: `/objects/${object}`,
+      },
+      visualType: "page",
+      object,
+      wildcard: false,
+    })),
+  ];
+  const layers: StackLayer[] = [];
+  const stack = (layer: StackLayer, kind: OpaqueAt): Background | undefined => {
+    if (layer.colour.a === 0) return undefined;
+    layers.push(layer);
+    if (layer.colour.a < 1) return undefined;
+    const blended = layers.reduceRight<Rgba | undefined>(
+      (behind, { colour }) => (behind ? over(colour, behind) : colour),
+      undefined,
+    )!;
+    const whole = (v: number): number => Math.round(v);
+    return {
+      known: true,
+      colour: { r: whole(blended.r), g: whole(blended.g), b: whole(blended.b), a: 1 },
+      layers,
+      opaqueAt: kind,
+    };
+  };
+  if (element) {
+    const done = stack(element, "element");
+    if (done) return done;
+  }
+  for (const place of places) {
+    const layer = readLayer(report.themes, place);
+    if (layer === "none") continue;
+    if ("why" in layer) return { known: false, why: layer.why };
+    const done = stack(layer, place.kind);
+    if (done) return done;
+  }
+  return { known: false, why: "not-set" };
 }
 
 /** The style preset a visual's visual.json names, which selects the theme's card of that name. */

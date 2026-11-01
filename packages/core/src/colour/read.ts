@@ -31,7 +31,11 @@ const notKnown = (why: NotKnown): ColourRead => ({ known: false, why });
  */
 function fromThemes(
   themes: Report["themes"],
-  look: (json: Record<string, unknown>, theme: ThemeFile, layer: ThemeSetting["layer"]) => ColourRead | undefined,
+  look: (
+    json: Record<string, unknown>,
+    theme: ThemeFile,
+    layer: ThemeSetting["layer"],
+  ) => ColourRead | undefined,
 ): ColourRead {
   const layers = [
     [themes.custom, "customTheme"],

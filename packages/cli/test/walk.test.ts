@@ -304,19 +304,14 @@ describe("resolveProject", () => {
       expect(themes(byFolder.report!.files)).toEqual([
         "StaticResources/RegisteredResources/theme.json",
       ]);
-      expect(byFolder.report!.unread).toEqual([
-        "StaticResources/SharedResources/BaseThemes/",
-      ]);
+      expect(byFolder.report!.unread).toEqual(["StaticResources/SharedResources/BaseThemes/"]);
       expect(byFolder.diagnostics.map((d) => d.kind)).toEqual(["unread-file"]);
     });
     it("reads them for a report given on its own, or by its definition folder", () => {
       const root = pbip({ report: true });
       write(root, BASE, "Base.json");
       const want = "StaticResources/SharedResources/BaseThemes/Base.json";
-      for (const input of [
-        join(root, "Demo.Report"),
-        join(root, "Demo.Report", "definition"),
-      ])
+      for (const input of [join(root, "Demo.Report"), join(root, "Demo.Report", "definition")])
         expect(themes(resolveProject(input).report!.files)).toContain(want);
     });
     it("reads a legacy report as legacy, whatever StaticResources holds", () => {
@@ -329,7 +324,9 @@ describe("resolveProject", () => {
     it("is refused as before when a report folder holds nothing but theme files", () => {
       const root = tempDir("only-themes");
       write(root, BASE, "Base.json");
-      expect(() => resolveProject(join(root, "Demo.Report"))).toThrow(/No semantic model or report/);
+      expect(() => resolveProject(join(root, "Demo.Report"))).toThrow(
+        /No semantic model or report/,
+      );
     });
   });
   it("reads a whole PBIP folder, its .pbip file, and both parts with part-relative paths, and in StaticResources only a theme file, never .pbi", () => {

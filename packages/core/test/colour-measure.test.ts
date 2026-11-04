@@ -88,6 +88,15 @@ const hexes = (m: Measurement) =>
   m.measured.map((x) => `${x.kind} ${toHex(x.foreground)} on ${toHex(x.background)}`);
 
 describe("measureReport", () => {
+  it("measures a report once, and again for another report object", () => {
+    const files: LintFile[] = [
+      { path: "definition/report.json", text: "{}" },
+      { path: "definition/pages/p/page.json", text: JSON.stringify({ name: "p" }) },
+    ];
+    const report = buildReport(files).report;
+    expect(measureReport(report)).toBe(measureReport(report));
+    expect(measureReport(buildReport(files).report)).not.toBe(measureReport(report));
+  });
   it("measures a title against the visual's background, with both sources", () => {
     const m = measure([{ vco: title({ fontColor: fill("#A19F9D") }) }]);
     expect(hexes(m)).toEqual(["title #A19F9D on #FFFFFF"]);

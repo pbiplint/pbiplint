@@ -95,6 +95,9 @@ function fluentDefault(report: Report, kind: ElementKind): boolean | undefined {
   return undefined;
 }
 
+/** Each report's measurement, by the report object, which a run builds once. */
+const MEASURED = new WeakMap<Report, Measurement>();
+
 /** The property that turns an element on, for the elements that can be turned off. */
 /**
  * The elements Power BI Desktop shows when nothing sets their `show`, as the first Desktop check
@@ -599,7 +602,12 @@ function measureTextBox(ctx: Context, spec: ElementSpec): void {
  * elements are not, and are not counted.
  */
 export function measureReport(report: Report): Measurement {
+  // The rule and the Text contrast fact read one measurement, so they cannot disagree, and a
+  // report is measured once however many read it.
+  const cached = MEASURED.get(report);
+  if (cached) return cached;
   const out: Measurement = { measured: [], skipped: [] };
+  MEASURED.set(report, out);
   for (const page of report.pages)
     for (const visual of page.visuals) {
       if (visual.isGroup || hidden(page, visual)) continue;

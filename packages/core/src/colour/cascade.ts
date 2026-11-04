@@ -285,7 +285,9 @@ export function backgroundOf(
       object: "background",
       wildcard: true,
       showRequired: true,
-      // CHECK 2a: what a visual that is on with no colour paints is not known yet, so it is not set.
+      // On with no colour, a visual paints white, as a group does (spec section 10, both Desktop
+      // checks); a theme's visualStyles that sets the colour still wins, as for the Dark themes.
+      defaultColour: { r: 255, g: 255, b: 255, a: 1 },
     },
     ...groupsOf(report, page, visual).map((group): LayerPlace | "unread" =>
       group === "unread"

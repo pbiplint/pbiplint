@@ -48,31 +48,43 @@ describe("ELEMENTS", () => {
       expect(new Set(fallbackOf(kind).map((f) => JSON.stringify(f)))).toEqual(
         new Set([JSON.stringify({ named: "foreground" })]),
       );
-    expect(fallbackOf("axisLabels")).toEqual([
-      { named: "foregroundNeutralSecondary" },
-      { named: "foregroundNeutralSecondary" },
-    ]);
     expect(ELEMENTS.find((e) => e.object === "values")?.background?.fallback).toEqual({
       named: "background",
     });
   });
+  it("takes the defaults the second Desktop check showed (spec section 10)", () => {
+    const smallLight = [{ textClass: "smallLightLabel" }, { named: "foregroundNeutralSecondary" }];
+    expect(fallbackOf("axisLabels")).toEqual([smallLight, smallLight]);
+    expect(fallbackOf("title")).toEqual([[{ textClass: "largeTitle" }, { textClass: "title" }]]);
+    expect(fallbackOf("subtitle")).toEqual([{ textClass: "lightLabel" }]);
+    expect(fallbackOf("legend")).toEqual([{ textClass: "lightLabel" }]);
+    expect(fallbackOf("axisTitles")).toEqual([{ textClass: "title" }, { textClass: "title" }]);
+    expect(fallbackOf("cardValue")).toEqual([{ textClass: "callout" }]);
+    expect(fallbackOf("slicerHeader")).toEqual([{ textClass: "title" }]);
+    expect(fallbackOf("dataLabels")).toEqual([{ named: "foregroundNeutralSecondary" }]);
+    const newCard = ELEMENTS.filter((e) => e.kind === "newCard");
+    expect(newCard.find((e) => e.object === "value")?.fallback).toEqual({ named: "foreground" });
+    expect(newCard.find((e) => e.object === "label")?.fallback).toEqual({
+      named: "foregroundNeutralSecondary",
+    });
+    for (const e of [...newCard.slice(0, 2), ...ELEMENTS.filter((x) => x.kind === "buttonSlicer")])
+      expect(e.background, e.object).toMatchObject({
+        object: "fillCustom",
+        defaultOn: true,
+        fallback: { named: "background" },
+      });
+    expect(
+      ELEMENTS.find((e) => e.kind === "buttonSlicer" && e.object === "value")?.fallback,
+    ).toEqual({ named: "foreground" });
+  });
   it("leaves every default the checks have not shown as not known", () => {
-    for (const kind of [
-      "title",
-      "subtitle",
-      "cardValue",
-      "newCard",
-      "multiRowCard",
-      "kpi",
-      "tableTotals",
-      "slicerHeader",
-      "buttonSlicer",
-      "legend",
-      "axisTitles",
-      "dataLabels",
-      "buttonText",
-    ] as const)
+    for (const kind of ["multiRowCard", "kpi", "tableTotals", "buttonText"] as const)
       for (const f of fallbackOf(kind)) expect(f, kind).toBe("not-known");
+    for (const object of ["referenceLabelTitle", "referenceLabelValue", "referenceLabelDetail"])
+      expect(ELEMENTS.find((e) => e.object === object)?.fallback, object).toBe("not-known");
+    expect(ELEMENTS.find((e) => e.kind === "buttonSlicer" && e.object === "label")?.fallback).toBe(
+      "not-known",
+    );
   });
   it("gives titles and subtitles to every visual type, and the rest to their own", () => {
     expect(elementsFor("tableEx").map((e) => e.object)).toEqual(

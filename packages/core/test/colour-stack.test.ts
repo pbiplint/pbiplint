@@ -124,12 +124,30 @@ describe("backgroundOf", () => {
     ])
       expectColour(backOf({ visual, page: PAGE_WHITE }), "#FFFFFF", "page");
   });
-  it("does not yet know a visual that is on with no colour from the theme alone (CHECK 2a)", () => {
+  // Both Desktop checks (spec section 10): on with no colour paints white, not the theme's background.
+  it("paints a visual that the theme turns on with no colour white", () => {
     const theme = {
       background: "#ABCDEF",
       visualStyles: { "*": { "*": { background: [{ show: true, transparency: 0 }] } } },
     };
-    expect(backOf({ theme })).toEqual({ known: false, why: "not-set" });
+    const b = backOf({ theme });
+    expectColour(b, "#FFFFFF", "visual");
+    expect(b).toMatchObject({ layers: [{ source: "baseTheme", file: BASE_FILE }] });
+  });
+  it("lets a theme's visualStyles colour win over the white, as a dark theme's does", () => {
+    const dark = {
+      background: "#202020",
+      visualStyles: {
+        "*": {
+          "*": {
+            background: [
+              { show: true, transparency: 0, color: { solid: { color: "background" } } },
+            ],
+          },
+        },
+      },
+    };
+    expectColour(backOf({ theme: dark }), "#202020", "visual");
   });
   it("blends a part-transparent visual over the page, rounding once", () => {
     const b = backOf({
@@ -427,13 +445,13 @@ describe("backgroundOf when it cannot know", () => {
       pointer: "/visualGroup/objects/background/0/properties/show",
     });
   });
-  it("still does not know a visual that is on with no colour, until the second check", () => {
-    expect(
-      backOf({ visual: { show: true }, page: PAGE_WHITE, theme: { background: "#ABCDEF" } }),
-    ).toEqual({
-      known: false,
-      why: "not-set",
+  it("paints a visual that turns itself on with no colour white, not the theme's background", () => {
+    const b = backOf({
+      visual: { show: true },
+      page: PAGE_WHITE,
+      theme: { background: "#ABCDEF" },
     });
+    expectColour(b, "#FFFFFF", "visual");
   });
   it("says a colour depends on the data", () => {
     expect(

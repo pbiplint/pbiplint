@@ -292,9 +292,49 @@ describe("measureReport", () => {
 });
 
 describe("measureReport skips, by reason", () => {
-  it("skips an element whose default is not known yet", () => {
-    const m = measure([{ vco: title({}) }], { theme: {} });
-    expect(m.skipped.map((s) => [s.kind, s.why])).toEqual([["title", "default-not-known"]]);
+  it("skips an element whose default no check has shown", () => {
+    const m = measure([{ objects: { text: props({ show: lit("true"), fontSize: lit("12D") }) } }], {
+      theme: {},
+    });
+    expect(m.skipped.map((s) => [s.kind, s.why])).toEqual([["buttonText", "default-not-known"]]);
+  });
+  it("still measures a button's text colour and fill that are set", () => {
+    const m = measure([
+      {
+        type: "actionButton",
+        objects: {
+          text: props({ show: lit("true"), fontColor: fill("#A19F9D"), fontSize: lit("12D") }),
+          fill: props({ show: lit("true"), fillColor: fill("#FFFFFF"), transparency: lit("0D") }),
+        },
+      },
+    ]);
+    expect(hexes(m)).toEqual(["buttonText #A19F9D on #FFFFFF"]);
+    expect(m.measured[0]!.backgroundAt[0]).toMatchObject({
+      pointer: "/visual/objects/fill/0/properties/fillColor",
+    });
+  });
+  it("takes a text class no theme sets as the next step of the default", () => {
+    // Axis labels: smallLightLabel, then foregroundNeutralSecondary (spec section 10).
+    const chart = {
+      type: "clusteredColumnChart",
+      objects: { categoryAxis: props({ fontSize: lit("12D") }) },
+    };
+    const set = measure([chart], {
+      theme: {
+        foregroundNeutralSecondary: "#0F7B6C",
+        textClasses: { smallLightLabel: { color: "#C0FFC0" } },
+      },
+    });
+    // Both axes: each is shown when nothing turns it off.
+    expect(hexes(set).filter((h) => h.startsWith("axisLabels"))).toEqual([
+      "axisLabels #C0FFC0 on #FFFFFF",
+      "axisLabels #C0FFC0 on #FFFFFF",
+    ]);
+    const unset = measure([chart], { theme: { foregroundNeutralSecondary: "#0F7B6C" } });
+    expect(hexes(unset).filter((h) => h.startsWith("axisLabels"))).toEqual([
+      "axisLabels #0F7B6C on #FFFFFF",
+      "axisLabels #0F7B6C on #FFFFFF",
+    ]);
   });
   it("skips text over an image on the visual or the page", () => {
     const image = { image: { name: lit("'bg.png'") } };

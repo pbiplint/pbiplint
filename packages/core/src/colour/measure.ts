@@ -15,6 +15,7 @@ import {
   type ElementKind,
   type ElementSpec,
   type Fallback,
+  type FallbackStep,
 } from "./elements.js";
 import {
   namedColour,
@@ -180,8 +181,19 @@ function fromFallback(
   themes: Report["themes"],
 ): { colour: ColourRead; size?: number } | undefined {
   if (fallback === "not-known") return undefined;
-  if ("textClass" in fallback) return textClass(fallback.textClass, themes);
-  return { colour: namedColour(fallback.named, themes) };
+  const steps: readonly FallbackStep[] = Array.isArray(fallback)
+    ? fallback
+    : [fallback as FallbackStep];
+  let last: { colour: ColourRead; size?: number } | undefined;
+  for (const step of steps) {
+    last =
+      "textClass" in step
+        ? textClass(step.textClass, themes)
+        : { colour: namedColour(step.named, themes) };
+    // A class no theme sets falls to the next step; anything else answers.
+    if (last.colour.known || last.colour.why !== "not-set") return last;
+  }
+  return last;
 }
 
 /** The states an element's own entries set, beside the default; a disabled one is not measured. */
@@ -327,7 +339,8 @@ function ownBackground(
     });
   if (bg.show) {
     const on = ask(bg.show);
-    if (!on.found || readLiteralBool(on.value) !== true)
+    const onByDefault = !on.found && on.why === "not-set" && bg.defaultOn === true;
+    if (!onByDefault && (!on.found || readLiteralBool(on.value) !== true))
       return on.found || on.why === "not-set" ? undefined : "not-known";
   }
   const set = ask(colourProp);

@@ -25,10 +25,12 @@ export type ElementKind =
 
 /**
  * Where an element's colour comes from when nothing sets it: a theme text class, a theme colour
- * by name, or not known. Each known one is what a Desktop check showed (spec section 10); every
+ * by name, a list of those tried in order (a text class no theme sets falls to the next), or not
+ * known. Each known one is what a Desktop check showed (spec section 10); every
  * other is not known, so what depends on it is skipped and counted, never guessed.
  */
-export type Fallback = { textClass: string } | { named: string } | "not-known";
+export type FallbackStep = { textClass: string } | { named: string };
+export type Fallback = FallbackStep | readonly FallbackStep[] | "not-known";
 
 /** An element's own background, painted between the text and the visual's background. */
 export interface OwnBackground {
@@ -38,6 +40,8 @@ export interface OwnBackground {
   transparency?: string;
   /** The property that turns it on, where it has one. */
   show?: string;
+  /** Whether it is on when nothing sets that property, as a Desktop check showed. */
+  defaultOn?: boolean;
   fallback?: Fallback;
 }
 
@@ -74,7 +78,7 @@ export const ELEMENTS: readonly ElementSpec[] = [
     size: "fontSize",
     bold: "bold",
     background: { object: "title", colour: ["background"] },
-    fallback: "not-known",
+    fallback: [{ textClass: "largeTitle" }, { textClass: "title" }],
   },
   {
     kind: "subtitle",
@@ -84,7 +88,7 @@ export const ELEMENTS: readonly ElementSpec[] = [
     colour: ["fontColor"],
     size: "fontSize",
     bold: "bold",
-    fallback: "not-known",
+    fallback: { textClass: "lightLabel" },
   },
   {
     kind: "dataLabels",
@@ -100,7 +104,7 @@ export const ELEMENTS: readonly ElementSpec[] = [
       transparency: "backgroundTransparency",
       show: "enableBackground",
     },
-    fallback: "not-known",
+    fallback: { named: "foregroundNeutralSecondary" },
   },
   {
     kind: "axisLabels",
@@ -110,7 +114,7 @@ export const ELEMENTS: readonly ElementSpec[] = [
     colour: ["labelColor"],
     size: "fontSize",
     bold: "bold",
-    fallback: { named: "foregroundNeutralSecondary" },
+    fallback: [{ textClass: "smallLightLabel" }, { named: "foregroundNeutralSecondary" }],
   },
   {
     kind: "axisLabels",
@@ -120,7 +124,7 @@ export const ELEMENTS: readonly ElementSpec[] = [
     colour: ["labelColor"],
     size: "fontSize",
     bold: "bold",
-    fallback: { named: "foregroundNeutralSecondary" },
+    fallback: [{ textClass: "smallLightLabel" }, { named: "foregroundNeutralSecondary" }],
   },
   {
     kind: "axisTitles",
@@ -130,7 +134,7 @@ export const ELEMENTS: readonly ElementSpec[] = [
     colour: ["titleColor"],
     size: "titleFontSize",
     bold: "titleBold",
-    fallback: "not-known",
+    fallback: { textClass: "title" },
   },
   {
     kind: "axisTitles",
@@ -140,7 +144,7 @@ export const ELEMENTS: readonly ElementSpec[] = [
     colour: ["titleColor"],
     size: "titleFontSize",
     bold: "titleBold",
-    fallback: "not-known",
+    fallback: { textClass: "title" },
   },
   {
     kind: "legend",
@@ -150,7 +154,7 @@ export const ELEMENTS: readonly ElementSpec[] = [
     colour: ["labelColor"],
     size: "fontSize",
     bold: "bold",
-    fallback: "not-known",
+    fallback: { textClass: "lightLabel" },
   },
   {
     kind: "cardValue",
@@ -160,7 +164,7 @@ export const ELEMENTS: readonly ElementSpec[] = [
     colour: ["color"],
     size: "fontSize",
     bold: "bold",
-    fallback: "not-known",
+    fallback: { textClass: "callout" },
   },
   {
     kind: "cardLabel",
@@ -185,8 +189,10 @@ export const ELEMENTS: readonly ElementSpec[] = [
       colour: ["fillColor"],
       transparency: "transparency",
       show: "show",
+      defaultOn: true,
+      fallback: { named: "background" },
     },
-    fallback: "not-known",
+    fallback: { named: "foreground" },
   },
   {
     kind: "newCard",
@@ -201,8 +207,10 @@ export const ELEMENTS: readonly ElementSpec[] = [
       colour: ["fillColor"],
       transparency: "transparency",
       show: "show",
+      defaultOn: true,
+      fallback: { named: "background" },
     },
-    fallback: "not-known",
+    fallback: { named: "foregroundNeutralSecondary" },
   },
   {
     kind: "newCard",
@@ -388,7 +396,7 @@ export const ELEMENTS: readonly ElementSpec[] = [
     size: "textSize",
     bold: "bold",
     background: { object: "header", colour: ["background"] },
-    fallback: "not-known",
+    fallback: { textClass: "title" },
   },
   {
     kind: "slicerItems",
@@ -414,8 +422,10 @@ export const ELEMENTS: readonly ElementSpec[] = [
       colour: ["fillColor"],
       transparency: "transparency",
       show: "show",
+      defaultOn: true,
+      fallback: { named: "background" },
     },
-    fallback: "not-known",
+    fallback: { named: "foreground" },
   },
   {
     kind: "buttonSlicer",
@@ -430,6 +440,8 @@ export const ELEMENTS: readonly ElementSpec[] = [
       colour: ["fillColor"],
       transparency: "transparency",
       show: "show",
+      defaultOn: true,
+      fallback: { named: "background" },
     },
     fallback: "not-known",
   },

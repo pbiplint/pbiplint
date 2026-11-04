@@ -174,6 +174,26 @@ describe("backgroundOf", () => {
     };
     expectColour(backOf({ theme, visual: { show: false }, page: PAGE_WHITE }), "#FFFFFF", "page");
   });
+  it("paints a page or wallpaper that has a colour, since neither has a show in Microsoft's schemas", () => {
+    expectColour(
+      backOf({
+        visual: { show: false },
+        page: { background: { ...PAGE_WHITE.background, show: false } },
+      }),
+      "#FFFFFF",
+      "page",
+    );
+    const theme = {
+      visualStyles: {
+        page: { "*": { outspace: [{ show: false, color: { solid: { color: "#222222" } } }] } },
+      },
+    };
+    expectColour(backOf({ theme, visual: { show: false } }), "#222222", "wallpaper");
+    // A page that names no colour is no layer, whatever else it says.
+    expect(
+      backOf({ visual: { show: false }, page: { background: { show: true } }, theme: {} }),
+    ).toEqual({ known: false, why: "not-set" });
+  });
   it("does not give a page or a group the theme's every-visual background", () => {
     const theme = {
       background: "#ABCDEF",

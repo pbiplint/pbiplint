@@ -181,6 +181,11 @@ interface LayerPlace {
   wildcard: boolean;
   /** Whether it has a `show` that must say so: a visual's. Others are on unless they say off. */
   showRequired?: boolean;
+  /**
+   * Whether it has no `show` at all: a page's background and wallpaper do not, in Microsoft's page
+   * and theme schemas, so one is painted whenever it names a colour, whatever else it says.
+   */
+  noShow?: boolean;
   /** The theme colour a layer that is on, with no colour set, takes. */
   defaultColour?: string;
 }
@@ -190,7 +195,7 @@ type LayerRead = "none" | StackLayer | { why: NotKnown };
 
 function readLayer(themes: Report["themes"], place: LayerPlace): LayerRead {
   const ask = (property: string): Lookup => lookup({ ...place, themes, property });
-  const show = ask("show");
+  const show: Lookup = place.noShow ? { found: false, why: "not-set" } : ask("show");
   if (show.found) {
     const on = readLiteralBool(show.value);
     if (on === undefined) return { why: "other-form" };
@@ -300,6 +305,7 @@ export function backgroundOf(
         ? "unread"
         : {
             kind: object === "background" ? "page" : "wallpaper",
+            noShow: true,
             own: {
               entries: objectsOf(page.json, ["objects", object]),
               source: "page",

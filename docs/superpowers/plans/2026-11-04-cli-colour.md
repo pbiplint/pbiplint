@@ -8,21 +8,20 @@
 
 ## The colours
 
-The 16 standard ANSI colours and bold only, as the issue decides. Each choice was checked for contrast against the background of a light and a dark theme in nine common palettes (macOS Terminal's Basic and Pro profiles, VS Code's Light+ and Dark+, Windows Terminal's Campbell, xterm on white and on black, GNOME's Tango on light and dark, and iTerm2's default), using the contrast ratio [WCAG 2.2](https://www.w3.org/TR/WCAG22/#contrast-minimum) defines. The floor is 3:1 in every palette, the ratio WCAG asks of large text ("Large-scale text and images of large-scale text have a contrast ratio of at least 3:1"): the severity words are always printed, so colour is never the only cue ([WCAG 2.2, 1.4.1 Use of Color](https://www.w3.org/TR/WCAG22/#use-of-color): "Color is not used as the only visual means of conveying information, indicating an action, prompting a response, or distinguishing a visual element").
+The 16 standard ANSI colours and bold only, as the issue decides. The reader's terminal palette sets the shades, so pbiplint cannot promise a contrast ratio; it picks the styles that keep the most contrast across common palettes. Each candidate was measured with the contrast ratio [WCAG 2.2](https://www.w3.org/TR/WCAG22/#contrast-minimum) defines, against 4.5:1, on the backgrounds of nine palettes: macOS Terminal's Basic and Pro profiles, VS Code's Light+ and Dark+, Windows Terminal's Campbell (the five most-used defaults), and xterm on white and on black, GNOME's Tango on light and dark, and iTerm2's default. The severity words are always printed, so colour is never the only cue ([WCAG 2.2, 1.4.1 Use of Color](https://www.w3.org/TR/WCAG22/#use-of-color): "Color is not used as the only visual means of conveying information, indicating an action, prompting a response, or distinguishing a visual element"), and each word must stay readable in its style.
 
-| What | Style | Lowest contrast in the nine palettes |
+| What | Style | Contrast |
 | --- | --- | --- |
-| `ERROR` on a rule's heading line, and a non-zero error count in the summary line | Bold bright red (`1;91`) | 4.0:1 (xterm on white) |
-| `WARN` on a rule's heading line, and a non-zero warning count | Bright magenta (`95`) | 3.1:1 (xterm on white) |
-| `INFO`, and the info count | The terminal's own foreground, no code | The theme's own text contrast |
+| `ERROR` on a rule's heading line, and a non-zero error count in the summary line | Bold bright red (`1;91`) | Lowest 4.0:1 (xterm on white). Short of 4.5:1 in four palettes: macOS Terminal Pro 4.3, xterm on white 4.0, Tango dark 4.2, Tango light 4.2. |
+| `WARN` on a rule's heading line, and a non-zero warning count | Bold (`1`), the terminal's own foreground | The theme's own text contrast |
+| `INFO`, and the info count | No code, the terminal's own foreground | The theme's own text contrast |
 | `Fix these first:` | Bold (`1`) | The theme's own text contrast |
 
-Why not the usual yellow and blue or cyan:
+Why these:
 
-- **Yellow** falls to between 1.7:1 and 3.1:1 on every light background checked (3.0:1 in macOS Terminal's Basic profile, 1.7:1 in xterm on white), and bright yellow to between 1.1:1 and 2.1:1.
-- **Red without bright** falls to 2.4:1 on macOS Terminal's Pro profile.
-- **Blue and cyan** each fail one side: blue falls to 1.6:1 on a dark background, bright blue to 2.4:1, and cyan to 2.0:1 on a light one. Info is the least urgent severity, so it keeps the terminal's own foreground, which every theme makes readable, and leaves the two colours to the findings that need action.
-- **Bright red and bright magenta** are also the two bright colours Solarized keeps as colours (orange and violet), where it maps the other brights to greys.
+- **Errors.** No standard colour reaches 4.5:1 in all five most-used defaults. Bright red comes closest (lowest 4.3:1, on macOS Terminal Pro) and is the best in all nine (lowest 4.0:1); plain red falls to 2.4:1 on macOS Terminal Pro.
+- **Warnings.** No standard colour reaches 4.5:1 in the five most-used defaults: yellow is 3.0:1 on macOS Terminal Basic (1.7:1 on xterm on white), bright magenta 3.8:1 on Basic and 3.2:1 on Campbell, blue 1.6:1 on Terminal Pro, cyan 3.0:1 on Basic. Bold alone keeps the theme's own contrast, and still sets warnings apart from info, so the report reads in three weights: bold red, bold, plain.
+- **Info** is the least urgent severity, so it stays plain.
 
 A zero count stays plain: a red "0 errors" would read as an alarm. Each code is closed by its own reset (`22` for bold, `39` for the colour), so nothing else on the line changes.
 
@@ -41,7 +40,7 @@ A run of the CLI that `pbiplint mcp` captures for a tool call never colours, sin
 
 Each step starts with a failing test.
 
-1. **The core's styles** (`packages/core/src/format/text.ts`). `FormatOptions` gains `colour?: boolean`, false by default. With it, `formatText` wraps the severity tag (the word only, so its padding and the columns after it stay where they are), the summary line's non-zero error and warning counts, and the `Fix these first:` heading. `countsLine` takes an optional function that styles a count, so the summary sentence the Markdown format and the site share is unchanged. The core reads no environment and imports nothing. Tests in `packages/core/test/format.test.ts`: no code by default; codes around exactly those strings with `colour: true`; the output with the codes removed equals the plain output; a name holding an escape character still prints as `\u001b`, and the only escape characters in the output are the ones the format added.
+1. **The core's styles** (`packages/core/src/format/text.ts`). `FormatOptions` gains `colour?: boolean`, false by default. With it, `formatText` styles the severity tag (the word only, so its padding and the columns after it stay where they are), the summary line's non-zero error and warning counts, and the `Fix these first:` heading. `countsLine` takes an optional function that styles a count, so the summary sentence the Markdown format and the site share is unchanged. The core reads no environment and imports nothing. Tests in `packages/core/test/format.test.ts`: no code by default; codes around exactly those strings with `colour: true`; the output with the codes removed equals the plain output; a name holding an escape character still prints as `\u001b`, and the only escape characters in the output are the ones the format added.
 2. **Several projects** (`packages/cli/src/several.ts`). `severalText` passes the option to each project's report and styles the combined summary line's counts.
 3. **The CLI's decision** (a small new module in `packages/cli/src`, called from `main.ts`). `Io` gains an optional `isTTY` and `env`, which `bin.ts` fills from `process.stdout.isTTY` and `process.env`. Left out, as every existing test and the MCP capture leave them, colour is off. Tests in `packages/cli/test/cli.test.ts`: on in a terminal; on through a pipe with `FORCE_COLOR`; off for a pipe, `NO_COLOR`, `TERM=dumb`, and `FORCE_COLOR=0` in a terminal; off for `--output`, `--format json`, `--format sarif`, `--format markdown`, and `--quiet` even with `FORCE_COLOR` set; a visual title holding an escape character prints as `\u001b` with colour on; a run over several projects colours each report. The contract tests and the golden outputs pass unchanged.
 4. **The CLI page** (`packages/web/content/cli.md`, "stdout and stderr"). One bullet: colour codes appear only in the text report written to a terminal, or through a pipe with `FORCE_COLOR`, and never in JSON, SARIF, Markdown, `--quiet`, or a file `--output` writes; `NO_COLOR` turns them off. Sources quoted with links as above.

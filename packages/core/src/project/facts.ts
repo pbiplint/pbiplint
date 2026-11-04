@@ -54,7 +54,19 @@ const NOT_MEASURED: Readonly<Record<Exclude<SkipReason, "visibility-not-known">,
  * so text that may not be shown never reads as unmeasured text. None for a report with no text.
  */
 function contrastFact(report: Report): Fact | undefined {
-  const { measured, skipped } = measureReport(report);
+  let measurement: ReturnType<typeof measureReport>;
+  try {
+    measurement = measureReport(report);
+  } catch {
+    // A partial count would read as clean, so the line says so instead.
+    return {
+      layer: "report",
+      label: "Text contrast",
+      value: "unknown",
+      detail: "the text could not be measured",
+    };
+  }
+  const { measured, skipped } = measurement;
   const keyOf = (x: {
     page: { id: string };
     visual: { id: string };

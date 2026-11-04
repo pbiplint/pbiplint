@@ -609,7 +609,6 @@ export function measureReport(report: Report): Measurement {
   const cached = MEASURED.get(report);
   if (cached) return cached;
   const out: Measurement = { measured: [], skipped: [] };
-  MEASURED.set(report, out);
   for (const page of report.pages)
     for (const visual of page.visuals) {
       if (visual.isGroup || hidden(page, visual)) continue;
@@ -626,5 +625,7 @@ export function measureReport(report: Report): Measurement {
         else measureElement(ctx, spec);
       }
     }
+  // Only a whole measurement is kept: one that threw partway is never read as complete.
+  MEASURED.set(report, out);
   return out;
 }

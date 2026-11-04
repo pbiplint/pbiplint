@@ -31,21 +31,42 @@ const SAMPLES_OUT = "packages/web/src/build/rule-samples.data.ts";
 
 /**
  * The colour sample of a page's example, for a rule whose findings carry colours: the rule run on
- * the page's own `pbir fires visual.json` fence, placed on a page of its own, as the rule-pages
- * test places it. The first finding's sample, or none.
+ * the page's own `pbir fires visual.json` fence, on the stock report the rule-pages test places an
+ * example on (packages/core/test/rule-pages.test.ts, stockReport), the first finding's sample. A
+ * page whose example runs under a config fence, or that draws no sample, is refused, so the
+ * figure never shows anything but the page's own example.
  */
 export function exampleSample(text, id) {
-  const fence = /```pbir fires visual\.json\n([\s\S]*?)\n```/.exec(text)?.[1];
+  const example = sections(text).Example ?? "";
+  const fence = /```pbir fires visual\.json\n([\s\S]*?)\n```/.exec(example)?.[1];
   const rule = defaultRules.find((r) => r.id === id);
   if (!fence || !rule) return undefined;
+  if (/```json pbiplint\.config\.json/.test(example))
+    throw new Error(`${id}: an example under a config fence draws no sample here`);
   const visual = JSON.parse(fence);
+  const page = "p1";
   const { report } = buildReport([
-    { path: "definition/report.json", text: "{}" },
     {
-      path: "definition/pages/p/page.json",
-      text: JSON.stringify({ name: "p", displayName: "Page" }),
+      path: "definition/report.json",
+      text: JSON.stringify({
+        themeCollection: { baseTheme: { name: "Fluent2-CY26SU04", type: "SharedResources" } },
+      }),
     },
-    { path: `definition/pages/p/visuals/${visual.name}/visual.json`, text: fence },
+    {
+      path: "definition/pages/pages.json",
+      text: JSON.stringify({ pageOrder: [page], activePageName: page }),
+    },
+    {
+      path: `definition/pages/${page}/page.json`,
+      text: JSON.stringify({
+        name: page,
+        displayName: "Overview",
+        displayOption: "FitToPage",
+        height: 720,
+        width: 1280,
+      }),
+    },
+    { path: `definition/pages/${page}/visuals/${visual.name}/visual.json`, text: fence },
   ]);
   const finding = rule.check({ report }, { indexes: undefined, options: {} })[0];
   return finding?.message ? contrastSample(finding.message.params) : undefined;

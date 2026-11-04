@@ -3,6 +3,7 @@ import { formatJson } from "./json.js";
 import { formatMarkdown, markdownText } from "./markdown.js";
 import { formatSarif } from "./sarif.js";
 import {
+  COLOUR_STYLE,
   countsLine,
   factsLines,
   formatText,
@@ -10,6 +11,7 @@ import {
   layerTag,
   locationOf,
   noticeLines,
+  paintCounts,
   plural,
   ruleErrorNotices,
   skippedLine,
@@ -17,7 +19,9 @@ import {
   topGroups,
   type CountedRun,
   type FormatOptions,
+  type Paint,
   type RuleHelp,
+  type TextStyle,
 } from "./text.js";
 
 export const FORMATS = ["text", "json", "markdown", "sarif"] as const;
@@ -48,6 +52,7 @@ export function formatResult(
 }
 
 export {
+  COLOUR_STYLE,
   countsLine,
   factsLines,
   formatJson,
@@ -59,10 +64,11 @@ export {
   locationOf,
   markdownText,
   noticeLines,
+  paintCounts,
   plural,
   ruleErrorNotices,
   skippedLine,
   summaryLine,
   topGroups,
 };
-export type { CountedRun, FormatOptions, RuleHelp };
+export type { CountedRun, FormatOptions, Paint, RuleHelp, TextStyle };

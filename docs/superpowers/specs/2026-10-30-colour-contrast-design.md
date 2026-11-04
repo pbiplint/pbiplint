@@ -77,10 +77,10 @@ From most specific to least, the first that sets the property wins **(the order 
 ### 5.2 How a colour is written
 
 - **Literal:** `{"solid":{"color":{"expr":{"Literal":{"Value":"'#1F4E79'"}}}}}`, a quoted hex string. 40% of the survey's text colours.
-- **Theme colour reference:** `ThemeDataColor {ColorId, Percent}`. 57% of text colours, so theme resolution is not optional. **ColorId (inferred from 13,205 survey uses):** 0 is the theme's `background`, 1 its `foreground`, n of 2 or more is `dataColors[n - 2]`.
-- **Percent** (−1 to 1) shades the colour, and Microsoft documents no formula. Two candidates: a straight blend toward white for a positive value and black for a negative one (Microsoft's custom visual helper, [`shadeColor` in powerbi-visuals-utils-colorutils](https://github.com/microsoft/powerbi-visuals-utils-colorutils/blob/main/src/colorUtils.ts)), or an HSV shade. **Until the Desktop check picks one, a colour with a Percent other than 0 is unknown** (28% of theme references in the survey). If neither matches Desktop, that stays the rule.
+- **Theme colour reference:** `ThemeDataColor {ColorId, Percent}`. 57% of text colours, so theme resolution is not optional. **ColorId (confirmed November 4, 2026; section 10):** 0 is `#FFFFFF` and 1 is `#000000`, not the theme's background and foreground; n of 2 or more is the theme's `dataColors[n - 2]`.
+- **Percent** (−1 to 1) shades the colour, and Microsoft documents no formula. Two candidates: a straight blend toward white for a positive value and black for a negative one (Microsoft's custom visual helper, [`shadeColor` in powerbi-visuals-utils-colorutils](https://github.com/microsoft/powerbi-visuals-utils-colorutils/blob/main/src/colorUtils.ts)), or an HSV shade. **The straight blend (confirmed November 4, 2026; section 10):** a channel c becomes c + p(255 − c) for p above 0 and c(1 + p) for p below 0, rounded to the nearest whole value, so a colour with a Percent is measured like any other.
 - **In theme files:** 3, 6, or 8-digit hex, and named theme colours (`foreground`, `background`, `backgroundLight`, `foregroundNeutralSecondary` and the rest of the schema's `colorOrThemeColor` list, as Fluent2 writes `{"solid":{"color":"foregroundNeutralSecondary"}}`), resolved through the custom then the base theme.
-- **Text box runs:** `objects.general[].properties.paragraphs[].textRuns[].textStyle.color` is a plain string, not an expression. A run with no colour takes the theme's text box default (`foreground`).
+- **Text box runs:** `objects.general[].properties.paragraphs[].textRuns[].textStyle.color` is a plain string, not an expression. A run with no colour takes the theme's `label` text class (confirmed November 4, 2026; section 10), not `foreground` as Learn's table has it.
 - **Data-dependent, so skipped:** any colour that is not a literal or a theme reference: `FillRule`, `Conditional`, `Measure`, `Aggregation` (830 text colours in the survey). "Conditional formatting overrides any custom background or font color you apply to the cell" ([Apply conditional table formatting](https://learn.microsoft.com/en-us/power-bi/create-reports/desktop-conditional-table-formatting#apply-conditional-formatting-in-power-bi)), so a cell whose background is conditional is skipped too.
 
 ### 5.3 The background stack
@@ -89,11 +89,11 @@ Text sits on a stack, painted back to front:
 
 1. **Wallpaper** (`page.json` `objects.outspace`, or the theme's `visualStyles.page["*"].outspace`).
 2. **Page background** (`objects.background` colour and `transparency`). The CY base themes set the page to transparency 100 over a white wallpaper; Fluent2 sets #FAFAFA at transparency 14 over #E6E6E6.
-3. **Visual group backgrounds,** outermost group first, for a visual inside one or more groups: a group container's `visualGroup.objects.background` (colour and transparency; the visualContainer schema from 2.4.0), resolved like a visual's (**design call**). A group's box is a layer of the stack, not "a visual behind it" for the overlap test in 5.4. The survey has 2,211 group containers.
+3. **Visual group backgrounds,** outermost group first, for a visual inside one or more groups: a group container's `visualGroup.objects.background` (colour and transparency; the visualContainer schema from 2.4.0), resolved like a visual's (**design call**), except that a group that is on with no colour paints `#FFFFFF` (confirmed November 4, 2026; section 10). A group's box is a layer of the stack, not "a visual behind it" for the overlap test in 5.4. The survey has 2,211 group containers.
 4. **Visual background** (`visualContainerObjects.background` `show`, `color`, `transparency`; the base themes set `show: true, transparency: 0` with no colour, so the default colour is the theme's `background` **(inferred)**; Fluent2 turns it off for text boxes and slicers).
 5. **The element's own background,** where it has one: `title.background`, a data label background (`labels.enableBackground`, `backgroundColor`, `backgroundTransparency`), table and matrix `backColor`, `backColorPrimary` and `backColorSecondary` for banded rows (each band measured), slicer `items.background` and `header.background`, button `fill.fillColor`, card `fillCustom.fillColor` and `layout.backgroundFillColor`. An 8-digit hex with alpha 00 (Fluent2's `#FFFFFF00` table cells) is transparent.
 
-Layers combine by source-over blending, alpha = 1 − transparency / 100, the formula of Microsoft's `channelBlend` helper in the same colorutils file **(inferred; Microsoft documents no formula)**. Learn also says "When you apply transparency to the page, the visuals in your report also have the transparency applied" ([Use visual elements, Using wallpaper](https://learn.microsoft.com/en-us/power-bi/create-reports/desktop-visual-elements-for-reports#using-wallpaper-in-power-bi-reports)); the Desktop check settles whether that changes a visual's own background, and the builder implements what Desktop shows.
+Layers combine by source-over blending, alpha = 1 − transparency / 100 held as a whole byte (confirmed November 4, 2026; section 10), the formula of Microsoft's `channelBlend` helper in the same colorutils file **(inferred; Microsoft documents no formula)**. Learn also says "When you apply transparency to the page, the visuals in your report also have the transparency applied" ([Use visual elements, Using wallpaper](https://learn.microsoft.com/en-us/power-bi/create-reports/desktop-visual-elements-for-reports#using-wallpaper-in-power-bi-reports)); the Desktop check settles whether that changes a visual's own background, and the builder implements what Desktop shows.
 
 ### 5.4 What it cannot see, so skips
 
@@ -161,7 +161,7 @@ Each finding carries one colour that passes **(design call)**: the text colour's
 - `suggested`, `suggestedRatio`
 - `others` (how many more instances or states fail), and on a theme finding `visuals` (how many visuals it fails on) and `elements` (a list of the element kinds)
 
-An English detail, for example: `Title #A19F9D on #FFFFFF is 2.57:1, and 12 pt text needs 4.5:1. #767676 would be 4.54:1.` **(builder: wording, through the catalog)**
+An English detail, for example: `Title #A19F9D on #FFFFFF is 2.63:1, and 12 pt text needs 4.5:1. #767676 would be 4.54:1.` **(builder: wording, through the catalog)**
 
 ## 9. Saying how much was measured
 
@@ -181,6 +181,20 @@ Several steps above are inferred from files, not documented. Before release, a m
 - **The check:** the project is opened at Actual size, screenshots are saved, and the pixel colours are read from them.
 - **It settles:** the ColorId mapping, the Percent formula (or leaves Percent other than 0 skipped), whether page transparency changes a visual's own background, how a group's background layers, the card category label contradiction, and that the resolver gets the same hex as Desktop for every case. Each result is recorded in this spec and pinned in a test.
 - **When:** as soon as the resolver exists (after the first PR), so the rule is built on confirmed steps.
+
+### Results, November 4, 2026
+
+The first check used a hand-made project with a hand-written custom theme over a CY base theme, in Power BI Desktop on Windows at Actual size. Its screenshots were read pixel by pixel, the canvas found by marker squares at its corners; 61 cases on seven pages. Each result below is pinned in a test.
+
+- **ColorId:** 0 is `#FFFFFF` and 1 is `#000000`, though the custom theme's background and foreground were `#FFF8E7` and `#7A1F5C`. n of 2 or more is the theme's `dataColors[n - 2]`, as inferred. A second check confirms 0 and 1 under a dark theme.
+- **Percent:** the straight blend of section 5.2, rounded to the nearest whole value. All 32 shaded cases matched to the unit, so a Percent other than 0 is measured, not skipped.
+- **Blending:** source-over with each layer's alpha held as a whole byte, round((1 − t / 100) × 255) / 255. Every case matched except the Fluent2 page, `#FAFAFA` at 14 over `#E6E6E6`, which Desktop paints one unit lighter (`#F8F8F8`) than this gives (`#F7F7F7`). The difference moves a ratio by about 0.01, and is a known difference rather than a rule.
+- **Page transparency** does not reach a visual's own background: a solid visual on a page at transparency 50 kept its own colour.
+- **Groups:** layered innermost first between the visual and the page, as section 5.3 says. A group that sets nothing, or whose background is off, paints nothing; one that is on with no colour paints `#FFFFFF`.
+- **The card category label** takes the `largeLightLabel` text class, which settles the contradiction in section 5.1.
+- **Defaults with no colour set:** a text box run takes the `label` text class; table headers and values, and slicer items, take `foreground`; chart axis labels take `foregroundNeutralSecondary`; table cells take the theme's `background` as their own background. Titles, card values, slicer headers, and axis titles took a text class of the base theme over the custom theme's `foreground`; which class, the check's themes could not tell apart.
+
+Left to the second check: a visual's background that is on with no colour; the default of each element the first check did not settle (titles and subtitles, card values, the new card, the multi-row card, slicer headers, the button slicer, legends, axis titles, data labels, button and shape text); and ColorId 0 and 1 under a dark theme. Until it settles one, that step is not known, and what depends on it is skipped and counted.
 
 ## 11. Output, the site, and the rule page
 

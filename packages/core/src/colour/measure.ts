@@ -29,7 +29,13 @@ import { isBold, pointSize, requiredRatio } from "./size.js";
 
 /** Why a text element was not measured (spec section 5.4), beside the reasons a colour is not known. */
 export type SkipReason =
-  NotKnown | "image" | "overlap" | "on-data" | "size-unknown" | "default-not-known";
+  | NotKnown
+  | "image"
+  | "overlap"
+  | "on-data"
+  | "size-unknown"
+  | "default-not-known"
+  | "visibility-not-known";
 
 /** Where a text colour came from: the setting, and the theme line behind a theme reference. */
 export interface ColourAt {
@@ -369,6 +375,8 @@ function measureElement(ctx: Context, spec: ElementSpec): void {
     const on = ask(toggle);
     if (!on.found && on.why === "theme-not-read") return skip("theme-not-read");
     const shown = on.found ? readLiteralBool(on.value) === true : SHOWN_BY_DEFAULT.has(spec.kind);
+    // Shown or not, the files do not say: it may be on the page, so it is counted as not known.
+    if (!on.found && !SHOWN_BY_DEFAULT.has(spec.kind)) return skip("visibility-not-known");
     if (!shown) return;
   }
   let onData = false;
@@ -427,13 +435,32 @@ function measureElement(ctx: Context, spec: ElementSpec): void {
       );
       if (!fg) continue;
       const fontSize = sizeAt.found ? pointSize(sizeAt.value) : undefined;
+      // The field's own cell background, else the element's, as for the element's own colour.
+      const ownBack = member(entries[index]!.properties, "backColor");
+      let element: StackLayer | "not-known" | undefined;
+      if (ownBack !== undefined) {
+        const read = readColour(ownBack, ctx.report.themes);
+        element = read.known
+          ? {
+              colour: read.colour,
+              source: "visual",
+              file: visual.file,
+              pointer: `${own.pointer}/${index}/properties/backColor`,
+            }
+          : "not-known";
+      } else if (spec.background)
+        element = ownBackground(ctx, spec, own, spec.background.colour[0]!, "default");
+      if (element === "not-known") {
+        skip("not-set");
+        continue;
+      }
       finish(
         ctx,
         spec.kind,
         spec.object,
         fg,
         { ...(fontSize !== undefined ? { fontSize } : {}), bold, field },
-        undefined,
+        element,
         onData,
       );
     }

@@ -30,7 +30,7 @@ interface V {
 /** A report with one page of these visuals, through the real reader; a base theme when given. */
 function measure(
   visuals: V[],
-  { theme, page }: { theme?: object; page?: object } = {},
+  { theme, page, all }: { theme?: object; page?: object; all?: boolean } = {},
 ): Measurement {
   const files: LintFile[] = [
     {
@@ -76,7 +76,9 @@ function measure(
     })),
     ...(theme ? [{ path: BASE_FILE, text: JSON.stringify(theme) }] : []),
   ];
-  return measureReport(buildReport(files).report);
+  const m = measureReport(buildReport(files).report);
+  // Every visual counts its unsettled subtitle and the like; tests about other things leave it out.
+  return all ? m : { ...m, skipped: m.skipped.filter((s) => s.why !== "visibility-not-known") };
 }
 
 const title = (o: object, selector?: object) => ({
@@ -136,21 +138,72 @@ describe("measureReport", () => {
     expect(m.skipped).toEqual([]);
   });
   it("measures each field's colour as its own instance", () => {
-    const m = measure([
-      {
-        type: "tableEx",
-        objects: {
-          values: props({ fontColor: fill("#000000"), fontSize: lit("12D") }),
-          columnFormatting: [
-            { properties: { fontColor: fill("#BBBBBB") }, selector: { metadata: "Sales.Amount" } },
-            { properties: { fontColor: fill("#CCCCCC") }, selector: { metadata: "Sales.Cost" } },
-          ],
+    const m = measure(
+      [
+        {
+          type: "tableEx",
+          objects: {
+            values: props({ fontColor: fill("#000000"), fontSize: lit("12D") }),
+            columnFormatting: [
+              {
+                properties: { fontColor: fill("#BBBBBB") },
+                selector: { metadata: "Sales.Amount" },
+              },
+              { properties: { fontColor: fill("#CCCCCC") }, selector: { metadata: "Sales.Cost" } },
+            ],
+          },
         },
-      },
-    ]);
+      ],
+      { theme: { background: "#FFFFFF" } },
+    );
     expect(m.measured.filter((x) => x.field).map((x) => [x.field, toHex(x.foreground)])).toEqual([
       ["Sales.Amount", "#BBBBBB"],
       ["Sales.Cost", "#CCCCCC"],
+    ]);
+  });
+  it("measures a field's colour against the table cell's background, its own or the theme's", () => {
+    const m = measure(
+      [
+        {
+          type: "tableEx",
+          vco: {
+            background: props({
+              show: lit("true"),
+              color: fill("#1A3A5C"),
+              transparency: lit("0D"),
+            }),
+          },
+          objects: {
+            values: props({ fontSize: lit("12D") }),
+            columnFormatting: [
+              {
+                properties: { fontColor: fill("#000000") },
+                selector: { metadata: "Sales.Amount" },
+              },
+              {
+                properties: { fontColor: fill("#000000"), backColor: fill("#EEEEEE") },
+                selector: { metadata: "Sales.Cost" },
+              },
+            ],
+          },
+        },
+      ],
+      { theme: { background: "#FFFFFF", foreground: "#000000" } },
+    );
+    expect(m.measured.filter((x) => x.field).map((x) => [x.field, toHex(x.background)])).toEqual([
+      ["Sales.Amount", "#FFFFFF"],
+      ["Sales.Cost", "#EEEEEE"],
+    ]);
+  });
+  it("counts an element whose visibility the files do not settle as not known", () => {
+    const m = measure([{ vco: { subTitle: props({ fontColor: fill("#000000") }) } }], {
+      theme: {},
+      all: true,
+    });
+    expect(m.skipped.map((s) => [s.kind, s.why])).toEqual([
+      ["title", "visibility-not-known"],
+      ["subtitle", "visibility-not-known"],
+      ["buttonText", "visibility-not-known"],
     ]);
   });
   it("blends a text colour that has alpha over its background first", () => {

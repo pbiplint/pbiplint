@@ -228,6 +228,23 @@ export interface ReportMeasure {
 export type DatasetReference =
   { kind: "byPath"; path: string } | { kind: "byConnection" } | { kind: "none" };
 
+/** A theme `report.json`'s `themeCollection` names. */
+export interface ThemeFile {
+  /** The name `themeCollection` gives it. */
+  name: string;
+  /**
+   * `read`; `absent` when the input reader did not hand it over (it is not there, or is over the
+   * size cap) or no resource package leads to it; `unparsed` when it does not parse, which is a
+   * PARSE_ISSUE.
+   */
+  state: "read" | "absent" | "unparsed";
+  /** Its path from the report's root, when a file was found. */
+  file?: string;
+  /** The file's text, so a finding on a theme setting can point at its line. */
+  text?: string;
+  json?: Record<string, unknown>;
+}
+
 /** The report layer of one run: everything the PBIR reader found, in the order the files declare it. */
 export interface Report {
   file?: string;
@@ -236,6 +253,11 @@ export interface Report {
   displayName?: string;
   schemaVersion?: string;
   themeName?: string;
+  /**
+   * The themes report.json names; the custom theme layers on top of the base theme. A report.json
+   * that could not be read may name either, so it reads as a base theme of no name that is absent.
+   */
+  themes: { base?: ThemeFile; custom?: ThemeFile };
   publicCustomVisuals: string[];
   filtersPane: { expanded?: boolean; visible?: boolean; hiddenInEditMode?: boolean };
   filters: ReportFilter[];

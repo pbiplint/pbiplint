@@ -1,4 +1,4 @@
-import { pbixRefusal } from "@pbiplint/core";
+import { MAX_THEME_BYTES, pbixRefusal } from "@pbiplint/core";
 import { describe, expect, it } from "vitest";
 import {
   emptyTree,
@@ -7,9 +7,11 @@ import {
   type InputTree,
 } from "../src/input/project-files.js";
 import {
+  markerOf,
   MAX_DEPTH,
   SKIP_DIRS,
   readDataTransfer,
+  skipsFolder,
   walkEntry,
   wanted,
 } from "../src/input/read-drop.js";
@@ -89,12 +91,23 @@ describe("wanted", () => {
       "X.Report/definition/report.json",
       "P/X.Report/definition/pages/p/visuals/v/visual.json",
       "X.Report/definition/pages/p/visuals/v/mobile.json",
+      "X.Report/StaticResources/SharedResources/BaseThemes/a.json",
+      "P/X.Report/StaticResources/SharedResources/BuiltInThemes/a.json",
+      "X.Report/StaticResources/RegisteredResources/a.json",
     ])
       expect(wanted(p), p).toBe(true);
     for (const p of [
       "X.Report/report.json",
       "X.Report/StaticResources/x.json",
       "X.Report/StaticResources/definition/x.json",
+      "X.Report/StaticResources/SharedResources/a.json",
+      "X.Report/StaticResources/RegisteredResources/sub/a.json",
+      "X.Report/StaticResources/RegisteredResources/a.png",
+      // Names wanted anywhere else are not wanted here.
+      "X.Report/StaticResources/RegisteredResources/a.tmdl",
+      "X.Report/StaticResources/RegisteredResources/a.pbip",
+      "X.Report/StaticResources/RegisteredResources/.platform",
+      "Other/StaticResources/RegisteredResources/a.json",
       "X.SemanticModel/definition/x.json",
       "notes.json",
       "X.Report/definition/x.png",
@@ -432,7 +445,39 @@ describe("walkEntry", () => {
       new InputError("Could not read P: the browser could not list all of its contents"),
     );
   });
-  it("never walks a report's StaticResources or CustomVisuals, and says nothing about them at the cap", async () => {
+  it("reads a theme file, and not one over the size cap, without opening it", async () => {
+    const big = {
+      ...file("Big.json", "/X.Report/StaticResources/SharedResources/BaseThemes/Big.json", "{}"),
+      file: (done: (f: File) => void) =>
+        done({
+          size: MAX_THEME_BYTES + 1,
+          text: () => Promise.reject(new Error("opened")),
+        } as unknown as File),
+    } as unknown as FileSystemEntry;
+    const tree = emptyTree();
+    await walkEntry(
+      dir("X.Report", "/X.Report", [
+        dir("StaticResources", "/X.Report/StaticResources", [
+          dir("SharedResources", "/X.Report/StaticResources/SharedResources", [
+            dir("BaseThemes", "/X.Report/StaticResources/SharedResources/BaseThemes", [
+              file(
+                "Base.json",
+                "/X.Report/StaticResources/SharedResources/BaseThemes/Base.json",
+                "{}",
+              ),
+              big,
+            ]),
+          ]),
+        ]),
+      ]),
+      tree,
+    );
+    expect(tree.entries.map((e) => e.path)).toEqual([
+      "X.Report/StaticResources/SharedResources/BaseThemes/Base.json",
+    ]);
+    expect(tree.diagnostics).toEqual([]);
+  });
+  it("never walks past a report's theme folders or into CustomVisuals, and says nothing about them at the cap", async () => {
     expect(SKIP_DIRS.has("StaticResources")).toBe(true);
     expect(SKIP_DIRS.has("CustomVisuals")).toBe(true);
     let opened = 0;
@@ -447,13 +492,14 @@ describe("walkEntry", () => {
     const tree = emptyTree();
     await walkEntry(
       dir("X.Report", "/X.Report", [
-        counted(
-          dir("StaticResources", "/X.Report/StaticResources", [
+        dir("StaticResources", "/X.Report/StaticResources", [
+          counted(
             dir("definition", "/X.Report/StaticResources/definition", [
               file("x.json", "/X.Report/StaticResources/definition/x.json", "{}"),
             ]),
-          ]),
-        ),
+          ),
+          file("loose.json", "/X.Report/StaticResources/loose.json", "{}"),
+        ]),
         counted(
           dir("CustomVisuals", "/X.Report/CustomVisuals", [
             file("pbiviz.json", "/X.Report/CustomVisuals/pbiviz.json", "{}"),
@@ -474,6 +520,39 @@ describe("walkEntry", () => {
     const capped = emptyTree();
     await walkEntry(deep, capped);
     expect(capped.diagnostics).toEqual([]);
+  });
+});
+
+describe("skipsFolder", () => {
+  it("lets a walk through to a report's theme folders and nowhere else in StaticResources", () => {
+    for (const p of [
+      "X.Report/StaticResources",
+      "P/X.Report/StaticResources/SharedResources",
+      "X.Report/StaticResources/SharedResources/BaseThemes",
+      "X.Report/StaticResources/SharedResources/BuiltInThemes",
+      "X.Report/StaticResources/RegisteredResources",
+      "definition",
+      "P",
+    ])
+      expect(skipsFolder(p), p).toBe(false);
+    for (const p of [
+      "X.Report/StaticResources/RegisteredResources/sub",
+      "X.Report/StaticResources/SharedResources/other",
+      "X.Report/StaticResources/SharedResources/BaseThemes/sub",
+      "X.Report/StaticResources/definition",
+      "StaticResources",
+      "Other/StaticResources",
+      ".git",
+      "P/.pbi",
+      "node_modules",
+      "X.Report/CustomVisuals",
+    ])
+      expect(skipsFolder(p), p).toBe(true);
+  });
+  it("records no marker for a .pbix or a report.json in a report's StaticResources", () => {
+    expect(markerOf("X.Report/StaticResources/RegisteredResources/a.pbix")).toBeUndefined();
+    expect(markerOf("Y.Report/StaticResources/x.Report/report.json")).toBeUndefined();
+    expect(markerOf("X.Report/a.pbix")).toEqual({ path: "X.Report/a.pbix", kind: "pbix" });
   });
 });
 

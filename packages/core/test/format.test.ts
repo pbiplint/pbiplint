@@ -68,7 +68,10 @@ describe("formatText with colour (#256)", () => {
     expect(coloured.split("\n")[0]).toContain(`${RED}${s.errors} errors${RED_OFF}`);
     expect(coloured).toContain(`${BOLD}Fix these first:${BOLD_OFF}`);
     expect(coloured).toMatch(
-      new RegExp(`^${RED.replace("[", "\\[")}ERROR${RED_OFF.replace("[", "\\[")}  \\[model\\] `, "m"),
+      new RegExp(
+        `^${RED.replace("[", "\\[")}ERROR${RED_OFF.replace("[", "\\[")}  \\[model\\] `,
+        "m",
+      ),
     );
     // Info keeps the terminal's own colour, on its heading line and in the summary.
     expect(coloured).toMatch(/^INFO {3}\[/m);
@@ -88,11 +91,15 @@ describe("formatText with colour (#256)", () => {
       severity: 2,
       check: ({ model }) => model!.tables.flatMap((t) => t.columns.map((c) => finding.column(c))),
     };
-    const r = await lint([{ path: "a.tmdl", text: "table A\n\tcolumn X\n\t\tdataType: string\n" }], {
-      rules: [oneColumn],
-    });
+    const r = await lint(
+      [{ path: "a.tmdl", text: "table A\n\tcolumn X\n\t\tdataType: string\n" }],
+      {
+        rules: [oneColumn],
+      },
+    );
     const line = formatText(r, { colour: true }).split("\n")[0]!;
     expect(line).toContain(`(0 errors, ${BOLD}1 warning${BOLD_OFF}, 0 info)`);
+    // eslint-disable-next-line no-control-regex -- the colour codes are what is matched
     expect(formatText(r, { colour: true })).toMatch(/^\u001b\[1mWARN\u001b\[22m {3}\[model\]/m);
   });
   it("keeps a name's escape character shown as text with colour on", async () => {
@@ -106,6 +113,7 @@ describe("formatText with colour (#256)", () => {
     const text = formatText(await lint(evil), { colour: true });
     expect(text).toContain("Evil\\u001b[2J");
     // Every escape character left is one of the format's own codes.
+    // eslint-disable-next-line no-control-regex -- the colour codes are what is matched
     expect(text.replace(/\u001b\[[\d;]*m/g, "")).not.toContain("\u001b");
     expect(text).not.toContain("\u001b[2J");
   });

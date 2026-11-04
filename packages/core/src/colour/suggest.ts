@@ -64,7 +64,9 @@ export function suggest(
   background: Rgba,
   required: number,
 ): { colour: Rgba; ratio: number } {
-  const { l, c, h } = oklch(foreground);
+  const { l, c: chroma, h } = oklch(foreground);
+  // A grey has no hue; the conversion leaves a trace of chroma that would tint it.
+  const c = chroma < 1e-4 ? 0 : chroma;
   const passes = (rgb: Rgba): boolean => contrastRatio(rounded(rgb), background) >= required;
   // Lighter when the text is lighter than the background, darker otherwise; then the other way.
   const lighterFirst = oklch(background).l < l;

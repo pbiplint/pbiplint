@@ -102,6 +102,16 @@ export const EN = {
   LEGACY_EXCEL_FILE:
     "the workbook is a legacy {kind, select, xlsb {.xlsb} other {.xls}} file, read through the Access Database Engine",
   LOCAL_DRIVE_PATH: "the path is on a local drive ({drive}:)",
+  LOW_TEXT_CONTRAST:
+    "{element}{state, select, default {} other { ({state})}}{field, select, none {} other { for {field}}}: {foreground} on {background} is {ratio}:1, and {size} needs {required}:1. {suggested} would be {suggestedRatio}:1{others, plural, =0 {} one {; # more state or field also falls short} other {; # more states or fields also fall short}}. Text colour from {foregroundSource, select, visual {the visual} group {its group} page {the page} customTheme {the custom theme} other {the base theme}}, background from {backgroundSource, select, visual {the visual} group {its group} page {the page} customTheme {the custom theme} other {the base theme}}",
+  "LOW_TEXT_CONTRAST.element":
+    "{element, select, title {Title} subtitle {Subtitle} dataLabels {Data labels} axisLabels {Axis labels} axisTitles {Axis title} legend {Legend} cardValue {Card value} cardLabel {Card label} newCard {Card text} multiRowCard {Multi-row card text} kpi {KPI text} tableHeaders {Headers} tableValues {Values} tableTotals {Totals} slicerHeader {Slicer header} slicerItems {Slicer items} buttonSlicer {Button slicer text} textBox {Text} buttonText {Button text} other {Text}}",
+  "LOW_TEXT_CONTRAST.sameColour":
+    "{element}{state, select, default {} other { ({state})}}{field, select, none {} other { for {field}}}: {foreground} on {background} is {ratio}:1, the same colour as what is behind it, so it cannot be read",
+  "LOW_TEXT_CONTRAST.size": "{fontSize} pt{bold, select, yes { bold} other {}} text",
+  "LOW_TEXT_CONTRAST.sizeUnknown": "text of unknown size",
+  "LOW_TEXT_CONTRAST.theme":
+    "{setting} in {theme} gives {foreground} on {background}, {ratio}:1, where {size} needs {required}:1, on {visuals, plural, one {# visual} other {# visuals}} ({elements, list}). {suggested} would be {suggestedRatio}:1",
   "NAME_WITHOUT_TRANSLATION.inContext": "{context}, {captions}",
   "NAME_WITHOUT_TRANSLATION.noCaption": "no caption in {cultures, list}",
   "NOT_REACHED_FROM_REPORT.level": 'level "{level}" of hierarchy "{hierarchy}"',

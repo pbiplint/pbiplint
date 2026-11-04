@@ -1,10 +1,9 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { exampleSample } from "../../../scripts/sync-rule-pages.mjs";
-import { RULE_SAMPLES } from "../src/build/rule-samples.data.js";
+import { RULE_SAMPLES } from "../../packages/web/src/build/rule-samples.data.ts";
+import { exampleSample } from "../sync-rule-pages.mjs";
 
-const page = (slug: string): string =>
-  readFileSync(new URL(`../../../rules/${slug}.md`, import.meta.url), "utf8");
+const page = (slug) => readFileSync(new URL(`../../rules/${slug}.md`, import.meta.url), "utf8");
 
 describe("rule-samples.data.ts", () => {
   it("is the sample the contrast rule's page draws from its own example today", () => {

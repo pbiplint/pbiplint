@@ -60,6 +60,37 @@ afterEach(() => {
   else Reflect.deleteProperty(navigator, "clipboard");
 });
 
+describe("renderResults and the contrast sample", () => {
+  const groupOf = (id: string) => result.groups.find((g) => g.rule.id === id)!;
+  it("draws a contrast finding's colours as an image beside its detail", () => {
+    renderResults(
+      container,
+      { ...result, groups: [groupOf("LOW_TEXT_CONTRAST")] },
+      { source: "x" },
+    );
+    const cell = container.querySelector(".group td:last-child")!;
+    expect(cell.textContent).toContain("#B3B0AD on #FFFFFF is 2.15:1");
+    const img = cell.querySelector("img.contrast-sample")!;
+    expect(img.getAttribute("src")).toMatch(/^data:image\/svg\+xml,/);
+    expect(img.getAttribute("alt")).toBe(
+      "Sample text drawn by the browser in #B3B0AD on #FFFFFF, 2.15:1, beside the suggested #797674, 4.5:1",
+    );
+    expect(img.hasAttribute("style")).toBe(false);
+  });
+  it("draws no image for another rule, or for a finding whose colours are not hex", () => {
+    renderResults(container, { ...result, groups: [groupOf("ENSURE_ALTTEXT")] }, { source: "x" });
+    expect(container.querySelector("img.contrast-sample")).toBeNull();
+    const g = groupOf("LOW_TEXT_CONTRAST");
+    const odd = {
+      ...g,
+      findings: g.findings.map((f) => ({ ...f, params: { ...f.params, foreground: "red" } })),
+    };
+    renderResults(container, { ...result, groups: [odd] }, { source: "x" });
+    expect(container.querySelector("img.contrast-sample")).toBeNull();
+    expect(container.querySelector(".group td:last-child")!.textContent).toContain("2.15:1");
+  });
+});
+
 describe("renderResults", () => {
   it("opens with the privacy line, the summary, and the five groups to fix first", () => {
     renderResults(container, result, { source: "the sample project" });

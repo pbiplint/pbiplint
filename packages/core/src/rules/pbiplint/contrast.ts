@@ -72,7 +72,7 @@ function themeFinding(report: Report, pairs: Measured[]): RuleFinding {
   const m = worst(pairs);
   const { file, pointer } = themeSetting(m);
   const theme = [report.themes.custom, report.themes.base].find((t) => t?.file === file);
-  const better = suggest(m.foreground, m.background, m.required);
+  const better = suggest(m.foreground, m.background, m.fontSize === undefined ? 4.5 : m.required);
   const kinds = [...new Set(pairs.map((p) => p.kind))];
   return {
     objectType: "Report",

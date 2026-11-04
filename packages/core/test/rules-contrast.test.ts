@@ -151,6 +151,14 @@ describe("LOW_TEXT_CONTRAST on a theme setting", () => {
       "foregroundNeutralSecondary in StaticResources/SharedResources/BaseThemes/B.json gives #C8C6C4 on #FFFFFF, 1.7:1, where 12 pt text needs 4.5:1, on 20 visuals (Title). #787675 would be 4.51:1",
     );
   });
+  it("suggests a colour that passes 4.5:1 on a theme finding whose size is not known", () => {
+    const unsized = JSON.parse(JSON.stringify(theme));
+    delete unsized.visualStyles["*"]["*"].title[0].fontSize;
+    const [report, , ...visuals] = files(2);
+    const f = findings([report!, { path: BASE, text: JSON.stringify(unsized) }, ...visuals]);
+    expect(f[0]!.detail).toContain("text of any size needs 3:1");
+    expect(Number(f[0]!.params!.suggestedRatio)).toBeGreaterThanOrEqual(4.5);
+  });
   it("still reports a visual that sets one of the two colours itself", () => {
     const own = visual("p", "mine", "shape", {}, { visualContainerObjects: { background: WHITE } });
     const f = findings([...files(2), own]);

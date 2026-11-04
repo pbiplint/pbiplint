@@ -98,6 +98,13 @@ describe("ELEMENTS", () => {
 
 describe("textClass", () => {
   const base = read({ textClasses: { label: { color: "#252423", fontSize: 10 } } }, BASE_FILE);
+  it("takes a class's size from the custom theme even when it sets no colour", () => {
+    const custom = read({ textClasses: { label: { fontSize: 20 } } }, CUSTOM_FILE);
+    expect(textClass("label", { base, custom })).toMatchObject({
+      colour: { known: true, colour: parseHex("#252423") },
+      size: 20,
+    });
+  });
   it("reads the custom theme's class, then the base's, with its size", () => {
     const custom = read({ textClasses: { label: { color: "#AA3344" } } }, CUSTOM_FILE);
     expect(textClass("label", { base, custom })).toEqual({
@@ -106,6 +113,8 @@ describe("textClass", () => {
         colour: parseHex("#AA3344"),
         from: { file: CUSTOM_FILE, pointer: "/textClasses/label/color", layer: "customTheme" },
       },
+      // The custom theme sets no size for the class, so the base theme's applies.
+      size: 10,
     });
     expect(textClass("label", { base })).toEqual({
       colour: {

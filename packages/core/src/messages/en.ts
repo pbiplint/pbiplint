@@ -109,7 +109,7 @@ export const EN = {
   "LOW_TEXT_CONTRAST.sameColour":
     "{element}{state, select, default {} other { ({state})}}{field, select, none {} other { for {field}}}: {foreground} on {background} is {ratio}:1, the same colour as what is behind it, so it cannot be read",
   "LOW_TEXT_CONTRAST.size": "{fontSize} pt{bold, select, yes { bold} other {}} text",
-  "LOW_TEXT_CONTRAST.sizeUnknown": "text of unknown size",
+  "LOW_TEXT_CONTRAST.sizeUnknown": "text of any size",
   "LOW_TEXT_CONTRAST.theme":
     "{setting} in {theme} gives {foreground} on {background}, {ratio}:1, where {size} needs {required}:1, on {visuals, plural, one {# visual} other {# visuals}} ({elements, list}). {suggested} would be {suggestedRatio}:1",
   "NAME_WITHOUT_TRANSLATION.inContext": "{context}, {captions}",

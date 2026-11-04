@@ -82,7 +82,7 @@ function measure(
 }
 
 const title = (o: object, selector?: object) => ({
-  title: props({ show: lit("true"), fontSize: lit("12D"), ...o }, selector),
+  title: props({ show: lit("true"), text: lit("'Sales'"), fontSize: lit("12D"), ...o }, selector),
 });
 const hexes = (m: Measurement) =>
   m.measured.map((x) => `${x.kind} ${toHex(x.foreground)} on ${toHex(x.background)}`);
@@ -124,7 +124,14 @@ describe("measureReport", () => {
       {
         vco: {
           title: [
-            { properties: { show: lit("true"), fontSize: lit("12D"), fontColor: fill("#000000") } },
+            {
+              properties: {
+                show: lit("true"),
+                text: lit("'Sales'"),
+                fontSize: lit("12D"),
+                fontColor: fill("#000000"),
+              },
+            },
             { properties: { fontColor: fill("#A19F9D") }, selector: { id: "hover" } },
             { properties: { fontColor: fill("#EEEEEE") }, selector: { id: "disabled" } },
           ],
@@ -214,8 +221,16 @@ describe("measureReport", () => {
             objects: { valueAxis: props({ titleColor: fill("#000000") }) },
             visualContainerObjects: {
               background: WHITE_BG,
-              title: props({ fontColor: fill("#000000"), fontSize: lit("12D") }),
-              subTitle: props({ fontColor: fill("#000000"), fontSize: lit("12D") }),
+              title: props({
+                text: lit("'Sales'"),
+                fontColor: fill("#000000"),
+                fontSize: lit("12D"),
+              }),
+              subTitle: props({
+                text: lit("'By year'"),
+                fontColor: fill("#000000"),
+                fontSize: lit("12D"),
+              }),
             },
           },
         }),
@@ -288,6 +303,136 @@ describe("measureReport", () => {
       foregroundAt: { source: "baseTheme", pointer: "/textClasses/label/color" },
     });
     expect(toHex(m.measured[0]!.foreground)).toBe("#AA3344");
+  });
+});
+
+describe("measureReport and what the review found", () => {
+  const DARK = props({ show: lit("true"), color: fill("#202020"), transparency: lit("0D") });
+  it("measures axis labels only on visuals with axes", () => {
+    const theme = { foregroundNeutralSecondary: "#605E5C" };
+    for (const type of ["pieChart", "donutChart", "treemap", "funnel"]) {
+      const m = measure([{ type, vco: { background: DARK } }], { theme });
+      expect(
+        m.measured.filter((x) => x.kind === "axisLabels"),
+        type,
+      ).toEqual([]);
+    }
+    const bars = measure([{ type: "clusteredColumnChart", vco: { background: DARK } }], { theme });
+    expect(bars.measured.filter((x) => x.kind === "axisLabels")).toHaveLength(2);
+  });
+  it("does not take a fill whose show nothing sets for no fill", () => {
+    const m = measure(
+      [
+        {
+          type: "shape",
+          objects: {
+            fill: props({ fillColor: fill("#1A3A5C") }),
+            text: props({ show: lit("true"), fontColor: fill("#FFFFFF"), fontSize: lit("12D") }),
+          },
+        },
+      ],
+      { theme: {} },
+    );
+    expect(m.measured).toEqual([]);
+    expect(m.skipped.map((s) => [s.kind, s.why])).toEqual([["buttonText", "not-set"]]);
+  });
+  it("measures a subtitle only when it has text, and a title when it has text or fields", () => {
+    // No theme named, so only what the visual sets counts; show is on explicitly.
+    const report = (vco: object, withFields = false): Measurement => {
+      const files: LintFile[] = [
+        {
+          path: "definition/report.json",
+          text: JSON.stringify({
+            themeCollection: {},
+          }),
+        },
+        { path: "definition/pages/p/page.json", text: JSON.stringify({ name: "p" }) },
+        {
+          path: "definition/pages/p/visuals/v/visual.json",
+          text: JSON.stringify({
+            name: "v",
+            position: { x: 0, y: 0, z: 0, width: 100, height: 100 },
+            visual: {
+              visualType: "card",
+              ...(withFields
+                ? {
+                    query: {
+                      queryState: {
+                        Values: {
+                          projections: [
+                            {
+                              field: {
+                                Measure: {
+                                  Expression: { SourceRef: { Entity: "S" } },
+                                  Property: "M",
+                                },
+                              },
+                            },
+                          ],
+                        },
+                      },
+                    },
+                  }
+                : {}),
+              visualContainerObjects: { background: WHITE_BG, ...vco },
+            },
+          }),
+        },
+      ];
+      return measureReport(buildReport(files).report);
+    };
+    const coloured = { show: lit("true"), fontColor: fill("#A0A0A0"), fontSize: lit("12D") };
+    const kinds = (m: Measurement) => m.measured.map((x) => x.kind).sort();
+    expect(kinds(report({ title: props(coloured), subTitle: props(coloured) }))).toEqual([]);
+    expect(kinds(report({ title: props(coloured), subTitle: props(coloured) }, true))).toEqual([
+      "title",
+    ]);
+    const texted = { ...coloured, text: lit("'Note'") };
+    expect(kinds(report({ title: props(texted), subTitle: props(texted) }))).toEqual([
+      "subtitle",
+      "title",
+    ]);
+  });
+  it("measures banded rows that set only their background", () => {
+    const m = measure(
+      [
+        {
+          type: "tableEx",
+          objects: {
+            values: props({
+              fontColor: fill("#777777"),
+              fontSize: lit("12D"),
+              backColorPrimary: fill("#FFFFFF"),
+              backColorSecondary: fill("#DDDDDD"),
+            }),
+          },
+        },
+      ],
+      { theme: { background: "#FFFFFF" } },
+    );
+    const values = m.measured
+      .filter((x) => x.kind === "tableValues")
+      .map((x) => toHex(x.background));
+    expect(values).toEqual(["#FFFFFF", "#FFFFFF", "#DDDDDD"]);
+  });
+  it("reads an axis title's weight from its own font family", () => {
+    const m = measure([
+      {
+        type: "clusteredColumnChart",
+        objects: {
+          valueAxis: props({
+            show: lit("true"),
+            showAxisTitle: lit("true"),
+            titleColor: fill("#000000"),
+            titleFontSize: lit("14D"),
+            fontFamily: lit("'Segoe UI Bold'"),
+            titleFontFamily: lit("'Segoe UI'"),
+          }),
+        },
+      },
+    ]);
+    const title = m.measured.find((x) => x.kind === "axisTitles" && x.object === "valueAxis")!;
+    expect(title).toMatchObject({ bold: false, required: 4.5 });
   });
 });
 
@@ -441,11 +586,20 @@ describe("measureReport skips, by reason", () => {
   });
   it("skips a ratio from 3 to 4.5 with no size, and measures one under 3", () => {
     const noSize = (hex: string) =>
-      measure([{ vco: { title: props({ show: lit("true"), fontColor: fill(hex) }) } }], {
-        theme: {},
-      });
+      measure(
+        [
+          {
+            vco: {
+              title: props({ show: lit("true"), text: lit("'Sales'"), fontColor: fill(hex) }),
+            },
+          },
+        ],
+        {
+          theme: {},
+        },
+      );
     expect(noSize("#767676").measured).toHaveLength(1);
     expect(noSize("#8A8A8A").skipped.map((s) => s.why)).toEqual(["size-unknown"]);
-    expect(noSize("#BBBBBB").measured[0]).toMatchObject({ required: 4.5 });
+    expect(noSize("#BBBBBB").measured[0]).toMatchObject({ required: 3 });
   });
 });

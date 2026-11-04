@@ -48,7 +48,8 @@ function onVisual(m: Measured, others: number): Message {
     ratio: truncateRatio(m.ratio),
   };
   if (m.ratio < SAME_COLOUR) return msg("LOW_TEXT_CONTRAST.sameColour", shared);
-  const better = suggest(m.foreground, m.background, m.required);
+  // With no size known, the suggestion passes the stricter 4.5:1, so it serves any size.
+  const better = suggest(m.foreground, m.background, m.fontSize === undefined ? 4.5 : m.required);
   return msg("LOW_TEXT_CONTRAST", {
     ...shared,
     size: sizeOf(m),
@@ -112,7 +113,7 @@ export const LOW_TEXT_CONTRAST = pbiplintRule({
     for (const m of failing) {
       const [map, key] = fromTheme(m)
         ? [byTheme, `${themeSetting(m).file}#${themeSetting(m).pointer}`]
-        : [byVisual, `${m.page.id}/${m.visual.id}/${m.kind}`];
+        : [byVisual, `${m.page.id}/${m.visual.id}/${m.kind}/${m.object}`];
       const list = map.get(key);
       if (list) list.push(m);
       else map.set(key, [m]);

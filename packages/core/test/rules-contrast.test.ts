@@ -22,7 +22,7 @@ const titled = (name: string, entries: object[], extra: object = {}) =>
     },
   );
 const titleIn = (hex: string, size = "12D") =>
-  props({ show: lit("true"), fontSize: lit(size), fontColor: fill(hex) });
+  props({ show: lit("true"), text: lit("'Sales'"), fontSize: lit(size), fontColor: fill(hex) });
 const findings = (files: { path: string; text: string }[]) =>
   reportFindings(LOW_TEXT_CONTRAST, [page("p"), ...files]);
 
@@ -68,6 +68,35 @@ describe("LOW_TEXT_CONTRAST", () => {
     const line = v.text.split("\n").findIndex((l) => l.includes('"fontColor"')) + 1;
     expect(findings([v])[0]!.location).toEqual({ file: v.path, line });
   });
+  it("reports each axis on its own, so the count of others is only states and fields", () => {
+    const axes = visual(
+      "p",
+      "c",
+      "clusteredColumnChart",
+      {},
+      {
+        visualContainerObjects: { background: WHITE },
+        objects: {
+          categoryAxis: [
+            props({ show: lit("true"), labelColor: fill("#BBBBBB"), fontSize: lit("12D") }),
+          ],
+          valueAxis: [
+            props({ show: lit("true"), labelColor: fill("#BBBBBB"), fontSize: lit("12D") }),
+          ],
+        },
+      },
+    );
+    const f = findings([axes]);
+    expect(f).toHaveLength(2);
+    for (const x of f) expect(x.detail).not.toContain("more state or field");
+  });
+  it("says text of unknown size needs 3:1 at any size, and suggests one that passes 4.5:1", () => {
+    const f = findings([
+      titled("v", [props({ show: lit("true"), text: lit("'Sales'"), fontColor: fill("#BBBBBB") })]),
+    ]);
+    expect(f[0]!.detail).toContain("text of any size needs 3:1");
+    expect(Number(f[0]!.params!.suggestedRatio)).toBeGreaterThanOrEqual(4.5);
+  });
   it("says the same colour below 1.1:1 in its own words", () => {
     const f = findings([titled("v", [titleIn("#FEFEFE")])]);
     expect(f[0]!.messageId).toBe("LOW_TEXT_CONTRAST.sameColour");
@@ -86,6 +115,7 @@ describe("LOW_TEXT_CONTRAST on a theme setting", () => {
           title: [
             {
               show: true,
+              text: "Sales",
               fontSize: 12,
               fontColor: { solid: { color: "foregroundNeutralSecondary" } },
             },

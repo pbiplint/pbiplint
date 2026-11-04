@@ -262,7 +262,7 @@ function finish(
   if (required === undefined) {
     // Under 3:1 fails at any size; from 3:1 up to 4.5:1 it depends on a size the files do not give.
     if (ratio >= 3 && ratio < 4.5) return skip("size-unknown");
-    required = 4.5;
+    required = 3;
   }
   out.measured.push({
     page,
@@ -339,10 +339,25 @@ function ownBackground(
     });
   if (bg.show) {
     const on = ask(bg.show);
-    const onByDefault = !on.found && on.why === "not-set" && bg.defaultOn === true;
-    if (!onByDefault && (!on.found || readLiteralBool(on.value) !== true))
-      return on.found || on.why === "not-set" ? undefined : "not-known";
+    // Nothing sets it: on or off as a check showed, else not known, so the text is skipped.
+    if (!on.found)
+      return on.why !== "not-set" || bg.defaultOn === undefined
+        ? "not-known"
+        : bg.defaultOn
+          ? ownColour(ctx, bg, ask, colourProp)
+          : undefined;
+    if (readLiteralBool(on.value) !== true) return undefined;
   }
+  return ownColour(ctx, bg, ask, colourProp);
+}
+
+/** The colour and transparency of an element's own background that is on. */
+function ownColour(
+  ctx: Context,
+  bg: NonNullable<ElementSpec["background"]>,
+  ask: (property: string) => Lookup,
+  colourProp = bg.colour[0]!,
+): StackLayer | "not-known" | undefined {
   const set = ask(colourProp);
   let read: ColourRead;
   let at: Pick<StackLayer, "source" | "file" | "pointer">;
@@ -382,12 +397,14 @@ function measureElement(ctx: Context, spec: ElementSpec): void {
   const themes = report.themes;
   const skip = (why: SkipReason): void =>
     void out.skipped.push({ page, visual, kind: spec.kind, why });
-  const own: Own = {
-    entries: ownEntries(visual, spec.container, spec.object),
+  const ownOf = (object: string): Own => ({
+    entries: ownEntries(visual, spec.container, object),
     source: "visual",
     file: visual.file,
-    pointer: ownPointer(spec.container, spec.object),
-  };
+    pointer: ownPointer(spec.container, object),
+  });
+  const own: Own = ownOf(spec.object);
+  const ownEl = own;
   const ask = (property: string, state = "default"): Lookup =>
     lookup({
       themes,
@@ -411,6 +428,19 @@ function measureElement(ctx: Context, spec: ElementSpec): void {
       return skip("visibility-not-known");
     if (!shown) return;
   }
+  // A subtitle with no text, or a title with no text on a visual with no fields to name it by, is
+  // not drawn, whatever its show says.
+  if (spec.kind === "subtitle" || spec.kind === "title") {
+    const text = ask("text");
+    // A literal in visual.json, a plain string in a theme.
+    const value = !text.found
+      ? ""
+      : typeof text.value === "string"
+        ? text.value
+        : literalText(text.value);
+    const written = value.trim() !== "";
+    if (!written && (spec.kind === "subtitle" || visual.fields.length === 0)) return;
+  }
   let onData = false;
   if (spec.kind === "dataLabels") {
     const position = ask("labelPosition");
@@ -426,22 +456,41 @@ function measureElement(ctx: Context, spec: ElementSpec): void {
   }
   const sizeAt = ask(spec.size);
   const boldAt = spec.bold ? ask(spec.bold) : undefined;
-  const familyAt = ask("fontFamily");
+  const familyAt = ask(spec.family ?? "fontFamily");
   const bold = isBold({
     bold: boldAt?.found ? boldAt.value : undefined,
     fontFamily: familyAt.found ? familyAt.value : undefined,
   });
   for (const state of statesOf(own.entries)) {
-    // The first colour property is the element's; the others (a table's banded rows) only when set.
-    spec.colour.forEach((property, i) => {
-      const found = ask(property, state);
-      if (i > 0 && !found.found) return;
+    // The first colour property is the element's; the others (a table's banded rows) only when
+    // their text colour or their background is set, the text then taking the element's colour.
+    const instances = Math.max(spec.colour.length, spec.background?.colour.length ?? 0);
+    for (let i = 0; i < instances; i++) {
+      const own = spec.colour[i];
+      const ownFound = own === undefined ? undefined : ask(own, state);
+      const bgSet =
+        i > 0 && spec.background?.colour[i] !== undefined
+          ? lookup({
+              themes,
+              own: { ...ownOf(spec.background.object) },
+              visualType: visual.type,
+              ...(ctx.preset ? { preset: ctx.preset } : {}),
+              object: spec.background.object,
+              property: spec.background.colour[i]!,
+              state,
+            }).found
+          : false;
+      if (i > 0 && !ownFound?.found && !bgSet) continue;
+      const found = ownFound?.found ? ownFound : ask(spec.colour[0]!, state);
       const fg = colourOf(ctx, spec, found, skip);
-      if (!fg) return;
+      if (!fg) continue;
       const fontSize = (sizeAt.found ? pointSize(sizeAt.value) : undefined) ?? fg.size;
       const bgProp = spec.background?.colour[Math.min(i, spec.background.colour.length - 1)];
-      const element = bgProp ? ownBackground(ctx, spec, own, bgProp, state) : undefined;
-      if (element === "not-known") return skip("not-set");
+      const element = bgProp ? ownBackground(ctx, spec, ownEl, bgProp, state) : undefined;
+      if (element === "not-known") {
+        skip("not-set");
+        continue;
+      }
       finish(
         ctx,
         spec.kind,
@@ -451,7 +500,7 @@ function measureElement(ctx: Context, spec: ElementSpec): void {
         element,
         onData,
       );
-    });
+    }
   }
   // Each field's own colour, from a metadata selector, is an instance of its own.
   for (const property of spec.colour)

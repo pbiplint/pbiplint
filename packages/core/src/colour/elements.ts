@@ -40,7 +40,10 @@ export interface OwnBackground {
   transparency?: string;
   /** The property that turns it on, where it has one. */
   show?: string;
-  /** Whether it is on when nothing sets that property, as a Desktop check showed. */
+  /**
+   * Whether it is on when nothing sets that property, as a Desktop check showed (false: off, as
+   * shown). Not set: not known, so text over it is skipped.
+   */
   defaultOn?: boolean;
   fallback?: Fallback;
 }
@@ -56,12 +59,16 @@ export interface ElementSpec {
   colour: readonly string[];
   size: string;
   bold?: string;
+  /** Its font family property, when it is not `fontFamily` (an axis title's `titleFontFamily`). */
+  family?: string;
   background?: OwnBackground;
   fallback: Fallback;
 }
 
 const TABLES = ["tableEx", "pivotTable"] as const;
 const CHARTS = "*charts*";
+/** Charts with a category and a value axis: not a pie, a donut, a treemap, or a funnel. */
+const AXES = "*axes*";
 
 /**
  * Each text element, its properties as Microsoft's report theme schema (2.159) names them for each
@@ -103,12 +110,13 @@ export const ELEMENTS: readonly ElementSpec[] = [
       colour: ["backgroundColor"],
       transparency: "backgroundTransparency",
       show: "enableBackground",
+      defaultOn: false,
     },
     fallback: { named: "foregroundNeutralSecondary" },
   },
   {
     kind: "axisLabels",
-    visualTypes: [CHARTS],
+    visualTypes: [AXES],
     container: false,
     object: "categoryAxis",
     colour: ["labelColor"],
@@ -118,7 +126,7 @@ export const ELEMENTS: readonly ElementSpec[] = [
   },
   {
     kind: "axisLabels",
-    visualTypes: [CHARTS],
+    visualTypes: [AXES],
     container: false,
     object: "valueAxis",
     colour: ["labelColor"],
@@ -128,22 +136,24 @@ export const ELEMENTS: readonly ElementSpec[] = [
   },
   {
     kind: "axisTitles",
-    visualTypes: [CHARTS],
+    visualTypes: [AXES],
     container: false,
     object: "categoryAxis",
     colour: ["titleColor"],
     size: "titleFontSize",
     bold: "titleBold",
+    family: "titleFontFamily",
     fallback: { textClass: "title" },
   },
   {
     kind: "axisTitles",
-    visualTypes: [CHARTS],
+    visualTypes: [AXES],
     container: false,
     object: "valueAxis",
     colour: ["titleColor"],
     size: "titleFontSize",
     bold: "titleBold",
+    family: "titleFontFamily",
     fallback: { textClass: "title" },
   },
   {
@@ -473,7 +483,10 @@ export const ELEMENTS: readonly ElementSpec[] = [
   },
 ];
 
-/** The visual types whose charts carry legends, data labels, and axes. */
+/** Charts that draw no axes. */
+const NO_AXES: ReadonlySet<string> = new Set(["donutChart", "funnel", "pieChart", "treemap"]);
+
+/** The visual types whose charts carry legends and data labels, and most of them axes. */
 const CHART_TYPES: ReadonlySet<string> = new Set([
   "areaChart",
   "barChart",
@@ -502,7 +515,8 @@ export const elementsFor = (visualType: string): ElementSpec[] =>
     (e) =>
       e.visualTypes === "*" ||
       e.visualTypes.includes(visualType) ||
-      (e.visualTypes.includes(CHARTS) && CHART_TYPES.has(visualType)),
+      (e.visualTypes.includes(CHARTS) && CHART_TYPES.has(visualType)) ||
+      (e.visualTypes.includes(AXES) && CHART_TYPES.has(visualType) && !NO_AXES.has(visualType)),
   );
 
 /** A theme text class's colour, custom over base, and the size the class that answered sets. */
@@ -510,7 +524,23 @@ export function textClass(
   name: string,
   themes: Report["themes"],
 ): { colour: ColourRead; size?: number } {
+  const classOf = (json: Record<string, unknown>): Record<string, unknown> | undefined => {
+    const classes = json.textClasses;
+    const cls =
+      typeof classes === "object" && classes !== null && Object.hasOwn(classes, name)
+        ? (classes as Record<string, unknown>)[name]
+        : undefined;
+    return typeof cls === "object" && cls !== null ? (cls as Record<string, unknown>) : undefined;
+  };
+  // The size from the first theme whose class sets one, custom over base, whatever sets the colour.
   let size: number | undefined;
+  for (const theme of [themes.custom, themes.base]) {
+    const fontSize = theme?.json ? classOf(theme.json)?.fontSize : undefined;
+    if (typeof fontSize === "number") {
+      size = fontSize;
+      break;
+    }
+  }
   const colour = fromThemes(themes, (json, theme, layer) => {
     const classes = json.textClasses;
     const cls =
@@ -518,8 +548,7 @@ export function textClass(
         ? (classes as Record<string, unknown>)[name]
         : undefined;
     if (typeof cls !== "object" || cls === null || !Object.hasOwn(cls, "color")) return undefined;
-    const { color, fontSize } = cls as { color: unknown; fontSize?: unknown };
-    if (typeof fontSize === "number") size = fontSize;
+    const { color } = cls as { color: unknown };
     return themeValue(color, theme, `/textClasses/${name}/color`, layer);
   });
   return size === undefined ? { colour } : { colour, size };

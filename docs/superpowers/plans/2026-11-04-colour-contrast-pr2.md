@@ -92,7 +92,7 @@ Expected: PASS.
 
 **Files:**
 - Create: `packages/core/src/colour/elements.ts`
-- Modify: `packages/core/src/colour/cascade.ts` (a fallback that names a text class)
+- Modify: `packages/core/src/colour/read.ts` (export `fromThemes` and `themeValue` for text classes; measure.ts applies an element's fallback)
 - Test: `packages/core/test/colour-elements.test.ts`
 
 **Interfaces:**
@@ -101,7 +101,7 @@ Expected: PASS.
 ```ts
 export type ElementKind =
   | "title" | "subtitle" | "dataLabels" | "axisLabels" | "axisTitles" | "legend"
-  | "cardValue" | "cardLabel" | "multiRowCard" | "kpi" | "tableHeaders" | "tableValues"
+  | "cardValue" | "cardLabel" | "newCard" | "multiRowCard" | "kpi" | "tableHeaders" | "tableValues"
   | "tableTotals" | "slicerHeader" | "slicerItems" | "buttonSlicer" | "textBox" | "buttonText";
 export type Fallback = { textClass: string } | { named: string } | "not-known";
 export interface ElementSpec {
@@ -126,7 +126,7 @@ export function textClass(name: string, themes: Report["themes"]): { colour: Col
 - `takes the defaults the first Desktop check showed`: textBox `{ textClass: "label" }`; cardLabel `{ textClass: "largeLightLabel" }`; tableHeaders, tableValues, slicerItems `{ named: "foreground" }`; axisLabels `{ named: "foregroundNeutralSecondary" }`; table cell background defaults to `background`.
 - `leaves the rest not known until the second check`: title, subtitle, cardValue, multiRowCard, kpi, slicerHeader, buttonSlicer, legend, axisTitles, dataLabels, buttonText are `"not-known"` (**CHECK 2b** replaces each with what the check shows).
 - `textClass` reads custom then base, stops at a theme not read, and returns the class's `fontSize` beside its colour.
-- `lookup` with a text class fallback answers from the class when nothing else sets the property.
+- `elementsFor` gives every visual type its title and subtitle, and the rest only to their own types; a custom visual gets the two alone.
 
 - [ ] **Step 2: Run them to see them fail**
 

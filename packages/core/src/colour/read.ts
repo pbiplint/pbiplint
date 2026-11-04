@@ -30,7 +30,7 @@ const notKnown = (why: NotKnown): ColourRead => ({ known: false, why });
  * for one theme's JSON: a colour, or undefined when that theme does not set it. A theme that is
  * named but not read stops the walk, since it may set what a later layer would otherwise answer.
  */
-function fromThemes(
+export function fromThemes(
   themes: Report["themes"],
   look: (
     json: Record<string, unknown>,
@@ -52,7 +52,7 @@ function fromThemes(
 }
 
 /** A value a theme holds for a colour: a hex string, never a reference to another name. */
-function themeValue(
+export function themeValue(
   value: unknown,
   theme: ThemeFile,
   pointer: string,

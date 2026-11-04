@@ -35,9 +35,51 @@ export interface FormatOptions {
    * it, so a report can sit as one section of a larger document. The other formats ignore it.
    */
   headingLevel?: number;
+  /**
+   * Colour codes in the text format, for a terminal; off by default. The caller decides, since
+   * the core reads no environment. The other formats ignore it.
+   */
+  colour?: boolean;
 }
 
-const SEVERITY_TAG = { 3: "ERROR", 2: "WARN ", 1: "INFO " } as const;
+/**
+ * How the text format styles a string: the 16 standard ANSI colours and bold, so the reader's
+ * terminal theme picks the shades. Each closes only what it opened, bold with 22 and the colour
+ * with 39. Error is bold bright red, the colour that kept the most contrast across the common
+ * palettes checked (#256); warning is bold alone and info plain, both in the terminal's own
+ * foreground, since no standard colour kept 4.5:1 on both light and dark backgrounds for them.
+ * The words are always printed, so colour is never the only cue.
+ */
+export interface TextStyle {
+  error(text: string): string;
+  warning(text: string): string;
+  heading(text: string): string;
+}
+
+const sgr =
+  (open: string, close: string) =>
+  (text: string): string =>
+    `\u001b[${open}m${text}\u001b[${close}m`;
+
+export const COLOUR_STYLE: TextStyle = {
+  error: sgr("1;91", "22;39"),
+  warning: sgr("1", "22"),
+  heading: sgr("1", "22"),
+};
+
+const PLAIN_STYLE: TextStyle = { error: (t) => t, warning: (t) => t, heading: (t) => t };
+
+/** A count as the summary line writes it, styled when it is not zero. */
+export type Paint = (severity: Severity, text: string, n: number) => string;
+const unpainted: Paint = (_severity, text) => text;
+
+/** A `Paint` for a style: a non-zero error or warning count is styled; info and zero stay plain. */
+export const paintCounts =
+  (style: TextStyle): Paint =>
+  (severity, text, n) =>
+    n === 0 || severity === 1 ? text : severity === 3 ? style.error(text) : style.warning(text);
+
+const SEVERITY_TAG = { 3: "ERROR", 2: "WARN", 1: "INFO" } as const;
 
 /** Where a finding is, as editors and terminals link it: `file:line`, or `file:line:column`. */
 export const locationOf = (f: Finding): string =>
@@ -52,8 +94,8 @@ export const plural = (n: number, noun: string): string => `${n} ${noun}${n === 
  * Summary sentence shared by the text and markdown formats and the site. A run where a rule could
  * not finish says so here, so a count missing that rule's findings never reads as the whole lint.
  */
-export const summaryLine = (result: LintResult): string =>
-  countsLine(result.summary, failedRules(result));
+export const summaryLine = (result: LintResult, paint: Paint = unpainted): string =>
+  countsLine(result.summary, failedRules(result), paint);
 
 /** How many rules could not finish in the run, each counted once however often it failed. */
 export const failedRules = (result: LintResult): number =>
@@ -73,14 +115,16 @@ export interface CountedRun {
  * `summaryLine`'s sentence from the counts alone, for a caller that adds up several runs: `failed`
  * is how many rules could not finish.
  */
-export function countsLine(s: CountedRun, failed: number): string {
+export function countsLine(s: CountedRun, failed: number, paint: Paint = unpainted): string {
+  const counts = (c: { errors: number; warnings: number; infos: number }): string =>
+    `${paint(3, plural(c.errors, "error"), c.errors)}, ${paint(2, plural(c.warnings, "warning"), c.warnings)}, ${paint(1, `${c.infos} info`, c.infos)}`;
   const unfinished = failed ? `, ${plural(failed, "rule")} could not finish` : "";
   // A result kept to some rules says so, so a filtered run never reads as the whole lint.
   if (s.shown) {
     const k = s.shown;
-    return `${k.findings} of ${plural(s.findings, "finding")} shown, ${plural(k.rules.length, "rule")} (${plural(k.errors, "error")}, ${plural(k.warnings, "warning")}, ${k.infos} info) in ${plural(s.files, "file")}${unfinished}`;
+    return `${k.findings} of ${plural(s.findings, "finding")} shown, ${plural(k.rules.length, "rule")} (${counts(k)}) in ${plural(s.files, "file")}${unfinished}`;
   }
-  return `${plural(s.findings, "finding")} (${plural(s.errors, "error")}, ${plural(s.warnings, "warning")}, ${s.infos} info) in ${plural(s.files, "file")}${unfinished}`;
+  return `${plural(s.findings, "finding")} (${counts(s)}) in ${plural(s.files, "file")}${unfinished}`;
 }
 
 /** Each rule error as a notice says it: the rule, that it could not finish, and the error's class. */
@@ -174,9 +218,16 @@ export const topGroups = (result: LintResult, n = 5): RankedGroup[] => result.gr
  * message, an absent layer's reason) is shown through `showControls`, and a column is measured
  * on the shown text, so no control character reaches the terminal and the columns line up.
  */
-export function formatText(result: LintResult, _options: FormatOptions = {}): string {
+export function formatText(result: LintResult, options: FormatOptions = {}): string {
+  const style = options.colour ? COLOUR_STYLE : PLAIN_STYLE;
+  // The tag is styled before it is padded, so the codes never shift the columns after it.
+  const tag = (severity: Severity): string => {
+    const word = SEVERITY_TAG[severity];
+    const styled = severity === 3 ? style.error(word) : severity === 2 ? style.warning(word) : word;
+    return styled + " ".repeat(5 - word.length);
+  };
   const out: string[] = [
-    `pbiplint: ${summaryLine(result)}`,
+    `pbiplint: ${summaryLine(result, paintCounts(style))}`,
     showControls([layersLine(result), skippedLine(result)].filter(Boolean).join(" ")),
     ...noticeLines(result),
     "",
@@ -185,7 +236,7 @@ export function formatText(result: LintResult, _options: FormatOptions = {}): st
   if (result.groups.length === 0) {
     out.push("No findings.", "");
   } else {
-    out.push("Fix these first:");
+    out.push(style.heading("Fix these first:"));
     // "info" takes no plural, as in the summary line: "2 info", never "2 infos".
     const count = (n: number, severity: Severity) =>
       severity === 1 ? `${n} info` : plural(n, SEVERITY_LABEL[severity]);
@@ -198,7 +249,7 @@ export function formatText(result: LintResult, _options: FormatOptions = {}): st
     // The tag column fits the longest tag, `[powerquery]`, so every rule name starts in one column.
     for (const g of result.groups) {
       out.push(
-        `${SEVERITY_TAG[g.rule.severity]}  ${layerTag(g.rule.layer).padEnd(12)}  ${g.rule.name}  ${g.rule.id}  (${g.findings.length})`,
+        `${tag(g.rule.severity)}  ${layerTag(g.rule.layer).padEnd(12)}  ${g.rule.name}  ${g.rule.id}  (${g.findings.length})`,
       );
       out.push(`       ${g.rule.url}`);
       // The location column is always emitted, empty or not, so a finding without a location never

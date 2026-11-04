@@ -73,7 +73,7 @@ A text box whose text is a light grey on white.
         {
           "properties": {
             "paragraphs": [
-              { "textRuns": [{ "value": "Figures exclude returns.", "textStyle": { "fontSize": "12pt", "color": "#767676" } }] }
+              { "textRuns": [{ "value": "Figures exclude returns.", "textStyle": { "fontSize": "12pt", "color": "#787675" } }] }
             ]
           }
         }

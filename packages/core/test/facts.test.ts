@@ -228,6 +228,13 @@ describe("buildFacts", () => {
       { layer: "report", label: "Mobile layouts", value: "1 of 3 pages" },
       {
         layer: "report",
+        label: "Text contrast",
+        value: "0 measured, 0 below the threshold, 2 not measured",
+        detail: "2 colour not set; 4 more of unknown visibility",
+        counts: { measured: 0, below: 0, notMeasured: 2, "not-set": 2, visibilityNotKnown: 4 },
+      },
+      {
+        layer: "report",
         label: "Schema versions",
         value: "report 3.2.0, page 2.1.0, visual 2.8.0",
       },

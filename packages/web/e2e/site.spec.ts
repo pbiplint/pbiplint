@@ -17,6 +17,7 @@ const PAGES = [
   "/rules/ensure-alttext/", // a report page with a visual.json figure
   "/rules/minimize-power-query-transformations/", // the first Power Query page
   "/rules/local-drive-path/", // pbiplint's own Power Query page, with a quote in When to ignore it
+  "/rules/low-text-contrast/", // the contrast rule's page, with its colour sample after the example
   "/about/",
   "/privacy/",
   "/cli/",
@@ -197,6 +198,9 @@ test("a control character an example needs reaches the page's text, so a copy of
 });
 
 test("no page template has an accessibility violation", async ({ page }) => {
+  // Each page's axe scan takes a few seconds in Firefox on CI, so the whole list needs longer than
+  // the default 30 seconds; it ran out at 30 with eighteen pages.
+  test.setTimeout(90_000);
   for (const path of PAGES) {
     await page.goto(path);
     expect(await violations(page), path).toEqual([]);

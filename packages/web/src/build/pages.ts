@@ -1,5 +1,6 @@
 import { Marked, Renderer, type Tokens } from "marked";
 import { FILTER_LAYERS, LAYER_LABEL, RULE_LAYERS, boxLabel, type RuleLayer } from "../layers.js";
+import { RULE_SAMPLES } from "./rule-samples.data.js";
 
 export const SITE = "https://pbiplint.com";
 
@@ -565,6 +566,19 @@ export interface RuleMeta {
  * A rule page and the metadata the index lists it by. `published` is the list showsLayers reads,
  * SITE_LAYERS unless a test renders the two-family site.
  */
+/**
+ * A rule page with its example's colour sample after the Example, where the rule has one
+ * (rule-samples.data.ts, which scripts/sync-rule-pages.mjs draws from the page's own example). The
+ * image's src is a data: SVG of six-digit hex colours, and its alt text gives the numbers.
+ */
+function withSample(html: string, id: string): string {
+  const sample = RULE_SAMPLES[id];
+  const at = html.indexOf('<h2 id="why-it-matters">');
+  if (!sample || at === -1) return html;
+  const figure = `<figure class="sample"><img class="contrast-sample" src="${escapeHtml(sample.src)}" alt="${escapeHtml(sample.alt)}"><figcaption>The example's colours, drawn by your browser, beside the suggested colour.</figcaption></figure>\n`;
+  return html.slice(0, at) + figure + html.slice(at);
+}
+
 export function rulePage(
   markdown: string,
   slug: string,
@@ -591,7 +605,7 @@ export function rulePage(
   <h1>${escapeHtml(title)}</h1>
   <p class="meta"><span class="badge ${escapeHtml(meta.severity)}">${escapeHtml(meta.severity)}</span> <code>${escapeHtml(meta.id)}</code> · ${escapeHtml(STATUS_LABEL[meta.status] ?? meta.status)}${layerItem} · scope: ${escapeHtml(list(data.scope).join(", "))}</p>
   ${video ? `<p class="video">${external(video, "Watch the video for this rule")}</p>` : ""}
-  ${render(withIgnoreHelp(body.replace(/^# .+\n/m, ""), meta.id, list(data.scope)), links, meta.id)}
+  ${withSample(render(withIgnoreHelp(body.replace(/^# .+\n/m, ""), meta.id, list(data.scope)), links, meta.id), meta.id)}
   ${attribution(list(data.sources))}<p class="cta"><a class="button" href="/">${CHECK_LABEL[meta.layer]}</a> ${external(`https://github.com/pbiplint/pbiplint/edit/main/rules/${slug}.md`, "Improve this page")}</p>
 </article>`;
   return {

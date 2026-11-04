@@ -116,6 +116,15 @@ pre code {
   background: none;
   padding: 0;
 }
+/* A contrast finding's colours, drawn as an image (results and the rule page). Its 1-pixel edge
+   keeps its outline visible on the dark canvas, since the sample is low contrast on purpose. */
+.contrast-sample {
+  display: block;
+  margin-top: 8px;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--fg-3);
+}
 /* A rule page's example: the snippet that fires and the same snippet fixed, and on a page whose
    example runs under a config, that pbiplint.config.json, captioned by the renderer so every page
    reads the same. */

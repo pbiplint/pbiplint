@@ -375,7 +375,8 @@ describe("the CLI's contract", () => {
     expect(modelOnly.layers.report.present).toBe(false);
     expect(doc.summary.shown).toBeUndefined();
     expect(doc.facts.length).toBeGreaterThan(0);
-    for (const f of doc.facts) hasFields(f, ["layer", "label", "value"], ["detail", "ruleId"]);
+    for (const f of doc.facts)
+      hasFields(f, ["layer", "label", "value"], ["detail", "ruleId", "counts"]);
     expect(doc.diagnostics.length).toBeGreaterThan(0);
     for (const d of doc.diagnostics) hasFields(d, ["kind", "message"], ["path"]);
     for (const g of doc.groups) {

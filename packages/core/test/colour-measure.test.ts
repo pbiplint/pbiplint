@@ -88,6 +88,15 @@ const hexes = (m: Measurement) =>
   m.measured.map((x) => `${x.kind} ${toHex(x.foreground)} on ${toHex(x.background)}`);
 
 describe("measureReport", () => {
+  it("measures a report once, and again for another report object", () => {
+    const files: LintFile[] = [
+      { path: "definition/report.json", text: "{}" },
+      { path: "definition/pages/p/page.json", text: JSON.stringify({ name: "p" }) },
+    ];
+    const report = buildReport(files).report;
+    expect(measureReport(report)).toBe(measureReport(report));
+    expect(measureReport(buildReport(files).report)).not.toBe(measureReport(report));
+  });
   it("measures a title against the visual's background, with both sources", () => {
     const m = measure([{ vco: title({ fontColor: fill("#A19F9D") }) }]);
     expect(hexes(m)).toEqual(["title #A19F9D on #FFFFFF"]);
@@ -247,12 +256,13 @@ describe("measureReport", () => {
     expect(cy.measured.map((m) => m.kind)).toEqual([]);
   });
   it("counts an element whose visibility the files do not settle as not known", () => {
-    const m = measure([{ vco: { subTitle: props({ fontColor: fill("#000000") }) } }], {
-      theme: {},
-      all: true,
-    });
+    const m = measure(
+      [{ vco: { subTitle: props({ text: lit("'By year'"), fontColor: fill("#000000") }) } }],
+      { theme: {}, all: true },
+    );
+    // The title has no text and the shape no fields, so it is not drawn and not counted; the
+    // subtitle has text, and the shape's own text may be on.
     expect(m.skipped.map((s) => [s.kind, s.why])).toEqual([
-      ["title", "visibility-not-known"],
       ["subtitle", "visibility-not-known"],
       ["buttonText", "visibility-not-known"],
     ]);

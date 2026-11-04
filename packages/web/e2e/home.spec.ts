@@ -78,6 +78,22 @@ test("lints the sample project and announces the result", async ({ page }) => {
   await expect(results.locator('.group[data-layer="report"]').first()).toBeVisible();
 });
 
+test("draws a contrast finding's colours as an image the browser renders", async ({ page }) => {
+  await page.getByRole("button", { name: "Try the sample project" }).click();
+  const group = page.locator("#results details.group", {
+    has: page.locator("code", { hasText: "LOW_TEXT_CONTRAST" }),
+  });
+  await group.locator("summary").click();
+  const img = group.locator("img.contrast-sample");
+  await expect(img).toBeVisible();
+  await expect(img).toHaveAttribute(
+    "alt",
+    /^Sample text drawn by the browser in #B3B0AD on #FFFFFF/,
+  );
+  // The SVG decoded and drew: an image that failed would have no natural width.
+  expect(await img.evaluate((el) => (el as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+});
+
 test("a link to a group the Show filter hid shows that group, opens it, and scrolls to it", async ({
   page,
 }) => {

@@ -68,7 +68,7 @@ describe("renderResults", () => {
       "Results for the sample project (model, 14 files · report, 78 files)",
     );
     expect(container.querySelector(".summary")!.textContent).toContain(
-      "280 findings (19 errors, 84 warnings, 177 info) in 92 files",
+      "281 findings (19 errors, 85 warnings, 177 info) in 92 files",
     );
     const first = [...container.querySelectorAll(".fix-first li")];
     expect(first.length).toBe(5);

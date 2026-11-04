@@ -1,5 +1,5 @@
-pbiplint: 280 findings (19 errors, 84 warnings, 177 info) in 92 files
-Model: 14 files. Report: 78 files. 117 rules run, 5 rules skipped (need a live model)
+pbiplint: 281 findings (19 errors, 85 warnings, 177 info) in 92 files
+Model: 14 files. Report: 78 files. 118 rules run, 5 rules skipped (need a live model)
 error BROKEN_ACTION_TARGET 1
 error BROKEN_FIELD_REFERENCE 1
 error OPENING_PAGE_INVALID 1
@@ -23,6 +23,7 @@ warning SNOWFLAKE_SCHEMA_ARCHITECTURE 1
 warning LOCAL_DRIVE_PATH 7
 warning BROKEN_BOOKMARK_REFERENCE 1
 warning ENSURE_ALTTEXT 1
+warning LOW_TEXT_CONTRAST 1
 warning TAB_ORDER_FOLLOWS_LAYOUT 1
 warning USE_THE_DIVIDE_FUNCTION_FOR_DIVISION 5
 warning REPORT_LEVEL_MEASURES 2

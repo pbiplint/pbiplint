@@ -540,6 +540,29 @@
               }
             },
             {
+              "id": "LOW_TEXT_CONTRAST",
+              "name": "Text with too little contrast",
+              "shortDescription": {
+                "text": "Text with too little contrast"
+              },
+              "fullDescription": {
+                "text": "Report text whose colour is too close to what sits behind it, measured with the contrast ratio and thresholds of WCAG 2.2's Success Criterion 1.4.3: at least 4.5:1, or 3:1 for large text, which is at least 18 point, or 14 point and bold.",
+                "markdown": "Report text whose colour is too close to what sits behind it, measured with the contrast ratio and thresholds of WCAG 2.2's Success Criterion 1.4.3: at least 4.5:1, or 3:1 for large text, which is at least 18 point, or 14 point and bold."
+              },
+              "help": {
+                "text": "Example\n\nA text box whose text is a light grey on white.\n\nFires the rule in visual.json\n\n{\n  \"$schema\": \"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.8.0/schema.json\",\n  \"name\": \"5b2c9e1a7d4f3086e1a2\",\n  \"position\": { \"x\": 40, \"y\": 40, \"z\": 1000, \"height\": 80, \"width\": 400, \"tabOrder\": 1000 },\n  \"visual\": {\n    \"visualType\": \"textbox\",\n    \"objects\": {\n      \"general\": [\n        {\n          \"properties\": {\n            \"paragraphs\": [\n              { \"textRuns\": [{ \"value\": \"Figures exclude returns.\", \"textStyle\": { \"fontSize\": \"12pt\", \"color\": \"#A19F9D\" } }] }\n            ]\n          }\n        }\n      ]\n    },\n    \"visualContainerObjects\": {\n      \"background\": [\n        {\n          \"properties\": {\n            \"show\": { \"expr\": { \"Literal\": { \"Value\": \"true\" } } },\n            \"color\": { \"solid\": { \"color\": { \"expr\": { \"Literal\": { \"Value\": \"'#FFFFFF'\" } } } } },\n            \"transparency\": { \"expr\": { \"Literal\": { \"Value\": \"0D\" } } }\n          }\n        }\n      ]\n    }\n  }\n}\n\nAfter the fix in visual.json\n\n{\n  \"$schema\": \"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.8.0/schema.json\",\n  \"name\": \"5b2c9e1a7d4f3086e1a2\",\n  \"position\": { \"x\": 40, \"y\": 40, \"z\": 1000, \"height\": 80, \"width\": 400, \"tabOrder\": 1000 },\n  \"visual\": {\n    \"visualType\": \"textbox\",\n    \"objects\": {\n      \"general\": [\n        {\n          \"properties\": {\n            \"paragraphs\": [\n              { \"textRuns\": [{ \"value\": \"Figures exclude returns.\", \"textStyle\": { \"fontSize\": \"12pt\", \"color\": \"#767676\" } }] }\n            ]\n          }\n        }\n      ]\n    },\n    \"visualContainerObjects\": {\n      \"background\": [\n        {\n          \"properties\": {\n            \"show\": { \"expr\": { \"Literal\": { \"Value\": \"true\" } } },\n            \"color\": { \"solid\": { \"color\": { \"expr\": { \"Literal\": { \"Value\": \"'#FFFFFF'\" } } } } },\n            \"transparency\": { \"expr\": { \"Literal\": { \"Value\": \"0D\" } } }\n          }\n        }\n      ]\n    }\n  }\n}\n\nWhy it matters\n\nText that is too close in colour to its background is hard to read for anyone with low vision, for people reading on a dim screen or in sunlight, and for many readers with a colour vision deficiency. WCAG sets 4.5:1 as the minimum for ordinary text because below it, readers whose contrast sensitivity has fallen with age or a condition can no longer make the text out at all. Microsoft's own accessibility checklist for Power BI reports asks for the same ratio between titles, axis labels, data labels, and their background. Teams that must meet an accessibility requirement, such as Section 508 for United States federal work, are asked about contrast first.\n\nHow to fix it\n\nChange the text colour to one that passes, such as the suggested colour in the finding, which keeps the text's hue. In Power BI Desktop, select the visual, open the Format pane, find the text (Title, Data labels, X-axis, Values, and so on), and set its colour; for a text box, select the text and set its font colour. If the colour comes from the theme, change it once for every visual: View, then Themes, then Customize current theme, or edit the custom theme's JSON file, where the finding points. A base theme is Microsoft's own file and is not yours to edit, so override the colour in a custom theme instead. You can also edit the colour property in visual.json directly, at the line the finding names, and Power BI Desktop keeps the change.\n\nChanging the background instead works too, but a background usually serves the whole visual or page, so check the other text on it afterwards.\n\nText that is the same colour as its background is usually there to be hidden. Hide the visual, or turn the text off, instead: a screen reader still reads hidden text, and a hidden button still takes the Tab key.\n\nTo make a contrast finding fail a build, as a team working to Section 508 may want, raise the rule to an error in pbiplint.config.json:\n\n{ \"rules\": { \"LOW_TEXT_CONTRAST\": \"error\" } }\n\nWhen to ignore it\n\nWCAG's Success Criterion 1.4.3 sets no contrast requirement for text that is pure decoration, such as a watermark, for text that is part of a logo or brand name, or for text nobody can see. If the finding is on text like that, it can be ignored. Text a reader is meant to read is not decoration because it is small or secondary: a footnote or a faint axis label still counts. A disabled button's text needs no contrast either, and pbiplint already leaves that state out.\n\nTo ignore this rule on one visual, add { \"name\": \"pbiplint.ignore\", \"value\": \"LOW_TEXT_CONTRAST\" } to the annotations array of its visual.json. Power BI Desktop keeps the annotation. To turn the rule off for a whole project, set \"LOW_TEXT_CONTRAST\": \"off\" under rules in pbiplint.config.json.\n\nQuirks\n\n- What it cannot see is skipped, and counted: a colour that depends on the data (conditional formatting, a field value, or a rule); an image behind the text, on the visual, the page, or the wallpaper; a visual whose own layers are not opaque and whose box overlaps another visual below it, since what shows through is not in the files; a data label drawn on the data (inside a bar, a column, or a slice) unless it has an opaque background of its own; a theme file the report names that is not in the project or is larger than 5 MB; and a default colour no Desktop check has confirmed.\n- Size: sizes are compared as written, at Actual size. A ratio from 3:1 up to 4.5:1 on text of unknown size is skipped; one under 3:1 is reported whatever the size.\n- Semibold is not bold. Text from 14 to under 18 point needs 4.5:1 unless it is bold, and a Semibold font is read as not bold.\n- How colours were confirmed: in Power BI Desktop, a theme colour's first two positions are white and black whatever the theme, a theme colour's shade is a straight blend toward white or black, and transparency is held as a whole byte. On a page set like the Fluent2 theme's, with #FAFAFA at transparency 14 over a #E6E6E6 wallpaper, Desktop paints one unit lighter than pbiplint works out, which moves a ratio by about 0.01.\n- Tooltips and the visual header are not measured; non-text contrast (chart marks, icons, and controls) is not part of this rule.\n\nRead more: https://pbiplint.com/rules/low-text-contrast",
+                "markdown": "### Example\n\nA text box whose text is a light grey on white.\n\n**Fires the rule in visual.json**\n\n```json\n{\n  \"$schema\": \"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.8.0/schema.json\",\n  \"name\": \"5b2c9e1a7d4f3086e1a2\",\n  \"position\": { \"x\": 40, \"y\": 40, \"z\": 1000, \"height\": 80, \"width\": 400, \"tabOrder\": 1000 },\n  \"visual\": {\n    \"visualType\": \"textbox\",\n    \"objects\": {\n      \"general\": [\n        {\n          \"properties\": {\n            \"paragraphs\": [\n              { \"textRuns\": [{ \"value\": \"Figures exclude returns.\", \"textStyle\": { \"fontSize\": \"12pt\", \"color\": \"#A19F9D\" } }] }\n            ]\n          }\n        }\n      ]\n    },\n    \"visualContainerObjects\": {\n      \"background\": [\n        {\n          \"properties\": {\n            \"show\": { \"expr\": { \"Literal\": { \"Value\": \"true\" } } },\n            \"color\": { \"solid\": { \"color\": { \"expr\": { \"Literal\": { \"Value\": \"'#FFFFFF'\" } } } } },\n            \"transparency\": { \"expr\": { \"Literal\": { \"Value\": \"0D\" } } }\n          }\n        }\n      ]\n    }\n  }\n}\n```\n\n**After the fix in visual.json**\n\n```json\n{\n  \"$schema\": \"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.8.0/schema.json\",\n  \"name\": \"5b2c9e1a7d4f3086e1a2\",\n  \"position\": { \"x\": 40, \"y\": 40, \"z\": 1000, \"height\": 80, \"width\": 400, \"tabOrder\": 1000 },\n  \"visual\": {\n    \"visualType\": \"textbox\",\n    \"objects\": {\n      \"general\": [\n        {\n          \"properties\": {\n            \"paragraphs\": [\n              { \"textRuns\": [{ \"value\": \"Figures exclude returns.\", \"textStyle\": { \"fontSize\": \"12pt\", \"color\": \"#767676\" } }] }\n            ]\n          }\n        }\n      ]\n    },\n    \"visualContainerObjects\": {\n      \"background\": [\n        {\n          \"properties\": {\n            \"show\": { \"expr\": { \"Literal\": { \"Value\": \"true\" } } },\n            \"color\": { \"solid\": { \"color\": { \"expr\": { \"Literal\": { \"Value\": \"'#FFFFFF'\" } } } } },\n            \"transparency\": { \"expr\": { \"Literal\": { \"Value\": \"0D\" } } }\n          }\n        }\n      ]\n    }\n  }\n}\n```\n\n### Why it matters\n\nText that is too close in colour to its background is hard to read for anyone with low vision, for people reading on a dim screen or in sunlight, and for many readers with a colour vision deficiency. WCAG sets 4.5:1 as the minimum for ordinary text because below it, readers whose contrast sensitivity has fallen with age or a condition can no longer make the text out at all. Microsoft's own accessibility checklist for Power BI reports asks for the same ratio between titles, axis labels, data labels, and their background. Teams that must meet an accessibility requirement, such as Section 508 for United States federal work, are asked about contrast first.\n\n### How to fix it\n\nChange the text colour to one that passes, such as the suggested colour in the finding, which keeps the text's hue. In Power BI Desktop, select the visual, open the Format pane, find the text (Title, Data labels, X-axis, Values, and so on), and set its colour; for a text box, select the text and set its font colour. If the colour comes from the theme, change it once for every visual: View, then Themes, then Customize current theme, or edit the custom theme's JSON file, where the finding points. A base theme is Microsoft's own file and is not yours to edit, so override the colour in a custom theme instead. You can also edit the colour property in `visual.json` directly, at the line the finding names, and Power BI Desktop keeps the change.\n\nChanging the background instead works too, but a background usually serves the whole visual or page, so check the other text on it afterwards.\n\nText that is the same colour as its background is usually there to be hidden. Hide the visual, or turn the text off, instead: a screen reader still reads hidden text, and a hidden button still takes the Tab key.\n\nTo make a contrast finding fail a build, as a team working to Section 508 may want, raise the rule to an error in `pbiplint.config.json`:\n\n```json\n{ \"rules\": { \"LOW_TEXT_CONTRAST\": \"error\" } }\n```\n\n### When to ignore it\n\nWCAG's Success Criterion 1.4.3 sets no contrast requirement for text that is pure decoration, such as a watermark, for text that is part of a logo or brand name, or for text nobody can see. If the finding is on text like that, it can be ignored. Text a reader is meant to read is not decoration because it is small or secondary: a footnote or a faint axis label still counts. A disabled button's text needs no contrast either, and pbiplint already leaves that state out.\n\nTo ignore this rule on one visual, add `{ \"name\": \"pbiplint.ignore\", \"value\": \"LOW_TEXT_CONTRAST\" }` to the `annotations` array of its visual.json. Power BI Desktop keeps the annotation. To turn the rule off for a whole project, set `\"LOW_TEXT_CONTRAST\": \"off\"` under `rules` in `pbiplint.config.json`.\n\n### Quirks\n\n- **What it cannot see is skipped, and counted:** a colour that depends on the data (conditional formatting, a field value, or a rule); an image behind the text, on the visual, the page, or the wallpaper; a visual whose own layers are not opaque and whose box overlaps another visual below it, since what shows through is not in the files; a data label drawn on the data (inside a bar, a column, or a slice) unless it has an opaque background of its own; a theme file the report names that is not in the project or is larger than 5 MB; and a default colour no Desktop check has confirmed.\n- **Size:** sizes are compared as written, at Actual size. A ratio from 3:1 up to 4.5:1 on text of unknown size is skipped; one under 3:1 is reported whatever the size.\n- **Semibold is not bold.** Text from 14 to under 18 point needs 4.5:1 unless it is bold, and a Semibold font is read as not bold.\n- **How colours were confirmed:** in Power BI Desktop, a theme colour's first two positions are white and black whatever the theme, a theme colour's shade is a straight blend toward white or black, and transparency is held as a whole byte. On a page set like the Fluent2 theme's, with `#FAFAFA` at transparency 14 over a `#E6E6E6` wallpaper, Desktop paints one unit lighter than pbiplint works out, which moves a ratio by about 0.01.\n- **Tooltips and the visual header** are not measured; non-text contrast (chart marks, icons, and controls) is not part of this rule.\n\nRead more: https://pbiplint.com/rules/low-text-contrast"
+              },
+              "helpUri": "https://pbiplint.com/rules/low-text-contrast",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "category": "Accessibility",
+                "layer": "report"
+              }
+            },
+            {
               "id": "TAB_ORDER_FOLLOWS_LAYOUT",
               "name": "Tab order disagrees with the layout",
               "shortDescription": {
@@ -2258,8 +2281,28 @@
           ]
         },
         {
-          "ruleId": "TAB_ORDER_FOLLOWS_LAYOUT",
+          "ruleId": "LOW_TEXT_CONTRAST",
           "ruleIndex": 23,
+          "level": "warning",
+          "message": {
+            "text": "\"Notes\" on \"Overview\": Text with too little contrast (Text: #B3B0AD on #FFFFFF is 2.15:1, and 10 pt text needs 4.5:1. #797674 would be 4.5:1. Text colour from the visual, background from the visual)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "<TMPREL>/sub/messy-sales/Messy%20Sales%20Demo.Report/definition/pages/3cea48e58036b1654474/visuals/49158e1e7dce5e8d37fd/visual.json"
+                },
+                "region": {
+                  "startLine": 25
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "TAB_ORDER_FOLLOWS_LAYOUT",
+          "ruleIndex": 24,
           "level": "warning",
           "message": {
             "text": "Page \"Detail\": Tab order disagrees with the layout (tab order starts at \"Total Margin\" but the layout reads \"Net Sales\" first)"
@@ -2279,7 +2322,7 @@
         },
         {
           "ruleId": "USE_THE_DIVIDE_FUNCTION_FOR_DIVISION",
-          "ruleIndex": 24,
+          "ruleIndex": 25,
           "level": "warning",
           "message": {
             "text": "'DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92'[QuarterNo]: Use the DIVIDE function for division"
@@ -2299,7 +2342,7 @@
         },
         {
           "ruleId": "USE_THE_DIVIDE_FUNCTION_FOR_DIVISION",
-          "ruleIndex": 24,
+          "ruleIndex": 25,
           "level": "warning",
           "message": {
             "text": "'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'[QuarterNo]: Use the DIVIDE function for division"
@@ -2319,7 +2362,7 @@
         },
         {
           "ruleId": "USE_THE_DIVIDE_FUNCTION_FOR_DIVISION",
-          "ruleIndex": 24,
+          "ruleIndex": 25,
           "level": "warning",
           "message": {
             "text": "[Margin %]: Use the DIVIDE function for division"
@@ -2339,7 +2382,7 @@
         },
         {
           "ruleId": "USE_THE_DIVIDE_FUNCTION_FOR_DIVISION",
-          "ruleIndex": 24,
+          "ruleIndex": 25,
           "level": "warning",
           "message": {
             "text": "[Average Order Value]: Use the DIVIDE function for division"
@@ -2359,7 +2402,7 @@
         },
         {
           "ruleId": "USE_THE_DIVIDE_FUNCTION_FOR_DIVISION",
-          "ruleIndex": 24,
+          "ruleIndex": 25,
           "level": "warning",
           "message": {
             "text": "[Sales YoY %]: Use the DIVIDE function for division"
@@ -2379,7 +2422,7 @@
         },
         {
           "ruleId": "REPORT_LEVEL_MEASURES",
-          "ruleIndex": 25,
+          "ruleIndex": 26,
           "level": "warning",
           "message": {
             "text": "[Net Margin] (report): Measure defined in the report (defined in the report on table \"Sales\")"
@@ -2399,7 +2442,7 @@
         },
         {
           "ruleId": "REPORT_LEVEL_MEASURES",
-          "ruleIndex": 25,
+          "ruleIndex": 26,
           "level": "warning",
           "message": {
             "text": "[Margin % (report)] (report): Measure defined in the report (defined in the report on table \"Sales\")"
@@ -2419,7 +2462,7 @@
         },
         {
           "ruleId": "DEFAULT_PAGE_NAME",
-          "ruleIndex": 26,
+          "ruleIndex": 27,
           "level": "warning",
           "message": {
             "text": "Page \"Page 2\": Page keeps its default name (\"Page 2\" is the name Power BI Desktop gives a new page)"
@@ -2439,7 +2482,7 @@
         },
         {
           "ruleId": "DEFAULT_PAGE_NAME",
-          "ruleIndex": 26,
+          "ruleIndex": 27,
           "level": "warning",
           "message": {
             "text": "Page \"Duplicate of Overview\": Page keeps its default name (\"Duplicate of Overview\" is the name Power BI Desktop gives a duplicated page)"
@@ -2459,7 +2502,7 @@
         },
         {
           "ruleId": "VISUAL_OUTSIDE_PAGE",
-          "ruleIndex": 27,
+          "ruleIndex": 28,
           "level": "warning",
           "message": {
             "text": "\"Notes\" on \"Overview\": Visual extends past the page (120 px past the right edge)"
@@ -2479,7 +2522,7 @@
         },
         {
           "ruleId": "VISUAL_OUTSIDE_PAGE",
-          "ruleIndex": 27,
+          "ruleIndex": 28,
           "level": "warning",
           "message": {
             "text": "Group \"Promotion notes\" on \"Promotions\": Visual extends past the page (40 px past the right edge)"
@@ -2499,7 +2542,7 @@
         },
         {
           "ruleId": "ACTION_WITHOUT_DESTINATION",
-          "ruleIndex": 28,
+          "ruleIndex": 29,
           "level": "warning",
           "message": {
             "text": "\"Next page\" on \"Overview\": Action has no destination (Page navigation action has no destination)"
@@ -2519,7 +2562,7 @@
         },
         {
           "ruleId": "ENSURE_PAGES_DO_NOT_SCROLL_VERTICALLY",
-          "ruleIndex": 29,
+          "ruleIndex": 30,
           "level": "warning",
           "message": {
             "text": "Page \"Detail\": Ensure pages do not scroll vertically (height 1080, more than 720)"
@@ -2539,7 +2582,7 @@
         },
         {
           "ruleId": "ENSURE_THEME_COLOURS",
-          "ruleIndex": 30,
+          "ruleIndex": 31,
           "level": "warning",
           "message": {
             "text": "\"Total Quantity\" on \"Page 2\": Ensure charts use theme colours (1 colour set to a hex value instead of a theme colour)"
@@ -2559,7 +2602,7 @@
         },
         {
           "ruleId": "FILTERS_PANE_STATE",
-          "ruleIndex": 31,
+          "ruleIndex": 32,
           "level": "warning",
           "message": {
             "text": "Report: Filters pane state differs from policy (saved open; the policy expects closed)"
@@ -2579,7 +2622,7 @@
         },
         {
           "ruleId": "HIDE_TOOLTIP_DRILLTROUGH_PAGES",
-          "ruleIndex": 32,
+          "ruleIndex": 33,
           "level": "warning",
           "message": {
             "text": "Page \"Product tooltip\": Tooltip and Drillthrough pages should be hidden (tooltip page is visible to readers)"
@@ -2599,7 +2642,7 @@
         },
         {
           "ruleId": "SLICER_SEARCH_SAVED",
-          "ruleIndex": 33,
+          "ruleIndex": 34,
           "level": "warning",
           "message": {
             "text": "\"City\" on \"Stores\": Slicer saved with a search term (opens with the search term \"spring\" saved)"
@@ -2619,7 +2662,7 @@
         },
         {
           "ruleId": "VISUAL_WITHOUT_FIELDS",
-          "ruleIndex": 34,
+          "ruleIndex": 35,
           "level": "warning",
           "message": {
             "text": "\"Placeholder\" on \"Overview\": Data visual with no fields (no fields bound)"
@@ -2639,7 +2682,7 @@
         },
         {
           "ruleId": "INTEGER_FORMATTING",
-          "ruleIndex": 35,
+          "ruleIndex": 36,
           "level": "warning",
           "message": {
             "text": "[Total Sales]: Whole numbers should be formatted with thousands separators and no decimals (no format string)"
@@ -2659,7 +2702,7 @@
         },
         {
           "ruleId": "INTEGER_FORMATTING",
-          "ruleIndex": 35,
+          "ruleIndex": 36,
           "level": "warning",
           "message": {
             "text": "[Total Quantity]: Whole numbers should be formatted with thousands separators and no decimals (no format string)"
@@ -2679,7 +2722,7 @@
         },
         {
           "ruleId": "INTEGER_FORMATTING",
-          "ruleIndex": 35,
+          "ruleIndex": 36,
           "level": "warning",
           "message": {
             "text": "[Average Unit Price]: Whole numbers should be formatted with thousands separators and no decimals (no format string)"
@@ -2699,7 +2742,7 @@
         },
         {
           "ruleId": "INTEGER_FORMATTING",
-          "ruleIndex": 35,
+          "ruleIndex": 36,
           "level": "warning",
           "message": {
             "text": "[Total Cost]: Whole numbers should be formatted with thousands separators and no decimals (no format string)"
@@ -2719,7 +2762,7 @@
         },
         {
           "ruleId": "INTEGER_FORMATTING",
-          "ruleIndex": 35,
+          "ruleIndex": 36,
           "level": "warning",
           "message": {
             "text": "[Total Discount]: Whole numbers should be formatted with thousands separators and no decimals (no format string)"
@@ -2739,7 +2782,7 @@
         },
         {
           "ruleId": "INTEGER_FORMATTING",
-          "ruleIndex": 35,
+          "ruleIndex": 36,
           "level": "warning",
           "message": {
             "text": "[Net Sales]: Whole numbers should be formatted with thousands separators and no decimals (no format string)"
@@ -2759,7 +2802,7 @@
         },
         {
           "ruleId": "INTEGER_FORMATTING",
-          "ruleIndex": 35,
+          "ruleIndex": 36,
           "level": "warning",
           "message": {
             "text": "[Total Margin]: Whole numbers should be formatted with thousands separators and no decimals (no format string)"
@@ -2779,7 +2822,7 @@
         },
         {
           "ruleId": "INTEGER_FORMATTING",
-          "ruleIndex": 35,
+          "ruleIndex": 36,
           "level": "warning",
           "message": {
             "text": "[Margin %]: Whole numbers should be formatted with thousands separators and no decimals (no format string)"
@@ -2799,7 +2842,7 @@
         },
         {
           "ruleId": "INTEGER_FORMATTING",
-          "ruleIndex": 35,
+          "ruleIndex": 36,
           "level": "warning",
           "message": {
             "text": "[Order Count]: Whole numbers should be formatted with thousands separators and no decimals (no format string)"
@@ -2819,7 +2862,7 @@
         },
         {
           "ruleId": "INTEGER_FORMATTING",
-          "ruleIndex": 35,
+          "ruleIndex": 36,
           "level": "warning",
           "message": {
             "text": "[Average Order Value]: Whole numbers should be formatted with thousands separators and no decimals (no format string)"
@@ -2839,7 +2882,7 @@
         },
         {
           "ruleId": "INTEGER_FORMATTING",
-          "ruleIndex": 35,
+          "ruleIndex": 36,
           "level": "warning",
           "message": {
             "text": "[Distinct Customers]: Whole numbers should be formatted with thousands separators and no decimals (no format string)"
@@ -2859,7 +2902,7 @@
         },
         {
           "ruleId": "INTEGER_FORMATTING",
-          "ruleIndex": 35,
+          "ruleIndex": 36,
           "level": "warning",
           "message": {
             "text": "[Sales YTD]: Whole numbers should be formatted with thousands separators and no decimals (no format string)"
@@ -2879,7 +2922,7 @@
         },
         {
           "ruleId": "INTEGER_FORMATTING",
-          "ruleIndex": 35,
+          "ruleIndex": 36,
           "level": "warning",
           "message": {
             "text": "[Sales LY]: Whole numbers should be formatted with thousands separators and no decimals (no format string)"
@@ -2899,7 +2942,7 @@
         },
         {
           "ruleId": "INTEGER_FORMATTING",
-          "ruleIndex": 35,
+          "ruleIndex": 36,
           "level": "warning",
           "message": {
             "text": "[Sales YoY %]: Whole numbers should be formatted with thousands separators and no decimals (no format string)"
@@ -2919,7 +2962,7 @@
         },
         {
           "ruleId": "HIDE_FOREIGN_KEYS",
-          "ruleIndex": 36,
+          "ruleIndex": 37,
           "level": "warning",
           "message": {
             "text": "'Customer'[Customer ID]: Hide foreign keys"
@@ -2939,7 +2982,7 @@
         },
         {
           "ruleId": "HIDE_FOREIGN_KEYS",
-          "ruleIndex": 36,
+          "ruleIndex": 37,
           "level": "warning",
           "message": {
             "text": "'Customer'[Join Date]: Hide foreign keys"
@@ -2959,7 +3002,7 @@
         },
         {
           "ruleId": "HIDE_FOREIGN_KEYS",
-          "ruleIndex": 36,
+          "ruleIndex": 37,
           "level": "warning",
           "message": {
             "text": "'Employee'[Employee ID]: Hide foreign keys"
@@ -2979,7 +3022,7 @@
         },
         {
           "ruleId": "HIDE_FOREIGN_KEYS",
-          "ruleIndex": 36,
+          "ruleIndex": 37,
           "level": "warning",
           "message": {
             "text": "'Product'[Product ID]: Hide foreign keys"
@@ -2999,7 +3042,7 @@
         },
         {
           "ruleId": "HIDE_FOREIGN_KEYS",
-          "ruleIndex": 36,
+          "ruleIndex": 37,
           "level": "warning",
           "message": {
             "text": "'Promotion'[Promotion ID]: Hide foreign keys"
@@ -3019,7 +3062,7 @@
         },
         {
           "ruleId": "HIDE_FOREIGN_KEYS",
-          "ruleIndex": 36,
+          "ruleIndex": 37,
           "level": "warning",
           "message": {
             "text": "'Sales'[Sale Date]: Hide foreign keys"
@@ -3039,7 +3082,7 @@
         },
         {
           "ruleId": "HIDE_FOREIGN_KEYS",
-          "ruleIndex": 36,
+          "ruleIndex": 37,
           "level": "warning",
           "message": {
             "text": "'Sales'[Product ID]: Hide foreign keys"
@@ -3059,7 +3102,7 @@
         },
         {
           "ruleId": "HIDE_FOREIGN_KEYS",
-          "ruleIndex": 36,
+          "ruleIndex": 37,
           "level": "warning",
           "message": {
             "text": "'Sales'[Customer ID]: Hide foreign keys"
@@ -3079,7 +3122,7 @@
         },
         {
           "ruleId": "HIDE_FOREIGN_KEYS",
-          "ruleIndex": 36,
+          "ruleIndex": 37,
           "level": "warning",
           "message": {
             "text": "'Sales'[Store ID]: Hide foreign keys"
@@ -3099,7 +3142,7 @@
         },
         {
           "ruleId": "HIDE_FOREIGN_KEYS",
-          "ruleIndex": 36,
+          "ruleIndex": 37,
           "level": "warning",
           "message": {
             "text": "'Sales'[Employee ID]: Hide foreign keys"
@@ -3119,7 +3162,7 @@
         },
         {
           "ruleId": "HIDE_FOREIGN_KEYS",
-          "ruleIndex": 36,
+          "ruleIndex": 37,
           "level": "warning",
           "message": {
             "text": "'Sales'[Promotion ID]: Hide foreign keys"
@@ -3139,7 +3182,7 @@
         },
         {
           "ruleId": "HIDE_FOREIGN_KEYS",
-          "ruleIndex": 36,
+          "ruleIndex": 37,
           "level": "warning",
           "message": {
             "text": "'Store'[Store ID]: Hide foreign keys"
@@ -3159,7 +3202,7 @@
         },
         {
           "ruleId": "HIDE_FACT_TABLE_COLUMNS",
-          "ruleIndex": 37,
+          "ruleIndex": 38,
           "level": "warning",
           "message": {
             "text": "'Sales'[Sale ID]: Hide fact table columns"
@@ -3179,7 +3222,7 @@
         },
         {
           "ruleId": "HIDE_FACT_TABLE_COLUMNS",
-          "ruleIndex": 37,
+          "ruleIndex": 38,
           "level": "warning",
           "message": {
             "text": "'Sales'[Unit Price]: Hide fact table columns"
@@ -3199,7 +3242,7 @@
         },
         {
           "ruleId": "HIDE_FACT_TABLE_COLUMNS",
-          "ruleIndex": 37,
+          "ruleIndex": 38,
           "level": "warning",
           "message": {
             "text": "'Sales'[Unit Cost]: Hide fact table columns"
@@ -3219,7 +3262,7 @@
         },
         {
           "ruleId": "HIDE_FACT_TABLE_COLUMNS",
-          "ruleIndex": 37,
+          "ruleIndex": 38,
           "level": "warning",
           "message": {
             "text": "'Sales'[Discount Amount]: Hide fact table columns"
@@ -3239,7 +3282,7 @@
         },
         {
           "ruleId": "HIDE_FACT_TABLE_COLUMNS",
-          "ruleIndex": 37,
+          "ruleIndex": 38,
           "level": "warning",
           "message": {
             "text": "'Sales'[Total Amount]: Hide fact table columns"
@@ -3259,7 +3302,7 @@
         },
         {
           "ruleId": "MONTH_(AS_A_STRING)_MUST_BE_SORTED",
-          "ruleIndex": 38,
+          "ruleIndex": 39,
           "level": "warning",
           "message": {
             "text": "'Date'[Month]: Month (as a string) must be sorted"
@@ -3279,7 +3322,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Customer': Visible objects with no description"
@@ -3299,7 +3342,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Customer'[Customer ID]: Visible objects with no description"
@@ -3319,7 +3362,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Customer'[Customer Name]: Visible objects with no description"
@@ -3339,7 +3382,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Customer'[Segment]: Visible objects with no description"
@@ -3359,7 +3402,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Customer'[Region]: Visible objects with no description"
@@ -3379,7 +3422,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Customer'[City]: Visible objects with no description"
@@ -3399,7 +3442,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Customer'[State]: Visible objects with no description"
@@ -3419,7 +3462,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Customer'[Postal Code]: Visible objects with no description"
@@ -3439,7 +3482,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Customer'[Country]: Visible objects with no description"
@@ -3459,7 +3502,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Customer'[Email]: Visible objects with no description"
@@ -3479,7 +3522,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Customer'[Join Date]: Visible objects with no description"
@@ -3499,7 +3542,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Customer'[Loyalty Tier]: Visible objects with no description"
@@ -3519,7 +3562,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Date': Visible objects with no description"
@@ -3539,7 +3582,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Date'[Date]: Visible objects with no description"
@@ -3559,7 +3602,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Date'[Year]: Visible objects with no description"
@@ -3579,7 +3622,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Date'[Quarter]: Visible objects with no description"
@@ -3599,7 +3642,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Date'[Quarter Number]: Visible objects with no description"
@@ -3619,7 +3662,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Date'[Month]: Visible objects with no description"
@@ -3639,7 +3682,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Date'[Month Number]: Visible objects with no description"
@@ -3659,7 +3702,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Date'[Day of Week]: Visible objects with no description"
@@ -3679,7 +3722,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Date'[Day Number]: Visible objects with no description"
@@ -3699,7 +3742,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Date'[Week of Year]: Visible objects with no description"
@@ -3719,7 +3762,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Date'[Is Weekend]: Visible objects with no description"
@@ -3739,7 +3782,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Employee Grouping': Visible objects with no description"
@@ -3759,7 +3802,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Employee Grouping'[Employee Grouping]: Visible objects with no description"
@@ -3779,7 +3822,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Employee': Visible objects with no description"
@@ -3799,7 +3842,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Employee'[Employee ID]: Visible objects with no description"
@@ -3819,7 +3862,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Employee'[Employee Name]: Visible objects with no description"
@@ -3839,7 +3882,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Employee'[Title]: Visible objects with no description"
@@ -3859,7 +3902,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Employee'[Department]: Visible objects with no description"
@@ -3879,7 +3922,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Employee'[Hire Date]: Visible objects with no description"
@@ -3899,7 +3942,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Employee'[Manager ID]: Visible objects with no description"
@@ -3919,7 +3962,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Employee'[Region]: Visible objects with no description"
@@ -3939,7 +3982,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Employee'[Email]: Visible objects with no description"
@@ -3959,7 +4002,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Product': Visible objects with no description"
@@ -3979,7 +4022,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Product'[Product ID]: Visible objects with no description"
@@ -3999,7 +4042,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Product'[Product Name]: Visible objects with no description"
@@ -4019,7 +4062,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Product'[Category]: Visible objects with no description"
@@ -4039,7 +4082,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Product'[Subcategory]: Visible objects with no description"
@@ -4059,7 +4102,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Product'[Brand]: Visible objects with no description"
@@ -4079,7 +4122,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Product'[Color]: Visible objects with no description"
@@ -4099,7 +4142,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Product'[Size]: Visible objects with no description"
@@ -4119,7 +4162,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Product'[Standard Cost]: Visible objects with no description"
@@ -4139,7 +4182,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Product'[List Price]: Visible objects with no description"
@@ -4159,7 +4202,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Product'[Supplier Name]: Visible objects with no description"
@@ -4179,7 +4222,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Product'[Discontinued]: Visible objects with no description"
@@ -4199,7 +4242,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Promotion': Visible objects with no description"
@@ -4219,7 +4262,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Promotion'[Promotion ID]: Visible objects with no description"
@@ -4239,7 +4282,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Promotion'[Promotion Name]: Visible objects with no description"
@@ -4259,7 +4302,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Promotion'[Promotion Type]: Visible objects with no description"
@@ -4279,7 +4322,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Promotion'[Discount Pct]: Visible objects with no description"
@@ -4299,7 +4342,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Promotion'[Start Date]: Visible objects with no description"
@@ -4319,7 +4362,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Promotion'[End Date]: Visible objects with no description"
@@ -4339,7 +4382,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Sales': Visible objects with no description"
@@ -4359,7 +4402,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Sales'[Sale ID]: Visible objects with no description"
@@ -4379,7 +4422,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Sales'[Sale Date]: Visible objects with no description"
@@ -4399,7 +4442,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Sales'[Product ID]: Visible objects with no description"
@@ -4419,7 +4462,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Sales'[Customer ID]: Visible objects with no description"
@@ -4439,7 +4482,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Sales'[Store ID]: Visible objects with no description"
@@ -4459,7 +4502,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Sales'[Employee ID]: Visible objects with no description"
@@ -4479,7 +4522,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Sales'[Promotion ID]: Visible objects with no description"
@@ -4499,7 +4542,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Sales'[Quantity]: Visible objects with no description"
@@ -4519,7 +4562,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Sales'[Unit Price]: Visible objects with no description"
@@ -4539,7 +4582,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Sales'[Unit Cost]: Visible objects with no description"
@@ -4559,7 +4602,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Sales'[Discount Amount]: Visible objects with no description"
@@ -4579,7 +4622,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Sales'[Total Amount]: Visible objects with no description"
@@ -4599,7 +4642,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Sales'[Net Amount]: Visible objects with no description"
@@ -4619,7 +4662,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "[Total Sales]: Visible objects with no description"
@@ -4639,7 +4682,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "[Total Quantity]: Visible objects with no description"
@@ -4659,7 +4702,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "[Average Unit Price]: Visible objects with no description"
@@ -4679,7 +4722,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "[Total Cost]: Visible objects with no description"
@@ -4699,7 +4742,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "[Total Discount]: Visible objects with no description"
@@ -4719,7 +4762,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "[Net Sales]: Visible objects with no description"
@@ -4739,7 +4782,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "[Total Margin]: Visible objects with no description"
@@ -4759,7 +4802,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "[Margin %]: Visible objects with no description"
@@ -4779,7 +4822,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "[Order Count]: Visible objects with no description"
@@ -4799,7 +4842,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "[Average Order Value]: Visible objects with no description"
@@ -4819,7 +4862,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "[Distinct Customers]: Visible objects with no description"
@@ -4839,7 +4882,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "[Sales YTD]: Visible objects with no description"
@@ -4859,7 +4902,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "[Sales LY]: Visible objects with no description"
@@ -4879,7 +4922,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "[Sales YoY %]: Visible objects with no description"
@@ -4899,7 +4942,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Store': Visible objects with no description"
@@ -4919,7 +4962,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Store'[Store ID]: Visible objects with no description"
@@ -4939,7 +4982,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Store'[Store Name]: Visible objects with no description"
@@ -4959,7 +5002,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Store'[Store Type]: Visible objects with no description"
@@ -4979,7 +5022,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Store'[City]: Visible objects with no description"
@@ -4999,7 +5042,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Store'[State]: Visible objects with no description"
@@ -5019,7 +5062,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Store'[Region]: Visible objects with no description"
@@ -5039,7 +5082,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Store'[Country]: Visible objects with no description"
@@ -5059,7 +5102,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Store'[Open Date]: Visible objects with no description"
@@ -5079,7 +5122,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Store'[Latitude]: Visible objects with no description"
@@ -5099,7 +5142,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Store'[Longitude]: Visible objects with no description"
@@ -5119,7 +5162,7 @@
         },
         {
           "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "'Store'[Square Feet]: Visible objects with no description"
@@ -5139,7 +5182,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "[Sales LY]: Not reached from the report (referenced only by [Sales YoY %], which nothing reaches either)"
@@ -5159,7 +5202,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "[Sales YoY %]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5179,7 +5222,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Customer'[Customer Name]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5199,7 +5242,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Customer'[Segment]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5219,7 +5262,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Customer'[Region]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5239,7 +5282,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Customer'[City]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5259,7 +5302,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Customer'[State]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5279,7 +5322,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Customer'[Postal Code]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5299,7 +5342,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Customer'[Country]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5319,7 +5362,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Customer'[Email]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5339,7 +5382,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Customer'[Loyalty Tier]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5359,7 +5402,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Date'[Quarter]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5379,7 +5422,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Date'[Quarter Number]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5399,7 +5442,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Date'[Month Number]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5419,7 +5462,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Date'[Day of Week]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5439,7 +5482,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Date'[Day Number]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5459,7 +5502,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Date'[Is Weekend]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5479,7 +5522,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Employee'[Hire Date]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5499,7 +5542,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Employee'[Manager ID]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5519,7 +5562,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Employee'[Email]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5539,7 +5582,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Product'[Subcategory]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5559,7 +5602,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Product'[Color]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5579,7 +5622,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Product'[Size]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5599,7 +5642,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Product'[Standard Cost]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5619,7 +5662,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Product'[List Price]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5639,7 +5682,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Product'[Supplier Name]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5659,7 +5702,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Product'[Discontinued]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5679,7 +5722,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Promotion'[Promotion Type]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5699,7 +5742,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Promotion'[Discount Pct]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5719,7 +5762,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Promotion'[Start Date]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5739,7 +5782,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Promotion'[End Date]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5759,7 +5802,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Sales'[Net Amount]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5779,7 +5822,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Store'[Store Name]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5799,7 +5842,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Store'[Region]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5819,7 +5862,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Store'[Open Date]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5839,7 +5882,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Store'[Latitude]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5859,7 +5902,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Store'[Longitude]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5879,7 +5922,7 @@
         },
         {
           "ruleId": "NOT_REACHED_FROM_REPORT",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "'Store'[Square Feet]: Not reached from the report (nothing in the report reaches it, and no measure or column references it)"
@@ -5899,7 +5942,7 @@
         },
         {
           "ruleId": "DEFAULT_STEP_NAMES",
-          "ruleIndex": 41,
+          "ruleIndex": 42,
           "level": "note",
           "message": {
             "text": "Customer: Steps keep Power Query's default names (query 'Customer': 2 steps keep default names, 'Promoted Headers' and 'Changed Type')"
@@ -5920,7 +5963,7 @@
         },
         {
           "ruleId": "DEFAULT_STEP_NAMES",
-          "ruleIndex": 41,
+          "ruleIndex": 42,
           "level": "note",
           "message": {
             "text": "Date: Steps keep Power Query's default names (query 'Date': 2 steps keep default names, 'Promoted Headers' and 'Changed Type')"
@@ -5941,7 +5984,7 @@
         },
         {
           "ruleId": "DEFAULT_STEP_NAMES",
-          "ruleIndex": 41,
+          "ruleIndex": 42,
           "level": "note",
           "message": {
             "text": "Employee: Steps keep Power Query's default names (query 'Employee': 2 steps keep default names, 'Promoted Headers' and 'Changed Type')"
@@ -5962,7 +6005,7 @@
         },
         {
           "ruleId": "DEFAULT_STEP_NAMES",
-          "ruleIndex": 41,
+          "ruleIndex": 42,
           "level": "note",
           "message": {
             "text": "Product: Steps keep Power Query's default names (query 'Product': 2 steps keep default names, 'Promoted Headers' and 'Changed Type')"
@@ -5983,7 +6026,7 @@
         },
         {
           "ruleId": "DEFAULT_STEP_NAMES",
-          "ruleIndex": 41,
+          "ruleIndex": 42,
           "level": "note",
           "message": {
             "text": "Promotion: Steps keep Power Query's default names (query 'Promotion': 2 steps keep default names, 'Promoted Headers' and 'Changed Type')"
@@ -6004,7 +6047,7 @@
         },
         {
           "ruleId": "DEFAULT_STEP_NAMES",
-          "ruleIndex": 41,
+          "ruleIndex": 42,
           "level": "note",
           "message": {
             "text": "Sales: Steps keep Power Query's default names (query 'Sales': 2 steps keep default names, 'Promoted Headers' and 'Changed Type')"
@@ -6025,7 +6068,7 @@
         },
         {
           "ruleId": "DEFAULT_STEP_NAMES",
-          "ruleIndex": 41,
+          "ruleIndex": 42,
           "level": "note",
           "message": {
             "text": "Store: Steps keep Power Query's default names (query 'Store': 2 steps keep default names, 'Promoted Headers' and 'Changed Type')"
@@ -6046,7 +6089,7 @@
         },
         {
           "ruleId": "HIDDEN_VISUAL_WITH_FIELDS",
-          "ruleIndex": 42,
+          "ruleIndex": 43,
           "level": "note",
           "message": {
             "text": "\"Debug table\" on \"Overview\": Hidden visual with fields bound (6 fields bound)"
@@ -6066,7 +6109,7 @@
         },
         {
           "ruleId": "HIDDEN_VISUAL_WITH_FIELDS",
-          "ruleIndex": 42,
+          "ruleIndex": 43,
           "level": "note",
           "message": {
             "text": "\"Sales trend (old)\" on \"Overview\": Hidden visual with fields bound (2 fields bound)"
@@ -6086,7 +6129,7 @@
         },
         {
           "ruleId": "HIDDEN_VISUAL_WITH_FIELDS",
-          "ruleIndex": 42,
+          "ruleIndex": 43,
           "level": "note",
           "message": {
             "text": "\"Employee cost\" on \"Employees\": Hidden visual with fields bound (1 field bound, hidden with Group \"Employee details\")"
@@ -6106,7 +6149,7 @@
         },
         {
           "ruleId": "HIDDEN_VISUAL_WITH_FIELDS",
-          "ruleIndex": 42,
+          "ruleIndex": 43,
           "level": "note",
           "message": {
             "text": "\"Employee sales\" on \"Employees\": Hidden visual with fields bound (2 fields bound, hidden with Group \"Employee details\")"
@@ -6126,7 +6169,7 @@
         },
         {
           "ruleId": "ENSURE_TABLES_HAVE_RELATIONSHIPS",
-          "ruleIndex": 43,
+          "ruleIndex": 44,
           "level": "note",
           "message": {
             "text": "'DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92': Ensure tables have relationships"
@@ -6146,7 +6189,7 @@
         },
         {
           "ruleId": "ENSURE_TABLES_HAVE_RELATIONSHIPS",
-          "ruleIndex": 43,
+          "ruleIndex": 44,
           "level": "note",
           "message": {
             "text": "'Employee Grouping': Ensure tables have relationships"
@@ -6166,7 +6209,7 @@
         },
         {
           "ruleId": "HARDCODED_YEAR_IN_FILTER",
-          "ruleIndex": 44,
+          "ruleIndex": 45,
           "level": "note",
           "message": {
             "text": "Page filter on \"Overview\": Hardcoded year in a filter (fixed year 2025 on 'Date'[Year])"
@@ -6186,7 +6229,7 @@
         },
         {
           "ruleId": "LANDING_PAGE_NOT_SET",
-          "ruleIndex": 45,
+          "ruleIndex": 46,
           "level": "note",
           "message": {
             "text": "Report: No landing page set (opens on \"Scratch\", the page open when it was saved)"
@@ -6206,7 +6249,7 @@
         },
         {
           "ruleId": "SLICER_SELECTION_SAVED",
-          "ruleIndex": 46,
+          "ruleIndex": 47,
           "level": "note",
           "message": {
             "text": "\"Category\" on \"Overview\": Slicer saved with a selection (opens with this selection applied)"
@@ -6226,7 +6269,7 @@
         },
         {
           "ruleId": "DECIMAL_COLUMN_WITHOUT_FORMAT_STRING",
-          "ruleIndex": 47,
+          "ruleIndex": 48,
           "level": "note",
           "message": {
             "text": "'Product'[Standard Cost]: Visible decimal column with no format string"
@@ -6246,7 +6289,7 @@
         },
         {
           "ruleId": "DECIMAL_COLUMN_WITHOUT_FORMAT_STRING",
-          "ruleIndex": 47,
+          "ruleIndex": 48,
           "level": "note",
           "message": {
             "text": "'Product'[List Price]: Visible decimal column with no format string"
@@ -6266,7 +6309,7 @@
         },
         {
           "ruleId": "DECIMAL_COLUMN_WITHOUT_FORMAT_STRING",
-          "ruleIndex": 47,
+          "ruleIndex": 48,
           "level": "note",
           "message": {
             "text": "'Promotion'[Discount Pct]: Visible decimal column with no format string"
@@ -6286,7 +6329,7 @@
         },
         {
           "ruleId": "DECIMAL_COLUMN_WITHOUT_FORMAT_STRING",
-          "ruleIndex": 47,
+          "ruleIndex": 48,
           "level": "note",
           "message": {
             "text": "'Sales'[Unit Price]: Visible decimal column with no format string"
@@ -6306,7 +6349,7 @@
         },
         {
           "ruleId": "DECIMAL_COLUMN_WITHOUT_FORMAT_STRING",
-          "ruleIndex": 47,
+          "ruleIndex": 48,
           "level": "note",
           "message": {
             "text": "'Sales'[Unit Cost]: Visible decimal column with no format string"
@@ -6326,7 +6369,7 @@
         },
         {
           "ruleId": "DECIMAL_COLUMN_WITHOUT_FORMAT_STRING",
-          "ruleIndex": 47,
+          "ruleIndex": 48,
           "level": "note",
           "message": {
             "text": "'Sales'[Discount Amount]: Visible decimal column with no format string"
@@ -6346,7 +6389,7 @@
         },
         {
           "ruleId": "DECIMAL_COLUMN_WITHOUT_FORMAT_STRING",
-          "ruleIndex": 47,
+          "ruleIndex": 48,
           "level": "note",
           "message": {
             "text": "'Sales'[Total Amount]: Visible decimal column with no format string"
@@ -6366,7 +6409,7 @@
         },
         {
           "ruleId": "DECIMAL_COLUMN_WITHOUT_FORMAT_STRING",
-          "ruleIndex": 47,
+          "ruleIndex": 48,
           "level": "note",
           "message": {
             "text": "'Sales'[Net Amount]: Visible decimal column with no format string"
@@ -6386,7 +6429,7 @@
         },
         {
           "ruleId": "DECIMAL_COLUMN_WITHOUT_FORMAT_STRING",
-          "ruleIndex": 47,
+          "ruleIndex": 48,
           "level": "note",
           "message": {
             "text": "'Store'[Latitude]: Visible decimal column with no format string"
@@ -6406,7 +6449,7 @@
         },
         {
           "ruleId": "DECIMAL_COLUMN_WITHOUT_FORMAT_STRING",
-          "ruleIndex": 47,
+          "ruleIndex": 48,
           "level": "note",
           "message": {
             "text": "'Store'[Longitude]: Visible decimal column with no format string"
@@ -6426,7 +6469,7 @@
         },
         {
           "ruleId": "DATECOLUMN_FORMATSTRING",
-          "ruleIndex": 48,
+          "ruleIndex": 49,
           "level": "note",
           "message": {
             "text": "'Customer'[Join Date]: Provide format string for \"Date\" columns"
@@ -6446,7 +6489,7 @@
         },
         {
           "ruleId": "DATECOLUMN_FORMATSTRING",
-          "ruleIndex": 48,
+          "ruleIndex": 49,
           "level": "note",
           "message": {
             "text": "'Date'[Date]: Provide format string for \"Date\" columns"
@@ -6466,7 +6509,7 @@
         },
         {
           "ruleId": "DATECOLUMN_FORMATSTRING",
-          "ruleIndex": 48,
+          "ruleIndex": 49,
           "level": "note",
           "message": {
             "text": "'DateTableTemplate_96ead6f8-eef3-4336-a020-6641aa278e92'[Date]: Provide format string for \"Date\" columns"
@@ -6486,7 +6529,7 @@
         },
         {
           "ruleId": "DATECOLUMN_FORMATSTRING",
-          "ruleIndex": 48,
+          "ruleIndex": 49,
           "level": "note",
           "message": {
             "text": "'Employee'[Hire Date]: Provide format string for \"Date\" columns"
@@ -6506,7 +6549,7 @@
         },
         {
           "ruleId": "DATECOLUMN_FORMATSTRING",
-          "ruleIndex": 48,
+          "ruleIndex": 49,
           "level": "note",
           "message": {
             "text": "'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'[Date]: Provide format string for \"Date\" columns"
@@ -6526,7 +6569,7 @@
         },
         {
           "ruleId": "DATECOLUMN_FORMATSTRING",
-          "ruleIndex": 48,
+          "ruleIndex": 49,
           "level": "note",
           "message": {
             "text": "'Promotion'[Start Date]: Provide format string for \"Date\" columns"
@@ -6546,7 +6589,7 @@
         },
         {
           "ruleId": "DATECOLUMN_FORMATSTRING",
-          "ruleIndex": 48,
+          "ruleIndex": 49,
           "level": "note",
           "message": {
             "text": "'Promotion'[End Date]: Provide format string for \"Date\" columns"
@@ -6566,7 +6609,7 @@
         },
         {
           "ruleId": "DATECOLUMN_FORMATSTRING",
-          "ruleIndex": 48,
+          "ruleIndex": 49,
           "level": "note",
           "message": {
             "text": "'Sales'[Sale Date]: Provide format string for \"Date\" columns"
@@ -6586,7 +6629,7 @@
         },
         {
           "ruleId": "DATECOLUMN_FORMATSTRING",
-          "ruleIndex": 48,
+          "ruleIndex": 49,
           "level": "note",
           "message": {
             "text": "'Store'[Open Date]: Provide format string for \"Date\" columns"
@@ -6606,7 +6649,7 @@
         },
         {
           "ruleId": "ADD_DATA_CATEGORY_FOR_COLUMNS",
-          "ruleIndex": 49,
+          "ruleIndex": 50,
           "level": "note",
           "message": {
             "text": "'Customer'[City]: Add data category for columns"
@@ -6626,7 +6669,7 @@
         },
         {
           "ruleId": "ADD_DATA_CATEGORY_FOR_COLUMNS",
-          "ruleIndex": 49,
+          "ruleIndex": 50,
           "level": "note",
           "message": {
             "text": "'Customer'[Country]: Add data category for columns"
@@ -6646,7 +6689,7 @@
         },
         {
           "ruleId": "ADD_DATA_CATEGORY_FOR_COLUMNS",
-          "ruleIndex": 49,
+          "ruleIndex": 50,
           "level": "note",
           "message": {
             "text": "'Store'[City]: Add data category for columns"
@@ -6666,7 +6709,7 @@
         },
         {
           "ruleId": "ADD_DATA_CATEGORY_FOR_COLUMNS",
-          "ruleIndex": 49,
+          "ruleIndex": 50,
           "level": "note",
           "message": {
             "text": "'Store'[Country]: Add data category for columns"
@@ -6686,7 +6729,7 @@
         },
         {
           "ruleId": "ADD_DATA_CATEGORY_FOR_COLUMNS",
-          "ruleIndex": 49,
+          "ruleIndex": 50,
           "level": "note",
           "message": {
             "text": "'Store'[Latitude]: Add data category for columns"
@@ -6706,7 +6749,7 @@
         },
         {
           "ruleId": "ADD_DATA_CATEGORY_FOR_COLUMNS",
-          "ruleIndex": 49,
+          "ruleIndex": 50,
           "level": "note",
           "message": {
             "text": "'Store'[Longitude]: Add data category for columns"
@@ -6726,7 +6769,7 @@
         },
         {
           "ruleId": "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE",
-          "ruleIndex": 50,
+          "ruleIndex": 51,
           "level": "note",
           "message": {
             "text": "'Customer'[Join Date]: Relationship columns should be of integer data type"
@@ -6746,7 +6789,7 @@
         },
         {
           "ruleId": "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE",
-          "ruleIndex": 50,
+          "ruleIndex": 51,
           "level": "note",
           "message": {
             "text": "'Date'[Date]: Relationship columns should be of integer data type"
@@ -6766,7 +6809,7 @@
         },
         {
           "ruleId": "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE",
-          "ruleIndex": 50,
+          "ruleIndex": 51,
           "level": "note",
           "message": {
             "text": "'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'[Date]: Relationship columns should be of integer data type"
@@ -6786,7 +6829,7 @@
         },
         {
           "ruleId": "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE",
-          "ruleIndex": 50,
+          "ruleIndex": 51,
           "level": "note",
           "message": {
             "text": "'Sales'[Sale Date]: Relationship columns should be of integer data type"
@@ -6806,7 +6849,7 @@
         },
         {
           "ruleId": "MARK_PRIMARY_KEYS",
-          "ruleIndex": 51,
+          "ruleIndex": 52,
           "level": "note",
           "message": {
             "text": "'LocalDateTable_b6c07c62-ecbc-4f14-b072-2fb027697b1d'[Date]: Mark primary keys"

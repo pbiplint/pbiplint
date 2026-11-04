@@ -79,6 +79,21 @@ const isRecord = (v: unknown): v is Record<string, unknown> =>
 const member = (v: unknown, key: string): unknown =>
   isRecord(v) && Object.hasOwn(v, key) ? v[key] : undefined;
 
+/**
+ * Whether a Fluent 2 base theme shows an element nothing turns on or off, as Microsoft Learn
+ * documents it: "Titles and subtitles are on by default; axis titles are off by default" (Visual
+ * defaults in Power BI reports, Uniform visual styling). Learn documents Microsoft's own theme, so
+ * this holds whether or not the base theme's file is in the project; a custom theme that was not
+ * read may override it, so then it is not known. Undefined for any other element or theme.
+ */
+function fluentDefault(report: Report, kind: ElementKind): boolean | undefined {
+  const { base, custom } = report.themes;
+  if (!base?.name.startsWith("Fluent2-") || (custom && custom.state !== "read")) return undefined;
+  if (kind === "title" || kind === "subtitle") return true;
+  if (kind === "axisTitles") return false;
+  return undefined;
+}
+
 /** The property that turns an element on, for the elements that can be turned off. */
 /**
  * The elements Power BI Desktop shows when nothing sets their `show`, as the first Desktop check
@@ -373,10 +388,14 @@ function measureElement(ctx: Context, spec: ElementSpec): void {
   const toggle = toggleOf(spec);
   if (toggle) {
     const on = ask(toggle);
-    if (!on.found && on.why === "theme-not-read") return skip("theme-not-read");
-    const shown = on.found ? readLiteralBool(on.value) === true : SHOWN_BY_DEFAULT.has(spec.kind);
+    const fluent = fluentDefault(report, spec.kind);
+    if (!on.found && on.why === "theme-not-read" && fluent === undefined)
+      return skip("theme-not-read");
+    const byDefault = fluent ?? SHOWN_BY_DEFAULT.has(spec.kind);
+    const shown = on.found ? readLiteralBool(on.value) === true : byDefault;
     // Shown or not, the files do not say: it may be on the page, so it is counted as not known.
-    if (!on.found && !SHOWN_BY_DEFAULT.has(spec.kind)) return skip("visibility-not-known");
+    if (!on.found && fluent === undefined && !SHOWN_BY_DEFAULT.has(spec.kind))
+      return skip("visibility-not-known");
     if (!shown) return;
   }
   let onData = false;

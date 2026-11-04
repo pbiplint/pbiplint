@@ -195,6 +195,42 @@ describe("measureReport", () => {
       ["Sales.Cost", "#EEEEEE"],
     ]);
   });
+  it("takes Fluent 2's documented defaults: titles and subtitles on, axis titles off", () => {
+    const files = (base: string): LintFile[] => [
+      {
+        path: "definition/report.json",
+        text: JSON.stringify({
+          themeCollection: { baseTheme: { name: base, type: "SharedResources" } },
+        }),
+      },
+      { path: "definition/pages/p/page.json", text: JSON.stringify({ name: "p" }) },
+      {
+        path: "definition/pages/p/visuals/v/visual.json",
+        text: JSON.stringify({
+          name: "v",
+          position: { x: 0, y: 0, z: 0, width: 100, height: 100 },
+          visual: {
+            visualType: "clusteredColumnChart",
+            objects: { valueAxis: props({ titleColor: fill("#000000") }) },
+            visualContainerObjects: {
+              background: WHITE_BG,
+              title: props({ fontColor: fill("#000000"), fontSize: lit("12D") }),
+              subTitle: props({ fontColor: fill("#000000"), fontSize: lit("12D") }),
+            },
+          },
+        }),
+      },
+    ];
+    const fluent = measureReport(buildReport(files("Fluent2-CY26SU04")).report);
+    // Both are on. The subtitle is measured; the title has a background of its own, which the
+    // Fluent 2 file, not in the project, may set, so the title is skipped rather than guessed.
+    expect(fluent.measured.map((m) => m.kind)).toEqual(["subtitle"]);
+    expect(fluent.skipped.filter((s) => s.kind === "title").length).toBe(1);
+    expect(fluent.skipped.some((s) => s.why === "visibility-not-known")).toBe(false);
+    expect(fluent.skipped.filter((s) => s.kind === "axisTitles")).toEqual([]);
+    const cy = measureReport(buildReport(files("CY24SU10")).report);
+    expect(cy.measured.map((m) => m.kind)).toEqual([]);
+  });
   it("counts an element whose visibility the files do not settle as not known", () => {
     const m = measure([{ vco: { subTitle: props({ fontColor: fill("#000000") }) } }], {
       theme: {},

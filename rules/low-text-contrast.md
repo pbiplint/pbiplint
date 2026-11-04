@@ -122,6 +122,7 @@ WCAG's Success Criterion 1.4.3 sets no contrast requirement for text that is pur
 - **Size:** sizes are compared as written, at Actual size. A ratio from 3:1 up to 4.5:1 on text of unknown size is skipped; one under 3:1 is reported whatever the size.
 - **Semibold is not bold.** Text from 14 to under 18 point needs 4.5:1 unless it is bold, and a Semibold font is read as not bold.
 - **How colours were confirmed:** in Power BI Desktop, a theme colour's first two positions are white and black whatever the theme, a theme colour's shade is a straight blend toward white or black, and transparency is held as a whole byte. On a page set like the Fluent2 theme's, with `#FAFAFA` at transparency 14 over a `#E6E6E6` wallpaper, Desktop paints one unit lighter than pbiplint works out, which moves a ratio by about 0.01.
+- **What is shown when nothing says:** under a Fluent 2 base theme, titles and subtitles are measured and axis titles are not, whether or not the theme's file is in the project, as Microsoft documents them: "Titles and subtitles are on by default; axis titles are off by default" ([Visual defaults in Power BI reports, Uniform visual styling](https://learn.microsoft.com/power-bi/create-reports/power-bi-reports-visual-defaults#uniform-visual-styling)). Under another base theme, text whose visibility nothing sets is counted as not known, apart from the three Power BI Desktop was seen to show.
 - **Tooltips and the visual header** are not measured; non-text contrast (chart marks, icons, and controls) is not part of this rule.
 
 ## Related rules

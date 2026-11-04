@@ -6,11 +6,11 @@
   },
   "summary": {
     "files": 92,
-    "findings": 280,
+    "findings": 281,
     "errors": 19,
-    "warnings": 84,
+    "warnings": 85,
     "infos": 177,
-    "rulesRun": 117,
+    "rulesRun": 118,
     "rulesSkipped": [
       {
         "id": "AVOID_BI-DIRECTIONAL_RELATIONSHIPS_AGAINST_HIGH-CARDINALITY_COLUMNS",
@@ -855,6 +855,30 @@
           "file": "definition/pages/b52832c4d9f487868953/visuals/2a7e16428070011e60ec/visual.json",
           "line": 32,
           "detail": "no alt text"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "id": "LOW_TEXT_CONTRAST",
+        "name": "Text with too little contrast",
+        "category": "Accessibility",
+        "severity": 2,
+        "layer": "report",
+        "slug": "low-text-contrast",
+        "url": "https://pbiplint.com/rules/low-text-contrast",
+        "status": "builtin"
+      },
+      "count": 1,
+      "findings": [
+        {
+          "layer": "report",
+          "objectType": "Visual",
+          "objectName": "\"Notes\" on \"Overview\"",
+          "objectId": "49158e1e7dce5e8d37fd",
+          "file": "definition/pages/3cea48e58036b1654474/visuals/49158e1e7dce5e8d37fd/visual.json",
+          "line": 25,
+          "detail": "Text: #B3B0AD on #FFFFFF is 2.15:1, and 10 pt text needs 4.5:1. #797674 would be 4.5:1. Text colour from the visual, background from the visual"
         }
       ]
     },

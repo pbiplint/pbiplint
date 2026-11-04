@@ -1,0 +1,48 @@
+{
+  "name": "Contrast Check",
+  "background": "#FFF8E7",
+  "foreground": "#7A1F5C",
+  "dataColors": [
+    "#2E8B57",
+    "#B8860B",
+    "#4B0082"
+  ],
+  "foregroundNeutralSecondary": "#0F7B6C",
+  "foregroundNeutralTertiary": "#3366AA",
+  "textClasses": {
+    "label": {
+      "color": "#AA3344"
+    },
+    "largeLightLabel": {
+      "color": "#CC5500"
+    }
+  },
+  "visualStyles": {
+    "textbox": {
+      "*": {
+        "title": [
+          {
+            "fontColor": {
+              "solid": {
+                "color": "foregroundNeutralTertiary"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "shape": {
+      "*": {
+        "title": [
+          {
+            "fontColor": {
+              "solid": {
+                "color": "backgroundNeutral"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

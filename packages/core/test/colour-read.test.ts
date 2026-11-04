@@ -75,10 +75,18 @@ describe("readColour on a written colour", () => {
 });
 
 describe("readColour on a theme colour reference", () => {
-  it("maps ColorId 0 to background, 1 to foreground, and 2 and up to dataColors, saying which line", () => {
+  // Pinned to the first Desktop check (spec section 10, November 4, 2026).
+  it("paints ColorId 0 white and 1 black, whatever the themes say", () => {
+    for (const themes of [baseOnly, {}, { base: absent, custom: absent }]) {
+      expect(readColour(themeRef(0, 0), themes)).toEqual({
+        known: true,
+        colour: colour("#FFFFFF"),
+      });
+      expect(readColour(themeRef(1), themes)).toEqual({ known: true, colour: colour("#000000") });
+    }
+  });
+  it("maps ColorId 2 and up to dataColors, saying which line", () => {
     const cases: [number, string, string][] = [
-      [0, "#FFFFFF", "/background"],
-      [1, "#252423", "/foreground"],
       [2, "#118DFF", "/dataColors/0"],
       [3, "#12239E", "/dataColors/1"],
     ];
@@ -89,16 +97,33 @@ describe("readColour on a theme colour reference", () => {
         from: { file: BASE_FILE, pointer, layer: "baseTheme" },
       });
   });
-  it("takes a missing Percent as 0", () => {
-    expect(readColour(themeRef(1), baseOnly)).toMatchObject({
-      known: true,
-      colour: colour("#252423"),
-    });
+  it("shades by Percent as Desktop paints it", () => {
+    const themes = { base: read({ dataColors: ["#2E8B57", "#B8860B"] }, BASE_FILE) };
+    const cases: [number, number, string][] = [
+      [2, -0.6, "#123823"],
+      [2, -0.2, "#256F46"],
+      [2, 0.2, "#58A279"],
+      [2, 0.6, "#ABD1BC"],
+      [3, -0.6, "#4A3604"],
+      [3, -0.2, "#936B09"],
+      [3, 0.2, "#C69E3C"],
+      [3, 0.6, "#E3CF9D"],
+      [0, -0.6, "#666666"],
+      [0, -0.2, "#CCCCCC"],
+      [0, 0.2, "#FFFFFF"],
+      [1, -0.2, "#000000"],
+      [1, 0.2, "#333333"],
+      [1, 0.6, "#999999"],
+    ];
+    for (const [id, p, hex] of cases)
+      expect(readColour(themeRef(id, p), themes), `${id} at ${p}`).toMatchObject({
+        known: true,
+        colour: colour(hex),
+      });
   });
-  it("does not know a Percent other than 0, whatever the themes say", () => {
-    for (const p of [0.2, -0.6, 1])
-      expect(readColour(themeRef(1, p), baseOnly)).toEqual({ known: false, why: "percent" });
-    expect(readColour(themeRef(1, 0.2), {})).toEqual({ known: false, why: "percent" });
+  it("refuses a Percent outside -1 to 1", () => {
+    for (const p of [1.5, -2, Number.NaN])
+      expect(readColour(themeRef(2, p), baseOnly)).toEqual({ known: false, why: "other-form" });
   });
   it("takes dataColors whole: a custom theme's list ends where it ends", () => {
     const themes = { base: BASE, custom: read({ dataColors: ["#AAAAAA"] }, CUSTOM_FILE) };
@@ -156,7 +181,7 @@ describe("a theme that was not read", () => {
   it("stops at a custom theme not read, though the base sets the colour", () => {
     const themes = { base: BASE, custom: absent };
     expect(namedColour("foreground", themes)).toEqual({ known: false, why: "theme-not-read" });
-    expect(readColour(themeRef(1), themes)).toEqual({ known: false, why: "theme-not-read" });
+    expect(readColour(themeRef(2), themes)).toEqual({ known: false, why: "theme-not-read" });
   });
   it("needs the base only when the custom theme does not set the colour", () => {
     const themes = { base: absent, custom: read({ foreground: "#000000" }, CUSTOM_FILE) };

@@ -74,6 +74,17 @@ const member = (v: unknown, key: string): unknown =>
   isRecord(v) && Object.hasOwn(v, key) ? v[key] : undefined;
 
 /** The property that turns an element on, for the elements that can be turned off. */
+/**
+ * The elements Power BI Desktop shows when nothing sets their `show`, as the first Desktop check
+ * saw (spec section 10): a classic card's category label, a chart's axis labels, a slicer's header.
+ * Any other element whose `show` nothing sets is not measured, since the files do not say it is there.
+ */
+const SHOWN_BY_DEFAULT: ReadonlySet<ElementKind> = new Set([
+  "cardLabel",
+  "axisLabels",
+  "slicerHeader",
+]);
+
 function toggleOf(spec: ElementSpec): string | undefined {
   if (spec.kind === "axisTitles") return "showAxisTitle";
   const always: readonly ElementKind[] = [
@@ -356,8 +367,9 @@ function measureElement(ctx: Context, spec: ElementSpec): void {
   const toggle = toggleOf(spec);
   if (toggle) {
     const on = ask(toggle);
-    if (!on.found) return on.why === "theme-not-read" ? skip("theme-not-read") : undefined;
-    if (readLiteralBool(on.value) !== true) return;
+    if (!on.found && on.why === "theme-not-read") return skip("theme-not-read");
+    const shown = on.found ? readLiteralBool(on.value) === true : SHOWN_BY_DEFAULT.has(spec.kind);
+    if (!shown) return;
   }
   let onData = false;
   if (spec.kind === "dataLabels") {

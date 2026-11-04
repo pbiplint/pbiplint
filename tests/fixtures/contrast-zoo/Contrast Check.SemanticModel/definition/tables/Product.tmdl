@@ -1,0 +1,104 @@
+table Product
+	lineageTag: 06cbf34b-4079-5016-a55b-40c6437d5636
+
+	column 'Product ID'
+		dataType: int64
+		isKey
+		lineageTag: ea1b6f51-3cb2-5393-bf37-d48f7259183e
+		summarizeBy: none
+		sourceColumn: Product ID
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Product Name'
+		dataType: string
+		lineageTag: 2b2393a4-92ce-547c-9171-ef4e4894ec8e
+		summarizeBy: none
+		sourceColumn: Product Name
+
+		annotation SummarizationSetBy = Automatic
+
+	column Category
+		dataType: string
+		lineageTag: d44274f7-6558-5988-8ee5-7ba5419cf064
+		summarizeBy: none
+		sourceColumn: Category
+
+		annotation SummarizationSetBy = Automatic
+
+	column Subcategory
+		dataType: string
+		lineageTag: 4d810712-dd23-597f-8aa5-b30ede580aec
+		summarizeBy: none
+		sourceColumn: Subcategory
+
+		annotation SummarizationSetBy = Automatic
+
+	column Brand
+		dataType: string
+		lineageTag: 2b5f87eb-683f-5dad-a448-27a90e1ebb2e
+		summarizeBy: none
+		sourceColumn: Brand
+
+		annotation SummarizationSetBy = Automatic
+
+	column Color
+		dataType: string
+		lineageTag: 02ac636f-1644-5859-8f33-0619232930cc
+		summarizeBy: none
+		sourceColumn: Color
+
+		annotation SummarizationSetBy = Automatic
+
+	column Size
+		dataType: string
+		lineageTag: fb68e549-1989-5e0f-98d2-1c833e74658d
+		summarizeBy: none
+		sourceColumn: Size
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Standard Cost'
+		dataType: decimal
+		lineageTag: 7d9eacb7-55e6-5070-91c7-17f18bab7916
+		summarizeBy: none
+		sourceColumn: Standard Cost
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'List Price'
+		dataType: decimal
+		lineageTag: 3e06604b-192f-5584-a99f-00747597dbc3
+		summarizeBy: none
+		sourceColumn: List Price
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Supplier Name'
+		dataType: string
+		lineageTag: 20522dd5-1f10-5eca-bca9-422e29d47a9f
+		summarizeBy: none
+		sourceColumn: Supplier Name
+
+		annotation SummarizationSetBy = Automatic
+
+	column Discontinued
+		dataType: boolean
+		lineageTag: 867a2b28-d8d7-5ecd-8ad9-8231245e1b80
+		summarizeBy: none
+		sourceColumn: Discontinued
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Product = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents("C:\Demo\Data\Product.csv"), [Delimiter=",", Columns=11, Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+				    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers", {{"Product ID", Int64.Type}, {"Product Name", Text.Type}, {"Category", Text.Type}, {"Subcategory", Text.Type}, {"Brand", Text.Type}, {"Color", Text.Type}, {"Size", Text.Type}, {"Standard Cost", Currency.Type}, {"List Price", Currency.Type}, {"Supplier Name", Text.Type}, {"Discontinued", Logical.Type}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table
+

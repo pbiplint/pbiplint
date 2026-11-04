@@ -98,4 +98,56 @@ describe("sanitizeProject", () => {
     expect(sanitizeProject(root)).toEqual({ rewritten: 0, removed: 0, edited: 0 });
     expect(readFileSync(file, "utf8")).toBe(text);
   });
+
+  it("keeps the custom theme report.json names, and drops every other resource and Microsoft's themes", () => {
+    const root = tempDir("sanitize-theme");
+    const res = join(root, "X.Report", "StaticResources");
+    mkdirSync(join(res, "RegisteredResources"), { recursive: true });
+    mkdirSync(join(res, "SharedResources", "BaseThemes"), { recursive: true });
+    mkdirSync(join(root, "X.Report", "definition"), { recursive: true });
+    writeFileSync(join(res, "RegisteredResources", "Mine.json"), '{"name":"Mine"}');
+    writeFileSync(join(res, "RegisteredResources", "logo.png"), "");
+    writeFileSync(join(res, "RegisteredResources", "Other.json"), "{}");
+    writeFileSync(join(res, "SharedResources", "BaseThemes", "CY24SU10.json"), "{}");
+    const mine = { name: "Mine.json", path: "Mine.json", type: "CustomTheme" };
+    writeFileSync(
+      join(root, "X.Report", "definition", "report.json"),
+      JSON.stringify({
+        themeCollection: {
+          baseTheme: { name: "CY24SU10", type: "SharedResources" },
+          customTheme: { name: "Mine.json", type: "RegisteredResources" },
+        },
+        resourcePackages: [
+          {
+            name: "SharedResources",
+            type: "SharedResources",
+            items: [{ name: "CY24SU10", path: "BaseThemes/CY24SU10.json", type: "BaseTheme" }],
+          },
+          {
+            name: "RegisteredResources",
+            type: "RegisteredResources",
+            items: [mine, { name: "logo.png", path: "logo.png", type: "Image" }],
+          },
+        ],
+      }),
+    );
+    sanitizeProject(root);
+    expect(existsSync(join(res, "RegisteredResources", "Mine.json"))).toBe(true);
+    for (const gone of [
+      "RegisteredResources/logo.png",
+      "RegisteredResources/Other.json",
+      "SharedResources",
+    ])
+      expect(existsSync(join(res, gone)), gone).toBe(false);
+    const report = JSON.parse(
+      readFileSync(join(root, "X.Report", "definition", "report.json"), "utf8"),
+    );
+    expect(report.themeCollection.customTheme).toEqual({
+      name: "Mine.json",
+      type: "RegisteredResources",
+    });
+    expect(report.resourcePackages[1].items).toEqual([mine]);
+    // The base theme is named still, and its file is gone, as with any project.
+    expect(report.themeCollection.baseTheme.name).toBe("CY24SU10");
+  });
 });

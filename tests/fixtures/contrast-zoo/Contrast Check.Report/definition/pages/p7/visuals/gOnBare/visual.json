@@ -1,0 +1,31 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.8.0/schema.json",
+  "name": "gOnBare",
+  "position": {
+    "x": 440,
+    "y": 380,
+    "z": 13000,
+    "height": 300,
+    "width": 360,
+    "tabOrder": 13000
+  },
+  "visualGroup": {
+    "displayName": "gOnBare",
+    "groupMode": "ScaleMode",
+    "objects": {
+      "background": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

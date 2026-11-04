@@ -4,9 +4,19 @@
 // .tmdl files to C:\Demo\Data\<basename>, deletes files and folders that do not belong in a
 // fixture (Desktop caches, layouts, registered resources, custom visual packages, .pbix), and
 // edits report.json so it no longer names the resources that were removed. TMDL carries no data;
-// paths reveal folder names, and resources are binaries nothing here reads.
-import { readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { basename, join } from "node:path";
+// paths reveal folder names, and resources are binaries nothing here reads. The one resource kept
+// is the custom theme report.json names, a JSON file of the project's own; Microsoft's base and
+// built-in themes are removed with the rest.
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
+import { basename, dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const JUNK_FILES = new Set([".DS_Store", "cache.abf", "localSettings.json", "diagramLayout.json"]);
@@ -26,13 +36,58 @@ function placeholder(path) {
   return `C:\\Demo\\Data\\${trimmed.split(/[\\/]/).pop()}${trailing}`;
 }
 
+/**
+ * The custom theme a report.json names, as its RegisteredResources item, when that item is a JSON
+ * file directly in the folder: the one resource a fixture keeps, since a hand-written theme is the
+ * project's own. Microsoft's base and built-in themes are never kept.
+ */
+function customTheme(json) {
+  const theme = json?.themeCollection?.customTheme;
+  if (theme?.type !== "RegisteredResources") return undefined;
+  const pack = (json.resourcePackages ?? []).find((r) => r.type === "RegisteredResources");
+  const item = pack?.items?.find((i) => i.name === theme.name);
+  return typeof item?.path === "string" && /^[^/\\]+\.json$/.test(item.path) ? item : undefined;
+}
+
+const reportJsonOf = (reportFolder) => {
+  try {
+    return JSON.parse(readFileSync(join(reportFolder, "definition", "report.json"), "utf8"));
+  } catch {
+    return undefined;
+  }
+};
+
 export function sanitizeProject(root) {
   const counts = { rewritten: 0, removed: 0, edited: 0 };
+  /** A report's StaticResources: everything goes but the custom theme report.json names. */
+  const prune = (dir) => {
+    const keep = customTheme(reportJsonOf(dirname(dir)));
+    const kept = keep && existsSync(join(dir, "RegisteredResources", keep.path));
+    if (!kept) {
+      rmSync(dir, { recursive: true, force: true });
+      counts.removed++;
+      return;
+    }
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const p = join(dir, entry.name);
+      if (entry.name !== "RegisteredResources") {
+        rmSync(p, { recursive: true, force: true });
+        counts.removed++;
+        continue;
+      }
+      for (const inner of readdirSync(p))
+        if (inner !== keep.path) {
+          rmSync(join(p, inner), { recursive: true, force: true });
+          counts.removed++;
+        }
+    }
+  };
   const walk = (dir) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const p = join(dir, entry.name);
       if (entry.isDirectory()) {
-        if (JUNK_DIRS.has(entry.name)) {
+        if (entry.name === "StaticResources") prune(p);
+        else if (JUNK_DIRS.has(entry.name)) {
           rmSync(p, { recursive: true, force: true });
           counts.removed++;
         } else walk(p);
@@ -58,14 +113,23 @@ export function sanitizeProject(root) {
       } else if (entry.name === "report.json" && basename(dir) === "definition") {
         const json = JSON.parse(readFileSync(p, "utf8"));
         let changed = false;
+        const theme = customTheme(json);
+        const keep =
+          theme &&
+          existsSync(join(dirname(dir), "StaticResources", "RegisteredResources", theme.path));
         if (Array.isArray(json.resourcePackages)) {
-          const kept = json.resourcePackages.filter((r) => r.type !== "RegisteredResources");
-          if (kept.length !== json.resourcePackages.length) {
+          const kept = json.resourcePackages.flatMap((r) => {
+            if (r.type !== "RegisteredResources") return [r];
+            if (!keep) return [];
+            const items = (r.items ?? []).filter((i) => i === theme);
+            return [{ ...r, items }];
+          });
+          if (JSON.stringify(kept) !== JSON.stringify(json.resourcePackages)) {
             json.resourcePackages = kept;
             changed = true;
           }
         }
-        if (json.themeCollection?.customTheme?.type === "RegisteredResources") {
+        if (!keep && json.themeCollection?.customTheme?.type === "RegisteredResources") {
           delete json.themeCollection.customTheme;
           changed = true;
         }

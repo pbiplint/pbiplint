@@ -1,0 +1,49 @@
+table 'Employee Grouping'
+	lineageTag: 2d4b76b0-c6f4-4384-be5e-8107e9206104
+
+	column 'Employee Grouping'
+		lineageTag: 4d449cb9-1416-44a4-be89-f8935275cdcb
+		summarizeBy: none
+		sourceColumn: [Value1]
+		sortByColumn: 'Employee Grouping Order'
+
+		relatedColumnDetails
+			groupByColumn: 'Employee Grouping Fields'
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Employee Grouping Fields'
+		isHidden
+		lineageTag: 50b2027f-e1a7-4633-99ae-d605bdebb0c7
+		summarizeBy: none
+		sourceColumn: [Value2]
+		sortByColumn: 'Employee Grouping Order'
+
+		extendedProperty ParameterMetadata =
+				{
+				  "version": 3,
+				  "kind": 2
+				}
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Employee Grouping Order'
+		isHidden
+		formatString: 0
+		lineageTag: cbd3ef2a-98fd-4e06-846b-ca7856e03122
+		summarizeBy: sum
+		sourceColumn: [Value3]
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'Employee Grouping' = calculated
+		mode: import
+		source =
+				{
+				    ("Department", NAMEOF('Employee'[Department]), 0),
+				    ("Title", NAMEOF('Employee'[Title]), 1),
+				    ("Region", NAMEOF('Employee'[Region]), 2)
+				}
+
+	annotation PBI_Id = c08cd40c863c8e3d27fa28982141c394
+

@@ -161,7 +161,7 @@ Each finding carries one colour that passes **(design call)**: the text colour's
 - `suggested`, `suggestedRatio`
 - `others` (how many more instances or states fail), and on a theme finding `visuals` (how many visuals it fails on) and `elements` (a list of the element kinds)
 
-An English detail, for example: `Title #A19F9D on #FFFFFF is 2.63:1, and 12 pt text needs 4.5:1. #767676 would be 4.54:1.` **(builder: wording, through the catalog)**
+An English detail, for example: `Title #A19F9D on #FFFFFF is 2.63:1, and 12 pt text needs 4.5:1. #787675 would be 4.51:1.` **(builder: wording, through the catalog)**
 
 ## 9. Saying how much was measured
 

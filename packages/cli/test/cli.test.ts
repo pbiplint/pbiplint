@@ -158,6 +158,23 @@ describe("pbiplint CLI", () => {
       // No mobile.json anywhere in the report.
       { layer: "report", label: "Mobile layouts", value: "none" },
       {
+        // The sample's base theme file is not in the project, so most of its text is not measured,
+        // and the line says so rather than reading as a pass.
+        layer: "report",
+        label: "Text contrast",
+        value: "1 measured, 1 below the threshold, 237 not measured",
+        detail: "235 theme file not read, 2 colour not set",
+        counts: {
+          measured: 1,
+          below: 1,
+          notMeasured: 237,
+          "theme-not-read": 235,
+          "not-set": 2,
+          visibilityNotKnown: 0,
+        },
+        ruleId: "LOW_TEXT_CONTRAST",
+      },
+      {
         layer: "report",
         label: "Schema versions",
         value: "report 3.2.0, page 2.1.0, visual 2.8.0",

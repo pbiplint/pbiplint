@@ -256,12 +256,13 @@ describe("measureReport", () => {
     expect(cy.measured.map((m) => m.kind)).toEqual([]);
   });
   it("counts an element whose visibility the files do not settle as not known", () => {
-    const m = measure([{ vco: { subTitle: props({ fontColor: fill("#000000") }) } }], {
-      theme: {},
-      all: true,
-    });
+    const m = measure(
+      [{ vco: { subTitle: props({ text: lit("'By year'"), fontColor: fill("#000000") }) } }],
+      { theme: {}, all: true },
+    );
+    // The title has no text and the shape no fields, so it is not drawn and not counted; the
+    // subtitle has text, and the shape's own text may be on.
     expect(m.skipped.map((s) => [s.kind, s.why])).toEqual([
-      ["title", "visibility-not-known"],
       ["subtitle", "visibility-not-known"],
       ["buttonText", "visibility-not-known"],
     ]);

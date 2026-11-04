@@ -1,3 +1,4 @@
+import { measureReport, type SkipReason } from "../colour/measure.js";
 import { plural } from "../format/text.js";
 import type { Indexes } from "../index/build.js";
 import { isHiddenAutoDateTable } from "../model/names.js";
@@ -30,6 +31,81 @@ import type { Fact, Project } from "./types.js";
 
 /** `n info`-style nouns are the caller's business; these take an s. */
 const n = plural;
+
+/** Why text was not measured, in the words the Text contrast line gives each reason. */
+const NOT_MEASURED: Readonly<Record<Exclude<SkipReason, "visibility-not-known">, string>> = {
+  "data-dependent": "colour from the data",
+  "theme-not-read": "theme file not read",
+  "file-not-read": "report file not read",
+  "not-set": "colour not set",
+  "other-form": "colour form not read",
+  image: "image behind",
+  overlap: "visual behind",
+  "on-data": "label on the data",
+  "size-unknown": "size not known",
+  "default-not-known": "default colour not known",
+};
+
+/**
+ * How much of the report's text was measured, so a quiet run never reads as a pass (#182's spec,
+ * section 9). The unit is a text element of a visual, as a contrast finding groups them: measured
+ * when any instance of it was, below the threshold when a measured instance falls short, else not
+ * measured, by its first reason. Text whose visibility the files do not settle is counted apart,
+ * so text that may not be shown never reads as unmeasured text. None for a report with no text.
+ */
+function contrastFact(report: Report): Fact | undefined {
+  const { measured, skipped } = measureReport(report);
+  const keyOf = (x: {
+    page: { id: string };
+    visual: { id: string };
+    kind: string;
+    object: string;
+  }) => `${x.page.id}/${x.visual.id}/${x.kind}/${x.object}`;
+  const below = new Set<string>();
+  const done = new Set<string>();
+  for (const m of measured) {
+    done.add(keyOf(m));
+    if (m.ratio < m.required) below.add(keyOf(m));
+  }
+  const reasons = new Map<string, string>();
+  let visibility = 0;
+  for (const s of skipped) {
+    const key = keyOf(s);
+    if (done.has(key) || reasons.has(key)) continue;
+    if (s.why === "visibility-not-known") visibility++;
+    else reasons.set(key, s.why);
+  }
+  if (done.size + reasons.size + visibility === 0) return undefined;
+  const byReason = new Map<string, number>();
+  for (const why of reasons.values()) byReason.set(why, (byReason.get(why) ?? 0) + 1);
+  const ranked = [...byReason].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "en"));
+  const value =
+    `${done.size} measured, ${below.size} below the threshold` +
+    (reasons.size ? `, ${reasons.size} not measured` : "");
+  const parts = [
+    ...(ranked.length
+      ? [
+          `${ranked
+            .map(([why, k]) => `${k} ${NOT_MEASURED[why as keyof typeof NOT_MEASURED]}`)
+            .join(", ")}`,
+        ]
+      : []),
+    ...(visibility ? [`${visibility} more of unknown visibility`] : []),
+  ];
+  return {
+    layer: "report",
+    label: "Text contrast",
+    value,
+    ...(parts.length ? { detail: parts.join("; ") } : {}),
+    counts: {
+      measured: done.size,
+      below: below.size,
+      notMeasured: reasons.size,
+      ...Object.fromEntries(ranked),
+      visibilityNotKnown: visibility,
+    },
+  };
+}
 
 /** The report's facts; the project is there for a fact whose rule reads the model beside it. */
 function reportFacts(
@@ -305,6 +381,9 @@ function reportFacts(
         ? { layer: "report", label: "Mobile layouts", value: "unknown", detail: mobileUnknown }
         : { layer: "report", label: "Mobile layouts", value: "none" },
   );
+  const contrast = contrastFact(report);
+  if (contrast)
+    facts.push(withRule(contrast, contrast.counts?.below ? "LOW_TEXT_CONTRAST" : undefined));
   const sv = report.schemaVersions;
   const versions = [
     sv.report && `report ${sv.report}`,

@@ -16,6 +16,9 @@ and the SARIF rule indexes after the new rule's place; anything else would have 
 regression. A later change that adds a rule or a sample finding re-records the same way, with a
 dated line here.
 
+**Re-recorded again November 4, 2026,** for "Report at a glance"'s new Text contrast line (#182):
+the line, its JSON fact with its counts, and the wider value column it gives the text format.
+
 ## The cases
 
 Two inputs, each with seven options:

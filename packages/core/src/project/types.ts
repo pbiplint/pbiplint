@@ -42,4 +42,6 @@ export interface Fact {
   detail?: string;
   /** The rule that checks this fact, when the run has that rule; the site links the fact to it. */
   ruleId?: string;
+  /** The numbers behind the line, by name, for a reader that wants them as data. */
+  counts?: Readonly<Record<string, number>>;
 }

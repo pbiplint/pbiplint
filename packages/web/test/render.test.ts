@@ -473,6 +473,7 @@ describe("renderResults", () => {
       "Report measures",
       "Slicers",
       "Mobile layouts",
+      "Text contrast",
       "Schema versions",
       "Model",
     ]);
@@ -566,6 +567,12 @@ describe("renderResults", () => {
         link: "fact flag #rule-slicer-selection-saved",
       },
       { label: "Mobile layouts", value: "none", detail: undefined, link: undefined },
+      {
+        label: "Text contrast",
+        value: "1 measured, 1 below the threshold, 237 not measured",
+        detail: "235 theme file not read, 2 colour not set",
+        link: "fact flag #rule-low-text-contrast",
+      },
       {
         label: "Schema versions",
         value: "report 3.2.0, page 2.1.0, visual 2.8.0",

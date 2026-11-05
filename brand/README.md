@@ -36,6 +36,9 @@ needed, use `pbiplint-logo-square.svg`.
 | Secondary text (banner subtitle) | `#A9B4C7` |
 
 The site uses the same values as custom properties at the top of `packages/web/src/styles.css`.
+For a reader whose system is set to light, the site has a light palette in the same file: a light
+canvas, with darker steps of the blue and the teal for text and marks, since the brand values are
+too pale to read on it. The favicon keeps its dark square there too.
 
 The faint constellation of lines and dots behind the banners belongs to the banners only.
 

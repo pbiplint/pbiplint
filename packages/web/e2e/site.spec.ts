@@ -196,22 +196,51 @@ test("a control character an example needs reaches the page's text, so a copy of
   expect(await fires.textContent()).toContain("column 'Order\u0001ID'");
 });
 
-test("no page template has an accessibility violation", async ({ page }) => {
-  for (const path of PAGES) {
-    await page.goto(path);
-    expect(await violations(page), path).toEqual([]);
-  }
-});
+// Every page template is scanned in both themes, the site following the reader's system setting
+// (#223). One test per page and theme: an axe scan takes a few seconds in Firefox, so the whole list
+// in one test ran up against the 30 second limit on CI, and both themes in one would double it.
+for (const colorScheme of ["dark", "light"] as const) {
+  test.describe(`in the ${colorScheme} theme`, () => {
+    test.use({ colorScheme });
 
-test("the home page has no accessibility violation after a run with a group open", async ({
-  page,
-}) => {
-  await page.getByRole("button", { name: "Try the sample project" }).click();
-  await expect(page.locator("#results")).toBeVisible();
-  // The sample has its report, so the scan covers the facts panel too.
-  await expect(page.locator("#results section.facts")).toBeVisible();
-  await page.locator("#results .group").first().locator("summary").click();
-  expect(await violations(page)).toEqual([]);
+    for (const path of PAGES) {
+      test(`${path} has no accessibility violation`, async ({ page }) => {
+        await page.goto(path);
+        expect(await violations(page)).toEqual([]);
+      });
+    }
+
+    test("the home page has no accessibility violation after a run with a group open", async ({
+      page,
+    }) => {
+      await page.getByRole("button", { name: "Try the sample project" }).click();
+      await expect(page.locator("#results")).toBeVisible();
+      // The sample has its report, so the scan covers the facts panel too.
+      await expect(page.locator("#results section.facts")).toBeVisible();
+      await page.locator("#results .group").first().locator("summary").click();
+      expect(await violations(page)).toEqual([]);
+    });
+  });
+}
+
+test("the site follows the system setting", async ({ page }) => {
+  // The canvas of each theme, and the color-scheme that paints the browser's own controls. No
+  // "no-preference" case: Chromium and Firefox report light for it, as Media Queries 5 says.
+  const expected = {
+    light: { background: "rgb(247, 249, 252)", scheme: "light" },
+    dark: { background: "rgb(10, 14, 26)", scheme: "dark" },
+  } as const;
+  for (const path of ["/", "/privacy/"]) {
+    await page.goto(path);
+    for (const [colorScheme, want] of Object.entries(expected)) {
+      await page.emulateMedia({ colorScheme: colorScheme as keyof typeof expected });
+      const seen = await page.evaluate(() => {
+        const style = getComputedStyle(document.documentElement);
+        return { background: style.backgroundColor, scheme: style.colorScheme };
+      });
+      expect(seen, `${path} with ${colorScheme}`).toEqual(want);
+    }
+  }
 });
 
 test("no page scrolls sideways at 320 CSS pixels", async ({ page }) => {

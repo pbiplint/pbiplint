@@ -41,7 +41,7 @@
   --container: 1080px;
   color-scheme: dark;
 }
-/* The light theme, for a reader whose system is set to light; everyone else keeps dark. CSS only,
+/* The light theme, for a reader whose system is set to light; dark stays the default. CSS only,
    so nothing is stored and no script runs. The brand's teal and blue are too pale for text on a
    light page, so text and marks use darker steps of the same hues; a "soft" token is the readable
    step, which on a light page is the darker one. The favicon keeps its dark tile. */

@@ -15,7 +15,7 @@
 - The site stores nothing in the browser and adds no script. The privacy page's Promise and its check stay word for word. `check-site` (run by the build) passes.
 - Text at least 4.5:1 ([WCAG 2.2, 1.4.3 Contrast (Minimum)](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html)) and graphics at least 3:1 ([1.4.11 Non-text Contrast](https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html)) against their background, in both palettes, checked by the tests. Cite only WCAG 2.2 and its Understanding pages.
 - The light palette uses darker steps of the brand's own hues for text and marks.
-- No-preference keeps dark: only `prefers-color-scheme: light` switches.
+- Dark stays the default: only `prefers-color-scheme: light` switches.
 - The favicon keeps its dark tile, and `favicon.svg` is not edited. No light logo, banners, or profile picture.
 - No new dependency. Core is untouched.
 - No em dashes. "the Promise" with a capital P.
@@ -59,7 +59,7 @@ New tokens (Task 1), dark value first, light second:
 
 ## Review Focus
 
-- A reader with no preference set (`no-preference`) gets dark, as today. Pinned by Task 2's system-setting test.
+- A browser that does not support `prefers-color-scheme` gets dark, as today: dark is the default and only a light setting switches. (Current Chromium and Firefox report `light` when no preference is set, as Media Queries 5 says, so `no-preference` is not tested.) Pinned by Task 1's one-media-query test.
 - A badge or tag sits on `--surface-1` inside a group and on `--canvas` on a rule page: both backgrounds are in Task 1's tables.
 - The facts panel's text sits on a teal tint over the canvas, not on the canvas: Task 1 composites the tint before measuring.
 - A hard-coded colour added later would skip the light palette: Task 1's test fails on any hex or `rgba()` outside the token blocks and the print block.
@@ -84,7 +84,7 @@ Change the existing `contrast` helper to take a scheme and resolve through `pale
 it("gives the light theme a value for colour tokens only, and only tokens the dark theme has", ...)
   // light block's selectors are exactly ":root"; each name in it exists in the dark :root
 it("switches color-scheme with the theme", ...)
-  // dark :root has `color-scheme: dark`; light block has `color-scheme: light`; no-preference is not named
+  // dark :root has `color-scheme: dark`; light block has `color-scheme: light`; `prefers-color-scheme` appears once
 it("writes every colour as a token, outside print", ...)
   // css with the :root block, the light block, and @media print removed has no /#[0-9a-f]{3,8}\b/i and no /rgba?\(/
 it.each(SCHEMES)("meets 4.5:1 for text in the %s theme", ...)
@@ -129,7 +129,7 @@ The canvas row stays "every background" for the brand files; one sentence after 
 
 - Replace `no page template has an accessibility violation` with one test per page and scheme, inside `for (const colorScheme of ["dark", "light"] as const)` and a `test.describe` that calls `test.use({ colorScheme })`: named `` `${path} has no accessibility violation in ${colorScheme}` ``. Each test takes a few seconds, so none nears the 30 s default, and `fullyParallel` spreads them across workers.
 - Run `the home page has no accessibility violation after a run with a group open` in both schemes the same way.
-- New: `the site follows the system setting`: `page.emulateMedia({ colorScheme })` for `light`, `dark`, and `no-preference`, on `/` and `/privacy/`; `getComputedStyle(document.documentElement)` gives `backgroundColor` `rgb(247, 249, 252)` for light and `rgb(10, 14, 26)` for the other two, and `colorScheme` `light` or `dark` to match.
+- New: `the site follows the system setting`: `page.emulateMedia({ colorScheme })` for `light` and `dark`, on `/` and `/privacy/`; `getComputedStyle(document.documentElement)` gives `backgroundColor` `rgb(247, 249, 252)` for light and `rgb(10, 14, 26)` for dark, and `colorScheme` `light` or `dark` to match.
 
 - [ ] **Step 2: Run**
 

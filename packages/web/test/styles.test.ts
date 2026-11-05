@@ -162,11 +162,11 @@ describe("styles.css", () => {
         .trim(),
     ).toBe("");
   });
-  it("switches the browser's own controls with the theme, and keeps dark when there is no preference", () => {
+  it("switches the browser's own controls with the theme, and only a light setting switches it", () => {
     // color-scheme paints form controls, the textarea, and scrollbars.
     expect(rule(":root")).toMatch(/color-scheme: dark;/);
     expect(light![1]).toMatch(/color-scheme: light;/);
-    // Only a light setting switches: no-preference, and any browser that does not say, keep dark.
+    // Only a light setting switches, so a browser that does not support the query keeps dark.
     expect(css.match(/prefers-color-scheme/g)).toHaveLength(1);
   });
   it("writes every colour as a token, so both themes reach it", () => {

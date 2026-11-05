@@ -32,10 +32,10 @@ This site has a light theme and a dark one, and shows the one your device is set
 
 These browsers have a setting of their own that overrides your device's, so check it if the site shows the theme you did not expect:
 
-- **Chrome on a computer:** on a New Tab page, select Customize Chrome, then under Appearance, Light, Dark, or Device ([Google's steps](https://support.google.com/chrome/answer/9275525?co=GENIE.Platform%3DDesktop)).
+- **Chrome on a computer:** at the bottom right of a New Tab page, select Customize Chrome, then under Appearance, Light, Dark, or Device ([Google's steps](https://support.google.com/chrome/answer/9275525?co=GENIE.Platform%3DDesktop)).
 - **Firefox on a computer:** Settings > General, then under Website appearance, Light, Dark, or System ([Mozilla's steps](https://support.mozilla.org/kb/change-website-appearance-settings-firefox)).
 
-Safari has no setting of its own: it follows your Mac, iPhone, or iPad. A dark-mode browser extension makes every site dark, this one included, whatever the settings above say.
+Safari has no setting of its own: it follows your Mac, iPhone, or iPad. A dark-mode browser extension can make every site dark, this one included, whatever the settings above say.
 
 The site has no button to switch themes. A button would have to store your choice in your browser to remember it from one page to the next, and [the Promise](/privacy/#the-promise) says "The site stores nothing in your browser."
 

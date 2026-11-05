@@ -1,7 +1,5 @@
 # Theme Help Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-
 **Goal:** The site says, once, that its light or dark theme follows the reader's device, and how to change it: a "Light and dark" section on the About page, and a line in every page's footer that links to it.
 
 **Architecture:** Content and markup only. A section in `packages/web/content/about.md` with a fixed anchor, `light-and-dark`; one footer line in the three places a footer is written (`FOOTER` in `packages/web/src/build/pages.ts`, `packages/web/index.html`, `packages/web/404.html`); and a build check in `checkBuild` (`packages/web/src/build/check-site.ts`) that every page of both builds, pbiplint.com's and the self-hosted copy, carries the footer link and that the About page carries the anchor it points to. No script, no style, nothing stored.

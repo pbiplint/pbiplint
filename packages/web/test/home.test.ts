@@ -547,6 +547,7 @@ describe("home page", () => {
       '.site-header .nav-row a[href="/privacy/"]',
       '.site-header .nav-row a[href="/about/"]',
       '.site-footer a[href="/privacy/"]',
+      '.site-footer a[href="/about/#light-and-dark"]',
       '.hint a[href="/cli/"]',
       // The Menu button's copy of the links, for a narrow screen, behaves the same.
       '.site-header .nav-panel a[href="/rules/"]',

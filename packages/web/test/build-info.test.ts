@@ -8,7 +8,7 @@ import {
   VERSION_MARKER,
   versionPlugin,
 } from "../src/build/build-info.js";
-import { page } from "../src/build/pages.js";
+import { page, THEME_HELP_PATH } from "../src/build/pages.js";
 
 const SHA = "6aa6f4e552bfedc660779e129fc4283cf1336e68";
 
@@ -83,6 +83,23 @@ describe("the footer marker", () => {
     expect(footerOf(page({ title: "t", description: "d", path: "/x/", main: "" }))).toContain(
       VERSION_MARKER,
     );
+  });
+});
+
+describe("the footer's line on light and dark", () => {
+  it("is in every page's footer, word for word, and links to the About page's section", () => {
+    // The hand-written pages wrap their lines, so compare with the whitespace at each tag dropped.
+    const fold = (html: string): string =>
+      html.replace(/\s+/g, " ").replace(/\s*(<[^>]*>)\s*/g, "$1");
+    const footerOf = (html: string): string =>
+      fold(/<footer[\s\S]*<\/footer>/.exec(html)?.[0] ?? "");
+    const line = fold(
+      `<p>Light or dark follows your device's setting: <a href="${THEME_HELP_PATH}">how to change it</a>.</p>`,
+    );
+    expect(THEME_HELP_PATH).toBe("/about/#light-and-dark");
+    for (const file of ["../index.html", "../404.html"])
+      expect(footerOf(readFileSync(new URL(file, import.meta.url), "utf8")), file).toContain(line);
+    expect(footerOf(page({ title: "t", description: "d", path: "/x/", main: "" }))).toContain(line);
   });
 });
 

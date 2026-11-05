@@ -177,7 +177,7 @@ describe("styles.css", () => {
       .replace(/@media print \{[\s\S]*$/, "")
       // A comment's issue number, such as #237, is not a colour.
       .replace(/\/\*[\s\S]*?\*\//g, "");
-    expect(outside.match(/#[0-9a-f]{3,8}\b|rgba?\(/gi)).toBeNull();
+    expect(outside.match(/#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?|color-mix)\(/gi)).toBeNull();
     // Nothing after the print block, so the cut above drops only print: the block's braces close
     // at the end of the file and nowhere before it.
     const print = css.slice(css.indexOf("@media print"));

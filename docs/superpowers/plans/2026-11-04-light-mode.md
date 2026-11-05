@@ -22,7 +22,7 @@
 
 ## The light palette
 
-Values chosen so every pair in Task 1's tables clears its bar (worst text pair: `--fg-2` on `--surface-3`, 6.10:1; worst graphic pair: `--brand-teal` on `--surface-1`, 4.80:1).
+Values chosen so every pair in Task 1's tables clears its bar (worst text pair: `--warning` on the facts panel's tint, 5.15:1; worst graphic pair: `--fg-3` on `--surface-1`, 4.51:1).
 
 | Token | Dark (today) | Light |
 |---|---|---|

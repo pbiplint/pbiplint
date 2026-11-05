@@ -61,6 +61,29 @@ test("every page names the version in its footer, and pbiplint.com's links to no
   }
 });
 
+test("every page's footer says light or dark follows the device, and the link reaches the About page's section", async ({
+  page,
+}) => {
+  for (const path of PAGES) {
+    await page.goto(path);
+    const line = page.locator(".site-footer p", { hasText: "Light or dark" });
+    await expect(line, path).toHaveText(
+      "Light or dark follows your device's setting: how to change it.",
+    );
+    await expect(line.getByRole("link", { name: "how to change it" }), path).toHaveAttribute(
+      "href",
+      "/about/#light-and-dark",
+    );
+  }
+  // Followed from a page's footer, the link lands on the section with its heading in view.
+  await page.goto("/rules/");
+  await page.locator(".site-footer").getByRole("link", { name: "how to change it" }).click();
+  await expect(page).toHaveURL(/\/about\/#light-and-dark$/);
+  const heading = page.locator("#light-and-dark");
+  await expect(heading).toHaveText("Light and dark");
+  await expect(heading).toBeInViewport();
+});
+
 test.describe("the /latest/ page", () => {
   const answer = (page: import("@playwright/test").Page) => page.locator("#latest-answer");
 
@@ -158,6 +181,7 @@ test("a section of a rule page, the rules index, the About page, and the Privacy
     ["/rules/hide-foreign-keys/#how-to-fix-it", "how-to-fix-it", "How to fix it"],
     ["/rules/#formatting", "formatting", "Formatting"],
     ["/about/#verify", "verify", "Privacy"],
+    ["/about/#light-and-dark", "light-and-dark", "Light and dark"],
     ["/privacy/#check", "check", "How to check it"],
     ["/privacy/#in-the-github-action", "in-the-github-action", "In your pipelines"],
   ]) {

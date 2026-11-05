@@ -21,6 +21,24 @@ pbiplint is made by McKinley Consulting, the makers of [The Data Practitioner](h
 
 The analysis runs in your browser, and nothing behind this site receives what you lint. [The pbiplint Privacy Promise](/privacy/) says what that covers on the site, on the command line, and in your pipelines, and how to check it for yourself. To run a verified copy of the site inside your own network instead, see [Host pbiplint yourself](/self-host/).
 
+<h2 id="light-and-dark">Light and dark</h2>
+
+This site has a light theme and a dark one, and shows the one your device is set to. To switch, change the setting on your device:
+
+- **Mac:** System Settings > Appearance, then Light, Dark, or Auto ([Apple's steps](https://support.apple.com/guide/mac-help/use-a-light-or-dark-appearance-mchl52e1c2d2/mac)).
+- **Windows:** Settings > Personalization > Colors, then under "Choose your mode", Light or Dark ([Microsoft's steps](https://support.microsoft.com/windows/change-colors-in-windows-d26ef4d6-819a-581c-1581-493cfcc005fe)).
+- **iPhone and iPad:** Settings > Appearance, then Light or Dark; in iOS 26 and earlier, the setting is under Display & Brightness ([Apple's steps](https://support.apple.com/108350)).
+- **Android:** Settings > Display, then turn Dark theme on or off ([Google's steps](https://support.google.com/android/answer/9730472)).
+
+These browsers have a setting of their own that overrides your device's, so check it if the site shows the theme you did not expect:
+
+- **Chrome on a computer:** on a New Tab page, select Customize Chrome, then under Appearance, Light, Dark, or Device ([Google's steps](https://support.google.com/chrome/answer/9275525?co=GENIE.Platform%3DDesktop)).
+- **Firefox on a computer:** Settings > General, then under Website appearance, Light, Dark, or System ([Mozilla's steps](https://support.mozilla.org/kb/change-website-appearance-settings-firefox)).
+
+Safari has no setting of its own: it follows your Mac, iPhone, or iPad. A dark-mode browser extension makes every site dark, this one included, whatever the settings above say.
+
+The site has no button to switch themes. A button would have to store your choice in your browser to remember it from one page to the next, and [the Promise](/privacy/#the-promise) says "The site stores nothing in your browser."
+
 ## Known limits in the browser
 
 pbiplint reads one semantic model and one report per run. A folder that holds two semantic models saved as TMDL, or two reports, is refused with their names; drop the one you want, or a folder that holds one of each. A folder that holds projects in folders below it is linted as the one project there, with a notice naming it, or refused with a list of them when it holds more than one; drop one at a time.

@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import type { Plugin } from "vite";
 import { GERMAN_PROBE } from "../../../core/build/m-parser-build.mjs";
-import { CONTROL_CHARACTER } from "./pages.js";
+import { CONTROL_CHARACTER, THEME_HELP_ID, THEME_HELP_PATH } from "./pages.js";
 
 export interface SiteReport {
   files: number;
@@ -235,7 +235,8 @@ const LATEST_LINK = 'href="https://pbiplint.com/latest/#';
 /**
  * Holds the two builds apart: the public build carries /latest/, the sitemap, and CNAME, and no
  * page links to /latest/ the way a self-hosted copy's footer does; the self-hosting build carries
- * none of those three, keeps robots out, and has that link on every page. Both show the version.
+ * none of those three, keeps robots out, and has that link on every page. Both show the version,
+ * and both link every footer to the About page's Light and dark section, which must be there.
  */
 export function checkBuild(dir: string, kind: BuildKind): string[] {
   const shape: string[] = [];
@@ -253,10 +254,17 @@ export function checkBuild(dir: string, kind: BuildKind): string[] {
     if (!/^Disallow: \/$/m.test(robots))
       shape.push("self-hosting build: robots.txt does not say Disallow: /");
   }
+  const about = join(dir, "about", "index.html");
+  if (!(existsSync(about) && readFileSync(about, "utf8").includes(`id="${THEME_HELP_ID}"`)))
+    shape.push(
+      `${self ? "self-hosting" : "public"} build: about/index.html has no id="${THEME_HELP_ID}", the section every footer links to`,
+    );
   for (const file of walk(dir).sort()) {
     const rel = relative(dir, file).split("\\").join("/");
     if (!rel.endsWith(".html")) continue;
     const footer = /<footer[\s\S]*<\/footer>/.exec(readFileSync(file, "utf8"))?.[0] ?? "";
+    if (!footer.includes(`href="${THEME_HELP_PATH}"`))
+      pages.push(`${rel}: no link to the Light and dark section in the footer`);
     if (!footer.includes('class="site-version"'))
       pages.push(`${rel}: no version line in the footer`);
     else if (self && !footer.includes(LATEST_LINK))

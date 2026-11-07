@@ -21,9 +21,6 @@
       "bredeespelid/PBIP_SemLin/docs/bpa/semantic model/BPARules-PowerBI.json": {
         "APPLY_FORMAT_STRING_MEASURES": "A measure's data type is not saved in the project's files, so pbiplint leaves the measure out of a rule that reads `DataType`; Tabular Editor works the type out from the measure's DAX."
       },
-      "data-goblin/power-bi-agentic-development/plugins/tabular-editor/skills/bpa-rules/examples/course-3-business-case-bpa-rules.json": {
-        "RULE10": "A measure's data type is not saved in the project's files, so pbiplint leaves the measure out of a rule that reads `DataType`; Tabular Editor works the type out from the measure's DAX."
-      },
       "eugenecp/fabcon2026-ai-ci-cd/Fabric2026-CI-CD-Complete-Package/scripts/.bpaRules.json": {
         "COL_HIDE_UNUSED": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
       },
@@ -61,9 +58,6 @@
       },
       "bredeespelid/PBIP_SemLin/docs/bpa/semantic model/BPARules-PowerBI.json": {
         "APPLY_FORMAT_STRING_MEASURES": []
-      },
-      "data-goblin/power-bi-agentic-development/plugins/tabular-editor/skills/bpa-rules/examples/course-3-business-case-bpa-rules.json": {
-        "RULE10": []
       },
       "eugenecp/fabcon2026-ai-ci-cd/Fabric2026-CI-CD-Complete-Package/scripts/.bpaRules.json": {
         "COL_HIDE_UNUSED": [

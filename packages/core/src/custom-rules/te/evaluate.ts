@@ -779,17 +779,47 @@ class Evaluator implements TeRuntime {
     return teEquals(l, r);
   }
 
+  /**
+   * `and` or `or` whose left side read a value the files leave unset. The answer is still known
+   * when the right side alone decides it (false for `and`, true for `or`), whatever the unset
+   * value is, so that is no guess. Otherwise the object stays out: unset again, even when the right
+   * side fails, since with the real left value .NET might never have evaluated it.
+   */
+  private afterUnsetLeft(e: TeExpr & { kind: "binary" }, env: Env<unknown>, decides: boolean) {
+    let r: boolean | null;
+    try {
+      r = this.logical(this.eval(e.right, env), e.spelling);
+    } catch (err) {
+      if (err instanceof TeUnset || err instanceof TeFailure) throw new TeUnset();
+      throw err;
+    }
+    if (r === decides) return decides;
+    throw new TeUnset();
+  }
+
   private binary(e: TeExpr & { kind: "binary" }, env: Env<unknown>): unknown {
     switch (e.op) {
       case "and": {
-        const l = this.logical(this.eval(e.left, env), e.spelling);
+        let l: boolean | null;
+        try {
+          l = this.logical(this.eval(e.left, env), e.spelling);
+        } catch (err) {
+          if (err instanceof TeUnset) return this.afterUnsetLeft(e, env, false);
+          throw err;
+        }
         if (l === false) return false;
         const r = this.logical(this.eval(e.right, env), e.spelling);
         if (r === false) return false;
         return l === null || r === null ? null : true;
       }
       case "or": {
-        const l = this.logical(this.eval(e.left, env), e.spelling);
+        let l: boolean | null;
+        try {
+          l = this.logical(this.eval(e.left, env), e.spelling);
+        } catch (err) {
+          if (err instanceof TeUnset) return this.afterUnsetLeft(e, env, true);
+          throw err;
+        }
         if (l === true) return true;
         const r = this.logical(this.eval(e.right, env), e.spelling);
         if (r === true) return true;

@@ -464,6 +464,25 @@ describe("evaluateTeRule: operators, methods, static members, conversions, enums
     expect(columns.kind === "findings" && columns.unset).toBe(1);
   });
 
+  it("decides and and or past an unset value when the other side alone settles the answer", () => {
+    const untyped = (expression: string) => outcome(expression, ["CalculatedColumn"]);
+    const settled = untyped('DataType == "String" or true');
+    expect(settled).toMatchObject({ kind: "findings", unset: 0 });
+    expect(settled.kind === "findings" && settled.objects.length).toBe(1);
+    expect(untyped('DataType == "String" and false')).toEqual({
+      kind: "findings",
+      objects: [],
+      unset: 0,
+    });
+    // The other side does not settle it, or fails: the object stays out and is counted.
+    expect(untyped('DataType == "String" or false')).toMatchObject({ unset: 1 });
+    expect(untyped('DataType == "String" and true')).toMatchObject({ unset: 1 });
+    expect(untyped('DataType == "String" or Convert.ToInt64("x") == 1')).toMatchObject({
+      unset: 1,
+    });
+    expect(untyped('true and DataType == "String"')).toMatchObject({ unset: 1 });
+  });
+
   it("covers every entry of LIBRARY with a case written for the test", () => {
     const text = [...TRUE, ...FALSE, ...FAILS.map((f) => f[0]), ...OTHER_ENUMS.map((x) => x[0])]
       .map((c) => (typeof c === "string" ? c : c[0]))

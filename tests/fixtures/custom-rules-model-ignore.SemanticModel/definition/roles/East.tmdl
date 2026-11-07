@@ -1,0 +1,4 @@
+role East
+	modelPermission: read
+
+	tablePermission Customers = 'Customers'[Region] = "East"

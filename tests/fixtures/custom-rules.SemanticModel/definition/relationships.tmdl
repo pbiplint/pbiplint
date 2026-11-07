@@ -1,0 +1,19 @@
+relationship 7c1e0b20-0000-4000-8000-000000000001
+	fromColumn: Orders.'Customer Key'
+	toColumn: Customers.'Customer Key'
+
+relationship 7c1e0b20-0000-4000-8000-000000000002
+	fromColumn: Orders.'Product Key'
+	toColumn: Products.'Product Key'
+
+relationship 7c1e0b20-0000-4000-8000-000000000003
+	isActive: false
+	fromColumn: Orders.'Ship Customer Key'
+	toColumn: Customers.'Customer Key'
+
+	annotation BestPracticeAnalyzer_IgnoreRules = {"RuleIDs":["INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED","PROBE_IGNORE_CUSTOM"]}
+
+relationship 7c1e0b20-0000-4000-8000-000000000004
+	isActive: false
+	fromColumn: Orders.'Bill Customer Key'
+	toColumn: Customers.'Customer Key'

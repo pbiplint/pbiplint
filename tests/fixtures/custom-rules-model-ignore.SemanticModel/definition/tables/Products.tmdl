@@ -1,0 +1,27 @@
+table Products
+
+	column 'Product Key'
+		dataType: int64
+		isHidden
+		isKey
+		summarizeBy: none
+		sourceColumn: Product Key
+
+	column 'Product Name'
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Product Name
+
+	column 'List Price'
+		dataType: decimal
+		formatString: #,0.00
+		summarizeBy: none
+		sourceColumn: List Price
+
+	partition Products = m
+		mode: import
+		source =
+				let
+				    Source = #"Snowflake Products"
+				in
+				    Source

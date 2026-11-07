@@ -4,7 +4,13 @@
 //   node scripts/te-expectations.mjs <fixtureDir> <out.json> --rules <BPARules.json>
 //   node scripts/te-expectations.mjs <fixtureDir> <out.json> --built-in
 //   node scripts/te-expectations.mjs <fixtureDir> <out.json> --survey <files.json>
+//   node scripts/te-expectations.mjs <fixtureDir> <out.json> --probes <dir>
 //   node scripts/te-expectations.mjs <fixtureDir> <out.json> --from <te-output.json> [--oracle <text>]
+//
+// --probes runs each rule file in <dir> (pbiplint's own probe rules, tests/rules/te-probes/), one
+// te run each, into tests/expectations/custom-rules/probes/<fixture>.json: per file its sha256 and
+// its findings, rule errors, te's severity label for each rule that found anything, and the rules
+// that found nothing (quiet), or te's error when it refused the file.
 //
 // --rules runs Microsoft's ruleset, the parity oracle for the ported rules
 // (tests/expectations/<fixture>.json). --built-in runs Tabular Editor 3's built-in rules
@@ -12,8 +18,8 @@
 // fetched at its commit and checked against its sha256 (tests/expectations/survey/<fixture>.json);
 // a file GitHub no longer has (404) is recorded as unavailable, with the capture's date.
 // --from converts a saved `te bpa run` JSON as --rules would. A rule te cannot evaluate is printed
-// and recorded under ruleErrors, never as a finding. Keeps skipRules, deviations, and ours from an
-// existing <out.json>. Tabular Editor is a development-time oracle only; see docs/RELEASING.md.
+// and recorded under ruleErrors, never as a finding. Keeps skipRules, deviations, ours, and custom
+// (custom rules' deviations, keyed by rule file id, then rule id) from an existing <out.json>. Tabular Editor is a development-time oracle only; see docs/RELEASING.md.
 // Never run in CI.
 import { Buffer } from "node:buffer";
 import { spawnSync } from "node:child_process";
@@ -21,6 +27,7 @@ import { createHash } from "node:crypto";
 import {
   existsSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   realpathSync,
   rmSync,
@@ -89,6 +96,58 @@ export function surveyResult(run) {
   return convertFindings(teJson(run.stdout));
 }
 
+/**
+ * The rule ids in a rule file, in file order, read as Tabular Editor reads the file: a byte order
+ * mark and `//` and `/* *\/` comments allowed, an array or an object with a `rules` array, keys in
+ * any case, and a number id written as its decimal string.
+ */
+export function ruleIdsOf(text) {
+  let json = "";
+  let inString = false;
+  for (let i = text.charCodeAt(0) === 0xfeff ? 1 : 0; i < text.length; i++) {
+    const c = text[i];
+    if (inString) {
+      json += c;
+      if (c === "\\") json += text[++i];
+      else if (c === '"') inString = false;
+    } else if (c === '"') {
+      inString = true;
+      json += c;
+    } else if (text.startsWith("//", i)) {
+      while (i < text.length && text[i] !== "\n") i++;
+      json += "\n";
+    } else if (text.startsWith("/*", i)) {
+      const end = text.indexOf("*/", i + 2);
+      if (end < 0) throw new Error("unterminated comment");
+      i = end + 1;
+    } else json += c;
+  }
+  const parsed = JSON.parse(json);
+  const rules = Array.isArray(parsed)
+    ? parsed
+    : Object.entries(parsed).find(([k]) => k.toLowerCase() === "rules")?.[1];
+  if (!Array.isArray(rules)) throw new Error("not an array or an object with a rules array");
+  return rules.map((rule) => {
+    const id = Object.entries(rule).find(([k]) => k.toLowerCase() === "id")?.[1];
+    return String(id);
+  });
+}
+
+/**
+ * A probe file's result: `surveyResult`'s findings and rule errors, te's severity label for each
+ * rule that found anything, and the ids in `ruleIds` that neither found anything nor failed; or
+ * te's error when it ran none.
+ */
+export function probeResult(run, ruleIds) {
+  if (!run.stdout.includes("{")) return { error: teError(run.stderr) };
+  const json = teJson(run.stdout);
+  const { findings, ruleErrors } = convertFindings(json);
+  const severities = {};
+  for (const f of json.findings) if (f.objectType !== "BpaRule") severities[f.code] = f.severity;
+  const quiet = [...new Set(ruleIds)].filter((id) => !(id in findings) && !(id in ruleErrors));
+  return { findings, ruleErrors, severities: sortedKeys(severities), quiet };
+}
+
 /** Checks that `data` has the sha256 `want`, or throws naming the file (`label`) and both sums. */
 export function checkSha256(data, want, label) {
   const got = sha256(data);
@@ -147,7 +206,9 @@ async function main() {
     const i = rest.indexOf(name);
     return i >= 0 ? rest[i + 1] : undefined;
   };
-  const modes = ["--from", "--rules", "--built-in", "--survey"].filter((m) => rest.includes(m));
+  const modes = ["--from", "--rules", "--built-in", "--survey", "--probes"].filter((m) =>
+    rest.includes(m),
+  );
   if (
     !fixtureDir ||
     !outPath ||
@@ -155,7 +216,7 @@ async function main() {
     (modes[0] !== "--built-in" && !opt(modes[0]))
   ) {
     console.error(
-      "usage: te-expectations <fixtureDir> <out.json> (--rules <BPARules.json> | --built-in | --survey <files.json> | --from <te.json> [--oracle <text>])",
+      "usage: te-expectations <fixtureDir> <out.json> (--rules <BPARules.json> | --built-in | --survey <files.json> | --probes <dir> | --from <te.json> [--oracle <text>])",
     );
     process.exit(2);
   }
@@ -169,6 +230,7 @@ async function main() {
   const kept = {
     deviations: previous.deviations ?? {},
     ours: previous.ours ?? {},
+    ...(previous.custom && { custom: previous.custom }),
   };
   const version = mode === "--from" ? undefined : parseTeVersion(te(["--version"]).stdout);
   let out;
@@ -208,6 +270,25 @@ async function main() {
       findings,
     };
     summary = `${Object.values(findings).flat().length} findings across ${Object.keys(findings).length} rules`;
+  } else if (mode === "--probes") {
+    const dir = opt("--probes");
+    const results = {};
+    for (const name of readdirSync(dir)
+      .filter((f) => f.endsWith(".json"))
+      .sort()) {
+      const path = join(dir, name);
+      const body = readFileSync(path);
+      const result = probeResult(bpaRun(definition, path), ruleIdsOf(body.toString("utf8")));
+      if (result.error) console.error(`${name}: Tabular Editor ran no rules: ${result.error}`);
+      results[name] = { sha256: sha256(body), ...result };
+    }
+    out = {
+      fixture,
+      oracle: `Tabular Editor CLI ${version}, each probe rule file in ${relative(process.cwd(), dir).split("\\").join("/")}`,
+      captured,
+      results,
+    };
+    summary = `${Object.keys(results).length} probe files`;
   } else {
     const listPath = opt("--survey");
     const { files } = JSON.parse(readFileSync(listPath, "utf8"));

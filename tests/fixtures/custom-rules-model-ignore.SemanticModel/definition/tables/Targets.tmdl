@@ -1,0 +1,18 @@
+table Targets
+
+	column Region
+		dataType: string
+		isNameInferred
+		summarizeBy: none
+		sourceColumn: [Region]
+
+	column Target
+		dataType: int64
+		isNameInferred
+		formatString: #,0
+		summarizeBy: sum
+		sourceColumn: [Target]
+
+	partition Targets = calculated
+		mode: import
+		source = DATATABLE("Region", STRING, "Target", INTEGER, {{"East", 1000}, {"West", 800}})

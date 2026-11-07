@@ -9,6 +9,8 @@ import {
   checkSha256,
   convertFindings,
   parseTeVersion,
+  probeResult,
+  ruleIdsOf,
   surveyResult,
   teError,
   teJson,
@@ -114,6 +116,37 @@ describe("teError and surveyResult", () => {
   });
 });
 
+describe("ruleIdsOf and probeResult", () => {
+  it("reads rule ids from a file with a byte order mark, comments, a rules wrapper, lowercase keys, and an integer id", () => {
+    const text =
+      '﻿// a comment\n{ /* wrapped */ "rules": [ { "id": "A" }, { "ID": 42 } // "ID": "no"\n ] }';
+    expect(ruleIdsOf(text)).toEqual(["A", "42"]);
+  });
+  it("keeps // inside a string", () => {
+    expect(ruleIdsOf('[{ "ID": "A//B" }]')).toEqual(["A//B"]);
+  });
+  it("gives each rule's findings, errors, te's severity label, and the rules that found nothing", () => {
+    const stdout = JSON.stringify({
+      findings: [
+        { ...finding("A", "Model", "Model"), severity: "info" },
+        { ...finding("B", "'T'", "Table"), severity: "error" },
+        { ...finding("E", "E", "BpaRule"), message: "Boom." },
+      ],
+    });
+    expect(probeResult({ status: 1, stdout, stderr: "" }, ["A", "B", "E", "Q"])).toEqual({
+      findings: { A: ["Model"], B: ["'T'"] },
+      ruleErrors: { E: "Boom." },
+      severities: { A: "info", B: "error" },
+      quiet: ["Q"],
+    });
+  });
+  it("gives a probe file te refused as an error", () => {
+    expect(probeResult({ status: 1, stdout: "", stderr: unreadable }, ["A"])).toEqual({
+      error: "Could not parse BPA rules. Expected JSON array or object with 'rules' array.",
+    });
+  });
+});
+
 describe("checkSha256", () => {
   // sha256 of the three bytes "foo"
   const foo = "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae";
@@ -132,7 +165,13 @@ describe("the command line", () => {
     spawnSync(process.execPath, [script, ...args], { encoding: "utf8", ...(cwd && { cwd }) });
 
   it("refuses no mode, two modes, or a mode without its file, before it runs anything", () => {
-    for (const args of [[], ["--built-in", "--rules", "x.json"], ["--rules"], ["--survey"]]) {
+    for (const args of [
+      [],
+      ["--built-in", "--rules", "x.json"],
+      ["--rules"],
+      ["--survey"],
+      ["--probes"],
+    ]) {
       const r = run(["fixture", "out.json", ...args]);
       expect(r.status, args.join(" ")).toBe(2);
       expect(r.stderr).toMatch(/^usage: te-expectations/);
@@ -179,6 +218,23 @@ describe("the command line", () => {
       ours: { B: [] },
       findings: { B: ["'T'[b]"] },
     });
+  });
+  it("keeps a custom key of survey deviations from an existing file", () => {
+    const dir = tempDir("te-expectations");
+    const out = join(dir, "zoo.json");
+    const saved = join(dir, "te.json");
+    const custom = {
+      deviations: { "o/r/f.json": { R: "Why." } },
+      ours: { "o/r/f.json": { R: [] } },
+    };
+    writeFileSync(
+      out,
+      JSON.stringify({ oracle: "O", deviations: {}, ours: {}, custom, findings: {} }),
+    );
+    writeFileSync(saved, JSON.stringify({ findings: [] }));
+    const r = run(["fixture", out, "--from", saved], dir);
+    expect(r.status, r.stderr).toBe(0);
+    expect(JSON.parse(readFileSync(out, "utf8")).custom).toEqual(custom);
   });
   it("names te 0.7.1.2 and Microsoft's ruleset when --from has no oracle to keep", () => {
     const dir = tempDir("te-expectations");

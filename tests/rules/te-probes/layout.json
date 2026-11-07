@@ -1,0 +1,24 @@
+﻿// A probe file in the layout two survey files use: comments, a rules wrapper, lowercase keys.
+{
+  /* the wrapper */
+  "rules": [
+    {
+      "id": "PROBE_LAYOUT_LOWERCASE",
+      "name": "lowercase keys",
+      "category": "Probe",
+      "severity": 2,
+      "scope": "Model",
+      "expression": "true",
+      "description": "Whether lowercase keys read."
+    },
+    {
+      "ID": 4242,
+      "Name": "integer id",
+      "Category": "Probe",
+      "Severity": 2,
+      "Scope": "Model",
+      "Expression": "true",
+      "Description": "Whether an integer ID reads, and how it is written."
+    } // trailing comment
+  ]
+}

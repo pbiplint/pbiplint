@@ -1,0 +1,19 @@
+[
+  {
+    "ID": "PROBE_NO_SCOPE",
+    "Name": "probe: no scope",
+    "Category": "Probe",
+    "Description": "A rule with no Scope.",
+    "Severity": 2,
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_NO_SCOPE_SIBLING",
+    "Name": "probe: no scope sibling",
+    "Category": "Probe",
+    "Description": "A good rule beside one with no scope: does it run.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "true"
+  }
+]

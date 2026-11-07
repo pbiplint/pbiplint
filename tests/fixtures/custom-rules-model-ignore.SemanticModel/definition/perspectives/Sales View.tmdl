@@ -1,0 +1,9 @@
+perspective 'Sales View'
+
+	perspectiveTable Orders
+
+		perspectiveMeasure 'Total Amount'
+
+	perspectiveTable Customers
+
+		perspectiveColumn 'Customer Name'

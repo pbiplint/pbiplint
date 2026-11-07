@@ -1,0 +1,11 @@
+cultureInfo fr-FR
+
+	translations
+		model Model
+			table Orders
+				caption: Commandes
+				measure 'Total Amount'
+					caption: Montant total
+			table Customers
+				column 'Customer Name'
+					caption: Nom du client

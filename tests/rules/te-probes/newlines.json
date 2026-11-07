@@ -1,0 +1,56 @@
+[
+  {
+    "ID": "PROBE_NEWLINE_BUILT",
+    "Name": "probe: newline built",
+    "Category": "Probe",
+    "Description": "Whether a newline can be built from its character code.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "(\"a\" + Convert.ToString(Convert.ToChar(10)) + \"b\").Length == 3"
+  },
+  {
+    "ID": "PROBE_REGEX_DOLLAR_FINAL_NEWLINE",
+    "Name": "probe: regex dollar final newline",
+    "Category": "Probe",
+    "Description": "Whether $ matches before a final newline.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "RegEx.IsMatch(\"ab\" + Convert.ToString(Convert.ToChar(10)), \"b$\")"
+  },
+  {
+    "ID": "PROBE_REGEX_DOLLAR_INNER_NEWLINE",
+    "Name": "probe: regex dollar inner newline",
+    "Category": "Probe",
+    "Description": "Whether $ matches before a newline that is not the last character.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "RegEx.IsMatch(\"ab\" + Convert.ToString(Convert.ToChar(10)) + \"c\", \"b$\")"
+  },
+  {
+    "ID": "PROBE_REGEX_DOT_NEWLINE",
+    "Name": "probe: regex dot newline",
+    "Category": "Probe",
+    "Description": "Whether . matches a newline.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "RegEx.IsMatch(\"a\" + Convert.ToString(Convert.ToChar(10)) + \"b\", \"a.b\")"
+  },
+  {
+    "ID": "PROBE_REGEX_CARET_AFTER_NEWLINE",
+    "Name": "probe: regex caret after newline",
+    "Category": "Probe",
+    "Description": "Whether ^ matches after a newline.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "RegEx.IsMatch(\"a\" + Convert.ToString(Convert.ToChar(10)) + \"b\", \"^b\")"
+  },
+  {
+    "ID": "PROBE_REGEX_SPACE_NEWLINE",
+    "Name": "probe: regex space newline",
+    "Category": "Probe",
+    "Description": "Whether \\s matches a newline.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "RegEx.IsMatch(\"a\" + Convert.ToString(Convert.ToChar(10)) + \"b\", \"a\\sb\")"
+  }
+]

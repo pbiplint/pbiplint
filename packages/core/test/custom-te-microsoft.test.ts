@@ -4,7 +4,7 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { runTeRules, STATISTICS_REASON } from "../src/custom-rules/te/index.js";
+import { runTeRules, STATISTICS_REASON, TOO_DEEP_REASON } from "../src/custom-rules/te/index.js";
 import { modelFrom } from "./helpers.js";
 import {
   MICROSOFT_FILE,
@@ -64,6 +64,34 @@ describe("runTeRules", () => {
       run.results[0]!.outcome.kind === "could-not-run" && run.results[0]!.outcome.reason,
     ).not.toBe("");
     expect(run.results[1]!.outcome.kind).toBe("findings");
+  });
+
+  it("gives a rule chained too long to run as one that could not run, and runs the rest", () => {
+    // 9,990 terms fit the 20,000 character limit and run out of stack in every engine pbiplint
+    // runs in; how few terms do depends on the engine's stack.
+    const grown = `"aaaaaaaaaa"${'.Replace("a", "aaaaaaaaaa")'.repeat(9)}.Length > 0`;
+    const run = runTeRules(
+      JSON.stringify([
+        { ID: "LONG", Scope: "Measure", Expression: `${Array(9990).fill("1").join("+")} > 0` },
+        { ID: "GROWN", Scope: "Measure", Expression: grown },
+        { ID: "GOOD", Scope: "Measure", Expression: 'Name == "Total"' },
+      ]),
+      model,
+    );
+    if ("error" in run) throw new Error(run.error);
+    expect(run.results[0]!.outcome).toEqual({
+      kind: "could-not-run",
+      reason: TOO_DEEP_REASON,
+    });
+    expect(TOO_DEEP_REASON).toBe(
+      "the expression is too deeply chained to run; split it into smaller rules",
+    );
+    const grownOutcome = run.results[1]!.outcome;
+    expect(grownOutcome.kind === "could-not-run" && grownOutcome.reason).toContain(
+      "reached the evaluation limit",
+    );
+    const good = run.results[2]!.outcome;
+    expect(good.kind === "findings" && good.objects.map((o) => o.teName)).toEqual(["[Total]"]);
   });
 
   it("passes on the rules it could not read, and refuses a file that is not a rule file", () => {

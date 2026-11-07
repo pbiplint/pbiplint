@@ -481,6 +481,18 @@ describe("evaluateTeRule: operators, methods, static members, conversions, enums
       unset: 1,
     });
     expect(untyped('true and DataType == "String"')).toMatchObject({ unset: 1 });
+    // A read on null on the right of `or`: with the real left value the object might be found,
+    // so it is counted. Under `and` it passes whatever the left value is.
+    expect(untyped('DataType == "String" or SortByColumn.Name == "x"')).toEqual({
+      kind: "findings",
+      objects: [],
+      unset: 1,
+    });
+    expect(untyped('DataType == "String" and SortByColumn.Name == "x"')).toEqual({
+      kind: "findings",
+      objects: [],
+      unset: 0,
+    });
   });
 
   it("covers every entry of LIBRARY with a case written for the test", () => {
@@ -701,6 +713,37 @@ describe("the evaluation limit", () => {
     expect(o.kind === "could-not-run" && o.reason).toContain("reached the evaluation limit");
     expect(Date.now() - started).toBeLessThan(20_000);
   }, 30_000);
+
+  const grow = (times: number) => '"aaaaaaaaaa"' + '.Replace("a", "aaaaaaaaaa")'.repeat(times);
+
+  it("stops a string grown past the limit by chained Replace calls", () => {
+    const started = Date.now();
+    const o = outcome(`${grow(9)}.Length > 0`);
+    expect(o.kind === "could-not-run" && o.reason).toContain("reached the evaluation limit");
+    expect(Date.now() - started).toBeLessThan(2_000);
+  });
+
+  it("spends the length of each string that + and & build", () => {
+    // Five Replace calls give a million characters; eight of them spend under nine million steps,
+    // and joining them builds strings of two to eight million characters, over the limit in all.
+    const eight = Array.from({ length: 8 }, () => `(${grow(5)})`);
+    for (const op of [" + ", " & "]) {
+      const o = outcome(`(${eight.join(op)}).Length > 0`);
+      expect(o.kind === "could-not-run" && o.reason, op).toContain("reached the evaluation limit");
+    }
+  });
+
+  it("spends the length of each string String.Concat builds", () => {
+    // Eight strings of a million characters spend under nine million steps to build; the strings
+    // String.Concat joins from them (four of two million, two of four, one of eight) take the
+    // rule over the limit.
+    const pair = `String.Concat(${grow(5)}, ${grow(5)})`;
+    expect(holds(`String.Concat(${pair}, ${pair}).Length == 4000000`)).toBe(true);
+    const o = outcome(
+      `String.Concat(String.Concat(${pair}, ${pair}), String.Concat(${pair}, ${pair})).Length > 0`,
+    );
+    expect(o.kind === "could-not-run" && o.reason).toContain("reached the evaluation limit");
+  });
 });
 
 // ---------------------------------------------------------------------------------------------

@@ -474,10 +474,35 @@ function substring(self: string, start: unknown, length?: unknown): string {
   return self.slice(st, st + len);
 }
 
-function replace(self: string, from: unknown, to: unknown): string {
+/**
+ * Spends a string's length before it is built, so text grown by repeated `Replace` or joining
+ * reaches the evaluation limit instead of stalling the run or passing the longest string
+ * JavaScript holds.
+ */
+function build(rt: TeRuntime, length: number, make: () => string): string {
+  rt.spend(length);
+  return make();
+}
+
+function replace(self: string, from: string, to: string, rt: TeRuntime): string {
+  let count = 0;
+  for (let i = self.indexOf(from); i !== -1; i = self.indexOf(from, i + from.length)) count++;
+  return build(rt, self.length + count * (to.length - from.length), () =>
+    self.split(from).join(to),
+  );
+}
+
+function replaceString(self: string, from: unknown, to: unknown, rt: TeRuntime): string {
   const f = notNull(from, "Replace");
   if (f === "") throw new TeFailure("`Replace` was given an empty string to replace");
-  return self.split(f).join((to as string | null) ?? "");
+  return replace(self, f, (to as string | null) ?? "", rt);
+}
+
+/** Strings joined end to end, with the separator between each. */
+function join(parts: readonly string[], separator: string, rt: TeRuntime): string {
+  const length =
+    parts.reduce((sum, x) => sum + x.length, 0) + separator.length * Math.max(parts.length - 1, 0);
+  return build(rt, length, () => parts.join(separator));
 }
 
 const STRING_METHODS: readonly TeLibraryEntry[] = [
@@ -618,17 +643,14 @@ const STRING_METHODS: readonly TeLibraryEntry[] = [
     [S("oldValue"), S("newValue")],
     "String",
     "The string with every occurrence of one value replaced by another, matching case exactly.",
-    (self, args) => replace(s(self), args[0], args[1]),
+    (self, args, rt) => replaceString(s(self), args[0], args[1], rt),
   ),
   entry(
     "Replace",
     [C("oldChar"), C("newChar")],
     "String",
     "The string with every occurrence of one character replaced by another.",
-    (self, args) =>
-      s(self)
-        .split(str(args[0] as TeChar))
-        .join(str(args[1] as TeChar)),
+    (self, args, rt) => replace(s(self), str(args[0] as TeChar), str(args[1] as TeChar), rt),
   ),
   entry(
     "Substring",
@@ -1188,14 +1210,24 @@ const STATICS = {
       [S("a"), S("b")],
       "String",
       "The strings joined end to end; null counts as empty.",
-      (_s, args) => args.map((x) => (x as string | null) ?? "").join(""),
+      (_s, args, rt) =>
+        join(
+          args.map((x) => (x as string | null) ?? ""),
+          "",
+          rt,
+        ),
     ),
     entry(
       "Concat",
       [S("a"), S("b"), S("c")],
       "String",
       "The strings joined end to end; null counts as empty.",
-      (_s, args) => args.map((x) => (x as string | null) ?? "").join(""),
+      (_s, args, rt) =>
+        join(
+          args.map((x) => (x as string | null) ?? ""),
+          "",
+          rt,
+        ),
     ),
     entry(
       "Join",
@@ -1203,10 +1235,11 @@ const STATICS = {
       "String",
       "The strings of a collection joined with the separator between each.",
       (_s, args, rt) =>
-        rt
-          .items(args[1])
-          .map((x) => teToString(x, rt.view))
-          .join((args[0] as string | null) ?? ""),
+        join(
+          rt.items(args[1]).map((x) => teToString(x, rt.view)),
+          (args[0] as string | null) ?? "",
+          rt,
+        ),
     ),
     entry(
       "Compare",

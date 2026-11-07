@@ -64,8 +64,9 @@ import {
  *   over tables with a null Expression (the survey's files), while `RegEx.IsMatch(Expression, ...)`
  *   failed on the same objects (PROBE_FAIL_NULL_EXPRESSION), so null passed as an argument fails
  *   and a null receiver does not. A null value otherwise follows .NET's lifted operators.
- * - Every node evaluated, every element a collection read yields, and every regular expression
- *   step spends one step of `LIMITS.stepsPerRule`, held per rule.
+ * - Every node evaluated, every element a collection read yields, every character of a string
+ *   that `+`, `&`, `Replace`, `String.Concat` or `String.Join` builds, and every regular
+ *   expression step spends one step of `LIMITS.stepsPerRule`, held per rule.
  *
  * Reasons are built from the rule's own text and the object type only, never the model's names or
  * values (section 6.7).
@@ -531,10 +532,12 @@ function checkFor(expr: TeExpr, type: TomType): string | undefined {
 // Running
 
 /**
- * A member read, method call, or index on null: .NET's NullReferenceException, which Tabular
- * Editor treats as the object not failing the rule. Its captures never report one, find nothing
- * for `RegEx.IsMatch(Expression.Replace(" ", ""), ...)` on tables whose Expression is null, and
- * fail `RegEx.IsMatch(Expression, ...)` on the same tables, where the null is an argument.
+ * A member read, method call, or index on null: .NET's NullReferenceException, which pbiplint
+ * treats as the object not failing the rule. The evidence is two cases in Tabular Editor's
+ * captures, which found nothing and reported no error for each: `Expression.Contains(...)` on a
+ * partition with no expression, and `RegEx.IsMatch(Expression.Replace(" ", ""), ...)` on tables
+ * with no expression. `RegEx.IsMatch(Expression, ...)` failed on the same tables, where the null
+ * is an argument.
  */
 class NullReceiver extends Error {}
 
@@ -784,7 +787,9 @@ class Evaluator implements TeRuntime {
    * `and` or `or` whose left side read a value the files leave unset. The answer is still known
    * when the right side alone decides it (false for `and`, true for `or`), whatever the unset
    * value is, so that is no guess. Otherwise the object stays out: unset again, even when the right
-   * side fails, since with the real left value .NET might never have evaluated it.
+   * side fails, since with the real left value .NET might never have evaluated it. A read on null
+   * on the right of `or` is unset as well: with the real left value the object might be found.
+   * Under `and` it stays a pass, which it is whatever the left value is.
    */
   private afterUnsetLeft(e: TeExpr & { kind: "binary" }, env: Env<unknown>, decides: boolean) {
     let r: boolean | null;
@@ -792,6 +797,7 @@ class Evaluator implements TeRuntime {
       r = this.logical(this.evalNode(e.right, env), e.spelling);
     } catch (err) {
       if (err instanceof TeUnset || err instanceof TeFailure) throw new TeUnset();
+      if (err instanceof NullReceiver && decides) throw new TeUnset();
       throw err;
     }
     if (r === decides) return decides;
@@ -847,11 +853,11 @@ class Evaluator implements TeRuntime {
         return e.op === "lt" ? c < 0 : e.op === "gt" ? c > 0 : e.op === "le" ? c <= 0 : c >= 0;
       }
       case "concat":
-        return teToString(l, this.view) + teToString(r, this.view);
+        return this.joined(teToString(l, this.view), teToString(r, this.view));
       case "add":
         if (typeof l === "string" || typeof r === "string") {
           if ((typeof l === "string" || l === null) && (typeof r === "string" || r === null))
-            return (l ?? "") + (r ?? "");
+            return this.joined(l ?? "", r ?? "");
           throw new TeFailure(
             `\`+\` joins ${a(typeName(l))} with ${a(typeName(r))}; turn the other into text with \`Convert.ToString\` first`,
           );
@@ -872,6 +878,12 @@ class Evaluator implements TeRuntime {
         });
       }
     }
+  }
+
+  /** Two strings end to end, their length spent first, as the library's string builders do. */
+  private joined(l: string, r: string): string {
+    this.spend(l.length + r.length);
+    return l + r;
   }
 
   private arithmetic(

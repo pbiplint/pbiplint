@@ -234,6 +234,26 @@ describe("refused constructs", () => {
     expect("regex" in compilePattern("a{1,500}")).toBe(true);
   });
 
+  it("compiles a repeat of an empty match at once, as the empty match it is", () => {
+    const patterns = [
+      ["(?:){100000000}", ""],
+      ["(?:(?:){2147483647}){2147483647}", ""],
+      ["(?=){100000000}", ""],
+      ["(?:){1,2147483647}", ""],
+      ["(?:)*", ""],
+      ["a(?:){100000000}b", "ab"],
+      ["a(?=){2147483647}", "a"],
+    ];
+    for (const [pattern, plain] of patterns) {
+      const started = Date.now();
+      const compiled = compilePattern(pattern!);
+      expect(Date.now() - started, pattern).toBeLessThan(50);
+      expect("regex" in compiled, pattern).toBe(true);
+      for (const input of ["", "a", "ab", "xaby"])
+        expect(m(pattern!, input), `${pattern} on ${input}`).toBe(m(plain!, input));
+    }
+  });
+
   it("refuses groups nested deeper than the limit", () => {
     const deep = "(".repeat(LIMITS.nesting + 1) + "a" + ")".repeat(LIMITS.nesting + 1);
     expect(unsupported(deep)).toMatch(/nested/);

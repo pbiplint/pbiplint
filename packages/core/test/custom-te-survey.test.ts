@@ -55,7 +55,10 @@ const tally = {
   skippedForAnnotation: 0,
   deviations: {} as Record<string, number>,
 };
-/** The (file, rule) pairs pbiplint reported as could not run where Tabular Editor failed too. */
+/**
+ * The (file, rule) pairs pbiplint reported as could not run where Tabular Editor failed too, on any
+ * fixture; keyed without the fixture, so a pair counts once however many fixtures show it.
+ */
 const failedInBoth = new Set<string>();
 
 describe.skipIf(!DIR)("the survey's rule files as custom rules", () => {
@@ -186,9 +189,11 @@ describe.skipIf(!DIR)("the survey's rule files as custom rules", () => {
   }
 
   it("reports the 23 rules Tabular Editor cannot run as could not run", () => {
-    // Counted over the nine fixtures from te 0.7.1.2, with every file at hand.
+    // Counted by file and rule over all eleven fixtures with captures, with every file at hand: a
+    // rule that fails on several fixtures counts once, so this is the spec's 23 rules in 9 files.
     if (unavailable.length > 0) return;
     expect(failedInBoth.size).toBe(23);
+    expect(new Set([...failedInBoth].map((key) => key.split(" ")[0])).size).toBe(9);
   });
 });
 

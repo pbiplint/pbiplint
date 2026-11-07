@@ -848,6 +848,8 @@ function stateCount(node: Node): number {
       return node.items.reduce((sum, item) => sum + stateCount(item), node.items.length - 1);
     case "rep": {
       const s = stateCount(node.body);
+      // Repeating an empty match is an empty match, however many times; see `emit`.
+      if (s === 0) return 0;
       const optional = node.max === Infinity ? s + 1 : (node.max - node.min) * (s + 1);
       return node.min * s + optional;
     }
@@ -875,6 +877,9 @@ function emit(node: Node, next: number, insts: Inst[]): number {
       return pc;
     }
     case "rep": {
+      // A body of no instructions, such as `(?:)` or `(?=)`, matches empty; its repeat does too,
+      // so it is emitted once rather than looped up to a count no limit has checked.
+      if (stateCount(node.body) === 0) return emit(node.body, next, insts);
       let tail = next;
       if (node.max === Infinity) {
         const loop: Inst & { op: "split" } = { op: "split", next: -1, alt: next };

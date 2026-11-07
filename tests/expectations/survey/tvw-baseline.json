@@ -4,6 +4,24 @@
   "captured": "2026-10-01",
   "deviations": {},
   "ours": {},
+  "custom": {
+    "deviations": {
+      "filcuk/ssas-best-practice-rules/BPARules.json": {
+        "INTEGER_FORMATTING": "A measure's data type is not saved in the project's files, so pbiplint leaves the measure out of a rule that reads `DataType`; Tabular Editor works the type out from the measure's DAX."
+      },
+      "petecarlssonw/powerbi-testing/BPARules/bpa-rules.json": {
+        "CHECK_TEXT_TYPE_MEASURES": "A measure's data type is not saved in the project's files, so pbiplint leaves the measure out of a rule that reads `DataType`; Tabular Editor works the type out from the measure's DAX."
+      }
+    },
+    "ours": {
+      "filcuk/ssas-best-practice-rules/BPARules.json": {
+        "INTEGER_FORMATTING": []
+      },
+      "petecarlssonw/powerbi-testing/BPARules/bpa-rules.json": {
+        "CHECK_TEXT_TYPE_MEASURES": []
+      }
+    }
+  },
   "results": {
     "microsoft/Analysis-Services/BestPracticeRules/BPARules.json": {
       "findings": {

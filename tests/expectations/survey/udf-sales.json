@@ -4,6 +4,357 @@
   "captured": "2026-10-01",
   "deviations": {},
   "ours": {},
+  "custom": {
+    "deviations": {
+      "Adrian1903/BPA-Rules/BPARules.json": {
+        "UNNECESSARY_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      },
+      "AlahmadiQ8/copilot-sdk-challenge/backend/src/data/bpa-rules.json": {
+        "UNNECESSARY_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      },
+      "BenniDeJagere/Presentations/2020/20200707_PBIMCR/BPARules.json": {
+        "PERF_UNUSED_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      },
+      "BenniDeJagere/Presentations/2020/20201002_SQLBits/BPARules.json": {
+        "PERF_UNUSED_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      },
+      "Code-DataFyre/PowerInsighter/PowerInsighter/ModelBestPractices/BPARules.json": {
+        "UNNECESSARY_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      },
+      "GreyskullAnalytics/by-the-power-of-analyics-engineering/powerbi/bestpracticeanalyser/BPARules.json": {
+        "UNNECESSARY_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      },
+      "KavasiMihaly/SelfServiceBIBlog/TabularEditor/BPARules-PowerBI.json": {
+        "APPLY_FORMAT_STRING_MEASURES": "A measure's data type is not saved in the project's files, so pbiplint leaves the measure out of a rule that reads `DataType`; Tabular Editor works the type out from the measure's DAX.",
+        "PERF_UNUSED_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      },
+      "Mikd14/BPARules/BPARules.json": {
+        "UNNECESSARY_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      },
+      "Reinsight-SE/Tabular/BestPractices/BPARules.json": {
+        "UNNECESSARY_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      },
+      "StuffbyYuki/PBI-BPA-Rules/BPA_Rules.json": {
+        "UNNECESSARY_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      },
+      "TabularEditor/BestPracticeRules/BPARules-PowerBI.json": {
+        "APPLY_FORMAT_STRING_MEASURES": "A measure's data type is not saved in the project's files, so pbiplint leaves the measure out of a rule that reads `DataType`; Tabular Editor works the type out from the measure's DAX.",
+        "PERF_UNUSED_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      },
+      "TabularEditor/BestPracticeRules/BPARules-standard-lax.json": {
+        "PERF_UNUSED_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      },
+      "TabularEditor/BestPracticeRules/BPARules-standard.json": {
+        "APPLY_FORMAT_STRING_MEASURES": "A measure's data type is not saved in the project's files, so pbiplint leaves the measure out of a rule that reads `DataType`; Tabular Editor works the type out from the measure's DAX.",
+        "PERF_UNUSED_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      },
+      "TabularEditor/SessionArchive/Webinars/2025-12-10 - CICD and version control for Fabric/src/automation/resources/BPARules.json": {
+        "APPLY_FORMAT_STRING_MEASURES": "A measure's data type is not saved in the project's files, so pbiplint leaves the measure out of a rule that reads `DataType`; Tabular Editor works the type out from the measure's DAX.",
+        "PERF_UNUSED_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      },
+      "bgarcevic/fabric-utils/.devops/bpa-rules.json": {
+        "UNNECESSARY_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      },
+      "bgarcevic/tomix-cli/src/Tomix.App/Bpa/Rules/bpa-rules.json": {
+        "UNNECESSARY_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      },
+      "bonardi/PowerBI-CICD/resources/dataset/config/bparules.json": {
+        "UNNECESSARY_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      },
+      "bredeespelid/PBIP_SemLin/docs/bpa/semantic model/BPARules-PowerBI.json": {
+        "APPLY_FORMAT_STRING_MEASURES": "A measure's data type is not saved in the project's files, so pbiplint leaves the measure out of a rule that reads `DataType`; Tabular Editor works the type out from the measure's DAX.",
+        "PERF_UNUSED_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      },
+      "eugenecp/fabcon2026-ai-ci-cd/Fabric2026-CI-CD-Complete-Package/scripts/.bpaRules.json": {
+        "COL_HIDE_UNUSED": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "faby31/test/BPARules.json": {
+        "UNNECESSARY_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      },
+      "filcuk/ssas-best-practice-rules/BPARules.json": {
+        "INTEGER_FORMATTING": "A measure's data type is not saved in the project's files, so pbiplint leaves the measure out of a rule that reads `DataType`; Tabular Editor works the type out from the measure's DAX.",
+        "UNNECESSARY_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      },
+      "gordoncheme/powerbi/BPARules.json": {
+        "FORMATTING_MEASURES_FORMAT_STRING": "A measure's data type is not saved in the project's files, so pbiplint leaves the measure out of a rule that reads `DataType`; Tabular Editor works the type out from the measure's DAX.",
+        "UNNECESSARY_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      },
+      "gronnerup/FabricOps/automation/resources/BPARules.json": {
+        "APPLY_FORMAT_STRING_MEASURES": "A measure's data type is not saved in the project's files, so pbiplint leaves the measure out of a rule that reads `DataType`; Tabular Editor works the type out from the measure's DAX.",
+        "PERF_UNUSED_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      },
+      "microsoft/Analysis-Services/BestPracticeRules/BPARules.json": {
+        "UNNECESSARY_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      },
+      "microsoft/Analysis-Services/BestPracticeRules/Italian/BPARules.json": {
+        "UNNECESSARY_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      },
+      "microsoft/Analysis-Services/BestPracticeRules/Japanese/BPARules.json": {
+        "UNNECESSARY_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      },
+      "microsoft/Analysis-Services/BestPracticeRules/Spanish/BPARules.json": {
+        "UNNECESSARY_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      },
+      "omezquita/PowerBI/MDA_BPA_Rules.json": {
+        "PERF_UNUSED_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      },
+      "petecarlssonw/powerbi-testing/BPARules/bpa-rules.json": {
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": "A measure's data type is not saved in the project's files, so pbiplint leaves the measure out of a rule that reads `DataType`; Tabular Editor works the type out from the measure's DAX.",
+        "UNNECESSARY_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      },
+      "rafaelxkr/Power-BI/Tabular_Editor/BPARules.json": {
+        "UNNECESSARY_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      },
+      "ryanduguid/accounting-review-pipeline/apps/australian-accounting-power-bi/tests/model_bpa_rules.json": {
+        "BPA_MEASURE_FORMAT_STRING": "A measure's data type is not saved in the project's files, so pbiplint leaves the measure out of a rule that reads `DataType`; Tabular Editor works the type out from the measure's DAX."
+      },
+      "tenfingerseddy/semanticus-vscode/Semanticus.Analysis/Rules/BPARules-PowerBI.json": {
+        "UNNECESSARY_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      },
+      "thijsknaapRob/BPARulesOnline/BPARules.json": {
+        "INTEGER_FORMATTING": "A measure's data type is not saved in the project's files, so pbiplint leaves the measure out of a rule that reads `DataType`; Tabular Editor works the type out from the measure's DAX."
+      },
+      "twelve-baskets-analytics/pbi-bpa/BPARules.json": {
+        "UNNECESSARY_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function.",
+        "UNUSED_COLUMN": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      },
+      "vlpatkosdani/powerbi-cicd-with-githubactions-demos/scripts/BPA_Rules.json": {
+        "13": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function.",
+        "14": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      }
+    },
+    "ours": {
+      "Adrian1903/BPA-Rules/BPARules.json": {
+        "UNNECESSARY_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      },
+      "AlahmadiQ8/copilot-sdk-challenge/backend/src/data/bpa-rules.json": {
+        "UNNECESSARY_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      },
+      "BenniDeJagere/Presentations/2020/20200707_PBIMCR/BPARules.json": {
+        "PERF_UNUSED_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      },
+      "BenniDeJagere/Presentations/2020/20201002_SQLBits/BPARules.json": {
+        "PERF_UNUSED_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      },
+      "Code-DataFyre/PowerInsighter/PowerInsighter/ModelBestPractices/BPARules.json": {
+        "UNNECESSARY_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      },
+      "GreyskullAnalytics/by-the-power-of-analyics-engineering/powerbi/bestpracticeanalyser/BPARules.json": {
+        "UNNECESSARY_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      },
+      "KavasiMihaly/SelfServiceBIBlog/TabularEditor/BPARules-PowerBI.json": {
+        "APPLY_FORMAT_STRING_MEASURES": [],
+        "PERF_UNUSED_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      },
+      "Mikd14/BPARules/BPARules.json": {
+        "UNNECESSARY_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      },
+      "Reinsight-SE/Tabular/BestPractices/BPARules.json": {
+        "UNNECESSARY_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      },
+      "StuffbyYuki/PBI-BPA-Rules/BPA_Rules.json": {
+        "UNNECESSARY_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      },
+      "TabularEditor/BestPracticeRules/BPARules-PowerBI.json": {
+        "APPLY_FORMAT_STRING_MEASURES": [],
+        "PERF_UNUSED_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      },
+      "TabularEditor/BestPracticeRules/BPARules-standard-lax.json": {
+        "PERF_UNUSED_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      },
+      "TabularEditor/BestPracticeRules/BPARules-standard.json": {
+        "APPLY_FORMAT_STRING_MEASURES": [],
+        "PERF_UNUSED_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      },
+      "TabularEditor/SessionArchive/Webinars/2025-12-10 - CICD and version control for Fabric/src/automation/resources/BPARules.json": {
+        "APPLY_FORMAT_STRING_MEASURES": [],
+        "PERF_UNUSED_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      },
+      "bgarcevic/fabric-utils/.devops/bpa-rules.json": {
+        "UNNECESSARY_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      },
+      "bgarcevic/tomix-cli/src/Tomix.App/Bpa/Rules/bpa-rules.json": {
+        "UNNECESSARY_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      },
+      "bonardi/PowerBI-CICD/resources/dataset/config/bparules.json": {
+        "UNNECESSARY_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      },
+      "bredeespelid/PBIP_SemLin/docs/bpa/semantic model/BPARules-PowerBI.json": {
+        "APPLY_FORMAT_STRING_MEASURES": [],
+        "PERF_UNUSED_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      },
+      "eugenecp/fabcon2026-ai-ci-cd/Fabric2026-CI-CD-Complete-Package/scripts/.bpaRules.json": {
+        "COL_HIDE_UNUSED": [
+          "'Customer'[City]",
+          "'Customer'[Country]",
+          "'Customer'[Customer Name]",
+          "'Customer'[Email]",
+          "'Customer'[Loyalty Tier]",
+          "'Customer'[Postal Code]",
+          "'Customer'[Region]",
+          "'Customer'[Segment]",
+          "'Customer'[State]",
+          "'Date'[Day Number]",
+          "'Date'[Day of Week]",
+          "'Date'[Month Number]",
+          "'Date'[Month]",
+          "'Date'[Quarter Number]",
+          "'Date'[Quarter]",
+          "'Date'[Week of Year]",
+          "'Date'[Year]",
+          "'Employee'[Email]",
+          "'Employee'[Employee Name]",
+          "'Employee'[Hire Date]",
+          "'Employee'[Manager ID]",
+          "'Product'[Brand]",
+          "'Product'[Category]",
+          "'Product'[Color]",
+          "'Product'[List Price]",
+          "'Product'[Product Name]",
+          "'Product'[Size]",
+          "'Product'[Standard Cost]",
+          "'Product'[Subcategory]",
+          "'Product'[Supplier Name]",
+          "'Promotion'[Discount Pct]",
+          "'Promotion'[End Date]",
+          "'Promotion'[Promotion Name]",
+          "'Promotion'[Promotion Type]",
+          "'Store'[City]",
+          "'Store'[Country]",
+          "'Store'[Latitude]",
+          "'Store'[Longitude]",
+          "'Store'[Open Date]",
+          "'Store'[Region]",
+          "'Store'[Square Feet]",
+          "'Store'[State]",
+          "'Store'[Store Name]",
+          "'Store'[Store Type]"
+        ]
+      },
+      "faby31/test/BPARules.json": {
+        "UNNECESSARY_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      },
+      "filcuk/ssas-best-practice-rules/BPARules.json": {
+        "INTEGER_FORMATTING": [],
+        "UNNECESSARY_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      },
+      "gordoncheme/powerbi/BPARules.json": {
+        "FORMATTING_MEASURES_FORMAT_STRING": [],
+        "UNNECESSARY_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      },
+      "gronnerup/FabricOps/automation/resources/BPARules.json": {
+        "APPLY_FORMAT_STRING_MEASURES": [],
+        "PERF_UNUSED_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      },
+      "microsoft/Analysis-Services/BestPracticeRules/BPARules.json": {
+        "UNNECESSARY_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      },
+      "microsoft/Analysis-Services/BestPracticeRules/Italian/BPARules.json": {
+        "UNNECESSARY_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      },
+      "microsoft/Analysis-Services/BestPracticeRules/Japanese/BPARules.json": {
+        "UNNECESSARY_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      },
+      "microsoft/Analysis-Services/BestPracticeRules/Spanish/BPARules.json": {
+        "UNNECESSARY_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      },
+      "omezquita/PowerBI/MDA_BPA_Rules.json": {
+        "PERF_UNUSED_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      },
+      "petecarlssonw/powerbi-testing/BPARules/bpa-rules.json": {
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [],
+        "UNNECESSARY_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      },
+      "rafaelxkr/Power-BI/Tabular_Editor/BPARules.json": {
+        "UNNECESSARY_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      },
+      "ryanduguid/accounting-review-pipeline/apps/australian-accounting-power-bi/tests/model_bpa_rules.json": {
+        "BPA_MEASURE_FORMAT_STRING": []
+      },
+      "tenfingerseddy/semanticus-vscode/Semanticus.Analysis/Rules/BPARules-PowerBI.json": {
+        "UNNECESSARY_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      },
+      "thijsknaapRob/BPARulesOnline/BPARules.json": {
+        "INTEGER_FORMATTING": []
+      },
+      "twelve-baskets-analytics/pbi-bpa/BPARules.json": {
+        "UNNECESSARY_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ],
+        "UNUSED_COLUMN": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      },
+      "vlpatkosdani/powerbi-cicd-with-githubactions-demos/scripts/BPA_Rules.json": {
+        "13": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ],
+        "14": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      }
+    }
+  },
   "results": {
     "microsoft/Analysis-Services/BestPracticeRules/BPARules.json": {
       "findings": {

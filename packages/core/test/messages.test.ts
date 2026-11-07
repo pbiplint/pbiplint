@@ -2115,8 +2115,8 @@ describe("every finding's params match its template (#98)", () => {
     return [...files.model, ...files.report];
   };
 
-  it("reads fifteen projects: tests/fixtures' fourteen and the example", () => {
-    expect(projects).toHaveLength(15);
+  it("reads seventeen projects: tests/fixtures' sixteen and the example", () => {
+    expect(projects).toHaveLength(17);
   });
 
   it.each(projects.map((p) => [relative(join(fixturesDir, "../.."), p), p]))(

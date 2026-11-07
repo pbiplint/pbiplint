@@ -31,6 +31,7 @@ import { LimitReached, type Budget } from "./regex.js";
 import { tokenTypeCode } from "./tokens.js";
 import {
   PROPERTIES,
+  SCOPE_TYPES,
   TOM_TYPES,
   UNSET,
   nearestProperty,
@@ -57,11 +58,12 @@ import {
  *   A value the files leave unset (`UNSET`) leaves the object out and counts it.
  * - A .NET exception or a type error on any object stops the rule for the whole project: one
  *   outcome per rule, never findings and a failure together.
- * - A member read or method call on null gives null rather than failing: Tabular Editor ran
- *   `Expression.Contains(...)` over a partition whose expression is null with no error
- *   (PROBE_PQ_EXPRESSION), while `RegEx.IsMatch(Expression, ...)` failed on the same partition
- *   (PROBE_FAIL_NULL_EXPRESSION), so null passed as an argument fails and a null receiver does not.
- *   Null then follows .NET's lifted operators: it is never true, so the object is not a finding.
+ * - A member read, method call, or index on null ends that object's run as no finding, without
+ *   failing: Tabular Editor ran `Expression.Contains(...)` over a partition whose expression is
+ *   null with no error (PROBE_PQ_EXPRESSION), and `RegEx.IsMatch(Expression.Replace(...), ...)`
+ *   over tables with a null Expression (the survey's files), while `RegEx.IsMatch(Expression, ...)`
+ *   failed on the same objects (PROBE_FAIL_NULL_EXPRESSION), so null passed as an argument fails
+ *   and a null receiver does not. A null value otherwise follows .NET's lifted operators.
  * - Every node evaluated, every element a collection read yields, and every regular expression
  *   step spends one step of `LIMITS.stepsPerRule`, held per rule.
  *
@@ -119,6 +121,14 @@ const ST_CHAR: ST = { kind: "char" };
 const ST_TOKEN: ST = { kind: "token" };
 
 class StaticError extends Error {}
+
+/** The text of a string literal written in the rule, in parentheses or not. */
+const quotedString = (x: TeExpr): string | undefined =>
+  x.kind === "literal" && x.type === "string"
+    ? x.value
+    : x.kind === "paren"
+      ? quotedString(x.expr)
+      : undefined;
 
 const unwrap = (t: ST): ST => (t.kind === "nullable" ? unwrap(t.of) : t);
 
@@ -268,6 +278,21 @@ class Checker {
         const l = unwrap(this.check(e.left, env));
         const r = unwrap(this.check(e.right, env));
         switch (e.op) {
+          case "eq":
+          case "ne":
+            // Dynamic LINQ turns a quoted name into the enum's value when it builds the rule, so
+            // a quoted string naming no value fails the rule before any object runs.
+            for (const [t, x] of [
+              [l, e.right],
+              [r, e.left],
+            ] as const) {
+              const s = quotedString(x);
+              if (t.kind === "enum" && s !== undefined && !enumValue(t, s))
+                throw new StaticError(
+                  `compares ${a(t.name)} with a string that names none of its values`,
+                );
+            }
+            return ST_BOOLEAN;
           case "coalesce":
             return l;
           case "concat":
@@ -505,6 +530,14 @@ function checkFor(expr: TeExpr, type: TomType): string | undefined {
 // ---------------------------------------------------------------------------------------------
 // Running
 
+/**
+ * A member read, method call, or index on null: .NET's NullReferenceException, which Tabular
+ * Editor treats as the object not failing the rule. Its captures never report one, find nothing
+ * for `RegEx.IsMatch(Expression.Replace(" ", ""), ...)` on tables whose Expression is null, and
+ * fail `RegEx.IsMatch(Expression, ...)` on the same tables, where the null is an argument.
+ */
+class NullReceiver extends Error {}
+
 class Evaluator implements TeRuntime {
   readonly budget: Budget = { left: LIMITS.stepsPerRule };
   private readonly members = new WeakMap<object, Record<string, CollectionMember>>();
@@ -567,7 +600,7 @@ class Evaluator implements TeRuntime {
 
   /** A name read on a value: a property, a token's field, a string's `Length`, a collection's `Count`. */
   private member(v: unknown, name: string): unknown {
-    if (v === null || v === undefined) return null;
+    if (v === null || v === undefined) throw new NullReceiver();
     if (isTomObject(v)) return this.property(v, name);
     const l = name.toLowerCase();
     if (isToken(v)) {
@@ -665,7 +698,7 @@ class Evaluator implements TeRuntime {
     argNodes: readonly TeExpr[],
     env: Env<unknown>,
   ) {
-    if (receiver === null || receiver === undefined) return null;
+    if (receiver === null || receiver === undefined) throw new NullReceiver();
     const named = this.receiverKinds(receiver).flatMap((k) =>
       entriesNamed(LIBRARY.methods[k], name),
     );
@@ -678,8 +711,10 @@ class Evaluator implements TeRuntime {
     return this.pick(named, args, name).run(receiver, args, this);
   }
 
-  private index(target: unknown, key: unknown): unknown {
-    if (target === null || target === undefined) return null;
+  private index(target: unknown, key0: unknown): unknown {
+    if (target === null || target === undefined) throw new NullReceiver();
+    // `TranslatedNames[culture]`: Tabular Editor's indexers also take the object a key names.
+    const key = isTomObject(key0) && isTeMap(target) ? this.property(key0, "Name") : key0;
     if (Array.isArray(target) || typeof target === "string") {
       if (typeof key !== "number")
         throw new TeFailure(`indexes a collection with ${a(typeName(key))}, not a whole number`);
@@ -909,7 +944,10 @@ export function evaluateTeRule(rule: TeRule, expr: TeExpr, view: TomView): TeOut
         objects.push(o);
       }
 
-  for (const type of new Set(objects.map((o) => o.type))) {
+  const types = new Set(objects.map((o) => o.type));
+  for (const scope of rule.scopes)
+    for (const type of findKey(SCOPE_TYPES, scope) ?? []) types.add(type);
+  for (const type of types) {
     const reason = checkFor(expr, type);
     if (reason !== undefined) return { kind: "could-not-run", reason };
   }
@@ -921,6 +959,7 @@ export function evaluateTeRule(rule: TeRule, expr: TeExpr, view: TomView): TeOut
     try {
       if (evaluator.run(expr, o)) found.push(o);
     } catch (e) {
+      if (e instanceof NullReceiver) continue;
       if (e instanceof TeUnset) unset++;
       else if (e instanceof TeFailure)
         return { kind: "could-not-run", reason: `${e.message}, on ${a(o.type)}` };

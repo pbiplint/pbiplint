@@ -400,10 +400,7 @@ const FAILS: [string, string, string?][] = [
   ["Tokenize().Any(Type = TRUE)", "compares an Int32 with a Boolean, on a Measure", "Measure"],
   ["Tokenize().Count() > 0", "Model has no method `Tokenize`"],
   ['"Sales".IndexOf(null) == 1', "`IndexOf` was given null"],
-  [
-    "Tables.Any(Name.Contains(Columns.First().SortByColumn.Name))",
-    "`Contains` was given null, on a Model",
-  ],
+  ['Tables.Any(Name.Contains(GetAnnotation("none")))', "`Contains` was given null, on a Model"],
   ["Convert.ToChar(\"ab\") == 'a'", "not one character"],
   ['Convert.ToBoolean("x")', "neither True nor False"],
   ['"a".Replace("", "b") == ""', "an empty string to replace"],
@@ -734,6 +731,144 @@ describe("Microsoft's rules on kitchen-sink and te3-zoo", () => {
       );
     });
   }
+});
+
+// ---------------------------------------------------------------------------------------------
+// What the survey's rule files showed (task B8), each against Tabular Editor's captures.
+
+describe("what the survey's rule files showed", () => {
+  const view = buildTomView(
+    modelFrom(
+      [
+        "model Model",
+        "\tculture: en-US",
+        "",
+        "table Sales",
+        "\tmeasure Total = 1",
+        "",
+        "\tcolumn Amount",
+        "\t\tdataType: int64",
+        "\t\tsourceColumn: Amount",
+        "",
+        "table Hidden",
+        "\tisHidden",
+        "",
+        "\tmeasure 'Hidden Total' = 2",
+        "",
+        "\tcolumn Code",
+        "\t\tdataType: string",
+        "\t\tsourceColumn: Code",
+        "",
+        "role Reader",
+        "\tmodelPermission: read",
+        "",
+        "\ttablePermission Sales = [Total] > 0",
+        "",
+        "perspective Main",
+        "\tperspectiveTable Sales",
+        "",
+        "cultureInfo en-US",
+        "",
+      ].join("\n"),
+    ),
+  );
+  const found = (expression: string, scopes: string[], on = view) => {
+    const o = outcome(expression, scopes, on);
+    if (o.kind !== "findings") throw new Error(`${expression}: ${o.reason}`);
+    return o.objects.map((x) => x.teName);
+  };
+
+  it("checks a rule against every type its scopes name, with or without objects of them", () => {
+    // Tabular Editor failed these on fixtures with no calculation group, and no measure.
+    expect(reason("Precedence <= 0", ["CalculationGroup"])).toContain(
+      "CalculationGroupTable has no property `Precedence`",
+    );
+    expect(reason("Visible", ["Measure", "KPI"])).toContain("Measure has no property `Visible`");
+    expect(reason('GetAnnotation("Vertipaq_RowCount") == null', ["KPI"])).toContain(
+      "needs statistics",
+    );
+  });
+
+  it("compares an enum only with a quoted name of one of its values, even where no object gets there", () => {
+    expect(reason('false and DataType != ""', ["DataColumn"])).toBe(
+      "compares a DataType with a string that names none of its values",
+    );
+    expect(holds('DataType == "int64"', ["DataColumn"])).toBe(true);
+  });
+
+  it("gives a calculation group's table the object type CalculationGroupTable", () => {
+    const zoo = viewOf("te3-zoo");
+    expect(
+      found("ObjectType == ObjectType.CalculationGroupTable", ["CalculationGroup"], zoo),
+    ).toEqual(["'Time Intelligence'"]);
+    expect(found("ObjectType == ObjectType.CalculationGroupTable", ["Table"], zoo)).toEqual([]);
+  });
+
+  it("translates the model's own name and description, and looks a translation up by a culture", () => {
+    expect(
+      found("Model.Cultures.Any(string.IsNullOrEmpty(outerIt.TranslatedNames[it]))", ["Model"]),
+    ).toEqual(["Model"]);
+    expect(
+      found('Model.Cultures.Any(outerIt.TranslatedDescriptions[it] == "")', ["Model"]),
+    ).toEqual(["Model"]);
+    expect(
+      found("Model.Cultures.Any(string.IsNullOrEmpty(outerIt.TranslatedNames[it]))", ["Table"]),
+    ).toEqual(["'Sales'", "'Hidden'"]);
+  });
+
+  it("lists the roles whose filters reference an object under ReferencedBy.Roles", () => {
+    expect(found('ReferencedBy.Roles.Any(Name == "Reader")', ["Measure"])).toEqual(["[Total]"]);
+  });
+
+  it("gives a table that is not calculated a null Expression", () => {
+    expect(found("Expression == null", ["Table"])).toEqual(["'Sales'", "'Hidden'"]);
+  });
+
+  it("ends an object's evaluation as no finding on a member read or call on null", () => {
+    // Tabular Editor found nothing and failed nothing for this rule on every captured fixture.
+    expect(found('RegEx.IsMatch(Expression.Replace(" ", ""), "x")', ["Table"])).toEqual([]);
+    expect(found("SortByColumn.Name == null", ["DataColumn"])).toEqual([]);
+    expect(found('not SortByColumn.Name.Contains("x")', ["DataColumn"])).toEqual([]);
+  });
+
+  it("hides a column with its table, leaves a measure visible, and shows a table with a visible measure", () => {
+    expect(found("not IsVisible", ["DataColumn"])).toEqual(["'Hidden'[Code]"]);
+    expect(found("IsVisible", ["Measure"])).toEqual(["[Total]", "[Hidden Total]"]);
+    expect(found("IsVisible and IsHidden", ["Table"])).toEqual(["'Hidden'"]);
+  });
+
+  it("hides a hierarchy with its table", () => {
+    const hidden = buildTomView(
+      modelFrom(
+        [
+          "model Model",
+          "",
+          "table Dates",
+          "\tisHidden",
+          "",
+          "\tcolumn Year",
+          "\t\tdataType: int64",
+          "\t\tsourceColumn: Year",
+          "",
+          "\thierarchy 'Date Hierarchy'",
+          "\t\tlevel Year",
+          "\t\t\tcolumn: Year",
+          "",
+        ].join("\n"),
+      ),
+    );
+    expect(found("IsHidden", ["Hierarchy"], hidden)).toEqual([]);
+    expect(found("not IsVisible", ["Hierarchy"], hidden)).toEqual(["Date Hierarchy"]);
+  });
+
+  it("gives a perspective its translations", () => {
+    expect(
+      found("Model.Cultures.Any(string.IsNullOrEmpty(outerIt.TranslatedNames[it]))", [
+        "Perspective",
+      ]),
+    ).toEqual(["Main"]);
+    expect(found('TranslatedDescriptions["en-US"] == ""', ["Perspective"])).toEqual(["Main"]);
+  });
 });
 
 // ---------------------------------------------------------------------------------------------

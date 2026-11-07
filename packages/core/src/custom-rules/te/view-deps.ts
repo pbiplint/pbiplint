@@ -1,10 +1,10 @@
 import { tokenizeDax } from "../../dax/tokenize.js";
 import { buildReferenceIndex } from "../../index/references.js";
-import type { Column, Measure, Model, Table } from "../../model/types.js";
+import type { Column, DaxFunction, Measure, Model, Table } from "../../model/types.js";
 
-/** One reference an expression makes, to a table, a column, or a measure of the model. */
+/** One reference an expression makes, to a table, a column, a measure, or a function of the model. */
 export interface DaxDependency {
-  target: Table | Column | Measure;
+  target: Table | Column | Measure | DaxFunction;
   /** Written with its table: `'Sales'[Amount]`, `Sales[Amount]`. A table reference never is. */
   fullyQualified: boolean;
 }
@@ -37,6 +37,7 @@ export function buildDependencyGraph(
   kpiOf: (m: Measure) => object | undefined,
 ): DependencyGraph {
   const tables = new Map(model.tables.map((t) => [lower(t.name), t]));
+  const functions = new Map(model.functions.map((f) => [lower(f.name), f]));
   const columns = new Map<string, Column>();
   const measures = new Map<string, Measure>();
   for (const t of model.tables) {
@@ -83,7 +84,12 @@ export function buildDependencyGraph(
         if (t.kind !== "table" && t.kind !== "identifier") return;
         const next = tokens[k + 1];
         if (next?.kind === "column" && (t.kind === "table" || next.start === t.end)) return;
-        if (next?.call !== undefined) return; // a function's name, not a table's
+        if (next?.call !== undefined) {
+          // A call of a user-defined function is a reference to it, as Tabular Editor keeps it.
+          const called = functions.get(lower(t.text));
+          if (called) out.push({ target: called, fullyQualified: false });
+          return;
+        }
         const table = tables.get(lower(t.text));
         if (table) out.push({ target: table, fullyQualified: false });
       });

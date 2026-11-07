@@ -221,6 +221,7 @@ export const ENUMS = {
     "Model",
     "DataSource",
     "Table",
+    "CalculationGroupTable",
     "Column",
     "Partition",
     "Relationship",

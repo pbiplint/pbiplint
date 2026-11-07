@@ -547,6 +547,19 @@ describe("names pbiplint cannot answer", () => {
   });
 });
 
+describe("a user-defined function in the dependencies", () => {
+  it("is referenced by the measures that call it, so ReferencedBy reaches them through it", () => {
+    const view = viewOf("udf-sales");
+    const net = find(view, "UserDefinedFunction", "Sales.NetAfterReserve");
+    expect(teNamesOf(prop(view, net, "ReferencedBy"))).toEqual(["[Net Sales]"]);
+    const reserve = find(view, "Measure", "[Returns Reserve]");
+    const all = prop(view, reserve, "ReferencedBy") as TomObject[];
+    const refs = PROPERTIES.Measure["ReferencedBy"]!.type;
+    if (refs.kind !== "collection") throw new Error("ReferencedBy is a collection");
+    expect(teNamesOf(refs.members!["AllMeasures"]!.get(all, view))).toContain("[Net Sales]");
+  });
+});
+
 describe("nearestProperty", () => {
   it("Visible on a measure is IsHidden", () => {
     expect(nearestProperty("Measure", "Visible")).toBe("IsHidden");

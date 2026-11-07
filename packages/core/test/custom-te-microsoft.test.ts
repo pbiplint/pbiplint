@@ -5,7 +5,6 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { runTeRules, STATISTICS_REASON } from "../src/custom-rules/te/index.js";
-import { buildTomView } from "../src/custom-rules/te/view.js";
 import { modelFrom } from "./helpers.js";
 import {
   MICROSOFT_FILE,
@@ -14,6 +13,7 @@ import {
   expectRule,
   fixtureModel,
   ignoreAnnotations,
+  leftOutForAnnotation,
   readMicrosoftCapture,
   readSurveyCapture,
   readsStatistics,
@@ -84,18 +84,12 @@ describe("Microsoft's ruleset as custom rules", () => {
     describe(fixture.name, () => {
       const capture = readMicrosoftCapture(fixture.microsoftPath);
       const { custom } = readSurveyCapture(fixture.surveyPath);
-      const model = fixtureModel(capture);
-      const view = buildTomView(model);
-      const run = runTeRules(rulesText, model);
+      const run = runTeRules(rulesText, fixtureModel(capture));
       if ("error" in run) throw new Error(run.error);
       // The annotated fixtures carry Tabular Editor's ignore annotation, which pbiplint reads from
-      // pull request C on. Until then a rule the annotation names, or one on a scope holding a
-      // malformed annotation, is left out here: the annotation alone explains its difference.
-      const ignored = fixture.annotated
-        ? ignoreAnnotations(fixture.name)
-        : { ids: new Set<string>(), malformedScopes: new Set<string>() };
-      const skipped = (id: string, scopes: string[]) =>
-        ignored.ids.has(id.toUpperCase()) || scopes.some((s) => ignored.malformedScopes.has(s));
+      // pull request C on. Until then a rule the annotation names, or one it failed in Tabular
+      // Editor, is left out here: the annotation alone explains its difference.
+      const ignored = fixture.annotated ? ignoreAnnotations(fixture.name) : undefined;
 
       it("reads all 71 rules", () => {
         expect(run.results).toHaveLength(71);
@@ -103,20 +97,14 @@ describe("Microsoft's ruleset as custom rules", () => {
       });
 
       for (const { rule, outcome } of run.results) {
-        if (skipped(rule.id, rule.scopes)) continue;
+        if (leftOutForAnnotation(ignored, rule, capture.ruleErrors?.[rule.id] !== undefined))
+          continue;
         it(rule.id, () => {
           if (readsStatistics(rule.expression)) {
-            // Tabular Editor reads null with no statistics and passes; pbiplint says it cannot run,
-            // unless the model has nothing in the rule's scopes, so the rule reads nothing at all.
+            // Tabular Editor reads null with no statistics and passes; pbiplint says it cannot run.
             expect(capture.findings[rule.id], "Tabular Editor found nothing").toBeUndefined();
-            if (rule.scopes.every((s) => view.objectsOf(s).length === 0)) {
-              expect(outcome).toEqual({ kind: "findings", objects: [], unset: 0 });
-            } else {
-              expect(outcome.kind).toBe("could-not-run");
-              expect(outcome.kind === "could-not-run" && outcome.reason).toContain(
-                STATISTICS_REASON,
-              );
-            }
+            expect(outcome.kind).toBe("could-not-run");
+            expect(outcome.kind === "could-not-run" && outcome.reason).toContain(STATISTICS_REASON);
             return;
           }
           const want =

@@ -77,17 +77,20 @@ export function fixtureModel(capture: MicrosoftCapture): Model {
   return buildModel(parseModelDir(`${repo}${capture.fixture}`));
 }
 
+/** Where a fixture carries Tabular Editor's ignore annotation; see `ignoreAnnotations`. */
+export interface IgnoreAnnotations {
+  ids: Set<string>;
+  malformedScopes: Set<string>;
+}
+
 /**
  * What Tabular Editor's ignore annotation (`BestPracticeAnalyzer_IgnoreRules`) does in a fixture:
  * the rule ids it names anywhere, uppercased since Tabular Editor matches them ignoring case, and
- * the scopes whose objects carry an annotation that is not valid JSON (Tabular Editor fails every
- * rule on such a scope). pbiplint reads the annotation from pull request C on; until then the parity
- * tests leave those rules out on the annotated fixtures, as nothing else explains their difference.
+ * the scopes whose objects carry an annotation that is not valid JSON, which fails a rule on such a
+ * scope in Tabular Editor. pbiplint reads the annotation from pull request C on; until then the
+ * parity tests leave those rules out on the annotated fixtures (`leftOutForAnnotation`).
  */
-export function ignoreAnnotations(name: string): {
-  ids: Set<string>;
-  malformedScopes: Set<string>;
-} {
+export function ignoreAnnotations(name: string): IgnoreAnnotations {
   const ids = new Set<string>();
   const malformedScopes = new Set<string>();
   for (const file of readModelFiles(`${repo}tests/fixtures/${name}.SemanticModel`)) {
@@ -107,6 +110,24 @@ export function ignoreAnnotations(name: string): {
     }
   }
   return { ids, malformedScopes };
+}
+
+/**
+ * Whether the annotation alone explains a rule's difference on an annotated fixture: the rule's id
+ * is one an annotation names, or Tabular Editor failed the rule and one of its scopes holds the
+ * malformed annotation. (In Tabular Editor's captures that annotation fails only some rules on its
+ * scope, those that would report the object holding it; the others run and are compared.)
+ */
+export function leftOutForAnnotation(
+  ignored: IgnoreAnnotations | undefined,
+  rule: { id: string; scopes: string[] },
+  teFailed: boolean,
+): boolean {
+  if (!ignored) return false;
+  return (
+    ignored.ids.has(rule.id.toUpperCase()) ||
+    (teFailed && rule.scopes.some((s) => ignored.malformedScopes.has(s)))
+  );
 }
 
 /** Whether a rule reads an annotation only a live model's statistics fill in (`Vertipaq_*` and kin). */

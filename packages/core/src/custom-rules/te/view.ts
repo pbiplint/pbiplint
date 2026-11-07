@@ -96,6 +96,40 @@ export const TE_SCOPES = [
   "UserDefinedFunction",
 ] as const;
 
+/**
+ * The object types each scope's objects have. Tabular Editor checks a rule's expression against
+ * every scope it names before it runs, so a rule fails on a scope the model has no objects of
+ * (`Precedence` on CalculationGroup, `Visible` on Measure, in its captures).
+ */
+export const SCOPE_TYPES: Record<(typeof TE_SCOPES)[number], readonly TomType[]> = {
+  Model: ["Model"],
+  Table: ["Table"],
+  CalculatedTable: ["CalculatedTable"],
+  Column: COLUMN_TYPES,
+  DataColumn: ["DataColumn"],
+  CalculatedColumn: ["CalculatedColumn"],
+  CalculatedTableColumn: ["CalculatedTableColumn"],
+  Measure: ["Measure"],
+  Hierarchy: ["Hierarchy"],
+  Level: ["Level"],
+  Partition: ["Partition"],
+  Relationship: ["Relationship"],
+  Perspective: ["Perspective"],
+  Culture: ["Culture"],
+  ModelRole: ["ModelRole"],
+  ModelRoleMember: ["ModelRoleMember"],
+  TablePermission: ["TablePermission"],
+  CalculationGroup: ["CalculationGroupTable"],
+  CalculationItem: ["CalculationItem"],
+  KPI: ["KPI"],
+  NamedExpression: ["NamedExpression"],
+  ProviderDataSource: ["ProviderDataSource"],
+  StructuredDataSource: ["StructuredDataSource"],
+  Variation: ["Variation"],
+  Calendar: ["Calendar"],
+  UserDefinedFunction: ["Function"],
+};
+
 export interface PropertySpec {
   type: TeType;
   get(o: TomObject, view: TomView): unknown | typeof UNSET;
@@ -176,6 +210,8 @@ const enumOr = (e: EnumType, raw: string | true | undefined, dflt: string | type
   enumValue(e, raw) ?? (raw === undefined ? dflt : UNSET);
 
 const key = {
+  model: "model",
+  perspective: (p: string) => `p\u0000${lower(p)}`,
   table: (t: string) => `t\u0000${lower(t)}`,
   column: (t: string, c: string) => `c\u0000${lower(t)}\u0000${lower(c)}`,
   measure: (t: string, m: string) => `m\u0000${lower(t)}\u0000${lower(m)}`,
@@ -385,7 +421,9 @@ function buildIndex(
       byObject.set(k, out);
     };
     for (const block of c.node?.children.filter((n) => n.type === "translations") ?? [])
-      for (const m of childObjects(block, "model"))
+      for (const m of childObjects(block, "model")) {
+        read(key.model, m);
+        for (const x of childObjects(m, "perspective")) read(key.perspective(x.name ?? ""), x);
         for (const t of childObjects(m, "table")) {
           const tn = t.name ?? "";
           read(key.table(tn), t);
@@ -397,6 +435,7 @@ function buildIndex(
               read(key.level(tn, h.name ?? "", l.name ?? ""), l);
           }
         }
+      }
     translations.set(c, byObject);
   }
 
@@ -530,6 +569,18 @@ const REFERENCED_BY_MEMBERS: Record<string, CollectionMember> = {
     type: collectionOf(objectOf(...TABLE_TYPES)),
     get: (items, view) => ofTypes(deepReferencedBy(view as TomView, items), TABLE_TYPES),
   },
+  /** The roles with a row filter that references the object. */
+  Roles: {
+    type: collectionOf(objectOf("ModelRole")),
+    get: (items, view) => {
+      const v = view as TomView;
+      const filters = new Set(ofTypes(items, ["TablePermission"]).map((o) => o.source));
+      return objectsIn(
+        v,
+        v.model.roles.filter((r) => r.tablePermissions.some((tp) => filters.has(tp))),
+      );
+    },
+  },
 };
 
 const keysOfTypes = (items: readonly unknown[], types: readonly TomType[]) =>
@@ -658,6 +709,9 @@ function tableProps(extra: Props): Props {
             : "Table";
     }),
     ...hideable<Table>(),
+    // A hidden table that holds a visible measure still shows, as the measure's home: Tabular
+    // Editor reports te3-zoo's hidden Budget table, with its visible measure, as visible.
+    IsVisible: p<Table>(BOOLEAN, (t) => !t.isHidden || t.measures.some((m) => !m.isHidden)),
     DataCategory: p<Table>(STRING, (t) => t.dataCategory ?? ""),
     Columns: p<Table>(COLUMNS, (t, _o, v) => objectsIn(v, t.columns)),
     Measures: p<Table>(collectionOf(objectOf("Measure")), (t, _o, v) => objectsIn(v, t.measures)),
@@ -708,6 +762,8 @@ function columnProps(objectTypeName: string, columnType: string, extra: Props): 
   return {
     ...named("Column", objectTypeName),
     ...hideable<Column>(),
+    // A column hides with its table in Tabular Editor; a measure does not (te3-zoo's captures).
+    IsVisible: p<Column>(BOOLEAN, (c) => !c.isHidden && !c.table.isHidden),
     Table: p<Column>(TABLE, (c, _o, v) => objectIn(v, c.table)),
     // Never guessed: no `dataType` line leaves the type to the engine (spec section 6.2).
     DataType: p<Column>(ENUMS.DataType, (c) => enumOr(ENUMS.DataType, c.dataType, UNSET)),
@@ -794,6 +850,7 @@ const kpiProp = (prop: string) => p<KpiSource>(STRING, (k) => text(propOf(k.node
 export const PROPERTIES: Record<TomType, Record<string, PropertySpec>> = {
   Model: {
     ...named("Model", "Model"),
+    ...translated<Model>(() => key.model, false),
     Tables: p<Model>(TABLES, (m, _o, v) => objectsIn(v, m.tables)),
     Relationships: p<Model>(collectionOf(objectOf("Relationship")), (m, _o, v) =>
       objectsIn(v, m.relationships),
@@ -869,7 +926,9 @@ export const PROPERTIES: Record<TomType, Record<string, PropertySpec>> = {
     ),
   },
 
-  Table: tableProps({}),
+  // Tabular Editor gives a table that is not calculated an Expression, null: its captures fail
+  // `RegEx.IsMatch(Expression, ...)` on a table, and run `IsNullOrWhitespace(Expression)` there.
+  Table: tableProps({ Expression: fixed(NULLABLE_STRING, null) }),
   CalculatedTable: tableProps({
     Expression: p<Table>(STRING, (t) =>
       t.partitions
@@ -880,6 +939,9 @@ export const PROPERTIES: Record<TomType, Record<string, PropertySpec>> = {
     DependsOn: dependsOnProp,
   }),
   CalculationGroupTable: tableProps({
+    // The value Tabular Editor's own rules exclude calculation group tables by.
+    ObjectType: fixed(ENUMS.ObjectType, "CalculationGroupTable"),
+    Expression: fixed(NULLABLE_STRING, null),
     CalculationItems: p<Table>(collectionOf(objectOf("CalculationItem")), (t, _o, v) =>
       objectsIn(v, t.calculationGroup?.items ?? []),
     ),
@@ -947,6 +1009,8 @@ export const PROPERTIES: Record<TomType, Record<string, PropertySpec>> = {
   Hierarchy: {
     ...named("Hierarchy", "Hierarchy"),
     ...hideable<Hierarchy>(),
+    // Hidden with its table, as a column is (messy-sales's date tables in Tabular Editor's captures).
+    IsVisible: p<Hierarchy>(BOOLEAN, (h) => !h.isHidden && !h.table.isHidden),
     Table: p<Hierarchy>(TABLE, (h, _o, v) => objectIn(v, h.table)),
     DisplayFolder: p<Hierarchy>(STRING, (h) => text(propOf(h.node, "displayfolder"))),
     Levels: p<Hierarchy>(collectionOf(objectOf("Level")), (h, _o, v) => objectsIn(v, h.levels)),
@@ -1027,7 +1091,10 @@ export const PROPERTIES: Record<TomType, Record<string, PropertySpec>> = {
     IsActive: p<Relationship>(BOOLEAN, (r) => r.isActive),
   },
 
-  Perspective: named("Perspective", "Perspective"),
+  Perspective: {
+    ...named("Perspective", "Perspective"),
+    ...translated<Perspective>((x) => key.perspective(x.name), false),
+  },
   Culture: named("Culture", "Translation", false),
 
   ModelRole: {
@@ -1148,6 +1215,7 @@ export const PROPERTIES: Record<TomType, Record<string, PropertySpec>> = {
     ...named("Function", "Function"),
     Expression: p<DaxFunction>(STRING, (f) => f.expression),
     DependsOn: dependsOnProp,
+    ReferencedBy: referencedByProp,
   },
 
   CalculationGroup: {

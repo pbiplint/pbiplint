@@ -873,13 +873,22 @@
     "Expression": "Tokenize().Any(Type = DIV and Next.Type <> INTEGER_LITERAL and Next.Type <> REAL_LITERAL)"
   },
   {
-    "ID": "PROBE_TOKEN_TEXT",
-    "Name": "probe: token text",
+    "ID": "PROBE_TOKEN_TEXT_UNQUOTED",
+    "Name": "probe: token text unquoted",
     "Category": "Probe",
-    "Description": "Whether a token's Text holds a string literal's content without its quotes.",
+    "Description": "Whether a string literal token's Text is its content without the quotes.",
     "Severity": 2,
     "Scope": "Measure",
-    "Expression": "Tokenize().Any(Type = STRING_LITERAL and Text = \"/\")"
+    "Expression": "Tokenize().Any(Type = STRING_LITERAL and Text = \"per unit / per order\")"
+  },
+  {
+    "ID": "PROBE_TOKEN_TEXT_QUOTED",
+    "Name": "probe: token text quoted",
+    "Category": "Probe",
+    "Description": "Whether a string literal token's Text keeps its quotes.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = STRING_LITERAL and Text = \"\"\"per unit / per order\"\"\")"
   },
   {
     "ID": "PROBE_TOKEN_NEXT_PAST_END",
@@ -1386,15 +1395,6 @@
     "Expression": "RegEx.IsMatch(\"a TODO\", \"(?<![A-Za-z0-9])TODO\")"
   },
   {
-    "ID": "PROBE_REGEX_DOLLAR_FINAL_NEWLINE",
-    "Name": "probe: regex dollar final newline",
-    "Category": "Probe",
-    "Description": "$ before a final newline.",
-    "Severity": 2,
-    "Scope": "Model",
-    "Expression": "RegEx.IsMatch(\"ab\\n\", \"b$\")"
-  },
-  {
     "ID": "PROBE_REGEX_DIGIT_NON_ASCII",
     "Name": "probe: regex digit non ascii",
     "Category": "Probe",
@@ -1411,15 +1411,6 @@
     "Severity": 2,
     "Scope": "Model",
     "Expression": "RegEx.IsMatch(\"é\", \"^\\w$\")"
-  },
-  {
-    "ID": "PROBE_REGEX_DOT_NEWLINE",
-    "Name": "probe: regex dot newline",
-    "Category": "Probe",
-    "Description": ". against a newline.",
-    "Severity": 2,
-    "Scope": "Model",
-    "Expression": "RegEx.IsMatch(\"a\\nb\", \"a.b\")"
   },
   {
     "ID": "PROBE_REGEX_BAD_PATTERN",

@@ -21,7 +21,7 @@
     "ID": "PROBE_DUPLICATE_DIFFERENT",
     "Name": "probe: duplicate different",
     "Category": "Probe",
-    "Description": "One id, two expressions: the first, the second, or both.",
+    "Description": "One id, two scopes: the first, the second, or both.",
     "Severity": 2,
     "Scope": "Model",
     "Expression": "true"
@@ -30,7 +30,7 @@
     "ID": "PROBE_DUPLICATE_DIFFERENT",
     "Name": "probe: duplicate different",
     "Category": "Probe",
-    "Description": "One id, two expressions: the first, the second, or both.",
+    "Description": "One id, two scopes: the first, the second, or both.",
     "Severity": 2,
     "Scope": "Table",
     "Expression": "true"

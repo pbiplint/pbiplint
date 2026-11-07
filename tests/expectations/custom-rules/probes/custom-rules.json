@@ -4,7 +4,7 @@
   "captured": "2026-11-07",
   "results": {
     "duplicates.json": {
-      "sha256": "57f2a39ffd88ac009c9a852d55ace544d0740232da92e8b1b935c40e42c2059b",
+      "sha256": "be532d7ba2dc970dc8a791d6fc51ce874111458695f2f797d7b65bcc1907ae43",
       "findings": {
         "PROBE_DUPLICATE_DIFFERENT": [
           "Model"
@@ -37,6 +37,31 @@
       },
       "quiet": []
     },
+    "newlines.json": {
+      "sha256": "f92ea5c02e8e6e82f0954a7dd96d7d2e8b9ac795602e87faa8c01cbdc0121a41",
+      "findings": {
+        "PROBE_NEWLINE_BUILT": [
+          "Model"
+        ],
+        "PROBE_REGEX_DOLLAR_FINAL_NEWLINE": [
+          "Model"
+        ],
+        "PROBE_REGEX_SPACE_NEWLINE": [
+          "Model"
+        ]
+      },
+      "ruleErrors": {},
+      "severities": {
+        "PROBE_NEWLINE_BUILT": "warning",
+        "PROBE_REGEX_DOLLAR_FINAL_NEWLINE": "warning",
+        "PROBE_REGEX_SPACE_NEWLINE": "warning"
+      },
+      "quiet": [
+        "PROBE_REGEX_DOLLAR_INNER_NEWLINE",
+        "PROBE_REGEX_DOT_NEWLINE",
+        "PROBE_REGEX_CARET_AFTER_NEWLINE"
+      ]
+    },
     "no-scope.json": {
       "sha256": "d2fcc562edac54bf68d089554c9e5ae1b0aa6f16acfaa833148c3ef9a70aeb62",
       "findings": {
@@ -53,7 +78,7 @@
       ]
     },
     "semantics.json": {
-      "sha256": "f7c5f5f5de87d0ce45e0804bde2b0ce2a38d6b5c78ae3dc1279e101969aaae96",
+      "sha256": "9a6035630f8dc8b0a9bee07ba382dd9c3392430acc8a90a1803d465d2d2d7b27",
       "findings": {
         "PROBE_CONVERT_OK": [
           "Model"
@@ -476,6 +501,9 @@
           "[Total Amount]",
           "[Total Quantity]"
         ],
+        "PROBE_TOKEN_TEXT_UNQUOTED": [
+          "[Slash Label]"
+        ],
         "PROBE_TOKEN_WHITESPACES": [
           "[Abc]",
           "[Amount per Order]",
@@ -611,6 +639,7 @@
         "PROBE_TOKEN_STRING_LITERAL": "warning",
         "PROBE_TOKEN_SUM": "warning",
         "PROBE_TOKEN_TABLE_OR_VARIABLE": "warning",
+        "PROBE_TOKEN_TEXT_UNQUOTED": "warning",
         "PROBE_TOKEN_WHITESPACES": "warning",
         "PROBE_TOUPPER_NON_ASCII": "warning",
         "PROBE_VERTIPAQ_WITHOUT_STATISTICS": "warning"
@@ -646,7 +675,7 @@
         "PROBE_TOKEN_BLANK",
         "PROBE_TOKEN_EQ",
         "PROBE_TOKEN_DATE",
-        "PROBE_TOKEN_TEXT",
+        "PROBE_TOKEN_TEXT_QUOTED",
         "PROBE_STRING_BACKSLASH_ESCAPE",
         "PROBE_STRING_NEWLINE_ESCAPE",
         "PROBE_STRING_EQUALS_CASE",
@@ -655,9 +684,7 @@
         "PROBE_DESCRIPTION_NULL",
         "PROBE_CONTAINS_CASE",
         "PROBE_INDEXOF_CULTURE",
-        "PROBE_REGEX_MID_IGNORE_CASE_BEFORE",
-        "PROBE_REGEX_DOLLAR_FINAL_NEWLINE",
-        "PROBE_REGEX_DOT_NEWLINE"
+        "PROBE_REGEX_MID_IGNORE_CASE_BEFORE"
       ]
     },
     "unknown-scope.json": {

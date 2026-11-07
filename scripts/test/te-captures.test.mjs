@@ -5,8 +5,9 @@ import { fileURLToPath, URL } from "node:url";
 import { describe, expect, it } from "vitest";
 import { ruleIdsOf } from "../te-expectations.mjs";
 
-// What Tabular Editor CLI 0.7.1.2 captured. That build stops working after October 31, 2026, so a
-// missing or partial capture cannot be made again without a licensed build (docs/RELEASING.md).
+// What Tabular Editor CLI 0.7.1.2 captured. That build stopped working after October 31, 2026, so a
+// missing or partial capture is made again with one current build: the preview until December 31,
+// 2026, a licensed build after (docs/RELEASING.md).
 const dir = fileURLToPath(new URL("../../tests/expectations/", import.meta.url));
 const read = (path) => JSON.parse(readFileSync(join(dir, path), "utf8"));
 /** The model fixtures with a capture in `sub`, by name. */
@@ -22,7 +23,7 @@ const isObject = (value) => typeof value === "object" && value !== null && !Arra
 // fixture whose captures are made before October 31, 2026 is added here. A fixture
 // added later has only its Microsoft capture and is not listed. A listed fixture keeps its captures
 // as they are after that date: a change to it needs every listed fixture re-captured three ways
-// with one licensed build (docs/RELEASING.md).
+// with one build: the preview until December 31, 2026, a licensed build after (docs/RELEASING.md).
 const CAPTURED = [
   "data-sources",
   "kitchen-sink",
@@ -173,7 +174,8 @@ describe("the custom rules captures", () => {
       const { results } = read(`custom-rules/survey/${name}.json`);
       expect(Object.keys(results).sort()).toEqual(ids);
       expect(Object.values(results).filter((r) => "error" in r).length).toBeLessThanOrEqual(1);
-      // custom-rules has a malformed ignore annotation, so its Microsoft capture has rule errors.
+      // The malformed ignore annotation is on a perspective, which no Microsoft rule reads, so
+      // neither Microsoft capture has rule errors today; a re-capture that gave one some stays equal.
       const ms = read(`${sub(name)}.json`);
       expect(results[MICROSOFT_FILE]).toEqual({
         findings: ms.findings,

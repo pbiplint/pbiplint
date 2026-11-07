@@ -1,6 +1,6 @@
 # Custom rules: a team's own rule files, in the CLI, the pipelines, and the browser (#118): spec
 
-Issue: [#118](https://github.com/pbiplint/pbiplint/issues/118), size XL. Written November 6, 2026, from main at `26a69b5`. **Status: draft for review.** Decisions the maintainer has made are marked **(decided)**; calls made in writing the spec are marked **(design call)**; anything marked **(builder)** is left to whoever plans and builds it.
+Issue: [#118](https://github.com/pbiplint/pbiplint/issues/118), size XL. Written November 6, 2026, from main at `26a69b5`. **Status: approved November 6, 2026.** Decisions the maintainer has made are marked **(decided)**; calls made in writing the spec are marked **(design call)**; anything marked **(builder)** is left to whoever plans and builds it.
 
 Research behind it (November 6, 2026): the 46 distinct rule files the survey of September 28, 2026 found (64 copies in 44 public repositories), each fetched at the commit `tests/expectations/survey/files.json` pins and checked against its sha256; Tabular Editor CLI 0.7.1.2's results on them, committed under `tests/expectations/survey/`; a GitHub code search for models that carry Tabular Editor's rule annotations; fab-inspector's rule format at the commit pbiplint's report rules were ported from; and a read of the codebase.
 

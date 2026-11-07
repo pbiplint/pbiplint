@@ -176,18 +176,19 @@ function bpaJson(run) {
 }
 
 /** Where a rule file the survey list names is, at its commit. */
-function ruleFileUrl(file) {
+export function ruleFileUrl(file) {
   const path = file.path.split("/").map(encodeURIComponent).join("/");
   return `https://raw.githubusercontent.com/${file.repository}/${file.commit}/${path}`;
 }
 
 /**
  * A rule file the survey list names, fetched at its commit and checked against its sha256, or null
- * when GitHub answers 404: its repository, or the commit, is no longer there.
+ * when GitHub answers 404: its repository, or the commit, is no longer there. `get` is the fetch to
+ * use, so a test can stand in for the network.
  */
-async function fetchRuleFile(file) {
+export async function fetchRuleFile(file, get = fetch) {
   const url = ruleFileUrl(file);
-  const res = await fetch(url);
+  const res = await get(url);
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`${file.id}: ${url} returned ${res.status}`);
   const body = Buffer.from(await res.arrayBuffer());

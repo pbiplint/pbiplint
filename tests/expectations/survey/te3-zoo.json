@@ -18,6 +18,88 @@
       "[Order Count]"
     ]
   },
+  "custom": {
+    "deviations": {
+      "KavasiMihaly/SelfServiceBIBlog/TabularEditor/BPARules-PowerBI.json": {
+        "APPLY_FORMAT_STRING_MEASURES": "A measure's data type is not saved in the project's files, so pbiplint leaves the measure out of a rule that reads `DataType`; Tabular Editor works the type out from the measure's DAX."
+      },
+      "TabularEditor/BestPracticeRules/BPARules-PowerBI.json": {
+        "APPLY_FORMAT_STRING_MEASURES": "A measure's data type is not saved in the project's files, so pbiplint leaves the measure out of a rule that reads `DataType`; Tabular Editor works the type out from the measure's DAX."
+      },
+      "TabularEditor/BestPracticeRules/BPARules-standard.json": {
+        "APPLY_FORMAT_STRING_MEASURES": "A measure's data type is not saved in the project's files, so pbiplint leaves the measure out of a rule that reads `DataType`; Tabular Editor works the type out from the measure's DAX."
+      },
+      "TabularEditor/SessionArchive/Webinars/2025-12-10 - CICD and version control for Fabric/src/automation/resources/BPARules.json": {
+        "APPLY_FORMAT_STRING_MEASURES": "A measure's data type is not saved in the project's files, so pbiplint leaves the measure out of a rule that reads `DataType`; Tabular Editor works the type out from the measure's DAX."
+      },
+      "bredeespelid/PBIP_SemLin/docs/bpa/semantic model/BPARules-PowerBI.json": {
+        "APPLY_FORMAT_STRING_MEASURES": "A measure's data type is not saved in the project's files, so pbiplint leaves the measure out of a rule that reads `DataType`; Tabular Editor works the type out from the measure's DAX."
+      },
+      "data-goblin/power-bi-agentic-development/plugins/tabular-editor/skills/bpa-rules/examples/course-3-business-case-bpa-rules.json": {
+        "RULE10": "A measure's data type is not saved in the project's files, so pbiplint leaves the measure out of a rule that reads `DataType`; Tabular Editor works the type out from the measure's DAX."
+      },
+      "filcuk/ssas-best-practice-rules/BPARules.json": {
+        "INTEGER_FORMATTING": "A measure's data type is not saved in the project's files, so pbiplint leaves the measure out of a rule that reads `DataType`; Tabular Editor works the type out from the measure's DAX."
+      },
+      "gordoncheme/powerbi/BPARules.json": {
+        "FORMATTING_MEASURES_FORMAT_STRING": "A measure's data type is not saved in the project's files, so pbiplint leaves the measure out of a rule that reads `DataType`; Tabular Editor works the type out from the measure's DAX."
+      },
+      "gronnerup/FabricOps/automation/resources/BPARules.json": {
+        "APPLY_FORMAT_STRING_MEASURES": "A measure's data type is not saved in the project's files, so pbiplint leaves the measure out of a rule that reads `DataType`; Tabular Editor works the type out from the measure's DAX."
+      },
+      "petecarlssonw/powerbi-testing/BPARules/bpa-rules.json": {
+        "CHECK_TEXT_TYPE_MEASURES": "A measure's data type is not saved in the project's files, so pbiplint leaves the measure out of a rule that reads `DataType`; Tabular Editor works the type out from the measure's DAX.",
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": "A measure's data type is not saved in the project's files, so pbiplint leaves the measure out of a rule that reads `DataType`; Tabular Editor works the type out from the measure's DAX."
+      },
+      "ryanduguid/accounting-review-pipeline/apps/australian-accounting-power-bi/tests/model_bpa_rules.json": {
+        "BPA_MEASURE_FORMAT_STRING": "A measure's data type is not saved in the project's files, so pbiplint leaves the measure out of a rule that reads `DataType`; Tabular Editor works the type out from the measure's DAX."
+      },
+      "thijsknaapRob/BPARulesOnline/BPARules.json": {
+        "INTEGER_FORMATTING": "A measure's data type is not saved in the project's files, so pbiplint leaves the measure out of a rule that reads `DataType`; Tabular Editor works the type out from the measure's DAX."
+      }
+    },
+    "ours": {
+      "KavasiMihaly/SelfServiceBIBlog/TabularEditor/BPARules-PowerBI.json": {
+        "APPLY_FORMAT_STRING_MEASURES": []
+      },
+      "TabularEditor/BestPracticeRules/BPARules-PowerBI.json": {
+        "APPLY_FORMAT_STRING_MEASURES": []
+      },
+      "TabularEditor/BestPracticeRules/BPARules-standard.json": {
+        "APPLY_FORMAT_STRING_MEASURES": []
+      },
+      "TabularEditor/SessionArchive/Webinars/2025-12-10 - CICD and version control for Fabric/src/automation/resources/BPARules.json": {
+        "APPLY_FORMAT_STRING_MEASURES": []
+      },
+      "bredeespelid/PBIP_SemLin/docs/bpa/semantic model/BPARules-PowerBI.json": {
+        "APPLY_FORMAT_STRING_MEASURES": []
+      },
+      "data-goblin/power-bi-agentic-development/plugins/tabular-editor/skills/bpa-rules/examples/course-3-business-case-bpa-rules.json": {
+        "RULE10": [
+          "[Total Amount]"
+        ]
+      },
+      "filcuk/ssas-best-practice-rules/BPARules.json": {
+        "INTEGER_FORMATTING": []
+      },
+      "gordoncheme/powerbi/BPARules.json": {
+        "FORMATTING_MEASURES_FORMAT_STRING": []
+      },
+      "gronnerup/FabricOps/automation/resources/BPARules.json": {
+        "APPLY_FORMAT_STRING_MEASURES": []
+      },
+      "petecarlssonw/powerbi-testing/BPARules/bpa-rules.json": {
+        "CHECK_TEXT_TYPE_MEASURES": [],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": []
+      },
+      "ryanduguid/accounting-review-pipeline/apps/australian-accounting-power-bi/tests/model_bpa_rules.json": {
+        "BPA_MEASURE_FORMAT_STRING": []
+      },
+      "thijsknaapRob/BPARulesOnline/BPARules.json": {
+        "INTEGER_FORMATTING": []
+      }
+    }
+  },
   "results": {
     "microsoft/Analysis-Services/BestPracticeRules/BPARules.json": {
       "findings": {

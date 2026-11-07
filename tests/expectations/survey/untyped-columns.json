@@ -6,6 +6,169 @@
   "ours": {},
   "custom": {
     "deviations": {
+      "Adrian1903/BPA-Rules/BPARules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "DATECOLUMN_FORMATSTRING": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "HIDE_FACT_TABLE_COLUMNS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "NUMERIC_COLUMN_SUMMARIZE_BY": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "AlahmadiQ8/copilot-sdk-challenge/backend/src/data/bpa-rules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "DATECOLUMN_FORMATSTRING": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "HIDE_FACT_TABLE_COLUMNS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "NUMERIC_COLUMN_SUMMARIZE_BY": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "BenniDeJagere/Presentations/2020/20200707_PBIMCR/BPARules.json": {
+        "META_AVOID_FLOAT": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "META_SUMMARIZE_NONE": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "BenniDeJagere/Presentations/2020/20201002_SQLBits/BPARules.json": {
+        "META_AVOID_FLOAT": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "META_SUMMARIZE_NONE": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "Code-DataFyre/PowerInsighter/PowerInsighter/ModelBestPractices/BPARules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "DATECOLUMN_FORMATSTRING": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "HIDE_FACT_TABLE_COLUMNS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "NUMERIC_COLUMN_SUMMARIZE_BY": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "GreyskullAnalytics/by-the-power-of-analyics-engineering/powerbi/bestpracticeanalyser/BPARules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "DATECOLUMN_FORMATSTRING": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "HIDE_FACT_TABLE_COLUMNS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "NUMERIC_COLUMN_SUMMARIZE_BY": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "KavasiMihaly/SelfServiceBIBlog/TabularEditor/BPARules-PowerBI.json": {
+        "APPLY_FORMAT_STRING_COLUMNS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "META_AVOID_FLOAT": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "META_SUMMARIZE_NONE": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "Mikd14/BPARules/BPARules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "NUMERIC_COLUMN_SUMMARIZE_BY": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "Reinsight-SE/Tabular/BestPractices/BPARules.json": {
+        "APPLY_FORMAT_STRING_COLUMNS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "AVOID_FLOATING_POINT_DATA_TYPES": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "DATECOLUMN_FORMATSTRING": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "FORMAT_FLAG_COLUMNS_AS_YES_NO_VALUE_STRINGS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "HIDE_FACT_TABLE_COLUMNS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "NUMERIC_COLUMN_SUMMARIZE_BY": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "StuffbyYuki/PBI-BPA-Rules/BPA_Rules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "DATECOLUMN_FORMATSTRING": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "HIDE_FACT_TABLE_COLUMNS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "NUMERIC_COLUMN_SUMMARIZE_BY": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "TabularEditor/BestPracticeRules/BPARules-PowerBI.json": {
+        "APPLY_FORMAT_STRING_COLUMNS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "META_AVOID_FLOAT": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "META_SUMMARIZE_NONE": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "TabularEditor/BestPracticeRules/BPARules-standard-lax.json": {
+        "META_AVOID_FLOAT": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "META_SUMMARIZE_NONE": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "TabularEditor/BestPracticeRules/BPARules-standard.json": {
+        "APPLY_FORMAT_STRING_COLUMNS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "META_AVOID_FLOAT": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "META_SUMMARIZE_NONE": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "TabularEditor/SessionArchive/Webinars/2025-12-10 - CICD and version control for Fabric/src/automation/resources/BPARules.json": {
+        "APPLY_FORMAT_STRING_COLUMNS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "META_AVOID_FLOAT": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "META_SUMMARIZE_NONE": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "bgarcevic/fabric-utils/.devops/bpa-rules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "DATECOLUMN_FORMATSTRING": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "HIDE_FACT_TABLE_COLUMNS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "NUMERIC_COLUMN_SUMMARIZE_BY": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "bgarcevic/tomix-cli/src/Tomix.App/Bpa/Rules/bpa-rules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "DATECOLUMN_FORMATSTRING": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "HIDE_FACT_TABLE_COLUMNS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "NUMERIC_COLUMN_SUMMARIZE_BY": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "bonardi/PowerBI-CICD/resources/dataset/config/bparules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "DATECOLUMN_FORMATSTRING": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "HIDE_FACT_TABLE_COLUMNS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "NUMERIC_COLUMN_SUMMARIZE_BY": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "bredeespelid/PBIP_SemLin/docs/bpa/semantic model/BPARules-PowerBI.json": {
+        "APPLY_FORMAT_STRING_COLUMNS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "META_AVOID_FLOAT": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "META_SUMMARIZE_NONE": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "data-goblin/power-bi-agentic-development/plugins/tabular-editor/skills/bpa-rules/examples/course-3-business-case-bpa-rules.json": {
+        "RULE6": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "eugenecp/fabcon2026-ai-ci-cd/Fabric2026-CI-CD-Complete-Package/scripts/.bpaRules.json": {
+        "COL_HIDE_UNUSED": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "faby31/test/BPARules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "HIDE_FACT_TABLE_COLUMNS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "NUMERIC_COLUMN_SUMMARIZE_BY": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "filcuk/ssas-best-practice-rules/BPARules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "DATECOLUMN_FORMATSTRING": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "HIDE_FACT_TABLE_COLUMNS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "NUMERIC_COLUMN_SUMMARIZE_BY": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "gordoncheme/powerbi/BPARules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "DATECOLUMN_FORMATSTRING": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "HIDE_FACT_TABLE_COLUMNS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "NUMERIC_COLUMN_SUMMARIZE_BY": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "gronnerup/FabricOps/automation/resources/BPARules.json": {
+        "APPLY_FORMAT_STRING_COLUMNS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "META_AVOID_FLOAT": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "META_SUMMARIZE_NONE": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "marcelodfelman/PowerBI-BPA-Analyzer/data/BPARules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
       "microsoft/Analysis-Services/BestPracticeRules/BPARules.json": {
         "AVOID_FLOATING_POINT_DATA_TYPES": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
         "DATECOLUMN_FORMATSTRING": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
@@ -14,9 +177,296 @@
         "MONTH_(AS_A_STRING)_MUST_BE_SORTED": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
         "NUMERIC_COLUMN_SUMMARIZE_BY": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
         "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "microsoft/Analysis-Services/BestPracticeRules/Italian/BPARules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "DATECOLUMN_FORMATSTRING": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "HIDE_FACT_TABLE_COLUMNS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "NUMERIC_COLUMN_SUMMARIZE_BY": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "microsoft/Analysis-Services/BestPracticeRules/Japanese/BPARules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "DATECOLUMN_FORMATSTRING": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "HIDE_FACT_TABLE_COLUMNS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "NUMERIC_COLUMN_SUMMARIZE_BY": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "microsoft/Analysis-Services/BestPracticeRules/Spanish/BPARules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "DATECOLUMN_FORMATSTRING": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "HIDE_FACT_TABLE_COLUMNS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "NUMERIC_COLUMN_SUMMARIZE_BY": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "omezquita/PowerBI/MDA_BPA_Rules.json": {
+        "META_AVOID_FLOAT": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "petecarlssonw/powerbi-testing/BPARules/bpa-rules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "DATECOLUMN_FORMATSTRING": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "HIDE_FACT_TABLE_COLUMNS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "NUMERIC_COLUMN_SUMMARIZE_BY": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "pranamg/powerbi-hub/Scripts/CSharp/TabularEditor/BestPracticeRules.json": {
+        "COLUMN_NO_SORT_BY_COLUMN": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "rafaelxkr/Power-BI/Tabular_Editor/BPARules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "DATECOLUMN_FORMATSTRING": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "HIDE_FACT_TABLE_COLUMNS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "NUMERIC_COLUMN_SUMMARIZE_BY": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "tenfingerseddy/semanticus-vscode/Semanticus.Analysis/Rules/BPARules-PowerBI.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "DATECOLUMN_FORMATSTRING": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "HIDE_FACT_TABLE_COLUMNS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "NUMERIC_COLUMN_SUMMARIZE_BY": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "SEM_COLUMN_NEEDS_FORMAT_STRING": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "thijsknaapRob/BPARulesOnline/BPARules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "DATECOLUMN_FORMATSTRING": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "NUMERIC_COLUMN_SUMMARIZE_BY": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "twelve-baskets-analytics/pbi-bpa/BPARules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "DATECOLUMN_FORMATSTRING": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "HIDE_FACT_TABLE_COLUMNS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "NUMERIC_COLUMN_SUMMARIZE_BY": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      },
+      "vlpatkosdani/powerbi-cicd-with-githubactions-demos/scripts/BPA_Rules.json": {
+        "2": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "17": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "31": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "49": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "65": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
       }
     },
     "ours": {
+      "Adrian1903/BPA-Rules/BPARules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [],
+        "HIDE_FACT_TABLE_COLUMNS": [],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Orders'[Order Date]"
+        ]
+      },
+      "AlahmadiQ8/copilot-sdk-challenge/backend/src/data/bpa-rules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [],
+        "HIDE_FACT_TABLE_COLUMNS": [],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Orders'[Order Date]"
+        ]
+      },
+      "BenniDeJagere/Presentations/2020/20200707_PBIMCR/BPARules.json": {
+        "META_AVOID_FLOAT": [],
+        "META_SUMMARIZE_NONE": []
+      },
+      "BenniDeJagere/Presentations/2020/20201002_SQLBits/BPARules.json": {
+        "META_AVOID_FLOAT": [],
+        "META_SUMMARIZE_NONE": []
+      },
+      "Code-DataFyre/PowerInsighter/PowerInsighter/ModelBestPractices/BPARules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [],
+        "HIDE_FACT_TABLE_COLUMNS": [],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Orders'[Order Date]"
+        ]
+      },
+      "GreyskullAnalytics/by-the-power-of-analyics-engineering/powerbi/bestpracticeanalyser/BPARules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [],
+        "HIDE_FACT_TABLE_COLUMNS": [],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": []
+      },
+      "KavasiMihaly/SelfServiceBIBlog/TabularEditor/BPARules-PowerBI.json": {
+        "APPLY_FORMAT_STRING_COLUMNS": [],
+        "META_AVOID_FLOAT": [],
+        "META_SUMMARIZE_NONE": []
+      },
+      "Mikd14/BPARules/BPARules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Orders'[Order Date]"
+        ]
+      },
+      "Reinsight-SE/Tabular/BestPractices/BPARules.json": {
+        "APPLY_FORMAT_STRING_COLUMNS": [],
+        "AVOID_FLOATING_POINT_DATA_TYPES": [],
+        "DATECOLUMN_FORMATSTRING": [],
+        "FORMAT_FLAG_COLUMNS_AS_YES_NO_VALUE_STRINGS": [],
+        "HIDE_FACT_TABLE_COLUMNS": [],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Orders'[Order Date]"
+        ]
+      },
+      "StuffbyYuki/PBI-BPA-Rules/BPA_Rules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [],
+        "HIDE_FACT_TABLE_COLUMNS": [],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Orders'[Order Date]"
+        ]
+      },
+      "TabularEditor/BestPracticeRules/BPARules-PowerBI.json": {
+        "APPLY_FORMAT_STRING_COLUMNS": [],
+        "META_AVOID_FLOAT": [],
+        "META_SUMMARIZE_NONE": []
+      },
+      "TabularEditor/BestPracticeRules/BPARules-standard-lax.json": {
+        "META_AVOID_FLOAT": [],
+        "META_SUMMARIZE_NONE": []
+      },
+      "TabularEditor/BestPracticeRules/BPARules-standard.json": {
+        "APPLY_FORMAT_STRING_COLUMNS": [],
+        "META_AVOID_FLOAT": [],
+        "META_SUMMARIZE_NONE": []
+      },
+      "TabularEditor/SessionArchive/Webinars/2025-12-10 - CICD and version control for Fabric/src/automation/resources/BPARules.json": {
+        "APPLY_FORMAT_STRING_COLUMNS": [],
+        "META_AVOID_FLOAT": [],
+        "META_SUMMARIZE_NONE": []
+      },
+      "bgarcevic/fabric-utils/.devops/bpa-rules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [],
+        "HIDE_FACT_TABLE_COLUMNS": [],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": []
+      },
+      "bgarcevic/tomix-cli/src/Tomix.App/Bpa/Rules/bpa-rules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [],
+        "HIDE_FACT_TABLE_COLUMNS": [],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": []
+      },
+      "bonardi/PowerBI-CICD/resources/dataset/config/bparules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [],
+        "HIDE_FACT_TABLE_COLUMNS": [],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Orders'[Order Date]"
+        ]
+      },
+      "bredeespelid/PBIP_SemLin/docs/bpa/semantic model/BPARules-PowerBI.json": {
+        "APPLY_FORMAT_STRING_COLUMNS": [],
+        "META_AVOID_FLOAT": [],
+        "META_SUMMARIZE_NONE": []
+      },
+      "data-goblin/power-bi-agentic-development/plugins/tabular-editor/skills/bpa-rules/examples/course-3-business-case-bpa-rules.json": {
+        "RULE6": []
+      },
+      "eugenecp/fabcon2026-ai-ci-cd/Fabric2026-CI-CD-Complete-Package/scripts/.bpaRules.json": {
+        "COL_HIDE_UNUSED": [
+          "'Targets'[Target]"
+        ]
+      },
+      "faby31/test/BPARules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [],
+        "HIDE_FACT_TABLE_COLUMNS": [],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Orders'[Order Date]"
+        ]
+      },
+      "filcuk/ssas-best-practice-rules/BPARules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [],
+        "HIDE_FACT_TABLE_COLUMNS": [],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Orders'[Order Date]"
+        ]
+      },
+      "gordoncheme/powerbi/BPARules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [],
+        "HIDE_FACT_TABLE_COLUMNS": [],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Orders'[Order Date]"
+        ]
+      },
+      "gronnerup/FabricOps/automation/resources/BPARules.json": {
+        "APPLY_FORMAT_STRING_COLUMNS": [],
+        "META_AVOID_FLOAT": [],
+        "META_SUMMARIZE_NONE": []
+      },
+      "marcelodfelman/PowerBI-BPA-Analyzer/data/BPARules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": []
+      },
       "microsoft/Analysis-Services/BestPracticeRules/BPARules.json": {
         "AVOID_FLOATING_POINT_DATA_TYPES": [],
         "DATECOLUMN_FORMATSTRING": [
@@ -29,6 +479,118 @@
         "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
           "'Orders'[Order Date]"
         ]
+      },
+      "microsoft/Analysis-Services/BestPracticeRules/Italian/BPARules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [],
+        "HIDE_FACT_TABLE_COLUMNS": [],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Orders'[Order Date]"
+        ]
+      },
+      "microsoft/Analysis-Services/BestPracticeRules/Japanese/BPARules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [],
+        "HIDE_FACT_TABLE_COLUMNS": [],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Orders'[Order Date]"
+        ]
+      },
+      "microsoft/Analysis-Services/BestPracticeRules/Spanish/BPARules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [],
+        "HIDE_FACT_TABLE_COLUMNS": [],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Orders'[Order Date]"
+        ]
+      },
+      "omezquita/PowerBI/MDA_BPA_Rules.json": {
+        "META_AVOID_FLOAT": []
+      },
+      "petecarlssonw/powerbi-testing/BPARules/bpa-rules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [],
+        "HIDE_FACT_TABLE_COLUMNS": [],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": []
+      },
+      "pranamg/powerbi-hub/Scripts/CSharp/TabularEditor/BestPracticeRules.json": {
+        "COLUMN_NO_SORT_BY_COLUMN": []
+      },
+      "rafaelxkr/Power-BI/Tabular_Editor/BPARules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [],
+        "HIDE_FACT_TABLE_COLUMNS": [],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Orders'[Order Date]"
+        ]
+      },
+      "tenfingerseddy/semanticus-vscode/Semanticus.Analysis/Rules/BPARules-PowerBI.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [],
+        "HIDE_FACT_TABLE_COLUMNS": [],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Orders'[Order Date]"
+        ],
+        "SEM_COLUMN_NEEDS_FORMAT_STRING": []
+      },
+      "thijsknaapRob/BPARulesOnline/BPARules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Orders'[Order Date]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Orders'[Order Date]"
+        ]
+      },
+      "twelve-baskets-analytics/pbi-bpa/BPARules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [],
+        "HIDE_FACT_TABLE_COLUMNS": [],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Orders'[Order Date]"
+        ]
+      },
+      "vlpatkosdani/powerbi-cicd-with-githubactions-demos/scripts/BPA_Rules.json": {
+        "2": [],
+        "17": [],
+        "31": [],
+        "49": [],
+        "65": []
       }
     }
   },

@@ -1,0 +1,20 @@
+[
+  {
+    "ID": "PROBE_SCOPE_UNKNOWN",
+    "Name": "probe: scope unknown",
+    "Category": "Probe",
+    "Description": "A scope name Tabular Editor does not define.",
+    "Severity": 2,
+    "Scope": "Visual",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SCOPE_UNKNOWN_SIBLING",
+    "Name": "probe: scope unknown sibling",
+    "Category": "Probe",
+    "Description": "A good rule beside one with an unknown scope: does it run.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "true"
+  }
+]

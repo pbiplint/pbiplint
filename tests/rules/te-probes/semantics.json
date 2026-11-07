@@ -1,0 +1,1442 @@
+[
+  {
+    "ID": "PROBE_SEVERITY_0",
+    "Name": "probe: severity 0",
+    "Category": "Probe",
+    "Description": "Which label Tabular Editor gives Severity 0.",
+    "Severity": 0,
+    "Scope": "Model",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SEVERITY_1",
+    "Name": "probe: severity 1",
+    "Category": "Probe",
+    "Description": "Which label Tabular Editor gives Severity 1.",
+    "Severity": 1,
+    "Scope": "Model",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SEVERITY_2",
+    "Name": "probe: severity 2",
+    "Category": "Probe",
+    "Description": "Which label Tabular Editor gives Severity 2.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SEVERITY_3",
+    "Name": "probe: severity 3",
+    "Category": "Probe",
+    "Description": "Which label Tabular Editor gives Severity 3.",
+    "Severity": 3,
+    "Scope": "Model",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SEVERITY_4",
+    "Name": "probe: severity 4",
+    "Category": "Probe",
+    "Description": "Which label Tabular Editor gives Severity 4.",
+    "Severity": 4,
+    "Scope": "Model",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SEVERITY_5",
+    "Name": "probe: severity 5",
+    "Category": "Probe",
+    "Description": "Which label Tabular Editor gives Severity 5.",
+    "Severity": 5,
+    "Scope": "Model",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SEVERITY_MISSING",
+    "Name": "probe: severity missing",
+    "Category": "Probe",
+    "Description": "Which label Tabular Editor gives a rule with no Severity.",
+    "Scope": "Model",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_DISABLED",
+    "Name": "probe: disabled",
+    "Category": "Probe",
+    "Description": "Whether Tabular Editor runs a rule marked IsDisabled.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "true",
+    "IsDisabled": true
+  },
+  {
+    "ID": "PROBE_SCOPE_MODEL",
+    "Name": "probe: scope model",
+    "Category": "Probe",
+    "Description": "Which objects scope Model covers, and how Tabular Editor names them.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SCOPE_TABLE",
+    "Name": "probe: scope table",
+    "Category": "Probe",
+    "Description": "Which objects scope Table covers, and how Tabular Editor names them.",
+    "Severity": 2,
+    "Scope": "Table",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SCOPE_CALCULATEDTABLE",
+    "Name": "probe: scope calculatedtable",
+    "Category": "Probe",
+    "Description": "Which objects scope CalculatedTable covers, and how Tabular Editor names them.",
+    "Severity": 2,
+    "Scope": "CalculatedTable",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SCOPE_COLUMN",
+    "Name": "probe: scope column",
+    "Category": "Probe",
+    "Description": "Which objects scope Column covers, and how Tabular Editor names them.",
+    "Severity": 2,
+    "Scope": "Column",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SCOPE_DATACOLUMN",
+    "Name": "probe: scope datacolumn",
+    "Category": "Probe",
+    "Description": "Which objects scope DataColumn covers, and how Tabular Editor names them.",
+    "Severity": 2,
+    "Scope": "DataColumn",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SCOPE_CALCULATEDCOLUMN",
+    "Name": "probe: scope calculatedcolumn",
+    "Category": "Probe",
+    "Description": "Which objects scope CalculatedColumn covers, and how Tabular Editor names them.",
+    "Severity": 2,
+    "Scope": "CalculatedColumn",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SCOPE_CALCULATEDTABLECOLUMN",
+    "Name": "probe: scope calculatedtablecolumn",
+    "Category": "Probe",
+    "Description": "Which objects scope CalculatedTableColumn covers, and how Tabular Editor names them.",
+    "Severity": 2,
+    "Scope": "CalculatedTableColumn",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SCOPE_MEASURE",
+    "Name": "probe: scope measure",
+    "Category": "Probe",
+    "Description": "Which objects scope Measure covers, and how Tabular Editor names them.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SCOPE_HIERARCHY",
+    "Name": "probe: scope hierarchy",
+    "Category": "Probe",
+    "Description": "Which objects scope Hierarchy covers, and how Tabular Editor names them.",
+    "Severity": 2,
+    "Scope": "Hierarchy",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SCOPE_LEVEL",
+    "Name": "probe: scope level",
+    "Category": "Probe",
+    "Description": "Which objects scope Level covers, and how Tabular Editor names them.",
+    "Severity": 2,
+    "Scope": "Level",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SCOPE_PARTITION",
+    "Name": "probe: scope partition",
+    "Category": "Probe",
+    "Description": "Which objects scope Partition covers, and how Tabular Editor names them.",
+    "Severity": 2,
+    "Scope": "Partition",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SCOPE_RELATIONSHIP",
+    "Name": "probe: scope relationship",
+    "Category": "Probe",
+    "Description": "Which objects scope Relationship covers, and how Tabular Editor names them.",
+    "Severity": 2,
+    "Scope": "Relationship",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SCOPE_PERSPECTIVE",
+    "Name": "probe: scope perspective",
+    "Category": "Probe",
+    "Description": "Which objects scope Perspective covers, and how Tabular Editor names them.",
+    "Severity": 2,
+    "Scope": "Perspective",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SCOPE_CULTURE",
+    "Name": "probe: scope culture",
+    "Category": "Probe",
+    "Description": "Which objects scope Culture covers, and how Tabular Editor names them.",
+    "Severity": 2,
+    "Scope": "Culture",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SCOPE_MODELROLE",
+    "Name": "probe: scope modelrole",
+    "Category": "Probe",
+    "Description": "Which objects scope ModelRole covers, and how Tabular Editor names them.",
+    "Severity": 2,
+    "Scope": "ModelRole",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SCOPE_MODELROLEMEMBER",
+    "Name": "probe: scope modelrolemember",
+    "Category": "Probe",
+    "Description": "Which objects scope ModelRoleMember covers, and how Tabular Editor names them.",
+    "Severity": 2,
+    "Scope": "ModelRoleMember",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SCOPE_TABLEPERMISSION",
+    "Name": "probe: scope tablepermission",
+    "Category": "Probe",
+    "Description": "Which objects scope TablePermission covers, and how Tabular Editor names them.",
+    "Severity": 2,
+    "Scope": "TablePermission",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SCOPE_CALCULATIONGROUP",
+    "Name": "probe: scope calculationgroup",
+    "Category": "Probe",
+    "Description": "Which objects scope CalculationGroup covers, and how Tabular Editor names them.",
+    "Severity": 2,
+    "Scope": "CalculationGroup",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SCOPE_CALCULATIONITEM",
+    "Name": "probe: scope calculationitem",
+    "Category": "Probe",
+    "Description": "Which objects scope CalculationItem covers, and how Tabular Editor names them.",
+    "Severity": 2,
+    "Scope": "CalculationItem",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SCOPE_KPI",
+    "Name": "probe: scope kpi",
+    "Category": "Probe",
+    "Description": "Which objects scope KPI covers, and how Tabular Editor names them.",
+    "Severity": 2,
+    "Scope": "KPI",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SCOPE_NAMEDEXPRESSION",
+    "Name": "probe: scope namedexpression",
+    "Category": "Probe",
+    "Description": "Which objects scope NamedExpression covers, and how Tabular Editor names them.",
+    "Severity": 2,
+    "Scope": "NamedExpression",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SCOPE_PROVIDERDATASOURCE",
+    "Name": "probe: scope providerdatasource",
+    "Category": "Probe",
+    "Description": "Which objects scope ProviderDataSource covers, and how Tabular Editor names them.",
+    "Severity": 2,
+    "Scope": "ProviderDataSource",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SCOPE_STRUCTUREDDATASOURCE",
+    "Name": "probe: scope structureddatasource",
+    "Category": "Probe",
+    "Description": "Which objects scope StructuredDataSource covers, and how Tabular Editor names them.",
+    "Severity": 2,
+    "Scope": "StructuredDataSource",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SCOPE_VARIATION",
+    "Name": "probe: scope variation",
+    "Category": "Probe",
+    "Description": "Which objects scope Variation covers, and how Tabular Editor names them.",
+    "Severity": 2,
+    "Scope": "Variation",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SCOPE_CALENDAR",
+    "Name": "probe: scope calendar",
+    "Category": "Probe",
+    "Description": "Which objects scope Calendar covers, and how Tabular Editor names them.",
+    "Severity": 2,
+    "Scope": "Calendar",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_SCOPE_USERDEFINEDFUNCTION",
+    "Name": "probe: scope userdefinedfunction",
+    "Category": "Probe",
+    "Description": "Which objects scope UserDefinedFunction covers, and how Tabular Editor names them.",
+    "Severity": 2,
+    "Scope": "UserDefinedFunction",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_IGNORE_CUSTOM",
+    "Name": "probe: ignore custom",
+    "Category": "Probe",
+    "Description": "A custom id the fixtures' ignore annotations name: which objects Tabular Editor still reports.",
+    "Severity": 2,
+    "Scope": "Model, Table, Measure, DataColumn, CalculatedColumn, Relationship, Partition",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_IGNORE_CUSTOM_LOWER",
+    "Name": "probe: ignore custom lower",
+    "Category": "Probe",
+    "Description": "A custom id an annotation names only in lowercase: whether the match ignores case.",
+    "Severity": 2,
+    "Scope": "Table, Measure",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_TOKEN_SINGLE_LINE_COMMENT",
+    "Name": "probe: token single line comment",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type SINGLE_LINE_COMMENT, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = SINGLE_LINE_COMMENT)"
+  },
+  {
+    "ID": "PROBE_TOKEN_DELIMITED_COMMENT",
+    "Name": "probe: token delimited comment",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type DELIMITED_COMMENT, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = DELIMITED_COMMENT)"
+  },
+  {
+    "ID": "PROBE_TOKEN_WHITESPACES",
+    "Name": "probe: token whitespaces",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type WHITESPACES, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = WHITESPACES)"
+  },
+  {
+    "ID": "PROBE_TOKEN_DATE_LITERAL",
+    "Name": "probe: token date literal",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type DATE_LITERAL, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = DATE_LITERAL)"
+  },
+  {
+    "ID": "PROBE_TOKEN_INTEGER_LITERAL",
+    "Name": "probe: token integer literal",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type INTEGER_LITERAL, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = INTEGER_LITERAL)"
+  },
+  {
+    "ID": "PROBE_TOKEN_REAL_LITERAL",
+    "Name": "probe: token real literal",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type REAL_LITERAL, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = REAL_LITERAL)"
+  },
+  {
+    "ID": "PROBE_TOKEN_STRING_LITERAL",
+    "Name": "probe: token string literal",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type STRING_LITERAL, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = STRING_LITERAL)"
+  },
+  {
+    "ID": "PROBE_TOKEN_TABLE",
+    "Name": "probe: token table",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type TABLE, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = TABLE)"
+  },
+  {
+    "ID": "PROBE_TOKEN_COLUMN_OR_MEASURE",
+    "Name": "probe: token column or measure",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type COLUMN_OR_MEASURE, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = COLUMN_OR_MEASURE)"
+  },
+  {
+    "ID": "PROBE_TOKEN_TABLE_OR_VARIABLE",
+    "Name": "probe: token table or variable",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type TABLE_OR_VARIABLE, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = TABLE_OR_VARIABLE)"
+  },
+  {
+    "ID": "PROBE_TOKEN_OPEN_CURLY",
+    "Name": "probe: token open curly",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type OPEN_CURLY, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = OPEN_CURLY)"
+  },
+  {
+    "ID": "PROBE_TOKEN_CLOSE_CURLY",
+    "Name": "probe: token close curly",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type CLOSE_CURLY, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = CLOSE_CURLY)"
+  },
+  {
+    "ID": "PROBE_TOKEN_OPEN_PARENS",
+    "Name": "probe: token open parens",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type OPEN_PARENS, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = OPEN_PARENS)"
+  },
+  {
+    "ID": "PROBE_TOKEN_CLOSE_PARENS",
+    "Name": "probe: token close parens",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type CLOSE_PARENS, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = CLOSE_PARENS)"
+  },
+  {
+    "ID": "PROBE_TOKEN_COMMA",
+    "Name": "probe: token comma",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type COMMA, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = COMMA)"
+  },
+  {
+    "ID": "PROBE_TOKEN_PLUS",
+    "Name": "probe: token plus",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type PLUS, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = PLUS)"
+  },
+  {
+    "ID": "PROBE_TOKEN_MINUS",
+    "Name": "probe: token minus",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type MINUS, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = MINUS)"
+  },
+  {
+    "ID": "PROBE_TOKEN_STAR",
+    "Name": "probe: token star",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type STAR, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = STAR)"
+  },
+  {
+    "ID": "PROBE_TOKEN_DIV",
+    "Name": "probe: token div",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type DIV, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = DIV)"
+  },
+  {
+    "ID": "PROBE_TOKEN_CARET",
+    "Name": "probe: token caret",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type CARET, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = CARET)"
+  },
+  {
+    "ID": "PROBE_TOKEN_AMP",
+    "Name": "probe: token amp",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type AMP, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = AMP)"
+  },
+  {
+    "ID": "PROBE_TOKEN_ASSIGNMENT",
+    "Name": "probe: token assignment",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type ASSIGNMENT, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = ASSIGNMENT)"
+  },
+  {
+    "ID": "PROBE_TOKEN_LT",
+    "Name": "probe: token lt",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type LT, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = LT)"
+  },
+  {
+    "ID": "PROBE_TOKEN_GT",
+    "Name": "probe: token gt",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type GT, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = GT)"
+  },
+  {
+    "ID": "PROBE_TOKEN_OP_AND",
+    "Name": "probe: token op and",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type OP_AND, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = OP_AND)"
+  },
+  {
+    "ID": "PROBE_TOKEN_OP_OR",
+    "Name": "probe: token op or",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type OP_OR, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = OP_OR)"
+  },
+  {
+    "ID": "PROBE_TOKEN_OP_NE",
+    "Name": "probe: token op ne",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type OP_NE, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = OP_NE)"
+  },
+  {
+    "ID": "PROBE_TOKEN_OP_LE",
+    "Name": "probe: token op le",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type OP_LE, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = OP_LE)"
+  },
+  {
+    "ID": "PROBE_TOKEN_OP_GE",
+    "Name": "probe: token op ge",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type OP_GE, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = OP_GE)"
+  },
+  {
+    "ID": "PROBE_TOKEN_LAMBDA",
+    "Name": "probe: token lambda",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type LAMBDA, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = LAMBDA)"
+  },
+  {
+    "ID": "PROBE_TOKEN_COLON",
+    "Name": "probe: token colon",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type COLON, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = COLON)"
+  },
+  {
+    "ID": "PROBE_TOKEN_VAR",
+    "Name": "probe: token var",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type VAR, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = VAR)"
+  },
+  {
+    "ID": "PROBE_TOKEN_RETURN",
+    "Name": "probe: token return",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type RETURN, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = RETURN)"
+  },
+  {
+    "ID": "PROBE_TOKEN_DIVIDE",
+    "Name": "probe: token divide",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type DIVIDE, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = DIVIDE)"
+  },
+  {
+    "ID": "PROBE_TOKEN_SUM",
+    "Name": "probe: token sum",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type SUM, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = SUM)"
+  },
+  {
+    "ID": "PROBE_TOKEN_CALCULATE",
+    "Name": "probe: token calculate",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type CALCULATE, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = CALCULATE)"
+  },
+  {
+    "ID": "PROBE_TOKEN_TRUE",
+    "Name": "probe: token true",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type TRUE, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = TRUE)"
+  },
+  {
+    "ID": "PROBE_TOKEN_IN",
+    "Name": "probe: token in",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type IN, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = IN)"
+  },
+  {
+    "ID": "PROBE_TOKEN_NOT",
+    "Name": "probe: token not",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type NOT, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = NOT)"
+  },
+  {
+    "ID": "PROBE_TOKEN_BLANK",
+    "Name": "probe: token blank",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type BLANK, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = BLANK)"
+  },
+  {
+    "ID": "PROBE_TOKEN_EQ",
+    "Name": "probe: token eq",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type EQ, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = EQ)"
+  },
+  {
+    "ID": "PROBE_TOKEN_NUMBER",
+    "Name": "probe: token number",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type NUMBER, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = NUMBER)"
+  },
+  {
+    "ID": "PROBE_TOKEN_NEQ",
+    "Name": "probe: token neq",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type NEQ, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = NEQ)"
+  },
+  {
+    "ID": "PROBE_TOKEN_GTE",
+    "Name": "probe: token gte",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type GTE, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = GTE)"
+  },
+  {
+    "ID": "PROBE_TOKEN_LTE",
+    "Name": "probe: token lte",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type LTE, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = LTE)"
+  },
+  {
+    "ID": "PROBE_TOKEN_EQUALS",
+    "Name": "probe: token equals",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type EQUALS, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = EQUALS)"
+  },
+  {
+    "ID": "PROBE_TOKEN_ASSIGN",
+    "Name": "probe: token assign",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type ASSIGN, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = ASSIGN)"
+  },
+  {
+    "ID": "PROBE_TOKEN_KEYWORD",
+    "Name": "probe: token keyword",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type KEYWORD, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = KEYWORD)"
+  },
+  {
+    "ID": "PROBE_TOKEN_FUNCTION",
+    "Name": "probe: token function",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type FUNCTION, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = FUNCTION)"
+  },
+  {
+    "ID": "PROBE_TOKEN_IDENTIFIER",
+    "Name": "probe: token identifier",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type IDENTIFIER, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = IDENTIFIER)"
+  },
+  {
+    "ID": "PROBE_TOKEN_COMMENT",
+    "Name": "probe: token comment",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type COMMENT, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = COMMENT)"
+  },
+  {
+    "ID": "PROBE_TOKEN_OPERATOR",
+    "Name": "probe: token operator",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type OPERATOR, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = OPERATOR)"
+  },
+  {
+    "ID": "PROBE_TOKEN_EQEQ",
+    "Name": "probe: token eqeq",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type EQEQ, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = EQEQ)"
+  },
+  {
+    "ID": "PROBE_TOKEN_DOUBLE_EQ",
+    "Name": "probe: token double eq",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type DOUBLE_EQ, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = DOUBLE_EQ)"
+  },
+  {
+    "ID": "PROBE_TOKEN_UNKNOWN",
+    "Name": "probe: token unknown",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type UNKNOWN, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = UNKNOWN)"
+  },
+  {
+    "ID": "PROBE_TOKEN_EOF",
+    "Name": "probe: token eof",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type EOF, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = EOF)"
+  },
+  {
+    "ID": "PROBE_TOKEN_DATE",
+    "Name": "probe: token date",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type DATE, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = DATE)"
+  },
+  {
+    "ID": "PROBE_TOKEN_DOUBLE_PIPE",
+    "Name": "probe: token double pipe",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type DOUBLE_PIPE, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = DOUBLE_PIPE)"
+  },
+  {
+    "ID": "PROBE_TOKEN_DOUBLE_AMP",
+    "Name": "probe: token double amp",
+    "Category": "Probe",
+    "Description": "Whether Tokenize() names a token type DOUBLE_AMP, and on which measures.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = DOUBLE_AMP)"
+  },
+  {
+    "ID": "PROBE_TOKEN_DIV_NEXT_INTEGER",
+    "Name": "probe: token div next integer",
+    "Category": "Probe",
+    "Description": "A division whose next token is an integer literal.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = DIV and Next.Type = INTEGER_LITERAL)"
+  },
+  {
+    "ID": "PROBE_TOKEN_DIV_NEXT_OTHER",
+    "Name": "probe: token div next other",
+    "Category": "Probe",
+    "Description": "The survey's division check, as its files write it.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = DIV and Next.Type <> INTEGER_LITERAL and Next.Type <> REAL_LITERAL)"
+  },
+  {
+    "ID": "PROBE_TOKEN_TEXT",
+    "Name": "probe: token text",
+    "Category": "Probe",
+    "Description": "Whether a token's Text holds a string literal's content without its quotes.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Type = STRING_LITERAL and Text = \"/\")"
+  },
+  {
+    "ID": "PROBE_TOKEN_NEXT_PAST_END",
+    "Name": "probe: token next past end",
+    "Category": "Probe",
+    "Description": "What Next is on the last token.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Any(Next == null)"
+  },
+  {
+    "ID": "PROBE_TOKEN_COUNT",
+    "Name": "probe: token count",
+    "Category": "Probe",
+    "Description": "How many tokens a short measure has, comments and spaces included or not.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Tokenize().Count() == 3"
+  },
+  {
+    "ID": "PROBE_FAIL_ONE_OBJECT",
+    "Name": "probe: fail one object",
+    "Category": "Probe",
+    "Description": "Throws only on a measure whose name is shorter than four characters: findings, an error, or both.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Name.Substring(4).Length >= 0"
+  },
+  {
+    "ID": "PROBE_FAIL_NULL_EXPRESSION",
+    "Name": "probe: fail null expression",
+    "Category": "Probe",
+    "Description": "A pattern match on a partition with no expression.",
+    "Severity": 2,
+    "Scope": "Partition",
+    "Expression": "RegEx.IsMatch(Expression, \"Sql\")"
+  },
+  {
+    "ID": "PROBE_PQ_EXPRESSION",
+    "Name": "probe: pq expression",
+    "Category": "Probe",
+    "Description": "A partition's M text through Expression.",
+    "Severity": 2,
+    "Scope": "Partition",
+    "Expression": "Expression.Contains(\"Snowflake.Databases\")"
+  },
+  {
+    "ID": "PROBE_PQ_QUERY",
+    "Name": "probe: pq query",
+    "Category": "Probe",
+    "Description": "A partition's M text through Query.",
+    "Severity": 2,
+    "Scope": "Partition",
+    "Expression": "Query.Contains(\"Snowflake.Databases\")"
+  },
+  {
+    "ID": "PROBE_PQ_SOURCETYPE_STRING",
+    "Name": "probe: pq sourcetype string",
+    "Category": "Probe",
+    "Description": "SourceType compared with a string.",
+    "Severity": 2,
+    "Scope": "Partition",
+    "Expression": "SourceType = \"M\""
+  },
+  {
+    "ID": "PROBE_PQ_SOURCETYPE_ENUM",
+    "Name": "probe: pq sourcetype enum",
+    "Category": "Probe",
+    "Description": "SourceType compared with an enum value.",
+    "Severity": 2,
+    "Scope": "Partition",
+    "Expression": "SourceType = PartitionSourceType.M"
+  },
+  {
+    "ID": "PROBE_PQ_SHARED",
+    "Name": "probe: pq shared",
+    "Category": "Probe",
+    "Description": "A shared query's M text.",
+    "Severity": 2,
+    "Scope": "NamedExpression",
+    "Expression": "Expression.Contains(\"Snowflake.Databases\")"
+  },
+  {
+    "ID": "PROBE_PQ_APPROVED_SCHEMA",
+    "Name": "probe: pq approved schema",
+    "Category": "Probe",
+    "Description": "The worked example: a query reads Snowflake but names no approved schema.",
+    "Severity": 2,
+    "Scope": "Partition, NamedExpression",
+    "Expression": "Expression.Contains(\"Snowflake.Databases\") and not Expression.Contains(\"Name=\"\"APPROVED\"\"\")"
+  },
+  {
+    "ID": "PROBE_STRING_BACKSLASH_ESCAPE",
+    "Name": "probe: string backslash escape",
+    "Category": "Probe",
+    "Description": "Whether a backslash escapes in a string literal.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "\"a\\\\b\".Length == 3"
+  },
+  {
+    "ID": "PROBE_STRING_BACKSLASH_LITERAL",
+    "Name": "probe: string backslash literal",
+    "Category": "Probe",
+    "Description": "Whether a backslash is kept as written.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "\"a\\\\b\".Length == 4"
+  },
+  {
+    "ID": "PROBE_STRING_ESCAPED_QUOTE",
+    "Name": "probe: string escaped quote",
+    "Category": "Probe",
+    "Description": "Whether \\\" puts a quote in a string.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "\"a\\\"b\".Length == 3"
+  },
+  {
+    "ID": "PROBE_STRING_DOUBLED_QUOTE",
+    "Name": "probe: string doubled quote",
+    "Category": "Probe",
+    "Description": "Whether a doubled quote puts a quote in a string.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "\"a\"\"b\".Length == 3"
+  },
+  {
+    "ID": "PROBE_STRING_NEWLINE_ESCAPE",
+    "Name": "probe: string newline escape",
+    "Category": "Probe",
+    "Description": "Whether \\n is a newline.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "\"a\\nb\".Length == 3"
+  },
+  {
+    "ID": "PROBE_STRING_SINGLE_QUOTED",
+    "Name": "probe: string single quoted",
+    "Category": "Probe",
+    "Description": "Whether single quotes make a string.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "'ab'.Length == 2"
+  },
+  {
+    "ID": "PROBE_STRING_ORDER_CASE",
+    "Name": "probe: string order case",
+    "Category": "Probe",
+    "Description": "String ordering: culture or ordinal.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "\"a\" < \"B\""
+  },
+  {
+    "ID": "PROBE_STRING_EQUALS_CASE",
+    "Name": "probe: string equals case",
+    "Category": "Probe",
+    "Description": "Whether == on strings ignores case.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "\"a\" == \"A\""
+  },
+  {
+    "ID": "PROBE_STRING_PLUS_NUMBER",
+    "Name": "probe: string plus number",
+    "Category": "Probe",
+    "Description": "A string plus a number.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "\"a\" + 1 == \"a1\""
+  },
+  {
+    "ID": "PROBE_INTEGER_DIVISION",
+    "Name": "probe: integer division",
+    "Category": "Probe",
+    "Description": "Whether 7 / 2 is 3.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "7 / 2 == 3"
+  },
+  {
+    "ID": "PROBE_REAL_DIVISION",
+    "Name": "probe: real division",
+    "Category": "Probe",
+    "Description": "Whether 7 / 2 is 3.5.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "7 / 2 == 3.5"
+  },
+  {
+    "ID": "PROBE_MODULO",
+    "Name": "probe: modulo",
+    "Category": "Probe",
+    "Description": "The remainder operator.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "7 % 3 == 1"
+  },
+  {
+    "ID": "PROBE_DECIMAL_SUM",
+    "Name": "probe: decimal sum",
+    "Category": "Probe",
+    "Description": "Whether 0.1 + 0.2 equals 0.3: decimal or double.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "0.1 + 0.2 == 0.3"
+  },
+  {
+    "ID": "PROBE_NULL_EQUALS_NULL",
+    "Name": "probe: null equals null",
+    "Category": "Probe",
+    "Description": "null == null.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "null == null"
+  },
+  {
+    "ID": "PROBE_DESCRIPTION_NULL",
+    "Name": "probe: description null",
+    "Category": "Probe",
+    "Description": "A model with no description: is Description null.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "Description == null"
+  },
+  {
+    "ID": "PROBE_DESCRIPTION_EMPTY",
+    "Name": "probe: description empty",
+    "Category": "Probe",
+    "Description": "A model with no description: is Description empty.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "Description == \"\""
+  },
+  {
+    "ID": "PROBE_DESCRIPTION_LENGTH",
+    "Name": "probe: description length",
+    "Category": "Probe",
+    "Description": "Length of a missing description.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "Description.Length == 0"
+  },
+  {
+    "ID": "PROBE_IS_NULL_OR_WHITESPACE_LOWER",
+    "Name": "probe: is null or whitespace lower",
+    "Category": "Probe",
+    "Description": "string.IsNullOrWhitespace, as many rules spell it.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "string.IsNullOrWhitespace(\" \")"
+  },
+  {
+    "ID": "PROBE_IS_NULL_OR_WHITESPACE_UPPER",
+    "Name": "probe: is null or whitespace upper",
+    "Category": "Probe",
+    "Description": "string.IsNullOrWhiteSpace, as .NET spells it.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "string.IsNullOrWhiteSpace(\" \")"
+  },
+  {
+    "ID": "PROBE_ENUM_BY_STRING",
+    "Name": "probe: enum by string",
+    "Category": "Probe",
+    "Description": "An enum property compared with a string.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "Tables.Any(Columns.Any(DataType == \"Int64\"))"
+  },
+  {
+    "ID": "PROBE_ENUM_BY_NAME",
+    "Name": "probe: enum by name",
+    "Category": "Probe",
+    "Description": "An enum property compared with Type.Value.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "Tables.Any(Columns.Any(DataType == DataType.Int64))"
+  },
+  {
+    "ID": "PROBE_ENUM_BARE",
+    "Name": "probe: enum bare",
+    "Category": "Probe",
+    "Description": "An enum property compared with a bare value name.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "Tables.Any(Columns.Any(DataType == Int64))"
+  },
+  {
+    "ID": "PROBE_CONVERT_OK",
+    "Name": "probe: convert ok",
+    "Category": "Probe",
+    "Description": "Convert.ToInt64 on digits.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "Convert.ToInt64(\"12\") == 12"
+  },
+  {
+    "ID": "PROBE_CONVERT_BAD",
+    "Name": "probe: convert bad",
+    "Category": "Probe",
+    "Description": "Convert.ToInt64 on letters.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "Convert.ToInt64(\"x\") == 1"
+  },
+  {
+    "ID": "PROBE_CONTAINS_CASE",
+    "Name": "probe: contains case",
+    "Category": "Probe",
+    "Description": "Whether Contains ignores case.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "\"Sales\".Contains(\"sales\")"
+  },
+  {
+    "ID": "PROBE_INDEXOF_IGNORE_CASE",
+    "Name": "probe: indexof ignore case",
+    "Category": "Probe",
+    "Description": "IndexOf with StringComparison.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "\"Sales\".IndexOf(\"sales\", StringComparison.OrdinalIgnoreCase) == 0"
+  },
+  {
+    "ID": "PROBE_INDEXOF_CULTURE",
+    "Name": "probe: indexof culture",
+    "Category": "Probe",
+    "Description": "IndexOf with no comparison: culture rules or ordinal.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "\"straße\".IndexOf(\"strasse\") == 0"
+  },
+  {
+    "ID": "PROBE_INDEXOF_EMPTY",
+    "Name": "probe: indexof empty",
+    "Category": "Probe",
+    "Description": "IndexOf of an empty string.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "\"abc\".IndexOf(\"\") == 0"
+  },
+  {
+    "ID": "PROBE_TOUPPER_NON_ASCII",
+    "Name": "probe: toupper non ascii",
+    "Category": "Probe",
+    "Description": "ToUpper on a letter outside ASCII.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "\"ä\".ToUpper() == \"Ä\""
+  },
+  {
+    "ID": "PROBE_MATH_MAX_MIXED",
+    "Name": "probe: math max mixed",
+    "Category": "Probe",
+    "Description": "Math.Max of an integer and a real.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "Math.Max(1, 2.5) == 2.5"
+  },
+  {
+    "ID": "PROBE_IIF",
+    "Name": "probe: iif",
+    "Category": "Probe",
+    "Description": "The iif function.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "iif(true, 1, 2) == 1"
+  },
+  {
+    "ID": "PROBE_NOT_PRECEDENCE",
+    "Name": "probe: not precedence",
+    "Category": "Probe",
+    "Description": "Whether not binds tighter than or.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "not true or true"
+  },
+  {
+    "ID": "PROBE_OPERATOR_SPELLINGS",
+    "Name": "probe: operator spellings",
+    "Category": "Probe",
+    "Description": "Symbol and word forms together.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "1 <> 2 and 1 != 2 && !false || false"
+  },
+  {
+    "ID": "PROBE_COUNT_PROPERTY",
+    "Name": "probe: count property",
+    "Category": "Probe",
+    "Description": "Count as a property.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "Tables.Count > 0"
+  },
+  {
+    "ID": "PROBE_COUNT_METHOD",
+    "Name": "probe: count method",
+    "Category": "Probe",
+    "Description": "Count as a method.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "Tables.Count() > 0"
+  },
+  {
+    "ID": "PROBE_IT",
+    "Name": "probe: it",
+    "Category": "Probe",
+    "Description": "it is the object.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "it.Name == Name"
+  },
+  {
+    "ID": "PROBE_OUTERIT",
+    "Name": "probe: outerit",
+    "Category": "Probe",
+    "Description": "outerIt is the next level up, or the rule's object.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "Tables.Any(Columns.Any(outerIt.Columns.Count() > 0))"
+  },
+  {
+    "ID": "PROBE_CURRENT",
+    "Name": "probe: current",
+    "Category": "Probe",
+    "Description": "current is the object.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "current.Name == Name"
+  },
+  {
+    "ID": "PROBE_GETANNOTATION_MISSING",
+    "Name": "probe: getannotation missing",
+    "Category": "Probe",
+    "Description": "GetAnnotation of a name the object lacks.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "GetAnnotation(\"pbiplint_none\") == null"
+  },
+  {
+    "ID": "PROBE_HASANNOTATION",
+    "Name": "probe: hasannotation",
+    "Category": "Probe",
+    "Description": "HasAnnotation of a name the model has.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "HasAnnotation(\"PBI_QueryOrder\")"
+  },
+  {
+    "ID": "PROBE_VERTIPAQ_WITHOUT_STATISTICS",
+    "Name": "probe: vertipaq without statistics",
+    "Category": "Probe",
+    "Description": "A statistics annotation on a model loaded from files.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "Tables.Any(GetAnnotation(\"Vertipaq_RowCount\") == null)"
+  },
+  {
+    "ID": "PROBE_REGEX_SPELLING_REGEX",
+    "Name": "probe: regex spelling regex",
+    "Category": "Probe",
+    "Description": "RegEx.IsMatch.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "RegEx.IsMatch(\"abc\", \"b\")"
+  },
+  {
+    "ID": "PROBE_REGEX_SPELLING_REGEX_LOWER",
+    "Name": "probe: regex spelling regex lower",
+    "Category": "Probe",
+    "Description": "Regex.IsMatch.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "Regex.IsMatch(\"abc\", \"b\")"
+  },
+  {
+    "ID": "PROBE_REGEX_MID_IGNORE_CASE",
+    "Name": "probe: regex mid ignore case",
+    "Category": "Probe",
+    "Description": "(?i) in the middle of a pattern.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "RegEx.IsMatch(\"xDIVIDE\", \"x(?i)divide\")"
+  },
+  {
+    "ID": "PROBE_REGEX_MID_IGNORE_CASE_BEFORE",
+    "Name": "probe: regex mid ignore case before",
+    "Category": "Probe",
+    "Description": "(?i) in the middle does not reach back.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "RegEx.IsMatch(\"XDIVIDE\", \"x(?i)divide\")"
+  },
+  {
+    "ID": "PROBE_REGEX_LOOKBEHIND",
+    "Name": "probe: regex lookbehind",
+    "Category": "Probe",
+    "Description": "A one-character negative lookbehind.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "RegEx.IsMatch(\"a TODO\", \"(?<![A-Za-z0-9])TODO\")"
+  },
+  {
+    "ID": "PROBE_REGEX_DOLLAR_FINAL_NEWLINE",
+    "Name": "probe: regex dollar final newline",
+    "Category": "Probe",
+    "Description": "$ before a final newline.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "RegEx.IsMatch(\"ab\\n\", \"b$\")"
+  },
+  {
+    "ID": "PROBE_REGEX_DIGIT_NON_ASCII",
+    "Name": "probe: regex digit non ascii",
+    "Category": "Probe",
+    "Description": "\\d on an Arabic-Indic digit.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "RegEx.IsMatch(\"٣\", \"^\\d$\")"
+  },
+  {
+    "ID": "PROBE_REGEX_WORD_NON_ASCII",
+    "Name": "probe: regex word non ascii",
+    "Category": "Probe",
+    "Description": "\\w on a letter outside ASCII.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "RegEx.IsMatch(\"é\", \"^\\w$\")"
+  },
+  {
+    "ID": "PROBE_REGEX_DOT_NEWLINE",
+    "Name": "probe: regex dot newline",
+    "Category": "Probe",
+    "Description": ". against a newline.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "RegEx.IsMatch(\"a\\nb\", \"a.b\")"
+  },
+  {
+    "ID": "PROBE_REGEX_BAD_PATTERN",
+    "Name": "probe: regex bad pattern",
+    "Category": "Probe",
+    "Description": "A pattern that does not compile.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "RegEx.IsMatch(\"a\", \"(\")"
+  },
+  {
+    "ID": "PROBE_REGEX_IGNORE_CASE_CLASS",
+    "Name": "probe: regex ignore case class",
+    "Category": "Probe",
+    "Description": "(?i) with a character class.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "RegEx.IsMatch(\"A\", \"(?i)[a-c]\")"
+  }
+]

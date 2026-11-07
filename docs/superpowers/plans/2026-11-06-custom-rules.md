@@ -14,7 +14,7 @@
 
 - Core stays browser-pure: no `node:` imports, no `fetch`, no file system, no DOM, no `eval`, no `Function` in anything under `packages/core/src/`.
 - No new runtime dependency.
-- Nothing under `packages/core/src/m/` changes.
+- Power Query parsing is untouched: custom rules read M as text (section 6.6), so nothing under `packages/core/src/m/` changes.
 - The survey's rule files are never committed; only Microsoft's `BPARules.json` (MIT), under its notice.
 - Everything is written in pbiplint's own words; no text is copied from any rule-writing skill.
 - Tabular Editor is a development-time oracle only; it never runs in CI.
@@ -58,14 +58,14 @@ New captures live in `tests/expectations/custom-rules/` so the existing parity t
 ### Task A1: the probe rule file and the script's probe mode
 
 **Files:**
-- Create: `tests/rules/te-probes.json`
+- Create: `tests/rules/te-probes/*.json`
 - Modify: `scripts/te-expectations.mjs`
 - Test: `scripts/test/te-expectations.test.mjs` (create if absent; else add to the existing script test)
 
 **Interfaces:**
-- Produces: `--probes <rules.json>` mode writing `{ fixture, oracle, captured, rules: <sha256 of the probe file>, findings, ruleErrors, severities }`, where `severities` maps each rule id that found anything to te's label; `convertFindings(json)` gains `severities` in its result. Every mode keeps a `custom` key (`{ deviations, ours }`, keyed by file id then rule id) from an existing output file, as it keeps `deviations` and `ours`.
+- Produces: `--probes <dir>` mode running each `.json` file in the folder and writing `{ fixture, oracle, captured, results }`, where `results` maps each file name to `{ sha256, findings, ruleErrors, severities, quiet }` or `{ sha256, error }`; `severities` maps each rule id that found anything to te's label and `quiet` lists the rule ids that found nothing; `convertFindings(json)` gains `severities` in its result. Every mode keeps a `custom` key (`{ deviations, ours }`, keyed by file id then rule id) from an existing output file, as it keeps `deviations` and `ours`.
 
-The probe file holds rules pbiplint wrote, each with an id starting `PROBE_`, a one-line `Description` of the question it asks, in pbiplint's words:
+The probe files hold rules pbiplint wrote, each with an id starting `PROBE_` and a one-line `Description` of the question it asks, in pbiplint's words. They are several files because a rule `te` refuses can make it refuse the whole file: `semantics.json` (most probes), `unknown-scope.json`, `no-scope.json`, `duplicates.json`, and `layout.json` (a byte order mark, comments, a `rules` wrapper with lowercase keys, an integer id). The questions:
 
 - **Severity:** `Severity` 0, 1, 2, 3, 4, 5 and missing, on scope `Model`, expression `true`.
 - **No scope:** expression `true`, no `Scope`; and an unknown scope name (`Scope: "Visual"`).
@@ -78,8 +78,8 @@ The probe file holds rules pbiplint wrote, each with an id starting `PROBE_`, a 
 
 - [ ] **Step 1:** Write the test: `convertFindings` on a hand-made te 0.8 JSON with two severities returns `severities: { A: "info", B: "error" }`; a rerun keeps an existing file's `custom` key unchanged.
 - [ ] **Step 2:** Run `npx vitest run scripts/test` and see it fail.
-- [ ] **Step 3:** Implement the mode and the kept key; write `tests/rules/te-probes.json`.
-- [ ] **Step 4:** Run the test and see it pass; run `te bpa run` once with the probe file on `kitchen-sink` to see every probe either find, error, or find nothing, with no error loading the file.
+- [ ] **Step 3:** Implement the mode and the kept key; write the probe files.
+- [ ] **Step 4:** Run the test and see it pass; run `te bpa run` once with each probe file on `kitchen-sink` to see every probe either find, error, or find nothing, with no error loading the file.
 - [ ] **Step 5:** Commit: `test: a probe rule file and a probe mode for the Tabular Editor captures`.
 
 ### Task A2: the fixtures
@@ -109,7 +109,7 @@ The fixtures are written by hand, sanitized (relative placeholder paths only), a
 - Create: `tests/expectations/custom-rules/<fixture>.json` (Microsoft), `custom-rules/te3/<fixture>.json`, `custom-rules/survey/<fixture>.json`, `custom-rules/probes/<fixture>.json`, for both fixtures
 - Modify: `scripts/test/te-captures.test.mjs`, `docs/RELEASING.md`, `CONTRIBUTING.md`
 
-- [ ] **Step 1:** Write the tests in `te-captures.test.mjs`: a second list `CAPTURED_0_8 = ["custom-rules", "custom-rules-model-ignore"]` with its own oracle constants naming `Tabular Editor CLI 0.8.1.1`; for each, all four captures exist and name the same fixture; the survey capture covers every file in `files.json` with at most one error; its Microsoft result equals the Microsoft capture; the probe capture's `rules` equals the probe file's sha256 and every probe id is under `findings`, `ruleErrors`, or the file's list of probes that found nothing (`quiet`, written by the script). The existing nine keep their checks unchanged.
+- [ ] **Step 1:** Write the tests in `te-captures.test.mjs`: a second list `CAPTURED_0_8 = ["custom-rules", "custom-rules-model-ignore"]` with its own oracle constants naming `Tabular Editor CLI 0.8.1.1`; for each, all four captures exist and name the same fixture; the survey capture covers every file in `files.json` with at most one error; its Microsoft result equals the Microsoft capture; the probe capture names every file in `tests/rules/te-probes/` with its current sha256, and every probe id in a file te read is under `findings`, `ruleErrors`, or `quiet`. The existing nine keep their checks unchanged.
 - [ ] **Step 2:** Run them and see them fail.
 - [ ] **Step 3:** Fetch Microsoft's file at the pinned commit into a fresh scratch folder, check its sha256, and capture each fixture four ways (`--rules`, `--built-in`, `--survey`, `--probes`).
 - [ ] **Step 4:** Run the tests and see them pass. Read each capture against the question it answers and write the answers into `.superpowers/sdd/2026-11-06-custom-rules/research.md` (ignore semantics on an object and on the model, token names, default severity, no-scope and unknown-scope handling, failure on one object, each semantics probe).
@@ -199,7 +199,7 @@ Rules call only `RegEx.IsMatch` (188 calls over the survey), so the matcher answ
 
 The evaluator runs the expression once per object in the rule's scopes, with `it` the object. A property in `UNKNOWN_PROPERTIES` or absent from `PROPERTIES` for the type stops the rule before it runs, naming the nearest property; an `UNSET` value leaves the object out and counts it; a .NET exception (null receiver, bad conversion, failed pattern) stops the rule for the project; every node evaluated and every regex step spends the rule's budget. Values follow .NET: integer division on integer types, ordinal `==` on strings, culture rules as the probe capture showed for comparisons and `IndexOf`. `Tokenize()` maps pbiplint's tokens to Tabular Editor's names as A's capture recorded, with `Next`. Reasons are built from the rule's own text and the object type only.
 
-- [ ] **Step 1:** Tests: every operator, method, static member, conversion, and enum in the tables, each with a case written for the test; each A probe's answer reproduced (the probe file and capture are pbiplint's own, so the test reads them); a null receiver stops the rule; a nested `Any` over a generated model of 400 tables reaches the limit and says so; no reason contains an object's name.
+- [ ] **Step 1:** Tests: every operator, method, static member, conversion, and enum in the tables, each with a case written for the test; each A probe's answer reproduced (the probe files and captures are pbiplint's own, so the test reads them); a null receiver stops the rule; a nested `Any` over a generated model of 400 tables reaches the limit and says so; no reason contains an object's name.
 - [ ] **Steps 2 to 5:** Fail, implement, pass, commit.
 
 ### Task B7: the entry point and Microsoft parity in pull request CI
@@ -235,4 +235,4 @@ Each settles the spec's builder items as follows; its tasks are added here befor
 - **D, config to output:** `customRules` in the config and its JSON Schema; the engine runs `runTeRules` per file, in order; a rule file that cannot be found stops the project's lint naming it; same-id handling with `packages/core/src/custom-rules/te/upstream-rules.data.ts`, generated by `scripts/fingerprint-upstream-rules.mjs` from every published version of Microsoft's file (all languages) and `TabularEditor/BestPracticeRules`, holding `{ id, scope, hash }` with a 64-bit FNV-1a hash of the whitespace-free expression (no rule text is stored); the severity mapping 0 and 1 info, 2 warning, 3 and above error, as pbiplint's built-in rules read Microsoft's numbers, and a missing severity as A's capture and Tabular Editor 2's source settle; JSON and SARIF fields `custom: true` and `ruleFile` (relative to the config), under the contract's rules for additions; custom categories after the eight; `RULE_COULD_NOT_FINISH` per rule; notices for left-out objects, replaced ids, and skipped copies; `pbiplint explain <ID>` for a custom id.
 - **E, the site:** reads the files `customRules` names from inside the dropped folder only; labels a finding "Your team's rule" with its file and description; loads the evaluator only when a config names custom rules if B9's measurement says it is worth it; e2e drops a folder with a config and a rule file.
 - **F, assistants:** `pbiplint reference` (text, and `--json`) printed from `PROPERTIES` and `LIBRARY`; `pbiplint mcp` gains it and `explain_rule` and `list_rules` take the project path; a second skill, `pbiplint-custom-rules`, written from scratch, installed by `pbiplint skill --install` and shipped in the npm package and the Claude plugin.
-- **G, words:** the "Custom rules" page (setup, the format, built-in ids, the ignore annotation, what does not run, the worked examples from #117 and the approved-schemas rule, the skill, the reference); the CLI page's configuration section; README; the privacy page's lists of files opened and its skill sentence; the pipelines page's "The lint" lines; release notes, with "What can change in your results" for the ignore annotation.
+- **G, words:** the "Custom rules" page (setup, the format, built-in ids, the ignore annotation, what does not run, the worked examples from #117 and the approved-schemas rule, the skill, the reference); the CLI page's configuration section; README; the privacy page's lists of files opened and its skill sentence; the pipelines page's "The lint" lines; one sentence on the custom rules page on how `Severity` numbers map, since Tabular Editor CLI 0.8.1.1 labels 1 as warning and pbiplint reads it as info; release notes, with "What can change in your results" for the ignore annotation.

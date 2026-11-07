@@ -1,0 +1,38 @@
+[
+  {
+    "ID": "PROBE_DUPLICATE_SAME",
+    "Name": "probe: duplicate same",
+    "Category": "Probe",
+    "Description": "The same rule twice: run once or twice.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_DUPLICATE_SAME",
+    "Name": "probe: duplicate same",
+    "Category": "Probe",
+    "Description": "The same rule twice: run once or twice.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_DUPLICATE_DIFFERENT",
+    "Name": "probe: duplicate different",
+    "Category": "Probe",
+    "Description": "One id, two expressions: the first, the second, or both.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "true"
+  },
+  {
+    "ID": "PROBE_DUPLICATE_DIFFERENT",
+    "Name": "probe: duplicate different",
+    "Category": "Probe",
+    "Description": "One id, two expressions: the first, the second, or both.",
+    "Severity": 2,
+    "Scope": "Table",
+    "Expression": "true"
+  }
+]

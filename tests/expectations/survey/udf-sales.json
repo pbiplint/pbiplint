@@ -4,6 +4,20 @@
   "captured": "2026-10-01",
   "deviations": {},
   "ours": {},
+  "custom": {
+    "deviations": {
+      "microsoft/Analysis-Services/BestPracticeRules/BPARules.json": {
+        "UNNECESSARY_COLUMNS": "`ReferencedBy` counts a column that a user-defined function names without its table, here in `MAX ( [Tax Rate] )`, on every table with a column of that name, since the caller can hand the function any table; Tabular Editor leaves it out, though deleting the column would break the function."
+      }
+    },
+    "ours": {
+      "microsoft/Analysis-Services/BestPracticeRules/BPARules.json": {
+        "UNNECESSARY_COLUMNS": [
+          "'Employee Grouping'[Employee Grouping Fields]"
+        ]
+      }
+    }
+  },
   "results": {
     "microsoft/Analysis-Services/BestPracticeRules/BPARules.json": {
       "findings": {

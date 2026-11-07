@@ -4,6 +4,34 @@
   "captured": "2026-10-02",
   "deviations": {},
   "ours": {},
+  "custom": {
+    "deviations": {
+      "microsoft/Analysis-Services/BestPracticeRules/BPARules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "DATECOLUMN_FORMATSTRING": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "HIDE_FACT_TABLE_COLUMNS": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "NUMERIC_COLUMN_SUMMARIZE_BY": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX.",
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": "A calculated column with no `dataType` line, as Power BI Desktop saves most of them, is left out of a rule that reads `DataType`, since pbiplint does not know its type; Tabular Editor works the type out from the column's DAX."
+      }
+    },
+    "ours": {
+      "microsoft/Analysis-Services/BestPracticeRules/BPARules.json": {
+        "AVOID_FLOATING_POINT_DATA_TYPES": [],
+        "DATECOLUMN_FORMATSTRING": [
+          "'Orders'[Order Date]"
+        ],
+        "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS": [],
+        "HIDE_FACT_TABLE_COLUMNS": [],
+        "MONTH_(AS_A_STRING)_MUST_BE_SORTED": [],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [],
+        "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE": [
+          "'Orders'[Order Date]"
+        ]
+      }
+    }
+  },
   "results": {
     "microsoft/Analysis-Services/BestPracticeRules/BPARules.json": {
       "findings": {

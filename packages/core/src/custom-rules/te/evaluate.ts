@@ -565,7 +565,7 @@ class Evaluator implements TeRuntime {
 
   /** Whether the rule holds for the object: true, false, or null (never true). */
   run(expr: TeExpr, o: TomObject): boolean {
-    const v = this.eval(expr, { it: o, outerIt: o, current: o });
+    const v = this.evalNode(expr, { it: o, outerIt: o, current: o });
     if (v !== null && typeof v !== "boolean")
       throw new TeFailure(
         `the expression gives ${a(typeName(v))}, where a rule needs true or false`,
@@ -677,7 +677,7 @@ class Evaluator implements TeRuntime {
     const named = list ? entriesNamed(list, name) : [];
     if (named.length === 0)
       throw new TeFailure(`\`${type.written}.${name}\` is not one of the functions pbiplint runs`);
-    const args = argNodes.map((x) => this.eval(x, env));
+    const args = argNodes.map((x) => this.evalNode(x, env));
     return this.pick(named, args, `${type.written}.${name}`).run(null, args, this);
   }
 
@@ -705,8 +705,9 @@ class Evaluator implements TeRuntime {
     if (named.length === 0) throw new TeFailure(`${typeName(receiver)} has no method \`${name}\``);
     const args = argNodes.map((x) =>
       x.kind === "lambdaBody"
-        ? (item: unknown) => this.eval(x.body, { it: item, outerIt: env.it, current: env.current })
-        : this.eval(x, env),
+        ? (item: unknown) =>
+            this.evalNode(x.body, { it: item, outerIt: env.it, current: env.current })
+        : this.evalNode(x, env),
     );
     return this.pick(named, args, name).run(receiver, args, this);
   }
@@ -788,7 +789,7 @@ class Evaluator implements TeRuntime {
   private afterUnsetLeft(e: TeExpr & { kind: "binary" }, env: Env<unknown>, decides: boolean) {
     let r: boolean | null;
     try {
-      r = this.logical(this.eval(e.right, env), e.spelling);
+      r = this.logical(this.evalNode(e.right, env), e.spelling);
     } catch (err) {
       if (err instanceof TeUnset || err instanceof TeFailure) throw new TeUnset();
       throw err;
@@ -802,36 +803,36 @@ class Evaluator implements TeRuntime {
       case "and": {
         let l: boolean | null;
         try {
-          l = this.logical(this.eval(e.left, env), e.spelling);
+          l = this.logical(this.evalNode(e.left, env), e.spelling);
         } catch (err) {
           if (err instanceof TeUnset) return this.afterUnsetLeft(e, env, false);
           throw err;
         }
         if (l === false) return false;
-        const r = this.logical(this.eval(e.right, env), e.spelling);
+        const r = this.logical(this.evalNode(e.right, env), e.spelling);
         if (r === false) return false;
         return l === null || r === null ? null : true;
       }
       case "or": {
         let l: boolean | null;
         try {
-          l = this.logical(this.eval(e.left, env), e.spelling);
+          l = this.logical(this.evalNode(e.left, env), e.spelling);
         } catch (err) {
           if (err instanceof TeUnset) return this.afterUnsetLeft(e, env, true);
           throw err;
         }
         if (l === true) return true;
-        const r = this.logical(this.eval(e.right, env), e.spelling);
+        const r = this.logical(this.evalNode(e.right, env), e.spelling);
         if (r === true) return true;
         return l === null || r === null ? null : false;
       }
       case "coalesce": {
-        const l = this.eval(e.left, env);
-        return l ?? this.eval(e.right, env);
+        const l = this.evalNode(e.left, env);
+        return l ?? this.evalNode(e.right, env);
       }
     }
-    const l = this.eval(e.left, env);
-    const r = this.eval(e.right, env);
+    const l = this.evalNode(e.left, env);
+    const r = this.evalNode(e.right, env);
     switch (e.op) {
       case "eq":
         return this.equals(l, r, e);
@@ -887,7 +888,7 @@ class Evaluator implements TeRuntime {
     return numbers.numeric(l, r, f);
   }
 
-  eval(e: TeExpr, env: Env<unknown>): unknown {
+  evalNode(e: TeExpr, env: Env<unknown>): unknown {
     this.spend(1);
     switch (e.kind) {
       case "literal":
@@ -908,9 +909,9 @@ class Evaluator implements TeRuntime {
       case "scope":
         return env[e.which];
       case "paren":
-        return this.eval(e.expr, env);
+        return this.evalNode(e.expr, env);
       case "lambdaBody":
-        return this.eval(e.body, env);
+        return this.evalNode(e.body, env);
       case "ident":
         return this.member(env.it, e.name);
       case "member": {
@@ -920,27 +921,27 @@ class Evaluator implements TeRuntime {
           const shortcut = this.enumShortcut(env.it, t.name, e.name);
           if (shortcut) return shortcut;
         }
-        return this.member(this.eval(t, env), e.name);
+        return this.member(this.evalNode(t, env), e.name);
       }
       case "call": {
         const t = e.target;
         if (t?.kind === "type") return this.callStatic(t, e.name, e.args, env);
-        return this.callMethod(t ? this.eval(t, env) : env.it, e.name, e.args, env);
+        return this.callMethod(t ? this.evalNode(t, env) : env.it, e.name, e.args, env);
       }
       case "index": {
-        const target = this.eval(e.target, env);
-        const keys = e.args.map((x) => this.eval(x, env));
+        const target = this.evalNode(e.target, env);
+        const keys = e.args.map((x) => this.evalNode(x, env));
         if (keys.length !== 1) throw new TeFailure("an index takes one value inside `[...]`");
         return this.index(target, keys[0]);
       }
       case "convert": {
-        const args = e.args.map((x) => this.eval(x, env));
+        const args = e.args.map((x) => this.evalNode(x, env));
         if (args.length !== 1)
           throw new TeFailure(`\`${e.type.written}(...)\` takes one value to convert`);
         return this.convert(e.type, args[0]);
       }
       case "unary": {
-        const v = this.eval(e.operand, env);
+        const v = this.evalNode(e.operand, env);
         if (e.op === "not") {
           const b = this.logical(v, e.spelling);
           return b === null ? null : !b;
@@ -953,8 +954,8 @@ class Evaluator implements TeRuntime {
       case "binary":
         return this.binary(e, env);
       case "conditional": {
-        const test = this.logical(this.eval(e.test, env), e.form);
-        return this.eval(test === true ? e.then : e.else, env);
+        const test = this.logical(this.evalNode(e.test, env), e.form);
+        return this.evalNode(test === true ? e.then : e.else, env);
       }
     }
   }

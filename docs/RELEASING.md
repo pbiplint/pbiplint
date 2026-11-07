@@ -157,8 +157,8 @@ The model rules are pinned to the Tabular Editor 3 command line, `te`, a develop
 only. The commands that refresh the captures are in CONTRIBUTING.md under "Refreshing parity
 expectations".
 
-Every capture from `te` under `tests/expectations/` was made with Tabular Editor CLI 0.7.1.2 in
-October 2026, as each file's `oracle` and `captured` fields say. Each model fixture captured before
+Every capture from `te` under `tests/expectations/` outside `custom-rules/` was made with Tabular
+Editor CLI 0.7.1.2 in October 2026, as each file's `oracle` and `captured` fields say. Each model fixture captured before
 October 31, 2026 has three; `scripts/test/te-captures.test.mjs` lists those fixtures and pins the
 build in their oracles. A fixture added later has only its Microsoft capture. The three are:
 
@@ -184,15 +184,33 @@ A listed fixture keeps its captures as they are once 0.7.1.2 stops working: a ch
 its Microsoft capture, which the survey's run of Microsoft's own file must equal, so every listed
 fixture is then re-captured three ways with one licensed build, or the change goes in a new fixture.
 
-Tabular Editor CLI 0.7.1.2 is a preview build that stops working after October 31, 2026, and the
-[0.7.0 release post](https://tabulareditor.com/blog/tabular-editor-cli-0-7-0-release) (September
-14, 2026) says, "After the preview period, a license will be required." So a re-capture after
-October 31, 2026 needs a licensed build from the
-[installation page](https://docs.tabulareditor.com/en/features/te-cli/te-cli-install.html): sign
-in with a Tabular Editor account, download the build for your platform, and overwrite the old one.
-The script writes the build it ran into each file's `oracle`; with `--from`, which converts a saved
-output instead of running `te`, the build comes from `--oracle`. A re-capture with another build
-also updates the oracle constants in `scripts/test/te-captures.test.mjs`.
+The two fixtures for custom rules, `custom-rules` and `custom-rules-model-ignore`, were captured
+with Tabular Editor CLI 0.8.1.1 in November 2026, four ways, under `tests/expectations/custom-rules/`
+(the same three, in `custom-rules/`, `custom-rules/te3/`, and `custom-rules/survey/`, and a fourth):
+
+- **The probe rule files**, `tests/expectations/custom-rules/probes/<fixture>.json`: what `te` makes
+  of each file in `tests/rules/te-probes/`, rule files pbiplint wrote in which each rule asks one
+  question custom rules depend on (the label each `Severity` gets, the objects each scope covers and
+  how they are named, the ignore annotation, `Tokenize()`'s token names and `Next`, a rule that fails
+  on one object, a rule with no scope, and how an expression behaves where .NET and JavaScript
+  differ). Each probe file is pinned there by its sha256.
+
+They sit apart because both carry Tabular Editor's `BestPracticeAnalyzer_IgnoreRules` annotation,
+which pbiplint does not read yet, so the parity tests do not read them; `scripts/test/te-captures.test.mjs`
+checks them on their own.
+
+Tabular Editor CLI 0.7.1.2 stopped working after October 31, 2026. Tabular Editor then extended the
+preview: the
+[installation page](https://docs.tabulareditor.com/en/features/te-cli/te-cli-install.html) says,
+"The preview build stops functioning after 2026-12-31", and "no license is required during
+preview", with a free Tabular Editor account. So until December 31, 2026, a re-capture uses the
+current preview build from that page: sign in, download the build for your platform, and overwrite
+the old one. After that date a re-capture needs a licensed build, and where none is at hand, the
+expected result is read from Tabular Editor 2's open-source code (MIT), whose analyzer the rule
+format comes from, and marked as read from that code. The script writes the build it ran into each
+file's `oracle`; with `--from`, which converts a saved output instead of running `te`, the build
+comes from `--oracle`. A re-capture with another build also updates the oracle constants in
+`scripts/test/te-captures.test.mjs`.
 
 ## Report parity expectations
 

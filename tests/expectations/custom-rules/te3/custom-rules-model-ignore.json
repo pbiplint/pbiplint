@@ -1,0 +1,128 @@
+{
+  "fixture": "tests/fixtures/custom-rules-model-ignore.SemanticModel",
+  "oracle": "Tabular Editor CLI 0.8.1.1 built-in rules",
+  "captured": "2026-11-07",
+  "deviations": {},
+  "ours": {},
+  "findings": {
+    "TE3_BUILT_IN_DATE_TABLE_EXISTS": [
+      "Model"
+    ],
+    "TE3_BUILT_IN_DO_NOT_SUMMARIZE_NUMERIC": [
+      "'Orders'[Amount]",
+      "'Orders'[Net Amount]",
+      "'Orders'[Quantity]",
+      "'Targets'[Target]"
+    ],
+    "TE3_BUILT_IN_FORMAT_STRING_COLUMNS": [
+      "'Orders'[Customer Key]",
+      "'Orders'[Product Key]"
+    ],
+    "TE3_BUILT_IN_FORMAT_STRING_MEASURES": [
+      "[Abc]"
+    ],
+    "TE3_BUILT_IN_HIDE_FOREIGN_KEYS": [
+      "'Orders'[Customer Key]",
+      "'Orders'[Product Key]"
+    ],
+    "TE3_BUILT_IN_POWERBI_LATEST_COMPATIBILITY": [
+      "Model"
+    ],
+    "TE3_BUILT_IN_SET_ISAVAILABLEINMDX_FALSE": [
+      "'Customers'[Customer Key]",
+      "'Orders'[Bill Customer Key]",
+      "'Orders'[Order Key]",
+      "'Orders'[Ship Customer Key]",
+      "'Products'[Product Key]",
+      "'Time Intelligence'[Ordinal]"
+    ],
+    "TE3_BUILT_IN_TRANSLATE_HIERARCHY_LEVELS": [
+      "City",
+      "Region"
+    ],
+    "TE3_BUILT_IN_TRANSLATE_PERSPECTIVES": [
+      "Model",
+      "Sales View"
+    ],
+    "TE3_BUILT_IN_TRANSLATE_VISIBLE_NAMES": [
+      "'Customers'",
+      "'Customers'[City]",
+      "'Customers'[Customer Name]",
+      "'Customers'[Region]",
+      "'Notes'",
+      "'Notes'[Note]",
+      "'Orders'",
+      "'Orders'[Amount Band]",
+      "'Orders'[Amount]",
+      "'Orders'[Customer Key]",
+      "'Orders'[Discount]",
+      "'Orders'[Net Amount]",
+      "'Orders'[Product Key]",
+      "'Orders'[Quantity]",
+      "'Orders'[Tax]",
+      "'Products'",
+      "'Products'[List Price]",
+      "'Products'[Product Name]",
+      "'Targets'",
+      "'Targets'[Region]",
+      "'Targets'[Target]",
+      "'Time Intelligence'[Name]",
+      "Geography",
+      "[Abc]",
+      "[Amount per Order]",
+      "[Amount per Unit]",
+      "[Block Comment Amount]",
+      "[Commented Amount]",
+      "[Half Amount]",
+      "[Note Count]",
+      "[Safe Ratio]",
+      "[Slash Label]",
+      "[Tenth Amount]",
+      "[Total Amount]",
+      "[Total Quantity]"
+    ],
+    "TE3_BUILT_IN_VISIBLE_CALCULATION_GROUPS_NO_DESCRIPTION": [
+      "'Time Intelligence'"
+    ],
+    "TE3_BUILT_IN_VISIBLE_COLUMNS_NO_DESCRIPTION": [
+      "'Customers'[City]",
+      "'Customers'[Customer Name]",
+      "'Customers'[Region]",
+      "'Notes'[Note]",
+      "'Orders'[Amount Band]",
+      "'Orders'[Amount]",
+      "'Orders'[Customer Key]",
+      "'Orders'[Discount]",
+      "'Orders'[Net Amount]",
+      "'Orders'[Product Key]",
+      "'Orders'[Quantity]",
+      "'Orders'[Tax]",
+      "'Products'[List Price]",
+      "'Products'[Product Name]",
+      "'Targets'[Region]",
+      "'Targets'[Target]",
+      "'Time Intelligence'[Name]"
+    ],
+    "TE3_BUILT_IN_VISIBLE_MEASURES_NO_DESCRIPTION": [
+      "[Abc]",
+      "[Amount per Order]",
+      "[Amount per Unit]",
+      "[Block Comment Amount]",
+      "[Commented Amount]",
+      "[Half Amount]",
+      "[Note Count]",
+      "[Safe Ratio]",
+      "[Slash Label]",
+      "[Tenth Amount]",
+      "[Total Amount]",
+      "[Total Quantity]"
+    ],
+    "TE3_BUILT_IN_VISIBLE_TABLES_NO_DESCRIPTION": [
+      "'Customers'",
+      "'Notes'",
+      "'Orders'",
+      "'Products'",
+      "'Targets'"
+    ]
+  }
+}

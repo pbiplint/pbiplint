@@ -26,8 +26,6 @@ table Orders
 
 	measure 'Slash Label' = "per unit / per order"
 
-		annotation BestPracticeAnalyzer_IgnoreRules = {"RuleIDs":["PROBE_IGNORE_CUSTOM"
-
 	measure 'Commented Amount' =
 			// amount / quantity is in Amount per Unit
 			[Total Amount]

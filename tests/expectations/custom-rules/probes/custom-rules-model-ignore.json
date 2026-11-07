@@ -1,0 +1,627 @@
+{
+  "fixture": "tests/fixtures/custom-rules-model-ignore.SemanticModel",
+  "oracle": "Tabular Editor CLI 0.8.1.1, each probe rule file in tests/rules/te-probes",
+  "captured": "2026-11-07",
+  "results": {
+    "duplicates.json": {
+      "sha256": "57f2a39ffd88ac009c9a852d55ace544d0740232da92e8b1b935c40e42c2059b",
+      "findings": {
+        "PROBE_DUPLICATE_DIFFERENT": [
+          "Model"
+        ],
+        "PROBE_DUPLICATE_SAME": [
+          "Model"
+        ]
+      },
+      "ruleErrors": {},
+      "severities": {
+        "PROBE_DUPLICATE_DIFFERENT": "warning",
+        "PROBE_DUPLICATE_SAME": "warning"
+      },
+      "quiet": []
+    },
+    "layout.json": {
+      "sha256": "3987b8ce823971f60fc10e139354af4ab98cfb1db3aed037f6b58b87b1cec3ff",
+      "findings": {
+        "4242": [
+          "Model"
+        ],
+        "PROBE_LAYOUT_LOWERCASE": [
+          "Model"
+        ]
+      },
+      "ruleErrors": {},
+      "severities": {
+        "4242": "warning",
+        "PROBE_LAYOUT_LOWERCASE": "warning"
+      },
+      "quiet": []
+    },
+    "no-scope.json": {
+      "sha256": "d2fcc562edac54bf68d089554c9e5ae1b0aa6f16acfaa833148c3ef9a70aeb62",
+      "findings": {
+        "PROBE_NO_SCOPE_SIBLING": [
+          "Model"
+        ]
+      },
+      "ruleErrors": {},
+      "severities": {
+        "PROBE_NO_SCOPE_SIBLING": "warning"
+      },
+      "quiet": [
+        "PROBE_NO_SCOPE"
+      ]
+    },
+    "semantics.json": {
+      "sha256": "f7c5f5f5de87d0ce45e0804bde2b0ce2a38d6b5c78ae3dc1279e101969aaae96",
+      "findings": {
+        "PROBE_CONVERT_OK": [
+          "Model"
+        ],
+        "PROBE_COUNT_METHOD": [
+          "Model"
+        ],
+        "PROBE_COUNT_PROPERTY": [
+          "Model"
+        ],
+        "PROBE_CURRENT": [
+          "Model"
+        ],
+        "PROBE_DESCRIPTION_EMPTY": [
+          "Model"
+        ],
+        "PROBE_DESCRIPTION_LENGTH": [
+          "Model"
+        ],
+        "PROBE_DISABLED": [
+          "Model"
+        ],
+        "PROBE_ENUM_BY_NAME": [
+          "Model"
+        ],
+        "PROBE_ENUM_BY_STRING": [
+          "Model"
+        ],
+        "PROBE_GETANNOTATION_MISSING": [
+          "Model"
+        ],
+        "PROBE_HASANNOTATION": [
+          "Model"
+        ],
+        "PROBE_IGNORE_CUSTOM_LOWER": [
+          "'Customers'",
+          "'Notes'",
+          "'Orders'",
+          "'Products'",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "PROBE_IIF": [
+          "Model"
+        ],
+        "PROBE_INDEXOF_EMPTY": [
+          "Model"
+        ],
+        "PROBE_INDEXOF_IGNORE_CASE": [
+          "Model"
+        ],
+        "PROBE_INTEGER_DIVISION": [
+          "Model"
+        ],
+        "PROBE_IS_NULL_OR_WHITESPACE_LOWER": [
+          "Model"
+        ],
+        "PROBE_IS_NULL_OR_WHITESPACE_UPPER": [
+          "Model"
+        ],
+        "PROBE_IT": [
+          "Model"
+        ],
+        "PROBE_MATH_MAX_MIXED": [
+          "Model"
+        ],
+        "PROBE_MODULO": [
+          "Model"
+        ],
+        "PROBE_NOT_PRECEDENCE": [
+          "Model"
+        ],
+        "PROBE_NULL_EQUALS_NULL": [
+          "Model"
+        ],
+        "PROBE_OPERATOR_SPELLINGS": [
+          "Model"
+        ],
+        "PROBE_OUTERIT": [
+          "Model"
+        ],
+        "PROBE_PQ_APPROVED_SCHEMA": [
+          "Customers",
+          "Snowflake Products"
+        ],
+        "PROBE_PQ_EXPRESSION": [
+          "Customers",
+          "Orders"
+        ],
+        "PROBE_PQ_QUERY": [
+          "Customers",
+          "Orders"
+        ],
+        "PROBE_PQ_SHARED": [
+          "Snowflake Products"
+        ],
+        "PROBE_PQ_SOURCETYPE_STRING": [
+          "Customers",
+          "Notes",
+          "Orders",
+          "Products"
+        ],
+        "PROBE_REGEX_DIGIT_NON_ASCII": [
+          "Model"
+        ],
+        "PROBE_REGEX_IGNORE_CASE_CLASS": [
+          "Model"
+        ],
+        "PROBE_REGEX_LOOKBEHIND": [
+          "Model"
+        ],
+        "PROBE_REGEX_MID_IGNORE_CASE": [
+          "Model"
+        ],
+        "PROBE_REGEX_SPELLING_REGEX": [
+          "Model"
+        ],
+        "PROBE_REGEX_SPELLING_REGEX_LOWER": [
+          "Model"
+        ],
+        "PROBE_REGEX_WORD_NON_ASCII": [
+          "Model"
+        ],
+        "PROBE_SCOPE_CALCULATEDCOLUMN": [
+          "'Orders'[Amount Band]",
+          "'Orders'[Net Amount]"
+        ],
+        "PROBE_SCOPE_CALCULATEDTABLE": [
+          "'Targets'"
+        ],
+        "PROBE_SCOPE_CALCULATEDTABLECOLUMN": [
+          "'Targets'[Region]",
+          "'Targets'[Target]"
+        ],
+        "PROBE_SCOPE_CALCULATIONGROUP": [
+          "'Time Intelligence'"
+        ],
+        "PROBE_SCOPE_CALCULATIONITEM": [
+          "Current",
+          "Half"
+        ],
+        "PROBE_SCOPE_COLUMN": [
+          "'Customers'[City]",
+          "'Customers'[Customer Key]",
+          "'Customers'[Customer Name]",
+          "'Customers'[Region]",
+          "'Notes'[Note]",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Order Key]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Ship Customer Key]",
+          "'Orders'[Tax]",
+          "'Products'[List Price]",
+          "'Products'[Product Key]",
+          "'Products'[Product Name]",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'[Name]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "PROBE_SCOPE_CULTURE": [
+          "en-US",
+          "fr-FR"
+        ],
+        "PROBE_SCOPE_DATACOLUMN": [
+          "'Customers'[City]",
+          "'Customers'[Customer Key]",
+          "'Customers'[Customer Name]",
+          "'Customers'[Region]",
+          "'Notes'[Note]",
+          "'Orders'[Amount]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Order Key]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Ship Customer Key]",
+          "'Orders'[Tax]",
+          "'Products'[List Price]",
+          "'Products'[Product Key]",
+          "'Products'[Product Name]",
+          "'Time Intelligence'[Name]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "PROBE_SCOPE_HIERARCHY": [
+          "Geography"
+        ],
+        "PROBE_SCOPE_KPI": [
+          "[Total Amount].KPI"
+        ],
+        "PROBE_SCOPE_LEVEL": [
+          "City",
+          "Region"
+        ],
+        "PROBE_SCOPE_MEASURE": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "PROBE_SCOPE_MODEL": [
+          "Model"
+        ],
+        "PROBE_SCOPE_MODELROLE": [
+          "East"
+        ],
+        "PROBE_SCOPE_NAMEDEXPRESSION": [
+          "Snowflake Products"
+        ],
+        "PROBE_SCOPE_PARTITION": [
+          "Customers",
+          "Notes",
+          "Orders",
+          "Products",
+          "Targets",
+          "Time Intelligence"
+        ],
+        "PROBE_SCOPE_PERSPECTIVE": [
+          "Sales View"
+        ],
+        "PROBE_SCOPE_RELATIONSHIP": [
+          "'Orders'[Bill Customer Key] ∞←1 'Customers'[Customer Key]",
+          "'Orders'[Customer Key] ∞←1 'Customers'[Customer Key]",
+          "'Orders'[Product Key] ∞←1 'Products'[Product Key]",
+          "'Orders'[Ship Customer Key] ∞←1 'Customers'[Customer Key]"
+        ],
+        "PROBE_SCOPE_TABLE": [
+          "'Customers'",
+          "'Notes'",
+          "'Orders'",
+          "'Products'"
+        ],
+        "PROBE_SCOPE_TABLEPERMISSION": [
+          "Customers"
+        ],
+        "PROBE_SEVERITY_0": [
+          "Model"
+        ],
+        "PROBE_SEVERITY_1": [
+          "Model"
+        ],
+        "PROBE_SEVERITY_2": [
+          "Model"
+        ],
+        "PROBE_SEVERITY_3": [
+          "Model"
+        ],
+        "PROBE_SEVERITY_4": [
+          "Model"
+        ],
+        "PROBE_SEVERITY_5": [
+          "Model"
+        ],
+        "PROBE_SEVERITY_MISSING": [
+          "Model"
+        ],
+        "PROBE_STRING_BACKSLASH_LITERAL": [
+          "Model"
+        ],
+        "PROBE_STRING_DOUBLED_QUOTE": [
+          "Model"
+        ],
+        "PROBE_STRING_ORDER_CASE": [
+          "Model"
+        ],
+        "PROBE_TOKEN_CLOSE_PARENS": [
+          "[Amount per Order]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "PROBE_TOKEN_COLUMN_OR_MEASURE": [
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Safe Ratio]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "PROBE_TOKEN_COMMA": [
+          "[Safe Ratio]"
+        ],
+        "PROBE_TOKEN_COUNT": [
+          "[Block Comment Amount]",
+          "[Commented Amount]"
+        ],
+        "PROBE_TOKEN_DELIMITED_COMMENT": [
+          "[Block Comment Amount]"
+        ],
+        "PROBE_TOKEN_DIV": [
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Half Amount]",
+          "[Tenth Amount]"
+        ],
+        "PROBE_TOKEN_DIVIDE": [
+          "[Safe Ratio]"
+        ],
+        "PROBE_TOKEN_DIV_NEXT_INTEGER": [
+          "[Half Amount]"
+        ],
+        "PROBE_TOKEN_DIV_NEXT_OTHER": [
+          "[Amount per Order]",
+          "[Amount per Unit]"
+        ],
+        "PROBE_TOKEN_INTEGER_LITERAL": [
+          "[Abc]",
+          "[Half Amount]"
+        ],
+        "PROBE_TOKEN_NEXT_PAST_END": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "PROBE_TOKEN_OPEN_PARENS": [
+          "[Amount per Order]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "PROBE_TOKEN_PLUS": [
+          "[Abc]"
+        ],
+        "PROBE_TOKEN_REAL_LITERAL": [
+          "[Tenth Amount]"
+        ],
+        "PROBE_TOKEN_SINGLE_LINE_COMMENT": [
+          "[Commented Amount]"
+        ],
+        "PROBE_TOKEN_STRING_LITERAL": [
+          "[Slash Label]"
+        ],
+        "PROBE_TOKEN_SUM": [
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "PROBE_TOKEN_TABLE_OR_VARIABLE": [
+          "[Amount per Order]",
+          "[Note Count]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "PROBE_TOKEN_WHITESPACES": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Safe Ratio]",
+          "[Tenth Amount]"
+        ],
+        "PROBE_TOUPPER_NON_ASCII": [
+          "Model"
+        ],
+        "PROBE_VERTIPAQ_WITHOUT_STATISTICS": [
+          "Model"
+        ]
+      },
+      "ruleErrors": {
+        "PROBE_CONVERT_BAD": "Error while evaluating expression on Model: The input string 'x' was not in a correct format.",
+        "PROBE_ENUM_BARE": "'.' or '(' expected",
+        "PROBE_FAIL_NULL_EXPRESSION": "Error while evaluating expression on Partitions: Value cannot be null. (Parameter 'input')",
+        "PROBE_FAIL_ONE_OBJECT": "Error while evaluating expression on Measures: startIndex cannot be larger than length of string. (Parameter 'startIndex')",
+        "PROBE_PQ_SOURCETYPE_ENUM": "No property or field 'PartitionSourceType' exists in type 'Partition'",
+        "PROBE_REGEX_BAD_PATTERN": "Error while evaluating expression on Model: Invalid pattern '(' at offset 1. Not enough )'s.",
+        "PROBE_STRING_ESCAPED_QUOTE": "Expression of type 'Boolean' expected",
+        "PROBE_STRING_PLUS_NUMBER": "Expression of type 'System.Int32' cannot be used for parameter of type 'System.Object' of method 'System.String Concat(System.Object, System.Object)' (Parameter 'arg1')",
+        "PROBE_STRING_SINGLE_QUOTED": "Character literal must contain exactly one character",
+        "PROBE_TOKEN_ASSIGN": "No property or field 'ASSIGN' exists in type 'DaxToken'",
+        "PROBE_TOKEN_ASSIGNMENT": "No property or field 'ASSIGNMENT' exists in type 'DaxToken'",
+        "PROBE_TOKEN_COMMENT": "No property or field 'COMMENT' exists in type 'DaxToken'",
+        "PROBE_TOKEN_DOUBLE_AMP": "No property or field 'DOUBLE_AMP' exists in type 'DaxToken'",
+        "PROBE_TOKEN_DOUBLE_EQ": "No property or field 'DOUBLE_EQ' exists in type 'DaxToken'",
+        "PROBE_TOKEN_DOUBLE_PIPE": "No property or field 'DOUBLE_PIPE' exists in type 'DaxToken'",
+        "PROBE_TOKEN_EOF": "No property or field 'EOF' exists in type 'DaxToken'",
+        "PROBE_TOKEN_EQEQ": "No property or field 'EQEQ' exists in type 'DaxToken'",
+        "PROBE_TOKEN_EQUALS": "No property or field 'EQUALS' exists in type 'DaxToken'",
+        "PROBE_TOKEN_FUNCTION": "No property or field 'FUNCTION' exists in type 'DaxToken'",
+        "PROBE_TOKEN_GTE": "No property or field 'GTE' exists in type 'DaxToken'",
+        "PROBE_TOKEN_IDENTIFIER": "No property or field 'IDENTIFIER' exists in type 'DaxToken'",
+        "PROBE_TOKEN_KEYWORD": "No property or field 'KEYWORD' exists in type 'DaxToken'",
+        "PROBE_TOKEN_LTE": "No property or field 'LTE' exists in type 'DaxToken'",
+        "PROBE_TOKEN_NEQ": "No property or field 'NEQ' exists in type 'DaxToken'",
+        "PROBE_TOKEN_NOT": "Expression expected",
+        "PROBE_TOKEN_NUMBER": "No property or field 'NUMBER' exists in type 'DaxToken'",
+        "PROBE_TOKEN_OPERATOR": "No property or field 'OPERATOR' exists in type 'DaxToken'",
+        "PROBE_TOKEN_TRUE": "Operator '=' incompatible with operand types 'Int32' and 'Boolean'",
+        "PROBE_TOKEN_UNKNOWN": "No property or field 'UNKNOWN' exists in type 'DaxToken'"
+      },
+      "severities": {
+        "PROBE_CONVERT_OK": "warning",
+        "PROBE_COUNT_METHOD": "warning",
+        "PROBE_COUNT_PROPERTY": "warning",
+        "PROBE_CURRENT": "warning",
+        "PROBE_DESCRIPTION_EMPTY": "warning",
+        "PROBE_DESCRIPTION_LENGTH": "warning",
+        "PROBE_DISABLED": "warning",
+        "PROBE_ENUM_BY_NAME": "warning",
+        "PROBE_ENUM_BY_STRING": "warning",
+        "PROBE_GETANNOTATION_MISSING": "warning",
+        "PROBE_HASANNOTATION": "warning",
+        "PROBE_IGNORE_CUSTOM_LOWER": "warning",
+        "PROBE_IIF": "warning",
+        "PROBE_INDEXOF_EMPTY": "warning",
+        "PROBE_INDEXOF_IGNORE_CASE": "warning",
+        "PROBE_INTEGER_DIVISION": "warning",
+        "PROBE_IS_NULL_OR_WHITESPACE_LOWER": "warning",
+        "PROBE_IS_NULL_OR_WHITESPACE_UPPER": "warning",
+        "PROBE_IT": "warning",
+        "PROBE_MATH_MAX_MIXED": "warning",
+        "PROBE_MODULO": "warning",
+        "PROBE_NOT_PRECEDENCE": "warning",
+        "PROBE_NULL_EQUALS_NULL": "warning",
+        "PROBE_OPERATOR_SPELLINGS": "warning",
+        "PROBE_OUTERIT": "warning",
+        "PROBE_PQ_APPROVED_SCHEMA": "warning",
+        "PROBE_PQ_EXPRESSION": "warning",
+        "PROBE_PQ_QUERY": "warning",
+        "PROBE_PQ_SHARED": "warning",
+        "PROBE_PQ_SOURCETYPE_STRING": "warning",
+        "PROBE_REGEX_DIGIT_NON_ASCII": "warning",
+        "PROBE_REGEX_IGNORE_CASE_CLASS": "warning",
+        "PROBE_REGEX_LOOKBEHIND": "warning",
+        "PROBE_REGEX_MID_IGNORE_CASE": "warning",
+        "PROBE_REGEX_SPELLING_REGEX": "warning",
+        "PROBE_REGEX_SPELLING_REGEX_LOWER": "warning",
+        "PROBE_REGEX_WORD_NON_ASCII": "warning",
+        "PROBE_SCOPE_CALCULATEDCOLUMN": "warning",
+        "PROBE_SCOPE_CALCULATEDTABLE": "warning",
+        "PROBE_SCOPE_CALCULATEDTABLECOLUMN": "warning",
+        "PROBE_SCOPE_CALCULATIONGROUP": "warning",
+        "PROBE_SCOPE_CALCULATIONITEM": "warning",
+        "PROBE_SCOPE_COLUMN": "warning",
+        "PROBE_SCOPE_CULTURE": "warning",
+        "PROBE_SCOPE_DATACOLUMN": "warning",
+        "PROBE_SCOPE_HIERARCHY": "warning",
+        "PROBE_SCOPE_KPI": "warning",
+        "PROBE_SCOPE_LEVEL": "warning",
+        "PROBE_SCOPE_MEASURE": "warning",
+        "PROBE_SCOPE_MODEL": "warning",
+        "PROBE_SCOPE_MODELROLE": "warning",
+        "PROBE_SCOPE_NAMEDEXPRESSION": "warning",
+        "PROBE_SCOPE_PARTITION": "warning",
+        "PROBE_SCOPE_PERSPECTIVE": "warning",
+        "PROBE_SCOPE_RELATIONSHIP": "warning",
+        "PROBE_SCOPE_TABLE": "warning",
+        "PROBE_SCOPE_TABLEPERMISSION": "warning",
+        "PROBE_SEVERITY_0": "info",
+        "PROBE_SEVERITY_1": "warning",
+        "PROBE_SEVERITY_2": "warning",
+        "PROBE_SEVERITY_3": "error",
+        "PROBE_SEVERITY_4": "error",
+        "PROBE_SEVERITY_5": "error",
+        "PROBE_SEVERITY_MISSING": "warning",
+        "PROBE_STRING_BACKSLASH_LITERAL": "warning",
+        "PROBE_STRING_DOUBLED_QUOTE": "warning",
+        "PROBE_STRING_ORDER_CASE": "warning",
+        "PROBE_TOKEN_CLOSE_PARENS": "warning",
+        "PROBE_TOKEN_COLUMN_OR_MEASURE": "warning",
+        "PROBE_TOKEN_COMMA": "warning",
+        "PROBE_TOKEN_COUNT": "warning",
+        "PROBE_TOKEN_DELIMITED_COMMENT": "warning",
+        "PROBE_TOKEN_DIV": "warning",
+        "PROBE_TOKEN_DIVIDE": "warning",
+        "PROBE_TOKEN_DIV_NEXT_INTEGER": "warning",
+        "PROBE_TOKEN_DIV_NEXT_OTHER": "warning",
+        "PROBE_TOKEN_INTEGER_LITERAL": "warning",
+        "PROBE_TOKEN_NEXT_PAST_END": "warning",
+        "PROBE_TOKEN_OPEN_PARENS": "warning",
+        "PROBE_TOKEN_PLUS": "warning",
+        "PROBE_TOKEN_REAL_LITERAL": "warning",
+        "PROBE_TOKEN_SINGLE_LINE_COMMENT": "warning",
+        "PROBE_TOKEN_STRING_LITERAL": "warning",
+        "PROBE_TOKEN_SUM": "warning",
+        "PROBE_TOKEN_TABLE_OR_VARIABLE": "warning",
+        "PROBE_TOKEN_WHITESPACES": "warning",
+        "PROBE_TOUPPER_NON_ASCII": "warning",
+        "PROBE_VERTIPAQ_WITHOUT_STATISTICS": "warning"
+      },
+      "quiet": [
+        "PROBE_SCOPE_MODELROLEMEMBER",
+        "PROBE_SCOPE_PROVIDERDATASOURCE",
+        "PROBE_SCOPE_STRUCTUREDDATASOURCE",
+        "PROBE_SCOPE_VARIATION",
+        "PROBE_SCOPE_CALENDAR",
+        "PROBE_SCOPE_USERDEFINEDFUNCTION",
+        "PROBE_IGNORE_CUSTOM",
+        "PROBE_TOKEN_DATE_LITERAL",
+        "PROBE_TOKEN_TABLE",
+        "PROBE_TOKEN_OPEN_CURLY",
+        "PROBE_TOKEN_CLOSE_CURLY",
+        "PROBE_TOKEN_MINUS",
+        "PROBE_TOKEN_STAR",
+        "PROBE_TOKEN_CARET",
+        "PROBE_TOKEN_AMP",
+        "PROBE_TOKEN_LT",
+        "PROBE_TOKEN_GT",
+        "PROBE_TOKEN_OP_AND",
+        "PROBE_TOKEN_OP_OR",
+        "PROBE_TOKEN_OP_NE",
+        "PROBE_TOKEN_OP_LE",
+        "PROBE_TOKEN_OP_GE",
+        "PROBE_TOKEN_LAMBDA",
+        "PROBE_TOKEN_COLON",
+        "PROBE_TOKEN_VAR",
+        "PROBE_TOKEN_RETURN",
+        "PROBE_TOKEN_CALCULATE",
+        "PROBE_TOKEN_IN",
+        "PROBE_TOKEN_BLANK",
+        "PROBE_TOKEN_EQ",
+        "PROBE_TOKEN_DATE",
+        "PROBE_TOKEN_TEXT",
+        "PROBE_STRING_BACKSLASH_ESCAPE",
+        "PROBE_STRING_NEWLINE_ESCAPE",
+        "PROBE_STRING_EQUALS_CASE",
+        "PROBE_REAL_DIVISION",
+        "PROBE_DECIMAL_SUM",
+        "PROBE_DESCRIPTION_NULL",
+        "PROBE_CONTAINS_CASE",
+        "PROBE_INDEXOF_CULTURE",
+        "PROBE_REGEX_MID_IGNORE_CASE_BEFORE",
+        "PROBE_REGEX_DOLLAR_FINAL_NEWLINE",
+        "PROBE_REGEX_DOT_NEWLINE"
+      ]
+    },
+    "unknown-scope.json": {
+      "sha256": "acb48c05efbd4f4ca5371f6f754cfe11c6eb72bfcdd2c51e5c0a66b378d6c274",
+      "error": "Could not parse BPA rules. Expected JSON array or object with 'rules' array."
+    }
+  }
+}

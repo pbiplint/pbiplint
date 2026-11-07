@@ -1,7 +1,9 @@
+import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, URL } from "node:url";
 import { describe, expect, it } from "vitest";
+import { ruleIdsOf } from "../te-expectations.mjs";
 
 // What Tabular Editor CLI 0.7.1.2 captured. That build stops working after October 31, 2026, so a
 // missing or partial capture cannot be made again without a licensed build (docs/RELEASING.md).
@@ -114,4 +116,94 @@ describe("the captures", () => {
   it.each(CAPTURED)("%s: the built-in capture has findings", (name) => {
     expect(isObject(read(`te3/${name}.json`).findings)).toBe(true);
   });
+});
+
+// The fixtures for the Tabular Editor behaviour custom rules depend on (#118), captured four ways
+// with te 0.8.1.1, whose preview stops working after December 31, 2026. They live under
+// custom-rules/ so the parity tests, which read every capture in tests/expectations/, te3/ and
+// survey/, do not hold pbiplint's rules to them yet: both carry Tabular Editor's ignore annotation.
+const CAPTURED_0_8 = ["custom-rules", "custom-rules-model-ignore"];
+const MICROSOFT_ORACLE_0_8 =
+  "Tabular Editor CLI 0.8.1.1 with BPARules.json sha256 ddb9cff4c2a0611a6467e2559d38319d9867381998066473ffa1e11c2d360392";
+const BUILT_IN_ORACLE_0_8 = "Tabular Editor CLI 0.8.1.1 built-in rules";
+const SURVEY_ORACLE_0_8 =
+  "Tabular Editor CLI 0.8.1.1, each rule file in tests/expectations/survey/files.json at its commit";
+const PROBES_ORACLE_0_8 =
+  "Tabular Editor CLI 0.8.1.1, each probe rule file in tests/rules/te-probes";
+
+describe("the custom rules captures", () => {
+  const { files } = read("survey/files.json");
+  const ids = files.map((f) => f.id).sort();
+  const probesDir = fileURLToPath(new URL("../../tests/rules/te-probes/", import.meta.url));
+  const probeFiles = readdirSync(probesDir)
+    .filter((f) => f.endsWith(".json"))
+    .sort();
+  const sub = (name) => `custom-rules/${name}`;
+
+  it("hold all four kinds for exactly these fixtures", () => {
+    for (const kind of ["", "te3/", "survey/", "probes/"])
+      expect(
+        readdirSync(join(dir, "custom-rules", kind))
+          .filter((f) => f.endsWith(".json"))
+          .map((f) => f.slice(0, -".json".length))
+          .sort(),
+        kind,
+      ).toEqual(CAPTURED_0_8);
+  });
+  it.each(CAPTURED_0_8)("%s: all four come from te 0.8.1.1, on the same fixture", (name) => {
+    const ms = read(`${sub(name)}.json`);
+    expect(ms.fixture).toBe(`tests/fixtures/${name}.SemanticModel`);
+    expect(ms.oracle).toBe(MICROSOFT_ORACLE_0_8);
+    expect(read(`custom-rules/te3/${name}.json`)).toMatchObject({
+      fixture: ms.fixture,
+      oracle: BUILT_IN_ORACLE_0_8,
+    });
+    expect(read(`custom-rules/survey/${name}.json`)).toMatchObject({
+      fixture: ms.fixture,
+      oracle: SURVEY_ORACLE_0_8,
+    });
+    expect(read(`custom-rules/probes/${name}.json`)).toMatchObject({
+      fixture: ms.fixture,
+      oracle: PROBES_ORACLE_0_8,
+    });
+  });
+  it.each(CAPTURED_0_8)(
+    "%s: the survey capture covers every listed file, at most one with an error, and its copy of Microsoft's ruleset finds what the Microsoft capture finds",
+    (name) => {
+      const { results } = read(`custom-rules/survey/${name}.json`);
+      expect(Object.keys(results).sort()).toEqual(ids);
+      expect(Object.values(results).filter((r) => "error" in r).length).toBeLessThanOrEqual(1);
+      // custom-rules has a malformed ignore annotation, so its Microsoft capture has rule errors.
+      const ms = read(`${sub(name)}.json`);
+      expect(results[MICROSOFT_FILE]).toEqual({
+        findings: ms.findings,
+        ruleErrors: ms.ruleErrors ?? {},
+      });
+    },
+  );
+  it.each(CAPTURED_0_8)(
+    "%s: the probe capture names every probe file at its current sha256, and places every rule of each file te read",
+    (name) => {
+      const { results } = read(`custom-rules/probes/${name}.json`);
+      expect(Object.keys(results).sort()).toEqual(probeFiles);
+      for (const file of probeFiles) {
+        const body = readFileSync(join(probesDir, file));
+        const result = results[file];
+        expect(result.sha256, file).toBe(createHash("sha256").update(body).digest("hex"));
+        if ("error" in result) continue;
+        const placed = new Set([
+          ...Object.keys(result.findings),
+          ...Object.keys(result.ruleErrors),
+          ...result.quiet,
+        ]);
+        expect(
+          [...new Set(ruleIdsOf(body.toString("utf8")))].filter((id) => !placed.has(id)),
+          file,
+        ).toEqual([]);
+        expect(Object.keys(result.severities).sort(), file).toEqual(
+          Object.keys(result.findings).sort(),
+        );
+      }
+    },
+  );
 });

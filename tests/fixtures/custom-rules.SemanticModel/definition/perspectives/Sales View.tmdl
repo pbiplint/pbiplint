@@ -1,5 +1,7 @@
 perspective 'Sales View'
 
+	annotation BestPracticeAnalyzer_IgnoreRules = {"RuleIDs":["PROBE_IGNORE_CUSTOM"
+
 	perspectiveTable Orders
 
 		perspectiveMeasure 'Total Amount'

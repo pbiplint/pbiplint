@@ -306,12 +306,30 @@ describe("root object types", () => {
       "table Sales\n\tcolumn Key\n\t\tdataType: int64\n\ncolumn Amount\n\tdataType: decimal\nisHidden\n",
     );
     expect(pf.issues.map((i) => [i.line, i.text, i.reason])).toEqual([
-      [
-        5,
-        "column Amount",
-        '"column" belongs to a table but has no "table" line above it: add its table\'s line, or copy it from TMDL view (Script TMDL), which writes one',
-      ],
+      [5, "column Amount", '"column" is not a type TMDL declares at the root of a file'],
       [7, "isHidden", '"isHidden" is not a type TMDL declares at the root of a file'],
+    ]);
+  });
+
+  it("tells a table's object with no table line above it what it needs (#274)", () => {
+    const pf = parseTmdl("pasted.tmdl", "measure A = 1\n\ncreateOrReplace\n\tcolumn B\n");
+    expect(pf.issues.map((i) => [i.line, i.reason])).toEqual([
+      [
+        1,
+        '"measure" belongs to a table but has no "table" line above it: add its table\'s line, or copy it from TMDL view (Script TMDL), which writes it under its table',
+      ],
+      [
+        4,
+        '"column" belongs to a table but has no "table" line above it: add its table\'s line, or copy it from TMDL view (Script TMDL), which writes it under its table',
+      ],
+    ]);
+    // With a table above it, the object lost its tab, not its table.
+    const lost = parseTmdl(
+      "pasted.tmdl",
+      "createOrReplace\n\tref table T\n\t\tmeasure A = 1\n\tmeasure B = 2\n",
+    );
+    expect(lost.issues.map((i) => i.reason)).toEqual([
+      '"measure" is not a type TMDL declares under a createOrReplace',
     ]);
   });
 

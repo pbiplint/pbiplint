@@ -175,7 +175,7 @@ export const EN = {
   "parse.tmdl.linesUnder":
     '"{word}" {at, select, root {at the root of a file} script {under createOrReplace} other {under a model}} has {child, select, declaration {a declaration} other {lines}} under it, which TMDL does not allow',
   "parse.tmdl.needsTable":
-    '"{word}" belongs to a table but has no "table" line above it: add its table\'s line, or copy it from TMDL view (Script TMDL), which writes one',
+    '"{word}" belongs to a table but has no "table" line above it: add its table\'s line, or copy it from TMDL view (Script TMDL), which writes it under its table',
   "parse.tmdl.noName": '"{word}" is declared with no name',
   "parse.tmdl.notChildType": '"{word}" is not a type TMDL declares under a {under}',
   "parse.tmdl.notModelProperty": '"{word}" is not a property TMDL allows under a model',

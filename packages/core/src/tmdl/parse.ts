@@ -86,6 +86,12 @@ const HOLDS_TABLE = new Set(["model", "createorreplace"]);
  * it belongs to no table (#274).
  */
 const holdsTableChild = (word: string): boolean => !isRootType(word) && allowsChild("table", word);
+/**
+ * Whether a line declares a table, or a part of one under `ref table`. A table's object with such
+ * a line above it lost its tab rather than its table, so its issue keeps saying where it may stand.
+ */
+const declaresTable = (n: TmdlNode): boolean =>
+  (n.kind === "object" || n.kind === "ref") && n.type === "table";
 
 const nameReadable = (name: string): boolean =>
   !name.includes("'") || quoteEnd(name) === name.length - 1;
@@ -418,7 +424,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
           ? msg("parse.tmdl.propertyAtRoot", { word })
           : isRootType(word)
             ? undefined
-            : holdsTableChild(word)
+            : holdsTableChild(word) && !roots.some(declaresTable)
               ? msg("parse.tmdl.needsTable", { word })
               : msg("parse.tmdl.notRootType", { word });
       // A misspelt word or a flag (`tableSales`, a lost space) may be a `table` line, as may a
@@ -488,9 +494,10 @@ export function parseTmdl(file: string, text: string): ParsedFile {
       } else if (level === "script" && !(isModelChildType(keyword) || keyword === "model")) {
         // Under a script's command, as at the root, but a flag is no property of the command: any
         // declaration the model does not read there is reported (#274).
-        malformed = holdsTableChild(keyword)
-          ? msg("parse.tmdl.needsTable", { word })
-          : msg("parse.tmdl.notChildType", { word, under: "createOrReplace" });
+        malformed =
+          holdsTableChild(keyword) && !parent!.children.some(declaresTable)
+            ? msg("parse.tmdl.needsTable", { word })
+            : msg("parse.tmdl.notChildType", { word, under: "createOrReplace" });
         mayBeTable = !holdsTableChild(keyword);
       } else if (
         level !== undefined &&

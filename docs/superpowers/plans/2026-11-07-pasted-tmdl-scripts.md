@@ -126,12 +126,12 @@ The paste box calls `lint([{ path: "pasted.tmdl", text }])`; the CLI calls it wi
 ### Task 8: Checks, review, PR
 
 - [x] `npm run build`, `npm run typecheck`, `npm run lint`, `npm test`, `npm run check:browser`, `npm run test:e2e`.
-- [ ] One whole-branch review; fix what it finds that meets the bar.
+- [x] One whole-branch review; fix what it finds that meets the bar.
 - [ ] PR body: "For #274.", the release note line for "What can change in your results", no closing keyword next to an issue number.
 
 ## Release note line
 
-What can change in your results: a TMDL script copied from Power BI Desktop's TMDL view, pasted into pbiplint.com or named on the command line, now gives the findings of the objects it holds; a paste or single file that declares no `model` skips the 15 rules that need the whole model, and says so on the skipped line.
+What can change in your results: a TMDL script copied from Power BI Desktop's TMDL view, pasted into pbiplint.com or named on the command line, now gives the findings of the objects it holds; a paste or single file that declares no `model` skips the rules that need the whole model, and says so on the skipped line.
 
 ## Left out
 

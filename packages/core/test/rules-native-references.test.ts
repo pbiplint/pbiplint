@@ -1008,6 +1008,7 @@ table Date
     // The fact's clause counts what the rule lists, so the two move together.
     const run = async (...files: { path: string; text: string }[]) => {
       const r = await lint([
+        { path: "definition/model.tmdl", text: "model Model\n" },
         { path: "definition/tables/Model.tmdl", text: model },
         page("p"),
         ...files,
@@ -1089,6 +1090,7 @@ table 'Sales by Day'
 		source = let Source = Sql.Database("finance", "Warehouse") in Source{[Item = "vwSalesByDay"]}[Data]
 `;
     const r = await lint([
+      { path: "definition/model.tmdl", text: "model Model\n" },
       { path: "definition/tables/Sales.tmdl", text: aggregated },
       page("p"),
       bound("p", "v", "cardVisual", [measure("Sales", "Order Count")]),

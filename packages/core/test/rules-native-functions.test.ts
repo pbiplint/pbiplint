@@ -182,6 +182,7 @@ role R
       (
         await lint(
           [
+            { path: "definition/model.tmdl", text: "model Model\n" },
             { path: "definition/tables/Sales.tmdl", text: sales },
             { path: "definition/functions.tmdl", text },
           ],

@@ -435,8 +435,9 @@ describe("buildModel on root object types", () => {
     const m = buildModel([pf]);
     expect(m.props.culture).toBe("en-US");
     expect(m.annotations).toEqual({ PBI_QueryOrder: '["Sales"]' });
-    // Product sits under createOrReplace, a script command the model does not read.
-    expect(m.tables.map((t) => t.name)).toEqual(["Sales"]);
+    // Product sits under createOrReplace, whose declarations are the model's outside a project's
+    // saved TMDL view tabs (#274).
+    expect(m.tables.map((t) => t.name)).toEqual(["Sales", "Product"]);
     expect(m.relationships.map((r) => r.name)).toEqual(["r1"]);
     expect(m.roles.map((r) => r.name)).toEqual(["Readers"]);
     expect(m.perspectives.map((p) => [p.name, p.tables])).toEqual([["Finance", ["Sales"]]]);

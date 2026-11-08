@@ -108,6 +108,8 @@ export function skippedLine(result: LintResult): string {
     parts.push(
       `${plural(by("noReport"), "rule")} skipped (${why(result.layers.report, "no report in the input")})`,
     );
+  if (by("partOfModel"))
+    parts.push(`${plural(by("partOfModel"), "rule")} skipped (the input is part of a model)`);
   if (by("reportFileUnread"))
     parts.push(
       `${plural(by("reportFileUnread"), "rule")} skipped (a report file could not be read)`,

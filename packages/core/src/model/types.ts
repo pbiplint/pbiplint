@@ -52,10 +52,25 @@ export interface Model extends Named {
     location: SourceLocation;
     flags: { name: string; location: SourceLocation }[];
   };
+  /**
+   * True when no file declares the model (`model`, at the root, under its `database`, or under a
+   * TMDL script's `createOrReplace`): the input is part of a model, such as pasted TMDL or a single
+   * table's file (#274). Power BI Desktop always writes `model.tmdl`, so a saved project is never
+   * partial. The rules that need the whole model are then skipped (engine/run.ts). Optional, so a
+   * `Model` built by hand against an earlier version still type-checks.
+   */
+  partial?: boolean;
 }
 
 export interface Table extends Named {
   kind: TableKind;
+  /**
+   * True when the input declares the table only through `ref table` lines with declarations under
+   * them, as Power BI Desktop's TMDL view scripts a measure: the table's own declaration is not in
+   * the input, so nothing is reported on the table itself, while what sits under it is linted
+   * (#274). Optional, so a `Table` built by hand against an earlier version still type-checks.
+   */
+  refOnly?: boolean;
   isHidden: boolean;
   dataCategory?: string;
   columns: Column[];

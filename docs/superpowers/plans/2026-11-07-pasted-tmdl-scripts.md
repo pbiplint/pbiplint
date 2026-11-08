@@ -46,19 +46,20 @@ Survey of the 125 `.tmdl` files in `TMDLScripts/` folders in the local corpora: 
    | `NAME_WITHOUT_TRANSLATION` | The cultures may be outside the paste. |
 
    Each is counted on the skipped line as `N rules skipped (the input is part of a model)`, beside `rules skipped (no report in the input)`, with the reason `partOfModel` in `rulesSkipped`. A model that is also partly read gives that reason instead, `modelFileUnread`, as today.
-4. **A table known only from `ref table` lines.** Its declaration is elsewhere, so nothing is reported on the table itself (its description, its partitions, its name); everything under it is linted, as the user pasted it. The rules gated by `tablesPartlyRead` are not skipped for it: that would skip `PROVIDE_FORMAT_STRING_FOR_MEASURES` and `NUMERIC_COLUMN_SUMMARIZE_BY` on the one-measure paste TMDL view writes, which is the miss #274 reports.
-5. **The skipped line's text lives in `packages/core/src/format/text.ts`,** one of the held files: four added lines in `skippedLine`, nothing else there. Recorded under "For the held PRs" in the decisions file before it is committed.
+4. **Rule pages stay as written.** Their examples show a table or two; the rule-page test reads each beside a `model.tmdl`. Pasted alone, such an example skips a whole-model rule, and the skipped line says why. Editing the pages would change the help text in the SARIF output the CLI's contract goldens hold.
+5. **A table known only from `ref table` lines.** Its declaration is elsewhere, so nothing is reported on the table itself (its description, its partitions, its name); everything under it is linted, as the user pasted it. The rules gated by `tablesPartlyRead` are not skipped for it: that would skip `PROVIDE_FORMAT_STRING_FOR_MEASURES` and `NUMERIC_COLUMN_SUMMARIZE_BY` on the one-measure paste TMDL view writes, which is the miss #274 reports.
+6. **The skipped line's text lives in `packages/core/src/format/text.ts`,** one of the held files: four added lines in `skippedLine`, nothing else there. Recorded under "For the held PRs" in the decisions file before it is committed.
 
 ## Files
 
-- `packages/core/src/tmdl/script.ts` (new): `readsScripts(path)`, the `TMDLScripts/` rule, shared by the parser and the model.
+- `packages/core/src/tmdl/script.ts` (new): `readsScript(path)`, the `TMDLScripts/` rule, shared by the parser and the model.
 - `packages/core/src/tmdl/parse.ts`: a root `createOrReplace` in such a file is a holder (`"script"`), a `model` under it is a model holder; the checks that run on the root and under a model run under it; the child-type check (#144) runs under a script and under `ref table`; a table's object with no `table` line gets the new message; a `ref` of another type with lines under it, and a property under a script, are issues.
 - `packages/core/src/messages/en.ts`: `parse.tmdl.needsTable`, `parse.tmdl.refLinesUnder`.
 - `packages/core/src/model/build.ts`: `modelDeclarations` reads a script holder's declarations; `readDeclaration` reads `ref table` with lines under it; `Model.partial`, `Table.refOnly`.
 - `packages/core/src/model/types.ts`: the two fields.
 - `packages/core/src/engine/run.ts`: the `partOfModel` reason; no finding on a `refOnly` table.
 - `packages/core/src/format/text.ts` (held file, four lines): the skipped line.
-- `rules/*.md` for the 15 rules whose `fires` example has no `model` line: add `model Model`, so a page's example pasted into the box still fires its rule; then `node scripts/sync-rule-pages.mjs`.
+- `packages/core/test/rule-pages.test.ts`: each TMDL example is linted beside a `model.tmdl`, as one file of a whole model. The pages themselves stay as they are: a page's help text reaches the SARIF output that the CLI's one-project goldens hold byte for byte, and those are never re-recorded.
 - `rules/parse-issue.md`: the two new messages, if the page lists messages.
 - `packages/web/index.html`: a line under the Paste TMDL label saying a script copied from TMDL view works.
 - Tests: `packages/core/test/pasted-scripts.test.ts` (new), `packages/cli/test/tmdl-scripts.test.ts` (new), `packages/web/e2e/paste-scripts.spec.ts` (new); `home.spec.ts` and `site.spec.ts` are held.
@@ -69,10 +70,10 @@ Survey of the 125 `.tmdl` files in `TMDLScripts/` folders in the local corpora: 
 
 The paste box calls `lint([{ path: "pasted.tmdl", text }])`; the CLI calls it with `[{ path: "<name>.tmdl", text }]` for one file. Every test goes through `lint`.
 
-- [ ] Write `packages/core/test/pasted-scripts.test.ts` with:
+- [x] Write `packages/core/test/pasted-scripts.test.ts` with:
   - **Row 1:** a table under `createOrReplace` (a measure with no format string, a `double` column summarized by sum, an M partition reading a `C:\` path) gives the same findings as the same table with no wrapper, among them `NUMERIC_COLUMN_SUMMARIZE_BY`, `PROVIDE_FORMAT_STRING_FOR_MEASURES`, `LOCAL_DRIVE_PATH`, and not `MODEL_SHOULD_HAVE_A_DATE_TABLE`; both give `partOfModel` skips for the 15 rules.
   - **The Customer pair:** `examples/messy-sales/Messy Sales Demo.SemanticModel/definition/tables/Customer.tmdl` as written, and as TMDL view writes it (`createOrReplace`, a blank line, every line one tab deeper), give the same findings.
-  - **Row 2:** one measure under `createOrReplace` and `ref table Sales` gives `PROVIDE_FORMAT_STRING_FOR_MEASURES` on `'Sales'[X]`, and no finding on the table Sales.
+  - **Row 2:** one measure under `createOrReplace` and `ref table Sales` gives `PROVIDE_FORMAT_STRING_FOR_MEASURES` on `[X]`, and no finding on the table Sales.
   - **Row 3:** a root `ref table Sales` with a measure under it gives the same as row 2.
   - **Merge:** `table Sales` and, in the same paste, `createOrReplace` / `ref table Sales` / a measure, give one table Sales with both, and findings on the table itself.
   - **Row 4:** a measure alone, a column alone, and a measure directly under `createOrReplace` each give a `PARSE_ISSUE` with the new message, which names the `table` line and TMDL view.
@@ -81,50 +82,50 @@ The paste box calls `lint([{ path: "pasted.tmdl", text }])`; the CLI calls it wi
   - **Nothing silent:** under `createOrReplace`, a property line, a misspelt `tabel X`, a `ref role X` with lines under it, and a misspelt `measur` under `ref table Sales` each give a `PARSE_ISSUE`.
   - **TMDLScripts:** the same script at `TMDLScripts/Script 1.tmdl` beside a `model.tmdl` adds nothing to the model and no issue.
   - **The skipped line** says `rules skipped (the input is part of a model)`.
-- [ ] Run them; each fails for the reason in #274.
+- [x] Run them; each fails for the reason in #274.
 
 ### Task 2: The parser
 
-- [ ] `tmdl/script.ts`: `readsScripts(path)` is false for a path with a `TMDLScripts` segment.
-- [ ] In `parseTmdl`, when `readsScripts(file)`: a root `createOrReplace` declaration is a holder `"script"`; a `model` directly under it is a holder `"model"`; `KEEPS_READING` holds `createOrReplace` only in a file that does not read scripts.
-- [ ] Under a script holder: a declaration of a type a table holds (`allowsChild("table", word)`) gets `parse.tmdl.needsTable`; any other declaration that is neither a model child type nor `model` gets `parse.tmdl.notChildType` with `under: "createOrReplace"`; a property or an expression with no name gets `parse.tmdl.propertyAtRoot`'s sibling wording if the existing text fits, else reuse it; `noName` applies as at the root.
-- [ ] At the root, a declaration of a type a table holds gets `parse.tmdl.needsTable` in place of `notRootType`.
-- [ ] The child-type check (#144) runs under a `ref table` line as under a `table` line.
-- [ ] In the closing loop, a `ref` line of a type other than `table` with lines under it, at the root, under a model, or under a script, gets `parse.tmdl.refLinesUnder`.
-- [ ] `npx vitest run packages/core/test/parse.test.ts` stays green; the parse rows of Task 1 pass.
+- [x] `tmdl/script.ts`: `readsScript(path)` is false for a path with a `TMDLScripts` segment.
+- [x] In `parseTmdl`, when `readsScript(file)`: a root `createOrReplace` declaration is a holder `"script"`; a `model` directly under it is a holder `"model"`; `KEEPS_READING` holds `createOrReplace` only in a file that does not read scripts.
+- [x] Under a script holder: a declaration of a type a table holds (`allowsChild("table", word)`) gets `parse.tmdl.needsTable`; any other declaration that is neither a model child type nor `model` gets `parse.tmdl.notChildType` with `under: "createOrReplace"`; a property or an expression with no name gets `parse.tmdl.propertyAtRoot`'s sibling wording if the existing text fits, else reuse it; `noName` applies as at the root.
+- [x] At the root, a declaration of a type a table holds gets `parse.tmdl.needsTable` in place of `notRootType`.
+- [x] The child-type check (#144) runs under a `ref table` line as under a `table` line.
+- [x] In the closing loop, a `ref` line of a type other than `table` with lines under it, at the root, under a model, or under a script, gets `parse.tmdl.refLinesUnder`.
+- [x] `npx vitest run packages/core/test/parse.test.ts` stays green; the parse rows of Task 1 pass.
 
 ### Task 3: The model
 
-- [ ] `modelDeclarations`: a script holder's children follow it, and a `model` among them is read as a root model is.
-- [ ] `readDeclaration`: a `ref table` with lines under it goes through `buildTable`, which records whether a table has any `table` declaration; one with none is `refOnly`.
-- [ ] `buildModel` sets `Model.partial` when no declaration it read is a `model`.
-- [ ] The build test "reads no model under a culture's translations or a TMDL script" keeps its `TMDLScripts/` path and passes unchanged.
+- [x] `modelDeclarations`: a script holder's children follow it, and a `model` among them is read as a root model is.
+- [x] `readDeclaration`: a `ref table` with lines under it goes through `buildTable`, which records whether a table has any `table` declaration; one with none is `refOnly`.
+- [x] `buildModel` sets `Model.partial` when no declaration it read is a `model`.
+- [x] The build test "reads no model under a culture's translations or a TMDL script" keeps its `TMDLScripts/` path and passes unchanged.
 
 ### Task 4: The engine and the skipped line
 
-- [ ] `run.ts`: a rule whose `skipWhenModelUnread` holds is skipped as today; else a rule whose `skipWhenModelUnread` is `modelPartlyRead` on a `partial` model is skipped with `partOfModel`.
-- [ ] `keep`: a finding whose object is a `refOnly` table is not kept and not counted as ignored.
-- [ ] `text.ts`: `skippedLine` adds `N rules skipped (the input is part of a model)`.
-- [ ] All of Task 1 passes.
+- [x] `run.ts`: a rule whose `skipWhenModelUnread` holds is skipped as today; else a rule whose `skipWhenModelUnread` is `modelPartlyRead` on a `partial` model is skipped with `partOfModel`.
+- [x] `keep`: a finding whose object is a `refOnly` table is not kept and not counted as ignored.
+- [x] `text.ts`: `skippedLine` adds `N rules skipped (the input is part of a model)`.
+- [x] All of Task 1 passes.
 
 ### Task 5: Existing tests and rule pages
 
-- [ ] Run the whole suite. For each failing whole-model test or rule page example with no `model` line, add `model Model` to the input; never weaken an assertion.
-- [ ] `node scripts/sync-rule-pages.mjs`; commit the regenerated data files.
-- [ ] `rules/parse-issue.md`: name the two new cases if the page lists cases.
+- [x] Run the whole suite. For each failing whole-model test with no `model` line, add a `model.tmdl` to its input; never weaken an assertion. The rule-page test reads each example beside a `model.tmdl`.
+- [x] `node scripts/sync-rule-pages.mjs`; commit the regenerated data files.
+- [x] `rules/parse-issue.md`: name the two new cases if the page lists cases.
 
 ### Task 6: TMDLScripts in a project, pinned
 
-- [ ] `packages/cli/test/tmdl-scripts.test.ts`: a temporary `.SemanticModel` folder with `definition/model.tmdl`, `definition/tables/Sales.tmdl`, and `TMDLScripts/Script 1.tmdl` holding a script that declares `table Extra`; the CLI's JSON output names no `Extra` and no `PARSE_ISSUE`.
+- [x] `packages/cli/test/tmdl-scripts.test.ts`: a temporary `.SemanticModel` folder with `definition/model.tmdl`, `definition/tables/Sales.tmdl`, and `TMDLScripts/Script 1.tmdl` holding a script that declares `table Extra`; the CLI's JSON output names no `Extra` and no `PARSE_ISSUE`.
 
 ### Task 7: The paste box
 
-- [ ] `packages/web/index.html`: under the Paste TMDL heading, a short line tied to the textarea with `aria-describedby`: any complete TMDL works, a table's file or a script copied from TMDL view (Script TMDL). Update `packages/web/test/home.test.ts` only where it pins the panel's text.
-- [ ] `packages/web/e2e/paste-scripts.spec.ts`: paste the Customer table as TMDL view writes it and see the same summary line as the plain file; paste one measure under `ref table` and see `PROVIDE_FORMAT_STRING_FOR_MEASURES`.
+- [x] `packages/web/index.html`: under the Paste TMDL heading, a short line tied to the textarea with `aria-describedby`: any complete TMDL works, a table's file or a script copied from TMDL view (Script TMDL). Update `packages/web/test/home.test.ts` only where it pins the panel's text.
+- [x] `packages/web/e2e/paste-scripts.spec.ts`: paste the Customer table as TMDL view writes it and see the same summary line as the plain file; paste one measure under `ref table` and see `PROVIDE_FORMAT_STRING_FOR_MEASURES`.
 
 ### Task 8: Checks, review, PR
 
-- [ ] `npm run build`, `npm run typecheck`, `npm run lint`, `npm test`, `npm run check:browser`, `npm run test:e2e`.
+- [x] `npm run build`, `npm run typecheck`, `npm run lint`, `npm test`, `npm run check:browser`, `npm run test:e2e`.
 - [ ] One whole-branch review; fix what it finds that meets the bar.
 - [ ] PR body: "For #274.", the release note line for "What can change in your results", no closing keyword next to an issue number.
 

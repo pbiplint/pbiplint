@@ -67,10 +67,16 @@
           <h2><label for="paste">Paste TMDL</label></h2>
           <textarea
             id="paste"
+            aria-describedby="paste-hint"
             spellcheck="false"
             placeholder="table Sales&#10;&#9;column 'Sale ID'&#10;&#9;&#9;dataType: int64&#10;&#9;&#9;sourceColumn: SaleID"
           ></textarea>
           <div><button id="lint-paste" type="button">Lint pasted TMDL</button></div>
+          <p id="paste-hint" class="hint">
+            Paste any complete TMDL: a table's file, several tables, or a script copied from TMDL
+            view in Power BI Desktop with Script TMDL. TMDL with no <code>model</code> line is part
+            of a model, so the rules that need the whole model are skipped.
+          </p>
         </section>
         <section class="panel">
           <h2>Drop a folder</h2>

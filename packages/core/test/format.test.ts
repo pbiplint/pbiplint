@@ -446,11 +446,12 @@ describe("a model with no model.tmdl", () => {
   // location at all rather than a bogus ":0" that SARIF consumers reject.
   let single: LintResult;
   beforeAll(async () => {
-    single = await lint([
-      { path: "tables/T.tmdl", text: "table T\n\tcolumn C\n\t\tdataType: string\n" },
-    ]);
+    // Six calculated columns: a Model finding that a model with no `model` line still gets, since
+    // the rules that need the whole model are skipped there (#274).
+    const columns = [1, 2, 3, 4, 5, 6].map((i) => `\tcolumn C${i} = ${i}\n`).join("");
+    single = await lint([{ path: "tables/T.tmdl", text: `table T\n${columns}` }]);
   });
-  const RULE = "MODEL_SHOULD_HAVE_A_DATE_TABLE";
+  const RULE = "REDUCE_NUMBER_OF_CALCULATED_COLUMNS";
 
   it("leaves the location off the Model finding", () => {
     const f = single.findings.find((x) => x.ruleId === RULE);

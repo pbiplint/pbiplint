@@ -490,10 +490,21 @@ describe("runRules", () => {
       const project = { model, ...(withReport ? { report: buildReport(reportFiles).report } : {}) };
       return runRules(project, buildIndexes(project), [wholeProject, wholeModel], resolveConfig());
     };
-    const read = "table A\n\tcolumn X\n\t\tdataType: string\n";
+    const table = "table A\n\tcolumn X\n\t\tdataType: string\n";
+    const read = `model Model\n\n${table}`;
     // A line indented with spaces takes what it declares out of the model.
     const partly = `${read}    column Y\n`;
     expect(run(read).rulesRun).toEqual(["WHOLE_PROJECT", "WHOLE_MODEL"]);
+    // A model with no `model` line is part of one, so the rules that need the whole of it are
+    // skipped with a reason of their own (#274); a model also partly read gives that reason.
+    expect(run(table).rulesSkipped).toEqual([
+      { id: "WHOLE_PROJECT", reason: "partOfModel" },
+      { id: "WHOLE_MODEL", reason: "partOfModel" },
+    ]);
+    expect(run(`${table}    column Y\n`).rulesSkipped).toEqual([
+      { id: "WHOLE_PROJECT", reason: "modelFileUnread" },
+      { id: "WHOLE_MODEL", reason: "modelFileUnread" },
+    ]);
     expect(run(partly).rulesSkipped).toEqual([
       { id: "WHOLE_PROJECT", reason: "modelFileUnread" },
       { id: "WHOLE_MODEL", reason: "modelFileUnread" },
@@ -707,6 +718,8 @@ describe("namedObjects", () => {
 describe("lint over a project", () => {
   const j = (v: unknown) => JSON.stringify(v);
   const modelFiles = [
+    // The model's declaration, so the rules that need the whole model run (#274).
+    { path: "definition/model.tmdl", text: "model Model\n" },
     {
       path: "definition/tables/Sales.tmdl",
       text: "table Sales\n\tcolumn Amount\n\t\tdataType: decimal\n",
@@ -720,10 +733,10 @@ describe("lint over a project", () => {
   it("reports which layers ran and why one is absent, and counts routed files", async () => {
     const both = await lint([...modelFiles, ...reportFiles, { path: "README.md", text: "" }]);
     expect(both.layers).toEqual({
-      model: { present: true, files: 1 },
+      model: { present: true, files: 2 },
       report: { present: true, files: 3 },
     });
-    expect(both.summary.files).toBe(4);
+    expect(both.summary.files).toBe(5);
     expect(both.project.model).toBeDefined();
     expect(both.project.report).toBeDefined();
     expect(both.facts.map((f) => f.label)).toContain("Opens on");
@@ -1209,6 +1222,7 @@ describe("lint over a project", () => {
     // Base is used only by Doubled's DAX, and nothing in the report binds either. Doubled's line
     // lost its tabs, so the parser skips it and the model has no Doubled to reach Base through.
     const withBase = (doubled: string) => [
+      { path: "definition/model.tmdl", text: "model Model\n" },
       {
         path: "definition/tables/Sales.tmdl",
         text: `table Sales\n\tcolumn Amount\n\t\tdataType: decimal\n\tmeasure Base = SUM('Sales'[Amount])\n${doubled}`,

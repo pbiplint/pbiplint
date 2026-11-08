@@ -87,8 +87,17 @@ const isTmdlExampleInfo = (info: string): boolean => /^tmdl (fires|fixed)$/.test
 
 const bullets = (s: string): string[] => s.split("\n").filter((l) => l.startsWith("- "));
 
+/** The model's declaration, so a rule that needs the whole model runs on an example (#274). */
+const STOCK_MODEL_DECLARATION: LintFile = { path: "definition/model.tmdl", text: "model Model\n" };
+
+/**
+ * A TMDL example's findings, read as one file of a whole model: beside a `model.tmdl` that
+ * declares it, so a rule that needs the whole model runs on an example that shows only a table or
+ * two (#274). Pasted alone, such an example is part of a model, and the skipped line says why the
+ * rule did not run.
+ */
 const run = async (tmdl: string): Promise<Finding[]> =>
-  (await lint([{ path: "example.tmdl", text: tmdl }])).findings;
+  (await lint([STOCK_MODEL_DECLARATION, { path: "example.tmdl", text: tmdl }])).findings;
 const hits = (findings: Finding[], id: string): Finding[] =>
   findings.filter((f) => f.ruleId === id);
 
@@ -209,7 +218,7 @@ const runPbir = async (
   config: unknown,
 ): Promise<Finding[]> =>
   (
-    await lint([...pbirFiles(doc), ...(withModel ? [STOCK_MODEL] : [])], {
+    await lint([...pbirFiles(doc), ...(withModel ? [STOCK_MODEL_DECLARATION, STOCK_MODEL] : [])], {
       config: resolveConfig(config),
     })
   ).findings;

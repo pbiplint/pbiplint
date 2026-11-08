@@ -593,7 +593,12 @@ describe("home page", () => {
     expect(text("#drop p")).toBe(
       "Drop a PBIP folder, a .SemanticModel or .Report folder, or a single .tmdl file here.",
     );
-    expect(text(".panel > .hint")).toMatch(
+    // A script copied from TMDL view is what Desktop gives a person to paste (#274).
+    expect(text("#paste-hint")).toBe(
+      "Paste any complete TMDL: a table's file, several tables, or a script copied from TMDL view in Power BI Desktop with Script TMDL. TMDL with no model line is part of a model, so the rules that need the whole model are skipped.",
+    );
+    expect(document.getElementById("paste")!.getAttribute("aria-describedby")).toBe("paste-hint");
+    expect(text("#drop + .hint")).toMatch(
       /^Only \.tmdl files, the report's JSON under its definition folder, \.platform, definition\.pbir, the \.pbip file, and pbiplint\.config\.json are read\. Nothing else in the folder is opened\. /,
     );
     expect(text(".actions .hint")).toBe(

@@ -306,7 +306,11 @@ describe("root object types", () => {
       "table Sales\n\tcolumn Key\n\t\tdataType: int64\n\ncolumn Amount\n\tdataType: decimal\nisHidden\n",
     );
     expect(pf.issues.map((i) => [i.line, i.text, i.reason])).toEqual([
-      [5, "column Amount", '"column" is not a type TMDL declares at the root of a file'],
+      [
+        5,
+        "column Amount",
+        '"column" belongs to a table but has no "table" line above it: add its table\'s line, or copy it from TMDL view (Script TMDL), which writes one',
+      ],
       [7, "isHidden", '"isHidden" is not a type TMDL declares at the root of a file'],
     ]);
   });
@@ -545,9 +549,10 @@ describe("root object types", () => {
     expect(pf.issues).toEqual([]);
   });
 
-  it("keeps today's reading inside a culture's translations and a TMDL script", () => {
+  it("keeps today's reading inside a culture's translations and a project's saved TMDL view tab", () => {
+    // A script elsewhere, as pasted, is the model's, and is checked as the root is (#274).
     const pf = parseTmdl(
-      "t.tmdl",
+      "TMDLScripts/Script 1.tmdl",
       [
         "cultureInfo de-DE",
         "\ttranslations",
@@ -1484,16 +1489,19 @@ describe("declarations under a model (#137)", () => {
     expect(issues(fence)).toEqual([[3, "unterminated code fence", true, true]]);
   });
 
-  it("leaves a model under a culture's translations or a TMDL script to its own reading", () => {
+  it("leaves a model under a culture's translations or a saved TMDL view tab to its own reading", () => {
     // Neither is the model's, so the lines under it are checked as any nested line is.
     expect(
       issues(
         "cultureInfo pt-PT\n\ttranslations\n\t\tmodel Model\n\t\t\ttable Sales\n\t\t\t\tcaption: Vendas\n\t\t\tcolumn X\n",
       ),
     ).toEqual([]);
-    expect(
-      issues("createOrReplace\n\n\tmodel Model\n\t\tculture: en-US\n\n\t\tmeasure M = 1\n"),
-    ).toEqual([]);
+    const script = "createOrReplace\n\n\tmodel Model\n\t\tculture: en-US\n\n\t\tmeasure M = 1\n";
+    expect(parseTmdl("TMDLScripts/Script 1.tmdl", script).issues).toEqual([]);
+    // Elsewhere, as pasted, the script's model is the model, checked as one at the root (#274).
+    expect(issues(script)).toEqual([
+      [6, '"measure" is not a type TMDL declares under a model', true, true],
+    ]);
   });
 });
 

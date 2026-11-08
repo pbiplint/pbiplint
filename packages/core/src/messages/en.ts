@@ -173,7 +173,9 @@ export const EN = {
   "parse.pbir.tooDeep": "nested more than {depth} levels deep",
   "parse.pbir.unnamedEntity": "an entity",
   "parse.tmdl.linesUnder":
-    '"{word}" {at, select, root {at the root of a file} other {under a model}} has {child, select, declaration {a declaration} other {lines}} under it, which TMDL does not allow',
+    '"{word}" {at, select, root {at the root of a file} script {under createOrReplace} other {under a model}} has {child, select, declaration {a declaration} other {lines}} under it, which TMDL does not allow',
+  "parse.tmdl.needsTable":
+    '"{word}" belongs to a table but has no "table" line above it: add its table\'s line, or copy it from TMDL view (Script TMDL), which writes one',
   "parse.tmdl.noName": '"{word}" is declared with no name',
   "parse.tmdl.notChildType": '"{word}" is not a type TMDL declares under a {under}',
   "parse.tmdl.notModelProperty": '"{word}" is not a property TMDL allows under a model',
@@ -181,6 +183,8 @@ export const EN = {
   "parse.tmdl.orphanDescription": "description is not followed by a declaration",
   "parse.tmdl.orphanIndentation": "orphan indentation",
   "parse.tmdl.propertyAtRoot": '"{word}" is a property, which TMDL allows only under an object',
+  "parse.tmdl.refLinesUnder":
+    '"ref {word}" has lines under it, which pbiplint reads only under "ref table"',
   "parse.tmdl.spaceIndentation": "space indentation (TMDL requires tabs)",
   "parse.tmdl.tableOnlyAtRoot":
     '"{word}" is a type TMDL declares only at the root of a file or under a model',

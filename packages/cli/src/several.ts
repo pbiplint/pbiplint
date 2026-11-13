@@ -1,5 +1,6 @@
 import { relative, resolve } from "node:path";
 import {
+  COLOUR_STYLE,
   ConfigError,
   escapeJsonControls,
   formatJson,
@@ -8,6 +9,7 @@ import {
   formatText,
   lint,
   markdownText,
+  paintCounts,
   plural,
   resolveConfig,
   runSummary,
@@ -178,14 +180,14 @@ const anyFindings = (runs: ProjectRun[]): boolean => runs.some((r) => r.result.g
  * `Project N of M: <path>` and its own text report, then the explain line once. A path comes
  * from the repository, so it is shown through `showControls`, and measured as shown.
  */
-export function severalText({ runs }: SeveralRun): string {
+export function severalText({ runs }: SeveralRun, colour = false): string {
   const paths = runs.map((r) => showControls(r.path));
   const counts = runs.map((r) => countsOf(r.result));
   const width = Math.max(...paths.map((p) => p.length));
   const lead = (c: string): number => c.indexOf(" ");
   const numbers = Math.max(...counts.map(lead));
   const out = [
-    `pbiplint: ${runSummaryLine(runSummary(runs))}`,
+    `pbiplint: ${runSummaryLine(runSummary(runs), colour ? paintCounts(COLOUR_STYLE) : undefined)}`,
     ...runs.map(
       (_, i) =>
         `  ${paths[i]!.padEnd(width)}  ${" ".repeat(numbers - lead(counts[i]!))}${counts[i]}`,
@@ -194,7 +196,7 @@ export function severalText({ runs }: SeveralRun): string {
   ];
   // Each report ends with a line break, so joining them leaves a blank line before the next.
   runs.forEach((r, i) =>
-    out.push(`Project ${i + 1} of ${runs.length}: ${paths[i]}`, formatText(r.result)),
+    out.push(`Project ${i + 1} of ${runs.length}: ${paths[i]}`, formatText(r.result, { colour })),
   );
   if (anyFindings(runs)) out.push(EXPLAIN_HINT, "");
   return out.join("\n").trimEnd() + "\n";

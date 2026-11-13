@@ -46,6 +46,79 @@ describe("formatText", () => {
   });
 });
 
+describe("formatText with colour (#256)", () => {
+  const RED = "\u001b[1;91m";
+  const BOLD = "\u001b[1m";
+  const RED_OFF = "\u001b[22;39m";
+  const BOLD_OFF = "\u001b[22m";
+  // eslint-disable-next-line no-control-regex -- the codes are what is being removed
+  const strip = (s: string): string => s.replace(/\u001b\[[\d;]*m/g, "");
+  const s = result.summary;
+  const coloured = formatText(result, { colour: true });
+
+  it("adds no code without the option, or with it false", () => {
+    expect(formatText(result)).not.toContain("\u001b");
+    expect(formatText(result, { colour: false })).toBe(formatText(result));
+  });
+  it("is the plain report once its codes are removed", () => {
+    expect(strip(coloured)).toBe(formatText(result));
+  });
+  it("colours the severity word, the non-zero counts, and the Fix these first heading", () => {
+    expect(s.errors).toBeGreaterThan(0);
+    expect(coloured.split("\n")[0]).toContain(`${RED}${s.errors} errors${RED_OFF}`);
+    expect(coloured).toContain(`${BOLD}Fix these first:${BOLD_OFF}`);
+    expect(coloured).toMatch(
+      new RegExp(
+        `^${RED.replace("[", "\\[")}ERROR${RED_OFF.replace("[", "\\[")}  \\[model\\] `,
+        "m",
+      ),
+    );
+    // Info keeps the terminal's own colour, on its heading line and in the summary.
+    expect(coloured).toMatch(/^INFO {3}\[/m);
+    expect(coloured.split("\n")[0]).toContain(` ${s.infos} info)`);
+  });
+  it("sets warnings in bold, and leaves a zero count plain", async () => {
+    const oneColumn: Rule = {
+      scope: [],
+      description: "",
+      references: [],
+      status: "ported",
+      layer: "model",
+      needs: ["model"],
+      id: "ONE_COLUMN",
+      name: "One column",
+      category: "Formatting",
+      severity: 2,
+      check: ({ model }) => model!.tables.flatMap((t) => t.columns.map((c) => finding.column(c))),
+    };
+    const r = await lint(
+      [{ path: "a.tmdl", text: "table A\n\tcolumn X\n\t\tdataType: string\n" }],
+      {
+        rules: [oneColumn],
+      },
+    );
+    const line = formatText(r, { colour: true }).split("\n")[0]!;
+    expect(line).toContain(`(0 errors, ${BOLD}1 warning${BOLD_OFF}, 0 info)`);
+    // eslint-disable-next-line no-control-regex -- the colour codes are what is matched
+    expect(formatText(r, { colour: true })).toMatch(/^\u001b\[1mWARN\u001b\[22m {3}\[model\]/m);
+  });
+  it("keeps a name's escape character shown as text with colour on", async () => {
+    const evil = [
+      files[0]!,
+      {
+        path: "definition/tables/Sales.tmdl",
+        text: "table Sales\n\tcolumn Amount\n\t\tdataType: double\n\t\tsourceColumn: Amount\n\tmeasure 'Evil\u001b[2J' = SUM([Amount])\n",
+      },
+    ];
+    const text = formatText(await lint(evil), { colour: true });
+    expect(text).toContain("Evil\\u001b[2J");
+    // Every escape character left is one of the format's own codes.
+    // eslint-disable-next-line no-control-regex -- the colour codes are what is matched
+    expect(text.replace(/\u001b\[[\d;]*m/g, "")).not.toContain("\u001b");
+    expect(text).not.toContain("\u001b[2J");
+  });
+});
+
 describe("summary wording", () => {
   const base = {
     scope: [],

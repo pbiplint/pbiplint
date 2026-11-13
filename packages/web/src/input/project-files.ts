@@ -11,6 +11,7 @@ import {
   projectBelowNotice,
   projectsBelow,
   reportsNamed,
+  THEME_FOLDERS,
   type DatasetReference,
   type Diagnostic,
   type FoundBelow,
@@ -345,19 +346,25 @@ function tmdlRead(s: Selection, root: string, dir: string): Part | undefined {
 
 /**
  * The report part at `folder`, as the CLI's reportPart reads it: its definition.pbir, .platform,
- * and every JSON under its definition folder, counted only when a file under that folder was read.
- * A folder with no definition folder is not read at all.
+ * every JSON under its definition folder, counted only when a file under that folder was read, and
+ * the JSON directly in its theme folders. A folder with no definition folder is not read at all.
  */
 function reportRead(s: Selection, folder: string): Part | undefined {
   const def = join(folder, "definition");
   if (!s.dirs.has(def)) return undefined;
   const part: Part = { root: folder, files: [], sources: new Set(), unread: [] };
   const own = [join(folder, "definition.pbir"), join(folder, ".platform")];
-  const covers = (p: string, folder = false): boolean =>
-    folder ? atOrWithin(p, def) : own.includes(p) || (within(p, def) && p.endsWith(".json"));
-  // The CLI reads definition.pbir, then .platform, and then walks the definition folder, so a
-  // path's place in that list comes before its place in the walk.
-  const rank = (p: string): number => (own.includes(p) ? own.indexOf(p) : own.length);
+  const themeFolders = THEME_FOLDERS.map((way) => join(folder, way));
+  const isTheme = (p: string): boolean =>
+    p.endsWith(".json") && themeFolders.includes(p.slice(0, p.lastIndexOf("/")));
+  const covers = (p: string, isFolder = false): boolean =>
+    isFolder
+      ? atOrWithin(p, def) || themeFolders.includes(p)
+      : own.includes(p) || (within(p, def) && p.endsWith(".json")) || isTheme(p);
+  // The CLI reads definition.pbir, then .platform, then walks the definition folder, and then reads
+  // the theme folders, so a path's place in that list comes before its place in the walk.
+  const rank = (p: string): number =>
+    own.includes(p) ? own.indexOf(p) : isTheme(p) ? own.length + 1 : own.length;
   s.reads.push({ part, covers, order: (a, b) => rank(a) - rank(b) || walkOrder(a, b) });
   for (const e of s.tree.entries)
     if (covers(e.path)) {

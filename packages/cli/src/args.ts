@@ -19,7 +19,7 @@ export class UsageError extends Error {
 }
 
 export interface CliOptions {
-  command: "lint" | "rules" | "explain" | "skill" | "mcp" | "help" | "version";
+  command: "lint" | "rules" | "explain" | "reference" | "skill" | "mcp" | "help" | "version";
   path?: string;
   /** The rule id `explain` was given. */
   ruleId?: string;
@@ -156,6 +156,14 @@ export function parseArgs(argv: string[]): CliOptions {
       throw new UsageError("explain prints text or json");
     return { ...opts, command: "explain", ruleId: positional[1] };
   }
+  if (positional[0] === "reference") {
+    if (positional.length > 1) throw new UsageError("reference takes no arguments");
+    if (opts.sample || opts.failOn || opts.config || opts.output || opts.quiet || opts.rules)
+      throw new UsageError("reference takes only --format");
+    if (opts.format !== "text" && opts.format !== "json")
+      throw new UsageError("reference prints text or json");
+    return { ...opts, command: "reference" };
+  }
   if (opts.quiet && opts.format !== "text") throw new UsageError("--quiet is text only");
   if (positional.length > 1) throw new UsageError("Expected one path");
   if (positional.length === 1 && opts.sample)
@@ -173,6 +181,7 @@ export const HELP = `Usage: pbiplint <path> [options]
        pbiplint --sample [options]
        pbiplint rules
        pbiplint explain <RULE_ID> [--format json] [--config <file>]
+       pbiplint reference [--format json]
        pbiplint skill [--install <assistant> [--force] [--dry-run] | --show]
        pbiplint mcp
 
@@ -188,6 +197,9 @@ violations. Either part alone is fine. Nothing is uploaded.
 --quiet             the summary, then one line per rule with findings (text only)
 --rule <RULE_ID>    show only this rule's findings (repeatable); --fail-on counts only these
 --help, --version
+
+pbiplint reference prints what a custom rule (a Tabular Editor rule a config's customRules names)
+can use at this version, and what pbiplint does not run, with the reason.
 
 pbiplint skill prints a skill that tells an AI assistant how to use pbiplint.
 --install <assistant>

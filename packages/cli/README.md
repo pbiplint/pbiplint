@@ -16,6 +16,7 @@ npx pbiplint path/to/model --format sarif --output pbiplint.sarif
 npx pbiplint path/to/model --format markdown
 npx pbiplint rules                                          # every rule with status and severity
 npx pbiplint explain HIDE_FOREIGN_KEYS                      # one rule's guidance, offline (--format json too)
+npx pbiplint reference                                      # what a custom rule can use at this version (--format json too)
 npx pbiplint path/to/model --quiet                          # the counts, one line per rule
 npx pbiplint path/to/model --rule HIDE_FOREIGN_KEYS         # one rule's findings (repeatable)
 npx pbiplint skill --install claude                         # the skill for AI assistants (--install copilot, codex, gemini; --show)
@@ -29,6 +30,11 @@ per rule; `--rule <RULE_ID>`, repeatable, for those rules' findings (every rule 
 summary says how many are shown of how many, and `--fail-on` counts only those); and
 `pbiplint explain <RULE_ID>` for the rule's guidance, from this version, with no network. When there
 are findings, the quiet output's last line names the other two.
+
+`pbiplint reference` prints what a custom rule, a Tabular Editor rule that a config's `customRules`
+names, can use at this version: its fields and severities, the scopes, each object type's
+properties, the operators, methods, and functions, the regular expressions that run, the limits,
+and what pbiplint does not run, with the reason. `--format json` prints the same as one document.
 
 `pbiplint skill` prints a skill, in the [Agent Skills](https://agentskills.io/home) format, that tells
 a coding assistant how to use pbiplint. `--install claude`, `copilot`, `codex`, or `gemini` writes it

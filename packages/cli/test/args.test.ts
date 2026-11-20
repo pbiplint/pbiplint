@@ -98,6 +98,39 @@ describe("parseArgs", () => {
     expect(parseArgs(["./mcp"])).toMatchObject({ command: "lint", path: "./mcp" });
   });
 
+  it("takes reference with --format text or json and nothing else (#118)", () => {
+    expect(parseArgs(["reference"])).toEqual({
+      command: "reference",
+      format: "text",
+      sample: false,
+    });
+    expect(parseArgs(["reference", "--format", "json"])).toMatchObject({
+      command: "reference",
+      format: "json",
+    });
+    expect(parseArgs(["--format=json", "reference"]).format).toBe("json");
+    expect(() => parseArgs(["reference", "x"])).toThrow(
+      new UsageError("reference takes no arguments"),
+    );
+    for (const extra of [
+      ["--sample"],
+      ["--config", "c.json"],
+      ["--quiet"],
+      ["--rule", "A"],
+      ["-o", "o"],
+      ["--fail-on", "info"],
+    ])
+      expect(() => parseArgs(["reference", ...extra])).toThrow(
+        new UsageError("reference takes only --format"),
+      );
+    for (const f of ["markdown", "sarif"])
+      expect(() => parseArgs(["reference", "--format", f])).toThrow(
+        new UsageError("reference prints text or json"),
+      );
+    expect(parseArgs(["./reference"])).toMatchObject({ command: "lint", path: "./reference" });
+    expect(HELP).toContain("pbiplint reference [--format json]");
+  });
+
   it("lints a folder named explain given as ./explain", () => {
     expect(parseArgs(["./explain"])).toMatchObject({ command: "lint", path: "./explain" });
   });

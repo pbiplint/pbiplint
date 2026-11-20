@@ -306,7 +306,15 @@ describe("the CLI's contract", () => {
     expect(warning.severity).toBe(2);
     // With --rule, the gate counts only the findings shown.
     expect((await run([sample, "--rule", warning.id])).code).toBe(0);
-    for (const argv of [["rules"], ["explain", warning.id], ["skill"], ["--help"], ["--version"]])
+    for (const argv of [
+      ["rules"],
+      ["explain", warning.id],
+      ["reference"],
+      ["reference", "--format", "json"],
+      ["skill"],
+      ["--help"],
+      ["--version"],
+    ])
       expect((await run(argv)).code, argv.join(" ")).toBe(0);
 
     const dir = tempDir("contract-exit-2");
@@ -333,6 +341,7 @@ describe("the CLI's contract", () => {
       ["a missing value", [sample, "--format"]],
       ["an unknown rule id for explain", ["explain", "NO_SUCH_RULE"]],
       ["an unknown rule id for --rule", [sample, "--rule", "NO_SUCH_RULE"]],
+      ["an argument to reference", ["reference", "x"]],
       ["--quiet with another format", [sample, "--quiet", "--format", "json"]],
       ["a config file it cannot use", [sample, "--config", join(dir, "array.json")]],
       ["a path that is not there", [join(dir, "nope")]],
@@ -851,6 +860,34 @@ describe("the CLI's contract", () => {
       expression: 'DataType = "Double"',
     });
     expect(doc.sections).toEqual({});
+  });
+
+  it("5b. pbiplint reference --format json has version 1, the tool, and formats.tabularEditor, with nothing on stderr (from 0.4.0)", async () => {
+    const r = await run(["reference", "--format", "json"]);
+    expect(r.code).toBe(0);
+    expect(r.err).toBe("");
+    const doc = JSON.parse(r.out);
+    hasFields(doc, ["version", "tool", "formats"]);
+    expect(doc.version).toBe(1);
+    expect(doc.tool).toEqual({ name: "pbiplint", version: VERSION });
+    hasFields(doc.formats, ["tabularEditor"]);
+    hasFields(doc.formats.tabularEditor, [
+      "fields",
+      "severities",
+      "scopes",
+      "types",
+      "methods",
+      "valueProperties",
+      "statics",
+      "staticValues",
+      "conversions",
+      "enums",
+      "syntax",
+      "tokens",
+      "regex",
+      "notRun",
+      "limits",
+    ]);
   });
 
   it("6. --help states the exit codes, what stdout carries, and links the contract", () => {

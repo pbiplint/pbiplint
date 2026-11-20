@@ -30,6 +30,7 @@ npx pbiplint path/to/model --format sarif --output pbiplint.sarif
 npx pbiplint path/to/model --format markdown
 npx pbiplint rules           # every rule with its status and severity
 npx pbiplint explain HIDE_FOREIGN_KEYS   # one rule's guidance, offline (--format json too)
+npx pbiplint reference                   # what a custom rule can use, from 0.4.0 (--format json too)
 npx pbiplint skill --install claude      # the skill for AI assistants, where Claude Code reads it
 npx pbiplint mcp                         # a local MCP server, for an AI assistant to start
 npx pbiplint --help          # every option, in one screen
@@ -147,7 +148,7 @@ Scripts, pipelines, and AI assistants read what the CLI prints, so these parts o
 
 ### Exit codes
 
-- `0`: nothing at or above `--fail-on`. With `--rule` (from 0.2.5), only the findings shown count. `pbiplint rules`, `pbiplint explain` with a rule it knows, `pbiplint skill` (from 0.2.5) when it prints, shows, or installs the skill, `pbiplint mcp` (from 0.2.5) when the app closes its input, `--help`, and `--version` exit `0` too.
+- `0`: nothing at or above `--fail-on`. With `--rule` (from 0.2.5), only the findings shown count. `pbiplint rules`, `pbiplint explain` with a rule it knows, `pbiplint reference` (from 0.4.0), `pbiplint skill` (from 0.2.5) when it prints, shows, or installs the skill, `pbiplint mcp` (from 0.2.5) when the app closes its input, `--help`, and `--version` exit `0` too.
 - `1`: something at or above `--fail-on`. From 0.3.0 that includes a rule that could not finish, through its [`RULE_COULD_NOT_FINISH`](/rules/rule-could-not-finish/) error finding, which the rule's page says how to keep from failing a gate while a fix ships. In a run over several projects (from 0.3.0), the run exits `1` when any project has something at or above its gate, and a project pbiplint cannot read is a [`PARSE_ISSUE`](/rules/parse-issue/) error finding of that project's, so it fails the default gate, unless the project's config turns `PARSE_ISSUE` off or lowers it below its gate.
 - `2`, with nothing on stdout and the reason on stderr:
   - a usage error, such as an unknown option, an option with no value or a value it does not take, two paths, or options with no path; from 0.2.5 also an unknown rule id given to `explain` or `--rule`, or `--quiet` with a format other than text;
@@ -191,6 +192,10 @@ In a run over several projects (from 0.3.0), the first line gives the whole run'
 ### pbiplint explain --format json (from 0.2.5)
 
 One object: `version` (`1`), `tool`, `rule` (the JSON document's rule fields plus `description`, what the rule checks), and `sections`: `example`, `whyItMatters`, `howToFixIt`, `whenToIgnoreIt`, and `quirks`, each in Markdown. `whyItMatters` and `howToFixIt` are always there; the others are left out when the rule's page has none. For a custom rule (from 0.4.0), `rule` also has `custom` (`true`), `ruleFile`, `scope` (the rule's scopes, as its file names them), and `expression`, plus `replaces`, the id of the pbiplint rule it runs in place of, when it shares that id; `sections` is empty. The same rule for changes applies.
+
+### pbiplint reference --format json (from 0.4.0)
+
+One object: `version` (`1`), `tool`, and `formats`, which holds `tabularEditor`, what a Tabular Editor rule that a config's `customRules` names can use at the installed version: `fields`, `severities`, `scopes`, `types`, `methods`, `valueProperties`, `statics`, `staticValues`, `conversions`, `enums`, `syntax`, `tokens`, `regex`, `notRun`, and `limits`. Another rule format would be added beside `tabularEditor`. The same rule for changes applies. Without `--format json`, `pbiplint reference` prints the same as text.
 
 ### Not promised
 

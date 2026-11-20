@@ -37,6 +37,7 @@ import {
   severalText,
   type RunOptions,
 } from "./several.js";
+import { referenceJson, referenceText } from "./reference.js";
 import { runSkill } from "./skill.js";
 import { logSafe } from "./log-safe.js";
 import { sampleDir } from "./sample.js";
@@ -106,6 +107,10 @@ export async function main(argv: string[], given: Io): Promise<number> {
     }
     if (opts.command === "rules") {
       io.stdout(listRules() + "\n");
+      return 0;
+    }
+    if (opts.command === "reference") {
+      io.stdout(opts.format === "json" ? referenceJson(VERSION) : referenceText(VERSION));
       return 0;
     }
     if (opts.command === "skill") return runSkill(opts, io, stderrLine);

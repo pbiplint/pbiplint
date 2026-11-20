@@ -276,6 +276,6 @@ Tabular Editor's `BestPracticeAnalyzer_IgnoreRules` annotation, honoured for eve
 **Files:**
 - Modify: `ignoreHelp` in `packages/core/src/engine/ignore.ts` and its copy in `packages/web/src/build/pages.ts` (a test holds them equal), its test in `packages/core/test/engine.test.ts`; then `node scripts/sync-rule-pages.mjs` for the SARIF help and description data.
 
-- [ ] **Step 1:** Test: for a model rule, `ignoreHelp` ends with one sentence after the existing ones: "pbiplint also honours Tabular Editor's `BestPracticeAnalyzer_IgnoreRules` annotation, on the object or on the model." Report-only and file-only scopes are unchanged.
+- [ ] **Step 1:** Test: for a model rule, `ignoreHelp` gains one sentence after the `pbiplint.ignore` one and before the project switch: "pbiplint also honours Tabular Editor's `BestPracticeAnalyzer_IgnoreRules` annotation, on the object or on the model." Report-only and file-only scopes are unchanged.
 - [ ] **Steps 2 to 4:** Fail, implement in both copies, pass.
 - [ ] **Step 5:** A comment on #118 headed "For the 0.4.0 release summary", under "What can change in your results": projects whose models carry `BestPracticeAnalyzer_IgnoreRules` stop seeing the findings their authors dismissed, and a malformed one is now reported. Commit, whole-branch review, pull request.

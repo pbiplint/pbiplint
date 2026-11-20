@@ -304,7 +304,7 @@ describe("Tabular Editor's ignore annotation", () => {
 describe("ignoreHelp", () => {
   it("names the annotation and the config line for the rule", () => {
     expect(ignoreHelp("HIDE_FOREIGN_KEYS", ["Column"])).toBe(
-      'To ignore this rule on one object, add `annotation pbiplint.ignore = HIDE_FOREIGN_KEYS` under the object in its TMDL file. Power BI Desktop keeps the annotation. To turn the rule off for a whole project, set `"HIDE_FOREIGN_KEYS": "off"` under `rules` in `pbiplint.config.json`.',
+      'To ignore this rule on one object, add `annotation pbiplint.ignore = HIDE_FOREIGN_KEYS` under the object in its TMDL file. Power BI Desktop keeps the annotation. pbiplint also honours Tabular Editor\'s `BestPracticeAnalyzer_IgnoreRules` annotation, on the object or on the model. To turn the rule off for a whole project, set `"HIDE_FOREIGN_KEYS": "off"` under `rules` in `pbiplint.config.json`.',
     );
     expect(ignoreHelp("X")).toBe(ignoreHelp("X", ["Model"]));
   });

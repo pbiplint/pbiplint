@@ -19,6 +19,10 @@ dated line here.
 **Re-recorded again November 4, 2026,** for "Report at a glance"'s new Text contrast line (#182):
 the line, its JSON fact with its counts, and the wider value column it gives the text format.
 
+**Re-recorded November 20, 2026,** for Tabular Editor's ignore annotation (#118): each model
+rule's SARIF help gains one sentence after the `pbiplint.ignore` one, in its Markdown and its
+plain text. The two SARIF goldens changed in those sentences alone.
+
 ## The cases
 
 Two inputs, each with seven options:

@@ -11,8 +11,11 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
+import { readCustomRules } from "../src/custom-rules/rules.js";
 import { runTeRules, STATISTICS_REASON, type TeRunResult } from "../src/custom-rules/te/index.js";
 import { readTeRuleFile } from "../src/custom-rules/te/read.js";
+import { sameIdAs } from "../src/engine/custom.js";
+import { defaultRules } from "../src/rules/index.js";
 import {
   PARITY_FIXTURES,
   expectPairedDeviations,
@@ -30,6 +33,7 @@ const DIR = process.env.PBIPLINT_SURVEY_DIR;
 
 interface ListedFile {
   id: string;
+  alsoAt: string[];
 }
 const { files } = JSON.parse(
   readFileSync(`${repo}tests/expectations/survey/files.json`, "utf8"),
@@ -87,6 +91,59 @@ describe.skipIf(!DIR)("the survey's rule files as custom rules", () => {
       expect(noScope).toBe(11);
       expect(report).toBe(9);
     }
+  });
+
+  // Custom rules spec, section 4: a team's copy of a rule pbiplint carries is unchanged when its
+  // scopes and its expression, whitespace aside, match a published version, and edited otherwise.
+  // Counted as lint sees each file: every rule readCustomRules keeps (a rule repeated word for word
+  // in one file is one rule) whose id, in any case, is a built-in id. Microsoft's and Tabular
+  // Editor's own files must all come out unchanged; the rest are team files, where the spec's
+  // research counted 901 unchanged of 970 against the current upstream files only. With every
+  // published version to match and today's built-in ids, the count is 1,156 unchanged of 1,188,
+  // 32 edited in 11 files (1,249 and 32 weighted by the copies files.json lists).
+  it("classifies every copy of a built-in rule in the survey as unchanged or edited", () => {
+    if (unavailable.length > 0) return;
+    const ownIds = new Set(defaultRules.map((r) => r.id.toUpperCase()));
+    const published = (id: string) =>
+      id.startsWith("microsoft/Analysis-Services/") ||
+      id.startsWith("TabularEditor/BestPracticeRules/");
+    const team = { unchanged: 0, edited: 0, weightedUnchanged: 0, weightedEdited: 0 };
+    let publishedCopies = 0;
+    const edited: string[] = [];
+    const editedFiles = new Set<string>();
+    for (const f of available) {
+      const text = texts.get(f.id)!;
+      if ("error" in readTeRuleFile(text)) continue;
+      for (const rule of readCustomRules([{ path: f.id, text }]).rules) {
+        const same = sameIdAs(rule, ownIds);
+        if (same === undefined) continue;
+        if (published(f.id)) {
+          expect(same, `${f.id} ${rule.id}`).toBe("asBuiltIn");
+          publishedCopies++;
+          continue;
+        }
+        const copies = 1 + f.alsoAt.length;
+        if (same === "asBuiltIn") {
+          team.unchanged++;
+          team.weightedUnchanged += copies;
+        } else {
+          team.edited++;
+          team.weightedEdited += copies;
+          edited.push(`  ${f.id} ${rule.id}`);
+          editedFiles.add(f.id);
+        }
+      }
+    }
+    console.info(
+      [
+        `Copies of built-in rules: ${publishedCopies} in Microsoft's and Tabular Editor's own files, all unchanged; in team files ${team.unchanged} unchanged, ${team.edited} edited in ${editedFiles.size} files (weighted by copies: ${team.weightedUnchanged} unchanged, ${team.weightedEdited} edited). Edited:`,
+        ...edited,
+      ].join("\n"),
+    );
+    expect(publishedCopies).toBeGreaterThan(0);
+    expect(team.unchanged + team.edited).toBe(1188);
+    // More published versions can only turn an edited copy into an unchanged one.
+    expect(team.unchanged).toBeGreaterThanOrEqual(1156);
   });
 
   for (const fixture of PARITY_FIXTURES) {

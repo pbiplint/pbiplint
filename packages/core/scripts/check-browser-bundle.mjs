@@ -85,8 +85,12 @@ console.log(
 // with room for its coverage fact and the second Desktop check's defaults. It was raised to 300 KB
 // on November 19, 2026, when the rule's coverage line and colour sample (#263) measured 295.4 KB on
 // a main that had grown with pasted TMDL view scripts (#274): main alone 261.9 KB, with the rule
-// 292.5 KB. If a later change crosses it, stop and tell the coordinator.
-const OWN_LIMIT_KB = 300;
+// 292.5 KB. It was raised to 310 KB on November 20, 2026, when custom rules' wiring in the engine
+// and the four formats (#118, Tasks D1 to D5) measured 299.9 KB, from 296.9 KB on main; the room
+// is for the CLI's reading of rule files and same-id handling still to come. The evaluator itself
+// stays out of this bundle, in the custom rules entry below. If a later change crosses it, stop
+// and tell the coordinator.
+const OWN_LIMIT_KB = 310;
 const PARSER_LIMIT_KB = 385;
 // The custom rules entry (#118) has its own tripwire, on its whole minified bundle: the evaluator
 // and the core code it shares with the main entry, which a bundle of both carries once. It was set

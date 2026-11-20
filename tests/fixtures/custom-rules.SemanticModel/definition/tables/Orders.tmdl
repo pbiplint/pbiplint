@@ -1,0 +1,117 @@
+table Orders
+
+	measure 'Total Amount' = SUM(Orders[Amount])
+		formatString: #,0.00
+
+		kpi
+			targetExpression = 1000
+			statusExpression = IF([Total Amount] > 1000, 1, -1)
+
+	measure 'Total Quantity' = SUM(Orders[Quantity])
+		formatString: #,0
+
+	measure 'Amount per Unit' = [Total Amount] / [Total Quantity]
+		formatString: #,0.00
+
+		annotation BestPracticeAnalyzer_IgnoreRules = {"RuleIDs":["USE_THE_DIVIDE_FUNCTION_FOR_DIVISION","PROBE_IGNORE_CUSTOM"]}
+
+	measure 'Amount per Order' = [Total Amount] / COUNTROWS(Orders)
+		formatString: #,0.00
+
+	measure 'Half Amount' = [Total Amount] / 2
+		formatString: #,0.00
+
+	measure 'Tenth Amount' = [Total Amount] / 0.1
+		formatString: #,0.00
+
+	measure 'Slash Label' = "per unit / per order"
+
+	measure 'Commented Amount' =
+			// amount / quantity is in Amount per Unit
+			[Total Amount]
+		formatString: #,0.00
+
+	measure 'Block Comment Amount' = /* not a division: a / b */ [Total Amount]
+		formatString: #,0.00
+
+	measure 'Safe Ratio' = DIVIDE([Total Amount], [Total Quantity])
+		formatString: #,0.00
+
+	measure Abc = 1 + 2
+
+	column 'Order Key'
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: Order Key
+
+	column 'Customer Key'
+		dataType: int64
+		summarizeBy: none
+		sourceColumn: Customer Key
+
+		annotation BestPracticeAnalyzer_IgnoreRules = {"RuleIDs":["HIDE_FOREIGN_KEYS","PROBE_IGNORE_CUSTOM"]}
+
+	column 'Product Key'
+		dataType: int64
+		summarizeBy: none
+		sourceColumn: Product Key
+
+	column 'Ship Customer Key'
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: Ship Customer Key
+
+	column 'Bill Customer Key'
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: Bill Customer Key
+
+	column Amount
+		dataType: decimal
+		formatString: #,0.00
+		summarizeBy: sum
+		sourceColumn: Amount
+
+	column Quantity
+		dataType: int64
+		formatString: #,0
+		summarizeBy: sum
+		sourceColumn: Quantity
+
+	column Discount
+		dataType: double
+		formatString: 0.00
+		summarizeBy: none
+		sourceColumn: Discount
+
+		annotation BestPracticeAnalyzer_IgnoreRules = {"RuleIDs":["AVOID_FLOATING_POINT_DATA_TYPES"]}
+
+	column Tax
+		dataType: double
+		formatString: 0.00
+		summarizeBy: none
+		sourceColumn: Tax
+
+	column 'Net Amount' = Orders[Amount] - Orders[Discount]
+		dataType: decimal
+		formatString: #,0.00
+		summarizeBy: sum
+
+	column 'Amount Band' = IF(Orders[Amount] > 100, "High", "Low")
+		summarizeBy: none
+
+	partition Orders = m
+		mode: import
+		source =
+				let
+				    Source = Snowflake.Databases("example.snowflakecomputing.com", "ANALYTICS_WH"),
+				    Db = Source{[Name="SALES",Kind="Database"]}[Data],
+				    Schema = Db{[Name="APPROVED",Kind="Schema"]}[Data],
+				    Orders = Schema{[Name="ORDERS",Kind="Table"]}[Data]
+				in
+				    Orders
+
+		annotation BestPracticeAnalyzer_IgnoreRules = {"RuleIDs":["PROBE_IGNORE_CUSTOM"]}

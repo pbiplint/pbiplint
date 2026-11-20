@@ -1,4 +1,5 @@
 import { quoteEnd, unquoteName } from "../tmdl/quote.js";
+import { readsScript } from "../tmdl/script.js";
 import type { ParsedFile, TmdlNode } from "../tmdl/types.js";
 import type {
   AlternateOf,
@@ -208,12 +209,20 @@ function buildCalendar(cal: TmdlNode, table: Table): Calendar {
   return { ...named(cal), table, columns };
 }
 
+/**
+ * Reads a table's declaration, or a part of it, into the model. A `ref table` line with
+ * declarations under it is a part (#139, #274): Microsoft's TMDL reader merges it into the table
+ * of that name, and creates the table when there is none, which is then `refOnly` until a `table`
+ * line declares it.
+ */
 function buildTable(r: TmdlNode, model: Model): void {
+  const ref = r.kind === "ref";
   let t = model.tables.find((x) => x.name === r.name);
   if (!t) {
     t = {
       ...named(r),
       kind: "table",
+      ...(ref ? { refOnly: true } : {}),
       isHidden: flag(r.props.ishidden),
       dataCategory: str(r.props.datacategory),
       columns: [],
@@ -224,7 +233,13 @@ function buildTable(r: TmdlNode, model: Model): void {
     };
     model.tables.push(t);
   } else {
-    // Partial declaration of an existing table: merge flags and fill blanks.
+    // Partial declaration of an existing table: merge flags and fill blanks. The first `table`
+    // line declares a table a `ref table` line made, and gives it that line's place.
+    if (!ref && t.refOnly) {
+      delete t.refOnly;
+      t.location = loc(r);
+      t.node = r;
+    }
     if (flag(r.props.ishidden)) t.isHidden = true;
     t.dataCategory ??= str(r.props.datacategory);
     t.description ??= r.description;
@@ -370,9 +385,10 @@ function walkOrder(a: string, b: string): number {
  * The model's own declarations in a parsed file, in line order: each line at its root, and each
  * line TMDL reads as if it sat there (#137), directly under a `model` at the root or under a
  * `model` under a `database` at the root, which follow that `model`
- * (https://learn.microsoft.com/analysis-services/tmdl/tmdl-overview#indentation). A model under
- * anything else, such as a culture's translations or a TMDL script's `createOrReplace`, is not the
- * model's. The parser checks each of these lines as it checks the root (tmdl/parse.ts), so a line
+ * (https://learn.microsoft.com/analysis-services/tmdl/tmdl-overview#indentation). So do the lines
+ * under a TMDL script's root `createOrReplace`, and under a `model` there, in every file but a
+ * project's saved TMDL view tab (`readsScript`, #274). A model under anything else, such as a
+ * culture's translations or a saved tab's script, is not the model's. The parser checks each of these lines as it checks the root (tmdl/parse.ts), so a line
  * among them that the model does not read is a parse issue. Anything that looks for where the
  * model declares something reads a file through this, as `buildModel` does.
  */
@@ -380,24 +396,37 @@ export function modelDeclarations(f: ParsedFile): TmdlNode[] {
   const declared = (n: TmdlNode): boolean => n.kind === "object" || n.kind === "flag";
   const isModel = (n: TmdlNode): boolean => n.type === "model" && declared(n);
   const out: TmdlNode[] = [];
+  const script = readsScript(f.file);
   for (const r of f.roots) {
     out.push(r);
-    const models = isModel(r)
-      ? [r]
-      : r.type === "database" && declared(r)
-        ? r.children.filter(isModel)
-        : [];
-    for (const m of models) {
-      if (m !== r) out.push(m);
-      out.push(...m.children);
-    }
+    const holds =
+      declared(r) && (r.type === "database" || (script && r.type === "createorreplace"));
+    const models = isModel(r) ? [r] : holds ? r.children.filter(isModel) : [];
+    // A script's command holds the model's declarations as a model does, its model among them.
+    if (holds && r.type === "createorreplace")
+      for (const c of r.children) {
+        out.push(c);
+        if (isModel(c)) out.push(...c.children);
+      }
+    else
+      for (const m of models) {
+        if (m !== r) out.push(m);
+        out.push(...m.children);
+      }
   }
   return out;
 }
 
 /** One of the model's own declarations (`modelDeclarations`). */
 function readDeclaration(r: TmdlNode, model: Model): void {
-  if (r.kind === "ref" || r.kind === "prop" || r.kind === "expr") return;
+  // A `ref table` line with declarations under it is a part of that table (#274). A bare `ref`
+  // line, as model.tmdl writes one per table, declares nothing; the parser reports lines under
+  // a `ref` of any other type.
+  if (r.kind === "ref") {
+    if (r.type === "table" && r.children.length > 0) buildTable(r, model);
+    return;
+  }
+  if (r.kind === "prop" || r.kind === "expr") return;
   // Keep the cases in step with MODELED in tmdl/root-types.ts.
   switch (r.type) {
     case "model":
@@ -503,7 +532,13 @@ export function buildModel(given: ParsedFile[], unreadPaths: readonly string[] =
     files,
     unreadPaths: unreadPaths.filter((p) => p.endsWith(".tmdl") || p.endsWith("/")),
   };
-  for (const f of files) for (const r of modelDeclarations(f)) readDeclaration(r, model);
+  let declaresModel = false;
+  for (const f of files)
+    for (const r of modelDeclarations(f)) {
+      if (r.type === "model" && (r.kind === "object" || r.kind === "flag")) declaresModel = true;
+      readDeclaration(r, model);
+    }
+  if (!declaresModel && files.length > 0) model.partial = true;
   finalizeKinds(model);
   return model;
 }

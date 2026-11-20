@@ -500,9 +500,14 @@ function header(path: string): string {
  */
 export const VERSION_MARKER = "<!-- pbiplint-version -->";
 
+/** The About page's section on light and dark (#266), which every page's footer links to. */
+export const THEME_HELP_ID = "light-and-dark";
+export const THEME_HELP_PATH = `/about/#${THEME_HELP_ID}`;
+
 const FOOTER = `<footer class="site-footer">
       <div class="container">
         <p>Nothing you lint leaves your browser: <a href="/privacy/">the pbiplint Privacy Promise</a>.</p>
+        <p>Light or dark follows your device's setting: <a href="${THEME_HELP_PATH}">how to change it</a>.</p>
         <p>
           Free software under the AGPL-3.0-or-later license, from the makers of
           ${external("https://www.youtube.com/@TheDataPractitioner", "The Data Practitioner")}. pbiplint

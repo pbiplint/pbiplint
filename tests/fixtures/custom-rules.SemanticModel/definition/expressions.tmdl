@@ -1,0 +1,8 @@
+expression 'Snowflake Products' =
+		let
+		    Source = Snowflake.Databases("example.snowflakecomputing.com", "ANALYTICS_WH"),
+		    Db = Source{[Name="SALES",Kind="Database"]}[Data],
+		    Schema = Db{[Name="STAGING",Kind="Schema"]}[Data],
+		    Products = Schema{[Name="PRODUCTS",Kind="Table"]}[Data]
+		in
+		    Products

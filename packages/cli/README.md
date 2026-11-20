@@ -40,8 +40,8 @@ whether each copy matches this version.
 (Claude Desktop, Claude Code, VS Code, Cursor) to start. Its three tools only read: `lint` (what
 `--format json` prints, or with `quiet` the short summary), `explain_rule`, and `list_rules`. It
 opens no port. See [the CLI page](https://pbiplint.com/cli/#mcp) for each app's setup. With Claude,
-the [pbiplint plugin for Claude](https://github.com/pbiplint/claude-plugin) installs the skill and
-the server together.
+[pbiplint for Claude](https://github.com/pbiplint/claude-plugin) installs the skill and the server
+as two plugins, `pbiplint` and `pbiplint-mcp`.
 
 Formats: `text` (default), `json`, `sarif` (for GitHub code scanning and editors), `markdown`.
 The Markdown export writes an email address, an `@name`, a `#123` or `GH-123`, and text

@@ -311,6 +311,28 @@ describe("root object types", () => {
     ]);
   });
 
+  it("tells a table's object with no table line above it what it needs (#274)", () => {
+    const pf = parseTmdl("pasted.tmdl", "measure A = 1\n\ncreateOrReplace\n\tcolumn B\n");
+    expect(pf.issues.map((i) => [i.line, i.reason])).toEqual([
+      [
+        1,
+        '"measure" belongs to a table but has no "table" line above it: add its table\'s line, or copy it from TMDL view (Script TMDL), which writes it under its table',
+      ],
+      [
+        4,
+        '"column" belongs to a table but has no "table" line above it: add its table\'s line, or copy it from TMDL view (Script TMDL), which writes it under its table',
+      ],
+    ]);
+    // With a table above it, the object lost its tab, not its table.
+    const lost = parseTmdl(
+      "pasted.tmdl",
+      "createOrReplace\n\tref table T\n\t\tmeasure A = 1\n\tmeasure B = 2\n",
+    );
+    expect(lost.issues.map((i) => i.reason)).toEqual([
+      '"measure" is not a type TMDL declares under a createOrReplace',
+    ]);
+  });
+
   it("reads every root type TMDL defines without an issue, whether the model holds it or not", () => {
     const text = [
       "database Sales",
@@ -545,9 +567,10 @@ describe("root object types", () => {
     expect(pf.issues).toEqual([]);
   });
 
-  it("keeps today's reading inside a culture's translations and a TMDL script", () => {
+  it("keeps today's reading inside a culture's translations and a project's saved TMDL view tab", () => {
+    // A script elsewhere, as pasted, is the model's, and is checked as the root is (#274).
     const pf = parseTmdl(
-      "t.tmdl",
+      "TMDLScripts/Script 1.tmdl",
       [
         "cultureInfo de-DE",
         "\ttranslations",
@@ -1484,16 +1507,19 @@ describe("declarations under a model (#137)", () => {
     expect(issues(fence)).toEqual([[3, "unterminated code fence", true, true]]);
   });
 
-  it("leaves a model under a culture's translations or a TMDL script to its own reading", () => {
+  it("leaves a model under a culture's translations or a saved TMDL view tab to its own reading", () => {
     // Neither is the model's, so the lines under it are checked as any nested line is.
     expect(
       issues(
         "cultureInfo pt-PT\n\ttranslations\n\t\tmodel Model\n\t\t\ttable Sales\n\t\t\t\tcaption: Vendas\n\t\t\tcolumn X\n",
       ),
     ).toEqual([]);
-    expect(
-      issues("createOrReplace\n\n\tmodel Model\n\t\tculture: en-US\n\n\t\tmeasure M = 1\n"),
-    ).toEqual([]);
+    const script = "createOrReplace\n\n\tmodel Model\n\t\tculture: en-US\n\n\t\tmeasure M = 1\n";
+    expect(parseTmdl("TMDLScripts/Script 1.tmdl", script).issues).toEqual([]);
+    // Elsewhere, as pasted, the script's model is the model, checked as one at the root (#274).
+    expect(issues(script)).toEqual([
+      [6, '"measure" is not a type TMDL declares under a model', true, true],
+    ]);
   });
 });
 

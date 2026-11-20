@@ -405,6 +405,7 @@ The fixture is pbiplint's own words: the config names both files and turns one c
 
 - [ ] **Step 1:** Tests: an unchanged copy with reflowed whitespace is skipped and pbiplint's rule runs with its page; an older published version counts as unchanged; a copy with severity 3 where upstream says 2 makes pbiplint's rule an error, and the config's severity beats the copy's; a changed scope counts as edited; an edited copy's findings come from the team's rule under its id (custom group, pbiplint's rule does not run, SARIF help is the description); the same unchanged copy in two files is counted once; the notice and `summary.customRules`; `explain` on an edited id shows the team's rule and says it replaces pbiplint's.
 - [ ] **Steps 2 to 5:** Fail, implement, pass, commit.
+- A copy the reader could not read (no scope, a report scope, an unknown scope, no expression, over a limit) never replaces pbiplint's rule: pbiplint's rule runs, the copy is not a RULE_COULD_NOT_FINISH finding, it is listed in `asBuiltIn` (`Rule.custom.readProblem` marks it), and the file's `custom-rules` notice names it with the reader's reason. A safety net's id keeps its handling, and a copy read fine that fails while it runs stays edited.
 
 #### Task D12: the fingerprints against the survey
 

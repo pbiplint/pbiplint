@@ -123,12 +123,14 @@ const plural = (n: number, one: string, other: string) => `${n} ${n === 1 ? one 
 
 /**
  * The one notice per rule file on the ids it shares with pbiplint's rules: how many rules it
- * holds, how many pbiplint runs as its own, how many run as the team's, and the ids those replace.
+ * holds, how many pbiplint runs as its own, which it could not read and runs its own rule for, with
+ * the reader's reason for each, how many run as the team's, and the ids those replace.
  */
 function sameIdNotice(
   file: string,
   held: number,
   own: number,
+  unread: readonly { id: string; reason: string }[],
   team: number,
   replacing: readonly string[],
 ): string {
@@ -137,6 +139,11 @@ function sameIdNotice(
     parts.push(
       `pbiplint runs ${own} as its own, since ${own === 1 ? "it matches a published version of that rule" : "they match a published version of those rules"}`,
     );
+  const u = unread.length;
+  if (u > 0)
+    parts.push(
+      `pbiplint could not read ${u}, so its own ${u === 1 ? "rule" : "rules"} with the same ${u === 1 ? "ID" : "IDs"} (${unread.map((r) => r.id).join(", ")}) ${u === 1 ? "runs in its place" : "run in their place"}`,
+    );
   if (team > 0) {
     const r = replacing.length;
     const which = `pbiplint's ${r === 1 ? "rule" : "rules"} with the same ${r === 1 ? "ID" : "IDs"} (${replacing.join(", ")})`;
@@ -144,7 +151,8 @@ function sameIdNotice(
       r === 0 ? "" : r === team ? `, in place of ${which}` : `, ${r} of them in place of ${which}`;
     parts.push(`${team} ${team === 1 ? "runs" : "run"} as your team's${instead}`);
   }
-  return `${file} holds ${plural(held, "rule", "rules")}: ${parts.join("; ")}.`;
+  const reasons = unread.map((r) => ` ${r.id}: ${r.reason}`).join("");
+  return `${file} holds ${plural(held, "rule", "rules")}: ${parts.join("; ")}.${reasons}`;
 }
 
 /**
@@ -157,11 +165,14 @@ export async function lint(files: LintFile[], options: LintOptions = {}): Promis
   const custom = options.customRules;
   // A custom rule with the id of one of pbiplint's rules in this run (custom rules spec, section
   // 4): an unchanged copy of a published version is left out and pbiplint's rule runs, taking the
-  // copy's severity when the team changed it; any other runs in place of pbiplint's rule. With
+  // copy's severity when the team changed it; a copy the reader could not read is left out too, and
+  // the file's notice gives the reader's reason; any other runs in place of pbiplint's rule. With
   // pbiplint's rule not in `rules`, the custom one runs as any other, so a team's rule is never
   // dropped for nothing. One refused for taking a safety net's id runs, to say so.
   const ownIds = new Set(builtIn.map((r) => r.id.toUpperCase()));
   const asBuiltIn = new Set<string>();
+  /** The reader's reason for each copy in `asBuiltIn` it could not read, by upper-case id. */
+  const unreadCopies = new Map<string, string>();
   const replaced = new Set<string>();
   const copySeverity = new Map<string, Severity>();
   for (const r of custom?.rules ?? []) {
@@ -170,6 +181,8 @@ export async function lint(files: LintFile[], options: LintOptions = {}): Promis
     if (same === "replaces") replaced.add(upper);
     else if (same === "asBuiltIn") {
       asBuiltIn.add(upper);
+      const problem = r.custom?.readProblem;
+      if (problem !== undefined) unreadCopies.set(upper, problem);
       const severity = r.custom?.upstreamSeverityChanged;
       if (severity !== undefined) copySeverity.set(upper, severity);
     }
@@ -237,7 +250,11 @@ export async function lint(files: LintFile[], options: LintOptions = {}): Promis
       message: sameIdNotice(
         f.path,
         f.ids.length,
-        own.length,
+        own.filter((id) => !unreadCopies.has(id.toUpperCase())).length,
+        own.flatMap((id) => {
+          const reason = unreadCopies.get(id.toUpperCase());
+          return reason === undefined ? [] : [{ id, reason }];
+        }),
         f.ids.filter((id) => !asBuiltIn.has(id.toUpperCase()) && !off.has(id.toUpperCase())).length,
         instead,
       ),

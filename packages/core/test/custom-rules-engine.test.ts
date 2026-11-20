@@ -484,6 +484,82 @@ describe("a custom rule with the id of one of pbiplint's rules", () => {
     ]);
   });
 
+  it("runs pbiplint's rule in place of a copy it could not read, and says why in the file's notice", async () => {
+    // The survey holds one: a report-scope rule with a built-in id. No published version matches a
+    // rule the reader could not read, and still it never switches off pbiplint's rule.
+    const REPORT = "The rule's Scope names a report object (Visual).";
+    for (const copy of [
+      copyOf(HIDE, { ID: "hide_foreign_keys", Scope: "Visual" }),
+      copyOf(HIDE, { Scope: undefined }),
+      copyOf(HIDE, { Expression: undefined }),
+    ]) {
+      const result = await run(set(copy, TEAM_FORMATTED));
+      const builtIn = await builtInRun();
+      expect(failures(result)).toEqual([]);
+      expect(ofRule(result, HIDE)).toEqual(ofRule(builtIn, HIDE));
+      expect(groupOf(result, HIDE)!.rule).toEqual(groupOf(builtIn, HIDE)!.rule);
+      expect(result.summary.rulesRun).toBe(builtIn.summary.rulesRun + 1);
+      expect(result.summary.ruleErrors).toEqual([]);
+      expect(result.summary.customRules).toEqual([
+        {
+          file: "rules/team.json",
+          // The reader lists the rules it could not read after the ones it read.
+          rules: ["TEAM_FORMATTED", String(copy.ID)],
+          asBuiltIn: [String(copy.ID)],
+          replaced: [],
+          notRun: [],
+        },
+      ]);
+      const [notice, ...more] = noticesOf(result);
+      expect(more).toEqual([]);
+      expect(notice!.path).toBe("rules/team.json");
+      expect(notice!.message).toMatch(
+        new RegExp(
+          `^rules/team\\.json holds 2 rules: pbiplint could not read 1, so its own rule with the same ID \\(${String(copy.ID)}\\) runs in its place; 1 runs as your team's\\. ${String(copy.ID)}: The rule`,
+        ),
+      );
+    }
+    const report = await run(set(copyOf(HIDE, { ID: "hide_foreign_keys", Scope: "Visual" })));
+    expect(noticesOf(report).map((d) => d.message)).toEqual([
+      `rules/team.json holds 1 rule: pbiplint could not read 1, so its own rule with the same ID (hide_foreign_keys) runs in its place. hide_foreign_keys: ${REPORT} Tabular Editor's rules check the semantic model; report rules use fab-inspector's format.`,
+    ]);
+    // With a published copy beside it, the notice says both.
+    const both = await run(
+      set(copyOf(HIDE, { Scope: "Visual" }), copyOf("PROVIDE_FORMAT_STRING_FOR_MEASURES")),
+    );
+    expect(noticesOf(both).map((d) => d.message)).toEqual([
+      `rules/team.json holds 2 rules: pbiplint runs 1 as its own, since it matches a published version of that rule; pbiplint could not read 1, so its own rule with the same ID (HIDE_FOREIGN_KEYS) runs in its place. HIDE_FOREIGN_KEYS: ${REPORT} Tabular Editor's rules check the semantic model; report rules use fab-inspector's format.`,
+    ]);
+    expect(both.summary.customRules?.[0]?.asBuiltIn).toEqual([
+      "PROVIDE_FORMAT_STRING_FOR_MEASURES",
+      HIDE,
+    ]);
+  });
+
+  it("keeps today's handling for a copy it could not read with a safety net's id, and for one that fails while it runs", async () => {
+    const reserved = await run(
+      set(rule({ ID: "PARSE_ISSUE", Scope: undefined, Expression: "true" })),
+    );
+    const [failure, ...more] = failures(reserved);
+    expect(more).toEqual([]);
+    expect(failure!.detail).toMatch(
+      /^PARSE_ISSUE could not finish on the model: rules\/team\.json: The rule has no Scope/,
+    );
+    expect(reserved.summary.customRules?.[0]).toMatchObject({
+      asBuiltIn: [],
+      notRun: ["PARSE_ISSUE"],
+    });
+    // Read fine, it fails on the model: an edited copy, which runs in place of pbiplint's rule.
+    const fails = await run(set(copyOf(HIDE, { Scope: "Measure", Expression: "Visible" })));
+    expect(ofRule(fails, HIDE)).toEqual([]);
+    expect(failures(fails)).toHaveLength(1);
+    expect(fails.summary.customRules?.[0]).toMatchObject({
+      asBuiltIn: [],
+      replaced: [HIDE],
+      notRun: [HIDE],
+    });
+  });
+
   it("leaves out of asBuiltIn, replaced, and the notice an id whose pbiplint rule the config turns off", async () => {
     // Neither rule runs: the config's off covers the id, and nothing runs in its place.
     for (const copy of [copyOf(HIDE), copyOf(HIDE, { Expression: "true" })]) {

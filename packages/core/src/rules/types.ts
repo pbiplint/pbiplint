@@ -221,4 +221,9 @@ export interface CustomRuleSource {
    * severity, which pbiplint's rule takes unless the config sets one.
    */
   upstreamSeverityChanged?: Severity;
+  /**
+   * Set when the reader could not read the rule: the reader's reason. Such a rule never runs in
+   * place of pbiplint's rule of its id (any case), which runs instead.
+   */
+  readProblem?: string;
 }

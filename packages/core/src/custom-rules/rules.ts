@@ -256,7 +256,7 @@ function problemRule(problem: TeRuleProblem, id: string, file: string): Rule {
       description: name,
       references: [],
       status: "custom",
-      custom: { file, scopes: [], expression: "" },
+      custom: { file, scopes: [], expression: "", readProblem: problem.reason },
       check: () => [],
     },
     problem.reason,

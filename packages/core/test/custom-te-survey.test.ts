@@ -100,14 +100,17 @@ describe.skipIf(!DIR)("the survey's rule files as custom rules", () => {
   // Editor's own files must all come out unchanged; the rest are team files, where the spec's
   // research counted 901 unchanged of 970 against the current upstream files only. With every
   // published version to match and today's built-in ids, the count is 1,156 unchanged of 1,188,
-  // 32 edited in 11 files (1,249 and 32 weighted by the copies files.json lists).
-  it("classifies every copy of a built-in rule in the survey as unchanged or edited", () => {
+  // 31 edited in 10 files (1,249 and 31 weighted by the copies files.json lists), and 1 the reader
+  // could not read: bonardi's report-scope REMOVE_UNUSED_CUSTOM_VISUALS, which counted as edited
+  // until a copy the reader could not read stopped replacing pbiplint's rule (it runs pbiplint's).
+  it("classifies every copy of a built-in rule in the survey as unchanged, edited, or unread", () => {
     if (unavailable.length > 0) return;
     const ownIds = new Set(defaultRules.map((r) => r.id.toUpperCase()));
     const published = (id: string) =>
       id.startsWith("microsoft/Analysis-Services/") ||
       id.startsWith("TabularEditor/BestPracticeRules/");
     const team = { unchanged: 0, edited: 0, weightedUnchanged: 0, weightedEdited: 0 };
+    const unread: string[] = [];
     let publishedCopies = 0;
     const edited: string[] = [];
     const editedFiles = new Set<string>();
@@ -123,7 +126,10 @@ describe.skipIf(!DIR)("the survey's rule files as custom rules", () => {
           continue;
         }
         const copies = 1 + f.alsoAt.length;
-        if (same === "asBuiltIn") {
+        if (rule.custom?.readProblem !== undefined) {
+          expect(same).toBe("asBuiltIn");
+          unread.push(`${f.id} ${rule.id}`);
+        } else if (same === "asBuiltIn") {
           team.unchanged++;
           team.weightedUnchanged += copies;
         } else {
@@ -136,12 +142,17 @@ describe.skipIf(!DIR)("the survey's rule files as custom rules", () => {
     }
     console.info(
       [
-        `Copies of built-in rules: ${publishedCopies} in Microsoft's and Tabular Editor's own files, all unchanged; in team files ${team.unchanged} unchanged, ${team.edited} edited in ${editedFiles.size} files (weighted by copies: ${team.weightedUnchanged} unchanged, ${team.weightedEdited} edited). Edited:`,
+        `Copies of built-in rules: ${publishedCopies} in Microsoft's and Tabular Editor's own files, all unchanged; in team files ${team.unchanged} unchanged, ${team.edited} edited in ${editedFiles.size} files (weighted by copies: ${team.weightedUnchanged} unchanged, ${team.weightedEdited} edited); ${unread.length} pbiplint could not read. Edited:`,
         ...edited,
+        "Could not read:",
+        ...unread.map((u) => `  ${u}`),
       ].join("\n"),
     );
     expect(publishedCopies).toBeGreaterThan(0);
-    expect(team.unchanged + team.edited).toBe(1188);
+    expect(team.unchanged + team.edited + unread.length).toBe(1188);
+    expect(unread).toEqual([
+      "bonardi/PowerBI-CICD/resources/report/config/bparules.json REMOVE_UNUSED_CUSTOM_VISUALS",
+    ]);
     // More published versions can only turn an edited copy into an unchanged one.
     expect(team.unchanged).toBeGreaterThanOrEqual(1156);
   });

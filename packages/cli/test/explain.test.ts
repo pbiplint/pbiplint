@@ -284,9 +284,14 @@ describe("explain for a custom rule (#118)", () => {
             Description: "Our own rule: every column stays visible.",
           }),
           copyOf("HIDE_FACT_TABLE_COLUMNS", { ID: "RULE_COULD_NOT_FINISH" }),
+          copyOf("DAX_COLUMNS_FULLY_QUALIFIED", { Scope: "Visual" }),
         ]),
       },
     ]);
+    // A copy pbiplint could not read never replaces its rule, which lint runs in its place.
+    const unread = explainRule("DAX_COLUMNS_FULLY_QUALIFIED", copies);
+    expect(unread).toMatchObject({ rule: { id: "DAX_COLUMNS_FULLY_QUALIFIED", status: "ported" } });
+    expect(unread).not.toHaveProperty("rule.custom");
     const unchanged = explainRule("provide_format_string_for_measures", copies);
     expect(unchanged).toMatchObject({
       rule: { id: "PROVIDE_FORMAT_STRING_FOR_MEASURES", status: "ported" },

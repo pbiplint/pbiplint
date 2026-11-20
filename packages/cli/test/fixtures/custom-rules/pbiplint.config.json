@@ -1,0 +1,9 @@
+{
+  "customRules": ["rules/team.json", "rules/more.json"],
+  "rules": {
+    "TEAM_VISIBLE": "error",
+    "NUMERIC_COLUMN_SUMMARIZE_BY": "warning",
+    "PROVIDE_FORMAT_STRING_FOR_MEASURES": "warning",
+    "PARSE_ISSUE": "warning"
+  }
+}

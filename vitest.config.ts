@@ -3,9 +3,20 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   resolve: {
-    alias: {
-      "@pbiplint/core": fileURLToPath(new URL("./packages/core/src/index.ts", import.meta.url)),
-    },
+    // Exact matches: a plain "@pbiplint/core" key would also catch "@pbiplint/core/custom-rules"
+    // and send it to a path under index.ts.
+    alias: [
+      {
+        find: /^@pbiplint\/core$/,
+        replacement: fileURLToPath(new URL("./packages/core/src/index.ts", import.meta.url)),
+      },
+      {
+        find: /^@pbiplint\/core\/custom-rules$/,
+        replacement: fileURLToPath(
+          new URL("./packages/core/src/custom-rules/index.ts", import.meta.url),
+        ),
+      },
+    ],
   },
   test: {
     // The release scripts are plain .mjs, and so are their tests: no TypeScript build step sits

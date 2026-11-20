@@ -20,6 +20,9 @@ await build({
   banner: { js: "#!/usr/bin/env node" },
   alias: {
     "@pbiplint/core": join(here, "../core/src/index.ts"),
+    // esbuild matches an alias on a path prefix and prefers the longest key, so the subpath needs
+    // its own entry, or it would resolve to a path under index.ts.
+    "@pbiplint/core/custom-rules": join(here, "../core/src/custom-rules/index.ts"),
     // The MCP SDK's Node shim brings ajv for a check pbiplint never needs; see src/mcp-shims.ts.
     "@modelcontextprotocol/server/_shims": join(here, "src/mcp-shims.ts"),
   },

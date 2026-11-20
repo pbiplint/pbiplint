@@ -3,14 +3,19 @@
 // captures in the Survey parity workflow (custom-te-survey.test.ts).
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
+import { readCustomRules } from "@pbiplint/core/custom-rules";
 import { runTeRules, STATISTICS_REASON, TOO_DEEP_REASON } from "../src/custom-rules/te/index.js";
-import { modelFrom } from "./helpers.js";
+import { lint, type LintResult } from "../src/engine/lint.js";
+import { defaultRules } from "../src/rules/index.js";
+import { isFailureOf, RULE_COULD_NOT_FINISH } from "../src/rules/rule-could-not-finish.js";
+import { modelFrom, readModelFiles } from "./helpers.js";
 import {
   MICROSOFT_FILE,
   PARITY_FIXTURES,
   expectPairedDeviations,
   expectRule,
+  expectSaid,
   fixtureModel,
   ignoreAnnotations,
   leftOutForAnnotation,
@@ -153,6 +158,87 @@ describe("Microsoft's ruleset as custom rules", () => {
       it("finds nothing Tabular Editor has no rule for", () => {
         const ids = new Set(run.results.map((r) => r.rule.id));
         for (const id of Object.keys(capture.findings)) expect(ids.has(id), id).toBe(true);
+      });
+    });
+  }
+});
+
+// The same file through the engine, as a project's config names it: there the engine applies Tabular
+// Editor's ignore annotation, so on the annotated fixtures every rule is compared, none left out.
+// Only RULE_COULD_NOT_FINISH of pbiplint's own rules runs, so none of the file's rules that share an
+// id with one of pbiplint's is set aside for it (the interim in engine/lint.ts sets a custom rule
+// aside only for a built-in rule in the run).
+describe("Microsoft's ruleset as custom rules, through the engine", () => {
+  const RULE_FILE = "rules/BPARules.json";
+  const builtInIds = new Set(defaultRules.map((r) => r.id.toUpperCase()));
+
+  for (const fixture of PARITY_FIXTURES.filter((f) => f.annotated)) {
+    describe(fixture.name, () => {
+      const capture = readMicrosoftCapture(fixture.microsoftPath);
+      const { custom } = readSurveyCapture(fixture.surveyPath);
+      const set = readCustomRules([{ path: RULE_FILE, text: rulesText }]);
+      let result: LintResult;
+      const ours: Record<string, string[]> = {};
+      beforeAll(async () => {
+        result = await lint(readModelFiles(`${repo}${capture.fixture}`), {
+          rules: [RULE_COULD_NOT_FINISH],
+          customRules: set,
+          config: { failOn: "none" },
+        });
+        for (const f of result.findings) (ours[f.ruleId] ??= []).push(f.objectName);
+      });
+
+      it("runs all 71 rules, those sharing an id with pbiplint's rules among them", () => {
+        expect(set.rules).toHaveLength(71);
+        expect(set.notices).toEqual([]);
+        expect(set.rules.filter((r) => builtInIds.has(r.id.toUpperCase())).length).toBeGreaterThan(
+          20,
+        );
+        expect(result.summary.rulesRun).toBe(72);
+        expect(result.summary.rulesSkipped).toEqual([]);
+        expect(result.summary.customRules).toEqual([
+          {
+            file: RULE_FILE,
+            rules: set.rules.map((r) => r.id),
+            asBuiltIn: [],
+            replaced: [],
+            notRun: set.rules.filter((r) => readsStatistics(r.custom!.expression)).map((r) => r.id),
+          },
+        ]);
+        expect(result.diagnostics.filter((d) => d.kind === "custom-rules")).toEqual([]);
+      });
+
+      for (const rule of set.rules) {
+        it(rule.id, () => {
+          const failures = result.findings.filter(
+            (f) => f.ruleId === RULE_COULD_NOT_FINISH.id && isFailureOf(f, rule.id),
+          );
+          if (readsStatistics(rule.custom!.expression)) {
+            // Tabular Editor reads null with no statistics and passes; pbiplint says it cannot run.
+            expect(capture.findings[rule.id], "Tabular Editor found nothing").toBeUndefined();
+            expect(ours[rule.id]).toBeUndefined();
+            expect(failures).toHaveLength(1);
+            expect(failures[0]!.detail).toContain(`${RULE_FILE}: `);
+            expect(failures[0]!.detail).toContain(STATISTICS_REASON);
+            return;
+          }
+          expect(failures, `${rule.id} ran to the end`).toEqual([]);
+          const want =
+            capture.ruleErrors?.[rule.id] !== undefined
+              ? "could-not-run"
+              : [...(capture.findings[rule.id] ?? [])].sort();
+          const got = [...(ours[rule.id] ?? [])].sort();
+          expectSaid(`${fixture.name} ${rule.id}`, got, want, custom, MICROSOFT_FILE, rule.id);
+        });
+      }
+
+      it("finds nothing but the file's rules and a failure for each statistics rule", () => {
+        const ids = new Set([...set.rules.map((r) => r.id), RULE_COULD_NOT_FINISH.id]);
+        for (const id of Object.keys(ours)) expect(ids.has(id), id).toBe(true);
+        const statistics = set.rules.filter((r) => readsStatistics(r.custom!.expression));
+        expect(ours[RULE_COULD_NOT_FINISH.id] ?? []).toHaveLength(statistics.length);
+        expect(result.summary.ruleErrors.map((e) => e.id)).toEqual(statistics.map((r) => r.id));
+        for (const e of result.summary.ruleErrors) expect(e.ruleFile).toBe(RULE_FILE);
       });
     });
   }

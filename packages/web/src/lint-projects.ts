@@ -1,5 +1,6 @@
 import {
   ConfigError,
+  isConfigError,
   lint,
   resolveConfig,
   shareModels,
@@ -27,7 +28,7 @@ export function parsedConfig(config: { text: string } | undefined): unknown {
  * path from the cwd. Anything else is `e` as it is.
  */
 function named(e: unknown, file: { path: string } | undefined): unknown {
-  if (!(e instanceof ConfigError) || file === undefined) return e;
+  if (!isConfigError(e) || file === undefined) return e;
   const plain = "pbiplint.config.json";
   return new ConfigError(
     e.message.startsWith(plain)

@@ -5,7 +5,10 @@
     "types": ["node"],
     "composite": false,
     "declaration": false,
-    "paths": { "@pbiplint/core": ["../core/src/index.ts"] }
+    "paths": {
+      "@pbiplint/core": ["../core/src/index.ts"],
+      "@pbiplint/core/custom-rules": ["../core/src/custom-rules/index.ts"]
+    }
   },
   "include": ["src"]
 }

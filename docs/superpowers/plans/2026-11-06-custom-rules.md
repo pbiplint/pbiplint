@@ -279,3 +279,146 @@ Tabular Editor's `BestPracticeAnalyzer_IgnoreRules` annotation, honoured for eve
 - [ ] **Step 1:** Test: for a model rule, `ignoreHelp` gains one sentence after the `pbiplint.ignore` one and before the project switch: "pbiplint also honors Tabular Editor's `BestPracticeAnalyzer_IgnoreRules` annotation: on an object it ignores the rule there, and on the model it ignores the rule on every model object." Report-only and file-only scopes are unchanged.
 - [ ] **Steps 2 to 4:** Fail, implement in both copies, pass.
 - [ ] **Step 5:** A comment on #118 headed "For the 0.4.0 release summary", under "What can change in your results": projects whose models carry `BestPracticeAnalyzer_IgnoreRules` stop seeing the findings their authors dismissed, and a malformed one is now reported. Commit, whole-branch review, pull request.
+
+### Pull request D, in tasks (added November 20, 2026)
+
+D connects Tabular Editor rule files to the run: `customRules` in the config, custom rules running as rules in the engine, same-id handling, the output, and the CLI. It ships as two pull requests, since D2's review is of a different kind (a development script that reads two repositories' history, and data that may hold nothing but ids, scopes, hashes and severities, because `TabularEditor/BestPracticeRules` has no license), and D1 alone is larger than C. E and F need only D1; the step 1 release waits for both.
+
+- **D1, Tasks D1 to D9:** config, the custom rules entry, the engine, the output, the CLI and `explain`.
+- **D2, Tasks D10 to D13:** fingerprints and same-id handling.
+
+Settled for D (builder calls, November 20, 2026):
+
+- **Core reads no file.** The CLI reads each file `customRules` names and passes `{ path, text }` to `readCustomRules`, which lives in a separate entry, `@pbiplint/core/custom-rules`, and returns a `CustomRuleSet` that `lint` takes as `LintOptions.customRules`. `lint` never imports the evaluator, so what `packages/core/src/index.ts` reaches does not grow by the evaluator's size; the site (E) loads the entry only when a config names custom rules; the CLI bundles both. The bundle check holds the entry to its own tripwire.
+- **A custom rule is a `Rule`** with `status: "custom"`, so `rules` entries, `failOn`, `rulesRun`, `showOnly` and `keep` (with both ignore annotations) work unchanged. A rule is evaluated only when it runs (one rule per `check`, not one file per call), so a rule the config turns off is never evaluated; each expression is parsed once and the model's view built once per model.
+- **Reader problems** (no id, no scope, a report scope, an unknown scope, no expression, over a limit) each become a rule that cannot run: one `RULE_COULD_NOT_FINISH` finding, as section 3 says. A second rule in one file with the same id and different text is a notice, as it is across files.
+- **A file the reader refuses whole** (not JSON, or fab-inspector's shape) stops that project's lint with a `ConfigError` naming the file and the reason, as a file that cannot be read does (section 3).
+- **Severity:** below 2 is info, 2 up to 3 a warning, 3 and above an error; a missing `Severity` takes the default in Tabular Editor 2's `BestPracticeRule` at a pinned commit (MIT), recorded beside the mapping.
+- **Paths:** `customRules` entries are relative to the config's folder; a URL and an absolute path are config errors naming the key, since the site and the pipelines need relative paths.
+- **Ids:** compare without regard to case. A custom id equal to `PARSE_ISSUE` or `RULE_COULD_NOT_FINISH` is refused as a rule that cannot run, so neither safety net can be replaced. A custom id holding whitespace runs (two survey files have such ids); see decisions.md for how the quiet output writes it.
+- **The JSON `url` of a custom rule** is the custom rules page, `https://pbiplint.com/custom-rules/`, since the contract lists `url` as always present and a rule page link would be wrong for an edited copy.
+- **Fingerprint data** holds `{ id, scope, hash, severity }`: without the severity, "the team changed the severity" would be judged against pbiplint's own severity.
+- **Interim in D1:** a custom rule whose id is a built-in id is skipped; pbiplint's own rule runs and a notice says so. D2 replaces this with section 4's handling.
+- **Output additions appear only when the config names custom rules,** so the one-project goldens never change.
+- **Also in D1:** `--rule` accepts custom ids (it checks once the configs are read), and `shareModels` keeps a later project's custom findings on a shared model.
+
+#### Task D1: `customRules` in the config and its schema
+
+**Files:** Modify `packages/core/src/engine/config.ts`, `packages/web/public/schema/pbiplint.config.schema.json`. Test `packages/core/test/engine.test.ts`.
+
+**Interfaces:** `PbiplintConfig.customRules?: string[]`; `ResolvedConfig.customRules: string[]` (as written, in order, `[]` when absent). `ConfigError`s naming the key: `pbiplint.config.json: "customRules" must be a list of paths to rule files`; `pbiplint.config.json: customRules[N] is a URL; customRules takes paths to local files, relative to the folder pbiplint.config.json is in`; the same shape for an empty entry and an absolute path (`/x`, `C:\x`, `\\server\x`).
+
+- [ ] **Step 1:** Tests: entries read in order; absent gives `[]`; a non-list value and a non-string entry refused; `https://`, `http://`, `file:///` refused naming the index; absolute paths refused; `rules\team.json` accepted; the schema's top-level `properties` equal the keys `resolveConfig` accepts.
+- [ ] **Steps 2 to 5:** Fail, implement (the schema gains `customRules`, an array of strings with a description and a pattern refusing `://`), pass, commit.
+
+#### Task D2: the custom rules entry and the bundle check
+
+**Files:** Create `packages/core/src/custom-rules/index.ts`. Modify `packages/core/package.json` (`exports` gains `./custom-rules`), `packages/core/scripts/check-browser-bundle.mjs`, `packages/cli/build.mjs`, `packages/cli/tsconfig.json`, `vitest.config.ts` (an alias for `@pbiplint/core/custom-rules` beside the existing one; esbuild must not resolve the subpath through the `@pbiplint/core` alias), `scripts/check-pack.mjs` (`REQUIRED` gains `dist/custom-rules/index.js` and `.d.ts`).
+
+**Interfaces:** the entry re-exports `runTeRules` and its types, and `readCustomRules` from D3. The check bundles `index.ts` as today and fails when any input under `src/custom-rules/` is in it; it then bundles the entry with the same forbidden-API list and its own tripwire, `CUSTOM_LIMIT_KB`, set from the measurement with room for D2's data.
+
+- [ ] **Step 1:** Extend the check; add a throwaway import of the entry to `engine/lint.ts`, see `npm run check:browser` fail naming the custom rules inputs; remove the import.
+- [ ] **Step 2:** `npm run check:browser` and `npm run build`; write the dated note above the limits (the entry's size, the core's own code before and after D's wiring). If the core's own code crosses 300 KB from D's wiring alone, raise it in a measured step with a dated note and tell the coordinator.
+- [ ] **Step 3:** `npm run check:pack`; commit.
+
+#### Task D3: custom rules as rules
+
+**Files:** Create `packages/core/src/custom-rules/rules.ts`, `packages/core/src/engine/custom.ts` (types and `CustomRuleStop` only, so the engine reaches nothing of the evaluator). Modify `packages/core/src/custom-rules/te/index.ts` (`teRunner`), `te/read.ts` (`TeRuleProblem` gains `kind?: "duplicate"`), `packages/core/src/rules/types.ts`, `packages/core/src/custom-rules/index.ts`. Test `packages/core/test/custom-rules.test.ts`.
+
+**Interfaces:**
+- `rules/types.ts`: `RuleStatus` gains `"custom"`; `Rule.category` and `RuleSummary.category` widen to `string` (a test keeps built-in rules to `CATEGORY_ORDER`); `ObjectType` gains `KPI`, `Culture`, `RoleMember`, `Variation`, `Calendar`; `Rule.custom?: { file: string; scopes: string[]; expression: string; teSeverity?: number }`.
+- `teSeverity(n: number | undefined): Severity`; `teRunner(model: Model): (rule: TeRule) => TeOutcome` (view cached per model, parse cached per rule); `tomFinding(o: TomObject): RuleFinding` (the object type, name and location the built-in helpers give that object; an object without annotations gets an empty `Ignorable`, so the model's annotation still reaches it).
+- `readCustomRules(files: readonly { path: string; text: string }[]): CustomRuleSet`, `CustomRuleSet = { files: { path: string; ids: string[] }[]; rules: Rule[]; notices: Diagnostic[] }`. Each `TeRule` becomes a `Rule`: id as written, name, `description ?? name`, `category ?? "Custom"`, severity from `teSeverity`, scope mapped to `ObjectType`s, `layer: "model"`, `needs: ["model"]`, `skipWhenModelUnread: modelPartlyRead`, `references: []`, and a `check` that runs `teRunner`, maps findings with `tomFinding`, throws `CustomRuleStop(reason)` when the rule could not run, and calls `ctx.notice` when `unset > 0`. Each `TeRuleProblem` without `kind` becomes a `Rule` whose check throws `CustomRuleStop(problem.reason)`. The same id in two files: identical rules (scopes, expression, severity) run once; different rules: the first in `customRules` order runs and a `custom-rule-duplicate` notice names the other file.
+
+- [ ] **Step 1:** Tests: severity 0, 1, 2, 3, 5, missing, -1, 2.5; for every scope, `tomFinding` on a `custom-rules` fixture object gives what the built-in helper gives; a refused file throws a `ConfigError` naming its path; a problem becomes a rule that throws with its reason; a same-file duplicate becomes a notice; two files with an identical rule give one rule, with different rules the first plus a notice; nothing is evaluated until `check` runs; the view is built once for two rules; `PARSE_ISSUE` and `RULE_COULD_NOT_FINISH` as custom ids are refused.
+- [ ] **Steps 2 to 5:** Fail, implement, pass, commit.
+
+#### Task D4: the engine runs them
+
+**Files:** Modify `packages/core/src/engine/lint.ts`, `run.ts`, `packages/core/src/rules/types.ts` (`RuleContext.notice?: (d: Diagnostic) => void`), `packages/core/src/project/types.ts` (`DiagnosticKind` gains `custom-rules`, `custom-rule-left-out`, `custom-rule-duplicate`), `packages/core/src/messages/en.ts` (`ruleError.customRule`: `{file}: {reason}`). Test `packages/core/test/custom-rules-engine.test.ts`, `messages.test.ts`.
+
+**Interfaces:** `LintOptions.customRules?: CustomRuleSet`; `RuleError.ruleFile?: string`; `LintSummary.customRules?: { file: string; rules: string[]; asBuiltIn: string[]; replaced: string[]; notRun: string[] }[]`. `lint` binds the config over the built-in rules, then the custom ones in file order. `fail` in `run.ts`, on a `CustomRuleStop`, writes `RuleError { id, message: "<file>: <reason>", ruleFile }` with the kind `msg("ruleError.customRule", { file, reason })` on the model, so the detail reads `TEAM_X could not finish on the model: rules/team.json: <reason>` and `isFailureOf` and `isFindingFor` hold. Each `ctx.notice` reaches `diagnostics`.
+
+- [ ] **Step 1:** Tests on `tests/fixtures/custom-rules.SemanticModel` with rule files written for the test: a custom finding has no `detail`, `messageId` or `params`; it counts in `rulesRun`; `"TEAM_X": "off"` gives skipped `disabled` and is never evaluated; `"TEAM_X": "error"` sets its severity; `failOn: "warning"` fails on a custom warning; `pbiplint.ignore` and `BestPracticeAnalyzer_IgnoreRules` on an object and on the model drop it; a rule that cannot run gives exactly one `RULE_COULD_NOT_FINISH` on the model naming the rule, the file and the reason with no object name from the fixture, fails the default gate, and is gone when its id is turned off; the same for a reader problem; `showOnly(result, ["TEAM_X"])` keeps the failure; a left-out object gives one notice per rule; `unknownRules` never lists a custom id; interim: a custom id equal to a built-in id runs pbiplint's rule and is listed in `asBuiltIn` and the notice; with no `customRules` the result deep-equals today's.
+- [ ] **Steps 2 to 5:** Fail, implement, pass, commit.
+
+#### Task D5: ranking and the four formats
+
+**Files:** Modify `packages/core/src/engine/rank.ts`, `packages/core/src/format/json.ts`, `sarif.ts`, `text.ts`, `markdown.ts`, `rules/rule-could-not-finish.md` (one paragraph on a custom rule that cannot run: the cause is in the rule file, and how to turn it off), then `node scripts/sync-rule-pages.mjs`. Test `packages/core/test/format.test.ts`, `engine.test.ts`.
+
+**Interfaces:** `RuleSummary` gains, for a custom rule only, `custom: true`, `ruleFile`, `description`, and its `url` is `https://pbiplint.com/custom-rules/`. `categoryRank(category: string): number`; `byRank` sorts by severity, then `CATEGORY_ORDER`, then custom categories by `localeCompare(b, "en")`, then count, then id. JSON: the group's `rule` carries the three fields, findings unchanged, `summary.customRules` and `ruleErrors[].ruleFile` when set. SARIF: the descriptor's `shortDescription` is the name, `fullDescription` and `help` the description, no `helpUri`, `properties` `{ custom: true, ruleFile }`; `options.help` never used for a custom rule; each result's `properties` carry `custom` and `ruleFile`. Text: the group's second line is `custom rule, rules/team.json` in place of the URL; a custom rule that cannot run gets the notice `The custom rule TEAM_X in rules/team.json could not run: <reason>`, without "please report this". Markdown: the id unlinked, then `custom rule, rules/team.json`, then the description.
+
+- [ ] **Step 1:** Tests: rank order over error groups in `Performance`, `Model Layout`, `2. Data Modelling`, `Formatting` and a warning group; each format's custom group and finding; a built-in-only result formats exactly as before in all four.
+- [ ] **Steps 2 to 5:** Fail, implement, pass, commit.
+
+#### Task D6: the CLI reads the rule files
+
+**Files:** Modify `packages/cli/src/config.ts`, `several.ts`, `main.ts`, `packages/core/src/engine/projects.ts` (`shareModels`). Test `packages/cli/test/cli.test.ts`, `several.test.ts`, and the `shareModels` test.
+
+**Interfaces:** `readCustomRuleFiles(found: FoundConfig): CustomRuleSet | undefined` resolves each entry against the config's folder; `ruleFile` is the entry with `\` as `/` and a leading `./` dropped; the size is checked by `stat` against `LIMITS.fileBytes` before reading; a file that cannot be found, read, or is too large is a `ConfigError`: `pbiplint.config.json: customRules: rules/team.json could not be read (ENOENT)`. `lintProject(project, config, custom?)`; `lintSeveral` reads each config's files once inside its existing `try`. `--rule` ids that are not built-in are checked once the configs are read; an id nothing knows gives `noRuleLines` and exit 2.
+
+- [ ] **Step 1:** Tests: a missing file exits 2, stdout empty, stderr naming the config and the file; a folder in a file's place and a file over the limit the same; a URL entry exits 2 naming the key; `customRules: []` gives byte for byte the output of no key; in a several-project run each project runs its own config's rules and one missing file stops the run naming its config; `--rule TEAM_X` shows the custom rule; `shareModels` keeps the custom findings a later project's config adds.
+- [ ] **Steps 2 to 5:** Fail, implement, pass, commit.
+
+#### Task D7: `pbiplint explain` for a custom id
+
+**Files:** Modify `packages/cli/src/args.ts` (`explain` takes `--config`), `explain.ts`, `main.ts`. Test `packages/cli/test/explain.test.ts`.
+
+**Interfaces:** `explainRule(input: string, custom?: CustomRuleSet): Explained | NotFound`; the config from `--config` or the nearest from the working folder; a built-in rule wins unless the set replaces it (D2); a custom rule gives `rule: RuleSummary & { description; custom: true; ruleFile; scope: string[]; expression }` and `sections: {}`; `suggest` includes custom ids. Text: id and name; severity, `model layer`, category, `custom rule`; the file, the description, `Scope: ...`, the expression indented.
+
+- [ ] **Step 1:** Tests: a custom id through the nearest config, in text and JSON; the same id in another case; a near miss suggests a custom id; a config whose rule file is missing exits 2 naming it; with no config a custom id exits 2 as today.
+- [ ] **Steps 2 to 5:** Fail, implement, pass, commit.
+
+#### Task D8: engine parity on the two annotated fixtures
+
+**Files:** Modify `packages/core/test/custom-te-microsoft.test.ts`, `custom-te-parity.ts`.
+
+- [ ] **Step 1:** Run the vendored `BPARules.json` through `lint` with `rules: [RULE_COULD_NOT_FINISH]` (no built-in rules, so no copy is skipped) and `customRules: readCustomRules(...)` on `custom-rules` and `custom-rules-model-ignore`. Each rule's objects equal the Microsoft capture with the annotation applied by the engine (no `leftOutForAnnotation` skip on this path); statistics rules give `RULE_COULD_NOT_FINISH`; the malformed perspective annotation is C's recorded difference.
+- [ ] **Steps 2 to 4:** Run, explain or fix each difference, commit.
+
+#### Task D9: the contract, the end-to-end fixture, and finishing D1
+
+**Files:** Create `packages/cli/test/fixtures/custom-rules/pbiplint.config.json`, `rules/team.json`, `rules/more.json`. Modify `packages/cli/test/contract.test.ts`, `cli.test.ts`, `packages/web/content/cli.md` (the JSON document section only: the new fields, the notice kinds, `ruleErrors[].ruleFile`, `explain --config`; "Configure it" is G's).
+
+The fixture is pbiplint's own words: the config names both files and turns one custom id to `error`; `team.json` holds `TEAM_MEASURES_IN_FOLDERS` (finds), `TEAM_VISIBLE` (reads `Visible` on `Measure`, cannot run), `PROBE_IGNORE_CUSTOM` (always true, skipped by the fixture's annotations), a rule with no `Scope`, and a rule whose id holds a space; `more.json` an identical copy of one team rule and a different rule under another team id. Tests run `--config packages/cli/test/fixtures/custom-rules/pbiplint.config.json tests/fixtures/custom-rules.SemanticModel`.
+
+- [ ] **Step 1:** Contract tests, inline, no new goldens, `fixtures/one-project` untouched: a custom group's `rule` has `custom`, `ruleFile`, `description`; its findings no `detail` or `messageId`; `summary.customRules` has its shape; the `RULE_COULD_NOT_FINISH` finding names the rule and the file; SARIF's descriptor has no `helpUri`, short description the name, help the description; results carry `custom` and `ruleFile`; `executionSuccessful` is `false`; quiet rule lines for custom ids split into three fields; exit 1 at the default gate; test 0 unchanged.
+- [ ] **Step 2:** End-to-end in `cli.test.ts`: the text report labels each custom group with its file; stderr carries the duplicate and left-out notices; turning `TEAM_VISIBLE` and the no-scope rule off exits 0.
+- [ ] **Step 3:** Fail, implement anything missing, pass.
+- [ ] **Step 4:** `npm run build && npm test && npm run typecheck && npm run lint && npm run check:browser && npm run check:pack`; one whole-branch review; open D1 with "For #118." and both measured bundle sizes.
+
+#### Task D10: the fingerprint and the upstream data (D2 starts here)
+
+**Files:** Create `packages/core/src/custom-rules/te/fingerprint.ts`, `scripts/fingerprint-upstream-rules.mjs`, `packages/core/src/custom-rules/te/upstream-rules.data.ts` (generated), `scripts/test/fingerprint-upstream-rules.test.mjs`, `packages/core/test/custom-te-fingerprint.test.ts`. Modify `CONTRIBUTING.md` (the command), `docs/RELEASING.md` (when to regenerate).
+
+**Interfaces:** `fingerprint(expression: string): string` drops every character `isWhiteSpaceCode` (library.ts) calls whitespace, hashes the UTF-8 bytes with 64-bit FNV-1a (offset `cbf29ce484222325`, prime `100000001b3`), returns 16 lowercase hex digits. `scopeKey(scopes: string[]): string`: the scopes as the reader spells them, sorted, joined by `,`. `UPSTREAM_RULES: readonly { id: string; scope: string; hash: string; severity: number }[]`; the header names each source, the commit read up to, and the sha256 of every file version read; no rule text is stored. The script, run by hand and never in CI: `node scripts/fingerprint-upstream-rules.mjs <scratchDir>` clones `microsoft/Analysis-Services` and `TabularEditor/BestPracticeRules` into the scratch folder up to commits pinned in the script, reads every version of each rule file in their history (Microsoft's `BPARules*.json` in every language, and the Tabular Editor repository's rule files), keeps ids pbiplint's built-in rules carry, removes duplicates, sorts, writes the data; its pure part, `fingerprintVersions(files)`, is exported for the test.
+
+- [ ] **Step 1:** Tests: FNV-1a vectors (`""` gives `cbf29ce484222325`, `"a"` gives `af63dc4c8601ec8c`); whitespace ignored; the script's hash agrees with core's; `fingerprintVersions` on two hand-made versions; every data id is a built-in id; every rule of the vendored `BPARules.json` matches an entry; sorted, no duplicates.
+- [ ] **Steps 2 to 4:** Fail, implement, run the script once into a fresh scratch folder, pass.
+- [ ] **Step 5:** Measure the entry again and adjust `CUSTOM_LIMIT_KB` with a dated note if needed; commit.
+
+#### Task D11: same-id handling
+
+**Files:** Modify `packages/core/src/custom-rules/rules.ts`, `packages/core/src/engine/lint.ts` (replaces D1's interim), `packages/cli/src/explain.ts`. Test `custom-rules-engine.test.ts`, `explain.test.ts`.
+
+**Interfaces:** each custom rule whose id (any case) has upstream entries gets `upstream: "unchanged" | "edited"` and `upstreamSeverityChanged?: Severity`. Unchanged (scope key and hash match a published version): the copy is dropped and listed in `asBuiltIn`; when its mapped severity matches none of the matching versions' mapped severities, pbiplint's rule takes the copy's severity, unless the config sets one. Edited: it replaces the built-in rule for the project and is listed in `replaced`. One `custom-rules` notice per project, per file: how many rules it holds, how many pbiplint runs as its own, which ids it replaces, how many run as the team's.
+
+- [ ] **Step 1:** Tests: an unchanged copy with reflowed whitespace is skipped and pbiplint's rule runs with its page; an older published version counts as unchanged; a copy with severity 3 where upstream says 2 makes pbiplint's rule an error, and the config's severity beats the copy's; a changed scope counts as edited; an edited copy's findings come from the team's rule under its id (custom group, pbiplint's rule does not run, SARIF help is the description); the same unchanged copy in two files is counted once; the notice and `summary.customRules`; `explain` on an edited id shows the team's rule and says it replaces pbiplint's.
+- [ ] **Steps 2 to 5:** Fail, implement, pass, commit.
+
+#### Task D12: the fingerprints against the survey
+
+**Files:** Modify `packages/core/test/custom-te-survey.test.ts`.
+
+- [ ] **Step 1:** Every rule in Microsoft's and Tabular Editor's own files in the survey classifies as unchanged; across team files at least 901 of the 970 copies are unchanged; the test prints each edited copy's file id and rule id.
+- [ ] **Step 2:** Run locally with `PBIPLINT_SURVEY_DIR`; a copy that looks unchanged but classifies as edited goes to the coordinator before going on. Commit.
+
+#### Task D13: the end-to-end copies and finishing D2
+
+**Files:** Modify `packages/cli/test/fixtures/custom-rules/rules/team.json`, `contract.test.ts`, `cli.test.ts`.
+
+- [ ] **Step 1:** `team.json` gains three copies, their expressions from the vendored Microsoft file (MIT): an unchanged rule with reflowed whitespace, an unchanged rule with its severity changed, an edited rule. Tests: the unchanged copy's group is pbiplint's rule with its URL; the severity-changed copy shows that severity; the edited copy's group is custom; `summary.customRules` lists each; the notice names the replaced id.
+- [ ] **Step 2:** Fail, pass.
+- [ ] **Step 3:** Full checks; one whole-branch review; open D2 with "For #118.".
+
+Heads-up for E: `packages/web/src/results/render.ts` filters groups by `CATEGORY_ORDER`, so the site would hide custom categories until E changes it.

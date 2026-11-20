@@ -16,15 +16,18 @@ function teIgnores(object: Ignorable | undefined, wanted: string): boolean {
  * True when the object carries `annotation pbiplint.ignore = RULE_A, RULE_B` naming this rule, or
  * `= *`, or Tabular Editor's `BestPracticeAnalyzer_IgnoreRules` naming it, on the object or on the
  * `model` given. Ids are matched without regard to case, so a hand-typed lowercase id still works.
- * `pbiplint.ignore` on the model ignores the model object alone, as it always has.
+ * `pbiplint.ignore` on the model ignores the model object alone, as it always has. With
+ * `tabularEditor` false, only `pbiplint.ignore` counts: a rule that could not finish is never
+ * hidden by Tabular Editor's annotation, which knows nothing of pbiplint's failures.
  */
 export function isIgnored(
   object: Ignorable | undefined,
   ruleId: string,
   model?: Ignorable,
+  tabularEditor = true,
 ): boolean {
   const wanted = ruleId.toUpperCase();
-  if (teIgnores(object, wanted) || teIgnores(model, wanted)) return true;
+  if (tabularEditor && (teIgnores(object, wanted) || teIgnores(model, wanted))) return true;
   const raw = object?.annotations[IGNORE_ANNOTATION];
   if (raw === undefined) return false;
   return unquoteValue(raw)

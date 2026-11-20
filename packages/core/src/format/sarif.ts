@@ -3,6 +3,7 @@ import { defaultRules } from "../rules/index.js";
 import type { Severity } from "../rules/types.js";
 import { VERSION } from "../version.js";
 import { escapeJsonControls } from "./controls.js";
+import { markdownText } from "./markdown.js";
 import type { FormatOptions, RuleHelp } from "./text.js";
 
 const LEVEL: Record<Severity, "error" | "warning" | "note"> = {
@@ -50,6 +51,27 @@ export function formatSarif(result: LintResult, options: FormatOptions = {}): st
       markdown: `${description}\n\nRead more: ${url}`,
     };
   const rules = result.groups.map((g) => {
+    // A team's own rule has no page and no help of pbiplint's: its description is its help, as
+    // written in the plain-text slots and Markdown-escaped in the others, since it comes from the
+    // team's file.
+    if (g.rule.custom) {
+      const description = g.rule.description ?? g.rule.name;
+      const own = { text: description, markdown: markdownText(description) };
+      return {
+        id: g.rule.id,
+        name: g.rule.name,
+        shortDescription: { text: g.rule.name },
+        fullDescription: own,
+        help: own,
+        defaultConfiguration: { level: LEVEL[g.rule.severity] },
+        properties: {
+          category: g.rule.category,
+          layer: g.rule.layer,
+          custom: true,
+          ruleFile: g.rule.ruleFile,
+        },
+      };
+    }
     const full = byId.get(g.rule.id);
     return {
       id: g.rule.id,
@@ -89,7 +111,9 @@ export function formatSarif(result: LintResult, options: FormatOptions = {}): st
       // message gets no properties, so it reads as it did before messages.
       ...(f.messageId !== undefined
         ? { properties: { messageId: f.messageId, params: f.params } }
-        : {}),
+        : g.rule.custom
+          ? { properties: { custom: true, ruleFile: g.rule.ruleFile } }
+          : {}),
     })),
   );
   // A run that could not read everything says so where a SARIF consumer looks for it, so nothing

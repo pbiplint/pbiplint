@@ -1,14 +1,17 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { buildIndexes } from "../src/index/build.js";
 import {
   bindConfig,
+  CONFIG_KEYS,
   ConfigError,
+  isConfigError,
   resolveConfig,
   type PbiplintConfig,
 } from "../src/engine/config.js";
 import { ignoreHelp, isIgnored, TE_IGNORE_ANNOTATION, teIgnoreIds } from "../src/engine/ignore.js";
 import { lint } from "../src/engine/lint.js";
-import { rank } from "../src/engine/rank.js";
+import { byRank, categoryRank, rank, type RankedGroup } from "../src/engine/rank.js";
 import { optionsFor, runRules } from "../src/engine/run.js";
 import { buildReport } from "../src/pbir/build.js";
 import { skippedLine } from "../src/format/text.js";
@@ -130,6 +133,95 @@ describe("resolveConfig", () => {
   });
 });
 
+describe("isConfigError", () => {
+  it("knows a ConfigError by its mark, so a copy from a separately loaded bundle is known too", () => {
+    expect(isConfigError(new ConfigError("pbiplint.config.json: no"))).toBe(true);
+    // A second copy of the class, as the custom rules entry's bundle carries, shares only the mark.
+    const mark = Symbol.for("pbiplint.ConfigError");
+    class OtherCopy extends Error {
+      readonly [mark] = true;
+    }
+    const other = new OtherCopy("pbiplint.config.json: customRules: rules/team.json is not JSON");
+    expect(other instanceof ConfigError).toBe(false);
+    expect(isConfigError(other)).toBe(true);
+    expect(isConfigError({ [mark]: true, message: "m" })).toBe(true);
+    expect(isConfigError(new Error("pbiplint.config.json: no"))).toBe(false);
+    expect(isConfigError({ [mark]: "yes", message: "m" })).toBe(false);
+    expect(isConfigError(undefined)).toBe(false);
+    expect(isConfigError("pbiplint.config.json")).toBe(false);
+  });
+});
+
+describe("customRules in the config", () => {
+  const PATHS_ONLY =
+    "customRules takes paths to local files, relative to the folder pbiplint.config.json is in";
+  it("keeps the entries as written and in order", () => {
+    expect(resolveConfig({ customRules: ["rules/team.json", "./more.json"] }).customRules).toEqual([
+      "rules/team.json",
+      "./more.json",
+    ]);
+  });
+  it("is an empty list when the key is absent", () => {
+    expect(resolveConfig().customRules).toEqual([]);
+    expect(resolveConfig({ rules: {} }).customRules).toEqual([]);
+  });
+  it("accepts a relative path written with backslashes", () => {
+    expect(resolveConfig({ customRules: ["rules\\team.json"] }).customRules).toEqual([
+      "rules\\team.json",
+    ]);
+  });
+  it("refuses a value that is not a list, and an entry that is not a string", () => {
+    const message = 'pbiplint.config.json: "customRules" must be a list of paths to rule files';
+    expect(() => resolveConfig({ customRules: "rules/team.json" })).toThrow(ConfigError);
+    expect(() => resolveConfig({ customRules: "rules/team.json" })).toThrow(message);
+    expect(() => resolveConfig({ customRules: { a: "x.json" } })).toThrow(message);
+    expect(() => resolveConfig({ customRules: ["a.json", 3] })).toThrow(message);
+    expect(() => resolveConfig({ customRules: [null] })).toThrow(message);
+  });
+  it("refuses a URL, naming its index", () => {
+    for (const url of ["https://x.test/r.json", "http://x.test/r.json", "file:///tmp/r.json"])
+      expect(() => resolveConfig({ customRules: ["a.json", url] })).toThrow(
+        `pbiplint.config.json: customRules[1] is a URL; ${PATHS_ONLY}`,
+      );
+  });
+  it("refuses an empty entry, naming its index", () => {
+    expect(() => resolveConfig({ customRules: [""] })).toThrow(
+      `pbiplint.config.json: customRules[0] is empty; ${PATHS_ONLY}`,
+    );
+    expect(() => resolveConfig({ customRules: ["a.json", "  "] })).toThrow(
+      `pbiplint.config.json: customRules[1] is empty; ${PATHS_ONLY}`,
+    );
+  });
+  it("refuses an absolute path, naming its index", () => {
+    for (const path of ["/x", "C:\\x", "c:/x", "\\\\server\\x"])
+      expect(() => resolveConfig({ customRules: [path] })).toThrow(
+        `pbiplint.config.json: customRules[0] is an absolute path; ${PATHS_ONLY}`,
+      );
+  });
+  it("carries the entries through bindConfig", () => {
+    const { config } = bindConfig(resolveConfig({ customRules: ["a.json"] }), []);
+    expect(config.customRules).toEqual(["a.json"]);
+  });
+  it("has the same top-level keys in the schema as resolveConfig accepts", () => {
+    const schema = JSON.parse(
+      readFileSync(
+        new URL("../../web/public/schema/pbiplint.config.schema.json", import.meta.url),
+        "utf8",
+      ),
+    ) as { properties: Record<string, { pattern?: string }> };
+    expect(Object.keys(schema.properties).sort()).toEqual([...CONFIG_KEYS].sort());
+    for (const key of CONFIG_KEYS) expect(() => resolveConfig({ [key]: undefined })).not.toThrow();
+    expect(schema.properties.customRules).toMatchObject({ type: "array" });
+    const pattern = new RegExp(
+      (schema.properties.customRules as { items: { pattern: string } }).items.pattern,
+    );
+    expect(pattern.test("rules/team.json")).toBe(true);
+    expect(pattern.test("rules\\team.json")).toBe(true);
+    for (const bad of ["https://x.test/r.json", "file:///r.json", "/x", "C:\\x", "\\\\s\\x", ""])
+      expect(pattern.test(bad)).toBe(false);
+  });
+});
+
 describe("bindConfig with options", () => {
   const withMax: Rule = {
     ...base,
@@ -196,6 +288,7 @@ describe("bindConfig with options", () => {
         severity: new Map(),
         options: new Map([["WITH_MAX", given]]),
         failOn: 3,
+        customRules: [],
       },
       [withMax],
     );
@@ -628,6 +721,53 @@ describe("rank", () => {
     expect(groups.map((g) => [g.rule.id, g.rule.severity])).toEqual([
       ["EVERY_TABLE", 3],
       ["MODEL_RULE", 2],
+    ]);
+  });
+});
+
+describe("ranking custom categories", () => {
+  const group = (id: string, severity: 1 | 2 | 3, category: string, count = 1): RankedGroup => ({
+    rule: {
+      id,
+      name: id,
+      category,
+      severity,
+      layer: "model",
+      slug: id.toLowerCase(),
+      url: "",
+      status: "custom",
+    },
+    findings: Array.from({ length: count }, () => ({
+      ruleId: id,
+      layer: "model" as const,
+      objectType: "Table" as const,
+      objectName: "T",
+    })),
+  });
+  it("ranks pbiplint's categories in order, then custom ones alphabetically after them", () => {
+    expect(categoryRank("Performance")).toBe(0);
+    expect(categoryRank("Formatting")).toBeLessThan(categoryRank("Naming Conventions"));
+    expect(categoryRank("Model Layout")).toBe(categoryRank("2. Data Modelling"));
+    expect(categoryRank("Model Layout")).toBeGreaterThan(categoryRank("Naming Conventions"));
+  });
+  it("orders by severity, then pbiplint's categories, then custom categories, then count, then id", () => {
+    const groups = [
+      group("W", 2, "Performance", 9),
+      group("ML", 3, "Model Layout", 5),
+      group("DM_B", 3, "2. Data Modelling"),
+      group("DM_A", 3, "2. Data Modelling"),
+      group("DM_MORE", 3, "2. Data Modelling", 2),
+      group("FMT", 3, "Formatting"),
+      group("PERF", 3, "Performance"),
+    ];
+    expect(groups.sort(byRank).map((g) => g.rule.id)).toEqual([
+      "PERF",
+      "FMT",
+      "DM_MORE",
+      "DM_A",
+      "DM_B",
+      "ML",
+      "W",
     ]);
   });
 });

@@ -1,7 +1,6 @@
 import { ruleUrl, slug } from "../model/names.js";
 import {
   CATEGORY_ORDER,
-  type Category,
   type Finding,
   type Layer,
   type Rule,
@@ -14,7 +13,7 @@ import { optionsFor } from "./run.js";
 export interface RuleSummary {
   id: string;
   name: string;
-  category: Category;
+  category: string;
   /** Effective severity after config overrides. */
   severity: Severity;
   /** The rule's layer; for a `project` rule, the layer of the objects its findings name. */
@@ -22,7 +21,16 @@ export interface RuleSummary {
   slug: string;
   url: string;
   status: RuleStatus;
+  /** Set, as true, for a team's own rule only, with `ruleFile` and `description`. */
+  custom?: true;
+  /** A custom rule's file, as the config's `customRules` names it. */
+  ruleFile?: string;
+  /** A custom rule's description, which stands in for a rule page. */
+  description?: string;
 }
+
+/** Where a custom rule's `url` points: the page on custom rules, since it has no page of its own. */
+export const CUSTOM_RULES_URL = "https://pbiplint.com/custom-rules/";
 
 export interface RankedGroup {
   rule: RuleSummary;
@@ -62,8 +70,13 @@ export function summarizeRule(
     severity: effectiveSeverity(rule, config),
     layer: groupLayer(rule.layer, findings),
     slug: slug(rule.id),
-    url: ruleUrl(rule.id),
+    url: rule.custom ? CUSTOM_RULES_URL : ruleUrl(rule.id),
     status: rule.status,
+    ...(rule.custom && {
+      custom: true as const,
+      ruleFile: rule.custom.file,
+      description: rule.description,
+    }),
   };
 }
 
@@ -73,7 +86,10 @@ export function summarizeRule(
  * returned them in.
  */
 export function rank(findings: Finding[], rules: Rule[], config: ResolvedConfig): RankedGroup[] {
-  const byId = new Map(rules.map((r) => [r.id, r]));
+  // The first rule with an id names the group: pbiplint's own rules come before custom ones, so a
+  // custom rule refused for taking a safety net's id never stands in for it.
+  const byId = new Map<string, Rule>();
+  for (const r of rules) if (!byId.has(r.id)) byId.set(r.id, r);
   // The findings come first, because a `project` rule takes its group's layer from them.
   const byRule = new Map<string, Finding[]>();
   for (const f of findings) {
@@ -89,9 +105,28 @@ export function rank(findings: Finding[], rules: Rule[], config: ResolvedConfig)
   return groups.sort(byRank);
 }
 
-/** The order `rank` gives groups, for a caller that changes how many findings a group holds. */
-export const byRank = (a: RankedGroup, b: RankedGroup): number =>
-  b.rule.severity - a.rule.severity ||
-  CATEGORY_ORDER.indexOf(a.rule.category) - CATEGORY_ORDER.indexOf(b.rule.category) ||
-  b.findings.length - a.findings.length ||
-  a.rule.id.localeCompare(b.rule.id, "en");
+/**
+ * Where a category ranks: pbiplint's own categories by their place in `CATEGORY_ORDER`, and every
+ * other category, a custom rule's own, after them all, level with each other.
+ */
+export function categoryRank(category: string): number {
+  const at = (CATEGORY_ORDER as readonly string[]).indexOf(category);
+  return at === -1 ? CATEGORY_ORDER.length : at;
+}
+
+/**
+ * The order `rank` gives groups, for a caller that changes how many findings a group holds:
+ * severity, then pbiplint's categories in order, then custom categories alphabetically, then
+ * count, then id.
+ */
+export function byRank(a: RankedGroup, b: RankedGroup): number {
+  const ca = categoryRank(a.rule.category);
+  const cb = categoryRank(b.rule.category);
+  return (
+    b.rule.severity - a.rule.severity ||
+    ca - cb ||
+    (ca === CATEGORY_ORDER.length ? a.rule.category.localeCompare(b.rule.category, "en") : 0) ||
+    b.findings.length - a.findings.length ||
+    a.rule.id.localeCompare(b.rule.id, "en")
+  );
+}

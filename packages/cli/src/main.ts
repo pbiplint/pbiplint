@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
 import {
-  ConfigError,
+  isConfigError,
   defaultRules,
   errorKind,
   formatResult,
@@ -14,8 +14,16 @@ import {
 } from "@pbiplint/core";
 import { HELP, parseArgs, UsageError, type CliOptions } from "./args.js";
 import { colourWanted } from "./colour.js";
-import { CONFIG_FILE } from "./config.js";
-import { explainJson, explainRule, explainText, findRule, noRuleLines } from "./explain.js";
+import { CONFIG_FILE, findConfig, readCustomRuleFiles } from "./config.js";
+import {
+  explainJson,
+  explainRule,
+  explainText,
+  findRule,
+  noRuleLines,
+  NoRuleError,
+  shownRuleIds,
+} from "./explain.js";
 import { EXPLAIN_HINT, quietText } from "./quiet.js";
 import {
   configFor,
@@ -108,24 +116,23 @@ export async function main(argv: string[], given: Io): Promise<number> {
       return 0;
     }
     if (opts.command === "explain") {
-      const explained = explainRule(opts.ruleId!);
+      // A custom id is found in the rule files of --config, or of the nearest config from the
+      // working folder. A built-in id needs neither, so the nearest config is read only for an
+      // id that is not built-in; one named by --config is always read.
+      const id = opts.ruleId!;
+      const explicit = opts.config ? resolve(io.cwd(), opts.config) : undefined;
+      const custom =
+        explicit || !findRule(id) ? readCustomRuleFiles(findConfig(io.cwd(), explicit)) : undefined;
+      const explained = explainRule(id, custom);
       if (!("rule" in explained)) {
-        for (const line of noRuleLines(opts.ruleId!)) stderrLine(line);
+        for (const line of noRuleLines(id, custom?.rules)) stderrLine(line);
         return 2;
       }
       io.stdout(opts.format === "json" ? explainJson(explained, VERSION) : explainText(explained));
       return 0;
     }
-    // Each --rule id is checked before the walk, so a mistyped one costs no lint.
-    const shownIds: string[] = [];
-    for (const input of opts.rules ?? []) {
-      const rule = findRule(input);
-      if (!rule) {
-        for (const line of noRuleLines(input)) stderrLine(line);
-        return 2;
-      }
-      if (!shownIds.includes(rule.id)) shownIds.push(rule.id);
-    }
+    // A --rule id may name a custom rule, which only the project's config can say, so each is
+    // checked once the config is read and before the lint, as one project's run reads it.
     // Colour only the text report on stdout: never --quiet, another format, or a file.
     const colour =
       opts.format === "text" &&
@@ -138,14 +145,16 @@ export async function main(argv: string[], given: Io): Promise<number> {
       cwd: io.cwd(),
       config: opts.config,
       failOn: opts.failOn,
-      ...(opts.rules ? { shownIds } : {}),
+      ...(opts.rules ? { shownIds: opts.rules } : {}),
     };
     if (input.kind === "several")
       return await several(target, input.projects, opts, options, io, stderrLine, colour);
     const { project } = input;
     const { found, config } = configFor(project.root, options);
-    const linted = await lintProject(project, config);
-    const result = opts.rules ? showOnly(linted, shownIds, config) : linted;
+    const custom = readCustomRuleFiles(found);
+    const shownIds = opts.rules && shownRuleIds(opts.rules, custom?.rules);
+    const linted = await lintProject(project, config, custom);
+    const result = shownIds ? showOnly(linted, shownIds, config) : linted;
     const prefix = prefixesOf(io.cwd(), project);
     const formatted = opts.quiet
       ? quietText(result)
@@ -181,7 +190,11 @@ export async function main(argv: string[], given: Io): Promise<number> {
     for (const d of result.diagnostics) stderrLine(`pbiplint: notice: ${d.message}`);
     return result.failed ? 1 : 0;
   } catch (e) {
-    if (e instanceof UsageError || e instanceof ConfigError) {
+    if (e instanceof NoRuleError) {
+      for (const line of e.lines) stderrLine(line);
+      return 2;
+    }
+    if (e instanceof UsageError || isConfigError(e)) {
       stderrLine(`pbiplint: ${e.message}`);
       if (e instanceof UsageError) {
         for (const line of e.lines) stderrLine(line);

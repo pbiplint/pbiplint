@@ -208,6 +208,7 @@ export const EN = {
   "query.partition": "query {query}, partition {partition}",
   "query.stepFinding": "{query}, step {step}: {finding}",
   quoted: '"{name}"',
+  "ruleError.customRule": "{file}: {reason}",
   "ruleError.errorClass": "{class}",
   "ruleError.notAnError": "a value that is not an Error",
   "ruleError.outOfStack": "{class} (out of stack space)",

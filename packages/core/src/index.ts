@@ -1,6 +1,7 @@
 export { VERSION } from "./version.js";
 export {
   ConfigError,
+  isConfigError,
   resolveConfig,
   SEVERITY_BY_NAME,
   type PbiplintConfig,
@@ -28,6 +29,8 @@ export {
   type Unreadable,
 } from "./engine/projects.js";
 export {
+  categoryRank,
+  CUSTOM_RULES_URL,
   effectiveSeverity,
   rank,
   summarizeRule,

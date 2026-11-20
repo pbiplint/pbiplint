@@ -16,7 +16,10 @@ export type DiagnosticKind =
   | "model-reference-mismatch"
   | "schema-newer-than-known"
   | "project-below-input"
-  | "shared-model";
+  | "shared-model"
+  | "custom-rules"
+  | "custom-rule-left-out"
+  | "custom-rule-duplicate";
 
 /** Something about the input that a reader must know so nothing unread is mistaken for clean. */
 export interface Diagnostic {

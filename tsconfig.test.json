@@ -4,7 +4,10 @@
     "noEmit": true,
     "composite": false,
     "declaration": false,
-    "paths": { "@pbiplint/core": ["./packages/core/src/index.ts"] }
+    "paths": {
+      "@pbiplint/core": ["./packages/core/src/index.ts"],
+      "@pbiplint/core/custom-rules": ["./packages/core/src/custom-rules/index.ts"]
+    }
   },
   "include": [
     "packages/*/test",

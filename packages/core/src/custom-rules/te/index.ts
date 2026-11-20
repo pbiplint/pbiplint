@@ -44,30 +44,53 @@ function engineLimitReason(e: unknown): string | undefined {
   return undefined;
 }
 
+/** Each rule's parsed expression, so a rule run on many models is parsed once. */
+const parsedRules = new WeakMap<TeRule, ReturnType<typeof parseTeExpression>>();
+
+/**
+ * Runs one rule on the view. An expression that does not parse is the rule not running, with the
+ * parser's reason; so is running out of stack, or building more than JavaScript holds.
+ */
 function runRule(rule: TeRule, view: TomView): TeOutcome {
-  const parsed = parseTeExpression(rule.expression);
-  if ("error" in parsed) return { kind: "could-not-run", reason: parsed.error };
-  return evaluateTeRule(rule, parsed.expr, view);
+  try {
+    let parsed = parsedRules.get(rule);
+    if (parsed === undefined) parsedRules.set(rule, (parsed = parseTeExpression(rule.expression)));
+    if ("error" in parsed) return { kind: "could-not-run", reason: parsed.error };
+    return evaluateTeRule(rule, parsed.expr, view);
+  } catch (e) {
+    const reason = engineLimitReason(e);
+    if (reason === undefined) throw e;
+    return { kind: "could-not-run", reason };
+  }
+}
+
+/** Each model's runner, so every custom rule run on one model shares one view. */
+const runners = new WeakMap<Model, (rule: TeRule) => TeOutcome>();
+
+/**
+ * What runs Tabular Editor rules on a model, one rule per call, as the engine runs custom rules:
+ * the model's view is built on the first call and kept for the model, and each rule's expression
+ * is parsed once.
+ */
+export function teRunner(model: Model): (rule: TeRule) => TeOutcome {
+  let runner = runners.get(model);
+  if (runner === undefined) {
+    let view: TomView | undefined;
+    runner = (rule) => runRule(rule, (view ??= buildTomView(model)));
+    runners.set(model, runner);
+  }
+  return runner;
 }
 
 /**
- * Reads a Tabular Editor rule file and runs every rule in it on the model. Each expression is
- * parsed once, and one that does not parse is that rule not running, with the parser's reason; the
- * model's view is built once for the whole file. A rule that runs out of stack, or builds more
- * than JavaScript holds, is that rule not running; the file's other rules still run.
+ * Reads a Tabular Editor rule file and runs every rule in it on the model. The model's view is
+ * built once for the whole file. A rule that cannot run is that rule's outcome; the file's other
+ * rules still run.
  */
 export function runTeRules(text: string, model: Model): TeRunResult {
   const file = readTeRuleFile(text);
   if ("error" in file) return { error: file.error };
   const view = buildTomView(model);
-  const results = file.rules.map((rule): TeRuleResult => {
-    try {
-      return { rule, outcome: runRule(rule, view) };
-    } catch (e) {
-      const reason = engineLimitReason(e);
-      if (reason === undefined) throw e;
-      return { rule, outcome: { kind: "could-not-run", reason } };
-    }
-  });
+  const results = file.rules.map((rule): TeRuleResult => ({ rule, outcome: runRule(rule, view) }));
   return { results, problems: file.problems };
 }

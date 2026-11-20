@@ -574,3 +574,64 @@ describe("a folder that holds several projects", () => {
     expect(md.out).toContain("\n| reports/Sa\\u001b\\[2J les/Sa\\u001b\\[2J les.pbip | ");
   });
 });
+
+describe("custom rules in a several-project run (#118)", () => {
+  /** A rule file of one rule, `id`, that finds every measure. */
+  const ruleFile = (id: string) =>
+    j([{ ID: id, Name: `${id} rule`, Severity: 2, Scope: "Measure", Expression: 'Name <> ""' }]);
+  /** Writes a config at `dir` naming `rules/team.json`, holding `id` unless `missing`. */
+  function teamConfig(dir: string, id: string, missing = false): void {
+    writeFileSync(join(dir, "pbiplint.config.json"), j({ customRules: ["rules/team.json"] }));
+    if (missing) return;
+    mkdirSync(join(dir, "rules"), { recursive: true });
+    writeFileSync(join(dir, "rules", "team.json"), ruleFile(id));
+  }
+  const ids = (p: { groups: { rule: { id: string } }[] }) =>
+    p.groups.map((g) => g.rule.id).filter((id) => id.startsWith("TEAM_"));
+
+  it("runs each project's own config's rules", async () => {
+    const root = secondHasErrors();
+    teamConfig(join(root, "a", "messy-sales"), "TEAM_A");
+    teamConfig(join(root, "b", "messy-sales"), "TEAM_B");
+    const r = await run([".", "--format", "json", "--fail-on", "none"], root);
+    expect(r.code).toBe(0);
+    const doc = JSON.parse(r.out);
+    expect(doc.projects.map(ids)).toEqual([["TEAM_A"], ["TEAM_B"]]);
+    expect(
+      doc.projects.map((p: { summary: { customRules: unknown } }) => p.summary.customRules),
+    ).toMatchObject([[{ file: "rules/team.json", rules: ["TEAM_A"] }], [{ rules: ["TEAM_B"] }]]);
+    // --rule takes a custom id any project's config knows.
+    const shown = JSON.parse((await run([".", "--format", "json", "--rule", "team_b"], root)).out);
+    expect(shown.projects.map(ids)).toEqual([[], ["TEAM_B"]]);
+    expect(shown.projects[1].groups).toHaveLength(1);
+    const unknown = await run([".", "--rule", "TEAM_C"], root);
+    expect(unknown).toEqual({
+      code: 2,
+      out: "",
+      err: 'pbiplint: no rule named "TEAM_C"\nDid you mean TEAM_A, or TEAM_B?\nRun pbiplint rules for the list.\n',
+    });
+  });
+
+  it("stops the run on one missing rule file, naming its config from the cwd", async () => {
+    const root = secondHasErrors();
+    teamConfig(join(root, "a", "messy-sales"), "TEAM_A");
+    teamConfig(join(root, "b", "messy-sales"), "TEAM_B", true);
+    expect(await run(["."], root)).toEqual({
+      code: 2,
+      out: "",
+      err: "pbiplint: b/messy-sales/pbiplint.config.json: customRules: rules/team.json could not be read (ENOENT)\n",
+    });
+  });
+
+  it("keeps a shared model's findings of a custom rule only a later project's config adds", async () => {
+    const root = monorepo("several-custom-shared");
+    teamConfig(join(root, "reports", "Sales"), "TEAM_SALES");
+    const doc = JSON.parse((await run([".", "--format", "json", "--fail-on", "none"], root)).out);
+    expect(doc.projects.map((p: { path: string }) => p.path)).toEqual(PATHS);
+    const [, finance, sales] = doc.projects;
+    expect(ids(finance)).toEqual([]);
+    expect(ids(sales)).toEqual(["TEAM_SALES"]);
+    const group = sales.groups.find((g: { rule: { id: string } }) => g.rule.id === "TEAM_SALES");
+    expect(group.findings.length).toBeGreaterThan(0);
+  });
+});

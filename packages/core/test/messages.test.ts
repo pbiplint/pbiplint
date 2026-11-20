@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { basename, join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 import { resolveConfig } from "../src/engine/config.js";
+import { CustomRuleStop } from "../src/engine/custom.js";
 import { lint, type LintFile } from "../src/engine/lint.js";
 import { unreadProject } from "../src/engine/projects.js";
 import { runRules } from "../src/engine/run.js";
@@ -2176,6 +2177,13 @@ describe("every parse reason and rule error fits its template (#98)", () => {
       throw new Error("no name");
     },
   });
+  /** A custom rule that cannot run, as `readCustomRules` makes one. */
+  const stopping: Rule = {
+    ...throwing(() => new CustomRuleStop("Measure has no property `Visible`")),
+    id: "TEAM_VISIBLE",
+    status: "custom",
+    custom: { file: "rules/team.json", scopes: ["Measure"], expression: "Visible" },
+  };
 
   const cases: [string, string[], () => Promise<Checked[]>][] = [
     [
@@ -2293,6 +2301,11 @@ describe("every parse reason and rule error fits its template (#98)", () => {
         ),
     ],
     ["a rule that throws a string", ["ruleError.notAnError"], () => failed(throwing(() => "x"))],
+    [
+      "a custom rule that cannot run",
+      ["RULE_COULD_NOT_FINISH", "ruleError.theModel", "ruleError.customRule"],
+      () => failed(stopping),
+    ],
     [
       "a rule that throws an Error whose name cannot be read",
       ["ruleError.errorClass"],

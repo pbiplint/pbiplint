@@ -37,6 +37,15 @@ afterAll(() => vi.unstubAllGlobals());
 const repo = new URL("../../../", import.meta.url).pathname;
 const sample = join(repo, "examples/messy-sales");
 const goldens = join(repo, "packages/cli/test/fixtures/one-project");
+/**
+ * A config naming two custom rule files (#118), and the model it is run on: rules/team.json holds a
+ * rule that finds, one that cannot run, one the fixture's ignore annotations partly set aside, one
+ * with no scope, and one whose id holds a space; rules/more.json an identical copy of one and a
+ * different rule under another's id.
+ */
+const customConfig = join(repo, "packages/cli/test/fixtures/custom-rules/pbiplint.config.json");
+const customModel = join(repo, "tests/fixtures/custom-rules.SemanticModel");
+const customArgs = (...more: string[]) => ["--config", customConfig, customModel, ...more];
 
 async function run(argv: string[], cwd = repo) {
   let out = "";
@@ -527,6 +536,135 @@ describe("the CLI's contract", () => {
     for (const p of several.projects) rendersBack(flat(p.groups));
   });
 
+  it("3e. with custom rules, the JSON document adds their fields and nothing else changes shape (#118)", async () => {
+    const r = await run(customArgs("--format", "json"));
+    expect(r.code).toBe(1);
+    const doc = JSON.parse(r.out);
+    expect(doc.version).toBe(1);
+    hasFields(doc, ["version", "tool", "summary", "layers", "facts", "diagnostics", "groups"]);
+    const one = JSON.parse((await run([sample, "--format", "json"])).out);
+    hasFields(doc.summary, [...Object.keys(one.summary), "customRules"]);
+    // Each rule file named, in customRules order, with the ids it holds and what became of them.
+    expect(doc.summary.customRules.map((f: { file: string }) => f.file)).toEqual([
+      "rules/team.json",
+      "rules/more.json",
+    ]);
+    for (const f of doc.summary.customRules) {
+      hasFields(f, ["file", "rules", "asBuiltIn", "replaced", "notRun"]);
+      for (const k of ["rules", "asBuiltIn", "replaced", "notRun"])
+        for (const id of f[k]) expect(typeof id, `${f.file} ${k}`).toBe("string");
+    }
+    const [team, more] = doc.summary.customRules;
+    expect([...team.rules].sort()).toEqual([
+      "PROBE_IGNORE_CUSTOM",
+      "TEAM_FLOAT COLUMNS",
+      "TEAM_MEASURES_IN_FOLDERS",
+      "TEAM_NO_SCOPE",
+      "TEAM_VISIBLE",
+    ]);
+    expect(team.notRun).toEqual(["TEAM_VISIBLE", "TEAM_NO_SCOPE"]);
+    expect(more).toMatchObject({ rules: ["TEAM_MEASURES_IN_FOLDERS", "TEAM_VISIBLE"], notRun: [] });
+    // A custom rule that could not run: a ruleErrors entry with its file, and a RULE_COULD_NOT_FINISH
+    // finding naming the rule and the file.
+    for (const e of doc.summary.ruleErrors) hasFields(e, ["id", "message", "ruleFile"]);
+    expect(doc.summary.ruleErrors.map((e: { id: string }) => e.id)).toEqual(team.notRun);
+    const failures = doc.groups.find(
+      (g: { rule: { id: string } }) => g.rule.id === "RULE_COULD_NOT_FINISH",
+    );
+    expect(failures.rule.status).toBe("builtin");
+    expect(failures.findings.map((f: { detail: string }) => f.detail)).toEqual([
+      expect.stringMatching(/^TEAM_VISIBLE could not finish on the model: rules\/team\.json: /),
+      expect.stringMatching(/^TEAM_NO_SCOPE could not finish on the model: rules\/team\.json: /),
+    ]);
+    // The duplicate and left-out notices are diagnostics of their own kinds.
+    for (const d of doc.diagnostics) hasFields(d, ["kind", "message"], ["path"]);
+    expect(doc.diagnostics.map((d: { kind: string; path: string }) => [d.kind, d.path])).toEqual([
+      ["custom-rule-duplicate", "rules/more.json"],
+      ["custom-rule-left-out", "rules/team.json"],
+    ]);
+    // A custom group's rule adds custom, ruleFile, and description, and links the custom rules
+    // page; its findings carry no detail or message fields.
+    const custom = doc.groups.filter((g: { rule: { custom?: boolean } }) => g.rule.custom);
+    expect(custom.map((g: { rule: { id: string } }) => g.rule.id).sort()).toEqual([
+      "PROBE_IGNORE_CUSTOM",
+      "TEAM_FLOAT COLUMNS",
+      "TEAM_MEASURES_IN_FOLDERS",
+    ]);
+    for (const g of custom) {
+      hasFields(g, ["rule", "count", "findings"]);
+      hasFields(g.rule, [
+        "id",
+        "name",
+        "category",
+        "severity",
+        "layer",
+        "slug",
+        "url",
+        "status",
+        "custom",
+        "ruleFile",
+        "description",
+      ]);
+      expect(g.rule).toMatchObject({
+        status: "custom",
+        custom: true,
+        ruleFile: "rules/team.json",
+        layer: "model",
+        url: "https://pbiplint.com/custom-rules/",
+      });
+      expect(g.count).toBe(g.findings.length);
+      for (const f of g.findings) {
+        hasFields(f, ["layer", "objectType", "objectName"], ["objectId", "file", "line", "column"]);
+        expect(f.layer).toBe("model");
+      }
+    }
+    // The fixture's ignore annotations set aside the objects that name the rule.
+    const probe = custom.find((g: { rule: { id: string } }) => g.rule.id === "PROBE_IGNORE_CUSTOM");
+    const probed = probe.findings.map((f: { objectName: string }) => f.objectName);
+    expect(probed).toContain("'Orders'");
+    for (const name of ["'Notes'", "[Amount per Unit]"]) expect(probed).not.toContain(name);
+    // A built-in group keeps its fields, with none of the custom ones.
+    for (const g of doc.groups.filter((g: { rule: { custom?: boolean } }) => !g.rule.custom))
+      hasFields(g.rule, ["id", "name", "category", "severity", "layer", "slug", "url", "status"]);
+  });
+
+  it("3f. with custom rules, SARIF describes each from its own fields and says the run did not finish (#118)", async () => {
+    const r = await run(customArgs("--format", "sarif"));
+    expect(r.code).toBe(1);
+    const sarifRun = JSON.parse(r.out).runs[0];
+    type Descriptor = {
+      id: string;
+      name: string;
+      helpUri?: string;
+      shortDescription: { text: string };
+      fullDescription: { text: string };
+      help: { text: string; markdown?: string };
+      properties: Record<string, unknown>;
+    };
+    const descriptors: Descriptor[] = sarifRun.tool.driver.rules;
+    const doc = JSON.parse((await run(customArgs("--format", "json"))).out);
+    const custom = doc.groups.filter((g: { rule: { custom?: boolean } }) => g.rule.custom);
+    expect(custom.length).toBe(3);
+    for (const { rule } of custom) {
+      const d = descriptors.find((x) => x.id === rule.id)!;
+      expect(d, rule.id).toBeDefined();
+      expect(d).not.toHaveProperty("helpUri");
+      expect(d.shortDescription.text).toBe(rule.name);
+      expect(d.fullDescription.text).toBe(rule.description);
+      expect(d.help.text).toBe(rule.description);
+      expect(d.properties).toMatchObject({ custom: true, ruleFile: rule.ruleFile });
+    }
+    const results: { ruleId: string; properties?: Record<string, unknown> }[] = sarifRun.results;
+    const ids = new Set(custom.map((g: { rule: { id: string } }) => g.rule.id));
+    const ofCustom = results.filter((x) => ids.has(x.ruleId));
+    expect(ofCustom.length).toBe(
+      custom.reduce((n: number, g: { count: number }) => n + g.count, 0),
+    );
+    for (const x of ofCustom)
+      expect(x.properties).toEqual({ custom: true, ruleFile: "rules/team.json" });
+    expect(sarifRun.invocations[0].executionSuccessful).toBe(false);
+  });
+
   it("4. the quiet output: the summary first, rule lines of three fields, and the Next line last", async () => {
     const lines = (await run([sampleBelow(), "--quiet"])).out.trimEnd().split("\n");
     expect(lines[0]).toMatch(/^pbiplint: /);
@@ -559,6 +697,38 @@ describe("the CLI's contract", () => {
     expect(rules(0, opens[0]!)).toEqual([]);
   });
 
+  it("4b. a custom rule's line has three fields too: each space in its id is written %20 (#118)", async () => {
+    const r = await run(customArgs("--quiet"));
+    expect(r.code).toBe(1);
+    const ruleLines = r.out.split("\n").filter((l) => /^(error|warning|info) /.test(l));
+    for (const l of ruleLines) {
+      const [severity, id, count, ...rest] = l.split(" ");
+      expect(rest, l).toEqual([]);
+      expect(["error", "warning", "info"]).toContain(severity);
+      expect(id, l).not.toMatch(/\s/);
+      expect(count, l).toMatch(/^[1-9]\d*$/);
+    }
+    expect(ruleLines).toContain("warning TEAM_FLOAT%20COLUMNS 2");
+    expect(ruleLines).toContainEqual(
+      expect.stringMatching(/^warning TEAM_MEASURES_IN_FOLDERS \d+$/),
+    );
+    expect(ruleLines).toContain("error RULE_COULD_NOT_FINISH 2");
+    // Decoded, the id is the one the JSON document and --rule use.
+    const id = decodeURIComponent(ruleLines.find((l) => l.includes("%20"))!.split(" ")[1]!);
+    expect(id).toBe("TEAM_FLOAT COLUMNS");
+    expect((await run(customArgs("--quiet", "--rule", id))).out).toMatch(
+      /^warning TEAM_FLOAT%20COLUMNS 2$/m,
+    );
+    // The Next: line says to pass the id on, and --rule and explain take it as the line writes it.
+    const written = ruleLines.find((l) => l.includes("%20"))!.split(" ")[1]!;
+    const shown = await run(customArgs("--quiet", "--rule", written));
+    expect(shown.err).not.toMatch(/no rule named/);
+    expect(shown.out).toMatch(/^warning TEAM_FLOAT%20COLUMNS 2$/m);
+    const explained = await run(["explain", written, "--config", customConfig, "--format", "json"]);
+    expect(explained.code).toBe(0);
+    expect(JSON.parse(explained.out).rule.id).toBe("TEAM_FLOAT COLUMNS");
+  });
+
   it("5. explain --format json has version 1, the tool, the rule, and its sections, for every rule", async () => {
     for (const rule of defaultRules) {
       const doc = JSON.parse((await run(["explain", rule.id, "--format", "json"])).out);
@@ -582,6 +752,46 @@ describe("the CLI's contract", () => {
         ["example", "whenToIgnoreIt", "quirks"],
       );
     }
+  });
+
+  it("5a. explain --config for a custom id: the rule's fields, its file, scope, and expression, and no sections (#118)", async () => {
+    const r = await run([
+      "explain",
+      "team_float columns",
+      "--config",
+      customConfig,
+      "--format",
+      "json",
+    ]);
+    expect(r.code).toBe(0);
+    expect(r.err).toBe("");
+    const doc = JSON.parse(r.out);
+    hasFields(doc, ["version", "tool", "rule", "sections"]);
+    expect(doc.version).toBe(1);
+    hasFields(doc.rule, [
+      "id",
+      "name",
+      "category",
+      "severity",
+      "layer",
+      "slug",
+      "url",
+      "status",
+      "description",
+      "custom",
+      "ruleFile",
+      "scope",
+      "expression",
+    ]);
+    expect(doc.rule).toMatchObject({
+      id: "TEAM_FLOAT COLUMNS",
+      status: "custom",
+      custom: true,
+      ruleFile: "rules/team.json",
+      scope: ["DataColumn", "CalculatedColumn"],
+      expression: 'DataType = "Double"',
+    });
+    expect(doc.sections).toEqual({});
   });
 
   it("6. --help states the exit codes, what stdout carries, and links the contract", () => {

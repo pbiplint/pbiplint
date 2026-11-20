@@ -1,12 +1,15 @@
 import {
   defaultRules,
+  escapeJsonControls,
   resolveConfig,
   SEVERITY_LABEL,
+  showControls,
   slug,
   summarizeRule,
   type Rule,
   type RuleSummary,
 } from "@pbiplint/core";
+import type { CustomRuleSet } from "@pbiplint/core/custom-rules";
 import { RULE_HELP } from "./rule-help.data.js";
 
 /** A rule page's help sections, in Markdown, keyed as `--format json` names them. */
@@ -18,9 +21,22 @@ export interface ExplainSections {
   quirks?: string;
 }
 
+/**
+ * A team's own rule as explain gives it: what lint's JSON gives it, with its Tabular Editor scopes
+ * as the rule file writes them and its expression, in place of a rule page.
+ */
+export type CustomExplainedRule = RuleSummary & {
+  description: string;
+  custom: true;
+  ruleFile: string;
+  scope: string[];
+  expression: string;
+};
+
 export interface Explained {
   /** The fields lint's JSON gives a rule, at the rule's default severity, plus what it checks. */
-  rule: RuleSummary & { description: string };
+  rule: (RuleSummary & { description: string }) | CustomExplainedRule;
+  /** The rule page's sections; none for a custom rule, which has no page. */
   sections: ExplainSections;
 }
 
@@ -73,11 +89,12 @@ function distance(a: string, b: string): number {
  * The rule ids nearest a mistyped one, compared as slugs: those that contain it first, then those
  * within an edit distance of a quarter of its length (at least 2), nearest first, at most three.
  */
-export function suggest(input: string): string[] {
+export function suggest(input: string, custom: readonly Rule[] = []): string[] {
   const s = slug(input);
   if (s === "") return [];
   const limit = Math.max(2, Math.floor(s.length / 4));
-  return defaultRules
+  const own = new Set(defaultRules.map((r) => r.id.toUpperCase()));
+  return [...defaultRules, ...custom.filter((r) => !own.has(r.id.toUpperCase()))]
     .map((r) => {
       const id = slug(r.id);
       return { id: r.id, d: id.includes(s) ? 0 : distance(s, id) };
@@ -94,9 +111,24 @@ export function findRule(input: string): Rule | undefined {
   return wanted === "" ? undefined : defaultRules.find((r) => slug(r.id) === wanted);
 }
 
+/**
+ * The custom rule an id names, among `rules`: its id in any case, or as a `--quiet` rule line
+ * writes it, each whitespace character as `%20`, which its `Next:` line says to pass on; or
+ * failing those its slug, as `findRule` matches a built-in id.
+ */
+export function findCustomRule(input: string, rules: readonly Rule[] = []): Rule | undefined {
+  const upper = input.trim().toUpperCase();
+  const exact =
+    rules.find((r) => r.id.toUpperCase() === upper) ??
+    rules.find((r) => r.id.replace(/\s/g, "%20").toUpperCase() === upper);
+  if (exact) return exact;
+  const wanted = slug(input);
+  return wanted === "" ? undefined : rules.find((r) => slug(r.id) === wanted);
+}
+
 /** What stderr says for an id that names no rule: the id, the nearest ids, and where the list is. */
-export function noRuleLines(input: string): string[] {
-  const s = suggest(input);
+export function noRuleLines(input: string, custom: readonly Rule[] = []): string[] {
+  const s = suggest(input, custom);
   return [
     `pbiplint: no rule named "${input}"`,
     ...(s.length
@@ -106,36 +138,110 @@ export function noRuleLines(input: string): string[] {
   ];
 }
 
+/** An id given to --rule that names no rule, built-in or custom: main writes `lines` and exits 2. */
+export class NoRuleError extends Error {
+  readonly lines: string[];
+  constructor(input: string, custom: readonly Rule[] = []) {
+    const lines = noRuleLines(input, custom);
+    super(lines[0]);
+    this.name = "NoRuleError";
+    this.lines = lines;
+  }
+}
+
+/**
+ * The rule ids the --rule inputs name, each once, in the order given: a built-in rule first, then
+ * one of `custom`. An input that names neither throws a `NoRuleError`.
+ */
+export function shownRuleIds(inputs: readonly string[], custom: readonly Rule[] = []): string[] {
+  const ids: string[] = [];
+  for (const input of inputs) {
+    const rule = findRule(input) ?? findCustomRule(input, custom);
+    if (!rule) throw new NoRuleError(input, custom);
+    if (!ids.includes(rule.id)) ids.push(rule.id);
+  }
+  return ids;
+}
+
 /**
  * One rule's guidance, from the rule pages the CLI carries: its id as a finding names it, in any
  * case, or its page name. What `pbiplint explain` prints and the MCP server's explain_rule returns.
+ * `custom`, the custom rules of the config explain found, adds a team's own rules: a built-in rule
+ * comes first, and a custom one gives its fields, scope, and expression in place of a page.
  */
-export function explainRule(input: string): Explained | NotFound {
+export function explainRule(input: string, custom?: CustomRuleSet): Explained | NotFound {
   const rule = findRule(input);
   const help = rule && RULE_HELP[rule.id];
-  if (!rule || !help) return { suggestions: suggest(input) };
+  if (rule && help)
+    return {
+      rule: { ...summarizeRule(rule, resolveConfig({})), description: rule.description },
+      sections: splitSections(help.markdown),
+    };
+  const own = findCustomRule(input, custom?.rules);
+  if (!own?.custom) return { suggestions: suggest(input, custom?.rules) };
   return {
-    rule: { ...summarizeRule(rule, resolveConfig({})), description: rule.description },
-    sections: splitSections(help.markdown),
+    rule: {
+      ...summarizeRule(own, resolveConfig({})),
+      custom: true,
+      ruleFile: own.custom.file,
+      description: own.description,
+      scope: [...own.custom.scopes],
+      expression: own.custom.expression,
+    },
+    sections: {},
   };
 }
 
 const capital = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 
-/** The text `pbiplint explain` prints: the rule's id, name, and page, then its help as plain text. */
+const isCustom = (r: Explained["rule"]): r is CustomExplainedRule => r.custom === true;
+
+/**
+ * A custom rule's text of several lines (its description, its expression): it comes from the
+ * team's rule file, so each line is shown through `showControls`, a tab as four spaces first, so
+ * an expression's indentation reads as written.
+ */
+const shown = (text: string, indent = ""): string =>
+  text
+    .split(/\r?\n/)
+    .map((line) => indent + showControls(line.replace(/\t/g, "    ")))
+    .join("\n");
+
+/**
+ * The text `pbiplint explain` prints: the rule's id, name, and page, then its help as plain text.
+ * For a custom rule: its file in place of the page, then its description, scope, and expression.
+ */
 export function explainText(e: Explained): string {
   const r = e.rule;
   const about = [
     capital(SEVERITY_LABEL[r.severity]),
     `${r.layer} layer`,
-    r.category,
+    isCustom(r) ? showControls(r.category) : r.category,
     ...(r.status === "needsLiveModel" ? ["needs a live model (listed, not run)"] : []),
+    ...(isCustom(r) ? ["custom rule"] : []),
   ].join(", ");
+  if (isCustom(r))
+    return [
+      `${showControls(r.id)}  ${showControls(r.name)}`,
+      about,
+      showControls(r.ruleFile),
+      "",
+      shown(r.description),
+      "",
+      `Scope: ${showControls(r.scope.join(", "))}`,
+      "",
+      "Expression:",
+      shown(r.expression, "    "),
+      "",
+    ].join("\n");
   const body = RULE_HELP[r.id]!.text.replace(/\n*Read more: \S+\s*$/, "");
   return `${r.id}  ${r.name}\n${about}\n${r.url}\n\n${r.description.replace(/`([^`]*)`/g, "$1")}\n\n${body}\n`;
 }
 
-/** The document `pbiplint explain --format json` prints. */
+/**
+ * The document `pbiplint explain --format json` prints. A custom rule's text comes from a team's
+ * file, so no control character reaches a terminal the document is printed to, as in lint's.
+ */
 export function explainJson(e: Explained, toolVersion: string): string {
   const doc = {
     version: 1,
@@ -143,5 +249,5 @@ export function explainJson(e: Explained, toolVersion: string): string {
     rule: e.rule,
     sections: e.sections,
   };
-  return JSON.stringify(doc, null, 2) + "\n";
+  return escapeJsonControls(JSON.stringify(doc, null, 2)) + "\n";
 }

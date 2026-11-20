@@ -1,6 +1,6 @@
 import type { Indexes } from "../index/build.js";
 import { formatMessage, msg, type Message } from "../messages/format.js";
-import type { Project } from "../project/types.js";
+import type { Diagnostic, Project } from "../project/types.js";
 import { finding, modelPartlyRead } from "../rules/helpers.js";
 import { reportFinding } from "../rules/report-helpers.js";
 import { failureMessage, RULE_COULD_NOT_FINISH } from "../rules/rule-could-not-finish.js";
@@ -13,6 +13,7 @@ import {
   type RuleOptions,
 } from "../rules/types.js";
 import type { ResolvedConfig } from "./config.js";
+import { isCustomRuleStop } from "./custom.js";
 import { isIgnored } from "./ignore.js";
 import { errorKindMessage } from "./rule-error.js";
 
@@ -43,11 +44,14 @@ export interface SkippedRule {
  * class alone, after the part's label when there is one (`query 'Sales': TypeError`), never the
  * error's own message, which can hold the model's text (v3 spec, section 11.3, amended October 28,
  * 2026). When RULE_COULD_NOT_FINISH runs, each error is also one of its findings, one per failed
- * rule and object.
+ * rule and object. A custom rule that cannot run is the exception: its message is its file and the
+ * reason, which is written from the rule's own text and never quotes the model, and `ruleFile`
+ * names the file.
  */
 export interface RuleError {
   id: string;
   message: string;
+  ruleFile?: string;
 }
 
 export interface RunResult {
@@ -59,6 +63,8 @@ export interface RunResult {
   ruleErrors: RuleError[];
   /** Findings dropped because their object's `pbiplint.ignore` annotation names the rule. */
   ignored: number;
+  /** The notices rules gave through `ctx.notice`, in the order given. */
+  notices: Diagnostic[];
 }
 
 /**
@@ -109,7 +115,11 @@ export function runRules(
     rulesSkipped: [],
     ruleErrors: [],
     ignored: 0,
+    notices: [],
   };
+  // Whether pbiplint's own RULE_COULD_NOT_FINISH ran: a custom rule refused for taking its id
+  // runs under it too, and must not stand in for it.
+  let failuresRan = false;
   /** Each error's rule, where it happened, and the object it was about, for the findings. */
   const failures: { id: string; label: Message; finding: RuleFinding; kind: Message }[] = [];
   /**
@@ -118,11 +128,17 @@ export function runRules(
    * project without a model.
    */
   const fail = (rule: Rule, e: unknown, site?: ErrorSite): void => {
-    const kind = errorKindMessage(e);
+    // A custom rule that cannot run says why, with its file, in place of the error's class.
+    const file = isCustomRuleStop(e) ? rule.custom?.file : undefined;
+    const kind =
+      file === undefined
+        ? errorKindMessage(e)
+        : msg("ruleError.customRule", { file, reason: (e as { reason: string }).reason });
     const kindText = formatMessage(kind);
     result.ruleErrors.push({
       id: rule.id,
       message: site === undefined ? kindText : `${formatMessage(site.label)}: ${kindText}`,
+      ...(file === undefined ? {} : { ruleFile: file }),
     });
     const { model, report } = project;
     const { label, finding: f }: ErrorSite =
@@ -149,16 +165,16 @@ export function runRules(
     // said about the table itself; what the input holds under it is (#274).
     if (f.object && "refOnly" in f.object && f.object.refOnly) return;
     const layer = f.layer ?? layerOf(f.objectType);
+    // A rule that could not finish answers to `pbiplint.ignore` alone, never to Tabular Editor's
+    // annotation, on its object or the model.
+    const tabularEditor = ruleId !== RULE_COULD_NOT_FINISH.id;
     const model =
-      f.object !== undefined &&
-      f.objectType !== "File" &&
-      ruleId !== RULE_COULD_NOT_FINISH.id &&
-      layer === "model"
+      f.object !== undefined && f.objectType !== "File" && tabularEditor && layer === "model"
         ? project.model
         : undefined;
     if (
-      isIgnored(f.object, ruleId, model) ||
-      (alsoIgnoredBy !== undefined && isIgnored(f.object, alsoIgnoredBy, model))
+      isIgnored(f.object, ruleId, model, tabularEditor) ||
+      (alsoIgnoredBy !== undefined && isIgnored(f.object, alsoIgnoredBy, model, tabularEditor))
     ) {
       result.ignored++;
       return;
@@ -204,12 +220,14 @@ export function runRules(
       continue;
     }
     result.rulesRun.push(rule.id);
+    if (rule.id === RULE_COULD_NOT_FINISH.id && rule.status !== "custom") failuresRan = true;
     let raw;
     try {
       raw = rule.check(project, {
         indexes,
         options: optionsFor(rule, config),
         reportError: (e, site) => fail(rule, e, site),
+        notice: (d) => result.notices.push(d),
       });
     } catch (e) {
       fail(rule, e);
@@ -217,7 +235,7 @@ export function runRules(
     }
     for (const f of raw) keep(rule.id, f);
   }
-  if (result.rulesRun.includes(RULE_COULD_NOT_FINISH.id)) {
+  if (failuresRan) {
     const seen = new Set<string>();
     for (const { id, label, finding: f, kind } of failures) {
       const key = JSON.stringify([id, f.objectType, f.objectName, f.objectId]);

@@ -2,6 +2,7 @@ import { relative, resolve } from "node:path";
 import {
   COLOUR_STYLE,
   ConfigError,
+  isConfigError,
   escapeJsonControls,
   formatJson,
   formatMarkdown,
@@ -24,8 +25,10 @@ import {
   type ResolvedConfig,
   type RuleHelp,
 } from "@pbiplint/core";
+import type { CustomRuleSet } from "@pbiplint/core/custom-rules";
 import type { CliOptions } from "./args.js";
-import { findConfig, type FoundConfig } from "./config.js";
+import { findConfig, readCustomRuleFiles, type FoundConfig } from "./config.js";
+import { findCustomRule, findRule, shownRuleIds } from "./explain.js";
 import { EXPLAIN_HINT, QUIET_NEXT, quietText } from "./quiet.js";
 import type { NamedProject, ResolvedProject } from "./walk.js";
 
@@ -33,7 +36,10 @@ import type { NamedProject, ResolvedProject } from "./walk.js";
 export interface RunOptions extends Pick<CliOptions, "config" | "failOn"> {
   /** The folder the CLI runs in; --config and every prefix are relative to it. */
   cwd: string;
-  /** The --rule ids, checked, or none when the run shows every rule. */
+  /**
+   * The --rule ids, or none when the run shows every rule. One that is not a built-in id is
+   * checked against each project's custom rules once its config is read.
+   */
   shownIds?: string[];
 }
 
@@ -72,11 +78,19 @@ const resolvedFor = (found: FoundConfig, options: RunOptions): ResolvedConfig =>
     ...(options.failOn ? { failOn: options.failOn } : {}),
   });
 
-/** The lint of a project the walk read, with what the walk could not read on its layers. */
-export function lintProject(project: ResolvedProject, config: ResolvedConfig): Promise<LintResult> {
+/**
+ * The lint of a project the walk read, with what the walk could not read on its layers, and the
+ * custom rules its config names when it names any.
+ */
+export function lintProject(
+  project: ResolvedProject,
+  config: ResolvedConfig,
+  custom?: CustomRuleSet,
+): Promise<LintResult> {
   const files = [...(project.model?.files ?? []), ...(project.report?.files ?? [])];
   return lint(files, {
     config,
+    ...(custom ? { customRules: custom } : {}),
     diagnostics: project.diagnostics,
     absent: project.absent,
     // Each part's own list, relative to its root, so what the walk could not read reaches the
@@ -119,6 +133,9 @@ export async function lintSeveral(
   const found: FoundConfig[] = [];
   const prefixes: Prefixes[] = [];
   const linted: ProjectRun[] = [];
+  // Each config's custom rules, read once however many projects use it, and each run's.
+  const read = new Map<string, CustomRuleSet | undefined>();
+  const customOf: (CustomRuleSet | undefined)[] = [];
   for (const named of projects) {
     const { path, project, unreadable, modelKey, modelPath } = named;
     // A project that could not be read has no root, so its config is searched from its path.
@@ -133,13 +150,20 @@ export async function lintSeveral(
     // the lint is inside too.
     let config: ResolvedConfig;
     let result: LintResult;
+    let custom: CustomRuleSet | undefined;
     try {
       config = resolvedFor(file, options);
-      result = project ? await lintProject(project, config) : unreadProject(unreadable!, config);
+      if (file.path !== undefined && !read.has(file.path))
+        read.set(file.path, readCustomRuleFiles(file));
+      custom = file.path === undefined ? undefined : read.get(file.path);
+      result = project
+        ? await lintProject(project, config, custom)
+        : unreadProject(unreadable!, config);
     } catch (e) {
-      if (!(e instanceof ConfigError) || configPath === undefined) throw e;
+      if (!isConfigError(e) || configPath === undefined) throw e;
       throw new ConfigError(`${configPath}: ${e.message.replace(/^pbiplint\.config\.json: /, "")}`);
     }
+    customOf.push(custom);
     if (project) {
       prefixes.push(prefixesOf(options.cwd, project));
       linted.push({
@@ -161,10 +185,34 @@ export async function lintSeveral(
       });
     }
   }
-  const runs = shareModels(linted).map((r) =>
-    options.shownIds ? { ...r, result: showOnly(r.result, options.shownIds, r.config) } : r,
+  const shown = options.shownIds && shownPerRun(options.shownIds, customOf);
+  const runs = shareModels(linted).map((r, i) =>
+    shown ? { ...r, result: showOnly(r.result, shown[i]!, r.config) } : r,
   );
   return { run: { runs, prefixes }, found };
+}
+
+/**
+ * The rule ids each run shows for the --rule inputs. An input may name a custom rule of any
+ * project's config: each run shows it under its own config's spelling, or, where its config does
+ * not have it, under the first config's that does, so it shows nothing there. An input no project
+ * knows throws a `NoRuleError`, suggesting from every project's custom rules.
+ */
+function shownPerRun(
+  inputs: readonly string[],
+  sets: readonly (CustomRuleSet | undefined)[],
+): string[][] {
+  const all = sets.flatMap((s) => s?.rules ?? []);
+  shownRuleIds(inputs, all);
+  return sets.map((set) => {
+    const ids: string[] = [];
+    for (const input of inputs) {
+      const rule =
+        findRule(input) ?? findCustomRule(input, set?.rules) ?? findCustomRule(input, all);
+      if (!ids.includes(rule!.id)) ids.push(rule!.id);
+    }
+    return ids;
+  });
 }
 
 /** A project's counts, as its summary line gives them, without the files. */

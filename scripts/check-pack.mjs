@@ -20,6 +20,8 @@ export const REQUIRED = {
     "dist/index.js.map",
     "dist/index.d.ts.map",
     "src/index.ts",
+    "dist/custom-rules/index.js",
+    "dist/custom-rules/index.d.ts",
   ],
   pbiplint: [
     "package.json",

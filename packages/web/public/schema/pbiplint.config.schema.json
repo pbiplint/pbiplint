@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://pbiplint.com/schema/pbiplint.config.schema.json",
   "title": "pbiplint configuration",
-  "description": "Rules on or off, severity overrides, rule options, and the fail threshold. Saved as pbiplint.config.json next to the project or anywhere above it.",
+  "description": "Rules on or off, severity overrides, rule options, the fail threshold, and custom rule files. Saved as pbiplint.config.json next to the project or anywhere above it.",
   "type": "object",
   "additionalProperties": false,
   "properties": {
@@ -26,6 +26,14 @@
       "enum": ["error", "warning", "info", "none"],
       "default": "error",
       "description": "Lowest severity that makes the command line exit 1."
+    },
+    "customRules": {
+      "type": "array",
+      "description": "Tabular Editor rule files to run as rules on the semantic model. Each entry is a path to a local file, relative to the folder this file is in; a URL or an absolute path is refused.",
+      "items": {
+        "type": "string",
+        "pattern": "^(?![\\\\/])(?![A-Za-z]:)(?!.*://)(?=.*\\S).+$"
+      }
     }
   }
 }

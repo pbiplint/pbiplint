@@ -164,13 +164,37 @@ function keepOnly(run: ProjectRun, keep: (f: Finding) => boolean, notice: string
 }
 
 /**
+ * The custom rules a run ran, each id once as its config's files first write it. One left out for
+ * having a pbiplint rule's id is pbiplint's own rule, and one its config turns off did not run, so
+ * neither is counted: another run's findings for it are then that run's own.
+ */
+function customIds(run: ProjectRun): string[] {
+  const off = new Set(
+    run.result.summary.rulesSkipped
+      .filter((r) => r.reason === "disabled")
+      .map((r) => r.id.toUpperCase()),
+  );
+  const seen = new Set<string>(off);
+  const out: string[] = [];
+  for (const f of run.result.summary.customRules ?? [])
+    for (const id of f.rules)
+      if (!f.asBuiltIn.includes(id) && !seen.has(id.toUpperCase())) {
+        seen.add(id.toUpperCase());
+        out.push(id);
+      }
+  return out;
+}
+
+/**
  * The runs with each shared model's findings listed once. Runs with the same `modelKey` read one
  * model: the first of them, in the order given, keeps the model's findings, and the others keep
  * only their report's. NOT_REACHED_FROM_REPORT counts a field as reached when any of the sharing
  * reports reaches it, so the first run keeps only the fields every sharing run reports, with its
  * own detail. A later run keeps a RULE_COULD_NOT_FINISH finding on the model that the first run
  * does not have: a rule over both layers can fail with one report only, and its failure is named
- * on the model. Each sharing run says so in a `shared-model` notice. A run that shares no model is
+ * on the model. It also keeps the findings of the custom rules its config adds that the first
+ * run's does not (by `summary.customRules`, ids compared without regard to case), as no other run
+ * lists them. Each sharing run says so in a `shared-model` notice. A run that shares no model is
  * returned as it is. It may run before or after `showOnly`; after it, a later run's totals still
  * count the model findings `showOnly` left out, which this step cannot see.
  */
@@ -191,11 +215,19 @@ export function shareModels(runs: ProjectRun[]): ProjectRun[] {
           .filter((f) => f.ruleId === RULE_COULD_NOT_FINISH.id)
           .map((f) => f.detail),
       );
+      const theirs = new Set(customIds(first).map((id) => id.toUpperCase()));
+      const added = customIds(run).filter((id) => !theirs.has(id.toUpperCase()));
+      const own = new Set(added.map((id) => id.toUpperCase()));
       return keepOnly(
         run,
         (f) =>
-          f.layer !== "model" || (f.ruleId === RULE_COULD_NOT_FINISH.id && !failures.has(f.detail)),
-        `${theModel} is shared with ${first.path}; its findings are listed there`,
+          f.layer !== "model" ||
+          own.has(f.ruleId.toUpperCase()) ||
+          (f.ruleId === RULE_COULD_NOT_FINISH.id && !failures.has(f.detail)),
+        `${theModel} is shared with ${first.path}; its findings are listed there` +
+          (added.length
+            ? `, except those of the custom rules only this project's config adds (${added.join(", ")})`
+            : ""),
       );
     }
     const unreached = rest.map(

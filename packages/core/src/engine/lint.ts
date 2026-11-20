@@ -7,15 +7,19 @@ import { buildFacts } from "../project/facts.js";
 import { isModelFile, isReportFile, routeFiles } from "../project/route.js";
 import type { Diagnostic, Fact, Layers, Project } from "../project/types.js";
 import { defaultRules } from "../rules/index.js";
+import { PARSE_ISSUE } from "../rules/parse-issue.js";
+import { RULE_COULD_NOT_FINISH } from "../rules/rule-could-not-finish.js";
 import type { Finding, LayerName, Rule } from "../rules/types.js";
 import { parseTmdl } from "../tmdl/parse.js";
 import {
   bindConfig,
+  ConfigError,
   isResolvedConfig,
   resolveConfig,
   type PbiplintConfig,
   type ResolvedConfig,
 } from "./config.js";
+import type { CustomRuleSet } from "./custom.js";
 import { rank, type RankedGroup } from "./rank.js";
 import { optionsFor, runRules, type RuleError, type SkippedRule } from "./run.js";
 
@@ -51,6 +55,29 @@ export interface LintOptions {
    * that layer was read.
    */
   unreadPaths?: Partial<Record<LayerName, string[]>>;
+  /**
+   * The project's custom rules, as `readCustomRules` (@pbiplint/core/custom-rules) builds them from
+   * the files its config's `customRules` names. They run after `rules`, in file order. Required
+   * when the config names rule files: a run without them throws a `ConfigError` rather than pass
+   * with the team's rules left out.
+   */
+  customRules?: CustomRuleSet;
+}
+
+/** One custom rule file in a run: the ids it holds, and what became of them. */
+export interface CustomRulesSummary {
+  file: string;
+  /** Every rule id the file holds, as written. */
+  rules: string[];
+  /**
+   * The ids of pbiplint's own rules, which take their place. An id whose pbiplint rule the config
+   * turns off is not here: neither rule runs, and the config's off covers it.
+   */
+  asBuiltIn: string[];
+  /** The ids of pbiplint's own rules the file's rules run in place of. */
+  replaced: string[];
+  /** The rules that ran and could not run to the end, each a RULE_COULD_NOT_FINISH finding. */
+  notRun: string[];
 }
 
 export interface LintSummary {
@@ -68,6 +95,8 @@ export interface LintSummary {
   unknownRules: string[];
   /** Set by `showOnly`: the rules kept and their counts, when the result shows only some rules. */
   shown?: ShownSummary;
+  /** Each custom rule file, when the run was given custom rules. */
+  customRules?: CustomRulesSummary[];
 }
 
 export interface ShownSummary {
@@ -98,11 +127,32 @@ export interface LintResult {
  * promise settles before the caller handles another event.
  */
 export async function lint(files: LintFile[], options: LintOptions = {}): Promise<LintResult> {
-  const rules = options.rules ?? defaultRules;
-  const { config, unknownRules } = bindConfig(
-    isResolvedConfig(options.config) ? options.config : resolveConfig(options.config),
-    rules,
-  );
+  const builtIn = options.rules ?? defaultRules;
+  const custom = options.customRules;
+  // Until same-id handling lands (#118, D2), a custom rule with the id of one of pbiplint's rules
+  // in this run is left out and pbiplint's own runs; with that rule not in `rules`, the custom one
+  // runs, so a team's rule is never dropped for nothing. One refused for taking a safety net's id
+  // runs, to say so.
+  const ownIds = new Set(builtIn.map((r) => r.id.toUpperCase()));
+  const asBuiltIn = (id: string) =>
+    ownIds.has(id.toUpperCase()) &&
+    id.toUpperCase() !== PARSE_ISSUE.id &&
+    id.toUpperCase() !== RULE_COULD_NOT_FINISH.id;
+  const rules = custom ? [...builtIn, ...custom.rules.filter((r) => !asBuiltIn(r.id))] : builtIn;
+  const resolved = isResolvedConfig(options.config)
+    ? options.config
+    : resolveConfig(options.config);
+  // A run must never pass in silence when a rule did not run (custom rules spec, section 2): a
+  // caller that read the config and not its rule files gets the config's refusal instead.
+  if (resolved.customRules.length > 0 && custom === undefined)
+    throw new ConfigError(
+      "pbiplint.config.json: customRules names rule files, and this run was not given them",
+    );
+  const { config, unknownRules } = bindConfig(resolved, rules);
+  // An id pbiplint's own rule takes, unless the config turns that rule off: then nothing runs in
+  // its place, so the notice and the summary leave it out.
+  const off = new Set([...config.disabled].map((id) => id.toUpperCase()));
+  const tookPlace = (id: string) => asBuiltIn(id) && !off.has(id.toUpperCase());
   const routed = routeFiles(files);
   // A path that names no file the layer reads is a folder, written with its trailing `/` or not.
   const folders = (paths: string[] | undefined, isFile: (path: string) => boolean) =>
@@ -131,11 +181,23 @@ export async function lint(files: LintFile[], options: LintOptions = {}): Promis
       : { present: false, reason: options.absent?.report ?? "no report in the input" },
   };
   const diagnostics = [...(options.diagnostics ?? []), ...(built?.diagnostics ?? [])];
+  for (const f of custom?.files ?? []) {
+    const ids = f.ids.filter(tookPlace);
+    if (ids.length === 0) continue;
+    const one = ids.length === 1;
+    diagnostics.push({
+      kind: "custom-rules",
+      path: f.path,
+      message: `${f.path}: ${one ? "1 rule has the ID of a pbiplint rule" : `${ids.length} rules have the IDs of pbiplint rules`} (${ids.join(", ")}), so pbiplint runs its own ${one ? "rule in its" : "rules in their"} place.`,
+    });
+  }
+  diagnostics.push(...(custom?.notices ?? []));
   // M is read after the model and before the indexes, so every rule reads the parsed M from
   // ctx.indexes.m and stays synchronous (v3 spec, section 4.2).
   const m = model ? await readM(model, routed.model) : emptyMIndex();
   const indexes = buildIndexes(project, m);
   const run = runRules(project, indexes, rules, config);
+  diagnostics.push(...run.notices);
   const groups = rank(run.findings, rules, config);
   // Only the rules that ran: a fact never links the page of a rule turned off or skipped. Their
   // options are the ones each was checked with, so a fact that links a rule only under a policy,
@@ -158,6 +220,15 @@ export async function lint(files: LintFile[], options: LintOptions = {}): Promis
     ruleErrors: run.ruleErrors,
     ignored: run.ignored,
     unknownRules,
+    ...(custom && {
+      customRules: custom.files.map((f) => ({
+        file: f.path,
+        rules: f.ids,
+        asBuiltIn: f.ids.filter(tookPlace),
+        replaced: [],
+        notRun: [...new Set(run.ruleErrors.filter((e) => e.ruleFile === f.path).map((e) => e.id))],
+      })),
+    }),
   };
   const failed = config.failOn !== null && groups.some((g) => g.rule.severity >= config.failOn!);
   return {

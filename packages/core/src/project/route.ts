@@ -1,6 +1,7 @@
 import type { LintFile } from "../engine/lint.js";
 import { datasetReferenceOf } from "../pbir/build.js";
 import { readJson } from "../pbir/json.js";
+import { isThemeFile } from "../pbir/themes.js";
 import type { DatasetReference } from "../pbir/types.js";
 import type { Diagnostic } from "./types.js";
 
@@ -10,12 +11,14 @@ export const isModelFile = (path: string): boolean => path.endsWith(".tmdl");
  * definition.pbir, .platform, a .pbip, or any JSON under a definition folder: the files a report is
  * made of. definition.pbir and .platform are known by their whole names, so `old.definition.pbir`
  * is not one. One below the report root is routed to the report too, where buildReport checks
- * that it parses but reads nothing from it: only the report's own, at its root, says anything.
+ * that it parses but reads nothing from it: only the report's own, at its root, says anything. A
+ * theme file (`isThemeFile`) is routed there too, and parsed only if report.json names it.
  */
 export const isReportFile = (path: string): boolean =>
   /(^|\/)(definition\.pbir|\.platform)$/.test(path) ||
   path.endsWith(".pbip") ||
-  /(^|\/)definition\/.*\.json$/.test(path);
+  /(^|\/)definition\/.*\.json$/.test(path) ||
+  isThemeFile(path);
 
 /**
  * Whether a file is a Power BI Desktop file, known by its name alone: one ending in `.pbix`,

@@ -123,6 +123,7 @@ export {
   visualLabel,
 } from "./pbir/names.js";
 export { collectFieldRefs } from "./pbir/refs.js";
+export { isThemeFile, MAX_THEME_BYTES, THEME_FOLDERS } from "./pbir/themes.js";
 export type * from "./pbir/types.js";
 export {
   projectBelowNotice,

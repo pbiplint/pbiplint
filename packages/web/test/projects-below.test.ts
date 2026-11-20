@@ -535,9 +535,10 @@ describe("a folder that holds several projects, in the CLI and the browser (#237
     monorepo(root);
     const sales = join(root, "reports", "Sales", "pbiplint.config.json");
     const lintDrop = async () => {
-      const selected = selectProjects(dropOf(root));
+      const tree = dropOf(root);
+      const selected = selectProjects(tree);
       if (selected.kind !== "several") throw new Error("the browser read one project");
-      return lintProjects(selected.projects);
+      return lintProjects(selected.projects, undefined, tree.handles);
     };
     const at = `${basename(root)}/reports/Sales/pbiplint.config.json`;
     writeFileSync(sales, j({ bogus: 1 }));
@@ -548,14 +549,65 @@ describe("a folder that holds several projects, in the CLI and the browser (#237
     );
     writeFileSync(sales, "{");
     await expect(lintDrop()).rejects.toThrow(new RegExp(`^${at} is not valid JSON: `));
-    // The page does not read rule files yet, so a config naming some refuses the drop in core's
-    // words rather than lint without the team's rules.
+    // A rule file that is not in the drop refuses the whole drop, naming the config that names
+    // it, before anything is linted; core's refusal of a run given no rule files never shows.
     writeFileSync(sales, j({ customRules: ["rules/team.json"] }));
     const refused = await lintDrop().catch((e: unknown) => e);
     expect(isConfigError(refused)).toBe(true);
     expect((refused as Error).message).toBe(
-      `${at}: customRules names rule files, and this run was not given them`,
+      `${at}: customRules: rules/team.json is not in the folder you dropped or chose; the path is relative to the folder pbiplint.config.json is in`,
     );
+    expect((refused as Error).message).not.toContain("this run was not given them");
+  });
+
+  it("lints with a config's custom rules as the CLI does, reading its files once for two projects", async () => {
+    // Two projects under one config at the top of the folder, which names both of the CLI
+    // fixture's rule files: the CLI's lintSeveral and the page's lintProjects give the same
+    // groups, the same summary of custom rules, and the same diagnostics.
+    const root = tempDir("both-several-custom");
+    const fixtures = fileURLToPath(
+      new URL("../../cli/test/fixtures/custom-rules", import.meta.url),
+    );
+    const model = fileURLToPath(
+      new URL("../../../tests/fixtures/custom-rules.SemanticModel", import.meta.url),
+    );
+    for (const name of ["A", "B"])
+      cpSync(model, join(root, name, "custom-rules.SemanticModel"), { recursive: true });
+    cpSync(fixtures, root, { recursive: true });
+    const named = resolveInput(root);
+    if (named.kind !== "several") throw new Error("the CLI read one project");
+    const cli = (await lintSeveral(root, named.projects, { cwd: root })).run.runs;
+    const tree = dropOf(root);
+    // Each handle counts its opens, so a config two projects share is seen to be read once.
+    const opened: string[] = [];
+    const handles = new Map(
+      [...tree.handles].map(([path, open]) => [
+        path,
+        () => {
+          opened.push(path);
+          return open();
+        },
+      ]),
+    );
+    const selected = selectProjects(tree);
+    if (selected.kind !== "several") throw new Error("the browser read one project");
+    const linted = (await lintProjects(selected.projects, undefined, handles))!;
+    const site = linted.runs;
+    const top = basename(root);
+    const files = [`${top}/rules/team.json`, `${top}/rules/more.json`];
+    expect(opened).toEqual(files);
+    expect(linted.ruleFiles).toEqual([files, files]);
+    const groups = (r: ProjectRun[]) =>
+      r.map((p) => p.result.groups.map((g) => [g.rule.id, g.findings.length]));
+    expect(groups(site)).toEqual(groups(cli));
+    expect(groups(site)[0]!.map(([id]) => id)).toContain("TEAM_MEASURES_IN_FOLDERS");
+    const custom = (r: ProjectRun[]) => r.map((p) => p.result.summary.customRules);
+    expect(custom(site)).toEqual(custom(cli));
+    expect(custom(site)[0]).toBeDefined();
+    const diagnostics = (r: ProjectRun[]) =>
+      r.map((p) => p.result.diagnostics.map((d) => [d.kind, d.message]));
+    expect(diagnostics(site)).toEqual(diagnostics(cli));
+    expect(runSummary(site)).toEqual(runSummary(cli));
   });
 
   it("caps a run at the same number of projects", () => {

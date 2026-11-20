@@ -14,8 +14,10 @@ import {
 import { lintProjects, parsedConfig } from "./lint-projects.js";
 import {
   InputError,
+  relativeToRoot,
   selectProjects,
   type InputTree,
+  type OpenFile,
   type SeveralProject,
 } from "./input/project-files.js";
 import { directoryPicker, readDirectoryInput, readPickedDirectory } from "./input/pick-folder.js";
@@ -29,10 +31,7 @@ import {
   withLearnLinks,
 } from "./results/render.js";
 import { SAMPLE_NAME, SAMPLE_TREE } from "./sample.js";
-// Brings the custom rules chunk into the build, so the site check holds it to its own file in
-// both builds. Nothing here calls the loader yet; the page fetches the chunk at idle once a drop
-// can read rule files, and this line then becomes that import.
-import "./rule-files.js";
+import { loadCustomRules, preloadCustomRules, readRuleFiles } from "./rule-files.js";
 
 /**
  * The page's own element, checked rather than cast: a #paste that stopped being a textarea would
@@ -53,6 +52,12 @@ const byId = <T extends HTMLElement>(id: string, type: new () => T): T => {
 // first check holds, and no request hints at the alphabet a project uses. A file that fails to load
 // leaves the system font in its place. happy-dom, which the unit tests run in, has no font API.
 if ("fonts" in document) document.fonts.forEach((face) => void face.load().catch(() => undefined));
+
+// The custom rules code is the site's own chunk, fetched from this origin once the page has loaded
+// and is idle, for the same reason: no request follows a drop, and a folder whose config names
+// rule files lints offline once the page is open. A fetch that fails here is tried again by the
+// drop that needs it, which says so if it fails again.
+preloadCustomRules();
 
 const paste = byId("paste", HTMLTextAreaElement);
 const status = byId("status", HTMLParagraphElement);
@@ -146,6 +151,13 @@ interface Run {
   /** What was linted, for the results heading, which adds each layer's file count. */
   source: string;
   config?: { path: string; text: string };
+  /** The project root in the drop, which `read` is relative to; the rule files are listed from it. */
+  root?: string;
+  /**
+   * An unopened handle on every file the walk passed, by its path in the drop, for the rule files
+   * a config names. None for a paste, and the sample's tree holds none.
+   */
+  handles?: ReadonlyMap<string, OpenFile>;
   /** What to list as read under the results: every file read, the config among them. None for a paste. */
   read?: string[];
   /** Sentences about the input for under the summary. */
@@ -173,11 +185,27 @@ async function painted(token: number): Promise<boolean> {
   return !superseded(token);
 }
 
-/** Every input ends up here: read the config if there is one, lint, render. Nothing touches the network. */
+/**
+ * The files read, with each rule file opened (a path in the drop) listed relative to the project
+ * root and marked "(custom rules)", in the name order the rest of the list keeps.
+ */
+function withRuleFiles(read: string[] | undefined, root: string, opened: string[]): string[] {
+  return [
+    ...(read ?? []),
+    ...opened.map((path) => `${relativeToRoot(root, path)} (custom rules)`),
+  ].sort((a, b) => a.localeCompare(b, "en"));
+}
+
+/**
+ * Every input ends up here: read the config if there is one, and the rule files it names, then
+ * lint and render. Nothing touches the network.
+ */
 async function run({
   files,
   source,
   config,
+  root = "",
+  handles = new Map(),
   read,
   notes,
   diagnostics,
@@ -187,13 +215,21 @@ async function run({
   // Every caller has claimed its token just before calling, so the newest token is this run's.
   const token = latestRun;
   try {
-    const raw = parsedConfig(config);
+    const resolved = resolveConfig(parsedConfig(config));
+    // The rule files the config names, opened from inside the drop only; none, and the custom
+    // rules code is never asked for, when it names none. The chunk was fetched at start-up.
+    const custom = config
+      ? await readRuleFiles(config, resolved.customRules, handles, loadCustomRules)
+      : undefined;
+    if (superseded(token)) return;
+    const listed = custom ? withRuleFiles(read, root, custom.opened) : read;
     if (!(await painted(token))) return;
     // The browser reads reports, so it lints with every default rule, as the CLI does. The time
     // is kept on the results for the performance test to read.
     const started = performance.now();
     const result = await lint(files, {
-      config: resolveConfig(raw),
+      config: resolved,
+      customRules: custom?.set,
       diagnostics,
       absent,
       unreadPaths,
@@ -204,7 +240,7 @@ async function run({
     // live region that first made the order matter has since moved out to #announce; the order
     // stays, and home.test.ts holds it.
     results.hidden = false;
-    renderResults(results, result, { source, files: read, notes });
+    renderResults(results, result, { source, files: listed, notes });
     keepResults(true);
     say("");
     // The results are rebuilt on every run, so the live region is this one paragraph that never
@@ -225,13 +261,20 @@ async function run({
  * microtasks, so without the wait the tab would not paint or take an input until every project
  * was done. A newer input made during a wait owns the page, and the run stops there.
  */
-async function runSeveral(projects: SeveralProject[]): Promise<void> {
+async function runSeveral(
+  projects: SeveralProject[],
+  handles: ReadonlyMap<string, OpenFile>,
+): Promise<void> {
   const token = latestRun;
   try {
-    const linted = await lintProjects(projects, (i) => {
-      say(`Linting project ${i + 1} of ${projects.length}`);
-      return painted(token);
-    });
+    const linted = await lintProjects(
+      projects,
+      (i) => {
+        say(`Linting project ${i + 1} of ${projects.length}`);
+        return painted(token);
+      },
+      handles,
+    );
     if (!linted) return;
     const shared = linted.runs;
     results.dataset.lintMs = String(Math.round(linted.ms));
@@ -240,7 +283,13 @@ async function runSeveral(projects: SeveralProject[]): Promise<void> {
     renderSeveral(
       results,
       shared,
-      projects.map((p) => ({ files: p.project?.read, notes: p.project?.notes ?? [] })),
+      projects.map(({ project }, i) => ({
+        files:
+          project && linted.ruleFiles[i]!.length > 0
+            ? withRuleFiles(project.read, project.root, linted.ruleFiles[i]!)
+            : project?.read,
+        notes: project?.notes ?? [],
+      })),
     );
     keepResults(true);
     say("");
@@ -262,7 +311,7 @@ function runEntries(tree: InputTree, name?: string): void {
   try {
     const selected = selectProjects(tree);
     if (selected.kind === "several") {
-      void runSeveral(selected.projects);
+      void runSeveral(selected.projects, tree.handles);
       return;
     }
     const { project } = selected;
@@ -270,6 +319,8 @@ function runEntries(tree: InputTree, name?: string): void {
       files: project.files,
       source: name ?? (project.root || "the dropped file"),
       config: project.config,
+      root: project.root,
+      handles: tree.handles,
       read: project.read,
       notes: project.notes,
       diagnostics: project.diagnostics,

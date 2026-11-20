@@ -57,16 +57,20 @@ describe.each([
 });
 
 describe("the site's CLI page's links", () => {
-  it("go only to pages the site builds: a page folder in packages/web, or a rule's page", () => {
+  it("go only to pages the site builds: the home page, the rules index, a content page, or a rule's page", () => {
+    // Read from the sources the build writes pages from, so the check holds before any build runs.
     const page = readFileSync(new URL("../../web/content/cli.md", import.meta.url), "utf8");
     const links = [...page.matchAll(/\]\((\/[^)#]*)(?:#[^)]*)?\)/g)].map((m) => m[1]!);
     expect(links.length).toBeGreaterThan(3);
     const missing = links.filter((link) => {
+      if (link === "/") return !existsSync(new URL("../../web/index.html", import.meta.url));
+      if (link === "/rules/") return false;
       const rule = /^\/rules\/([a-z0-9-]+)\/$/.exec(link);
-      const source = rule
-        ? new URL(`../../../rules/${rule[1]}.md`, import.meta.url)
-        : new URL(`../../web${link}index.html`, import.meta.url);
-      return !existsSync(source);
+      if (rule) return !existsSync(new URL(`../../../rules/${rule[1]}.md`, import.meta.url));
+      const content = /^\/(.+)\/$/.exec(link);
+      return (
+        !content || !existsSync(new URL(`../../web/content/${content[1]}.md`, import.meta.url))
+      );
     });
     expect(missing).toEqual([]);
   });

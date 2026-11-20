@@ -143,6 +143,49 @@ export function withLearnLinks(text: string): (string | HTMLAnchorElement)[] {
   return text.split(LINKED).map((part, i) => (i % 2 ? newTabLink({ href: part }, part) : part));
 }
 
+/**
+ * What a team's own rule is called on the page (custom rules spec, section 8): the tag on its group
+ * and, where a built-in rule links to its page, on its fix-first item.
+ */
+export const TEAM_RULE = "Your team's rule";
+
+/**
+ * The categories the groups name, for the Show filter: pbiplint's eight in their order, then a
+ * team's own, as written, alphabetically, the order core ranks groups in.
+ */
+export function categoriesOf(groups: readonly RankedGroup[]): string[] {
+  const present = new Set(groups.map((g) => g.rule.category));
+  const own: readonly string[] = CATEGORY_ORDER;
+  return [
+    ...own.filter((c) => present.has(c)),
+    ...[...present].filter((c) => !own.includes(c)).sort((a, b) => a.localeCompare(b, "en")),
+  ];
+}
+
+/**
+ * Each group's slug, by rule id, for its id on the page. pbiplint's rules keep their own, which
+ * are unique. A team's ids are written by hand, so two can share a slug (`TEAM_FLOAT COLUMNS` and
+ * `TEAM_FLOAT_COLUMNS`) or have none (`___`): such a slug takes `-2`, `-3`, and so on, the first
+ * that no group has, in the groups' order, so every group and every link to one is its own.
+ */
+export function groupSlugs(groups: readonly RankedGroup[]): Map<string, string> {
+  const slugs = new Map<string, string>();
+  const taken = new Set<string>();
+  for (const g of groups)
+    if (!g.rule.custom) {
+      slugs.set(g.rule.id, g.rule.slug);
+      taken.add(g.rule.slug);
+    }
+  for (const g of groups) {
+    if (!g.rule.custom) continue;
+    let s = g.rule.slug;
+    for (let n = 2; s === "" || taken.has(s); n++) s = `${g.rule.slug}-${n}`;
+    slugs.set(g.rule.id, s);
+    taken.add(s);
+  }
+  return slugs;
+}
+
 const SEVERITIES: readonly Severity[] = [3, 2, 1];
 /** The file families, for the heading's file counts. The filter's families are FILTER_LAYERS. */
 const LAYERS: readonly LayerName[] = ["model", "report"];
@@ -187,6 +230,8 @@ export function renderResults(
   options: RenderOptions,
 ): void {
   const ids: Ids = idsFor(options.section);
+  const slugs = groupSlugs(result.groups);
+  const anchor = (g: RankedGroup): string => ids.group(slugs.get(g.rule.id) ?? g.rule.slug);
   container.replaceChildren(
     ...(options.section === undefined ? [privacyLine()] : []),
     h(ids.top, {}, heading(result, options.source)),
@@ -213,7 +258,7 @@ export function renderResults(
     ...renderFilesRead(options.files),
     // What the report will do, whether or not anything fired: after everything that says what
     // was read, before what to fix. A run with no report has no facts and no panel.
-    ...renderFacts(result, ids),
+    ...renderFacts(result, ids, slugs),
   );
   // Cleared on every render and set again below only when there are filters to change and groups
   // to link to, so a run with no findings cannot leave the previous run's handlers on the container.
@@ -230,22 +275,23 @@ export function renderResults(
       { class: "fix-first" },
       // The name jumps to the group; the second link opens the rule page, which is otherwise only
       // reachable from inside the group once it is expanded. The tag sits between the count and
-      // that link, where the approved mockup puts it.
+      // that link, where the approved mockup puts it. A team's rule has no page, so its item says
+      // whose rule it is there instead.
       ...topGroups(result).map((g) =>
         h(
           "li",
           {},
-          h("a", { href: `#${ids.group(g.rule.slug)}` }, g.rule.name),
+          h("a", { href: `#${anchor(g)}` }, g.rule.name),
           ` (${count(g.findings.length, g.rule.severity)}) `,
           layerTag(g),
           " · ",
-          fixLink(g),
+          g.rule.custom ? teamTag() : fixLink(g),
         ),
       ),
     ),
     ...renderExportBar(result, ids),
     renderFilters(result),
-    h("div", { class: "groups" }, ...result.groups.map((g) => renderGroup(g, ids))),
+    h("div", { class: "groups" }, ...result.groups.map((g) => renderGroup(g, anchor(g)))),
   );
   // One handler of each kind for the whole container, assigned rather than added, so re-rendering
   // replaces them instead of stacking a second one.
@@ -429,6 +475,24 @@ function filterBoxes(container: HTMLElement, kind: string): HTMLInputElement[] {
 const layerTag = (g: RankedGroup): HTMLElement =>
   h("span", { class: `layer ${g.rule.layer}` }, LAYER_LABEL[g.rule.layer]);
 
+/** "Your team's rule": on a team's group, after its layer tag, and on its fix-first item. */
+const teamTag = (): HTMLElement => h("span", { class: "team-tag" }, TEAM_RULE);
+
+/**
+ * A team's description, which stands in for the rule page a built-in rule links to. Text only, as
+ * everything from a rule file is. Each line goes through `showControls`, so a control character in
+ * it shows as an escape, while the line breaks themselves stay breaks, which `white-space:
+ * pre-line` shows.
+ */
+function ruleDescription(text: string): HTMLElement {
+  const p = h("p", { class: "rule-description" });
+  text.split(/\r\n|\r|\n/).forEach((line, i) => {
+    if (i > 0) p.append(document.createTextNode("\n"));
+    p.append(showControls(line));
+  });
+  return p;
+}
+
 /**
  * "How to fix it", on a fix-first item and in a group's panel: the rule's page. Up to ten of them
  * read the same, so the accessible name says which rule each one opens.
@@ -450,9 +514,8 @@ const fixLink = (g: RankedGroup): HTMLAnchorElement =>
  * in a new tab, when the rule found nothing. Every href is built from the rule id, never from report
  * text.
  */
-function renderFacts(result: LintResult, ids: Ids): HTMLElement[] {
+function renderFacts(result: LintResult, ids: Ids, onPage: Map<string, string>): HTMLElement[] {
   if (result.facts.length === 0) return [];
-  const onPage = new Map(result.groups.map((g) => [g.rule.id, g.rule.slug]));
   const value = (f: Fact): Node | string => {
     if (f.ruleId === undefined) return f.value;
     const here = onPage.get(f.ruleId);
@@ -573,7 +636,7 @@ function renderFilters(result: LintResult): HTMLElement {
       label,
     );
   const severities = SEVERITIES.filter((s) => result.groups.some((g) => g.rule.severity === s));
-  const categories = CATEGORY_ORDER.filter((c) => result.groups.some((g) => g.rule.category === c));
+  const categories = categoriesOf(result.groups);
   // "Error", not "error": the category labels beside them are title case.
   const titleCase = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
   // Layer boxes only when the groups span two or more families: with one, unchecking it would only
@@ -627,7 +690,12 @@ function contrastImage(f: Finding): HTMLImageElement | null {
   return sample ? h("img", { src: sample.src, alt: sample.alt, class: "contrast-sample" }) : null;
 }
 
-function renderGroup(g: RankedGroup, ids: Ids): HTMLElement {
+/**
+ * A group: its summary, the line under it, and the findings. A team's rule says so after its layer
+ * tag, names its file where a built-in rule links to its page, and shows its description below.
+ * `id` is the group's id on the page (see groupSlugs).
+ */
+function renderGroup(g: RankedGroup, id: string): HTMLElement {
   const label = SEVERITY_LABEL[g.rule.severity];
   const rows = g.findings.map((f) =>
     h(
@@ -643,7 +711,7 @@ function renderGroup(g: RankedGroup, ids: Ids): HTMLElement {
     "details",
     {
       class: "group",
-      id: ids.group(g.rule.slug),
+      id,
       "data-severity": String(g.rule.severity),
       "data-category": g.rule.category,
       "data-layer": g.rule.layer,
@@ -656,6 +724,7 @@ function renderGroup(g: RankedGroup, ids: Ids): HTMLElement {
       {},
       h("span", { class: `badge ${label}` }, label),
       layerTag(g),
+      g.rule.custom ? teamTag() : null,
       h("span", { class: "name" }, g.rule.name),
       // The digits are for the eye, the phrase for a screen reader: "2" beside a rule name is a
       // number with no noun, and both in the open would read the count out twice.
@@ -666,7 +735,15 @@ function renderGroup(g: RankedGroup, ids: Ids): HTMLElement {
         h("span", { class: "visually-hidden" }, count(g.findings.length, g.rule.severity)),
       ),
     ),
-    h("p", { class: "meta" }, h("code", {}, g.rule.id), ` · ${g.rule.category} · `, fixLink(g)),
+    g.rule.custom
+      ? h(
+          "p",
+          { class: "meta" },
+          h("code", {}, g.rule.id),
+          ` · ${g.rule.category} · ${g.rule.ruleFile ?? ""}`,
+        )
+      : h("p", { class: "meta" }, h("code", {}, g.rule.id), ` · ${g.rule.category} · `, fixLink(g)),
+    g.rule.custom && g.rule.description ? ruleDescription(g.rule.description) : null,
     // The wrapper scrolls sideways on a narrow screen, so a long object name never widens the page.
     // Nothing inside it takes focus, so it is a named tab stop of its own for keyboard scrolling.
     h(

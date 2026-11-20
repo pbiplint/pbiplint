@@ -655,6 +655,18 @@ button.secondary:hover,
   color: var(--fg-2);
   font-size: 13px;
 }
+/* A team's own rule has no page, so its description stands where a built-in rule's link would
+   lead, under the meta line and in step with it. The rule file's line breaks are kept, and a long
+   word wraps rather than widening the page. */
+.group .rule-description {
+  margin: 0;
+  padding: 0 16px 12px 42px;
+  color: var(--fg-1);
+  font-size: 14px;
+  max-width: 80ch;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
 .badge {
   display: inline-block;
   font-size: 11px;
@@ -719,6 +731,18 @@ button.secondary:hover,
   border-style: dotted;
   border-color: var(--layer-powerquery);
   color: var(--layer-powerquery);
+}
+/* "Your team's rule", beside the layer tag on a team's group and in place of the rule page link
+   on its fix-first item: outlined like a layer tag, but a pill, so it is told from one by its
+   shape as well as its words, and in the page's strongest text colour. */
+.team-tag {
+  display: inline-block;
+  font-size: 11px;
+  border: 1px solid var(--fg-3);
+  border-radius: 999px;
+  padding: 0 8px;
+  color: var(--fg-1);
+  white-space: nowrap;
 }
 /* The same phrase on every row, so it reads as the secondary link it is beside the rule's own
    name, and never breaks across the separator before it. It keeps the link colour and the

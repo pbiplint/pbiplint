@@ -10,6 +10,7 @@ file.
 
 pbiplint bundles rule definitions derived from BPARules.json in the
 microsoft/Analysis-Services repository (https://github.com/microsoft/Analysis-Services),
+and a copy of that file itself for tests (tests/rules/microsoft/BPARules.json),
 which is licensed under the MIT License:
 
 MIT License

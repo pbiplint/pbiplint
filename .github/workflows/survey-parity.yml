@@ -1,0 +1,37 @@
+name: Survey parity
+
+# Custom rules held to Tabular Editor's results on the survey's 46 rule files (spec section 11 of
+# docs/superpowers/specs/2026-11-06-custom-rules-design.md). The files are not committed, since
+# several carry no license: the job fetches each at its pinned commit and checks its sha256. A file
+# GitHub no longer has is listed and skipped. Pull request CI runs Microsoft's file only
+# (packages/core/test/custom-te-microsoft.test.ts); this runs on demand, weekly, and on each
+# release commit before it is tagged (docs/RELEASING.md).
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Mondays at 04:17 UTC, off the hour when scheduled runs bunch up.
+    - cron: "17 4 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  survey:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Fetch the survey's rule files at their commits
+        run: node scripts/fetch-survey-rules.mjs tests/expectations/survey/files.json "$RUNNER_TEMP/survey"
+      - name: Run the survey parity test
+        # The default reporter, with the test's own output, prints the tally of matches and
+        # deviations by reason, and any file listed as unavailable.
+        run: npx vitest run packages/core/test/custom-te-survey.test.ts --reporter=default --silent=false
+        env:
+          PBIPLINT_SURVEY_DIR: ${{ runner.temp }}/survey

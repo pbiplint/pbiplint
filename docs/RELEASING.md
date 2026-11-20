@@ -57,13 +57,16 @@ drafted from those comments.
    commit that skips the README cannot pass CI.
 
 2. Commit as `chore: release v0.2.0`, open a pull request, let CI pass, merge.
-3. Tag the merge commit and push the tag:
+3. Run Survey parity on the merge commit and see it green before tagging: in Actions, choose
+   Survey parity, then Run workflow on main. It holds custom rules to Tabular Editor's results
+   on the survey's 46 rule files, which pull request CI does not fetch.
+4. Tag the merge commit and push the tag:
 
    ```bash
    git fetch origin main && git tag v0.2.0 origin/main && git push origin v0.2.0
    ```
 
-4. The Release workflow verifies the tag against the version, runs every check, builds, dry-runs
+5. The Release workflow verifies the tag against the version, runs every check, builds, dry-runs
    the tarballs, publishes both packages, and creates the GitHub release with generated notes. It
    does that in two jobs, so anything that fails once the checks are green failed in the second
    one: `verify` checks the tag and runs lint, types, tests, the browser check and the pack check,
@@ -75,7 +78,7 @@ drafted from those comments.
    attestation for the first two, which lets a firm verify them without a GitHub sign-in. The archive
    is packed before the npm publish, so a failure there publishes nothing.
    Watch it with `gh run watch --repo pbiplint/pbiplint`.
-5. Check the published build against the one you tagged, rather than against a number written
+6. Check the published build against the one you tagged, rather than against a number written
    here that drifts with every rule added:
 
    ```bash
@@ -103,16 +106,16 @@ drafted from those comments.
    git rev-parse 'v0.2.0^{commit}' | cut -c1-7   # the same seven characters
    ```
 
-6. Bump the GitHub Action's pin. In https://github.com/pbiplint/action, change the
+7. Bump the GitHub Action's pin. In https://github.com/pbiplint/action, change the
    `pbiplint-version` default in `action.yml` and the version in the README's inputs table to the
    new version, then release the action following its own `RELEASING.md`. Until then, workflows
    using `pbiplint/action@v1` keep running the previous CLI.
-7. Bump the Azure Pipelines task's pin the same way. In https://github.com/pbiplint/azure-pipelines,
+8. Bump the Azure Pipelines task's pin the same way. In https://github.com/pbiplint/azure-pipelines,
    change the `pbiplintVersion` default in `task/task.json`, the README's and the Marketplace
    listing's (`overview.md`) inputs tables, the plain YAML route's `PBIPLINT_VERSION`, and the test
    organization's `test/pipelines/plain.yml`, then publish the extension following its own
    `RELEASING.md`. Until then, pipelines using `pbiplint@1` keep running the previous CLI.
-8. Release the Claude plugin, which carries the CLI's own version, following
+9. Release the Claude plugin, which carries the CLI's own version, following
    [pbiplint/claude-plugin's `RELEASING.md`](https://github.com/pbiplint/claude-plugin/blob/main/RELEASING.md#after-a-pbiplint-release),
    "After a pbiplint release": the version pinned in the plugin's files, the bundled skill refreshed
    from the published CLI, the `.mcpb` built from the published package, a pull request with CI
@@ -200,6 +203,15 @@ with Tabular Editor CLI 0.8.1.1 in November 2026, four ways, under `tests/expect
 They sit apart because both carry Tabular Editor's `BestPracticeAnalyzer_IgnoreRules` annotation,
 which pbiplint does not read yet, so the parity tests do not read them; `scripts/test/te-captures.test.mjs`
 checks them on their own.
+
+Custom rules are held to these captures as well. Pull request CI runs
+`packages/core/test/custom-te-microsoft.test.ts`, which runs Microsoft's ruleset, vendored as
+`tests/rules/microsoft/BPARules.json`, on every captured fixture. The survey's other files are
+fetched at their commits by `scripts/fetch-survey-rules.mjs` and run by
+`packages/core/test/custom-te-survey.test.ts` in the Survey parity workflow
+(`.github/workflows/survey-parity.yml`), on demand, weekly, and before each release. Both read a
+custom rule's recorded deviations from the `custom` key of each survey capture, by rule file id,
+then rule id.
 
 Tabular Editor CLI 0.7.1.2 stopped working after October 31, 2026. Tabular Editor then extended the
 preview: the

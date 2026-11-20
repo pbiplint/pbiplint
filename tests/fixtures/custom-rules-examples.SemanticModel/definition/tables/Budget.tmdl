@@ -1,0 +1,28 @@
+table Budget
+
+	measure 'Total Budget' = SUM(Budget[Budget Amount])
+		formatString: #,0.00
+		displayFolder: Totals
+
+	column 'Fiscal Month'
+		dataType: string
+		displayFolder: Budget
+		summarizeBy: none
+		sourceColumn: Fiscal Month
+
+	column 'Budget Amount'
+		dataType: decimal
+		formatString: #,0.00
+		displayFolder: Budget
+		summarizeBy: sum
+		sourceColumn: Budget Amount
+
+	partition Budget = m
+		mode: import
+		source =
+				let
+						Source = Csv.Document(File.Contents("C:\Demo\Data\budget.csv"), [Delimiter=",", Columns=2, Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+						Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+						Typed = Table.TransformColumnTypes(Promoted, {{"Fiscal Month", type text}, {"Budget Amount", Currency.Type}})
+				in
+						Typed

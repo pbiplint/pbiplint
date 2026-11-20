@@ -1,0 +1,17 @@
+table Scratch
+
+	column 'Test Value'
+		dataType: string
+		summarizeBy: none
+		sourceColumn: TEST_VALUE
+
+	partition Scratch = m
+		mode: import
+		source =
+				let
+						Source = Snowflake.Databases("example.snowflakecomputing.com", "ANALYTICS_WH"),
+						Db = Source{[Name="ANALYTICS",Kind="Database"]}[Data],
+						Schema = Db{[Name="SANDBOX",Kind="Schema"]}[Data],
+						Trial = Schema{[Name="TRIAL",Kind="Table"]}[Data]
+				in
+						Trial

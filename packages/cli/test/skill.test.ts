@@ -59,6 +59,14 @@ describe("the skill file", () => {
     for (const name of [...linting, "quiet", "rules"]) expect(run).toContain(`\`${name}\``);
   });
 
+  it("points to the custom rules skill and the reference for writing a team's own rule", () => {
+    const run = /^## How to run it\n([\s\S]*?)\n## /m.exec(text)![1]!;
+    const pointer = run.split("\n").filter((l) => l.includes("`pbiplint-custom-rules`"));
+    expect(pointer).toHaveLength(1);
+    expect(pointer[0]).toContain("`custom_rules_reference`");
+    expect(pointer[0]).toContain("`pbiplint reference`");
+  });
+
   it("says a folder that holds several projects lints whole, and how the quiet output names each (#237)", () => {
     const flat = text.replace(/\s+/g, " ");
     expect(flat).toContain(

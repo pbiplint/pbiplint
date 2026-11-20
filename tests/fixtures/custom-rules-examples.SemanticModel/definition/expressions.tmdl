@@ -1,0 +1,10 @@
+expression 'Finance Targets' =
+		let
+				Source = Snowflake.Databases("example.snowflakecomputing.com", "ANALYTICS_WH"),
+				Db = Source{[Name="ANALYTICS",Kind="Database"]}[Data],
+				Schema = Db{[Name="FINANCE",Kind="Schema"]}[Data],
+				Targets = Schema{[Name="TARGETS",Kind="Table"]}[Data]
+		in
+				Targets
+
+	annotation PBI_ResultType = Table

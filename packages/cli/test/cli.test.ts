@@ -9,7 +9,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { defaultRules, lint, type Rule } from "@pbiplint/core";
-import { readCustomRules } from "@pbiplint/core/custom-rules";
+import { LIMITS, readCustomRules } from "@pbiplint/core/custom-rules";
 import { describe, expect, it } from "vitest";
 import { tempDir } from "../../../tests/support/temp-dir.js";
 import { EXPLAIN_HINT, main } from "../src/main.js";
@@ -445,7 +445,11 @@ describe("pbiplint CLI", () => {
       out: "",
       err: 'pbiplint: no rule named "HIDE_FOREIGN_KEY"\nDid you mean HIDE_FOREIGN_KEYS?\nRun pbiplint rules for the list.\n',
     });
-    expect((await run([join(repo, "nope"), "--rule", "zzzz"])).err).toContain("no rule named");
+    // An id that is not built-in may be a custom rule's, which only the config can say (#118), so
+    // a path that cannot be read is told first.
+    const missing = await run([join(repo, "nope"), "--rule", "zzzz"]);
+    expect(missing.code).toBe(2);
+    expect(missing.err).not.toContain("no rule named");
   });
   it("lints a folder named explain when given as ./explain", async () => {
     const dir = tempDir("explain-folder");
@@ -1231,5 +1235,144 @@ describe("--quiet with a custom rule whose id holds whitespace", () => {
     expect(ruleLines.some((l) => /^\w+ [A-Z0-9_]+ \d+$/.test(l) && !l.includes("TEAM"))).toBe(true);
     // Everywhere else the id appears as written.
     expect(result.groups.map((g) => g.rule.id)).toContain("TEAM TABLES\tALL");
+  });
+});
+
+describe("custom rules from the config (#118)", () => {
+  const teamRules = [
+    {
+      ID: "TEAM_MEASURES",
+      Name: "Every measure, for the test",
+      Description: "Finds each measure, so a test can see the rule ran.",
+      Category: "Team",
+      Severity: 2,
+      Scope: "Measure",
+      Expression: 'Name <> ""',
+    },
+  ];
+  /** A copy of the sample whose config names `entries`, with `files` written below it. */
+  function teamProject(
+    name: string,
+    entries: unknown,
+    files: Record<string, string> = { "rules/team.json": JSON.stringify(teamRules) },
+  ): string {
+    const root = tempDir(name);
+    cpSync(sample, root, { recursive: true });
+    const config = JSON.parse(readFileSync(join(sample, "pbiplint.config.json"), "utf8"));
+    writeFileSync(
+      join(root, "pbiplint.config.json"),
+      JSON.stringify({ ...config, ...(entries === undefined ? {} : { customRules: entries }) }),
+    );
+    for (const [path, text] of Object.entries(files)) {
+      mkdirSync(join(root, path, ".."), { recursive: true });
+      writeFileSync(join(root, path), text);
+    }
+    return root;
+  }
+
+  it("runs a rule file's rules, named by the entry with forward slashes", async () => {
+    const root = teamProject("custom-runs", [".\\rules\\team.json"]);
+    const r = await run([root, "--format", "json", "--fail-on", "none"]);
+    expect(r.code).toBe(0);
+    const doc = JSON.parse(r.out);
+    const group = doc.groups.find((g: { rule: { id: string } }) => g.rule.id === "TEAM_MEASURES");
+    expect(group.rule).toMatchObject({ custom: true, ruleFile: "rules/team.json", severity: 2 });
+    expect(group.findings.length).toBeGreaterThan(0);
+    expect(doc.summary.customRules).toEqual([
+      {
+        file: "rules/team.json",
+        rules: ["TEAM_MEASURES"],
+        asBuiltIn: [],
+        replaced: [],
+        notRun: [],
+      },
+    ]);
+    const text = await run([root, "--fail-on", "none"]);
+    expect(text.out).toContain("custom rule, rules/team.json");
+  });
+
+  it("exits 2 naming the config and the file when a rule file is missing", async () => {
+    const root = teamProject("custom-missing", ["rules/team.json"], {});
+    expect(await run([root])).toEqual({
+      code: 2,
+      out: "",
+      err: "pbiplint: pbiplint.config.json: customRules: rules/team.json could not be read (ENOENT)\n",
+    });
+  });
+
+  it("exits 2 when a folder stands where a rule file should be", async () => {
+    const root = teamProject("custom-folder", ["rules"]);
+    expect(await run([root])).toEqual({
+      code: 2,
+      out: "",
+      err: "pbiplint: pbiplint.config.json: customRules: rules could not be read (EISDIR)\n",
+    });
+  });
+
+  it("exits 2 on a rule file over the size limit, without reading it", async () => {
+    const root = teamProject("custom-large", ["rules/team.json"], {
+      "rules/team.json": " ".repeat(LIMITS.fileBytes + 1),
+    });
+    expect(await run([root])).toEqual({
+      code: 2,
+      out: "",
+      err: `pbiplint: pbiplint.config.json: customRules: rules/team.json is ${(LIMITS.fileBytes + 1).toLocaleString("en")} bytes, over the limit of ${LIMITS.fileBytes.toLocaleString("en")} bytes for a rule file\n`,
+    });
+    // At the limit it is read, and refused only for what it holds.
+    const at = teamProject("custom-at-limit", ["rules/team.json"], {
+      "rules/team.json": `[]${" ".repeat(LIMITS.fileBytes - 2)}`,
+    });
+    expect((await run([at, "--fail-on", "none"])).code).toBe(0);
+  });
+
+  it("exits 2 with the reader's reason for a file it refuses whole", async () => {
+    const root = teamProject("custom-refused", ["rules/team.json"], {
+      "rules/team.json": "this is not JSON",
+    });
+    const r = await run([root]);
+    expect(r.code).toBe(2);
+    expect(r.out).toBe("");
+    expect(r.err).toMatch(/^pbiplint: pbiplint\.config\.json: customRules: rules\/team\.json: \S/);
+    expect(r.err.split("\n")).toHaveLength(2);
+  });
+
+  it("exits 2 naming the key for a URL entry", async () => {
+    const r = await run([teamProject("custom-url", ["https://example.com/team.json"])]);
+    expect(r.code).toBe(2);
+    expect(r.out).toBe("");
+    expect(r.err).toContain("pbiplint: pbiplint.config.json: customRules[0] is a URL");
+  });
+
+  it("gives with an empty list exactly what it gives without the key", async () => {
+    const without = teamProject("custom-none", undefined);
+    const empty = teamProject("custom-empty", []);
+    for (const format of ["text", "json", "sarif", "markdown"]) {
+      const a = await run([".", "--format", format, "--fail-on", "none"], without);
+      const b = await run([".", "--format", format, "--fail-on", "none"], empty);
+      expect(b, format).toEqual(a);
+    }
+  });
+
+  it("--rule takes a custom id, in any case, once the config is read", async () => {
+    const root = teamProject("custom-rule-flag", ["rules/team.json"]);
+    const r = await run([root, "--rule", "team_measures", "--format", "json"]);
+    // A warning, so the default gate passes; --fail-on warning counts it.
+    expect(r.code).toBe(0);
+    expect((await run([root, "--rule", "TEAM_MEASURES", "--fail-on", "warning"])).code).toBe(1);
+    const doc = JSON.parse(r.out);
+    expect(doc.groups.map((g: { rule: { id: string } }) => g.rule.id)).toEqual(["TEAM_MEASURES"]);
+    expect(doc.summary.shown.rules).toEqual(["TEAM_MEASURES"]);
+    // A near miss is told as for a built-in id, with the custom id among the suggestions.
+    expect(await run([root, "--rule", "TEAM_MEASURE"])).toEqual({
+      code: 2,
+      out: "",
+      err: 'pbiplint: no rule named "TEAM_MEASURE"\nDid you mean TEAM_MEASURES?\nRun pbiplint rules for the list.\n',
+    });
+    // Without the config's rules, the id is unknown.
+    expect(await run([sample, "--rule", "TEAM_MEASURES"])).toEqual({
+      code: 2,
+      out: "",
+      err: 'pbiplint: no rule named "TEAM_MEASURES"\nRun pbiplint rules for the list.\n',
+    });
   });
 });

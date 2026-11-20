@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readCustomRules } from "@pbiplint/core/custom-rules";
 import { resolveConfig } from "../src/engine/config.js";
 import { lint, type LintFile, type LintResult } from "../src/engine/lint.js";
 import {
@@ -175,6 +176,57 @@ describe("shareModels", () => {
     expect(s.groups.flatMap((g) => g.findings)).toContain(failure);
     const { findings, errors, warnings, infos } = s.summary;
     expect({ findings, errors, warnings, infos }).toEqual(counts(s));
+  });
+
+  it("keeps the custom findings of rules only a later project's config adds", async () => {
+    const teamRule = (id: string) => ({
+      ID: id,
+      Name: `${id} rule`,
+      Severity: 2,
+      Scope: "Measure",
+      Expression: 'Name <> ""',
+    });
+    const custom = (...ids: string[]) =>
+      readCustomRules([
+        { path: "rules/team.json", text: JSON.stringify(ids.map((id) => teamRule(id))) },
+      ]);
+    const a = await lint([...model, ...report(measure("Sales", "A"))], {
+      config,
+      customRules: custom("TEAM_A"),
+    });
+    // The later config writes TEAM_A in another case: the same id, so its findings are the first's.
+    const b = await lint([...model, ...report(column("Sales", "Amount"))], {
+      config,
+      customRules: custom("team_a", "TEAM_B"),
+    });
+    const ofRule = (r: LintResult, id: string) => r.findings.filter((f) => f.ruleId === id);
+    expect(ofRule(b, "TEAM_B").map((f) => f.objectName)).toEqual(["[A]", "[B]"]);
+    const [first, second] = shareModels([
+      run("a/A.pbip", a, { modelKey: "m" }),
+      run("b/B.pbip", b, { modelKey: "m" }),
+    ]);
+    expect(ofRule(first!.result, "TEAM_A")).toHaveLength(2);
+    const s = second!.result;
+    expect(ofRule(s, "team_a")).toEqual([]);
+    expect(ofRule(s, "TEAM_B")).toEqual(ofRule(b, "TEAM_B"));
+    expect(s.groups.find((g) => g.rule.id === "TEAM_B")?.findings).toHaveLength(2);
+    // Only the added rule's findings stay on the model layer.
+    expect(s.findings.filter((f) => f.layer === "model").every((f) => f.ruleId === "TEAM_B")).toBe(
+      true,
+    );
+    const { findings, errors, warnings, infos } = s.summary;
+    expect({ findings, errors, warnings, infos }).toEqual(counts(s));
+    expect(s.diagnostics.at(-1)!.message).toBe(
+      "the model is shared with a/A.pbip; its findings are listed there, except those of the custom rules only this project's config adds (TEAM_B)",
+    );
+    // A first run with no custom rules leaves every custom rule of a later one its own.
+    const plain = await lint([...model, ...report(measure("Sales", "A"))], { config });
+    const [, again] = shareModels([
+      run("a/A.pbip", plain, { modelKey: "m" }),
+      run("b/B.pbip", b, { modelKey: "m" }),
+    ]);
+    expect(ofRule(again!.result, "team_a")).toHaveLength(2);
+    expect(ofRule(again!.result, "TEAM_B")).toHaveLength(2);
   });
 
   it("says which config a shared model's findings follow when the configs differ", () => {

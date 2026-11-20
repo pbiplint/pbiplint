@@ -73,11 +73,12 @@ function distance(a: string, b: string): number {
  * The rule ids nearest a mistyped one, compared as slugs: those that contain it first, then those
  * within an edit distance of a quarter of its length (at least 2), nearest first, at most three.
  */
-export function suggest(input: string): string[] {
+export function suggest(input: string, custom: readonly Rule[] = []): string[] {
   const s = slug(input);
   if (s === "") return [];
   const limit = Math.max(2, Math.floor(s.length / 4));
-  return defaultRules
+  const own = new Set(defaultRules.map((r) => r.id.toUpperCase()));
+  return [...defaultRules, ...custom.filter((r) => !own.has(r.id.toUpperCase()))]
     .map((r) => {
       const id = slug(r.id);
       return { id: r.id, d: id.includes(s) ? 0 : distance(s, id) };
@@ -94,9 +95,21 @@ export function findRule(input: string): Rule | undefined {
   return wanted === "" ? undefined : defaultRules.find((r) => slug(r.id) === wanted);
 }
 
+/**
+ * The custom rule an id names, among `rules`: its id in any case, or failing that its slug, as
+ * `findRule` matches a built-in id.
+ */
+export function findCustomRule(input: string, rules: readonly Rule[] = []): Rule | undefined {
+  const upper = input.trim().toUpperCase();
+  const exact = rules.find((r) => r.id.toUpperCase() === upper);
+  if (exact) return exact;
+  const wanted = slug(input);
+  return wanted === "" ? undefined : rules.find((r) => slug(r.id) === wanted);
+}
+
 /** What stderr says for an id that names no rule: the id, the nearest ids, and where the list is. */
-export function noRuleLines(input: string): string[] {
-  const s = suggest(input);
+export function noRuleLines(input: string, custom: readonly Rule[] = []): string[] {
+  const s = suggest(input, custom);
   return [
     `pbiplint: no rule named "${input}"`,
     ...(s.length
@@ -104,6 +117,31 @@ export function noRuleLines(input: string): string[] {
       : []),
     "Run pbiplint rules for the list.",
   ];
+}
+
+/** An id given to --rule that names no rule, built-in or custom: main writes `lines` and exits 2. */
+export class NoRuleError extends Error {
+  readonly lines: string[];
+  constructor(input: string, custom: readonly Rule[] = []) {
+    const lines = noRuleLines(input, custom);
+    super(lines[0]);
+    this.name = "NoRuleError";
+    this.lines = lines;
+  }
+}
+
+/**
+ * The rule ids the --rule inputs name, each once, in the order given: a built-in rule first, then
+ * one of `custom`. An input that names neither throws a `NoRuleError`.
+ */
+export function shownRuleIds(inputs: readonly string[], custom: readonly Rule[] = []): string[] {
+  const ids: string[] = [];
+  for (const input of inputs) {
+    const rule = findRule(input) ?? findCustomRule(input, custom);
+    if (!rule) throw new NoRuleError(input, custom);
+    if (!ids.includes(rule.id)) ids.push(rule.id);
+  }
+  return ids;
 }
 
 /**

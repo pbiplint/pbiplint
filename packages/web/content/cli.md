@@ -83,13 +83,14 @@ GitHub Copilot reads all three folders, so one copy is enough for it. `--install
 
 <h3 id="mcp">Serve an AI assistant over MCP (from 0.2.5)</h3>
 
-`pbiplint mcp` is a local [MCP](https://modelcontextprotocol.io) server for an AI assistant that runs local servers, such as Claude Desktop, Claude Code, VS Code with GitHub Copilot, or Cursor. The assistant starts it and talks to it over stdin and stdout; it opens no port. It is the way to lint from an app that gives the assistant no terminal, such as Claude Desktop's chat. Its three tools only read, and each carries MCP's read-only annotation, so an app can approve them once:
+`pbiplint mcp` is a local [MCP](https://modelcontextprotocol.io) server for an AI assistant that runs local servers, such as Claude Desktop, Claude Code, VS Code with GitHub Copilot, or Cursor. The assistant starts it and talks to it over stdin and stdout; it opens no port. It is the way to lint from an app that gives the assistant no terminal, such as Claude Desktop's chat. Its four tools only read, and each carries MCP's read-only annotation, so an app can approve them once:
 
 | Tool | What it returns |
 | --- | --- |
 | `lint` | What `pbiplint <path> --format json` prints, or with `quiet`, what `--quiet` prints. `rules` and `failOn` work as `--rule` and `--fail-on` do. A path it cannot read comes back as an error with the CLI's own message. |
-| `explain_rule` | What `pbiplint explain <RULE_ID> --format json` prints. |
-| `list_rules` | Every rule with its layer, status, severity, and category, as JSON. |
+| `explain_rule` | What `pbiplint explain <RULE_ID> --format json` prints. From 0.4.0, given a `path` in a project, it also explains the custom rules that the nearest `pbiplint.config.json` above that path names, as `--config` with that file does. |
+| `list_rules` | Every rule with its layer, status, severity, and category, as JSON. From 0.4.0, given a `path` in a project, it adds the custom rules that the nearest config above that path names, each with `custom`, `ruleFile`, `replaces` for one that runs in place of pbiplint's rule of its id, and `problem` for one pbiplint could not read; an unchanged copy of a published rule runs as pbiplint's rule, so it is listed as that. |
+| `custom_rules_reference` | From 0.4.0, what `pbiplint reference` prints, or with `format` `json`, what `--format json` prints. |
 
 With Claude, [pbiplint for Claude](https://github.com/pbiplint/claude-plugin) is the easy route: the skill and this MCP server as two plugins. Each of its releases is pinned to a pbiplint release.
 

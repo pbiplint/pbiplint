@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Starts the built bundle's MCP server as an app would, over real stdio, lints the bundled sample,
-// and fails unless the findings come back. Runs after the build (npm run test:bundle).
+// and asks for the custom rules reference as JSON, and fails unless the findings and the reference
+// come back. Runs after the build (npm run test:bundle).
 import { spawn } from "node:child_process";
 import { clearTimeout, setTimeout } from "node:timers";
 import { dirname, join } from "node:path";
@@ -36,8 +37,19 @@ child.stdout.on("data", (chunk) => {
       if (m.result?.isError) fail(m.result.content[0].text);
       const report = JSON.parse(m.result.content[0].text);
       if (!(report.summary.findings > 0)) fail("the sample gave no findings");
-      clearTimeout(timer);
       console.log(`MCP smoke test: lint found ${report.summary.findings} findings in the sample`);
+      send({
+        id: 3,
+        method: "tools/call",
+        params: { name: "custom_rules_reference", arguments: { format: "json" } },
+      });
+    } else if (m.id === 3) {
+      if (m.result?.isError) fail(m.result.content[0].text);
+      const reference = JSON.parse(m.result.content[0].text);
+      const scopes = reference.formats?.tabularEditor?.scopes?.length;
+      if (!(scopes > 0)) fail("the custom rules reference listed no scopes");
+      clearTimeout(timer);
+      console.log(`MCP smoke test: custom_rules_reference listed ${scopes} scopes`);
       child.stdin.end();
     }
   }

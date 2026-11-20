@@ -53,8 +53,10 @@ describe("the skill file", () => {
     const run = /^## How to run it\n([\s\S]*?)\n## /m.exec(text)![1]!;
     const server = readFileSync(new URL("../src/mcp.ts", import.meta.url), "utf8");
     const tools = [...server.matchAll(/registerTool\(\s*"([a-z_]+)"/g)].map((m) => m[1]!);
-    expect(tools).toEqual(["lint", "explain_rule", "list_rules"]);
-    for (const name of [...tools, "quiet", "rules"]) expect(run).toContain(`\`${name}\``);
+    expect(tools).toEqual(["lint", "explain_rule", "list_rules", "custom_rules_reference"]);
+    // custom_rules_reference is for writing a team's rule, which the custom rules skill covers.
+    const linting = tools.filter((t) => t !== "custom_rules_reference");
+    for (const name of [...linting, "quiet", "rules"]) expect(run).toContain(`\`${name}\``);
   });
 
   it("says a folder that holds several projects lints whole, and how the quiet output names each (#237)", () => {

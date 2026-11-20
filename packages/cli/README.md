@@ -43,9 +43,10 @@ that differs unless given `--force`, and `--dry-run` writes nothing. `--show` li
 whether each copy matches this version.
 
 `pbiplint mcp` is a local MCP server over stdin and stdout, for an assistant that runs local servers
-(Claude Desktop, Claude Code, VS Code, Cursor) to start. Its three tools only read: `lint` (what
-`--format json` prints, or with `quiet` the short summary), `explain_rule`, and `list_rules`. It
-opens no port. See [the CLI page](https://pbiplint.com/cli/#mcp) for each app's setup. With Claude,
+(Claude Desktop, Claude Code, VS Code, Cursor) to start. Its four tools only read: `lint` (what
+`--format json` prints, or with `quiet` the short summary), `explain_rule`, `list_rules`, and
+`custom_rules_reference` (what `pbiplint reference` prints). Given a `path` in a project,
+`explain_rule` and `list_rules` include the custom rules its config names. It opens no port. See [the CLI page](https://pbiplint.com/cli/#mcp) for each app's setup. With Claude,
 [pbiplint for Claude](https://github.com/pbiplint/claude-plugin) installs the skill and the server
 as two plugins, `pbiplint` and `pbiplint-mcp`.
 

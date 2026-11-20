@@ -117,7 +117,7 @@ export async function main(argv: string[], given: Io): Promise<number> {
     if (opts.command === "mcp") {
       // Serves until the app closes stdin. Each tool runs this CLI with its output captured.
       const { serveMcp } = await import("./mcp.js");
-      await serveMcp((argv) => capture(argv, given.cwd()), {}, VERSION);
+      await serveMcp((argv, cwd) => capture(argv, cwd ?? given.cwd()), {}, VERSION, given.cwd());
       return 0;
     }
     if (opts.command === "explain") {

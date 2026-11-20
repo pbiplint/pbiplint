@@ -10,7 +10,7 @@ import {
 } from "../src/engine/config.js";
 import { ignoreHelp, isIgnored, TE_IGNORE_ANNOTATION, teIgnoreIds } from "../src/engine/ignore.js";
 import { lint } from "../src/engine/lint.js";
-import { rank } from "../src/engine/rank.js";
+import { byRank, categoryRank, rank, type RankedGroup } from "../src/engine/rank.js";
 import { optionsFor, runRules } from "../src/engine/run.js";
 import { buildReport } from "../src/pbir/build.js";
 import { skippedLine } from "../src/format/text.js";
@@ -701,6 +701,53 @@ describe("rank", () => {
     expect(groups.map((g) => [g.rule.id, g.rule.severity])).toEqual([
       ["EVERY_TABLE", 3],
       ["MODEL_RULE", 2],
+    ]);
+  });
+});
+
+describe("ranking custom categories", () => {
+  const group = (id: string, severity: 1 | 2 | 3, category: string, count = 1): RankedGroup => ({
+    rule: {
+      id,
+      name: id,
+      category,
+      severity,
+      layer: "model",
+      slug: id.toLowerCase(),
+      url: "",
+      status: "custom",
+    },
+    findings: Array.from({ length: count }, () => ({
+      ruleId: id,
+      layer: "model" as const,
+      objectType: "Table" as const,
+      objectName: "T",
+    })),
+  });
+  it("ranks pbiplint's categories in order, then custom ones alphabetically after them", () => {
+    expect(categoryRank("Performance")).toBe(0);
+    expect(categoryRank("Formatting")).toBeLessThan(categoryRank("Naming Conventions"));
+    expect(categoryRank("Model Layout")).toBe(categoryRank("2. Data Modelling"));
+    expect(categoryRank("Model Layout")).toBeGreaterThan(categoryRank("Naming Conventions"));
+  });
+  it("orders by severity, then pbiplint's categories, then custom categories, then count, then id", () => {
+    const groups = [
+      group("W", 2, "Performance", 9),
+      group("ML", 3, "Model Layout", 5),
+      group("DM_B", 3, "2. Data Modelling"),
+      group("DM_A", 3, "2. Data Modelling"),
+      group("DM_MORE", 3, "2. Data Modelling", 2),
+      group("FMT", 3, "Formatting"),
+      group("PERF", 3, "Performance"),
+    ];
+    expect(groups.sort(byRank).map((g) => g.rule.id)).toEqual([
+      "PERF",
+      "FMT",
+      "DM_MORE",
+      "DM_A",
+      "DM_B",
+      "ML",
+      "W",
     ]);
   });
 });

@@ -28,6 +28,8 @@ export {
   type Unreadable,
 } from "./engine/projects.js";
 export {
+  categoryRank,
+  CUSTOM_RULES_URL,
   effectiveSeverity,
   rank,
   summarizeRule,

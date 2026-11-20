@@ -127,11 +127,23 @@ export function countsLine(s: CountedRun, failed: number, paint: Paint = unpaint
   return `${plural(s.findings, "finding")} (${counts(s)}) in ${plural(s.files, "file")}${unfinished}`;
 }
 
-/** Each rule error as a notice says it: the rule, that it could not finish, and the error's class. */
+/**
+ * Each rule error as a notice says it: the rule, that it could not finish, and the error's class.
+ * A custom rule that could not run names its file and the reason, which is in the team's file, so
+ * it asks for no report.
+ */
 export const ruleErrorNotices = (result: LintResult): string[] =>
-  result.summary.ruleErrors.map(
-    (e) => `The rule ${e.id} could not finish (please report this): ${e.message}`,
-  );
+  result.summary.ruleErrors.map((e) => {
+    if (e.ruleFile === undefined)
+      return `The rule ${e.id} could not finish (please report this): ${e.message}`;
+    const prefix = `${e.ruleFile}: `;
+    const reason = e.message.startsWith(prefix) ? e.message.slice(prefix.length) : e.message;
+    return `The custom rule ${e.id} in ${e.ruleFile} could not run: ${reason}`;
+  });
+
+/** The line under a group's heading: a rule's page, or for a custom rule, its file. */
+const groupSource = (rule: RankedGroup["rule"]): string =>
+  rule.custom ? `custom rule, ${rule.ruleFile ?? ""}` : rule.url;
 
 export function skippedLine(result: LintResult): string {
   const s = result.summary;
@@ -244,16 +256,17 @@ export function formatText(result: LintResult, options: FormatOptions = {}): str
       severity === 1 ? `${n} info` : plural(n, SEVERITY_LABEL[severity]);
     topGroups(result).forEach((g, i) =>
       out.push(
-        `  ${i + 1}. ${g.rule.name}  (${count(g.findings.length, g.rule.severity)})   ${layerTag(g.rule.layer)}`,
+        `  ${i + 1}. ${showControls(g.rule.name)}  (${count(g.findings.length, g.rule.severity)})   ${layerTag(g.rule.layer)}`,
       ),
     );
     out.push("");
     // The tag column fits the longest tag, `[powerquery]`, so every rule name starts in one column.
+    // A custom rule's name, id, and file come from the team's files, so each is shown as well.
     for (const g of result.groups) {
       out.push(
-        `${tag(g.rule.severity)}  ${layerTag(g.rule.layer).padEnd(12)}  ${g.rule.name}  ${g.rule.id}  (${g.findings.length})`,
+        `${tag(g.rule.severity)}  ${layerTag(g.rule.layer).padEnd(12)}  ${showControls(g.rule.name)}  ${showControls(g.rule.id)}  (${g.findings.length})`,
       );
-      out.push(`       ${g.rule.url}`);
+      out.push(`       ${showControls(groupSource(g.rule))}`);
       // The location column is always emitted, empty or not, so a finding without a location never
       // shifts its detail into the location column. Widths align within the group only.
       const rows = g.findings.map((f) => ({

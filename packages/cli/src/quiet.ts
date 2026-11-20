@@ -33,9 +33,18 @@ export function quietText(result: LintResult): string {
   else
     out.push(
       ...result.groups.map(
-        (g) => `${SEVERITY_LABEL[g.rule.severity]} ${g.rule.id} ${g.findings.length}`,
+        (g) => `${SEVERITY_LABEL[g.rule.severity]} ${quietId(g.rule)} ${g.findings.length}`,
       ),
       QUIET_NEXT,
     );
   return out.join("\n") + "\n";
 }
+
+/**
+ * A rule's id as a quiet rule line writes it. A rule line splits on single spaces, and the CLI
+ * page promises a rule id holds none, so each whitespace character in a custom rule's id (a
+ * team's file can hold one, and Tabular Editor runs it) is written as `%20`, and what is left is
+ * shown. A built-in id is written as it is.
+ */
+const quietId = (rule: LintResult["groups"][number]["rule"]): string =>
+  rule.custom ? showControls(rule.id.replace(/\s/g, "%20")) : rule.id;

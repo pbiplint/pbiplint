@@ -174,18 +174,29 @@ export function formatMarkdown(result: LintResult, options: FormatOptions = {}):
     return out.join("\n");
   }
   out.push(`${h}## Fix these first`, "");
+  // A custom rule's name, id, category, file, and description come from the team's files, so each
+  // is written as input text, and its id is not linked, since it has no page.
+  const name = (g: (typeof result.groups)[number]): string =>
+    g.rule.custom ? text(g.rule.name, false) : g.rule.name;
+  const id = (g: (typeof result.groups)[number]): string =>
+    g.rule.custom ? text(g.rule.id, false) : `[${g.rule.id}](${g.rule.url})`;
   topGroups(result).forEach((g, i) =>
-    out.push(
-      `${i + 1}. **${g.rule.name}** (${g.findings.length}) [${g.rule.id}](${g.rule.url}) · ${g.rule.layer}`,
-    ),
+    out.push(`${i + 1}. **${name(g)}** (${g.findings.length}) ${id(g)} · ${g.rule.layer}`),
   );
   out.push("");
   for (const g of result.groups) {
     out.push(
-      `${h}## ${SEVERITY_LABEL[g.rule.severity].toUpperCase()}: ${g.rule.name} (${g.findings.length}) · ${g.rule.layer}`,
+      `${h}## ${SEVERITY_LABEL[g.rule.severity].toUpperCase()}: ${name(g)} (${g.findings.length}) · ${g.rule.layer}`,
       "",
     );
-    out.push(`[${g.rule.id}](${g.rule.url}) · ${g.rule.category}`, "");
+    if (g.rule.custom)
+      out.push(
+        `${id(g)} · custom rule, ${text(g.rule.ruleFile ?? "", false)} · ${text(g.rule.category, false)}`,
+        "",
+        text(oneLine(g.rule.description ?? g.rule.name), false),
+        "",
+      );
+    else out.push(`${id(g)} · ${g.rule.category}`, "");
     out.push("| Object | Type | Location | Detail |", "|---|---|---|---|");
     for (const f of g.findings)
       out.push(

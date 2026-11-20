@@ -17,6 +17,8 @@ import {
 import { locationOf } from "../src/format/text.js";
 import { showControls } from "../src/index.js";
 import { msg } from "../src/messages/format.js";
+import { readCustomRules } from "@pbiplint/core/custom-rules";
+import { fixturesDir, readModelFiles } from "./helpers.js";
 
 const files = [
   { path: "definition/model.tmdl", text: "model Model\n\tculture: en-US\n" },
@@ -1422,5 +1424,187 @@ describe("a Power Query rule in every format", () => {
     // Severity tag (5) and two spaces, then the tag padded to 12, then two spaces.
     for (const line of heads) expect(line.charAt(21), line).not.toBe(" ");
     for (const line of heads) expect(line.slice(19, 21), line).toBe("  ");
+  });
+});
+
+describe("custom rules in every format", () => {
+  const teamRules = [
+    {
+      ID: "TEAM_FORMATTED",
+      Name: "Measures carry a format string",
+      Description: "Every measure should say how its values are shown.",
+      Category: "Team Layout",
+      Severity: 2,
+      Scope: "Measure",
+      Expression: 'FormatString <> ""',
+    },
+    {
+      ID: "TEAM_VISIBLE",
+      Name: "Reads a property measures lack",
+      Category: "Team Layout",
+      Severity: 2,
+      Scope: "Measure",
+      Expression: "Visible",
+    },
+  ];
+  const model = readModelFiles(`${fixturesDir}custom-rules.SemanticModel`);
+  const custom = readCustomRules([{ path: "rules/team.json", text: JSON.stringify(teamRules) }]);
+  let withCustom: LintResult;
+  let builtIn: LintResult;
+  beforeAll(async () => {
+    withCustom = await lint(model, { customRules: custom });
+    builtIn = await lint(model);
+  });
+  const group = (r: LintResult) => r.groups.find((g) => g.rule.id === "TEAM_FORMATTED")!;
+
+  it("summarises a custom rule with its file, its description, and the custom rules page", () => {
+    expect(group(withCustom).rule).toEqual({
+      id: "TEAM_FORMATTED",
+      name: "Measures carry a format string",
+      category: "Team Layout",
+      severity: 2,
+      layer: "model",
+      slug: "team-formatted",
+      url: "https://pbiplint.com/custom-rules/",
+      status: "custom",
+      custom: true,
+      ruleFile: "rules/team.json",
+      description: "Every measure should say how its values are shown.",
+    });
+    for (const g of builtIn.groups) {
+      expect(g.rule).not.toHaveProperty("custom");
+      expect(g.rule).not.toHaveProperty("ruleFile");
+      expect(g.rule).not.toHaveProperty("description");
+    }
+  });
+
+  it("JSON: the group's rule names the file, findings as before, and the run's custom rules", () => {
+    const json = JSON.parse(formatJson(withCustom));
+    const g = json.groups.find((x: { rule: { id: string } }) => x.rule.id === "TEAM_FORMATTED");
+    expect(g.rule).toMatchObject({
+      custom: true,
+      ruleFile: "rules/team.json",
+      description: "Every measure should say how its values are shown.",
+      url: "https://pbiplint.com/custom-rules/",
+    });
+    expect(g.findings[0]).toEqual({
+      layer: "model",
+      objectType: "Measure",
+      objectName: expect.any(String),
+      file: expect.stringMatching(/^definition\/tables\//),
+      line: expect.any(Number),
+    });
+    expect(json.summary.customRules).toEqual([
+      {
+        file: "rules/team.json",
+        rules: ["TEAM_FORMATTED", "TEAM_VISIBLE"],
+        asBuiltIn: [],
+        replaced: [],
+        notRun: ["TEAM_VISIBLE"],
+      },
+    ]);
+    expect(json.summary.ruleErrors).toEqual([
+      {
+        id: "TEAM_VISIBLE",
+        message: expect.stringMatching(/^rules\/team\.json: /),
+        ruleFile: "rules/team.json",
+      },
+    ]);
+    const plain = JSON.parse(formatJson(builtIn));
+    expect(plain.summary).not.toHaveProperty("customRules");
+  });
+
+  it("SARIF: the descriptor is the rule's own, with no help link, and results name the file", () => {
+    const help = { TEAM_FORMATTED: { text: "not this", markdown: "not this" } };
+    const run = JSON.parse(formatSarif(withCustom, { help })).runs[0];
+    const d = run.tool.driver.rules.find((r: { id: string }) => r.id === "TEAM_FORMATTED");
+    expect(d).toEqual({
+      id: "TEAM_FORMATTED",
+      name: "Measures carry a format string",
+      shortDescription: { text: "Measures carry a format string" },
+      fullDescription: {
+        text: "Every measure should say how its values are shown.",
+        markdown: "Every measure should say how its values are shown.",
+      },
+      help: {
+        text: "Every measure should say how its values are shown.",
+        markdown: "Every measure should say how its values are shown.",
+      },
+      defaultConfiguration: { level: "warning" },
+      properties: {
+        category: "Team Layout",
+        layer: "model",
+        custom: true,
+        ruleFile: "rules/team.json",
+      },
+    });
+    const results = run.results.filter((r: { ruleId: string }) => r.ruleId === "TEAM_FORMATTED");
+    expect(results.length).toBeGreaterThan(0);
+    for (const r of results)
+      expect(r.properties).toEqual({ custom: true, ruleFile: "rules/team.json" });
+    const builtInRun = JSON.parse(formatSarif(builtIn)).runs[0];
+    for (const r of builtInRun.tool.driver.rules) expect(r.properties).not.toHaveProperty("custom");
+  });
+
+  it("SARIF: a custom description is Markdown-safe in the Markdown slot", () => {
+    const odd = readCustomRules([
+      {
+        path: "rules/odd.json",
+        text: JSON.stringify([{ ...teamRules[0], Description: "Use <b>FORMAT</b> [here](x)" }]),
+      },
+    ]);
+    return lint(model, { customRules: odd }).then((r) => {
+      const d = JSON.parse(formatSarif(r)).runs[0].tool.driver.rules.find(
+        (x: { id: string }) => x.id === "TEAM_FORMATTED",
+      );
+      expect(d.fullDescription.text).toBe("Use <b>FORMAT</b> [here](x)");
+      expect(d.help.markdown).toBe("Use &lt;b&gt;FORMAT&lt;/b&gt; \\[here\\](x)");
+    });
+  });
+
+  it("text: the group names the file in place of the URL; a rule that cannot run says why", () => {
+    const lines = formatText(withCustom).split("\n");
+    const at = lines.findIndex((l) =>
+      /Measures carry a format string\s+TEAM_FORMATTED\s+\(\d+\)$/.test(l),
+    );
+    expect(at).toBeGreaterThan(-1);
+    expect(lines[at + 1]).toBe("       custom rule, rules/team.json");
+    const notice = lines.find((l) => l.includes("TEAM_VISIBLE"))!;
+    expect(notice).toMatch(
+      /^Notice: The custom rule TEAM_VISIBLE in rules\/team\.json could not run: (?!rules\/team\.json)\S/,
+    );
+    expect(notice).not.toContain("please report this");
+  });
+
+  it("Markdown: the id unlinked, the file, then the description", () => {
+    const md = formatMarkdown(withCustom).split("\n");
+    const at = md.findIndex((l) => l.startsWith("## WARNING: Measures carry a format string ("));
+    expect(at).toBeGreaterThan(-1);
+    expect(md[at + 2]).toBe("TEAM\\_FORMATTED · custom rule, rules/team.json · Team Layout");
+    expect(md[at + 4]).toBe("Every measure should say how its values are shown.");
+    expect(md.join("\n")).not.toContain("](https://pbiplint.com/rules/team-formatted)");
+    expect(md.find((l) => l.includes("TEAM\\_VISIBLE"))).toMatch(
+      /^> Notice: The custom rule TEAM\\_VISIBLE in rules\/team\.json could not run: /,
+    );
+  });
+
+  it("lists a custom rule in Fix these first, in text and Markdown, its id unlinked", async () => {
+    const only = await lint(model, { rules: [], customRules: custom });
+    const n = group(only).findings.length;
+    expect(formatMarkdown(only).split("\n")).toContain(
+      `1. **Measures carry a format string** (${n}) TEAM\\_FORMATTED · model`,
+    );
+    expect(formatText(only).split("\n")).toContain(
+      `  1. Measures carry a format string  (${n} warnings)   [model]`,
+    );
+  });
+
+  it("formats a run without custom rules as before: no custom field in any format", () => {
+    for (const name of FORMATS) {
+      const out = formatResult(name, builtIn);
+      expect(out).not.toContain("custom rule");
+      expect(out).not.toContain('"custom"');
+      expect(out).not.toContain("ruleFile");
+    }
   });
 });

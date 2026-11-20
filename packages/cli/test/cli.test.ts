@@ -9,6 +9,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { defaultRules, lint, type Rule } from "@pbiplint/core";
+import { readCustomRules } from "@pbiplint/core/custom-rules";
 import { describe, expect, it } from "vitest";
 import { tempDir } from "../../../tests/support/temp-dir.js";
 import { EXPLAIN_HINT, main } from "../src/main.js";
@@ -1185,5 +1186,50 @@ describe("the CLI's output and CI log command sequences", () => {
     const notice = await run([proj, "--fail-on", "none"]);
     expect(notice.err).toContain("pbiplint: notice: #\\u0023vso[x]y.Report is stored");
     expect(COMMAND.test(notice.err)).toBe(false);
+  });
+});
+
+describe("--quiet with a custom rule whose id holds whitespace", () => {
+  it("writes each whitespace character in a custom id as %20, and only in the rule line", async () => {
+    const custom = readCustomRules([
+      {
+        path: "rules/team.json",
+        text: JSON.stringify([
+          {
+            ID: "TEAM TABLES\tALL",
+            Name: "Every table",
+            Severity: 2,
+            Scope: "Table",
+            Expression: "true",
+          },
+          {
+            ID: "TEAM_PLAIN",
+            Name: "Every table again",
+            Severity: 2,
+            Scope: "Table",
+            Expression: "true",
+          },
+        ]),
+      },
+    ]);
+    const result = await lint(
+      [
+        { path: "definition/model.tmdl", text: "model Model\n" },
+        {
+          path: "definition/tables/Sales.tmdl",
+          text: "table Sales\n\tcolumn Amount\n\t\tdataType: double\n",
+        },
+      ],
+      { customRules: custom, config: { failOn: "none" } },
+    );
+    const lines = quietText(result).split("\n");
+    expect(lines).toContain("warning TEAM%20TABLES%20ALL 1");
+    expect(lines).toContain("warning TEAM_PLAIN 1");
+    const ruleLines = lines.filter((l) => /^(error|warning|info) /.test(l));
+    for (const l of ruleLines) expect(l.split(" ")).toHaveLength(3);
+    // Built-in ids are written as they are.
+    expect(ruleLines.some((l) => /^\w+ [A-Z0-9_]+ \d+$/.test(l) && !l.includes("TEAM"))).toBe(true);
+    // Everywhere else the id appears as written.
+    expect(result.groups.map((g) => g.rule.id)).toContain("TEAM TABLES\tALL");
   });
 });

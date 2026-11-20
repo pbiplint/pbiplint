@@ -2,6 +2,8 @@
 // rules. It is apart from the core's main entry, so lint never carries the evaluator and the site
 // loads this only when a config names custom rules. The bundle check holds it to its own budget.
 export { readCustomRules, teSeverity, type CustomRuleSet } from "./rules.js";
+export { sameIdAs } from "../engine/custom.js";
+export type { UpstreamRule } from "./te/upstream-rules.data.js";
 export { LIMITS, type CustomRuleLimits } from "./limits.js";
 export {
   runTeRules,

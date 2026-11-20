@@ -197,8 +197,28 @@ export interface Rule {
   references: string[];
   status: RuleStatus;
   /** For a custom rule: its file as the config names it, and the rule as that file writes it. */
-  custom?: { file: string; scopes: string[]; expression: string; teSeverity?: number };
+  custom?: CustomRuleSource;
   /** A policy rule's severity under its options, read when the config sets no severity for it. */
   policySeverity?(options: RuleOptions): Severity | undefined;
   check(project: Project, ctx: RuleContext): RuleFinding[];
+}
+
+/** A custom rule's file, as the config names it, and the rule as that file writes it. */
+export interface CustomRuleSource {
+  file: string;
+  scopes: string[];
+  expression: string;
+  teSeverity?: number;
+  /**
+   * Set when Microsoft or Tabular Editor has published a rule with this id (any case):
+   * `unchanged` when the scopes and the expression, whitespace aside, match a published version,
+   * so pbiplint runs its own rule of that id in this one's place; `edited` otherwise, so this one
+   * runs in place of pbiplint's.
+   */
+  upstream?: "unchanged" | "edited";
+  /**
+   * For an unchanged copy whose severity matches none of the matching versions': the copy's
+   * severity, which pbiplint's rule takes unless the config sets one.
+   */
+  upstreamSeverityChanged?: Severity;
 }

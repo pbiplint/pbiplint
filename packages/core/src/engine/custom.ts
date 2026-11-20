@@ -39,3 +39,22 @@ export const isCustomRuleStop = (e: unknown): e is CustomRuleStop =>
   e !== null &&
   (e as Record<symbol, unknown>)[STOP] === true &&
   typeof (e as { reason?: unknown }).reason === "string";
+
+/** The ids of pbiplint's safety nets, upper case: a custom rule cannot take either. */
+export const RESERVED_IDS: ReadonlySet<string> = new Set(["PARSE_ISSUE", "RULE_COULD_NOT_FINISH"]);
+
+/**
+ * What becomes of a custom rule whose id (any case) is one of `ownIds`, the upper-case ids of
+ * pbiplint's rules in the run (custom rules spec, section 4): `asBuiltIn` for an unchanged copy of
+ * a published rule, so pbiplint's own rule runs in its place, and `replaces` for any other, which
+ * runs in place of pbiplint's. Undefined for an id pbiplint's rules do not take, and for a safety
+ * net's id, which a custom rule cannot take (it runs, to say so).
+ */
+export function sameIdAs(
+  rule: Rule,
+  ownIds: ReadonlySet<string>,
+): "asBuiltIn" | "replaces" | undefined {
+  const upper = rule.id.toUpperCase();
+  if (!ownIds.has(upper) || RESERVED_IDS.has(upper)) return undefined;
+  return rule.custom?.upstream === "unchanged" ? "asBuiltIn" : "replaces";
+}

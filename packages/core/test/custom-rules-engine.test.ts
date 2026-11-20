@@ -1,15 +1,20 @@
+import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { readCustomRules } from "@pbiplint/core/custom-rules";
+import { fingerprint } from "../src/custom-rules/te/fingerprint.js";
 import { buildTomView } from "../src/custom-rules/te/view.js";
 import { isConfigError, resolveConfig, type PbiplintConfig } from "../src/engine/config.js";
 import type { CustomRuleSet } from "../src/engine/custom.js";
 import { lint, type LintFile, type LintResult } from "../src/engine/lint.js";
+import { CUSTOM_RULES_URL } from "../src/engine/rank.js";
 import { showOnly } from "../src/engine/show-only.js";
+import { formatSarif } from "../src/format/sarif.js";
 import {
   isFailureOf,
   isFindingFor,
   RULE_COULD_NOT_FINISH,
 } from "../src/rules/rule-could-not-finish.js";
+import { repo } from "./custom-te-parity.js";
 import { fixturesDir, readModelFiles } from "./helpers.js";
 
 vi.mock("../src/custom-rules/te/view.js", async (importOriginal) => {
@@ -36,6 +41,20 @@ const TEAM_FORMATTED = rule({ ID: "TEAM_FORMATTED", Expression: 'FormatString <>
 const TEAM_VISIBLE = rule({ ID: "TEAM_VISIBLE", Expression: "Visible" });
 /** Has no scope, so the reader cannot read it. */
 const TEAM_NO_SCOPE = rule({ ID: "TEAM_NO_SCOPE", Scope: undefined, Expression: "true" });
+
+/** Microsoft's published rules, vendored (MIT): the source of a team's copies below. */
+const microsoftText = readFileSync(`${repo}tests/rules/microsoft/BPARules.json`, "utf8");
+const microsoft = JSON.parse(microsoftText.slice(microsoftText.indexOf("["))) as Record<
+  string,
+  unknown
+>[];
+/** A team's copy of a published rule, with the fields the team changed. */
+const copyOf = (id: string, fields: Record<string, unknown> = {}) => ({
+  ...microsoft.find((r) => r.ID === id)!,
+  ...fields,
+});
+/** The same expression laid out again: every run of whitespace a line break and an indent. */
+const reflow = (expression: unknown) => String(expression).replace(/\s+/g, "\n      ");
 
 const set = (...rules: unknown[]): CustomRuleSet =>
   readCustomRules([{ path: "rules/team.json", text: JSON.stringify(rules) }]);
@@ -220,59 +239,6 @@ describe("the engine runs custom rules", () => {
     );
   });
 
-  it("runs pbiplint's own rule for a custom id that is a built-in id, and says so", async () => {
-    const copy = rule({ ID: "hide_foreign_keys", Scope: "Column", Expression: "true" });
-    const result = await run(set(copy, TEAM_FORMATTED));
-    const builtIn = await run(undefined);
-    expect(ofRule(result, "HIDE_FOREIGN_KEYS")).toEqual(ofRule(builtIn, "HIDE_FOREIGN_KEYS"));
-    expect(ofRule(result, "hide_foreign_keys")).toEqual([]);
-    expect(result.summary.rulesRun).toBe(builtIn.summary.rulesRun + 1);
-    expect(result.summary.customRules).toEqual([
-      {
-        file: "rules/team.json",
-        rules: ["hide_foreign_keys", "TEAM_FORMATTED"],
-        asBuiltIn: ["hide_foreign_keys"],
-        replaced: [],
-        notRun: [],
-      },
-    ]);
-    const notice = result.diagnostics.filter((d) => d.kind === "custom-rules");
-    expect(notice).toHaveLength(1);
-    expect(notice[0]).toMatchObject({ path: "rules/team.json" });
-    expect(notice[0]!.message).toContain("hide_foreign_keys");
-  });
-
-  it("leaves out of asBuiltIn and the notice an id whose pbiplint rule the config turns off", async () => {
-    // Neither rule runs: the config's off covers the id, and nothing runs in its place.
-    const copy = rule({ ID: "hide_foreign_keys", Scope: "Column", Expression: "true" });
-    const result = await run(set(copy, TEAM_FORMATTED), { rules: { HIDE_FOREIGN_KEYS: "off" } });
-    expect(ofRule(result, "HIDE_FOREIGN_KEYS")).toEqual([]);
-    expect(ofRule(result, "hide_foreign_keys")).toEqual([]);
-    expect(result.summary.rulesSkipped).toContainEqual({
-      id: "HIDE_FOREIGN_KEYS",
-      reason: "disabled",
-    });
-    expect(result.summary.customRules).toEqual([
-      {
-        file: "rules/team.json",
-        rules: ["hide_foreign_keys", "TEAM_FORMATTED"],
-        asBuiltIn: [],
-        replaced: [],
-        notRun: [],
-      },
-    ]);
-    expect(result.diagnostics.filter((d) => d.kind === "custom-rules")).toEqual([]);
-    // Another built-in id in the same file still runs as pbiplint's own, and is still named.
-    const other = rule({ ID: "DAX_COLUMNS_FULLY_QUALIFIED", Expression: "true" });
-    const mixed = await run(set(copy, other), { rules: { hide_foreign_keys: "off" } });
-    expect(mixed.summary.customRules?.[0]?.asBuiltIn).toEqual(["DAX_COLUMNS_FULLY_QUALIFIED"]);
-    const [notice, ...more] = mixed.diagnostics.filter((d) => d.kind === "custom-rules");
-    expect(more).toEqual([]);
-    expect(notice!.message).toBe(
-      "rules/team.json: 1 rule has the ID of a pbiplint rule (DAX_COLUMNS_FULLY_QUALIFIED), so pbiplint runs its own rule in its place.",
-    );
-  });
-
   it("refuses a run whose config names rule files when it was not given them", async () => {
     // A team's rules must never pass in silence: a caller that resolved such a config and passed
     // no set, as the site does today, gets the config's refusal rather than a run without them.
@@ -343,5 +309,207 @@ describe("the engine runs custom rules", () => {
     const { customRules, ...summary } = none.summary;
     expect(customRules).toEqual([]);
     expect({ ...none, summary }).toEqual(today);
+  });
+});
+
+describe("a custom rule with the id of one of pbiplint's rules", () => {
+  const HIDE = "HIDE_FOREIGN_KEYS";
+  const builtInRun = () => run(undefined);
+  const groupOf = (r: LintResult, id: string) => r.groups.find((g) => g.rule.id === id);
+  const noticesOf = (r: LintResult) => r.diagnostics.filter((d) => d.kind === "custom-rules");
+
+  it("skips an unchanged copy, whitespace aside, and runs pbiplint's rule with its page", async () => {
+    const copy = copyOf(HIDE, { Expression: reflow(copyOf(HIDE).Expression) });
+    const result = await run(set(copy, TEAM_FORMATTED));
+    const builtIn = await builtInRun();
+    expect(ofRule(builtIn, HIDE).length).toBeGreaterThan(0);
+    expect(ofRule(result, HIDE)).toEqual(ofRule(builtIn, HIDE));
+    expect(groupOf(result, HIDE)!.rule).toEqual(groupOf(builtIn, HIDE)!.rule);
+    expect(groupOf(result, HIDE)!.rule).not.toHaveProperty("custom");
+    expect(result.summary.rulesRun).toBe(builtIn.summary.rulesRun + 1);
+    expect(result.summary.customRules).toEqual([
+      {
+        file: "rules/team.json",
+        rules: [HIDE, "TEAM_FORMATTED"],
+        asBuiltIn: [HIDE],
+        replaced: [],
+        notRun: [],
+      },
+    ]);
+  });
+
+  it("counts a copy of an older published version as unchanged", async () => {
+    const scope = "CalculatedColumn,CalculatedTableColumn,DataColumn";
+    const older = "IsHidden == false and UsedInRelationships.Any()";
+    const upstream = [older, String(copyOf(HIDE).Expression)].map((e) => ({
+      id: HIDE,
+      scope,
+      hash: fingerprint(e),
+      severity: 2,
+    }));
+    const read = (expression: string) =>
+      readCustomRules(
+        [
+          {
+            path: "rules/team.json",
+            text: JSON.stringify([copyOf(HIDE, { Expression: expression })]),
+          },
+        ],
+        upstream,
+      );
+    const old = await run(read(older));
+    expect(old.summary.customRules?.[0]).toMatchObject({ asBuiltIn: [HIDE], replaced: [] });
+    expect(ofRule(old, HIDE)).toEqual(ofRule(await builtInRun(), HIDE));
+    const neither = await run(read("IsHidden == false"));
+    expect(neither.summary.customRules?.[0]).toMatchObject({ asBuiltIn: [], replaced: [HIDE] });
+  });
+
+  it("gives pbiplint's rule the copy's severity when the team changed it, unless the config sets one", async () => {
+    // Microsoft publishes HIDE_FOREIGN_KEYS at severity 2, a warning.
+    const raised = await run(set(copyOf(HIDE, { Severity: 3 })));
+    expect(groupOf(raised, HIDE)!.rule).toMatchObject({ severity: 3, status: "ported" });
+    expect(raised.summary.customRules?.[0]?.asBuiltIn).toEqual([HIDE]);
+    expect(raised.failed).toBe(true);
+    const config = await run(set(copyOf(HIDE, { Severity: 3 })), { rules: { [HIDE]: "info" } });
+    expect(groupOf(config, HIDE)!.rule.severity).toBe(1);
+    // 2.5 reads as a warning, as Microsoft's 2 does: the severity is unchanged.
+    const same = await run(set(copyOf(HIDE, { Severity: 2.5 })));
+    expect(groupOf(same, HIDE)!.rule.severity).toBe(2);
+  });
+
+  it("runs a copy with a changed scope as the team's rule, in place of pbiplint's", async () => {
+    const copy = copyOf(HIDE, { Scope: "DataColumn" });
+    const result = await run(set(copy));
+    const builtIn = await builtInRun();
+    expect(groupOf(result, HIDE)!.rule).toMatchObject({ status: "custom", custom: true });
+    expect(result.summary.rulesRun).toBe(builtIn.summary.rulesRun);
+    expect(result.summary.customRules?.[0]).toMatchObject({ asBuiltIn: [], replaced: [HIDE] });
+  });
+
+  it("runs an edited copy under its id as the team's rule, and pbiplint's rule not at all", async () => {
+    const description = "Our own rule: a visible column needs a description.";
+    const copy = copyOf(HIDE, {
+      ID: "hide_foreign_keys",
+      Expression: "IsHidden == false and string.IsNullOrWhitespace(Description)",
+      Description: description,
+    });
+    const result = await run(set(copy));
+    const found = ofRule(result, "hide_foreign_keys");
+    expect(found.length).toBeGreaterThan(ofRule(await builtInRun(), HIDE).length);
+    for (const f of found) expect(f).not.toHaveProperty("detail");
+    expect(ofRule(result, HIDE)).toEqual([]);
+    expect(result.groups.filter((g) => g.rule.id.toUpperCase() === HIDE)).toHaveLength(1);
+    expect(groupOf(result, "hide_foreign_keys")!.rule).toMatchObject({
+      status: "custom",
+      custom: true,
+      ruleFile: "rules/team.json",
+      description,
+      url: CUSTOM_RULES_URL,
+    });
+    const sarif = JSON.parse(formatSarif(result)).runs[0].tool.driver.rules as {
+      id: string;
+      helpUri?: string;
+      help?: { text: string };
+    }[];
+    const descriptor = sarif.find((r) => r.id.toUpperCase() === HIDE)!;
+    expect(descriptor.id).toBe("hide_foreign_keys");
+    expect(descriptor).not.toHaveProperty("helpUri");
+    expect(descriptor.help?.text).toBe(description);
+    expect(result.summary.customRules?.[0]).toMatchObject({
+      asBuiltIn: [],
+      replaced: ["hide_foreign_keys"],
+    });
+  });
+
+  it("counts an unchanged copy held by two files once", async () => {
+    const copy = copyOf(HIDE);
+    const custom = readCustomRules([
+      { path: "rules/team.json", text: JSON.stringify([copy]) },
+      { path: "rules/more.json", text: JSON.stringify([copy]) },
+    ]);
+    const result = await run(custom);
+    const builtIn = await builtInRun();
+    expect(ofRule(result, HIDE)).toEqual(ofRule(builtIn, HIDE));
+    expect(result.summary.rulesRun).toBe(builtIn.summary.rulesRun);
+    expect(result.summary.customRules?.map((f) => f.asBuiltIn)).toEqual([[HIDE], [HIDE]]);
+    expect(noticesOf(result).map((d) => d.path)).toEqual(["rules/team.json", "rules/more.json"]);
+  });
+
+  it("says in one notice per file how many rules pbiplint runs as its own and which it replaces", async () => {
+    const custom = readCustomRules([
+      {
+        path: "rules/team.json",
+        text: JSON.stringify([
+          copyOf(HIDE),
+          copyOf("PROVIDE_FORMAT_STRING_FOR_MEASURES"),
+          copyOf("DAX_COLUMNS_FULLY_QUALIFIED", { Expression: "true" }),
+          TEAM_FORMATTED,
+        ]),
+      },
+      { path: "rules/more.json", text: JSON.stringify([TEAM_VISIBLE]) },
+    ]);
+    const result = await run(custom);
+    expect(noticesOf(result)).toEqual([
+      {
+        kind: "custom-rules",
+        path: "rules/team.json",
+        message:
+          "rules/team.json holds 4 rules: pbiplint runs 2 as its own, since they match a published version of those rules; 2 run as your team's, 1 of them in place of pbiplint's rule with the same ID (DAX_COLUMNS_FULLY_QUALIFIED).",
+      },
+    ]);
+    expect(result.summary.customRules).toEqual([
+      {
+        file: "rules/team.json",
+        rules: [
+          HIDE,
+          "PROVIDE_FORMAT_STRING_FOR_MEASURES",
+          "DAX_COLUMNS_FULLY_QUALIFIED",
+          "TEAM_FORMATTED",
+        ],
+        asBuiltIn: [HIDE, "PROVIDE_FORMAT_STRING_FOR_MEASURES"],
+        replaced: ["DAX_COLUMNS_FULLY_QUALIFIED"],
+        notRun: [],
+      },
+      {
+        file: "rules/more.json",
+        rules: ["TEAM_VISIBLE"],
+        asBuiltIn: [],
+        replaced: [],
+        notRun: ["TEAM_VISIBLE"],
+      },
+    ]);
+    const one = await run(set(copyOf(HIDE)));
+    expect(noticesOf(one).map((d) => d.message)).toEqual([
+      "rules/team.json holds 1 rule: pbiplint runs 1 as its own, since it matches a published version of that rule.",
+    ]);
+  });
+
+  it("leaves out of asBuiltIn, replaced, and the notice an id whose pbiplint rule the config turns off", async () => {
+    // Neither rule runs: the config's off covers the id, and nothing runs in its place.
+    for (const copy of [copyOf(HIDE), copyOf(HIDE, { Expression: "true" })]) {
+      const result = await run(set(copy, TEAM_FORMATTED), { rules: { hide_foreign_keys: "off" } });
+      expect(ofRule(result, HIDE)).toEqual([]);
+      expect(result.summary.rulesSkipped).toContainEqual({ id: HIDE, reason: "disabled" });
+      expect(result.summary.customRules).toEqual([
+        {
+          file: "rules/team.json",
+          rules: [HIDE, "TEAM_FORMATTED"],
+          asBuiltIn: [],
+          replaced: [],
+          notRun: [],
+        },
+      ]);
+      expect(noticesOf(result)).toEqual([]);
+    }
+    // Another built-in id in the same file still takes its place, and is still named.
+    const other = copyOf("DAX_COLUMNS_FULLY_QUALIFIED", { Expression: "true" });
+    const mixed = await run(set(copyOf(HIDE), other), { rules: { HIDE_FOREIGN_KEYS: "off" } });
+    expect(mixed.summary.customRules?.[0]).toMatchObject({
+      asBuiltIn: [],
+      replaced: ["DAX_COLUMNS_FULLY_QUALIFIED"],
+    });
+    expect(noticesOf(mixed).map((d) => d.message)).toEqual([
+      "rules/team.json holds 2 rules: 1 runs as your team's, in place of pbiplint's rule with the same ID (DAX_COLUMNS_FULLY_QUALIFIED).",
+    ]);
   });
 });

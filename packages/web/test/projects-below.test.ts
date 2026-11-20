@@ -7,6 +7,7 @@ import { UsageError } from "../../cli/src/args.js";
 import { isConfigError, noTmdlNote, runSummary, type ProjectRun } from "@pbiplint/core";
 import { lintSeveral } from "../../cli/src/several.js";
 import { lintProjects } from "../src/lint-projects.js";
+import { customRulesLoader } from "../src/rule-files.js";
 import {
   MAX_PROJECTS as CLI_MAX_PROJECTS,
   resolveInput,
@@ -591,7 +592,10 @@ describe("a folder that holds several projects, in the CLI and the browser (#237
     );
     const selected = selectProjects(tree);
     if (selected.kind !== "several") throw new Error("the browser read one project");
-    const linted = (await lintProjects(selected.projects, undefined, handles))!;
+    // The chunk as the page preloads it before anything is dropped.
+    const code = customRulesLoader(() => import("../src/custom-rules.js"));
+    await code.preload();
+    const linted = (await lintProjects(selected.projects, undefined, handles, code.loaded))!;
     const site = linted.runs;
     const top = basename(root);
     const files = [`${top}/rules/team.json`, `${top}/rules/more.json`];

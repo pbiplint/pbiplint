@@ -9,7 +9,7 @@ import {
   type ProjectRun,
 } from "@pbiplint/core";
 import type { OpenFile, SeveralProject } from "./input/project-files.js";
-import { loadCustomRules, readRuleFiles } from "./rule-files.js";
+import { loadCustomRules, readRuleFiles, type CustomRulesModule } from "./rule-files.js";
 
 /** A config file's text as resolveConfig takes it, refused in the page's words when it is not JSON. */
 export function parsedConfig(config: { text: string } | undefined): unknown {
@@ -47,13 +47,14 @@ function named(e: unknown, file: { path: string } | undefined): unknown {
  * once. `before(i)` runs ahead of each project's lint, where the page yields to the browser;
  * when it says false the run stops there and gives nothing. `ms` is the time spent linting, the
  * waits left out. `ruleFiles` holds, per project, the drop-relative paths of the rule files its
- * config named, for the list of files read. No DOM here, so projects-below.test.ts runs this
- * same loop against the CLI's.
+ * config named, for the list of files read. `load` hands over the custom rules chunk the page
+ * preloaded. No DOM here, so projects-below.test.ts runs this same loop against the CLI's.
  */
 export async function lintProjects(
   projects: SeveralProject[],
   before: (i: number) => Promise<boolean> = () => Promise.resolve(true),
   handles: ReadonlyMap<string, OpenFile> = new Map(),
+  load: () => Promise<CustomRulesModule> = loadCustomRules,
 ): Promise<{ runs: ProjectRun[]; ms: number; ruleFiles: string[][] } | undefined> {
   const configs = projects.map((p) => {
     try {
@@ -69,10 +70,7 @@ export async function lintProjects(
   for (const [i, { config: file }] of projects.entries()) {
     if (file === undefined || read.has(file.path)) continue;
     try {
-      read.set(
-        file.path,
-        await readRuleFiles(file, configs[i]!.customRules, handles, loadCustomRules),
-      );
+      read.set(file.path, await readRuleFiles(file, configs[i]!.customRules, handles, load));
     } catch (e) {
       throw named(e, file);
     }

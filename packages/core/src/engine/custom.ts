@@ -15,6 +15,13 @@ export interface CustomRuleSet {
   notices: Diagnostic[];
 }
 
+/**
+ * The most a rule file may weigh, in UTF-8 bytes. The custom rules entry's LIMITS.fileBytes is
+ * this number; it lives here too so the site can check a rule file's size before that entry's
+ * code has arrived.
+ */
+export const RULE_FILE_BYTES = 1_048_576;
+
 // A mark the engine checks rather than the class, so a stop thrown by a separately loaded copy of
 // the custom rules entry (the site loads it as its own bundle) is still known for what it is.
 const STOP = Symbol.for("pbiplint.customRuleStop");

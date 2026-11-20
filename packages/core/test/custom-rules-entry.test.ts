@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { VERSION } from "@pbiplint/core";
+import { RULE_FILE_BYTES, VERSION } from "@pbiplint/core";
 import * as entry from "@pbiplint/core/custom-rules";
 import { runTeRules, STATISTICS_REASON } from "../src/custom-rules/te/index.js";
 
@@ -13,5 +13,9 @@ describe("the custom rules entry", () => {
   it("leaves @pbiplint/core resolving to the main entry", () => {
     expect(VERSION).toMatch(/^\d+\.\d+\.\d+$/);
     expect("VERSION" in entry).toBe(false);
+  });
+  it("gives the main entry the rule file size limit the reader holds to", () => {
+    // The site checks a rule file's size before the custom rules chunk has arrived.
+    expect(RULE_FILE_BYTES).toBe(entry.LIMITS.fileBytes);
   });
 });

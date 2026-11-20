@@ -53,10 +53,10 @@ const byId = <T extends HTMLElement>(id: string, type: new () => T): T => {
 // leaves the system font in its place. happy-dom, which the unit tests run in, has no font API.
 if ("fonts" in document) document.fonts.forEach((face) => void face.load().catch(() => undefined));
 
-// The custom rules code is the site's own chunk, fetched from this origin once the page has loaded
-// and is idle, for the same reason: no request follows a drop, and a folder whose config names
-// rule files lints offline once the page is open. A fetch that fails here is tried again by the
-// drop that needs it, which says so if it fails again.
+// The custom rules code is the site's own chunk, fetched from this origin from start-up, at the
+// first idle moment or within a second, for the same reason: no request follows a drop, and a
+// folder whose config names rule files lints offline once the page is open. Nothing else ever
+// fetches it: a drop that needs it while it is missing refuses and says to reload the page.
 preloadCustomRules();
 
 const paste = byId("paste", HTMLTextAreaElement);
@@ -189,6 +189,9 @@ async function painted(token: number): Promise<boolean> {
  * The files read, with each rule file opened (a path in the drop) listed relative to the project
  * root and marked "(custom rules)", in the name order the rest of the list keeps.
  */
+// The two names for a rule file differ on purpose. A group's meta line names it as the config
+// wrote it, relative to the config (ruleFileName), as the CLI's output does; this list names every
+// file read relative to the project root, so a rule file sits among the files beside it.
 function withRuleFiles(read: string[] | undefined, root: string, opened: string[]): string[] {
   return [
     ...(read ?? []),
@@ -250,7 +253,8 @@ async function run({
     if (typeof results.scrollIntoView === "function")
       results.scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (e) {
-    fail(e);
+    // A run a newer input superseded keeps its failure to itself, as its results.
+    if (!superseded(token)) fail(e);
   }
 }
 
@@ -298,7 +302,8 @@ async function runSeveral(
     if (typeof results.scrollIntoView === "function")
       results.scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (e) {
-    fail(e);
+    // A run a newer input superseded keeps its failure to itself, as its results.
+    if (!superseded(token)) fail(e);
   }
 }
 

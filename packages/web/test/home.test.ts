@@ -828,7 +828,7 @@ describe("home page", () => {
     expect(document.getElementById("results")!.hidden).toBe(true);
   });
   it("asks for the custom rules chunk at start-up, before anything is dropped", () => {
-    // No request may follow a drop, so the page fetches the chunk once it is idle.
+    // No request may follow a drop, so the page fetches the chunk from start-up.
     expect(startupPreloads).toBe(1);
   });
   it("lints a dropped project with the custom rules its config names, and lists their files", async () => {
@@ -885,6 +885,47 @@ describe("home page", () => {
     const linted = vi.mocked(lint).mock.calls.map((c) => c[0].map((f) => f.path).join());
     expect(linted).toEqual(["pasted.tmdl"]);
   });
+  // A drop of one project, and a drop of several sharing one config's rule files.
+  const superseding: [string, () => File[]][] = [
+    ["one project", () => teamFolder()],
+    [
+      "several projects",
+      () => [
+        ...modelFiles("Drop/a/A.SemanticModel"),
+        ...modelFiles("Drop/b/B.SemanticModel"),
+        at("Drop/pbiplint.config.json", '{ "customRules": ["rules/team.json"] }'),
+        at("Drop/rules/team.json", fixture("rules/team.json")),
+      ],
+    ],
+  ];
+  it.each(superseding)(
+    "leaves the newer run's results alone when a superseded drop of %s fails",
+    async (_, files) => {
+      let refuse: () => void = () => undefined;
+      vi.mocked(loadCustomRules).mockImplementationOnce(
+        () =>
+          new Promise((_done, no) => (refuse = () => no(new InputError(CUSTOM_RULES_LOAD_FAILED)))),
+      );
+      feedFolder(files());
+      await tick();
+      (document.getElementById("paste") as HTMLTextAreaElement).value = "table Pasted\n";
+      document.getElementById("lint-paste")!.click();
+      await tick();
+      expect(document.querySelector("#results h2")!.textContent).toBe(
+        "Results for pasted TMDL (model, 1 file)",
+      );
+      refuse();
+      await tick();
+      await tick();
+      const results = document.getElementById("results")!;
+      expect(results.hidden).toBe(false);
+      expect(results.querySelector("h2")!.textContent).toBe(
+        "Results for pasted TMDL (model, 1 file)",
+      );
+      expect(document.getElementById("status")!.hidden).toBe(true);
+      expect(document.getElementById("status")!.textContent).not.toBe(CUSTOM_RULES_LOAD_FAILED);
+    },
+  );
   const OUTSIDE =
     "is outside the folder you dropped or chose; drop or choose the folder that holds both the project and its rule files";
   const refusals: [string, () => File[], string][] = [
@@ -940,18 +981,21 @@ describe("home page", () => {
       expect(document.getElementById("results")!.childElementCount).toBe(0);
     },
   );
-  it("says so when the custom rules code could not be fetched, and tries again on the next drop", async () => {
+  it("says so when the custom rules code could not be fetched, and fetches nothing for the next drop", async () => {
+    // What the page's loader gives a drop once the preload has failed: a refusal, and no fetch.
     vi.mocked(loadCustomRules).mockRejectedValueOnce(new InputError(CUSTOM_RULES_LOAD_FAILED));
-    feedFolder(teamFolder());
-    await tick();
-    await tick();
-    expect(document.getElementById("status")!.textContent).toBe(CUSTOM_RULES_LOAD_FAILED);
-    expect(document.getElementById("results")!.hidden).toBe(true);
-    feedFolder(teamFolder());
-    await tick();
-    await tick();
-    await tick();
-    expect(document.getElementById("results")!.textContent).toContain("TEAM_MEASURES_IN_FOLDERS");
+    vi.mocked(loadCustomRules).mockRejectedValueOnce(new InputError(CUSTOM_RULES_LOAD_FAILED));
+    vi.mocked(preloadCustomRules).mockClear();
+    for (let drop = 0; drop < 2; drop++) {
+      feedFolder(teamFolder());
+      await tick();
+      await tick();
+      expect(document.getElementById("status")!.textContent).toBe(CUSTOM_RULES_LOAD_FAILED);
+      expect(document.getElementById("results")!.hidden).toBe(true);
+    }
+    // Only the start-up preload ever fetches the chunk; a drop never asks for it again.
+    expect(vi.mocked(preloadCustomRules)).not.toHaveBeenCalled();
+    expect(vi.mocked(loadCustomRules)).toHaveBeenCalledTimes(2);
   });
   it("names a project's config when its rule file is missing in a folder of several", async () => {
     feedFolder([

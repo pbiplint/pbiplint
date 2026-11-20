@@ -1,4 +1,4 @@
-import { ConfigError, isConfigError, ruleFileName } from "@pbiplint/core";
+import { ConfigError, isConfigError, RULE_FILE_BYTES, ruleFileName } from "@pbiplint/core";
 import type { CustomRuleSet } from "@pbiplint/core/custom-rules";
 import { InputError, type OpenFile } from "./input/project-files.js";
 import { SKIP_DIRS, skipsFolder } from "./input/read-drop.js";
@@ -10,40 +10,50 @@ export type CustomRulesModule = typeof import("./custom-rules.js");
 export const CUSTOM_RULES_LOAD_FAILED =
   "pbiplint could not load its custom rules code from this site, so the folder was not linted. Reload the page, then drop or choose the folder again.";
 
-/**
- * A loader for the custom rules chunk over `importer`: one promise for the page, so the chunk is
- * fetched once however many drops and configs ask for it. A failed fetch clears that promise and
- * is refused in the page's words, so the next call tries again.
- */
-export function customRulesLoader(
-  importer: () => Promise<CustomRulesModule>,
-): () => Promise<CustomRulesModule> {
-  let loading: Promise<CustomRulesModule> | undefined;
-  return () =>
-    (loading ??= importer().catch(() => {
-      loading = undefined;
-      throw new InputError(CUSTOM_RULES_LOAD_FAILED);
-    }));
+/** The custom rules chunk: fetched by `preload`, and only by it; handed to a drop by `loaded`. */
+export interface CustomRulesLoader {
+  /**
+   * Fetches the chunk, once for the page however often it is called; a failed fetch is refused in
+   * the page's words. The only way the chunk is ever asked for.
+   */
+  preload(): Promise<CustomRulesModule>;
+  /**
+   * The preload's promise, in flight or settled, for a drop. It never starts a fetch: when the
+   * preload never started, or failed, it refuses in the page's words, which say to reload.
+   */
+  loaded(): Promise<CustomRulesModule>;
 }
 
-/** The custom rules chunk, fetched from the site's own origin, once per page. */
-export const loadCustomRules = customRulesLoader(() => import("./custom-rules.js"));
+/** A loader for the custom rules chunk over `importer`, which only its `preload` calls. */
+export function customRulesLoader(importer: () => Promise<CustomRulesModule>): CustomRulesLoader {
+  let loading: Promise<CustomRulesModule> | undefined;
+  const refused = (): never => {
+    throw new InputError(CUSTOM_RULES_LOAD_FAILED);
+  };
+  return {
+    preload: () => (loading ??= importer().catch(refused)),
+    loaded: () => loading ?? Promise.reject(new InputError(CUSTOM_RULES_LOAD_FAILED)),
+  };
+}
+
+/** The page's custom rules chunk, fetched from the site's own origin. */
+const page = customRulesLoader(() => import("./custom-rules.js"));
+
+/** The page's custom rules chunk for a drop: the start-up preload's, never a fetch of its own. */
+export const loadCustomRules = (): Promise<CustomRulesModule> => page.loaded();
 
 /**
- * Fetches the custom rules chunk once the page has loaded and is idle, before anything is dropped,
- * so no request follows a drop and custom rules work offline once the page is open. A failure is
- * left for a later drop to meet, which tries again and says so.
+ * Fetches the custom rules chunk from start-up, at the first idle moment or within a second,
+ * without waiting for the page's load event, so it is there before anything is dropped: no
+ * request follows a drop, and custom rules work offline once the page is open. A failure is
+ * swallowed here; a drop that needs the chunk then refuses and says to reload.
  */
-export function preloadCustomRules(load: () => Promise<unknown> = loadCustomRules): void {
+export function preloadCustomRules(preload: () => Promise<unknown> = () => page.preload()): void {
   const run = (): void => {
-    load().catch(() => {});
+    preload().catch(() => {});
   };
-  const whenIdle = (): void => {
-    if (typeof requestIdleCallback === "function") requestIdleCallback(run);
-    else setTimeout(run, 0);
-  };
-  if (document.readyState === "complete") whenIdle();
-  else window.addEventListener("load", whenIdle, { once: true });
+  if (typeof requestIdleCallback === "function") requestIdleCallback(run, { timeout: 1000 });
+  else setTimeout(run, 0);
 }
 
 /**
@@ -80,10 +90,12 @@ const reasonOf = (e: unknown): string => (e instanceof Error ? e.message : Strin
  * The rule files a config names, opened from inside the dropped folder only, through the handles
  * the walk kept, and read by the custom rules chunk. Undefined, with nothing loaded, when the
  * config names none. Each entry in turn is resolved and checked, then opened: its size first,
- * against the reader's limit, then its text. Any entry that cannot be used refuses the project with
- * a `ConfigError` naming the config and the entry, as the CLI's readCustomRuleFiles does, in the
- * CLI's words where the cause is the same; a file the reader refuses whole is the reader's own
- * refusal. `opened` holds the drop-relative paths read, in order.
+ * against the reader's limit, then its text. All of that happens before the chunk is awaited, so a
+ * mistake in the config gets its own refusal even when the chunk is not there. Any entry that
+ * cannot be used refuses the project with a `ConfigError` naming the config and the entry, as the
+ * CLI's readCustomRuleFiles does, in the CLI's words where the cause is the same; a file the
+ * reader refuses whole is the reader's own refusal. `opened` holds the drop-relative paths read,
+ * in order.
  */
 export async function readRuleFiles(
   config: { path: string; text: string },
@@ -92,7 +104,6 @@ export async function readRuleFiles(
   load: () => Promise<CustomRulesModule> = loadCustomRules,
 ): Promise<{ set: CustomRuleSet; opened: string[] } | undefined> {
   if (entries.length === 0) return undefined;
-  const { LIMITS, readCustomRules } = await load();
   // What was dropped or chosen, by its top-level names: a path whose first segment is none of them
   // climbed out of the drop, even though it stayed below its top.
   const dropped = new Set([...handles.keys()].map((path) => path.split("/")[0]!));
@@ -123,9 +134,9 @@ export async function readRuleFiles(
     let text: string;
     try {
       const file = await open();
-      if (file.size > LIMITS.fileBytes)
+      if (file.size > RULE_FILE_BYTES)
         throw refuse(
-          `is ${file.size.toLocaleString("en")} bytes, over the limit of ${LIMITS.fileBytes.toLocaleString("en")} bytes for a rule file`,
+          `is ${file.size.toLocaleString("en")} bytes, over the limit of ${RULE_FILE_BYTES.toLocaleString("en")} bytes for a rule file`,
         );
       text = await file.text();
     } catch (e) {
@@ -135,5 +146,6 @@ export async function readRuleFiles(
     opened.push(path);
     files.push({ path: name, text });
   }
+  const { readCustomRules } = await load();
   return { set: readCustomRules(files), opened };
 }

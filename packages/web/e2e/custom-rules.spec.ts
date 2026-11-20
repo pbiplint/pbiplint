@@ -10,7 +10,7 @@ import { withTempFolder } from "./temp-folder.js";
 // A team's own rules on the site: a folder whose pbiplint.config.json names rule files, given to
 // the page as a folder is. The unit tests hold the reader, the results' DOM, and the export; this
 // holds what a real browser does with them, and the requests around a drop. The custom rules code
-// is the site's own chunk, fetched once the page is idle and before anything is given to it, so
+// is the site's own chunk, fetched from start-up and before anything is given to it, so
 // the Privacy Promise's first check stays true word for word: no request follows a drop.
 
 const model = fileURLToPath(
@@ -31,7 +31,7 @@ const chunkOn = (origin: string) => (url: string) =>
   url.startsWith(`${origin}/assets/custom-rules-`) && url.endsWith(".js");
 
 /**
- * Waits for the custom rules chunk, which the page asks for once it is idle, and for the network to
+ * Waits for the custom rules chunk, which the page asks for from start-up, and for the network to
  * settle after it; returns how many requests the page had made by then. The chunk is asked for
  * exactly once, from the page's own origin.
  */
@@ -130,7 +130,7 @@ test("lints a folder with the team's rules its config names, with no request aft
   });
 });
 
-test("the sample makes no request, the custom rules chunk having come at idle", async ({
+test("the sample makes no request, the custom rules chunk having come before it", async ({
   page,
   seen,
   baseURL,
@@ -167,7 +167,12 @@ test("a folder whose config names no rule files makes no request and shows no te
   );
 });
 
-test("refuses a rule file outside the folder given, and lints nothing", async ({ page }) => {
+test("refuses a rule file outside the folder given, lints nothing, and makes no request", async ({
+  page,
+  seen,
+  baseURL,
+}) => {
+  const before = await settledWithChunk(page, seen, baseURL!);
   await withTempFolder(
     "pbiplint-custom-rules-outside-",
     (dir) => {
@@ -186,11 +191,18 @@ test("refuses a rule file outside the folder given, and lints nothing", async ({
         "customRules: ../rules/team.json is outside the folder you dropped or chose; drop or choose the folder that holds both the project and its rule files",
       );
       await expect(page.locator("#results")).toBeHidden();
+      await painted(page);
+      expect(seen.requests.slice(before)).toEqual([]);
     },
   );
 });
 
-test("refuses a rule file that is not in the folder given, and lints nothing", async ({ page }) => {
+test("refuses a rule file that is not in the folder given, lints nothing, and makes no request", async ({
+  page,
+  seen,
+  baseURL,
+}) => {
+  const before = await settledWithChunk(page, seen, baseURL!);
   await withTempFolder(
     "pbiplint-custom-rules-missing-",
     (dir) => team(dir, '{ "customRules": ["rules/gone.json"] }'),
@@ -200,6 +212,59 @@ test("refuses a rule file that is not in the folder given, and lints nothing", a
         "customRules: rules/gone.json is not in the folder you dropped or chose; the path is relative to the folder pbiplint.config.json is in",
       );
       await expect(page.locator("#results")).toBeHidden();
+      await painted(page);
+      expect(seen.requests.slice(before)).toEqual([]);
     },
   );
+});
+
+test("a folder given straight after the page opens finds the chunk already asked for, and asks for nothing", async ({
+  page,
+  seen,
+  baseURL,
+}) => {
+  // No wait for the chunk: the page asks for it from start-up, so it is under way by the time
+  // anything can be given, and the folder adds no request of its own.
+  const origin = new URL(baseURL!).origin;
+  await withTempFolder("pbiplint-custom-rules-early-", team, async (dir) => {
+    const before = seen.requests.length;
+    expect(seen.requests.slice(0, before).filter(chunkOn(origin))).toHaveLength(1);
+    await setFolder(page.locator("#folder-input"), join(dir, "Team"));
+    const results = page.locator("#results");
+    await expect(results.locator("h2").first()).toHaveText(/^Results for Team \(model, /);
+    await expect(results.locator(".team-tag").first()).toHaveText("Your team's rule");
+    await painted(page);
+    expect(seen.requests.slice(before).filter(chunkOn(origin))).toEqual([]);
+    // The fonts the page asks for at start-up may still be arriving; the folder adds nothing.
+    expect(seen.requests.slice(before).filter((url) => !url.endsWith(".woff2"))).toEqual([]);
+  });
+});
+
+test("when the chunk could not be fetched, a folder is refused with the reload message and nothing is asked for", async ({
+  page,
+  seen,
+  baseURL,
+}) => {
+  const origin = new URL(baseURL!).origin;
+  await page.route(`${origin}/assets/custom-rules-*.js`, (route) => route.abort());
+  await page.reload();
+  // The first load's chunk, then the reload's, which was aborted.
+  await expect.poll(() => seen.requests.filter(chunkOn(origin)).length).toBe(2);
+  await page.waitForLoadState("networkidle");
+  await page.evaluate(() => document.fonts.ready);
+  const before = seen.requests.length;
+  await withTempFolder("pbiplint-custom-rules-unloaded-", team, async (dir) => {
+    await setFolder(page.locator("#folder-input"), join(dir, "Team"));
+    await expect(page.locator("#status")).toHaveText(
+      "pbiplint could not load its custom rules code from this site, so the folder was not linted. Reload the page, then drop or choose the folder again.",
+    );
+    await expect(page.locator("#results")).toBeHidden();
+    await painted(page);
+    expect(seen.requests.slice(before)).toEqual([]);
+  });
+  // The aborted chunk is the one failure the browser may report; the page itself wrote nothing.
+  const pageErrors = seen.errors.filter((e) => !/custom-rules-|Failed to load resource/.test(e));
+  expect(pageErrors).toEqual([]);
+  seen.errors.length = 0;
+  seen.errors.push(...pageErrors);
 });

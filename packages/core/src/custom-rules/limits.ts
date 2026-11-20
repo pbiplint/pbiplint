@@ -1,3 +1,5 @@
+import { RULE_FILE_BYTES } from "../engine/custom.js";
+
 /** The most a custom rule file, a rule, and a rule's regular expressions may ask of pbiplint. */
 export interface CustomRuleLimits {
   /** A rule file's size in UTF-8 bytes. */
@@ -22,7 +24,7 @@ export interface CustomRuleLimits {
  * while keeping a hostile one from stalling a run or the browser.
  */
 export const LIMITS: CustomRuleLimits = {
-  fileBytes: 1_048_576,
+  fileBytes: RULE_FILE_BYTES,
   rulesPerFile: 2_000,
   expressionChars: 20_000,
   nesting: 100,

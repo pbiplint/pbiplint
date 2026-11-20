@@ -7,7 +7,13 @@ import { buildFacts } from "../project/facts.js";
 import { isModelFile, isReportFile, routeFiles } from "../project/route.js";
 import type { Diagnostic, Fact, Layers, Project } from "../project/types.js";
 import { defaultRules } from "../rules/index.js";
-import type { Finding, LayerName, Rule, Severity } from "../rules/types.js";
+import {
+  SEVERITY_LABEL,
+  type Finding,
+  type LayerName,
+  type Rule,
+  type Severity,
+} from "../rules/types.js";
 import { parseTmdl } from "../tmdl/parse.js";
 import {
   bindConfig,
@@ -17,7 +23,7 @@ import {
   type PbiplintConfig,
   type ResolvedConfig,
 } from "./config.js";
-import { sameIdAs, type CustomRuleSet } from "./custom.js";
+import { RESERVED_IDS, sameIdAs, type CustomRuleSet } from "./custom.js";
 import { rank, type RankedGroup } from "./rank.js";
 import { optionsFor, runRules, type RuleError, type SkippedRule } from "./run.js";
 
@@ -68,11 +74,17 @@ export interface CustomRulesSummary {
   /** Every rule id the file holds, as written. */
   rules: string[];
   /**
-   * The ids of pbiplint's own rules, which take their place. An id whose pbiplint rule the config
-   * turns off is not here: neither rule runs, and the config's off covers it.
+   * The ids of the file's unchanged copies of published rules, whose pbiplint rule runs in their
+   * place. An id whose pbiplint rule the config turns off is not here: neither rule runs, and the
+   * config's off covers it. Nor is an id whose rule here was left out for another file's (or an
+   * earlier one in this file) with that id: the run's `custom-rule-duplicate` notice names it.
    */
   asBuiltIn: string[];
-  /** The ids of pbiplint's own rules the file's rules run in place of. */
+  /**
+   * The ids of pbiplint's own rules the file's rules run in place of, left out as `asBuiltIn` is.
+   * A rule with one of pbiplint's ids that the reader could not read is in neither list: pbiplint's
+   * rule runs, and the rule is in `notRun`.
+   */
   replaced: string[];
   /** The rules that ran and could not run to the end, each a RULE_COULD_NOT_FINISH finding. */
   notRun: string[];
@@ -123,26 +135,34 @@ const plural = (n: number, one: string, other: string) => `${n} ${n === 1 ? one 
 
 /**
  * The one notice per rule file on the ids it shares with pbiplint's rules: how many rules it
- * holds, how many pbiplint runs as its own, which it could not read and runs its own rule for, with
- * the reader's reason for each, how many run as the team's, and the ids those replace.
+ * holds; how many pbiplint runs as its own, naming each whose severity it takes from the file; the
+ * ids of its rules pbiplint could not read, whose pbiplint rule runs beside their failure finding;
+ * how many run as the team's; and the ids those replace.
  */
 function sameIdNotice(
   file: string,
   held: number,
   own: number,
-  unread: readonly { id: string; reason: string }[],
+  adopted: readonly { id: string; severity: Severity }[],
+  unread: readonly string[],
   team: number,
   replacing: readonly string[],
 ): string {
   const parts: string[] = [];
-  if (own > 0)
+  if (own > 0) {
+    const a = adopted.length;
+    const severities =
+      a === 0
+        ? ""
+        : `, ${a === own && a === 1 ? "" : `${a} `}at the severity the file gives ${a === 1 ? "it" : "them"} (${adopted.map((r) => `${r.id} at ${SEVERITY_LABEL[r.severity]}`).join(", ")})`;
     parts.push(
-      `pbiplint runs ${own} as its own, since ${own === 1 ? "it matches a published version of that rule" : "they match a published version of those rules"}`,
+      `pbiplint runs ${own} as its own, since ${own === 1 ? "it matches a published version of that rule" : "they match a published version of those rules"}${severities}`,
     );
+  }
   const u = unread.length;
   if (u > 0)
     parts.push(
-      `pbiplint could not read ${u}, so its own ${u === 1 ? "rule" : "rules"} with the same ${u === 1 ? "ID" : "IDs"} (${unread.map((r) => r.id).join(", ")}) ${u === 1 ? "runs in its place" : "run in their place"}`,
+      `pbiplint could not read ${u} (${unread.join(", ")}), so its own ${u === 1 ? "rule" : "rules"} with the same ${u === 1 ? "ID runs, and the copy is a RULE_COULD_NOT_FINISH finding" : "IDs run, and each copy is a RULE_COULD_NOT_FINISH finding"}`,
     );
   if (team > 0) {
     const r = replacing.length;
@@ -151,8 +171,7 @@ function sameIdNotice(
       r === 0 ? "" : r === team ? `, in place of ${which}` : `, ${r} of them in place of ${which}`;
     parts.push(`${team} ${team === 1 ? "runs" : "run"} as your team's${instead}`);
   }
-  const reasons = unread.map((r) => ` ${r.id}: ${r.reason}`).join("");
-  return `${file} holds ${plural(held, "rule", "rules")}: ${parts.join("; ")}.${reasons}`;
+  return `${file} holds ${plural(held, "rule", "rules")}: ${parts.join("; ")}.`;
 }
 
 /**
@@ -165,32 +184,33 @@ export async function lint(files: LintFile[], options: LintOptions = {}): Promis
   const custom = options.customRules;
   // A custom rule with the id of one of pbiplint's rules in this run (custom rules spec, section
   // 4): an unchanged copy of a published version is left out and pbiplint's rule runs, taking the
-  // copy's severity when the team changed it; a copy the reader could not read is left out too, and
-  // the file's notice gives the reader's reason; any other runs in place of pbiplint's rule. With
-  // pbiplint's rule not in `rules`, the custom one runs as any other, so a team's rule is never
-  // dropped for nothing. One refused for taking a safety net's id runs, to say so.
+  // copy's severity when the team changed it; any other runs in place of pbiplint's rule. A copy
+  // the reader could not read runs beside pbiplint's rule, to report why as a rule that could not
+  // finish (section 3), as one refused for taking a safety net's id does. With pbiplint's rule not
+  // in `rules`, the custom one runs as any other, so a team's rule is never dropped for nothing.
+  // Each is a rule `readCustomRules` kept, one per id (any case), so each belongs to one file.
   const ownIds = new Set(builtIn.map((r) => r.id.toUpperCase()));
-  const asBuiltIn = new Set<string>();
-  /** The reader's reason for each copy in `asBuiltIn` it could not read, by upper-case id. */
-  const unreadCopies = new Map<string, string>();
-  const replaced = new Set<string>();
-  const copySeverity = new Map<string, Severity>();
+  const upper = (r: Rule) => r.id.toUpperCase();
+  const asBuiltIn = new Set<Rule>();
+  const replaced = new Set<Rule>();
+  /** The copies the reader could not read, with the id of a pbiplint rule that is not a safety net. */
+  const unreadCopies = new Set<Rule>();
   for (const r of custom?.rules ?? []) {
-    const upper = r.id.toUpperCase();
     const same = sameIdAs(r, ownIds);
-    if (same === "replaces") replaced.add(upper);
-    else if (same === "asBuiltIn") {
-      asBuiltIn.add(upper);
-      const problem = r.custom?.readProblem;
-      if (problem !== undefined) unreadCopies.set(upper, problem);
-      const severity = r.custom?.upstreamSeverityChanged;
-      if (severity !== undefined) copySeverity.set(upper, severity);
-    }
+    if (same === "replaces") replaced.add(r);
+    else if (same === "asBuiltIn") asBuiltIn.add(r);
+    else if (
+      r.custom?.readProblem !== undefined &&
+      ownIds.has(upper(r)) &&
+      !RESERVED_IDS.has(upper(r))
+    )
+      unreadCopies.add(r);
   }
-  const rules = custom
+  const replacedIds = new Set([...replaced].map(upper));
+  const listed = custom
     ? [
-        ...builtIn.filter((r) => !replaced.has(r.id.toUpperCase())),
-        ...custom.rules.filter((r) => !asBuiltIn.has(r.id.toUpperCase())),
+        ...builtIn.filter((r) => !replacedIds.has(upper(r))),
+        ...custom.rules.filter((r) => !asBuiltIn.has(r)),
       ]
     : builtIn;
   const resolved = isResolvedConfig(options.config)
@@ -202,16 +222,26 @@ export async function lint(files: LintFile[], options: LintOptions = {}): Promis
     throw new ConfigError(
       "pbiplint.config.json: customRules names rule files, and this run was not given them",
     );
-  const { config, unknownRules } = bindConfig(resolved, rules);
+  // pbiplint's rules come first, so the config's settings for an id two rules share are its rule's.
+  const { config, unknownRules } = bindConfig(resolved, listed);
   // pbiplint's rule takes a copy's severity only where the config sets none.
-  for (const r of builtIn) {
-    const severity = copySeverity.get(r.id.toUpperCase());
-    if (severity !== undefined && !config.severity.has(r.id)) config.severity.set(r.id, severity);
+  const adopted = new Map<string, Severity>();
+  for (const copy of asBuiltIn) {
+    const severity = copy.custom?.upstreamSeverityChanged;
+    const own = builtIn.find((r) => upper(r) === upper(copy));
+    if (severity === undefined || own === undefined || config.severity.has(own.id)) continue;
+    config.severity.set(own.id, severity);
+    adopted.set(upper(copy), severity);
   }
-  // An id the config turns off: neither rule runs, so the notice and the summary leave it out.
+  // An id the config turns off: neither rule runs, so the notice and the summary leave it out. A
+  // copy pbiplint could not read goes with its pbiplint rule, so one off turns both off.
   const off = new Set([...config.disabled].map((id) => id.toUpperCase()));
-  const ofFile = (ids: string[], set: ReadonlySet<string>) =>
-    ids.filter((id) => set.has(id.toUpperCase()) && !off.has(id.toUpperCase()));
+  const rules = listed.filter((r) => !(unreadCopies.has(r) && off.has(upper(r))));
+  /** The ids of the file's rules in `set`, as the file lists them, the ones turned off left out. */
+  const ofFile = (f: { path: string; ids: string[] }, set: ReadonlySet<Rule>) => {
+    const mine = new Set([...set].filter((r) => r.custom?.file === f.path).map(upper));
+    return f.ids.filter((id) => mine.has(id.toUpperCase()) && !off.has(id.toUpperCase()));
+  };
   const routed = routeFiles(files);
   // A path that names no file the layer reads is a folder, written with its trailing `/` or not.
   const folders = (paths: string[] | undefined, isFile: (path: string) => boolean) =>
@@ -241,21 +271,33 @@ export async function lint(files: LintFile[], options: LintOptions = {}): Promis
   };
   const diagnostics = [...(options.diagnostics ?? []), ...(built?.diagnostics ?? [])];
   for (const f of custom?.files ?? []) {
-    const own = ofFile(f.ids, asBuiltIn);
-    const instead = ofFile(f.ids, replaced);
-    if (own.length === 0 && instead.length === 0) continue;
+    const own = ofFile(f, asBuiltIn);
+    const instead = ofFile(f, replaced);
+    const unreadIds = ofFile(f, unreadCopies);
+    if (own.length === 0 && instead.length === 0 && unreadIds.length === 0) continue;
+    // The file's rules that run as the team's: kept for this file, not pbiplint's own, not turned
+    // off, and able to run (read, and not refused for a safety net's id).
+    const team = custom!.rules.filter(
+      (r) =>
+        r.custom?.file === f.path &&
+        !asBuiltIn.has(r) &&
+        !off.has(upper(r)) &&
+        r.custom.readProblem === undefined &&
+        !RESERVED_IDS.has(upper(r)),
+    ).length;
     diagnostics.push({
       kind: "custom-rules",
       path: f.path,
       message: sameIdNotice(
         f.path,
         f.ids.length,
-        own.filter((id) => !unreadCopies.has(id.toUpperCase())).length,
+        own.length,
         own.flatMap((id) => {
-          const reason = unreadCopies.get(id.toUpperCase());
-          return reason === undefined ? [] : [{ id, reason }];
+          const severity = adopted.get(id.toUpperCase());
+          return severity === undefined ? [] : [{ id, severity }];
         }),
-        f.ids.filter((id) => !asBuiltIn.has(id.toUpperCase()) && !off.has(id.toUpperCase())).length,
+        unreadIds,
+        team,
         instead,
       ),
     });
@@ -272,9 +314,10 @@ export async function lint(files: LintFile[], options: LintOptions = {}): Promis
   // options are the ones each was checked with, so a fact that links a rule only under a policy,
   // as Filters pane does, reads the policy the rule read.
   const ran = new Set(run.rulesRun);
-  const ranOptions = new Map(
-    rules.filter((r) => ran.has(r.id)).map((r) => [r.id, optionsFor(r, config)] as const),
-  );
+  // The first rule with an id gives its options: pbiplint's rule, when a custom rule runs beside it.
+  const ranOptions = new Map<string, ReturnType<typeof optionsFor>>();
+  for (const r of rules)
+    if (ran.has(r.id) && !ranOptions.has(r.id)) ranOptions.set(r.id, optionsFor(r, config));
   const facts = buildFacts(project, indexes, ran, ranOptions);
   const count = (severity: number) =>
     groups.filter((g) => g.rule.severity === severity).reduce((n, g) => n + g.findings.length, 0);
@@ -293,8 +336,8 @@ export async function lint(files: LintFile[], options: LintOptions = {}): Promis
       customRules: custom.files.map((f) => ({
         file: f.path,
         rules: f.ids,
-        asBuiltIn: ofFile(f.ids, asBuiltIn),
-        replaced: ofFile(f.ids, replaced),
+        asBuiltIn: ofFile(f, asBuiltIn),
+        replaced: ofFile(f, replaced),
         notRun: [...new Set(run.ruleErrors.filter((e) => e.ruleFile === f.path).map((e) => e.id))],
       })),
     }),

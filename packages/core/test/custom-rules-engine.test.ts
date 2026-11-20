@@ -14,6 +14,7 @@ import {
   isFindingFor,
   RULE_COULD_NOT_FINISH,
 } from "../src/rules/rule-could-not-finish.js";
+import { defaultRules } from "../src/rules/index.js";
 import { repo } from "./custom-te-parity.js";
 import { fixturesDir, readModelFiles } from "./helpers.js";
 
@@ -370,8 +371,21 @@ describe("a custom rule with the id of one of pbiplint's rules", () => {
     expect(groupOf(raised, HIDE)!.rule).toMatchObject({ severity: 3, status: "ported" });
     expect(raised.summary.customRules?.[0]?.asBuiltIn).toEqual([HIDE]);
     expect(raised.failed).toBe(true);
+    expect(noticesOf(raised).map((d) => d.message)).toEqual([
+      "rules/team.json holds 1 rule: pbiplint runs 1 as its own, since it matches a published version of that rule, at the severity the file gives it (HIDE_FOREIGN_KEYS at error).",
+    ]);
     const config = await run(set(copyOf(HIDE, { Severity: 3 })), { rules: { [HIDE]: "info" } });
     expect(groupOf(config, HIDE)!.rule.severity).toBe(1);
+    // The config's severity wins, so the notice names no severity of the file's.
+    expect(noticesOf(config).map((d) => d.message)).toEqual([
+      "rules/team.json holds 1 rule: pbiplint runs 1 as its own, since it matches a published version of that rule.",
+    ]);
+    const two = await run(
+      set(copyOf(HIDE, { Severity: 1 }), copyOf("PROVIDE_FORMAT_STRING_FOR_MEASURES")),
+    );
+    expect(noticesOf(two).map((d) => d.message)).toEqual([
+      "rules/team.json holds 2 rules: pbiplint runs 2 as its own, since they match a published version of those rules, 1 at the severity the file gives it (HIDE_FOREIGN_KEYS at info).",
+    ]);
     // 2.5 reads as a warning, as Microsoft's 2 does: the severity is unchanged.
     const same = await run(set(copyOf(HIDE, { Severity: 2.5 })));
     expect(groupOf(same, HIDE)!.rule.severity).toBe(2);
@@ -421,7 +435,7 @@ describe("a custom rule with the id of one of pbiplint's rules", () => {
     });
   });
 
-  it("counts an unchanged copy held by two files once", async () => {
+  it("counts an unchanged copy held by two files once, under the first file", async () => {
     const copy = copyOf(HIDE);
     const custom = readCustomRules([
       { path: "rules/team.json", text: JSON.stringify([copy]) },
@@ -431,8 +445,71 @@ describe("a custom rule with the id of one of pbiplint's rules", () => {
     const builtIn = await builtInRun();
     expect(ofRule(result, HIDE)).toEqual(ofRule(builtIn, HIDE));
     expect(result.summary.rulesRun).toBe(builtIn.summary.rulesRun);
-    expect(result.summary.customRules?.map((f) => f.asBuiltIn)).toEqual([[HIDE], [HIDE]]);
-    expect(noticesOf(result).map((d) => d.path)).toEqual(["rules/team.json", "rules/more.json"]);
+    expect(result.summary.customRules?.map((f) => f.asBuiltIn)).toEqual([[HIDE], []]);
+    expect(noticesOf(result).map((d) => d.path)).toEqual(["rules/team.json"]);
+  });
+
+  it("credits each id to the file whose rule runs, never to one whose different copy is left out", async () => {
+    const unchanged = copyOf(HIDE);
+    const edited = copyOf(HIDE, { Expression: "IsHidden == false" });
+    const duplicateOf = (path: string) =>
+      expect.objectContaining({ kind: "custom-rule-duplicate", path });
+    // Unchanged first: pbiplint's rule runs, and the edited copy is left out.
+    const first = await run(
+      readCustomRules([
+        { path: "rules/team.json", text: JSON.stringify([unchanged]) },
+        { path: "rules/more.json", text: JSON.stringify([edited]) },
+      ]),
+    );
+    expect(ofRule(first, HIDE)).toEqual(ofRule(await builtInRun(), HIDE));
+    expect(first.summary.customRules).toEqual([
+      { file: "rules/team.json", rules: [HIDE], asBuiltIn: [HIDE], replaced: [], notRun: [] },
+      { file: "rules/more.json", rules: [HIDE], asBuiltIn: [], replaced: [], notRun: [] },
+    ]);
+    expect(noticesOf(first).map((d) => d.message)).toEqual([
+      "rules/team.json holds 1 rule: pbiplint runs 1 as its own, since it matches a published version of that rule.",
+    ]);
+    expect(first.diagnostics).toContainEqual(duplicateOf("rules/more.json"));
+    // Edited first: the team's rule runs, and the unchanged copy is left out.
+    const second = await run(
+      readCustomRules([
+        { path: "rules/team.json", text: JSON.stringify([edited]) },
+        { path: "rules/more.json", text: JSON.stringify([unchanged]) },
+      ]),
+    );
+    expect(groupOf(second, HIDE)?.rule).toMatchObject({
+      custom: true,
+      ruleFile: "rules/team.json",
+    });
+    expect(second.summary.customRules).toEqual([
+      { file: "rules/team.json", rules: [HIDE], asBuiltIn: [], replaced: [HIDE], notRun: [] },
+      { file: "rules/more.json", rules: [HIDE], asBuiltIn: [], replaced: [], notRun: [] },
+    ]);
+    expect(noticesOf(second).map((d) => d.message)).toEqual([
+      "rules/team.json holds 1 rule: 1 runs as your team's, in place of pbiplint's rule with the same ID (HIDE_FOREIGN_KEYS).",
+    ]);
+    expect(second.diagnostics).toContainEqual(duplicateOf("rules/more.json"));
+  });
+
+  it("counts as your team's only the rules of the file that run and can run", async () => {
+    const custom = readCustomRules([
+      { path: "rules/team.json", text: JSON.stringify([TEAM_FORMATTED]) },
+      {
+        path: "rules/more.json",
+        text: JSON.stringify([
+          // Left out: a different rule with an id rules/team.json already holds.
+          { ...TEAM_FORMATTED, Expression: "true" },
+          // Cannot run: the reader could not read it, or it takes a safety net's id.
+          TEAM_NO_SCOPE,
+          rule({ ID: "PARSE_ISSUE", Expression: "true" }),
+          copyOf("DAX_COLUMNS_FULLY_QUALIFIED", { Expression: "true" }),
+        ]),
+      },
+    ]);
+    const result = await run(custom);
+    expect(noticesOf(result).map((d) => d.message)).toEqual([
+      "rules/more.json holds 4 rules: 1 runs as your team's, in place of pbiplint's rule with the same ID (DAX_COLUMNS_FULLY_QUALIFIED).",
+    ]);
   });
 
   it("says in one notice per file how many rules pbiplint runs as its own and which it replaces", async () => {
@@ -484,56 +561,95 @@ describe("a custom rule with the id of one of pbiplint's rules", () => {
     ]);
   });
 
-  it("runs pbiplint's rule in place of a copy it could not read, and says why in the file's notice", async () => {
+  it("runs pbiplint's rule beside a copy it could not read, and reports the copy as it reports any rule it could not read", async () => {
     // The survey holds one: a report-scope rule with a built-in id. No published version matches a
-    // rule the reader could not read, and still it never switches off pbiplint's rule.
+    // rule the reader could not read; still it never switches off pbiplint's rule (custom rules
+    // spec, section 3), and it fails a gated run, as every rule that cannot run does (section 6.7).
     const REPORT = "The rule's Scope names a report object (Visual).";
     for (const copy of [
       copyOf(HIDE, { ID: "hide_foreign_keys", Scope: "Visual" }),
       copyOf(HIDE, { Scope: undefined }),
       copyOf(HIDE, { Expression: undefined }),
     ]) {
-      const result = await run(set(copy, TEAM_FORMATTED));
+      const id = String(copy.ID);
+      const result = await run(set(copy, TEAM_FORMATTED), { failOn: "error" });
       const builtIn = await builtInRun();
-      expect(failures(result)).toEqual([]);
       expect(ofRule(result, HIDE)).toEqual(ofRule(builtIn, HIDE));
       expect(groupOf(result, HIDE)!.rule).toEqual(groupOf(builtIn, HIDE)!.rule);
-      expect(result.summary.rulesRun).toBe(builtIn.summary.rulesRun + 1);
-      expect(result.summary.ruleErrors).toEqual([]);
+      // pbiplint's rule, the copy, and TEAM_FORMATTED.
+      expect(result.summary.rulesRun).toBe(builtIn.summary.rulesRun + 2);
+      const [failure, ...more] = failures(result);
+      expect(more).toEqual([]);
+      expect(failure!.detail).toMatch(
+        new RegExp(`^${id} could not finish on the model: rules/team\\.json: The rule`),
+      );
+      expect(isFailureOf(failure!, id)).toBe(true);
+      expect(result.summary.ruleErrors).toEqual([
+        {
+          id,
+          message: expect.stringMatching(/^rules\/team\.json: The rule/),
+          ruleFile: "rules/team.json",
+        },
+      ]);
+      expect(result.failed).toBe(true);
       expect(result.summary.customRules).toEqual([
         {
           file: "rules/team.json",
           // The reader lists the rules it could not read after the ones it read.
-          rules: ["TEAM_FORMATTED", String(copy.ID)],
-          asBuiltIn: [String(copy.ID)],
+          rules: ["TEAM_FORMATTED", id],
+          asBuiltIn: [],
           replaced: [],
-          notRun: [],
+          notRun: [id],
         },
       ]);
-      const [notice, ...more] = noticesOf(result);
-      expect(more).toEqual([]);
-      expect(notice!.path).toBe("rules/team.json");
-      expect(notice!.message).toMatch(
-        new RegExp(
-          `^rules/team\\.json holds 2 rules: pbiplint could not read 1, so its own rule with the same ID \\(${String(copy.ID)}\\) runs in its place; 1 runs as your team's\\. ${String(copy.ID)}: The rule`,
-        ),
-      );
+      expect(noticesOf(result).map((d) => d.message)).toEqual([
+        `rules/team.json holds 2 rules: pbiplint could not read 1 (${id}), so its own rule with the same ID runs, and the copy is a RULE_COULD_NOT_FINISH finding; 1 runs as your team's.`,
+      ]);
     }
     const report = await run(set(copyOf(HIDE, { ID: "hide_foreign_keys", Scope: "Visual" })));
-    expect(noticesOf(report).map((d) => d.message)).toEqual([
-      `rules/team.json holds 1 rule: pbiplint could not read 1, so its own rule with the same ID (hide_foreign_keys) runs in its place. hide_foreign_keys: ${REPORT} Tabular Editor's rules check the semantic model; report rules use fab-inspector's format.`,
-    ]);
+    expect(failures(report)[0]!.detail).toBe(
+      `hide_foreign_keys could not finish on the model: rules/team.json: ${REPORT} Tabular Editor's rules check the semantic model; report rules use fab-inspector's format.`,
+    );
     // With a published copy beside it, the notice says both.
     const both = await run(
       set(copyOf(HIDE, { Scope: "Visual" }), copyOf("PROVIDE_FORMAT_STRING_FOR_MEASURES")),
     );
     expect(noticesOf(both).map((d) => d.message)).toEqual([
-      `rules/team.json holds 2 rules: pbiplint runs 1 as its own, since it matches a published version of that rule; pbiplint could not read 1, so its own rule with the same ID (HIDE_FOREIGN_KEYS) runs in its place. HIDE_FOREIGN_KEYS: ${REPORT} Tabular Editor's rules check the semantic model; report rules use fab-inspector's format.`,
+      "rules/team.json holds 2 rules: pbiplint runs 1 as its own, since it matches a published version of that rule; pbiplint could not read 1 (HIDE_FOREIGN_KEYS), so its own rule with the same ID runs, and the copy is a RULE_COULD_NOT_FINISH finding.",
     ]);
     expect(both.summary.customRules?.[0]?.asBuiltIn).toEqual([
       "PROVIDE_FORMAT_STRING_FOR_MEASURES",
-      HIDE,
     ]);
+  });
+
+  it("turns off both pbiplint's rule and a copy it could not read by their id, and gives the id's options to pbiplint's rule", async () => {
+    for (const copy of [
+      copyOf(HIDE, { Scope: "Visual" }),
+      copyOf(HIDE, { ID: "hide_foreign_keys", Scope: "Visual" }),
+    ])
+      for (const key of [HIDE, "hide_foreign_keys"]) {
+        const result = await run(set(copy), { rules: { [key]: "off" } });
+        expect(ofRule(result, HIDE)).toEqual([]);
+        expect(failures(result)).toEqual([]);
+        expect(result.summary.ruleErrors).toEqual([]);
+        expect(result.summary.rulesSkipped.filter((r) => r.id.toUpperCase() === HIDE)).toEqual([
+          { id: HIDE, reason: "disabled" },
+        ]);
+        expect(result.summary.customRules?.[0]).toMatchObject({ asBuiltIn: [], notRun: [] });
+        expect(noticesOf(result)).toEqual([]);
+      }
+    // A rule with options keeps them: the config's options bind to pbiplint's rule.
+    const own = defaultRules.find((r) => (r.options?.length ?? 0) > 0)!;
+    const option = own.options![0]!;
+    const value =
+      option.type === "number"
+        ? Number(option.default ?? 1)
+        : String(option.values?.[0] ?? option.default ?? "x");
+    const result = await run(set(rule({ ID: own.id, Scope: "Visual", Expression: "true" })), {
+      rules: { [own.id]: { [option.name]: value } },
+    });
+    expect(failures(result)).toHaveLength(1);
+    expect(result.summary.ruleErrors.map((e) => e.id)).toEqual([own.id]);
   });
 
   it("keeps today's handling for a copy it could not read with a safety net's id, and for one that fails while it runs", async () => {

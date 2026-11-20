@@ -223,7 +223,8 @@ export interface CustomRuleSource {
   upstreamSeverityChanged?: Severity;
   /**
    * Set when the reader could not read the rule: the reader's reason. Such a rule never runs in
-   * place of pbiplint's rule of its id (any case), which runs instead.
+   * place of pbiplint's rule of its id (any case): both run, pbiplint's as ever and this one to
+   * report the reason as a RULE_COULD_NOT_FINISH finding.
    */
   readProblem?: string;
 }

@@ -94,15 +94,17 @@ describe.skipIf(!DIR)("the survey's rule files as custom rules", () => {
   });
 
   // Custom rules spec, section 4: a team's copy of a rule pbiplint carries is unchanged when its
-  // scopes and its expression, whitespace aside, match a published version, and edited otherwise.
+  // scopes and its expression, whitespace outside string literals aside, match a published version,
+  // and edited otherwise.
   // Counted as lint sees each file: every rule readCustomRules keeps (a rule repeated word for word
   // in one file is one rule) whose id, in any case, is a built-in id. Microsoft's and Tabular
   // Editor's own files must all come out unchanged; the rest are team files, where the spec's
   // research counted 901 unchanged of 970 against the current upstream files only. With every
   // published version to match and today's built-in ids, the count is 1,156 unchanged of 1,188,
   // 31 edited in 10 files (1,249 and 31 weighted by the copies files.json lists), and 1 the reader
-  // could not read: bonardi's report-scope REMOVE_UNUSED_CUSTOM_VISUALS, which counted as edited
-  // until a copy the reader could not read stopped replacing pbiplint's rule (it runs pbiplint's).
+  // could not read: bonardi's report-scope REMOVE_UNUSED_CUSTOM_VISUALS. That one is neither: it
+  // never replaces pbiplint's rule, which runs, and it is reported as a rule that could not finish
+  // (spec, section 3). Keeping whitespace inside string literals moved no copy between classes.
   it("classifies every copy of a built-in rule in the survey as unchanged, edited, or unread", () => {
     if (unavailable.length > 0) return;
     const ownIds = new Set(defaultRules.map((r) => r.id.toUpperCase()));
@@ -119,6 +121,13 @@ describe.skipIf(!DIR)("the survey's rule files as custom rules", () => {
       if ("error" in readTeRuleFile(text)) continue;
       for (const rule of readCustomRules([{ path: f.id, text }]).rules) {
         const same = sameIdAs(rule, ownIds);
+        const upper = rule.id.toUpperCase();
+        if (rule.custom?.readProblem !== undefined && ownIds.has(upper)) {
+          expect(same).toBeUndefined();
+          expect(published(f.id)).toBe(false);
+          unread.push(`${f.id} ${rule.id}`);
+          continue;
+        }
         if (same === undefined) continue;
         if (published(f.id)) {
           expect(same, `${f.id} ${rule.id}`).toBe("asBuiltIn");
@@ -126,10 +135,7 @@ describe.skipIf(!DIR)("the survey's rule files as custom rules", () => {
           continue;
         }
         const copies = 1 + f.alsoAt.length;
-        if (rule.custom?.readProblem !== undefined) {
-          expect(same).toBe("asBuiltIn");
-          unread.push(`${f.id} ${rule.id}`);
-        } else if (same === "asBuiltIn") {
+        if (same === "asBuiltIn") {
           team.unchanged++;
           team.weightedUnchanged += copies;
         } else {

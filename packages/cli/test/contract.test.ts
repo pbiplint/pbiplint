@@ -720,7 +720,7 @@ describe("the CLI's contract", () => {
       kind: "custom-rules",
       path: "rules/team.json",
       message:
-        "rules/team.json holds 8 rules: pbiplint runs 2 as its own, since they match a published version of those rules; 6 run as your team's, 1 of them in place of pbiplint's rule with the same ID (OBJECTS_WITH_NO_DESCRIPTION).",
+        "rules/team.json holds 8 rules: pbiplint runs 2 as its own, since they match a published version of those rules, 1 at the severity the file gives it (HIDE_FOREIGN_KEYS at info); 5 run as your team's, 1 of them in place of pbiplint's rule with the same ID (OBJECTS_WITH_NO_DESCRIPTION).",
     });
   });
 

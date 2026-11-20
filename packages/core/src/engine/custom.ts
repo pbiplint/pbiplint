@@ -46,18 +46,18 @@ export const RESERVED_IDS: ReadonlySet<string> = new Set(["PARSE_ISSUE", "RULE_C
 /**
  * What becomes of a custom rule whose id (any case) is one of `ownIds`, the upper-case ids of
  * pbiplint's rules in the run (custom rules spec, section 4): `asBuiltIn` for an unchanged copy of
- * a published rule and for a rule the reader could not read, so pbiplint's own rule runs in its
- * place, and `replaces` for any other, which runs in place of pbiplint's. Undefined for an id
- * pbiplint's rules do not take, and for a safety net's id, which a custom rule cannot take (it
- * runs, to say so).
+ * a published rule, so pbiplint's own rule runs in its place, and `replaces` for any other, which
+ * runs in place of pbiplint's. Undefined for an id pbiplint's rules do not take; for a safety net's
+ * id, which a custom rule cannot take; and for a rule the reader could not read (section 3), which
+ * never switches off pbiplint's rule. The last two run beside pbiplint's rule, to say why they
+ * cannot run.
  */
 export function sameIdAs(
   rule: Rule,
   ownIds: ReadonlySet<string>,
 ): "asBuiltIn" | "replaces" | undefined {
   const upper = rule.id.toUpperCase();
-  if (!ownIds.has(upper) || RESERVED_IDS.has(upper)) return undefined;
-  return rule.custom?.upstream === "unchanged" || rule.custom?.readProblem !== undefined
-    ? "asBuiltIn"
-    : "replaces";
+  if (!ownIds.has(upper) || RESERVED_IDS.has(upper) || rule.custom?.readProblem !== undefined)
+    return undefined;
+  return rule.custom?.upstream === "unchanged" ? "asBuiltIn" : "replaces";
 }

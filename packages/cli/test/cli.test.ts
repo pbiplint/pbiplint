@@ -1413,7 +1413,7 @@ describe("custom rules end to end, from the fixture's config (#118)", () => {
     expect(lines[severity + 1]).toBe("       https://pbiplint.com/rules/hide-foreign-keys");
     const notices = r.err.split("\n").filter((l) => l.startsWith("pbiplint: notice: "));
     expect(notices).toEqual([
-      "pbiplint: notice: rules/team.json holds 8 rules: pbiplint runs 2 as its own, since they match a published version of those rules; 6 run as your team's, 1 of them in place of pbiplint's rule with the same ID (OBJECTS_WITH_NO_DESCRIPTION).",
+      "pbiplint: notice: rules/team.json holds 8 rules: pbiplint runs 2 as its own, since they match a published version of those rules, 1 at the severity the file gives it (HIDE_FOREIGN_KEYS at info); 5 run as your team's, 1 of them in place of pbiplint's rule with the same ID (OBJECTS_WITH_NO_DESCRIPTION).",
       "pbiplint: notice: The custom rule TEAM_VISIBLE in rules/more.json is left out: rules/team.json, earlier in customRules, holds a different rule with the same ID, and only the first runs. Give one of them its own ID.",
       "pbiplint: notice: The custom rule TEAM_FLOAT COLUMNS in rules/team.json left out 1 object whose files leave unset a value the rule reads, such as a calculated column's data type, and says nothing about it.",
     ]);

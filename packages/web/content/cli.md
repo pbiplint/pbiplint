@@ -71,15 +71,17 @@ An AI assistant that lints after each edit can keep its context small: `pbiplint
 
 `pbiplint skill` prints a skill, in the [Agent Skills](https://agentskills.io/home) format, that tells a coding assistant when to run pbiplint, how to keep its output short, how to read the results, and what to leave to you, such as ignoring a finding or editing files while Power BI Desktop has the project open. It ships with the CLI, so it always matches the version installed, and an assistant can read it from that command without installing anything.
 
-To keep it in a project, run `pbiplint skill --install <assistant>` from the project's or repository's root folder:
+From 0.4.0 the CLI ships a second skill, `pbiplint-custom-rules`, which takes an assistant through writing a team's own rule and checking it. `pbiplint skill --name pbiplint-custom-rules` prints it; `pbiplint skill` alone still prints the first, as before.
 
-| Assistant | Folder it writes |
+To keep them in a project, run `pbiplint skill --install <assistant>` from the project's or repository's root folder. From 0.4.0 it writes both skills, each in a folder named after it:
+
+| Assistant | Folders it writes |
 | --- | --- |
-| `claude` (Claude Code) | `.claude/skills/pbiplint/` |
-| `copilot` (GitHub Copilot) | `.github/skills/pbiplint/` |
-| `codex` (Codex) or `gemini` (Gemini CLI) | `.agents/skills/pbiplint/` |
+| `claude` (Claude Code) | `.claude/skills/pbiplint/` and `.claude/skills/pbiplint-custom-rules/` |
+| `copilot` (GitHub Copilot) | `.github/skills/pbiplint/` and `.github/skills/pbiplint-custom-rules/` |
+| `codex` (Codex) or `gemini` (Gemini CLI) | `.agents/skills/pbiplint/` and `.agents/skills/pbiplint-custom-rules/` |
 
-GitHub Copilot reads all three folders, so one copy is enough for it. `--install` never replaces a copy that differs from the one it would write, an edited copy or one from another version, unless you add `--force`; `--dry-run` says what it would do and writes nothing. `--show` lists each folder, whether the skill is there, and whether that copy matches the version installed. To remove it, delete the `pbiplint` folder `--show` names.
+GitHub Copilot reads all three folders, so one copy of each skill is enough for it. `--install` never replaces a copy that differs from the one it would write, an edited copy or one from another version, unless you add `--force`. It is all or nothing (from 0.4.0): it checks every copy before it writes any, and when one differs it writes neither, exits `2`, and names each copy that differs. `--dry-run` says what it would do and writes nothing. `--show` lists each folder, whether each skill is there, and whether that copy matches the version installed. `--name <skill>` (from 0.4.0), `pbiplint` or `pbiplint-custom-rules`, limits printing, `--install`, and `--show` to that skill. To remove a skill, delete the folder `--show` names.
 
 <h3 id="mcp">Serve an AI assistant over MCP (from 0.2.5)</h3>
 

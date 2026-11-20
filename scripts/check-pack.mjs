@@ -36,6 +36,7 @@ export const REQUIRED = {
     "sample/Messy Sales Demo.pbip",
     "sample/pbiplint.config.json",
     "skill/SKILL.md",
+    "skill/pbiplint-custom-rules/SKILL.md",
   ],
 };
 /**

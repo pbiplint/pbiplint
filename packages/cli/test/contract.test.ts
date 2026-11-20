@@ -312,6 +312,7 @@ describe("the CLI's contract", () => {
       ["reference"],
       ["reference", "--format", "json"],
       ["skill"],
+      ["skill", "--name", "pbiplint-custom-rules"],
       ["--help"],
       ["--version"],
     ])
@@ -342,6 +343,7 @@ describe("the CLI's contract", () => {
       ["an unknown rule id for explain", ["explain", "NO_SUCH_RULE"]],
       ["an unknown rule id for --rule", [sample, "--rule", "NO_SUCH_RULE"]],
       ["an argument to reference", ["reference", "x"]],
+      ["a skill --name it does not know", ["skill", "--name", "nope"]],
       ["--quiet with another format", [sample, "--quiet", "--format", "json"]],
       ["a config file it cannot use", [sample, "--config", join(dir, "array.json")]],
       ["a path that is not there", [join(dir, "nope")]],

@@ -19,7 +19,7 @@ npx pbiplint explain HIDE_FOREIGN_KEYS                      # one rule's guidanc
 npx pbiplint reference                                      # what a custom rule can use at this version (--format json too)
 npx pbiplint path/to/model --quiet                          # the counts, one line per rule
 npx pbiplint path/to/model --rule HIDE_FOREIGN_KEYS         # one rule's findings (repeatable)
-npx pbiplint skill --install claude                         # the skill for AI assistants (--install copilot, codex, gemini; --show)
+npx pbiplint skill --install claude                         # the skills for AI assistants (--install copilot, codex, gemini; --show; --name)
 npx pbiplint mcp                                            # a local MCP server for an AI assistant to start
 npx pbiplint --help                                         # every option, in one screen
 npx pbiplint --version
@@ -37,10 +37,13 @@ properties, the operators, methods, and functions, the regular expressions that 
 and what pbiplint does not run, with the reason. `--format json` prints the same as one document.
 
 `pbiplint skill` prints a skill, in the [Agent Skills](https://agentskills.io/home) format, that tells
-a coding assistant how to use pbiplint. `--install claude`, `copilot`, `codex`, or `gemini` writes it
-where that assistant reads a project's skills, below the current folder; it never replaces a copy
-that differs unless given `--force`, and `--dry-run` writes nothing. `--show` lists where it is and
-whether each copy matches this version.
+a coding assistant how to use pbiplint. A second skill, `pbiplint-custom-rules`, takes an assistant
+through writing and checking a team's own rule; `--name pbiplint-custom-rules` prints it.
+`--install claude`, `copilot`, `codex`, or `gemini` writes both, each in a folder named after it,
+where that assistant reads a project's skills, below the current folder. It never replaces a copy
+that differs unless given `--force`, and when either copy differs it writes neither; `--dry-run`
+writes nothing. `--show` lists where each skill is and whether each copy matches this version.
+`--name` limits printing, `--install`, and `--show` to one skill.
 
 `pbiplint mcp` is a local MCP server over stdin and stdout, for an assistant that runs local servers
 (Claude Desktop, Claude Code, VS Code, Cursor) to start. Its four tools only read: `lint` (what
@@ -146,6 +149,7 @@ https://github.com/pbiplint/pbiplint.
 
 Copyright (C) 2026 McKinley Consulting. GNU Affero General Public License, version 3 or later; see
 LICENSE. The vendored Microsoft ruleset and PBI Inspector rule metadata are MIT-licensed; see
-NOTICE. The skill for AI assistants (`skill/SKILL.md`, which `pbiplint skill` prints and installs) is
-MIT-licensed, so it can be committed to any repository; its notice is at the end of the file. The
+NOTICE. The two skills for AI assistants (`skill/SKILL.md` and `skill/pbiplint-custom-rules/SKILL.md`,
+which `pbiplint skill` prints and installs) are MIT-licensed, so they can be committed to any
+repository; each carries its notice at the end of the file. The
 name pbiplint and its logo are trademarks of McKinley Consulting.

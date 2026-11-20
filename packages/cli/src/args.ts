@@ -1,5 +1,5 @@
 import { FORMATS, type FormatName, type SeverityName } from "@pbiplint/core";
-import { SKILL_TARGETS, type SkillTarget } from "./skill.js";
+import { SKILL_TARGETS, SKILLS, type SkillName, type SkillTarget } from "./skill.js";
 
 export class UsageError extends Error {
   readonly #lines: readonly string[];
@@ -38,6 +38,8 @@ export interface CliOptions {
   dryRun?: boolean;
   /** `skill --show`. */
   show?: boolean;
+  /** `skill --name`: the one skill to print, install, or show. */
+  name?: SkillName;
 }
 
 const FAIL_ON = ["error", "warning", "info", "none"] as const;
@@ -92,6 +94,13 @@ export function parseArgs(argv: string[]): CliOptions {
       case "--show":
         opts.show = true;
         break;
+      case "--name": {
+        const n = value();
+        if (!Object.hasOwn(SKILLS, n))
+          throw new UsageError(`--name must be one of ${Object.keys(SKILLS).join(", ")}`);
+        opts.name = n as SkillName;
+        break;
+      }
       case "--format": {
         const f = value();
         if (!(FORMATS as readonly string[]).includes(f))
@@ -118,7 +127,7 @@ export function parseArgs(argv: string[]): CliOptions {
         positional.push(arg);
     }
   }
-  const skillOption = opts.install || opts.force || opts.dryRun || opts.show;
+  const skillOption = opts.install || opts.force || opts.dryRun || opts.show || opts.name;
   if (positional[0] === "skill") {
     if (positional.length > 1) throw new UsageError("skill takes no arguments");
     if (
@@ -130,14 +139,16 @@ export function parseArgs(argv: string[]): CliOptions {
       opts.rules ||
       opts.format !== "text"
     )
-      throw new UsageError("skill takes only --install, --force, --dry-run, and --show");
+      throw new UsageError("skill takes only --install, --force, --dry-run, --show, and --name");
     if ((opts.force || opts.dryRun) && !opts.install)
       throw new UsageError("--force and --dry-run go with --install");
     if (opts.install && opts.show) throw new UsageError("Give either --install or --show");
     return { ...opts, command: "skill" };
   }
   if (skillOption)
-    throw new UsageError("--install, --force, --dry-run, and --show go with pbiplint skill");
+    throw new UsageError(
+      "--install, --force, --dry-run, --show, and --name go with pbiplint skill",
+    );
   if (positional[0] === "rules") {
     if (positional.length > 1) throw new UsageError("rules takes no arguments");
     return { ...opts, command: "rules" };
@@ -182,7 +193,7 @@ export const HELP = `Usage: pbiplint <path> [options]
        pbiplint rules
        pbiplint explain <RULE_ID> [--format json] [--config <file>]
        pbiplint reference [--format json]
-       pbiplint skill [--install <assistant> [--force] [--dry-run] | --show]
+       pbiplint skill [--install <assistant> [--force] [--dry-run] | --show] [--name <skill>]
        pbiplint mcp
 
 Lint a Power BI project, its semantic model (TMDL) and its report (PBIR), for best-practice
@@ -203,11 +214,14 @@ can use at this version, and what pbiplint does not run, with the reason.
 
 pbiplint skill prints a skill that tells an AI assistant how to use pbiplint.
 --install <assistant>
-                    claude, copilot, codex, or gemini: write it where that assistant reads a project's
-                    skills, below the current folder (copilot also reads the claude and codex folders)
+                    claude, copilot, codex, or gemini: write both skills, pbiplint and
+                    pbiplint-custom-rules (for writing a team's own rule), where that assistant reads a
+                    project's skills, below the current folder (copilot also reads the claude and codex
+                    folders); if either copy differs, it writes neither
 --force             replace a copy that differs (an edited or older one)
 --dry-run           say what --install would do, and write nothing
---show              which folders have it, and whether each copy matches this version
+--show              which folders have each skill, and whether each copy matches this version
+--name <skill>      pbiplint or pbiplint-custom-rules: print, install, or show only that skill
 
 Exit codes: 0 no findings at or above --fail-on, 1 findings, 2 a usage error, an input it cannot read, or nothing to lint.
 With --format json, sarif, or markdown, stdout is one document and nothing else.

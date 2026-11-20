@@ -226,6 +226,15 @@ file's `oracle`; with `--from`, which converts a saved output instead of running
 comes from `--oracle`. A re-capture with another build also updates the oracle constants in
 `scripts/test/te-captures.test.mjs`.
 
+The fingerprints of the published versions of Microsoft's and Tabular Editor's rule files
+(`packages/core/src/custom-rules/te/upstream-rules.data.ts`), by which a team's unchanged copy of a
+rule runs as pbiplint's own, are read up to the commits `scripts/fingerprint-upstream-rules.mjs`
+pins. Before a release, compare those commits with the default branch of `microsoft/Analysis-Services`
+(for `BestPracticeRules/`) and of `TabularEditor/BestPracticeRules`; when either has published
+newer rule files, or when a port adds a built-in id one of them holds, move the pins to the new
+heads and regenerate with the command in CONTRIBUTING.md. Without that, a team's copy of a newly
+published version runs as an edited rule in place of pbiplint's.
+
 ## Report parity expectations
 
 The report rules are pinned to fab-inspector, a development-time oracle only. Refresh the

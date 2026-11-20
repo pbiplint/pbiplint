@@ -9,7 +9,7 @@ import {
   type Rule,
   type RuleSummary,
 } from "@pbiplint/core";
-import type { CustomRuleSet } from "@pbiplint/core/custom-rules";
+import { sameIdAs, type CustomRuleSet } from "@pbiplint/core/custom-rules";
 import { RULE_HELP } from "./rule-help.data.js";
 
 /** A rule page's help sections, in Markdown, keyed as `--format json` names them. */
@@ -31,6 +31,8 @@ export type CustomExplainedRule = RuleSummary & {
   ruleFile: string;
   scope: string[];
   expression: string;
+  /** Set when the rule runs in place of pbiplint's rule of the same id: that rule's id. */
+  replaces?: string;
 };
 
 export interface Explained {
@@ -156,7 +158,14 @@ export class NoRuleError extends Error {
 export function shownRuleIds(inputs: readonly string[], custom: readonly Rule[] = []): string[] {
   const ids: string[] = [];
   for (const input of inputs) {
-    const rule = findRule(input) ?? findCustomRule(input, custom);
+    const own = findRule(input);
+    const team = findCustomRule(input, custom);
+    // A custom rule that runs in place of pbiplint's rule of its id is shown by its own spelling.
+    const replaces =
+      own !== undefined &&
+      team !== undefined &&
+      sameIdAs(team, new Set([own.id.toUpperCase()])) === "replaces";
+    const rule = replaces ? team : (own ?? team);
     if (!rule) throw new NoRuleError(input, custom);
     if (!ids.includes(rule.id)) ids.push(rule.id);
   }
@@ -167,17 +176,23 @@ export function shownRuleIds(inputs: readonly string[], custom: readonly Rule[] 
  * One rule's guidance, from the rule pages the CLI carries: its id as a finding names it, in any
  * case, or its page name. What `pbiplint explain` prints and the MCP server's explain_rule returns.
  * `custom`, the custom rules of the config explain found, adds a team's own rules: a built-in rule
- * comes first, and a custom one gives its fields, scope, and expression in place of a page.
+ * comes first, unless a custom rule of its id runs in its place (an edited copy, as lint runs it),
+ * and a custom one gives its fields, scope, and expression in place of a page. An unchanged copy of
+ * a published rule gives pbiplint's rule, which lint runs in its place.
  */
 export function explainRule(input: string, custom?: CustomRuleSet): Explained | NotFound {
   const rule = findRule(input);
   const help = rule && RULE_HELP[rule.id];
-  if (rule && help)
+  const own = findCustomRule(input, custom?.rules);
+  const replaces =
+    rule !== undefined &&
+    own !== undefined &&
+    sameIdAs(own, new Set([rule.id.toUpperCase()])) === "replaces";
+  if (rule && help && !replaces)
     return {
       rule: { ...summarizeRule(rule, resolveConfig({})), description: rule.description },
       sections: splitSections(help.markdown),
     };
-  const own = findCustomRule(input, custom?.rules);
   if (!own?.custom) return { suggestions: suggest(input, custom?.rules) };
   return {
     rule: {
@@ -187,6 +202,7 @@ export function explainRule(input: string, custom?: CustomRuleSet): Explained | 
       description: own.description,
       scope: [...own.custom.scopes],
       expression: own.custom.expression,
+      ...(replaces ? { replaces: rule.id } : {}),
     },
     sections: {},
   };
@@ -225,6 +241,9 @@ export function explainText(e: Explained): string {
       `${showControls(r.id)}  ${showControls(r.name)}`,
       about,
       showControls(r.ruleFile),
+      ...(r.replaces === undefined
+        ? []
+        : ["Replaces pbiplint's rule of the same ID for the projects this config covers."]),
       "",
       shown(r.description),
       "",

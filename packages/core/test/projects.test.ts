@@ -288,6 +288,36 @@ describe("shareModels", () => {
     expect(ofRule(kept!.result, "hide_foreign_keys")).toEqual(ofRule(later, "hide_foreign_keys"));
   });
 
+  it("lists a pbiplint rule's model findings once when a later config holds a copy pbiplint could not read", async () => {
+    const plain = await lint([...model, ...report(measure("Sales", "A"))], { config });
+    const id = plain.findings.find((f) => f.layer === "model" && f.ruleId !== "TEAM_A")!.ruleId;
+    const ofRule = (r: LintResult, rule: string) => r.findings.filter((f) => f.ruleId === rule);
+    // A report scope: the reader cannot read it, so pbiplint's rule runs beside its failure.
+    const unread = readCustomRules([
+      {
+        path: "rules/team.json",
+        text: JSON.stringify([{ ID: id, Name: "Copy", Scope: "Visual", Expression: "true" }]),
+      },
+    ]);
+    const later = await lint([...model, ...report(column("Sales", "Amount"))], {
+      config,
+      customRules: unread,
+    });
+    expect(ofRule(later, id).length).toBeGreaterThan(0);
+    const [, second] = shareModels([
+      run("a/A.pbip", plain, { modelKey: "m" }),
+      run("b/B.pbip", later, { modelKey: "m" }),
+    ]);
+    // pbiplint's findings are the first run's; the copy's failure is the later run's own.
+    expect(ofRule(second!.result, id).filter((f) => f.layer === "model")).toEqual([]);
+    expect(
+      second!.result.findings.filter(
+        (f) =>
+          f.ruleId === "RULE_COULD_NOT_FINISH" && f.detail?.startsWith(`${id} could not finish`),
+      ),
+    ).toHaveLength(1);
+  });
+
   it("says which config a shared model's findings follow when the configs differ", () => {
     const [first] = shareModels([
       run("a/A.pbip", finance, { modelKey: "m", configPath: "a/pbiplint.config.json" }),

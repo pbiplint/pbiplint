@@ -41,12 +41,21 @@ If you can run commands where the project is, run \`npx pbiplint <path> --quiet\
 ${JUDGMENT}
 `;
 
-/** Each fired rule's How to fix it and When to ignore it, in the report's order, with its page. */
+/**
+ * Each fired rule's How to fix it and When to ignore it, in the report's order, with its page. A
+ * team's own rule gets its description and its file instead: pbiplint's guidance for a rule of the
+ * same id is about a different rule.
+ */
 function guidance(result: LintResult): string {
   const out = ["## How to fix these findings", ""];
   for (const { rule } of result.groups) {
-    const g = RULE_GUIDANCE[rule.id];
+    const g = rule.custom ? undefined : RULE_GUIDANCE[rule.id];
     out.push(`### ${rule.name} (${rule.id})`, "");
+    if (rule.custom)
+      out.push(
+        `The team's own rule, from ${rule.ruleFile ?? "its rule file"}: ${rule.description ?? rule.name}`,
+        "",
+      );
     // A rule with no page text still gets its heading and its page, so no fired rule goes unnamed.
     if (g) out.push("**How to fix it**", "", g.fix, "");
     if (g?.ignore) out.push("**When to ignore it**", "", g.ignore, "");

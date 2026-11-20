@@ -69,7 +69,12 @@ export interface BoundConfig {
  * Options are checked against the rule's own declaration here, where the rules are in hand.
  */
 export function bindConfig(config: ResolvedConfig, rules: Rule[]): BoundConfig {
-  const ruleByUpper = new Map(rules.map((r) => [r.id.toUpperCase(), r]));
+  // The first rule with an id takes the config's settings for it: pbiplint's own rules come before
+  // custom ones, so a custom rule that runs beside pbiplint's rule of its id (one the reader could
+  // not read, one that takes a safety net's id) never takes them from it.
+  const ruleByUpper = new Map<string, Rule>();
+  for (const r of rules)
+    if (!ruleByUpper.has(r.id.toUpperCase())) ruleByUpper.set(r.id.toUpperCase(), r);
   const bound: ResolvedConfig = {
     disabled: new Set(),
     severity: new Map(),

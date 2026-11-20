@@ -15,6 +15,7 @@ import {
   lint,
   msg,
   resolveConfig,
+  ruleUrl,
   type Message,
   type MessageId,
   type Rule,
@@ -40,8 +41,10 @@ const goldens = join(repo, "packages/cli/test/fixtures/one-project");
 /**
  * A config naming two custom rule files (#118), and the model it is run on: rules/team.json holds a
  * rule that finds, one that cannot run, one the fixture's ignore annotations partly set aside, one
- * with no scope, and one whose id holds a space; rules/more.json an identical copy of one and a
- * different rule under another's id.
+ * with no scope, one whose id holds a space, and three copies of rules pbiplint carries, their
+ * expressions from Microsoft's BPARules.json (MIT): unchanged but reflowed, unchanged at another
+ * severity, and edited; rules/more.json an identical copy of one and a different rule under
+ * another's id.
  */
 const customConfig = join(repo, "packages/cli/test/fixtures/custom-rules/pbiplint.config.json");
 const customModel = join(repo, "tests/fixtures/custom-rules.SemanticModel");
@@ -556,6 +559,9 @@ describe("the CLI's contract", () => {
     }
     const [team, more] = doc.summary.customRules;
     expect([...team.rules].sort()).toEqual([
+      "ENSURE_TABLES_HAVE_RELATIONSHIPS",
+      "HIDE_FOREIGN_KEYS",
+      "OBJECTS_WITH_NO_DESCRIPTION",
       "PROBE_IGNORE_CUSTOM",
       "TEAM_FLOAT COLUMNS",
       "TEAM_MEASURES_IN_FOLDERS",
@@ -563,7 +569,16 @@ describe("the CLI's contract", () => {
       "TEAM_VISIBLE",
     ]);
     expect(team.notRun).toEqual(["TEAM_VISIBLE", "TEAM_NO_SCOPE"]);
-    expect(more).toMatchObject({ rules: ["TEAM_MEASURES_IN_FOLDERS", "TEAM_VISIBLE"], notRun: [] });
+    // Two unchanged copies of published rules run as pbiplint's own; the edited one replaces it.
+    expect(team.asBuiltIn).toEqual(["ENSURE_TABLES_HAVE_RELATIONSHIPS", "HIDE_FOREIGN_KEYS"]);
+    expect(team.replaced).toEqual(["OBJECTS_WITH_NO_DESCRIPTION"]);
+    expect(more).toEqual({
+      file: "rules/more.json",
+      rules: ["TEAM_MEASURES_IN_FOLDERS", "TEAM_VISIBLE"],
+      asBuiltIn: [],
+      replaced: [],
+      notRun: [],
+    });
     // A custom rule that could not run: a ruleErrors entry with its file, and a RULE_COULD_NOT_FINISH
     // finding naming the rule and the file.
     for (const e of doc.summary.ruleErrors) hasFields(e, ["id", "message", "ruleFile"]);
@@ -576,9 +591,10 @@ describe("the CLI's contract", () => {
       expect.stringMatching(/^TEAM_VISIBLE could not finish on the model: rules\/team\.json: /),
       expect.stringMatching(/^TEAM_NO_SCOPE could not finish on the model: rules\/team\.json: /),
     ]);
-    // The duplicate and left-out notices are diagnostics of their own kinds.
+    // The same-id, duplicate, and left-out notices are diagnostics of their own kinds.
     for (const d of doc.diagnostics) hasFields(d, ["kind", "message"], ["path"]);
     expect(doc.diagnostics.map((d: { kind: string; path: string }) => [d.kind, d.path])).toEqual([
+      ["custom-rules", "rules/team.json"],
       ["custom-rule-duplicate", "rules/more.json"],
       ["custom-rule-left-out", "rules/team.json"],
     ]);
@@ -586,6 +602,7 @@ describe("the CLI's contract", () => {
     // page; its findings carry no detail or message fields.
     const custom = doc.groups.filter((g: { rule: { custom?: boolean } }) => g.rule.custom);
     expect(custom.map((g: { rule: { id: string } }) => g.rule.id).sort()).toEqual([
+      "OBJECTS_WITH_NO_DESCRIPTION",
       "PROBE_IGNORE_CUSTOM",
       "TEAM_FLOAT COLUMNS",
       "TEAM_MEASURES_IN_FOLDERS",
@@ -644,7 +661,7 @@ describe("the CLI's contract", () => {
     const descriptors: Descriptor[] = sarifRun.tool.driver.rules;
     const doc = JSON.parse((await run(customArgs("--format", "json"))).out);
     const custom = doc.groups.filter((g: { rule: { custom?: boolean } }) => g.rule.custom);
-    expect(custom.length).toBe(3);
+    expect(custom.length).toBe(4);
     for (const { rule } of custom) {
       const d = descriptors.find((x) => x.id === rule.id)!;
       expect(d, rule.id).toBeDefined();
@@ -663,6 +680,48 @@ describe("the CLI's contract", () => {
     for (const x of ofCustom)
       expect(x.properties).toEqual({ custom: true, ruleFile: "rules/team.json" });
     expect(sarifRun.invocations[0].executionSuccessful).toBe(false);
+  });
+
+  it("3g. a team's copy of a published rule: pbiplint's rule for an unchanged copy, the team's for an edited one (#118)", async () => {
+    const doc = JSON.parse((await run(customArgs("--format", "json"))).out);
+    const group = (id: string) =>
+      doc.groups.find((g: { rule: { id: string } }) => g.rule.id === id);
+    const builtIn = (id: string) => defaultRules.find((r) => r.id === id)!;
+    // An unchanged copy (its expression reflowed, its scopes in another order) runs as pbiplint's
+    // rule, with its page and its severity; one whose severity the team changed takes that severity.
+    for (const [id, severity] of [
+      ["ENSURE_TABLES_HAVE_RELATIONSHIPS", builtIn("ENSURE_TABLES_HAVE_RELATIONSHIPS").severity],
+      ["HIDE_FOREIGN_KEYS", 1],
+    ] as const) {
+      const g = group(id);
+      expect(g, id).toBeDefined();
+      hasFields(g.rule, ["id", "name", "category", "severity", "layer", "slug", "url", "status"]);
+      expect(g.rule).toMatchObject({
+        name: builtIn(id).name,
+        status: builtIn(id).status,
+        url: ruleUrl(id),
+        severity,
+      });
+    }
+    expect(builtIn("HIDE_FOREIGN_KEYS").severity).not.toBe(1);
+    // The edited copy runs as the team's rule under its id, on the objects its own scope names.
+    const edited = group("OBJECTS_WITH_NO_DESCRIPTION");
+    expect(edited.rule).toMatchObject({
+      custom: true,
+      ruleFile: "rules/team.json",
+      url: "https://pbiplint.com/custom-rules/",
+    });
+    expect(edited.findings.length).toBeGreaterThan(0);
+    for (const f of edited.findings) expect(f.objectType).toBe("Measure");
+    // The notice says how many of the file's rules pbiplint runs as its own and names the id the
+    // edited copy replaces.
+    const notice = doc.diagnostics.find((d: { kind: string }) => d.kind === "custom-rules");
+    expect(notice).toEqual({
+      kind: "custom-rules",
+      path: "rules/team.json",
+      message:
+        "rules/team.json holds 8 rules: pbiplint runs 2 as its own, since they match a published version of those rules, 1 at the severity the file gives it (HIDE_FOREIGN_KEYS at info); 5 run as your team's, 1 of them in place of pbiplint's rule with the same ID (OBJECTS_WITH_NO_DESCRIPTION).",
+    });
   });
 
   it("4. the quiet output: the summary first, rule lines of three fields, and the Next line last", async () => {

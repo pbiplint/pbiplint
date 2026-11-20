@@ -164,9 +164,10 @@ function keepOnly(run: ProjectRun, keep: (f: Finding) => boolean, notice: string
 }
 
 /**
- * The custom rules a run ran, each id once as its config's files first write it. One left out for
- * having a pbiplint rule's id is pbiplint's own rule, and one its config turns off did not run, so
- * neither is counted: another run's findings for it are then that run's own.
+ * The custom rules a run ran, each id once as its config's files first write it. An id any file
+ * lists in `asBuiltIn` is pbiplint's own rule, even where another file's copy of it was left out,
+ * and one its config turns off did not run, so neither is counted: another run's findings for it
+ * are then that run's own.
  */
 function customIds(run: ProjectRun): string[] {
   const off = new Set(
@@ -174,11 +175,15 @@ function customIds(run: ProjectRun): string[] {
       .filter((r) => r.reason === "disabled")
       .map((r) => r.id.toUpperCase()),
   );
-  const seen = new Set<string>(off);
+  const files = run.result.summary.customRules ?? [];
+  const seen = new Set<string>([
+    ...off,
+    ...files.flatMap((f) => f.asBuiltIn.map((id) => id.toUpperCase())),
+  ]);
   const out: string[] = [];
-  for (const f of run.result.summary.customRules ?? [])
+  for (const f of files)
     for (const id of f.rules)
-      if (!f.asBuiltIn.includes(id) && !seen.has(id.toUpperCase())) {
+      if (!seen.has(id.toUpperCase())) {
         seen.add(id.toUpperCase());
         out.push(id);
       }
@@ -218,11 +223,14 @@ export function shareModels(runs: ProjectRun[]): ProjectRun[] {
       const theirs = new Set(customIds(first).map((id) => id.toUpperCase()));
       const added = customIds(run).filter((id) => !theirs.has(id.toUpperCase()));
       const own = new Set(added.map((id) => id.toUpperCase()));
+      // Only a custom rule's own findings: pbiplint's rule of the same id can run beside one, such
+      // as a copy pbiplint could not read, and its findings are the first run's.
+      const custom = new Set(run.result.groups.filter((g) => g.rule.custom).map((g) => g.rule.id));
       return keepOnly(
         run,
         (f) =>
           f.layer !== "model" ||
-          own.has(f.ruleId.toUpperCase()) ||
+          (own.has(f.ruleId.toUpperCase()) && custom.has(f.ruleId)) ||
           (f.ruleId === RULE_COULD_NOT_FINISH.id && !failures.has(f.detail)),
         `${theModel} is shared with ${first.path}; its findings are listed there` +
           (added.length

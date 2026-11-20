@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { defaultRules } from "@pbiplint/core";
 import { readCustomRules } from "@pbiplint/core/custom-rules";
@@ -262,6 +262,80 @@ describe("explain for a custom rule (#118)", () => {
       suggestions: ["TEAM_MEASURE_FORMAT"],
     });
     expect(suggest("TEAM_MEASURE_FORMT", set.rules)).toEqual(["TEAM_MEASURE_FORMAT"]);
+  });
+
+  it("shows an edited copy of a pbiplint rule as the team's rule that replaces it, and an unchanged copy as pbiplint's", () => {
+    const text = readFileSync(
+      new URL("../../../tests/rules/microsoft/BPARules.json", import.meta.url),
+      "utf8",
+    );
+    const microsoft = JSON.parse(text.slice(text.indexOf("["))) as Record<string, unknown>[];
+    const copyOf = (id: string, fields: Record<string, unknown> = {}) => ({
+      ...microsoft.find((r) => r.ID === id)!,
+      ...fields,
+    });
+    const copies = readCustomRules([
+      {
+        path: "rules/team.json",
+        text: JSON.stringify([
+          copyOf("PROVIDE_FORMAT_STRING_FOR_MEASURES"),
+          copyOf("HIDE_FOREIGN_KEYS", {
+            Expression: "IsHidden == false",
+            Description: "Our own rule: every column stays visible.",
+          }),
+          copyOf("HIDE_FACT_TABLE_COLUMNS", { ID: "RULE_COULD_NOT_FINISH" }),
+          copyOf("DAX_COLUMNS_FULLY_QUALIFIED", { Scope: "Visual" }),
+        ]),
+      },
+    ]);
+    // A copy pbiplint could not read never replaces its rule, which lint runs in its place.
+    const unread = explainRule("DAX_COLUMNS_FULLY_QUALIFIED", copies);
+    expect(unread).toMatchObject({ rule: { id: "DAX_COLUMNS_FULLY_QUALIFIED", status: "ported" } });
+    expect(unread).not.toHaveProperty("rule.custom");
+    const unchanged = explainRule("provide_format_string_for_measures", copies);
+    expect(unchanged).toMatchObject({
+      rule: { id: "PROVIDE_FORMAT_STRING_FOR_MEASURES", status: "ported" },
+    });
+    expect(unchanged).not.toHaveProperty("rule.custom");
+    expect(explainRule("RULE_COULD_NOT_FINISH", copies)).toMatchObject({
+      rule: { status: "builtin" },
+    });
+    const edited = explainRule("hide_foreign_keys", copies);
+    if (!("rule" in edited)) throw new Error("did not explain");
+    expect(edited).toMatchObject({
+      rule: {
+        id: "HIDE_FOREIGN_KEYS",
+        custom: true,
+        ruleFile: "rules/team.json",
+        replaces: "HIDE_FOREIGN_KEYS",
+        expression: "IsHidden == false",
+      },
+      sections: {},
+    });
+    expect(explainText(edited).split("\n").slice(0, 6)).toEqual([
+      "HIDE_FOREIGN_KEYS  [Formatting] Hide foreign keys",
+      "Warning, model layer, Formatting, custom rule",
+      "rules/team.json",
+      "Replaces pbiplint's rule of the same ID for the projects this config covers.",
+      "",
+      "Our own rule: every column stays visible.",
+    ]);
+    expect(JSON.parse(explainJson(edited, "1.2.3")).rule.replaces).toBe("HIDE_FOREIGN_KEYS");
+    // --rule shows the rule that runs, by the spelling its findings carry.
+    const lower = readCustomRules([
+      {
+        path: "rules/team.json",
+        text: JSON.stringify([
+          copyOf("HIDE_FOREIGN_KEYS", { ID: "hide_foreign_keys", Expression: "IsHidden == false" }),
+          copyOf("PROVIDE_FORMAT_STRING_FOR_MEASURES", {
+            ID: "provide_format_string_for_measures",
+          }),
+        ]),
+      },
+    ]).rules;
+    expect(
+      shownRuleIds(["HIDE_FOREIGN_KEYS", "PROVIDE_FORMAT_STRING_FOR_MEASURES"], lower),
+    ).toEqual(["hide_foreign_keys", "PROVIDE_FORMAT_STRING_FOR_MEASURES"]);
   });
 
   it("finds the custom id through the nearest config, in text and JSON, in any case", async () => {

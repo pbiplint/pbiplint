@@ -97,9 +97,14 @@ const PARSER_LIMIT_KB = 385;
 // at 130 KB on November 20, 2026, when the entry (the Tabular Editor reader, parser, evaluator,
 // model view, and regular expression matcher) measured 111.7 KB minified, 34.8 KB gzipped; the
 // room is for D2's fingerprint data, about 15 KB. The core's own code measured 296.9 KB before
-// D's wiring and 297.5 KB with customRules in the config (Task D1). If a later change crosses
-// it, stop and tell the coordinator.
-const CUSTOM_LIMIT_KB = 130;
+// D's wiring and 297.5 KB with customRules in the config (Task D1). It was raised to 140 KB on
+// November 20, 2026, when same-id handling (#118, Tasks D10 and D11) measured 132.0 KB minified,
+// 40.6 KB gzipped, from 118.9 KB at the end of D1: the fingerprint data, 96 distinct
+// fingerprints read from 129 file versions, is 12.0 KB of it, its ids being long, and the room is
+// for regenerating that data as Microsoft and Tabular Editor publish new versions. The core's own
+// code measured 301.7 KB with same-id handling in the engine. If a later change crosses it, stop
+// and tell the coordinator.
+const CUSTOM_LIMIT_KB = 140;
 let failed = false;
 if (ownBytes > OWN_LIMIT_KB * 1024) {
   console.error(

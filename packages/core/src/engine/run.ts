@@ -120,8 +120,17 @@ export function runRules(
   // Whether pbiplint's own RULE_COULD_NOT_FINISH ran: a custom rule refused for taking its id
   // runs under it too, and must not stand in for it.
   let failuresRan = false;
-  /** Each error's rule, where it happened, and the object it was about, for the findings. */
-  const failures: { id: string; label: Message; finding: RuleFinding; kind: Message }[] = [];
+  /**
+   * Each error's rule, its custom rule file when it has one, where it happened, and the object it
+   * was about, for the findings.
+   */
+  const failures: {
+    id: string;
+    file?: string;
+    label: Message;
+    finding: RuleFinding;
+    kind: Message;
+  }[] = [];
   /**
    * Records a rule's error, by its class alone: every `RuleError` is made here, its message in
    * English. A throw out of `check` is about the model, or the report for a report rule or a
@@ -151,7 +160,13 @@ export function runRules(
               label: msg("ruleError.theModel"),
               finding: { objectType: "Model", objectName: "Model" },
             });
-    failures.push({ id: rule.id, kind, label, finding: f });
+    failures.push({
+      id: rule.id,
+      ...(file === undefined ? {} : { file }),
+      kind,
+      label,
+      finding: f,
+    });
   };
   /**
    * Adds a rule's finding, unless its object's `pbiplint.ignore` or Tabular Editor's annotation
@@ -237,8 +252,9 @@ export function runRules(
   }
   if (failuresRan) {
     const seen = new Set<string>();
-    for (const { id, label, finding: f, kind } of failures) {
-      const key = JSON.stringify([id, f.objectType, f.objectName, f.objectId]);
+    for (const { id, file, label, finding: f, kind } of failures) {
+      // The file keeps apart a custom rule that cannot run and pbiplint's rule of the same id.
+      const key = JSON.stringify([id, file ?? null, f.objectType, f.objectName, f.objectId]);
       if (seen.has(key)) continue;
       seen.add(key);
       keep(RULE_COULD_NOT_FINISH.id, { ...f, message: failureMessage(id, label, kind) }, id);

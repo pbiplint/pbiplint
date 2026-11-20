@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { lint, resolveConfig, VERSION } from "@pbiplint/core";
+import { readCustomRules } from "@pbiplint/core/custom-rules";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   copy,
@@ -154,6 +155,40 @@ describe("export for an AI assistant", () => {
     }
     for (const id of Object.keys(RULE_GUIDANCE).filter((id) => !fired.has(id)))
       expect(copied).not.toContain(`(${id})\n`);
+  });
+
+  it("gives a team's rule that takes one of pbiplint's ids none of pbiplint's guidance for that id", async () => {
+    // An edited copy of a model rule the sample fires runs in place of pbiplint's rule, under its id.
+    const id = result.groups.find((g) => g.rule.layer === "model" && !g.rule.custom)!.rule.id;
+    const description = "Our own rule: the model is always flagged.";
+    const customRules = readCustomRules([
+      {
+        path: "rules/team.json",
+        text: JSON.stringify([
+          {
+            ID: id,
+            Name: "Team rule",
+            Scope: "Model",
+            Expression: "true",
+            Description: description,
+          },
+        ]),
+      },
+    ]);
+    const team = await lint(SAMPLE_FILES, {
+      config: resolveConfig(JSON.parse(SAMPLE_CONFIG)),
+      customRules,
+    });
+    const group = team.groups.find((g) => g.rule.id === id)!;
+    expect(group.rule).toMatchObject({ custom: true, ruleFile: "rules/team.json" });
+    const text = exportForAssistant(team).text;
+    const section = text.slice(text.indexOf(`### Team rule (${id})`));
+    const own = RULE_GUIDANCE[id]!;
+    expect(own).toBeDefined();
+    expect(section).not.toContain(own.fix);
+    if (own.ignore) expect(section).not.toContain(own.ignore);
+    expect(section).toContain("rules/team.json");
+    expect(section).toContain(description);
   });
 
   it("leaves each rule's Example on its page", () => {

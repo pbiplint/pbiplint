@@ -1,5 +1,5 @@
 import { ConfigError } from "../engine/config.js";
-import { CustomRuleStop, type CustomRuleSet } from "../engine/custom.js";
+import { CustomRuleStop, RESERVED_IDS, type CustomRuleSet } from "../engine/custom.js";
 import type {
   Calendar,
   Column,
@@ -11,10 +11,19 @@ import type {
 } from "../model/types.js";
 import type { Diagnostic } from "../project/types.js";
 import { finding, modelPartlyRead } from "../rules/helpers.js";
-import type { Ignorable, ObjectType, Rule, RuleFinding, Severity } from "../rules/types.js";
+import type {
+  CustomRuleSource,
+  Ignorable,
+  ObjectType,
+  Rule,
+  RuleFinding,
+  Severity,
+} from "../rules/types.js";
 import type { TmdlNode } from "../tmdl/types.js";
+import { fingerprint, scopeKey } from "./te/fingerprint.js";
 import { teRunner } from "./te/index.js";
 import { readTeRuleFile, type TeRule, type TeRuleProblem } from "./te/read.js";
+import { UPSTREAM_RULES, type UpstreamRule } from "./te/upstream-rules.data.js";
 import type { TomObject } from "./te/view-types.js";
 
 export type { CustomRuleSet } from "../engine/custom.js";
@@ -143,14 +152,47 @@ export function tomFinding(o: TomObject): RuleFinding {
   }
 }
 
-/** The ids pbiplint keeps for its safety nets: a custom rule cannot take either. */
-const RESERVED = new Set(["PARSE_ISSUE", "RULE_COULD_NOT_FINISH"]);
 const PLACEHOLDER = /^\(rule \d+\)$/;
 
 const plural = (n: number, one: string, other: string) => `${n} ${n === 1 ? one : other}`;
 
+/** Published rule versions by upper-case id. */
+type UpstreamIndex = ReadonlyMap<string, readonly UpstreamRule[]>;
+
+const indexUpstream = (entries: readonly UpstreamRule[]): UpstreamIndex => {
+  const index = new Map<string, UpstreamRule[]>();
+  for (const e of entries) {
+    const upper = e.id.toUpperCase();
+    index.set(upper, [...(index.get(upper) ?? []), e]);
+  }
+  return index;
+};
+let publishedIndex: UpstreamIndex | undefined;
+
+/**
+ * How a rule stands to the published versions of a rule with its id (custom rules spec, section
+ * 4): nothing when none is published; unchanged when its scopes and its expression, whitespace
+ * aside, match a published version, with its severity when that matches none of the matching
+ * versions' severities as pbiplint reads them; edited otherwise.
+ */
+function upstreamOf(
+  te: TeRule,
+  index: UpstreamIndex,
+): Pick<CustomRuleSource, "upstream" | "upstreamSeverityChanged"> {
+  const published = index.get(te.id.toUpperCase());
+  if (published === undefined) return {};
+  const scope = scopeKey(te.scopes);
+  const hash = fingerprint(te.expression);
+  const matching = published.filter((e) => e.scope === scope && e.hash === hash);
+  if (matching.length === 0) return { upstream: "edited" };
+  const severity = teSeverity(te.severity);
+  return matching.some((e) => teSeverity(e.severity) === severity)
+    ? { upstream: "unchanged" }
+    : { upstream: "unchanged", upstreamSeverityChanged: severity };
+}
+
 /** A custom rule that runs its Tabular Editor rule on the model when, and only when, it runs. */
-function customRule(te: TeRule, file: string): Rule {
+function customRule(te: TeRule, file: string, index: UpstreamIndex): Rule {
   return {
     id: te.id,
     name: te.name,
@@ -168,6 +210,7 @@ function customRule(te: TeRule, file: string): Rule {
       scopes: te.scopes,
       expression: te.expression,
       ...(te.severity === undefined ? {} : { teSeverity: te.severity }),
+      ...upstreamOf(te, index),
     },
     check: (project, ctx) => {
       const model: Model | undefined = project.model;
@@ -213,7 +256,7 @@ function problemRule(problem: TeRuleProblem, id: string, file: string): Rule {
       description: name,
       references: [],
       status: "custom",
-      custom: { file, scopes: [], expression: "" },
+      custom: { file, scopes: [], expression: "", readProblem: problem.reason },
       check: () => [],
     },
     problem.reason,
@@ -233,8 +276,19 @@ const sameness = (te: TeRule) =>
  * case: a rule held alike by two files (or twice in one) runs once; for different rules with one
  * id the first runs and a notice names the other. A file the reader refuses whole throws a
  * `ConfigError` naming it, which stops the project's lint as a config that cannot be used does.
+ *
+ * A rule whose id Microsoft or Tabular Editor has published is marked as an unchanged or an edited
+ * copy (`Rule.custom.upstream`), which `lint` reads to run pbiplint's rule or the team's. `upstream`
+ * is the published versions to compare with: the generated data, unless a test passes its own.
  */
-export function readCustomRules(files: readonly { path: string; text: string }[]): CustomRuleSet {
+export function readCustomRules(
+  files: readonly { path: string; text: string }[],
+  upstream?: readonly UpstreamRule[],
+): CustomRuleSet {
+  const index =
+    upstream === undefined
+      ? (publishedIndex ??= indexUpstream(UPSTREAM_RULES))
+      : indexUpstream(upstream);
   const set: CustomRuleSet = { files: [], rules: [], notices: [] };
   const first = new Map<string, { file: string; key: string }>();
   const notice = (path: string, message: string): Diagnostic => ({
@@ -271,9 +325,9 @@ export function readCustomRules(files: readonly { path: string; text: string }[]
     };
     for (const te of read.rules) {
       list(te.id);
-      const rule = customRule(te, path);
+      const rule = customRule(te, path, index);
       const upper = te.id.toUpperCase();
-      if (RESERVED.has(upper)) {
+      if (RESERVED_IDS.has(upper)) {
         const reason = `The ID ${upper} belongs to one of pbiplint's own rules, which report what pbiplint could not read or run, so a custom rule cannot use it. Give the rule an ID of its own.`;
         add(stoppedRule(rule, reason), JSON.stringify(["stopped", reason]), path);
       } else add(rule, sameness(te), path);

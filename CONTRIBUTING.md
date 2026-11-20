@@ -70,6 +70,13 @@ The probe captures pin each probe file by its sha256, so a probe file changes on
 
 `te` runs on Windows, macOS, and Linux. Without it, submit hand-verified expectations and say so in the pull request. Keep the `skipRules` entries and their reasons; the script keeps them from the existing file, and any `deviations` with their `ours` too.
 
+A team's copy of one of pbiplint's rules is recognised by its fingerprint: `packages/core/src/custom-rules/te/upstream-rules.data.ts` holds the id, scopes, expression hash, and severity of every published version of Microsoft's and Tabular Editor's rule files, and no rule text. It is generated, never edited by hand, by a script that reads both repositories' history through GitHub's API up to the commits it pins (update them to read newer versions). It reads the built core, so build first; `GH_TOKEN` is optional but a run makes more requests than GitHub allows without it:
+
+```bash
+npm run build
+GH_TOKEN=<token> node scripts/fingerprint-upstream-rules.mjs <new empty scratch folder>
+```
+
 The report rules are pinned to fab-inspector the same way; the steps are in docs/RELEASING.md under Report parity expectations. What a re-capture needs after October 31, 2026, when Tabular Editor CLI 0.7.1.2 stops working, is in the same file under Model parity expectations.
 
 New fixtures must be sanitized: `node scripts/sanitize-fixture.mjs <modelDir | projectDir>` rewrites every absolute path in the TMDL to `C:\Demo\Data\<name>`, deletes what does not belong in a fixture (Desktop caches and layouts, registered resources, custom visual packages, `.pbix` files), and edits a report's `report.json` so it no longer names the resources it deleted. TMDL carries no data.

@@ -153,6 +153,13 @@ describe("the engine runs custom rules", () => {
     expect(result.summary.ignored).toBeGreaterThan(0);
   });
 
+  it("never lets Tabular Editor's annotation hide a rule that could not finish", async () => {
+    // The model's own annotation names PROBE_IGNORE_CUSTOM, and the failure sits on the model.
+    const broken = rule({ ID: "PROBE_IGNORE_CUSTOM", Expression: "Visible" });
+    const result = await run(set(broken), {}, fixture("custom-rules-model-ignore"));
+    expect(failures(result).filter((f) => isFailureOf(f, "PROBE_IGNORE_CUSTOM"))).toHaveLength(1);
+  });
+
   it.each([
     ["a rule that cannot run", "TEAM_VISIBLE", TEAM_VISIBLE, /Measure has no property `Visible`/],
     ["a rule the reader could not read", "TEAM_NO_SCOPE", TEAM_NO_SCOPE, /has no Scope/],

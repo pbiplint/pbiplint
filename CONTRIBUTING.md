@@ -60,6 +60,14 @@ node scripts/te-expectations.mjs tests/fixtures/rule-zoo.SemanticModel tests/exp
 
 `BPARules.json` is Microsoft's ruleset with the sha256 the files' `oracle` names. The survey capture downloads the 46 rule files from GitHub and runs `te` on each, about two minutes a fixture, and warns for every rule `te` cannot evaluate, which is expected for these files. A rule file GitHub no longer has is recorded as unavailable, with a warning. A saved output converts with `--from <file>` in place of `--rules`. It must come from `te bpa run -m <definition> -r BPARules.json --no-defaults --no-model-rules --output-format json`, and `--oracle <text>` names the build that made it; without `--oracle`, an existing file keeps the oracle it had, and a new one names Tabular Editor CLI 0.7.1.2, which is wrong for any other build.
 
+The two fixtures for [custom rules](https://github.com/pbiplint/pbiplint/issues/118), `custom-rules` and `custom-rules-model-ignore`, have their captures under `tests/expectations/custom-rules/`, made with Tabular Editor CLI 0.8.1.1, and a fourth kind: what `te` makes of pbiplint's own probe rule files in `tests/rules/te-probes/`, each rule asking one question about how Tabular Editor runs a rule. The three commands above write them with `custom-rules/` in each output path, and the fourth is:
+
+```bash
+node scripts/te-expectations.mjs tests/fixtures/custom-rules.SemanticModel tests/expectations/custom-rules/probes/custom-rules.json --probes tests/rules/te-probes
+```
+
+The probe captures pin each probe file by its sha256, so a probe file changes only with a re-capture. Never reformat them.
+
 `te` runs on Windows, macOS, and Linux. Without it, submit hand-verified expectations and say so in the pull request. Keep the `skipRules` entries and their reasons; the script keeps them from the existing file, and any `deviations` with their `ours` too.
 
 The report rules are pinned to fab-inspector the same way; the steps are in docs/RELEASING.md under Report parity expectations. What a re-capture needs after October 31, 2026, when Tabular Editor CLI 0.7.1.2 stops working, is in the same file under Model parity expectations.

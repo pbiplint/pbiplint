@@ -1,0 +1,18 @@
+model Model
+	culture: en-US
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	sourceQueryCulture: en-US
+
+annotation BestPracticeAnalyzer_IgnoreRules = {"RuleIDs":["AVOID_FLOATING_POINT_DATA_TYPES","HIDE_FOREIGN_KEYS","USE_THE_DIVIDE_FUNCTION_FOR_DIVISION","ENSURE_TABLES_HAVE_RELATIONSHIPS","INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED","MODEL_SHOULD_HAVE_A_DATE_TABLE","PROBE_IGNORE_CUSTOM"]}
+
+annotation PBI_QueryOrder = ["Orders","Customers","Products","Notes","Targets"]
+
+ref table Orders
+ref table Customers
+ref table Products
+ref table Notes
+ref table Targets
+ref table 'Time Intelligence'
+
+ref cultureInfo en-US
+ref cultureInfo fr-FR

@@ -466,6 +466,7 @@ describe("the shared messages (#98)", () => {
 
   it("gives a table permission's finding its role as a message", async () => {
     const r = await lint([
+      { path: "definition/model.tmdl", text: "model Model\n" },
       {
         path: "definition/tables/T.tmdl",
         text: "table T\n\tcolumn C\n\t\tdataType: int64\n\tpartition T = m\n\t\tmode: import\n\t\tsource = 1\n",
@@ -2115,8 +2116,8 @@ describe("every finding's params match its template (#98)", () => {
     return [...files.model, ...files.report];
   };
 
-  it("reads fifteen projects: tests/fixtures' fourteen and the example", () => {
-    expect(projects).toHaveLength(15);
+  it("reads seventeen projects: tests/fixtures' sixteen and the example", () => {
+    expect(projects).toHaveLength(17);
   });
 
   it.each(projects.map((p) => [relative(join(fixturesDir, "../.."), p), p]))(
@@ -2211,6 +2212,12 @@ describe("every parse reason and rule error fits its template (#98)", () => {
     ["a table under a table", ["parse.tmdl.tableOnlyAtRoot"], () => tmdl("table T\n\ttable X\n")],
     ["a misspelt child", ["parse.tmdl.notChildType"], () => tmdl("table T\n\tcolumm C\n")],
     ["a table with no name", ["parse.tmdl.noName"], () => tmdl("table ''\n\tcolumn C\n")],
+    ["a measure with no table line", ["parse.tmdl.needsTable"], () => tmdl("measure M = 1\n")],
+    [
+      "a ref role with lines under it",
+      ["parse.tmdl.refLinesUnder"],
+      () => tmdl("ref role R\n\tmodelPermission: read\n"),
+    ],
     ["an unquoted name", ["parse.tmdl.unquotedName"], () => tmdl("table O'Brien\n")],
     [
       "a root annotation with lines under it",

@@ -95,11 +95,16 @@ test("lints a folder of several projects as a section each, and copies one proje
     await jump.click();
     await expect(page.locator(`${target}`)).toHaveAttribute("open", "");
 
-    // Every section's ids are its own, so the page passes the scan one project passes.
-    const scan = await new AxeBuilder({ page }).analyze();
-    expect(scan.violations.map((v) => `${v.id} (${v.impact}): ${v.nodes.length} node(s)`)).toEqual(
-      [],
-    );
+    // Every section's ids are its own, so the page passes the scan one project passes, in the
+    // light theme (Playwright's default) and in dark.
+    for (const colorScheme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme });
+      const scan = await new AxeBuilder({ page }).analyze();
+      expect(
+        scan.violations.map((v) => `${v.id} (${v.impact}): ${v.nodes.length} node(s)`),
+        colorScheme,
+      ).toEqual([]);
+    }
     // The download is one project's too, named by its project's number.
     const [download] = await Promise.all([
       page.waitForEvent("download"),

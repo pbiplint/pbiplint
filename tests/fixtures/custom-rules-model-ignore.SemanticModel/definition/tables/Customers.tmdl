@@ -1,0 +1,42 @@
+table Customers
+
+	column 'Customer Key'
+		dataType: int64
+		isHidden
+		isKey
+		summarizeBy: none
+		sourceColumn: Customer Key
+
+	column 'Customer Name'
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Customer Name
+
+	column Region
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Region
+
+	column City
+		dataType: string
+		summarizeBy: none
+		sourceColumn: City
+
+	hierarchy Geography
+
+		level Region
+			column: Region
+
+		level City
+			column: City
+
+	partition Customers = m
+		mode: import
+		source =
+				let
+				    Source = Snowflake.Databases("example.snowflakecomputing.com", "ANALYTICS_WH"),
+				    Db = Source{[Name="SALES",Kind="Database"]}[Data],
+				    Schema = Db{[Name="SCRATCH",Kind="Schema"]}[Data],
+				    Customers = Schema{[Name="CUSTOMERS",Kind="Table"]}[Data]
+				in
+				    Customers

@@ -3,6 +3,8 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Plugin } from "vite";
 import { VERSION } from "../../../core/src/version.js";
+import { referenceHtml } from "./custom-rules-reference.js";
+import { TE_REFERENCE } from "./custom-rules-reference.data.js";
 import {
   contentPage,
   latestPage,
@@ -30,7 +32,20 @@ export const CONTENT_PAGES = [
   "pipelines",
   "self-host",
   "self-host/checklist",
+  "custom-rules",
 ] as const;
+
+/**
+ * HTML a content page takes from the build rather than from its Markdown, by page and then by
+ * the name of the `<!-- name -->` line it replaces. The custom rules page's reference is
+ * generated from the evaluator's own tables (custom-rules-reference.data.ts), so it cannot drift
+ * from what pbiplint runs.
+ */
+const CONTENT_BLOCKS: Partial<
+  Record<(typeof CONTENT_PAGES)[number], () => Record<string, string>>
+> = {
+  "custom-rules": () => ({ reference: referenceHtml(TE_REFERENCE) }),
+};
 
 /**
  * Where a content page names this release, as the self-hosting page does in its download and
@@ -104,7 +119,10 @@ export function generateSite({
   for (const name of CONTENT_PAGES) {
     const source = `content/${name}.md`;
     const markdown = withVersion(readFileSync(join(contentDir, `${name}.md`), "utf8"));
-    write(join(outDir, name, "index.html"), contentPage(markdown, `/${name}/`, source));
+    write(
+      join(outDir, name, "index.html"),
+      contentPage(markdown, `/${name}/`, source, CONTENT_BLOCKS[name]?.()),
+    );
   }
   // Both are gitignored output in the source tree, so a self-hosting build removes the copies an
   // earlier public build left there; otherwise it would pick them up and ship them.

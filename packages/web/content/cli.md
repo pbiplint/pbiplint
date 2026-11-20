@@ -77,9 +77,9 @@ To keep them in a project, run `pbiplint skill --install <assistant>` from the p
 
 | Assistant | Folders it writes |
 | --- | --- |
-| `claude` (Claude Code) | `.claude/skills/pbiplint/` and `.claude/skills/pbiplint-custom-rules/` |
-| `copilot` (GitHub Copilot) | `.github/skills/pbiplint/` and `.github/skills/pbiplint-custom-rules/` |
-| `codex` (Codex) or `gemini` (Gemini CLI) | `.agents/skills/pbiplint/` and `.agents/skills/pbiplint-custom-rules/` |
+| `claude` (Claude Code) | `.claude/skills/pbiplint/`, and from 0.4.0 `.claude/skills/pbiplint-custom-rules/` |
+| `copilot` (GitHub Copilot) | `.github/skills/pbiplint/`, and from 0.4.0 `.github/skills/pbiplint-custom-rules/` |
+| `codex` (Codex) or `gemini` (Gemini CLI) | `.agents/skills/pbiplint/`, and from 0.4.0 `.agents/skills/pbiplint-custom-rules/` |
 
 GitHub Copilot reads all three folders, so one copy of each skill is enough for it. `--install` never replaces a copy that differs from the one it would write, an edited copy or one from another version, unless you add `--force`. It is all or nothing (from 0.4.0): it checks every copy before it writes any, and when one differs it writes neither, exits `2`, and names each copy that differs. `--dry-run` says what it would do and writes nothing. `--show` lists each folder, whether each skill is there, and whether that copy matches the version installed. `--name <skill>` (from 0.4.0), `pbiplint` or `pbiplint-custom-rules`, limits printing, `--install`, and `--show` to that skill. To remove a skill, delete the folder `--show` names.
 
@@ -113,7 +113,7 @@ Pin a version, as in `pbiplint@0.2.5`, to keep every machine on the same rules.
 
 <h3 id="custom-rule">Write a custom rule (from 0.4.0)</h3>
 
-A team can add rules of its own, in Tabular Editor's Best Practice Analyzer format, in a file that `customRules` in `pbiplint.config.json` names, and pbiplint runs them beside its own. An assistant with the `pbiplint-custom-rules` skill writes one in a loop: it asks what the rule should catch, with one object that should be flagged and one that should not; reads what a rule can use at the installed version from `pbiplint reference` (or the MCP tool `custom_rules_reference`); writes the rule into the team's file and checks that the nearest config names that file; runs `pbiplint <path> --rule <RULE_ID>` and checks that it flags the objects meant and nothing else, with `pbiplint explain <RULE_ID> --config <file>`, where `<file>` is the project's `pbiplint.config.json`, showing the rule as pbiplint read it; and when the rule gives [`RULE_COULD_NOT_FINISH`](/rules/rule-could-not-finish/), reads the reason, fixes the rule, and runs it again. Severity, and any change to a rule the team already has, stay the team's call.
+A team can add rules of its own, in Tabular Editor's Best Practice Analyzer format, in a file that `customRules` in `pbiplint.config.json` names, and pbiplint runs them beside its own. An assistant with the `pbiplint-custom-rules` skill writes one in a loop: it asks what the rule should catch, with one object that should be flagged and one that should not; reads what a rule can use at the installed version from `pbiplint reference` (or the MCP tool `custom_rules_reference`); writes the rule into the team's file and checks that the nearest config names that file; runs `pbiplint <path> --rule <RULE_ID>` and checks that it flags the objects meant and nothing else, with `pbiplint explain <RULE_ID> --config <file>`, where `<file>` is the project's `pbiplint.config.json`, showing the rule as pbiplint read it; and when the rule gives [`RULE_COULD_NOT_FINISH`](/rules/rule-could-not-finish/), reads the reason, fixes the rule, and runs it again. Severity, and any change to a rule the team already has, stay the team's call. [Custom rules](/custom-rules/) covers the format, the worked examples, and everything a rule can use.
 
 To lint a folder named `explain`, `reference`, `rules`, `skill`, or `mcp`, give it as `./explain`, `./reference`, `./rules`, `./skill`, or `./mcp` (`reference` is a command from 0.4.0).
 
@@ -137,6 +137,20 @@ A `pbiplint.config.json` next to the project, or in any folder above it, turns r
   "failOn": "warning"
 }
 ```
+
+From 0.4.0, `customRules` names your team's own rule files, in Tabular Editor's Best Practice Analyzer format, by their paths from the folder the config is in, and pbiplint runs them beside its own rules. The `rules` entries work on their ids too:
+
+```json
+{
+  "$schema": "https://pbiplint.com/schema/pbiplint.config.schema.json",
+  "customRules": ["rules/team.json"],
+  "rules": {
+    "TEAM_MEASURE_DESCRIPTIONS": "error"
+  }
+}
+```
+
+A rule file that cannot be read stops the run with exit `2`, naming the config and the file, so a gate never passes without the team's rules. [Custom rules](/custom-rules/) has the format, what happens to a rule with one of pbiplint's ids, and what a rule can use.
 
 To ignore a rule on one object, add `annotation pbiplint.ignore = HIDE_FOREIGN_KEYS` under the object in its TMDL file, or a `pbiplint.ignore` entry in the `annotations` array of a page's or a visual's JSON file. Power BI Desktop keeps both. The [CLI's README](https://github.com/pbiplint/pbiplint/tree/main/packages/cli#readme) has the details, and each rule's page lists the options the rule takes.
 

@@ -884,6 +884,19 @@ th {
 .rule-list .summary {
   font-size: 14px;
 }
+/* The custom rules page's generated reference: each object type and value type folds away under
+   its name, so the section can be scanned, and opened where it is needed. */
+.reference-type summary {
+  cursor: pointer;
+  padding: 6px 0;
+}
+/* Its tables hold long names with nothing to break at, such as ProviderDataSource, and the
+   regular expression table has four columns, so at 320 pixels a cell breaks anywhere rather than
+   widen the page. */
+.reference-table th,
+.reference-table td {
+  overflow-wrap: anywhere;
+}
 .cta {
   margin-top: 32px;
   display: flex;

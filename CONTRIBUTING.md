@@ -97,6 +97,8 @@ Sections, in this order: What it checks, Example, Why it matters, How to fix it,
 - Related rules is a bulleted list. Each bullet opens with a rule id in backticks and says how the rules relate. The test checks the ids. On the site, a rule id in backticks anywhere on a page links to that rule's page.
 - The pages also feed tool output. After editing a page, run `npm run build -w @pbiplint/core && node scripts/sync-rule-pages.mjs` to regenerate `packages/core/src/rules/rule-summaries.data.ts`, `packages/cli/src/rule-help.data.ts`, and `packages/web/src/results/rule-guidance.data.ts` (what the results page's Copy for an AI assistant adds to the report); the rule-pages tests fail until they match.
 
+The site's [custom rules page](https://pbiplint.com/custom-rules/) ends with a reference of everything a Tabular Editor rule can use, generated from the evaluator's own tables, as `pbiplint reference` prints it. After any change to those tables (what changes `pbiplint reference`), run `npm run build -w @pbiplint/core && node scripts/sync-custom-rules-reference.mjs` to regenerate `packages/web/src/build/custom-rules-reference.data.ts`; its test fails until the two match. The page's worked examples are the custom rules skill's (`packages/cli/skill/pbiplint-custom-rules/SKILL.md`), byte for byte, and a test fails when one changes without the other.
+
 ## Testing a pull request
 
 Every pull request runs three checks on GitHub, and it cannot merge with any of them red:

@@ -716,6 +716,7 @@ ${families.map((l) => `<label class="filter"><input type="checkbox" value="${l}"
   const main = `<article class="prose">
 <h1>Rules</h1>
 <p>${metas.length} rules: ${sources}. Ranked by severity, then category, then how many objects they hit.</p>
+<p>Your team can run rules of its own beside these, from Tabular Editor rule files: see <a href="/custom-rules/">Custom rules</a>.</p>
 ${filter}${sections}
 </article>`;
   return page({
@@ -727,16 +728,33 @@ ${filter}${sections}
   });
 }
 
-/** A Markdown page with `title` and `description` frontmatter, such as content/about.md. */
-export function contentPage(markdown: string, path: string, source: string): string {
+/**
+ * A Markdown page with `title` and `description` frontmatter, such as content/about.md. Each entry
+ * of `blocks` replaces the page's `<!-- name -->` line with HTML the build made, such as the
+ * custom rules page's generated reference; a block whose line the page lacks fails the build, so
+ * a generated section never goes missing without a word.
+ */
+export function contentPage(
+  markdown: string,
+  path: string,
+  source: string,
+  blocks: Record<string, string> = {},
+): string {
   const { data, body } = parseFrontmatter(markdown, source);
   const title = str(data.title);
+  let html = render(body);
+  for (const [name, block] of Object.entries(blocks)) {
+    const marker = `<!-- ${name} -->`;
+    if (!html.includes(marker))
+      throw new Error(`${source}: no ${marker} line for the build to fill`);
+    html = html.replace(marker, () => block);
+  }
   return page({
     // A title that already names pbiplint, as "About pbiplint" does, is not named twice.
     title: title.includes("pbiplint") ? title : `${title} · pbiplint`,
     description: str(data.description),
     path,
-    main: `<article class="prose">\n${render(body)}\n</article>`,
+    main: `<article class="prose">\n${html}\n</article>`,
   });
 }
 
@@ -777,6 +795,7 @@ For a coding assistant that can run commands: run \`npx pbiplint skill\` and fol
 - [The pbiplint CLI](${SITE}/cli/): how to get it, run it, and check that it sends nothing
 - [What a script can rely on](${SITE}/cli/#contract): stdout, exit codes, and the JSON fields
 - [Rules](${SITE}/rules/): every rule, what it checks, and how to fix it
+- [Custom rules](${SITE}/custom-rules/): a team's own Tabular Editor rules in pbiplint, how to write one, and what a rule can use
 - [The pbiplint Privacy Promise](${SITE}/privacy/): what the site, the CLI, and the pipeline steps read and send
 
 ## Optional

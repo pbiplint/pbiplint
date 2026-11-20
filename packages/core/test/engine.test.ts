@@ -414,6 +414,36 @@ describe("Tabular Editor's ignore annotation", () => {
     expect(ids).toContain("PARSE_ISSUE");
     expect(ids).not.toContain("MODEL_SHOULD_HAVE_A_DATE_TABLE");
   });
+  it("never hides a report finding, even on an object that carries it; pbiplint.ignore still does", () => {
+    const m = modelFrom("table A\n\tcolumn X\n\t\tdataType: string\n");
+    const visual = (annotations: Record<string, string>) => ({
+      objectType: "Visual",
+      objectName: "v1",
+      layer: "report",
+      detail: "x",
+      object: { annotations },
+    });
+    const reportRule = (annotations: Record<string, string>) =>
+      ({
+        ...base,
+        id: "REPORT_RULE",
+        name: "Report rule",
+        category: "Maintenance",
+        severity: 1,
+        layer: "report",
+        needs: [],
+        check: () => [visual(annotations)],
+      }) as unknown as Rule;
+    const run = (annotations: Record<string, string>) =>
+      runRules(
+        { model: m },
+        buildIndexes({ model: m }),
+        [reportRule(annotations)],
+        resolveConfig(),
+      );
+    expect(run({ [TE_IGNORE_ANNOTATION]: '{"RuleIDs":["REPORT_RULE"]}' }).findings).toHaveLength(1);
+    expect(run({ "pbiplint.ignore": "REPORT_RULE" }).findings).toHaveLength(0);
+  });
   it("reads only a JSON object with a RuleIDs list of strings", () => {
     expect(teIgnoreIds('{"RuleIDs":["A","b"]}')).toEqual(["A", "B"]);
     expect(teIgnoreIds('{"RuleIDs":[]}')).toEqual([]);

@@ -180,13 +180,12 @@ export function runRules(
     // said about the table itself; what the input holds under it is (#274).
     if (f.object && "refOnly" in f.object && f.object.refOnly) return;
     const layer = f.layer ?? layerOf(f.objectType);
-    // A rule that could not finish answers to `pbiplint.ignore` alone, never to Tabular Editor's
-    // annotation, on its object or the model.
-    const tabularEditor = ruleId !== RULE_COULD_NOT_FINISH.id;
-    const model =
-      f.object !== undefined && f.objectType !== "File" && tabularEditor && layer === "model"
-        ? project.model
-        : undefined;
+    // Tabular Editor's annotation reaches model findings only, on their object or from the model:
+    // Tabular Editor never reads a report or a file, and knows nothing of a rule that could not
+    // finish, which answers to `pbiplint.ignore` alone.
+    const tabularEditor =
+      ruleId !== RULE_COULD_NOT_FINISH.id && layer === "model" && f.objectType !== "File";
+    const model = f.object !== undefined && tabularEditor ? project.model : undefined;
     if (
       isIgnored(f.object, ruleId, model, tabularEditor) ||
       (alsoIgnoredBy !== undefined && isIgnored(f.object, alsoIgnoredBy, model, tabularEditor))

@@ -23,6 +23,7 @@ packages/web/cli/
 packages/web/pipelines/
 packages/web/latest/
 packages/web/self-host/
+packages/web/custom-rules/
 packages/web/public/sitemap.xml
 packages/web/public/llms.txt
 

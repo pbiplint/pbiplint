@@ -789,9 +789,10 @@ describe("generateSite", () => {
     expect(privacy).toContain('<h3 id="in-the-github-action">In your pipelines</h3>');
     expect(privacy).toContain('<a href="/pipelines/">Pipelines</a>');
     // The site's list of the files it opens names the rule files a config's customRules names,
-    // which the site reads from 0.4.0, and only from inside the folder given.
+    // only from inside the folder given: on pbiplint.com, which runs main, now, and in a copy a
+    // firm hosts from the release that brings them.
     expect(privacy).toContain(
-      "<code>.platform</code>, <code>pbiplint.config.json</code>, and the rule files its <code>customRules</code> names inside that folder (from 0.4.0). Everything else in the folder",
+      "<code>.platform</code>, <code>pbiplint.config.json</code>, and the rule files its <code>customRules</code> names inside that folder (on pbiplint.com now, and in a copy your firm hosts from 0.4.0). Everything else in the folder",
     );
     expect(about).toContain('<a href="/cli/">');
     const cli = readFileSync(join(out, "cli/index.html"), "utf8");
@@ -828,9 +829,10 @@ describe("generateSite", () => {
     expect(sitemap).toContain("<loc>https://pbiplint.com/privacy/</loc>");
     expect(sitemap).toContain("<loc>https://pbiplint.com/cli/</loc>");
     expect(sitemap).toContain("<loc>https://pbiplint.com/pipelines/</loc>");
-    // The home page, the About, Privacy Promise, CLI, and pipelines pages, the rules index, and one
-    // entry per rule page.
-    expect((sitemap.match(/<loc>/g) ?? []).length).toBe(8 + 123);
+    expect(sitemap).toContain("<loc>https://pbiplint.com/custom-rules/</loc>");
+    // The home page, the About, Privacy Promise, CLI, pipelines, self-hosting, checklist, and custom
+    // rules pages, the rules index, and one entry per rule page.
+    expect((sitemap.match(/<loc>/g) ?? []).length).toBe(9 + 123);
     // llms.txt points an assistant at the skill first, then at the pages.
     const llms = readFileSync(join(out, "public/llms.txt"), "utf8");
     expect(llms.startsWith("# pbiplint\n\n> ")).toBe(true);
@@ -841,6 +843,7 @@ describe("generateSite", () => {
       [
         "about",
         "cli",
+        "custom-rules",
         "latest",
         "pipelines",
         "self-host",

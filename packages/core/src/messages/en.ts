@@ -182,6 +182,8 @@ export const EN = {
   "parse.pbir.notValidJson": "not valid JSON ({message})",
   "parse.pbir.tooDeep": "nested more than {depth} levels deep",
   "parse.pbir.unnamedEntity": "an entity",
+  "parse.tmdl.ignoreAnnotation":
+    "the BestPracticeAnalyzer_IgnoreRules annotation is not a JSON object with a RuleIDs list, so it ignores nothing",
   "parse.tmdl.linesUnder":
     '"{word}" {at, select, root {at the root of a file} script {under createOrReplace} other {under a model}} has {child, select, declaration {a declaration} other {lines}} under it, which TMDL does not allow',
   "parse.tmdl.needsTable":

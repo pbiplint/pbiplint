@@ -114,9 +114,9 @@ describe("Microsoft's ruleset as custom rules", () => {
       const { custom } = readSurveyCapture(fixture.surveyPath);
       const run = runTeRules(rulesText, fixtureModel(capture));
       if ("error" in run) throw new Error(run.error);
-      // The annotated fixtures carry Tabular Editor's ignore annotation, which pbiplint reads from
-      // pull request C on. Until then a rule the annotation names, or one it failed in Tabular
-      // Editor, is left out here: the annotation alone explains its difference.
+      // The annotated fixtures carry Tabular Editor's ignore annotation. pbiplint applies it in the
+      // engine (engine/ignore.ts), which runTeRules does not reach, so a rule the annotation names,
+      // or one Tabular Editor failed on it, is left out here: the annotation alone explains it.
       const ignored = fixture.annotated ? ignoreAnnotations(fixture.name) : undefined;
 
       it("reads all 71 rules", () => {

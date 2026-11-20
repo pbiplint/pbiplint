@@ -1,6 +1,7 @@
 import { msg, type Message } from "../messages/format.js";
 import { quoteEnd, unquoteName, unquoteValue } from "./quote.js";
 import { allowsChild, checksChildren } from "./child-types.js";
+import { TE_IGNORE_ANNOTATION, teIgnoreIds } from "./ignore-annotation.js";
 import { parseIssue } from "./issue.js";
 import { isModelChildType, isNamedRootType, isRootType } from "./root-types.js";
 import { readsScript } from "./script.js";
@@ -640,5 +641,26 @@ export function parseTmdl(file: string, text: string): ParsedFile {
     const at = issues.findIndex((i) => i.line > r.line);
     issues.splice(at === -1 ? issues.length : at, 0, issue);
   }
+  // Tabular Editor's ignore annotation, when its value is not what Tabular Editor reads: reported
+  // once, on its line, and read as ignoring nothing (engine/ignore.ts). Tabular Editor fails every
+  // rule whose scope covers the object instead; one finding on the line is the better answer.
+  const visit = (n: TmdlNode): void => {
+    if (
+      n.kind === "object" &&
+      n.type === "annotation" &&
+      n.name === TE_IGNORE_ANNOTATION &&
+      teIgnoreIds(n.value ?? "") === undefined
+    ) {
+      const issue = {
+        ...parseIssue(file, n.line, lines[n.line - 1]!, msg("parse.tmdl.ignoreAnnotation")),
+        canDropObjects: false,
+        canDropTableLine: false,
+      };
+      const at = issues.findIndex((i) => i.line > n.line);
+      issues.splice(at === -1 ? issues.length : at, 0, issue);
+    }
+    n.children.forEach(visit);
+  };
+  roots.forEach(visit);
   return { file, roots, issues, lineCount: lines.length };
 }

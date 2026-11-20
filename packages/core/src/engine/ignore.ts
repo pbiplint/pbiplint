@@ -1,16 +1,32 @@
 import type { Ignorable } from "../rules/types.js";
+import { TE_IGNORE_ANNOTATION, teIgnoreIds } from "../tmdl/ignore-annotation.js";
 import { unquoteValue } from "../tmdl/quote.js";
+
+export { TE_IGNORE_ANNOTATION, teIgnoreIds };
 
 export const IGNORE_ANNOTATION = "pbiplint.ignore";
 
+/** Whether the object's own Tabular Editor annotation names the rule. */
+function teIgnores(object: Ignorable | undefined, wanted: string): boolean {
+  const raw = object?.annotations[TE_IGNORE_ANNOTATION];
+  return raw !== undefined && (teIgnoreIds(raw)?.includes(wanted) ?? false);
+}
+
 /**
  * True when the object carries `annotation pbiplint.ignore = RULE_A, RULE_B` naming this rule, or
- * `= *`. Ids are matched without regard to case, so a hand-typed lowercase id still works.
+ * `= *`, or Tabular Editor's `BestPracticeAnalyzer_IgnoreRules` naming it, on the object or on the
+ * `model` given. Ids are matched without regard to case, so a hand-typed lowercase id still works.
+ * `pbiplint.ignore` on the model ignores the model object alone, as it always has.
  */
-export function isIgnored(object: Ignorable | undefined, ruleId: string): boolean {
+export function isIgnored(
+  object: Ignorable | undefined,
+  ruleId: string,
+  model?: Ignorable,
+): boolean {
+  const wanted = ruleId.toUpperCase();
+  if (teIgnores(object, wanted) || teIgnores(model, wanted)) return true;
   const raw = object?.annotations[IGNORE_ANNOTATION];
   if (raw === undefined) return false;
-  const wanted = ruleId.toUpperCase();
   return unquoteValue(raw)
     .split(",")
     .map((s) => s.trim())
@@ -61,6 +77,7 @@ export function ignoreHelp(ruleId: string, scope: readonly string[] = []): strin
     return `This rule reports on the report itself, so there is no object to annotate. ${project}`;
   return (
     `To ignore this rule on one object, add \`annotation ${IGNORE_ANNOTATION} = ${ruleId}\` under ` +
-    `the object in its TMDL file. Power BI Desktop keeps the annotation. ${project}`
+    `the object in its TMDL file. Power BI Desktop keeps the annotation. ` +
+    `pbiplint also honors Tabular Editor's \`${TE_IGNORE_ANNOTATION}\` annotation: on an object it ignores the rule there, and on the model it ignores the rule on every model object. ${project}`
   );
 }

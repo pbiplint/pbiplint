@@ -70,6 +70,36 @@ describe("parseTmdl", () => {
     ]);
   });
 
+  it("reports a malformed BestPracticeAnalyzer_IgnoreRules annotation once, and keeps reading", () => {
+    const text = [
+      "table T",
+      "\tcolumn A",
+      "\t\tdataType: string",
+      "",
+      '\t\tannotation BestPracticeAnalyzer_IgnoreRules = {"RuleIDs":["X"',
+      "",
+      "\tcolumn B",
+      "\t\tdataType: string",
+      "",
+      '\t\tannotation BestPracticeAnalyzer_IgnoreRules = {"RuleIDs":["X"]}',
+      "",
+    ].join("\n");
+    const pf = parseTmdl("t.tmdl", text);
+    expect(pf.issues).toEqual([
+      {
+        file: "t.tmdl",
+        line: 5,
+        text: '\t\tannotation BestPracticeAnalyzer_IgnoreRules = {"RuleIDs":["X"',
+        reason:
+          "the BestPracticeAnalyzer_IgnoreRules annotation is not a JSON object with a RuleIDs list, so it ignores nothing",
+        message: { id: "parse.tmdl.ignoreAnnotation", params: {} },
+        canDropObjects: false,
+        canDropTableLine: false,
+      },
+    ]);
+    expect(pf.roots[0]!.children.filter((n) => n.type === "column")).toHaveLength(2);
+  });
+
   it("reports a run of /// lines at the line the run started on", () => {
     // The whole run is one description, so the issue points at where it begins rather than at the
     // last line before the gap.

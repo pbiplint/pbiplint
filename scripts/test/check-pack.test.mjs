@@ -17,6 +17,8 @@ const core = (extra = []) =>
     "dist/index.js.map",
     "dist/index.d.ts.map",
     "src/index.ts",
+    "dist/custom-rules/index.js",
+    "dist/custom-rules/index.d.ts",
     ...extra,
   ]);
 const cli = (extra = []) =>
@@ -39,6 +41,18 @@ const cli = (extra = []) =>
 describe("packProblems", () => {
   it("passes the two packages as they ship today", () => {
     expect(packProblems([core(), cli()])).toEqual([]);
+  });
+  it("requires the custom rules entry the core exports", () => {
+    const withoutEntry = pack(
+      "@pbiplint/core",
+      core()
+        .files.map((f) => f.path)
+        .filter((p) => !p.startsWith("dist/custom-rules/")),
+    );
+    expect(packProblems([withoutEntry, cli()])).toEqual([
+      "@pbiplint/core: missing dist/custom-rules/index.js",
+      "@pbiplint/core: missing dist/custom-rules/index.d.ts",
+    ]);
   });
   it("catches a forbidden file at any depth, not only at the package root", () => {
     // The core ships all of src, so a stray file deep in the tree has to be caught too.

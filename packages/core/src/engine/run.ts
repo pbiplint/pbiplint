@@ -137,14 +137,17 @@ export function runRules(
             });
     failures.push({ id: rule.id, kind, label, finding: f });
   };
-  /** Adds a rule's finding, unless its object's `pbiplint.ignore` names the rule or `alsoIgnoredBy`. */
+  /**
+   * Adds a rule's finding, unless its object's `pbiplint.ignore` or Tabular Editor's annotation, on
+   * the object or the model, names the rule or `alsoIgnoredBy`.
+   */
   const keep = (ruleId: string, f: RuleFinding, alsoIgnoredBy?: string): void => {
     // A table the input knows only from `ref table` lines is declared elsewhere, so nothing is
     // said about the table itself; what the input holds under it is (#274).
     if (f.object && "refOnly" in f.object && f.object.refOnly) return;
     if (
-      isIgnored(f.object, ruleId) ||
-      (alsoIgnoredBy !== undefined && isIgnored(f.object, alsoIgnoredBy))
+      isIgnored(f.object, ruleId, project.model) ||
+      (alsoIgnoredBy !== undefined && isIgnored(f.object, alsoIgnoredBy, project.model))
     ) {
       result.ignored++;
       return;

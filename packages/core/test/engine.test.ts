@@ -6,7 +6,7 @@ import {
   resolveConfig,
   type PbiplintConfig,
 } from "../src/engine/config.js";
-import { ignoreHelp, isIgnored } from "../src/engine/ignore.js";
+import { ignoreHelp, isIgnored, TE_IGNORE_ANNOTATION, teIgnoreIds } from "../src/engine/ignore.js";
 import { lint } from "../src/engine/lint.js";
 import { rank } from "../src/engine/rank.js";
 import { optionsFor, runRules } from "../src/engine/run.js";
@@ -240,6 +240,64 @@ describe("isIgnored", () => {
       "table A\n\tcolumn X\n\t\tdataType: string\n\n\t\tannotation pbiplint.ignore = every_column\n",
     );
     expect(isIgnored(lower.tables[0]!.columns[0]!, "EVERY_COLUMN")).toBe(true);
+  });
+});
+
+describe("Tabular Editor's ignore annotation", () => {
+  const te = (value: string) => `annotation ${TE_IGNORE_ANNOTATION} = ${value}`;
+  const m = modelFrom(
+    [
+      "table A",
+      "\tcolumn X",
+      "\t\tdataType: string",
+      "",
+      `\t\t${te('{"RuleIDs":["HIDE_FOREIGN_KEYS","team_rule"]}')}`,
+      "",
+      "\tcolumn Y",
+      "\t\tdataType: string",
+      "",
+      `\t\t${te('{"ruleids":["KEY_CASE"]}')}`,
+      "",
+      "\tcolumn Z",
+      "\t\tdataType: string",
+      "",
+      `\t\t${te('{"RuleIDs":["BROKEN"')}`,
+      "",
+      "\t\tannotation pbiplint.ignore = BOTH_KINDS",
+      "",
+    ].join("\n"),
+  );
+  const [x, y, z] = m.tables[0]!.columns;
+  it("skips the object it is on, for the ids it names, matched without regard to case", () => {
+    expect(isIgnored(x, "HIDE_FOREIGN_KEYS")).toBe(true);
+    expect(isIgnored(x, "TEAM_RULE")).toBe(true);
+    expect(isIgnored(x, "OTHER")).toBe(false);
+    expect(isIgnored(y, "HIDE_FOREIGN_KEYS")).toBe(false);
+    expect(isIgnored(y, "KEY_CASE")).toBe(true);
+  });
+  it("ignores nothing when malformed, and leaves pbiplint.ignore on the same object working", () => {
+    expect(isIgnored(z, "BROKEN")).toBe(false);
+    expect(isIgnored(z, "BOTH_KINDS")).toBe(true);
+  });
+  it("on the model, skips those ids on every object, the model included", () => {
+    const withModel = modelFrom(
+      `model Model\n\t${te('{"RuleIDs":["MODEL_WIDE"]}')}\n\ntable A\n\tcolumn X\n\t\tdataType: string\n`,
+    );
+    const column = withModel.tables[0]!.columns[0]!;
+    expect(isIgnored(column, "MODEL_WIDE", withModel)).toBe(true);
+    expect(isIgnored(withModel, "MODEL_WIDE", withModel)).toBe(true);
+    expect(isIgnored(column, "OTHER", withModel)).toBe(false);
+    // pbiplint.ignore on the model keeps its meaning: the model object alone.
+    const own = modelFrom(
+      "model Model\n\tannotation pbiplint.ignore = ONLY_MODEL\n\ntable A\n\tcolumn X\n\t\tdataType: string\n",
+    );
+    expect(isIgnored(own.tables[0]!.columns[0]!, "ONLY_MODEL", own)).toBe(false);
+  });
+  it("reads only a JSON object with a RuleIDs list of strings", () => {
+    expect(teIgnoreIds('{"RuleIDs":["A","b"]}')).toEqual(["A", "B"]);
+    expect(teIgnoreIds('{"RuleIDs":[]}')).toEqual([]);
+    for (const bad of ['{"RuleIDs":["A"', '["A"]', '{"RuleIDs":"A"}', '{"RuleIDs":[1]}', "{}", "x"])
+      expect(teIgnoreIds(bad), bad).toBeUndefined();
   });
 });
 

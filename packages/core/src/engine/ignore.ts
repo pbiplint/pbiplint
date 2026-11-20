@@ -4,13 +4,51 @@ import { unquoteValue } from "../tmdl/quote.js";
 export const IGNORE_ANNOTATION = "pbiplint.ignore";
 
 /**
- * True when the object carries `annotation pbiplint.ignore = RULE_A, RULE_B` naming this rule, or
- * `= *`. Ids are matched without regard to case, so a hand-typed lowercase id still works.
+ * Tabular Editor's own ignore annotation, `{"RuleIDs": ["RULE_A", ...]}`. Many models carry it,
+ * Microsoft's sample project among them, so pbiplint honours it for every rule as Tabular Editor
+ * does: on an object for that object, on the model for every object in the model.
  */
-export function isIgnored(object: Ignorable | undefined, ruleId: string): boolean {
+export const TE_IGNORE_ANNOTATION = "BestPracticeAnalyzer_IgnoreRules";
+
+/**
+ * The rule ids a `BestPracticeAnalyzer_IgnoreRules` value names, upper-cased, or undefined when the
+ * value is not a JSON object whose `RuleIDs` (any case, as Tabular Editor reads it) is a list of
+ * strings. A malformed value ignores nothing; PARSE_ISSUE reports it.
+ */
+export function teIgnoreIds(raw: string): string[] | undefined {
+  let value: unknown;
+  try {
+    value = JSON.parse(unquoteValue(raw));
+  } catch {
+    return undefined;
+  }
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
+  const list = Object.entries(value).find(([key]) => key.toLowerCase() === "ruleids")?.[1];
+  if (!Array.isArray(list) || !list.every((id) => typeof id === "string")) return undefined;
+  return list.map((id: string) => id.toUpperCase());
+}
+
+/** Whether the object's own Tabular Editor annotation names the rule. */
+function teIgnores(object: Ignorable | undefined, wanted: string): boolean {
+  const raw = object?.annotations[TE_IGNORE_ANNOTATION];
+  return raw !== undefined && (teIgnoreIds(raw)?.includes(wanted) ?? false);
+}
+
+/**
+ * True when the object carries `annotation pbiplint.ignore = RULE_A, RULE_B` naming this rule, or
+ * `= *`, or Tabular Editor's `BestPracticeAnalyzer_IgnoreRules` naming it, on the object or on the
+ * `model` given. Ids are matched without regard to case, so a hand-typed lowercase id still works.
+ * `pbiplint.ignore` on the model ignores the model object alone, as it always has.
+ */
+export function isIgnored(
+  object: Ignorable | undefined,
+  ruleId: string,
+  model?: Ignorable,
+): boolean {
+  const wanted = ruleId.toUpperCase();
+  if (teIgnores(object, wanted) || teIgnores(model, wanted)) return true;
   const raw = object?.annotations[IGNORE_ANNOTATION];
   if (raw === undefined) return false;
-  const wanted = ruleId.toUpperCase();
   return unquoteValue(raw)
     .split(",")
     .map((s) => s.trim())

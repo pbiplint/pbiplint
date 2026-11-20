@@ -61,7 +61,10 @@ jobs:
   # stays quick and a browser download never slows the unit tests.
   e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # The browsers' system packages come from Ubuntu's mirror, which usually takes under a minute
+    # but took 12 to 14 minutes on two runs on November 19, 2026, so the limit leaves room for that
+    # beside the tests, the self-hosting build, and the egress check.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7

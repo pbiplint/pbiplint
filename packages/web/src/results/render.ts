@@ -1,5 +1,6 @@
 import {
   CATEGORY_ORDER,
+  contrastSample,
   findingDetail,
   LEARN_HELP_URLS,
   locationOf,
@@ -14,6 +15,7 @@ import {
   summaryLine,
   topGroups,
   type Fact,
+  type Finding,
   type LayerName,
   type LintResult,
   type ProjectRun,
@@ -614,6 +616,17 @@ export function applyFilters(container: HTMLElement): void {
     );
 }
 
+/**
+ * A contrast finding's colours, drawn by the browser as a labelled image (#182's spec, section
+ * 11): an image, so the site's axe scan does not measure a sample that is low on purpose and no
+ * inline style is needed. None for any other finding, or when its colours are not hex.
+ */
+function contrastImage(f: Finding): HTMLImageElement | null {
+  if (!f.messageId?.startsWith("LOW_TEXT_CONTRAST") || !f.params) return null;
+  const sample = contrastSample(f.params);
+  return sample ? h("img", { src: sample.src, alt: sample.alt, class: "contrast-sample" }) : null;
+}
+
 function renderGroup(g: RankedGroup, ids: Ids): HTMLElement {
   const label = SEVERITY_LABEL[g.rule.severity];
   const rows = g.findings.map((f) =>
@@ -623,7 +636,7 @@ function renderGroup(g: RankedGroup, ids: Ids): HTMLElement {
       h("td", { class: "mono" }, f.objectName),
       h("td", {}, f.objectType),
       h("td", { class: "mono" }, locationOf(f)),
-      h("td", {}, findingDetail(f) ?? ""),
+      h("td", {}, findingDetail(f) ?? "", contrastImage(f)),
     ),
   );
   return h(

@@ -1,7 +1,14 @@
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
+import { join, relative } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import { lint, type LintResult } from "../src/engine/lint.js";
 import { fixturesDir, readProjectFiles } from "./helpers.js";
+
+/** Every file below `dir`, by its path from it with forward slashes. */
+const listFiles = (dir: string): string[] =>
+  readdirSync(dir, { recursive: true, withFileTypes: true })
+    .filter((e) => e.isFile())
+    .map((e) => relative(dir, join(e.parentPath, e.name)).split("\\").join("/"));
 
 /** The committed project fixtures and the shape each one has (spec section 3.3). */
 const PROJECTS = [
@@ -9,6 +16,8 @@ const PROJECTS = [
   { name: "base-rules-passes", pages: 13, visuals: 74, bookmarks: 0 },
   { name: "pbip-and-github-demo", pages: 1, visuals: 19, bookmarks: 0 },
   { name: "shelfmart", pages: 1, visuals: 9, bookmarks: 0 },
+  // The first Desktop check for the contrast rule, with hand-written themes (#182's spec, section 12).
+  { name: "contrast-zoo", pages: 7, visuals: 94, bookmarks: 0 },
 ];
 
 describe.each(PROJECTS)("project fixture $name", ({ name, pages, visuals, bookmarks }) => {
@@ -33,8 +42,16 @@ describe.each(PROJECTS)("project fixture $name", ({ name, pages, visuals, bookma
     expect(report.pages.reduce((n, p) => n + p.visuals.length, 0)).toBe(visuals);
     expect(report.bookmarks.length).toBe(bookmarks);
   });
-  it("carries no registered resources, caches, or local paths", () => {
-    expect(existsSync(`${root}/${files.reportFolder}/StaticResources`)).toBe(false);
+  it("carries no resources but hand-written theme JSON, no caches, and no local paths", () => {
+    // Only theme JSON directly in a theme folder: never an image, never Microsoft's own themes.
+    const resources = `${root}/${files.reportFolder}/StaticResources`;
+    const kept = existsSync(resources) ? listFiles(resources) : [];
+    expect(
+      kept.filter(
+        (f) => !/^(RegisteredResources|SharedResources\/BaseThemes)\/[^/]+\.json$/.test(f),
+      ),
+    ).toEqual([]);
+    expect(kept.filter((f) => /\/(CY\d{2}SU\d{2}|Fluent2-[^/]*)\.json$/.test(f))).toEqual([]);
     expect(existsSync(`${root}/${files.modelFolder}/.pbi`)).toBe(false);
     expect(files.model.some((f) => /File\.Contents\("(?!C:\\Demo\\Data\\)/.test(f.text))).toBe(
       false,

@@ -1,0 +1,18 @@
+cultureInfo en-US
+
+	linguisticMetadata =
+			{
+			  "Version": "1.0.0",
+			  "Language": "en-US",
+			  "Entities": {
+			    "employee.department": {
+			      "Binding": {
+			        "ConceptualEntity": "Employee",
+			        "ConceptualProperty": "Department"
+			      },
+			      "State": "Generated"
+			    }
+			  }
+			}
+		contentType: json
+

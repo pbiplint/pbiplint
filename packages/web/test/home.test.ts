@@ -90,7 +90,7 @@ describe("home page", () => {
     await tick();
     const results = document.getElementById("results")!;
     expect(results.hidden).toBe(false);
-    expect(results.querySelector(".summary")!.textContent).toContain("280 findings");
+    expect(results.querySelector(".summary")!.textContent).toContain("281 findings");
     expect(results.querySelector("h2")!.textContent).toBe(
       "Results for the sample project (model, 14 files · report, 78 files)",
     );
@@ -110,7 +110,7 @@ describe("home page", () => {
     document.getElementById("try-sample")!.click();
     await tick();
     expect(announcer.textContent).toBe(
-      "Results for the sample project (model, 14 files · report, 78 files): 280 findings (19 errors, 84 warnings, 177 info) in 92 files.",
+      "Results for the sample project (model, 14 files · report, 78 files): 281 findings (19 errors, 85 warnings, 177 info) in 92 files.",
     );
     expect(document.getElementById("results")!.hasAttribute("aria-live")).toBe(false);
     expect(document.querySelectorAll("#results [aria-live]").length).toBe(0);
@@ -189,7 +189,7 @@ describe("home page", () => {
     // The same rule the status line follows: a hidden block is out of the accessibility tree, so
     // content rendered into one arrives where nothing can reach it.
     expect(order).toEqual(["hidden=false", "render"]);
-    expect(results.querySelector(".summary")!.textContent).toContain("280 findings");
+    expect(results.querySelector(".summary")!.textContent).toContain("281 findings");
   });
   it("scrolls a problem message only as far as needed, so the textarea stays in view", () => {
     const status = document.getElementById("status")!;
@@ -593,7 +593,12 @@ describe("home page", () => {
     expect(text("#drop p")).toBe(
       "Drop a PBIP folder, a .SemanticModel or .Report folder, or a single .tmdl file here.",
     );
-    expect(text(".panel > .hint")).toMatch(
+    // A script copied from TMDL view is what Desktop gives a person to paste (#274).
+    expect(text("#paste-hint")).toBe(
+      "Paste any complete TMDL: a table's file, several tables, or a script copied from TMDL view in Power BI Desktop with Script TMDL. TMDL with no model line is part of a model, so the rules that need the whole model are skipped.",
+    );
+    expect(document.getElementById("paste")!.getAttribute("aria-describedby")).toBe("paste-hint");
+    expect(text("#drop + .hint")).toMatch(
       /^Only \.tmdl files, the report's JSON under its definition folder, \.platform, definition\.pbir, the \.pbip file, and pbiplint\.config\.json are read\. Nothing else in the folder is opened\. /,
     );
     expect(text(".actions .hint")).toBe(

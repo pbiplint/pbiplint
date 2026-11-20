@@ -241,7 +241,7 @@ describe("the CLI's contract", () => {
     const dir = tempDir("contract-output");
     const written = await run([sample, "--format", "json", "--output", "r.json"], dir);
     expect(written.out).toBe("");
-    expect(written.err).toMatch(/^pbiplint: 280 findings .*, wrote r\.json\n$/);
+    expect(written.err).toMatch(/^pbiplint: 281 findings .*, wrote r\.json\n$/);
     expect(() => JSON.parse(readFileSync(join(dir, "r.json"), "utf8"))).not.toThrow();
   });
 
@@ -258,6 +258,33 @@ describe("the CLI's contract", () => {
     expect(notices).toContainEqual(
       expect.stringMatching(/^pbiplint: notice: reports\/Sales\/Sales\.pbip: the model at /),
     );
+  });
+
+  it("1b. colour codes only in the text report on a terminal or with FORCE_COLOR; NO_COLOR turns them off (#256)", async () => {
+    const dir = tempDir("contract-colour");
+    const runIn = async (argv: string[], isTTY: boolean, env: Record<string, string>) => {
+      let out = "";
+      let err = "";
+      await main(argv, {
+        stdout: (s) => (out += s),
+        stderr: (s) => (err += s),
+        cwd: () => dir,
+        isTTY,
+        env,
+      });
+      return out + err;
+    };
+    const ESC = "\u001b";
+    expect(await runIn(["--sample"], true, {})).toContain(ESC);
+    expect(await runIn(["--sample"], false, { FORCE_COLOR: "1" })).toContain(ESC);
+    expect(await runIn(["--sample"], false, {})).not.toContain(ESC);
+    expect(await runIn(["--sample"], true, { NO_COLOR: "1" })).not.toContain(ESC);
+    const forced = { FORCE_COLOR: "1" };
+    for (const format of ["json", "sarif", "markdown"])
+      expect(await runIn(["--sample", "--format", format], true, forced)).not.toContain(ESC);
+    expect(await runIn(["--sample", "--quiet"], true, forced)).not.toContain(ESC);
+    await runIn(["--sample", "--output", "r.txt"], true, forced);
+    expect(readFileSync(join(dir, "r.txt"), "utf8")).not.toContain(ESC);
   });
 
   it("2. exits 0 when nothing reaches --fail-on, 1 when something does, and 2 for each refusal", async () => {
@@ -375,7 +402,8 @@ describe("the CLI's contract", () => {
     expect(modelOnly.layers.report.present).toBe(false);
     expect(doc.summary.shown).toBeUndefined();
     expect(doc.facts.length).toBeGreaterThan(0);
-    for (const f of doc.facts) hasFields(f, ["layer", "label", "value"], ["detail", "ruleId"]);
+    for (const f of doc.facts)
+      hasFields(f, ["layer", "label", "value"], ["detail", "ruleId", "counts"]);
     expect(doc.diagnostics.length).toBeGreaterThan(0);
     for (const d of doc.diagnostics) hasFields(d, ["kind", "message"], ["path"]);
     for (const g of doc.groups) {

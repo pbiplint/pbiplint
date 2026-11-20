@@ -1,4 +1,4 @@
-import { pbixRefusal } from "@pbiplint/core";
+import { MAX_THEME_BYTES, pbixRefusal } from "@pbiplint/core";
 import { describe, expect, it } from "vitest";
 import { emptyTree, InputError, selectProject } from "../src/input/project-files.js";
 import { readDirectoryInput, readPickedDirectory } from "../src/input/pick-folder.js";
@@ -195,7 +195,17 @@ describe("readPickedDirectory", () => {
           fileHandle("report.json", "{}"),
           dirHandle("pages", [dirHandle("p", [fileHandle("page.json", "{}")])]),
         ]),
-        neverListed("StaticResources", opened),
+        dirHandle("StaticResources", [
+          neverListed("Other", opened),
+          neverOpened("loose.json", opened),
+          dirHandle("RegisteredResources", [
+            neverOpened("logo.png", opened),
+            neverOpened("x.tmdl", opened),
+            neverOpened("x.pbix", opened),
+            neverListed("sub", opened),
+            fileHandle("Mine.json", "{}"),
+          ]),
+        ]),
         neverListed("CustomVisuals", opened),
       ]),
     ]);
@@ -212,6 +222,7 @@ describe("readPickedDirectory", () => {
       "Proj/New.Report/definition.pbir",
       "Proj/New.Report/definition/report.json",
       "Proj/New.Report/definition/pages/p/page.json",
+      "Proj/New.Report/StaticResources/RegisteredResources/Mine.json",
     ]);
     expect(out?.diagnostics).toEqual([]);
   });
@@ -236,6 +247,23 @@ describe("readPickedDirectory", () => {
     });
     // Nothing else in the folder, so the page names the first the CLI's walk would meet.
     expect(() => selectProject(out!)).toThrow(pbixRefusal("Demo/Archive/Old.PBIX", 1));
+  });
+  it("does not open a theme file over the size cap", async () => {
+    const big: Handle = {
+      kind: "file",
+      name: "Big.json",
+      getFile: async () =>
+        ({
+          size: MAX_THEME_BYTES + 1,
+          text: () => Promise.reject(new Error("opened")),
+        }) as unknown as File,
+    };
+    const picked = dirHandle("X.Report", [
+      dirHandle("StaticResources", [dirHandle("RegisteredResources", [big])]),
+    ]);
+    const out = await readPickedDirectory(async () => picked as never);
+    expect(out?.entries).toEqual([]);
+    expect(out?.diagnostics).toEqual([]);
   });
   it("stops a chain past the cap with a diagnostic naming the folder it stopped in", async () => {
     const out = await readPickedDirectory(
@@ -460,6 +488,9 @@ describe("readDirectoryInput", () => {
         at("Proj/New.Report/definition/pages/p/visuals/v/mobile.json", "{}"),
         // Names wanted anywhere, so only the skip keeps these unopened.
         unopened("Proj/New.Report/StaticResources/SharedResources/x.tmdl"),
+        unopened("Proj/New.Report/StaticResources/RegisteredResources/x.tmdl"),
+        unopened("Proj/New.Report/StaticResources/RegisteredResources/sub/a.json"),
+        unopened("Proj/Other/StaticResources/RegisteredResources/a.json"),
         unopened("Proj/New.Report/CustomVisuals/v/.platform"),
         at("Proj/Demo.pbip", "{}"),
       ],

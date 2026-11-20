@@ -19,7 +19,11 @@
               {
                 "textRuns": [
                   {
-                    "value": "Figures exclude returns."
+                    "value": "Figures exclude returns.",
+                    "textStyle": {
+                      "fontSize": "10pt",
+                      "color": "#B3B0AD"
+                    }
                   }
                 ]
               }
@@ -44,6 +48,37 @@
               "expr": {
                 "Literal": {
                   "Value": "'Notes'"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "background": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "color": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "'#FFFFFF'"
+                    }
+                  }
+                }
+              }
+            },
+            "transparency": {
+              "expr": {
+                "Literal": {
+                  "Value": "0D"
                 }
               }
             }

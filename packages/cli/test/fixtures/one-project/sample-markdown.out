@@ -1,6 +1,6 @@
 # pbiplint report
 
-280 findings (19 errors, 84 warnings, 177 info) in 92 files. Model: 14 files. Report: 78 files. 117 rules run, 5 rules skipped (need a live model).
+281 findings (19 errors, 85 warnings, 177 info) in 92 files. Model: 14 files. Report: 78 files. 118 rules run, 5 rules skipped (need a live model).
 
 ## Report at a glance
 
@@ -13,6 +13,7 @@
 | Report measures | 2 (defined in the report, not the model) | [REPORT_LEVEL_MEASURES](https://pbiplint.com/rules/report-level-measures) |
 | Slicers | 2 (1 saved selection, 1 saved search term) | [SLICER_SELECTION_SAVED](https://pbiplint.com/rules/slicer-selection-saved) |
 | Mobile layouts | none |  |
+| Text contrast | 1 measured, 1 below the threshold, 237 not measured (235 theme file not read, 2 colour not set) | [LOW_TEXT_CONTRAST](https://pbiplint.com/rules/low-text-contrast) |
 | Schema versions | report 3.2.0, page 2.1.0, visual 2.8.0 |  |
 | Model | 8 tables, 73 columns, 14 measures (36 columns and 2 measures not reached from this report) | [NOT_REACHED_FROM_REPORT](https://pbiplint.com/rules/not-reached-from-report) |
 
@@ -236,6 +237,14 @@
 | Object | Type | Location | Detail |
 |---|---|---|---|
 | `"Scratch note" on "Scratch"` | Visual | definition/pages/b52832c4d9f487868953/visuals/2a7e16428070011e60ec/visual.json:32 | no alt text |
+
+## WARNING: Text with too little contrast (1) · report
+
+[LOW_TEXT_CONTRAST](https://pbiplint.com/rules/low-text-contrast) · Accessibility
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `"Notes" on "Overview"` | Visual | definition/pages/3cea48e58036b1654474/visuals/49158e1e7dce5e8d37fd/visual.json:25 | Text: #B3B0AD on #FFFFFF is 2.15:1, and 10 pt text needs 4.5:1. `#797674` would be 4.5:1. Text colour from the visual, background from the visual |
 
 ## WARNING: Tab order disagrees with the layout (1) · report
 

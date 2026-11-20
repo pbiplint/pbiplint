@@ -102,6 +102,16 @@ export const EN = {
   LEGACY_EXCEL_FILE:
     "the workbook is a legacy {kind, select, xlsb {.xlsb} other {.xls}} file, read through the Access Database Engine",
   LOCAL_DRIVE_PATH: "the path is on a local drive ({drive}:)",
+  LOW_TEXT_CONTRAST:
+    "{element}{state, select, default {} other { ({state})}}{field, select, none {} other { for {field}}}: {foreground} on {background} is {ratio}:1, and {size} needs {required}:1. {suggested} would be {suggestedRatio}:1{others, plural, =0 {} one {; # more state or field also falls short} other {; # more states or fields also fall short}}. Text colour from {foregroundSource, select, visual {the visual} group {its group} page {the page} customTheme {the custom theme} other {the base theme}}, background from {backgroundSource, select, visual {the visual} group {its group} page {the page} customTheme {the custom theme} other {the base theme}}",
+  "LOW_TEXT_CONTRAST.element":
+    "{element, select, title {Title} subtitle {Subtitle} dataLabels {Data labels} axisLabels {Axis labels} axisTitles {Axis title} legend {Legend} cardValue {Card value} cardLabel {Card label} newCard {Card text} multiRowCard {Multi-row card text} kpi {KPI text} tableHeaders {Headers} tableValues {Values} tableTotals {Totals} slicerHeader {Slicer header} slicerItems {Slicer items} buttonSlicer {Button slicer text} textBox {Text} buttonText {Button text} other {Text}}",
+  "LOW_TEXT_CONTRAST.sameColour":
+    "{element}{state, select, default {} other { ({state})}}{field, select, none {} other { for {field}}}: {foreground} on {background} is {ratio}:1, the same colour as what is behind it, so it cannot be read",
+  "LOW_TEXT_CONTRAST.size": "{fontSize} pt{bold, select, yes { bold} other {}} text",
+  "LOW_TEXT_CONTRAST.sizeUnknown": "text of any size",
+  "LOW_TEXT_CONTRAST.theme":
+    "{setting} in {theme} gives {foreground} on {background}, {ratio}:1, where {size} needs {required}:1, on {visuals, plural, one {# visual} other {# visuals}} ({elements, list}). {suggested} would be {suggestedRatio}:1",
   "NAME_WITHOUT_TRANSLATION.inContext": "{context}, {captions}",
   "NAME_WITHOUT_TRANSLATION.noCaption": "no caption in {cultures, list}",
   "NOT_REACHED_FROM_REPORT.level": 'level "{level}" of hierarchy "{hierarchy}"',
@@ -173,7 +183,9 @@ export const EN = {
   "parse.pbir.tooDeep": "nested more than {depth} levels deep",
   "parse.pbir.unnamedEntity": "an entity",
   "parse.tmdl.linesUnder":
-    '"{word}" {at, select, root {at the root of a file} other {under a model}} has {child, select, declaration {a declaration} other {lines}} under it, which TMDL does not allow',
+    '"{word}" {at, select, root {at the root of a file} script {under createOrReplace} other {under a model}} has {child, select, declaration {a declaration} other {lines}} under it, which TMDL does not allow',
+  "parse.tmdl.needsTable":
+    '"{word}" belongs to a table but has no "table" line above it: add its table\'s line, or copy it from TMDL view (Script TMDL), which writes it under its table',
   "parse.tmdl.noName": '"{word}" is declared with no name',
   "parse.tmdl.notChildType": '"{word}" is not a type TMDL declares under a {under}',
   "parse.tmdl.notModelProperty": '"{word}" is not a property TMDL allows under a model',
@@ -181,6 +193,8 @@ export const EN = {
   "parse.tmdl.orphanDescription": "description is not followed by a declaration",
   "parse.tmdl.orphanIndentation": "orphan indentation",
   "parse.tmdl.propertyAtRoot": '"{word}" is a property, which TMDL allows only under an object',
+  "parse.tmdl.refLinesUnder":
+    '"ref {word}" has lines under it, which pbiplint reads only under "ref table"',
   "parse.tmdl.spaceIndentation": "space indentation (TMDL requires tabs)",
   "parse.tmdl.tableOnlyAtRoot":
     '"{word}" is a type TMDL declares only at the root of a file or under a model',

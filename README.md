@@ -11,7 +11,7 @@ and how to check it.
 
 ## Status
 
-Version 0.3.2. It covers the semantic model layer (TMDL): every rule from the
+Version 0.3.4. It covers the semantic model layer (TMDL): every rule from the
 Microsoft best-practice ruleset, ported and verified against Tabular Editor,
 plus pbiplint's own rules for a year or a date fixed in DAX, for DAX
 user-defined functions, for translations, and for decimal columns' format
@@ -20,7 +20,7 @@ and verified against it, plus pbiplint's own rules for what is broken,
 unfinished, or expensive in a report, for a filter held to a fixed year, and
 for what the model holds that the report never reaches; and Power Query, the
 M behind the model's tables and shared expressions, read with Microsoft's
-Power Query parser: 16 rules, 15 of them pbiplint's own. 122 rules in all, 40 of
+Power Query parser: 16 rules, 15 of them pbiplint's own. 123 rules in all, 41 of
 them built into pbiplint. The site at https://pbiplint.com runs the code on
 main; the command line runs the version npm gives you, and the
 [releases page](https://github.com/pbiplint/pbiplint/releases) lists each
@@ -60,11 +60,12 @@ Skills](https://agentskills.io/home) format, that tells the assistant when to li
 results, and what to leave to you; `--install claude`, `copilot`, `codex`, or `gemini` writes it
 where that assistant reads a project's skills. For a chat app with no terminal, `pbiplint mcp` is a
 local MCP server with three read-only tools (`lint`, `explain_rule`, `list_rules`); the [CLI
-page](https://pbiplint.com/cli/#mcp) has each app's setup. With Claude, the [pbiplint plugin for
-Claude](https://github.com/pbiplint/claude-plugin) installs the skill and the MCP server in one
-step: in Claude Code and Cowork, `/plugin marketplace add pbiplint/claude-plugin`, then `/plugin
-install pbiplint@pbiplint`; for Claude Desktop's chat, the `.mcpb` file from its [latest
-release](https://github.com/pbiplint/claude-plugin/releases/latest), which carries pbiplint itself.
+page](https://pbiplint.com/cli/#mcp) has each app's setup. With Claude, [pbiplint for
+Claude](https://github.com/pbiplint/claude-plugin) has the skill and the MCP server as two plugins:
+in Claude Code and Cowork, `/plugin marketplace add pbiplint/claude-plugin`, then `/plugin install
+pbiplint@pbiplint` and `/plugin install pbiplint-mcp@pbiplint`; for Claude Desktop's chat, the
+`.mcpb` file from its [latest release](https://github.com/pbiplint/claude-plugin/releases/latest),
+which carries pbiplint itself.
 On the site, the results page's "Copy for an AI assistant" button copies the report with each rule's
 guidance, to paste into a chat.
 
@@ -165,16 +166,16 @@ rules for a report's correctness and readiness: fields the model does not have, 
 report never reaches, a landing page not set, the opening page, the Filters pane, hidden visuals
 left with fields bound, default page names, empty visuals, visuals past the page edge, report-level
 measures, actions that point at a missing page or bookmark, bookmarks that refer to a missing page
-or visual, actions with no destination, tab order against layout, saved slicer selections and search
-terms, and Filters pane filters held to a fixed year, such as a page filtered to 2025. "Report at a
+or visual, actions with no destination, tab order against layout, text with too little contrast
+against its background, saved slicer selections and search terms, and Filters pane filters held to a fixed year, such as a page filtered to 2025. "Report at a
 glance" states what the report will do whether or not anything fired.
 
 The Power Query layer: the M behind each table's partitions, the shared expressions, and incremental
 refresh policies, read with Microsoft's Power Query parser, and the file's Power Query options. 16
 rules check it: Microsoft's `MINIMIZE_POWER_QUERY_TRANSFORMATIONS` and 15 of pbiplint's own. A
 finding in M names the query and the step as Power Query's editor shows them, at the line and column
-in the TMDL file, and M that does not parse gets a `PARSE_ISSUE` error where the parser stopped. 122
-rules in all, 40 of them built into pbiplint; the
+in the TMDL file, and M that does not parse gets a `PARSE_ISSUE` error where the parser stopped. 123
+rules in all, 41 of them built into pbiplint; the
 [rules index](https://pbiplint.com/rules/?layer=powerquery) filters to the Power Query ones.
 
 ## Links

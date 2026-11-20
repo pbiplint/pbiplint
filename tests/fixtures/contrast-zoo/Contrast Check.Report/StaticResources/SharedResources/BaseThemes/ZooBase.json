@@ -1,0 +1,32 @@
+{
+  "name": "ZooBase",
+  "dataColors": ["#118DFF", "#12239E"],
+  "foreground": "#252423",
+  "foregroundNeutralSecondary": "#605E5C",
+  "foregroundNeutralTertiary": "#B3B0AD",
+  "background": "#FFFFFF",
+  "backgroundLight": "#F3F2F1",
+  "backgroundNeutral": "#C8C6C4",
+  "textClasses": {
+    "callout": { "fontSize": 45, "color": "#252423" },
+    "title": { "fontSize": 12, "color": "#252423" },
+    "header": { "fontSize": 12, "color": "#252423" },
+    "label": { "fontSize": 10, "color": "#252423" }
+  },
+  "visualStyles": {
+    "*": {
+      "*": {
+        "background": [{ "show": true, "transparency": 0 }]
+      }
+    },
+    "group": { "*": { "background": [{ "show": false }] } },
+    "shape": { "*": { "background": [{ "show": false }] } },
+    "image": { "*": { "background": [{ "show": false }] } },
+    "page": {
+      "*": {
+        "outspace": [{ "color": { "solid": { "color": "#FFFFFF" } } }],
+        "background": [{ "transparency": 100 }]
+      }
+    }
+  }
+}

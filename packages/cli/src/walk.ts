@@ -17,12 +17,14 @@ import {
   LEGACY_REPORT_REASON,
   legacyModelNotice as legacyModel,
   legacyReportNotice as legacyReport,
+  MAX_THEME_BYTES,
   noTmdlRefusal,
   pairingDecision,
   pbixRefusal,
   projectBelowNotice,
   projectsBelow,
   reportsNamed,
+  THEME_FOLDERS,
   type DatasetReference,
   type Diagnostic,
   type FoundBelow,
@@ -58,7 +60,10 @@ export interface ResolvedProject {
 export const EXPECTED_INPUT =
   "a PBIP folder, a .pbip file, a .SemanticModel folder, a .Report folder, a definition folder, or one .tmdl file";
 
-/** Folders never read: Desktop's caches, git, packages, and a report's resources and custom visuals. */
+/**
+ * Folders a walk never enters: Desktop's caches, git, packages, and a report's resources and custom
+ * visuals. A report's theme files are read by name, by readThemes.
+ */
 const SKIP_DIRS = new Set([".git", ".pbi", "node_modules", "StaticResources", "CustomVisuals"]);
 
 const toPosix = (p: string): string => p.split("\\").join("/");
@@ -424,7 +429,44 @@ function reportPart(w: Walk, folder: string): ResolvedPart | undefined {
     if (text !== undefined) part.files.push({ path: name, text });
   }
   readTree(w, part, def, (n) => n.endsWith(".json"));
-  return part.files.some((f) => f.path.startsWith("definition/")) ? part : undefined;
+  if (!part.files.some((f) => f.path.startsWith("definition/"))) return undefined;
+  // Only once this is known to be a report, so a run that read nothing keeps its own refusal.
+  readThemes(w, part, folder);
+  return part;
+}
+
+/**
+ * The JSON files directly in the report's theme folders, up to the size cap. Nothing else in
+ * StaticResources is looked at, and the name is tested first, so an image is never opened. A link
+ * on the way, or a folder or file that refuses, is a notice, as it is below definition.
+ */
+function readThemes(w: Walk, part: ResolvedPart, folder: string): void {
+  for (const way of THEME_FOLDERS) {
+    let dir = folder;
+    const reached = way.split("/").every((segment) => {
+      dir = join(dir, segment);
+      return !linked(w, dir, part, true);
+    });
+    if (!reached) continue;
+    const entries = attempt(
+      w,
+      dir,
+      () => (isDir(dir) ? readdirSync(dir, { withFileTypes: true }) : []),
+      part,
+      true,
+    );
+    for (const entry of (entries ?? []).sort((a, b) => byName(a.name, b.name))) {
+      if (!entry.name.endsWith(".json") || entry.isDirectory()) continue;
+      const p = join(dir, entry.name);
+      const text = attempt(
+        w,
+        p,
+        () => (statSync(p).size > MAX_THEME_BYTES ? undefined : readFileSync(p, "utf8")),
+        part,
+      );
+      if (text !== undefined) part.files.push({ path: toPosix(relative(part.root, p)), text });
+    }
+  }
 }
 
 const UNREAD_PART: Record<LayerName, string> = {

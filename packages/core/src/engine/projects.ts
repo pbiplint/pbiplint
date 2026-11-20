@@ -1,4 +1,4 @@
-import { countsLine, plural } from "../format/text.js";
+import { countsLine, plural, type Paint } from "../format/text.js";
 import { formatMessage, msg } from "../messages/format.js";
 import { buildModel } from "../model/build.js";
 import { LEGACY_MODEL_REASON, LEGACY_REPORT_REASON } from "../project/route.js";
@@ -251,5 +251,5 @@ export function runSummary(runs: ProjectRun[]): RunSummary {
 }
 
 /** `summaryLine` for a several-project run: the number of projects, then the counts in its words. */
-export const runSummaryLine = (summary: RunSummary): string =>
-  `${plural(summary.projects, "project")}, ${countsLine(summary, summary.ruleErrors)}`;
+export const runSummaryLine = (summary: RunSummary, paint?: Paint): string =>
+  `${plural(summary.projects, "project")}, ${countsLine(summary, summary.ruleErrors, paint)}`;

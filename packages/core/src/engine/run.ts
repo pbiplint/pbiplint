@@ -1,7 +1,7 @@
 import type { Indexes } from "../index/build.js";
 import { formatMessage, msg, type Message } from "../messages/format.js";
 import type { Project } from "../project/types.js";
-import { finding } from "../rules/helpers.js";
+import { finding, modelPartlyRead } from "../rules/helpers.js";
 import { reportFinding } from "../rules/report-helpers.js";
 import { failureMessage, RULE_COULD_NOT_FINISH } from "../rules/rule-could-not-finish.js";
 import {
@@ -23,10 +23,18 @@ export interface SkippedRule {
    * `disabled`: the config turns it off. `needsLiveModel`: it needs column statistics a TMDL file
    * does not carry, so it is listed and never run. `noModel` or `noReport`: a layer it needs is
    * absent from the input. `reportFileUnread` or `modelFileUnread`: a file its findings depend on
-   * could not be read, so it reports nothing rather than something wrong.
+   * could not be read, so it reports nothing rather than something wrong. `partOfModel`: it needs
+   * the whole model (`modelPartlyRead`), and the input declares no model, such as pasted TMDL or a
+   * single table's file (`Model.partial`, #274).
    */
   reason:
-    "disabled" | "needsLiveModel" | "noModel" | "noReport" | "reportFileUnread" | "modelFileUnread";
+    | "disabled"
+    | "needsLiveModel"
+    | "noModel"
+    | "noReport"
+    | "reportFileUnread"
+    | "modelFileUnread"
+    | "partOfModel";
 }
 
 /**
@@ -131,6 +139,9 @@ export function runRules(
   };
   /** Adds a rule's finding, unless its object's `pbiplint.ignore` names the rule or `alsoIgnoredBy`. */
   const keep = (ruleId: string, f: RuleFinding, alsoIgnoredBy?: string): void => {
+    // A table the input knows only from `ref table` lines is declared elsewhere, so nothing is
+    // said about the table itself; what the input holds under it is (#274).
+    if (f.object && "refOnly" in f.object && f.object.refOnly) return;
     if (
       isIgnored(f.object, ruleId) ||
       (alsoIgnoredBy !== undefined && isIgnored(f.object, alsoIgnoredBy))
@@ -172,6 +183,10 @@ export function runRules(
     }
     if (rule.skipWhenModelUnread && project.model && rule.skipWhenModelUnread(project.model)) {
       result.rulesSkipped.push({ id: rule.id, reason: "modelFileUnread" });
+      continue;
+    }
+    if (rule.skipWhenModelUnread === modelPartlyRead && project.model?.partial) {
+      result.rulesSkipped.push({ id: rule.id, reason: "partOfModel" });
       continue;
     }
     result.rulesRun.push(rule.id);

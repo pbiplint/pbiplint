@@ -40,8 +40,8 @@ whether each copy matches this version.
 (Claude Desktop, Claude Code, VS Code, Cursor) to start. Its three tools only read: `lint` (what
 `--format json` prints, or with `quiet` the short summary), `explain_rule`, and `list_rules`. It
 opens no port. See [the CLI page](https://pbiplint.com/cli/#mcp) for each app's setup. With Claude,
-the [pbiplint plugin for Claude](https://github.com/pbiplint/claude-plugin) installs the skill and
-the server together.
+[pbiplint for Claude](https://github.com/pbiplint/claude-plugin) installs the skill and the server
+as two plugins, `pbiplint` and `pbiplint-mcp`.
 
 Formats: `text` (default), `json`, `sarif` (for GitHub code scanning and editors), `markdown`.
 The Markdown export writes an email address, an `@name`, a `#123` or `GH-123`, and text
@@ -129,7 +129,7 @@ The Power Query layer is read inside the model: the M behind each table's partit
 expressions, and incremental refresh policies, with Microsoft's Power Query parser, and the file's
 Power Query options. 16 rules check it, `MINIMIZE_POWER_QUERY_TRANSFORMATIONS` and 15 of pbiplint's
 own; a finding in M names the query and the step as Power Query's editor shows them, at
-`file:line:column`. 122 rules in all, 40 of them built into pbiplint; `pbiplint rules` lists them
+`file:line:column`. 123 rules in all, 41 of them built into pbiplint; `pbiplint rules` lists them
 with their layer.
 
 The same linter runs in the browser at https://pbiplint.com. Source, issues, and contributing:

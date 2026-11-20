@@ -578,11 +578,11 @@ const SKIPPED_FILES: Record<string, string> = {
 const PROBE_EXCEPTIONS: Record<string, Record<string, string>> = {
   "custom-rules": {
     PROBE_SCOPE_PERSPECTIVE:
-      "Tabular Editor failed it on the malformed ignore annotation, which pull request C handles",
+      "Tabular Editor failed it on the malformed ignore annotation; pbiplint reports that annotation as a PARSE_ISSUE and ignores nothing (better than the source)",
     PROBE_IGNORE_CUSTOM:
-      "Tabular Editor skips the objects the ignore annotation names; pull request C reads the annotation",
+      "Tabular Editor skips the objects the ignore annotation names; the engine applies the annotation to every finding (engine/ignore.ts), not the evaluator",
     PROBE_IGNORE_CUSTOM_LOWER:
-      "Tabular Editor skips the objects the ignore annotation names; pull request C reads the annotation",
+      "Tabular Editor skips the objects the ignore annotation names; the engine applies the annotation to every finding (engine/ignore.ts), not the evaluator",
     PROBE_VERTIPAQ_WITHOUT_STATISTICS:
       "better than the source by design: Tabular Editor reads a missing statistic as null and passes; pbiplint says the rule needs statistics",
     PROBE_NO_SCOPE:
@@ -590,7 +590,7 @@ const PROBE_EXCEPTIONS: Record<string, Record<string, string>> = {
   },
   "custom-rules-model-ignore": {
     PROBE_IGNORE_CUSTOM:
-      "Tabular Editor skips every object for the model's ignore annotation; pull request C reads the annotation",
+      "Tabular Editor skips every object for the model's ignore annotation; the engine applies the annotation to every finding (engine/ignore.ts), not the evaluator",
     PROBE_VERTIPAQ_WITHOUT_STATISTICS:
       "better than the source by design: Tabular Editor reads a missing statistic as null and passes; pbiplint says the rule needs statistics",
     PROBE_NO_SCOPE:

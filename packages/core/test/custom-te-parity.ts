@@ -87,8 +87,9 @@ export interface IgnoreAnnotations {
  * What Tabular Editor's ignore annotation (`BestPracticeAnalyzer_IgnoreRules`) does in a fixture:
  * the rule ids it names anywhere, uppercased since Tabular Editor matches them ignoring case, and
  * the scopes whose objects carry an annotation that is not valid JSON, which fails a rule on such a
- * scope in Tabular Editor. pbiplint reads the annotation from pull request C on; until then the
- * parity tests leave those rules out on the annotated fixtures (`leftOutForAnnotation`).
+ * scope in Tabular Editor. pbiplint applies the annotation in the engine (engine/ignore.ts), which
+ * runTeRules does not reach, so the parity tests leave those rules out on the annotated fixtures
+ * (`leftOutForAnnotation`).
  */
 export function ignoreAnnotations(name: string): IgnoreAnnotations {
   const ids = new Set<string>();

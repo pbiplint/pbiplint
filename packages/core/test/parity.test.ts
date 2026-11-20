@@ -20,12 +20,26 @@ interface Expectation {
 
 const repoRoot = new URL("../../../", import.meta.url).pathname;
 const expectationsDir = repoRoot + "tests/expectations/";
-const expectations: Expectation[] = readdirSync(expectationsDir)
-  .filter((f) => f.endsWith(".json") && !f.endsWith(".report.json"))
-  .map((f) => ({
-    name: f.replace(/\.json$/, ""),
-    ...(JSON.parse(readFileSync(expectationsDir + f, "utf8")) as Omit<Expectation, "name">),
-  }));
+/**
+ * Every Microsoft capture: those in tests/expectations/ itself, and the two in custom-rules/,
+ * whose fixtures carry Tabular Editor's ignore annotation on objects and on the model.
+ */
+const expectations: Expectation[] = ["", "custom-rules/"].flatMap((sub) =>
+  readdirSync(expectationsDir + sub)
+    .filter((f) => f.endsWith(".json") && !f.endsWith(".report.json") && f !== "files.json")
+    .map((f) => ({
+      name: sub + f.replace(/\.json$/, ""),
+      ...(JSON.parse(readFileSync(expectationsDir + sub + f, "utf8")) as Omit<Expectation, "name">),
+    })),
+);
+
+/**
+ * The parse issues a fixture carries on purpose, by file: custom-rules has a malformed ignore
+ * annotation on its perspective, which PARSE_ISSUE reports and which ignores nothing.
+ */
+const PLANTED_PARSE_ISSUES: Record<string, string[]> = {
+  "custom-rules/custom-rules": ["definition/perspectives/Sales View.tmdl"],
+};
 
 // MINIMIZE_POWER_QUERY_TRANSFORMATIONS is Microsoft's and on the Power Query layer (v3 spec,
 // section 10.1), so it stays checked against Tabular Editor.
@@ -53,8 +67,10 @@ describe.each(expectations)("parity with Tabular Editor: $name", (exp) => {
   it("reads at least one file", () => {
     expect(files.length).toBeGreaterThan(0);
   });
-  it("parses every file without issues", () => {
-    expect(result.findings.filter((f) => f.ruleId === "PARSE_ISSUE")).toEqual([]);
+  it("parses every file without issues, apart from those planted on purpose", () => {
+    expect(
+      result.findings.filter((f) => f.ruleId === "PARSE_ISSUE").map((f) => f.objectName),
+    ).toEqual(PLANTED_PARSE_ISSUES[exp.name] ?? []);
   });
   it("runs every rule without errors", () => {
     expect(result.summary.ruleErrors).toEqual([]);

@@ -45,9 +45,14 @@ function dropOf(root: string): InputTree {
         continue;
       }
       const marker = markerOf(path);
-      if (marker) tree.markers.push(marker);
-      else if (wanted(path))
-        tree.entries.push({ path, text: readFileSync(join(root, "..", path), "utf8") });
+      if (marker) {
+        tree.markers.push(marker);
+        continue;
+      }
+      // Every file passed keeps a handle, opened only when asked, as the walkers keep them.
+      const onDisk = join(root, "..", path);
+      tree.handles.set(path, async () => new File([readFileSync(onDisk)], d.name));
+      if (wanted(path)) tree.entries.push({ path, text: readFileSync(onDisk, "utf8") });
     }
   };
   walk(basename(root));

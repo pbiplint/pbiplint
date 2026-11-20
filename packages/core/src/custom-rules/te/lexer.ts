@@ -1,4 +1,5 @@
 import type { TeNumberKind } from "./ast.js";
+import { OPERATOR_SYNTAX, TE_LEXED_ONLY } from "./syntax.js";
 
 /** A token of a rule expression. `start` and `end` are offsets into the text, end exclusive. */
 export type TeToken = { start: number; end: number } & (
@@ -29,38 +30,13 @@ export class TeSyntaxError extends Error {
   }
 }
 
-/** Operators, longest first so `<=` wins over `<`. */
-const OPERATORS = [
-  "??",
-  "==",
-  "=>",
-  "!=",
-  "<=",
-  "<>",
-  ">=",
-  "&&",
-  "||",
-  "(",
-  ")",
-  "[",
-  "]",
-  ",",
-  ".",
-  "?",
-  ":",
-  "=",
-  "!",
-  "<",
-  ">",
-  "&",
-  "|",
-  "+",
-  "-",
-  "*",
-  "/",
-  "%",
-  "$",
-];
+/**
+ * Operators, from the syntax table's spellings that are not words, longest first so `<=` wins
+ * over `<`.
+ */
+const OPERATORS = [...new Set([...OPERATOR_SYNTAX.flatMap((o) => o.spellings), ...TE_LEXED_ONLY])]
+  .filter((s) => !/^[a-z]/i.test(s))
+  .sort((a, b) => b.length - a.length);
 
 const LETTER = /^[\p{L}\p{Nl}_]$/u;
 const NAME_PART = /^[\p{L}\p{Nl}\p{Nd}\p{Mn}\p{Mc}\p{Pc}]$/u;

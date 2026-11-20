@@ -32,3 +32,18 @@ export const LIMITS: CustomRuleLimits = {
   patternStates: 10_000,
   stepsPerRule: 20_000_000,
 };
+
+/** What each limit holds, and what happens past it, in a line each, for the reference. */
+export const LIMIT_DESCRIPTIONS: Record<keyof CustomRuleLimits, string> = {
+  fileBytes:
+    "The most bytes a rule file may hold; a larger file stops the project's lint, naming it.",
+  rulesPerFile: "The most rules read from one file; each rule after that is reported as not read.",
+  expressionChars: "The longest Expression, in characters; a longer one is reported as not read.",
+  nesting:
+    "How deeply an Expression, or the groups of a regular expression, may nest; deeper stops the rule.",
+  patternChars: "The longest regular expression, in characters; a longer one stops the rule.",
+  patternStates:
+    "The most states a regular expression may compile to; large repeat counts such as `{1000}` reach it, and it stops the rule.",
+  stepsPerRule:
+    "The evaluation steps one rule may take over the whole model, regular expressions included; a rule that reaches it stops.",
+};

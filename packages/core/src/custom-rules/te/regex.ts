@@ -46,6 +46,217 @@ export type CompileResult =
   { regex: CompiledPattern } | { unsupported: string } | { invalid: string };
 
 // ---------------------------------------------------------------------------------------------
+// What runs and what does not, as tables the custom rules reference prints (pull request F).
+
+/** A construct the matcher runs, with a pattern using it, an input it matches, and one it does not. */
+export interface RegexRuns {
+  construct: string;
+  example: string;
+  matches: string;
+  doesNotMatch: string;
+}
+
+/** The constructs that run, each exactly as .NET runs it. */
+export const REGEX_RUNS: readonly RegexRuns[] = [
+  { construct: "Literal text", example: "Sales", matches: "Total Sales", doesNotMatch: "sales" },
+  {
+    construct: "`.`, any character but a line feed",
+    example: "a.c",
+    matches: "abc",
+    doesNotMatch: "a\nc",
+  },
+  {
+    construct: "`|`, either side",
+    example: "Sum|Total",
+    matches: "Total Cost",
+    doesNotMatch: "Cost",
+  },
+  {
+    construct: "A group, `(...)` or `(?:...)`, to repeat or choose within",
+    example: "(?:ab)+c",
+    matches: "ababc",
+    doesNotMatch: "ac",
+  },
+  {
+    construct: "A named group, `(?<name>...)` or `(?'name'...)`",
+    example: "(?<year>\\d{4})-",
+    matches: "2026-11",
+    doesNotMatch: "26-11",
+  },
+  { construct: "`*`, none or more", example: "ab*c", matches: "ac", doesNotMatch: "adc" },
+  { construct: "`+`, one or more", example: "ab+c", matches: "abbc", doesNotMatch: "ac" },
+  { construct: "`?`, none or one", example: "colou?r", matches: "color", doesNotMatch: "colouur" },
+  {
+    construct: "`{n}`, `{n,}` and `{n,m}`, a counted repeat",
+    example: "^\\d{2,4}$",
+    matches: "123",
+    doesNotMatch: "12345",
+  },
+  {
+    construct: "A lazy repeat such as `*?`, which matches where the greedy one does",
+    example: "a.*?b",
+    matches: "axxb",
+    doesNotMatch: "axx",
+  },
+  {
+    construct: "`^` and `$`, the start and the end (or just before a final line feed)",
+    example: "^Sales$",
+    matches: "Sales",
+    doesNotMatch: "Sales Tax",
+  },
+  {
+    construct:
+      "`\\A`, `\\z` and `\\Z`, the start, the very end, and the end or before a final line feed",
+    example: "\\ASales\\z",
+    matches: "Sales",
+    doesNotMatch: "Sales\n",
+  },
+  {
+    construct: "`\\b` and `\\B`, a word boundary and its opposite",
+    example: "\\bID\\b",
+    matches: "Customer ID",
+    doesNotMatch: "IDENTITY",
+  },
+  {
+    construct: "A class, `[...]`, with ranges such as `a-z`",
+    example: "^[A-Z][a-z]+$",
+    matches: "Sales",
+    doesNotMatch: "sales",
+  },
+  {
+    construct: "A negated class, `[^...]`",
+    example: "^[^0-9]+$",
+    matches: "Sales",
+    doesNotMatch: "Q4",
+  },
+  {
+    construct:
+      "`\\d`, `\\w` and `\\s`, with `\\D`, `\\W` and `\\S` for their opposites, as Unicode defines them",
+    example: "\\w+\\s\\d",
+    matches: "Quarter 4",
+    doesNotMatch: "Quarter",
+  },
+  {
+    construct: "`\\p{...}` and `\\P{...}`, a Unicode general category such as `Lu`",
+    example: "^\\p{Lu}",
+    matches: "Sales",
+    doesNotMatch: "sales",
+  },
+  {
+    construct: "Escapes such as `\\t`, `\\n`, `\\x41`, `\\u0041` and `\\.`",
+    example: "\\x41\\u0042\\.",
+    matches: "AB.",
+    doesNotMatch: "AB!",
+  },
+  {
+    construct: "`(?i)`, ignoring case from there on, and `(?i:...)` within a group",
+    example: "(?i)total",
+    matches: "TOTAL",
+    doesNotMatch: "tot al",
+  },
+  {
+    construct: "A lookaround one character or one class wide, such as `(?=u)` or `(?<!_)`",
+    example: "(?<!_)id",
+    matches: "Customer id",
+    doesNotMatch: "_id",
+  },
+  { construct: "A comment, `(?#...)`", example: "a(?#note)b", matches: "ab", doesNotMatch: "a b" },
+];
+
+/** A construct the matcher refuses, which stops the rule. */
+export type RegexRefusal =
+  | "atomic"
+  | "conditional"
+  | "balancing"
+  | "inlineOption"
+  | "wideLookaround"
+  | "anchorG"
+  | "backreference"
+  | "unicodeBlock"
+  | "casedCategory"
+  | "posixClass"
+  | "subtraction";
+
+/** The reason for each refusal; `detail` is the option, form or name the pattern wrote. */
+const REFUSAL_REASONS: Record<RegexRefusal, (detail: string) => string> = {
+  atomic: () => "an atomic group `(?>...)` cannot be translated exactly",
+  conditional: () => "a conditional `(?(...)yes|no)` cannot be run",
+  balancing: () => "a balancing group `(?<name-other>...)` cannot be run",
+  inlineOption: (o) => `the inline option \`(?${o})\` cannot be run; pbiplint runs only \`(?i)\``,
+  wideLookaround: (form) =>
+    `\`${form}\` wider than one character or one class cannot be translated exactly`,
+  anchorG: () => "the anchor `\\G` cannot be run",
+  backreference: () => "a backreference (`\\1`, `\\k<name>`) cannot be run in linear time",
+  unicodeBlock: (name) => `the Unicode block \`\\p{${name}}\` cannot be run`,
+  casedCategory: (name) => `\`\\p{${name}}\` under \`(?i)\` cannot be translated exactly`,
+  posixClass: () => "`[:name:]` inside a class cannot be translated exactly",
+  subtraction: () => "a class subtraction `[...-[...]]` cannot be translated exactly",
+};
+
+const refused = (key: RegexRefusal, construct: string, example: string, detail = "") => ({
+  construct,
+  example,
+  reason: REFUSAL_REASONS[key](detail),
+});
+
+/**
+ * The constructs .NET accepts that the matcher refuses, with a pattern using each and the reason
+ * that pattern gives. A refused construct stops the rule; nothing is run approximately.
+ */
+export const REGEX_REFUSED: Record<
+  RegexRefusal,
+  { construct: string; example: string; reason: string }
+> = {
+  atomic: /* @__PURE__ */ refused("atomic", "An atomic group, `(?>...)`", "(?>ab|a)c"),
+  conditional: /* @__PURE__ */ refused(
+    "conditional",
+    "A conditional, `(?(...)yes|no)`",
+    "(?(a)b|c)",
+  ),
+  balancing: /* @__PURE__ */ refused(
+    "balancing",
+    "A balancing group, `(?<name-other>...)`",
+    "(?<o>a)(?<c-o>b)",
+  ),
+  inlineOption: /* @__PURE__ */ refused(
+    "inlineOption",
+    "The inline options `(?m)`, `(?n)`, `(?s)` and `(?x)`, and the RegexOptions they stand for",
+    "(?m)^Total",
+    "m",
+  ),
+  wideLookaround: /* @__PURE__ */ refused(
+    "wideLookaround",
+    "A lookaround wider than one character or one class, such as `(?=ab)`",
+    "Total(?=ab)",
+    "(?=...)",
+  ),
+  anchorG: /* @__PURE__ */ refused("anchorG", "`\\G`, where the last match ended", "\\Ga"),
+  backreference: /* @__PURE__ */ refused(
+    "backreference",
+    "A backreference, `\\1` or `\\k<name>`",
+    "(a)\\1",
+  ),
+  unicodeBlock: /* @__PURE__ */ refused(
+    "unicodeBlock",
+    "A Unicode block, such as `\\p{IsGreek}`",
+    "\\p{IsGreek}",
+    "IsGreek",
+  ),
+  casedCategory: /* @__PURE__ */ refused(
+    "casedCategory",
+    "`\\p{Lu}`, `\\p{Ll}` or `\\p{Lt}` while case is ignored",
+    "(?i)\\p{Lu}",
+    "Lu",
+  ),
+  posixClass: /* @__PURE__ */ refused("posixClass", "`[:name:]` inside a class", "[[:alpha:]]"),
+  subtraction: /* @__PURE__ */ refused(
+    "subtraction",
+    "A class subtraction, `[...-[...]]`",
+    "[a-z-[aeiou]]",
+  ),
+};
+
+// ---------------------------------------------------------------------------------------------
 // Character classes, with .NET's Unicode meanings. These regular expressions are constant source
 // written here, used only to test one character against a Unicode property; no pattern text from
 // a rule ever reaches JavaScript's RegExp.
@@ -243,8 +454,8 @@ class Parser {
     private readonly groups: Groups,
   ) {}
 
-  private refuse(what: string): void {
-    this.unsupported ??= what;
+  private refuse(key: RegexRefusal, detail = ""): void {
+    this.unsupported ??= REFUSAL_REASONS[key](detail);
   }
 
   private fail(what: string, at = this.i): never {
@@ -403,11 +614,11 @@ class Parser {
         return this.namedGroup(open, "'");
       case ">":
         this.i++;
-        this.refuse("an atomic group `(?>...)` cannot be translated exactly");
+        this.refuse("atomic");
         return this.groupBody(open);
       case "(":
         // The condition is itself parenthesized; parsing it as a group keeps the structure.
-        this.refuse("a conditional `(?(...)yes|no)` cannot be run");
+        this.refuse("conditional");
         return this.groupBody(open);
       default:
         return this.options(open);
@@ -434,7 +645,7 @@ class Parser {
     if (p[this.i] === "-") {
       this.i++;
       if (!this.groupName()) this.fail("an invalid group name", open);
-      this.refuse("a balancing group `(?<name-other>...)` cannot be run");
+      this.refuse("balancing");
     } else if (!name) {
       this.fail("an invalid group name", open);
     }
@@ -462,8 +673,7 @@ class Parser {
       else if (ch === "+") on = true;
       else if (ch === "i") ignoreCase = on;
       else if (ch === "m" || ch === "n" || ch === "s" || ch === "x") {
-        if (on)
-          this.refuse(`the inline option \`(?${ch})\` cannot be run; pbiplint runs only \`(?i)\``);
+        if (on) this.refuse("inlineOption", ch);
       } else break;
       this.i++;
     }
@@ -488,7 +698,7 @@ class Parser {
     const single = oneCharacter(body);
     if (single === null) {
       const form = `(?${behind ? "<" : ""}${negative ? "!" : "="}...)`;
-      this.refuse(`\`${form}\` wider than one character or one class cannot be translated exactly`);
+      this.refuse("wideLookaround", form);
       return EMPTY;
     }
     if (single === "empty") return negative ? { k: "assert", test: () => false } : EMPTY;
@@ -522,7 +732,7 @@ class Parser {
         return { k: "assert", test: atEnd };
       case "G":
         this.i += 2;
-        this.refuse("the anchor `\\G` cannot be run");
+        this.refuse("anchorG");
         return EMPTY;
       case "d":
       case "D":
@@ -567,7 +777,7 @@ class Parser {
         const n = Number(p.slice(start, j));
         if (!this.isSlot(n))
           this.fail(`a reference to group ${n}, which the pattern does not define`, at);
-        this.refuse("a backreference (`\\1`, `\\k<name>`) cannot be run in linear time");
+        this.refuse("backreference");
         this.i = j + 1;
         return EMPTY;
       }
@@ -578,7 +788,7 @@ class Parser {
         if (!this.groups.names.has(p.slice(start, j))) {
           this.fail("a reference to a group name the pattern does not define", at);
         }
-        this.refuse("a backreference (`\\1`, `\\k<name>`) cannot be run in linear time");
+        this.refuse("backreference");
         this.i = j + 1;
         return EMPTY;
       }
@@ -590,7 +800,7 @@ class Parser {
         if (n > INT_MAX) this.fail("a group number larger than .NET allows", at);
       }
       if (this.isSlot(n)) {
-        this.refuse("a backreference (`\\1`, `\\k<name>`) cannot be run in linear time");
+        this.refuse("backreference");
         this.i = j;
         return EMPTY;
       }
@@ -682,12 +892,12 @@ class Parser {
     this.i++;
     const test = categoryTest(name);
     if (!test) {
-      if (name.startsWith("Is")) this.refuse(`the Unicode block \`\\p{${name}}\` cannot be run`);
+      if (name.startsWith("Is")) this.refuse("unicodeBlock", name);
       else this.fail(`an unknown Unicode category \`\\p{${name}}\``, at);
       return () => false;
     }
     if (this.ignoreCase && CASED_CATEGORIES.has(name)) {
-      this.refuse(`\`\\p{${name}}\` under \`(?i)\` cannot be translated exactly`);
+      this.refuse("casedCategory", name);
     }
     return negative ? (c) => !test(c) : test;
   }
@@ -737,7 +947,7 @@ class Parser {
           let j = this.i + 1;
           while (wordAt(p, j)) j++;
           if (p[j] === ":" && p[j + 1] === "]") {
-            this.refuse("`[:name:]` inside a class cannot be translated exactly");
+            this.refuse("posixClass");
             this.i = j + 2;
           }
         }
@@ -774,7 +984,7 @@ class Parser {
     this.charClass();
     if (p[this.i] !== "]") this.fail("a class subtraction that is not last in its class", open);
     this.i++;
-    this.refuse("a class subtraction `[...-[...]]` cannot be translated exactly");
+    this.refuse("subtraction");
     return () => false;
   }
 }

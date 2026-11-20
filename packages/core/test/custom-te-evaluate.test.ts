@@ -1,7 +1,18 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { evaluateTeRule, type TeOutcome } from "../src/custom-rules/te/evaluate.js";
-import { LIBRARY } from "../src/custom-rules/te/library.js";
+import {
+  CONVERSION_REFUSED,
+  TE_CONVERSIONS,
+  checkTeExpression,
+  evaluateTeRule,
+  type TeOutcome,
+} from "../src/custom-rules/te/evaluate.js";
+import {
+  LIBRARY,
+  REGEX_OPTIONS,
+  REGEX_OPTIONS_RUN,
+  REGEX_OPTION_REFUSED,
+} from "../src/custom-rules/te/library.js";
 import { parseTeExpression } from "../src/custom-rules/te/parser.js";
 import { readTeRuleFile, type TeRule } from "../src/custom-rules/te/read.js";
 import { buildTomView, type TomView } from "../src/custom-rules/te/view.js";
@@ -930,6 +941,67 @@ describe("what the survey's rule files showed", () => {
       ]),
     ).toEqual(["Main"]);
     expect(found('TranslatedDescriptions["en-US"] == ""', ["Perspective"])).toEqual(["Main"]);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// The tables the reference reads (pull request F, Task F1).
+
+describe("the tables the reference reads", () => {
+  /** What converting 7.9, 97 or 7 to each type gives, as a rule that holds. */
+  const CONVERTS: Record<string, string> = {
+    Char: "(97) == 'a'",
+    SByte: "(7.9) == 7",
+    Byte: "(7.9) == 7",
+    Int16: "(7.9) == 7",
+    UInt16: "(7.9) == 7",
+    Int32: "(7.9) == 7",
+    UInt32: "(7.9) == 7",
+    Int64: "(7.9) == 7",
+    UInt64: "(7.9) == 7",
+    Single: "(7) / 2 == 3.5",
+    Double: "(7) / 2 == 3.5",
+    Decimal: "(7) / 2 == 3.5",
+  };
+
+  it("converts with every spelling of every conversion", () => {
+    expect(TE_CONVERSIONS.map((c) => c.type).sort()).toEqual(Object.keys(CONVERTS).sort());
+    for (const c of TE_CONVERSIONS)
+      for (const s of c.spellings) expect(holds(`${s}${CONVERTS[c.type]}`), s).toBe(true);
+  });
+
+  it("refuses a conversion to any other type with CONVERSION_REFUSED, as before", () => {
+    expect(reason('string(1) == "1"')).toBe(
+      "converting to String with `string(...)` is not supported; use `Convert`",
+    );
+    expect(reason('string(1) == "1"')).toBe(CONVERSION_REFUSED("String", "string"));
+    expect(reason("Boolean(1)")).toBe(CONVERSION_REFUSED("Boolean", "Boolean"));
+    expect(reason("DateTime(1) == null")).toBe(CONVERSION_REFUSED("DateTime", "DateTime"));
+  });
+
+  it("runs the RegexOptions values REGEX_OPTIONS_RUN lists, and stops the rule on any other", () => {
+    expect(REGEX_OPTIONS_RUN).toEqual(["None", "IgnoreCase"]);
+    for (const o of REGEX_OPTIONS_RUN)
+      expect(outcome(`RegEx.IsMatch("a", "a", RegexOptions.${o})`).kind).toBe("findings");
+    const others = REGEX_OPTIONS.values.filter((v) => !REGEX_OPTIONS_RUN.includes(v));
+    expect(others.length).toBe(9);
+    for (const o of others) {
+      const want = `\`RegEx.IsMatch\` was given \`RegexOptions.${o}\`, which pbiplint does not run; only \`IgnoreCase\` and \`None\` are`;
+      expect(reason(`RegEx.IsMatch("a", "a", RegexOptions.${o})`)).toBe(`${want}, on a Model`);
+      expect(REGEX_OPTION_REFUSED(o)).toBe(want);
+    }
+  });
+
+  it("gives from checkTeExpression the reason evaluateTeRule gives before any object", () => {
+    const visible = parseTeExpression("Visible");
+    if ("error" in visible) throw new Error(visible.error);
+    const want = "Measure has no property `Visible`; `IsHidden` is the nearest";
+    expect(checkTeExpression(visible.expr, ["Measure"])).toBe(want);
+    expect(reason("Visible", ["Measure"])).toBe(want);
+    const ok = parseTeExpression("IsHidden");
+    if ("error" in ok) throw new Error(ok.error);
+    expect(checkTeExpression(ok.expr, ["Measure", "Column"])).toBeUndefined();
+    expect(checkTeExpression(ok.expr, [])).toBeUndefined();
   });
 });
 

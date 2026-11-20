@@ -68,16 +68,75 @@ const SCOPES = [
 const SCOPE_BY_LOWER = new Map(SCOPES.map((s) => [s.toLowerCase(), s]));
 
 /** Report object scopes: a rule file in Tabular Editor's shape sometimes uses them. */
-const REPORT_SCOPES = new Set(["page", "visual", "customvisual", "filter", "report"]);
+export const TE_REPORT_SCOPES: readonly string[] = [
+  "Page",
+  "Visual",
+  "CustomVisual",
+  "Filter",
+  "Report",
+];
+const REPORT_SCOPES = new Set(TE_REPORT_SCOPES.map((s) => s.toLowerCase()));
 
 /** Names Tabular Editor refuses that have a scope it accepts for the same objects. */
-const NEAREST_SCOPE = new Map([
-  ["calculationgrouptable", "CalculationGroup"],
-  ["function", "UserDefinedFunction"],
-  ["role", "ModelRole"],
-  ["datasource", "ProviderDataSource"],
-  ["expression", "NamedExpression"],
-]);
+export const TE_NEAREST_SCOPES: Readonly<Record<string, string>> = {
+  CalculationGroupTable: "CalculationGroup",
+  Function: "UserDefinedFunction",
+  Role: "ModelRole",
+  DataSource: "ProviderDataSource",
+  Expression: "NamedExpression",
+};
+const NEAREST_SCOPE = new Map(
+  Object.entries(TE_NEAREST_SCOPES).map(([name, near]) => [name.toLowerCase(), near]),
+);
+
+/** A field of a Tabular Editor rule: read, or ignored, with what pbiplint does with it. */
+export interface TeRuleField {
+  name: string;
+  use: "read" | "ignored";
+  note: string;
+}
+
+/**
+ * The fields of a rule, as Tabular Editor names them, and what the reader does with each; keys
+ * match in any case. The reader looks each read field up by its name here.
+ */
+const RULE_FIELD_USE = {
+  ID: "read",
+  Name: "read",
+  Category: "read",
+  Description: "read",
+  Severity: "read",
+  Scope: "read",
+  Expression: "read",
+  IsDisabled: "read",
+  FixExpression: "ignored",
+  CompatibilityLevel: "ignored",
+} as const satisfies Record<string, TeRuleField["use"]>;
+type FieldName = keyof typeof RULE_FIELD_USE;
+
+const RULE_FIELD_NOTES: Record<FieldName, string> = {
+  ID: "Required. Text, or a whole number read as its digits; it names the rule in every finding, so no two rules may share one.",
+  Name: "A short title for the rule; the ID stands in when there is none.",
+  Category: "Groups the rule in the output; Custom when there is none.",
+  Description:
+    "What everyone who meets a finding reads: what the rule checks, why, and how to fix it.",
+  Severity: "A number, or digits in a string; see the severities below. 1 when there is none.",
+  Scope:
+    "Required. A comma-separated list of the scopes below; the rule runs on each object of each one.",
+  Expression: "Required. The condition, as text; an object it is true for is a finding.",
+  IsDisabled:
+    "Read, but the rule still runs, as Tabular Editor CLI runs it; turn a rule off in pbiplint.config.json instead.",
+  FixExpression: "pbiplint reports findings and never changes the model, so a fix is not run.",
+  CompatibilityLevel: "pbiplint runs the rule whatever the model's compatibility level.",
+};
+
+/** The fields of a rule, each read or ignored, with a note for the reference. */
+export const TE_RULE_FIELDS: readonly TeRuleField[] = /* @__PURE__ */ (
+  Object.keys(RULE_FIELD_USE) as FieldName[]
+).map((name) => ({ name, use: RULE_FIELD_USE[name], note: RULE_FIELD_NOTES[name] }));
+
+/** A field's key, lowercased, as `lowerKeys` gives it. */
+const key = (name: FieldName): string => name.toLowerCase();
 
 const count = (n: number) => n.toLocaleString("en-US");
 const isObject = (v: unknown): v is Record<string, unknown> =>
@@ -152,6 +211,12 @@ function readScopes(v: unknown): { scopes: string[] } | { reason: string } {
   return { scopes };
 }
 
+/** Why a rule with this `Scope` text is not run (a problem of the file), or undefined when it reads. */
+export function teScopeReason(scope: string): string | undefined {
+  const read = readScopes(scope);
+  return "reason" in read ? read.reason : undefined;
+}
+
 /**
  * Reads a Tabular Editor rule file the way Tabular Editor CLI 0.8.1.1 does (pull request A
  * captures): a JSON array of rules or an object with a `rules` array, keys in any case, a numeric
@@ -182,7 +247,7 @@ export function readTeRuleFile(text: string): TeRuleFile {
     fab = 0;
   for (const keys of keyed) {
     if (keys === undefined) continue;
-    if (keys.has("expression")) te++;
+    if (keys.has(key("Expression"))) te++;
     if (keys.has("part") && keys.has("test")) fab++;
   }
   if (fab > 0 && te > 0) {
@@ -209,9 +274,9 @@ export function readTeRuleFile(text: string): TeRuleFile {
       problems.push({ id: place, reason: "This entry is not a rule: each rule is a JSON object." });
       return;
     }
-    const rawName = keys.get("name");
+    const rawName = keys.get(key("Name"));
     const givenName = typeof rawName === "string" && rawName !== "" ? rawName : undefined;
-    const id = readId(keys.get("id"));
+    const id = readId(keys.get(key("ID")));
     const problem = (reason: string, kind?: "duplicate") =>
       problems.push({
         id: id ?? place,
@@ -233,10 +298,10 @@ export function readTeRuleFile(text: string): TeRuleFile {
       return;
     }
 
-    const key = canonical(keys);
+    const canon = canonical(keys);
     const first = firstById.get(id);
     if (first !== undefined) {
-      if (first !== key) {
+      if (first !== canon) {
         problem(
           "Another rule earlier in this file has the same ID, and only the first rule with this ID runs. Give this rule its own ID, or remove one of the two.",
           "duplicate",
@@ -244,14 +309,14 @@ export function readTeRuleFile(text: string): TeRuleFile {
       }
       return;
     }
-    firstById.set(id, key);
+    firstById.set(id, canon);
 
-    const scopes = readScopes(keys.get("scope"));
+    const scopes = readScopes(keys.get(key("Scope")));
     if ("reason" in scopes) {
       problem(scopes.reason);
       return;
     }
-    const expression = keys.get("expression");
+    const expression = keys.get(key("Expression"));
     if (expression === undefined || (typeof expression === "string" && expression.trim() === "")) {
       problem(
         "The rule has no Expression, so there is nothing to check. Add the condition an object fails on.",
@@ -269,9 +334,9 @@ export function readTeRuleFile(text: string): TeRuleFile {
       return;
     }
 
-    const description = keys.get("description");
-    const category = keys.get("category");
-    const severity = readSeverity(keys.get("severity"));
+    const description = keys.get(key("Description"));
+    const category = keys.get(key("Category"));
+    const severity = readSeverity(keys.get(key("Severity")));
     rules.push({
       id,
       name: givenName ?? (typeof rawName === "number" ? String(rawName) : id),
@@ -280,7 +345,7 @@ export function readTeRuleFile(text: string): TeRuleFile {
       ...(severity === undefined ? {} : { severity }),
       scopes: scopes.scopes,
       expression,
-      disabled: keys.get("isdisabled") === true,
+      disabled: keys.get(key("IsDisabled")) === true,
     });
   });
 

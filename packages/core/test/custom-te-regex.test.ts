@@ -2,12 +2,15 @@ import { describe, expect, it } from "vitest";
 import { LIMITS } from "../src/custom-rules/limits.js";
 import {
   LimitReached,
+  REGEX_REFUSED,
+  REGEX_RUNS,
   compilePattern,
   isMatch,
   type CompiledPattern,
 } from "../src/custom-rules/te/regex.js";
 
 const r = String.raw;
+const EM_DASH = String.fromCharCode(0x2014);
 
 /** Compiles or fails the test with the reason. */
 const re = (pattern: string): CompiledPattern => {
@@ -451,5 +454,52 @@ describe("the step budget", () => {
 
   it("caches a compiled pattern by its text", () => {
     expect(compilePattern("cache(me)")).toBe(compilePattern("cache(me)"));
+  });
+});
+
+describe("the tables the reference reads", () => {
+  it("gives every construct that runs an example and its two answers", () => {
+    expect(REGEX_RUNS.length).toBeGreaterThan(15);
+    for (const x of REGEX_RUNS) {
+      expect(m(x.example, x.matches), `${x.construct}: ${x.matches}`).toBe(true);
+      expect(m(x.example, x.doesNotMatch), `${x.construct}: ${x.doesNotMatch}`).toBe(false);
+      expect(`${x.construct}${x.example}`).not.toContain(EM_DASH);
+    }
+  });
+
+  it("gives every construct refused an example that is refused with its reason", () => {
+    for (const [key, x] of Object.entries(REGEX_REFUSED)) {
+      expect(unsupported(x.example), key).toBe(x.reason);
+      expect(`${x.construct}${x.reason}`).not.toContain(EM_DASH);
+    }
+  });
+
+  it("keeps every reason word for word", () => {
+    expect(unsupported("(?>a)")).toBe("an atomic group `(?>...)` cannot be translated exactly");
+    expect(unsupported("(?(a)b|c)")).toBe("a conditional `(?(...)yes|no)` cannot be run");
+    expect(unsupported("(?<b>x)(?<a-b>c)")).toBe(
+      "a balancing group `(?<name-other>...)` cannot be run",
+    );
+    for (const o of ["m", "n", "s", "x"])
+      expect(unsupported(`(?${o})a`)).toBe(
+        `the inline option \`(?${o})\` cannot be run; pbiplint runs only \`(?i)\``,
+      );
+    for (const form of ["(?=...)", "(?!...)", "(?<=...)", "(?<!...)"])
+      expect(unsupported(`${form.replace("...", "ab")}c`)).toBe(
+        `\`${form}\` wider than one character or one class cannot be translated exactly`,
+      );
+    expect(unsupported(r`\Ga`)).toBe("the anchor `\\G` cannot be run");
+    for (const p of [r`(a)\1`, r`(?<n>a)\k<n>`, r`(?<n>a)\'n'`, r`(a)\k<1>`])
+      expect(unsupported(p)).toBe(
+        "a backreference (`\\1`, `\\k<name>`) cannot be run in linear time",
+      );
+    expect(unsupported(r`\p{IsGreek}`)).toBe("the Unicode block `\\p{IsGreek}` cannot be run");
+    expect(unsupported(r`(?i)\p{Ll}`)).toBe("`\\p{Ll}` under `(?i)` cannot be translated exactly");
+    expect(unsupported("[[:alpha:]]")).toBe(
+      "`[:name:]` inside a class cannot be translated exactly",
+    );
+    expect(unsupported("[a-z-[aeiou]]")).toBe(
+      "a class subtraction `[...-[...]]` cannot be translated exactly",
+    );
   });
 });

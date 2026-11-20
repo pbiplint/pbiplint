@@ -1,6 +1,7 @@
 import { LIMITS } from "../limits.js";
-import type { TeBinaryOp, TeExpr, TeTypeRef } from "./ast.js";
+import type { TeBinaryOp, TeExpr, TeTypeRef, TeUnaryOp } from "./ast.js";
 import { lex, TeSyntaxError, type TeToken } from "./lexer.js";
+import { KEYWORD_NAMES, operatorsAt } from "./syntax.js";
 
 /**
  * The .NET types an expression may name, keyed by lowercase spelling: Dynamic LINQ's predefined
@@ -9,119 +10,123 @@ import { lex, TeSyntaxError, type TeToken } from "./lexer.js";
  * work. Enum names that are also properties (`DataType`, `CrossFilteringBehavior`) are not here:
  * `DataType.ToString()` reads the property, so the evaluator decides those.
  */
+const TYPE_NAMES = [
+  "Object",
+  "Boolean",
+  "Char",
+  "String",
+  "SByte",
+  "Byte",
+  "Int16",
+  "UInt16",
+  "Int32",
+  "UInt32",
+  "Int64",
+  "UInt64",
+  "Single",
+  "Double",
+  "Decimal",
+  "DateTime",
+  "DateTimeOffset",
+  "TimeSpan",
+  "Guid",
+  "Math",
+  "Convert",
+  "Regex",
+  "StringComparison",
+];
+/** The C# aliases Dynamic LINQ accepts for its predefined types. */
+const ALIASES: Record<string, string> = {
+  object: "Object",
+  bool: "Boolean",
+  char: "Char",
+  string: "String",
+  sbyte: "SByte",
+  byte: "Byte",
+  short: "Int16",
+  ushort: "UInt16",
+  int: "Int32",
+  uint: "UInt32",
+  long: "Int64",
+  ulong: "UInt64",
+  float: "Single",
+  double: "Double",
+  decimal: "Decimal",
+};
+
+/**
+ * Each type name an expression may write, with its spellings: the name, then a C# alias that is
+ * not the name in another case (`int` for `Int32`; `double` is `Double` already).
+ */
+export const TE_TYPES: readonly { name: string; spellings: readonly string[] }[] = TYPE_NAMES.map(
+  (name) => ({
+    name,
+    spellings: [
+      name,
+      ...Object.keys(ALIASES).filter(
+        (a) => ALIASES[a] === name && a.toLowerCase() !== name.toLowerCase(),
+      ),
+    ],
+  }),
+);
+
 const TYPES = new Map<string, string>(
-  [
-    ...[
-      "Object",
-      "Boolean",
-      "Char",
-      "String",
-      "SByte",
-      "Byte",
-      "Int16",
-      "UInt16",
-      "Int32",
-      "UInt32",
-      "Int64",
-      "UInt64",
-      "Single",
-      "Double",
-      "Decimal",
-      "DateTime",
-      "DateTimeOffset",
-      "TimeSpan",
-      "Guid",
-      "Math",
-      "Convert",
-      "Regex",
-      "StringComparison",
-    ].map((t): [string, string] => [t, t]),
-    ...Object.entries({
-      object: "Object",
-      bool: "Boolean",
-      char: "Char",
-      string: "String",
-      sbyte: "SByte",
-      byte: "Byte",
-      short: "Int16",
-      ushort: "UInt16",
-      int: "Int32",
-      uint: "UInt32",
-      long: "Int64",
-      ulong: "UInt64",
-      float: "Single",
-      double: "Double",
-      decimal: "Decimal",
-    }),
-  ].map(([k, v]) => [k.toLowerCase(), v]),
+  TE_TYPES.flatMap((t) => t.spellings.map((s): [string, string] => [s.toLowerCase(), t.name])),
 );
 
 /**
- * Collection methods whose arguments are lambda bodies, matched ignoring case. `Contains`, `Take`,
- * `Skip` and the like take values, so they are not here.
+ * Collection methods whose arguments are lambda bodies, as the parser reads them (matched ignoring
+ * case). `Contains`, `Take`, `Skip` and the like take values, so they are not here. The parser
+ * knows more than the evaluator runs, so a rule calling one it does not run is told so by name.
  */
-const LAMBDA_METHODS = new Set(
-  [
-    "All",
-    "Any",
-    "Average",
-    "Count",
-    "LongCount",
-    "First",
-    "FirstOrDefault",
-    "Last",
-    "LastOrDefault",
-    "Single",
-    "SingleOrDefault",
-    "Max",
-    "Min",
-    "Sum",
-    "Where",
-    "Select",
-    "SelectMany",
-    "OrderBy",
-    "OrderByDescending",
-    "ThenBy",
-    "ThenByDescending",
-    "TakeWhile",
-    "SkipWhile",
-    "GroupBy",
-    "DistinctBy",
-  ].map((m) => m.toLowerCase()),
-);
+export const TE_LAMBDA_METHODS: readonly string[] = [
+  "All",
+  "Any",
+  "Average",
+  "Count",
+  "LongCount",
+  "First",
+  "FirstOrDefault",
+  "Last",
+  "LastOrDefault",
+  "Single",
+  "SingleOrDefault",
+  "Max",
+  "Min",
+  "Sum",
+  "Where",
+  "Select",
+  "SelectMany",
+  "OrderBy",
+  "OrderByDescending",
+  "ThenBy",
+  "ThenByDescending",
+  "TakeWhile",
+  "SkipWhile",
+  "GroupBy",
+  "DistinctBy",
+];
+const LAMBDA_METHODS = new Set(TE_LAMBDA_METHODS.map((m) => m.toLowerCase()));
 
 /** Words with a meaning of their own, matched ignoring case; none of them is a property name. */
-const KEYWORDS = new Set([
-  "true",
-  "false",
-  "null",
-  "it",
-  "outerit",
-  "current",
-  "iif",
-  "not",
-  "and",
-  "or",
-  "mod",
-]);
+const KEYWORDS = new Set<string>(KEYWORD_NAMES.map((k) => k.toLowerCase()));
 
-const EQUALITY: Record<string, TeBinaryOp> = {
-  "=": "eq",
-  "==": "eq",
-  "!=": "ne",
-  "<>": "ne",
-  "<": "lt",
-  ">": "gt",
-  "<=": "le",
-  ">=": "ge",
-};
-const ADDITIVE: Record<string, TeBinaryOp> = { "+": "add", "-": "sub", "&": "concat" };
-const MULTIPLICATIVE: Record<string, TeBinaryOp> = {
-  "*": "mul",
-  "/": "div",
-  "%": "mod",
-  mod: "mod",
-};
+/** The binary operators at each level, by spelling, from the syntax table. */
+const COALESCE = operatorsAt<TeBinaryOp>(2);
+const OR = operatorsAt<TeBinaryOp>(3);
+const AND = operatorsAt<TeBinaryOp>(4);
+const EQUALITY = operatorsAt<TeBinaryOp>(5);
+const ADDITIVE = operatorsAt<TeBinaryOp>(6);
+const MULTIPLICATIVE = operatorsAt<TeBinaryOp>(7);
+const UNARY = operatorsAt<TeUnaryOp>(8);
+
+/**
+ * Why a rule with a named lambda parameter (`Columns.Any(c => c.IsHidden)`) cannot run; the
+ * message adds where the arrow is, then `NAMED_LAMBDA_HINT`.
+ */
+export const NAMED_LAMBDA_REASON =
+  "a named lambda parameter ('x => ...'), which Tabular Editor does not run";
+export const NAMED_LAMBDA_HINT = "write the body with 'it' instead";
 
 const count = (n: number) => n.toLocaleString("en-US");
 
@@ -193,12 +198,7 @@ class Parser {
   private fail(expected: string): never {
     const t = this.t;
     if (this.isOp("=>")) {
-      throw new TeSyntaxError(
-        "a named lambda parameter ('x => ...'), which Tabular Editor does not run,",
-        t.start,
-        undefined,
-        "write the body with 'it' instead",
-      );
+      throw new TeSyntaxError(`${NAMED_LAMBDA_REASON},`, t.start, undefined, NAMED_LAMBDA_HINT);
     }
     throw new TeSyntaxError(`expected ${expected}`, t.start, describe(t));
   }
@@ -241,51 +241,14 @@ class Parser {
   }
 
   private coalesce(): TeExpr {
-    let left = this.or();
-    while (this.isOp("??")) {
-      const spelling = this.take();
-      const right = this.or();
-      left = {
-        kind: "binary",
-        op: "coalesce",
-        spelling,
-        left,
-        right,
-        start: left.start,
-        end: right.end,
-      };
-    }
-    return left;
+    return this.level(COALESCE, () => this.or());
   }
-
   private or(): TeExpr {
-    let left = this.and();
-    while (this.isOp("||") || this.keyword() === "or") {
-      const spelling = this.take();
-      const right = this.and();
-      left = { kind: "binary", op: "or", spelling, left, right, start: left.start, end: right.end };
-    }
-    return left;
+    return this.level(OR, () => this.and());
   }
-
   private and(): TeExpr {
-    let left = this.comparison();
-    while (this.isOp("&&") || this.keyword() === "and") {
-      const spelling = this.take();
-      const right = this.comparison();
-      left = {
-        kind: "binary",
-        op: "and",
-        spelling,
-        left,
-        right,
-        start: left.start,
-        end: right.end,
-      };
-    }
-    return left;
+    return this.level(AND, () => this.comparison());
   }
-
   private comparison(): TeExpr {
     return this.level(EQUALITY, () => this.additive());
   }
@@ -318,15 +281,16 @@ class Parser {
 
   private unary(): TeExpr {
     const t = this.t;
-    const word = this.keyword(t) === "not";
-    if (word || this.isOp("!") || this.isOp("-")) {
+    const key = t.type === "op" ? t.text : this.keyword(t);
+    const op = key === undefined ? undefined : UNARY[key];
+    if (op !== undefined) {
       this.enter(t.start);
       const spelling = this.take();
       const operand = this.unary();
       this.depth--;
       return {
         kind: "unary",
-        op: spelling === "-" ? "negate" : "not",
+        op,
         spelling,
         operand,
         start: t.start,

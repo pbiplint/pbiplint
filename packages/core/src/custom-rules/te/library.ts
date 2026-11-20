@@ -3,6 +3,7 @@ import { teTokens } from "./tokens.js";
 import {
   ENUMS,
   PROPERTIES,
+  STATISTICS_PREFIX,
   UNSET,
   getAnnotation,
   hasAnnotation,
@@ -117,6 +118,18 @@ export const REGEX_OPTIONS = enumType("RegexOptions", [
   "CultureInvariant",
   "NonBacktracking",
 ]);
+
+/** The `RegexOptions` values pbiplint runs; any other stops the rule with `REGEX_OPTION_REFUSED`. */
+export const REGEX_OPTIONS_RUN: readonly string[] = ["None", "IgnoreCase"];
+
+/** Why a rule passing `RegexOptions.<name>` to `RegEx.IsMatch` stops, for a value pbiplint does not run. */
+export const REGEX_OPTION_REFUSED = (name: string): string =>
+  `\`RegEx.IsMatch\` was given \`RegexOptions.${name}\`, which pbiplint does not run; only ${[
+    ...REGEX_OPTIONS_RUN,
+  ]
+    .reverse()
+    .map((v) => `\`${v}\``)
+    .join(" and ")} are`;
 
 export const isInt = (v: unknown): v is number => typeof v === "number";
 const isNumeric = (v: unknown): boolean =>
@@ -1098,7 +1111,11 @@ export const DAX_EXPRESSION_TYPES: ReadonlySet<string> = new Set([
 /** Whether an annotation name is one a live model's statistics fill in, which a project never holds. */
 export function isStatisticsAnnotation(name: string): boolean {
   const l = name.toLowerCase();
-  return l.startsWith("vertipaq_") || l === "longlengthrowcount" || l === "datetimewithhourminsec";
+  return (
+    l.startsWith(STATISTICS_PREFIX.toLowerCase()) ||
+    l === "longlengthrowcount" ||
+    l === "datetimewithhourminsec"
+  );
 }
 
 export const STATISTICS_REASON =
@@ -1425,10 +1442,7 @@ const STATICS = {
       (_s, args, rt) => {
         const o = args[2] as TeEnum | string;
         const name = o instanceof TeEnum ? o.name : o;
-        if (name !== "None" && name !== "IgnoreCase")
-          throw new TeFailure(
-            `\`RegEx.IsMatch\` was given \`RegexOptions.${name}\`, which pbiplint does not run; only \`IgnoreCase\` and \`None\` are`,
-          );
+        if (!REGEX_OPTIONS_RUN.includes(name)) throw new TeFailure(REGEX_OPTION_REFUSED(name));
         return regexIsMatch(args[0], args[1], name === "IgnoreCase", rt);
       },
     ),

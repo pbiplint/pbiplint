@@ -16,9 +16,10 @@ npx pbiplint path/to/model --format sarif --output pbiplint.sarif
 npx pbiplint path/to/model --format markdown
 npx pbiplint rules                                          # every rule with status and severity
 npx pbiplint explain HIDE_FOREIGN_KEYS                      # one rule's guidance, offline (--format json too)
+npx pbiplint reference                                      # what a custom rule can use at this version (--format json too)
 npx pbiplint path/to/model --quiet                          # the counts, one line per rule
 npx pbiplint path/to/model --rule HIDE_FOREIGN_KEYS         # one rule's findings (repeatable)
-npx pbiplint skill --install claude                         # the skill for AI assistants (--install copilot, codex, gemini; --show)
+npx pbiplint skill --install claude                         # the skills for AI assistants (--install copilot, codex, gemini; --show; --name)
 npx pbiplint mcp                                            # a local MCP server for an AI assistant to start
 npx pbiplint --help                                         # every option, in one screen
 npx pbiplint --version
@@ -30,16 +31,26 @@ summary says how many are shown of how many, and `--fail-on` counts only those);
 `pbiplint explain <RULE_ID>` for the rule's guidance, from this version, with no network. When there
 are findings, the quiet output's last line names the other two.
 
+`pbiplint reference` prints what a custom rule, a Tabular Editor rule that a config's `customRules`
+names, can use at this version: its fields and severities, the scopes, each object type's
+properties, the operators, how values are written, what an empty value does, the methods and
+functions, the regular expressions that run, the limits, and what pbiplint does not run, with the
+reason. `--format json` prints the same as one document.
+
 `pbiplint skill` prints a skill, in the [Agent Skills](https://agentskills.io/home) format, that tells
-a coding assistant how to use pbiplint. `--install claude`, `copilot`, `codex`, or `gemini` writes it
-where that assistant reads a project's skills, below the current folder; it never replaces a copy
-that differs unless given `--force`, and `--dry-run` writes nothing. `--show` lists where it is and
-whether each copy matches this version.
+a coding assistant how to use pbiplint. A second skill, `pbiplint-custom-rules`, takes an assistant
+through writing and checking a team's own rule; `--name pbiplint-custom-rules` prints it.
+`--install claude`, `copilot`, `codex`, or `gemini` writes both, each in a folder named after it,
+where that assistant reads a project's skills, below the current folder. It never replaces a copy
+that differs unless given `--force`, and when either copy differs it writes neither; `--dry-run`
+writes nothing. `--show` lists where each skill is and whether each copy matches this version.
+`--name` limits printing, `--install`, and `--show` to one skill.
 
 `pbiplint mcp` is a local MCP server over stdin and stdout, for an assistant that runs local servers
-(Claude Desktop, Claude Code, VS Code, Cursor) to start. Its three tools only read: `lint` (what
-`--format json` prints, or with `quiet` the short summary), `explain_rule`, and `list_rules`. It
-opens no port. See [the CLI page](https://pbiplint.com/cli/#mcp) for each app's setup. With Claude,
+(Claude Desktop, Claude Code, VS Code, Cursor) to start. Its four tools only read: `lint` (what
+`--format json` prints, or with `quiet` the short summary), `explain_rule`, `list_rules`, and
+`custom_rules_reference` (what `pbiplint reference` prints). Given a `path` in a project,
+`explain_rule` and `list_rules` include the custom rules its config names. It opens no port. See [the CLI page](https://pbiplint.com/cli/#mcp) for each app's setup. With Claude,
 [pbiplint for Claude](https://github.com/pbiplint/claude-plugin) installs the skill and the server
 as two plugins, `pbiplint` and `pbiplint-mcp`.
 
@@ -139,6 +150,7 @@ https://github.com/pbiplint/pbiplint.
 
 Copyright (C) 2026 McKinley Consulting. GNU Affero General Public License, version 3 or later; see
 LICENSE. The vendored Microsoft ruleset and PBI Inspector rule metadata are MIT-licensed; see
-NOTICE. The skill for AI assistants (`skill/SKILL.md`, which `pbiplint skill` prints and installs) is
-MIT-licensed, so it can be committed to any repository; its notice is at the end of the file. The
+NOTICE. The two skills for AI assistants (`skill/SKILL.md` and `skill/pbiplint-custom-rules/SKILL.md`,
+which `pbiplint skill` prints and installs) are MIT-licensed, so they can be committed to any
+repository; each carries its notice at the end of the file. The
 name pbiplint and its logo are trademarks of McKinley Consulting.

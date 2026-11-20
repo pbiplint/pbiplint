@@ -102,9 +102,18 @@ const PARSER_LIMIT_KB = 385;
 // 40.6 KB gzipped, from 118.9 KB at the end of D1: the fingerprint data, 96 distinct
 // fingerprints read from 129 file versions, is 12.0 KB of it, its ids being long, and the room is
 // for regenerating that data as Microsoft and Tabular Editor publish new versions. The core's own
-// code measured 301.7 KB with same-id handling in the engine. If a later change crosses it, stop
-// and tell the coordinator.
-const CUSTOM_LIMIT_KB = 140;
+// code measured 301.7 KB with same-id handling in the engine. It was raised to 150 KB on November
+// 20, 2026, when the reference of what a rule can use (#118, Tasks F1 and F2) measured 144.6 KB
+// minified, 45.1 KB gzipped, from 132.1 KB: the tables lifted out of the evaluator took it to
+// 133.5 KB, and the reference's own words (the operators', keywords', fields' and limits'
+// meanings, the regular expression examples, and the code that walks the tables) are the rest.
+// They are joined on in pure calls, so the site's custom rules chunk, which imports only
+// readCustomRules, leaves them out: it measured 122.9 KB after F1 and after F2. The table of how
+// values are written and the line on empty values took the entry to 146.7 KB minified, 45.8 KB
+// gzipped, with the site's chunk still 122.9 KB. The room is for
+// the reference growing as the evaluator does. If a later change crosses it, stop and tell the
+// coordinator.
+const CUSTOM_LIMIT_KB = 150;
 let failed = false;
 if (ownBytes > OWN_LIMIT_KB * 1024) {
   console.error(

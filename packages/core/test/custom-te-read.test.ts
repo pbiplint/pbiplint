@@ -1,8 +1,16 @@
 import { createHash } from "node:crypto";
 import { readFileSync, readdirSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { LIMITS } from "../src/custom-rules/limits.js";
-import { readTeRuleFile, type TeRule, type TeRuleFile } from "../src/custom-rules/te/read.js";
+import { LIMITS, LIMIT_DESCRIPTIONS } from "../src/custom-rules/limits.js";
+import {
+  TE_NEAREST_SCOPES,
+  TE_REPORT_SCOPES,
+  TE_RULE_FIELDS,
+  readTeRuleFile,
+  teScopeReason,
+  type TeRule,
+  type TeRuleFile,
+} from "../src/custom-rules/te/read.js";
 
 const repo = new URL("../../../", import.meta.url).pathname;
 const probesDir = `${repo}tests/rules/te-probes/`;
@@ -194,6 +202,87 @@ describe("readTeRuleFile: scopes", () => {
 
   it("lists a repeated scope once", () => {
     expect(ok(read([rule({ Scope: "Measure, Measure" })])).rules[0]!.scopes).toEqual(["Measure"]);
+  });
+});
+
+describe("the tables the reference reads", () => {
+  const EM_DASH = String.fromCharCode(0x2014);
+
+  it("lists the rule's fields, each read or ignored, with a note", () => {
+    expect(TE_RULE_FIELDS.map((f) => [f.name, f.use])).toEqual([
+      ["ID", "read"],
+      ["Name", "read"],
+      ["Category", "read"],
+      ["Description", "read"],
+      ["Severity", "read"],
+      ["Scope", "read"],
+      ["Expression", "read"],
+      ["IsDisabled", "read"],
+      ["FixExpression", "ignored"],
+      ["CompatibilityLevel", "ignored"],
+    ]);
+    for (const f of TE_RULE_FIELDS) {
+      expect(f.note.length, f.name).toBeGreaterThan(20);
+      expect(f.note).not.toContain(EM_DASH);
+    }
+  });
+
+  it("reads every field it lists as read, in any case", () => {
+    const full = rule({ IsDisabled: true });
+    for (const f of TE_RULE_FIELDS.filter((x) => x.use === "read"))
+      expect(Object.keys(full), f.name).toContain(f.name);
+    const lower = Object.fromEntries(Object.entries(full).map(([k, v]) => [k.toLowerCase(), v]));
+    expect(ok(read([lower])).rules).toEqual(ok(read([full])).rules);
+    expect(ok(read([full])).rules[0]).toEqual({
+      id: "SALES_MEASURE_FOLDER",
+      name: "Sales measures sit in a display folder",
+      category: "Maintenance",
+      description: "Every measure on the Sales table belongs in a display folder.",
+      severity: 2,
+      scopes: ["Measure"],
+      expression: 'Table.Name == "Sales" and string.IsNullOrEmpty(DisplayFolder)',
+      disabled: true,
+    });
+  });
+
+  it("changes nothing for a field it lists as ignored", () => {
+    for (const f of TE_RULE_FIELDS.filter((x) => x.use === "ignored"))
+      expect(ok(read([rule({ [f.name]: "IsHidden = true" })])).rules, f.name).toEqual(
+        ok(read([rule()])).rules,
+      );
+  });
+
+  it("gives each scope it refuses the reason a rule with that scope gets, as before", () => {
+    expect(TE_REPORT_SCOPES).toEqual(["Page", "Visual", "CustomVisual", "Filter", "Report"]);
+    expect(TE_NEAREST_SCOPES).toEqual({
+      CalculationGroupTable: "CalculationGroup",
+      Function: "UserDefinedFunction",
+      Role: "ModelRole",
+      DataSource: "ProviderDataSource",
+      Expression: "NamedExpression",
+    });
+    expect(teScopeReason("Page")).toBe(
+      "The rule's Scope names a report object (Page). Tabular Editor's rules check the semantic model; report rules use fab-inspector's format.",
+    );
+    expect(teScopeReason("Role")).toBe(
+      "The rule's Scope names a scope Tabular Editor does not define: Role. For Role, use ModelRole. Scope is a comma-separated list of names such as Model, Table, Column, Measure, Partition, or Relationship.",
+    );
+    expect(teScopeReason("")).toBe(
+      "The rule has no Scope, so it would check nothing (Tabular Editor runs such a rule on no objects). Give it a Scope such as Measure, Column, or Table.",
+    );
+    expect(teScopeReason("Measure, Column")).toBeUndefined();
+    for (const scope of [...TE_REPORT_SCOPES, ...Object.keys(TE_NEAREST_SCOPES), "", "Dashboard"])
+      expect(ok(read([rule({ Scope: scope })])).problems[0]!.reason, scope).toBe(
+        teScopeReason(scope),
+      );
+  });
+
+  it("describes every limit", () => {
+    expect(Object.keys(LIMIT_DESCRIPTIONS).sort()).toEqual(Object.keys(LIMITS).sort());
+    for (const [k, d] of Object.entries(LIMIT_DESCRIPTIONS)) {
+      expect(d.length, k).toBeGreaterThan(20);
+      expect(d).not.toContain(EM_DASH);
+    }
   });
 });
 

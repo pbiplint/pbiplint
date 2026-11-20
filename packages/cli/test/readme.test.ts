@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { HELP } from "../src/args.js";
 
@@ -21,7 +21,7 @@ describe.each([
 
   it("names every command the help text's usage lines give", () => {
     const commands = [...HELP.matchAll(/^(?:Usage:)?[ \t]+pbiplint ([a-z]+)/gm)].map((m) => m[1]!);
-    expect(commands).toEqual(["rules", "explain", "skill", "mcp"]);
+    expect(commands).toEqual(["rules", "explain", "reference", "skill", "mcp"]);
     expect(commands.filter((c) => !readme.includes(`pbiplint ${c}`))).toEqual([]);
   });
 
@@ -53,5 +53,25 @@ describe.each([
   it("says a folder that holds several projects is linted in one run, not refused (#237)", () => {
     expect(readme).toContain("holds several projects, pbiplint lints every one in one run");
     expect(readme).not.toMatch(/holds several (exits 2|is refused)/);
+  });
+});
+
+describe("the site's CLI page's links", () => {
+  it("go only to pages the site builds: the home page, the rules index, a content page, or a rule's page", () => {
+    // Read from the sources the build writes pages from, so the check holds before any build runs.
+    const page = readFileSync(new URL("../../web/content/cli.md", import.meta.url), "utf8");
+    const links = [...page.matchAll(/\]\((\/[^)#]*)(?:#[^)]*)?\)/g)].map((m) => m[1]!);
+    expect(links.length).toBeGreaterThan(3);
+    const missing = links.filter((link) => {
+      if (link === "/") return !existsSync(new URL("../../web/index.html", import.meta.url));
+      if (link === "/rules/") return false;
+      const rule = /^\/rules\/([a-z0-9-]+)\/$/.exec(link);
+      if (rule) return !existsSync(new URL(`../../../rules/${rule[1]}.md`, import.meta.url));
+      const content = /^\/(.+)\/$/.exec(link);
+      return (
+        !content || !existsSync(new URL(`../../web/content/${content[1]}.md`, import.meta.url))
+      );
+    });
+    expect(missing).toEqual([]);
   });
 });

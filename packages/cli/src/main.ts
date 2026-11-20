@@ -37,6 +37,7 @@ import {
   severalText,
   type RunOptions,
 } from "./several.js";
+import { referenceJson, referenceText } from "./reference.js";
 import { runSkill } from "./skill.js";
 import { logSafe } from "./log-safe.js";
 import { sampleDir } from "./sample.js";
@@ -108,11 +109,15 @@ export async function main(argv: string[], given: Io): Promise<number> {
       io.stdout(listRules() + "\n");
       return 0;
     }
+    if (opts.command === "reference") {
+      io.stdout(opts.format === "json" ? referenceJson(VERSION) : referenceText(VERSION));
+      return 0;
+    }
     if (opts.command === "skill") return runSkill(opts, io, stderrLine);
     if (opts.command === "mcp") {
       // Serves until the app closes stdin. Each tool runs this CLI with its output captured.
       const { serveMcp } = await import("./mcp.js");
-      await serveMcp((argv) => capture(argv, given.cwd()), {}, VERSION);
+      await serveMcp((argv, cwd) => capture(argv, cwd ?? given.cwd()), {}, VERSION, given.cwd());
       return 0;
     }
     if (opts.command === "explain") {

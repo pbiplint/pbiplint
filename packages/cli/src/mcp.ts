@@ -1,9 +1,19 @@
-import { isAbsolute } from "node:path";
+import { statSync } from "node:fs";
+import { dirname, isAbsolute, resolve } from "node:path";
 import type { Readable, Writable } from "node:stream";
 import { McpServer } from "@modelcontextprotocol/server";
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
-import { defaultRules, SEVERITY_LABEL } from "@pbiplint/core";
+import {
+  defaultRules,
+  escapeJsonControls,
+  isConfigError,
+  SEVERITY_LABEL,
+  showControls,
+} from "@pbiplint/core";
+import { sameIdAs, type CustomRuleSet } from "@pbiplint/core/custom-rules";
 import * as z from "zod/v4";
+import { UsageError } from "./args.js";
+import { findConfig, readCustomRuleFiles, type FoundConfig } from "./config.js";
 
 /** What one run of the CLI printed and how it exited. */
 export interface CliRun {
@@ -12,8 +22,11 @@ export interface CliRun {
   stderr: string;
 }
 
-/** Runs the CLI with argv, as `main` does, with its output captured. */
-export type RunCli = (argv: string[]) => Promise<CliRun>;
+/**
+ * Runs the CLI with argv, as `main` does, with its output captured; in `cwd` when given, else in
+ * the server's folder.
+ */
+export type RunCli = (argv: string[], cwd?: string) => Promise<CliRun>;
 
 /**
  * Every tool only reads: it lints, explains, or lists, and never writes a file or reaches the
@@ -33,7 +46,10 @@ const INSTRUCTIONS =
   "project, call it with quiet first for the counts per rule, then with rules for one rule's " +
   "findings, and explain_rule for how to fix a rule's findings. A folder that holds several " +
   "projects, such as a repository's root, is linted whole in one call: the JSON is version 2, " +
-  "with each project under projects, and the quiet text opens each project with a `project ` line.";
+  "with each project under projects, and the quiet text opens each project with a `project ` line. " +
+  "To write or check a team's custom rule, call custom_rules_reference for what a rule can use, " +
+  "and give explain_rule and list_rules a path in the project to include the custom rules its " +
+  "pbiplint.config.json names.";
 
 export interface LintInput {
   path: string;
@@ -50,6 +66,53 @@ export function lintArgv(input: LintInput): string[] {
   for (const rule of input.rules ?? []) argv.push("--rule", rule);
   if (input.failOn) argv.push("--fail-on", input.failOn);
   return argv;
+}
+
+/**
+ * Where the nearest config to `path` is looked for: the folder `path` names, or the folder of the
+ * file it names, a relative path taken from `cwd`, the server's folder. A path that is not there
+ * is refused with the CLI's message.
+ */
+export function configStart(path: string, cwd: string): string {
+  const full = resolve(cwd, path);
+  const stat = statSync(full, { throwIfNoEntry: false });
+  if (stat === undefined) throw new UsageError(`${path} does not exist`);
+  return stat.isDirectory() ? full : dirname(full);
+}
+
+/** One entry of list_rules, as it has always listed a built-in rule. */
+const listed = (r: (typeof defaultRules)[number]) => ({
+  id: r.id,
+  name: r.name,
+  layer: r.layer,
+  status: r.status,
+  severity: SEVERITY_LABEL[r.severity],
+  category: r.category,
+});
+
+/**
+ * The custom rules list_rules adds: each the config's files hold, at its own severity, apart from
+ * an unchanged copy of a published rule, which runs as pbiplint's rule and is listed as that.
+ * `replaces` names the pbiplint rule an edited copy runs in place of; `problem` is why the reader
+ * could not read a rule.
+ */
+function customListed(custom: CustomRuleSet | undefined) {
+  const own = new Set(defaultRules.map((r) => r.id.toUpperCase()));
+  const byId = new Map(defaultRules.map((r) => [r.id.toUpperCase(), r.id]));
+  return (custom?.rules ?? []).flatMap((r) => {
+    const same = sameIdAs(r, own);
+    if (same === "asBuiltIn") return [];
+    const problem = r.custom?.readProblem;
+    return [
+      {
+        ...listed(r),
+        custom: true,
+        ruleFile: r.custom?.file,
+        ...(same === "replaces" ? { replaces: byId.get(r.id.toUpperCase()) } : {}),
+        ...(problem === undefined ? {} : { problem }),
+      },
+    ];
+  });
 }
 
 const text = (t: string, isError = false) => ({
@@ -70,8 +133,31 @@ const answer = (run: CliRun) => {
   return out;
 };
 
-export function createServer(run: RunCli, version: string): McpServer {
+/** A usage or config error as the CLI writes it to stderr: an error answer. */
+function refused(e: unknown) {
+  if (e instanceof UsageError || isConfigError(e))
+    return text(`pbiplint: ${showControls(e.message)}`, true);
+  throw e;
+}
+
+const pathInput = z
+  .string()
+  .optional()
+  .describe(
+    "A file or folder in the project, to include the custom rules its nearest pbiplint.config.json names; a relative path is taken from the folder the app started the server in",
+  );
+
+/**
+ * `cwd` is the server's folder, which a relative `path` is taken from; the process's own unless
+ * given.
+ */
+export function createServer(run: RunCli, version: string, cwd = process.cwd()): McpServer {
   const server = new McpServer({ name: "pbiplint", version }, { instructions: INSTRUCTIONS });
+  /** The folder a path's config is looked for from, and the config found there. */
+  const configAt = (path: string): { start: string; found: FoundConfig } => {
+    const start = configStart(path, cwd);
+    return { start, found: findConfig(start) };
+  };
   server.registerTool(
     "lint",
     {
@@ -114,34 +200,65 @@ export function createServer(run: RunCli, version: string): McpServer {
       title: "Explain a rule",
       description:
         "A rule's guidance as JSON: what it checks, why it matters, how to fix it, and when to ignore it.",
-      inputSchema: z.object({ ruleId: z.string().describe("The rule id, as in ENSURE_ALTTEXT") }),
+      inputSchema: z.object({
+        ruleId: z.string().describe("The rule id, as in ENSURE_ALTTEXT"),
+        path: pathInput,
+      }),
       annotations: TOOL_ANNOTATIONS,
     },
-    async ({ ruleId }) => answer(await run(["explain", ruleId, "--format", "json"])),
+    async ({ ruleId, path }) => {
+      const argv = ["explain", ruleId, "--format", "json"];
+      if (path === undefined) return answer(await run(argv));
+      // Run from the path's folder too, so a path with no config above it never finds the one
+      // above the server's folder.
+      let at;
+      try {
+        at = configAt(path);
+      } catch (e) {
+        return refused(e);
+      }
+      const config = at.found.path === undefined ? [] : ["--config", at.found.path];
+      return answer(await run([...argv, ...config], at.start));
+    },
   );
   server.registerTool(
     "list_rules",
     {
       title: "List the rules",
       description: "Every rule pbiplint runs, with its layer, status, severity, and category.",
-      inputSchema: z.object({}),
+      inputSchema: z.object({ path: pathInput }),
       annotations: TOOL_ANNOTATIONS,
     },
-    async () =>
-      text(
-        JSON.stringify(
-          defaultRules.map((r) => ({
-            id: r.id,
-            name: r.name,
-            layer: r.layer,
-            status: r.status,
-            severity: SEVERITY_LABEL[r.severity],
-            category: r.category,
-          })),
-          null,
-          2,
-        ) + "\n",
-      ),
+    async ({ path }) => {
+      if (path === undefined) return text(JSON.stringify(defaultRules.map(listed), null, 2) + "\n");
+      try {
+        const custom = readCustomRuleFiles(configAt(path).found);
+        const rules = [...defaultRules.map(listed), ...customListed(custom)];
+        // A custom rule's fields come from a team's file, so no control character reaches a
+        // terminal, as in explain's JSON.
+        return text(escapeJsonControls(JSON.stringify(rules, null, 2)) + "\n");
+      } catch (e) {
+        return refused(e);
+      }
+    },
+  );
+  server.registerTool(
+    "custom_rules_reference",
+    {
+      title: "What a custom rule can use",
+      description:
+        "What a custom rule can use at the installed version: scopes, properties, functions, regular expressions, limits, and what pbiplint does not run, with the reason.",
+      inputSchema: z.object({
+        format: z
+          .enum(["text", "json"])
+          .optional()
+          .describe(
+            "text (default), or json for the document pbiplint reference --format json prints",
+          ),
+      }),
+      annotations: TOOL_ANNOTATIONS,
+    },
+    async ({ format }) => answer(await run(["reference", "--format", format ?? "text"])),
   );
   return server;
 }
@@ -158,8 +275,9 @@ export async function serveMcp(
   run: RunCli,
   streams: { stdin?: Readable; stdout?: Writable } = {},
   version = "0.0.0-dev",
+  cwd?: string,
 ): Promise<McpHandle> {
-  const server = createServer(run, version);
+  const server = createServer(run, version, cwd);
   const transport = new StdioServerTransport(streams.stdin, streams.stdout);
   await server.connect(transport);
   return { close: () => server.close() };

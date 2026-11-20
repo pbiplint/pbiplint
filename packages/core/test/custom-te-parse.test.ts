@@ -3,7 +3,14 @@ import { describe, expect, it } from "vitest";
 import { parseJsonc } from "../src/custom-rules/jsonc.js";
 import { LIMITS } from "../src/custom-rules/limits.js";
 import type { TeExpr, TeTypeRef } from "../src/custom-rules/te/ast.js";
-import { parseTeExpression } from "../src/custom-rules/te/parser.js";
+import {
+  NAMED_LAMBDA_HINT,
+  NAMED_LAMBDA_REASON,
+  TE_LAMBDA_METHODS,
+  TE_TYPES,
+  parseTeExpression,
+} from "../src/custom-rules/te/parser.js";
+import { TE_KEYWORDS, TE_OPERATORS } from "../src/custom-rules/te/syntax.js";
 import { BPA_RULES } from "../src/rules/microsoft-bpa/bpa-rules.data.js";
 
 const repo = new URL("../../../", import.meta.url).pathname;
@@ -60,6 +67,7 @@ function show(e: TeExpr | TeTypeRef | null): string {
   }
 }
 const shape = (text: string) => show(tree(text));
+const EM_DASH = String.fromCharCode(0x2014);
 
 describe("precedence", () => {
   it("and binds tighter than or", () => {
@@ -419,5 +427,127 @@ describe("the corpus", () => {
       "PROBE_STRING_SINGLE_QUOTED",
       "PROBE_TOKEN_NOT",
     ]);
+  });
+});
+
+describe("the syntax tables the reference reads", () => {
+  /** The binary operators, each spelling with its op and level. */
+  const binary = TE_OPERATORS.filter((o) => o.precedence >= 2 && o.precedence <= 7).flatMap((o) =>
+    o.spellings.map((s) => ({ s, op: o.op, precedence: o.precedence })),
+  );
+
+  it("parses every binary spelling to its op", () => {
+    expect(binary.length).toBe(20);
+    for (const { s, op } of binary) {
+      const e = tree(`a ${s} b`);
+      expect(e.kind === "binary" && e.op, s).toBe(op);
+      expect(e.kind === "binary" && e.spelling, s).toBe(s);
+    }
+  });
+
+  it("parses every pair of binary spellings at their levels", () => {
+    for (const low of binary)
+      for (const high of binary) {
+        if (low.precedence >= high.precedence) continue;
+        const pair = `${low.s} ${high.s}`;
+        expect(shape(`a ${low.s} b ${high.s} c`), pair).toBe(`(${low.op} a (${high.op} b c))`);
+        expect(shape(`a ${high.s} b ${low.s} c`), pair).toBe(`(${low.op} (${high.op} a b) c)`);
+      }
+  });
+
+  it("parses every unary spelling to its op, above every binary level", () => {
+    const unary = TE_OPERATORS.filter((o) => o.precedence === 8);
+    expect(unary.map((o) => o.op).sort()).toEqual(["negate", "not"]);
+    for (const o of unary)
+      for (const s of o.spellings) {
+        expect(shape(`${s} a`), s).toBe(`(${o.op} a)`);
+        for (const b of binary) expect(shape(`${s} a ${b.s} b`)).toBe(`(${b.op} (${o.op} a) b)`);
+      }
+  });
+
+  it("keeps the conditional operator below every binary level", () => {
+    const conditional = TE_OPERATORS.filter((o) => o.precedence === 1);
+    expect(conditional.map((o) => [o.op, o.spellings])).toEqual([["conditional", ["?", ":"]]]);
+    for (const b of binary) expect(shape(`a ${b.s} b ? c : d`)).toBe(`(?: (${b.op} a b) c d)`);
+  });
+
+  it("reads the rest at the highest level, each as its meaning says", () => {
+    const top = Object.fromEntries(
+      TE_OPERATORS.filter((o) => o.precedence === 9).map((o) => [o.op, o.spellings]),
+    );
+    expect(top).toEqual({
+      member: ["."],
+      index: ["[", "]"],
+      call: ["(", ")"],
+      separator: [","],
+      it: ["$"],
+    });
+    expect(shape("a.b")).toBe("a.b");
+    expect(shape("a[0]")).toBe("a[0:int]");
+    expect(shape("f(a, b)")).toBe("_.f(a, b)");
+    expect(shape("(a or b) and c")).toBe("(and (or a b) c)");
+    expect(shape("$.Name")).toBe("it.Name");
+  });
+
+  it("gives every operator a meaning and a level from 1 to 9", () => {
+    for (const o of TE_OPERATORS) {
+      expect(o.meaning.length, o.op).toBeGreaterThan(10);
+      expect(o.meaning).not.toContain(EM_DASH);
+      expect(o.precedence).toBeGreaterThanOrEqual(1);
+      expect(o.precedence).toBeLessThanOrEqual(9);
+    }
+    expect(new Set(TE_OPERATORS.map((o) => o.op)).size).toBe(TE_OPERATORS.length);
+  });
+
+  it("reads every keyword as a keyword, and as a name only with @", () => {
+    expect(TE_KEYWORDS.map((k) => k.name)).toEqual([
+      "true",
+      "false",
+      "null",
+      "it",
+      "outerIt",
+      "current",
+      "iif",
+      "not",
+      "and",
+      "or",
+      "mod",
+    ]);
+    for (const k of TE_KEYWORDS) {
+      expect(k.meaning.length, k.name).toBeGreaterThan(10);
+      expect(k.meaning).not.toContain(EM_DASH);
+      const r = parseTeExpression(k.name.toUpperCase());
+      expect("expr" in r && r.expr.kind === "ident", k.name).toBe(false);
+      expect(shape(`@${k.name}`)).toBe(k.name);
+    }
+  });
+
+  it("gives the named lambda refusal from its constants, as before", () => {
+    expect(error("Columns.Any(c => c.IsHidden)")).toBe(
+      "a named lambda parameter ('x => ...'), which Tabular Editor does not run, at character 15; write the body with 'it' instead",
+    );
+    expect(error("Columns.Any(c => c.IsHidden)")).toBe(
+      `${NAMED_LAMBDA_REASON}, at character 15; ${NAMED_LAMBDA_HINT}`,
+    );
+  });
+
+  it("still reads a lone | as an operator no rule can use", () => {
+    expect(error("a | b")).toBe(
+      "expected an operator or the end of the expression at character 3, found '|'",
+    );
+  });
+
+  it("lists the lambda methods the parser knows", () => {
+    expect(TE_LAMBDA_METHODS).toContain("Any");
+    expect(TE_LAMBDA_METHODS).toContain("GroupBy");
+    const e = tree("Columns.groupby(IsHidden)");
+    expect(e.kind === "call" && e.args[0]?.kind).toBe("lambdaBody");
+  });
+
+  it("lists the type names an expression may write, each with its spellings", () => {
+    expect(TE_TYPES.find((t) => t.name === "Int32")?.spellings).toEqual(["Int32", "int"]);
+    expect(TE_TYPES.find((t) => t.name === "Double")?.spellings).toEqual(["Double"]);
+    for (const t of TE_TYPES)
+      for (const s of t.spellings) expect(shape(`${s}.X`), s).toBe(`<${t.name}>.X`);
   });
 });

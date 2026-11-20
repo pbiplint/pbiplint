@@ -30,7 +30,8 @@ npx pbiplint path/to/model --format sarif --output pbiplint.sarif
 npx pbiplint path/to/model --format markdown
 npx pbiplint rules           # every rule with its status and severity
 npx pbiplint explain HIDE_FOREIGN_KEYS   # one rule's guidance, offline (--format json too)
-npx pbiplint skill --install claude      # the skill for AI assistants, where Claude Code reads it
+npx pbiplint reference                   # what a custom rule can use, from 0.4.0 (--format json too)
+npx pbiplint skill --install claude      # the skills for AI assistants, where Claude Code reads them
 npx pbiplint mcp                         # a local MCP server, for an AI assistant to start
 npx pbiplint --help          # every option, in one screen
 npx pbiplint --version
@@ -70,32 +71,35 @@ An AI assistant that lints after each edit can keep its context small: `pbiplint
 
 `pbiplint skill` prints a skill, in the [Agent Skills](https://agentskills.io/home) format, that tells a coding assistant when to run pbiplint, how to keep its output short, how to read the results, and what to leave to you, such as ignoring a finding or editing files while Power BI Desktop has the project open. It ships with the CLI, so it always matches the version installed, and an assistant can read it from that command without installing anything.
 
-To keep it in a project, run `pbiplint skill --install <assistant>` from the project's or repository's root folder:
+From 0.4.0 the CLI ships a second skill, `pbiplint-custom-rules`, which takes an assistant through writing a team's own rule and checking it (see [Write a custom rule](#custom-rule)). `pbiplint skill --name pbiplint-custom-rules` prints it; `pbiplint skill` alone still prints the first, as before.
 
-| Assistant | Folder it writes |
+To keep them in a project, run `pbiplint skill --install <assistant>` from the project's or repository's root folder. From 0.4.0 it writes both skills, each in a folder named after it:
+
+| Assistant | Folders it writes |
 | --- | --- |
-| `claude` (Claude Code) | `.claude/skills/pbiplint/` |
-| `copilot` (GitHub Copilot) | `.github/skills/pbiplint/` |
-| `codex` (Codex) or `gemini` (Gemini CLI) | `.agents/skills/pbiplint/` |
+| `claude` (Claude Code) | `.claude/skills/pbiplint/` and `.claude/skills/pbiplint-custom-rules/` |
+| `copilot` (GitHub Copilot) | `.github/skills/pbiplint/` and `.github/skills/pbiplint-custom-rules/` |
+| `codex` (Codex) or `gemini` (Gemini CLI) | `.agents/skills/pbiplint/` and `.agents/skills/pbiplint-custom-rules/` |
 
-GitHub Copilot reads all three folders, so one copy is enough for it. `--install` never replaces a copy that differs from the one it would write, an edited copy or one from another version, unless you add `--force`; `--dry-run` says what it would do and writes nothing. `--show` lists each folder, whether the skill is there, and whether that copy matches the version installed. To remove it, delete the `pbiplint` folder `--show` names.
+GitHub Copilot reads all three folders, so one copy of each skill is enough for it. `--install` never replaces a copy that differs from the one it would write, an edited copy or one from another version, unless you add `--force`. It is all or nothing (from 0.4.0): it checks every copy before it writes any, and when one differs it writes neither, exits `2`, and names each copy that differs. `--dry-run` says what it would do and writes nothing. `--show` lists each folder, whether each skill is there, and whether that copy matches the version installed. `--name <skill>` (from 0.4.0), `pbiplint` or `pbiplint-custom-rules`, limits printing, `--install`, and `--show` to that skill. To remove a skill, delete the folder `--show` names.
 
 <h3 id="mcp">Serve an AI assistant over MCP (from 0.2.5)</h3>
 
-`pbiplint mcp` is a local [MCP](https://modelcontextprotocol.io) server for an AI assistant that runs local servers, such as Claude Desktop, Claude Code, VS Code with GitHub Copilot, or Cursor. The assistant starts it and talks to it over stdin and stdout; it opens no port. It is the way to lint from an app that gives the assistant no terminal, such as Claude Desktop's chat. Its three tools only read, and each carries MCP's read-only annotation, so an app can approve them once:
+`pbiplint mcp` is a local [MCP](https://modelcontextprotocol.io) server for an AI assistant that runs local servers, such as Claude Desktop, Claude Code, VS Code with GitHub Copilot, or Cursor. The assistant starts it and talks to it over stdin and stdout; it opens no port. It is the way to lint from an app that gives the assistant no terminal, such as Claude Desktop's chat. Its four tools only read, and each carries MCP's read-only annotation, so an app can approve them once:
 
 | Tool | What it returns |
 | --- | --- |
 | `lint` | What `pbiplint <path> --format json` prints, or with `quiet`, what `--quiet` prints. `rules` and `failOn` work as `--rule` and `--fail-on` do. A path it cannot read comes back as an error with the CLI's own message. |
-| `explain_rule` | What `pbiplint explain <RULE_ID> --format json` prints. |
-| `list_rules` | Every rule with its layer, status, severity, and category, as JSON. |
+| `explain_rule` | What `pbiplint explain <RULE_ID> --format json` prints. From 0.4.0, given a `path` in a project, it also explains the custom rules that the nearest `pbiplint.config.json` above that path names, as `--config` with that file does. |
+| `list_rules` | Every rule with its layer, status, severity, and category, as JSON. From 0.4.0, given a `path` in a project, it adds the custom rules that the nearest config above that path names, each with `custom`, `ruleFile`, `replaces` for one that runs in place of pbiplint's rule of its id, and `problem` for one pbiplint could not read; an unchanged copy of a published rule runs as pbiplint's rule, so it is listed as that. |
+| `custom_rules_reference` | From 0.4.0, what `pbiplint reference` prints, or with `format` `json`, what `--format json` prints. |
 
 With Claude, [pbiplint for Claude](https://github.com/pbiplint/claude-plugin) is the easy route: the skill and this MCP server as two plugins. Each of its releases is pinned to a pbiplint release.
 
 - **Claude Code and Cowork:** run `/plugin marketplace add pbiplint/claude-plugin`, then `/plugin install pbiplint@pbiplint` for the skill and `/plugin install pbiplint-mcp@pbiplint` for this MCP server.
 - **Claude Desktop's chat:** download the `.mcpb` file from the plugin's [latest release](https://github.com/pbiplint/claude-plugin/releases/latest) and open it, and Claude Desktop installs the server in one click. The file carries pbiplint itself, so nothing is downloaded when it runs.
 
-To set it up by hand, in Claude or another app: give `lint` an absolute path, since a relative one is taken from the folder the app started the server in. To add it to Claude Code, run `claude mcp add pbiplint -- npx -y pbiplint mcp`. Claude Desktop and Cursor take a server like this in their MCP settings, and VS Code in `.vscode/mcp.json` under `servers` rather than `mcpServers`:
+To set it up by hand, in Claude or another app: give `lint` an absolute path, and the `path` of `explain_rule` and `list_rules` too, since a relative one is taken from the folder the app started the server in. To add it to Claude Code, run `claude mcp add pbiplint -- npx -y pbiplint mcp`. Claude Desktop and Cursor take a server like this in their MCP settings, and VS Code in `.vscode/mcp.json` under `servers` rather than `mcpServers`:
 
 ```json
 {
@@ -107,7 +111,11 @@ To set it up by hand, in Claude or another app: give `lint` an absolute path, si
 
 Pin a version, as in `pbiplint@0.2.5`, to keep every machine on the same rules.
 
-To lint a folder named `explain`, `rules`, `skill`, or `mcp`, give it as `./explain`, `./rules`, `./skill`, or `./mcp`.
+<h3 id="custom-rule">Write a custom rule (from 0.4.0)</h3>
+
+A team can add rules of its own, in Tabular Editor's Best Practice Analyzer format, in a file that `customRules` in `pbiplint.config.json` names, and pbiplint runs them beside its own. An assistant with the `pbiplint-custom-rules` skill writes one in a loop: it asks what the rule should catch, with one object that should be flagged and one that should not; reads what a rule can use at the installed version from `pbiplint reference` (or the MCP tool `custom_rules_reference`); writes the rule into the team's file and checks that the nearest config names that file; runs `pbiplint <path> --rule <RULE_ID>` and checks that it flags the objects meant and nothing else, with `pbiplint explain <RULE_ID> --config <file>`, where `<file>` is the project's `pbiplint.config.json`, showing the rule as pbiplint read it; and when the rule gives [`RULE_COULD_NOT_FINISH`](/rules/rule-could-not-finish/), reads the reason, fixes the rule, and runs it again. Severity, and any change to a rule the team already has, stay the team's call.
+
+To lint a folder named `explain`, `reference`, `rules`, `skill`, or `mcp`, give it as `./explain`, `./reference`, `./rules`, `./skill`, or `./mcp` (`reference` is a command from 0.4.0).
 
 ### Gate a build on it
 
@@ -147,7 +155,7 @@ Scripts, pipelines, and AI assistants read what the CLI prints, so these parts o
 
 ### Exit codes
 
-- `0`: nothing at or above `--fail-on`. With `--rule` (from 0.2.5), only the findings shown count. `pbiplint rules`, `pbiplint explain` with a rule it knows, `pbiplint skill` (from 0.2.5) when it prints, shows, or installs the skill, `pbiplint mcp` (from 0.2.5) when the app closes its input, `--help`, and `--version` exit `0` too.
+- `0`: nothing at or above `--fail-on`. With `--rule` (from 0.2.5), only the findings shown count. `pbiplint rules`, `pbiplint explain` with a rule it knows, `pbiplint reference` (from 0.4.0), `pbiplint skill` (from 0.2.5) when it prints, shows, or installs the skills, `pbiplint mcp` (from 0.2.5) when the app closes its input, `--help`, and `--version` exit `0` too.
 - `1`: something at or above `--fail-on`. From 0.3.0 that includes a rule that could not finish, through its [`RULE_COULD_NOT_FINISH`](/rules/rule-could-not-finish/) error finding, which the rule's page says how to keep from failing a gate while a fix ships. In a run over several projects (from 0.3.0), the run exits `1` when any project has something at or above its gate, and a project pbiplint cannot read is a [`PARSE_ISSUE`](/rules/parse-issue/) error finding of that project's, so it fails the default gate, unless the project's config turns `PARSE_ISSUE` off or lowers it below its gate.
 - `2`, with nothing on stdout and the reason on stderr:
   - a usage error, such as an unknown option, an option with no value or a value it does not take, two paths, or options with no path; from 0.2.5 also an unknown rule id given to `explain` or `--rule`, or `--quiet` with a format other than text;
@@ -158,7 +166,7 @@ Scripts, pipelines, and AI assistants read what the CLI prints, so these parts o
   - a folder that holds more than 200 projects (from 0.3.0), naming the folders below it that hold them and how many each holds;
   - a folder of several projects none of which can be read (from 0.3.0), naming each and why;
   - before 0.3.0, also a folder that holds several projects, naming each;
-  - `pbiplint skill --install` finding a copy that differs from the one it would write, without `--force` (from 0.2.5);
+  - `pbiplint skill --install` finding a copy that differs from the one it would write, without `--force` (from 0.2.5); from 0.4.0 it then writes neither skill, prints nothing on stdout, and names each copy that differs on stderr;
   - an unexpected error.
 
 ### The JSON document
@@ -192,6 +200,10 @@ In a run over several projects (from 0.3.0), the first line gives the whole run'
 
 One object: `version` (`1`), `tool`, `rule` (the JSON document's rule fields plus `description`, what the rule checks), and `sections`: `example`, `whyItMatters`, `howToFixIt`, `whenToIgnoreIt`, and `quirks`, each in Markdown. `whyItMatters` and `howToFixIt` are always there; the others are left out when the rule's page has none. For a custom rule (from 0.4.0), `rule` also has `custom` (`true`), `ruleFile`, `scope` (the rule's scopes, as its file names them), and `expression`, plus `replaces`, the id of the pbiplint rule it runs in place of, when it shares that id; `sections` is empty. The same rule for changes applies.
 
+### pbiplint reference --format json (from 0.4.0)
+
+One object: `version` (`1`), `tool`, and `formats`, which holds `tabularEditor`, what a Tabular Editor rule that a config's `customRules` names can use at the installed version: `fields`, `severities`, `scopes`, `types`, `methods`, `valueProperties`, `statics`, `staticValues`, `conversions`, `enums`, `syntax`, `tokens`, `regex`, `notRun`, and `limits`. Another rule format would be added beside `tabularEditor`. The same rule for changes applies. Without `--format json`, `pbiplint reference` prints the same as text.
+
 ### Not promised
 
 The text format's layout and wording, which are for people and may change; the Markdown export's layout; the wording of any message, notice, or error; and the SARIF document beyond what SARIF 2.1.0 defines.
@@ -200,8 +212,8 @@ The text format's layout and wording, which are for people and may change; the M
 
 This is the command line's part of [the pbiplint Privacy Promise](/privacy/), in detail.
 
-- **It reads** the files that describe a project, under the path you give it: the `.pbip` file, the model's `.tmdl` files, and the report's `definition.pbir`, `.platform`, and JSON files, along with the report or model folder a `.pbip` file or a report's `definition.pbir` points to inside the folder you name, or the project folder (the folder that holds the `.pbip`); a reference that leads outside both, by its path or through a link, is not read, and the run says so in a notice. So a report whose model sits in a shared folder beside its own, such as `../models`, is linted with its model when you name the folder that holds both. From 0.3.0, when several reports share one model folder, naming the folder that holds them all lints the model with each of them, and it is read from disk once. It also reads the nearest `pbiplint.config.json`, or the one `--config` names. In a report's `StaticResources` folder it opens only the JSON files directly in `SharedResources/BaseThemes`, `SharedResources/BuiltInThemes`, and `RegisteredResources`, up to 5 MB each, and it uses only the themes the report's `report.json` names. It lists folders to find those files, and opens nothing else: it never enters the `.pbi` folder, where Power BI Desktop keeps the model's local data cache, nor `.git`, `node_modules`, or a report's `CustomVisuals` folder, and it does not follow a symbolic link below the path you give. `pbiplint skill` reads the skill file it ships with, and any copy already installed below the current folder. `pbiplint mcp` reads what its `lint` tool is given, as `pbiplint <path>` does.
-- **It writes** the report to your terminal, or to the file `--output` names (creating its folder if needed). Notices, and with `--output` a one-line summary, go to stderr. `pbiplint skill --install` writes the skill's `SKILL.md` into the folder the assistant reads, below the current folder, when you ask it to. `pbiplint mcp` writes only its MCP messages, to stdout, for the app that started it. Nothing else: no cache, no settings file, no log.
+- **It reads** the files that describe a project, under the path you give it: the `.pbip` file, the model's `.tmdl` files, and the report's `definition.pbir`, `.platform`, and JSON files, along with the report or model folder a `.pbip` file or a report's `definition.pbir` points to inside the folder you name, or the project folder (the folder that holds the `.pbip`); a reference that leads outside both, by its path or through a link, is not read, and the run says so in a notice. So a report whose model sits in a shared folder beside its own, such as `../models`, is linted with its model when you name the folder that holds both. From 0.3.0, when several reports share one model folder, naming the folder that holds them all lints the model with each of them, and it is read from disk once. It also reads the nearest `pbiplint.config.json`, or the one `--config` names, and from 0.4.0 the rule files that config's `customRules` names. In a report's `StaticResources` folder it opens only the JSON files directly in `SharedResources/BaseThemes`, `SharedResources/BuiltInThemes`, and `RegisteredResources`, up to 5 MB each, and it uses only the themes the report's `report.json` names. It lists folders to find those files, and opens nothing else: it never enters the `.pbi` folder, where Power BI Desktop keeps the model's local data cache, nor `.git`, `node_modules`, or a report's `CustomVisuals` folder, and it does not follow a symbolic link below the path you give. `pbiplint skill` reads the skill files it ships with (two from 0.4.0), and any copy already installed below the current folder. `pbiplint reference` (from 0.4.0) reads nothing: it prints what this version can run. `pbiplint mcp` reads what its `lint` tool is given, as `pbiplint <path>` does; from 0.4.0, given a `path`, `explain_rule` and `list_rules` read the nearest `pbiplint.config.json` from that path up and the rule files its `customRules` names, and `custom_rules_reference` reads nothing.
+- **It writes** the report to your terminal, or to the file `--output` names (creating its folder if needed). Notices, and with `--output` a one-line summary, go to stderr. `pbiplint skill --install` writes each skill's `SKILL.md` into the folder the assistant reads, below the current folder, when you ask it to: from 0.4.0 two files, `pbiplint/SKILL.md` and `pbiplint-custom-rules/SKILL.md` in that folder, or one with `--name`. `pbiplint mcp` writes only its MCP messages, to stdout, for the app that started it. Nothing else: no cache, no settings file, no log.
 - **It sends** nothing. It makes no network request: no telemetry, no update check, no call home.
 
 The network steps that are not pbiplint's own belong to npm. Installing the package fetches it from the registry. And `npx pbiplint` asks the registry for the package's details on every run, even when a copy is already in npm's cache, to see whether a newer version matches; with no network, npm retries for about a minute before it runs the cached copy. Neither request carries anything from your project. To run with no network request at all, run an installed copy, or `npx --offline pbiplint`, which uses the cached copy without asking.
@@ -253,7 +265,7 @@ On Linux, `strace -f -e trace=network pbiplint --sample` lists every network cal
 ### 4. Check what you installed
 
 - `npm view pbiplint dependencies` prints nothing: the package has no runtime dependencies, so nothing else is installed with it.
-- `npm pack pbiplint --dry-run` lists what it ships: the `dist/pbiplint.mjs` bundle, the sample project, the skill (`skill/SKILL.md`), the README, `NOTICE`, `LICENSE`, and `package.json`.
+- `npm pack pbiplint --dry-run` lists what it ships: the `dist/pbiplint.mjs` bundle, the sample project, the skill (`skill/SKILL.md`) and from 0.4.0 the custom rules skill (`skill/pbiplint-custom-rules/SKILL.md`), the README, `NOTICE`, `LICENSE`, and `package.json`.
 - `npm audit signatures`, in an empty folder where you install only pbiplint, reports "1 package has a verified registry signature" and "1 package has a verified attestation". Releases are published from GitHub Actions with npm provenance, and [the npm page](https://www.npmjs.com/package/pbiplint) links the commit and the workflow run that built each version.
 
 ### 5. Read the code

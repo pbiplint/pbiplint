@@ -1,0 +1,66 @@
+table Sales
+
+	measure 'Total Sales' = SUM(Sales[Amount])
+		formatString: #,0.00
+		displayFolder: Totals
+
+	measure 'Order Count' = COUNTROWS(Sales)
+		formatString: #,0
+
+	measure 'Sales Check' = [Total Sales] - SUM(Sales[Amount])
+		formatString: #,0.00
+		isHidden
+
+	column customerName
+		dataType: string
+		displayFolder: Customer
+		summarizeBy: none
+		sourceColumn: CUSTOMER_NAME
+
+	column orderKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: ORDER_KEY
+
+	column SKU
+		dataType: string
+		displayFolder: Product
+		summarizeBy: none
+		sourceColumn: SKU
+
+	column 'Order Date'
+		dataType: dateTime
+		formatString: Long Date
+		displayFolder: Dates
+		summarizeBy: none
+		sourceColumn: ORDER_DATE
+
+	column Amount
+		dataType: decimal
+		formatString: #,0.00
+		isHidden
+		summarizeBy: sum
+		sourceColumn: AMOUNT
+
+	hierarchy orderCalendar
+
+		level 'Order Date'
+			column: 'Order Date'
+
+	hierarchy 'Order Calendar'
+		displayFolder: Dates
+
+		level 'Order Date'
+			column: 'Order Date'
+
+	partition Sales = m
+		mode: import
+		source =
+				let
+						Source = Snowflake.Databases("example.snowflakecomputing.com", "ANALYTICS_WH"),
+						Db = Source{[Name="ANALYTICS",Kind="Database"]}[Data],
+						Schema = Db{[Name="SALES",Kind="Schema"]}[Data],
+						Orders = Schema{[Name="ORDERS",Kind="Table"]}[Data]
+				in
+						Orders

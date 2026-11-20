@@ -26,6 +26,7 @@ import {
   type TeRuntime,
   type TeStaticType,
 } from "./library.js";
+import { TE_TYPES } from "./parser.js";
 import type { TeRule } from "./read.js";
 import { LimitReached, type Budget } from "./regex.js";
 import { tokenTypeCode } from "./tokens.js";
@@ -71,6 +72,13 @@ import {
  * Reasons are built from the rule's own text and the object type only, never the model's names or
  * values (section 6.7).
  */
+/**
+ * What an empty value does, in a rule author's words, as the list above sets it out; the custom
+ * rules reference prints it.
+ */
+export const TE_EMPTY_VALUES =
+  "A property marked `?` can be empty (null). Reading a property of an empty value, calling a method on it, or indexing it gives no finding for that object, and the rule goes on to the next object; passing an empty value to a function, as in `RegEx.IsMatch(Expression, ...)`, stops the rule. Otherwise an empty value follows .NET's rules: `== null` tests for one, `+` joins it to text as empty text, arithmetic on it gives an empty value, and a condition that comes out empty gives no finding.";
+
 export type TeOutcome =
   | { kind: "findings"; objects: TomObject[]; unset: number }
   | { kind: "could-not-run"; reason: string };
@@ -80,6 +88,13 @@ const LIMIT_REASON = `reached the evaluation limit of ${fmt(LIMITS.stepsPerRule)
 
 /** "a String", "an Int32". */
 const a = (word: string) => `${/^[AEIOU]/i.test(word) ? "an" : "a"} ${word}`;
+
+/** Why a rule stops that reads a name pbiplint knows it cannot answer, with the gap's reason. */
+export const READS_UNKNOWN = (name: string, why: string): string =>
+  `reads \`${name}\`, which ${why}`;
+
+/** Why a rule stops that calls a method its value does not have (or pbiplint does not run). */
+export const NO_METHOD = (on: string, name: string): string => `${on} has no method \`${name}\``;
 
 /** A property of a type, by name: the exact spelling first, then without regard to case. */
 function findProperty(type: TomType, name: string): PropertySpec | undefined {
@@ -100,7 +115,7 @@ function findKey<T>(record: Record<string, T> | undefined, name: string): T | un
 /** The reason for a name a type does not have: pbiplint's known gaps first, then the nearest name. */
 function missingProperty(type: string, name: string, tomType?: TomType): string {
   const why = unknownReason(name);
-  if (why) return `reads \`${name}\`, which ${why}`;
+  if (why) return READS_UNKNOWN(name, why);
   const near = tomType ? nearestProperty(tomType, name) : undefined;
   return `${type} has no property \`${name}\`${near ? `; \`${near}\` is the nearest` : ""}`;
 }
@@ -458,7 +473,7 @@ class Checker {
         return UNKNOWN;
     }
     const named = lists.flatMap((k) => entriesNamed(LIBRARY.methods[k], name));
-    if (named.length === 0) throw new StaticError(`${stName(receiver)} has no method \`${name}\``);
+    if (named.length === 0) throw new StaticError(NO_METHOD(stName(receiver), name));
     const entry = byArity(named, args.length, name, StaticError);
     const first = args[0];
     if (
@@ -467,7 +482,7 @@ class Checker {
       first.type === "string" &&
       isStatisticsAnnotation(first.value)
     )
-      throw new StaticError(`reads \`${first.value}\`, which ${STATISTICS_REASON}`);
+      throw new StaticError(READS_UNKNOWN(first.value, STATISTICS_REASON));
     let selector: ST = UNKNOWN;
     for (const x of args) {
       if (x.kind === "lambdaBody")
@@ -493,25 +508,42 @@ function byArity(
   );
 }
 
-const INTEGER_TYPES = new Set([
-  "SByte",
-  "Byte",
-  "Int16",
-  "UInt16",
-  "Int32",
-  "UInt32",
-  "Int64",
-  "UInt64",
-]);
-const REAL_TYPES = new Set(["Single", "Double", "Decimal"]);
+/**
+ * What `Int32(...)` and its siblings convert to, by type: a character, a whole number, or a
+ * double or decimal. Any other type name written as a conversion stops the rule.
+ */
+const CONVERTS_TO: Record<string, "char" | "int" | "double" | "decimal"> = {
+  Char: "char",
+  SByte: "int",
+  Byte: "int",
+  Int16: "int",
+  UInt16: "int",
+  Int32: "int",
+  UInt32: "int",
+  Int64: "int",
+  UInt64: "int",
+  Single: "double",
+  Double: "double",
+  Decimal: "decimal",
+};
+
+/** The conversions a rule may write (`int(x)`, `Decimal(x)`), each with its spellings. */
+export const TE_CONVERSIONS: readonly { type: string; spellings: readonly string[] }[] =
+  TE_TYPES.filter((t) => Object.hasOwn(CONVERTS_TO, t.name)).map((t) => ({
+    type: t.name,
+    spellings: t.spellings,
+  }));
+
+/** Why a conversion to a type not in `TE_CONVERSIONS` stops the rule, as written in the rule. */
+export const CONVERSION_REFUSED = (type: string, written: string): string =>
+  `converting to ${type} with \`${written}(...)\` is not supported; use \`Convert\``;
 
 function conversionType(type: TeTypeRef): ST {
-  if (type.name === "Char") return ST_CHAR;
-  if (INTEGER_TYPES.has(type.name)) return ST_INT;
-  if (REAL_TYPES.has(type.name)) return { kind: type.name === "Decimal" ? "decimal" : "double" };
-  throw new StaticError(
-    `converting to ${type.name} with \`${type.written}(...)\` is not supported; use \`Convert\``,
-  );
+  const to = Object.hasOwn(CONVERTS_TO, type.name) ? CONVERTS_TO[type.name] : undefined;
+  if (to === "char") return ST_CHAR;
+  if (to === "int") return ST_INT;
+  if (to !== undefined) return { kind: to };
+  throw new StaticError(CONVERSION_REFUSED(type.name, type.written));
 }
 
 /** The check for one object type; returns the reason the rule cannot run, if any. */
@@ -705,7 +737,7 @@ class Evaluator implements TeRuntime {
     const named = this.receiverKinds(receiver).flatMap((k) =>
       entriesNamed(LIBRARY.methods[k], name),
     );
-    if (named.length === 0) throw new TeFailure(`${typeName(receiver)} has no method \`${name}\``);
+    if (named.length === 0) throw new TeFailure(NO_METHOD(typeName(receiver), name));
     const args = argNodes.map((x) =>
       x.kind === "lambdaBody"
         ? (item: unknown) =>
@@ -743,20 +775,21 @@ class Evaluator implements TeRuntime {
     const fail = () => {
       throw new TeFailure(`\`${type.written}(...)\` cannot convert ${a(typeName(v))}`);
     };
-    if (type.name === "Char") {
+    const to = Object.hasOwn(CONVERTS_TO, type.name) ? CONVERTS_TO[type.name] : undefined;
+    if (to === "char") {
       if (v instanceof TeChar) return v;
       if (typeof v === "number" && v >= 0 && v <= 0xffff) return new TeChar(v);
       return fail();
     }
-    if (INTEGER_TYPES.has(type.name)) {
+    if (to === "int") {
       if (typeof v === "number") return v;
       if (v instanceof TeReal) return Math.trunc(v.value);
       if (v instanceof TeChar) return v.code;
       return fail();
     }
-    if (REAL_TYPES.has(type.name)) {
+    if (to !== undefined) {
       if (typeof v === "number" || v instanceof TeReal || v instanceof TeChar)
-        return new TeReal(numbers.numberOf(v), type.name === "Decimal" ? "decimal" : "double");
+        return new TeReal(numbers.numberOf(v), to);
       return fail();
     }
     return conversionType(type);
@@ -974,6 +1007,34 @@ class Evaluator implements TeRuntime {
 }
 
 /**
+ * The check before any object runs, over the types given first and then every type the scopes
+ * name, whether the model has objects of them or not: the first reason found, or undefined.
+ */
+function checkTypes(
+  expr: TeExpr,
+  first: ReadonlySet<TomType>,
+  scopes: readonly string[],
+): string | undefined {
+  const types = new Set(first);
+  for (const scope of scopes) for (const type of findKey(SCOPE_TYPES, scope) ?? []) types.add(type);
+  for (const type of types) {
+    const reason = checkFor(expr, type);
+    if (reason !== undefined) return reason;
+  }
+  return undefined;
+}
+
+/**
+ * The check `evaluateTeRule` runs before any object, with no model: why a parsed expression cannot
+ * run on the scopes' object types (a name a type does not have, a function pbiplint does not run,
+ * a conversion it refuses, a statistics annotation), or undefined. A name the check passes can
+ * still stop the rule while it runs, on a value of the wrong type or a .NET exception.
+ */
+export function checkTeExpression(expr: TeExpr, scopes: readonly string[]): string | undefined {
+  return checkTypes(expr, new Set(), scopes);
+}
+
+/**
  * Runs a parsed rule over the view: the objects of its scopes it holds for, and how many were left
  * out for a value the files leave unset; or the one reason it could not run.
  */
@@ -987,13 +1048,8 @@ export function evaluateTeRule(rule: TeRule, expr: TeExpr, view: TomView): TeOut
         objects.push(o);
       }
 
-  const types = new Set(objects.map((o) => o.type));
-  for (const scope of rule.scopes)
-    for (const type of findKey(SCOPE_TYPES, scope) ?? []) types.add(type);
-  for (const type of types) {
-    const reason = checkFor(expr, type);
-    if (reason !== undefined) return { kind: "could-not-run", reason };
-  }
+  const reason = checkTypes(expr, new Set(objects.map((o) => o.type)), rule.scopes);
+  if (reason !== undefined) return { kind: "could-not-run", reason };
 
   const evaluator = new Evaluator(view);
   const found: TomObject[] = [];

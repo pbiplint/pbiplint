@@ -4,9 +4,10 @@
 // Writes packages/core/src/version.ts from packages/core/package.json, so the core can report its
 // version without reading a file at run time (it runs in the browser). The CLI takes its own
 // version from its package.json at bundle time (packages/cli/build.mjs). It also writes the CLI's
-// version into the skill the CLI ships (packages/cli/skill/SKILL.md), in its description and its
-// metadata, so a stale installed copy shows. The version and skill tests fail when the generated
-// file, the skill, or the two package versions are out of step.
+// version into each skill the CLI ships (packages/cli/skill/SKILL.md and
+// packages/cli/skill/pbiplint-custom-rules/SKILL.md), in its description and its metadata, so a
+// stale installed copy shows. The version and skill tests fail when the generated file, a skill,
+// or the two package versions are out of step.
 import { readFileSync, writeFileSync } from "node:fs";
 
 const { version } = JSON.parse(readFileSync("packages/core/package.json", "utf8"));
@@ -18,11 +19,15 @@ writeFileSync(
 console.log(`wrote ${version} to ${out}`);
 
 const cli = JSON.parse(readFileSync("packages/cli/package.json", "utf8")).version;
-const skill = "packages/cli/skill/SKILL.md";
-writeFileSync(
-  skill,
-  readFileSync(skill, "utf8")
-    .replace(/ pbiplint \S+\.$/m, ` pbiplint ${cli}.`)
-    .replace(/^ {2}version: "[^"]+"$/m, `  version: "${cli}"`),
-);
-console.log(`wrote ${cli} to ${skill}`);
+for (const skill of [
+  "packages/cli/skill/SKILL.md",
+  "packages/cli/skill/pbiplint-custom-rules/SKILL.md",
+]) {
+  writeFileSync(
+    skill,
+    readFileSync(skill, "utf8")
+      .replace(/ pbiplint \S+\.$/m, ` pbiplint ${cli}.`)
+      .replace(/^ {2}version: "[^"]+"$/m, `  version: "${cli}"`),
+  );
+  console.log(`wrote ${cli} to ${skill}`);
+}

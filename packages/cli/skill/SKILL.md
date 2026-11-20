@@ -28,6 +28,8 @@ It runs on this machine. It reads the project's files and prints to the terminal
 
 Use `npx pbiplint` (or `pbiplint` where it is installed). If pbiplint's MCP tools are available (`lint`, `explain_rule`, and `list_rules`), use them in place of the commands: `lint` takes the project's path with the same `quiet` and `rules` options, and `explain_rule` takes a rule id.
 
+To write or fix a team's own rule, one that `customRules` in `pbiplint.config.json` names, use the `pbiplint-custom-rules` skill, with `pbiplint reference` (or the MCP tool `custom_rules_reference`) for what such a rule can use.
+
 1. `pbiplint <path> --quiet` prints the summary and one line per rule with findings: `<severity> <RULE_ID> <count>`.
 2. Work on errors first, then warnings. Info findings are suggestions: mention them, do not work through them unless asked.
 3. `pbiplint <path> --rule <RULE_ID>` prints one rule's findings, each with its file and line. Give `--rule` more than once for several rules.

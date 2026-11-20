@@ -618,7 +618,7 @@ describe("home page", () => {
     );
     expect(document.getElementById("paste")!.getAttribute("aria-describedby")).toBe("paste-hint");
     expect(text("#drop + .hint")).toMatch(
-      /^Only \.tmdl files, the report's JSON under its definition folder, \.platform, definition\.pbir, the \.pbip file, and pbiplint\.config\.json are read\. Nothing else in the folder is opened\. /,
+      /^Only \.tmdl files, the report's JSON under its definition folder, \.platform, definition\.pbir, the \.pbip file, pbiplint\.config\.json, and the rule files it names under customRules are read\. Nothing else in the folder is opened\. /,
     );
     expect(text(".actions .hint")).toBe(
       "A small sales project, a model and its report, with planted violations, the same one npx pbiplint --sample lints.",

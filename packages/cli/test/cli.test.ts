@@ -915,6 +915,24 @@ describe("pbiplint CLI", () => {
       }
     },
   );
+  it("reports M with many unmatched brackets after many lists as a PARSE_ISSUE, and exits 1", async () => {
+    const def = join(tempDir("unmatched-brackets"), "S.SemanticModel", "definition");
+    mkdirSync(join(def, "tables"), { recursive: true });
+    writeFileSync(join(def, "model.tmdl"), "model Model\n\tculture: en-US\n");
+    const lists = Array<string>(9_000).fill("{1,1,1}").join(",\n\t\t\t\t");
+    writeFileSync(
+      join(def, "tables", "T.tmdl"),
+      `table T\n\tpartition T = m\n\t\tmode: import\n\t\tsource =\n\t\t\t\t{${lists},\n\t\t\t\t${"(".repeat(127)}\n\n`,
+    );
+    const r = await run([def, "--format", "json"]);
+    expect(r.code).toBe(1);
+    const parse = JSON.parse(r.out).groups.find(
+      (g: { rule: { id: string } }) => g.rule.id === "PARSE_ISSUE",
+    );
+    expect(parse.findings.map((x: { detail: string }) => x.detail)).toEqual([
+      expect.stringContaining("M is too large or complex to read"),
+    ]);
+  });
   it.skipIf(noModes)(
     "reads a report file it cannot read as one that could not be parsed, with a notice and no PARSE_ISSUE",
     async () => {

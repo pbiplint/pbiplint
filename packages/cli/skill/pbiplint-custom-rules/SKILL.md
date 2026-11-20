@@ -29,7 +29,7 @@ Use `npx pbiplint` (or `pbiplint` where it is installed). If pbiplint's MCP tool
 3. Write the rule into the team's rule file (create one, such as `rules/team.json`, if there is none), with a description in the shape set out below.
 4. Make sure `customRules` in the nearest `pbiplint.config.json` names the file, by its path from the config's folder.
 5. Run `pbiplint <path> --rule <ID>` on the project.
-6. Check that it flags the objects meant and nothing else, the example that should pass included; `pbiplint explain <ID>` shows the rule as pbiplint read it, and `pbiplint <path> --rule <ID> --format json` gives every finding with its object.
+6. Check that it flags the objects meant and nothing else, the example that should pass included; `pbiplint explain <ID> --config <file>` shows the rule as pbiplint read it, where `<file>` is the project's `pbiplint.config.json` (without `--config`, explain looks for one from the working folder up), and `pbiplint <path> --rule <ID> --format json` gives every finding with its object.
 7. On `RULE_COULD_NOT_FINISH`, read the reason, which names the property, function, or pattern construct at fault, fix the rule, and go back to step 5. Do the same when it flags too much or too little.
 
 ## Writing the rule
@@ -40,7 +40,7 @@ A rule file is a JSON array of rules. Each rule has these fields:
 - `Name`: a short title, read in every finding.
 - `Category`: the team's own word for the group, such as `Naming` or `Layout`.
 - `Description`: three paragraphs, as a pbiplint rule page has: what the rule checks; why the team wants it; how to fix a finding. Separate them with a blank line (`\n\n` in the JSON).
-- `Severity`: 1 is info, 2 a warning, 3 an error, as pbiplint reads it (a rule with none is info). Tabular Editor CLI shows 1 as a warning, so a team that has used it may expect that.
+- `Severity`: 1 is info, 2 a warning, 3 or more an error, as pbiplint reads it (a rule with none is info). Tabular Editor CLI shows 1 as a warning, so a team that has used it may expect that.
 - `Scope`: a comma-separated list of the scopes the reference gives, such as `"Measure"` or `"DataColumn, CalculatedColumn, Hierarchy"`. The rule runs on each object of each scope.
 - `Expression`: a condition; each object it is true for is a finding.
 
@@ -51,7 +51,7 @@ In the expression:
 - A bare property, such as `Name` or `IsHidden`, belongs to the object the rule runs on, which is also `it`. Names match without regard to case.
 - Inside a condition such as `Columns.Any(...)`, `it` is the element being tested, `outerIt` is what `it` was one level out, and `current` is always the object the rule runs on.
 - The expression is a JSON string, so each `"` in it is written `\"` in the file. A quote inside a string in the expression is doubled (`""`), which the file holds as `\"\"`. The expression language has no backslash escapes of its own, so a pattern's backslash is only doubled for JSON: `\\d` in the file is `\d` in the pattern.
-- A property marked `?` in the reference can be empty. Calling a method on an empty one stops the rule for the whole project, as it does in Tabular Editor, so test it first, as `Expression != null and Expression.Length > 2000` does on a partition.
+- A property marked `?` in the reference can be empty. Reading a property of it or calling a method on it, as `Expression.Length` or `Expression.Contains(...)` does, gives no finding for that object, so test `== null` when an empty value should be flagged. Passing an empty one to a function, as in `RegEx.IsMatch(Expression, ...)`, stops the rule for the whole project, so test it first, as `not string.IsNullOrEmpty(Expression) and RegEx.IsMatch(Expression, ...)` does.
 - Regular expressions are .NET's. pbiplint runs the constructs the reference lists and refuses the others with the reason; it never runs one approximately.
 - Power Query is read as text: a partition's `Expression` (with `SourceType`) and a shared query's `Expression` on the `NamedExpression` scope, exactly as the TMDL holds them.
 
@@ -66,7 +66,7 @@ In the expression:
 
 ## Worked examples
 
-Each example runs on `tests/fixtures/custom-rules-examples.SemanticModel` in pbiplint's repository and flags exactly the objects named.
+Each example runs on `tests/fixtures/custom-rules-examples.SemanticModel` in pbiplint's repository and flags exactly the objects named. The first three keep the names teams already use for these conventions, which is why they have no team prefix.
 
 ### `NO_CAMELCASE_COLUMNS_HIERARCHIES`
 
@@ -134,7 +134,7 @@ The team allows reports to read Snowflake only from the schemas `SALES` and `FIN
 }
 ```
 
-The empty-expression test comes first, since a partition with no Power Query has no `Expression` to search. The pattern looks for the navigation step Power BI Desktop writes, `Name="SALES",Kind="Schema"`, so a database that happens to be called `SALES` does not count. A query that names an approved schema and also another one passes, and a partition that reads a shared query is checked through that query; say so when you report back.
+The empty-expression test comes first, since a partition with no Power Query has no `Expression` to search, and passing an empty one to `RegEx.IsMatch` would stop the rule. The pattern looks for the navigation step Power BI Desktop writes, `Name="SALES",Kind="Schema"`, so a database that happens to be called `SALES` does not count. A query that names an approved schema and also another one passes, and a partition that reads a shared query is checked through that query; say so when you report back.
 
 ## Reporting back
 

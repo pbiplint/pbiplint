@@ -1,7 +1,7 @@
 import { cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { defaultRules } from "@pbiplint/core";
-import { readCustomRules, teReference } from "@pbiplint/core/custom-rules";
+import { readCustomRules, teReference, teSeverity } from "@pbiplint/core/custom-rules";
 import { describe, expect, it } from "vitest";
 import { tempDir } from "../../../tests/support/temp-dir.js";
 import { parseArgs } from "../src/args.js";
@@ -84,7 +84,7 @@ describe("the custom rules skill file", () => {
       /team's rule file/,
       /`customRules`/,
       /`pbiplint <path> --rule <ID>`/,
-      /`pbiplint explain <ID>`/,
+      /`pbiplint explain <ID> --config <file>`.*`<file>` is the project's `pbiplint.config.json`/,
       /`RULE_COULD_NOT_FINISH`/,
     ];
     expect(steps).toHaveLength(marks.length);
@@ -239,5 +239,100 @@ describe("the skill's worked examples", () => {
         );
       },
     );
+
+    it("pbiplint explain <ID> --config <file> finds the rule from a parent folder, as the loop runs it", async () => {
+      const parent = tempDir("skill-explain-parent");
+      const project = join(parent, "project");
+      cpSync(
+        join(repo, "tests/fixtures/custom-rules-examples.SemanticModel"),
+        join(project, "m.SemanticModel"),
+        {
+          recursive: true,
+        },
+      );
+      mkdirSync(join(project, "rules"));
+      writeFileSync(join(project, "rules", "team.json"), ruleFile);
+      writeFileSync(
+        join(project, "pbiplint.config.json"),
+        JSON.stringify({ customRules: ["rules/team.json"] }),
+      );
+      const id = "LAYOUT_MEASURES_DF";
+      // Without --config, explain looks from the working folder, so it does not find the rule.
+      expect((await run(["explain", id], parent)).code).toBe(2);
+      const r = await run(["explain", id, "--config", "project/pbiplint.config.json"], parent);
+      expect(r.code).toBe(0);
+      expect(r.err).toBe("");
+      expect(r.out).toContain("custom rule");
+      expect(r.out).toContain("rules/team.json");
+      // The CLI page's "Write a custom rule" loop gives the same command.
+      const page = readFileSync(new URL("../../web/content/cli.md", import.meta.url), "utf8");
+      expect(page).toContain("`pbiplint explain <RULE_ID> --config <file>`, where `<file>` is");
+    });
+  });
+});
+
+describe("the skill on severities, held to how pbiplint reads them", () => {
+  it("says 1 is info, 2 a warning, and 3 or more an error", () => {
+    const writing = section("Writing the rule").replace(/\s+/g, " ");
+    expect(writing).toContain("1 is info, 2 a warning, 3 or more an error");
+    expect([1, 2, 3, 4, 10].map((n) => teSeverity(n))).toEqual([1, 2, 3, 3, 3]);
+  });
+});
+
+describe("the skill on empty values, held to the evaluator", () => {
+  const writing = section("Writing the rule").replace(/\s+/g, " ");
+
+  it("says what an empty value does, as the evaluator runs it", () => {
+    for (const words of [
+      "A property marked `?` in the reference can be empty.",
+      "calling a method on it",
+      "gives no finding for that object",
+      "test `== null` when an empty value should be flagged",
+      "Passing an empty one to a function, as in `RegEx.IsMatch(Expression, ...)`, stops the rule",
+    ])
+      expect(writing).toContain(words);
+    expect(writing).not.toMatch(/Calling a method on an empty one stops the rule/);
+  });
+
+  // Table.Expression is empty on every table of the fixture: none is a calculated table.
+  const behaviours: [expression: string, flags: number | "stops"][] = [
+    ["Expression == null", 3],
+    ["Expression.Length > 0", 0],
+    ['Expression.Contains("a") == false', 0],
+    ['RegEx.IsMatch(Expression, "a")', "stops"],
+  ];
+  it.each(behaviours)("on the empty Table.Expression, %s gives %s", async (expression, flags) => {
+    const dir = tempDir("skill-empty-values");
+    const model = join(dir, "m.SemanticModel");
+    cpSync(join(repo, "tests/fixtures/custom-rules-examples.SemanticModel"), model, {
+      recursive: true,
+    });
+    const rule = {
+      ID: "TEAM_EMPTY",
+      Name: "Empty",
+      Scope: "Table",
+      Severity: 2,
+      Expression: expression,
+    };
+    writeFileSync(join(dir, "team.json"), JSON.stringify([rule]));
+    writeFileSync(
+      join(dir, "pbiplint.config.json"),
+      JSON.stringify({ customRules: ["team.json"] }),
+    );
+    const r = await run([model, "--format", "json"], dir);
+    const doc = JSON.parse(r.out) as {
+      groups: { rule: { id: string }; findings: { objectName: string; detail?: string }[] }[];
+    };
+    const own = doc.groups.find((g) => g.rule.id === "TEAM_EMPTY");
+    const stopped = doc.groups
+      .find((g) => g.rule.id === "RULE_COULD_NOT_FINISH")
+      ?.findings.some((f) => f.detail?.includes("TEAM_EMPTY"));
+    if (flags === "stops") {
+      expect(stopped).toBe(true);
+      expect(own).toBeUndefined();
+    } else {
+      expect(stopped ?? false).toBe(false);
+      expect(own?.findings.length ?? 0).toBe(flags);
+    }
   });
 });

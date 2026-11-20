@@ -72,6 +72,13 @@ import {
  * Reasons are built from the rule's own text and the object type only, never the model's names or
  * values (section 6.7).
  */
+/**
+ * What an empty value does, in a rule author's words, as the list above sets it out; the custom
+ * rules reference prints it.
+ */
+export const TE_EMPTY_VALUES =
+  "A property marked `?` can be empty (null). Reading a property of an empty value, calling a method on it, or indexing it gives no finding for that object, and the rule goes on to the next object; passing an empty value to a function, as in `RegEx.IsMatch(Expression, ...)`, stops the rule. Otherwise an empty value follows .NET's rules: `== null` tests for one, `+` joins it to text as empty text, arithmetic on it gives an empty value, and a condition that comes out empty gives no finding.";
+
 export type TeOutcome =
   | { kind: "findings"; objects: TomObject[]; unset: number }
   | { kind: "could-not-run"; reason: string };

@@ -1,7 +1,13 @@
 import { LIMITS, LIMIT_DESCRIPTIONS, type CustomRuleLimits } from "../limits.js";
 import { teSeverity } from "../rules.js";
 import { SEVERITY_LABEL } from "../../rules/types.js";
-import { CONVERSION_REFUSED, NO_METHOD, READS_UNKNOWN, TE_CONVERSIONS } from "./evaluate.js";
+import {
+  CONVERSION_REFUSED,
+  NO_METHOD,
+  READS_UNKNOWN,
+  TE_CONVERSIONS,
+  TE_EMPTY_VALUES,
+} from "./evaluate.js";
 import {
   LIBRARY,
   REGEX_OPTIONS,
@@ -14,7 +20,7 @@ import {
 import { NAMED_LAMBDA_HINT, NAMED_LAMBDA_REASON, TE_LAMBDA_METHODS, TE_TYPES } from "./parser.js";
 import { TE_NEAREST_SCOPES, TE_REPORT_SCOPES, TE_RULE_FIELDS, teScopeReason } from "./read.js";
 import { REGEX_REFUSED, REGEX_RUNS } from "./regex.js";
-import { TE_KEYWORDS, TE_OPERATORS } from "./syntax.js";
+import { TE_KEYWORDS, TE_LITERALS, TE_OPERATORS } from "./syntax.js";
 import { TOKEN_MEMBERS, TOKEN_TYPES } from "./tokens.js";
 import {
   PROPERTIES,
@@ -68,8 +74,14 @@ export interface TeReferenceNotRun {
  */
 export interface TeReference {
   fields: { name: string; use: "read" | "ignored"; note: string }[];
-  /** How each `Severity` reads; `written: null` is a rule with none. */
-  severities: { written: number | null; severity: "info" | "warning" | "error" }[];
+  /**
+   * How each `Severity` reads: a number, `"below 0"` or `"4 or more"` for the ranges at either
+   * end, and `null` for a rule with none.
+   */
+  severities: {
+    written: number | "below 0" | "4 or more" | null;
+    severity: "info" | "warning" | "error";
+  }[];
   scopes: { name: string; types: string[] }[];
   types: { name: string; scopes: string[]; properties: TeReferenceProperty[] }[];
   methods: TeReferenceMember[];
@@ -82,6 +94,10 @@ export interface TeReference {
   syntax: {
     operators: { op: string; spellings: string[]; precedence: number; meaning: string }[];
     keywords: { name: string; meaning: string }[];
+    /** How each kind of value is written, with an example and the type it gives. */
+    literals: { written: string; type: string; meaning: string }[];
+    /** What an empty (null) value does. */
+    emptyValues: string;
   };
   tokens: {
     members: { name: string; type: string; description: string }[];
@@ -177,8 +193,16 @@ function notRun(): TeReferenceNotRun[] {
     kind: "syntax",
     reason: `${NAMED_LAMBDA_REASON}; ${NAMED_LAMBDA_HINT}`,
   });
+  // A type that is not a value (a static class such as `Math`, or an enum such as
+  // `StringComparison`) is left out: converting to one is not something a rule would try.
+  const notValues = new Set(
+    [
+      ...Object.keys(LIBRARY.statics).filter((on) => !Object.hasOwn(LIBRARY.methods, on)),
+      ...Object.keys(LIBRARY.enums),
+    ].map((n) => n.toLowerCase()),
+  );
   for (const t of TE_TYPES)
-    if (!TE_CONVERSIONS.some((c) => c.type === t.name))
+    if (!TE_CONVERSIONS.some((c) => c.type === t.name) && !notValues.has(t.name.toLowerCase()))
       out.push({
         name: `${t.name}(...)`,
         kind: "syntax",
@@ -207,10 +231,12 @@ function notRun(): TeReferenceNotRun[] {
 export function teReference(): TeReference {
   return {
     fields: TE_RULE_FIELDS.map((f) => ({ name: f.name, use: f.use, note: f.note })),
-    severities: [0, 1, 2, 3, undefined].map((n) => ({
-      written: n ?? null,
-      severity: SEVERITY_LABEL[teSeverity(n)],
-    })),
+    severities: [
+      { written: "below 0" as const, severity: SEVERITY_LABEL[teSeverity(-1)] },
+      ...[0, 1, 2, 3].map((n) => ({ written: n, severity: SEVERITY_LABEL[teSeverity(n)] })),
+      { written: "4 or more" as const, severity: SEVERITY_LABEL[teSeverity(4)] },
+      { written: null, severity: SEVERITY_LABEL[teSeverity(undefined)] },
+    ],
     scopes: TE_SCOPES.map((name) => ({ name, types: [...SCOPE_TYPES[name]] })),
     types: TOM_TYPES.map((name) => ({
       name,
@@ -244,6 +270,8 @@ export function teReference(): TeReference {
         meaning: o.meaning,
       })),
       keywords: TE_KEYWORDS.map((k) => ({ name: k.name, meaning: k.meaning })),
+      literals: TE_LITERALS.map((l) => ({ written: l.written, type: l.type, meaning: l.meaning })),
+      emptyValues: TE_EMPTY_VALUES,
     },
     tokens: {
       members: TOKEN_MEMBERS.map((m) => ({

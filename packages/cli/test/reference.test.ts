@@ -60,6 +60,8 @@ describe("referenceText", () => {
       "Properties by object type",
       "Operators",
       "Keywords",
+      "Literals",
+      "Empty values",
       "Methods by value type",
       "Static functions and values",
       "Conversions",
@@ -102,6 +104,11 @@ describe("referenceText", () => {
       expect(text).toContain(`  ${s.on}.${s.name}(${params}): ${s.returns}  ${s.description}`);
     }
     for (const n of ref.notRun) expect(text).toContain(`  ${n.name} (${n.kind}): ${n.reason}`);
+    for (const l of ref.syntax.literals)
+      expect(text).toContain(`  ${l.written} (${l.type}): ${l.meaning}`);
+    expect(text).toContain(`\nEmpty values\n  ${ref.syntax.emptyValues}\n`);
+    expect(text).toContain("\n  below 0: info\n");
+    expect(text).toContain("\n  4 or more: error\n");
     for (const l of ref.limits) expect(text).toContain(`  ${l.name}: ${l.value}  ${l.description}`);
   });
 

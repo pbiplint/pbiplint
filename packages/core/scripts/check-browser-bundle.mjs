@@ -108,7 +108,9 @@ const PARSER_LIMIT_KB = 385;
 // 133.5 KB, and the reference's own words (the operators', keywords', fields' and limits'
 // meanings, the regular expression examples, and the code that walks the tables) are the rest.
 // They are joined on in pure calls, so the site's custom rules chunk, which imports only
-// readCustomRules, leaves them out: it measured 122.9 KB after F1 and after F2. The room is for
+// readCustomRules, leaves them out: it measured 122.9 KB after F1 and after F2. The table of how
+// values are written and the line on empty values took the entry to 146.7 KB minified, 45.8 KB
+// gzipped, with the site's chunk still 122.9 KB. The room is for
 // the reference growing as the evaluator does. If a later change crosses it, stop and tell the
 // coordinator.
 const CUSTOM_LIMIT_KB = 150;

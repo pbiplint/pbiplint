@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import * as entry from "@pbiplint/core/custom-rules";
 import { LIMITS } from "../src/custom-rules/limits.js";
 import { teSeverity } from "../src/custom-rules/rules.js";
-import { checkTeExpression, TE_CONVERSIONS } from "../src/custom-rules/te/evaluate.js";
+import {
+  checkTeExpression,
+  TE_CONVERSIONS,
+  TE_EMPTY_VALUES,
+} from "../src/custom-rules/te/evaluate.js";
+import { lex } from "../src/custom-rules/te/lexer.js";
 import { runTeRules } from "../src/custom-rules/te/index.js";
 import { LIBRARY, REGEX_OPTIONS, REGEX_OPTIONS_RUN } from "../src/custom-rules/te/library.js";
 import { parseTeExpression, TE_LAMBDA_METHODS, TE_TYPES } from "../src/custom-rules/te/parser.js";
@@ -13,7 +18,13 @@ import {
 } from "../src/custom-rules/te/read.js";
 import { teReference, typeLabel, type TeReference } from "../src/custom-rules/te/reference.js";
 import { REGEX_REFUSED, REGEX_RUNS } from "../src/custom-rules/te/regex.js";
-import { TE_KEYWORDS, TE_OPERATORS } from "../src/custom-rules/te/syntax.js";
+import {
+  NUMBER_SUFFIXES,
+  NUMBER_TYPE_NAMES,
+  TE_KEYWORDS,
+  TE_LITERALS,
+  TE_OPERATORS,
+} from "../src/custom-rules/te/syntax.js";
 import { TOKEN_MEMBERS, TOKEN_TYPES } from "../src/custom-rules/te/tokens.js";
 import {
   ENUMS,
@@ -168,13 +179,16 @@ describe("teReference: walking the tables", () => {
   it("lists the rule's fields and how each severity reads", () => {
     expect(REF.fields).toEqual(TE_RULE_FIELDS.map((f) => ({ ...f })));
     expect(REF.severities).toEqual([
+      { written: "below 0", severity: "info" },
       { written: 0, severity: "info" },
       { written: 1, severity: "info" },
       { written: 2, severity: "warning" },
       { written: 3, severity: "error" },
+      { written: "4 or more", severity: "error" },
       { written: null, severity: "info" },
     ]);
     expect(teSeverity(undefined)).toBe(1);
+    expect([-100, -1, 4, 5, 100].map((n) => teSeverity(n))).toEqual([1, 1, 3, 3, 3]);
   });
 
   it("lists every scope with its object types", () => {
@@ -232,6 +246,8 @@ describe("teReference: walking the tables", () => {
       TE_OPERATORS.map((o) => ({ ...o, spellings: [...o.spellings] })),
     );
     expect(REF.syntax.keywords).toEqual(TE_KEYWORDS.map((k) => ({ ...k })));
+    expect(REF.syntax.literals).toEqual(TE_LITERALS.map((l) => ({ ...l })));
+    expect(REF.syntax.emptyValues).toBe(TE_EMPTY_VALUES);
     expect(REF.tokens.members).toEqual(TOKEN_MEMBERS.map((m) => ({ ...m })));
     expect(REF.tokens.types).toEqual([...TOKEN_TYPES]);
     expect(REF.regex.runs).toEqual(REGEX_RUNS.map((r) => ({ ...r })));
@@ -257,9 +273,13 @@ describe("teReference: walking the tables", () => {
       ].map((n) => `annotation ${n}`),
       ...[...TE_REPORT_SCOPES, ...Object.keys(TE_NEAREST_SCOPES)].map((n) => `scope ${n}`),
       "syntax x => ...",
-      ...TE_TYPES.filter((t) => !TE_CONVERSIONS.some((c) => c.type === t.name)).map(
-        (t) => `syntax ${t.name}(...)`,
-      ),
+      // Math, Convert, Regex and StringComparison are not values, so a conversion to one is no
+      // advice worth listing; the evaluator still refuses it.
+      ...TE_TYPES.filter(
+        (t) =>
+          !TE_CONVERSIONS.some((c) => c.type === t.name) &&
+          !["Math", "Convert", "Regex", "StringComparison"].includes(t.name),
+      ).map((t) => `syntax ${t.name}(...)`),
       ...TE_LAMBDA_METHODS.filter((m) => !methods.has(m.toLowerCase())).map(
         (m) => `syntax .${m}(...)`,
       ),
@@ -281,6 +301,95 @@ describe("teReference: walking the tables", () => {
   it("is exported from the custom rules entry", () => {
     expect(entry.teReference).toBe(teReference);
     expect(entry.typeLabel).toBe(typeLabel);
+  });
+});
+
+describe("teReference: literals, held to the lexer", () => {
+  /** The type the lexer gives a literal written alone, as the reference names it. */
+  function lexedType(written: string): string {
+    const tokens = lex(written);
+    expect(tokens, written).toHaveLength(2);
+    const t = tokens[0]!;
+    switch (t.type) {
+      case "string":
+        return "String";
+      case "char":
+        return "Char";
+      case "number":
+        return NUMBER_TYPE_NAMES[t.numberKind];
+      case "ident":
+        expect(t.escaped, written).toBe(true);
+        return "name";
+      default:
+        throw new Error(`${written} lexed as ${t.type}`);
+    }
+  }
+
+  it("gives each example the type the lexer gives it", () => {
+    for (const l of REF.syntax.literals) expect(lexedType(l.written), l.written).toBe(l.type);
+  });
+
+  it("passes the check for every value example, and reads @it as a property, not the keyword", () => {
+    for (const l of REF.syntax.literals)
+      if (l.type !== "name") passes(`(${l.written}) == null`, ["Model"]);
+    const escaped = REF.syntax.literals.find((l) => l.type === "name")!.written;
+    expect(check(`${escaped} == null`, ["Model"])).toMatch(/\bit\b/);
+    passes("it == null", ["Model"]);
+  });
+
+  it("lists every number suffix the lexer reads, and no other, in either case", () => {
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+    const read = [...letters, ...letters.flatMap((a) => letters.map((b) => a + b))].filter((s) =>
+      ["10", "1.5"].some((n) => {
+        try {
+          lex(`${n}${s}`);
+          return true;
+        } catch {
+          return false;
+        }
+      }),
+    );
+    expect(read.sort()).toEqual(Object.keys(NUMBER_SUFFIXES).sort());
+    for (const [suffix, kind] of Object.entries(NUMBER_SUFFIXES)) {
+      const listed = REF.syntax.literals.find((l) => l.meaning.startsWith(`The suffix ${suffix} `));
+      expect(listed?.type, suffix).toBe(NUMBER_TYPE_NAMES[kind]);
+      expect(lexedType(listed!.written.toLowerCase())).toBe(NUMBER_TYPE_NAMES[kind]);
+    }
+  });
+
+  it("writes a quote in a string or a character by doubling it, with no backslash escapes", () => {
+    const value = (written: string) => {
+      const t = lex(written)[0]!;
+      if (t.type !== "string" && t.type !== "char") throw new Error(written);
+      return t.value;
+    };
+    expect(value(`"say ""hi"""`)).toBe(`say "hi"`);
+    expect(value(String.raw`"\d"`)).toBe(String.raw`\d`);
+    expect(value('"a\\"')).toBe("a\\");
+    expect(value(`''''`)).toBe(`'`);
+    const strings = REF.syntax.literals.filter((l) => l.type === "String").map((l) => l.meaning);
+    expect(strings.join(" ")).toMatch(/doubled.*no backslash escapes/);
+  });
+
+  it("says what an empty value does, as the evaluator runs it", () => {
+    const run = (expression: string) => {
+      const result = runTeRules(
+        JSON.stringify([{ ID: "EMPTY", Scope: "Table", Expression: expression }]),
+        MODEL,
+      );
+      if ("error" in result) throw new Error(result.error);
+      return result.results[0]!.outcome;
+    };
+    expect(REF.syntax.emptyValues).toContain("gives no finding for that object");
+    expect(REF.syntax.emptyValues).toContain("passing an empty value to a function");
+    const empty = run("Expression == null");
+    if (empty.kind !== "findings") throw new Error("== null did not run");
+    expect(empty.objects.length).toBeGreaterThan(0);
+    expect(run(`Expression.Length > 0 or Expression.Contains("a") == false`)).toMatchObject({
+      kind: "findings",
+      objects: [],
+    });
+    expect(run(`RegEx.IsMatch(Expression, "a")`).kind).toBe("could-not-run");
   });
 });
 

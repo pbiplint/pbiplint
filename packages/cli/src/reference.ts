@@ -95,6 +95,11 @@ export function referenceText(version: string): string {
     "Keywords",
     ref.syntax.keywords.map((k) => `  ${k.name}: ${k.meaning}`),
   );
+  section(
+    "Literals",
+    ref.syntax.literals.map((l) => `  ${l.written} (${l.type}): ${l.meaning}`),
+  );
+  section("Empty values", [`  ${ref.syntax.emptyValues}`]);
 
   const ons = [...new Set([...ref.methods, ...ref.valueProperties].map((m) => m.on))];
   section(

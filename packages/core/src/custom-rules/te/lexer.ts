@@ -1,5 +1,13 @@
 import type { TeNumberKind } from "./ast.js";
-import { OPERATOR_SYNTAX, TE_LEXED_ONLY } from "./syntax.js";
+import {
+  CHAR_QUOTE,
+  NAME_ESCAPE,
+  NUMBER_SUFFIXES,
+  OPERATOR_SYNTAX,
+  STRING_QUOTE,
+  TE_LEXED_ONLY,
+  WHOLE_NUMBER_KINDS,
+} from "./syntax.js";
 
 /** A token of a rule expression. `start` and `end` are offsets into the text, end exclusive. */
 export type TeToken = { start: number; end: number } & (
@@ -67,13 +75,13 @@ export function lex(text: string): TeToken[] {
       continue;
     }
     const start = i;
-    if (c === '"' || c === "'") {
+    if (c === STRING_QUOTE || c === CHAR_QUOTE) {
       let value = "";
       i++;
       for (;;) {
         if (i >= n) {
           throw new TeSyntaxError(
-            c === '"'
+            c === STRING_QUOTE
               ? "string literal not closed, it starts"
               : "character literal not closed, it starts",
             start,
@@ -92,7 +100,7 @@ export function lex(text: string): TeToken[] {
         value += d;
         i++;
       }
-      if (c === "'") {
+      if (c === CHAR_QUOTE) {
         if (value.length !== 1) {
           throw new TeSyntaxError(
             "a character literal must hold exactly one character; this one starts",
@@ -110,8 +118,8 @@ export function lex(text: string): TeToken[] {
       i = tokens[tokens.length - 1]!.end;
       continue;
     }
-    if (isLetter(c) || (c === "@" && !isDigit(text[i + 1]))) {
-      const escaped = c === "@";
+    if (isLetter(c) || (c === NAME_ESCAPE && !isDigit(text[i + 1]))) {
+      const escaped = c === NAME_ESCAPE;
       if (escaped) i++;
       const nameStart = i;
       if (isLetter(text[i])) {
@@ -119,7 +127,13 @@ export function lex(text: string): TeToken[] {
         while (isNamePart(text[i])) i++;
       }
       const name = text.slice(nameStart, i);
-      tokens.push({ type: "ident", text: name === "" ? "@" : name, escaped, start, end: i });
+      tokens.push({
+        type: "ident",
+        text: name === "" ? NAME_ESCAPE : name,
+        escaped,
+        start,
+        end: i,
+      });
       continue;
     }
     const op = OPERATORS.find((o) => text.startsWith(o, i));
@@ -165,18 +179,18 @@ function readNumber(text: string, start: number): TeToken {
       else if (v <= UINT64_MAX) kind = "ulong";
       else throw new TeSyntaxError("integer literal too large", start);
     }
-  } else if (suffix === "F" || suffix === "D" || suffix === "M") {
-    kind = suffix === "F" ? "float" : suffix === "D" ? "double" : "decimal";
-  } else if (suffix === "L" || suffix === "U" || suffix === "UL" || suffix === "LU") {
-    if (real)
-      throw new TeSyntaxError(
-        `the suffix '${suffix}' needs an integer, and this number is not one; it starts`,
-        start,
-      );
-    kind = suffix === "L" ? "long" : suffix === "U" ? "uint" : "ulong";
-    const v = BigInt(digits);
-    const max = kind === "long" ? INT64_MAX : kind === "uint" ? UINT32_MAX : UINT64_MAX;
-    if (v > max) throw new TeSyntaxError("integer literal too large", start);
+  } else if (Object.hasOwn(NUMBER_SUFFIXES, suffix)) {
+    kind = NUMBER_SUFFIXES[suffix]!;
+    if (WHOLE_NUMBER_KINDS.includes(kind)) {
+      if (real)
+        throw new TeSyntaxError(
+          `the suffix '${suffix}' needs an integer, and this number is not one; it starts`,
+          start,
+        );
+      const v = BigInt(digits);
+      const max = kind === "long" ? INT64_MAX : kind === "uint" ? UINT32_MAX : UINT64_MAX;
+      if (v > max) throw new TeSyntaxError("integer literal too large", start);
+    }
   }
   // A suffix that is not one, or a name run straight into the number.
   if (kind === undefined || isNamePart(text[i])) {

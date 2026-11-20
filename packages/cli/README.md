@@ -33,8 +33,9 @@ are findings, the quiet output's last line names the other two.
 
 `pbiplint reference` prints what a custom rule, a Tabular Editor rule that a config's `customRules`
 names, can use at this version: its fields and severities, the scopes, each object type's
-properties, the operators, methods, and functions, the regular expressions that run, the limits,
-and what pbiplint does not run, with the reason. `--format json` prints the same as one document.
+properties, the operators, how values are written, what an empty value does, the methods and
+functions, the regular expressions that run, the limits, and what pbiplint does not run, with the
+reason. `--format json` prints the same as one document.
 
 `pbiplint skill` prints a skill, in the [Agent Skills](https://agentskills.io/home) format, that tells
 a coding assistant how to use pbiplint. A second skill, `pbiplint-custom-rules`, takes an assistant

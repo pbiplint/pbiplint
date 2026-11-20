@@ -1,4 +1,4 @@
-import type { TeBinaryOp, TeUnaryOp } from "./ast.js";
+import type { TeBinaryOp, TeNumberKind, TeUnaryOp } from "./ast.js";
 
 /**
  * The operators and keywords of a Tabular Editor rule expression, as tables: the lexer reads its
@@ -126,6 +126,108 @@ export const TE_KEYWORDS: readonly TeKeyword[] = /* @__PURE__ */ KEYWORD_NAMES.m
   name,
   meaning: KEYWORD_MEANINGS[name],
 }));
+
+/** The quote that starts and ends a string; doubled inside one, it is a quote. */
+export const STRING_QUOTE = '"';
+/** The quote that starts and ends a character; doubled inside one, it is that quote. */
+export const CHAR_QUOTE = "'";
+/** Written before a name, it makes the name a property even when it is a keyword or a type. */
+export const NAME_ESCAPE = "@";
+
+/**
+ * The suffixes a number may end with, in upper case (the lexer reads either case), and the type
+ * each gives. `L`, `U`, `UL` and `LU` need a whole number.
+ */
+export const NUMBER_SUFFIXES: Readonly<Record<string, TeNumberKind>> = {
+  L: "long",
+  U: "uint",
+  UL: "ulong",
+  LU: "ulong",
+  F: "float",
+  D: "double",
+  M: "decimal",
+};
+
+/** The number types a suffix gives that need a whole number. */
+export const WHOLE_NUMBER_KINDS: readonly TeNumberKind[] = ["int", "uint", "long", "ulong"];
+
+/** Each number type by its .NET name, as the reference prints it. */
+export const NUMBER_TYPE_NAMES: Readonly<Record<TeNumberKind, string>> = {
+  int: "Int32",
+  uint: "UInt32",
+  long: "Int64",
+  ulong: "UInt64",
+  float: "Single",
+  double: "Double",
+  decimal: "Decimal",
+};
+
+export interface TeLiteral {
+  /** An example, written as a rule writes it. */
+  written: string;
+  /** The type it gives: `String`, `Char`, a number type's .NET name, or `name` for `@name`. */
+  type: string;
+  meaning: string;
+}
+
+/**
+ * How to write each kind of value in a rule expression, with an example the lexer reads to the
+ * type given, from the constants above. Built in a pure call, so a bundle that runs rules but
+ * never prints the reference leaves it out.
+ */
+function literals(): TeLiteral[] {
+  const q = STRING_QUOTE;
+  const c = CHAR_QUOTE;
+  const out: TeLiteral[] = [
+    {
+      written: `${q}Sales${q}`,
+      type: "String",
+      meaning: `Text between ${q} quotes.`,
+    },
+    {
+      written: `${q}say ${q}${q}hi${q}${q}${q}`,
+      type: "String",
+      meaning: `A quote inside a string is doubled, so this one is say ${q}hi${q}. There are no backslash escapes: a backslash is itself, so ${q}\\d${q} is a backslash and a d.`,
+    },
+    {
+      written: `${c}a${c}`,
+      type: "Char",
+      meaning: `Exactly one character between ${c} quotes; a ${c} inside one is doubled, as ${c}${c}${c}${c}.`,
+    },
+    {
+      written: "42",
+      type: NUMBER_TYPE_NAMES.int,
+      meaning: `A whole number is ${NUMBER_TYPE_NAMES.int}, or ${NUMBER_TYPE_NAMES.uint}, ${NUMBER_TYPE_NAMES.long} or ${NUMBER_TYPE_NAMES.ulong}, the first it fits.`,
+    },
+    {
+      written: "1.5",
+      type: NUMBER_TYPE_NAMES.double,
+      meaning: `A number with a decimal point is ${NUMBER_TYPE_NAMES.double}.`,
+    },
+    {
+      written: "2e3",
+      type: NUMBER_TYPE_NAMES.double,
+      meaning: `A number with an exponent is ${NUMBER_TYPE_NAMES.double}.`,
+    },
+  ];
+  for (const [suffix, kind] of Object.entries(NUMBER_SUFFIXES)) {
+    const whole = WHOLE_NUMBER_KINDS.includes(kind);
+    out.push({
+      written: `${whole ? "10" : "1.5"}${suffix}`,
+      type: NUMBER_TYPE_NAMES[kind],
+      meaning: `The suffix ${suffix} (or ${suffix.toLowerCase()}) makes the number ${NUMBER_TYPE_NAMES[kind]}${whole ? "; it needs a whole number" : ""}.`,
+    });
+  }
+  out.push({
+    written: `${NAME_ESCAPE}it`,
+    type: "name",
+    meaning: `${NAME_ESCAPE} before a name makes it a property even when it is a keyword or a type name, so ${NAME_ESCAPE}it is a property named it.`,
+  });
+  return out;
+}
+
+/** How each kind of value is written. */
+export const TE_LITERALS: readonly TeLiteral[] = /* @__PURE__ */ literals();
 
 /** The operators at one level, by spelling, for the parser. */
 export function operatorsAt<Op extends TeOperatorOp>(precedence: number): Record<string, Op> {

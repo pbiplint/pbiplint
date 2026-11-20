@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { HELP } from "../src/args.js";
 
@@ -53,5 +53,21 @@ describe.each([
   it("says a folder that holds several projects is linted in one run, not refused (#237)", () => {
     expect(readme).toContain("holds several projects, pbiplint lints every one in one run");
     expect(readme).not.toMatch(/holds several (exits 2|is refused)/);
+  });
+});
+
+describe("the site's CLI page's links", () => {
+  it("go only to pages the site builds: a page folder in packages/web, or a rule's page", () => {
+    const page = readFileSync(new URL("../../web/content/cli.md", import.meta.url), "utf8");
+    const links = [...page.matchAll(/\]\((\/[^)#]*)(?:#[^)]*)?\)/g)].map((m) => m[1]!);
+    expect(links.length).toBeGreaterThan(3);
+    const missing = links.filter((link) => {
+      const rule = /^\/rules\/([a-z0-9-]+)\/$/.exec(link);
+      const source = rule
+        ? new URL(`../../../rules/${rule[1]}.md`, import.meta.url)
+        : new URL(`../../web${link}index.html`, import.meta.url);
+      return !existsSync(source);
+    });
+    expect(missing).toEqual([]);
   });
 });

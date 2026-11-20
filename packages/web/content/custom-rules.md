@@ -7,7 +7,7 @@ description: How to run your team's own Tabular Editor rules in pbiplint, on thi
 
 pbiplint's own rules are the same for everyone. Most teams also have rules of their own: measures in a folder, visible names in plain words, Power Query that reads only the approved schemas. Custom rules let your team check those too, from the rule files it already keeps in Tabular Editor's Best Practice Analyzer format (`BPARules.json`), with nothing else installed. pbiplint runs them beside its own rules, on the semantic model and the Power Query code it holds, wherever pbiplint runs: on this site, on the command line, in `pbiplint mcp`, and in your GitHub Actions and Azure Pipelines.
 
-On pbiplint.com, custom rules run now. In a [copy your firm hosts](/self-host/), on the command line, and in the pipelines, they run from pbiplint 0.4.0; `pbiplint --version` says which you have. A team that has never written a rule can have an AI assistant write one, with the skill and the reference pbiplint ships ([below](#assistant)).
+On pbiplint.com, custom rules run now. In a [copy your firm hosts](/self-host/), on the command line, and in the pipelines, they run from pbiplint 0.4.0; `pbiplint --version` says which you have, and a self-hosted copy names its version in each page's footer. A team that has never written a rule can have an AI assistant write one, with the skill and the reference pbiplint ships ([below](#assistant)).
 
 A rule file holds rules for the semantic model and its Power Query. Rules for the report, in fab-inspector's format, come in a later release.
 
@@ -63,7 +63,7 @@ A rule file is a JSON array of rules, or an object whose `rules` key holds that 
 
 - **`ID`** names the rule in every finding, in your config, and in `--rule`. Ids match without regard to case. Give your team's rules a prefix, such as `TEAM_`, so they stay apart from pbiplint's; `pbiplint rules` lists those. A rule with one of pbiplint's ids is handled as [the next section](#built-in-ids) says.
 - **`Name`** is the short title every finding shows, and **`Description`** stands in where one of pbiplint's rules links to its page, so whoever meets a finding reads it. Write it in three paragraphs, as a rule page has them: what the rule checks, why the team wants it, and how to fix a finding.
-- **`Category`** groups the rule in the results, written as the file writes it. Custom categories come after pbiplint's own eight, in alphabetical order; a rule with none is in `Custom`.
+- **`Category`** groups the rule in the results, written as the file writes it. Within a severity, custom categories come after pbiplint's own eight, in alphabetical order, as the site's category filter lists them; a rule with none is in `Custom`.
 - **`Scope`** names the object types the rule runs on, separated by commas, such as `"DataColumn, CalculatedColumn, Hierarchy"`. [The reference](#reference-scopes) lists every scope.
 - **`Expression`** is a condition in Tabular Editor's expression language. Each object it is true for is a finding. A bare name such as `IsVisible` is a property of the object the rule runs on, which is also `it`; inside a condition such as `Columns.Any(...)`, `it` is the element being tested, `outerIt` the one a level out, and `current` always the object the rule runs on. The expression is a JSON string, so each `"` inside it is written `\"`.
 - **`Severity`** sets how serious a finding is. A `Severity` below 2 is info, from 2 up to 3 a warning, and 3 or more an error; a rule with none reads as 1, info. Tabular Editor's own command line labels `Severity` 1 as a warning; pbiplint reads 1 as info, as its built-in rules read Microsoft's numbers, so a team moving from it sees those rules as info. Set a rule's severity in your config to change it.
@@ -73,18 +73,19 @@ pbiplint reads at most 2,000 rules from one file, and an `Expression` of at most
 
 <h2 id="built-in-ids">A rule with one of pbiplint's ids</h2>
 
-Most team files start from Microsoft's ruleset, so they carry rules with the same ids as pbiplint's own, which pbiplint already runs. pbiplint tells the copies apart by comparing each one with every version Microsoft and Tabular Editor have published of that rule: [Microsoft's `BPARules.json`](https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json) in every language, and Tabular Editor's own rule files. A copy is unchanged when its scope is the same and its expression is the same, whitespace aside, as any of those versions.
+Most team files start from Microsoft's ruleset, so they carry rules with the same ids as pbiplint's own, which pbiplint already runs. pbiplint tells the copies apart by comparing each one with every version of that rule published when this release was built: [Microsoft's `BPARules.json`](https://github.com/microsoft/Analysis-Services/blob/master/BestPracticeRules/BPARules.json) in every language, and Tabular Editor's own rule files. A copy is unchanged when its scope is the same and its expression is the same, whitespace aside, as any of those versions.
 
 - **An unchanged copy is not run again.** pbiplint runs its own rule, with its rule page.
 - **An unchanged copy with a different severity** sets the severity of pbiplint's rule for that project, since the change is your team's policy. A severity your config sets for the id wins over both.
 - **An edited copy** runs in place of pbiplint's rule for that project, as your team's rule, with its own name and description; pbiplint's rule of that id does not run there.
-- **A copy pbiplint cannot read,** such as one with no scope, never switches pbiplint's rule off: pbiplint's rule runs, and the copy is one `RULE_COULD_NOT_FINISH` finding, as [any rule that cannot run](#cannot-run) is. Turning the id off in your config turns off both.
+- **A copy pbiplint cannot read,** one with no ID, no `Scope` or a report scope, or no `Expression` or one past the limit, never switches pbiplint's rule off: pbiplint's rule runs, and the copy is one `RULE_COULD_NOT_FINISH` finding, as [any rule that cannot run](#cannot-run) is. Turning the id off in your config turns off both.
+- **A copy that reads but cannot run,** such as one whose expression does not parse or names a property pbiplint does not run, is an edited copy: it runs in place of pbiplint's rule as one `RULE_COULD_NOT_FINISH` finding, and pbiplint's rule of that id does not run there. Fix the copy, or delete it to have pbiplint's rule back.
 
-One notice per file says how many of its rules pbiplint runs as its own, which ids your team's rules replace, and how many run as the team's. Two files with the same custom id run an identical rule once; when the two rules differ, the first in `customRules` runs, and a notice names the other. A custom rule can never take the id `PARSE_ISSUE` or `RULE_COULD_NOT_FINISH`: such a rule cannot run, so neither of those safety nets can be replaced.
+A file that holds a rule with one of pbiplint's ids gets one notice, which says how many of its rules pbiplint runs as its own, which ids your team's rules replace, and how many run as the team's. Two files with the same custom id run an identical rule once; when the two rules differ, the first in `customRules` runs, and a notice names the other. A custom rule can never take the id `PARSE_ISSUE` or `RULE_COULD_NOT_FINISH`: such a rule cannot run, so neither of those safety nets can be replaced.
 
 <h2 id="ignore-annotation">Tabular Editor's ignore annotation</h2>
 
-Tabular Editor keeps the rules someone has dismissed in an annotation, `BestPracticeAnalyzer_IgnoreRules`, which Power BI Desktop keeps in the TMDL files. pbiplint honors it for every rule, its own and your team's, beside its own `pbiplint.ignore`:
+Tabular Editor keeps the rules someone has dismissed in an annotation, `BestPracticeAnalyzer_IgnoreRules`, which Power BI Desktop keeps in the TMDL files. pbiplint honors it beside its own `pbiplint.ignore`, for every rule's findings on the model's objects, its own rules and your team's:
 
 ```tmdl
 	column 'Product ID'
@@ -95,6 +96,7 @@ Tabular Editor keeps the rules someone has dismissed in an annotation, `BestPrac
 - **On an object,** it ignores the rules it names on that object.
 - **On the model,** it ignores them on every object in the model.
 - **Ids and the `RuleIDs` key match without regard to case,** as Tabular Editor reads them.
+- **It never hides a `RULE_COULD_NOT_FINISH` or `PARSE_ISSUE` finding,** since Tabular Editor knows nothing of what pbiplint could not read or run, and on the model it reaches the model's objects only, never the report. Only `pbiplint.ignore` hides those.
 - **An annotation that is not a JSON object with a `RuleIDs` list** ignores nothing, and is one [`PARSE_ISSUE`](/rules/parse-issue/) on its line, so it can be fixed. Tabular Editor instead fails every rule that runs on the object.
 
 This changes results for a project that carries the annotation, whether or not it uses custom rules: the findings its authors dismissed in Tabular Editor stop appearing. On pbiplint.com it does so now; on the command line and in a self-hosted copy, from 0.4.0.
@@ -103,7 +105,7 @@ This changes results for a project that carries the annotation, whether or not i
 
 A rule that cannot run is never skipped without a word. It is one [`RULE_COULD_NOT_FINISH`](/rules/rule-could-not-finish/) finding, an error on the model, whose detail names the rule, its file, and the reason, as in `` TEAM_VISIBLE could not finish on the model: rules/team.json: Measure has no property `Visible`; `IsHidden` is the nearest ``. The reason names the cause from the rule's own text, never a name or a value from your model, so it can be shared to get the rule fixed.
 
-A rule cannot run when it has no `Scope`, a scope pbiplint does not know, or a report scope; when its expression does not parse; when it names a property, function, or regular expression construct pbiplint does not run; when it needs statistics from a live model; when it reaches a limit; or when it fails on an object, such as passing an empty value to `RegEx.IsMatch`. A failure on one object stops the rule for the whole project, as it does in Tabular Editor. The other rules in the file still run.
+A rule cannot run when pbiplint cannot read it: it has no ID, no `Scope`, a scope pbiplint does not know, or a report scope, or no `Expression`. A rule that reads can still fail to run: when its expression does not parse; when it names a property, function, or regular expression construct pbiplint does not run; when it needs statistics from a live model; when it reaches a limit; or when it fails on an object, such as passing an empty value to `RegEx.IsMatch`. A failure on one object stops the rule for the whole project, as it does in Tabular Editor. The other rules in the file still run. For a rule with one of pbiplint's ids, the two kinds differ: a copy pbiplint cannot read runs beside pbiplint's rule, and one that reads but cannot run takes its place, as [above](#built-in-ids) says.
 
 The finding fails a gated run, as any error does, so a clean result means every rule ran. The cause is in the rule file, so the fix is there: the reason says what to change, and an assistant can read it and fix the rule ([below](#assistant)). Until then, turning the rule's id off in your config, as in `"TEAM_VISIBLE": "off"`, removes both the rule and the finding.
 
@@ -111,14 +113,14 @@ A property that the project's files leave unset on some objects is different. Po
 
 <h2 id="output">In the output</h2>
 
-A custom finding is always labelled as your team's rule, with its file, so it never passes for one of pbiplint's.
+On the command line, all of this comes with pbiplint 0.4.0. A custom finding is always labelled as your team's rule, with its file, so it never passes for one of pbiplint's.
 
 - **Text and Markdown:** the rule's name and id, then `custom rule, rules/team.json` where a built-in rule's page link would be; the Markdown export adds the rule's description.
 - **JSON:** the group's `rule` has `custom` (`true`), `ruleFile` (the file as `customRules` names it), and `description`; its `url` is this page, and its findings have no `detail`, `messageId`, or `params`. `summary.customRules` lists each file with its rules, the copies pbiplint runs as its own, the ids it replaces, and the rules that could not run. [The CLI page](/cli/#the-json-document) has every field.
 - **SARIF:** the rule's descriptor takes its name as its short description and its description as its help, with no help link, and carries `custom` and `ruleFile`, as each of its results does.
 - **`--quiet`:** a custom rule's line is like any other. An id can hold a space, which the quiet line writes as `%20`, so the line still splits into three fields; `--rule` and `explain` accept the id either way.
 - **`--rule <ID>`** shows a custom rule's findings, as it does a built-in rule's.
-- **`pbiplint explain <ID>`** prints a custom rule's name, file, description, category, severity, scope, and expression, read from the nearest `pbiplint.config.json` above the working folder or the one `--config` names.
+- **`pbiplint explain <ID>`** prints a custom rule's name, file, description, category, severity, scope, and expression, read from the nearest `pbiplint.config.json` in or above the working folder, or the one `--config` names.
 
 <h2 id="on-this-site">On this site</h2>
 
@@ -132,7 +134,7 @@ The pbiplint Action in GitHub Actions and the pbiplint task in Azure Pipelines r
 
 <h2 id="assistant">Write a rule with an AI assistant</h2>
 
-The format is technical, so pbiplint gives an AI assistant what it needs to write a rule and check it:
+The format is technical, so pbiplint gives an AI assistant what it needs to write a rule and check it. On the command line, all three come with pbiplint 0.4.0:
 
 - **A skill.** `pbiplint-custom-rules` takes an assistant through the loop: ask what the rule should catch, with one object that should be flagged and one that should not; read what a rule can use; write the rule, with its description; make sure `customRules` names the file; run `pbiplint <path> --rule <ID>`; check it flags what was meant and nothing else; and when it gives `RULE_COULD_NOT_FINISH`, read the reason, fix the rule, and run it again. `pbiplint skill --install claude` (or `copilot`, `codex`, `gemini`) writes it into your project beside pbiplint's first skill, and `pbiplint skill --name pbiplint-custom-rules` prints it. [The CLI page](/cli/#custom-rule) has the details.
 - **The reference.** `pbiplint reference` prints what a rule can use at the version installed, and `--format json` prints the same as data. It is the [reference below](#reference), built from the same tables pbiplint runs.

@@ -170,7 +170,7 @@ It opens your copy in a headless browser with a fresh profile and watches every 
 
 ### What you will see, and why it is fine
 
-- **Links.** Rule pages link to Microsoft Learn, GitHub, YouTube, and community blogs. Following one is a navigation the person chooses, in a new tab, and every page sets `no-referrer`, so your copy's address is not sent with it.
+- **Links.** Rule pages link to Microsoft Learn, GitHub, YouTube, community blogs, and pbiplint.com. Following one is a navigation the person chooses, in a new tab, and every page sets `no-referrer`, so your copy's address is not sent with it.
 - **Names of pbiplint.com.** Each page's canonical link names `https://pbiplint.com`, which a browser never fetches; it only tells search engines which copy is the original.
 - **Nothing from a project in a URL.** Nothing from a linted project is ever placed in a URL: the results are built in the tab, and an export is a download made in the tab.
 

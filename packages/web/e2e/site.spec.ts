@@ -276,10 +276,14 @@ test("no page scrolls sideways at 320 CSS pixels", async ({ page }) => {
   const wide: string[] = [];
   for (const path of PAGES) {
     await page.goto(path);
-    const { scroll, client } = await page.evaluate(() => ({
-      scroll: document.documentElement.scrollWidth,
-      client: document.documentElement.clientWidth,
-    }));
+    // A closed <details> hides what it holds, such as a wide table, so open them all first.
+    const { scroll, client } = await page.evaluate(() => {
+      for (const d of document.querySelectorAll("details")) d.open = true;
+      return {
+        scroll: document.documentElement.scrollWidth,
+        client: document.documentElement.clientWidth,
+      };
+    });
     if (scroll > client) wide.push(`${path}: ${scroll} > ${client}`);
   }
   expect(wide).toEqual([]);

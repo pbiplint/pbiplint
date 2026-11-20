@@ -1,8 +1,15 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
+import { gzipSync } from "node:zlib";
 import { describe, expect, it, vi } from "vitest";
 import { tempDir } from "../../../tests/support/temp-dir.js";
-import { checkBuild, checkSite, scanTags, siteCheckPlugin } from "../src/build/check-site.js";
+import {
+  checkBuild,
+  checkSite,
+  scanTags,
+  scriptSizes,
+  siteCheckPlugin,
+} from "../src/build/check-site.js";
 import { CSP } from "../src/build/csp.js";
 
 const META = `<meta http-equiv="Content-Security-Policy" content="${CSP}">`;
@@ -290,6 +297,10 @@ describe("siteCheckPlugin", () => {
     expect(logs[1]).toBe(
       "site check passed: CSP on every page, no external resources, no network APIs, every link off the site in a new tab",
     );
+    // The page loads no script, and there is no chunk.
+    expect(logs[2]).toBe(
+      "home page scripts: 0.0 KB (0.0 KB gzipped); custom rules chunk: 0.0 KB (0.0 KB gzipped)",
+    );
   });
 
   it("fails the build, naming every problem it found", () => {
@@ -410,5 +421,42 @@ describe("checkBuild", () => {
     expect(checkBuild(dir, "public")).toEqual([
       'public build: about/index.html has no id="light-and-dark", the section every footer links to',
     ]);
+  });
+});
+
+describe("scriptSizes", () => {
+  const sizeOf = (text: string) => ({
+    bytes: Buffer.byteLength(text),
+    gzipped: gzipSync(text).length,
+  });
+  it("adds up the home page's module script and its modulepreload files, and the custom rules chunk", () => {
+    const home = "export const a = 1;".repeat(40);
+    const nav = "export const n = 2;".repeat(30);
+    const layers = "export const l = 3;".repeat(20);
+    const chunk = "export const c = 4;".repeat(50);
+    const dir = site({
+      "index.html": `<html><head>${META}<link rel="modulepreload" crossorigin href="/assets/nav-1.js"><link rel="modulepreload" crossorigin href="/assets/layers-2.js"></head><body><script type="module" crossorigin src="/assets/home-3.js"></script></body></html>`,
+      "assets/home-3.js": home,
+      "assets/nav-1.js": nav,
+      "assets/layers-2.js": layers,
+      // Another page's script and the chunk itself are not the home page's.
+      "assets/rules-4.js": "export const r = 5;",
+      "assets/custom-rules-5.js": chunk,
+    });
+    const [h, n, l, c] = [home, nav, layers, chunk].map(sizeOf);
+    expect(scriptSizes(dir)).toEqual({
+      home: {
+        bytes: h!.bytes + n!.bytes + l!.bytes,
+        gzipped: h!.gzipped + n!.gzipped + l!.gzipped,
+      },
+      chunk: c,
+    });
+  });
+  it("gives nothing for a chunk that is not there", () => {
+    const dir = site({ "index.html": `<html><head>${META}</head><body></body></html>` });
+    expect(scriptSizes(dir)).toEqual({
+      home: { bytes: 0, gzipped: 0 },
+      chunk: { bytes: 0, gzipped: 0 },
+    });
   });
 });

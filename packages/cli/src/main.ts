@@ -13,6 +13,7 @@ import {
   summaryLine,
 } from "@pbiplint/core";
 import { HELP, parseArgs, UsageError, type CliOptions } from "./args.js";
+import { colourWanted } from "./colour.js";
 import { CONFIG_FILE } from "./config.js";
 import { explainJson, explainRule, explainText, findRule, noRuleLines } from "./explain.js";
 import { EXPLAIN_HINT, quietText } from "./quiet.js";
@@ -44,6 +45,12 @@ export interface Io {
   stdout(text: string): void;
   stderr(text: string): void;
   cwd(): string;
+  /**
+   * Whether stdout is a terminal, and the environment, for colour (#256). Left out, as the MCP
+   * server's runs leave them, the report is never coloured.
+   */
+  isTTY?: boolean;
+  env?: Readonly<Record<string, string | undefined>>;
 }
 
 // The layer column fits the longest layer, powerquery.
@@ -119,6 +126,12 @@ export async function main(argv: string[], given: Io): Promise<number> {
       }
       if (!shownIds.includes(rule.id)) shownIds.push(rule.id);
     }
+    // Colour only the text report on stdout: never --quiet, another format, or a file.
+    const colour =
+      opts.format === "text" &&
+      !opts.quiet &&
+      !opts.output &&
+      colourWanted(given.isTTY ?? false, given.env ?? {});
     const target = opts.sample ? sampleDir() : resolve(io.cwd(), opts.path!);
     const input = resolveInput(target);
     const options: RunOptions = {
@@ -128,7 +141,7 @@ export async function main(argv: string[], given: Io): Promise<number> {
       ...(opts.rules ? { shownIds } : {}),
     };
     if (input.kind === "several")
-      return await several(target, input.projects, opts, options, io, stderrLine);
+      return await several(target, input.projects, opts, options, io, stderrLine, colour);
     const { project } = input;
     const { found, config } = configFor(project.root, options);
     const linted = await lintProject(project, config);
@@ -141,6 +154,7 @@ export async function main(argv: string[], given: Io): Promise<number> {
           pathPrefix: prefix.model ?? prefix.report ?? "",
           reportPathPrefix: prefix.report,
           help: RULE_HELP,
+          colour,
         });
     // The text format is for a person or an assistant reading a terminal, so with findings it
     // ends by naming where each rule's guidance is. Core names no CLI command, so the line is added here.
@@ -195,10 +209,11 @@ async function several(
   options: RunOptions,
   io: Io,
   stderrLine: (line: string) => void,
+  colour: boolean,
 ): Promise<number> {
   const { run, found } = await lintSeveral(folder, projects, options);
   const formats = {
-    text: () => severalText(run),
+    text: () => severalText(run, colour),
     json: () => severalJson(run, VERSION),
     markdown: () => severalMarkdown(run),
     sarif: () => severalSarif(run, { toolVersion: VERSION, help: RULE_HELP }),

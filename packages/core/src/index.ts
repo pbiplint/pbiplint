@@ -37,6 +37,7 @@ export {
 export { runRules, type RuleError, type RunResult, type SkippedRule } from "./engine/run.js";
 export { escapeJsonControls, showControls } from "./format/controls.js";
 export {
+  COLOUR_STYLE,
   countsLine,
   factsLines,
   FORMATS,
@@ -50,6 +51,7 @@ export {
   locationOf,
   markdownText,
   noticeLines,
+  paintCounts,
   plural,
   ruleErrorNotices,
   skippedLine,
@@ -58,7 +60,9 @@ export {
   type CountedRun,
   type FormatName,
   type FormatOptions,
+  type Paint,
   type RuleHelp,
+  type TextStyle,
 } from "./format/index.js";
 export { buildIndexes, type Indexes } from "./index/build.js";
 export { buildReachabilityIndex, type ReachabilityIndex } from "./index/reachability.js";

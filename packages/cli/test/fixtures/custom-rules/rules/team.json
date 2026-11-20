@@ -1,0 +1,46 @@
+[
+  {
+    "ID": "TEAM_MEASURES_IN_FOLDERS",
+    "Name": "Measures sit in a display folder",
+    "Category": "Team conventions",
+    "Description": "Every measure goes in a display folder, so the field list stays easy to browse as the model grows.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "DisplayFolder == \"\""
+  },
+  {
+    "ID": "TEAM_VISIBLE",
+    "Name": "Measures are visible",
+    "Category": "Team conventions",
+    "Description": "Reads Visible, which a measure does not have, so the rule cannot run.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Visible"
+  },
+  {
+    "ID": "PROBE_IGNORE_CUSTOM",
+    "Name": "Every table, measure, and relationship",
+    "Category": "Team conventions",
+    "Description": "Reports each object in its scope, apart from those whose ignore annotation names this rule.",
+    "Severity": 1,
+    "Scope": "Table, Measure, Relationship",
+    "Expression": "true"
+  },
+  {
+    "ID": "TEAM_NO_SCOPE",
+    "Name": "A rule that names no scope",
+    "Category": "Team conventions",
+    "Description": "Has no Scope, so pbiplint cannot tell which objects it reads.",
+    "Severity": 2,
+    "Expression": "true"
+  },
+  {
+    "ID": "TEAM_FLOAT COLUMNS",
+    "Name": "Columns store decimals, not floating point numbers",
+    "Category": "Team conventions",
+    "Description": "A column of floating point numbers can round sums in surprising ways; store a fixed decimal instead.",
+    "Severity": 2,
+    "Scope": "DataColumn, CalculatedColumn",
+    "Expression": "DataType = \"Double\""
+  }
+]

@@ -1,0 +1,20 @@
+[
+  {
+    "ID": "TEAM_MEASURES_IN_FOLDERS",
+    "Name": "Measures sit in a display folder",
+    "Category": "Team conventions",
+    "Description": "Every measure goes in a display folder, so the field list stays easy to browse as the model grows.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "DisplayFolder == \"\""
+  },
+  {
+    "ID": "TEAM_VISIBLE",
+    "Name": "Measures are not hidden",
+    "Category": "Team conventions",
+    "Description": "Has the ID of a rule in team.json and a different expression, so only team.json's rule runs.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "not IsHidden"
+  }
+]

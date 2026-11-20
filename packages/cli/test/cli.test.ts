@@ -1376,3 +1376,55 @@ describe("custom rules from the config (#118)", () => {
     });
   });
 });
+
+describe("custom rules end to end, from the fixture's config (#118)", () => {
+  const fixtureDir = join(repo, "packages/cli/test/fixtures/custom-rules");
+  const fixtureConfig = join(fixtureDir, "pbiplint.config.json");
+  const model = join(repo, "tests/fixtures/custom-rules.SemanticModel");
+  const args = (config: string, ...more: string[]) => ["--config", config, model, ...more];
+
+  it("labels each custom group with its file and puts the duplicate and left-out notices on stderr", async () => {
+    const r = await run(args(fixtureConfig));
+    expect(r.code).toBe(1);
+    // Each custom group's second line names its file in place of a rule page's address.
+    const lines = r.out.split("\n");
+    for (const id of ["TEAM_MEASURES_IN_FOLDERS", "TEAM_FLOAT COLUMNS", "PROBE_IGNORE_CUSTOM"]) {
+      const at = lines.findIndex((l) => l.includes(id) && !l.startsWith("Notice: "));
+      expect(at, id).toBeGreaterThanOrEqual(0);
+      expect(lines[at + 1], id).toContain("custom rule, rules/team.json");
+    }
+    expect(r.out).not.toContain("https://pbiplint.com/custom-rules/");
+    const notices = r.err.split("\n").filter((l) => l.startsWith("pbiplint: notice: "));
+    expect(notices).toEqual([
+      "pbiplint: notice: The custom rule TEAM_VISIBLE in rules/more.json is left out: rules/team.json, earlier in customRules, holds a different rule with the same ID, and only the first runs. Give one of them its own ID.",
+      "pbiplint: notice: The custom rule TEAM_FLOAT COLUMNS in rules/team.json left out 1 object whose files leave unset a value the rule reads, such as a calculated column's data type, and says nothing about it.",
+    ]);
+    // The rules that cannot run are named with their file, without asking for a report.
+    expect(r.out).toContain("The custom rule TEAM_VISIBLE in rules/team.json could not run: ");
+    expect(r.out).toContain("The custom rule TEAM_NO_SCOPE in rules/team.json could not run: ");
+    expect(r.out).not.toMatch(/please report/i);
+    // The identical copy in more.json runs once, under team.json.
+    const doc = JSON.parse((await run(args(fixtureConfig, "--format", "json"))).out);
+    const folders = doc.groups.filter(
+      (g: { rule: { id: string } }) => g.rule.id === "TEAM_MEASURES_IN_FOLDERS",
+    );
+    expect(folders.map((g: { rule: { ruleFile: string } }) => g.rule.ruleFile)).toEqual([
+      "rules/team.json",
+    ]);
+  });
+
+  it("exits 0 once the rules that cannot run are turned off", async () => {
+    const dir = tempDir("custom-fixture-off");
+    cpSync(fixtureDir, dir, { recursive: true });
+    const config = JSON.parse(readFileSync(fixtureConfig, "utf8"));
+    config.rules = { ...config.rules, TEAM_VISIBLE: "off", TEAM_NO_SCOPE: "off" };
+    writeFileSync(join(dir, "pbiplint.config.json"), JSON.stringify(config));
+    const r = await run(args(join(dir, "pbiplint.config.json"), "--format", "json"));
+    expect(r.code).toBe(0);
+    const doc = JSON.parse(r.out);
+    expect(doc.summary.ruleErrors).toEqual([]);
+    expect(doc.summary.errors).toBe(0);
+    expect(doc.summary.rulesSkipped).toContainEqual({ id: "TEAM_VISIBLE", reason: "disabled" });
+    expect(doc.summary.rulesSkipped).toContainEqual({ id: "TEAM_NO_SCOPE", reason: "disabled" });
+  });
+});

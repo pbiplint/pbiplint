@@ -178,7 +178,7 @@ export const UPSTREAM_RULES: readonly UpstreamRule[] = [
   {
     id: "AVOID_DUPLICATE_MEASURES",
     scope: "Measure",
-    hash: "cd9f931bdab3e2e0",
+    hash: "d5ed3b4ceb2d364e",
     severity: 2,
   },
   {
@@ -222,7 +222,7 @@ export const UPSTREAM_RULES: readonly UpstreamRule[] = [
   {
     id: "AVOID_USING_'1-(X/Y)'_SYNTAX",
     scope: "CalculatedColumn,CalculationItem,Measure",
-    hash: "74bdd195633ae0f7",
+    hash: "b27e9a0c39977089",
     severity: 2,
   },
   {
@@ -234,13 +234,13 @@ export const UPSTREAM_RULES: readonly UpstreamRule[] = [
   {
     id: "AVOID_USING_THE_IFERROR_FUNCTION",
     scope: "CalculatedColumn,Measure",
-    hash: "403dac9099d2ad5e",
+    hash: "4e7df5ad6b675593",
     severity: 2,
   },
   {
     id: "AVOID_USING_THE_IFERROR_FUNCTION",
     scope: "CalculatedColumn,Measure",
-    hash: "4e7df5ad6b675593",
+    hash: "c9f01586497a2d6c",
     severity: 2,
   },
   {
@@ -342,13 +342,13 @@ export const UPSTREAM_RULES: readonly UpstreamRule[] = [
   {
     id: "FILTER_COLUMN_VALUES",
     scope: "CalculatedColumn,CalculationItem,Measure",
-    hash: "34b7e82078d7edd1",
+    hash: "a2aacad4a940b39d",
     severity: 2,
   },
   {
     id: "FILTER_MEASURE_VALUES_BY_COLUMNS",
     scope: "CalculatedColumn,CalculationItem,Measure",
-    hash: "a972250c07bfe92c",
+    hash: "f7814dffe7115a38",
     severity: 2,
   },
   {
@@ -367,19 +367,19 @@ export const UPSTREAM_RULES: readonly UpstreamRule[] = [
   {
     id: "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS",
     scope: "CalculatedColumn,CalculatedTableColumn,DataColumn",
-    hash: "aceff1805750824a",
+    hash: "409b1d71b39fa3ce",
     severity: 1,
   },
   {
     id: "HIDE_FACT_TABLE_COLUMNS",
     scope: "CalculatedColumn,CalculatedTableColumn,DataColumn",
-    hash: "8f3b37baff572451",
+    hash: "56d2f6b2cc840b83",
     severity: 2,
   },
   {
     id: "HIDE_FACT_TABLE_COLUMNS",
     scope: "CalculatedColumn,CalculatedTableColumn,DataColumn",
-    hash: "bbacd26039c17d31",
+    hash: "8f3b37baff572451",
     severity: 2,
   },
   {
@@ -433,13 +433,13 @@ export const UPSTREAM_RULES: readonly UpstreamRule[] = [
   {
     id: "LIMIT_ROW_LEVEL_SECURITY_(RLS)_LOGIC",
     scope: "CalculatedTable,Table",
-    hash: "66c57f84d826a042",
+    hash: "17b833200c840e8c",
     severity: 2,
   },
   {
     id: "LIMIT_ROW_LEVEL_SECURITY_(RLS)_LOGIC",
     scope: "CalculatedTable,Table",
-    hash: "bb5899f6cf37df9e",
+    hash: "baaa0b0e46257962",
     severity: 2,
   },
   {
@@ -463,13 +463,13 @@ export const UPSTREAM_RULES: readonly UpstreamRule[] = [
   {
     id: "MEASURES_USING_TIME_INTELLIGENCE_AND_MODEL_IS_USING_DIRECT_QUERY",
     scope: "CalculationItem,Measure",
-    hash: "8bbf320750b446f8",
+    hash: "791e483a4e33d383",
     severity: 2,
   },
   {
     id: "MEASURES_USING_TIME_INTELLIGENCE_AND_MODEL_IS_USING_DIRECT_QUERY",
     scope: "CalculationItem,Measure",
-    hash: "f3e14d9d140d2281",
+    hash: "875f8e47f44e98d2",
     severity: 2,
   },
   {
@@ -487,13 +487,13 @@ export const UPSTREAM_RULES: readonly UpstreamRule[] = [
   {
     id: "MODEL_USING_DIRECT_QUERY_AND_NO_AGGREGATIONS",
     scope: "Model",
-    hash: "a4fd8babc7539458",
+    hash: "8c9ab6e6b401c1d0",
     severity: 1,
   },
   {
     id: "MONTHCOLUMN_FORMATSTRING",
     scope: "CalculatedColumn,CalculatedTableColumn,DataColumn",
-    hash: "814e6c1f2cf0e328",
+    hash: "0d1dfaecc988d59c",
     severity: 1,
   },
   {
@@ -511,7 +511,7 @@ export const UPSTREAM_RULES: readonly UpstreamRule[] = [
   {
     id: "OBJECTS_SHOULD_NOT_START_OR_END_WITH_A_SPACE",
     scope: "CalculatedColumn,DataColumn,Hierarchy,Measure,Model,Partition,Perspective,Table",
-    hash: "b559f355f94ab933",
+    hash: "7d6bbfa373423935",
     severity: 3,
   },
   {
@@ -567,13 +567,13 @@ export const UPSTREAM_RULES: readonly UpstreamRule[] = [
   {
     id: "REDUCE_USAGE_OF_CALCULATED_COLUMNS_THAT_USE_THE_RELATED_FUNCTION",
     scope: "CalculatedColumn",
-    hash: "57eb93c3a2647e9f",
+    hash: "0eb3002b1ef55860",
     severity: 2,
   },
   {
     id: "REDUCE_USAGE_OF_CALCULATED_COLUMNS_THAT_USE_THE_RELATED_FUNCTION",
     scope: "CalculatedColumn",
-    hash: "76ac4b343188d11a",
+    hash: "57eb93c3a2647e9f",
     severity: 2,
   },
   {
@@ -609,7 +609,7 @@ export const UPSTREAM_RULES: readonly UpstreamRule[] = [
   {
     id: "REMOVE_AUTO-DATE_TABLE",
     scope: "CalculatedTable,Table",
-    hash: "846fdc41c9c5c26d",
+    hash: "451fef0e18eff43f",
     severity: 2,
   },
   {
@@ -665,7 +665,7 @@ export const UPSTREAM_RULES: readonly UpstreamRule[] = [
     id: "TRIM_OBJECT_NAMES",
     scope:
       "CalculatedColumn,CalculatedTable,CalculatedTableColumn,CalculationGroup,CalculationItem,DataColumn,Hierarchy,Level,Measure,Model,ModelRole,NamedExpression,Partition,Perspective,ProviderDataSource,StructuredDataSource,Table",
-    hash: "b559f355f94ab933",
+    hash: "7d6bbfa373423935",
     severity: 1,
   },
   {
@@ -713,7 +713,7 @@ export const UPSTREAM_RULES: readonly UpstreamRule[] = [
   {
     id: "USE_THE_DIVIDE_FUNCTION_FOR_DIVISION",
     scope: "CalculatedColumn,Measure",
-    hash: "7ee467372aad5cad",
+    hash: "866edcd74c865499",
     severity: 2,
   },
   {
@@ -725,7 +725,7 @@ export const UPSTREAM_RULES: readonly UpstreamRule[] = [
   {
     id: "USE_THE_TREATAS_FUNCTION_INSTEAD_OF_INTERSECT",
     scope: "CalculationItem,Measure",
-    hash: "536015817115b3ae",
+    hash: "9234344e26a79778",
     severity: 2,
   },
 ];

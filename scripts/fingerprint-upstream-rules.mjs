@@ -49,12 +49,18 @@ const isWhiteSpaceCode = (c) =>
 
 /**
  * An expression's fingerprint, as core's `fingerprint` (custom-rules/te/fingerprint.ts) computes
- * it: whitespace dropped, the UTF-8 bytes hashed with 64-bit FNV-1a, 16 lowercase hex digits.
+ * it: whitespace dropped outside double-quoted string literals (a literal runs to the next `"` that
+ * is not doubled), the UTF-8 bytes hashed with 64-bit FNV-1a (a lone surrogate as U+FFFD, as
+ * `Buffer.from` writes it), 16 lowercase hex digits.
  */
 export function fingerprint(expression) {
   let kept = "";
-  for (let i = 0; i < expression.length; i++)
-    if (!isWhiteSpaceCode(expression.charCodeAt(i))) kept += expression[i];
+  let inLiteral = false;
+  for (let i = 0; i < expression.length; i++) {
+    const c = expression.charCodeAt(i);
+    if (c === 0x22) inLiteral = !inLiteral;
+    if (inLiteral || !isWhiteSpaceCode(c)) kept += expression[i];
+  }
   let h = 0xcbf29ce484222325n;
   for (const b of Buffer.from(kept, "utf8"))
     h = ((h ^ BigInt(b)) * 0x100000001b3n) & 0xffffffffffffffffn;

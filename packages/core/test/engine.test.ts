@@ -5,6 +5,7 @@ import {
   bindConfig,
   CONFIG_KEYS,
   ConfigError,
+  isConfigError,
   resolveConfig,
   type PbiplintConfig,
 } from "../src/engine/config.js";
@@ -129,6 +130,25 @@ describe("resolveConfig", () => {
       /rules\["A"\]\.severity/,
     );
     expect(() => resolveConfig({ rules: { A: [] } })).toThrow(ConfigError);
+  });
+});
+
+describe("isConfigError", () => {
+  it("knows a ConfigError by its mark, so a copy from a separately loaded bundle is known too", () => {
+    expect(isConfigError(new ConfigError("pbiplint.config.json: no"))).toBe(true);
+    // A second copy of the class, as the custom rules entry's bundle carries, shares only the mark.
+    const mark = Symbol.for("pbiplint.ConfigError");
+    class OtherCopy extends Error {
+      readonly [mark] = true;
+    }
+    const other = new OtherCopy("pbiplint.config.json: customRules: rules/team.json is not JSON");
+    expect(other instanceof ConfigError).toBe(false);
+    expect(isConfigError(other)).toBe(true);
+    expect(isConfigError({ [mark]: true, message: "m" })).toBe(true);
+    expect(isConfigError(new Error("pbiplint.config.json: no"))).toBe(false);
+    expect(isConfigError({ [mark]: "yes", message: "m" })).toBe(false);
+    expect(isConfigError(undefined)).toBe(false);
+    expect(isConfigError("pbiplint.config.json")).toBe(false);
   });
 });
 

@@ -165,10 +165,16 @@ function keepOnly(run: ProjectRun, keep: (f: Finding) => boolean, notice: string
 
 /**
  * The custom rules a run ran, each id once as its config's files first write it. One left out for
- * having a pbiplint rule's id is pbiplint's own rule, so it is not counted.
+ * having a pbiplint rule's id is pbiplint's own rule, and one its config turns off did not run, so
+ * neither is counted: another run's findings for it are then that run's own.
  */
 function customIds(run: ProjectRun): string[] {
-  const seen = new Set<string>();
+  const off = new Set(
+    run.result.summary.rulesSkipped
+      .filter((r) => r.reason === "disabled")
+      .map((r) => r.id.toUpperCase()),
+  );
+  const seen = new Set<string>(off);
   const out: string[] = [];
   for (const f of run.result.summary.customRules ?? [])
     for (const id of f.rules)

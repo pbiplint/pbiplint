@@ -719,6 +719,14 @@ describe("the CLI's contract", () => {
     expect((await run(customArgs("--quiet", "--rule", id))).out).toMatch(
       /^warning TEAM_FLOAT%20COLUMNS 2$/m,
     );
+    // The Next: line says to pass the id on, and --rule and explain take it as the line writes it.
+    const written = ruleLines.find((l) => l.includes("%20"))!.split(" ")[1]!;
+    const shown = await run(customArgs("--quiet", "--rule", written));
+    expect(shown.err).not.toMatch(/no rule named/);
+    expect(shown.out).toMatch(/^warning TEAM_FLOAT%20COLUMNS 2$/m);
+    const explained = await run(["explain", written, "--config", customConfig, "--format", "json"]);
+    expect(explained.code).toBe(0);
+    expect(JSON.parse(explained.out).rule.id).toBe("TEAM_FLOAT COLUMNS");
   });
 
   it("5. explain --format json has version 1, the tool, the rule, and its sections, for every rule", async () => {

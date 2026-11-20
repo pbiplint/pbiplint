@@ -33,12 +33,28 @@ export interface ResolvedConfig {
   customRules: string[];
 }
 
+// A mark shared by every copy of the class, as CustomRuleStop's is.
+const CONFIG_ERROR = Symbol.for("pbiplint.ConfigError");
+
 /**
  * A config that cannot be used: the wrong shape, an unknown key, or an option the rule does not
  * declare. Its message names the file and the key at fault, and is written to be shown to the
- * user as it stands, as the CLI and the site do.
+ * user as it stands, as the CLI and the site do. Callers know one by `isConfigError`, not by
+ * `instanceof`: the custom rules entry is its own bundle on the site, with its own copy of this class.
  */
-export class ConfigError extends Error {}
+export class ConfigError extends Error {
+  // On the prototype, so the mark is no own field of an error and two with one message stay equal.
+  get [CONFIG_ERROR](): true {
+    return true;
+  }
+}
+
+/** Whether `e` is a ConfigError from any copy of the core, known by its mark rather than its class. */
+export const isConfigError = (e: unknown): e is ConfigError =>
+  typeof e === "object" &&
+  e !== null &&
+  (e as Record<symbol, unknown>)[CONFIG_ERROR] === true &&
+  typeof (e as { message?: unknown }).message === "string";
 
 export interface BoundConfig {
   /** The same settings keyed by the rules' own ids. */

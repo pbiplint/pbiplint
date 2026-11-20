@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { tempDir } from "../../../tests/support/temp-dir.js";
 import { UsageError } from "../../cli/src/args.js";
-import { noTmdlNote, runSummary, type ProjectRun } from "@pbiplint/core";
+import { isConfigError, noTmdlNote, runSummary, type ProjectRun } from "@pbiplint/core";
 import { lintSeveral } from "../../cli/src/several.js";
 import { lintProjects } from "../src/lint-projects.js";
 import {
@@ -543,6 +543,14 @@ describe("a folder that holds several projects, in the CLI and the browser (#237
     );
     writeFileSync(sales, "{");
     await expect(lintDrop()).rejects.toThrow(new RegExp(`^${at} is not valid JSON: `));
+    // The page does not read rule files yet, so a config naming some refuses the drop in core's
+    // words rather than lint without the team's rules.
+    writeFileSync(sales, j({ customRules: ["rules/team.json"] }));
+    const refused = await lintDrop().catch((e: unknown) => e);
+    expect(isConfigError(refused)).toBe(true);
+    expect((refused as Error).message).toBe(
+      `${at}: customRules names rule files, and this run was not given them`,
+    );
   });
 
   it("caps a run at the same number of projects", () => {

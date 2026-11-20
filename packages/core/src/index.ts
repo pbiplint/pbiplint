@@ -1,6 +1,7 @@
 export { VERSION } from "./version.js";
 export {
   ConfigError,
+  isConfigError,
   resolveConfig,
   SEVERITY_BY_NAME,
   type PbiplintConfig,

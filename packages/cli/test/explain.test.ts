@@ -4,7 +4,15 @@ import { defaultRules } from "@pbiplint/core";
 import { readCustomRules } from "@pbiplint/core/custom-rules";
 import { describe, expect, it } from "vitest";
 import { tempDir } from "../../../tests/support/temp-dir.js";
-import { explainJson, explainRule, explainText, splitSections, suggest } from "../src/explain.js";
+import {
+  explainJson,
+  explainRule,
+  explainText,
+  findCustomRule,
+  shownRuleIds,
+  splitSections,
+  suggest,
+} from "../src/explain.js";
 import { main } from "../src/main.js";
 import { RULE_HELP } from "../src/rule-help.data.js";
 
@@ -225,6 +233,25 @@ describe("explain for a custom rule (#118)", () => {
     expect(text).toContain("Clear\\u001b[2J");
     expect(text).toContain("    true\\u202e");
     expect(explainJson(e, "1.2.3")).toContain("true\\u202e");
+  });
+
+  it("finds a custom id written as --quiet writes it, each whitespace character as %20", () => {
+    const spaced = readCustomRules([
+      {
+        path: "rules/team.json",
+        text: JSON.stringify([
+          { ...TEAM_RULE, ID: "TEAM A" },
+          { ...TEAM_RULE, ID: "TEAM TABLES\tALL" },
+        ]),
+      },
+    ]).rules;
+    expect(findCustomRule("TEAM%20A", spaced)?.id).toBe("TEAM A");
+    expect(findCustomRule("team%20a", spaced)?.id).toBe("TEAM A");
+    expect(findCustomRule("TEAM%20TABLES%20ALL", spaced)?.id).toBe("TEAM TABLES\tALL");
+    expect(findCustomRule("TEAM%20B", spaced)).toBeUndefined();
+    expect(shownRuleIds(["TEAM%20A", "TEAM A"], spaced)).toEqual(["TEAM A"]);
+    const set = { files: [], rules: spaced, notices: [] };
+    expect(explainRule("TEAM%20A", set)).toMatchObject({ rule: { id: "TEAM A", custom: true } });
   });
 
   it("keeps a built-in rule ahead of a custom one, and suggests custom ids", () => {

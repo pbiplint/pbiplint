@@ -2,6 +2,7 @@ import { relative, resolve } from "node:path";
 import {
   COLOUR_STYLE,
   ConfigError,
+  isConfigError,
   escapeJsonControls,
   formatJson,
   formatMarkdown,
@@ -159,7 +160,7 @@ export async function lintSeveral(
         ? await lintProject(project, config, custom)
         : unreadProject(unreadable!, config);
     } catch (e) {
-      if (!(e instanceof ConfigError) || configPath === undefined) throw e;
+      if (!isConfigError(e) || configPath === undefined) throw e;
       throw new ConfigError(`${configPath}: ${e.message.replace(/^pbiplint\.config\.json: /, "")}`);
     }
     customOf.push(custom);

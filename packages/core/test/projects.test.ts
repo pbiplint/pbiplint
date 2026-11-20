@@ -229,6 +229,65 @@ describe("shareModels", () => {
     expect(ofRule(again!.result, "TEAM_B")).toHaveLength(2);
   });
 
+  it("keeps a later project's findings for a custom rule the first project's config turns off", async () => {
+    const teamRule = (id: string) => ({
+      ID: id,
+      Name: `${id} rule`,
+      Severity: 2,
+      Scope: "Measure",
+      Expression: 'Name <> ""',
+    });
+    const custom = (...ids: string[]) =>
+      readCustomRules([
+        { path: "rules/team.json", text: JSON.stringify(ids.map((id) => teamRule(id))) },
+      ]);
+    // The first config turns TEAM_A off, so its findings are listed nowhere but the later run.
+    const a = await lint([...model, ...report(measure("Sales", "A"))], {
+      config: resolveConfig({ failOn: "info", rules: { team_a: "off" } }),
+      customRules: custom("TEAM_A"),
+    });
+    const b = await lint([...model, ...report(column("Sales", "Amount"))], {
+      config,
+      customRules: custom("TEAM_A"),
+    });
+    const ofRule = (r: LintResult, id: string) => r.findings.filter((f) => f.ruleId === id);
+    expect(ofRule(a, "TEAM_A")).toEqual([]);
+    expect(ofRule(b, "TEAM_A")).toHaveLength(2);
+    const [, second] = shareModels([
+      run("a/A.pbip", a, { modelKey: "m" }),
+      run("b/B.pbip", b, { modelKey: "m" }),
+    ]);
+    expect(ofRule(second!.result, "TEAM_A")).toEqual(ofRule(b, "TEAM_A"));
+    expect(second!.result.diagnostics.at(-1)!.message).toBe(
+      "the model is shared with a/A.pbip; its findings are listed there, except those of the custom rules only this project's config adds (TEAM_A)",
+    );
+    // A pbiplint rule's id the first config turns off is the same: the team's rule of that id in
+    // the later run is its own.
+    const copy = readCustomRules([
+      {
+        path: "rules/team.json",
+        text: JSON.stringify([
+          { ...teamRule("hide_foreign_keys"), Scope: "Column", Expression: "true" },
+        ]),
+      },
+    ]);
+    const off = await lint([...model, ...report(measure("Sales", "A"))], {
+      config: resolveConfig({ failOn: "info", rules: { HIDE_FOREIGN_KEYS: "off" } }),
+      customRules: copy,
+    });
+    const later = await lint([...model, ...report(column("Sales", "Amount"))], {
+      config,
+      rules: defaultRules.filter((r) => r.id !== "HIDE_FOREIGN_KEYS"),
+      customRules: copy,
+    });
+    expect(ofRule(later, "hide_foreign_keys").length).toBeGreaterThan(0);
+    const [, kept] = shareModels([
+      run("a/A.pbip", off, { modelKey: "m" }),
+      run("b/B.pbip", later, { modelKey: "m" }),
+    ]);
+    expect(ofRule(kept!.result, "hide_foreign_keys")).toEqual(ofRule(later, "hide_foreign_keys"));
+  });
+
   it("says which config a shared model's findings follow when the configs differ", () => {
     const [first] = shareModels([
       run("a/A.pbip", finance, { modelKey: "m", configPath: "a/pbiplint.config.json" }),

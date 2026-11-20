@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { ConfigError, resolveConfig, type PbiplintConfig } from "@pbiplint/core";
+import { ConfigError, isConfigError, resolveConfig, type PbiplintConfig } from "@pbiplint/core";
 import { LIMITS, readCustomRules, type CustomRuleSet } from "@pbiplint/core/custom-rules";
 import { UsageError } from "./args.js";
 
@@ -82,7 +82,7 @@ export function readCustomRuleFiles(found: FoundConfig): CustomRuleSet | undefin
         );
       text = readFileSync(path, "utf8");
     } catch (e) {
-      if (e instanceof ConfigError) throw e;
+      if (isConfigError(e)) throw e;
       throw refuse(`could not be read (${codeOf(e)})`);
     }
     return { path: name, text };

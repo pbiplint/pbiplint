@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { readCustomRules } from "@pbiplint/core/custom-rules";
 import { buildTomView } from "../src/custom-rules/te/view.js";
-import { resolveConfig, type PbiplintConfig } from "../src/engine/config.js";
+import { isConfigError, resolveConfig, type PbiplintConfig } from "../src/engine/config.js";
 import type { CustomRuleSet } from "../src/engine/custom.js";
 import { lint, type LintFile, type LintResult } from "../src/engine/lint.js";
 import { showOnly } from "../src/engine/show-only.js";
@@ -240,6 +240,51 @@ describe("the engine runs custom rules", () => {
     expect(notice).toHaveLength(1);
     expect(notice[0]).toMatchObject({ path: "rules/team.json" });
     expect(notice[0]!.message).toContain("hide_foreign_keys");
+  });
+
+  it("leaves out of asBuiltIn and the notice an id whose pbiplint rule the config turns off", async () => {
+    // Neither rule runs: the config's off covers the id, and nothing runs in its place.
+    const copy = rule({ ID: "hide_foreign_keys", Scope: "Column", Expression: "true" });
+    const result = await run(set(copy, TEAM_FORMATTED), { rules: { HIDE_FOREIGN_KEYS: "off" } });
+    expect(ofRule(result, "HIDE_FOREIGN_KEYS")).toEqual([]);
+    expect(ofRule(result, "hide_foreign_keys")).toEqual([]);
+    expect(result.summary.rulesSkipped).toContainEqual({
+      id: "HIDE_FOREIGN_KEYS",
+      reason: "disabled",
+    });
+    expect(result.summary.customRules).toEqual([
+      {
+        file: "rules/team.json",
+        rules: ["hide_foreign_keys", "TEAM_FORMATTED"],
+        asBuiltIn: [],
+        replaced: [],
+        notRun: [],
+      },
+    ]);
+    expect(result.diagnostics.filter((d) => d.kind === "custom-rules")).toEqual([]);
+    // Another built-in id in the same file still runs as pbiplint's own, and is still named.
+    const other = rule({ ID: "DAX_COLUMNS_FULLY_QUALIFIED", Expression: "true" });
+    const mixed = await run(set(copy, other), { rules: { hide_foreign_keys: "off" } });
+    expect(mixed.summary.customRules?.[0]?.asBuiltIn).toEqual(["DAX_COLUMNS_FULLY_QUALIFIED"]);
+    const [notice, ...more] = mixed.diagnostics.filter((d) => d.kind === "custom-rules");
+    expect(more).toEqual([]);
+    expect(notice!.message).toBe(
+      "rules/team.json: 1 rule has the ID of a pbiplint rule (DAX_COLUMNS_FULLY_QUALIFIED), so pbiplint runs its own rule in its place.",
+    );
+  });
+
+  it("refuses a run whose config names rule files when it was not given them", async () => {
+    // A team's rules must never pass in silence: a caller that resolved such a config and passed
+    // no set, as the site does today, gets the config's refusal rather than a run without them.
+    const message =
+      "pbiplint.config.json: customRules names rule files, and this run was not given them";
+    const config = { customRules: ["rules/team.json"] };
+    await expect(lint(files, { config })).rejects.toThrow(message);
+    await expect(lint(files, { config: resolveConfig(config) })).rejects.toSatisfy(isConfigError);
+    // Given a set, even one that holds no rules, the run goes ahead; so does a config naming none.
+    const none = { files: [], rules: [], notices: [] };
+    await expect(lint(files, { config, customRules: none })).resolves.toBeDefined();
+    await expect(lint(files, { config: { customRules: [] } })).resolves.toBeDefined();
   });
 
   it("runs a custom rule with a built-in id when pbiplint's rule of that id is not in the run", async () => {

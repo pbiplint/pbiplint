@@ -112,12 +112,15 @@ export function findRule(input: string): Rule | undefined {
 }
 
 /**
- * The custom rule an id names, among `rules`: its id in any case, or failing that its slug, as
- * `findRule` matches a built-in id.
+ * The custom rule an id names, among `rules`: its id in any case, or as a `--quiet` rule line
+ * writes it, each whitespace character as `%20`, which its `Next:` line says to pass on; or
+ * failing those its slug, as `findRule` matches a built-in id.
  */
 export function findCustomRule(input: string, rules: readonly Rule[] = []): Rule | undefined {
   const upper = input.trim().toUpperCase();
-  const exact = rules.find((r) => r.id.toUpperCase() === upper);
+  const exact =
+    rules.find((r) => r.id.toUpperCase() === upper) ??
+    rules.find((r) => r.id.replace(/\s/g, "%20").toUpperCase() === upper);
   if (exact) return exact;
   const wanted = slug(input);
   return wanted === "" ? undefined : rules.find((r) => slug(r.id) === wanted);

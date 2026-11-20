@@ -13,6 +13,7 @@ import type { Finding, LayerName, Rule } from "../rules/types.js";
 import { parseTmdl } from "../tmdl/parse.js";
 import {
   bindConfig,
+  ConfigError,
   isResolvedConfig,
   resolveConfig,
   type PbiplintConfig,
@@ -56,7 +57,9 @@ export interface LintOptions {
   unreadPaths?: Partial<Record<LayerName, string[]>>;
   /**
    * The project's custom rules, as `readCustomRules` (@pbiplint/core/custom-rules) builds them from
-   * the files its config's `customRules` names. They run after `rules`, in file order.
+   * the files its config's `customRules` names. They run after `rules`, in file order. Required
+   * when the config names rule files: a run without them throws a `ConfigError` rather than pass
+   * with the team's rules left out.
    */
   customRules?: CustomRuleSet;
 }
@@ -66,7 +69,10 @@ export interface CustomRulesSummary {
   file: string;
   /** Every rule id the file holds, as written. */
   rules: string[];
-  /** The ids of pbiplint's own rules, which pbiplint runs in their place. */
+  /**
+   * The ids of pbiplint's own rules, which take their place. An id whose pbiplint rule the config
+   * turns off is not here: neither rule runs, and the config's off covers it.
+   */
   asBuiltIn: string[];
   /** The ids of pbiplint's own rules the file's rules run in place of. */
   replaced: string[];
@@ -133,10 +139,20 @@ export async function lint(files: LintFile[], options: LintOptions = {}): Promis
     id.toUpperCase() !== PARSE_ISSUE.id &&
     id.toUpperCase() !== RULE_COULD_NOT_FINISH.id;
   const rules = custom ? [...builtIn, ...custom.rules.filter((r) => !asBuiltIn(r.id))] : builtIn;
-  const { config, unknownRules } = bindConfig(
-    isResolvedConfig(options.config) ? options.config : resolveConfig(options.config),
-    rules,
-  );
+  const resolved = isResolvedConfig(options.config)
+    ? options.config
+    : resolveConfig(options.config);
+  // A run must never pass in silence when a rule did not run (custom rules spec, section 2): a
+  // caller that read the config and not its rule files gets the config's refusal instead.
+  if (resolved.customRules.length > 0 && custom === undefined)
+    throw new ConfigError(
+      "pbiplint.config.json: customRules names rule files, and this run was not given them",
+    );
+  const { config, unknownRules } = bindConfig(resolved, rules);
+  // An id pbiplint's own rule takes, unless the config turns that rule off: then nothing runs in
+  // its place, so the notice and the summary leave it out.
+  const off = new Set([...config.disabled].map((id) => id.toUpperCase()));
+  const tookPlace = (id: string) => asBuiltIn(id) && !off.has(id.toUpperCase());
   const routed = routeFiles(files);
   // A path that names no file the layer reads is a folder, written with its trailing `/` or not.
   const folders = (paths: string[] | undefined, isFile: (path: string) => boolean) =>
@@ -166,7 +182,7 @@ export async function lint(files: LintFile[], options: LintOptions = {}): Promis
   };
   const diagnostics = [...(options.diagnostics ?? []), ...(built?.diagnostics ?? [])];
   for (const f of custom?.files ?? []) {
-    const ids = f.ids.filter(asBuiltIn);
+    const ids = f.ids.filter(tookPlace);
     if (ids.length === 0) continue;
     const one = ids.length === 1;
     diagnostics.push({
@@ -208,7 +224,7 @@ export async function lint(files: LintFile[], options: LintOptions = {}): Promis
       customRules: custom.files.map((f) => ({
         file: f.path,
         rules: f.ids,
-        asBuiltIn: f.ids.filter(asBuiltIn),
+        asBuiltIn: f.ids.filter(tookPlace),
         replaced: [],
         notRun: [...new Set(run.ruleErrors.filter((e) => e.ruleFile === f.path).map((e) => e.id))],
       })),

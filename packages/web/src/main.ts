@@ -1,5 +1,5 @@
 import {
-  ConfigError,
+  isConfigError,
   errorKind,
   lint,
   resolveConfig,
@@ -119,7 +119,7 @@ function problem(message: string): void {
 }
 
 function fail(e: unknown): void {
-  if (e instanceof InputError || e instanceof ConfigError) problem(e.message);
+  if (e instanceof InputError || isConfigError(e)) problem(e.message);
   // Only the class: a message can hold the model's text (v3 spec, section 11.3).
   else
     problem(

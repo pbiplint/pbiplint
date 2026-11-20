@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
 import {
-  ConfigError,
+  isConfigError,
   defaultRules,
   errorKind,
   formatResult,
@@ -194,7 +194,7 @@ export async function main(argv: string[], given: Io): Promise<number> {
       for (const line of e.lines) stderrLine(line);
       return 2;
     }
-    if (e instanceof UsageError || e instanceof ConfigError) {
+    if (e instanceof UsageError || isConfigError(e)) {
       stderrLine(`pbiplint: ${e.message}`);
       if (e instanceof UsageError) {
         for (const line of e.lines) stderrLine(line);

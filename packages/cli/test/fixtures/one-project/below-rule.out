@@ -1,5 +1,5 @@
-pbiplint: 14 of 280 findings shown, 1 rule (14 errors, 0 warnings, 0 info) in 92 files
-Model: 14 files. Report: 78 files. 117 rules run, 5 rules skipped (need a live model)
+pbiplint: 14 of 281 findings shown, 1 rule (14 errors, 0 warnings, 0 info) in 92 files
+Model: 14 files. Report: 78 files. 118 rules run, 5 rules skipped (need a live model)
 Notice: sub/messy-sales is the only project found below the folder given, so it was linted as if given directly
 
 Report at a glance

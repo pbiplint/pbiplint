@@ -8,6 +8,14 @@ for byte, so a several-project change that touches a one-project run fails there
 **Never re-record these on this branch.** They are the record of `release/0.3.0`'s output. A run
 that differs from them is a regression to fix, not a golden to update.
 
+**Re-recorded November 4, 2026,** for the contrast rule (#182), which adds a rule to every run and
+one finding to the sample. The recording kept `0.3.0` where the tool names itself and left out
+message ids and parameters, as the test does when it compares. The difference from the first
+recording was only the new rule's finding and group, the totals and `rulesRun` that count them,
+and the SARIF rule indexes after the new rule's place; anything else would have been a
+regression. A later change that adds a rule or a sample finding re-records the same way, with a
+dated line here.
+
 ## The cases
 
 Two inputs, each with seven options:

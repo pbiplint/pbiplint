@@ -1,5 +1,6 @@
 import type { Rule } from "../types.js";
 import { actionRules } from "./actions.js";
+import { contrastRules } from "./contrast.js";
 import { filterRules } from "./filters.js";
 import { formattingRules } from "./formatting.js";
 import { functionRules } from "./functions.js";
@@ -16,7 +17,7 @@ import { visualRules } from "./visuals.js";
 /**
  * pbiplint's own rules, in the spec's order: references, opening, visuals, pages, measures,
  * periods in DAX, years in filters, user-defined functions, translations, format strings, actions
- * and bookmarks, tab order, and Power Query.
+ * and bookmarks, tab order, text contrast, and Power Query.
  */
 export const pbiplintRules: Rule[] = [
   ...referenceRules,
@@ -31,5 +32,6 @@ export const pbiplintRules: Rule[] = [
   ...formattingRules,
   ...actionRules,
   ...tabOrderRules,
+  ...contrastRules,
   ...powerQueryRules,
 ];

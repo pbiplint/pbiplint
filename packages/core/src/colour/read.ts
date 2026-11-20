@@ -1,15 +1,14 @@
 import { literal } from "../pbir/build.js";
 import type { Report, ThemeFile } from "../pbir/types.js";
-import { parseHex, type Rgba } from "./colour.js";
+import { parseHex, shade, type Rgba } from "./colour.js";
 
 /**
  * Why a colour cannot be known from the project's files, so nothing is said about it: it depends on
- * the data; it has a Percent, whose formula Microsoft does not document; a theme it depends on was
- * not read; a report file it depends on was not read; nothing sets it; or it is written in a form
+ * the data; a theme it depends on was not read; a report file it depends on was not read; nothing sets it; or it is written in a form
  * this does not read.
  */
 export type NotKnown =
-  "data-dependent" | "percent" | "theme-not-read" | "file-not-read" | "not-set" | "other-form";
+  "data-dependent" | "theme-not-read" | "file-not-read" | "not-set" | "other-form";
 
 /** The line of a theme file that supplied a colour. */
 export interface ThemeSetting {
@@ -31,7 +30,7 @@ const notKnown = (why: NotKnown): ColourRead => ({ known: false, why });
  * for one theme's JSON: a colour, or undefined when that theme does not set it. A theme that is
  * named but not read stops the walk, since it may set what a later layer would otherwise answer.
  */
-function fromThemes(
+export function fromThemes(
   themes: Report["themes"],
   look: (
     json: Record<string, unknown>,
@@ -53,7 +52,7 @@ function fromThemes(
 }
 
 /** A value a theme holds for a colour: a hex string, never a reference to another name. */
-function themeValue(
+export function themeValue(
   value: unknown,
   theme: ThemeFile,
   pointer: string,
@@ -71,17 +70,28 @@ export const namedColour = (name: string, themes: Report["themes"]): ColourRead 
   );
 
 /**
- * `ThemeDataColor`. The ColorId mapping is inferred from real files: 0 is the theme's background, 1
- * its foreground, n from 2 the theme's `dataColors[n - 2]`. A theme's `dataColors` is one list, so
- * an id past the end of a custom theme's list is not looked up in the base's.
+ * `ThemeDataColor`, as Power BI Desktop paints it (spec section 10, November 4, 2026): 0 is white
+ * and 1 black, whatever the theme; n from 2 is the theme's `dataColors[n - 2]`. A theme's
+ * `dataColors` is one list, so an id past the end of a custom theme's list is not looked up in the
+ * base's. A Percent shades the colour (`shade`).
  */
 function themeDataColour(ref: Record<string, unknown>, themes: Report["themes"]): ColourRead {
   const percent = ref.Percent ?? 0;
-  if (percent !== 0) return notKnown("percent");
+  if (typeof percent !== "number" || !(percent >= -1 && percent <= 1))
+    return notKnown("other-form");
   const id = ref.ColorId;
   if (typeof id !== "number" || !Number.isInteger(id) || id < 0) return notKnown("other-form");
-  if (id === 0) return namedColour("background", themes);
-  if (id === 1) return namedColour("foreground", themes);
+  const found = id <= 1 ? fixedColour(id) : dataColour(id, themes);
+  return found.known && percent !== 0 ? { ...found, colour: shade(found.colour, percent) } : found;
+}
+
+/** ColorId 0 and 1: white and black, the first two columns of Desktop's theme colour picker. */
+const fixedColour = (id: number): ColourRead => ({
+  known: true,
+  colour: parseHex(id === 0 ? "#FFFFFF" : "#000000")!,
+});
+
+function dataColour(id: number, themes: Report["themes"]): ColourRead {
   return fromThemes(themes, (json, theme, layer) => {
     if (!Array.isArray(json.dataColors)) return undefined;
     const at = id - 2;

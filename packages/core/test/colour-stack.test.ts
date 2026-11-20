@@ -124,24 +124,38 @@ describe("backgroundOf", () => {
     ])
       expectColour(backOf({ visual, page: PAGE_WHITE }), "#FFFFFF", "page");
   });
-  it("takes the theme's background for a visual with show on and no colour", () => {
+  // Both Desktop checks (spec section 10): on with no colour paints white, not the theme's background.
+  it("paints a visual that the theme turns on with no colour white", () => {
     const theme = {
       background: "#ABCDEF",
       visualStyles: { "*": { "*": { background: [{ show: true, transparency: 0 }] } } },
     };
     const b = backOf({ theme });
-    expectColour(b, "#ABCDEF", "visual");
-    expect(b).toMatchObject({
-      layers: [{ source: "baseTheme", file: BASE_FILE, pointer: "/background" }],
-    });
+    expectColour(b, "#FFFFFF", "visual");
+    expect(b).toMatchObject({ layers: [{ source: "baseTheme", file: BASE_FILE }] });
+  });
+  it("lets a theme's visualStyles colour win over the white, as a dark theme's does", () => {
+    const dark = {
+      background: "#202020",
+      visualStyles: {
+        "*": {
+          "*": {
+            background: [
+              { show: true, transparency: 0, color: { solid: { color: "background" } } },
+            ],
+          },
+        },
+      },
+    };
+    expectColour(backOf({ theme: dark }), "#202020", "visual");
   });
   it("blends a part-transparent visual over the page, rounding once", () => {
     const b = backOf({
       visual: { show: true, color: fill("#000000"), transparency: 50 },
       page: PAGE_WHITE,
     });
-    expectColour(b, "#808080", "page");
-    expect(b.known && b.colour).toEqual({ r: 128, g: 128, b: 128, a: 1 });
+    expectColour(b, "#7F7F7F", "page");
+    expect(b.known && b.colour).toEqual({ r: 127, g: 127, b: 127, a: 1 });
     expect(b.known && b.layers.map((l) => l.source)).toEqual(["visual", "page"]);
   });
   it("blends the page over the wallpaper, as Microsoft's themes set them", () => {
@@ -166,6 +180,7 @@ describe("backgroundOf", () => {
         },
       },
     };
+    // Desktop paints this page one unit lighter, #F8F8F8: a known difference (spec section 10).
     expectColour(backOf({ theme: fluent, visual: { show: false } }), "#F7F7F7", "wallpaper");
   });
   it("takes the page's own settings over the theme's", () => {
@@ -204,6 +219,41 @@ describe("backgroundOf", () => {
   });
 });
 
+describe("backgroundOf with Desktop's whole-byte alpha (spec section 10)", () => {
+  const PAGE_GOLD = { background: { color: fill("#FFD700"), transparency: 0 } };
+  it("matches the first Desktop check's blends", () => {
+    expectColour(
+      backOf({ visual: { show: true, color: fill("#000080"), transparency: 50 }, page: PAGE_GOLD }),
+      "#7F6B40",
+      "page",
+    );
+    const clearPage = {
+      background: { color: fill("#FF0000"), transparency: 50 },
+      outspace: { color: fill("#0000FF") },
+    };
+    expectColour(backOf({ visual: { show: false }, page: clearPage }), "#80007F", "wallpaper");
+    expectColour(
+      backOf({ visual: { show: true, color: fill("#00FF00"), transparency: 50 }, page: clearPage }),
+      "#40803F",
+      "wallpaper",
+    );
+    expectColour(
+      backOf({ visual: { show: true, color: fill("#00FF00"), transparency: 0 }, page: clearPage }),
+      "#00FF00",
+      "visual",
+    );
+    expectColour(
+      backOf({
+        visual: { show: false },
+        groups: [{ show: true, color: fill("#222222"), transparency: 50 }],
+        page: PAGE_GOLD,
+      }),
+      "#907C11",
+      "page",
+    );
+  });
+});
+
 describe("backgroundOf and groups", () => {
   it("stops at a group's opaque fill, with a transparent visual inside it", () => {
     const b = backOf({
@@ -228,7 +278,7 @@ describe("backgroundOf and groups", () => {
         groups: [{ show: true, color: fill("#000000"), transparency: 50 }],
         page: PAGE_WHITE,
       }),
-      "#808080",
+      "#7F7F7F",
       "page",
     );
   });
@@ -240,7 +290,7 @@ describe("backgroundOf and groups", () => {
         { color: fill("#0000FF"), transparency: 0 },
       ],
     });
-    expectColour(b, "#800080", "group");
+    expectColour(b, "#80007F", "group");
     expect(b.known && b.layers.map((l) => l.file)).toEqual([
       "definition/pages/p/visuals/g0/visual.json",
       "definition/pages/p/visuals/g1/visual.json",
@@ -382,26 +432,35 @@ describe("backgroundOf and a report file that could not be read", () => {
 });
 
 describe("backgroundOf when it cannot know", () => {
-  it("does not take a group that is on with no colour for one with no paint", () => {
-    const group = { show: true };
-    expect(backOf({ visual: { show: false }, groups: [group], page: PAGE_WHITE })).toEqual({
-      known: false,
-      why: "not-set",
+  it("paints a group that is on with no colour white, as Desktop does", () => {
+    const b = backOf({
+      visual: { show: false },
+      groups: [{ show: true }],
+      page: PAGE_WHITE,
+      theme: {},
     });
+    expectColour(b, "#FFFFFF", "group");
+    expect(b.known && b.layers[0]).toMatchObject({
+      source: "group",
+      pointer: "/visualGroup/objects/background/0/properties/show",
+    });
+  });
+  it("paints a visual that turns itself on with no colour white, not the theme's background", () => {
+    const b = backOf({
+      visual: { show: true },
+      page: PAGE_WHITE,
+      theme: { background: "#ABCDEF" },
+    });
+    expectColour(b, "#FFFFFF", "visual");
   });
   it("says a colour depends on the data", () => {
     expect(
       backOf({ visual: { show: true, color: { solid: { color: { expr: { FillRule: {} } } } } } }),
     ).toEqual({ known: false, why: "data-dependent" });
   });
-  it("says a colour has a Percent", () => {
-    const color = { solid: { color: { expr: { ThemeDataColor: { ColorId: 0, Percent: 0.2 } } } } };
-    expect(
-      backOf({ visual: { show: true, color, transparency: 0 }, theme: { background: "#FFFFFF" } }),
-    ).toEqual({
-      known: false,
-      why: "percent",
-    });
+  it("measures a colour with a Percent", () => {
+    const color = { solid: { color: { expr: { ThemeDataColor: { ColorId: 1, Percent: 0.2 } } } } };
+    expectColour(backOf({ visual: { show: true, color, transparency: 0 } }), "#333333", "visual");
   });
   it("says a theme a needed layer depends on was not read", () => {
     expect(backOf({ theme: "absent" })).toEqual({ known: false, why: "theme-not-read" });

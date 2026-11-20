@@ -124,6 +124,8 @@ export const RULE_SUMMARIES: Readonly<Record<string, string>> = {
     "Tables whose row-level security filter, in any role, calls RIGHT, LEFT, UPPER, LOWER, or FIND.",
   LOCAL_DRIVE_PATH:
     "Text in a Power Query query or parameter that starts with a path on a drive letter, such as `C:\\Demo\\Data\\Sales.csv` or `D:/Exports/`.",
+  LOW_TEXT_CONTRAST:
+    "Report text whose colour is too close to what sits behind it, measured with the contrast ratio and thresholds of WCAG 2.2's Success Criterion 1.4.3: at least 4.5:1, or 3:1 for large text, which is at least 18 point, or 14 point and bold.",
   "MANY-TO-MANY_RELATIONSHIPS_SHOULD_BE_SINGLE-DIRECTION":
     "Many-to-many relationships with bi-directional cross filtering.",
   MARK_PRIMARY_KEYS:

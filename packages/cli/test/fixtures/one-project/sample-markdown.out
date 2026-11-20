@@ -1,6 +1,6 @@
 # pbiplint report
 
-280 findings (19 errors, 84 warnings, 177 info) in 92 files. Model: 14 files. Report: 78 files. 117 rules run, 5 rules skipped (need a live model).
+281 findings (19 errors, 85 warnings, 177 info) in 92 files. Model: 14 files. Report: 78 files. 118 rules run, 5 rules skipped (need a live model).
 
 ## Report at a glance
 
@@ -236,6 +236,14 @@
 | Object | Type | Location | Detail |
 |---|---|---|---|
 | `"Scratch note" on "Scratch"` | Visual | definition/pages/b52832c4d9f487868953/visuals/2a7e16428070011e60ec/visual.json:32 | no alt text |
+
+## WARNING: Text with too little contrast (1) · report
+
+[LOW_TEXT_CONTRAST](https://pbiplint.com/rules/low-text-contrast) · Accessibility
+
+| Object | Type | Location | Detail |
+|---|---|---|---|
+| `"Notes" on "Overview"` | Visual | definition/pages/3cea48e58036b1654474/visuals/49158e1e7dce5e8d37fd/visual.json:25 | Text: #B3B0AD on #FFFFFF is 2.15:1, and 10 pt text needs 4.5:1. `#797674` would be 4.5:1. Text colour from the visual, background from the visual |
 
 ## WARNING: Tab order disagrees with the layout (1) · report
 

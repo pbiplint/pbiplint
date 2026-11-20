@@ -18,6 +18,17 @@ export function parseHex(text: string): Rgba | undefined {
   return { r: pair(0), g: pair(2), b: pair(4), a: digits.length === 8 ? pair(6) / 255 : 1 };
 }
 
+/**
+ * A colour shaded by a theme reference's Percent, as Power BI Desktop paints it (spec section 10,
+ * November 4, 2026): toward white for a Percent above 0, toward black below it, each channel
+ * rounded. The formula of Microsoft's `shadeColor` helper in powerbi-visuals-utils-colorutils.
+ */
+export function shade(c: Rgba, percent: number): Rgba {
+  const one = (v: number): number =>
+    Math.round(percent > 0 ? v + percent * (255 - v) : v * (1 + percent));
+  return { r: one(c.r), g: one(c.g), b: one(c.b), a: c.a };
+}
+
 /** `#RRGGBB`, upper case, each channel rounded. Alpha is not written: blend first. */
 export function toHex(c: Rgba): string {
   const pair = (v: number): string => Math.round(v).toString(16).padStart(2, "0");

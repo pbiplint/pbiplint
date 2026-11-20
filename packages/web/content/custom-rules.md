@@ -96,7 +96,7 @@ Tabular Editor keeps the rules someone has dismissed in an annotation, `BestPrac
 - **On an object,** it ignores the rules it names on that object.
 - **On the model,** it ignores them on every object in the model.
 - **Ids and the `RuleIDs` key match without regard to case,** as Tabular Editor reads them.
-- **It never hides a `RULE_COULD_NOT_FINISH` or `PARSE_ISSUE` finding,** since Tabular Editor knows nothing of what pbiplint could not read or run, and on the model it reaches the model's objects only, never the report. Only `pbiplint.ignore` hides those.
+- **It never hides a finding on the report, a `RULE_COULD_NOT_FINISH`, or a `PARSE_ISSUE` finding,** since Tabular Editor reads only the model and knows nothing of what pbiplint could not read or run. Only `pbiplint.ignore` hides those.
 - **An annotation that is not a JSON object with a `RuleIDs` list** ignores nothing, and is one [`PARSE_ISSUE`](/rules/parse-issue/) on its line, so it can be fixed. Tabular Editor instead fails every rule that runs on the object.
 
 This changes results for a project that carries the annotation, whether or not it uses custom rules: the findings its authors dismissed in Tabular Editor stop appearing. On pbiplint.com it does so now; on the command line and in a self-hosted copy, from 0.4.0.

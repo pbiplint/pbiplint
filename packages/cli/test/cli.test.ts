@@ -98,7 +98,7 @@ describe("pbiplint CLI", () => {
     const r = await run([sample]);
     expect(r.code).toBe(1);
     expect(r.out).toMatch(
-      /^pbiplint: 280 findings \(19 errors, 84 warnings, 177 info\) in 92 files/,
+      /^pbiplint: 281 findings \(19 errors, 85 warnings, 177 info\) in 92 files/,
     );
     expect(r.out).toContain("https://pbiplint.com/rules/provide-format-string-for-measures");
     expect(r.err).toBe("");
@@ -158,6 +158,23 @@ describe("pbiplint CLI", () => {
       // No mobile.json anywhere in the report.
       { layer: "report", label: "Mobile layouts", value: "none" },
       {
+        // The sample's base theme file is not in the project, so most of its text is not measured,
+        // and the line says so rather than reading as a pass.
+        layer: "report",
+        label: "Text contrast",
+        value: "1 measured, 1 below the threshold, 237 not measured",
+        detail: "235 theme file not read, 2 colour not set",
+        counts: {
+          measured: 1,
+          below: 1,
+          notMeasured: 237,
+          "theme-not-read": 235,
+          "not-set": 2,
+          visibilityNotKnown: 0,
+        },
+        ruleId: "LOW_TEXT_CONTRAST",
+      },
+      {
         layer: "report",
         label: "Schema versions",
         value: "report 3.2.0, page 2.1.0, visual 2.8.0",
@@ -176,7 +193,7 @@ describe("pbiplint CLI", () => {
   it("--sample is the same as pointing at the bundled sample", async () => {
     const r = await run(["--sample", "--format", "json"]);
     expect(r.code).toBe(1);
-    expect(JSON.parse(r.out).summary.findings).toBe(280);
+    expect(JSON.parse(r.out).summary.findings).toBe(281);
   });
   it("--sample reads the bundled project, its model and its report, and prints no notice", async () => {
     const r = await run(["--sample", "--fail-on", "none"]);
@@ -216,7 +233,7 @@ describe("pbiplint CLI", () => {
     expect(r.code).toBe(1);
     expect(r.out).toBe("");
     expect(r.err).toBe(
-      "pbiplint: 280 findings (19 errors, 84 warnings, 177 info) in 92 files, wrote out/report.sarif\n",
+      "pbiplint: 281 findings (19 errors, 85 warnings, 177 info) in 92 files, wrote out/report.sarif\n",
     );
   });
   it("prefixes SARIF artifact URIs with the model root's path from the cwd", async () => {
@@ -598,7 +615,7 @@ describe("pbiplint CLI", () => {
     expect(text.err).toBe(`pbiplint: notice: ${notice}\n`);
     expect(text.out).toBe((await run([sample])).out.replace("\n\n", `\nNotice: ${notice}\n\n`));
     const doc = JSON.parse((await run([root, "--format", "json"])).out);
-    expect(doc.summary.findings).toBe(280);
+    expect(doc.summary.findings).toBe(281);
     expect(doc.diagnostics).toEqual([
       { kind: "project-below-input", path: "sub/messy-sales", message: notice },
     ]);
@@ -634,11 +651,11 @@ describe("pbiplint CLI", () => {
     expect(text.code).toBe(1);
     const lines = text.out.split("\n");
     expect(lines.filter((l) => RAW_CONTROL.test(l))).toEqual([]);
-    expect(lines[0]).toMatch(/^pbiplint: 3 projects, 840 findings /);
+    expect(lines[0]).toMatch(/^pbiplint: 3 projects, 843 findings /);
     expect(lines[3]).toBe(
-      "  c\\u000aRun\\u001b[2J  280 findings (19 errors, 84 warnings, 177 info)",
+      "  c\\u000aRun\\u001b[2J  281 findings (19 errors, 85 warnings, 177 info)",
     );
-    expect(text.out).toContain("\nProject 3 of 3: c\\u000aRun\\u001b[2J\npbiplint: 280 findings ");
+    expect(text.out).toContain("\nProject 3 of 3: c\\u000aRun\\u001b[2J\npbiplint: 281 findings ");
   });
   // These tests have the operating system refuse a read, as a POSIX system does for a user, or
   // put a symbolic link where the walk would read (CI runs them on Ubuntu). Root reads a folder

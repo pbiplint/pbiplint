@@ -241,7 +241,7 @@ describe("the CLI's contract", () => {
     const dir = tempDir("contract-output");
     const written = await run([sample, "--format", "json", "--output", "r.json"], dir);
     expect(written.out).toBe("");
-    expect(written.err).toMatch(/^pbiplint: 280 findings .*, wrote r\.json\n$/);
+    expect(written.err).toMatch(/^pbiplint: 281 findings .*, wrote r\.json\n$/);
     expect(() => JSON.parse(readFileSync(join(dir, "r.json"), "utf8"))).not.toThrow();
   });
 
@@ -402,7 +402,8 @@ describe("the CLI's contract", () => {
     expect(modelOnly.layers.report.present).toBe(false);
     expect(doc.summary.shown).toBeUndefined();
     expect(doc.facts.length).toBeGreaterThan(0);
-    for (const f of doc.facts) hasFields(f, ["layer", "label", "value"], ["detail", "ruleId"]);
+    for (const f of doc.facts)
+      hasFields(f, ["layer", "label", "value"], ["detail", "ruleId", "counts"]);
     expect(doc.diagnostics.length).toBeGreaterThan(0);
     for (const d of doc.diagnostics) hasFields(d, ["kind", "message"], ["path"]);
     for (const g of doc.groups) {

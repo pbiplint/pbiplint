@@ -129,7 +129,7 @@ describe("bundled sample", () => {
     const result = await lint(SAMPLE_FILES, { config: resolveConfig(JSON.parse(SAMPLE_CONFIG)) });
     const { summary } = result;
     expect([summary.findings, summary.errors, summary.warnings, summary.infos]).toEqual([
-      280, 19, 84, 177,
+      281, 19, 85, 177,
     ]);
     expect(summary.files).toBe(92);
     expect(result.layers).toEqual({

@@ -123,6 +123,10 @@ A colour that must not change with the theme is set by hand on purpose: a partne
 - Text boxes are not checked, as the source leaves them out, so a hex colour on a text box's text is not reported.
 - Only visuals are read. A hex colour on a page's background or wallpaper, which page.json holds, is not reported.
 
+## Related rules
+
+- `LOW_TEXT_CONTRAST` measures whether text can be read against its background. A palette chosen for contrast reaches only the visuals that use it, so a colour fixed in the theme fixes every visual that takes it.
+
 ## Links
 
 - [Use report themes in Power BI](https://learn.microsoft.com/power-bi/create-reports/desktop-report-themes)

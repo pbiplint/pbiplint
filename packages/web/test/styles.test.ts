@@ -124,6 +124,15 @@ describe("styles.css", () => {
     expect(/\.example figcaption \{[^}]*text-transform: uppercase/.test(css)).toBe(true);
     expect(/\.example figcaption code \{[^}]*text-transform: none/.test(css)).toBe(true);
   });
+  it("edges a contrast sample in a token that shows on the canvas of either theme", () => {
+    // The sample is low contrast on purpose; its 1-pixel edge keeps its outline visible.
+    expect(rule(".contrast-sample")).toMatch(/border: 1px solid var\(--fg-3\)/);
+    expect(rule(".contrast-sample")).toMatch(/max-width: 100%/);
+    for (const scheme of SCHEMES) {
+      expect(contrast("--fg-3", "--canvas", scheme), scheme).toBeGreaterThanOrEqual(3);
+      expect(contrast("--fg-3", "--surface-1", scheme), scheme).toBeGreaterThanOrEqual(3);
+    }
+  });
   it("marks an example that fires in the danger tone and its fix in the success tone", () => {
     // A bar beside each figure, so the pair reads as before and after without reading the
     // captions (pages.ts writes the fires and fixed classes). The config figure has only the

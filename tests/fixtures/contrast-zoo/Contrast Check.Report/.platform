@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Report",
+    "displayName": "Contrast Check"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "dc6f0ed5-015b-46f5-ad8c-ce3764c20653"
+  }
+}

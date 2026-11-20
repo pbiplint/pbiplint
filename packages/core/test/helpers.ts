@@ -7,6 +7,7 @@ import { EN } from "../src/messages/en.js";
 import { msg, templateArgs, type Message } from "../src/messages/format.js";
 import { buildModel } from "../src/model/build.js";
 import type { Model } from "../src/model/types.js";
+import { THEME_FOLDERS } from "../src/pbir/themes.js";
 import type { Finding, Rule, RuleFinding } from "../src/rules/types.js";
 import { parseTmdl } from "../src/tmdl/parse.js";
 import type { ParsedFile } from "../src/tmdl/types.js";
@@ -186,6 +187,14 @@ export function readProjectFiles(root: string): {
       }
     };
     walk(join(base, "definition"));
+    // The JSON directly in each theme folder, as the CLI reads it.
+    for (const way of THEME_FOLDERS) {
+      const dir = join(base, way);
+      if (!existsSync(dir)) continue;
+      for (const name of readdirSync(dir).sort((a, b) => a.localeCompare(b, "en")))
+        if (name.endsWith(".json"))
+          report.push({ path: `${way}/${name}`, text: readFileSync(join(dir, name), "utf8") });
+    }
     // The CLI rides the project's .pbip in the report part by its path relative to the report
     // root, one level up, so a finding on it points at the real file.
     const pbip = readdirSync(root).find((n) => n.endsWith(".pbip"));

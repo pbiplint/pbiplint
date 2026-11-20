@@ -1,5 +1,13 @@
 import { emptyTree, isModelFolder, isReportFolder, type InputTree } from "./project-files.js";
-import { depthCap, markerOf, MAX_DEPTH, SKIP_DIRS, unread, wanted } from "./read-drop.js";
+import {
+  depthCap,
+  markerOf,
+  MAX_DEPTH,
+  readWanted,
+  skipsFolder,
+  unread,
+  wanted,
+} from "./read-drop.js";
 
 // lib.dom does not type the File System Access API's picker or directory iteration, so the shape
 // used here is declared locally. It matches Chrome and Edge.
@@ -54,7 +62,7 @@ async function walkHandle(
   // for that same reason, so a cycle stops at the cap on the picked root's own path as well as on
   // its children. The skip comes first, so a folder that is never read raises no notice about
   // it. MAX_DEPTH, in read-drop.ts, says what the cap is for.
-  if (SKIP_DIRS.has(dir.name)) return;
+  if (skipsFolder(prefix)) return;
   if (depth >= MAX_DEPTH) {
     tree.diagnostics.push(depthCap(prefix));
     return;
@@ -85,7 +93,8 @@ async function walkHandle(
     if (marker) tree.markers.push(marker);
     else if (wanted(path)) {
       try {
-        tree.entries.push({ path, text: await (await handle.getFile()).text() });
+        const text = await readWanted(path, await handle.getFile());
+        if (text !== undefined) tree.entries.push({ path, text });
       } catch (e) {
         unread(tree, path, e);
       }
@@ -95,9 +104,12 @@ async function walkHandle(
 
 /**
  * This route sees paths rather than entries: a directory input enumerates hidden and nested
- * folders too, so the skip is applied to the segments of the reported path.
+ * folders too, so the skip is applied to each folder of the reported path.
  */
-const skipped = (path: string): boolean => path.split("/").some((seg) => SKIP_DIRS.has(seg));
+const skipped = (path: string): boolean => {
+  const dirs = path.split("/").slice(0, -1);
+  return dirs.some((_, i) => skipsFolder(dirs.slice(0, i + 1).join("/")));
+};
 
 /**
  * The folders a reported path passes through whose names `is` accepts, outermost first. A part
@@ -142,7 +154,8 @@ export async function readDirectoryInput(input: HTMLInputElement): Promise<Input
     if (marker) tree.markers.push(marker);
     else if (wanted(path)) {
       try {
-        tree.entries.push({ path, text: await file.text() });
+        const text = await readWanted(path, file);
+        if (text !== undefined) tree.entries.push({ path, text });
       } catch (e) {
         unread(tree, path, e);
       }

@@ -21,7 +21,9 @@ unfinished, or expensive in a report, for a filter held to a fixed year, and
 for what the model holds that the report never reaches; and Power Query, the
 M behind the model's tables and shared expressions, read with Microsoft's
 Power Query parser: 16 rules, 15 of them pbiplint's own. 123 rules in all, 41 of
-them built into pbiplint. The site at https://pbiplint.com runs the code on
+them built into pbiplint. A team's own Tabular Editor rule files run beside
+them, on the site now and on the command line from 0.4.0:
+[Custom rules](https://pbiplint.com/custom-rules/). The site at https://pbiplint.com runs the code on
 main; the command line runs the version npm gives you, and the
 [releases page](https://github.com/pbiplint/pbiplint/releases) lists each
 version with the date it was published.

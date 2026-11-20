@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { lint, resolveConfig } from "@pbiplint/core";
@@ -140,6 +141,24 @@ describe("where the site links the custom rules page", () => {
     expect(built("public/llms.txt")).toContain("(https://pbiplint.com/custom-rules/)");
     expect(built("rules/index.html")).toContain('<a href="/custom-rules/">');
   });
+  it("is linked from the CLI page's Write a custom rule section and its configuration, and from About", () => {
+    const cli = built("cli/index.html");
+    const write = cli.slice(
+      cli.indexOf('<h3 id="custom-rule">'),
+      cli.indexOf('<h3 id="gate-a-build-on-it">'),
+    );
+    expect(write).toContain('<a href="/custom-rules/');
+    const configure = cli.slice(
+      cli.indexOf('<h3 id="configure-it">'),
+      cli.indexOf('<h2 id="contract">'),
+    );
+    expect(configure).toContain('<a href="/custom-rules/');
+    expect(built("about/index.html")).toContain('<a href="/custom-rules/">');
+  });
+  it("is linked from the rule-could-not-finish page's paragraph on a custom rule", () => {
+    const rcnf = built("rules/rule-could-not-finish/index.html");
+    expect(rcnf).toMatch(/custom rule[\s\S]*href="https:\/\/pbiplint\.com\/custom-rules\//);
+  });
 });
 
 describe("the links on the site's content pages", () => {
@@ -202,5 +221,80 @@ describe("referenceHtml", () => {
     const ids = [...referenceHtml(TE_REFERENCE).matchAll(/ id="([^"]+)"/g)].map((m) => m[1]);
     expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) expect(id).toMatch(/^reference-/);
+  });
+});
+
+describe("the pages that list what pbiplint opens or writes", () => {
+  const built = (path: string): string => readFileSync(join(out, path), "utf8");
+  const privacy = readFileSync(join(CONTENT_DIR, "privacy.md"), "utf8");
+  const sha256 = (s: string): string => createHash("sha256").update(s).digest("hex");
+
+  it("keep the Promise's five items and its checks word for word", () => {
+    // A change to either is a change to the Promise itself, which needs its own decision: update
+    // these only with one.
+    const promise = privacy.slice(
+      privacy.indexOf("## The Promise"),
+      privacy.indexOf("## Where it holds"),
+    );
+    const checks = privacy.slice(
+      privacy.indexOf('<h2 id="check">'),
+      privacy.indexOf("These checks show"),
+    );
+    expect(sha256(promise)).toBe(
+      "54eaacd2d5bcff73721942714da7bee581cb93d7442a2809e4aae0119bba11f5",
+    );
+    expect(sha256(checks)).toBe("7a26225773f2cbf4a523fb5fa121044e93a9ae0b8f26748391e19f55981767d7");
+  });
+
+  it("date the site's rule files true for pbiplint.com, which runs main, and for a self-hosted copy", () => {
+    expect(privacy).toContain(
+      "`pbiplint.config.json`, and the rule files its `customRules` names inside that folder (on pbiplint.com now, and in a copy your firm hosts from 0.4.0).",
+    );
+  });
+
+  it("name the rule files among what the command line opens, and both skills among what it writes", () => {
+    expect(privacy).toContain(
+      "along with the nearest `pbiplint.config.json` or the one `--config` names, and from 0.4.0 the rule files its `customRules` names.",
+    );
+    expect(privacy).toContain(
+      "it writes two files (one before 0.4.0), each named `SKILL.md`, into that assistant's skills folder below the current folder (`.claude/skills/pbiplint/` and `.claude/skills/pbiplint-custom-rules/` for Claude Code), or one with `--name`, and reads any copy already there first, so it does not overwrite one you have edited.",
+    );
+    expect(privacy).not.toContain("it writes one file, `SKILL.md`");
+  });
+
+  it("say what pbiplint mcp's tools read given a path, and that the reference tool reads nothing", () => {
+    expect(privacy).toContain(
+      "From 0.4.0, `explain_rule` and `list_rules`, given a `path`, also read the nearest `pbiplint.config.json` from that path up and the rule files its `customRules` names, and `custom_rules_reference` reads nothing.",
+    );
+  });
+
+  it("name the rule files in both pipelines' lint steps", () => {
+    const pipelines = readFileSync(join(CONTENT_DIR, "pipelines.md"), "utf8");
+    const lint = [...pipelines.matchAll(/^2\. \*\*The lint\.\*\*.*$/gm)].map((m) => m[0]);
+    expect(lint).toHaveLength(2);
+    for (const line of lint)
+      expect(line).toMatch(/rule files .*customRules|customRules.*rule files/);
+  });
+
+  it("mark the CLI page's second skill folders from 0.4.0, as its section does", () => {
+    const cli = readFileSync(join(CONTENT_DIR, "cli.md"), "utf8");
+    const table = cli.slice(
+      cli.indexOf("| Assistant | Folders it writes |"),
+      cli.indexOf("GitHub Copilot reads"),
+    );
+    const rows = table.split("\n").filter((l) => l.startsWith("| `"));
+    expect(rows).toHaveLength(3);
+    for (const row of rows)
+      expect(row).toMatch(/, and from 0\.4\.0 `[^`]+pbiplint-custom-rules\/`/);
+  });
+
+  it("set up customRules in the CLI page's configuration section, from 0.4.0", () => {
+    const cli = built("cli/index.html");
+    const configure = cli.slice(
+      cli.indexOf('<h3 id="configure-it">'),
+      cli.indexOf('<h2 id="contract">'),
+    );
+    expect(configure).toContain("<code>customRules</code>");
+    expect(configure).toMatch(/From 0\.4\.0, <code>customRules<\/code>/);
   });
 });

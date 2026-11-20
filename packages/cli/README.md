@@ -93,6 +93,13 @@ picks one explicitly):
 A rule that takes options is set with an object, such as
 `"REDUCE_VISUALS_ON_PAGE": { "severity": "error", "max": 15 }`; each rule's page lists its options.
 
+`customRules` names your team's own rule files, in Tabular Editor's Best Practice Analyzer format
+(`BPARules.json`), by their paths from the config's folder, as in
+`"customRules": ["rules/team.json"]`, and pbiplint runs them beside its own rules; `rules` entries
+work on their ids too. A file that cannot be read stops the run with exit `2`, naming it. The
+format, what happens to a rule with one of pbiplint's ids, and everything a rule can use are on
+https://pbiplint.com/custom-rules/.
+
 To ignore a rule on one object, annotate it in TMDL (Power BI Desktop keeps the annotation):
 
 ```

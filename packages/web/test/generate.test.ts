@@ -789,9 +789,10 @@ describe("generateSite", () => {
     expect(privacy).toContain('<h3 id="in-the-github-action">In your pipelines</h3>');
     expect(privacy).toContain('<a href="/pipelines/">Pipelines</a>');
     // The site's list of the files it opens names the rule files a config's customRules names,
-    // which the site reads from 0.4.0, and only from inside the folder given.
+    // only from inside the folder given: on pbiplint.com, which runs main, now, and in a copy a
+    // firm hosts from the release that brings them.
     expect(privacy).toContain(
-      "<code>.platform</code>, <code>pbiplint.config.json</code>, and the rule files its <code>customRules</code> names inside that folder (from 0.4.0). Everything else in the folder",
+      "<code>.platform</code>, <code>pbiplint.config.json</code>, and the rule files its <code>customRules</code> names inside that folder (on pbiplint.com now, and in a copy your firm hosts from 0.4.0). Everything else in the folder",
     );
     expect(about).toContain('<a href="/cli/">');
     const cli = readFileSync(join(out, "cli/index.html"), "utf8");

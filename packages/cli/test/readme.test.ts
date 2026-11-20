@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { HELP } from "../src/args.js";
 
@@ -56,22 +56,78 @@ describe.each([
   });
 });
 
-describe("the site's CLI page's links", () => {
-  it("go only to pages the site builds: the home page, the rules index, a content page, or a rule's page", () => {
-    // Read from the sources the build writes pages from, so the check holds before any build runs.
+/** Every Markdown page the site builds a content page from, as a path under packages/web/content. */
+const contentPages = (
+  dir = new URL("../../web/content/", import.meta.url),
+  prefix = "",
+): string[] =>
+  readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+    e.isDirectory()
+      ? contentPages(new URL(`${e.name}/`, dir), `${prefix}${e.name}/`)
+      : e.name.endsWith(".md")
+        ? [`${prefix}${e.name}`]
+        : [],
+  );
+
+/** Whether a path on the site is a page the build writes from these sources, or a file it serves. */
+const builds = (written: string): boolean => {
+  // A filter in the query, as in /rules/?layer=powerquery, is the same page; a folder written
+  // without its trailing slash, as in https://pbiplint.com/rules, is served as that folder's page.
+  const path = written.replace(/\?.*$/, "");
+  const link = /\/[^/.]+$/.test(path) ? `${path}/` : path;
+  if (link === "/") return existsSync(new URL("../../web/index.html", import.meta.url));
+  if (link === "/rules/") return true;
+  const rule = /^\/rules\/([a-z0-9-]+)\/$/.exec(link);
+  if (rule) return existsSync(new URL(`../../../rules/${rule[1]}.md`, import.meta.url));
+  const content = /^\/(.+)\/$/.exec(link);
+  if (content) return existsSync(new URL(`../../web/content/${content[1]}.md`, import.meta.url));
+  return existsSync(new URL(`../../web/public${link}`, import.meta.url));
+};
+const sitePaths = (text: string): string[] =>
+  [...text.matchAll(/\]\((\/[^)#]*)(?:#[^)]*)?\)/g)].map((m) => m[1]!);
+
+describe("the site's content pages' links", () => {
+  it.each(contentPages())(
+    "%s links only to pages the site builds: the home page, the rules index, a content page, or a rule's page",
+    (name) => {
+      // Read from the sources the build writes pages from, so the check holds before any build runs.
+      const page = readFileSync(new URL(`../../web/content/${name}`, import.meta.url), "utf8");
+      expect(sitePaths(page).filter((link) => !builds(link))).toEqual([]);
+    },
+  );
+  it("include the CLI page's, which links to several", () => {
     const page = readFileSync(new URL("../../web/content/cli.md", import.meta.url), "utf8");
-    const links = [...page.matchAll(/\]\((\/[^)#]*)(?:#[^)]*)?\)/g)].map((m) => m[1]!);
-    expect(links.length).toBeGreaterThan(3);
-    const missing = links.filter((link) => {
-      if (link === "/") return !existsSync(new URL("../../web/index.html", import.meta.url));
-      if (link === "/rules/") return false;
-      const rule = /^\/rules\/([a-z0-9-]+)\/$/.exec(link);
-      if (rule) return !existsSync(new URL(`../../../rules/${rule[1]}.md`, import.meta.url));
-      const content = /^\/(.+)\/$/.exec(link);
-      return (
-        !content || !existsSync(new URL(`../../web/content/${content[1]}.md`, import.meta.url))
-      );
-    });
+    expect(sitePaths(page).length).toBeGreaterThan(3);
+  });
+  it("to pbiplint.com, in the content pages, the rule pages, and the READMEs, go to pages it builds", () => {
+    const rules = new URL("../../../rules/", import.meta.url);
+    const sources = [
+      ...contentPages().map((n) => new URL(`../../web/content/${n}`, import.meta.url)),
+      ...readdirSync(rules)
+        .filter((f) => f.endsWith(".md"))
+        .map((f) => new URL(f, rules)),
+      new URL("../README.md", import.meta.url),
+      new URL("../../../README.md", import.meta.url),
+    ];
+    const missing = sources.flatMap((url) =>
+      [...readFileSync(url, "utf8").matchAll(/https:\/\/pbiplint\.com(\/[^\s)#>"`]*)/g)]
+        // A sentence's closing stop or comma is not part of the address.
+        .map((m) => m[1]!.replace(/[.,;:]+$/, ""))
+        .filter((link) => !builds(link))
+        .map((link) => `${url.pathname.split("/").slice(-2).join("/")}: ${link}`),
+    );
     expect(missing).toEqual([]);
+  });
+});
+
+describe("the CLI README", () => {
+  it("names customRules in its configuration and points to the custom rules page", () => {
+    const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+    const config = readme.slice(
+      readme.indexOf("## Configuration"),
+      readme.indexOf("## What it checks"),
+    );
+    expect(config).toContain("`customRules`");
+    expect(config).toContain("https://pbiplint.com/custom-rules/");
   });
 });

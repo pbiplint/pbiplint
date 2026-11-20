@@ -1,4 +1,13 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  rmdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { CliOptions } from "./args.js";
@@ -56,38 +65,162 @@ export interface InstallResult {
   installed?: string;
 }
 
+/** The file system calls an install makes, so a test can make one fail. */
+export interface SkillFs {
+  mkdirSync: (path: string, options: { recursive: true }) => string | undefined;
+  writeFileSync: (path: string, data: string) => void;
+  renameSync: (from: string, to: string) => void;
+  rmSync: (path: string, options: { force: true }) => void;
+  rmdirSync: (path: string) => void;
+}
+
+const NODE_FS: SkillFs = { mkdirSync, writeFileSync, renameSync, rmSync, rmdirSync };
+
+/** Why an install could not finish, in one line for `pbiplint: ` to start; nothing is left written. */
+export class SkillInstallError extends Error {}
+
+/** A path below `root` as the CLI shows one: relative, with forward slashes. */
+const shownPath = (root: string, path: string): string =>
+  relative(root, path).split("\\").join("/");
+
+/** A file system error in a few words, as `EACCES: permission denied`, without the path. */
+function why(e: unknown): string {
+  const err = e as { code?: unknown; message?: unknown };
+  const message = typeof err.message === "string" ? err.message.split(", ")[0]! : String(e);
+  const code = typeof err.code === "string" ? err.code : undefined;
+  return code && !message.startsWith(code) ? `${code}: ${message}` : message;
+}
+
+/**
+ * The first step on the way from `root` to `path` that is there and is not a folder, or the skill
+ * file's own place when a folder is there; undefined when nothing stands in the way.
+ */
+function blocker(root: string, path: string): string | undefined {
+  const steps = relative(root, path).split(/[\\/]/);
+  let at = root;
+  for (const [i, step] of steps.entries()) {
+    at = join(at, step);
+    let stat;
+    try {
+      stat = statSync(at);
+    } catch {
+      return undefined;
+    }
+    const last = i === steps.length - 1;
+    if (last ? !stat.isFile() : !stat.isDirectory()) return at;
+  }
+  return undefined;
+}
+
 /**
  * Writes each skill (all of them, or those `names` gives) where `target` reads it, all or nothing:
  * every copy is checked before any is written. A copy already there is left alone when it
  * matches; when one differs and `force` is not set, nothing is written and that copy's outcome is
- * "differs". `dryRun` writes nothing and says what would happen.
+ * "differs". A file where a folder should be, or a folder where a skill file should be, stops the
+ * install with a SkillInstallError before anything is written. Otherwise every folder is made
+ * first, each copy is written beside its target under a temporary name, and then each is moved
+ * into place; when any step fails, the temporary files, the folders it made, and any copy already
+ * moved are undone, and a SkillInstallError says what failed. `dryRun` writes nothing and says
+ * what would happen.
  */
 export function installSkills(
   root: string,
   target: SkillTarget,
-  options: { force?: boolean; dryRun?: boolean; names?: readonly SkillName[] } = {},
+  options: {
+    force?: boolean;
+    dryRun?: boolean;
+    names?: readonly SkillName[];
+    fs?: Partial<SkillFs>;
+  } = {},
 ): InstallResult[] {
+  const fs: SkillFs = { ...NODE_FS, ...options.fs };
   const planned = (options.names ?? SKILL_NAMES).map((name) => {
     const path = skillPath(root, target, name);
+    const stops = blocker(root, path);
+    if (stops !== undefined)
+      throw new SkillInstallError(
+        `cannot install the skills: ${shownPath(root, stops)} is ${stops === path ? "a folder, not a file" : "a file, not a folder"}; move it and run again`,
+      );
     const text = skillText(name);
     const version = skillVersion(text) ?? "";
     let result: InstallResult = { name, outcome: "written", path, version };
+    let before: string | undefined;
     if (existsSync(path)) {
-      const current = readFileSync(path, "utf8");
-      const installed = skillVersion(current);
-      const outcome = current === text ? "unchanged" : options.force ? "replaced" : "differs";
+      try {
+        before = readFileSync(path, "utf8");
+      } catch (e) {
+        throw new SkillInstallError(
+          `cannot install the skills: could not read ${shownPath(root, path)} (${why(e)})`,
+        );
+      }
+      const installed = skillVersion(before);
+      const outcome = before === text ? "unchanged" : options.force ? "replaced" : "differs";
       result = { name, outcome, path, version, installed };
     }
-    return { result, text };
+    return { result, text, before };
   });
   const refused = planned.some((p) => p.result.outcome === "differs");
-  if (!refused && !options.dryRun)
-    for (const { result, text } of planned) {
-      if (result.outcome === "unchanged") continue;
-      mkdirSync(dirname(result.path), { recursive: true });
-      writeFileSync(result.path, text);
-    }
+  if (!refused && !options.dryRun) write(root, planned, fs);
   return planned.map((p) => p.result);
+}
+
+/** The writing half of installSkills: folders, then temporary files, then each moved into place. */
+function write(
+  root: string,
+  planned: { result: InstallResult; text: string; before?: string }[],
+  fs: SkillFs,
+): void {
+  const todo = planned.filter((p) => p.result.outcome !== "unchanged");
+  const made: string[] = [];
+  const temps: string[] = [];
+  const moved: typeof todo = [];
+  let step = "";
+  try {
+    for (const { result } of todo) {
+      const folder = dirname(result.path);
+      step = `could not create ${shownPath(root, folder)}`;
+      const first = fs.mkdirSync(folder, { recursive: true });
+      // The folders this call made, deepest first, ahead of those made before them, so an undo
+      // removes each before its parent.
+      const chain: string[] = [];
+      if (first !== undefined)
+        for (let at = folder; ; at = dirname(at)) {
+          chain.push(at);
+          if (at === first || at === dirname(at)) break;
+        }
+      made.unshift(...chain);
+    }
+    const unique = `.pbiplint-${process.pid}-${Date.now()}.tmp`;
+    for (const { result, text } of todo) {
+      const temp = result.path + unique;
+      step = `could not write ${shownPath(root, result.path)}`;
+      temps.push(temp);
+      fs.writeFileSync(temp, text);
+    }
+    for (const [i, p] of todo.entries()) {
+      step = `could not move ${shownPath(root, p.result.path)} into place`;
+      fs.renameSync(temps[i]!, p.result.path);
+      moved.push(p);
+    }
+  } catch (e) {
+    // Undo quietly: what cannot be undone is left, and the first failure is the one reported.
+    const quietly = (f: () => void) => {
+      try {
+        f();
+      } catch {
+        // left as it is
+      }
+    };
+    for (const p of moved)
+      quietly(() =>
+        p.before === undefined
+          ? fs.rmSync(p.result.path, { force: true })
+          : fs.writeFileSync(p.result.path, p.before),
+      );
+    for (const temp of temps) quietly(() => fs.rmSync(temp, { force: true }));
+    for (const folder of made) quietly(() => fs.rmdirSync(folder));
+    throw new SkillInstallError(`cannot install the skills: ${step} (${why(e)})`);
+  }
 }
 
 /**
@@ -137,8 +270,15 @@ export function runSkill(opts: CliOptions, io: Io, stderrLine: (line: string) =>
     io.stdout(skillText(opts.name));
     return 0;
   }
-  const results = installSkills(root, opts.install, { ...opts, names });
-  const shown = (r: InstallResult) => relative(root, r.path).split("\\").join("/");
+  let results: InstallResult[];
+  try {
+    results = installSkills(root, opts.install, { ...opts, names });
+  } catch (e) {
+    if (!(e instanceof SkillInstallError)) throw e;
+    stderrLine(`pbiplint: ${e.message}`);
+    return 2;
+  }
+  const shown = (r: InstallResult) => shownPath(root, r.path);
   const differs = results.filter((r) => r.outcome === "differs");
   if (differs.length) {
     // Nothing was written; one line for each copy that stopped it.

@@ -1,12 +1,21 @@
 import { execFileSync } from "node:child_process";
-import { cpSync, mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
+import {
+  chmodSync,
+  cpSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  renameSync,
+} from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { tempDir } from "../../../tests/support/temp-dir.js";
 import { parseArgs } from "../src/args.js";
 import { main } from "../src/main.js";
-import { SKILLS, skillPath, skillText, skillVersion } from "../src/skill.js";
+import { installSkills, SKILLS, skillPath, skillText, skillVersion } from "../src/skill.js";
 
 const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as {
   version: string;
@@ -322,6 +331,87 @@ describe("pbiplint skill, with two skills (from 0.4.0)", () => {
     expect(r.err.trimEnd().split("\n")).toHaveLength(1);
     expect(r.err).toContain(".claude/skills/pbiplint-custom-rules/SKILL.md differs");
     expect(existsSync(join(dir, ".claude/skills/pbiplint"))).toBe(false);
+  });
+
+  it("refuses, writing nothing, when a folder on a target path is a plain file", async () => {
+    const dir = tempDir("skill-plain-file");
+    mkdirSync(join(dir, ".claude/skills"), { recursive: true });
+    writeFileSync(join(dir, ".claude/skills/pbiplint-custom-rules"), "a plain file\n");
+    for (const argv of [
+      ["skill", "--install", "claude"],
+      ["skill", "--install", "claude", "--dry-run"],
+      ["skill", "--install", "claude", "--force"],
+    ]) {
+      const r = await run(argv, dir);
+      expect(r.code, argv.join(" ")).toBe(2);
+      expect(r.out).toBe("");
+      expect(r.err).toBe(
+        "pbiplint: cannot install the skills: .claude/skills/pbiplint-custom-rules is a file, not a folder; move it and run again\n",
+      );
+    }
+    expect(readdirSync(join(dir, ".claude/skills"))).toEqual(["pbiplint-custom-rules"]);
+  });
+
+  it("writes neither copy when a write fails, and leaves no temporary file or new folder", () => {
+    const dir = tempDir("skill-write-fails");
+    let writes = 0;
+    const failing = (path: string, data: string) => {
+      if (++writes === 2) throw Object.assign(new Error("no space left"), { code: "ENOSPC" });
+      writeFileSync(path, data);
+    };
+    expect(() => installSkills(dir, "claude", { fs: { writeFileSync: failing } })).toThrow(
+      /^cannot install the skills: .*no space left/,
+    );
+    expect(writes).toBe(2);
+    expect(existsSync(join(dir, ".claude"))).toBe(false);
+    // A copy being replaced keeps its old text when the other one fails.
+    const path = skillPath(dir, "claude");
+    mkdirSync(join(path, ".."), { recursive: true });
+    writeFileSync(path, "an edited copy\n");
+    writes = 0;
+    expect(() =>
+      installSkills(dir, "claude", { force: true, fs: { writeFileSync: failing } }),
+    ).toThrow(/no space left/);
+    expect(readFileSync(path, "utf8")).toBe("an edited copy\n");
+    expect(readdirSync(join(dir, ".claude/skills"))).toEqual(["pbiplint"]);
+    expect(readdirSync(join(dir, ".claude/skills/pbiplint"))).toEqual(["SKILL.md"]);
+  });
+
+  it("restores the first copy when the second cannot be moved into place", () => {
+    const dir = tempDir("skill-rename-fails");
+    const path = skillPath(dir, "claude");
+    mkdirSync(join(path, ".."), { recursive: true });
+    writeFileSync(path, "an edited copy\n");
+    let renames = 0;
+    const failing = (from: string, to: string) => {
+      if (++renames === 2) throw Object.assign(new Error("busy"), { code: "EBUSY" });
+      renameSync(from, to);
+    };
+    expect(() =>
+      installSkills(dir, "claude", { force: true, fs: { renameSync: failing } }),
+    ).toThrow(/busy/);
+    expect(readFileSync(path, "utf8")).toBe("an edited copy\n");
+    expect(readdirSync(join(dir, ".claude/skills"))).toEqual(["pbiplint"]);
+    expect(readdirSync(join(dir, ".claude/skills/pbiplint"))).toEqual(["SKILL.md"]);
+  });
+
+  it("reports a folder it may not write as one line, exit 2, with the other copy not written", async () => {
+    const dir = tempDir("skill-read-only");
+    const locked = join(dir, ".claude/skills/pbiplint-custom-rules");
+    mkdirSync(locked, { recursive: true });
+    chmodSync(locked, 0o555);
+    try {
+      const r = await run(["skill", "--install", "claude"], dir);
+      expect(r.code).toBe(2);
+      expect(r.out).toBe("");
+      expect(r.err.split("\n")).toHaveLength(2);
+      expect(r.err).toMatch(/^pbiplint: cannot install the skills: .*EACCES.*\n$/);
+      expect(r.err).not.toMatch(/\n\s+at /);
+      expect(existsSync(join(dir, ".claude/skills/pbiplint"))).toBe(false);
+      expect(readdirSync(locked)).toEqual([]);
+    } finally {
+      chmodSync(locked, 0o755);
+    }
   });
 
   it("sync-version writes the CLI's version into both skills", () => {

@@ -42,5 +42,32 @@
     "Severity": 2,
     "Scope": "DataColumn, CalculatedColumn",
     "Expression": "DataType = \"Double\""
+  },
+  {
+    "ID": "ENSURE_TABLES_HAVE_RELATIONSHIPS",
+    "Name": "Each table takes part in a relationship",
+    "Category": "Team conventions",
+    "Description": "A copy of a published rule with its expression laid out on two lines and its scopes in another order, so pbiplint runs its own rule.",
+    "Severity": 1,
+    "Scope": "CalculatedTable, Table",
+    "Expression": "UsedInRelationships.Count()\n    == 0"
+  },
+  {
+    "ID": "HIDE_FOREIGN_KEYS",
+    "Name": "Foreign key columns are hidden",
+    "Category": "Team conventions",
+    "Description": "A copy of a published rule at a lower severity than the published one, so pbiplint runs its own rule at this severity.",
+    "Severity": 1,
+    "Scope": "DataColumn, CalculatedColumn, CalculatedTableColumn",
+    "Expression": "UsedInRelationships.Any(FromColumn.Name == current.Name and FromCardinality == \"Many\")\n\r\nand\r\n\nIsHidden == false"
+  },
+  {
+    "ID": "OBJECTS_WITH_NO_DESCRIPTION",
+    "Name": "Visible measures have a description",
+    "Category": "Team conventions",
+    "Description": "A copy of a published rule narrowed to measures, so it runs as the team's rule in place of pbiplint's.",
+    "Severity": 1,
+    "Scope": "Measure",
+    "Expression": "string.IsNullOrWhitespace(Description)\r\nand\r\nIsHidden == false"
   }
 ]

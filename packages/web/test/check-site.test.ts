@@ -2,10 +2,13 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { gzipSync } from "node:zlib";
 import { describe, expect, it, vi } from "vitest";
+import { STATISTICS_REASON } from "@pbiplint/core/custom-rules";
 import { tempDir } from "../../../tests/support/temp-dir.js";
 import {
   checkBuild,
+  checkChunks,
   checkSite,
+  CUSTOM_RULES_PROBE,
   scanTags,
   scriptSizes,
   siteCheckPlugin,
@@ -318,6 +321,17 @@ describe("siteCheckPlugin", () => {
     expect(logs).toHaveLength(1);
   });
 
+  it("checks the custom rules chunk when told which build it is, in both builds", () => {
+    for (const build of ["public", "self-host"] as const) {
+      const dir = site({
+        "index.html": `<html><head>${META}</head><body></body></html>`,
+        "assets/a.js": 'document.createElement("a");',
+      });
+      const { error } = run(dir, build);
+      expect(error?.message).toContain("assets: no custom-rules-*.js chunk");
+    }
+  });
+
   it("checks the build's shape too when told which build it is", () => {
     const dir = site({
       "index.html": `<html><head>${META}</head><body><footer><p class="site-version">pbiplint 0.3.0</p></footer></body></html>`,
@@ -458,5 +472,46 @@ describe("scriptSizes", () => {
       home: { bytes: 0, gzipped: 0 },
       chunk: { bytes: 0, gzipped: 0 },
     });
+  });
+});
+
+describe("checkChunks", () => {
+  it("probes for the chunk with the text of the entry's statistics reason", () => {
+    expect(CUSTOM_RULES_PROBE).toBe(STATISTICS_REASON);
+  });
+  it("passes one chunk that alone holds the custom rules code", () => {
+    const dir = site({
+      "assets/home-1.js": 'import("./custom-rules-2.js");',
+      "assets/custom-rules-2.js": `const r = ${JSON.stringify(CUSTOM_RULES_PROBE)};`,
+    });
+    expect(checkChunks(dir)).toEqual([]);
+  });
+  it("names a build with no chunk, or with more than one", () => {
+    expect(checkChunks(site({ "assets/home-1.js": "" }))).toEqual([
+      "assets: no custom-rules-*.js chunk",
+    ]);
+    expect(checkChunks(site({ "index.html": "" }))).toEqual(["assets: no custom-rules-*.js chunk"]);
+    const two = site({
+      "assets/custom-rules-1.js": CUSTOM_RULES_PROBE,
+      "assets/custom-rules-2.js": "",
+    });
+    expect(checkChunks(two)).toEqual(["assets: 2 custom-rules-*.js chunks, where one is expected"]);
+  });
+  it("names any other script holding the custom rules code, which belongs in the chunk only", () => {
+    const dir = site({
+      "assets/home-1.js": `const r = ${JSON.stringify(CUSTOM_RULES_PROBE)};`,
+      "assets/custom-rules-2.js": CUSTOM_RULES_PROBE,
+      "rules/x.js": CUSTOM_RULES_PROBE,
+    });
+    expect(checkChunks(dir)).toEqual([
+      "assets/home-1.js: holds the custom rules code, which belongs in its chunk only",
+      "rules/x.js: holds the custom rules code, which belongs in its chunk only",
+    ]);
+  });
+  it("names a chunk that does not hold the custom rules code", () => {
+    const dir = site({ "assets/custom-rules-2.js": "export {};" });
+    expect(checkChunks(dir)).toEqual([
+      "assets/custom-rules-2.js: does not hold the custom rules code",
+    ]);
   });
 });

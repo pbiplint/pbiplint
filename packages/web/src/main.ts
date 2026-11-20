@@ -29,6 +29,10 @@ import {
   withLearnLinks,
 } from "./results/render.js";
 import { SAMPLE_NAME, SAMPLE_TREE } from "./sample.js";
+// Brings the custom rules chunk into the build, so the site check holds it to its own file in
+// both builds. Nothing here calls the loader yet; the page fetches the chunk at idle once a drop
+// can read rule files, and this line then becomes that import.
+import "./rule-files.js";
 
 /**
  * The page's own element, checked rather than cast: a #paste that stopped being a textarea would

@@ -29,7 +29,15 @@ export default defineConfig(({ mode }) => {
       siteCheckPlugin({ build: selfHost ? "self-host" : "public" }),
     ],
     resolve: {
-      alias: { "@pbiplint/core": join(repo, "packages/core/src/index.ts") },
+      // Exact matches, as vitest.config.ts has them: a plain "@pbiplint/core" key would also catch
+      // "@pbiplint/core/custom-rules" and send it to a path under index.ts.
+      alias: [
+        { find: /^@pbiplint\/core$/, replacement: join(repo, "packages/core/src/index.ts") },
+        {
+          find: /^@pbiplint\/core\/custom-rules$/,
+          replacement: join(repo, "packages/core/src/custom-rules/index.ts"),
+        },
+      ],
     },
     server: { fs: { allow: [repo] } },
     build: {

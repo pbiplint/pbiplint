@@ -3,6 +3,7 @@ export {
   ConfigError,
   isConfigError,
   resolveConfig,
+  ruleFileName,
   SEVERITY_BY_NAME,
   type PbiplintConfig,
   type ResolvedConfig,

@@ -1,6 +1,12 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { ConfigError, isConfigError, resolveConfig, type PbiplintConfig } from "@pbiplint/core";
+import {
+  ConfigError,
+  isConfigError,
+  resolveConfig,
+  ruleFileName,
+  type PbiplintConfig,
+} from "@pbiplint/core";
 import { LIMITS, readCustomRules, type CustomRuleSet } from "@pbiplint/core/custom-rules";
 import { UsageError } from "./args.js";
 
@@ -41,10 +47,6 @@ export function findConfig(startDir: string, explicit?: string): FoundConfig {
     dir = parent;
   }
 }
-
-/** A `customRules` entry as the output names it: forward slashes, no leading `./`. */
-export const ruleFileName = (entry: string): string =>
-  entry.replace(/\\/g, "/").replace(/^\.\//, "");
 
 /** Node's code for an error it raised (`ENOENT`, `EACCES`), else the error's class. */
 const codeOf = (e: unknown): string =>

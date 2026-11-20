@@ -69,6 +69,9 @@ const contentPages = (
         : [],
   );
 
+/** The files the site build writes into public/ itself (packages/web/src/build/generate.ts). */
+const BUILT_FILES = new Set(["/llms.txt", "/sitemap.xml"]);
+
 /** Whether a path on the site is a page the build writes from these sources, or a file it serves. */
 const builds = (written: string): boolean => {
   // A filter in the query, as in /rules/?layer=powerquery, is the same page; a folder written
@@ -81,6 +84,8 @@ const builds = (written: string): boolean => {
   if (rule) return existsSync(new URL(`../../../rules/${rule[1]}.md`, import.meta.url));
   const content = /^\/(.+)\/$/.exec(link);
   if (content) return existsSync(new URL(`../../web/content/${content[1]}.md`, import.meta.url));
+  // Files the build writes into public/ (generate.ts), absent before a build, as in CI's tests.
+  if (BUILT_FILES.has(link)) return true;
   return existsSync(new URL(`../../web/public${link}`, import.meta.url));
 };
 const sitePaths = (text: string): string[] =>

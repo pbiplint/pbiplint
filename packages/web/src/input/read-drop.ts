@@ -6,6 +6,7 @@ import {
   isReportFolder,
   type InputMarker,
   type InputTree,
+  type OpenFile,
 } from "./project-files.js";
 
 /** A report's JSON: anything under the definition folder directly inside a .Report folder. */
@@ -134,6 +135,7 @@ async function readLoose(file: File, tree: InputTree): Promise<void> {
     tree.markers.push(marker);
     return;
   }
+  tree.handles.set(file.name, () => Promise.resolve(file));
   if (!wanted(file.name)) return;
   try {
     tree.entries.push({ path: file.name, text: await file.text() });
@@ -177,12 +179,13 @@ export async function walkEntry(entry: FileSystemEntry, tree: InputTree, depth =
       tree.markers.push(marker);
       return;
     }
+    // The opener is kept for every file passed, and is how a wanted file is read below too.
+    const open: OpenFile = () =>
+      new Promise<File>((resolve, reject) => (entry as FileSystemFileEntry).file(resolve, reject));
+    tree.handles.set(path, open);
     if (!wanted(path)) return;
     try {
-      const file = await new Promise<File>((resolve, reject) =>
-        (entry as FileSystemFileEntry).file(resolve, reject),
-      );
-      const text = await readWanted(path, file);
+      const text = await readWanted(path, await open());
       if (text !== undefined) tree.entries.push({ path, text });
     } catch (e) {
       unread(tree, path, e);

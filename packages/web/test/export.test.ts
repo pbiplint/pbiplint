@@ -3,6 +3,8 @@ import { lint, resolveConfig, VERSION } from "@pbiplint/core";
 import { readCustomRules } from "@pbiplint/core/custom-rules";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  ASSISTANT_CUSTOM_NOTE,
+  ASSISTANT_PREAMBLE,
   copy,
   download,
   exportForAssistant,
@@ -189,6 +191,102 @@ describe("export for an AI assistant", () => {
     if (own.ignore) expect(section).not.toContain(own.ignore);
     expect(section).toContain("rules/team.json");
     expect(section).toContain(description);
+  });
+
+  it("stays byte for byte as it was for a run with no team's rule", () => {
+    // The shape before custom rules: the preamble, the Markdown report, then each rule's heading,
+    // its guidance, and its page.
+    const before = ["## How to fix these findings", ""];
+    for (const { rule } of result.groups) {
+      const g = RULE_GUIDANCE[rule.id];
+      before.push(`### ${rule.name} (${rule.id})`, "");
+      if (g) before.push("**How to fix it**", "", g.fix, "");
+      if (g?.ignore) before.push("**When to ignore it**", "", g.ignore, "");
+      before.push(`Rule page: ${rule.url}`, "");
+    }
+    expect(copied).toBe(
+      [ASSISTANT_PREAMBLE, exportMarkdown(result).text.trimEnd(), "", before.join("\n")].join("\n"),
+    );
+    expect(copied).not.toContain(ASSISTANT_CUSTOM_NOTE);
+    expect(copied).not.toContain("Custom rules in pbiplint");
+  });
+
+  describe("with a team's own rules", () => {
+    const description = "What it checks.\nWhy the team wants it.\nHow to fix it.";
+    const teamRules = (ids: string[]) =>
+      readCustomRules([
+        {
+          path: "rules/team.json",
+          text: JSON.stringify(
+            ids.map((ID) => ({
+              ID,
+              Name: `The team's ${ID}`,
+              Category: "Team conventions",
+              Severity: 2,
+              Scope: "Table",
+              Expression: "true",
+              Description: description,
+            })),
+          ),
+        },
+      ]);
+    const lintWith = (ids: string[]) =>
+      lint(SAMPLE_FILES, {
+        config: resolveConfig(JSON.parse(SAMPLE_CONFIG)),
+        customRules: teamRules(ids),
+      });
+
+    it("says once, under the preamble, what a team's rule is and where its guidance lives", async () => {
+      expect(ASSISTANT_CUSTOM_NOTE).toBe(
+        "A rule marked as the team's own comes from the team's rule file, named beside it. Its description is the only guidance there is, and `npx pbiplint explain <RULE_ID>` prints its expression. Fix the project to meet the rule, or, if the rule itself is wrong, its file.",
+      );
+      const text = exportForAssistant(await lintWith(["TEAM_ONE", "TEAM_TWO"])).text;
+      expect(text.split(ASSISTANT_CUSTOM_NOTE).length - 1).toBe(1);
+      expect(
+        text.startsWith(`${ASSISTANT_PREAMBLE}\n${ASSISTANT_CUSTOM_NOTE}\n\n# pbiplint report\n`),
+      ).toBe(true);
+    });
+
+    it("gives a team's rule its description and file, no How to fix it, and the custom rules page", async () => {
+      const run = await lintWith(["TEAM_ONE"]);
+      const text = exportForAssistant(run).text;
+      const guidance = text.slice(text.indexOf("## How to fix these findings"));
+      const start = guidance.indexOf("### The team's TEAM_ONE (TEAM_ONE)");
+      expect(start).toBeGreaterThan(0);
+      const next = guidance.indexOf("\n### ", start + 1);
+      const section = guidance.slice(start, next === -1 ? undefined : next);
+      expect(section).toBe(
+        [
+          "### The team's TEAM_ONE (TEAM_ONE)",
+          "",
+          `The team's own rule, from rules/team.json: ${description}`,
+          "",
+          "Custom rules in pbiplint: https://pbiplint.com/custom-rules/",
+          "",
+        ].join("\n"),
+      );
+      expect(section).not.toContain("**How to fix it**");
+      expect(section).not.toContain("Rule page:");
+      // pbiplint's own rules keep their pages beside it.
+      expect(guidance).toContain(`Rule page: ${result.groups[0]!.rule.url}`);
+    });
+
+    it("carries a team's rule, its file, and its description in the Markdown and JSON downloads", async () => {
+      const run = await lintWith(["TEAM_ONE"]);
+      const md = exportMarkdown(run).text;
+      // Core's Markdown writes a team's id as input text, escaped, and its description on one line.
+      expect(md).toMatch(/TEAM\\?_ONE.* · custom rule, rules\/team\.json · Team conventions/);
+      expect(md).toContain("What it checks. Why the team wants it. How to fix it.");
+      const doc = JSON.parse(exportJson(run).text);
+      const group = doc.groups.find((g: { rule: { id: string } }) => g.rule.id === "TEAM_ONE");
+      expect(group.rule).toMatchObject({
+        custom: true,
+        ruleFile: "rules/team.json",
+        description,
+        url: "https://pbiplint.com/custom-rules/",
+        category: "Team conventions",
+      });
+    });
   });
 
   it("leaves each rule's Example on its page", () => {

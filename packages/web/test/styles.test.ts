@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { lint, resolveConfig } from "@pbiplint/core";
+import { readCustomRules } from "@pbiplint/core/custom-rules";
 import { describe, expect, it } from "vitest";
 import { renderResults } from "../src/results/render.js";
 import { SAMPLE_CONFIG, SAMPLE_FILES } from "../src/sample.js";
@@ -155,6 +156,45 @@ describe("styles.css", () => {
       expect(contrast("--layer-powerquery", "--canvas", scheme)).toBeGreaterThanOrEqual(4.5);
       expect(contrast("--layer-powerquery", "--surface-1", scheme)).toBeGreaterThanOrEqual(4.5);
     }
+  });
+  it("styles a team's rule tag and description, with every class they bring, readable in both themes", async () => {
+    const team = JSON.stringify([
+      {
+        ID: "TEAM_TABLES",
+        Name: "Tables follow the team's convention",
+        Category: "Team conventions",
+        Description: "What it checks.\nHow to fix it.",
+        Severity: 3,
+        Scope: "Table",
+        Expression: "true",
+      },
+    ]);
+    const custom = await lint(SAMPLE_FILES, {
+      config: resolveConfig(JSON.parse(SAMPLE_CONFIG)),
+      customRules: readCustomRules([{ path: "rules/team.json", text: team }]),
+    });
+    const container = document.createElement("section");
+    renderResults(container, custom, { source: "the sample project" });
+    const used = [...classesIn(container)];
+    for (const c of ["team-tag", "rule-description"]) expect(used).toContain(c);
+    expect(used.filter((c) => !new RegExp(`\\.${c}\\b`).test(css))).toEqual([]);
+    // Outlined like a layer tag, in a pill's shape, so it is told from one by its outline as well
+    // as its words. Its text is --fg-1, on the canvas in the fix-first list and on --surface-1 in
+    // a group; its edge is --fg-3, a mark (WCAG 1.4.11) on both.
+    const tag = rule(".team-tag");
+    expect(tag).toMatch(/color: var\(--fg-1\)/);
+    expect(tag).toMatch(/border: 1px solid var\(--fg-3\)/);
+    expect(tag).toMatch(/border-radius: 999px/);
+    // The description keeps the rule file's line breaks and wraps a long word.
+    const description = rule(".group .rule-description");
+    expect(description).toMatch(/white-space: pre-line/);
+    expect(description).toMatch(/overflow-wrap: anywhere/);
+    expect(description).toMatch(/color: var\(--fg-1\)/);
+    for (const scheme of SCHEMES)
+      for (const bg of ["--canvas", "--surface-1"]) {
+        expect(contrast("--fg-1", bg, scheme), `${scheme} ${bg}`).toBeGreaterThanOrEqual(4.5);
+        expect(contrast("--fg-3", bg, scheme), `${scheme} ${bg}`).toBeGreaterThanOrEqual(3);
+      }
   });
   it("gives the light theme values for tokens only, and only for tokens the dark theme has", () => {
     // The light theme repaints; it never restyles. A selector or a new name here would be a rule

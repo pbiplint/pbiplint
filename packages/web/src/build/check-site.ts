@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
+import { gzipSync } from "node:zlib";
 import type { Plugin } from "vite";
 import { GERMAN_PROBE } from "../../../core/build/m-parser-build.mjs";
 import { CONTROL_CHARACTER, THEME_HELP_ID, THEME_HELP_PATH } from "./pages.js";
@@ -225,6 +226,89 @@ function walk(dir: string): string[] {
   );
 }
 
+/** A size on disk and gzipped, in bytes. */
+export interface Size {
+  bytes: number;
+  gzipped: number;
+}
+
+/** The custom rules entry's chunk, which the home page fetches at idle and never names in its HTML. */
+const CHUNK = /^custom-rules-[^/]*\.js$/;
+
+const sizeOf = (files: string[]): Size =>
+  files.reduce(
+    (sum, file) => {
+      const data = readFileSync(file);
+      return { bytes: sum.bytes + data.length, gzipped: sum.gzipped + gzipSync(data).length };
+    },
+    { bytes: 0, gzipped: 0 },
+  );
+
+/**
+ * What a visit to the home page downloads before anything is dropped: the module script in
+ * index.html and the files it preloads (`home`), and the custom rules chunk (`chunk`), each on
+ * disk and gzipped. Measured here rather than taken from Vite, so they are the folder's as it
+ * ships.
+ */
+export function scriptSizes(dir: string): { home: Size; chunk: Size } {
+  const index = join(dir, "index.html");
+  const tags = existsSync(index) ? scanTags(readFileSync(index, "utf8")) : [];
+  const home = tags.flatMap((tag) => {
+    const path =
+      tag.name === "script" && tag.attrs.get("type") === "module"
+        ? tag.attrs.get("src")
+        : tag.name === "link" && tag.attrs.get("rel") === "modulepreload"
+          ? tag.attrs.get("href")
+          : undefined;
+    return path ? [join(dir, path)] : [];
+  });
+  const assets = join(dir, "assets");
+  const chunk = existsSync(assets)
+    ? readdirSync(assets)
+        .filter((name) => CHUNK.test(name))
+        .map((name) => join(assets, name))
+    : [];
+  return { home: sizeOf(home), chunk: sizeOf(chunk) };
+}
+
+const kb = (bytes: number): string => `${(bytes / 1024).toFixed(1)} KB`;
+
+/** The build's line for the pull request: what the home page loads, and the chunk it fetches at idle. */
+export const scriptSizesLine = ({ home, chunk }: { home: Size; chunk: Size }): string =>
+  `home page scripts: ${kb(home.bytes)} (${kb(home.gzipped)} gzipped); custom rules chunk: ${kb(chunk.bytes)} (${kb(chunk.gzipped)} gzipped)`;
+
+/**
+ * Text only the custom rules code holds: the entry's STATISTICS_REASON, written out here because
+ * the build check does not load core (a test holds the two equal). Its place tells the check that
+ * the code sits in its own chunk and has not been folded into a script every page loads.
+ */
+export const CUSTOM_RULES_PROBE =
+  "needs statistics from a live model that a project's files do not hold; run the rule in Tabular Editor against a deployed model";
+
+/**
+ * Holds the custom rules code to its chunk, in both builds: exactly one `assets/custom-rules-*.js`,
+ * which holds the code, and no other script that does. The home page fetches that chunk once it
+ * is idle, so a page that carried the code itself would make every visitor download it twice.
+ */
+export function checkChunks(dir: string): string[] {
+  const assets = join(dir, "assets");
+  const chunks = existsSync(assets) ? readdirSync(assets).filter((name) => CHUNK.test(name)) : [];
+  if (chunks.length === 0) return ["assets: no custom-rules-*.js chunk"];
+  if (chunks.length > 1)
+    return [`assets: ${chunks.length} custom-rules-*.js chunks, where one is expected`];
+  const chunk = `assets/${chunks[0]!}`;
+  const problems: string[] = [];
+  for (const file of walk(dir).sort()) {
+    const rel = relative(dir, file).split("\\").join("/");
+    if (!(rel.endsWith(".js") || rel.endsWith(".mjs"))) continue;
+    const holds = readFileSync(file, "utf8").includes(CUSTOM_RULES_PROBE);
+    if (rel === chunk && !holds) problems.push(`${rel}: does not hold the custom rules code`);
+    if (rel !== chunk && holds)
+      problems.push(`${rel}: holds the custom rules code, which belongs in its chunk only`);
+  }
+  return problems;
+}
+
 /** Which of the two builds of one commit a folder holds: pbiplint.com's, or the one a firm hosts. */
 export type BuildKind = "public" | "self-host";
 
@@ -289,13 +373,14 @@ export function siteCheckPlugin({ build }: { build?: BuildKind } = {}): Plugin {
     },
     closeBundle() {
       const report = checkSite(outDir);
-      if (build) report.problems.push(...checkBuild(outDir, build));
+      if (build) report.problems.push(...checkBuild(outDir, build), ...checkChunks(outDir));
       console.log(`site: ${report.files} files, ${(report.bytes / 1024).toFixed(0)} KB`);
       if (report.problems.length)
         throw new Error(`site check failed:\n  ${report.problems.join("\n  ")}`);
       console.log(
         "site check passed: CSP on every page, no external resources, no network APIs, every link off the site in a new tab",
       );
+      console.log(scriptSizesLine(scriptSizes(outDir)));
     },
   };
 }

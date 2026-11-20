@@ -26,6 +26,9 @@ export interface InputEntry {
   text: string;
 }
 
+/** Opens one file a walk passed: called only once something asks for that file by name. */
+export type OpenFile = () => Promise<File>;
+
 /** A legacy part's marker file, or a .pbix, seen by name and never opened. */
 export interface InputMarker {
   path: string;
@@ -50,6 +53,14 @@ export interface InputTree {
    * .pbix: seen by name, never opened.
    */
   markers: InputMarker[];
+  /**
+   * An opener for every file the walk passed outside a skipped folder, by drop-relative path,
+   * wanted or not: the entry's `file()` for a drop, the handle's `getFile()` for the picker, the
+   * `File` itself for the directory input and a file dropped on its own. The walk opens none of
+   * them through this map; a reader that learns later which file it needs (a rule file a config
+   * names) opens that one and nothing else. A marker has none, since it is never opened.
+   */
+  handles: Map<string, OpenFile>;
   /** What the walk could not do: a folder past the depth cap, a file or folder that failed to read. */
   diagnostics: Diagnostic[];
   /**
@@ -83,6 +94,7 @@ export const emptyTree = (): InputTree => ({
   modelFolders: [],
   reportFolders: [],
   markers: [],
+  handles: new Map(),
   diagnostics: [],
   unreadFolders: [],
 });

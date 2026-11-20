@@ -1,8 +1,16 @@
 import { MAX_THEME_BYTES, pbixRefusal } from "@pbiplint/core";
 import { describe, expect, it } from "vitest";
-import { emptyTree, InputError, selectProject } from "../src/input/project-files.js";
+import {
+  emptyTree,
+  InputError,
+  selectProject,
+  type InputTree,
+} from "../src/input/project-files.js";
 import { readDirectoryInput, readPickedDirectory } from "../src/input/pick-folder.js";
 import { MAX_DEPTH } from "../src/input/read-drop.js";
+
+/** A tree with its handles as the paths they open, so a whole tree compares with toEqual. */
+const bare = (tree: InputTree | null) => tree && { ...tree, handles: [...tree.handles.keys()] };
 
 type Handle =
   | { kind: "file"; name: string; getFile(): Promise<File> }
@@ -95,8 +103,9 @@ describe("readPickedDirectory", () => {
       dirHandle(".git", [fileHandle("x.tmdl", "never")]),
     ]);
     const out = await readPickedDirectory(async () => picked as never);
-    expect(out).toEqual({
+    expect(bare(out)).toEqual({
       ...emptyTree(),
+      handles: ["Demo.SemanticModel/definition.pbism", "Demo.SemanticModel/definition/model.tmdl"],
       entries: [{ path: "Demo.SemanticModel/definition/model.tmdl", text: "model Model\n" }],
       modelFolders: ["Demo.SemanticModel"],
     });
@@ -145,7 +154,7 @@ describe("readPickedDirectory", () => {
     const out = await readPickedDirectory(
       async () => dirHandle("Proj", [fileHandle("notes.txt", "")]) as never,
     );
-    expect(out).toEqual(emptyTree());
+    expect(bare(out)).toEqual({ ...emptyTree(), handles: ["Proj/notes.txt"] });
     expect(() => selectProject(out!)).toThrow(new InputError(NOTHING));
   });
   it("reads nothing when the picked folder is itself one of the skipped folders", async () => {
@@ -413,7 +422,12 @@ describe("readDirectoryInput", () => {
     } as unknown as HTMLInputElement;
     for (const input of [none, some]) {
       const out = await readDirectoryInput(input);
-      expect(out).toEqual({ ...emptyTree(), directoryInput: true });
+      expect(out).toEqual({
+        ...emptyTree(),
+        directoryInput: true,
+        handles: input === some ? expect.any(Map) : new Map(),
+      });
+      if (input === some) expect([...out.handles.keys()]).toEqual(["Proj/notes.txt"]);
       expect(() => selectProject(out)).toThrow(new InputError(`${NOTHING} ${DRAG}`));
     }
   });
@@ -425,9 +439,10 @@ describe("readDirectoryInput", () => {
       webkitRelativePath: "Demo.Report/report.json",
     });
     const input = { files: [f, junk] } as unknown as HTMLInputElement;
-    expect(await readDirectoryInput(input)).toEqual({
+    expect(bare(await readDirectoryInput(input))).toEqual({
       ...emptyTree(),
       directoryInput: true,
+      handles: ["Demo.SemanticModel/definition/tables/T.tmdl"],
       entries: [{ path: "Demo.SemanticModel/definition/tables/T.tmdl", text: "table T\n" }],
       modelFolders: ["Demo.SemanticModel"],
       reportFolders: ["Demo.Report"],
@@ -495,9 +510,20 @@ describe("readDirectoryInput", () => {
         at("Proj/Demo.pbip", "{}"),
       ],
     } as unknown as HTMLInputElement;
-    expect(await readDirectoryInput(input)).toEqual({
+    expect(bare(await readDirectoryInput(input))).toEqual({
       ...emptyTree(),
       directoryInput: true,
+      handles: [
+        "Proj/New.Report/definition.pbir",
+        "Proj/New.Report/.platform",
+        "Proj/New.Report/definition/report.json",
+        "Proj/New.Report/definition/pages/p/visuals/v/visual.json",
+        "Proj/New.Report/definition/pages/p/visuals/v/mobile.json",
+        // In a theme folder the walkers pass through, so kept, and opened by no one.
+        "Proj/New.Report/StaticResources/SharedResources/x.tmdl",
+        "Proj/New.Report/StaticResources/RegisteredResources/x.tmdl",
+        "Proj/Demo.pbip",
+      ],
       entries: [
         { path: "Proj/New.Report/definition.pbir", text: "{}" },
         { path: "Proj/New.Report/.platform", text: "{}" },
@@ -591,5 +617,87 @@ describe("readDirectoryInput", () => {
     expect(out.refusal).toEqual({ path: "M/Sales.tmdl", reason: "locked" });
     // This route lists no folder, so it never has one it could not list.
     expect(out.unreadFolders).toEqual([]);
+  });
+});
+
+/** A file handle whose getFile() is counted and still answers. */
+const countedHandle = (name: string, text: string, opened: string[]): Handle => ({
+  kind: "file",
+  name,
+  getFile: async () => {
+    opened.push(name);
+    return new File([text], name);
+  },
+});
+
+describe("the picker's handles", () => {
+  it("keeps an unopened handle on every file outside a skipped folder, and none on a marker", async () => {
+    const opened: string[] = [];
+    const picked = dirHandle("Team", [
+      fileHandle("pbiplint.config.json", "{}"),
+      dirHandle("rules", [
+        countedHandle("team.json", "[]", opened),
+        countedHandle("notes.txt", "", opened),
+      ]),
+      dirHandle(".git", [countedHandle("a.json", "", opened)]),
+      dirHandle("node_modules", [countedHandle("b.json", "", opened)]),
+      dirHandle("X.Report", [
+        neverOpened("report.json", opened),
+        dirHandle(".pbi", [countedHandle("c.json", "", opened)]),
+        dirHandle("StaticResources", [dirHandle("Other", [countedHandle("d.json", "", opened)])]),
+      ]),
+      neverOpened("Sales.pbix", opened),
+    ]);
+    const out = (await readPickedDirectory(async () => picked as never))!;
+    expect(opened).toEqual([]);
+    expect([...out.handles.keys()]).toEqual([
+      "Team/pbiplint.config.json",
+      "Team/rules/team.json",
+      "Team/rules/notes.txt",
+    ]);
+    expect(out.entries.map((e) => e.path)).toEqual(["Team/pbiplint.config.json"]);
+    const rule = await out.handles.get("Team/rules/team.json")!();
+    expect(await rule.text()).toBe("[]");
+    expect(opened).toEqual(["team.json"]);
+  });
+  it("keeps no handle below the depth cap", async () => {
+    const out = await readPickedDirectory(
+      async () => chain(MAX_DEPTH + 1, [fileHandle("x.json", "{}")]) as never,
+    );
+    expect(out?.handles.size).toBe(0);
+  });
+});
+
+describe("the directory input's handles", () => {
+  it("keeps each file's own File, unopened, outside a skipped folder, and none on a marker or below the cap", async () => {
+    const at = (path: string, text: string) =>
+      Object.assign(new File([text], path.slice(path.lastIndexOf("/") + 1)), {
+        webkitRelativePath: path,
+      });
+    const unopened = (path: string) =>
+      Object.assign(at(path, ""), { text: () => Promise.reject(new Error("opened")) });
+    const team = Object.assign(at("Team/rules/team.json", "[]"), {
+      text: () => Promise.reject(new Error("opened")),
+    });
+    const folders = Array.from({ length: MAX_DEPTH + 1 }, (_, i) => `d${i}`).join("/");
+    const input = {
+      files: [
+        at("Team/pbiplint.config.json", "{}"),
+        team,
+        unopened("Team/.git/a.json"),
+        unopened("Team/node_modules/b.json"),
+        unopened("Team/X.Report/.pbi/c.json"),
+        unopened("Team/X.Report/StaticResources/Other/d.json"),
+        unopened("Team/X.Report/report.json"),
+        unopened("Team/Sales.pbix"),
+        unopened(`Team/${folders}/x.json`),
+      ],
+    };
+    const out = await readDirectoryInput(input as unknown as HTMLInputElement);
+    expect([...out.handles.keys()]).toEqual(["Team/pbiplint.config.json", "Team/rules/team.json"]);
+    expect(out.entries.map((e) => e.path)).toEqual(["Team/pbiplint.config.json"]);
+    // The page clears the input's value once it is read, and the File is still there.
+    input.files = [];
+    expect(await out.handles.get("Team/rules/team.json")!()).toBe(team);
   });
 });

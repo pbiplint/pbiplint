@@ -205,6 +205,13 @@ export function resolveConfig(raw: unknown = {}): ResolvedConfig {
   return out;
 }
 
+/**
+ * A `customRules` entry as the output names it: forward slashes, no leading `./`. The CLI and the
+ * site both name a rule file by this, so the same entry reads the same in either.
+ */
+export const ruleFileName = (entry: string): string =>
+  entry.replace(/\\/g, "/").replace(/^\.\//, "");
+
 const PATHS_ONLY =
   "customRules takes paths to local files, relative to the folder pbiplint.config.json is in";
 

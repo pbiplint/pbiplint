@@ -42,9 +42,20 @@ ${JUDGMENT}
 `;
 
 /**
+ * What an assistant needs to know about a team's own rule, said once under the preamble, and only
+ * when the run has one, so a copy with none reads exactly as it did before custom rules.
+ */
+export const ASSISTANT_CUSTOM_NOTE =
+  "A rule marked as the team's own comes from the team's rule file, named beside it. Its description is the only guidance there is, and `npx pbiplint explain <RULE_ID>` prints its expression. Fix the project to meet the rule, or, if the rule itself is wrong, its file.";
+
+/** The last line of a team's rule, in place of the page a built-in rule links to. */
+const CUSTOM_RULES_LINE = "Custom rules in pbiplint: ";
+
+/**
  * Each fired rule's How to fix it and When to ignore it, in the report's order, with its page. A
  * team's own rule gets its description and its file instead: pbiplint's guidance for a rule of the
- * same id is about a different rule.
+ * same id is about a different rule. It has no page of its own, so it ends with the page on custom
+ * rules.
  */
 function guidance(result: LintResult): string {
   const out = ["## How to fix these findings", ""];
@@ -59,7 +70,7 @@ function guidance(result: LintResult): string {
     // A rule with no page text still gets its heading and its page, so no fired rule goes unnamed.
     if (g) out.push("**How to fix it**", "", g.fix, "");
     if (g?.ignore) out.push("**When to ignore it**", "", g.ignore, "");
-    out.push(`Rule page: ${rule.url}`, "");
+    out.push(`${rule.custom ? CUSTOM_RULES_LINE : "Rule page: "}${rule.url}`, "");
   }
   return out.join("\n");
 }
@@ -67,14 +78,19 @@ function guidance(result: LintResult): string {
 /**
  * The Markdown report between a preamble for an AI assistant and each fired rule's guidance. The
  * rule's Example stays on its page: a report rule's Example is the report JSON a person does not
- * edit by hand, and it would double each rule's share of the paste.
+ * edit by hand, and it would double each rule's share of the paste. A run with a team's own rule
+ * has the note on them under the preamble.
  */
 export const exportForAssistant = (result: LintResult): ExportFile => ({
   name: "pbiplint-report-for-ai.md",
   type: "text/markdown",
-  text: [ASSISTANT_PREAMBLE, exportMarkdown(result).text.trimEnd(), "", guidance(result)].join(
-    "\n",
-  ),
+  text: [
+    ASSISTANT_PREAMBLE,
+    ...(result.groups.some((g) => g.rule.custom) ? [ASSISTANT_CUSTOM_NOTE, ""] : []),
+    exportMarkdown(result).text.trimEnd(),
+    "",
+    guidance(result),
+  ].join("\n"),
 });
 
 /** Offers the text as a download through a same-origin blob URL. No request leaves the page. */

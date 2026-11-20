@@ -1,10 +1,12 @@
 import { expect, test as base, type Page } from "@playwright/test";
 import { leavesOrigin } from "../egress/egress-check.mjs";
 
-/** Console errors and off-origin requests, collected from before the first navigation. */
+/** Console errors and requests, collected from before the first navigation. */
 export interface Seen {
   errors: string[];
   offOrigin: string[];
+  /** Every request's URL, in the order the page made them, on the origin or off it. */
+  requests: string[];
 }
 
 /**
@@ -12,13 +14,14 @@ export interface Seen {
  * runs against its own copy count the same requests as leaving.
  */
 function watch(page: Page, origin: string): Seen {
-  const seen: Seen = { errors: [], offOrigin: [] };
+  const seen: Seen = { errors: [], offOrigin: [], requests: [] };
   page.on("console", (message) => {
     if (message.type() === "error") seen.errors.push(message.text());
   });
   page.on("pageerror", (error) => seen.errors.push(error.message));
   page.on("request", (request) => {
     const url = request.url();
+    seen.requests.push(url);
     if (leavesOrigin(url, origin)) seen.offOrigin.push(url);
   });
   return seen;

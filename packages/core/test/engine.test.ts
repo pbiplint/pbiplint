@@ -7,8 +7,10 @@ import {
   ConfigError,
   isConfigError,
   resolveConfig,
+  ruleFileName,
   type PbiplintConfig,
 } from "../src/engine/config.js";
+import { ruleFileName as fromMainEntry } from "../src/index.js";
 import { ignoreHelp, isIgnored, TE_IGNORE_ANNOTATION, teIgnoreIds } from "../src/engine/ignore.js";
 import { lint } from "../src/engine/lint.js";
 import { byRank, categoryRank, rank, type RankedGroup } from "../src/engine/rank.js";
@@ -197,6 +199,17 @@ describe("customRules in the config", () => {
       expect(() => resolveConfig({ customRules: [path] })).toThrow(
         `pbiplint.config.json: customRules[0] is an absolute path; ${PATHS_ONLY}`,
       );
+  });
+  it("names a rule file with forward slashes and no leading ./, from the main entry", () => {
+    expect(fromMainEntry).toBe(ruleFileName);
+    expect(ruleFileName("rules/team.json")).toBe("rules/team.json");
+    expect(ruleFileName("./rules/team.json")).toBe("rules/team.json");
+    expect(ruleFileName(".\\rules\\team.json")).toBe("rules/team.json");
+    expect(ruleFileName("rules\\team.json")).toBe("rules/team.json");
+    expect(ruleFileName("../rules/team.json")).toBe("../rules/team.json");
+    // Only one leading ./ goes, and one inside the path stays as written.
+    expect(ruleFileName("././team.json")).toBe("./team.json");
+    expect(ruleFileName("rules/./team.json")).toBe("rules/./team.json");
   });
   it("carries the entries through bindConfig", () => {
     const { config } = bindConfig(resolveConfig({ customRules: ["a.json"] }), []);

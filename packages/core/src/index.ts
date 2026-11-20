@@ -3,6 +3,7 @@ export {
   ConfigError,
   isConfigError,
   resolveConfig,
+  ruleFileName,
   SEVERITY_BY_NAME,
   type PbiplintConfig,
   type ResolvedConfig,
@@ -17,6 +18,7 @@ export {
   type LintSummary,
   type ShownSummary,
 } from "./engine/lint.js";
+export { RULE_FILE_BYTES } from "./engine/custom.js";
 export { errorKind } from "./engine/rule-error.js";
 export { showOnly } from "./engine/show-only.js";
 export {

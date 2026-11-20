@@ -424,3 +424,89 @@ The fixture is pbiplint's own words: the config names both files and turns one c
 - [ ] **Step 3:** Full checks; one whole-branch review; open D2 with "For #118.".
 
 Heads-up for E: `packages/web/src/results/render.ts` filters groups by `CATEGORY_ORDER`, so the site would hide custom categories until E changes it.
+
+### Pull request E, in tasks (added November 20, 2026)
+
+E brings custom rules to the site. When a dropped folder's `pbiplint.config.json` names rule files, the page opens those files from inside the dropped folder only, hands them to `@pbiplint/core/custom-rules`, and shows each finding as the team's rule, with its file and its description.
+
+Settled for E (November 20, 2026):
+
+- **When the code loads (decided by Michael, November 20, 2026):** the custom rules entry is a chunk of the site's own, fetched from the same origin once the page has loaded and is idle, before any drop. Every Promise sentence and check stays true word for word: no request follows a drop, and custom rules work offline once the page has loaded. The CSP is unchanged (`script-src 'self'` allows it), and the self-hosting build carries the chunk.
+- **The walkers keep a handle on every file they pass, and open none of them.** Today the folder readers open only the files they want, decided before any config is read, so a rule file would never be read. Each walker records an unopened opener for every file it passes outside a skipped folder (the entry's `file()` for a drop, the handle's `getFile()` for the picker, the `File` itself for the directory input). Once the config is read, the rule file reader opens only the files it names, and nothing else.
+- **Inside the dropped folder:** an entry resolves against the config's folder in the drop (`\` read as `/`, `.` and `..` applied). It is outside when it climbs above the top of the drop, or when its first segment is not something that was dropped.
+- **The CLI's words where the cause is the same** (the size limit, a file that could not be read); words of the site's own where only the site has the cause (outside the folder, not in the folder, inside a folder the walk skips, a folder in a file's place). `ruleFileName` moves from the CLI to core's main entry so the two cannot name files differently.
+- **Every config's rule files are read before anything is linted,** so one missing file refuses the drop and names its config; a config several projects share is read once.
+- **No rule file text becomes a link or markup:** name, description, category and file are text, through `showControls`.
+
+#### Task E1: the walkers keep a handle on every file
+
+**Files:** Modify `packages/web/src/input/project-files.ts` (`InputTree`, `emptyTree`), `read-drop.ts` (`walkEntry`, `readLoose`), `pick-folder.ts` (`walkHandle`, `readDirectoryInput`), `packages/web/src/sample.ts` if its tree is a literal. Test `packages/web/test/read-drop.test.ts`, `pick-folder.test.ts`, `projects-below.test.ts`.
+
+**Interfaces:** `export type OpenFile = () => Promise<File>`; `InputTree.handles: Map<string, OpenFile>`, every file the walk passed outside a skipped folder, by drop-relative path, wanted or not, never opened by the walk; `emptyTree()` gives an empty map. Markers (`.pbix`, `model.bim`, `report.json`) get no handle.
+
+- [ ] **Step 1:** Tests: on each route, a drop or pick holding `rules/team.json` gives it a handle whose `file()`/`getFile()` is never called by the walk; a file under `.git`, `node_modules`, `.pbi` or `StaticResources` (outside the theme paths) has none; nothing below the depth cap; a `.pbix` has none; a wanted file has both an entry and a handle; the directory input keeps its `File` objects after the input's value is cleared.
+- [ ] **Steps 2 to 5:** Fail, implement, pass, commit.
+
+#### Task E2: the rule file reader and the chunk
+
+**Files:** Create `packages/web/src/rule-files.ts`, `packages/web/src/custom-rules.ts` (re-exports `readCustomRules`, `LIMITS` and the `CustomRuleSet` type from `@pbiplint/core/custom-rules`, nothing else). Modify `packages/web/vite.config.ts` (`resolve.alias` becomes the exact-match array `vitest.config.ts` uses), `packages/web/tsconfig.json` (`paths` gains the subpath), `packages/web/src/build/check-site.ts`, `packages/core/src/engine/config.ts` and `packages/core/src/index.ts` (`ruleFileName`), `packages/cli/src/config.ts` (imports it). Test `packages/web/test/rule-files.test.ts`, `check-site.test.ts`, the moved `ruleFileName` cases in `packages/core/test/engine.test.ts`.
+
+**Interfaces:**
+- `ruleFilePath(configPath: string, entry: string): string | undefined`: the drop-relative path, or `undefined` above the top of the drop.
+- `loadCustomRules(): Promise<typeof import("./custom-rules.js")>`: the dynamic import, one promise per page; a rejection clears it and throws `new InputError(CUSTOM_RULES_LOAD_FAILED)`. `preloadCustomRules(): void` calls it once the page is idle (`requestIdleCallback`, or a `setTimeout` fallback, after `load`), swallowing errors (a later drop retries).
+- `readRuleFiles(config: { path: string; text: string }, entries: readonly string[], handles: ReadonlyMap<string, OpenFile>, load = loadCustomRules): Promise<{ set: CustomRuleSet; opened: string[] } | undefined>`: `undefined` without calling `load` when `entries` is empty; otherwise each entry in order is checked, opened (size first against `LIMITS.fileBytes`, then `text()`), and passed as `{ path: ruleFileName(entry), text }` to `readCustomRules`; `opened` holds the drop-relative paths.
+- Refusals are `ConfigError`s (`named` in `lint-projects.ts` rewrites the leading `pbiplint.config.json` into the config's path in the drop):
+  - `pbiplint.config.json: customRules: ../rules/team.json is outside the folder you dropped or chose; drop or choose the folder that holds both the project and its rule files`
+  - `pbiplint.config.json: customRules: rules/team.json is not in the folder you dropped or chose; the path is relative to the folder pbiplint.config.json is in`
+  - `pbiplint.config.json: customRules: .git/team.json is inside a .git folder, which pbiplint never opens; move the rule file to another folder` (the skipped folder's own name)
+  - `pbiplint.config.json: customRules: rules is a folder; customRules takes paths to rule files`
+  - the CLI's: `pbiplint.config.json: customRules: rules/team.json is 2,000,000 bytes, over the limit of 1,048,576 bytes for a rule file`, and `... could not be read (<the browser's message>)`
+- `CUSTOM_RULES_LOAD_FAILED = "pbiplint could not load its custom rules code from this site, so the folder was not linted. Reload the page, then drop or choose the folder again."`
+- `check-site.ts`: `checkChunks(dir)` finds exactly one `assets/custom-rules-*.js` and checks no other `.js` holds `CUSTOM_RULES_PROBE` (the text of the entry's `STATISTICS_REASON`; a test holds them equal), in both builds; `scriptSizes(dir)` gives `home` (the module script in `index.html` plus its `modulepreload` files) and `chunk`, raw and gzipped; the plugin prints `home page scripts: N KB (G KB gzipped); custom rules chunk: N KB (G KB gzipped)`.
+
+- [ ] **Step 1:** The baseline: add `scriptSizes` and its line first, with its test; commit; record the line from `npm run build -w @pbiplint/web` (the "before").
+- [ ] **Step 2:** Tests: `ruleFilePath` cases (`rules/team.json`, `./rules/team.json`, `rules\team.json`, `rules/../rules/team.json`, `../x.json` from a nested config, `../../x.json` above the top); each refusal word for word; outside when several items were dropped; size checked before `text()`; `load` never called for `[]` and once for two configs; a rejecting `load` gives `CUSTOM_RULES_LOAD_FAILED` and a second call retries; `preloadCustomRules` calls `load` once after idle and a failure is swallowed; a file the reader refuses whole gives core's `ConfigError`; `checkChunks` on fake dists; `ruleFileName` as the CLI's.
+- [ ] **Steps 3 to 5:** Fail, implement, pass.
+- [ ] **Step 6:** Both builds (`npm run build -w @pbiplint/web`, and with `-- --mode self-host`) print the chunk and pass the site check; record the "after"; `npm run check:browser`; commit.
+
+#### Task E3: lint with them
+
+**Files:** Modify `packages/web/src/main.ts` (`run`, `runSeveral`, `runEntries`, and `preloadCustomRules` at start-up), `packages/web/src/lint-projects.ts`. Test `packages/web/test/home.test.ts`, `projects-below.test.ts`.
+
+**Interfaces:** `Run` gains `handles?: ReadonlyMap<string, OpenFile>`; `runEntries(tree)` passes `tree.handles`; the paste and the sample pass none. `run` resolves the config, awaits `readRuleFiles`, checks `superseded(token)`, lints with `customRules: read?.set`, and lists each rule file as `relativeToRoot(root, path) + " (custom rules)"`. `lintProjects(projects, before, handles = new Map())` reads each config's rule files once, keyed by its path, before the first `before(i)`, refusals through `named`; it returns `ruleFiles: string[][]` as well, which `runSeveral` appends to each project's files.
+
+- [ ] **Step 1:** Tests: a tree with `Team/custom-rules.SemanticModel`, `Team/pbiplint.config.json`, `Team/rules/team.json` (texts from `packages/cli/test/fixtures/custom-rules/`) shows a custom group and lists the rule file; a config without `customRules` never calls the loader and its results are unchanged; a superseded drop renders nothing; each refusal reaches the status line and clears results; the CLI's `lintSeveral` and the site's `lintProjects` on the same folder give the same groups, `summary.customRules` and diagnostics; two projects under one config read its files once; one project's missing file refuses the drop naming its config; core's "this run was not given them" refusal never appears.
+- [ ] **Steps 2 to 5:** Fail, implement, pass, commit.
+
+#### Task E4: the results
+
+**Files:** Modify `packages/web/src/results/render.ts`, `packages/web/src/styles.css`. Test `packages/web/test/render.test.ts`, `styles.test.ts`.
+
+**Interfaces:** `TEAM_RULE = "Your team's rule"`. A custom group: the summary gains `<span class="team-tag">Your team's rule</span>` after the layer tag; the meta line reads `<code>TEAM_X</code> · Team conventions · rules/team.json`; under it `<p class="rule-description">` (with `white-space: pre-line`) holds the description; "Fix these first" shows `Your team's rule` where the rule link would be; no custom group links to `/rules/`. `categoriesOf(groups): string[]`: the eight in `CATEGORY_ORDER`, then the others by `localeCompare(b, "en")`. `groupSlugs(groups)`: unique slugs, a custom id whose slug is empty or taken gets `-2`, `-3`.
+
+- [ ] **Step 1:** Tests: tag, file and description, no rule link; a built-in group renders as before; the custom category's filter box after the eight works; two custom categories sort alphabetically; `TEAM_FLOAT COLUMNS` and `TEAM_FLOAT_COLUMNS` get two ids and their own fix-first links; a description with a newline and a bidi control shows as text; the custom rule that could not run is in the notices with its file; every new class meets the contrast checks in both themes.
+- [ ] **Steps 2 to 5:** Fail, implement, pass, commit.
+
+#### Task E5: the export for an assistant
+
+**Files:** Modify `packages/web/src/results/export.ts`. Test `packages/web/test/export.test.ts`.
+
+**Interfaces:** `ASSISTANT_CUSTOM_NOTE`, under the preamble only when a group is custom: "A rule marked as the team's own comes from the team's rule file, named beside it. Its description is the only guidance there is, and `npx pbiplint explain <RULE_ID>` prints its expression. Fix the project to meet the rule, or, if the rule itself is wrong, its file." A custom rule's last line is `Custom rules in pbiplint: https://pbiplint.com/custom-rules/` in place of `Rule page:`.
+
+- [ ] **Step 1:** Tests: no custom group gives the export byte for byte as before; a custom group gives the note once, its description and file, no "How to fix it", and the custom rules line; the Markdown and JSON downloads carry the custom fields.
+- [ ] **Steps 2 to 4:** Fail, implement, pass, commit.
+
+#### Task E6: the words the behaviour needs
+
+**Files:** Modify `packages/web/index.html` (the hint under the drop zone), and `packages/web/content/privacy.md` (the site paragraph's list of files opened only: add the rule files `customRules` names, from 0.4.0). The rest of the privacy page, the CLI and pipelines lists, the skill sentence, and the custom rules page are G's.
+
+- [ ] **Step 1:** The hint reads: "Only .tmdl files, the report's JSON under its definition folder, .platform, definition.pbir, the .pbip file, pbiplint.config.json, and the rule files it names under customRules are read. Nothing else in the folder is opened." The privacy page's site list gains the rule files. Checks 1 and 2 and the self-hosting page stay as they are.
+- [ ] **Step 2:** `npm test`; commit.
+
+#### Task E7: end to end, and finishing E
+
+**Files:** Create `packages/web/e2e/custom-rules.spec.ts` (folders built in `withTempFolder` from `tests/fixtures/custom-rules.SemanticModel` and `packages/cli/test/fixtures/custom-rules/`, given with `setFolder`).
+
+- [ ] **Step 1:** Tests in all three engines (`fixtures.ts` already fails a test on a console error or a request off the origin): giving `Team/` shows the team's group with "Your team's rule", its file and description, the `TEAM_VISIBLE` notice, the custom category's filter, and the rule file among the files read; the request to `/assets/custom-rules-` happens on the page's origin before the drop and none follows the drop; the sample and a folder with no `customRules` give the same requests as before (the chunk is fetched at idle either way); an axe scan of the results is clean; "Copy for an AI assistant" (Chromium) holds the team's rule and its file; a config naming `../rules/team.json` with only the model folder given shows the outside message and no results; a missing file shows the not-in-the-folder message.
+- [ ] **Step 2:** `npm run build && npm test && npm run typecheck && npm run lint && npm run check:browser && npm run check:pack && npm run test:e2e`; `npm run build -w @pbiplint/web -- --mode self-host && npm run check:egress`; `node scripts/site-archive.mjs <scratch folder>` and confirm the zip lists `assets/custom-rules-`.
+- [ ] **Step 3:** One whole-branch review. Open E with "For #118.", the home page scripts before and after, the chunk, each in KB and gzipped KB, and the egress check and the privacy checks passing as written.

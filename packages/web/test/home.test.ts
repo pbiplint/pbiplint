@@ -1,10 +1,16 @@
 // @vitest-environment happy-dom
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { readdirSync, readFileSync, type Dirent } from "node:fs";
+import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { LEARN_HELP_URLS, legacyReportNotice, lint, pbixRefusal } from "@pbiplint/core";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { fakeSecrets } from "../../../tests/support/fake-secrets.js";
+import { InputError } from "../src/input/project-files.js";
+import {
+  CUSTOM_RULES_LOAD_FAILED,
+  loadCustomRules,
+  preloadCustomRules,
+} from "../src/rule-files.js";
 
 // happy-dom resolves a relative URL against the page's http base, so the file path is built
 // from import.meta.url instead of new URL(..., import.meta.url).
@@ -17,6 +23,16 @@ const notFound = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../
 vi.mock("@pbiplint/core", async (importOriginal) => {
   const core = await importOriginal<typeof import("@pbiplint/core")>();
   return { ...core, lint: vi.fn(core.lint) };
+});
+// The custom rules loader and the start-up preload, counted but otherwise the page's own, so a
+// test can say when the chunk was asked for, or stand in for a fetch that is slow or fails.
+vi.mock("../src/rule-files.js", async (importOriginal) => {
+  const own = await importOriginal<typeof import("../src/rule-files.js")>();
+  return {
+    ...own,
+    loadCustomRules: vi.fn(own.loadCustomRules),
+    preloadCustomRules: vi.fn(own.preloadCustomRules),
+  };
 });
 // main.ts waits one frame and one task before it lints, so the status line is painted first; a
 // tick waits that out and then the task a run used to need.
@@ -69,9 +85,12 @@ function writeOrder(el: HTMLElement, props: string[], fn: () => void): string[] 
 }
 
 describe("home page", () => {
+  // Counted as the page starts, since every test begins with its mocks' calls cleared.
+  let startupPreloads = 0;
   beforeAll(async () => {
     document.body.innerHTML = body;
     await import("../src/main.js");
+    startupPreloads = vi.mocked(preloadCustomRules).mock.calls.length;
   });
   it("ships the note on the browser's folder question hidden, and leaves it so with no folder picker", () => {
     // The note answers the question Chrome and Edge ask before their folder picker opens. The page
@@ -599,7 +618,7 @@ describe("home page", () => {
     );
     expect(document.getElementById("paste")!.getAttribute("aria-describedby")).toBe("paste-hint");
     expect(text("#drop + .hint")).toMatch(
-      /^Only \.tmdl files, the report's JSON under its definition folder, \.platform, definition\.pbir, the \.pbip file, and pbiplint\.config\.json are read\. Nothing else in the folder is opened\. /,
+      /^Only \.tmdl files, the report's JSON under its definition folder, \.platform, definition\.pbir, the \.pbip file, pbiplint\.config\.json, and the rule files it names under customRules are read\. Nothing else in the folder is opened\. /,
     );
     expect(text(".actions .hint")).toBe(
       "A small sales project, a model and its report, with planted violations, the same one npx pbiplint --sample lints.",
@@ -808,7 +827,239 @@ describe("home page", () => {
     );
     expect(document.getElementById("results")!.hidden).toBe(true);
   });
+  it("asks for the custom rules chunk at start-up, before anything is dropped", () => {
+    // No request may follow a drop, so the page fetches the chunk from start-up.
+    expect(startupPreloads).toBe(1);
+  });
+  it("lints a dropped project with the custom rules its config names, and lists their files", async () => {
+    feedFolder(teamFolder());
+    await tick();
+    await tick();
+    await tick();
+    const results = document.getElementById("results")!;
+    expect(document.getElementById("status")!.hidden).toBe(true);
+    expect(results.hidden).toBe(false);
+    expect(results.textContent).toContain("TEAM_MEASURES_IN_FOLDERS");
+    const listed = [...results.querySelectorAll("details.files li")].map((li) => li.textContent);
+    // Relative to the project root, the dropped Team folder, as the rest of the list is.
+    expect(listed).toContain("pbiplint.config.json (config)");
+    expect(listed).toContain("rules/team.json (custom rules)");
+    expect(listed).toContain("rules/more.json (custom rules)");
+    expect(listed.filter((p) => p!.includes("rules/"))).toHaveLength(2);
+    expect(listed).toEqual([...listed].sort((a, b) => a!.localeCompare(b!, "en")));
+    expect(results.textContent).not.toContain("this run was not given them");
+  });
+  it("never asks for the custom rules code for a config that names no rule files", async () => {
+    const listedSummary = async (config?: string): Promise<string> => {
+      feedFolder([
+        at("Proj/Demo.SemanticModel/definition/tables/T.tmdl", "table T\n"),
+        ...(config === undefined ? [] : [at("Proj/pbiplint.config.json", config)]),
+      ]);
+      await tick();
+      await tick();
+      return document.querySelector("#results .summary")!.textContent!;
+    };
+    const without = await listedSummary();
+    vi.mocked(loadCustomRules).mockClear();
+    expect(await listedSummary('{ "rules": {} }')).toBe(without);
+    expect(vi.mocked(loadCustomRules)).not.toHaveBeenCalled();
+  });
+  it("renders nothing for a drop superseded while its rule files were read", async () => {
+    let release: () => void = () => undefined;
+    const real = vi.mocked(loadCustomRules).getMockImplementation()!;
+    vi.mocked(loadCustomRules).mockImplementationOnce(
+      () => new Promise((done) => (release = () => done(real()))),
+    );
+    vi.mocked(lint).mockClear();
+    feedFolder(teamFolder());
+    await tick();
+    (document.getElementById("paste") as HTMLTextAreaElement).value = "table Pasted\n";
+    document.getElementById("lint-paste")!.click();
+    await tick();
+    release();
+    await tick();
+    await tick();
+    expect(document.querySelector("#results h2")!.textContent).toBe(
+      "Results for pasted TMDL (model, 1 file)",
+    );
+    const linted = vi.mocked(lint).mock.calls.map((c) => c[0].map((f) => f.path).join());
+    expect(linted).toEqual(["pasted.tmdl"]);
+  });
+  // A drop of one project, and a drop of several sharing one config's rule files.
+  const superseding: [string, () => File[]][] = [
+    ["one project", () => teamFolder()],
+    [
+      "several projects",
+      () => [
+        ...modelFiles("Drop/a/A.SemanticModel"),
+        ...modelFiles("Drop/b/B.SemanticModel"),
+        at("Drop/pbiplint.config.json", '{ "customRules": ["rules/team.json"] }'),
+        at("Drop/rules/team.json", fixture("rules/team.json")),
+      ],
+    ],
+  ];
+  it.each(superseding)(
+    "leaves the newer run's results alone when a superseded drop of %s fails",
+    async (_, files) => {
+      let refuse: () => void = () => undefined;
+      vi.mocked(loadCustomRules).mockImplementationOnce(
+        () =>
+          new Promise((_done, no) => (refuse = () => no(new InputError(CUSTOM_RULES_LOAD_FAILED)))),
+      );
+      feedFolder(files());
+      await tick();
+      (document.getElementById("paste") as HTMLTextAreaElement).value = "table Pasted\n";
+      document.getElementById("lint-paste")!.click();
+      await tick();
+      expect(document.querySelector("#results h2")!.textContent).toBe(
+        "Results for pasted TMDL (model, 1 file)",
+      );
+      refuse();
+      await tick();
+      await tick();
+      const results = document.getElementById("results")!;
+      expect(results.hidden).toBe(false);
+      expect(results.querySelector("h2")!.textContent).toBe(
+        "Results for pasted TMDL (model, 1 file)",
+      );
+      expect(document.getElementById("status")!.hidden).toBe(true);
+      expect(document.getElementById("status")!.textContent).not.toBe(CUSTOM_RULES_LOAD_FAILED);
+    },
+  );
+  const OUTSIDE =
+    "is outside the folder you dropped or chose; drop or choose the folder that holds both the project and its rule files";
+  const refusals: [string, () => File[], string][] = [
+    [
+      "outside the drop",
+      () => teamFolder('{ "customRules": ["../../x.json"] }'),
+      `pbiplint.config.json: customRules: ../../x.json ${OUTSIDE}`,
+    ],
+    [
+      "not in the drop",
+      () => teamFolder('{ "customRules": ["rules/gone.json"] }'),
+      "pbiplint.config.json: customRules: rules/gone.json is not in the folder you dropped or chose; the path is relative to the folder pbiplint.config.json is in",
+    ],
+    [
+      "a folder",
+      () => teamFolder('{ "customRules": ["rules"] }'),
+      "pbiplint.config.json: customRules: rules is a folder; customRules takes paths to rule files",
+    ],
+    [
+      "inside a skipped folder",
+      () => teamFolder('{ "customRules": [".git/team.json"] }'),
+      "pbiplint.config.json: customRules: .git/team.json is inside a .git folder, which pbiplint never opens; move the rule file to another folder",
+    ],
+    [
+      "over the size limit",
+      () => [
+        ...teamFolder('{ "customRules": ["rules/big.json"] }'),
+        at("Team/rules/big.json", " ".repeat(1_048_577)),
+      ],
+      "pbiplint.config.json: customRules: rules/big.json is 1,048,577 bytes, over the limit of 1,048,576 bytes for a rule file",
+    ],
+    [
+      "unreadable",
+      () => {
+        const broken = at("Team/rules/broken.json", "[]");
+        broken.text = () => Promise.reject(new Error("The file is locked"));
+        return [...teamFolder('{ "customRules": ["rules/broken.json"] }'), broken];
+      },
+      "pbiplint.config.json: customRules: rules/broken.json could not be read (The file is locked)",
+    ],
+  ];
+  it.each(refusals)(
+    "refuses a rule file %s on the status line and clears the results",
+    async (_, files, message) => {
+      document.getElementById("try-sample")!.click();
+      await tick();
+      expect(document.getElementById("results")!.hidden).toBe(false);
+      feedFolder(files());
+      await tick();
+      await tick();
+      expect(document.getElementById("status")!.textContent).toBe(message);
+      expect(document.getElementById("results")!.hidden).toBe(true);
+      expect(document.getElementById("results")!.childElementCount).toBe(0);
+    },
+  );
+  it("says so when the custom rules code could not be fetched, and fetches nothing for the next drop", async () => {
+    // What the page's loader gives a drop once the preload has failed: a refusal, and no fetch.
+    vi.mocked(loadCustomRules).mockRejectedValueOnce(new InputError(CUSTOM_RULES_LOAD_FAILED));
+    vi.mocked(loadCustomRules).mockRejectedValueOnce(new InputError(CUSTOM_RULES_LOAD_FAILED));
+    vi.mocked(preloadCustomRules).mockClear();
+    for (let drop = 0; drop < 2; drop++) {
+      feedFolder(teamFolder());
+      await tick();
+      await tick();
+      expect(document.getElementById("status")!.textContent).toBe(CUSTOM_RULES_LOAD_FAILED);
+      expect(document.getElementById("results")!.hidden).toBe(true);
+    }
+    // Only the start-up preload ever fetches the chunk; a drop never asks for it again.
+    expect(vi.mocked(preloadCustomRules)).not.toHaveBeenCalled();
+    expect(vi.mocked(loadCustomRules)).toHaveBeenCalledTimes(2);
+  });
+  it("names a project's config when its rule file is missing in a folder of several", async () => {
+    feedFolder([
+      at("Drop/a/A.SemanticModel/definition/tables/T.tmdl", "table T\n"),
+      at("Drop/b/B.SemanticModel/definition/tables/T.tmdl", "table T\n"),
+      at("Drop/b/pbiplint.config.json", '{ "customRules": ["rules/team.json"] }'),
+    ]);
+    await tick();
+    await tick();
+    expect(document.getElementById("status")!.textContent).toBe(
+      "Drop/b/pbiplint.config.json: customRules: rules/team.json is not in the folder you dropped or chose; the path is relative to the folder pbiplint.config.json is in",
+    );
+    expect(document.getElementById("results")!.hidden).toBe(true);
+  });
+  it("lists a config's rule files under each project of several that uses it", async () => {
+    feedFolder([
+      ...modelFiles("Drop/a/A.SemanticModel"),
+      ...modelFiles("Drop/b/B.SemanticModel"),
+      at("Drop/pbiplint.config.json", '{ "customRules": ["rules/team.json"] }'),
+      at("Drop/rules/team.json", fixture("rules/team.json")),
+    ]);
+    await tick();
+    await tick();
+    await tick();
+    const results = document.getElementById("results")!;
+    expect(document.getElementById("status")!.hidden).toBe(true);
+    const sections = [...results.querySelectorAll("section.project")];
+    expect(sections).toHaveLength(2);
+    for (const s of sections) {
+      expect(s.textContent).toContain("TEAM_MEASURES_IN_FOLDERS");
+      const listed = [...s.querySelectorAll("details.files li")].map((li) => li.textContent);
+      expect(listed).toContain("../../rules/team.json (custom rules)");
+    }
+  });
 });
+
+// The CLI's custom rules fixture: its config and rule files, and the model its tests lint.
+const here = dirname(fileURLToPath(import.meta.url));
+const fixture = (name: string): string =>
+  readFileSync(join(here, "../../cli/test/fixtures/custom-rules", name), "utf8");
+const modelDir = join(here, "../../../tests/fixtures/custom-rules.SemanticModel");
+
+/** The fixture model's files, as the directory input reports them under `dir`. */
+function modelFiles(dir: string): File[] {
+  return (readdirSync(modelDir, { recursive: true, withFileTypes: true }) as Dirent[])
+    .filter((d) => d.isFile())
+    .map((d) => {
+      const path = join(d.parentPath, d.name);
+      return at(
+        `${dir}/${relative(modelDir, path).split(sep).join("/")}`,
+        readFileSync(path, "utf8"),
+      );
+    });
+}
+
+/** A Team folder holding the fixture model, a config (the fixture's by default) and its rule files. */
+function teamFolder(config = fixture("pbiplint.config.json")): File[] {
+  return [
+    ...modelFiles("Team/custom-rules.SemanticModel"),
+    at("Team/pbiplint.config.json", config),
+    at("Team/rules/team.json", fixture("rules/team.json")),
+    at("Team/rules/more.json", fixture("rules/more.json")),
+  ];
+}
 
 // eslint-disable-next-line no-control-regex -- the characters showControls writes as escapes
 const RAW_CONTROL = /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/;

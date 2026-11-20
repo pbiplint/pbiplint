@@ -788,6 +788,11 @@ describe("generateSite", () => {
     // The section links out in the world point at keeps its id under its pipelines heading.
     expect(privacy).toContain('<h3 id="in-the-github-action">In your pipelines</h3>');
     expect(privacy).toContain('<a href="/pipelines/">Pipelines</a>');
+    // The site's list of the files it opens names the rule files a config's customRules names,
+    // which the site reads from 0.4.0, and only from inside the folder given.
+    expect(privacy).toContain(
+      "<code>.platform</code>, <code>pbiplint.config.json</code>, and the rule files its <code>customRules</code> names inside that folder (from 0.4.0). Everything else in the folder",
+    );
     expect(about).toContain('<a href="/cli/">');
     const cli = readFileSync(join(out, "cli/index.html"), "utf8");
     expect(cli).toContain("<title>The pbiplint CLI</title>");

@@ -80,6 +80,9 @@ function readerCount(limit: number) {
   return { state, wrap };
 }
 
+/** A tree with its handles as the paths they open, so a whole tree compares with toEqual. */
+const bare = (tree: InputTree) => ({ ...tree, handles: [...tree.handles.keys()] });
+
 describe("wanted", () => {
   it("reads TMDL, the config, the project files, and report JSON under a .Report's definition, and nothing else", () => {
     for (const p of [
@@ -239,6 +242,7 @@ describe("walkEntry", () => {
       modelFolders: [],
       reportFolders: [],
       markers: [],
+      handles: new Map(),
       diagnostics: [],
       unreadFolders: [],
     };
@@ -273,6 +277,7 @@ describe("walkEntry", () => {
       modelFolders: [],
       reportFolders: [],
       markers: [],
+      handles: new Map(),
       diagnostics: [],
       unreadFolders: [],
     };
@@ -322,6 +327,7 @@ describe("walkEntry", () => {
       modelFolders: [],
       reportFolders: [],
       markers: [],
+      handles: new Map(),
       diagnostics: [],
       unreadFolders: [],
     };
@@ -570,7 +576,7 @@ describe("readDataTransfer", () => {
       files: [],
     } as unknown as DataTransfer;
     const tree = await readDataTransfer(dt);
-    expect(tree).toEqual(emptyTree());
+    expect(bare(tree)).toEqual({ ...emptyTree(), handles: ["Proj/notes.txt"] });
     expect(() => selectProject(tree)).toThrow(
       new InputError(
         "No model or report found. Drop a PBIP folder, a .SemanticModel or .Report folder, or a .tmdl file.",
@@ -580,8 +586,9 @@ describe("readDataTransfer", () => {
   it("uses the entries API when the browser has it", async () => {
     const entry = file("T.tmdl", "/T.tmdl", "table T\n");
     const dt = { items: [{ webkitGetAsEntry: () => entry }], files: [] } as unknown as DataTransfer;
-    expect(await readDataTransfer(dt)).toEqual({
+    expect(bare(await readDataTransfer(dt))).toEqual({
       ...emptyTree(),
+      handles: ["T.tmdl"],
       entries: [{ path: "T.tmdl", text: "table T\n" }],
     });
   });
@@ -602,8 +609,9 @@ describe("readDataTransfer", () => {
       ],
       files: [],
     } as unknown as DataTransfer;
-    expect(await readDataTransfer(dt)).toEqual({
+    expect(bare(await readDataTransfer(dt))).toEqual({
       ...emptyTree(),
+      handles: ["T.tmdl", "other.json"],
       entries: [{ path: "T.tmdl", text: "table T\n" }],
     });
   });
@@ -617,8 +625,9 @@ describe("readDataTransfer", () => {
       ],
       files: [new File(["table T\n"], "T.tmdl"), new File(["{}"], "report.json")],
     } as unknown as DataTransfer;
-    expect(await readDataTransfer(dt)).toEqual({
+    expect(bare(await readDataTransfer(dt))).toEqual({
       ...emptyTree(),
+      handles: ["T.tmdl", "report.json"],
       entries: [{ path: "T.tmdl", text: "table T\n" }],
     });
   });
@@ -644,8 +653,9 @@ describe("readDataTransfer", () => {
       path: "T.tmdl",
       message: "T.tmdl could not be read (gone), so it was not linted",
     };
-    expect(await readDataTransfer(viaItems)).toEqual({
+    expect(bare(await readDataTransfer(viaItems))).toEqual({
       ...emptyTree(),
+      handles: ["T.tmdl", "U.tmdl"],
       entries: [{ path: "U.tmdl", text: "table U\n" }],
       diagnostics: [unreadT],
       refusal: { path: "T.tmdl", reason: "gone" },
@@ -654,8 +664,9 @@ describe("readDataTransfer", () => {
       items: [],
       files: [failing("T.tmdl", "gone"), new File(["table U\n"], "U.tmdl")],
     } as unknown as DataTransfer;
-    expect(await readDataTransfer(flat)).toEqual({
+    expect(bare(await readDataTransfer(flat))).toEqual({
       ...emptyTree(),
+      handles: ["T.tmdl", "U.tmdl"],
       entries: [{ path: "U.tmdl", text: "table U\n" }],
       diagnostics: [unreadT],
       refusal: { path: "T.tmdl", reason: "gone" },
@@ -687,9 +698,103 @@ describe("readDataTransfer", () => {
       items: [],
       files: [new File(["table T\n"], "T.tmdl"), new File(["{}"], "report.json")],
     } as unknown as DataTransfer;
-    expect(await readDataTransfer(dt)).toEqual({
+    expect(bare(await readDataTransfer(dt))).toEqual({
       ...emptyTree(),
+      handles: ["T.tmdl", "report.json"],
       entries: [{ path: "T.tmdl", text: "table T\n" }],
     });
+  });
+});
+
+/**
+ * A file entry whose file() is counted and still answers, so a test can tell whether the walk
+ * opened it and then open it through its handle.
+ */
+function counted(
+  name: string,
+  fullPath: string,
+  text: string,
+  opened: string[],
+): FileSystemFileEntry {
+  return {
+    isFile: true,
+    isDirectory: false,
+    name,
+    fullPath,
+    file: (ok: (f: File) => void) => {
+      opened.push(fullPath);
+      ok(new File([text], name));
+    },
+  } as unknown as FileSystemFileEntry;
+}
+
+describe("the drop's handles", () => {
+  it("keeps an unopened handle on every file outside a skipped folder, and none on a marker", async () => {
+    const opened: string[] = [];
+    const tree = emptyTree();
+    await walkEntry(
+      dir("Team", "/Team", [
+        file("pbiplint.config.json", "/Team/pbiplint.config.json", "{}"),
+        dir("rules", "/Team/rules", [
+          counted("team.json", "/Team/rules/team.json", "[]", opened),
+          counted("notes.txt", "/Team/rules/notes.txt", "", opened),
+        ]),
+        dir(".git", "/Team/.git", [counted("a.json", "/Team/.git/a.json", "", opened)]),
+        dir("node_modules", "/Team/node_modules", [
+          counted("b.json", "/Team/node_modules/b.json", "", opened),
+        ]),
+        dir("X.Report", "/Team/X.Report", [
+          unopened("report.json", "/Team/X.Report/report.json", opened),
+          dir(".pbi", "/Team/X.Report/.pbi", [
+            counted("c.json", "/Team/X.Report/.pbi/c.json", "", opened),
+          ]),
+          dir("StaticResources", "/Team/X.Report/StaticResources", [
+            dir("Other", "/Team/X.Report/StaticResources/Other", [
+              counted("d.json", "/Team/X.Report/StaticResources/Other/d.json", "", opened),
+            ]),
+          ]),
+        ]),
+        unopened("Sales.pbix", "/Team/Sales.pbix", opened),
+      ]),
+      tree,
+    );
+    // The walk opened only what it wanted, and the rule file is not one of those.
+    expect(opened).toEqual([]);
+    expect([...tree.handles.keys()]).toEqual([
+      "Team/pbiplint.config.json",
+      "Team/rules/team.json",
+      "Team/rules/notes.txt",
+    ]);
+    // A wanted file has both an entry and a handle.
+    expect(tree.entries.map((e) => e.path)).toEqual(["Team/pbiplint.config.json"]);
+    // The handle opens the file when asked, and only then.
+    const rule = await tree.handles.get("Team/rules/team.json")!();
+    expect(await rule.text()).toBe("[]");
+    expect(opened).toEqual(["/Team/rules/team.json"]);
+  });
+  it("keeps no handle below the depth cap", async () => {
+    let deep = dir("bottom", "/bottom", [file("x.json", "/bottom/x.json", "{}")]);
+    for (let i = MAX_DEPTH; i >= 0; i--) deep = dir(`d${i}`, `/d${i}`, [deep]);
+    const tree = emptyTree();
+    await walkEntry(deep, tree);
+    expect(tree.handles.size).toBe(0);
+  });
+  it("keeps a dropped file's own File as its handle, on both top-level branches, and none for a .pbix", async () => {
+    const team = new File(["[]"], "team.json");
+    const pbix = new File([""], "Sales.pbix");
+    const viaItems = {
+      items: [
+        { webkitGetAsEntry: () => file("team.json", "/team.json", ""), getAsFile: () => team },
+        { webkitGetAsEntry: () => file("Sales.pbix", "/Sales.pbix", ""), getAsFile: () => pbix },
+      ],
+      files: [],
+    } as unknown as DataTransfer;
+    const a = await readDataTransfer(viaItems);
+    expect([...a.handles.keys()]).toEqual(["team.json"]);
+    expect(await a.handles.get("team.json")!()).toBe(team);
+    const flat = { items: [], files: [team, pbix] } as unknown as DataTransfer;
+    const b = await readDataTransfer(flat);
+    expect([...b.handles.keys()]).toEqual(["team.json"]);
+    expect(await b.handles.get("team.json")!()).toBe(team);
   });
 });

@@ -8,7 +8,8 @@ import {
   type LintResult,
   type ProjectRun,
 } from "@pbiplint/core";
-import type { SeveralProject } from "./input/project-files.js";
+import type { OpenFile, SeveralProject } from "./input/project-files.js";
+import { loadCustomRules, readRuleFiles, type CustomRulesModule } from "./rule-files.js";
 
 /** A config file's text as resolveConfig takes it, refused in the page's words when it is not JSON. */
 export function parsedConfig(config: { text: string } | undefined): unknown {
@@ -42,14 +43,19 @@ function named(e: unknown, file: { path: string } | undefined): unknown {
  * folder: each in turn under its own config, a project that could not be read as its one
  * PARSE_ISSUE finding under its config too, then the shared-model step. Every config is read
  * before anything is linted, so one that is not valid JSON refuses the drop, as the CLI's refuses
- * its run. `before(i)` runs ahead of each project's lint, where the page yields to the browser;
+ * its run, and then every config's rule files, opened through the walk's `handles`, each config's
+ * once. `before(i)` runs ahead of each project's lint, where the page yields to the browser;
  * when it says false the run stops there and gives nothing. `ms` is the time spent linting, the
- * waits left out. No DOM here, so projects-below.test.ts runs this same loop against the CLI's.
+ * waits left out. `ruleFiles` holds, per project, the drop-relative paths of the rule files its
+ * config named, for the list of files read. `load` hands over the custom rules chunk the page
+ * preloaded. No DOM here, so projects-below.test.ts runs this same loop against the CLI's.
  */
 export async function lintProjects(
   projects: SeveralProject[],
   before: (i: number) => Promise<boolean> = () => Promise.resolve(true),
-): Promise<{ runs: ProjectRun[]; ms: number } | undefined> {
+  handles: ReadonlyMap<string, OpenFile> = new Map(),
+  load: () => Promise<CustomRulesModule> = loadCustomRules,
+): Promise<{ runs: ProjectRun[]; ms: number; ruleFiles: string[][] } | undefined> {
   const configs = projects.map((p) => {
     try {
       return resolveConfig(parsedConfig(p.config));
@@ -57,6 +63,19 @@ export async function lintProjects(
       throw named(e, p.config);
     }
   });
+  // Every config's rule files, read once however many projects it covers, before anything is
+  // linted, so one that cannot be used refuses the drop and names its config, as the CLI's
+  // lintSeveral reads each config's once.
+  const read = new Map<string, Awaited<ReturnType<typeof readRuleFiles>>>();
+  for (const [i, { config: file }] of projects.entries()) {
+    if (file === undefined || read.has(file.path)) continue;
+    try {
+      read.set(file.path, await readRuleFiles(file, configs[i]!.customRules, handles, load));
+    } catch (e) {
+      throw named(e, file);
+    }
+  }
+  const custom = projects.map((p) => (p.config ? read.get(p.config.path) : undefined));
   const runs: ProjectRun[] = [];
   let ms = 0;
   for (const [i, { path, project, unreadable, config: file, modelKey, modelPath }] of [
@@ -71,6 +90,7 @@ export async function lintProjects(
       result = project
         ? await lint(project.files, {
             config,
+            customRules: custom[i]?.set,
             diagnostics: project.diagnostics,
             absent: project.absent,
             unreadPaths: project.unreadPaths,
@@ -88,5 +108,5 @@ export async function lintProjects(
       ...(file === undefined ? {} : { configPath: file.path }),
     });
   }
-  return { runs: shareModels(runs), ms };
+  return { runs: shareModels(runs), ms, ruleFiles: custom.map((c) => c?.opened ?? []) };
 }

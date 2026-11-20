@@ -1,8 +1,18 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
+import { gzipSync } from "node:zlib";
 import { describe, expect, it, vi } from "vitest";
+import { STATISTICS_REASON } from "@pbiplint/core/custom-rules";
 import { tempDir } from "../../../tests/support/temp-dir.js";
-import { checkBuild, checkSite, scanTags, siteCheckPlugin } from "../src/build/check-site.js";
+import {
+  checkBuild,
+  checkChunks,
+  checkSite,
+  CUSTOM_RULES_PROBE,
+  scanTags,
+  scriptSizes,
+  siteCheckPlugin,
+} from "../src/build/check-site.js";
 import { CSP } from "../src/build/csp.js";
 
 const META = `<meta http-equiv="Content-Security-Policy" content="${CSP}">`;
@@ -290,6 +300,10 @@ describe("siteCheckPlugin", () => {
     expect(logs[1]).toBe(
       "site check passed: CSP on every page, no external resources, no network APIs, every link off the site in a new tab",
     );
+    // The page loads no script, and there is no chunk.
+    expect(logs[2]).toBe(
+      "home page scripts: 0.0 KB (0.0 KB gzipped); custom rules chunk: 0.0 KB (0.0 KB gzipped)",
+    );
   });
 
   it("fails the build, naming every problem it found", () => {
@@ -305,6 +319,17 @@ describe("siteCheckPlugin", () => {
     expect(error?.message).toContain("assets/a.js: references fetch(");
     // The size line is written before the check can fail, so a failing build still says what it read.
     expect(logs).toHaveLength(1);
+  });
+
+  it("checks the custom rules chunk when told which build it is, in both builds", () => {
+    for (const build of ["public", "self-host"] as const) {
+      const dir = site({
+        "index.html": `<html><head>${META}</head><body></body></html>`,
+        "assets/a.js": 'document.createElement("a");',
+      });
+      const { error } = run(dir, build);
+      expect(error?.message).toContain("assets: no custom-rules-*.js chunk");
+    }
   });
 
   it("checks the build's shape too when told which build it is", () => {
@@ -409,6 +434,84 @@ describe("checkBuild", () => {
     });
     expect(checkBuild(dir, "public")).toEqual([
       'public build: about/index.html has no id="light-and-dark", the section every footer links to',
+    ]);
+  });
+});
+
+describe("scriptSizes", () => {
+  const sizeOf = (text: string) => ({
+    bytes: Buffer.byteLength(text),
+    gzipped: gzipSync(text).length,
+  });
+  it("adds up the home page's module script and its modulepreload files, and the custom rules chunk", () => {
+    const home = "export const a = 1;".repeat(40);
+    const nav = "export const n = 2;".repeat(30);
+    const layers = "export const l = 3;".repeat(20);
+    const chunk = "export const c = 4;".repeat(50);
+    const dir = site({
+      "index.html": `<html><head>${META}<link rel="modulepreload" crossorigin href="/assets/nav-1.js"><link rel="modulepreload" crossorigin href="/assets/layers-2.js"></head><body><script type="module" crossorigin src="/assets/home-3.js"></script></body></html>`,
+      "assets/home-3.js": home,
+      "assets/nav-1.js": nav,
+      "assets/layers-2.js": layers,
+      // Another page's script and the chunk itself are not the home page's.
+      "assets/rules-4.js": "export const r = 5;",
+      "assets/custom-rules-5.js": chunk,
+    });
+    const [h, n, l, c] = [home, nav, layers, chunk].map(sizeOf);
+    expect(scriptSizes(dir)).toEqual({
+      home: {
+        bytes: h!.bytes + n!.bytes + l!.bytes,
+        gzipped: h!.gzipped + n!.gzipped + l!.gzipped,
+      },
+      chunk: c,
+    });
+  });
+  it("gives nothing for a chunk that is not there", () => {
+    const dir = site({ "index.html": `<html><head>${META}</head><body></body></html>` });
+    expect(scriptSizes(dir)).toEqual({
+      home: { bytes: 0, gzipped: 0 },
+      chunk: { bytes: 0, gzipped: 0 },
+    });
+  });
+});
+
+describe("checkChunks", () => {
+  it("probes for the chunk with the text of the entry's statistics reason", () => {
+    expect(CUSTOM_RULES_PROBE).toBe(STATISTICS_REASON);
+  });
+  it("passes one chunk that alone holds the custom rules code", () => {
+    const dir = site({
+      "assets/home-1.js": 'import("./custom-rules-2.js");',
+      "assets/custom-rules-2.js": `const r = ${JSON.stringify(CUSTOM_RULES_PROBE)};`,
+    });
+    expect(checkChunks(dir)).toEqual([]);
+  });
+  it("names a build with no chunk, or with more than one", () => {
+    expect(checkChunks(site({ "assets/home-1.js": "" }))).toEqual([
+      "assets: no custom-rules-*.js chunk",
+    ]);
+    expect(checkChunks(site({ "index.html": "" }))).toEqual(["assets: no custom-rules-*.js chunk"]);
+    const two = site({
+      "assets/custom-rules-1.js": CUSTOM_RULES_PROBE,
+      "assets/custom-rules-2.js": "",
+    });
+    expect(checkChunks(two)).toEqual(["assets: 2 custom-rules-*.js chunks, where one is expected"]);
+  });
+  it("names any other script holding the custom rules code, which belongs in the chunk only", () => {
+    const dir = site({
+      "assets/home-1.js": `const r = ${JSON.stringify(CUSTOM_RULES_PROBE)};`,
+      "assets/custom-rules-2.js": CUSTOM_RULES_PROBE,
+      "rules/x.js": CUSTOM_RULES_PROBE,
+    });
+    expect(checkChunks(dir)).toEqual([
+      "assets/home-1.js: holds the custom rules code, which belongs in its chunk only",
+      "rules/x.js: holds the custom rules code, which belongs in its chunk only",
+    ]);
+  });
+  it("names a chunk that does not hold the custom rules code", () => {
+    const dir = site({ "assets/custom-rules-2.js": "export {};" });
+    expect(checkChunks(dir)).toEqual([
+      "assets/custom-rules-2.js: does not hold the custom rules code",
     ]);
   });
 });

@@ -90,8 +90,13 @@ async function walkHandle(
     }
     // A legacy part is known by its marker's name, and a .pbix by its own; neither is opened.
     const marker = markerOf(path);
-    if (marker) tree.markers.push(marker);
-    else if (wanted(path)) {
+    if (marker) {
+      tree.markers.push(marker);
+      continue;
+    }
+    // Kept unopened for every file passed; a rule file a config names is opened through it later.
+    tree.handles.set(path, () => handle.getFile());
+    if (wanted(path)) {
       try {
         const text = await readWanted(path, await handle.getFile());
         if (text !== undefined) tree.entries.push({ path, text });
@@ -151,8 +156,13 @@ export async function readDirectoryInput(input: HTMLInputElement): Promise<Input
     addNew(tree.modelFolders, foldersIn(path, isModelFolder));
     addNew(tree.reportFolders, foldersIn(path, isReportFolder));
     const marker = markerOf(path);
-    if (marker) tree.markers.push(marker);
-    else if (wanted(path)) {
+    if (marker) {
+      tree.markers.push(marker);
+      continue;
+    }
+    // The File itself, taken from the list before the page clears the input, so it outlives that.
+    tree.handles.set(path, () => Promise.resolve(file));
+    if (wanted(path)) {
       try {
         const text = await readWanted(path, file);
         if (text !== undefined) tree.entries.push({ path, text });

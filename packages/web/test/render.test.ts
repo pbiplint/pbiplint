@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import {
+  CATEGORY_ORDER,
   defaultRules,
   LEARN_HELP_URLS,
   legacyReportNotice,
@@ -12,15 +13,19 @@ import {
   type ProjectRun,
   type Rule,
 } from "@pbiplint/core";
+import { readCustomRules } from "@pbiplint/core/custom-rules";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NEW_TAB_NOTE as PAGES_NEW_TAB_NOTE } from "../src/build/pages.js";
 import {
   applyFilters,
+  categoriesOf,
+  groupSlugs,
   h,
   heading,
   NEW_TAB_NOTE,
   renderResults,
   renderSeveral,
+  TEAM_RULE,
   withLearnLinks,
 } from "../src/results/render.js";
 import { exportForAssistant } from "../src/results/export.js";
@@ -1425,5 +1430,168 @@ describe("h", () => {
     expect(el.textContent).not.toMatch(RAW_CONTROL);
     // A string shown once already, as heading's is, reads the same the second time.
     expect(h("p", {}, SHOWN).textContent).toBe(SHOWN);
+  });
+});
+
+/** A rule in Tabular Editor's format, with what every one here shares. */
+const teRule = (fields: Record<string, unknown>) => ({
+  Category: "Team conventions",
+  Description: "Says what the team wants.",
+  Severity: 3,
+  Scope: "Table",
+  Expression: "true",
+  ...fields,
+});
+const teamFile = JSON.stringify([
+  teRule({
+    ID: "TEAM_FLOAT COLUMNS",
+    Name: "Tables follow the first convention",
+    Description: "What it checks.\nWhy the team wants it. \u202eTxet\r\nHow to fix it.",
+  }),
+  teRule({ ID: "TEAM_FLOAT_COLUMNS", Name: "Tables follow the second convention" }),
+  teRule({
+    ID: "TEAM_NAMING",
+    Name: "Measures follow the naming guide",
+    Category: "Naming guide",
+    Scope: "Measure",
+  }),
+  teRule({
+    ID: "TEAM_ARCHITECTURE",
+    Name: "Tables follow the architecture",
+    Category: "Architecture board",
+  }),
+  teRule({
+    ID: "TEAM_BROKEN",
+    Name: "Measures are visible",
+    Scope: "Measure",
+    Expression: "Visible",
+  }),
+]);
+/** The sample linted with the team's rules beside pbiplint's. */
+const custom = await lint(SAMPLE_FILES, {
+  config: resolveConfig(JSON.parse(SAMPLE_CONFIG)),
+  customRules: readCustomRules([{ path: "rules/team.json", text: teamFile }]),
+});
+
+describe("a team's own rules (custom rules)", () => {
+  const team = { ...custom, groups: custom.groups.filter((g) => g.rule.custom) };
+  const groupFor = (id: string) =>
+    [...container.querySelectorAll<HTMLDetailsElement>("details.group")].find(
+      (g) => g.querySelector(".meta code")?.textContent === id,
+    )!;
+
+  it("tags a team's group, names its file, and shows its description where a rule page link would be", () => {
+    renderResults(container, custom, { source: "x" });
+    const group = groupFor("TEAM_NAMING");
+    const summary = group.querySelector("summary")!;
+    const tag = summary.querySelector(".team-tag")!;
+    expect(tag.textContent).toBe(TEAM_RULE);
+    expect(TEAM_RULE).toBe("Your team's rule");
+    // After the layer tag, before the name.
+    expect(tag.previousElementSibling!.classList.contains("layer")).toBe(true);
+    expect(tag.nextElementSibling!.classList.contains("name")).toBe(true);
+    expect(group.querySelector(".meta")!.textContent).toBe(
+      "TEAM_NAMING · Naming guide · rules/team.json",
+    );
+    expect(group.querySelector(".meta + p.rule-description")!.textContent).toBe(
+      "Says what the team wants.",
+    );
+    expect(group.querySelector("a")).toBeNull();
+    expect(container.querySelector('a[href*="/rules/team"]')).toBeNull();
+  });
+  it("renders a built-in group as before beside a team's", () => {
+    renderResults(container, custom, { source: "x" });
+    const own = custom.groups.find((g) => !g.rule.custom)!;
+    const group = container.querySelector<HTMLElement>(`#rule-${own.rule.slug}`)!;
+    expect(group.querySelector(".team-tag")).toBeNull();
+    expect(group.querySelector(".rule-description")).toBeNull();
+    expect(group.querySelector("a.rule-link")!.getAttribute("href")).toBe(
+      `/rules/${own.rule.slug}/`,
+    );
+    expect(group.querySelector(".meta")!.textContent).toBe(
+      `${own.rule.id} · ${own.rule.category} · How to fix it`,
+    );
+  });
+  it("shows the tag where the rule link would be among the groups to fix first", () => {
+    renderResults(container, team, { source: "x" });
+    const items = [...container.querySelectorAll(".fix-first li")];
+    expect(items.length).toBeGreaterThan(0);
+    for (const li of items) {
+      expect(li.querySelector("a.rule-link")).toBeNull();
+      expect(li.querySelectorAll("a").length).toBe(1);
+      expect(li.lastElementChild!.textContent).toBe(TEAM_RULE);
+      expect(li.lastElementChild!.classList.contains("team-tag")).toBe(true);
+    }
+  });
+  it("offers a box for each team category after pbiplint's eight, alphabetically, and filters by it", () => {
+    renderResults(container, custom, { source: "x" });
+    const categories = [
+      ...container.querySelectorAll<HTMLInputElement>('input[data-filter="category"]'),
+    ].map((b) => b.value);
+    const own = CATEGORY_ORDER.filter((c) => custom.groups.some((g) => g.rule.category === c));
+    expect(own.length).toBeGreaterThan(1);
+    expect(categories).toEqual([...own, "Architecture board", "Naming guide", "Team conventions"]);
+    expect(categoriesOf(custom.groups)).toEqual(categories);
+    uncheck("category:Naming guide");
+    expect(groupFor("TEAM_NAMING").hidden).toBe(true);
+    expect(groupFor("TEAM_ARCHITECTURE").hidden).toBe(false);
+    expect(
+      [...container.querySelectorAll<HTMLElement>(".group[hidden]")].map((g) => g.dataset.category),
+    ).toEqual(["Naming guide"]);
+  });
+  it("gives two team ids that share a slug an id each, and each its own link to fix first", () => {
+    renderResults(container, team, { source: "x" });
+    const a = groupFor("TEAM_FLOAT COLUMNS");
+    const b = groupFor("TEAM_FLOAT_COLUMNS");
+    expect(new Set([a.id, b.id])).toEqual(
+      new Set(["rule-team-float-columns", "rule-team-float-columns-2"]),
+    );
+    const ids = [...container.querySelectorAll("[id]")].map((e) => e.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    const hrefs = [...container.querySelectorAll(".fix-first li a")].map((l) =>
+      l.getAttribute("href"),
+    );
+    expect(hrefs).toContain(`#${a.id}`);
+    expect(hrefs).toContain(`#${b.id}`);
+  });
+  it("gives a team id a slug of its own when its slug is empty or taken", () => {
+    const g = (id: string, slug: string, isCustom: boolean) => {
+      const { custom: _, ...rule } = team.groups[0]!.rule;
+      return {
+        rule: { ...rule, id, slug, ...(isCustom && { custom: true as const }) },
+        findings: [],
+      };
+    };
+    const slugs = groupSlugs([
+      g("TEAM_A", "builtin-rule", true),
+      g("BUILTIN_RULE", "builtin-rule", false),
+      g("___", "", true),
+      g("TEAM_B", "builtin-rule-2", true),
+      g("TEAM-B", "builtin-rule-2", true),
+    ]);
+    expect([...slugs]).toEqual([
+      ["BUILTIN_RULE", "builtin-rule"],
+      ["TEAM_A", "builtin-rule-2"],
+      ["___", "-2"],
+      ["TEAM_B", "builtin-rule-2-2"],
+      ["TEAM-B", "builtin-rule-2-3"],
+    ]);
+  });
+  it("shows a description's lines as text, with a bidirectional control as an escape", () => {
+    renderResults(container, team, { source: "x" });
+    const p = groupFor("TEAM_FLOAT COLUMNS").querySelector(".rule-description")!;
+    expect(p.textContent).toBe(
+      "What it checks.\nWhy the team wants it. \\u202eTxet\nHow to fix it.",
+    );
+    expect(p.children.length).toBe(0);
+  });
+  it("names a team's rule that could not run, and its file, among the notices", () => {
+    renderResults(container, custom, { source: "x" });
+    const notices = [...container.querySelectorAll(".notice")].map((n) => n.textContent ?? "");
+    expect(
+      notices.filter((n) =>
+        n.startsWith("The custom rule TEAM_BROKEN in rules/team.json could not run: "),
+      ),
+    ).toHaveLength(1);
   });
 });

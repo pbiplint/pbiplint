@@ -1,0 +1,92 @@
+{
+  "fixture": "tests/fixtures/custom-rules-model-ignore.SemanticModel",
+  "oracle": "Tabular Editor CLI 0.8.1.1 with BPARules.json sha256 ddb9cff4c2a0611a6467e2559d38319d9867381998066473ffa1e11c2d360392",
+  "captured": "2026-11-07",
+  "skipRules": {},
+  "findings": {
+    "ADD_DATA_CATEGORY_FOR_COLUMNS": [
+      "'Customers'[City]"
+    ],
+    "HIDE_FACT_TABLE_COLUMNS": [
+      "'Orders'[Amount]",
+      "'Orders'[Quantity]"
+    ],
+    "INTEGER_FORMATTING": [
+      "[Abc]",
+      "[Amount per Order]",
+      "[Amount per Unit]",
+      "[Block Comment Amount]",
+      "[Commented Amount]",
+      "[Half Amount]",
+      "[Safe Ratio]",
+      "[Slash Label]",
+      "[Tenth Amount]",
+      "[Total Amount]"
+    ],
+    "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+      "'Customers'[Customer Key]",
+      "'Orders'[Bill Customer Key]",
+      "'Orders'[Order Key]",
+      "'Orders'[Ship Customer Key]",
+      "'Products'[Product Key]",
+      "'Time Intelligence'[Ordinal]"
+    ],
+    "NUMERIC_COLUMN_SUMMARIZE_BY": [
+      "'Orders'[Amount]",
+      "'Orders'[Net Amount]",
+      "'Orders'[Quantity]",
+      "'Targets'[Target]"
+    ],
+    "OBJECTS_WITH_NO_DESCRIPTION": [
+      "'Customers'",
+      "'Customers'[City]",
+      "'Customers'[Customer Name]",
+      "'Customers'[Region]",
+      "'Notes'",
+      "'Notes'[Note]",
+      "'Orders'",
+      "'Orders'[Amount Band]",
+      "'Orders'[Amount]",
+      "'Orders'[Customer Key]",
+      "'Orders'[Discount]",
+      "'Orders'[Net Amount]",
+      "'Orders'[Product Key]",
+      "'Orders'[Quantity]",
+      "'Orders'[Tax]",
+      "'Products'",
+      "'Products'[List Price]",
+      "'Products'[Product Name]",
+      "'Targets'",
+      "'Targets'[Region]",
+      "'Targets'[Target]",
+      "'Time Intelligence'",
+      "'Time Intelligence'[Name]",
+      "[Abc]",
+      "[Amount per Order]",
+      "[Amount per Unit]",
+      "[Block Comment Amount]",
+      "[Commented Amount]",
+      "[Half Amount]",
+      "[Note Count]",
+      "[Safe Ratio]",
+      "[Slash Label]",
+      "[Tenth Amount]",
+      "[Total Amount]",
+      "[Total Quantity]"
+    ],
+    "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+      "[Abc]",
+      "[Slash Label]"
+    ],
+    "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+      "'Targets'"
+    ],
+    "REMOVE_ROLES_WITH_NO_MEMBERS": [
+      "East"
+    ],
+    "UNNECESSARY_COLUMNS": [
+      "'Orders'[Order Key]",
+      "'Time Intelligence'[Ordinal]"
+    ]
+  }
+}

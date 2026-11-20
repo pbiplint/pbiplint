@@ -1,0 +1,3513 @@
+{
+  "fixture": "tests/fixtures/custom-rules-model-ignore.SemanticModel",
+  "oracle": "Tabular Editor CLI 0.8.1.1, each rule file in tests/expectations/survey/files.json at its commit",
+  "captured": "2026-11-07",
+  "deviations": {},
+  "ours": {},
+  "results": {
+    "microsoft/Analysis-Services/BestPracticeRules/BPARules.json": {
+      "findings": {
+        "ADD_DATA_CATEGORY_FOR_COLUMNS": [
+          "'Customers'[City]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Amount]",
+          "'Orders'[Quantity]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Customers'[Customer Key]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Order Key]",
+          "'Orders'[Ship Customer Key]",
+          "'Products'[Product Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Customers'",
+          "'Customers'[City]",
+          "'Customers'[Customer Name]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Abc]",
+          "[Slash Label]"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Targets'"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "microsoft/Analysis-Services/BestPracticeRules/Italian/BPARules.json": {
+      "findings": {
+        "ADD_DATA_CATEGORY_FOR_COLUMNS": [
+          "'Customers'[City]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Amount]",
+          "'Orders'[Quantity]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Customers'[Customer Key]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Order Key]",
+          "'Orders'[Ship Customer Key]",
+          "'Products'[Product Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Customers'",
+          "'Customers'[City]",
+          "'Customers'[Customer Name]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Abc]",
+          "[Slash Label]"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Targets'"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "microsoft/Analysis-Services/BestPracticeRules/Spanish/BPARules.json": {
+      "findings": {
+        "ADD_DATA_CATEGORY_FOR_COLUMNS": [
+          "'Customers'[City]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Amount]",
+          "'Orders'[Quantity]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Customers'[Customer Key]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Order Key]",
+          "'Orders'[Ship Customer Key]",
+          "'Products'[Product Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Customers'",
+          "'Customers'[City]",
+          "'Customers'[Customer Name]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Abc]",
+          "[Slash Label]"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Targets'"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "microsoft/Analysis-Services/BestPracticeRules/Japanese/BPARules.json": {
+      "findings": {
+        "ADD_DATA_CATEGORY_FOR_COLUMNS": [
+          "'Customers'[City]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Amount]",
+          "'Orders'[Quantity]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Customers'[Customer Key]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Order Key]",
+          "'Orders'[Ship Customer Key]",
+          "'Products'[Product Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Customers'",
+          "'Customers'[City]",
+          "'Customers'[Customer Name]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Abc]",
+          "[Slash Label]"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Targets'"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "BenniDeJagere/Presentations/2020/20200707_PBIMCR/BPARules.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_MEASURES": [
+          "[Abc]",
+          "[Slash Label]"
+        ],
+        "DAX_DIVISION_COLUMNS": [
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Slash Label]",
+          "[Tenth Amount]"
+        ],
+        "LAYOUT_ADD_TO_PERSPECTIVES": [
+          "'Customers'[City]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'[Name]",
+          "Geography",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Quantity]"
+        ],
+        "LAYOUT_HIDE_FK_COLUMNS": [
+          "'Orders'[Customer Key]",
+          "'Orders'[Product Key]"
+        ],
+        "LAYOUT_MEASURES_DF": [
+          "'Orders'"
+        ],
+        "META_AVOID_FLOAT": [
+          "'Orders'[Discount]",
+          "'Orders'[Tax]"
+        ],
+        "META_SUMMARIZE_NONE": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "PERF_UNUSED_COLUMNS": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "BenniDeJagere/Presentations/2020/20201002_SQLBits/BPARules.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_MEASURES": [
+          "[Abc]",
+          "[Slash Label]"
+        ],
+        "DAX_DIVISION_COLUMNS": [
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Slash Label]",
+          "[Tenth Amount]"
+        ],
+        "LAYOUT_ADD_TO_PERSPECTIVES": [
+          "'Customers'[City]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'[Name]",
+          "Geography",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Quantity]"
+        ],
+        "LAYOUT_HIDE_FK_COLUMNS": [
+          "'Orders'[Customer Key]",
+          "'Orders'[Product Key]"
+        ],
+        "LAYOUT_MEASURES_DF": [
+          "'Orders'"
+        ],
+        "META_AVOID_FLOAT": [
+          "'Orders'[Discount]",
+          "'Orders'[Tax]"
+        ],
+        "META_SUMMARIZE_NONE": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "PERF_UNUSED_COLUMNS": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "gronnerup/FabricOps/automation/resources/BPARules.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_COLUMNS": [
+          "'Orders'[Customer Key]",
+          "'Orders'[Product Key]"
+        ],
+        "APPLY_FORMAT_STRING_MEASURES": [
+          "[Abc]"
+        ],
+        "DAX_DIVISION_COLUMNS": [
+          "[Amount per Order]",
+          "[Amount per Unit]"
+        ],
+        "DISABLE_ATTRIBUTE_HIERACHIES": [
+          "'Customers'[Customer Key]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Order Key]",
+          "'Orders'[Ship Customer Key]",
+          "'Products'[Product Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "LAYOUT_ADD_TO_PERSPECTIVES": [
+          "'Customers'[City]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'[Name]",
+          "Geography",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Quantity]"
+        ],
+        "LAYOUT_HIDE_FK_COLUMNS": [
+          "'Orders'[Customer Key]",
+          "'Orders'[Product Key]"
+        ],
+        "LAYOUT_MEASURES_DF": [
+          "'Orders'"
+        ],
+        "META_AVOID_FLOAT": [
+          "'Orders'[Discount]",
+          "'Orders'[Tax]"
+        ],
+        "META_SUMMARIZE_NONE": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "PERF_UNUSED_COLUMNS": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "TRANSLATE_HIDEABLE_OBJECT_NAMES": [
+          "'Customers'",
+          "'Customers'[City]",
+          "'Customers'[Customer Name]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'[Name]",
+          "Geography",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "TRANSLATE_HIERARCHY_LEVEL_NAMES": [
+          "City",
+          "Region"
+        ],
+        "TRANSLATE_OTHER_NAMES": [
+          "Model",
+          "Sales View"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "Reinsight-SE/Tabular/BestPractices/BPARules.json": {
+      "findings": {
+        "ADD_DATA_CATEGORY_FOR_COLUMNS": [
+          "'Customers'[City]"
+        ],
+        "APPLY_FORMAT_STRING_COLUMNS": [
+          "'Orders'[Customer Key]",
+          "'Orders'[Product Key]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Amount]",
+          "'Orders'[Quantity]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Customers'[Customer Key]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Order Key]",
+          "'Orders'[Ship Customer Key]",
+          "'Products'[Product Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "LAYOUT_ADD_TO_PERSPECTIVES": [
+          "'Customers'[City]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'[Name]",
+          "Geography",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Quantity]"
+        ],
+        "LAYOUT_MEASURES_DF": [
+          "'Orders'"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Customers'",
+          "'Customers'[City]",
+          "'Customers'[Customer Name]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Targets'"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East"
+        ],
+        "TRANSLATE_HIDEABLE_OBJECT_NAMES": [
+          "'Customers'",
+          "'Customers'[City]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'[Name]",
+          "Geography",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Quantity]"
+        ],
+        "TRANSLATE_HIERARCHY_LEVEL_NAMES": [
+          "City",
+          "Region"
+        ],
+        "TRANSLATE_OTHER_NAMES": [
+          "Model",
+          "Sales View"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "USE_DIVIDE_FUNCTION_FOR_DIVISION": [
+          "[Amount per Order]",
+          "[Amount per Unit]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "filcuk/ssas-best-practice-rules/BPARules.json": {
+      "findings": {
+        "ADD_DATA_CATEGORY_FOR_COLUMNS": [
+          "'Customers'[City]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Amount]",
+          "'Orders'[Quantity]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Abc]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Customers'[Customer Key]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Order Key]",
+          "'Orders'[Ship Customer Key]",
+          "'Products'[Product Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Customers'",
+          "'Customers'[City]",
+          "'Customers'[Customer Name]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Abc]",
+          "[Slash Label]"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Targets'"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "rafaelxkr/Power-BI/Tabular_Editor/BPARules.json": {
+      "findings": {
+        "ADD_DATA_CATEGORY_FOR_COLUMNS": [
+          "'Customers'[City]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Amount]",
+          "'Orders'[Quantity]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Customers'[Customer Key]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Order Key]",
+          "'Orders'[Ship Customer Key]",
+          "'Products'[Product Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Customers'",
+          "'Customers'[City]",
+          "'Customers'[Customer Name]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Abc]",
+          "[Slash Label]"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Targets'"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "Adrian1903/BPA-Rules/BPARules.json": {
+      "findings": {
+        "ADD_DATA_CATEGORY_FOR_COLUMNS": [
+          "'Customers'[City]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Amount]",
+          "'Orders'[Quantity]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Customers'[Customer Key]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Order Key]",
+          "'Orders'[Ship Customer Key]",
+          "'Products'[Product Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Orders'[Amount Band]",
+          "'Orders'[Net Amount]",
+          "'Targets'",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Abc]",
+          "[Slash Label]"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ]
+      },
+      "ruleErrors": {
+        "CHECK_IF_DYNAMIC_ROW_LEVEL_SECURITY_(RLS)_IS_NECESSARY": "Error while evaluating expression on Tables: Value cannot be null. (Parameter 'input')"
+      }
+    },
+    "marcelodfelman/PowerBI-BPA-Analyzer/data/BPARules.json": {
+      "findings": {
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Customers'[Customer Key]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Order Key]",
+          "'Orders'[Ship Customer Key]",
+          "'Products'[Product Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Abc]",
+          "[Slash Label]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "punitgiri921/Brightline-Analytics/bpa-rules/BPARules.json": {
+      "findings": {
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Abc]",
+          "[Slash Label]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "bonardi/PowerBI-CICD/resources/report/config/bparules.json": {
+      "error": "Could not parse BPA rules. Expected JSON array or object with 'rules' array."
+    },
+    "bonardi/PowerBI-CICD/resources/dataset/config/bparules.json": {
+      "findings": {
+        "ADD_DATA_CATEGORY_FOR_COLUMNS": [
+          "'Customers'[City]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Amount]",
+          "'Orders'[Quantity]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Customers'[Customer Key]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Order Key]",
+          "'Orders'[Ship Customer Key]",
+          "'Products'[Product Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Customers'",
+          "'Customers'[City]",
+          "'Customers'[Customer Name]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Abc]",
+          "[Slash Label]"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Targets'"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "gordoncheme/powerbi/BPARules.json": {
+      "findings": {
+        "ADD_DATA_CATEGORY_FOR_COLUMNS": [
+          "'Customers'[City]"
+        ],
+        "FKCOLUMNS_HIDDEN": [
+          "'Orders'[Customer Key]",
+          "'Orders'[Product Key]"
+        ],
+        "FORMATTING_MEASURES_FORMAT_STRING": [
+          "[Abc]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Amount]",
+          "'Orders'[Quantity]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Customers'[Customer Key]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Order Key]",
+          "'Orders'[Ship Customer Key]",
+          "'Products'[Product Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "MODELING_AVOID_CALCULATED_COLUMNS": [
+          "'Orders'[Amount Band]",
+          "'Orders'[Net Amount]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Customers'",
+          "'Customers'[City]",
+          "'Customers'[Customer Name]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Abc]",
+          "[Slash Label]"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Targets'"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "USABILITY_MEASURE_DISPLAY_FOLDERS": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "thijsknaapRob/BPARulesOnline/BPARules.json": {
+      "findings": {
+        "ADD_DATA_CATEGORY_FOR_COLUMNS": [
+          "'Customers'[City]"
+        ],
+        "CHECK_IF_CALCULATED_COLUMNS_ARE_NEEDED": [
+          "'Orders'[Amount Band]",
+          "'Orders'[Net Amount]"
+        ],
+        "DISABLE_ATTRIBUTE_HIERACHIES": [
+          "'Customers'[Customer Key]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Order Key]",
+          "'Orders'[Ship Customer Key]",
+          "'Products'[Product Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Abc]",
+          "[Note Count]",
+          "[Total Quantity]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Customers'[Customer Key]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Order Key]",
+          "'Orders'[Ship Customer Key]",
+          "'Products'[Product Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Abc]",
+          "[Slash Label]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "twelve-baskets-analytics/pbi-bpa/BPARules.json": {
+      "findings": {
+        "INTEGER_FORMATTING": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Customers'[Customer Key]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Order Key]",
+          "'Orders'[Ship Customer Key]",
+          "'Products'[Product Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Customers'",
+          "'Customers'[City]",
+          "'Customers'[Customer Name]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Abc]",
+          "[Slash Label]"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Targets'"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "UNUSED_COLUMN": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "faby31/test/BPARules.json": {
+      "findings": {
+        "ADD_DATA_CATEGORY_FOR_COLUMNS": [
+          "'Customers'[City]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Amount]",
+          "'Orders'[Quantity]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Customers'[Customer Key]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Order Key]",
+          "'Orders'[Ship Customer Key]",
+          "'Products'[Product Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Customers'",
+          "'Customers'[City]",
+          "'Customers'[Customer Name]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Abc]",
+          "[Slash Label]"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Targets'"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "Mikd14/BPARules/BPARules.json": {
+      "findings": {
+        "ADD_DATA_CATEGORY_FOR_COLUMNS": [
+          "'Customers'[City]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Targets'"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "GreyskullAnalytics/by-the-power-of-analyics-engineering/powerbi/bestpracticeanalyser/BPARules.json": {
+      "findings": {
+        "ADD_DATA_CATEGORY_FOR_COLUMNS": [
+          "'Customers'[City]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Amount]",
+          "'Orders'[Quantity]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Customers'[Customer Key]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Order Key]",
+          "'Orders'[Ship Customer Key]",
+          "'Products'[Product Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Customers'",
+          "'Customers'[City]",
+          "'Customers'[Customer Name]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Abc]",
+          "[Slash Label]"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Targets'"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "Code-DataFyre/PowerInsighter/PowerInsighter/ModelBestPractices/BPARules.json": {
+      "findings": {
+        "ADD_DATA_CATEGORY_FOR_COLUMNS": [
+          "'Customers'[City]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Amount]",
+          "'Orders'[Quantity]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Customers'[Customer Key]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Order Key]",
+          "'Orders'[Ship Customer Key]",
+          "'Products'[Product Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Customers'",
+          "'Customers'[City]",
+          "'Customers'[Customer Name]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Abc]",
+          "[Slash Label]"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Targets'"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "eugenecp/fabcon2026-ai-ci-cd/Fabric2026-CI-CD-Complete-Package/scripts/.bpaRules.json": {
+      "findings": {
+        "COL_HIDE_UNUSED": [
+          "'Customers'[City]",
+          "'Customers'[Customer Name]",
+          "'Notes'[Note]",
+          "'Orders'[Amount Band]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Tax]",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'[Name]"
+        ],
+        "DOC_MEASURE_DESCRIPTION": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "DOC_TABLE_DESCRIPTION": [
+          "'Customers'",
+          "'Notes'",
+          "'Orders'",
+          "'Products'"
+        ],
+        "MEASURE_FOLDER_RECOMMENDED": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "MEASURE_FORMAT_REQUIRED": [
+          "[Abc]",
+          "[Slash Label]"
+        ],
+        "MEASURE_ONLY_IN_FACT_TABLES": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "NAME_NO_SPACES_COLUMN": [
+          "'Customers'[Customer Key]",
+          "'Customers'[Customer Name]",
+          "'Orders'[Amount Band]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Order Key]",
+          "'Orders'[Product Key]",
+          "'Orders'[Ship Customer Key]",
+          "'Products'[List Price]",
+          "'Products'[Product Key]",
+          "'Products'[Product Name]"
+        ],
+        "NAME_NO_SPACES_MEASURE": [
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "NAME_TABLE_PREFIXES": [
+          "'Customers'",
+          "'Notes'",
+          "'Orders'",
+          "'Products'"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "TabularEditor/SessionArchive/Webinars/2025-12-10 - CICD and version control for Fabric/src/automation/resources/BPARules.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_COLUMNS": [
+          "'Orders'[Customer Key]",
+          "'Orders'[Product Key]"
+        ],
+        "APPLY_FORMAT_STRING_MEASURES": [
+          "[Abc]"
+        ],
+        "DAX_DIVISION_COLUMNS": [
+          "[Amount per Order]",
+          "[Amount per Unit]"
+        ],
+        "DISABLE_ATTRIBUTE_HIERACHIES": [
+          "'Customers'[Customer Key]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Order Key]",
+          "'Orders'[Ship Customer Key]",
+          "'Products'[Product Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "LAYOUT_ADD_TO_PERSPECTIVES": [
+          "'Customers'[City]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'[Name]",
+          "Geography",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Quantity]"
+        ],
+        "LAYOUT_HIDE_FK_COLUMNS": [
+          "'Orders'[Customer Key]",
+          "'Orders'[Product Key]"
+        ],
+        "LAYOUT_MEASURES_DF": [
+          "'Orders'"
+        ],
+        "META_AVOID_FLOAT": [
+          "'Orders'[Discount]",
+          "'Orders'[Tax]"
+        ],
+        "META_SUMMARIZE_NONE": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "PERF_UNUSED_COLUMNS": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "TRANSLATE_HIDEABLE_OBJECT_NAMES": [
+          "'Customers'",
+          "'Customers'[City]",
+          "'Customers'[Customer Name]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'[Name]",
+          "Geography",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "TRANSLATE_HIERARCHY_LEVEL_NAMES": [
+          "City",
+          "Region"
+        ],
+        "TRANSLATE_OTHER_NAMES": [
+          "Model",
+          "Sales View"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "data-goblin/power-bi-agentic-development/plugins/tabular-editor/skills/bpa-rules/examples/course-3-business-case-bpa-rules.json": {
+      "findings": {
+        "RULE1": [
+          "'Notes'"
+        ],
+        "RULE10": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "RULE6": [
+          "'Orders'[Discount]",
+          "'Orders'[Tax]"
+        ],
+        "RULE9": [
+          "'Customers'[City]",
+          "'Customers'[Customer Key]",
+          "'Customers'[Customer Name]",
+          "'Customers'[Region]",
+          "'Notes'[Note]",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Order Key]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Ship Customer Key]",
+          "'Orders'[Tax]",
+          "'Products'[List Price]",
+          "'Products'[Product Key]",
+          "'Products'[Product Name]",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'[Name]",
+          "'Time Intelligence'[Ordinal]",
+          "Geography",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "bgarcevic/fabric-utils/.devops/bpa-rules.json": {
+      "findings": {
+        "ADD_DATA_CATEGORY_FOR_COLUMNS": [
+          "'Customers'[City]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Amount]",
+          "'Orders'[Quantity]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Customers'[Customer Key]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Order Key]",
+          "'Orders'[Ship Customer Key]",
+          "'Products'[Product Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Customers'",
+          "'Customers'[City]",
+          "'Customers'[Customer Name]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Abc]",
+          "[Slash Label]"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Targets'"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "luccapinto/agentic-data-kit/.agent/skills/pbi-quality-rules/bpa-rules.json": {
+      "findings": {
+        "DOC_MEASURE_DESCRIPTION": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "DOC_TABLE_DESCRIPTION": [
+          "'Customers'",
+          "'Notes'",
+          "'Orders'",
+          "'Products'"
+        ],
+        "MODEL_ISLAND_TABLE": [
+          "'Notes'"
+        ],
+        "NAMING_MEASURE_DISPLAYFOLDER": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "bgarcevic/tomix-cli/src/Tomix.App/Bpa/Rules/bpa-rules.json": {
+      "findings": {
+        "ADD_DATA_CATEGORY_FOR_COLUMNS": [
+          "'Customers'[City]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Amount]",
+          "'Orders'[Quantity]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Customers'[Customer Key]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Order Key]",
+          "'Orders'[Ship Customer Key]",
+          "'Products'[Product Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Customers'",
+          "'Customers'[City]",
+          "'Customers'[Customer Name]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Abc]",
+          "[Slash Label]"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Targets'"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ]
+      },
+      "ruleErrors": {
+        "DATA_COLUMNS_MUST_HAVE_A_SOURCE_COLUMN": "No property or field 'CalculationItems' exists in type 'Table'",
+        "RELATIONSHIP_COLUMNS_SAME_DATA_TYPE": "Operator '!=' incompatible with operand types 'DataType' and 'String'"
+      }
+    },
+    "AlahmadiQ8/copilot-sdk-challenge/backend/src/data/bpa-rules.json": {
+      "findings": {
+        "ADD_DATA_CATEGORY_FOR_COLUMNS": [
+          "'Customers'[City]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Amount]",
+          "'Orders'[Quantity]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Customers'[Customer Key]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Order Key]",
+          "'Orders'[Ship Customer Key]",
+          "'Products'[Product Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Customers'",
+          "'Customers'[City]",
+          "'Customers'[Customer Name]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Abc]",
+          "[Slash Label]"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Targets'"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "petecarlssonw/powerbi-testing/BPARules/bpa-rules.json": {
+      "findings": {
+        "ADD_DATA_CATEGORY_FOR_COLUMNS": [
+          "'Customers'[City]"
+        ],
+        "CHECK_TEXT_TYPE_MEASURES": [
+          "[Slash Label]"
+        ],
+        "DO_NOT_USE_CALCULATED_COLUMNS": [
+          "Model"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Amount]",
+          "'Orders'[Quantity]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Customers'[Customer Key]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Order Key]",
+          "'Orders'[Ship Customer Key]",
+          "'Products'[Product Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Customers'",
+          "'Customers'[City]",
+          "'Customers'[Customer Name]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Abc]"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Targets'"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ]
+      },
+      "ruleErrors": {
+        "CHECK_IF_DYNAMIC_ROW_LEVEL_SECURITY_(RLS)_IS_NECESSARY": "Error while evaluating expression on Tables: Value cannot be null. (Parameter 'input')"
+      }
+    },
+    "TabularEditor/BestPracticeRules/BPARules-standard.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_COLUMNS": [
+          "'Orders'[Customer Key]",
+          "'Orders'[Product Key]"
+        ],
+        "APPLY_FORMAT_STRING_MEASURES": [
+          "[Abc]"
+        ],
+        "DAX_DIVISION_COLUMNS": [
+          "[Amount per Order]",
+          "[Amount per Unit]"
+        ],
+        "DISABLE_ATTRIBUTE_HIERACHIES": [
+          "'Customers'[Customer Key]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Order Key]",
+          "'Orders'[Ship Customer Key]",
+          "'Products'[Product Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "LAYOUT_ADD_TO_PERSPECTIVES": [
+          "'Customers'[City]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'[Name]",
+          "Geography",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Quantity]"
+        ],
+        "LAYOUT_HIDE_FK_COLUMNS": [
+          "'Orders'[Customer Key]",
+          "'Orders'[Product Key]"
+        ],
+        "LAYOUT_MEASURES_DF": [
+          "'Orders'"
+        ],
+        "META_AVOID_FLOAT": [
+          "'Orders'[Discount]",
+          "'Orders'[Tax]"
+        ],
+        "META_SUMMARIZE_NONE": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "PERF_UNUSED_COLUMNS": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "TRANSLATE_HIDEABLE_OBJECT_NAMES": [
+          "'Customers'",
+          "'Customers'[City]",
+          "'Customers'[Customer Name]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'[Name]",
+          "Geography",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "TRANSLATE_HIERARCHY_LEVEL_NAMES": [
+          "City",
+          "Region"
+        ],
+        "TRANSLATE_OTHER_NAMES": [
+          "Model",
+          "Sales View"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "TabularEditor/BestPracticeRules/BPARules-PowerBI.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_COLUMNS": [
+          "'Orders'[Customer Key]",
+          "'Orders'[Product Key]"
+        ],
+        "APPLY_FORMAT_STRING_MEASURES": [
+          "[Abc]"
+        ],
+        "DAX_DIVISION_COLUMNS": [
+          "[Amount per Order]",
+          "[Amount per Unit]"
+        ],
+        "LAYOUT_ADD_TO_PERSPECTIVES": [
+          "'Customers'[City]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'[Name]",
+          "Geography",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Quantity]"
+        ],
+        "LAYOUT_HIDE_FK_COLUMNS": [
+          "'Orders'[Customer Key]",
+          "'Orders'[Product Key]"
+        ],
+        "LAYOUT_MEASURES_DF": [
+          "'Orders'"
+        ],
+        "META_AVOID_FLOAT": [
+          "'Orders'[Discount]",
+          "'Orders'[Tax]"
+        ],
+        "META_SUMMARIZE_NONE": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "PERF_UNUSED_COLUMNS": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "TRANSLATE_HIDEABLE_OBJECT_NAMES": [
+          "'Customers'",
+          "'Customers'[City]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'[Name]",
+          "Geography",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Quantity]"
+        ],
+        "TRANSLATE_HIERARCHY_LEVEL_NAMES": [
+          "City",
+          "Region"
+        ],
+        "TRANSLATE_OTHER_NAMES": [
+          "Model",
+          "Sales View"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "tenfingerseddy/semanticus-vscode/Semanticus.Analysis/Rules/BPARules-PowerBI.json": {
+      "findings": {
+        "ADD_DATA_CATEGORY_FOR_COLUMNS": [
+          "'Customers'[City]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Amount]",
+          "'Orders'[Quantity]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Customers'[Customer Key]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Order Key]",
+          "'Orders'[Ship Customer Key]",
+          "'Products'[Product Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Customers'",
+          "'Customers'[City]",
+          "'Customers'[Customer Name]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Abc]",
+          "[Slash Label]"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Targets'"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East"
+        ],
+        "SEM_COLUMN_NEEDS_FORMAT_STRING": [
+          "'Orders'[Customer Key]",
+          "'Orders'[Product Key]"
+        ],
+        "SEM_MEASURES_NEED_DISPLAY_FOLDERS": [
+          "'Orders'"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "KavasiMihaly/SelfServiceBIBlog/TabularEditor/BPARules-PowerBI.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_COLUMNS": [
+          "'Orders'[Customer Key]",
+          "'Orders'[Product Key]"
+        ],
+        "APPLY_FORMAT_STRING_MEASURES": [
+          "[Abc]"
+        ],
+        "DAX_DIVISION_COLUMNS": [
+          "[Amount per Order]",
+          "[Amount per Unit]"
+        ],
+        "LAYOUT_ADD_TO_PERSPECTIVES": [
+          "'Customers'[City]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'[Name]",
+          "Geography",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Quantity]"
+        ],
+        "LAYOUT_HIDE_FK_COLUMNS": [
+          "'Orders'[Customer Key]",
+          "'Orders'[Product Key]"
+        ],
+        "LAYOUT_MEASURES_DF": [
+          "'Orders'"
+        ],
+        "META_AVOID_FLOAT": [
+          "'Orders'[Discount]",
+          "'Orders'[Tax]"
+        ],
+        "META_SUMMARIZE_NONE": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "PERF_UNUSED_COLUMNS": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "TRANSLATE_HIDEABLE_OBJECT_NAMES": [
+          "'Customers'",
+          "'Customers'[City]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'[Name]",
+          "Geography",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Quantity]"
+        ],
+        "TRANSLATE_HIERARCHY_LEVEL_NAMES": [
+          "City",
+          "Region"
+        ],
+        "TRANSLATE_OTHER_NAMES": [
+          "Model",
+          "Sales View"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "bredeespelid/PBIP_SemLin/docs/bpa/semantic model/BPARules-PowerBI.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_COLUMNS": [
+          "'Orders'[Customer Key]",
+          "'Orders'[Product Key]"
+        ],
+        "APPLY_FORMAT_STRING_MEASURES": [
+          "[Abc]"
+        ],
+        "DAX_DIVISION_COLUMNS": [
+          "[Amount per Order]",
+          "[Amount per Unit]"
+        ],
+        "LAYOUT_ADD_TO_PERSPECTIVES": [
+          "'Customers'[City]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'[Name]",
+          "Geography",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Quantity]"
+        ],
+        "LAYOUT_HIDE_FK_COLUMNS": [
+          "'Orders'[Customer Key]",
+          "'Orders'[Product Key]"
+        ],
+        "LAYOUT_MEASURES_DF": [
+          "'Orders'"
+        ],
+        "META_AVOID_FLOAT": [
+          "'Orders'[Discount]",
+          "'Orders'[Tax]"
+        ],
+        "META_SUMMARIZE_NONE": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "PERF_UNUSED_COLUMNS": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "TRANSLATE_HIDEABLE_OBJECT_NAMES": [
+          "'Customers'",
+          "'Customers'[City]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'[Name]",
+          "Geography",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Quantity]"
+        ],
+        "TRANSLATE_HIERARCHY_LEVEL_NAMES": [
+          "City",
+          "Region"
+        ],
+        "TRANSLATE_OTHER_NAMES": [
+          "Model",
+          "Sales View"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "vlpatkosdani/powerbi-cicd-with-githubactions-demos/BPA_Rules.json": {
+      "findings": {
+        "2_PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Abc]",
+          "[Slash Label]"
+        ],
+        "7_TRANSLATE_OTHER_NAMES": [
+          "Model",
+          "Sales View"
+        ],
+        "8_LAYOUT_ADD_TO_PERSPECTIVES": [
+          "'Customers'[City]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'[Name]",
+          "Geography",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Quantity]"
+        ]
+      },
+      "ruleErrors": {
+        "1_DAX_TODO": "Error while evaluating expression on Partitions: Value cannot be null. (Parameter 'input')"
+      }
+    },
+    "vlpatkosdani/powerbi-cicd-with-githubactions-demos/scripts/BPA_Rules.json": {
+      "findings": {
+        "2": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "4": [
+          "'Orders'[Customer Key]",
+          "'Orders'[Product Key]"
+        ],
+        "7": [
+          "'Customers'[Customer Key]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Order Key]",
+          "'Orders'[Ship Customer Key]",
+          "'Products'[Product Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "8": [
+          "'Customers'[Customer Key]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Order Key]",
+          "'Orders'[Ship Customer Key]",
+          "'Products'[Product Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "13": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "14": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "16": [
+          "East"
+        ],
+        "17": [
+          "'Orders'[Discount]",
+          "'Orders'[Tax]"
+        ],
+        "20": [
+          "[Abc]",
+          "[Slash Label]"
+        ],
+        "23": [
+          "Model",
+          "Sales View"
+        ],
+        "24": [
+          "'Customers'[City]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'[Name]",
+          "Geography",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Quantity]"
+        ],
+        "27": [
+          "'Customers'",
+          "'Customers'[City]",
+          "'Customers'[Customer Name]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'[Name]",
+          "Geography",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "29": [
+          "'Customers'",
+          "'Customers'[City]",
+          "'Customers'[Customer Name]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "31": [
+          "'Orders'[Customer Key]",
+          "'Orders'[Product Key]"
+        ],
+        "32": [
+          "'Notes'",
+          "'Targets'"
+        ],
+        "33": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]"
+        ],
+        "52": [
+          "[Amount per Order]",
+          "[Amount per Unit]"
+        ],
+        "55": [
+          "Model"
+        ],
+        "60": [
+          "'Targets'"
+        ],
+        "61": [
+          "'Orders'"
+        ],
+        "69": [
+          "'Orders'[Bill Customer Key] ∞←1 'Customers'[Customer Key]",
+          "'Orders'[Ship Customer Key] ∞←1 'Customers'[Customer Key]"
+        ],
+        "73": [
+          "City",
+          "Region"
+        ]
+      },
+      "ruleErrors": {
+        "5": "Syntax error '\\'",
+        "19": "Error while evaluating expression on Partitions: Value cannot be null. (Parameter 'input')",
+        "62": "Syntax error '\\'",
+        "63": "Expression of type 'Boolean' expected"
+      }
+    },
+    "ianfinkdata/sql-practice/pbip/bpa/bpa_rules.json": {
+      "findings": {
+        "BPA_DAX_USE_DIVIDE_FUNCTION": [
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Half Amount]",
+          "[Slash Label]",
+          "[Tenth Amount]"
+        ],
+        "BPA_MEASURE_CENTRALIZE_IN_MEASURES_TABLE": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "BPA_MODEL_HIDE_SURROGATE_KEYS": [
+          "'Orders'[Customer Key]",
+          "'Orders'[Product Key]"
+        ]
+      },
+      "ruleErrors": {
+        "BPA_MEASURE_ORGANIZE_DISPLAY_FOLDERS": "No property or field 'Visible' exists in type 'Measure'",
+        "BPA_MEASURE_PROVIDE_DESCRIPTION": "No property or field 'Visible' exists in type 'Measure'",
+        "BPA_MEASURE_SET_FORMAT_STRING": "No property or field 'Visible' exists in type 'Measure'",
+        "BPA_MODEL_HIDE_FOREIGN_KEYS": "No property or field 'r' exists in type 'SingleColumnRelationship'"
+      }
+    },
+    "omezquita/PowerBI/MDA_BPA_Rules.json": {
+      "findings": {
+        "DAX_DIVISION_COLUMNS": [
+          "[Amount per Order]",
+          "[Amount per Unit]"
+        ],
+        "META_AVOID_FLOAT": [
+          "'Orders'[Discount]",
+          "'Orders'[Tax]"
+        ],
+        "PERF_UNUSED_COLUMNS": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "aswalsheshant-cell/mt-dashboard/PowerBI/CI/bpa_rules.json": {
+      "findings": {},
+      "ruleErrors": {
+        "COLUMN_NAMING_CONVENTION": "Value cannot be null. (Parameter 'expression')",
+        "DAX_NO_UNFORMATTED_DIVIDE": "Value cannot be null. (Parameter 'expression')",
+        "FORMAT_STRING_MISSING": "Value cannot be null. (Parameter 'expression')",
+        "HIERARCHY_VALIDATION": "Value cannot be null. (Parameter 'expression')",
+        "MEASURE_DESCRIPTION_MISSING": "Value cannot be null. (Parameter 'expression')",
+        "RELATIONSHIPS_BOTH_DIRECTIONS": "Value cannot be null. (Parameter 'expression')"
+      }
+    },
+    "StuffbyYuki/PBI-BPA-Rules/BPA_Rules.json": {
+      "findings": {
+        "ADD_DATA_CATEGORY_FOR_COLUMNS": [
+          "'Customers'[City]"
+        ],
+        "HIDE_FACT_TABLE_COLUMNS": [
+          "'Orders'[Amount]",
+          "'Orders'[Quantity]"
+        ],
+        "INTEGER_FORMATTING": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]"
+        ],
+        "ISAVAILABLEINMDX_FALSE_NONATTRIBUTE_COLUMNS": [
+          "'Customers'[Customer Key]",
+          "'Orders'[Bill Customer Key]",
+          "'Orders'[Order Key]",
+          "'Orders'[Ship Customer Key]",
+          "'Products'[Product Key]",
+          "'Time Intelligence'[Ordinal]"
+        ],
+        "NUMERIC_COLUMN_SUMMARIZE_BY": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "OBJECTS_WITH_NO_DESCRIPTION": [
+          "'Customers'",
+          "'Customers'[City]",
+          "'Customers'[Customer Name]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'",
+          "'Time Intelligence'[Name]",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "PROVIDE_FORMAT_STRING_FOR_MEASURES": [
+          "[Abc]",
+          "[Slash Label]"
+        ],
+        "REDUCE_USAGE_OF_CALCULATED_TABLES": [
+          "'Targets'"
+        ],
+        "REMOVE_ROLES_WITH_NO_MEMBERS": [
+          "East"
+        ],
+        "UNNECESSARY_COLUMNS": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ]
+      },
+      "ruleErrors": {}
+    },
+    "sautalwar/hearst_cicd_fabric_demo/tests/semantic_model/bpa_rules.json": {
+      "findings": {},
+      "ruleErrors": {}
+    },
+    "ryanduguid/accounting-review-pipeline/apps/australian-accounting-power-bi/tests/model_bpa_rules.json": {
+      "findings": {
+        "BPA_MEASURE_DESCRIPTION": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "BPA_MEASURE_FORMAT_STRING": [
+          "[Abc]"
+        ]
+      },
+      "ruleErrors": {
+        "BPA_CALC_GROUP_PRECEDENCE": "No property or field 'Precedence' exists in type 'CalculationGroupTable'"
+      }
+    },
+    "pranamg/powerbi-hub/Scripts/CSharp/TabularEditor/BestPracticeRules.json": {
+      "findings": {
+        "CALC_COLUMN_AVOID_IF_POSSIBLE": [
+          "'Orders'[Amount Band]",
+          "'Orders'[Net Amount]"
+        ],
+        "DAX_NO_DIVIDE_BY_ZERO": [
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Slash Label]",
+          "[Tenth Amount]"
+        ],
+        "HIDDEN_UNUSED_COLUMNS": [
+          "'Orders'[Customer Key]",
+          "'Orders'[Product Key]"
+        ],
+        "MEASURE_FORMAT_STRING": [
+          "[Abc]",
+          "[Slash Label]"
+        ],
+        "MEASURE_IN_DISPLAY_FOLDER": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "MEASURE_REQUIRES_DESCRIPTION": [
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Amount]",
+          "[Total Quantity]"
+        ],
+        "MODEL_HAS_DESCRIPTION": [
+          "Model"
+        ]
+      },
+      "ruleErrors": {
+        "DAX_NO_HARDCODED_DATES": "No property or field '@' exists in type 'Measure'",
+        "TABLE_HAS_DATE_TABLE": "No property or field 't' exists in type 'Table'",
+        "TABLE_NO_AUTO_DATE": "No property or field 't' exists in type 'Table'"
+      }
+    },
+    "TabularEditor/BestPracticeRules/BPARules-contrib.json": {
+      "findings": {},
+      "ruleErrors": {}
+    },
+    "TabularEditor/BestPracticeRules/BPARules-standard-lax.json": {
+      "findings": {
+        "APPLY_FORMAT_STRING_MEASURES": [
+          "[Abc]",
+          "[Slash Label]"
+        ],
+        "DAX_DIVISION_COLUMNS": [
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Slash Label]",
+          "[Tenth Amount]"
+        ],
+        "LAYOUT_ADD_TO_PERSPECTIVES": [
+          "'Customers'[City]",
+          "'Customers'[Region]",
+          "'Notes'",
+          "'Notes'[Note]",
+          "'Orders'[Amount Band]",
+          "'Orders'[Amount]",
+          "'Orders'[Customer Key]",
+          "'Orders'[Discount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Product Key]",
+          "'Orders'[Quantity]",
+          "'Orders'[Tax]",
+          "'Products'",
+          "'Products'[List Price]",
+          "'Products'[Product Name]",
+          "'Targets'[Region]",
+          "'Targets'[Target]",
+          "'Time Intelligence'[Name]",
+          "Geography",
+          "[Abc]",
+          "[Amount per Order]",
+          "[Amount per Unit]",
+          "[Block Comment Amount]",
+          "[Commented Amount]",
+          "[Half Amount]",
+          "[Note Count]",
+          "[Safe Ratio]",
+          "[Slash Label]",
+          "[Tenth Amount]",
+          "[Total Quantity]"
+        ],
+        "LAYOUT_HIDE_FK_COLUMNS": [
+          "'Orders'[Customer Key]",
+          "'Orders'[Product Key]"
+        ],
+        "LAYOUT_MEASURES_DF": [
+          "'Orders'"
+        ],
+        "META_AVOID_FLOAT": [
+          "'Orders'[Discount]",
+          "'Orders'[Tax]"
+        ],
+        "META_SUMMARIZE_NONE": [
+          "'Orders'[Amount]",
+          "'Orders'[Net Amount]",
+          "'Orders'[Quantity]",
+          "'Targets'[Target]"
+        ],
+        "PERF_UNUSED_COLUMNS": [
+          "'Orders'[Order Key]",
+          "'Time Intelligence'[Ordinal]"
+        ]
+      },
+      "ruleErrors": {}
+    }
+  }
+}

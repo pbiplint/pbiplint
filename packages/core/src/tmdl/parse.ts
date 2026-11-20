@@ -3,6 +3,7 @@ import { quoteEnd, unquoteName, unquoteValue } from "./quote.js";
 import { allowsChild, checksChildren } from "./child-types.js";
 import { parseIssue } from "./issue.js";
 import { isModelChildType, isNamedRootType, isRootType } from "./root-types.js";
+import { readsScript } from "./script.js";
 import type { ParsedFile, TmdlNode, TmdlParseIssue } from "./types.js";
 
 const PROP = /^([A-Za-z_]\w*):(?:\s(.*))?$/;
@@ -79,6 +80,19 @@ const HOLDS_TABLE = new Set(["model", "createorreplace"]);
  * (https://learn.microsoft.com/analysis-services/tmdl/tmdl-overview#object-declaration). One whose
  * quote is left open also swallows the `=` after it, so the expression reads as part of the name.
  */
+/**
+ * Whether a declaration of `word` is one a table holds, such as a column or a measure, and not a
+ * word TMDL also declares at the root, as an annotation is: one pasted with no `table` line above
+ * it belongs to no table (#274).
+ */
+const holdsTableChild = (word: string): boolean => !isRootType(word) && allowsChild("table", word);
+/**
+ * Whether a line declares a table, or a part of one under `ref table`. A table's object with such
+ * a line above it lost its tab rather than its table, so its issue keeps saying where it may stand.
+ */
+const declaresTable = (n: TmdlNode): boolean =>
+  (n.kind === "object" || n.kind === "ref") && n.type === "table";
+
 const nameReadable = (name: string): boolean =>
   !name.includes("'") || quoteEnd(name) === name.length - 1;
 
@@ -193,7 +207,14 @@ export function parseTmdl(file: string, text: string): ParsedFile {
    * the model, and a `model` under that `database`. A culture's translations and a TMDL script nest
    * a model too, and it is not the model's.
    */
-  const holders = new Map<TmdlNode, "model" | "database">();
+  const holders = new Map<TmdlNode, "model" | "database" | "script">();
+  /**
+   * Whether a root `createOrReplace` holds the model's own declarations, as a root `model` does
+   * (#274): in every file but a project's saved TMDL view tab (`readsScript`). Under it TMDL reads a
+   * `model`, which holds the model's declarations in turn, any declaration it reads at the root,
+   * and a `ref table` line whose declarations are part of that table.
+   */
+  const scripted = readsScript(file);
   /**
    * The lines kept out of the model with an issue of their own: nothing under one is checked
    * against its object's child types (#144), since the issue on that line already covers it.
@@ -208,9 +229,11 @@ export function parseTmdl(file: string, text: string): ParsedFile {
   let skippedAt: number | undefined;
   /**
    * What sits above a line keeps the parser's reading of it: a culture's translations, which
-   * restate the model's objects in a shape of their own, and a TMDL script's `createOrReplace`.
+   * restate the model's objects in a shape of their own, and a TMDL script's `createOrReplace` in a
+   * file whose script is not the model (`scripted`).
    */
-  const KEEPS_READING = new Set(["cultureinfo", "createorreplace"]);
+  const keepsReading = (a: TmdlNode): boolean =>
+    a.type === "cultureinfo" || (a.type === "createorreplace" && !scripted);
   /**
    * Whether a line the parser lost may have been one of the model's own declarations, such as a
    * table's: a line that may have been at the root (`mayBeRootLine`), or one whose tabs put it
@@ -401,7 +424,9 @@ export function parseTmdl(file: string, text: string): ParsedFile {
           ? msg("parse.tmdl.propertyAtRoot", { word })
           : isRootType(word)
             ? undefined
-            : msg("parse.tmdl.notRootType", { word });
+            : holdsTableChild(word) && !roots.some(declaresTable)
+              ? msg("parse.tmdl.needsTable", { word })
+              : msg("parse.tmdl.notRootType", { word });
       // A misspelt word or a flag (`tableSales`, a lost space) may be a `table` line, as may a
       // property or an expression with no name whose word is `table`; no other property or
       // expression can be one, and the lines under it are indented.
@@ -462,34 +487,51 @@ export function parseTmdl(file: string, text: string): ParsedFile {
         // an expression's `queryGroup` that lost its tabs. No property of a model has such a word.
         if (level === "model" && isModelChildType(keyword))
           malformed = msg("parse.tmdl.notModelProperty", { word });
+        // A script's command holds declarations, and no property of its own (#274).
+        else if (level === "script") malformed = msg("parse.tmdl.propertyAtRoot", { word });
       } else if (indent > 0 && keyword === "table" && !HOLDS_TABLE.has(parent?.type ?? "")) {
         malformed = msg("parse.tmdl.tableOnlyAtRoot", { word });
+      } else if (level === "script" && !(isModelChildType(keyword) || keyword === "model")) {
+        // Under a script's command, as at the root, but a flag is no property of the command: any
+        // declaration the model does not read there is reported (#274).
+        malformed =
+          holdsTableChild(keyword) && !parent!.children.some(declaresTable)
+            ? msg("parse.tmdl.needsTable", { word })
+            : msg("parse.tmdl.notChildType", { word, under: "createOrReplace" });
+        mayBeTable = !holdsTableChild(keyword);
       } else if (
         level !== undefined &&
+        level !== "script" &&
         !(level === "model" ? isModelChildType(keyword) : keyword === "model") &&
         (node.kind === "object" || isRootType(keyword))
       ) {
         malformed = msg("parse.tmdl.notChildType", { word, under: level });
         mayBeTable = true;
       } else if (
-        (indent === 0 || level === "model") &&
+        (indent === 0 || level === "model" || level === "script") &&
         (node.kind === "flag" || node.name === "") &&
         isNamedRootType(keyword)
       ) {
         malformed = msg("parse.tmdl.noName", { word });
       } else if (
         node.kind === "object" &&
-        (parent?.kind === "object" || parent?.kind === "flag") &&
+        (parent?.kind === "object" ||
+          parent?.kind === "flag" ||
+          // A `ref table` line's declarations are part of that table (#274).
+          (parent?.kind === "ref" && parent.type === "table")) &&
         skippedAt === undefined &&
         checksChildren(parent.type) &&
         !allowsChild(parent.type, keyword) &&
-        !stack.slice(0, indent).some((a) => reported.has(a) || KEEPS_READING.has(a.type))
+        !stack.slice(0, indent).some((a) => reported.has(a) || keepsReading(a))
       ) {
         // A declaration its object does not hold (#144): a misspelt `columm`, a `level` that lost
         // its tab and landed under the table, a `measure` with a tab too many under a column. Only
         // a word followed by a name is checked, the way TMDL declares an object; a lone word is a
         // flag and keeps today's reading. Both words are named as written.
-        const under = /^\s*(\w+)/.exec(lines[parent.line - 1]!)?.[1] ?? parent.type;
+        const under =
+          parent.kind === "ref"
+            ? parent.type
+            : (/^\s*(\w+)/.exec(lines[parent.line - 1]!)?.[1] ?? parent.type);
         malformed = msg("parse.tmdl.notChildType", { word, under });
       } else if (!readableName) {
         malformed = msg("parse.tmdl.unquotedName");
@@ -516,9 +558,11 @@ export function parseTmdl(file: string, text: string): ParsedFile {
     if (
       declaration &&
       ((!parent && (node.type === "model" || node.type === "database")) ||
-        (level === "database" && node.type === "model"))
+        ((level === "database" || level === "script") && node.type === "model"))
     )
       holders.set(node, node.type as "model" | "database");
+    else if (declaration && !parent && node.type === "createorreplace" && scripted)
+      holders.set(node, "script");
     stack[indent] = node;
     i++;
   }
@@ -544,12 +588,35 @@ export function parseTmdl(file: string, text: string): ParsedFile {
   const modelLevel = [
     ...roots.map((node) => ({ node, root: true })),
     ...[...holders]
-      .filter(([, holds]) => holds === "model")
-      .flatMap(([m]) => m.children.map((node) => ({ node, root: false }))),
+      .filter(([, holds]) => holds !== "database")
+      .flatMap(([m, holds]) => m.children.map((node) => ({ node, root: holds === "script" }))),
   ];
+  /** Where a line among the model's own declarations sits, for the issue that names it. */
+  const placeOf = (r: TmdlNode, root: boolean): "root" | "script" | "model" =>
+    !root ? "model" : r.indent === 0 ? "root" : "script";
   for (const { node: r, root } of modelLevel) {
     if (r.children.length === 0) continue;
-    if (r.kind === "ref") continue;
+    if (r.kind === "ref") {
+      // A `ref table` line's declarations are part of that table (model/build.ts). No real file
+      // has lines under a `ref` of another type, so they are reported rather than read (#274).
+      if (r.type !== "table") {
+        const issue = {
+          ...parseIssue(
+            file,
+            r.line,
+            lines[r.line - 1]!,
+            msg("parse.tmdl.refLinesUnder", {
+              word: /^\s*ref\s+(\w+)/.exec(lines[r.line - 1]!)?.[1] ?? r.type,
+            }),
+          ),
+          canDropObjects: true,
+          canDropTableLine: false,
+        };
+        const after = issues.findIndex((i) => i.line > r.line);
+        issues.splice(after === -1 ? issues.length : after, 0, issue);
+      }
+      continue;
+    }
     const valued = r.kind === "prop" || r.kind === "expr";
     const noted = r.type === "annotation" || r.type === "extendedproperty";
     const holdsDeclaration =
@@ -563,7 +630,7 @@ export function parseTmdl(file: string, text: string): ParsedFile {
         text,
         msg("parse.tmdl.linesUnder", {
           word: /^\w+/.exec(text.trimStart())![0],
-          at: root ? "root" : "model",
+          at: placeOf(r, root),
           child: holdsDeclaration ? "declaration" : "lines",
         }),
       ),

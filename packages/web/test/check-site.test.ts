@@ -318,13 +318,20 @@ describe("siteCheckPlugin", () => {
 
 const LINK =
   '<a href="https://pbiplint.com/latest/#0.3.0" target="_blank" rel="noopener noreferrer">Check for a newer version</a>';
-const publicPage = `<footer><p class="site-version">pbiplint 0.3.0</p></footer>`;
-const selfHostPage = `<footer><p class="site-version">pbiplint 0.3.0, from October 4, 2026. ${LINK}</p></footer>`;
+/** The footer line that links every page to the About page's Light and dark section (#266). */
+const THEME =
+  '<p>Light or dark follows your device\'s setting: <a href="/about/#light-and-dark">how to change it</a>.</p>';
+const publicPage = `<footer>${THEME}<p class="site-version">pbiplint 0.3.0</p></footer>`;
+const selfHostPage = `<footer>${THEME}<p class="site-version">pbiplint 0.3.0, from October 4, 2026. ${LINK}</p></footer>`;
+/** The About page, carrying the section every footer links to. */
+const aboutPage = (footer: string): string =>
+  `<main><h2 id="light-and-dark">Light and dark</h2></main>${footer}`;
 
 describe("checkBuild", () => {
   it("passes a public build with /latest/, a sitemap, CNAME, and the version alone in every footer", () => {
     const dir = site({
       "index.html": publicPage,
+      "about/index.html": aboutPage(publicPage),
       "latest/index.html": publicPage,
       "sitemap.xml": "<urlset/>",
       CNAME: "pbiplint.com",
@@ -338,6 +345,8 @@ describe("checkBuild", () => {
       "public build: no CNAME",
       "public build: no latest/index.html",
       "public build: no sitemap.xml",
+      'public build: about/index.html has no id="light-and-dark", the section every footer links to',
+      "about/index.html: no link to the Light and dark section in the footer",
       "about/index.html: no version line in the footer",
       "index.html: links to /latest/, which only a self-hosted copy does",
     ]);
@@ -345,6 +354,7 @@ describe("checkBuild", () => {
   it("passes a self-hosting build with no /latest/, sitemap, or CNAME, robots kept out, and the link on every page", () => {
     const dir = site({
       "index.html": selfHostPage,
+      "about/index.html": aboutPage(selfHostPage),
       "rules/x/index.html": selfHostPage,
       "robots.txt": "User-agent: *\nDisallow: /\n",
     });
@@ -363,7 +373,42 @@ describe("checkBuild", () => {
       "self-hosting build: carries latest/index.html",
       "self-hosting build: carries sitemap.xml",
       "self-hosting build: robots.txt does not say Disallow: /",
+      'self-hosting build: about/index.html has no id="light-and-dark", the section every footer links to',
       "index.html: no link to /latest/ in the footer",
+    ]);
+  });
+  it("names a page whose footer has no link to the Light and dark section, in either build", () => {
+    const bare = (page: string): string => page.replace(THEME, "");
+    const pub = site({
+      "index.html": publicPage,
+      "about/index.html": aboutPage(publicPage),
+      "rules/x/index.html": bare(publicPage),
+      "latest/index.html": publicPage,
+      "sitemap.xml": "<urlset/>",
+      CNAME: "pbiplint.com",
+    });
+    expect(checkBuild(pub, "public")).toEqual([
+      "rules/x/index.html: no link to the Light and dark section in the footer",
+    ]);
+    const self = site({
+      "index.html": bare(selfHostPage),
+      "about/index.html": aboutPage(selfHostPage),
+      "robots.txt": "User-agent: *\nDisallow: /\n",
+    });
+    expect(checkBuild(self, "self-host")).toEqual([
+      "index.html: no link to the Light and dark section in the footer",
+    ]);
+  });
+  it("names an About page that lost the section the footers link to", () => {
+    const dir = site({
+      "index.html": publicPage,
+      "about/index.html": `<main><h2 id="light">Light and dark</h2></main>${publicPage}`,
+      "latest/index.html": publicPage,
+      "sitemap.xml": "<urlset/>",
+      CNAME: "pbiplint.com",
+    });
+    expect(checkBuild(dir, "public")).toEqual([
+      'public build: about/index.html has no id="light-and-dark", the section every footer links to',
     ]);
   });
 });

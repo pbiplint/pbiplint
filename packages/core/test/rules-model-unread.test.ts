@@ -252,10 +252,16 @@ const ruleNamed = (id: string) => defaultRules.find((r) => r.id === id)!;
 const reported = (r: Awaited<ReturnType<typeof lint>>, id: string) =>
   r.findings.filter((f) => f.ruleId === id).map((f) => f.objectName);
 
+/** The files with the model's declaration, unless they declare it already (#274). */
+const declared = (files: File[]): File[] =>
+  files.some((f) => /^model /m.test(f.text))
+    ? files
+    : [{ path: "definition/model.tmdl", text: "model Model\n" }, ...files];
+
 /** The two runs every case makes: the whole model, and the model pbiplint could not fully read. */
 function itSkipsWhilePartlyRead({ rule, whole, partly, wouldReport }: Case): void {
   it("runs and reports nothing while every model file was read", async () => {
-    const r = await lint(whole);
+    const r = await lint(declared(whole));
     expect(r.findings.filter((f) => f.ruleId === "PARSE_ISSUE")).toEqual([]);
     expect(r.summary.rulesSkipped.map((s) => s.id)).not.toContain(rule);
     expect(reported(r, rule)).toEqual([]);

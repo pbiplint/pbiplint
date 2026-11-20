@@ -24,13 +24,54 @@ const rule = (selector: string): string =>
     css,
   )?.[1] ?? "";
 
-/** WCAG's contrast ratio between two of the stylesheet's hex colour tokens. */
-function contrast(fg: string, bg: string): number {
-  const luminance = (token: string): number => {
-    const hex = new RegExp(`${token}: #([0-9a-f]{6});`).exec(css)?.[1];
-    if (hex === undefined) throw new Error(`no hex value for ${token}`);
-    const [red, green, blue] = [0, 2, 4].map((i) => {
-      const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+/** The two themes: dark is the :root rule, and light is that with the light block's values on top. */
+const SCHEMES = ["dark", "light"] as const;
+type Scheme = (typeof SCHEMES)[number];
+
+/** The light block: the :root rule inside `@media (prefers-color-scheme: light)`. */
+const light = /@media \(prefers-color-scheme: light\) \{\s*:root \{([^}]*)\}\s*\}/.exec(css);
+
+/** A block's custom properties, in order. */
+const tokensIn = (block: string): Map<string, string> =>
+  new Map([...block.matchAll(/(--[a-z0-9-]+): ([^;]+);/g)].map((m) => [m[1]!, m[2]!.trim()]));
+
+/** A theme's tokens. */
+function palette(scheme: Scheme): Map<string, string> {
+  const tokens = tokensIn(rule(":root"));
+  if (scheme === "light") for (const [k, v] of tokensIn(light?.[1] ?? "")) tokens.set(k, v);
+  return tokens;
+}
+
+/** A token's colour as red, green, and blue (0 to 255) and alpha (0 to 1). */
+function channels(token: string, scheme: Scheme): number[] {
+  const value = palette(scheme).get(token) ?? "";
+  const hex = /^#([0-9a-f]{6})$/.exec(value)?.[1];
+  if (hex !== undefined) return [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16)).concat(1);
+  const fn = /^rgba\((\d+), (\d+), (\d+), ([\d.]+)\)$/.exec(value);
+  if (fn) return fn.slice(1).map(Number);
+  throw new Error(`no colour for ${token} in the ${scheme} theme`);
+}
+
+/**
+ * A colour as it reaches the screen: a token, or "--tint over --base" for a translucent token laid
+ * on an opaque one, composited the way the browser does.
+ */
+function screen(colour: string, scheme: Scheme): number[] {
+  const [top, base] = colour.split(" over ");
+  const [red, green, blue, alpha] = channels(top!, scheme);
+  if (base === undefined) {
+    if (alpha !== 1) throw new Error(`${top} is translucent; say what it lies over`);
+    return [red!, green!, blue!];
+  }
+  const under = screen(base, scheme);
+  return [red!, green!, blue!].map((c, i) => c * alpha! + under[i]! * (1 - alpha!));
+}
+
+/** WCAG's contrast ratio between two colours of a theme (see screen for the forms a colour takes). */
+function contrast(fg: string, bg: string, scheme: Scheme): number {
+  const luminance = (colour: string): number => {
+    const [red, green, blue] = screen(colour, scheme).map((v) => {
+      const c = v / 255;
       return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
     });
     return 0.2126 * red! + 0.7152 * green! + 0.0722 * blue!;
@@ -92,15 +133,114 @@ describe("styles.css", () => {
     expect(rule(".example")).toMatch(/margin: 16px 0/);
     expect(rule(".example")).not.toMatch(/border(-left)?:/);
     // WCAG 1.4.11 asks 3:1 of a graphic against the colour beside it, here the canvas.
-    expect(contrast("--danger", "--canvas")).toBeGreaterThanOrEqual(3);
-    expect(contrast("--success", "--canvas")).toBeGreaterThanOrEqual(3);
+    for (const scheme of SCHEMES) {
+      expect(contrast("--danger", "--canvas", scheme)).toBeGreaterThanOrEqual(3);
+      expect(contrast("--success", "--canvas", scheme)).toBeGreaterThanOrEqual(3);
+    }
   });
   it("tags a Power Query rule in its own colour and outline, readable on the canvas", () => {
     expect(rule(".layer.powerquery")).toMatch(/border-style: dotted/);
     expect(rule(".layer.powerquery")).toMatch(/color: var\(--layer-powerquery\)/);
     // Text, so WCAG 1.4.3's 4.5:1.
-    expect(contrast("--layer-powerquery", "--canvas")).toBeGreaterThanOrEqual(4.5);
-    expect(contrast("--layer-powerquery", "--surface-1")).toBeGreaterThanOrEqual(4.5);
+    for (const scheme of SCHEMES) {
+      expect(contrast("--layer-powerquery", "--canvas", scheme)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast("--layer-powerquery", "--surface-1", scheme)).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+  it("gives the light theme values for tokens only, and only for tokens the dark theme has", () => {
+    // The light theme repaints; it never restyles. A selector or a new name here would be a rule
+    // the dark theme lacks.
+    expect(light).not.toBeNull();
+    const dark = tokensIn(rule(":root"));
+    const names = [...tokensIn(light![1]!).keys()];
+    expect(names.length).toBeGreaterThan(15);
+    expect(names.filter((name) => !dark.has(name))).toEqual([]);
+    expect(
+      light![1]!
+        .replace(/\/\*[\s\S]*?\*\//g, "")
+        .replace(/(--[a-z0-9-]+|color-scheme): [^;]+;/g, "")
+        .trim(),
+    ).toBe("");
+  });
+  it("switches the browser's own controls with the theme, and only a light setting switches it", () => {
+    // color-scheme paints form controls, the textarea, and scrollbars.
+    expect(rule(":root")).toMatch(/color-scheme: dark;/);
+    expect(light![1]).toMatch(/color-scheme: light;/);
+    // Only a light setting switches, so a browser that does not support the query keeps dark.
+    expect(css.match(/prefers-color-scheme/g)).toHaveLength(1);
+  });
+  it("writes every colour as a token, so both themes reach it", () => {
+    // Print is not a theme: it keeps black on paper.
+    const outside = css
+      .replace(/(?:^|\n):root \{[^}]*\}/, "")
+      .replace(light![0], "")
+      .replace(/@media print \{[\s\S]*$/, "")
+      // A comment's issue number, such as #237, is not a colour.
+      .replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(outside.match(/#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?|color-mix)\(/gi)).toBeNull();
+    // Nothing after the print block, so the cut above drops only print: the block's braces close
+    // at the end of the file and nowhere before it.
+    const print = css.slice(css.indexOf("@media print"));
+    let depth = 0;
+    const closes = [...print].flatMap((c, i) =>
+      c === "{" ? (depth++, []) : c === "}" && --depth === 0 ? [i] : [],
+    );
+    expect(closes).toEqual([print.trimEnd().length - 1]);
+  });
+  // Every text colour on every background it sits on: WCAG 1.4.3 asks 4.5:1 of text this size
+  // (https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html).
+  const TEXT: [string, string][] = [
+    ...["--fg-1", "--fg-2"].flatMap((fg) =>
+      ["--canvas", "--surface-1", "--surface-2", "--surface-3", "--surface-inset"].map(
+        (bg): [string, string] => [fg, bg],
+      ),
+    ),
+    // Links, the project tag, and the Power Query tag, on a rule page and inside a group.
+    ...["--brand-teal-soft", "--brand-blue-soft", "--layer-powerquery"].flatMap((fg) =>
+      ["--canvas", "--surface-1"].map((bg): [string, string] => [fg, bg]),
+    ),
+    // A button's label on its fill and on its hover fill.
+    ["--canvas", "--brand-blue"],
+    ["--canvas", "--brand-blue-soft"],
+    // A severity badge, in a group and on a rule page.
+    ...["error", "warning", "info"].flatMap((s) =>
+      ["--surface-1", "--canvas"].map((bg): [string, string] => [
+        `--badge-${s}-fg`,
+        `--badge-${s}-bg over ${bg}`,
+      ]),
+    ),
+    // The report-at-a-glance panel's text on its tint.
+    ...["--fg-1", "--fg-2", "--brand-teal-soft", "--warning"].map((fg): [string, string] => [
+      fg,
+      "--teal-tint-faint over --canvas",
+    ]),
+  ];
+  // Every mark a reader needs to see: WCAG 1.4.11 asks 3:1 of a graphic against what is beside it
+  // (https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html).
+  const GRAPHICS: [string, string][] = [
+    // The bars beside a notice, an example that fires, and its fix.
+    ["--danger", "--canvas"],
+    ["--success", "--canvas"],
+    ["--warning", "--canvas"],
+    // The bar beside an error in the status line.
+    ["--danger", "--surface-2"],
+    // The focus ring and a report tag's edge.
+    ["--brand-teal", "--canvas"],
+    ["--brand-teal", "--surface-1"],
+    // A group's disclosure mark.
+    ["--fg-3", "--surface-1"],
+  ];
+  it.each(SCHEMES)("gives text 4.5:1 in the %s theme", (scheme) => {
+    const low = TEXT.filter(([fg, bg]) => contrast(fg, bg, scheme) < 4.5);
+    expect(low.map(([fg, bg]) => `${fg} on ${bg}: ${contrast(fg, bg, scheme).toFixed(2)}`)).toEqual(
+      [],
+    );
+  });
+  it.each(SCHEMES)("gives marks 3:1 in the %s theme", (scheme) => {
+    const low = GRAPHICS.filter(([fg, bg]) => contrast(fg, bg, scheme) < 3);
+    expect(low.map(([fg, bg]) => `${fg} on ${bg}: ${contrast(fg, bg, scheme).toFixed(2)}`)).toEqual(
+      [],
+    );
   });
   it("lets the header's links and a long rule id wrap, so a narrow page does not scroll sideways", () => {
     // At 320 pixels the brand and the links do not fit on one row, and a rule id such as

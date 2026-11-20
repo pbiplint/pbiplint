@@ -20,3 +20,5 @@ packages/web/public/llms.txt
 packages/cli/test/fixtures
 # Compiled by Bicep from deploy/azure/main.bicep; CI compares it byte for byte with a fresh build.
 deploy/azure/azuredeploy.json
+# Rule files pinned by sha256 in the captures; a format pass would change them.
+tests/rules

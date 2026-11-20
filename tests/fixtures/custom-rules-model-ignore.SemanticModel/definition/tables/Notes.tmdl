@@ -1,0 +1,17 @@
+table Notes
+
+	measure 'Note Count' = COUNTROWS(Notes)
+		formatString: #,0
+
+	column Note
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Note
+
+	partition Notes = m
+		mode: import
+		source =
+				let
+				    Source = Table.FromRows({{"First note"}}, {"Note"})
+				in
+				    Source

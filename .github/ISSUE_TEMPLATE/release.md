@@ -57,7 +57,7 @@ Following pbiplint/azure-pipelines' `RELEASING.md`, "After a pbiplint CLI releas
 
 Following pbiplint/claude-plugin's [`RELEASING.md`](https://github.com/pbiplint/claude-plugin/blob/main/RELEASING.md#after-a-pbiplint-release), "After a pbiplint release". The plugin carries the CLI's version, 0.x.y.
 
-- [ ] **Plugin pull request.** 0.x.y pinned in `plugin.json`, `.mcp.json`, `mcpb/manifest.json`, README, SETUP, and PERMISSIONS; the skill refreshed with `npx -y pbiplint@0.x.y skill`; `node scripts/check-pins.mjs` passing; CI green, merge.
+- [ ] **Plugin pull request.** 0.x.y pinned in `plugin.json`, `.mcp.json`, `mcpb/manifest.json`, README, SETUP, and PERMISSIONS; the skills refreshed, `pbiplint` with `npx -y pbiplint@0.x.y skill` and, once the plugin carries it, `pbiplint-custom-rules` with `npx -y pbiplint@0.x.y skill --name pbiplint-custom-rules`; `node scripts/check-pins.mjs` passing; CI green, merge.
 - [ ] **MCP Bundle.** `sh scripts/build-mcpb.sh` builds `pbiplint-0.x.y.mcpb` from the published package; note its sha256.
 - [ ] **Tag and release.** The maintainer tags the merge commit v0.x.y and pushes it; the GitHub release carries the `.mcpb` and its sha256.
 - [ ] **Install check.** In a clean `CLAUDE_CONFIG_DIR`, the marketplace add and the install from GitHub give 0.x.y.

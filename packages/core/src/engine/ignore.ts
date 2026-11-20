@@ -1,32 +1,10 @@
 import type { Ignorable } from "../rules/types.js";
+import { TE_IGNORE_ANNOTATION, teIgnoreIds } from "../tmdl/ignore-annotation.js";
 import { unquoteValue } from "../tmdl/quote.js";
 
+export { TE_IGNORE_ANNOTATION, teIgnoreIds };
+
 export const IGNORE_ANNOTATION = "pbiplint.ignore";
-
-/**
- * Tabular Editor's own ignore annotation, `{"RuleIDs": ["RULE_A", ...]}`. Many models carry it,
- * Microsoft's sample project among them, so pbiplint honours it for every rule as Tabular Editor
- * does: on an object for that object, on the model for every object in the model.
- */
-export const TE_IGNORE_ANNOTATION = "BestPracticeAnalyzer_IgnoreRules";
-
-/**
- * The rule ids a `BestPracticeAnalyzer_IgnoreRules` value names, upper-cased, or undefined when the
- * value is not a JSON object whose `RuleIDs` (any case, as Tabular Editor reads it) is a list of
- * strings. A malformed value ignores nothing; PARSE_ISSUE reports it.
- */
-export function teIgnoreIds(raw: string): string[] | undefined {
-  let value: unknown;
-  try {
-    value = JSON.parse(unquoteValue(raw));
-  } catch {
-    return undefined;
-  }
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
-  const list = Object.entries(value).find(([key]) => key.toLowerCase() === "ruleids")?.[1];
-  if (!Array.isArray(list) || !list.every((id) => typeof id === "string")) return undefined;
-  return list.map((id: string) => id.toUpperCase());
-}
 
 /** Whether the object's own Tabular Editor annotation names the rule. */
 function teIgnores(object: Ignorable | undefined, wanted: string): boolean {

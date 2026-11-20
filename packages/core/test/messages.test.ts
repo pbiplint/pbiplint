@@ -2210,6 +2210,11 @@ describe("every parse reason and rule error fits its template (#98)", () => {
       () => tmdl("model Model\n\ttable: Sales\n", "definition/model.tmdl"),
     ],
     ["a table under a table", ["parse.tmdl.tableOnlyAtRoot"], () => tmdl("table T\n\ttable X\n")],
+    [
+      "a malformed BestPracticeAnalyzer_IgnoreRules annotation",
+      ["parse.tmdl.ignoreAnnotation"],
+      () => tmdl('table T\n\tannotation BestPracticeAnalyzer_IgnoreRules = {"RuleIDs":["X"\n'),
+    ],
     ["a misspelt child", ["parse.tmdl.notChildType"], () => tmdl("table T\n\tcolumm C\n")],
     ["a table with no name", ["parse.tmdl.noName"], () => tmdl("table ''\n\tcolumn C\n")],
     ["a measure with no table line", ["parse.tmdl.needsTable"], () => tmdl("measure M = 1\n")],

@@ -190,6 +190,8 @@ export const EN = {
   "parse.tmdl.notChildType": '"{word}" is not a type TMDL declares under a {under}',
   "parse.tmdl.notModelProperty": '"{word}" is not a property TMDL allows under a model',
   "parse.tmdl.notRootType": '"{word}" is not a type TMDL declares at the root of a file',
+  "parse.tmdl.ignoreAnnotation":
+    "the BestPracticeAnalyzer_IgnoreRules annotation is not a JSON object with a RuleIDs list, so it ignores nothing",
   "parse.tmdl.orphanDescription": "description is not followed by a declaration",
   "parse.tmdl.orphanIndentation": "orphan indentation",
   "parse.tmdl.propertyAtRoot": '"{word}" is a property, which TMDL allows only under an object',

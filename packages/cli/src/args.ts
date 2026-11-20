@@ -149,8 +149,9 @@ export function parseArgs(argv: string[]): CliOptions {
   if (positional[0] === "explain") {
     if (positional.length === 1) throw new UsageError("explain needs a rule id");
     if (positional.length > 2) throw new UsageError("explain takes one rule id");
-    if (opts.sample || opts.failOn || opts.config || opts.output || opts.quiet || opts.rules)
-      throw new UsageError("explain takes only --format");
+    // --config says where a custom rule's id is found, as the nearest config does without it.
+    if (opts.sample || opts.failOn || opts.output || opts.quiet || opts.rules)
+      throw new UsageError("explain takes only --format and --config");
     if (opts.format !== "text" && opts.format !== "json")
       throw new UsageError("explain prints text or json");
     return { ...opts, command: "explain", ruleId: positional[1] };
@@ -171,7 +172,7 @@ export function parseArgs(argv: string[]): CliOptions {
 export const HELP = `Usage: pbiplint <path> [options]
        pbiplint --sample [options]
        pbiplint rules
-       pbiplint explain <RULE_ID> [--format json]
+       pbiplint explain <RULE_ID> [--format json] [--config <file>]
        pbiplint skill [--install <assistant> [--force] [--dry-run] | --show]
        pbiplint mcp
 

@@ -14,11 +14,12 @@ import {
 } from "@pbiplint/core";
 import { HELP, parseArgs, UsageError, type CliOptions } from "./args.js";
 import { colourWanted } from "./colour.js";
-import { CONFIG_FILE, readCustomRuleFiles } from "./config.js";
+import { CONFIG_FILE, findConfig, readCustomRuleFiles } from "./config.js";
 import {
   explainJson,
   explainRule,
   explainText,
+  findRule,
   noRuleLines,
   NoRuleError,
   shownRuleIds,
@@ -115,9 +116,16 @@ export async function main(argv: string[], given: Io): Promise<number> {
       return 0;
     }
     if (opts.command === "explain") {
-      const explained = explainRule(opts.ruleId!);
+      // A custom id is found in the rule files of --config, or of the nearest config from the
+      // working folder. A built-in id needs neither, so the nearest config is read only for an
+      // id that is not built-in; one named by --config is always read.
+      const id = opts.ruleId!;
+      const explicit = opts.config ? resolve(io.cwd(), opts.config) : undefined;
+      const custom =
+        explicit || !findRule(id) ? readCustomRuleFiles(findConfig(io.cwd(), explicit)) : undefined;
+      const explained = explainRule(id, custom);
       if (!("rule" in explained)) {
-        for (const line of noRuleLines(opts.ruleId!)) stderrLine(line);
+        for (const line of noRuleLines(id, custom?.rules)) stderrLine(line);
         return 2;
       }
       io.stdout(opts.format === "json" ? explainJson(explained, VERSION) : explainText(explained));

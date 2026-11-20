@@ -65,8 +65,16 @@ describe("parseArgs", () => {
     expect(() => parseArgs(["explain", "a", "b"])).toThrow(/explain takes one rule id/);
     for (const f of ["markdown", "sarif"])
       expect(() => parseArgs(["explain", "x", "--format", f])).toThrow(/text or json/);
-    for (const extra of [["--sample"], ["--fail-on", "info"], ["--config", "c.json"], ["-o", "o"]])
-      expect(() => parseArgs(["explain", "x", ...extra])).toThrow(/explain takes only --format/);
+    for (const extra of [["--sample"], ["--fail-on", "info"], ["-o", "o"]])
+      expect(() => parseArgs(["explain", "x", ...extra])).toThrow(
+        /explain takes only --format and --config/,
+      );
+    // --config names where a custom rule's id is found (#118).
+    expect(parseArgs(["explain", "x", "--config", "c.json"])).toMatchObject({
+      command: "explain",
+      config: "c.json",
+    });
+    expect(HELP).toContain("pbiplint explain <RULE_ID> [--format json] [--config <file>]");
   });
   it("takes --quiet and repeated --rule, and keeps --quiet to text (#178)", () => {
     expect(parseArgs(["./m", "-q", "--rule", "A", "--rule=b"])).toMatchObject({

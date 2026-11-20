@@ -604,3 +604,37 @@ The privacy page is G's; its sentence on `pbiplint skill --install` becomes: "Th
 - [ ] A comment on #118 headed "For the 0.4.0 release summary", under "What can change in your results": `pbiplint reference` is a command, so a folder named `reference` is given as `./reference`; `pbiplint skill --install` writes two skills and refuses both when either copy differs; `pbiplint mcp` has a fourth tool, and `explain_rule` and `list_rules` take an optional `path`.
 - [ ] An issue in `pbiplint/claude-plugin`, for after 0.4.0 is on npm: the second skill under `plugins/pbiplint/skills/`, refreshed with `npx -y pbiplint@<version> skill --name pbiplint-custom-rules`; its release steps and pin check covering it; the manifest's tools and permissions naming `custom_rules_reference`.
 - [ ] One whole-branch review. Open F with "For #118.", the custom rules entry's size before and after, the site chunk unchanged, and the reference's text and JSON sizes.
+
+### Pull request G, in tasks (added November 20, 2026)
+
+G writes the words step 1 needs before its release: the "Custom rules" page, the reference on it, and every page that lists what pbiplint reads or writes. Everything else in step 1 is on main.
+
+Settled for G (builder calls, November 20, 2026):
+
+- **The page is `packages/web/content/custom-rules.md`, at `/custom-rules/`,** built like the other content pages and linked where the site links them (the header or footer navigation, and the sitemap if there is one). Every page that names custom rules links to it: the CLI page's "Write a custom rule" section (the link F left out), the rule-could-not-finish page's custom rule paragraph, and the About page in one sentence.
+- **The reference on the page is generated, never written by hand:** `scripts/sync-custom-rules-reference.mjs` reads the built core's `teReference()` and writes `packages/web/src/build/custom-rules-reference.data.ts`, as `scripts/sync-rule-pages.mjs` writes the rule guidance data; the page's build renders it into the page's last section. A test holds the data equal to `teReference()`, so it cannot drift; CONTRIBUTING says when to run the script.
+- **Dates read true in both places:** pbiplint.com runs main, so a behaviour already live there is written as on the site now and "in a self-hosted copy and the command line from 0.4.0". The privacy page's site paragraph is reworded so.
+- **The Promise's five items, and its checks, stay word for word.**
+- **The severity sentence:** Tabular Editor's own command line labels `Severity` 1 as a warning; pbiplint reads 1 as info, as its built-in rules read Microsoft's numbers; the page says so beside the mapping.
+
+#### Task G1: the page and its reference
+
+**Files:** Create `packages/web/content/custom-rules.md`, `scripts/sync-custom-rules-reference.mjs`, `packages/web/src/build/custom-rules-reference.data.ts` (generated), its renderer in `packages/web/src/build/` (beside the page build), tests in `packages/web/test/` and `scripts/test/`. Modify `packages/web/src/build/generate.ts` (the page list), the site's navigation and sitemap if they list pages, `CONTRIBUTING.md` (the script).
+
+The page, in pbiplint's own words, in this order: what custom rules are (a team's own rules, in Tabular Editor's format, run beside pbiplint's own, everywhere pbiplint runs); setting up `customRules` (paths relative to the config's folder, local files only, what happens when a file cannot be read); the format (the fields pbiplint reads, `Scope`, `Expression`, severity and its mapping with the sentence above, categories, a short example rule); a team's rule with one of pbiplint's ids (unchanged copies, a changed severity, edited copies, copies pbiplint cannot read, `PARSE_ISSUE` and `RULE_COULD_NOT_FINISH`); Tabular Editor's ignore annotation; when a rule cannot run (one `RULE_COULD_NOT_FINISH` finding, its reason, failing the gate, turning the id off); in the output (labels, JSON and SARIF fields, `--quiet` and ids with spaces, `explain`, `--rule`); on the site (rule files from inside the dropped folder only, the code fetched from the site once the page is idle, nothing sent anywhere, the Promise); in your pipelines (the Action and the task read the config, no new input); writing a rule with an AI assistant (the skill, `pbiplint skill --install`, `pbiplint reference`, `pbiplint mcp`); worked examples (the skill's four, as shown there, each with what it catches); what pbiplint does not run, and why (statistics from a live model, fix expressions, rules stored in a model, Power Query structure); the reference (generated).
+
+- [ ] **Step 1:** Tests: the generated data equals the built core's `teReference()`; the page builds with every section above, its reference section lists every scope and every `notRun` reason from the data, its worked examples equal the skill's blocks byte for byte (so the two cannot drift), it has no em dash, and every link on it resolves to a built page or an external URL; the page is in the navigation and the sitemap.
+- [ ] **Steps 2 to 5:** Fail, write, pass, commit.
+
+#### Task G2: every page that lists what pbiplint reads or writes
+
+**Files:** Modify `packages/web/content/cli.md` ("Configure it" gains `customRules` with an example; "Write a custom rule" links to `/custom-rules/`), `packages/web/content/privacy.md` (the site paragraph's date reworded as settled; the command line paragraph's files gain the rule files `customRules` names; the `skill --install` sentence becomes F's wording, two files; the `pbiplint mcp` paragraph gains what `explain_rule` and `list_rules` read given a `path`; checks and the Promise untouched), the CLI page's skill table, where the second skill's folders are marked "from 0.4.0" as its pack section is, so a 0.3.4 user does not read two skills and get one; `packages/web/content/pipelines.md` (both "The lint" lines name the rule files its config names), `packages/web/content/about.md` (one sentence and the link), `rules/rule-could-not-finish.md` (the link), `packages/cli/README.md` (`customRules` in its configuration section, a pointer to the page), `README.md` (one line, if it lists features). Test `packages/cli/test/readme.test.ts` and the web page tests.
+
+- [ ] **Step 1:** Tests where the repository pins page text (find them); every new link resolves; no em dash.
+- [ ] **Steps 2 to 4:** Write, `node scripts/sync-rule-pages.mjs` after the rule page edit (after `npm run build`), pass, commit.
+
+#### Task G3: finishing G
+
+- [ ] `npm run build && npm test && npm run typecheck && npm run lint && npm run check:browser && npm run check:pack && npm run test:e2e`; the self-hosting build and `npm run check:egress`.
+- [ ] Release-summary comments on #118 for E and F if not posted, and one for G ("Custom rules" page).
+- [ ] One whole-branch review; open G with "For #118.".

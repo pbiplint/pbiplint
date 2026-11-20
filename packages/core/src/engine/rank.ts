@@ -72,7 +72,10 @@ export function summarizeRule(
  * returned them in.
  */
 export function rank(findings: Finding[], rules: Rule[], config: ResolvedConfig): RankedGroup[] {
-  const byId = new Map(rules.map((r) => [r.id, r]));
+  // The first rule with an id names the group: pbiplint's own rules come before custom ones, so a
+  // custom rule refused for taking a safety net's id never stands in for it.
+  const byId = new Map<string, Rule>();
+  for (const r of rules) if (!byId.has(r.id)) byId.set(r.id, r);
   // The findings come first, because a `project` rule takes its group's layer from them.
   const byRule = new Map<string, Finding[]>();
   for (const f of findings) {

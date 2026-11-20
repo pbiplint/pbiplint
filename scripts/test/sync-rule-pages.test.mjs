@@ -64,7 +64,7 @@ describe("exampleMarkdown", () => {
 
 describe("helpMarkdown", () => {
   const mechanics =
-    'To ignore this rule on one object, add `annotation pbiplint.ignore = X` under the object in its TMDL file. Power BI Desktop keeps the annotation. pbiplint also honours Tabular Editor\'s `BestPracticeAnalyzer_IgnoreRules` annotation, on the object or on the model. To turn the rule off for a whole project, set `"X": "off"` under `rules` in `pbiplint.config.json`.';
+    'To ignore this rule on one object, add `annotation pbiplint.ignore = X` under the object in its TMDL file. Power BI Desktop keeps the annotation. pbiplint also honors Tabular Editor\'s `BestPracticeAnalyzer_IgnoreRules` annotation: on an object it ignores the rule there, and on the model it ignores the rule on every model object. To turn the rule off for a whole project, set `"X": "off"` under `rules` in `pbiplint.config.json`.';
   it("mirrors the page minus What it checks, captions the example, and appends the mechanics", () => {
     const s = {
       Example: "```tmdl fires\ntable A\n```\n\n```tmdl fixed\ntable B\n```",

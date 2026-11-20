@@ -138,16 +138,27 @@ export function runRules(
     failures.push({ id: rule.id, kind, label, finding: f });
   };
   /**
-   * Adds a rule's finding, unless its object's `pbiplint.ignore` or Tabular Editor's annotation, on
-   * the object or the model, names the rule or `alsoIgnoredBy`.
+   * Adds a rule's finding, unless its object's `pbiplint.ignore` or Tabular Editor's annotation
+   * names the rule or `alsoIgnoredBy`. Tabular Editor's annotation on the model reaches findings on
+   * model objects only (the model layer, Power Query included, never a file), since Tabular Editor
+   * sees nothing else: it never hides a parse issue, a report finding, or a rule that could not
+   * finish.
    */
   const keep = (ruleId: string, f: RuleFinding, alsoIgnoredBy?: string): void => {
     // A table the input knows only from `ref table` lines is declared elsewhere, so nothing is
     // said about the table itself; what the input holds under it is (#274).
     if (f.object && "refOnly" in f.object && f.object.refOnly) return;
+    const layer = f.layer ?? layerOf(f.objectType);
+    const model =
+      f.object !== undefined &&
+      f.objectType !== "File" &&
+      ruleId !== RULE_COULD_NOT_FINISH.id &&
+      layer === "model"
+        ? project.model
+        : undefined;
     if (
-      isIgnored(f.object, ruleId, project.model) ||
-      (alsoIgnoredBy !== undefined && isIgnored(f.object, alsoIgnoredBy, project.model))
+      isIgnored(f.object, ruleId, model) ||
+      (alsoIgnoredBy !== undefined && isIgnored(f.object, alsoIgnoredBy, model))
     ) {
       result.ignored++;
       return;

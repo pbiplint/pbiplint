@@ -78,6 +78,6 @@ export function ignoreHelp(ruleId: string, scope: readonly string[] = []): strin
   return (
     `To ignore this rule on one object, add \`annotation ${IGNORE_ANNOTATION} = ${ruleId}\` under ` +
     `the object in its TMDL file. Power BI Desktop keeps the annotation. ` +
-    `pbiplint also honours Tabular Editor's \`${TE_IGNORE_ANNOTATION}\` annotation, on the object or on the model. ${project}`
+    `pbiplint also honors Tabular Editor's \`${TE_IGNORE_ANNOTATION}\` annotation: on an object it ignores the rule there, and on the model it ignores the rule on every model object. ${project}`
   );
 }

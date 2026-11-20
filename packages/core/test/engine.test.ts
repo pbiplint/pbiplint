@@ -293,6 +293,21 @@ describe("Tabular Editor's ignore annotation", () => {
     );
     expect(isIgnored(own.tables[0]!.columns[0]!, "ONLY_MODEL", own)).toBe(false);
   });
+  it("on the model, reaches findings on model objects only, never a file's parse issue", async () => {
+    const result = await lint(
+      [
+        {
+          path: "definition/model.tmdl",
+          text: `model Model\n\t${te('{"RuleIDs":["PARSE_ISSUE","MODEL_SHOULD_HAVE_A_DATE_TABLE"]}')}\n`,
+        },
+        { path: "definition/tables/A.tmdl", text: "table A\n    column Spaced\n" },
+      ],
+      { config: { failOn: "none" } },
+    );
+    const ids = result.findings.map((f) => f.ruleId);
+    expect(ids).toContain("PARSE_ISSUE");
+    expect(ids).not.toContain("MODEL_SHOULD_HAVE_A_DATE_TABLE");
+  });
   it("reads only a JSON object with a RuleIDs list of strings", () => {
     expect(teIgnoreIds('{"RuleIDs":["A","b"]}')).toEqual(["A", "B"]);
     expect(teIgnoreIds('{"RuleIDs":[]}')).toEqual([]);
@@ -304,7 +319,7 @@ describe("Tabular Editor's ignore annotation", () => {
 describe("ignoreHelp", () => {
   it("names the annotation and the config line for the rule", () => {
     expect(ignoreHelp("HIDE_FOREIGN_KEYS", ["Column"])).toBe(
-      'To ignore this rule on one object, add `annotation pbiplint.ignore = HIDE_FOREIGN_KEYS` under the object in its TMDL file. Power BI Desktop keeps the annotation. pbiplint also honours Tabular Editor\'s `BestPracticeAnalyzer_IgnoreRules` annotation, on the object or on the model. To turn the rule off for a whole project, set `"HIDE_FOREIGN_KEYS": "off"` under `rules` in `pbiplint.config.json`.',
+      'To ignore this rule on one object, add `annotation pbiplint.ignore = HIDE_FOREIGN_KEYS` under the object in its TMDL file. Power BI Desktop keeps the annotation. pbiplint also honors Tabular Editor\'s `BestPracticeAnalyzer_IgnoreRules` annotation: on an object it ignores the rule there, and on the model it ignores the rule on every model object. To turn the rule off for a whole project, set `"HIDE_FOREIGN_KEYS": "off"` under `rules` in `pbiplint.config.json`.',
     );
     expect(ignoreHelp("X")).toBe(ignoreHelp("X", ["Model"]));
   });

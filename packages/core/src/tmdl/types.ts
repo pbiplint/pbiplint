@@ -51,7 +51,8 @@ export interface TmdlParseIssue extends ParseIssue {
    * the parser skipped, which may have declared either, or a line at the root, or directly under
    * the model (#137), that the model does not read the lines under, such as a misspelt `table` or
    * a property or an annotation that lost its tabs. False only for a `///` description that
-   * nothing claims, which loses the description and no declaration. Set where the parser pushes
+   * nothing claims, which loses the description and no declaration, and for a malformed
+   * `BestPracticeAnalyzer_IgnoreRules` annotation, which is read and ignores nothing. Set where the parser pushes
    * the issue, so a rule that must not report what the file may declare (BROKEN_FIELD_REFERENCE)
    * reads this and never the reason's words.
    */

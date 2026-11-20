@@ -34,11 +34,13 @@ const expectations: Expectation[] = ["", "custom-rules/"].flatMap((sub) =>
 );
 
 /**
- * The parse issues a fixture carries on purpose, by file: custom-rules has a malformed ignore
+ * The parse issues a fixture carries on purpose, as file, line, and reason: custom-rules has a malformed ignore
  * annotation on its perspective, which PARSE_ISSUE reports and which ignores nothing.
  */
 const PLANTED_PARSE_ISSUES: Record<string, string[]> = {
-  "custom-rules/custom-rules": ["definition/perspectives/Sales View.tmdl"],
+  "custom-rules/custom-rules": [
+    "definition/perspectives/Sales View.tmdl:3:parse.tmdl.ignoreAnnotation",
+  ],
 };
 
 // MINIMIZE_POWER_QUERY_TRANSFORMATIONS is Microsoft's and on the Power Query layer (v3 spec,
@@ -68,8 +70,12 @@ describe.each(expectations)("parity with Tabular Editor: $name", (exp) => {
     expect(files.length).toBeGreaterThan(0);
   });
   it("parses every file without issues, apart from those planted on purpose", () => {
+    const reasonOf = (params: unknown): string =>
+      (params as { reason?: { id?: string } } | undefined)?.reason?.id ?? "";
     expect(
-      result.findings.filter((f) => f.ruleId === "PARSE_ISSUE").map((f) => f.objectName),
+      result.findings
+        .filter((f) => f.ruleId === "PARSE_ISSUE")
+        .map((f) => `${f.objectName}:${f.location?.line}:${reasonOf(f.params)}`),
     ).toEqual(PLANTED_PARSE_ISSUES[exp.name] ?? []);
   });
   it("runs every rule without errors", () => {

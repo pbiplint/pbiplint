@@ -325,6 +325,12 @@ describe("readTeRuleFile: duplicates", () => {
     expect(file.problems).toHaveLength(1);
     expect(file.problems[0]!.id).toBe("SALES_MEASURE_FOLDER");
     expect(file.problems[0]!.reason).toMatch(/first rule with this ID/);
+    expect(file.problems[0]!.kind).toBe("duplicate");
+  });
+
+  it("marks only a duplicate's problem with a kind", () => {
+    const file = ok(read([rule({ Scope: "Visual" })]));
+    expect(file.problems[0]).not.toHaveProperty("kind");
   });
 
   it("counts a difference in any field, even the description", () => {

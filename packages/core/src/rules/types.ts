@@ -3,7 +3,7 @@ import type { MessageId } from "../messages/en.js";
 import type { Message, MessageParam } from "../messages/format.js";
 import type { Model, SourceLocation } from "../model/types.js";
 import type { Report } from "../pbir/types.js";
-import type { Project } from "../project/types.js";
+import type { Diagnostic, Project } from "../project/types.js";
 
 export type Category =
   | "Performance"
@@ -61,7 +61,13 @@ export type ObjectType =
   | "Page"
   | "Visual"
   | "Bookmark"
-  | "ReportMeasure";
+  | "ReportMeasure"
+  // Objects only a custom rule reports, named as Tabular Editor names them.
+  | "KPI"
+  | "Culture"
+  | "RoleMember"
+  | "Variation"
+  | "Calendar";
 
 /**
  * Which part of a project a rule reads: one file family, both (`project`), or the Power Query M
@@ -84,7 +90,8 @@ export const REPORT_OBJECT_TYPES: ReadonlySet<ObjectType> = new Set<ObjectType>(
 export const layerOf = (t: ObjectType): LayerName =>
   REPORT_OBJECT_TYPES.has(t) ? "report" : "model";
 
-export type RuleStatus = "ported" | "needsLiveModel" | "builtin";
+/** `custom`: a team's own rule, read from a file the config's `customRules` names. */
+export type RuleStatus = "ported" | "needsLiveModel" | "builtin" | "custom";
 
 /** An option a rule accepts from pbiplint.config.json, with its default. */
 export interface RuleOption {
@@ -108,6 +115,8 @@ export interface RuleContext {
    * class alone. Absent when a rule is called without the engine.
    */
   reportError?: (error: unknown, site: ErrorSite) => void;
+  /** Records a notice for the run's diagnostics, as a custom rule does for objects it left out. */
+  notice?: (d: Diagnostic) => void;
 }
 
 /** Where a rule caught an error: a label for the message, and the object it was working on. */
@@ -158,7 +167,8 @@ export interface Finding {
 export interface Rule {
   id: string;
   name: string;
-  category: Category;
+  /** One of `CATEGORY_ORDER` for pbiplint's own rules; a custom rule's own, as its file writes it. */
+  category: string;
   severity: Severity;
   scope: ObjectType[];
   layer: Layer;
@@ -186,6 +196,8 @@ export interface Rule {
   fixExpression?: string;
   references: string[];
   status: RuleStatus;
+  /** For a custom rule: its file as the config names it, and the rule as that file writes it. */
+  custom?: { file: string; scopes: string[]; expression: string; teSeverity?: number };
   /** A policy rule's severity under its options, read when the config sets no severity for it. */
   policySeverity?(options: RuleOptions): Severity | undefined;
   check(project: Project, ctx: RuleContext): RuleFinding[];

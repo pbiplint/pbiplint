@@ -1,6 +1,7 @@
 // The custom rules entry, @pbiplint/core/custom-rules: a team's own rule files read and run as
 // rules. It is apart from the core's main entry, so lint never carries the evaluator and the site
 // loads this only when a config names custom rules. The bundle check holds it to its own budget.
+export { readCustomRules, teSeverity, type CustomRuleSet } from "./rules.js";
 export {
   runTeRules,
   STATISTICS_REASON,

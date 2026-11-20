@@ -1,7 +1,6 @@
 import { ruleUrl, slug } from "../model/names.js";
 import {
   CATEGORY_ORDER,
-  type Category,
   type Finding,
   type Layer,
   type Rule,
@@ -14,7 +13,7 @@ import { optionsFor } from "./run.js";
 export interface RuleSummary {
   id: string;
   name: string;
-  category: Category;
+  category: string;
   /** Effective severity after config overrides. */
   severity: Severity;
   /** The rule's layer; for a `project` rule, the layer of the objects its findings name. */
@@ -92,6 +91,7 @@ export function rank(findings: Finding[], rules: Rule[], config: ResolvedConfig)
 /** The order `rank` gives groups, for a caller that changes how many findings a group holds. */
 export const byRank = (a: RankedGroup, b: RankedGroup): number =>
   b.rule.severity - a.rule.severity ||
-  CATEGORY_ORDER.indexOf(a.rule.category) - CATEGORY_ORDER.indexOf(b.rule.category) ||
+  (CATEGORY_ORDER as readonly string[]).indexOf(a.rule.category) -
+    (CATEGORY_ORDER as readonly string[]).indexOf(b.rule.category) ||
   b.findings.length - a.findings.length ||
   a.rule.id.localeCompare(b.rule.id, "en");

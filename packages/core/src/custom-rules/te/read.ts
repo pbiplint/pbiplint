@@ -26,6 +26,11 @@ export interface TeRuleProblem {
   id: string;
   name?: string;
   reason: string;
+  /**
+   * `duplicate`: a later rule in the file with an earlier rule's id and different text. The first
+   * rule runs, so this one is a notice rather than a rule that cannot run.
+   */
+  kind?: "duplicate";
 }
 
 /** A rule file read: refused whole with a reason, or its rules and the rules it could not read. */
@@ -207,11 +212,12 @@ export function readTeRuleFile(text: string): TeRuleFile {
     const rawName = keys.get("name");
     const givenName = typeof rawName === "string" && rawName !== "" ? rawName : undefined;
     const id = readId(keys.get("id"));
-    const problem = (reason: string) =>
+    const problem = (reason: string, kind?: "duplicate") =>
       problems.push({
         id: id ?? place,
         ...(givenName === undefined ? {} : { name: givenName }),
         reason,
+        ...(kind === undefined ? {} : { kind }),
       });
 
     if (index >= LIMITS.rulesPerFile) {
@@ -233,6 +239,7 @@ export function readTeRuleFile(text: string): TeRuleFile {
       if (first !== key) {
         problem(
           "Another rule earlier in this file has the same ID, and only the first rule with this ID runs. Give this rule its own ID, or remove one of the two.",
+          "duplicate",
         );
       }
       return;

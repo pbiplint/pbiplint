@@ -242,6 +242,21 @@ describe("the engine runs custom rules", () => {
     expect(notice[0]!.message).toContain("hide_foreign_keys");
   });
 
+  it("runs a custom rule with a built-in id when pbiplint's rule of that id is not in the run", async () => {
+    // Set aside only for a rule that runs in its place: a team's rule is never dropped for one
+    // the caller left out.
+    const copy = rule({ ID: "hide_foreign_keys", Scope: "Column", Expression: "IsHidden" });
+    const result = await lint(files, {
+      rules: [RULE_COULD_NOT_FINISH],
+      customRules: set(copy),
+      config: { failOn: "none" },
+    });
+    expect(ofRule(result, "hide_foreign_keys").length).toBeGreaterThan(0);
+    expect(result.summary.rulesRun).toBe(2);
+    expect(result.summary.customRules?.[0]?.asBuiltIn).toEqual([]);
+    expect(result.diagnostics.filter((d) => d.kind === "custom-rules")).toEqual([]);
+  });
+
   it("keeps RULE_COULD_NOT_FINISH pbiplint's own when a custom rule takes its id", async () => {
     const result = await run(set(rule({ ID: "RULE_COULD_NOT_FINISH", Expression: "true" })));
     const [failure, ...more] = failures(result);

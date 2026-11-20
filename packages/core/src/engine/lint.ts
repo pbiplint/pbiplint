@@ -124,7 +124,9 @@ export async function lint(files: LintFile[], options: LintOptions = {}): Promis
   const builtIn = options.rules ?? defaultRules;
   const custom = options.customRules;
   // Until same-id handling lands (#118, D2), a custom rule with the id of one of pbiplint's rules
-  // is left out and pbiplint's own runs. One refused for taking a safety net's id runs, to say so.
+  // in this run is left out and pbiplint's own runs; with that rule not in `rules`, the custom one
+  // runs, so a team's rule is never dropped for nothing. One refused for taking a safety net's id
+  // runs, to say so.
   const ownIds = new Set(builtIn.map((r) => r.id.toUpperCase()));
   const asBuiltIn = (id: string) =>
     ownIds.has(id.toUpperCase()) &&

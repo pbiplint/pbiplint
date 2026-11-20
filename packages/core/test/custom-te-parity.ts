@@ -165,15 +165,30 @@ export function expectRule(
   fileId: string,
   ruleId: string,
 ): "match" | "deviation" {
+  return expectSaid(told(label, got), said(got), want, custom, fileId, ruleId);
+}
+
+/**
+ * `expectRule` for what pbiplint said, however it ran the rule: `runTeRules`'s outcome, or the
+ * engine's findings by object name (sorted), or "could-not-run".
+ */
+export function expectSaid(
+  label: string,
+  got: string[] | "could-not-run",
+  want: string[] | "could-not-run",
+  custom: CustomDeviations | undefined,
+  fileId: string,
+  ruleId: string,
+): "match" | "deviation" {
   const sentence = custom?.deviations?.[fileId]?.[ruleId];
   if (sentence === undefined) {
-    expect(said(got), told(label, got)).toEqual(want);
+    expect(got, label).toEqual(want);
     return "match";
   }
   const ours = custom?.ours?.[fileId]?.[ruleId];
   expect(typeof sentence, `${label}: the deviation is a sentence`).toBe("string");
   expect(ours, `${label}: a deviation records pbiplint's objects`).toBeDefined();
-  expect(said(got), told(label, got)).toEqual([...ours!].sort());
+  expect(got, label).toEqual([...ours!].sort());
   expect(same([...ours!].sort(), want), `${label}: the deviation shows a difference`).toBe(false);
   return "deviation";
 }

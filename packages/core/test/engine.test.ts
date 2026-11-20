@@ -1,7 +1,9 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { buildIndexes } from "../src/index/build.js";
 import {
   bindConfig,
+  CONFIG_KEYS,
   ConfigError,
   resolveConfig,
   type PbiplintConfig,
@@ -130,6 +132,76 @@ describe("resolveConfig", () => {
   });
 });
 
+describe("customRules in the config", () => {
+  const PATHS_ONLY =
+    "customRules takes paths to local files, relative to the folder pbiplint.config.json is in";
+  it("keeps the entries as written and in order", () => {
+    expect(resolveConfig({ customRules: ["rules/team.json", "./more.json"] }).customRules).toEqual([
+      "rules/team.json",
+      "./more.json",
+    ]);
+  });
+  it("is an empty list when the key is absent", () => {
+    expect(resolveConfig().customRules).toEqual([]);
+    expect(resolveConfig({ rules: {} }).customRules).toEqual([]);
+  });
+  it("accepts a relative path written with backslashes", () => {
+    expect(resolveConfig({ customRules: ["rules\\team.json"] }).customRules).toEqual([
+      "rules\\team.json",
+    ]);
+  });
+  it("refuses a value that is not a list, and an entry that is not a string", () => {
+    const message = 'pbiplint.config.json: "customRules" must be a list of paths to rule files';
+    expect(() => resolveConfig({ customRules: "rules/team.json" })).toThrow(ConfigError);
+    expect(() => resolveConfig({ customRules: "rules/team.json" })).toThrow(message);
+    expect(() => resolveConfig({ customRules: { a: "x.json" } })).toThrow(message);
+    expect(() => resolveConfig({ customRules: ["a.json", 3] })).toThrow(message);
+    expect(() => resolveConfig({ customRules: [null] })).toThrow(message);
+  });
+  it("refuses a URL, naming its index", () => {
+    for (const url of ["https://x.test/r.json", "http://x.test/r.json", "file:///tmp/r.json"])
+      expect(() => resolveConfig({ customRules: ["a.json", url] })).toThrow(
+        `pbiplint.config.json: customRules[1] is a URL; ${PATHS_ONLY}`,
+      );
+  });
+  it("refuses an empty entry, naming its index", () => {
+    expect(() => resolveConfig({ customRules: [""] })).toThrow(
+      `pbiplint.config.json: customRules[0] is empty; ${PATHS_ONLY}`,
+    );
+    expect(() => resolveConfig({ customRules: ["a.json", "  "] })).toThrow(
+      `pbiplint.config.json: customRules[1] is empty; ${PATHS_ONLY}`,
+    );
+  });
+  it("refuses an absolute path, naming its index", () => {
+    for (const path of ["/x", "C:\\x", "c:/x", "\\\\server\\x"])
+      expect(() => resolveConfig({ customRules: [path] })).toThrow(
+        `pbiplint.config.json: customRules[0] is an absolute path; ${PATHS_ONLY}`,
+      );
+  });
+  it("carries the entries through bindConfig", () => {
+    const { config } = bindConfig(resolveConfig({ customRules: ["a.json"] }), []);
+    expect(config.customRules).toEqual(["a.json"]);
+  });
+  it("has the same top-level keys in the schema as resolveConfig accepts", () => {
+    const schema = JSON.parse(
+      readFileSync(
+        new URL("../../web/public/schema/pbiplint.config.schema.json", import.meta.url),
+        "utf8",
+      ),
+    ) as { properties: Record<string, { pattern?: string }> };
+    expect(Object.keys(schema.properties).sort()).toEqual([...CONFIG_KEYS].sort());
+    for (const key of CONFIG_KEYS) expect(() => resolveConfig({ [key]: undefined })).not.toThrow();
+    expect(schema.properties.customRules).toMatchObject({ type: "array" });
+    const pattern = new RegExp(
+      (schema.properties.customRules as { items: { pattern: string } }).items.pattern,
+    );
+    expect(pattern.test("rules/team.json")).toBe(true);
+    expect(pattern.test("rules\\team.json")).toBe(true);
+    for (const bad of ["https://x.test/r.json", "file:///r.json", "/x", "C:\\x", "\\\\s\\x", ""])
+      expect(pattern.test(bad)).toBe(false);
+  });
+});
+
 describe("bindConfig with options", () => {
   const withMax: Rule = {
     ...base,
@@ -196,6 +268,7 @@ describe("bindConfig with options", () => {
         severity: new Map(),
         options: new Map([["WITH_MAX", given]]),
         failOn: 3,
+        customRules: [],
       },
       [withMax],
     );

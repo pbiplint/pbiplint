@@ -16,7 +16,12 @@ export interface PbiplintConfig {
   rules?: Record<string, "off" | SeverityName | RuleConfigObject>;
   /** Lowest severity that makes the CLI exit nonzero. Default "error". */
   failOn?: SeverityName | "none";
+  /** Tabular Editor rule files to run as rules, as paths relative to the folder this file is in. */
+  customRules?: string[];
 }
+
+/** Every top-level key pbiplint.config.json may hold; the JSON Schema lists the same. */
+export const CONFIG_KEYS = ["$schema", "rules", "failOn", "customRules"] as const;
 
 export interface ResolvedConfig {
   disabled: Set<string>;
@@ -24,6 +29,8 @@ export interface ResolvedConfig {
   /** Options per rule id as written, validated against the rule's declaration by bindConfig. */
   options: Map<string, Record<string, unknown>>;
   failOn: Severity | null;
+  /** The config's customRules entries as written and in order; empty when the key is absent. */
+  customRules: string[];
 }
 
 /**
@@ -52,6 +59,7 @@ export function bindConfig(config: ResolvedConfig, rules: Rule[]): BoundConfig {
     severity: new Map(),
     options: new Map(),
     failOn: config.failOn,
+    customRules: config.customRules,
   };
   const unknownRules: string[] = [];
   for (const id of config.disabled) {
@@ -124,7 +132,7 @@ export function isResolvedConfig(v: unknown): v is ResolvedConfig {
 export function resolveConfig(raw: unknown = {}): ResolvedConfig {
   if (!isRecord(raw)) throw new ConfigError("pbiplint.config.json must be a JSON object");
   for (const k of Object.keys(raw))
-    if (k !== "rules" && k !== "failOn" && k !== "$schema")
+    if (!(CONFIG_KEYS as readonly string[]).includes(k))
       throw new ConfigError(`pbiplint.config.json: unknown key "${k}"`);
   // Nothing here reads $schema, but a number or an object in it means the file was written by
   // hand and misunderstood, and every other key says so rather than passing it over in silence.
@@ -135,6 +143,7 @@ export function resolveConfig(raw: unknown = {}): ResolvedConfig {
     severity: new Map(),
     options: new Map(),
     failOn: 3,
+    customRules: [],
   };
   if (raw.rules !== undefined) {
     if (!isRecord(raw.rules))
@@ -171,5 +180,37 @@ export function resolveConfig(raw: unknown = {}): ResolvedConfig {
         'pbiplint.config.json: "failOn" must be "info", "warning", "error", or "none"',
       );
   }
+  if (raw.customRules !== undefined) out.customRules = readCustomRulePaths(raw.customRules);
   return out;
+}
+
+const PATHS_ONLY =
+  "customRules takes paths to local files, relative to the folder pbiplint.config.json is in";
+
+/**
+ * Check customRules: a list of relative paths. The site and the pipelines resolve each entry
+ * against the config's own folder, so a URL or an absolute path could only work on one machine;
+ * it is refused here with the entry's index rather than failing later as a missing file.
+ */
+function readCustomRulePaths(value: unknown): string[] {
+  if (!Array.isArray(value) || value.some((entry) => typeof entry !== "string"))
+    throw new ConfigError(
+      'pbiplint.config.json: "customRules" must be a list of paths to rule files',
+    );
+  const paths = value as string[];
+  paths.forEach((path, i) => {
+    const problem =
+      path.trim() === ""
+        ? "is empty"
+        : path.includes("://")
+          ? "is a URL"
+          : // A leading slash or backslash (a root, or a \\server share), or a drive letter.
+            /^[\\/]|^[A-Za-z]:/.test(path)
+            ? "is an absolute path"
+            : undefined;
+    if (problem)
+      throw new ConfigError(`pbiplint.config.json: customRules[${i}] ${problem}; ${PATHS_ONLY}`);
+  });
+  // A copy, so a caller that changes its own list later does not change the run's.
+  return [...paths];
 }

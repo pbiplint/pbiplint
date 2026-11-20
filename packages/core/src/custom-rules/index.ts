@@ -17,3 +17,13 @@ export {
   type TeRunResult,
   type TomObject,
 } from "./te/index.js";
+// What a rule can use, for `pbiplint reference` and `pbiplint mcp`; the site does not import it.
+export {
+  teReference,
+  typeLabel,
+  type TeReference,
+  type TeReferenceMember,
+  type TeReferenceNotRun,
+  type TeReferenceParam,
+  type TeReferenceProperty,
+} from "./te/reference.js";

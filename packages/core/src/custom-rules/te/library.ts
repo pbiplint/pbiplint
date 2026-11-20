@@ -3,6 +3,7 @@ import { teTokens } from "./tokens.js";
 import {
   ENUMS,
   PROPERTIES,
+  STATISTICS_PREFIX,
   UNSET,
   getAnnotation,
   hasAnnotation,
@@ -1110,7 +1111,11 @@ export const DAX_EXPRESSION_TYPES: ReadonlySet<string> = new Set([
 /** Whether an annotation name is one a live model's statistics fill in, which a project never holds. */
 export function isStatisticsAnnotation(name: string): boolean {
   const l = name.toLowerCase();
-  return l.startsWith("vertipaq_") || l === "longlengthrowcount" || l === "datetimewithhourminsec";
+  return (
+    l.startsWith(STATISTICS_PREFIX.toLowerCase()) ||
+    l === "longlengthrowcount" ||
+    l === "datetimewithhourminsec"
+  );
 }
 
 export const STATISTICS_REASON =

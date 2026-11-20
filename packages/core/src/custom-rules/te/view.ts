@@ -1262,6 +1262,8 @@ export const PROPERTIES: Record<TomType, Record<string, PropertySpec>> = {
 
 const STATISTICS =
   "needs statistics from a live model that a project's files do not hold; run the rule in Tabular Editor against a deployed model";
+/** Every annotation name with this prefix holds a live model's statistics (`Vertipaq_Cardinality`). */
+export const STATISTICS_PREFIX = "Vertipaq_";
 const SERVER_STATE = "is kept by the server for a deployed model and is not in a project's files";
 
 /**
@@ -1288,7 +1290,7 @@ export const UNKNOWN_PROPERTIES: Record<string, string> = {
 /** The reason pbiplint cannot answer a name, if it is one it knows: any `Vertipaq_` annotation is. */
 export function unknownReason(name: string): string | undefined {
   if (Object.hasOwn(UNKNOWN_PROPERTIES, name)) return UNKNOWN_PROPERTIES[name];
-  return lower(name).startsWith("vertipaq_") ? STATISTICS : undefined;
+  return lower(name).startsWith(lower(STATISTICS_PREFIX)) ? STATISTICS : undefined;
 }
 
 function editDistance(a: string, b: string): number {

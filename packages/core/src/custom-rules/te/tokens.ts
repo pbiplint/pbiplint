@@ -433,6 +433,29 @@ export const TOKEN_TYPES: readonly string[] = [
   ...WORDS,
 ];
 
+/**
+ * What a rule reads on a token, as the evaluator answers it: `Type`, `Text` and `Next`. A token
+ * type's name read on a token (`Type == STRING_LITERAL`) gives that type's code, to compare with.
+ */
+export const TOKEN_MEMBERS: readonly { name: string; type: string; description: string }[] = [
+  {
+    name: "Type",
+    type: "Int32",
+    description:
+      "The token's type, as a code to compare with a type name: `Type == STRING_LITERAL`. A type named as a keyword or a .NET type of the expression, such as `NOT`, `TRUE` or `CONVERT`, does not read as the token type there; compare `Text.ToUpper()` instead.",
+  },
+  {
+    name: "Text",
+    type: "String",
+    description: "The token's text; for a string literal, its content without the quotes.",
+  },
+  {
+    name: "Next",
+    type: "DaxToken?",
+    description: "The next token that is neither white space nor a comment, or null at the end.",
+  },
+];
+
 /** The type a character no DAX token starts with gets; no rule can name it. */
 const UNRECOGNIZED = "UNRECOGNIZED";
 

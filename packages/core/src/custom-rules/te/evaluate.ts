@@ -82,6 +82,13 @@ const LIMIT_REASON = `reached the evaluation limit of ${fmt(LIMITS.stepsPerRule)
 /** "a String", "an Int32". */
 const a = (word: string) => `${/^[AEIOU]/i.test(word) ? "an" : "a"} ${word}`;
 
+/** Why a rule stops that reads a name pbiplint knows it cannot answer, with the gap's reason. */
+export const READS_UNKNOWN = (name: string, why: string): string =>
+  `reads \`${name}\`, which ${why}`;
+
+/** Why a rule stops that calls a method its value does not have (or pbiplint does not run). */
+export const NO_METHOD = (on: string, name: string): string => `${on} has no method \`${name}\``;
+
 /** A property of a type, by name: the exact spelling first, then without regard to case. */
 function findProperty(type: TomType, name: string): PropertySpec | undefined {
   const props = PROPERTIES[type];
@@ -101,7 +108,7 @@ function findKey<T>(record: Record<string, T> | undefined, name: string): T | un
 /** The reason for a name a type does not have: pbiplint's known gaps first, then the nearest name. */
 function missingProperty(type: string, name: string, tomType?: TomType): string {
   const why = unknownReason(name);
-  if (why) return `reads \`${name}\`, which ${why}`;
+  if (why) return READS_UNKNOWN(name, why);
   const near = tomType ? nearestProperty(tomType, name) : undefined;
   return `${type} has no property \`${name}\`${near ? `; \`${near}\` is the nearest` : ""}`;
 }
@@ -459,7 +466,7 @@ class Checker {
         return UNKNOWN;
     }
     const named = lists.flatMap((k) => entriesNamed(LIBRARY.methods[k], name));
-    if (named.length === 0) throw new StaticError(`${stName(receiver)} has no method \`${name}\``);
+    if (named.length === 0) throw new StaticError(NO_METHOD(stName(receiver), name));
     const entry = byArity(named, args.length, name, StaticError);
     const first = args[0];
     if (
@@ -468,7 +475,7 @@ class Checker {
       first.type === "string" &&
       isStatisticsAnnotation(first.value)
     )
-      throw new StaticError(`reads \`${first.value}\`, which ${STATISTICS_REASON}`);
+      throw new StaticError(READS_UNKNOWN(first.value, STATISTICS_REASON));
     let selector: ST = UNKNOWN;
     for (const x of args) {
       if (x.kind === "lambdaBody")
@@ -723,7 +730,7 @@ class Evaluator implements TeRuntime {
     const named = this.receiverKinds(receiver).flatMap((k) =>
       entriesNamed(LIBRARY.methods[k], name),
     );
-    if (named.length === 0) throw new TeFailure(`${typeName(receiver)} has no method \`${name}\``);
+    if (named.length === 0) throw new TeFailure(NO_METHOD(typeName(receiver), name));
     const args = argNodes.map((x) =>
       x.kind === "lambdaBody"
         ? (item: unknown) =>

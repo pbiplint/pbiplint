@@ -684,6 +684,22 @@ describe("pageLayer and SITE_LAYERS", () => {
 });
 
 describe("generateSite", () => {
+  it("draws the contrast rule's example as a colour sample on its page, and on no other", () => {
+    const out = tempDir("site-sample");
+    generateSite({ outDir: out });
+    const html = readFileSync(join(out, "rules/low-text-contrast/index.html"), "utf8");
+    const samples = html.match(/<img class="contrast-sample"[^>]*>/g) ?? [];
+    expect(samples).toHaveLength(1);
+    expect(samples[0]).toContain(
+      'alt="Sample text drawn by the browser in #A19F9D on #FFFFFF, 2.63:1, beside the suggested #787675, 4.51:1"',
+    );
+    expect(samples[0]).toMatch(/src="data:image\/svg\+xml,/);
+    // After the example, before Why it matters.
+    expect(html.indexOf(samples[0]!)).toBeLessThan(html.indexOf('<h2 id="why-it-matters">'));
+    expect(html.indexOf(samples[0]!)).toBeGreaterThan(html.indexOf('<h2 id="example">'));
+    const other = readFileSync(join(out, "rules/ensure-theme-colours/index.html"), "utf8");
+    expect(other).not.toContain("contrast-sample");
+  });
   it("writes every rule page, the index, the about page, and the sitemap", () => {
     const out = tempDir("site");
     const metas = generateSite({ outDir: out });

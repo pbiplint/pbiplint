@@ -67,6 +67,7 @@ export interface Skipped {
   page: Page;
   visual: Visual;
   kind: ElementKind;
+  object: string;
   why: SkipReason;
 }
 
@@ -94,6 +95,9 @@ function fluentDefault(report: Report, kind: ElementKind): boolean | undefined {
   if (kind === "axisTitles") return false;
   return undefined;
 }
+
+/** Each report's measurement, by the report object, which a run builds once. */
+const MEASURED = new WeakMap<Report, Measurement>();
 
 /** The property that turns an element on, for the elements that can be turned off. */
 /**
@@ -237,7 +241,8 @@ function finish(
   onData = false,
 ): void {
   const { report, page, visual, out } = ctx;
-  const skip = (why: SkipReason): void => void out.skipped.push({ page, visual, kind, why });
+  const skip = (why: SkipReason): void =>
+    void out.skipped.push({ page, visual, kind, object, why });
   const back = backgroundOf(report, page, visual, element);
   if (!back.known) return skip(back.why);
   if (onData && back.opaqueAt !== "element") return skip("on-data");
@@ -396,7 +401,7 @@ function measureElement(ctx: Context, spec: ElementSpec): void {
   const { report, page, visual, out } = ctx;
   const themes = report.themes;
   const skip = (why: SkipReason): void =>
-    void out.skipped.push({ page, visual, kind: spec.kind, why });
+    void out.skipped.push({ page, visual, kind: spec.kind, object: spec.object, why });
   const ownOf = (object: string): Own => ({
     entries: ownEntries(visual, spec.container, object),
     source: "visual",
@@ -415,19 +420,6 @@ function measureElement(ctx: Context, spec: ElementSpec): void {
       property,
       state,
     });
-  const toggle = toggleOf(spec);
-  if (toggle) {
-    const on = ask(toggle);
-    const fluent = fluentDefault(report, spec.kind);
-    if (!on.found && on.why === "theme-not-read" && fluent === undefined)
-      return skip("theme-not-read");
-    const byDefault = fluent ?? SHOWN_BY_DEFAULT.has(spec.kind);
-    const shown = on.found ? readLiteralBool(on.value) === true : byDefault;
-    // Shown or not, the files do not say: it may be on the page, so it is counted as not known.
-    if (!on.found && fluent === undefined && !SHOWN_BY_DEFAULT.has(spec.kind))
-      return skip("visibility-not-known");
-    if (!shown) return;
-  }
   // A subtitle with no text, or a title with no text on a visual with no fields to name it by, is
   // not drawn, whatever its show says.
   if (spec.kind === "subtitle" || spec.kind === "title") {
@@ -440,6 +432,19 @@ function measureElement(ctx: Context, spec: ElementSpec): void {
         : literalText(text.value);
     const written = value.trim() !== "";
     if (!written && (spec.kind === "subtitle" || visual.fields.length === 0)) return;
+  }
+  const toggle = toggleOf(spec);
+  if (toggle) {
+    const on = ask(toggle);
+    const fluent = fluentDefault(report, spec.kind);
+    if (!on.found && on.why === "theme-not-read" && fluent === undefined)
+      return skip("theme-not-read");
+    const byDefault = fluent ?? SHOWN_BY_DEFAULT.has(spec.kind);
+    const shown = on.found ? readLiteralBool(on.value) === true : byDefault;
+    // Shown or not, the files do not say: it may be on the page, so it is counted as not known.
+    if (!on.found && fluent === undefined && !SHOWN_BY_DEFAULT.has(spec.kind))
+      return skip("visibility-not-known");
+    if (!shown) return;
   }
   let onData = false;
   if (spec.kind === "dataLabels") {
@@ -562,7 +567,7 @@ function measureTextBox(ctx: Context, spec: ElementSpec): void {
   );
   if (!Array.isArray(paragraphs)) return;
   const skip = (why: SkipReason): void =>
-    void out.skipped.push({ page, visual, kind: "textBox", why });
+    void out.skipped.push({ page, visual, kind: "textBox", object: "general", why });
   paragraphs.forEach((paragraph, p) => {
     const runs = member(paragraph, "textRuns");
     if (!Array.isArray(runs)) return;
@@ -599,6 +604,10 @@ function measureTextBox(ctx: Context, spec: ElementSpec): void {
  * elements are not, and are not counted.
  */
 export function measureReport(report: Report): Measurement {
+  // The rule and the Text contrast fact read one measurement, so they cannot disagree, and a
+  // report is measured once however many read it.
+  const cached = MEASURED.get(report);
+  if (cached) return cached;
   const out: Measurement = { measured: [], skipped: [] };
   for (const page of report.pages)
     for (const visual of page.visuals) {
@@ -616,5 +625,7 @@ export function measureReport(report: Report): Measurement {
         else measureElement(ctx, spec);
       }
     }
+  // Only a whole measurement is kept: one that threw partway is never read as complete.
+  MEASURED.set(report, out);
   return out;
 }

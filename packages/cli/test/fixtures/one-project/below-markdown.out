@@ -15,6 +15,7 @@
 | Report measures | 2 (defined in the report, not the model) | [REPORT_LEVEL_MEASURES](https://pbiplint.com/rules/report-level-measures) |
 | Slicers | 2 (1 saved selection, 1 saved search term) | [SLICER_SELECTION_SAVED](https://pbiplint.com/rules/slicer-selection-saved) |
 | Mobile layouts | none |  |
+| Text contrast | 1 measured, 1 below the threshold, 237 not measured (235 theme file not read, 2 colour not set) | [LOW_TEXT_CONTRAST](https://pbiplint.com/rules/low-text-contrast) |
 | Schema versions | report 3.2.0, page 2.1.0, visual 2.8.0 |  |
 | Model | 8 tables, 73 columns, 14 measures (36 columns and 2 measures not reached from this report) | [NOT_REACHED_FROM_REPORT](https://pbiplint.com/rules/not-reached-from-report) |
 

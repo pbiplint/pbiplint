@@ -17,6 +17,7 @@ const PAGES = [
   "/rules/ensure-alttext/", // a report page with a visual.json figure
   "/rules/minimize-power-query-transformations/", // the first Power Query page
   "/rules/local-drive-path/", // pbiplint's own Power Query page, with a quote in When to ignore it
+  "/rules/low-text-contrast/", // the contrast rule's page, with its colour sample after the example
   "/about/",
   "/privacy/",
   "/cli/",

@@ -24,6 +24,7 @@ const PAGES = [
   "/pipelines/",
   "/self-host/",
   "/self-host/checklist/",
+  "/custom-rules/", // the generated reference, folded under details elements
   "/latest/",
   "/404.html",
 ];

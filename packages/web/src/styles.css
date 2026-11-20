@@ -884,6 +884,12 @@ th {
 .rule-list .summary {
   font-size: 14px;
 }
+/* The custom rules page's generated reference: each object type and value type folds away under
+   its name, so the section can be scanned, and opened where it is needed. */
+.reference-type summary {
+  cursor: pointer;
+  padding: 6px 0;
+}
 .cta {
   margin-top: 32px;
   display: flex;

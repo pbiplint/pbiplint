@@ -828,9 +828,10 @@ describe("generateSite", () => {
     expect(sitemap).toContain("<loc>https://pbiplint.com/privacy/</loc>");
     expect(sitemap).toContain("<loc>https://pbiplint.com/cli/</loc>");
     expect(sitemap).toContain("<loc>https://pbiplint.com/pipelines/</loc>");
-    // The home page, the About, Privacy Promise, CLI, and pipelines pages, the rules index, and one
-    // entry per rule page.
-    expect((sitemap.match(/<loc>/g) ?? []).length).toBe(8 + 123);
+    expect(sitemap).toContain("<loc>https://pbiplint.com/custom-rules/</loc>");
+    // The home page, the About, Privacy Promise, CLI, pipelines, self-hosting, checklist, and custom
+    // rules pages, the rules index, and one entry per rule page.
+    expect((sitemap.match(/<loc>/g) ?? []).length).toBe(9 + 123);
     // llms.txt points an assistant at the skill first, then at the pages.
     const llms = readFileSync(join(out, "public/llms.txt"), "utf8");
     expect(llms.startsWith("# pbiplint\n\n> ")).toBe(true);
@@ -841,6 +842,7 @@ describe("generateSite", () => {
       [
         "about",
         "cli",
+        "custom-rules",
         "latest",
         "pipelines",
         "self-host",
